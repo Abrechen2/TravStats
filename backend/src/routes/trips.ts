@@ -176,7 +176,25 @@ router.post("/trips", authenticate, requireWriteScope, async (req: AuthRequest, 
     }
 
     const trip = await prisma.trip.create({
-      data: { userId, name: body.name, description: body.description, color },
+      data: {
+        userId,
+        name: body.name,
+        description: body.description,
+        color,
+        startDate: body.startDate,
+        endDate: body.endDate,
+        status: body.status,
+        category: body.category,
+        tags: body.tags,
+        companions: body.companions,
+        notes: body.notes,
+        summary: body.summary,
+        originLabel: body.originLabel,
+        destinationLabel: body.destinationLabel,
+        coverImageUrl: body.coverImageUrl,
+        icon: body.icon,
+        countries: body.countries,
+      },
     });
 
     logger.info({ tripId: trip.id, userId }, "[Trips] Created trip");
@@ -200,6 +218,19 @@ router.patch("/trips/:id", authenticate, requireWriteScope, async (req: AuthRequ
         ...(body.name !== undefined && { name: body.name }),
         ...(body.description !== undefined && { description: body.description }),
         ...(body.color !== undefined && { color: body.color }),
+        ...(body.startDate !== undefined && { startDate: body.startDate }),
+        ...(body.endDate !== undefined && { endDate: body.endDate }),
+        ...(body.status !== undefined && { status: body.status }),
+        ...(body.category !== undefined && { category: body.category }),
+        ...(body.tags !== undefined && { tags: body.tags }),
+        ...(body.companions !== undefined && { companions: body.companions }),
+        ...(body.notes !== undefined && { notes: body.notes }),
+        ...(body.summary !== undefined && { summary: body.summary }),
+        ...(body.originLabel !== undefined && { originLabel: body.originLabel }),
+        ...(body.destinationLabel !== undefined && { destinationLabel: body.destinationLabel }),
+        ...(body.coverImageUrl !== undefined && { coverImageUrl: body.coverImageUrl }),
+        ...(body.icon !== undefined && { icon: body.icon }),
+        ...(body.countries !== undefined && { countries: body.countries }),
       },
     });
 

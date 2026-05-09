@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { flightsApi, tripsApi } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
 import type { Flight, FlightFilters, FlightInput, Trip } from "../types";
@@ -24,12 +25,14 @@ import DataSourceBadges from "../components/DataSourceBadges";
 import { logger } from "../lib/logger";
 import PageTransition from "../components/PageTransition";
 import { SkeletonTable } from "../components/SkeletonLoader";
-import TripsTab from "../components/Trips/TripsTab";
+
+// Trips moved to their own /trips top-level page (Phase-1 redesign).
+// This page now focuses purely on the flight table; the trip badge in
+// each flight row is a Link to /trips/:id.
 
 export default function FlightsTablePage(): JSX.Element {
   const { t } = useTranslation(["flights", "common", "dashboard", "trips"]);
   const [flights, setFlights] = useState<Flight[]>([]);
-  const [activeTab, setActiveTab] = useState<"flights" | "trips">("flights");
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripFilter, setTripFilter] = useState<"all" | "with" | "without" | string>("all");
   const [filters, setFilters] = useState<FlightFilters>({});
@@ -320,45 +323,12 @@ export default function FlightsTablePage(): JSX.Element {
             </button>
           </div>
 
-          {/* Tab bar */}
-          <div
-            className="flex border-b rounded-t-lg overflow-hidden"
-            style={{ background: "var(--bg-surface)", borderColor: "var(--color-border)" }}
-          >
-            <button
-              onClick={() => setActiveTab("flights")}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "flights"
-                  ? "border-[var(--accent)] text-[var(--accent)]"
-                  : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-              }`}
-            >
-              ✈ {t("trips:tabFlights")}
-            </button>
-            <button
-              onClick={() => setActiveTab("trips")}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "trips"
-                  ? "border-[var(--accent)] text-[var(--accent)]"
-                  : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-              }`}
-            >
-              🗺 {t("trips:tab")}
-              {trips.length > 0 && (
-                <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full bg-[var(--bg-muted)]">
-                  {trips.length}
-                </span>
-              )}
-            </button>
-          </div>
-
           {/* Table */}
           <div
-            className="rounded-b-lg shadow-sm overflow-hidden"
-            style={{ border: "1px solid var(--color-border)", borderTop: "none" }}
+            className="rounded-lg shadow-sm overflow-hidden"
+            style={{ border: "1px solid var(--color-border)" }}
           >
-            {activeTab === "flights" ? (
-              <>
+            <>
                 {/* Trip filter chips */}
                 <div
                   className="flex flex-wrap gap-2 px-4 py-2"
@@ -631,8 +601,8 @@ export default function FlightsTablePage(): JSX.Element {
                               </td>
                               <td className="px-3 py-2">
                                 {tripEntry ? (
-                                  <button
-                                    onClick={() => setActiveTab("trips")}
+                                  <Link
+                                    to={`/trips/${tripEntry.id}`}
                                     className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border transition-all hover:brightness-110"
                                     style={{
                                       background: `${tripEntry.color}18`,
@@ -645,7 +615,7 @@ export default function FlightsTablePage(): JSX.Element {
                                       style={{ background: tripEntry.color }}
                                     />
                                     {tripEntry.name}
-                                  </button>
+                                  </Link>
                                 ) : (
                                   <span style={{ color: "var(--text-muted)", opacity: 0.3 }}>
                                     —
@@ -753,9 +723,6 @@ export default function FlightsTablePage(): JSX.Element {
                   </div>
                 )}
               </>
-            ) : (
-              <TripsTab trips={trips} onTripsChange={() => void loadTrips()} />
-            )}
           </div>
         </div>
 

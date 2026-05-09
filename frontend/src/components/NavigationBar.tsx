@@ -23,7 +23,7 @@ export default function NavigationBar(): JSX.Element {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useTranslation(["dashboard", "common", "cruise"]);
+  const { t } = useTranslation(["dashboard", "common", "cruise", "trips"]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pendingUpdatesCount, setPendingUpdatesCount] = useState(0);
   const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
@@ -68,6 +68,7 @@ export default function NavigationBar(): JSX.Element {
     { path: "/stats", label: t("dashboard:stats"), show: true },
     { path: "/flights", label: t("dashboard:flights"), show: isEnabled("flight") },
     { path: "/cruises", label: t("cruise:nav.link"), show: isEnabled("cruise") },
+    { path: "/trips", label: t("trips:tab"), show: true },
     {
       path: "/pending-updates",
       label: t("dashboard:pendingUpdates"),

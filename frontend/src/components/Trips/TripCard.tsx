@@ -5,16 +5,16 @@ import { differenceInDays } from "date-fns";
 
 interface TripCardProps {
   trip: Trip;
+  onOpen: (trip: Trip) => void;
   onEdit: (trip: Trip) => void;
   onDelete: (trip: Trip) => void;
-  onShowOnMap: (trip: Trip) => void;
 }
 
 export default function TripCard({
   trip,
+  onOpen,
   onEdit,
   onDelete,
-  onShowOnMap,
 }: TripCardProps): JSX.Element {
   const { t, i18n } = useTranslation(["trips"]);
   const { features } = useSettingsStore();
@@ -74,7 +74,16 @@ export default function TripCard({
 
   return (
     <div
-      className="rounded-xl overflow-hidden flex flex-col transition-all hover:-translate-y-0.5 hover:shadow-xl"
+      role="link"
+      tabIndex={0}
+      onClick={() => onOpen(trip)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen(trip);
+        }
+      }}
+      className="rounded-xl overflow-hidden flex flex-col transition-all hover:-translate-y-0.5 hover:shadow-xl cursor-pointer"
       style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
     >
       {/* Accent bar */}
@@ -158,17 +167,18 @@ export default function TripCard({
         </div>
       </div>
 
-      {/* Footer buttons */}
+      {/* Footer buttons — stop propagation so they don't trigger card open */}
       <div
         className="flex gap-2 px-4 py-2.5"
         style={{ borderTop: "1px solid var(--color-border)" }}
+        onClick={(e) => e.stopPropagation()}
       >
         <button
-          onClick={() => onShowOnMap(trip)}
+          onClick={() => onOpen(trip)}
           className="px-2.5 py-1 rounded text-xs font-medium"
-          style={{ background: "var(--bg-muted)", color: "var(--text-muted)" }}
+          style={{ background: "var(--bg-muted)", color: "var(--accent)" }}
         >
-          🗺 {t("trips:showOnMap")}
+          → {t("trips:openTrip", { defaultValue: "Öffnen" })}
         </button>
         <button
           onClick={() => onEdit(trip)}
