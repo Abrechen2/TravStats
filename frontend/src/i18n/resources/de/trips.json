@@ -1,32 +1,66 @@
 {
-  "tab": "Trips",
+  "tab": "Reisen",
   "tabFlights": "Einzelflüge",
-  "count": "{{count}} Trip",
-  "count_plural": "{{count}} Trips",
+  "count": "{{count}} Reise",
+  "count_plural": "{{count}} Reisen",
+  "countSpan": "{{count}} Reisen · {{from}} – {{to}}",
   "nights": "{{count}} Nacht",
   "nights_plural": "{{count}} Nächte",
-  "noTrips": "Noch keine Trips vorhanden.",
-  "noTripsDesc": "Trips werden beim E-Mail-Import automatisch erkannt oder können manuell erstellt werden.",
-  "createTrip": "Trip erstellen",
-  "newTrip": "Neuen Trip erstellen",
-  "newTripDesc": "Flüge manuell gruppieren oder beim E-Mail-Import auto-erstellt",
-  "editTrip": "Trip bearbeiten",
-  "deleteTrip": "Trip löschen",
-  "removeFromTrip": "Aus Trip entfernen",
-  "deleteTripConfirm": "Trip \"{{name}}\" löschen? Die zugehörigen Flüge bleiben erhalten.",
+  "noTrips": "Noch keine Reisen vorhanden.",
+  "noTripsDesc": "Reisen werden beim E-Mail-Import automatisch erkannt oder können manuell erstellt werden.",
+  "createTrip": "Reise erstellen",
+  "newTrip": "Neue Reise erstellen",
+  "newTripDesc": "Flüge & Kreuzfahrten manuell gruppieren oder beim Import auto-erstellt",
+  "openTrip": "Öffnen",
+  "editTrip": "Reise bearbeiten",
+  "deleteTrip": "Reise löschen",
+  "removeFromTrip": "Aus Reise entfernen",
+  "deleteTripConfirm": "Reise \"{{name}}\" löschen? Die zugehörigen Flüge & Kreuzfahrten bleiben erhalten.",
   "showOnMap": "Auf Karte",
   "flightCount": "{{count}} Flug",
   "flightCount_plural": "{{count}} Flüge",
+  "cruiseCount": "{{count}} Kreuzfahrt",
+  "cruiseCount_plural": "{{count}} Kreuzfahrten",
   "pnrLabel": "Buchungsref.",
   "totalCost": "Gesamtkosten",
   "costPerKm": "Kosten/km",
   "distance": "Strecke",
+  "status": {
+    "planned": "Geplant",
+    "in_progress": "Aktuell",
+    "completed": "Abgeschlossen"
+  },
+  "category": {
+    "vacation": "Urlaub",
+    "business": "Geschäft",
+    "weekend": "Wochenende",
+    "family": "Familie",
+    "other": "Sonstiges"
+  },
+  "filterBar": {
+    "search": "Suche nach Name, Land, Tag …",
+    "allStatuses": "Alle",
+    "allCategories": "Alle Kategorien",
+    "noResults": "Keine Reisen entsprechen den Filtern."
+  },
   "modal": {
-    "nameLabel": "Trip-Name",
+    "nameLabel": "Reisename",
     "namePlaceholder": "z.B. Trondheim Jun 2024",
     "descLabel": "Beschreibung (optional)",
-    "descPlaceholder": "Notizen zur Reise...",
-    "colorLabel": "Farbe",
+    "descPlaceholder": "Notizen zur Reise …",
+    "descHint": "Kurzbeschreibung — erscheint auf der Karte.",
+    "statusLabel": "Status",
+    "categoryLabel": "Kategorie",
+    "startDateLabel": "Startdatum",
+    "endDateLabel": "Enddatum",
+    "originLabel": "Herkunft",
+    "destinationLabel": "Ziel",
+    "tagsLabel": "Tags (kommagetrennt)",
+    "companionsLabel": "Mitreisende (kommagetrennt)",
+    "coverLabel": "Coverbild-URL",
+    "notesLabel": "Notizen (Markdown)",
+    "notesPlaceholder": "Längere Notizen über die Reise …",
+    "colorLabel": "Akzent-Farbe",
     "save": "Speichern",
     "cancel": "Abbrechen"
   },
@@ -35,23 +69,61 @@
   },
   "filter": {
     "all": "Alle",
-    "with": "Mit Trip",
-    "without": "Ohne Trip"
+    "with": "Mit Reise",
+    "without": "Ohne Reise"
+  },
+  "detail": {
+    "backToList": "Zurück zu Reisen",
+    "notes": "Notizen",
+    "companions": "Reisende",
+    "tags": "Tags",
+    "countries": "Länder",
+    "noLinks": "Noch keine Flüge oder Kreuzfahrten verknüpft.",
+    "flightsCount": "{{count}} Flug",
+    "flightsCount_plural": "{{count}} Flüge",
+    "cruisesCount": "{{count}} Kreuzfahrt",
+    "cruisesCount_plural": "{{count}} Kreuzfahrten",
+    "stats": {
+      "flights": "Flüge",
+      "cruises": "Kreuzfahrten",
+      "countries": "Länder",
+      "companions": "Reisende",
+      "tags": "Tags"
+    },
+    "tabs": {
+      "overview": "Übersicht",
+      "timeline": "Timeline",
+      "map": "Karte",
+      "gallery": "Galerie",
+      "logistics": "Logistik"
+    },
+    "tabPlaceholder": {
+      "gallery": "Galerie kommt in der nächsten Iteration — sobald Foto-Upload und Speicher-Backend stehen.",
+      "map": "Eine reisespezifische Karte folgt in der nächsten Iteration."
+    },
+    "logistics": {
+      "flights": "Flüge",
+      "cruises": "Kreuzfahrten",
+      "bookings": "Buchungen",
+      "totalBooked": "Gesamt"
+    }
   },
   "toasts": {
-    "created": "Trip erstellt",
-    "updated": "Trip aktualisiert",
-    "deleted": "Trip gelöscht",
-    "createError": "Trip konnte nicht erstellt werden",
-    "updateError": "Trip konnte nicht aktualisiert werden",
-    "deleteError": "Trip konnte nicht gelöscht werden",
-    "flightRemoved": "Flug aus Trip entfernt",
-    "flightRemoveError": "Flug konnte nicht aus Trip entfernt werden"
+    "created": "Reise erstellt",
+    "updated": "Reise aktualisiert",
+    "deleted": "Reise gelöscht",
+    "loadError": "Reise nicht gefunden",
+    "createError": "Reise konnte nicht erstellt werden",
+    "updateError": "Reise konnte nicht aktualisiert werden",
+    "deleteError": "Reise konnte nicht gelöscht werden",
+    "flightRemoved": "Flug aus Reise entfernt",
+    "flightRemoveError": "Flug konnte nicht aus Reise entfernt werden"
   },
   "detectBanner": {
-    "title": "{{count}} mögliche Trips erkannt",
+    "title": "{{count}} mögliche Reisen erkannt",
     "linkAll": "Alle verknüpfen",
-    "success": "{{trips}} Trips erstellt, {{flights}} Flüge zugeordnet, {{orphans}} verwaiste Trips entfernt",
-    "error": "Trip-Erkennung fehlgeschlagen"
+    "review": "Prüfen",
+    "success": "{{trips}} Reisen erstellt, {{flights}} Flüge zugeordnet, {{orphans}} verwaiste Reisen entfernt",
+    "error": "Reise-Erkennung fehlgeschlagen"
   }
 }
