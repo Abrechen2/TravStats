@@ -4,6 +4,23 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.21] - 2026-05-09 (Beta)
+
+### Changed
+- **Flat-map cruise port labels show UN/LOCODE instead of full name**
+  — Mirrors how airport markers show 3-letter IATA codes ("HAM",
+  "JFK"). Ports now show the 5-letter UN/LOCODE ("DEHAM", "USJFK")
+  with a fallback to the full name when the UN/LOCODE column is null.
+  The Globe view already did this — flat-map was inconsistent.
+
+### Added
+- **Hover tooltip on every airport + port marker** — Shows the full
+  place name in a small dark bubble on hover. Wired through
+  `getTooltip` on every MapboxOverlay (DeckGLMap, GlobeView,
+  CruiseRouteMap, TripMap) using a shared
+  `components/map/markerTooltip.ts` helper. Routes / arcs / paths
+  are explicitly excluded so the cursor stays clean while panning.
+
 ## [2.0.0-beta.20] - 2026-05-09 (Beta)
 
 ### Changed

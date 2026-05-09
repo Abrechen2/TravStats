@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import MapGL, { useControl, type MapRef, type MapLayerMouseEvent } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
+import { buildMarkerTooltip } from "./map/markerTooltip";
 import { LightingEffect } from "@deck.gl/core";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
@@ -69,7 +70,13 @@ interface DeckOverlayProps {
 
 function DeckGLOverlay({ layers, effects }: DeckOverlayProps): null {
   const overlay = useControl<MapboxOverlay>(
-    () => new MapboxOverlay({ layers, effects, pickingRadius: 5 }),
+    () =>
+      new MapboxOverlay({
+        layers,
+        effects,
+        pickingRadius: 5,
+        getTooltip: buildMarkerTooltip,
+      }),
     { position: "top-left" }
   );
   overlay.setProps({ layers, effects, pickingRadius: 5 });

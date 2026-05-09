@@ -6,6 +6,12 @@ interface PortDatum {
   position: [number, number];
   portId: number;
   name: string;
+  /**
+   * Short label rendered on the marker — UN/LOCODE if available
+   * (5-letter international port code, e.g. "DEHAM"), falling back
+   * to the full port name. Mirrors airport markers showing IATA codes.
+   */
+  shortLabel: string;
   visits: number;
 }
 
@@ -36,6 +42,7 @@ export function createCruisePortsLayer(cruises: Cruise[]): Layer[] | null {
           position: [stop.port.lon, stop.port.lat],
           portId: stop.port.id,
           name: stop.port.name,
+          shortLabel: stop.port.unlocode ?? stop.port.name,
           visits: 1,
         });
       }
@@ -74,11 +81,11 @@ export function createCruisePortsLayer(cruises: Cruise[]): Layer[] | null {
     id: "cruise-ports-labels",
     data,
     getPosition: (d) => d.position,
-    getText: (d) => d.name,
+    getText: (d) => d.shortLabel,
     getColor: [241, 245, 249, 235],
     getSize: 11,
     fontFamily: "Inter, sans-serif",
-    fontWeight: 500,
+    fontWeight: 700,
     background: true,
     backgroundPadding: [4, 2],
     getBackgroundColor: [13, 17, 23, 200],

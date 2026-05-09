@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
+import { buildMarkerTooltip } from "../map/markerTooltip";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise } from "../../types";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/cruise";
@@ -24,9 +25,15 @@ interface DeckOverlayProps {
 }
 
 function DeckGLOverlay({ layers }: DeckOverlayProps): null {
-  const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers, pickingRadius: 5 }), {
-    position: "top-left",
-  });
+  const overlay = useControl<MapboxOverlay>(
+    () =>
+      new MapboxOverlay({
+        layers,
+        pickingRadius: 5,
+        getTooltip: buildMarkerTooltip,
+      }),
+    { position: "top-left" }
+  );
   overlay.setProps({ layers, pickingRadius: 5 });
   return null;
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
+import { buildMarkerTooltip } from "../map/markerTooltip";
 import { ArcLayer, PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { Trip } from "../../types";
@@ -64,7 +65,12 @@ function DeckGLOverlay({
   onClick: (info: PickingInfo) => void;
 }): null {
   const overlay = useControl<MapboxOverlay>(
-    () => new MapboxOverlay({ layers, pickingRadius: 8 }),
+    () =>
+      new MapboxOverlay({
+        layers,
+        pickingRadius: 8,
+        getTooltip: buildMarkerTooltip,
+      }),
     { position: "top-left" }
   );
   overlay.setProps({ layers, pickingRadius: 8, onClick });
