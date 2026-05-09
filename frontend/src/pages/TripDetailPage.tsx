@@ -147,7 +147,10 @@ export default function TripDetailPage(): JSX.Element {
             role="dialog"
             aria-modal="true"
           >
-            <h2 className="text-base font-semibold">
+            <h2
+              className="text-base font-semibold"
+              style={{ color: "var(--text-primary)" }}
+            >
               {t("trips:deleteTripConfirm", { name: trip.name })}
             </h2>
             <div className="flex justify-end gap-2">
