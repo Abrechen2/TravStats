@@ -56,6 +56,8 @@ export function createCruisePortsLayer(cruises: Cruise[]): Layer[] | null {
     data,
     getPosition: (d) => d.position,
     getRadius: PORT_RING_RADIUS_M,
+    radiusMinPixels: 7,
+    radiusMaxPixels: 14,
     getFillColor: [0, 0, 0, 0],
     getLineColor: [...PORT_RGB, 80] as [number, number, number, number],
     stroked: true,
@@ -69,6 +71,12 @@ export function createCruisePortsLayer(cruises: Cruise[]): Layer[] | null {
     data,
     getPosition: (d) => d.position,
     getRadius: PORT_DOT_RADIUS_M,
+    // Cap the marker so it stays a recognisable dot at every zoom —
+    // sub-pixel meters at low zoom collapse to just the white stroke
+    // (visible "clipping"), and at very high zoom the meter radius
+    // would balloon to cover the entire port city.
+    radiusMinPixels: 4,
+    radiusMaxPixels: 8,
     getFillColor: [...PORT_RGB, 220] as [number, number, number, number],
     getLineColor: [255, 255, 255, 220],
     lineWidthUnits: "pixels",

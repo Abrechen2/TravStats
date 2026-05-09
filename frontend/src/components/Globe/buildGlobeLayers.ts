@@ -52,6 +52,13 @@ const CRUISE_PSEUDO_COUNT = 1;
 // the user observed. 5 km is invisible at any user-relevant zoom but
 // safely above the precision noise of the fragment depth.
 const CRUISE_PATH_ALTITUDE_M = 5_000;
+// Airport + port markers (and their labels) lift slightly above the
+// cruise-path altitude so they render ON TOP of cruise paths rather
+// than getting visually clipped where a path intersects the marker.
+// Beta.22 had markers at altitude 0 → cruise paths drew over them at
+// shallow camera angles. 8 km is well above the 5 km cruise altitude
+// but still hugs the surface visually.
+const MARKER_ALTITUDE_M = 8_000;
 
 // Convert a deck.gl PickingInfo.coordinate into a [lng, lat] pair so we
 // can anchor the popup where the user actually clicked the line. The
@@ -269,7 +276,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     new ScatterplotLayer<PointDatum>({
       id: "globe-airport-dots",
       data: airportPoints,
-      getPosition: (d) => d.position,
+      getPosition: (d) => [d.position[0], d.position[1], MARKER_ALTITUDE_M],
       getFillColor: AIRPORT_DOT_COLOR,
       getRadius: MARKER_RADIUS_PX,
       radiusUnits: "pixels",
@@ -295,7 +302,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     new ScatterplotLayer<PointDatum>({
       id: "globe-port-dots",
       data: portPoints,
-      getPosition: (d) => d.position,
+      getPosition: (d) => [d.position[0], d.position[1], MARKER_ALTITUDE_M],
       getFillColor: PORT_DOT_COLOR,
       getRadius: MARKER_RADIUS_PX,
       radiusUnits: "pixels",
@@ -325,7 +332,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     new TextLayer<PointDatum>({
       id: "globe-airport-labels",
       data: airportPoints,
-      getPosition: (d) => d.position,
+      getPosition: (d) => [d.position[0], d.position[1], MARKER_ALTITUDE_M],
       getText: (d) => d.iata,
       getSize: 11,
       getColor: [255, 255, 255, 240],
@@ -356,7 +363,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     new TextLayer<PointDatum>({
       id: "globe-port-labels",
       data: portPoints,
-      getPosition: (d) => d.position,
+      getPosition: (d) => [d.position[0], d.position[1], MARKER_ALTITUDE_M],
       getText: (d) => d.iata,
       getSize: 11,
       getColor: [255, 255, 255, 240],

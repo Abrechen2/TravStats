@@ -3,11 +3,14 @@ import type { PickingInfo } from "@deck.gl/core";
 // Marker layer ids that should surface a hover tooltip with the
 // full place name. Listed explicitly so unrelated pickable layers
 // (route arcs, cruise paths) don't accidentally hijack the cursor.
+//
+// Flat-map AIRPORTS are intentionally excluded — DeckGLMap already
+// shows the rich `AirportTooltip` (departures / arrivals / distance
+// / route counts) on click; layering a hover bubble on top would
+// double up with that. Flat-map ports + every globe marker get the
+// hover bubble because they have no equivalent rich tooltip.
 const TOOLTIP_LAYER_IDS = new Set<string>([
-  // Flat-map airport stack
-  "routes-dot",
-  "routes-label",
-  // Flat-map cruise ports
+  // Flat-map cruise ports (no rich tooltip exists yet)
   "cruise-ports",
   "cruise-ports-labels",
   // Globe airport stack
