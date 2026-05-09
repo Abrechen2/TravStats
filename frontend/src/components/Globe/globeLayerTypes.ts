@@ -49,8 +49,13 @@ export interface TooltipState {
   y: number;
 }
 
+// `anchorLngLat` is where the popup tail points on the globe surface:
+// - airport/port: the marker's own [lng, lat]
+// - arc/cruise: PickingInfo.coordinate from the click event, so the
+//   popup attaches to where the user actually tapped the line, not to
+//   an aggregated midpoint
 export type GlobePinned =
-  | { kind: "arc"; data: ArcDatum }
-  | { kind: "airport"; data: PointDatum }
-  | { kind: "port"; data: PointDatum }
-  | { kind: "cruise"; data: CruisePathDatum };
+  | { kind: "arc"; data: ArcDatum; anchorLngLat: [number, number] }
+  | { kind: "airport"; data: PointDatum; anchorLngLat: [number, number] }
+  | { kind: "port"; data: PointDatum; anchorLngLat: [number, number] }
+  | { kind: "cruise"; data: CruisePathDatum; anchorLngLat: [number, number] };

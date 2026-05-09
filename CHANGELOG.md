@@ -4,6 +4,23 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.12] - 2026-05-09 (Beta)
+
+### Changed
+- **Globe pinned-card now anchors to the clicked feature** — The detail
+  card that opens when you click an airport, port, route arc, or cruise
+  path used to live in a fixed bottom-right slot, disconnected from
+  the feature it described. It now mounts inside a MapLibre `Popup`
+  bound to the lng/lat where the click landed (`PickingInfo.coordinate`
+  for arcs and cruise paths, `position` for airport/port markers), so
+  the card visually belongs to the feature with a tail pointing at it.
+  MapLibre handles edge-aware anchor flipping near the viewport
+  borders, and `locationOccludedOpacity:0` uses the renderer's own
+  globe-visibility math to fade the card when the anchor rotates to
+  the back of the earth. The card content itself is unchanged in this
+  beta — Phase B (denser content per Gemini + Codex review) lands in
+  the next bump.
+
 ## [2.0.0-beta.11] - 2026-05-09 (Beta)
 
 ### Fixed

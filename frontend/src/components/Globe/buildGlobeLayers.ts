@@ -34,6 +34,24 @@ const PORT_DOT_COLOR: [number, number, number, number] = [56, 189, 248, 230];
 const MARKER_HEIGHT_M = 70_000;
 const MARKER_RADIUS_M = 12_000;
 
+// Convert a deck.gl PickingInfo.coordinate into a [lng, lat] pair so we
+// can anchor the popup where the user actually clicked the line. The
+// coordinate is `number[]` of length ≥ 2 in deck.gl's typing — pull
+// the first two numbers. Falls back to the path's midpoint if the
+// pick didn't carry a coordinate, which can happen for offscreen
+// picks or when the pipeline doesn't compute one.
+function pickingCoordToLngLat(
+  coordinate: number[] | undefined,
+  fallbackPath: ReadonlyArray<readonly number[]>,
+): [number, number] {
+  if (coordinate && coordinate.length >= 2) {
+    return [coordinate[0], coordinate[1]];
+  }
+  const mid = fallbackPath[Math.floor(fallbackPath.length / 2)];
+  if (mid && mid.length >= 2) return [mid[0], mid[1]];
+  return [0, 0];
+}
+
 export interface BuildGlobeLayersOptions {
   arcsData: ArcDatum[];
   antipodalArcs: ArcDatum[];
@@ -112,9 +130,11 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       autoHighlight: !lite,
       highlightColor: [255, 255, 255, 180],
       onHover: onArcHover,
-      onClick: ({ object }: { object?: ArcDatum }): void => {
+      onClick: (info: PickingInfo<ArcDatum>): void => {
+        const object = info.object;
         if (!object) return;
-        setPinned({ kind: "arc", data: object });
+        const anchor = pickingCoordToLngLat(info.coordinate, object.waypoints);
+        setPinned({ kind: "arc", data: object, anchorLngLat: anchor });
         flyToArc(object);
       },
       extensions: [
@@ -153,8 +173,11 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       autoHighlight: !lite,
       highlightColor: [255, 255, 255, 180],
       onHover: onArcHover,
-      onClick: ({ object }: { object?: ArcDatum }): void => {
-        if (object) setPinned({ kind: "arc", data: object });
+      onClick: (info: PickingInfo<ArcDatum>): void => {
+        const object = info.object;
+        if (!object) return;
+        const anchor = pickingCoordToLngLat(info.coordinate, object.waypoints);
+        setPinned({ kind: "arc", data: object, anchorLngLat: anchor });
       },
       extensions: [occlusionExt],
       ...occlusionProps,
@@ -190,8 +213,11 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       autoHighlight: !lite,
       highlightColor: [255, 255, 255, 180],
       onHover: onCruisePathHover,
-      onClick: ({ object }: { object?: CruisePathDatum }): void => {
-        if (object) setPinned({ kind: "cruise", data: object });
+      onClick: (info: PickingInfo<CruisePathDatum>): void => {
+        const object = info.object;
+        if (!object) return;
+        const anchor = pickingCoordToLngLat(info.coordinate, object.path);
+        setPinned({ kind: "cruise", data: object, anchorLngLat: anchor });
       },
       ...occlusionProps,
     } as ConstructorParameters<typeof PathLayer<CruisePathDatum>>[0] &
@@ -221,7 +247,12 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       highlightColor: [255, 255, 255, 200],
       onHover: onAirportHover,
       onClick: ({ object }: { object?: PointDatum }): void => {
-        if (object) setPinned({ kind: "airport", data: object });
+        if (!object) return;
+        setPinned({
+          kind: "airport",
+          data: object,
+          anchorLngLat: [object.position[0], object.position[1]],
+        });
       },
       extensions: [occlusionExt],
       ...occlusionProps,
@@ -242,7 +273,12 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       highlightColor: [255, 255, 255, 200],
       onHover: onPortHover,
       onClick: ({ object }: { object?: PointDatum }): void => {
-        if (object) setPinned({ kind: "port", data: object });
+        if (!object) return;
+        setPinned({
+          kind: "port",
+          data: object,
+          anchorLngLat: [object.position[0], object.position[1]],
+        });
       },
       extensions: [occlusionExt],
       ...occlusionProps,
@@ -269,8 +305,11 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
             autoHighlight: !lite,
             highlightColor: [255, 255, 255, 220],
             onHover: onArcHover,
-            onClick: ({ object }: { object?: ArcDatum }) => {
-              if (object) setPinned({ kind: "arc", data: object });
+            onClick: (info: PickingInfo<ArcDatum>) => {
+              const object = info.object;
+              if (!object) return;
+              const anchor = pickingCoordToLngLat(info.coordinate, object.waypoints);
+              setPinned({ kind: "arc", data: object, anchorLngLat: anchor });
             },
             extensions: [occlusionExt],
             ...occlusionProps,
