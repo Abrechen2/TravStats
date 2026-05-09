@@ -19,6 +19,12 @@
   --color-border: #30363d;
   --text-primary: #e6edf3;
   --text-muted: #8b949e;
+  /* `--text-secondary` is the readable-but-dimmed shade for inactive
+     tabs, section nav, deselected buttons. Brighter than --text-muted
+     (which is reserved for genuinely-de-emphasised content like
+     captions, scrollbars, borders) so contrast against --bg-base /
+     --bg-surface stays comfortably above WCAG AA. */
+  --text-secondary: #a8b3bf;
 
   /* Brand — amber. Same hex as --domain-flight by design (BRAND.md §3). */
   --accent: #f0a947;

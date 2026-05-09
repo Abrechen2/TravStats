@@ -322,7 +322,7 @@ export default function SettingsPage(): JSX.Element {
                   className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors"
                   style={{
                     background: activeSection === section.id ? "var(--bg-elevated)" : "transparent",
-                    color: activeSection === section.id ? "var(--accent)" : "var(--text-muted)",
+                    color: activeSection === section.id ? "var(--accent)" : "var(--text-secondary)",
                     borderLeft:
                       activeSection === section.id
                         ? "2px solid var(--accent)"

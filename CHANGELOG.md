@@ -4,6 +4,21 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.15] - 2026-05-09 (Beta)
+
+### Changed
+- **Inactive-tab / section-nav contrast bumped consistently** — The
+  TripDetailPage tab fix in beta.10 used a one-off
+  `rgba(230,237,243,0.65)` to lift inactive tabs above the borderline
+  WCAG-AA contrast `--text-muted` (#8b949e) was hitting against
+  `--bg-base`. That fix is now a proper design token, `--text-secondary`
+  (#a8b3bf), applied everywhere the same pattern was leaking through:
+  AdvancedStatsPage tab strip (Alle / Flug / Kreuzfahrt filter),
+  AdminPage tabs + section sidebar, SettingsPage section sidebar, and
+  TripModal sub-tabs. `--text-muted` itself is unchanged and stays
+  reserved for genuinely de-emphasised content (captions, scrollbars,
+  borders).
+
 ## [2.0.0-beta.14] - 2026-05-09 (Beta)
 
 ### Fixed

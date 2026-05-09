@@ -574,7 +574,7 @@ export default function AdminPage(): JSX.Element {
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
                   ? "border-[var(--accent)] text-[var(--accent)]"
-                  : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               }`}
             >
               {tab.icon && (
@@ -639,7 +639,7 @@ export default function AdminPage(): JSX.Element {
                 className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-between"
                 style={{
                   background: activeSection === section.id ? "var(--bg-elevated)" : "transparent",
-                  color: activeSection === section.id ? "var(--accent)" : "var(--text-muted)",
+                  color: activeSection === section.id ? "var(--accent)" : "var(--text-secondary)",
                   borderLeft:
                     activeSection === section.id
                       ? "2px solid var(--accent)"
