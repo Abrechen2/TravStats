@@ -1,25 +1,26 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { ArcLayer, PathLayer, ScatterplotLayer } from "@deck.gl/layers";
-import type { Layer, MapViewState } from "@deck.gl/core";
+import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { Trip } from "../../types";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 import { computeBbox } from "../../utils/mapAnimationHelpers";
 import { logger } from "../../lib/logger";
+import { useTranslation } from "../../hooks/useTranslation";
 
 const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
-const FLIGHT_RGB: [number, number, number] = [240, 169, 71]; // amber #f0a947
-const CRUISE_RGB: [number, number, number] = [111, 160, 214]; // cyan-blue #6fa0d6
+const FLIGHT_RGB: [number, number, number] = [240, 169, 71];
+const CRUISE_RGB: [number, number, number] = [111, 160, 214];
 const STOP_DOMAIN_RGB: Record<string, [number, number, number]> = {
-  poi: [94, 194, 178],     // teal-green
-  hotel: [176, 114, 214],  // purple
-  train: [143, 170, 95],   // olive
-  road: [168, 153, 132],   // tan
-  ferry: [74, 166, 176],   // teal-blue
-  hike: [120, 150, 106],   // sage
-  bike: [159, 190, 99],    // lime
+  poi: [94, 194, 178],
+  hotel: [176, 114, 214],
+  train: [143, 170, 95],
+  road: [168, 153, 132],
+  ferry: [74, 166, 176],
+  hike: [120, 150, 106],
+  bike: [159, 190, 99],
   other: [180, 180, 180],
 };
 const AIRPORT_RGB: [number, number, number] = [240, 169, 71];
@@ -32,15 +33,19 @@ const INITIAL_VIEW: MapViewState = {
   bearing: 0,
 };
 
+type Projection = "mercator" | "globe";
+
 interface FlightArc {
   flightId: string;
   source: [number, number];
   target: [number, number];
+  label: string;
 }
 
 interface CruisePath {
   cruiseId: string;
   path: [number, number][];
+  label: string;
 }
 
 interface PointDatum {
@@ -48,14 +53,21 @@ interface PointDatum {
   label: string;
   color: [number, number, number];
   radiusMeters: number;
+  kind: "airport" | "stop";
 }
 
-function DeckGLOverlay({ layers }: { layers: Layer[] }): null {
+function DeckGLOverlay({
+  layers,
+  onClick,
+}: {
+  layers: Layer[];
+  onClick: (info: PickingInfo) => void;
+}): null {
   const overlay = useControl<MapboxOverlay>(
-    () => new MapboxOverlay({ layers, pickingRadius: 6 }),
+    () => new MapboxOverlay({ layers, pickingRadius: 8 }),
     { position: "top-left" }
   );
-  overlay.setProps({ layers, pickingRadius: 6 });
+  overlay.setProps({ layers, pickingRadius: 8, onClick });
   return null;
 }
 
@@ -63,19 +75,11 @@ interface TripMapProps {
   trip: Trip;
 }
 
-/**
- * Per-trip map (Phase-1 iteration 4). Renders this trip's flights
- * (great-circle arcs), cruises (Hybrid v2 schematic-routed paths via
- * `/cruises/geometry/batch`), and user-placed stops on a Carto dark
- * basemap. Bbox-fits to the union of all data points once on first
- * load, then lets the user pan / zoom freely.
- *
- * Empty-data trips render the basemap with the world centred — no
- * crash on a brand-new trip without any linked items yet.
- */
 export default function TripMap({ trip }: TripMapProps): JSX.Element {
+  const { t } = useTranslation(["trips"]);
   const mapRef = useRef<MapRef | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [projection, setProjection] = useState<Projection>("mercator");
   const [cruiseGeometry, setCruiseGeometry] = useState<
     Map<string, CruiseRouteFeatureCollection>
   >(() => new Map());
@@ -118,6 +122,7 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
         flightId: f.id,
         source: [f.depLon, f.depLat],
         target: [f.arrLon, f.arrLat],
+        label: `${f.depIata ?? "?"} → ${f.arrIata ?? "?"}`,
       });
     }
     return out;
@@ -125,15 +130,23 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
 
   const cruisePaths = useMemo<CruisePath[]>(() => {
     const out: CruisePath[] = [];
+    const cruiseLabel = new Map<string, string>();
+    for (const c of trip.cruises ?? []) {
+      cruiseLabel.set(c.id, c.cruiseLine ?? "Cruise");
+    }
     for (const [cruiseId, fc] of cruiseGeometry.entries()) {
       for (const feat of fc.features) {
         if (feat.geometry.coordinates.length >= 2) {
-          out.push({ cruiseId, path: feat.geometry.coordinates });
+          out.push({
+            cruiseId,
+            path: feat.geometry.coordinates,
+            label: cruiseLabel.get(cruiseId) ?? "Cruise",
+          });
         }
       }
     }
     return out;
-  }, [cruiseGeometry]);
+  }, [cruiseGeometry, trip.cruises]);
 
   const airportPoints = useMemo<PointDatum[]>(() => {
     const seen = new Map<string, PointDatum>();
@@ -151,6 +164,7 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
           label: f.depIata ?? "",
           color: AIRPORT_RGB,
           radiusMeters: 30000,
+          kind: "airport",
         });
       }
       if (
@@ -164,6 +178,7 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
           label: f.arrIata ?? "",
           color: AIRPORT_RGB,
           radiusMeters: 30000,
+          kind: "airport",
         });
       }
     }
@@ -180,10 +195,57 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
         label: s.title,
         color: rgb,
         radiusMeters: 60000,
+        kind: "stop",
       });
     }
     return out;
   }, [trip.stops]);
+
+  /* ---- Fly-to handlers ---- */
+
+  const flyToBbox = useCallback((points: Array<[number, number]>): void => {
+    const map = mapRef.current?.getMap();
+    if (!map || points.length === 0) return;
+    const bbox = computeBbox(points);
+    if (!bbox) return;
+    const [west, south, east, north] = bbox;
+    map.fitBounds(
+      [
+        [west, south],
+        [east, north],
+      ],
+      { padding: 80, duration: 1200, maxZoom: 9 }
+    );
+  }, []);
+
+  const flyToPoint = useCallback((position: [number, number], zoom = 8): void => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    map.flyTo({
+      center: position,
+      zoom,
+      duration: 1200,
+      essential: true,
+    });
+  }, []);
+
+  const handleClick = useCallback(
+    (info: PickingInfo): void => {
+      if (!info.object || !info.layer) return;
+      const id = info.layer.id;
+      if (id === "trip-flight-arcs") {
+        const arc = info.object as FlightArc;
+        flyToBbox([arc.source, arc.target]);
+      } else if (id === "trip-cruise-paths") {
+        const path = info.object as CruisePath;
+        flyToBbox(path.path);
+      } else if (id === "trip-airports" || id === "trip-stops") {
+        const pt = info.object as PointDatum;
+        flyToPoint(pt.position, pt.kind === "airport" ? 7 : 11);
+      }
+    },
+    [flyToBbox, flyToPoint]
+  );
 
   /* ---- deck.gl layers ---- */
 
@@ -197,7 +259,9 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
       getTargetColor: [...FLIGHT_RGB, 230] as [number, number, number, number],
       getWidth: 2,
       greatCircle: true,
-      pickable: false,
+      pickable: true,
+      autoHighlight: true,
+      highlightColor: [255, 255, 255, 80],
     });
 
     const paths = new PathLayer<CruisePath>({
@@ -207,7 +271,9 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
       getColor: [...CRUISE_RGB, 230] as [number, number, number, number],
       getWidth: 3,
       widthMinPixels: 2,
-      pickable: false,
+      pickable: true,
+      autoHighlight: true,
+      highlightColor: [255, 255, 255, 80],
     });
 
     const airports = new ScatterplotLayer<PointDatum>({
@@ -221,7 +287,9 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
       stroked: true,
       getLineColor: [13, 17, 23, 255],
       lineWidthMinPixels: 1,
-      pickable: false,
+      pickable: true,
+      autoHighlight: true,
+      highlightColor: [255, 255, 255, 100],
     });
 
     const stops = new ScatterplotLayer<PointDatum>({
@@ -236,6 +304,8 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
       getLineColor: [13, 17, 23, 255],
       lineWidthMinPixels: 1.5,
       pickable: true,
+      autoHighlight: true,
+      highlightColor: [255, 255, 255, 100],
     });
 
     return [paths, arcs, airports, stops];
@@ -275,6 +345,25 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
     didFit.current = true;
   }, [mapLoaded, bboxPoints]);
 
+  /* ---- Globe / Mercator toggle ---- */
+
+  const toggleProjection = useCallback((): void => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    const next: Projection = projection === "globe" ? "mercator" : "globe";
+    // MapLibre 5 — `setProjection` is the runtime API. Wrapped in a try
+    // because some style sources may not support globe yet.
+    try {
+      const projApi = map as unknown as {
+        setProjection?: (p: { type: string }) => void;
+      };
+      projApi.setProjection?.({ type: next });
+      setProjection(next);
+    } catch (err) {
+      logger.warn("TripMap: projection toggle failed", err);
+    }
+  }, [projection]);
+
   const empty = bboxPoints.length === 0;
 
   return (
@@ -291,19 +380,34 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
         initialViewState={INITIAL_VIEW}
         mapStyle={DARK_MAP_STYLE}
         style={{ position: "absolute", inset: 0 }}
+        cursor="grab"
         onLoad={(): void => setMapLoaded(true)}
       >
-        {mapLoaded && <DeckGLOverlay layers={layers} />}
+        {mapLoaded && <DeckGLOverlay layers={layers} onClick={handleClick} />}
       </MapGL>
       {empty && (
         <div
-          className="absolute inset-0 flex items-center justify-center text-sm pointer-events-none"
+          className="absolute inset-0 flex items-center justify-center text-sm pointer-events-none px-6 text-center"
           style={{ color: "var(--text-muted)", background: "rgba(13,17,23,0.5)" }}
         >
-          Diese Reise hat noch keine Geo-Daten — füge Stopps mit Koordinaten oder
-          Flüge / Kreuzfahrten mit Routendaten hinzu.
+          {t("trips:detail.map.empty")}
         </div>
       )}
+      <button
+        type="button"
+        onClick={toggleProjection}
+        className="absolute top-3 right-3 px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+        style={{
+          background: "rgba(13,17,23,0.85)",
+          backdropFilter: "blur(6px)",
+          border: "1px solid var(--color-border)",
+          color: projection === "globe" ? "var(--accent)" : "var(--text-muted)",
+        }}
+        aria-pressed={projection === "globe"}
+        title={t("trips:detail.map.toggleProjectionHint")}
+      >
+        {projection === "globe" ? "🌐 Globe" : "🗺 Flat"}
+      </button>
       <div
         className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-mono"
         style={{
@@ -314,6 +418,18 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
       >
         {flightArcs.length}✈ · {cruisePaths.length}⚓ · {stopPoints.length}📍
       </div>
+      {!empty && (
+        <div
+          className="absolute bottom-3 left-3 px-2.5 py-1 rounded-md text-[10px]"
+          style={{
+            background: "rgba(13,17,23,0.75)",
+            backdropFilter: "blur(4px)",
+            color: "var(--text-muted)",
+          }}
+        >
+          {t("trips:detail.map.clickHint")}
+        </div>
+      )}
     </div>
   );
 }
