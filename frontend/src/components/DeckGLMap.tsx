@@ -461,13 +461,24 @@ export function DeckGLMap({
     );
     const arrows = createCruiseArrowsLayer(cruises, geometryMap, selectedCruiseId, { zoom });
     const ports = createCruisePortsLayer(cruises);
-    const cruiseLayers: Layer[] = [
+
+    // Split cruise visuals into a "below" group (arcs/arrows render
+    // beneath flight arcs and airport markers) and an "above" group
+    // (port halo/dot/label sit on top of everything). Without this
+    // split cruise paths drew over airport dots at every crossing,
+    // visually clipping the dots.
+    const cruisePathsBelow: Layer[] = [
       ...(arcs !== null ? [arcs] : []),
       ...(arrows !== null ? [arrows] : []),
-      ...(ports ?? []),
     ];
+    const cruisePortsAbove: Layer[] = ports ?? [];
 
-    return [...base, ...cruiseLayers, ...(extraLayers ?? [])];
+    return [
+      ...cruisePathsBelow,
+      ...base,
+      ...cruisePortsAbove,
+      ...(extraLayers ?? []),
+    ];
   }, [
     visMode,
     flights,

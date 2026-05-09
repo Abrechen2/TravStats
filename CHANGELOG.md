@@ -4,6 +4,31 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.23] - 2026-05-09 (Beta)
+
+### Fixed
+- **Double tooltip on flat-map airport markers** — Beta.21 added a
+  hover bubble via deck.gl's `getTooltip` to surface full place names
+  on every marker. On the flat map, airport markers already trigger
+  the rich `AirportTooltip` (departures/arrivals/distance/route
+  counts) on click, so the new hover bubble layered a second tooltip
+  on top of the rich one. The hover bubble now skips flat-map
+  airports (`routes-dot` / `routes-label`) and fires only on flat-map
+  ports + every globe marker. Globe airports keep the hover bubble
+  because they have no rich-tooltip equivalent.
+- **Markers clipped where cruise paths cross them** — Globe airport +
+  port markers rendered at altitude 0 while cruise paths sit at 5 km;
+  the depth buffer let the path's fragments occlude the marker dot at
+  shallow camera angles. Lifted both the dot and the label to 8 km
+  altitude (`MARKER_ALTITUDE_M`) so the marker is reliably above any
+  path that crosses it. On the flat map the symptom was different:
+  cruise paths were composed AFTER airport visuals in the layer
+  stack, so they drew on top of airport dots at every intersection.
+  Reordered the flat-map layer composition: cruise arcs/arrows go
+  below flight arcs and airport markers, cruise port halo+dot+label
+  go on top of everything (their pixel-radius cap keeps them readable
+  at every zoom).
+
 ## [2.0.0-beta.22] - 2026-05-09 (Beta)
 
 ### Fixed
