@@ -24,7 +24,12 @@ interface PinnedCardProps {
   flights: GeoJSONFeature[];
   cruises: Cruise[];
   onClose: () => void;
-  onFlightClick?: (flightId: string) => void;
+  /** Fires when the "Open last flight" CTA is clicked — should open the
+      flight edit modal or navigate to a flight detail surface. */
+  onFlightOpen?: (flightId: string) => void;
+  /** Fires when the "Open cruise" CTA is clicked — should navigate to
+      the cruise detail page. */
+  onCruiseOpen?: (cruiseId: string) => void;
 }
 
 const SURFACE: React.CSSProperties = {
@@ -55,7 +60,8 @@ export function PinnedCard({
   flights,
   cruises,
   onClose,
-  onFlightClick,
+  onFlightOpen,
+  onCruiseOpen,
 }: PinnedCardProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
@@ -92,11 +98,17 @@ export function PinnedCard({
           flights={flights}
           locale={locale}
           t={t}
-          onFlightClick={onFlightClick}
+          onFlightOpen={onFlightOpen}
         />
       )}
       {pinned.kind === "cruise" && (
-        <CruiseBody pinned={pinned} cruises={cruises} locale={locale} t={t} />
+        <CruiseBody
+          pinned={pinned}
+          cruises={cruises}
+          locale={locale}
+          t={t}
+          onCruiseOpen={onCruiseOpen}
+        />
       )}
     </div>
   );
@@ -233,11 +245,11 @@ function ArcBody({
   flights,
   locale,
   t,
-  onFlightClick,
+  onFlightOpen,
 }: {
   pinned: Extract<GlobePinned, { kind: "arc" }>;
   flights: GeoJSONFeature[];
-  onFlightClick?: (flightId: string) => void;
+  onFlightOpen?: (flightId: string) => void;
 } & BodyCommonProps): JSX.Element {
   const stats = getArcStats(flights, pinned.data.flightIds);
   const colorRgb = `rgb(${pinned.data.color[0]},${pinned.data.color[1]},${pinned.data.color[2]})`;
@@ -270,12 +282,12 @@ function ArcBody({
           <Row label={t("map:globe.pinned.topAirline")} value={stats.topAirline} />
         )}
       </Grid>
-      {onFlightClick && pinned.data.flightIds.length > 0 && (
+      {onFlightOpen && pinned.data.flightIds.length > 0 && (
         <Cta
           label={t("map:globe.openLastFlight")}
           onClick={() => {
             const last = pinned.data.flightIds[pinned.data.flightIds.length - 1];
-            onFlightClick(last);
+            onFlightOpen(last);
           }}
         />
       )}
@@ -290,7 +302,12 @@ function CruiseBody({
   cruises,
   locale,
   t,
-}: { pinned: Extract<GlobePinned, { kind: "cruise" }>; cruises: Cruise[] } & BodyCommonProps): JSX.Element {
+  onCruiseOpen,
+}: {
+  pinned: Extract<GlobePinned, { kind: "cruise" }>;
+  cruises: Cruise[];
+  onCruiseOpen?: (cruiseId: string) => void;
+} & BodyCommonProps): JSX.Element {
   const stats = getCruiseStats(cruises, pinned.data.cruiseId);
   if (!stats) {
     return (
@@ -319,6 +336,12 @@ function CruiseBody({
           <Row label={t("map:globe.pinned.debark")} value={stats.debarkPort} />
         )}
       </Grid>
+      {onCruiseOpen && (
+        <Cta
+          label={t("map:globe.pinned.openCruise")}
+          onClick={() => onCruiseOpen(pinned.data.cruiseId)}
+        />
+      )}
     </>
   );
 }

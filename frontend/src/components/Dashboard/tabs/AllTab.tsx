@@ -292,6 +292,8 @@ export function AllTab(): JSX.Element {
           showInternalCruises={false}
           onFlightClick={handleFlightClick}
           onRouteClick={handleRouteClick}
+          onFlightOpen={handlePanelFlightDetails}
+          onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
           flightRouteColor={FLIGHT_RGB}
         />
         {toggleAndLegend}
@@ -310,6 +312,8 @@ export function AllTab(): JSX.Element {
         flightRouteColor={FLIGHT_RGB}
         onFlightClick={handleFlightClick}
         onRouteClick={handleRouteClick}
+        onFlightOpen={handlePanelFlightDetails}
+        onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
       />
       {toggleAndLegend}
       {activityPanel}

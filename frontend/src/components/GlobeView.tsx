@@ -71,7 +71,12 @@ import {
 interface GlobeViewProps {
   flights: GeoJSONFeature[];
   cruises?: Cruise[];
-  onFlightClick?: (flightId: string) => void;
+  /** Fired by the pinned-card "Open last flight" CTA — should open the
+      flight (modal or detail page). */
+  onFlightOpen?: (flightId: string) => void;
+  /** Fired by the pinned-card "Open cruise" CTA — should navigate to
+      the cruise detail page. */
+  onCruiseOpen?: (cruiseId: string) => void;
   minRouteCount?: number;
 }
 
@@ -255,7 +260,8 @@ function DeckGLOverlay({ layers }: DeckOverlayProps): null {
 export default function GlobeView({
   flights = [],
   cruises = [],
-  onFlightClick,
+  onFlightOpen,
+  onCruiseOpen,
   minRouteCount = 1,
 }: GlobeViewProps): JSX.Element {
   const { t } = useTranslation(["map"]);
@@ -1552,7 +1558,8 @@ export default function GlobeView({
               flights={flights}
               cruises={cruises ?? []}
               onClose={() => setPinned(null)}
-              onFlightClick={onFlightClick}
+              onFlightOpen={onFlightOpen}
+              onCruiseOpen={onCruiseOpen}
             />
           </PinnedCardBoundary>
         </div>
