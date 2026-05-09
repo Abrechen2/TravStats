@@ -80,6 +80,7 @@ export function GenericCsvImportTile(): JSX.Element {
         <PreviewModal
           rows={preview.rows}
           summary={preview.summary}
+          flightsListHref="/flights"
           onCommit={async (rows) => {
             const result = await commitPreviewRows(rows, "imported_generic_csv");
             if (result.failures.length > 0) {
@@ -87,10 +88,12 @@ export function GenericCsvImportTile(): JSX.Element {
                 `Imported ${result.committed} of ${rows.length}. ${result.failures.length} chunk(s) failed: ${result.failures.map((f) => `chunk ${f.chunkIndex}: ${f.error}`).join("; ")}`,
               );
             }
-            setPreview(null);
-            setCsvText(null);
+            return {
+              committed: result.committed,
+              failedChunks: result.failures.length,
+            };
           }}
-          onCancel={() => {
+          onClose={() => {
             setPreview(null);
             setCsvText(null);
           }}
