@@ -77,6 +77,10 @@ interface GlobeViewProps {
   /** Fired by the pinned-card "Open cruise" CTA — should navigate to
       the cruise detail page. */
   onCruiseOpen?: (cruiseId: string) => void;
+  /** When set, every flight arc renders in this RGB instead of the
+      heatmap palette. Same prop semantics as `MapContainer3D.flightRouteColor`
+      on the flat map. */
+  flightRouteColor?: [number, number, number];
   minRouteCount?: number;
 }
 
@@ -262,6 +266,7 @@ export default function GlobeView({
   cruises = [],
   onFlightOpen,
   onCruiseOpen,
+  flightRouteColor,
   minRouteCount = 1,
 }: GlobeViewProps): JSX.Element {
   const { t } = useTranslation(["map"]);
@@ -336,23 +341,6 @@ export default function GlobeView({
       cruises.length >= LITE_AUTO_CRUISE_THRESHOLD
     );
   }, [liteMode, flights.length, cruises.length]);
-  // Ship markers: tall thin columns rendered at each cruise's current
-  // position when the time slider is playing live. Off by default —
-  // a real 3D glTF ship model would be the v2.x roadmap upgrade; this
-  // marker fills the same need (locating the ship at scrub-time)
-  // without shipping a binary asset.
-  const [shipMarkers, setShipMarkers] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return window.sessionStorage.getItem("globeShipMarkers") === "1";
-  });
-  const onShipMarkersChange = useCallback((next: boolean) => {
-    setShipMarkers(next);
-    try {
-      window.sessionStorage.setItem("globeShipMarkers", next ? "1" : "0");
-    } catch {
-      // sessionStorage may be unavailable in private mode — opt-in only
-    }
-  }, []);
   // First-run coachmark: shown on the first ever globe visit, dismissed
   // forever via localStorage. The check defaults to false (i.e. "shown")
   // when localStorage is unreadable so the user always gets at least
@@ -985,26 +973,6 @@ export default function GlobeView({
     };
   }, [sliderMode, filteredFlights, lite, altitudeFactor]);
 
-  // Ship marker positions: take the LAST point of every visible cruise
-  // path. In live mode, cruisePaths are truncated to current progress —
-  // so the last point IS the ship's current location. In off / filter
-  // modes the path is the full route and the last point is the final
-  // port, which is a reasonable secondary use ("most recent destination").
-  const shipMarkerPoints = useMemo<PointDatum[]>(() => {
-    if (!shipMarkers) return [];
-    return cruisePaths
-      .filter((p) => p.path.length >= 2)
-      .map((p) => {
-        const last = p.path[p.path.length - 1];
-        return {
-          position: [last[0], last[1]] as [number, number],
-          size: 1,
-          iata: "🚢",
-          name: p.cruiseLabel,
-        };
-      });
-  }, [shipMarkers, cruisePaths]);
-
   // Live stats overlay: derived from the same slider-filtered data as
   // the layers, so the numbers move in lockstep with the time slider.
   // Cheap because everything is already memoised upstream.
@@ -1134,11 +1102,9 @@ export default function GlobeView({
         cruisePaths,
         airportPoints,
         portPoints,
-        shipMarkerPoints,
         headFlightArc,
         activeQuartile,
         lite,
-        shipMarkers,
         occlusionExt,
         occlusionProps,
         onArcHover,
@@ -1147,7 +1113,7 @@ export default function GlobeView({
         onCruisePathHover,
         flyToArc,
         setPinned,
-        setTooltip,
+        flightRouteColor,
       }),
     [
       arcsData,
@@ -1157,8 +1123,6 @@ export default function GlobeView({
       portPoints,
       activeQuartile,
       lite,
-      shipMarkers,
-      shipMarkerPoints,
       headFlightArc,
       flyToArc,
       onArcHover,
@@ -1167,6 +1131,7 @@ export default function GlobeView({
       onPortHover,
       occlusionExt,
       occlusionProps,
+      flightRouteColor,
     ]
   );
 
@@ -1314,18 +1279,6 @@ export default function GlobeView({
               className="cursor-pointer"
             />
             <span className="text-xs font-medium">🌍 {t("map:globe.autoRotation")}</span>
-          </label>
-          <label
-            className="mt-1.5 flex cursor-pointer select-none items-center gap-2"
-            title={t("map:globe.shipMarkersHint")}
-          >
-            <input
-              type="checkbox"
-              checked={shipMarkers}
-              onChange={(e) => onShipMarkersChange(e.target.checked)}
-              className="cursor-pointer"
-            />
-            <span className="text-xs font-medium">🚢 {t("map:globe.shipMarkers")}</span>
           </label>
           <button
             type="button"

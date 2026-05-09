@@ -123,6 +123,7 @@ export function CruisesTab(): JSX.Element {
         }}
         extraLayers={extraLayers}
         showInternalCruises={showInternalCruises}
+        hideVisModeSelector
       />
       <button
         type="button"

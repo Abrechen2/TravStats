@@ -7,32 +7,42 @@
 // caller wraps this in `useMemo` and supplies the same dependency list
 // it would have used inline; nothing in here depends on render scope.
 
-import { ColumnLayer, PathLayer } from "@deck.gl/layers";
+import { ColumnLayer, PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import { PathStyleExtension, type PathStyleExtensionProps } from "@deck.gl/extensions";
 import type { Layer, PickingInfo } from "@deck.gl/core";
 import {
   EarthOcclusionExtension,
   type EarthOcclusionExtensionProps,
 } from "./EarthOcclusionExtension";
-import { escapeHtml } from "../../lib/escapeHtml";
 import type { Quartile } from "./heatmapUtils";
 import type {
   ArcDatum,
   CruisePathDatum,
   GlobePinned,
   PointDatum,
-  TooltipState,
 } from "./globeLayerTypes";
 
 const CRUISE_PATH_COLOR: [number, number, number, number] = [80, 180, 255, 230];
 const AIRPORT_DOT_COLOR: [number, number, number, number] = [251, 191, 36, 230];
 const PORT_DOT_COLOR: [number, number, number, number] = [56, 189, 248, 230];
 
-// Airport + port column markers. Height and radius are constant so all
-// markers look identical regardless of visit count — magnitude encoding
-// belongs on the arcs (heatmap colour), not duplicated on the dots.
-const MARKER_HEIGHT_M = 70_000;
-const MARKER_RADIUS_M = 12_000;
+// Airport + port markers are pixel-sized via ScatterplotLayer so they
+// stay the same on-screen size regardless of zoom. The ColumnLayer
+// (3-D extruded cylinder) variant looked nice at low zoom but
+// ballooned to city-covering pillars at high zoom — the user's
+// "marker max size = current low-zoom appearance" requirement maps
+// cleanly to a constant pixel diameter.
+const MARKER_RADIUS_PX = 5;
+// Head-flight arrival marker keeps a little 3-D pop via ColumnLayer,
+// but airports + ports go flat. The numbers below are only used by
+// the head-flight column.
+const HEAD_MARKER_HEIGHT_M = 90_000;
+const HEAD_MARKER_RADIUS_M = 10_000;
+// Constant flight-arc count used for cruise width so cruise paths
+// render at the same default thickness as a single-flight arc
+// (count=1 yields ~2.5 px through the log formula). Cruises don't
+// aggregate by repetition the way flight routes do.
+const CRUISE_PSEUDO_COUNT = 1;
 
 // Lift cruise paths a few km off the sphere surface so they don't
 // z-fight with / clip into the globe. The path geometry comes from the
@@ -67,11 +77,9 @@ export interface BuildGlobeLayersOptions {
   cruisePaths: CruisePathDatum[];
   airportPoints: PointDatum[];
   portPoints: PointDatum[];
-  shipMarkerPoints: PointDatum[];
   headFlightArc: ArcDatum | null;
   activeQuartile: Quartile | null;
   lite: boolean;
-  shipMarkers: boolean;
   occlusionExt: EarthOcclusionExtension;
   occlusionProps: EarthOcclusionExtensionProps;
   onArcHover: (info: PickingInfo<ArcDatum>) => void;
@@ -81,7 +89,14 @@ export interface BuildGlobeLayersOptions {
   /** @deprecated retained for source compat; click no longer flies the camera. */
   flyToArc?: (arc: ArcDatum) => void;
   setPinned: (pinned: GlobePinned | null) => void;
-  setTooltip: (tooltip: TooltipState | null) => void;
+  /**
+   * When set, every flight arc renders in this RGB instead of the
+   * heatmap palette derived from per-route quartile. The quartile
+   * dimming (active filter) is preserved as alpha so the filter still
+   * works visually. Same prop semantics as `MapContainer3D.flightRouteColor`
+   * on the flat map.
+   */
+  flightRouteColor?: [number, number, number];
 }
 
 export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
@@ -91,11 +106,9 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     cruisePaths,
     airportPoints,
     portPoints,
-    shipMarkerPoints,
     headFlightArc,
     activeQuartile,
     lite,
-    shipMarkers,
     occlusionExt,
     occlusionProps,
     onArcHover,
@@ -103,8 +116,16 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     onPortHover,
     onCruisePathHover,
     setPinned,
-    setTooltip,
+    flightRouteColor,
   } = opts;
+  // Pick the per-arc colour. With `flightRouteColor` set, every arc
+  // gets that single tint; otherwise the per-arc quartile heatmap
+  // applies. Active-quartile alpha dimming is preserved either way so
+  // the click-to-isolate filter still reads visually.
+  const arcColor = (d: ArcDatum, baseAlpha: number): [number, number, number, number] => {
+    const rgb = flightRouteColor ?? d.color;
+    return [rgb[0], rgb[1], rgb[2], baseAlpha];
+  };
 
   return [
     // Flight arcs as PathLayer with pre-tessellated great-circle
@@ -119,12 +140,9 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       id: "globe-flight-arcs",
       data: arcsData,
       getPath: (d) => d.waypoints,
-      getColor: (d) => {
-        const baseAlpha =
-          activeQuartile === null || activeQuartile === d.quartile ? 235 : 35;
-        return [...d.color, baseAlpha] as [number, number, number, number];
-      },
-      updateTriggers: { getColor: [activeQuartile] },
+      getColor: (d) =>
+        arcColor(d, activeQuartile === null || activeQuartile === d.quartile ? 235 : 35),
+      updateTriggers: { getColor: [activeQuartile, flightRouteColor] },
       getWidth: (d) => Math.max(1.5, Math.min(4, 1.5 + Math.log2(d.count + 1))),
       widthUnits: "pixels",
       widthMinPixels: 1.5,
@@ -169,12 +187,9 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       id: "globe-flight-arcs-antipodal",
       data: antipodalArcs,
       getPath: (d) => d.waypoints,
-      getColor: (d) => {
-        const baseAlpha =
-          activeQuartile === null || activeQuartile === d.quartile ? 160 : 25;
-        return [...d.color, baseAlpha] as [number, number, number, number];
-      },
-      updateTriggers: { getColor: [activeQuartile] },
+      getColor: (d) =>
+        arcColor(d, activeQuartile === null || activeQuartile === d.quartile ? 160 : 25),
+      updateTriggers: { getColor: [activeQuartile, flightRouteColor] },
       getWidth: 1,
       widthUnits: "pixels",
       widthMinPixels: 1,
@@ -214,10 +229,14 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
           (p) => [p[0], p[1], CRUISE_PATH_ALTITUDE_M] as [number, number, number],
         ),
       getColor: CRUISE_PATH_COLOR,
-      getWidth: 2,
+      // Match the flight-arc width so cruise + flight routes read at
+      // the same default thickness. Cruises don't aggregate by
+      // repetition, so we pin a synthetic count=1 (= 2.5 px).
+      getWidth: () =>
+        Math.max(1.5, Math.min(4, 1.5 + Math.log2(CRUISE_PSEUDO_COUNT + 1))),
       widthUnits: "pixels",
       widthMinPixels: 1.5,
-      widthMaxPixels: 3,
+      widthMaxPixels: 4,
       capRounded: true,
       jointRounded: true,
       extensions: [
@@ -241,25 +260,23 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     } as ConstructorParameters<typeof PathLayer<CruisePathDatum>>[0] &
       PathStyleExtensionProps<CruisePathDatum> &
       EarthOcclusionExtensionProps),
-    // Airport + port markers as ColumnLayer (3D cylinders rendered
-    // radially outward from the globe surface). Replaces the old
-    // ScatterplotLayer dots that clipped into the sphere when viewed
-    // from a low pitch — same visual idiom react-globe.gl used. Size
-    // is intentionally constant (height + radius identical for every
-    // marker): visit count is already encoded by the heatmap colour
-    // on the arcs, so dual-encoding it here makes hub clusters
-    // visually overwhelming without adding information.
-    new ColumnLayer<PointDatum>({
-      id: "globe-airport-columns",
+    // Airport + port markers as ScatterplotLayer with `radiusUnits:
+    // "pixels"` so they keep a constant on-screen size at all zoom
+    // levels. Earlier ColumnLayer extruded cylinders ballooned at
+    // high zoom (radius in meters → city-covering pillars). Visit
+    // count is encoded by the heatmap colour on the arcs, so the
+    // markers don't need to vary in size to convey magnitude.
+    new ScatterplotLayer<PointDatum>({
+      id: "globe-airport-dots",
       data: airportPoints,
       getPosition: (d) => d.position,
       getFillColor: AIRPORT_DOT_COLOR,
-      getElevation: MARKER_HEIGHT_M,
-      elevationScale: 1,
-      radius: MARKER_RADIUS_M,
-      diskResolution: lite ? 8 : 16,
-      extruded: true,
-      material: false,
+      getRadius: MARKER_RADIUS_PX,
+      radiusUnits: "pixels",
+      stroked: true,
+      getLineColor: [13, 17, 23, 220],
+      lineWidthUnits: "pixels",
+      getLineWidth: 1,
       pickable: true,
       autoHighlight: !lite,
       highlightColor: [255, 255, 255, 200],
@@ -274,18 +291,18 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       },
       extensions: [occlusionExt],
       ...occlusionProps,
-    } as ConstructorParameters<typeof ColumnLayer<PointDatum>>[0] & EarthOcclusionExtensionProps),
-    new ColumnLayer<PointDatum>({
-      id: "globe-port-columns",
+    } as ConstructorParameters<typeof ScatterplotLayer<PointDatum>>[0] & EarthOcclusionExtensionProps),
+    new ScatterplotLayer<PointDatum>({
+      id: "globe-port-dots",
       data: portPoints,
       getPosition: (d) => d.position,
       getFillColor: PORT_DOT_COLOR,
-      getElevation: MARKER_HEIGHT_M,
-      elevationScale: 1,
-      radius: MARKER_RADIUS_M,
-      diskResolution: lite ? 8 : 16,
-      extruded: true,
-      material: false,
+      getRadius: MARKER_RADIUS_PX,
+      radiusUnits: "pixels",
+      stroked: true,
+      getLineColor: [13, 17, 23, 220],
+      lineWidthUnits: "pixels",
+      getLineWidth: 1,
       pickable: true,
       autoHighlight: !lite,
       highlightColor: [255, 255, 255, 200],
@@ -300,7 +317,73 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       },
       extensions: [occlusionExt],
       ...occlusionProps,
-    } as ConstructorParameters<typeof ColumnLayer<PointDatum>>[0] & EarthOcclusionExtensionProps),
+    } as ConstructorParameters<typeof ScatterplotLayer<PointDatum>>[0] & EarthOcclusionExtensionProps),
+    // IATA / UN/LOCODE labels above the markers. Same TextLayer
+    // pattern the flat-map routesLayer uses — clickable, so tapping
+    // the label opens the same pinned card as tapping the marker.
+    // SDF font enables the dark outline against the basemap.
+    new TextLayer<PointDatum>({
+      id: "globe-airport-labels",
+      data: airportPoints,
+      getPosition: (d) => d.position,
+      getText: (d) => d.iata,
+      getSize: 11,
+      getColor: [255, 255, 255, 240],
+      getBackgroundColor: [22, 27, 34, 210],
+      background: true,
+      backgroundPadding: [4, 2, 4, 2],
+      fontFamily: '"Inter", system-ui, monospace',
+      fontWeight: "bold",
+      fontSettings: { sdf: true },
+      outlineWidth: 2,
+      outlineColor: [0, 0, 0, 160],
+      getPixelOffset: [0, -16],
+      billboard: true,
+      characterSet: "auto",
+      pickable: true,
+      onClick: ({ object }: { object?: PointDatum }): void => {
+        if (!object) return;
+        setPinned({
+          kind: "airport",
+          data: object,
+          anchorLngLat: [object.position[0], object.position[1]],
+        });
+      },
+      parameters: { depthCompare: "always" as const },
+      extensions: [occlusionExt],
+      ...occlusionProps,
+    } as ConstructorParameters<typeof TextLayer<PointDatum>>[0] & EarthOcclusionExtensionProps),
+    new TextLayer<PointDatum>({
+      id: "globe-port-labels",
+      data: portPoints,
+      getPosition: (d) => d.position,
+      getText: (d) => d.iata,
+      getSize: 11,
+      getColor: [255, 255, 255, 240],
+      getBackgroundColor: [22, 27, 34, 210],
+      background: true,
+      backgroundPadding: [4, 2, 4, 2],
+      fontFamily: '"Inter", system-ui, monospace',
+      fontWeight: "bold",
+      fontSettings: { sdf: true },
+      outlineWidth: 2,
+      outlineColor: [0, 0, 0, 160],
+      getPixelOffset: [0, -16],
+      billboard: true,
+      characterSet: "auto",
+      pickable: true,
+      onClick: ({ object }: { object?: PointDatum }): void => {
+        if (!object) return;
+        setPinned({
+          kind: "port",
+          data: object,
+          anchorLngLat: [object.position[0], object.position[1]],
+        });
+      },
+      parameters: { depthCompare: "always" as const },
+      extensions: [occlusionExt],
+      ...occlusionProps,
+    } as ConstructorParameters<typeof TextLayer<PointDatum>>[0] & EarthOcclusionExtensionProps),
     // Live-mode "head" highlight: bright orange overlay on the most
     // recent flight in the live window. Drawn AFTER everything else so
     // it visually pops above the heatmap. Pickable so the user can
@@ -311,7 +394,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
             id: "globe-flight-head",
             data: [headFlightArc],
             getPath: (d) => d.waypoints,
-            getColor: [...headFlightArc.color, 245] as [number, number, number, number],
+            getColor: arcColor(headFlightArc, 245),
             getWidth: 5,
             widthUnits: "pixels",
             widthMinPixels: 4,
@@ -348,48 +431,14 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
             ],
             getPosition: (d) => d.position,
             getFillColor: [240, 169, 71, 235],
-            getElevation: MARKER_HEIGHT_M * 1.6,
+            getElevation: HEAD_MARKER_HEIGHT_M,
             elevationScale: 1,
-            radius: MARKER_RADIUS_M * 0.85,
+            radius: HEAD_MARKER_RADIUS_M,
+            radiusUnits: "pixels",
             diskResolution: lite ? 8 : 16,
-            extruded: true,
+            extruded: false,
             material: false,
             pickable: false,
-            extensions: [occlusionExt],
-            ...occlusionProps,
-          } as ConstructorParameters<typeof ColumnLayer<PointDatum>>[0] &
-            EarthOcclusionExtensionProps),
-        ]
-      : []),
-    // Ship markers: taller, narrower columns at each visible cruise's
-    // current position. Only present when the toggle is on.
-    ...(shipMarkers && shipMarkerPoints.length > 0
-      ? [
-          new ColumnLayer<PointDatum>({
-            id: "globe-ship-columns",
-            data: shipMarkerPoints,
-            getPosition: (d) => d.position,
-            getFillColor: [125, 211, 252, 235],
-            getElevation: MARKER_HEIGHT_M * 2.5,
-            elevationScale: 1,
-            radius: MARKER_RADIUS_M * 0.55,
-            diskResolution: lite ? 6 : 12,
-            extruded: true,
-            material: false,
-            pickable: true,
-            autoHighlight: !lite,
-            highlightColor: [255, 255, 255, 200],
-            onHover: (info: PickingInfo<PointDatum>) => {
-              if (info.object && info.x != null && info.y != null) {
-                setTooltip({
-                  html: `<div style="font-weight:600;">🚢 ${escapeHtml(info.object.name)}</div>`,
-                  x: info.x,
-                  y: info.y,
-                });
-              } else {
-                setTooltip(null);
-              }
-            },
             extensions: [occlusionExt],
             ...occlusionProps,
           } as ConstructorParameters<typeof ColumnLayer<PointDatum>>[0] &

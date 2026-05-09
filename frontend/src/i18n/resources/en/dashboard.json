@@ -134,6 +134,9 @@
   },
   "filter": {
     "title": "Filter",
+    "year": "Year",
+    "allYears": "All years",
+    "domains": "Domains",
     "timeFrom": "From",
     "timeTo": "To",
     "airline": "Airline",

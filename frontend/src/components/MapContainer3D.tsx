@@ -55,6 +55,18 @@ interface MapContainer3DProps {
    * it undefined to keep the count-encoded heatmap behaviour.
    */
   flightRouteColor?: [number, number, number];
+  /**
+   * Restrict which vis modes appear in the in-map FAB selector. Defaults
+   * to all 4 (existing behaviour). Per-domain tabs pass a subset that
+   * excludes cross-domain-only modes like `globe`.
+   */
+  availableModes?: readonly MapMode[];
+  /**
+   * Hide the in-map mode FAB entirely. Used by tabs that own mode
+   * switching outside the map (e.g. CruisesTab uses the dashboard-level
+   * mode dropdown only — its modes don't map 1:1 to MapMode).
+   */
+  hideVisModeSelector?: boolean;
 }
 
 export default function MapContainer3D({
@@ -73,6 +85,8 @@ export default function MapContainer3D({
   extraLayers,
   showInternalCruises = true,
   flightRouteColor,
+  availableModes,
+  hideVisModeSelector = false,
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
   const mapTheme = useThemeStore((s) => s.mapTheme);
@@ -149,6 +163,7 @@ export default function MapContainer3D({
               cruises={cruises}
               onFlightOpen={onFlightOpen ?? onFlightClick}
               onCruiseOpen={onCruiseOpen}
+              flightRouteColor={flightRouteColor}
               minRouteCount={minRouteCount}
             />
           </Suspense>
@@ -216,12 +231,15 @@ export default function MapContainer3D({
 
       {/* Bottom-right stack: mode FAB (top) + filter FAB (bottom) */}
       <div className="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2">
-        <VisModeSelector
-          current={visMode}
-          onChange={onVisModeChange}
-          isOpen={fabOpen}
-          onOpenChange={setFabOpen}
-        />
+        {!hideVisModeSelector && (
+          <VisModeSelector
+            current={visMode}
+            onChange={onVisModeChange}
+            isOpen={fabOpen}
+            onOpenChange={setFabOpen}
+            availableModes={availableModes}
+          />
+        )}
         {filterSlot}
       </div>
     </div>

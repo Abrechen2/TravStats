@@ -52,6 +52,10 @@ const MAP_MODE_TO_ALL_MODE: Partial<Record<MapMode, AllMode>> = {
   globe: "globe",
 };
 
+// Subset of MapMode values offered by the in-map FAB on the Alle tab.
+// Globe is cross-domain and only exposed here.
+const ALL_TAB_MAP_MODES: readonly MapMode[] = ["routes", "heatmap", "globe"];
+
 function isAllMode(mode: unknown): mode is AllMode {
   return typeof mode === "string" && (ALL_MODES as readonly string[]).includes(mode);
 }
@@ -295,6 +299,7 @@ export function AllTab(): JSX.Element {
           onFlightOpen={handlePanelFlightDetails}
           onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
           flightRouteColor={FLIGHT_RGB}
+          availableModes={ALL_TAB_MAP_MODES}
         />
         {toggleAndLegend}
         {activityPanel}
@@ -314,6 +319,7 @@ export function AllTab(): JSX.Element {
         onRouteClick={handleRouteClick}
         onFlightOpen={handlePanelFlightDetails}
         onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
+        availableModes={ALL_TAB_MAP_MODES}
       />
       {toggleAndLegend}
       {activityPanel}

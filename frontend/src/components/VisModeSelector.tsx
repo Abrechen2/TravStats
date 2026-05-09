@@ -96,6 +96,11 @@ interface VisModeSeelctorProps {
   onChange: (mode: MapMode) => void;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Restrict which modes appear in the dropdown. Defaults to all 4
+      so existing call sites keep current behaviour. The Alle tab
+      passes the full set; per-domain tabs pass a subset that excludes
+      e.g. `globe` (cross-domain only). */
+  availableModes?: readonly MapMode[];
 }
 
 export function VisModeSelector({
@@ -103,8 +108,13 @@ export function VisModeSelector({
   onChange,
   isOpen,
   onOpenChange,
+  availableModes,
 }: VisModeSeelctorProps): JSX.Element {
   const { t } = useTranslation("map");
+
+  const visibleModes = availableModes
+    ? MODES.filter((m) => availableModes.includes(m.mode))
+    : MODES;
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -139,7 +149,7 @@ export function VisModeSelector({
             transition={{ duration: 0.15 }}
             className="flex flex-col items-end gap-1.5"
           >
-            {[...MODES].reverse().map(({ mode, labelKey }) => {
+            {[...visibleModes].reverse().map(({ mode, labelKey }) => {
               const active = current === mode;
               const Icon = MODE_ICONS[mode];
               return (

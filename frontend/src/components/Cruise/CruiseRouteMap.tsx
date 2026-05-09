@@ -72,8 +72,12 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   const layers: Layer[] = useMemo(() => {
     const arcsLayer = createCruiseArcsLayer([cruise], geometryMap, null, undefined, { zoom });
     const arrowsLayer = createCruiseArrowsLayer([cruise], geometryMap, null, { zoom });
-    const portsLayer = createCruisePortsLayer([cruise]);
-    return [arcsLayer, arrowsLayer, portsLayer].filter((l): l is Layer => l !== null);
+    const portsLayers = createCruisePortsLayer([cruise]);
+    return [
+      ...(arcsLayer !== null ? [arcsLayer] : []),
+      ...(arrowsLayer !== null ? [arrowsLayer] : []),
+      ...(portsLayers ?? []),
+    ];
   }, [cruise, geometryMap, zoom]);
 
   const bboxPoints: Array<[number, number]> = useMemo(() => {
