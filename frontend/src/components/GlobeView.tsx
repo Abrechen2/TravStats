@@ -1,5 +1,6 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from "react";
 import Globe from "react-globe.gl";
+import * as THREE from "three";
 import type { GeoJSONFeature } from "../types";
 import type { Cruise } from "../types/cruise";
 import { useTimeSliderStore } from "../store/timeSliderStore";
@@ -8,11 +9,6 @@ import { useTranslation } from "../hooks/useTranslation";
 import { DOMAINS } from "../shared/domains";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
 import { logger } from "../lib/logger";
-import {
-  computeSunDirection,
-  createDayNightGlobeMaterial,
-  type DayNightMaterial,
-} from "./Globe/dayNightGlobeMaterial";
 import { GlobeTimeSlider } from "./Globe/GlobeTimeSlider";
 import {
   computeCruiseLegDates,
@@ -43,16 +39,19 @@ const CRUISE_HEX_RGB = ((): { r: number; g: number; b: number } => {
 })();
 const CRUISE_ARC_COLOR = `rgba(${CRUISE_HEX_RGB.r}, ${CRUISE_HEX_RGB.g}, ${CRUISE_HEX_RGB.b}, 0.85)`;
 const CRUISE_PORT_COLOR = `rgba(${CRUISE_HEX_RGB.r}, ${CRUISE_HEX_RGB.g}, ${CRUISE_HEX_RGB.b}, 0.95)`;
+const FLIGHT_POINT_COLOR = "#f0a947";
+const ATMOSPHERE_COLOR = "#5fa3ff";
+const ATMOSPHERE_ALTITUDE = 0.32;
+const POINT_ALTITUDE = 0.01;
+const ARC_STROKE_OPACITY = 0.6;
+// Layer tweens are disabled — data identity changes whenever the time
+// slider scrubs, and the lib's default ~1s tween creates massive churn
+// (re-tesselating geometry every frame). 0 = jump directly, no tween.
+const ZERO_TRANSITION = 0;
+const BUMP_SCALE = 8;
 
-/**
- * One curved path on the globe per cruise leg. `coords` are the
- * schematic-router waypoints (3-8 [lat, lng] pairs after deck-style
- * spline densification on the backend) and react-globe.gl renders them
- * as a polyline along the surface, exactly mirroring how the deck.gl
- * map shows cruise routes.
- */
 interface CruisePathDatum {
-  coords: Array<[number, number]>; // [lat, lng] per react-globe.gl convention
+  coords: Array<[number, number]>;
   cruiseId: string;
   cruiseLabel: string;
 }
@@ -137,6 +136,8 @@ type GlobeInstance = {
     transitionDuration?: number
   ) => { lat: number; lng: number; altitude: number } | void;
   controls: () => GlobeControls;
+  renderer: () => THREE.WebGLRenderer;
+  globeMaterial: () => THREE.Material;
 };
 
 interface ArcData {
@@ -159,6 +160,26 @@ interface PointData {
   name: string;
   code: string;
 }
+
+interface MergedPoint extends PointData {
+  _kind: "airport" | "port";
+}
+
+// Module-level accessors — referenced by identity, never re-created. The
+// lib uses prop identity to decide whether a layer needs a full data
+// digest, so stable functions matter on the hot path.
+const arcColorFn = (arc: ArcData): string => arc.color;
+const arcAltitudeFn = (arc: ArcData): number => arc.altitude;
+const pathPointsFn = (p: CruisePathDatum): Array<[number, number]> => p.coords;
+const pathPointLatFn = (coord: [number, number]): number => coord[0];
+const pathPointLngFn = (coord: [number, number]): number => coord[1];
+const pathColorFn = (): string => CRUISE_ARC_COLOR;
+const pointColorFn = (point: object): string =>
+  (point as MergedPoint)._kind === "port" ? CRUISE_PORT_COLOR : FLIGHT_POINT_COLOR;
+const pointRadiusFn = (point: object): number => {
+  const p = point as PointData;
+  return Math.min(Math.sqrt(p.size) * 0.08, 0.3);
+};
 
 export default function GlobeView({
   flights = [],
@@ -184,52 +205,32 @@ export default function GlobeView({
     }
   }, [autoRotate]);
 
-  // Day/Night terminator material. Created once per mount so React doesn't
-  // re-instantiate textures on every render. Sun direction is updated on a
-  // requestAnimationFrame tick so the terminator drifts visibly (60x real
-  // time so a full rotation takes ~24 minutes — long enough to feel
-  // natural, short enough that staying on the page shows motion).
-  const dayNightMaterial = useMemo<DayNightMaterial>(
-    () =>
-      createDayNightGlobeMaterial({
-        dayTextureUrl: "/earth-day.jpg",
-        nightTextureUrl: "/earth-night.jpg",
-        bumpTextureUrl: "/earth-topology.png",
-      }),
-    []
-  );
+  // Crank the texture sampler up to the GPU's max anisotropy as soon as
+  // the globe mesh exists. Three's default of 1 leaves the day texture
+  // and bump map looking soft at glancing angles when zoomed in — most
+  // GPUs support 16, which is the visible-detail-on-zoom fix.
+  const onGlobeReady = useCallback((): void => {
+    const globe = globeRef.current;
+    if (!globe) return;
+    try {
+      const max = globe.renderer().capabilities.getMaxAnisotropy();
+      const material = globe.globeMaterial() as THREE.MeshPhongMaterial;
+      if (material.map) material.map.anisotropy = max;
+      if (material.bumpMap) material.bumpMap.anisotropy = max;
+      // bumpScale ranges 0..N — the lib default 10 is too aggressive on
+      // a 2k topology map. 8 reads as gentle relief without harsh banding.
+      material.bumpScale = BUMP_SCALE;
+      if (material.map) material.map.needsUpdate = true;
+      if (material.bumpMap) material.bumpMap.needsUpdate = true;
+    } catch (err: unknown) {
+      logger.warn("GlobeView: anisotropy upgrade skipped", err);
+    }
+  }, []);
 
-  useEffect(() => {
-    let raf = 0;
-    const tick = (): void => {
-      // Sun direction tracks the slider when it's driving the scene:
-      //   live   → cursor date (terminator scrubs with the timeline)
-      //   filter → end of range (consistent with the visible window)
-      //   off    → real now @ 60x so the user still sees motion
-      const s = useTimeSliderStore.getState();
-      let date: Date;
-      let speed = 1;
-      if (s.mode === "live" && s.currentDate) {
-        date = s.currentDate;
-      } else if (s.mode === "filter" && s.filterEnd) {
-        date = s.filterEnd;
-      } else {
-        date = new Date();
-        speed = 60;
-      }
-      dayNightMaterial.setSunDirection(computeSunDirection(date, speed));
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [dayNightMaterial]);
-
-  // Camera-altitude tracking. Previously polled pointOfView() every 500ms
-  // even when the camera was idle; now subscribes to the OrbitControls
-  // 'change' event which fires only on user input (drag / wheel / pinch).
-  // Updates state only when altitude actually crossed a noticeable
-  // threshold so dynamicStroke + arcCurveResolution memos don't churn on
-  // sub-pixel changes during a slow drag.
+  // Camera-altitude tracking. Subscribes to the OrbitControls 'change'
+  // event which fires only on user input (drag / wheel / pinch). Updates
+  // state only when altitude crossed a noticeable threshold so dependent
+  // memos don't churn on sub-pixel changes during a slow drag.
   useEffect(() => {
     const globe = globeRef.current;
     if (!globe) return;
@@ -238,8 +239,6 @@ export default function GlobeView({
     const onChange = (): void => {
       const pov = globe.pointOfView();
       if (!pov) return;
-      // Only re-render when altitude moves more than ~5% — keeps dependent
-      // memos cheap during slow camera moves.
       setCameraAltitude((prev) => (Math.abs(pov.altitude - prev) > 0.05 ? pov.altitude : prev));
     };
     controls.addEventListener("change", onChange);
@@ -251,43 +250,31 @@ export default function GlobeView({
     return Math.min(Math.max(0.3 * zoomFactor, 0.08), 0.7);
   }, [cameraAltitude]);
 
-  // Arc tesselation LOD. The default resolution of 64 segments per arc
-  // is overkill when the user is zoomed all the way out (altitude > 3 ≈
-  // a full hemisphere visible) — at that scale 32 segments still curves
-  // smoothly. Halving vertex count for the wide view ~halves Three.js
-  // geometry work for the route layer when there are many arcs.
+  // Arc tesselation LOD. 32 segments at wide-angle (whole-hemisphere
+  // visible), 64 zoomed-in. Halving vertex count for the wide view
+  // halves Three.js geometry work for the route layer.
   const arcResolution = useMemo<number>(() => (cameraAltitude > 3 ? 32 : 64), [cameraAltitude]);
+  const pathStroke = useMemo(() => Math.max(dynamicStroke * 0.85, 0.18), [dynamicStroke]);
 
   // Time-slider state. Sliced per-field so unrelated store changes don't
-  // re-render the whole component. The store mode drives whether
-  // flights/cruises get filtered before they reach Globe's data props.
+  // re-render the whole component.
   const sliderMode = useTimeSliderStore((s) => s.mode);
   const sliderCurrent = useTimeSliderStore((s) => s.currentDate);
   const sliderFilterStart = useTimeSliderStore((s) => s.filterStart);
   const sliderFilterEnd = useTimeSliderStore((s) => s.filterEnd);
   const setSliderRange = useTimeSliderStore((s) => s.setRange);
 
-  // Push the data-driven [min, max] into the store every time the
-  // flights or cruises arrays change identity. The store dedupes if
-  // the bounds didn't actually move so this stays O(1) on the hot
-  // selection-change path.
   useEffect(() => {
     const range = computeTimeRange(flights, cruises);
     if (range) setSliderRange(range.min, range.max);
   }, [flights, cruises, setSliderRange]);
 
-  // Per-leg date metadata for every cruise. Computed once per cruises
-  // identity. Keyed by cruiseId so the live-mode partial-draw can pair
-  // a leg's geometry with its (start, end) dates in O(1).
   const cruiseLegDatesByCruise = useMemo<Map<string, CruiseLegDates[]>>(() => {
     const out = new Map<string, CruiseLegDates[]>();
     for (const c of cruises) out.set(c.id, computeCruiseLegDates(c));
     return out;
   }, [cruises]);
 
-  // The pre-aggregation flight set, filtered by slider state. The arc
-  // builder downstream still groups same-route flights together so a
-  // city pair only renders one arc however many flights are visible.
   const filteredFlights = useMemo<GeoJSONFeature[]>(() => {
     if (sliderMode === "off") return flights;
     if (sliderMode === "live") {
@@ -377,10 +364,6 @@ export default function GlobeView({
     return { arcsData: arcs, heatmapThresholds: thresholds };
   }, [filteredFlights, minRouteCount]);
 
-  // Cruise route geometry from the backend schematic router. One
-  // FeatureCollection per cruise, each Feature is one port-pair leg with
-  // 3-8 [lon, lat] waypoints. Loaded once per cruise list change; the
-  // server-side LRU cache makes repeat fetches cheap.
   const [cruiseGeometry, setCruiseGeometry] = useState<Map<string, CruiseRouteFeatureCollection>>(
     () => new Map()
   );
@@ -414,11 +397,6 @@ export default function GlobeView({
     };
   }, [cruises]);
 
-  // One curved path per cruise leg, drawn along the globe surface.
-  // react-globe.gl wants [lat, lng] pairs (not [lng, lat] like GeoJSON).
-  // In live mode, legs whose end date hasn't been reached are either
-  // hidden (before start) or partially drawn (in progress) — the
-  // ship-walking effect across the itinerary.
   const cruisePathsData = useMemo<CruisePathDatum[]>(() => {
     const out: CruisePathDatum[] = [];
     for (const cruise of cruises) {
@@ -426,8 +404,6 @@ export default function GlobeView({
       if (!fc) continue;
       const label = cruise.ship?.name ?? cruise.shipNameOverride ?? cruise.cruiseLine ?? "Cruise";
       const legDates = cruiseLegDatesByCruise.get(cruise.id) ?? [];
-      // Index legDates by "from:to" so we can look up the date for the
-      // feature whose properties say { fromPortId, toPortId }.
       const dateByPair = new Map<string, CruiseLegDates>();
       for (const ld of legDates) {
         dateByPair.set(`${ld.fromPortId}:${ld.toPortId}`, ld);
@@ -444,7 +420,7 @@ export default function GlobeView({
           );
           if (ld) {
             const p = legProgress(ld, sliderCurrent);
-            if (p === 0) continue; // not yet sailed — hide this leg
+            if (p === 0) continue;
             const partial = p < 1 ? truncatePolyline(coords, p) : coords;
             if (partial.length < 2) continue;
             out.push({ coords: partial, cruiseId: cruise.id, cruiseLabel: label });
@@ -475,17 +451,10 @@ export default function GlobeView({
     sliderFilterEnd,
   ]);
 
-  // Distinct port markers across all cruises so popular embarkation ports
-  // (Hamburg, Civitavecchia, …) get a single dot rather than one per cruise.
-  // Live mode only counts ports the ship has actually reached by the
-  // current cursor; filter mode only counts visits inside the window.
   const cruisePointsData = useMemo<PointData[]>(() => {
     const portMap = new Map<number, PointData>();
     for (const c of cruises) {
       const legs = cruiseLegDatesByCruise.get(c.id) ?? [];
-      // Build per-port "visited" predicate: a port is visited at the
-      // ARRIVAL date of the leg ending there (or at startDate for the
-      // first port). Sea-day stops don't show as ports anyway.
       const portVisitDate = new Map<number, Date>();
       const startDate = c.startDate ? new Date(c.startDate) : null;
       const firstPortStop = c.stops.find((s) => !s.isAtSea && s.port);
@@ -587,6 +556,21 @@ export default function GlobeView({
     return Array.from(airportMap.values());
   }, [filteredFlights]);
 
+  // Merged airport + port array — react-globe.gl wants one pointsData
+  // prop. Keep the merge memoized so prop identity only changes when
+  // either input list changes, not on every render.
+  const mergedPointsData = useMemo<MergedPoint[]>(() => {
+    const out: MergedPoint[] = new Array(pointsData.length + cruisePointsData.length);
+    let i = 0;
+    for (const p of pointsData) {
+      out[i++] = { ...p, _kind: "airport" };
+    }
+    for (const p of cruisePointsData) {
+      out[i++] = { ...p, _kind: "port" };
+    }
+    return out;
+  }, [pointsData, cruisePointsData]);
+
   const arcLabel = useCallback(
     (arc: ArcData): string => `
       <div style="background:rgba(0,0,0,0.8);color:white;padding:8px 12px;border-radius:6px;font-family:system-ui;font-size:12px;">
@@ -613,23 +597,29 @@ export default function GlobeView({
     []
   );
 
-  // Smooth fly-to on arc click. Compute the geographic mid-point of the arc
-  // and zoom in so the user sees the full route without jarring teleport.
   const flyToArc = useCallback(
     (startLat: number, startLng: number, endLat: number, endLng: number): void => {
       if (!globeRef.current) return;
       const midLat = (startLat + endLat) / 2;
-      // Wrap-around handling: pick the shorter longitude path so a Pacific
-      // route doesn't camera-pan the long way around.
       const lngDiff = endLng - startLng;
       const adjustedEnd = lngDiff > 180 ? endLng - 360 : lngDiff < -180 ? endLng + 360 : endLng;
       const midLng = (startLng + adjustedEnd) / 2;
       const distance = calculateDistance(startLat, startLng, endLat, endLng);
-      // Bigger arcs zoom out further so both endpoints stay framed.
       const altitude = Math.max(0.8, Math.min(2.5, distance / 5000));
       globeRef.current.pointOfView({ lat: midLat, lng: midLng, altitude }, 1500);
     },
     []
+  );
+
+  const onArcClick = useCallback(
+    (arc: ArcData): void => {
+      flyToArc(arc.startLat, arc.startLng, arc.endLat, arc.endLng);
+      if (onFlightClick && arc.flights.length > 0) {
+        const mostRecentFlight = arc.flights[arc.flights.length - 1];
+        onFlightClick(mostRecentFlight.properties.id);
+      }
+    },
+    [flyToArc, onFlightClick]
   );
 
   const pointLabel = useCallback(
@@ -672,12 +662,10 @@ export default function GlobeView({
       className="h-full w-full relative flex items-center justify-center"
       style={{ touchAction: "pan-x pan-y pinch-zoom" }}
     >
-      {/* Bottom-left stack: auto-rotation control + route legend */}
       <div
         className="absolute bottom-4 left-4 z-[9999] flex flex-col gap-2 items-start"
         style={{ touchAction: "auto", pointerEvents: "auto" }}
       >
-        {/* Control Panel */}
         <div className="bg-[var(--bg-surface)] rounded-lg shadow-lg p-4 border border-[var(--color-border)]">
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input
@@ -692,7 +680,6 @@ export default function GlobeView({
           </label>
         </div>
 
-        {/* Heatmap Legend */}
         {arcsData.length > 0 && (
           <div className="bg-[var(--bg-surface)] rounded-lg shadow-lg p-3 border border-[var(--color-border)]">
             <div className="text-xs font-semibold text-[var(--text-primary)] mb-2">
@@ -710,11 +697,6 @@ export default function GlobeView({
         )}
       </div>
 
-      {/* Bottom-center time-slider. Visible-counter values use the
-          post-filter arrays so the user sees the immediate effect of
-          a scrub, not stale aggregate counts. Cruises are counted as
-          distinct cruise IDs (not legs) so the number reads as "trips
-          you can see right now". */}
       <div
         className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[9999]"
         style={{ touchAction: "auto", pointerEvents: "auto" }}
@@ -728,61 +710,43 @@ export default function GlobeView({
       <Globe
         ref={globeRef}
         style={{ width: "100%", height: "100%" }}
-        globeMaterial={dayNightMaterial}
+        globeImageUrl="/earth-day.jpg"
+        bumpImageUrl="/earth-topology.png"
         backgroundImageUrl="/night-sky.png"
+        onGlobeReady={onGlobeReady}
+        atmosphereColor={ATMOSPHERE_COLOR}
+        atmosphereAltitude={ATMOSPHERE_ALTITUDE}
         arcsData={arcsData}
-        arcColor={(arc: ArcData) => arc.color}
+        arcColor={arcColorFn}
         arcStroke={dynamicStroke}
-        arcStrokeOpacity={0.6}
-        arcAltitude={(arc: ArcData) => arc.altitude}
+        arcStrokeOpacity={ARC_STROKE_OPACITY}
+        arcAltitude={arcAltitudeFn}
         arcCurveResolution={arcResolution}
-        // Static arcs — dash animation removed (felt too busy with 70+
-        // routes). Full-length stroke, no gap, no animation.
         arcDashLength={1}
         arcDashGap={0}
-        arcDashInitialGap={() => 0}
+        arcDashInitialGap={0}
+        arcsTransitionDuration={ZERO_TRANSITION}
         arcLabel={arcLabel}
-        onArcClick={(arc: ArcData) => {
-          // Smooth POV transition first — feels like a polished travel app.
-          flyToArc(arc.startLat, arc.startLng, arc.endLat, arc.endLng);
-          if (onFlightClick && arc.flights.length > 0) {
-            const mostRecentFlight = arc.flights[arc.flights.length - 1];
-            onFlightClick(mostRecentFlight.properties.id);
-          }
-        }}
-        // Cruise routes as curved paths along the surface (one per leg).
-        // The schematic-router waypoints from /cruises/geometry/batch
-        // produce the same continental-detour curves the deck.gl map shows
-        // — sky-blue, slightly thinner stroke, no animation, no arrows.
+        onArcClick={onArcClick}
         pathsData={cruisePathsData}
-        pathPoints={(p: CruisePathDatum) => p.coords}
-        pathPointLat={(coord: [number, number]) => coord[0]}
-        pathPointLng={(coord: [number, number]) => coord[1]}
-        pathColor={() => CRUISE_ARC_COLOR}
-        pathStroke={Math.max(dynamicStroke * 0.85, 0.18)}
+        pathPoints={pathPointsFn}
+        pathPointLat={pathPointLatFn}
+        pathPointLng={pathPointLngFn}
+        pathColor={pathColorFn}
+        pathStroke={pathStroke}
         pathDashLength={1}
         pathDashGap={0}
         pathDashAnimateTime={0}
+        pathTransitionDuration={ZERO_TRANSITION}
         pathLabel={cruisePathLabel}
-        pointsData={[
-          ...pointsData.map((p) => ({ ...p, _kind: "airport" as const })),
-          ...cruisePointsData.map((p) => ({ ...p, _kind: "port" as const })),
-        ]}
+        pointsData={mergedPointsData}
         pointLat="lat"
         pointLng="lng"
-        pointColor={(point: object) => {
-          const p = point as PointData & { _kind: "airport" | "port" };
-          if (p._kind === "port") return CRUISE_PORT_COLOR;
-          return "#f0a947";
-        }}
-        pointAltitude={0.01}
-        pointRadius={(point: object) => {
-          const p = point as PointData;
-          return Math.min(Math.sqrt(p.size) * 0.08, 0.3);
-        }}
+        pointColor={pointColorFn}
+        pointAltitude={POINT_ALTITUDE}
+        pointRadius={pointRadiusFn}
+        pointsTransitionDuration={ZERO_TRANSITION}
         pointLabel={pointLabel}
-        atmosphereColor="#5fa3ff"
-        atmosphereAltitude={0.32}
         enablePointerInteraction={true}
         animateIn={true}
       />
