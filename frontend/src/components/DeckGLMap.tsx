@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import MapGL, { useControl, type MapRef, type MapLayerMouseEvent } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
-import { buildMarkerTooltip } from "./map/markerTooltip";
+import { createMarkerTooltip } from "./map/markerTooltip";
 import { LightingEffect } from "@deck.gl/core";
+import { useTranslation } from "../hooks/useTranslation";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { MapMode } from "./MapContainer3D";
@@ -66,20 +67,23 @@ const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/st
 interface DeckOverlayProps {
   layers: Layer[];
   effects: LightingEffect[];
+  getTooltip: ReturnType<typeof createMarkerTooltip>;
 }
 
-function DeckGLOverlay({ layers, effects }: DeckOverlayProps): null {
+function DeckGLOverlay({ layers, effects, getTooltip }: DeckOverlayProps): null {
   const overlay = useControl<MapboxOverlay>(
     () =>
       new MapboxOverlay({
         layers,
         effects,
         pickingRadius: 5,
-        getTooltip: buildMarkerTooltip,
+        getTooltip,
       }),
     { position: "top-left" }
   );
-  overlay.setProps({ layers, effects, pickingRadius: 5 });
+  // Push getTooltip on every render too so language switches propagate
+  // — MapboxOverlay caches the constructor's getTooltip otherwise.
+  overlay.setProps({ layers, effects, pickingRadius: 5, getTooltip });
   return null;
 }
 
@@ -113,6 +117,9 @@ export function DeckGLMap({
   extraLayers,
   flightRouteColor,
 }: DeckGLMapProps): JSX.Element {
+  const { t, i18n } = useTranslation(["map"]);
+  const locale = i18n.language || "de";
+  const getTooltip = useMemo(() => createMarkerTooltip(t, locale), [t, locale]);
   const mapTheme = useThemeStore((state) => state.mapTheme);
   // Heatmap palette is unchanged by flightRouteColor — the override
   // is threaded explicitly into createRoutesLayers/buildRouteData so
@@ -565,7 +572,11 @@ export function DeckGLMap({
         cursor={nativeInteractiveIds ? "pointer" : undefined}
       >
         {webgl2Available && mapLoaded && (
-          <DeckGLOverlay layers={[...layers, ...pulseLayers, ...planeLayers]} effects={effects} />
+          <DeckGLOverlay
+            layers={[...layers, ...pulseLayers, ...planeLayers]}
+            effects={effects}
+            getTooltip={getTooltip}
+          />
         )}
         {!webgl2Available && visMode === "routes" && (
           <NativeRoutesLayer

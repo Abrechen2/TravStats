@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
-import { buildMarkerTooltip } from "../map/markerTooltip";
+import { createMarkerTooltip } from "../map/markerTooltip";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise } from "../../types";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/cruise";
@@ -9,6 +9,7 @@ import { createCruiseArcsLayer, createCruiseArrowsLayer } from "../layers/cruise
 import { createCruisePortsLayer } from "../layers/cruisePortsLayer";
 import { computeBbox } from "../../utils/mapAnimationHelpers";
 import { logger } from "../../lib/logger";
+import { useTranslation } from "../../hooks/useTranslation";
 
 const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
@@ -22,19 +23,20 @@ const INITIAL_VIEW: MapViewState = {
 
 interface DeckOverlayProps {
   layers: Layer[];
+  getTooltip: ReturnType<typeof createMarkerTooltip>;
 }
 
-function DeckGLOverlay({ layers }: DeckOverlayProps): null {
+function DeckGLOverlay({ layers, getTooltip }: DeckOverlayProps): null {
   const overlay = useControl<MapboxOverlay>(
     () =>
       new MapboxOverlay({
         layers,
         pickingRadius: 5,
-        getTooltip: buildMarkerTooltip,
+        getTooltip,
       }),
     { position: "top-left" }
   );
-  overlay.setProps({ layers, pickingRadius: 5 });
+  overlay.setProps({ layers, pickingRadius: 5, getTooltip });
   return null;
 }
 
@@ -50,6 +52,9 @@ interface Props {
  * first geometry + port load, then lets the user pan/zoom freely.
  */
 export function CruiseRouteMap({ cruise }: Props): JSX.Element {
+  const { t, i18n } = useTranslation(["map"]);
+  const locale = i18n.language || "de";
+  const getTooltip = useMemo(() => createMarkerTooltip(t, locale), [t, locale]);
   const mapRef = useRef<MapRef | null>(null);
   const [geometry, setGeometry] = useState<CruiseRouteFeatureCollection | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -131,7 +136,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
           setZoom((prev) => (prev === nextZoom ? prev : nextZoom));
         }}
       >
-        {mapLoaded && <DeckGLOverlay layers={layers} />}
+        {mapLoaded && <DeckGLOverlay layers={layers} getTooltip={getTooltip} />}
       </MapGL>
     </div>
   );
