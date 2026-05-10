@@ -38,11 +38,6 @@ const MARKER_RADIUS_PX = 5;
 // the head-flight column.
 const HEAD_MARKER_HEIGHT_M = 90_000;
 const HEAD_MARKER_RADIUS_M = 10_000;
-// Constant flight-arc count used for cruise width so cruise paths
-// render at the same default thickness as a single-flight arc
-// (count=1 yields ~2.5 px through the log formula). Cruises don't
-// aggregate by repetition the way flight routes do.
-const CRUISE_PSEUDO_COUNT = 1;
 
 // Lift cruise paths a few km off the sphere surface so they don't
 // z-fight with / clip into the globe. The path geometry comes from the
@@ -150,9 +145,14 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       getColor: (d) =>
         arcColor(d, activeQuartile === null || activeQuartile === d.quartile ? 235 : 35),
       updateTriggers: { getColor: [activeQuartile, flightRouteColor] },
-      getWidth: (d) => Math.max(1.5, Math.min(4, 1.5 + Math.log2(d.count + 1))),
+      // Match the flat-map routes-layer formula so flight-arc thickness
+      // is consistent across map ↔ globe transitions: sqrt(count) px,
+      // 1 flight → 1 px, 16 flights → 4 px (cap). The earlier
+      // log2-based curve started at 2.5 px which read as too heavy on
+      // the globe.
+      getWidth: (d) => Math.min(Math.sqrt(d.count), 4),
       widthUnits: "pixels",
-      widthMinPixels: 1.5,
+      widthMinPixels: 1,
       widthMaxPixels: 4,
       capRounded: true,
       jointRounded: true,
@@ -236,14 +236,14 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
           (p) => [p[0], p[1], CRUISE_PATH_ALTITUDE_M] as [number, number, number],
         ),
       getColor: CRUISE_PATH_COLOR,
-      // Match the flight-arc width so cruise + flight routes read at
-      // the same default thickness. Cruises don't aggregate by
-      // repetition, so we pin a synthetic count=1 (= 2.5 px).
-      getWidth: () =>
-        Math.max(1.5, Math.min(4, 1.5 + Math.log2(CRUISE_PSEUDO_COUNT + 1))),
+      // Pin to 2 px to match the flat-map cruiseArcsLayer default —
+      // visually heavier than a single-flight arc (1 px) so cruise
+      // routes still read distinct, but no longer dominate the globe
+      // the way the earlier 2.5 px setting did.
+      getWidth: () => 2,
       widthUnits: "pixels",
-      widthMinPixels: 1.5,
-      widthMaxPixels: 4,
+      widthMinPixels: 1,
+      widthMaxPixels: 3,
       capRounded: true,
       jointRounded: true,
       extensions: [
