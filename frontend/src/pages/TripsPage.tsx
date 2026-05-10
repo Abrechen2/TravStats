@@ -5,6 +5,7 @@ import { logger } from "../lib/logger";
 import type { Trip } from "../types";
 import TripsTab from "../components/Trips/TripsTab";
 import PageTransition from "../components/PageTransition";
+import NavigationBar from "../components/NavigationBar";
 
 /**
  * Top-level Trips page (Phase-1 redesign). Was previously embedded as a
@@ -38,6 +39,7 @@ export default function TripsPage(): JSX.Element {
         className="min-h-screen"
         style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
       >
+        <NavigationBar />
         <div className="max-w-7xl mx-auto px-4 py-6">
           <h1 className="text-2xl font-display font-bold mb-1">{t("trips:tab")}</h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
