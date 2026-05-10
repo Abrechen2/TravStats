@@ -47,14 +47,25 @@ describe("importPreview.buildPreviewRows", () => {
     await prisma.$disconnect();
   });
 
-  it("trans-meridian — uses Duration as ground truth for IDL-westbound (LAX→SYD)", async () => {
+  it("trans-meridian — arrUtc anchored to arr_local + arr_tz, Duration picks calendar day (LAX→SYD)", async () => {
+    // Per issue #99 + jay-tau RC.2 UAT: FR24's `Duration` is a derived/cached
+    // field that's broken on some routes. Authoritative signals are
+    // (dep_local, dep_tz) and (arr_local, arr_tz). We use Duration only to
+    // disambiguate the calendar day on trans-meridian flights.
+    //
+    // LAX→SYD CSV: dep 2023-03-22 22:30 LAX (PDT, UTC-7), arr 06:25 SYD
+    // (AEDT, UTC+11), duration 14:55. Best day-shift is +2 days (matches
+    // the dep+duration target within ~1h). Resulting arrUtc =
+    // 2023-03-23 19:25 UTC = 2023-03-24 06:25 SYD. Real wall-clock flight
+    // time = 13h55, NOT FR24's stored 14h55.
     const inputs = loadFr24Fixture();
     const rows = (await buildPreviewRows(userId, inputs)).rows;
     const lax = rows.find((r) => r.fromIata === "LAX" && r.toIata === "SYD");
     expect(lax).toBeDefined();
     const delta = lax!.arrUtc.getTime() - lax!.depUtc.getTime();
-    expect(Math.abs(delta - 14 * 3600 * 1000 - 55 * 60 * 1000)).toBeLessThan(60_000);
+    expect(Math.abs(delta - (13 * 3600 + 55 * 60) * 1000)).toBeLessThan(60_000);
     expect(lax!.arrivalLocalCorrected.startsWith("2023-03-24")).toBe(true);
+    expect(lax!.arrivalLocalCorrected.endsWith("T06:25:00")).toBe(true);
   });
 
   it("status defaulting — 2019 row is flown, 2024 future row is scheduled", async () => {
@@ -84,18 +95,18 @@ describe("importPreview.buildPreviewRows", () => {
     expect(rows[0].flags).toContain("duration_mismatch");
   });
 
-  it("duration_mismatch is a soft warning — depUtc/arrUtc/arrivalLocalCorrected stay valid", async () => {
-    // Regression for jay-tau UAT (issue #99): FR24's `Duration` field uses
-    // UTC+4 instead of Asia/Kolkata (+5:30) for BLR-international flights,
-    // tripping duration_mismatch on otherwise valid rows. The frontend used
-    // to silently drop them. The backend MUST keep producing usable
-    // depUtc/arrUtc/arrivalLocalCorrected so the row stays importable.
-    // Reproduces jay-tau's AF191 BLR→CDG observation:
-    //   real ~10h35, IATA-correct math 11h00, FR24's broken Duration 9h30
+  it("duration_mismatch — arrUtc anchored to arr_local, NOT dep_utc + (broken) Duration (BLR→CDG)", async () => {
+    // Regression for jay-tau RC.2 UAT (issue #99): FR24's `Duration` field
+    // uses UTC+4 instead of Asia/Kolkata (+5:30) for BLR-international
+    // flights. RC.2 made the row importable but stored arr_utc =
+    // dep_utc + (broken) Duration, putting the time off by 1h30. RC.6 fixes
+    // this by anchoring arrUtc on arr_local + arr_tz; Duration only picks
+    // the calendar day. The flag still fires for transparency.
+    //
     // depUtc = 2023-03-15 01:30 IST = 2023-03-14 20:00 UTC
-    // naive arrUtc = 2023-03-15 08:00 CET = 2023-03-15 07:00 UTC (= 11h flight)
-    // derived arrUtc = depUtc + 9h30 = 2023-03-15 05:30 UTC
-    // delta = 90 min, well past the 30-min threshold
+    // arrUtc (correct, anchored)  = 2023-03-15 08:00 CET = 2023-03-15 07:00 UTC
+    // arrUtc (RC.2 buggy, target) = depUtc + 9h30        = 2023-03-15 05:30 UTC
+    //   delta = 1h30 — well past the 30-min threshold, fires the flag
     const blrRoute: PreviewRowInput[] = [
       {
         date: "2023-03-15",
@@ -111,11 +122,11 @@ describe("importPreview.buildPreviewRows", () => {
     ];
     const rows = (await buildPreviewRows(userId, blrRoute)).rows;
     expect(rows[0].flags).toContain("duration_mismatch");
-    // depUtc must NOT be SAFE_DATE (epoch 0) — frontend uses this directly
-    expect(rows[0].depUtc.getTime()).toBeGreaterThan(0);
-    expect(rows[0].arrUtc.getTime()).toBeGreaterThan(0);
-    expect(rows[0].arrivalLocalCorrected).not.toBe("");
-    // statusDefault should resolve normally — the date is in the past
+    expect(rows[0].depUtc.toISOString()).toBe("2023-03-14T20:00:00.000Z");
+    // The actual jay-tau bug: arrUtc must reflect arr_local + arr_tz,
+    // NOT dep_utc + broken-duration.
+    expect(rows[0].arrUtc.toISOString()).toBe("2023-03-15T07:00:00.000Z");
+    expect(rows[0].arrivalLocalCorrected).toBe("2023-03-15T08:00:00");
     expect(rows[0].statusDefault).toBe("flown");
   });
 
