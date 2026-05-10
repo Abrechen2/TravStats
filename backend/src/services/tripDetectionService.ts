@@ -116,7 +116,7 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
     return await finalizeWithCleanup(committed, userId, dryRun);
   }
 
-  const flights = await prisma.flight.findMany({
+  const dbFlights = await prisma.flight.findMany({
     where: { userId, tripId: null },
     orderBy: { departureTime: "asc" },
     select: {
@@ -131,6 +131,13 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
       arrLon: true,
     },
   });
+
+  // Re-sort same-day flights by chain coherence so the home-loop and
+  // continuity heuristics see DATE_ONLY return-day legs in the order
+  // the user actually flew them, not in the order their default UTC
+  // timestamps happen to fall. See `chainCoherentSort` for the full
+  // rationale (issue #104).
+  const flights = chainCoherentSort(dbFlights);
 
   if (flights.length === 0) {
     return await finalizeWithCleanup({ proposed: [], created: [], orphansRemoved: 0 }, userId, dryRun);
@@ -195,6 +202,7 @@ export const _internals = {
   spanDays,
   findHomeLoops,
   findContinuityClusters,
+  chainCoherentSort,
 };
 
 function groupByPnr(flights: FlightLite[]): Map<string, FlightLite[]> {
@@ -313,6 +321,105 @@ function findContinuityClusters(flights: FlightLite[]): FlightLite[][] {
   }
   if (current.length > 0) out.push(current);
   return out;
+}
+
+/**
+ * Re-order same-day flights by chain coherence.
+ *
+ * `findMany` orders by `departureTime asc`, which is correct when the
+ * timestamps are accurate. For DATE_ONLY rows, manually entered
+ * round-trips can have default times that don't reflect the within-day
+ * chain — e.g. Norberts MUC↺RAK on 2009-09-21 stores RAK→MAD with
+ * `dep=12:00 UTC` and MAD→MUC with `dep=10:00 UTC`, so a raw timestamp
+ * sort puts the connecting anchor BEFORE the return leg. The home-loop
+ * walker then closes the loop early and orphans the return (issue #104).
+ *
+ * Fix: within each calendar date, run Kahn's topological sort using
+ * arr→dep airport matches as the chain dependency. Multi-day order is
+ * preserved; days with no chain ambiguity (single flight, or chain
+ * already in timestamp order) are unaffected. Flights without a
+ * departureTime stay at the end, mirroring the existing heuristics.
+ */
+function chainCoherentSort<T extends FlightLite>(flights: T[]): T[] {
+  const withTime = flights.filter((f) => f.departureTime != null);
+  const withoutTime = flights.filter((f) => f.departureTime == null);
+
+  const byDay = new Map<string, T[]>();
+  for (const fl of withTime) {
+    const key = toYmd(fl.departureTime as Date);
+    const arr = byDay.get(key) ?? [];
+    arr.push(fl);
+    byDay.set(key, arr);
+  }
+
+  const out: T[] = [];
+  for (const day of [...byDay.keys()].sort()) {
+    out.push(...sortDayByChain(byDay.get(day) as T[]));
+  }
+  out.push(...withoutTime);
+  return out;
+}
+
+function sortDayByChain<T extends FlightLite>(day: T[]): T[] {
+  if (day.length <= 1) return day;
+
+  const n = day.length;
+  const inDegree = new Array<number>(n).fill(0);
+  const adj: number[][] = Array.from({ length: n }, () => []);
+
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      if (i === j) continue;
+      if (
+        day[i].arrIata &&
+        day[j].depIata &&
+        day[i].arrIata === day[j].depIata
+      ) {
+        adj[i].push(j);
+        inDegree[j]++;
+      }
+    }
+  }
+
+  const byDepTime = (a: number, b: number): number =>
+    (day[a].departureTime?.getTime() ?? 0) -
+    (day[b].departureTime?.getTime() ?? 0);
+
+  // Initial frontier: in-degree-0 nodes sorted by depTime (stable tiebreak
+  // for two unrelated chains starting on the same day).
+  const ready: number[] = [];
+  for (let i = 0; i < n; i++) if (inDegree[i] === 0) ready.push(i);
+  ready.sort(byDepTime);
+
+  const visited = new Set<number>();
+  const result: T[] = [];
+
+  while (ready.length > 0) {
+    const i = ready.shift() as number;
+    if (visited.has(i)) continue;
+    visited.add(i);
+    result.push(day[i]);
+
+    // Walk this chain to completion before starting the next: prepend
+    // newly-ready chain neighbours, sorted, ahead of any pending starts.
+    const chainNext: number[] = [];
+    for (const j of adj[i]) {
+      if (visited.has(j)) continue;
+      inDegree[j]--;
+      if (inDegree[j] === 0) chainNext.push(j);
+    }
+    chainNext.sort(byDepTime);
+    ready.unshift(...chainNext);
+  }
+
+  // Defensive: if a cycle slipped past (real flights cannot form one,
+  // but malformed input could), append any remaining nodes in original
+  // order so we never silently drop data.
+  for (let i = 0; i < n; i++) {
+    if (!visited.has(i)) result.push(day[i]);
+  }
+
+  return result;
 }
 
 function makeProposal(

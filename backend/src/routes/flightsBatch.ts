@@ -8,6 +8,7 @@ import { TRIP_COLORS } from "../schemas/trip";
 import logger from "../utils/logger";
 import { enrichFlightAirports } from "../services/airportLookup";
 import { calculateCo2Kg, haversineKm, toSeatClass } from "../services/co2Calculator";
+import { resolveAirlineCodes } from "../utils/airlineNormalize";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
 
@@ -80,11 +81,27 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
         const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
         const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
         const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
+        // Auto-resolve IATA/ICAO from a free-text airline name (issue #106B).
+        // Importers (Generic-CSV, FR24, AI-agent) often only supply a name —
+        // without codes downstream features like airline filters and codeshare
+        // detection treat spelling variants as separate carriers.
+        const resolvedAirline = data.airline && !data.airlineIata && !data.airlineIcao
+          ? resolveAirlineCodes(data.airline)
+          : null;
+        const resolvedOperating = data.operatingAirline && !data.operatingAirlineIata && !data.operatingAirlineIcao
+          ? resolveAirlineCodes(data.operatingAirline)
+          : null;
+
         const flight = await tx.flight.create({
           data: {
             userId,
             airline: data.airline,
+            airlineIata: data.airlineIata ?? resolvedAirline?.iata,
+            airlineIcao: data.airlineIcao ?? resolvedAirline?.icao,
             operatingAirline: data.operatingAirline,
+            operatingAirlineIata: data.operatingAirlineIata ?? resolvedOperating?.iata,
+            operatingAirlineIcao: data.operatingAirlineIcao ?? resolvedOperating?.icao,
+            isCodeshare: data.isCodeshare,
             flightNumber: data.flightNumber,
             callsign: data.callsign,
             aircraft: data.aircraft,

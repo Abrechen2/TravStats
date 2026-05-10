@@ -118,19 +118,38 @@ export async function buildPreviewRows(
         depUtc = fromZonedTime(`${row.date}T${row.depTimeLocal ?? "00:00:00"}`, depTz);
         if (!isValidDate(depUtc)) throw new Error("invalid dep");
 
-        if (typeof row.durationSeconds === "number" && row.durationSeconds > 0) {
-          arrUtc = new Date(depUtc.getTime() + row.durationSeconds * 1000);
-          if (row.arrTimeLocal) {
-            const naive = fromZonedTime(`${row.date}T${row.arrTimeLocal}`, arrTz);
-            let candidate = naive;
-            for (let i = 0; i < 3; i++) {
-              if (Math.abs(candidate.getTime() - arrUtc.getTime()) <= 30 * 60 * 1000) break;
-              candidate = new Date(candidate.getTime() + 24 * 3600 * 1000);
-            }
-            if (Math.abs(candidate.getTime() - arrUtc.getTime()) > 30 * 60 * 1000) {
-              flags.push("duration_mismatch");
+        // Authoritative arrival signal is `arr_local + arr_tz`, NOT
+        // `dep_utc + Duration`. FR24's `Duration` field is a derived/cached
+        // value that's known-broken on some routes (e.g. BLR-international:
+        // FR24 uses UTC+4 instead of Asia/Kolkata +5:30, off by 1h30 — see
+        // issue #99). When both signals are present we anchor on arr_local
+        // and use Duration only to pick the calendar day for trans-meridian
+        // flights. The duration_mismatch flag still fires for transparency.
+        const hasDuration =
+          typeof row.durationSeconds === "number" && row.durationSeconds > 0;
+        if (hasDuration && row.arrTimeLocal) {
+          const target = depUtc.getTime() + row.durationSeconds! * 1000;
+          const naiveMs = fromZonedTime(
+            `${row.date}T${row.arrTimeLocal}`,
+            arrTz
+          ).getTime();
+          let bestMs = naiveMs;
+          let bestDiff = Math.abs(naiveMs - target);
+          const dayMs = 24 * 3600 * 1000;
+          for (let day = 1; day <= 3; day++) {
+            const candidate = naiveMs + day * dayMs;
+            const diff = Math.abs(candidate - target);
+            if (diff < bestDiff) {
+              bestMs = candidate;
+              bestDiff = diff;
             }
           }
+          arrUtc = new Date(bestMs);
+          if (bestDiff > 30 * 60 * 1000) {
+            flags.push("duration_mismatch");
+          }
+        } else if (hasDuration) {
+          arrUtc = new Date(depUtc.getTime() + row.durationSeconds! * 1000);
         } else if (row.arrTimeLocal) {
           arrUtc = fromZonedTime(`${row.date}T${row.arrTimeLocal}`, arrTz);
           let safety = 0;
