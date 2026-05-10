@@ -68,6 +68,13 @@ interface MapContainer3DProps {
    */
   hideVisModeSelector?: boolean;
   /**
+   * Hide the top-left "<count> Flüge · <count> Routen" info pill.
+   * Used by tabs that render their own overlay at top-left (e.g.
+   * AllTab's Aktivität toggle + domain legend), so the info pill
+   * doesn't sit underneath them and bleed through.
+   */
+  hideInfoPill?: boolean;
+  /**
    * Pre-filtered cruise list. When provided, the internal cruiseApi
    * fetch is bypassed and these cruises are rendered instead. Lets
    * tabs pre-filter cruises by year / domain visibility upstream
@@ -96,6 +103,7 @@ export default function MapContainer3D({
   flightRouteColor,
   availableModes,
   hideVisModeSelector = false,
+  hideInfoPill = false,
   cruisesOverride,
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
@@ -222,7 +230,7 @@ export default function MapContainer3D({
           Skipped when the tab owns no flights (e.g. the Cruises tab
           renders this component with flights={[]} to reuse the
           base-map — a flight counter there would always read "0"). */}
-      {visMode === "routes" && routeCount !== null && flights.length > 0 && (
+      {!hideInfoPill && visMode === "routes" && routeCount !== null && flights.length > 0 && (
         <div
           className="absolute top-3 left-3 z-10 select-none"
           style={{
