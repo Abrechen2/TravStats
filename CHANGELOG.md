@@ -4,6 +4,36 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.27] - 2026-05-10 (Beta)
+
+### Fixed
+- **Bulk historical refresh aborted client-side after 10 s** while the
+  backend kept running. The default axios timeout is 10 s, but
+  `runBulkRefresh` loops sequentially through up to 25 flights, each
+  calling AeroDataBox / Aviationstack — easily 30–60 s on a healthy
+  link. The UI gave up mid-loop, surfaced a red `timeout of 10000ms
+  exceeded` toast, and the user had to re-click before any data
+  showed up. Bumped the bulk-refresh request to the parser-class
+  180 s timeout so the call stays open for the full server-side
+  iteration.
+- **Settings → Auffrischen-Buttons used raw `bg-blue-600`** instead of
+  the brand-amber `btn-primary`. Side-fix while in the file.
+
+### Performance
+- **Globe hover tooltip moved into a leaf component.** Sweeping the
+  cursor over airport / port labels triggered React re-renders at
+  60–120 Hz of the entire 1600-line `GlobeView` tree (every onHover
+  event called `setTooltip`); on lower-end GPUs this read as visible
+  jank during the cursor-following tooltip. The new `HoverTooltip`
+  exposes an imperative `show / hide` API via `forwardRef`, so only
+  the 30-line tooltip subtree re-renders on cursor movement — the
+  parent and its `MapboxOverlay` setProps stay put.
+- **Aktivität-Panel rows replaced 720 `onMouseEnter` / `onMouseLeave`
+  JS handlers** (2 per row × 354 rows + cruises) with a Tailwind
+  `hover:bg-white/[0.04]` class. The browser now handles row hover
+  purely in CSS — no listeners attached, no inline-style mutation
+  during scroll.
+
 ## [2.0.0-beta.26] - 2026-05-10 (Beta)
 
 ### Fixed
