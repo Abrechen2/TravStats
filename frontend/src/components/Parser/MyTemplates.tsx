@@ -58,13 +58,20 @@ export default function MyTemplates(): JSX.Element {
   };
 
   const statusBadge = (status: UserTemplateItem["status"]): JSX.Element => {
-    const styles: Record<UserTemplateItem["status"], string> = {
-      active: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-      pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-      disabled: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400",
+    // Status badges use brand state tokens (--success / --warning / muted
+    // surface) instead of light-mode tailwind variants. Per BRAND.md state
+    // colours are global tokens, not light-mode-only paint.
+    const styles: Record<UserTemplateItem["status"], { bg: string; fg: string }> = {
+      active: { bg: "rgba(63,185,80,0.15)", fg: "var(--success)" },
+      pending: { bg: "rgba(210,153,34,0.15)", fg: "var(--warning)" },
+      disabled: { bg: "var(--bg-elevated)", fg: "var(--text-muted)" },
     };
+    const s = styles[status];
     return (
-      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${styles[status]}`}>
+      <span
+        className="text-xs px-2 py-0.5 rounded-full font-medium"
+        style={{ background: s.bg, color: s.fg }}
+      >
         {t(`parser:myTemplates.status.${status}`)}
       </span>
     );
@@ -101,7 +108,8 @@ export default function MyTemplates(): JSX.Element {
       {templates.map((tmpl) => (
         <div
           key={tmpl.id}
-          className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 px-5 py-4 flex items-center justify-between gap-4"
+          className="rounded-lg px-5 py-4 flex items-center justify-between gap-4"
+          style={{ background: "var(--bg-elevated)", border: "1px solid var(--color-border)" }}
         >
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
@@ -133,7 +141,7 @@ export default function MyTemplates(): JSX.Element {
                 data-testid={`activate-${tmpl.id}`}
                 onClick={() => handleSetStatus(tmpl.id, "active")}
                 disabled={actionLoading === tmpl.id}
-                className="text-xs px-3 py-1.5 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50 disabled:opacity-50 transition-colors"
+                className="btn-primary text-xs px-3 py-1.5 disabled:opacity-50"
               >
                 {t("parser:myTemplates.activate")}
               </button>
@@ -142,7 +150,8 @@ export default function MyTemplates(): JSX.Element {
                 data-testid={`disable-${tmpl.id}`}
                 onClick={() => handleSetStatus(tmpl.id, "disabled")}
                 disabled={actionLoading === tmpl.id}
-                className="text-xs px-3 py-1.5 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors"
+                className="text-xs px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors"
+                style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}
               >
                 {t("parser:myTemplates.disable")}
               </button>
@@ -151,7 +160,8 @@ export default function MyTemplates(): JSX.Element {
               data-testid={`delete-${tmpl.id}`}
               onClick={() => handleDelete(tmpl.id)}
               disabled={actionLoading === tmpl.id}
-              className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50 disabled:opacity-50 transition-colors"
+              className="text-xs px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors"
+              style={{ background: "rgba(248,81,73,0.12)", color: "var(--danger)" }}
             >
               {t("common:buttons.delete")}
             </button>

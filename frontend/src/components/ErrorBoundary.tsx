@@ -96,16 +96,23 @@ export default class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <h3 className="text-red-800 font-semibold mb-2">
+        <div
+          className="p-4 rounded-lg"
+          style={{
+            background: "rgba(248,81,73,0.10)",
+            border: "1px solid rgba(248,81,73,0.35)",
+          }}
+        >
+          <h3 className="font-semibold mb-2" style={{ color: "var(--danger)" }}>
             {i18n.t("common:errorBoundary.fallbackTitle")}
           </h3>
-          <p className="text-red-600 text-sm">
+          <p className="text-sm" style={{ color: "var(--text-primary)" }}>
             {this.state.error?.message || i18n.t("common:errorBoundary.fallbackMessage")}
           </p>
           <button
             onClick={() => this.setState({ hasError: false, error: undefined })}
-            className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            className="mt-3 px-4 py-2 rounded text-white"
+            style={{ background: "var(--danger)" }}
           >
             {i18n.t("common:errorBoundary.tryAgain")}
           </button>

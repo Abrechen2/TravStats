@@ -82,11 +82,14 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
     });
   };
 
+  // Intensity ramp uses brand-amber gradient instead of cruise-domain blue.
+  // Each cell is also labelled with the count in the tooltip / legend so the
+  // colour isn't conveying state alone (BRAND.md "❌ Don't" #3).
   const getIntensityColor = (flightCount: number): string => {
     if (flightCount === 0) return "bg-[var(--bg-elevated)]";
-    if (flightCount === 1) return "bg-blue-200";
-    if (flightCount === 2) return "bg-blue-400";
-    return "bg-blue-600";
+    if (flightCount === 1) return "bg-[var(--accent-soft)]";
+    if (flightCount === 2) return "bg-[var(--accent-dim)]";
+    return "bg-[var(--accent)]";
   };
 
   const goToPreviousMonth = () => {
@@ -276,15 +279,15 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
             <span className="text-xs text-[var(--text-muted)]">0</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-6 h-6 rounded bg-blue-200" />
+            <div className="w-6 h-6 rounded bg-[var(--accent-soft)]" />
             <span className="text-xs text-[var(--text-muted)]">1</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-6 h-6 rounded bg-blue-400" />
+            <div className="w-6 h-6 rounded bg-[var(--accent-dim)]" />
             <span className="text-xs text-[var(--text-muted)]">2</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-6 h-6 rounded bg-blue-600" />
+            <div className="w-6 h-6 rounded bg-[var(--accent)]" />
             <span className="text-xs text-[var(--text-muted)]">3+</span>
           </div>
         </div>

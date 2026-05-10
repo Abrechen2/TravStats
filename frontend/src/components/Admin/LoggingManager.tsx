@@ -67,11 +67,14 @@ export default function LoggingManager({
         <div className="flex gap-2">
           <button
             onClick={onToggleDebug}
-            className={`px-4 py-2 rounded-lg transition font-medium ${
-              loggingConfig.logLevel === "debug"
-                ? "bg-yellow-600 hover:bg-yellow-700 text-white"
-                : "bg-blue-600 hover:bg-blue-700 text-white"
-            }`}
+            className="px-4 py-2 rounded-lg transition font-medium"
+            style={{
+              background:
+                loggingConfig.logLevel === "debug"
+                  ? "var(--warning)"
+                  : "var(--accent)",
+              color: "#0d1117",
+            }}
           >
             {loggingConfig.logLevel === "debug"
               ? t("admin:logging.debugModeDisable")
@@ -80,7 +83,7 @@ export default function LoggingManager({
           <button
             onClick={onSave}
             disabled={savingLogging}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition font-medium"
+            className="btn-primary px-4 py-2 font-medium disabled:opacity-50"
           >
             {savingLogging ? t("common:buttons.saving") : t("admin:saveConfig")}
           </button>
@@ -305,7 +308,8 @@ export default function LoggingManager({
           </h3>
           <button
             onClick={onCleanup}
-            className="text-sm bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg transition"
+            className="text-sm text-white px-3 py-1.5 rounded-lg transition"
+            style={{ background: "var(--danger)" }}
           >
             {t("admin:logging.files.cleanup")}
           </button>
@@ -342,11 +346,12 @@ export default function LoggingManager({
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <span
-                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        className="px-2 py-1 text-xs font-semibold rounded-full"
+                        style={
                           file.category === "error"
-                            ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                            : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                        }`}
+                            ? { background: "rgba(248,81,73,0.15)", color: "var(--danger)" }
+                            : { background: "var(--accent-soft)", color: "var(--accent)" }
+                        }
                       >
                         {file.category}
                       </span>

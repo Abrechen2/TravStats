@@ -113,11 +113,12 @@ export default function ReceiptUpload({
         </div>
       ) : (
         <div
-          className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+          className="relative border-2 border-dashed rounded-lg p-6 text-center transition-colors"
+          style={
             dragActive
-              ? "border-blue-500 bg-blue-50"
-              : "border-[var(--color-border)] hover:border-[var(--color-border)]"
-          }`}
+              ? { borderColor: "var(--accent)", background: "var(--accent-soft)" }
+              : { borderColor: "var(--color-border)" }
+          }
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
@@ -139,8 +140,8 @@ export default function ReceiptUpload({
               </p>
               <div className="w-full bg-[var(--bg-muted)] rounded-full h-2">
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
+                  className="h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%`, background: "var(--accent)" }}
                 />
               </div>
             </div>

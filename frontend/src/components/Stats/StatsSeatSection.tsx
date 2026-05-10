@@ -80,21 +80,28 @@ export default function StatsSeatSection({ seatStats }: StatsSeatSectionProps): 
               <h3 className="text-lg font-semibold mb-3" style={{ color: "var(--text-primary)" }}>
                 Front / Middle / Back
               </h3>
+              {/* Front/Middle/Back chart bars previously used purple/indigo/
+                  pink which leak Hotel-domain (purple) and non-brand hues
+                  (indigo, pink) into a flight stat. Per BRAND.md §3 those
+                  domain colours stay in their domain and pink/indigo aren't
+                  in the brand palette at all. Use brand-amber graded by
+                  zone position so the eye still differentiates the three
+                  bars (front = strong, middle = mid, back = soft). */}
               {[
                 {
                   label: t("stats:seats.front"),
                   count: seatStats.frontCount,
-                  color: "bg-purple-500",
+                  color: "bg-[var(--accent)]",
                 },
                 {
                   label: t("stats:seats.middleZone"),
                   count: seatStats.middleZoneCount,
-                  color: "bg-indigo-500",
+                  color: "bg-[var(--accent-dim)]",
                 },
                 {
                   label: t("stats:seats.back"),
                   count: seatStats.backCount,
-                  color: "bg-pink-500",
+                  color: "bg-[var(--accent-soft)]",
                 },
               ].map((item) => {
                 const total =
@@ -189,8 +196,8 @@ export default function StatsSeatSection({ seatStats }: StatsSeatSectionProps): 
                         style={{ background: "var(--color-border)" }}
                       >
                         <div
-                          className="bg-teal-500 h-2 rounded-full"
-                          style={{ width: `${pct}%` }}
+                          className="h-2 rounded-full"
+                          style={{ width: `${pct}%`, background: "var(--accent)" }}
                         />
                       </div>
                     </div>
