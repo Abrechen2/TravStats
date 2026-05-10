@@ -4,7 +4,71 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
-## [2.0.0-beta.25] - 2026-05-09 (Beta)
+## [2.0.0-beta.26] - 2026-05-10 (Beta)
+
+### Fixed
+- **Sonder-Flug entry was invisible from the dashboard top-bar add
+  button** — `DashboardLayout` mounted `SimplifiedFlightFormV2` without
+  the `onPickSpecialFlight` prop, so the special-flight chooser card
+  silently dropped out of the lookup step for every user coming through
+  this path. The chooser button label was also calling a missing i18n
+  key (`specialFlights:chooser.pickAction`); now uses the correct
+  `chooser.cta`.
+- **NavigationBar missing on Trips pages** — `/trips` and `/trips/:id`
+  had no top-bar at all (no logo, no nav links, no user menu) while
+  every other top-level page mounted `<NavigationBar />`. Added it to
+  both, plus the loading state on `/trips/:id` so the chrome doesn't
+  pop in once the trip resolves.
+- **Map info pill bled through the dashboard's Aktivität toggle on the
+  Alle and Flüge tabs** — `MapContainer3D` rendered a "X Flüge · Y
+  Routen" pill at top-left z-10, sitting under the tab-level
+  Aktivität button + domain-legend chips at z-30. The "Routen" tail
+  peeked out between the two pills. Added a `hideInfoPill` prop and
+  set it on AllTab + FlightsTab.
+- **Route-Details button on the flight tooltip silently did nothing**
+  when the Aktivität sidebar was closed — `<RouteDetailsSidebar>` is
+  rendered inside `<FlightPanel>`, which only mounts while the sidebar
+  is open. Clicking the button just flipped the store flag and looked
+  unresponsive. FlightsTab now auto-opens the sidebar on any non-null
+  `detailMode` transition so the details actually appear.
+
+### Visual / brand
+- **Cruise-port markers + UN/LOCODE labels on the flat map**: hover
+  tooltip ported from globe so airport / port hover bubbles now show
+  IATA + name + count + last-visit / last-call across both surfaces.
+  Labels also gain the same low-zoom hide threshold the airport IATA
+  labels already use.
+- **Globe arc + cruise-path widths** realigned to the flat-map
+  `sqrt(count)` formula so the visual jump between map ↔ globe
+  transitions is smooth instead of jumping in line weight.
+- **Three-round brand-violation sweep** against `BRAND.md`:
+  - Domain-color leaks fixed across AchievementPopup tier gradients,
+    Admin/UserManagement role badge, DataSourceBadges, Stats seat-class
+    and zone bars, Training flight-highlighter palette, FlightCalendar
+    intensity ramp.
+  - Email-import "Beste Option" hero card on the cruise side moved off
+    the retired green/teal pattern to the same brand-amber gradient
+    the flight side already uses; FlightLookupStep "Sonder-Flug" card
+    border moved off Hotel-domain purple to flight-domain amber.
+  - Stats progress bars (aircraft / airline / country) and the Setup +
+    SetupPage success/error banners moved off light-mode Tailwind
+    palette to brand state tokens (`--success` / `--danger` /
+    `--warning` / `--accent`).
+  - Admin LoggingManager + BackupManagement, Training TemplateReview
+    + BoardingPassAnnotation, ParserPage tabs, ReceiptUpload drag-
+    state and AirportSeedingBanner all rerouted to brand tokens.
+  - Cruise port markers on the map now render in the canonical
+    `--domain-cruise` hex (#6fa0d6) instead of sky-400.
+- **Shared tooltip labels** moved out of `map.globe.pinned.*` into a
+  dedicated top-level `map.tooltip.*` namespace shared by both the
+  globe pinned card and the flat-map hover bubble (no functional
+  change, just consistent key location).
+- **Globe edge-clipping fixed** — `EarthOcclusionExtension` now reads
+  the live MapLibre camera distance off the deck.gl viewport instead
+  of an empirical zoom heuristic that was off by 3-22× from the real
+  camera. Routes no longer disappear at the rim when zoomed out.
+
+
 
 ### Fixed
 - **Alle-tab map legend now reflects domain pills** — The legend stripe
