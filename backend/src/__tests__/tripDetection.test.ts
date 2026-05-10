@@ -2,8 +2,14 @@ import { describe, it, expect } from "@jest/globals";
 import { _internals } from "../services/tripDetectionService";
 import type { HomeAirportEntry } from "../utils/homeAirport";
 
-const { groupByPnr, dropCancelledDuplicates, spanDays, findHomeLoops, findContinuityClusters } =
-  _internals;
+const {
+  groupByPnr,
+  dropCancelledDuplicates,
+  spanDays,
+  findHomeLoops,
+  findContinuityClusters,
+  chainCoherentSort,
+} = _internals;
 
 interface TestFlight {
   id: string;
@@ -138,6 +144,75 @@ describe("tripDetectionService heuristics", () => {
             depLat: 52.366, depLon: 13.503 }),
       ];
       expect(findContinuityClusters(flights).length).toBe(1);
+    });
+  });
+
+  describe("Chain-coherent same-day sort (Norbert RAK regression, issue #104)", () => {
+    // DB sorts findMany() results by departureTime asc. For DATE_ONLY
+    // round-trips entered manually, both endpoints get default 10:00 / 12:00
+    // UTC stamps that don't reflect within-day chain order. Norberts
+    // 2009-09-21 return-day has RAK→MAD (dep 12:00) ordered AFTER MAD→MUC
+    // (dep 10:00) by raw timestamp, breaking the home-loop walk and
+    // orphaning the return leg. chainCoherentSort re-sorts same-day
+    // flights via Kahn's topo sort using arr→dep matches as chain edges.
+
+    it("re-orders RAK→MAD before MAD→MUC on the same calendar day", () => {
+      const flights = [
+        f({ id: "anchor", depIata: "MAD", arrIata: "MUC", departureTime: new Date("2009-09-21T10:00:00Z") }),
+        f({ id: "return", depIata: "RAK", arrIata: "MAD", departureTime: new Date("2009-09-21T12:00:00Z") }),
+      ];
+      const sorted = chainCoherentSort(flights);
+      expect(sorted.map((x) => x.id)).toEqual(["return", "anchor"]);
+    });
+
+    it("preserves multi-day order while re-sorting within each day", () => {
+      const flights = [
+        f({ id: "out1", depIata: "MUC", arrIata: "MAD", departureTime: new Date("2009-09-14T10:00:00Z") }),
+        f({ id: "out2", depIata: "MAD", arrIata: "RAK", departureTime: new Date("2009-09-14T10:00:00Z") }),
+        f({ id: "anchor", depIata: "MAD", arrIata: "MUC", departureTime: new Date("2009-09-21T10:00:00Z") }),
+        f({ id: "return", depIata: "RAK", arrIata: "MAD", departureTime: new Date("2009-09-21T12:00:00Z") }),
+      ];
+      const sorted = chainCoherentSort(flights);
+      // Day 1 chain: MUC→MAD→RAK ; Day 2 chain: RAK→MAD→MUC
+      expect(sorted.map((x) => x.id)).toEqual(["out1", "out2", "return", "anchor"]);
+    });
+
+    it("leaves single-flight days unchanged", () => {
+      const flights = [
+        f({ id: "solo", depIata: "MUC", arrIata: "FRA", departureTime: new Date("2024-04-01T08:00:00Z") }),
+      ];
+      expect(chainCoherentSort(flights).map((x) => x.id)).toEqual(["solo"]);
+    });
+
+    it("keeps two unrelated chains on the same day stable by depTime", () => {
+      // Two independent connections on the same day (rare but possible:
+      // e.g. dropping a friend off then taking a separate trip later).
+      const flights = [
+        f({ id: "ax", depIata: "MUC", arrIata: "FRA", departureTime: new Date("2024-04-01T08:00:00Z") }),
+        f({ id: "ay", depIata: "FRA", arrIata: "JFK", departureTime: new Date("2024-04-01T11:00:00Z") }),
+        f({ id: "bx", depIata: "HEL", arrIata: "ARN", departureTime: new Date("2024-04-01T14:00:00Z") }),
+        f({ id: "by", depIata: "ARN", arrIata: "OSL", departureTime: new Date("2024-04-01T17:00:00Z") }),
+      ];
+      const sorted = chainCoherentSort(flights);
+      expect(sorted.map((x) => x.id)).toEqual(["ax", "ay", "bx", "by"]);
+    });
+
+    it("findHomeLoops captures all 4 legs of MUC↺RAK after chain-coherent sort (issue #104)", () => {
+      const history: HomeAirportEntry[] = [
+        { iata: "MUC", fromDate: "2009-01-01", toDate: null },
+      ];
+      // Order as findMany returns it (departureTime asc):
+      const fromDb = [
+        f({ id: "out1", depIata: "MUC", arrIata: "MAD", departureTime: new Date("2009-09-14T10:00:00Z") }),
+        f({ id: "out2", depIata: "MAD", arrIata: "RAK", departureTime: new Date("2009-09-14T10:00:00Z") }),
+        f({ id: "anchor", depIata: "MAD", arrIata: "MUC", departureTime: new Date("2009-09-21T10:00:00Z") }),
+        f({ id: "return", depIata: "RAK", arrIata: "MAD", departureTime: new Date("2009-09-21T12:00:00Z") }),
+      ];
+      const loops = findHomeLoops(chainCoherentSort(fromDb), history);
+      expect(loops.length).toBe(1);
+      expect(loops[0].length).toBe(4);
+      // The previously-orphaned return leg is now part of the loop.
+      expect(loops[0].map((x) => x.id)).toContain("return");
     });
   });
 });
