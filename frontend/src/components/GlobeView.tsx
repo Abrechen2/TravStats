@@ -237,6 +237,18 @@ const INITIAL_VIEW_STATE: MapViewState = {
   bearing: 0,
 };
 
+function formatTooltipDate(iso: string, locale: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(locale, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return iso.slice(0, 10);
+  }
+}
+
 interface DeckOverlayProps {
   layers: Layer[];
 }
@@ -280,7 +292,8 @@ export default function GlobeView({
   flightRouteColor,
   minRouteCount = 1,
 }: GlobeViewProps): JSX.Element {
-  const { t } = useTranslation(["map"]);
+  const { t, i18n } = useTranslation(["map"]);
+  const locale = i18n.language || "de";
   const mapRef = useRef<MapRef>(null);
 
   const [styleId, setStyleId] = useState<StyleId>(() => {
@@ -684,6 +697,14 @@ export default function GlobeView({
 
   const airportPoints = useMemo<PointDatum[]>(() => {
     const seen = new Map<string, PointDatum>();
+    const bumpLastVisit = (
+      cur: PointDatum,
+      candidate: string | undefined,
+    ): string | undefined => {
+      if (!candidate) return cur.lastVisit;
+      if (!cur.lastVisit || candidate > cur.lastVisit) return candidate;
+      return cur.lastVisit;
+    };
     for (const flight of filteredFlights) {
       const coords = flight.geometry?.coordinates;
       if (!coords || coords.length < 2) continue;
@@ -691,17 +712,23 @@ export default function GlobeView({
       const arr = flight.properties?.arrivalAirport;
       const start = coords[0];
       const end = coords[coords.length - 1];
+      const departureTime = flight.properties?.departureTime ?? undefined;
       if (dep?.iata && Number.isFinite(start[0]) && Number.isFinite(start[1])) {
         const key = dep.iata;
         const cur = seen.get(key);
         if (cur) {
-          seen.set(key, { ...cur, size: cur.size + 1 });
+          seen.set(key, {
+            ...cur,
+            size: cur.size + 1,
+            lastVisit: bumpLastVisit(cur, departureTime),
+          });
         } else {
           seen.set(key, {
             position: [start[0], start[1]],
             size: 1,
             iata: dep.iata,
             name: dep.name ?? dep.iata,
+            lastVisit: departureTime,
           });
         }
       }
@@ -709,13 +736,18 @@ export default function GlobeView({
         const key = arr.iata;
         const cur = seen.get(key);
         if (cur) {
-          seen.set(key, { ...cur, size: cur.size + 1 });
+          seen.set(key, {
+            ...cur,
+            size: cur.size + 1,
+            lastVisit: bumpLastVisit(cur, departureTime),
+          });
         } else {
           seen.set(key, {
             position: [end[0], end[1]],
             size: 1,
             iata: arr.iata,
             name: arr.name ?? arr.iata,
+            lastVisit: departureTime,
           });
         }
       }
@@ -915,15 +947,21 @@ export default function GlobeView({
           }
         }
 
+        const visitIso = visit ? visit.toISOString() : undefined;
         const cur = seen.get(port.id);
         if (cur) {
-          seen.set(port.id, { ...cur, size: cur.size + 1 });
+          const nextLast =
+            visitIso && (!cur.lastVisit || visitIso > cur.lastVisit)
+              ? visitIso
+              : cur.lastVisit;
+          seen.set(port.id, { ...cur, size: cur.size + 1, lastVisit: nextLast });
         } else {
           seen.set(port.id, {
             position: [port.lon, port.lat],
             size: 1,
             iata: port.unlocode ?? port.name,
             name: port.name,
+            lastVisit: visitIso,
           });
         }
       }
@@ -1070,31 +1108,46 @@ export default function GlobeView({
     (info: PickingInfo<PointDatum>): void => {
       if (info.object && info.x != null && info.y != null) {
         const d = info.object;
+        const lastVisitLine = d.lastVisit
+          ? `<div style="opacity:0.75;font-size:10.5px;margin-top:3px;">
+              ${escapeHtml(t("map:globe.pinned.lastVisit"))}: ${escapeHtml(formatTooltipDate(d.lastVisit, locale))}
+            </div>`
+          : "";
         const html = `
           <div style="font-weight:600;">${escapeHtml(d.iata)}</div>
           <div style="opacity:0.85;font-size:11px;">${escapeHtml(d.name)}</div>
           <div style="color:#fbbf24;margin-top:2px;">
             ${d.size} ${escapeHtml(t("map:globe.flight", { count: d.size }))}
-          </div>`;
+          </div>
+          ${lastVisitLine}`;
         setTooltip({ html, x: info.x, y: info.y });
       } else {
         setTooltip(null);
       }
     },
-    [t]
+    [t, locale]
   );
 
-  const onPortHover = useCallback((info: PickingInfo<PointDatum>): void => {
-    if (info.object && info.x != null && info.y != null) {
-      const d = info.object;
-      const html = `
-        <div style="font-weight:600;">⚓ ${escapeHtml(d.name)}</div>
-        ${d.iata !== d.name ? `<div style="opacity:0.85;font-size:11px;">${escapeHtml(d.iata)}</div>` : ""}`;
-      setTooltip({ html, x: info.x, y: info.y });
-    } else {
-      setTooltip(null);
-    }
-  }, []);
+  const onPortHover = useCallback(
+    (info: PickingInfo<PointDatum>): void => {
+      if (info.object && info.x != null && info.y != null) {
+        const d = info.object;
+        const lastCallLine = d.lastVisit
+          ? `<div style="opacity:0.75;font-size:10.5px;margin-top:3px;">
+              ${escapeHtml(t("map:globe.pinned.lastCall"))}: ${escapeHtml(formatTooltipDate(d.lastVisit, locale))}
+            </div>`
+          : "";
+        const html = `
+          <div style="font-weight:600;">⚓ ${escapeHtml(d.name)}</div>
+          ${d.iata !== d.name ? `<div style="opacity:0.85;font-size:11px;">${escapeHtml(d.iata)}</div>` : ""}
+          ${lastCallLine}`;
+        setTooltip({ html, x: info.x, y: info.y });
+      } else {
+        setTooltip(null);
+      }
+    },
+    [t, locale]
+  );
 
   const onCruisePathHover = useCallback((info: PickingInfo<CruisePathDatum>): void => {
     if (info.object && info.x != null && info.y != null) {
