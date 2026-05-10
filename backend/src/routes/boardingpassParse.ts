@@ -5,13 +5,14 @@ import { z } from 'zod';
 import logger from '../utils/logger';
 import { getParserConfig, parseBoardingPass, getAvailableProviders } from '../services/parsers/factory';
 import { validateBoardingPassImageBase64 } from '../utils/fileValidation';
+import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
 
 const router = Router();
 
 const parseBoardingpassSchema = z.object({
   imageBase64: z.string().min(1, 'Image data is required').max(20 * 1024 * 1024, 'Image too large (max 20MB)'),
   enrichWithApi: z.boolean().optional().default(true),
-  domain: z.enum(['flight', 'cruise']).optional().default('flight'),
+  domain: z.enum(PARSER_SUPPORTED_DOMAINS).optional().default('flight'),
 });
 
 /**

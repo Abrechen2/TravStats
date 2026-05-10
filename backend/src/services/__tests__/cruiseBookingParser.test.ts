@@ -164,4 +164,91 @@ describe("CruiseBookingParser", () => {
     const [cruise] = await parser.parseText("…");
     expect(cruise.shipName).toBe("Solo Ship");
   });
+
+  it("re-sequences dayNumber gaps and out-of-order stops to monotone 1..N", async () => {
+    mock.setResponse({
+      response: JSON.stringify([
+        {
+          shipName: "Mein Schiff 6",
+          startDate: "2026-08-01",
+          endDate: "2026-08-08",
+          stops: [
+            { dayNumber: 7, isAtSea: false, portName: "Stockholm" },
+            { dayNumber: 1, isAtSea: false, portName: "Hamburg" },
+            { dayNumber: 4, isAtSea: true },
+            { dayNumber: 12, isAtSea: false, portName: "Tallinn" },
+          ],
+        },
+      ]),
+    });
+    const [cruise] = await parser.parseText("…");
+    expect(cruise.stops.map((s) => s.dayNumber)).toEqual([1, 2, 3, 4]);
+    expect(cruise.stops.map((s) => s.portName)).toEqual([
+      "Hamburg",
+      undefined,
+      "Stockholm",
+      "Tallinn",
+    ]);
+  });
+
+  it("clears portName on at-sea stops even if the LLM hallucinated one", async () => {
+    mock.setResponse({
+      response: JSON.stringify([
+        {
+          shipName: "Mein Schiff 7",
+          startDate: "2026-09-01",
+          endDate: "2026-09-08",
+          stops: [
+            { dayNumber: 1, isAtSea: false, portName: "Hamburg" },
+            // LLM occasionally invents a port name on an at-sea day —
+            // normalizer must drop it so Zod doesn't reject the upload.
+            { dayNumber: 2, isAtSea: true, portName: "Mid-Ocean Resort" },
+          ],
+        },
+      ]),
+    });
+    const [cruise] = await parser.parseText("…");
+    expect(cruise.stops[1].isAtSea).toBe(true);
+    expect(cruise.stops[1].portName).toBeUndefined();
+  });
+
+  it("rejects negative or zero dayNumber values and replaces them with positional fallback", async () => {
+    mock.setResponse({
+      response: JSON.stringify([
+        {
+          shipName: "Mein Schiff 8",
+          startDate: "2026-10-01",
+          endDate: "2026-10-04",
+          stops: [
+            { dayNumber: 0, isAtSea: false, portName: "Hamburg" },
+            { dayNumber: -3, isAtSea: true },
+            { dayNumber: 2, isAtSea: false, portName: "Bergen" },
+          ],
+        },
+      ]),
+    });
+    const [cruise] = await parser.parseText("…");
+    expect(cruise.stops.map((s) => s.dayNumber)).toEqual([1, 2, 3]);
+    // After re-sequencing the original positional fallback (index+1) sorts
+    // the stops as: index0 → 1 (Hamburg, fallback), index1 → 2 (sea, fallback),
+    // index2 → 2 (Bergen, real). The stable-sort keeps Bergen after the
+    // sea-day fallback when both have key=2; final sequence is 1,2,3.
+    expect(cruise.stops[0].portName).toBe("Hamburg");
+  });
+
+  it("drops invalid deck values (non-positive, NaN) without throwing", async () => {
+    mock.setResponse({
+      response: JSON.stringify([
+        {
+          shipName: "Mein Schiff 9",
+          startDate: "2026-11-01",
+          endDate: "2026-11-08",
+          deck: -3,
+          stops: [],
+        },
+      ]),
+    });
+    const [cruise] = await parser.parseText("…");
+    expect(cruise.deck).toBeUndefined();
+  });
 });

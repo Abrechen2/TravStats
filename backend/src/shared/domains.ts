@@ -57,6 +57,16 @@ export const AVAILABLE_DOMAINS: DomainKey[] = DOMAIN_KEYS.filter(
   (k) => DOMAINS[k].available,
 );
 
+/**
+ * Subset of domains that have a working parser (email + PDF + boarding
+ * pass extraction). Strictly narrower than `AVAILABLE_DOMAINS` because
+ * a domain can be live in the UI before a parser exists for it. Used
+ * as the runtime allow-list for the `domain` field on every parse
+ * endpoint — adding hotel parsing means adding `'hotel'` here once.
+ */
+export const PARSER_SUPPORTED_DOMAINS = ['flight', 'cruise'] as const satisfies readonly DomainKey[];
+export type ParserSupportedDomain = (typeof PARSER_SUPPORTED_DOMAINS)[number];
+
 export function isValidDomain(value: string): value is DomainKey {
   return (DOMAIN_KEYS as readonly string[]).includes(value);
 }

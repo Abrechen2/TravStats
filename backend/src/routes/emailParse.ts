@@ -11,6 +11,7 @@ import logger from '../utils/logger';
 import fs from 'fs';
 import path from 'path';
 import { validateEmailFile } from '../utils/fileValidation';
+import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
 
 const router = Router();
 
@@ -23,7 +24,7 @@ const parseEmailSchema = z.object({
     (val) => !val || val.length <= 1000,
     { message: 'Subject too long (max 1000 characters)' }
   ),
-  domain: z.enum(['flight', 'cruise']).optional().default('flight'),
+  domain: z.enum(PARSER_SUPPORTED_DOMAINS).optional().default('flight'),
 });
 
 /**
@@ -130,7 +131,7 @@ router.post(
       // Domain discriminator (optional, defaults to 'flight').
       // Multipart form-data: rawDomain comes as string from form field.
       const rawDomain = typeof req.body?.domain === 'string' ? req.body.domain : 'flight';
-      const domainSchema = z.enum(['flight', 'cruise']).optional().default('flight');
+      const domainSchema = z.enum(PARSER_SUPPORTED_DOMAINS).optional().default('flight');
       const domainParse = domainSchema.safeParse(rawDomain);
       if (!domainParse.success) {
         if (filePath && fs.existsSync(filePath)) {
