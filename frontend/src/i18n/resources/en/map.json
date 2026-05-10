@@ -84,9 +84,7 @@
     "quartileFilterHint": "Click to isolate this frequency band",
     "quartileFilterClear": "Clear filter",
     "pinned": {
-      "lastVisit": "Last visit",
       "lastFlight": "Last flight",
-      "lastCall": "Last call",
       "longestRoute": "Longest route",
       "longestPortCall": "Longest stay",
       "topAirline": "Top airline",
@@ -122,5 +120,9 @@
   "infoPill": {
     "flights": "Flights",
     "routes": "Routes"
+  },
+  "tooltip": {
+    "lastVisit": "Last visit",
+    "lastCall": "Last call"
   }
 }

@@ -141,7 +141,7 @@ function renderAirportHtml(
   if (lastVisit) {
     lines.push(
       `<div style="opacity:0.75;font-size:10.5px;margin-top:3px;">${escapeHtml(
-        t("map:globe.pinned.lastVisit"),
+        t("map:tooltip.lastVisit"),
       )}: ${escapeHtml(formatDate(lastVisit, locale))}</div>`,
     );
   }
@@ -178,7 +178,7 @@ function renderPortHtml(
   if (lastCall) {
     lines.push(
       `<div style="opacity:0.75;font-size:10.5px;margin-top:3px;">${escapeHtml(
-        t("map:globe.pinned.lastCall"),
+        t("map:tooltip.lastCall"),
       )}: ${escapeHtml(formatDate(lastCall, locale))}</div>`,
     );
   }
