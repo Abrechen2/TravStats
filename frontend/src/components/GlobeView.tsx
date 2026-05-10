@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
-import { buildMarkerTooltip } from "./map/markerTooltip";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import {
   EarthOcclusionExtension,
@@ -253,6 +252,12 @@ function DeckGLOverlay({ layers }: DeckOverlayProps): null {
   // react-map-gl to mount it as a corner widget, which can confuse the
   // overlay's lifecycle.
   //
+  // No `getTooltip` either: GlobeView renders its own rich React-state
+  // tooltip via `onAirportHover` / `onPortHover` / `onArcHover` /
+  // `onCruisePathHover`. Wiring `buildMarkerTooltip` here in addition
+  // would stack two bubbles on the same hover (a deck.gl-rendered name
+  // tooltip behind, and the React rich tooltip on top).
+  //
   // Caller must gate this component until MapLibre is confirmed in
   // globe projection — see `mapReady` in GlobeView.
   const overlay = useControl<MapboxOverlay>(
@@ -261,7 +266,6 @@ function DeckGLOverlay({ layers }: DeckOverlayProps): null {
         layers,
         pickingRadius: 5,
         interleaved: true,
-        getTooltip: buildMarkerTooltip,
       })
   );
   overlay.setProps({ layers });
