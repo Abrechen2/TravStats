@@ -139,7 +139,11 @@ export default function FlightList({
                   {flight.co2Kg != null && (
                     <span
                       data-testid="co2-chip"
-                      className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                      className="px-2 py-0.5 rounded text-xs font-medium"
+                      style={{
+                        background: "rgba(63,185,80,0.15)",
+                        color: "var(--success)",
+                      }}
                       title={t("flights:actualTimes.co2Label")}
                     >
                       {t("flights:actualTimes.co2Value", { kg: flight.co2Kg })}
