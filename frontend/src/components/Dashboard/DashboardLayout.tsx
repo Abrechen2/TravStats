@@ -8,6 +8,7 @@ import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
 import NavigationBar from "../NavigationBar";
 import SimplifiedFlightFormV2 from "../SimplifiedFlightFormV2";
+import SpecialFlightModal from "../SpecialFlightModal";
 import { CruiseEditModal } from "../Cruise/CruiseEditModal";
 import { DomainTabStrip } from "./DomainTabStrip";
 import { DashboardControlsBar } from "./DashboardControlsBar";
@@ -35,6 +36,7 @@ export function DashboardLayout({
   const { tab, mode, setTab, setMode } = useDashboardRoute();
   const [filterOpen, setFilterOpen] = useState(false);
   const [addingDomain, setAddingDomain] = useState<AddableDomain | null>(null);
+  const [showSpecialModal, setShowSpecialModal] = useState(false);
   const { isEnabled } = useEnabledDomains();
   const { addToast } = useToastStore();
 
@@ -87,8 +89,21 @@ export function DashboardLayout({
         <SimplifiedFlightFormV2
           onSubmit={handleFlightCreate}
           onCancel={() => setAddingDomain(null)}
+          onPickSpecialFlight={() => {
+            setAddingDomain(null);
+            setShowSpecialModal(true);
+          }}
         />
       )}
+      <SpecialFlightModal
+        isOpen={showSpecialModal}
+        flight={null}
+        onClose={() => setShowSpecialModal(false)}
+        onSaved={() => {
+          setShowSpecialModal(false);
+          onDataChanged?.();
+        }}
+      />
       {addingDomain === "cruise" && (
         <CruiseEditModal
           mode="create"
