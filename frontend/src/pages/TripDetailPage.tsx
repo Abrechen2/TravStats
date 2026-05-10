@@ -7,6 +7,7 @@ import { useToastStore } from "../store/toastStore";
 import { useTranslation } from "../hooks/useTranslation";
 import type { Trip, TripJournalEntry, TripStatus, TripStop } from "../types";
 import PageTransition from "../components/PageTransition";
+import NavigationBar from "../components/NavigationBar";
 import TripModal from "../components/Trips/TripModal";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
 import StopModal from "../components/Trips/StopModal";
@@ -82,10 +83,13 @@ export default function TripDetailPage(): JSX.Element {
   if (loading || !trip) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center"
+        className="min-h-screen"
         style={{ background: "var(--bg-base)", color: "var(--text-muted)" }}
       >
-        {t("common:loading", { defaultValue: "Lädt …" })}
+        <NavigationBar />
+        <div className="flex items-center justify-center py-20">
+          {t("common:loading", { defaultValue: "Lädt …" })}
+        </div>
       </div>
     );
   }
@@ -96,6 +100,7 @@ export default function TripDetailPage(): JSX.Element {
         className="min-h-screen"
         style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
       >
+        <NavigationBar />
         <TripHero
           trip={trip}
           locale={i18n.language}
