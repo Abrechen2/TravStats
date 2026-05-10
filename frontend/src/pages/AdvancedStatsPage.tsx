@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { flightsApi, statsApi } from "../lib/api";
 import type { SummaryStats } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
@@ -61,10 +62,39 @@ export default function AdvancedStatsPage(): JSX.Element {
   const [showCertificate, setShowCertificate] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
-  // Domain filter scaffolding (Foundation) — display-only for now; downstream
-  // logic is wired up in the Cruise plan.
+  // Domain filter — `?tab=<key>` deep-links into a specific domain tab so
+  // "Details →" links from the cross-domain Gesamt overview can route to
+  // the right drill-down.
   const { enabled } = useEnabledDomains();
-  const [filter, setFilter] = useState<DomainKey | "all">("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [filter, setFilterState] = useState<DomainKey | "all">(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "all" || tab === "flight" || tab === "cruise" || tab === "hotel" || tab === "poi") {
+      return tab;
+    }
+    return "all";
+  });
+  const setFilter = useCallback(
+    (next: DomainKey | "all") => {
+      setFilterState(next);
+      setSearchParams((prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === "all") params.delete("tab");
+        else params.set("tab", next);
+        return params;
+      });
+    },
+    [setSearchParams]
+  );
+
+  // Sync URL → state when the user navigates back/forward or follows a
+  // deep link from another page (e.g. the Gesamt-tab "Details →").
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    const next: DomainKey | "all" =
+      tab === "flight" || tab === "cruise" || tab === "hotel" || tab === "poi" ? tab : "all";
+    if (next !== filter) setFilterState(next);
+  }, [searchParams, filter]);
 
   // Year filter + comparison state
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
