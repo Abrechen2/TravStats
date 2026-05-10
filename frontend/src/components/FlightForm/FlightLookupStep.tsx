@@ -185,7 +185,7 @@ export default function FlightLookupStep({
               </div>
             </div>
             <button type="button" onClick={onPickSpecialFlight} className="btn-primary">
-              {t("specialFlights:chooser.pickAction")}
+              {t("specialFlights:chooser.cta")}
             </button>
           </div>
         </div>
