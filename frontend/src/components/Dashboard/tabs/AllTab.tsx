@@ -349,6 +349,7 @@ export function AllTab(): JSX.Element {
           flightRouteColor={FLIGHT_RGB}
           availableModes={ALL_TAB_MAP_MODES}
           cruisesOverride={visibleCruises}
+          hideInfoPill
         />
         {toggleAndLegend}
         {activityPanel}
@@ -370,6 +371,7 @@ export function AllTab(): JSX.Element {
         onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
         availableModes={ALL_TAB_MAP_MODES}
         cruisesOverride={visibleCruises}
+        hideInfoPill
       />
       {toggleAndLegend}
       {activityPanel}
