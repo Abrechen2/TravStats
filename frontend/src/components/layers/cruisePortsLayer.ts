@@ -23,7 +23,11 @@ interface PortDatum {
 // solid centre + label mirror the airport stack in routesLayer.ts.
 const PORT_DOT_RADIUS_M = 2200;
 const PORT_RING_RADIUS_M = 6000;
-const PORT_RGB: [number, number, number] = [56, 189, 248]; // sky-400
+// Cruise domain hex per BRAND.md §3 (--domain-cruise = #6fa0d6 / rgb(111,160,214)).
+// Was sky-400 [56, 189, 248] which is a different blue and not in the brand
+// palette — port markers are the primary on-map signifier of the cruise
+// domain so they have to render in the canonical domain colour.
+const PORT_RGB: [number, number, number] = [111, 160, 214];
 
 /**
  * Match the airport-label zoom gate from routesLayer
