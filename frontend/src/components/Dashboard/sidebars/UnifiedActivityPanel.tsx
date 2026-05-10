@@ -233,14 +233,13 @@ export function UnifiedActivityPanel({
                 handleItemClick(item);
               }
             }}
+            className="activity-row hover:bg-white/[0.04]"
             style={{
               padding: "10px 16px",
               borderBottom: "1px solid var(--color-border)",
               fontSize: 13,
               cursor: "pointer",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span aria-hidden>{item.kind === "flight" ? "✈" : "⚓"}</span>
