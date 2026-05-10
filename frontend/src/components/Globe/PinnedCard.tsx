@@ -181,7 +181,7 @@ function AirportBody({
         )}
         {stats.lastVisitDate && (
           <Row
-            label={t("map:globe.pinned.lastVisit")}
+            label={t("map:tooltip.lastVisit")}
             value={formatDate(stats.lastVisitDate, locale)}
           />
         )}
@@ -229,7 +229,7 @@ function PortBody({
         )}
         {stats.lastCallDate && (
           <Row
-            label={t("map:globe.pinned.lastCall")}
+            label={t("map:tooltip.lastCall")}
             value={formatDate(stats.lastCallDate, locale)}
           />
         )}

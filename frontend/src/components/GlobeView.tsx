@@ -1110,7 +1110,7 @@ export default function GlobeView({
         const d = info.object;
         const lastVisitLine = d.lastVisit
           ? `<div style="opacity:0.75;font-size:10.5px;margin-top:3px;">
-              ${escapeHtml(t("map:globe.pinned.lastVisit"))}: ${escapeHtml(formatTooltipDate(d.lastVisit, locale))}
+              ${escapeHtml(t("map:tooltip.lastVisit"))}: ${escapeHtml(formatTooltipDate(d.lastVisit, locale))}
             </div>`
           : "";
         const html = `
@@ -1134,7 +1134,7 @@ export default function GlobeView({
         const d = info.object;
         const lastCallLine = d.lastVisit
           ? `<div style="opacity:0.75;font-size:10.5px;margin-top:3px;">
-              ${escapeHtml(t("map:globe.pinned.lastCall"))}: ${escapeHtml(formatTooltipDate(d.lastVisit, locale))}
+              ${escapeHtml(t("map:tooltip.lastCall"))}: ${escapeHtml(formatTooltipDate(d.lastVisit, locale))}
             </div>`
           : "";
         const html = `

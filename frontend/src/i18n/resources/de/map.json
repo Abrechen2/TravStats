@@ -84,9 +84,7 @@
     "quartileFilterHint": "Klick: nur dieses Häufigkeitsband zeigen",
     "quartileFilterClear": "Filter zurücksetzen",
     "pinned": {
-      "lastVisit": "Letzter Besuch",
       "lastFlight": "Letzter Flug",
-      "lastCall": "Letzter Anlauf",
       "longestRoute": "Längste Strecke",
       "longestPortCall": "Längster Anlauf",
       "topAirline": "Top Linie",
@@ -122,5 +120,9 @@
   "infoPill": {
     "flights": "Flüge",
     "routes": "Routen"
+  },
+  "tooltip": {
+    "lastVisit": "Letzter Besuch",
+    "lastCall": "Letzter Anlauf"
   }
 }
