@@ -35,6 +35,11 @@ export interface PointDatum {
   size: number;
   iata: string;
   name: string;
+  /** ISO date of the most recent flight or cruise stop touching this
+   *  marker; surfaced in the hover tooltip. Undefined when no dated
+   *  events exist for this marker (extremely rare — would mean every
+   *  contributing flight had no `departureTime`). */
+  lastVisit?: string;
 }
 
 export interface CruisePathDatum {

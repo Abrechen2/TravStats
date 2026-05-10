@@ -348,6 +348,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       billboard: true,
       characterSet: "auto",
       pickable: true,
+      onHover: onAirportHover,
       onClick: ({ object }: { object?: PointDatum }): void => {
         if (!object) return;
         setPinned({
@@ -379,6 +380,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       billboard: true,
       characterSet: "auto",
       pickable: true,
+      onHover: onPortHover,
       onClick: ({ object }: { object?: PointDatum }): void => {
         if (!object) return;
         setPinned({
