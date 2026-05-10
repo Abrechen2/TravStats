@@ -175,7 +175,7 @@ export default function EmailImportTab({
             type="button"
             onClick={() => void handleTextParse()}
             disabled={!emailText.trim() || showLoader}
-            className="self-end px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg text-sm font-medium text-white"
+            className="btn-primary self-end px-4 py-2 text-sm"
           >
             {t("import:email.parse")}
           </button>

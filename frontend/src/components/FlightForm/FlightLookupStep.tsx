@@ -157,10 +157,19 @@ export default function FlightLookupStep({
         </div>
       </div>
 
-      {/* Special flight — same visual weight as Boarding Pass, purple accent.
-          Dark-only (V2): no light/dark toggle. */}
+      {/* Special flight — same visual weight as Boarding Pass. Border uses
+          flight-domain accent (amber) since Sonder-Flug is a flight subtype,
+          not the hotel domain. Per BRAND.md §3: domain colours never bleed
+          into other domains. Dark-only (V2). */}
       {onPickSpecialFlight && (
-        <div className="bg-gradient-to-r from-[var(--bg-elevated)] to-[var(--bg-muted)] border border-purple-700 rounded-lg p-4">
+        <div
+          className="rounded-lg p-4"
+          style={{
+            background:
+              "linear-gradient(to right, var(--bg-elevated), var(--bg-muted))",
+            border: "1px solid var(--accent)",
+          }}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span aria-hidden className="text-2xl">

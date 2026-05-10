@@ -419,14 +419,28 @@ interface ChooserProps {
 function ChooserStep({ onPickEmail, onPickManual, t }: ChooserProps): JSX.Element {
   return (
     <div className="space-y-4 p-6">
-      {/* Email hero card — matches FlightLookupStep green-900→teal-900 gradient */}
-      <div className="rounded-xl border-2 border-green-600 bg-gradient-to-r from-green-900 to-teal-900 p-6 shadow-lg shadow-green-900/50 ring-2 ring-green-500/30 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl hover:shadow-green-900/70">
+      {/* Email hero card — brand-amber "Beste Option" callout. Mirrors
+          FlightLookupStep so the cruise + flight import flows look the
+          same. Per BRAND.md §2: recommended/preferred callouts use amber,
+          not green. */}
+      <div
+        className="rounded-xl p-6 transition-all duration-300 hover:scale-[1.02]"
+        style={{
+          background:
+            "linear-gradient(to right, var(--accent-soft), rgba(240, 169, 71, 0.04))",
+          border: "2px solid var(--accent)",
+          boxShadow: "0 8px 24px rgba(240, 169, 71, 0.18)",
+        }}
+      >
         <div className="flex items-start gap-4">
           <div className="flex flex-shrink-0 flex-col items-start gap-2">
-            <span className="inline-flex items-center rounded-full bg-yellow-500 px-3 py-1 text-xs font-bold text-[var(--text-primary)] shadow-md">
+            <span
+              className="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold shadow-md"
+              style={{ background: "var(--accent)", color: "#0d1117" }}
+            >
               ⏳ {t("chooser.email.badge")}
             </span>
-            <div className="text-4xl text-green-300" aria-hidden>
+            <div className="text-4xl" style={{ color: "var(--accent)" }} aria-hidden>
               📧
             </div>
           </div>
@@ -438,8 +452,11 @@ function ChooserStep({ onPickEmail, onPickManual, t }: ChooserProps): JSX.Elemen
             <p className="mb-4 text-base font-medium text-[var(--text-muted)]">
               {t("chooser.email.description")}
             </p>
-            <p className="flex items-center gap-2 text-sm font-semibold text-green-300">
-              <span className="text-lg text-green-400">✓</span>
+            <p
+              className="flex items-center gap-2 text-sm font-semibold"
+              style={{ color: "var(--accent)" }}
+            >
+              <span className="text-lg">✓</span>
               {t("chooser.email.infoLine")}
             </p>
           </div>
@@ -464,8 +481,18 @@ function ChooserStep({ onPickEmail, onPickManual, t }: ChooserProps): JSX.Elemen
         </div>
       </div>
 
-      {/* Manual entry secondary card — matches FlightLookupStep boarding-pass style */}
-      <div className="rounded-lg border border-blue-700 bg-gradient-to-r from-[var(--bg-elevated)] to-[var(--bg-muted)] p-4">
+      {/* Manual entry secondary card — neutral surface, matches the
+          FlightLookupStep boarding-pass card. Border was previously
+          blue-700 (not a brand colour and read as cruise-domain leak);
+          dropped to the neutral border token. */}
+      <div
+        className="rounded-lg p-4"
+        style={{
+          background:
+            "linear-gradient(to right, var(--bg-elevated), var(--bg-muted))",
+          border: "1px solid var(--color-border)",
+        }}
+      >
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="text-3xl" aria-hidden>
