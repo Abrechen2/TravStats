@@ -8,6 +8,7 @@ import { parseBookingText } from '../services/bookingParser';
 import { parseCruiseBookingText } from '../services/cruiseBookingParser';
 import { resolveCruiseEntities } from '../services/cruiseEntityResolver';
 import { FILE_LIMITS } from '../config/constants';
+import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
 
 const router = Router();
 
@@ -16,7 +17,7 @@ const parsePdfSchema = z.object({
     .string()
     .min(1, 'PDF data is required')
     .max(FILE_LIMITS.PDF_MAX_SIZE * 2, 'PDF too large'), // base64 overhead ~1.37x, use 2x for safety
-  domain: z.enum(['flight', 'cruise']).optional().default('flight'),
+  domain: z.enum(PARSER_SUPPORTED_DOMAINS).optional().default('flight'),
 });
 
 /**
