@@ -68,9 +68,9 @@ export default function SetupPage(): JSX.Element {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--bg-base)" }}>
       <div className="max-w-md w-full">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8">
+        <div className="bg-[var(--bg-elevated)] rounded-lg shadow-xl p-8">
           <div className="text-center mb-8">
             <div className="text-5xl mb-4">✈️</div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
@@ -85,15 +85,24 @@ export default function SetupPage(): JSX.Element {
 
           {success ? (
             <div className="space-y-4">
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6 text-center">
+              <div
+                className="rounded-lg p-6 text-center"
+                style={{
+                  background: "rgba(63,185,80,0.10)",
+                  border: "1px solid rgba(63,185,80,0.35)",
+                }}
+              >
                 <div className="text-5xl mb-4">✅</div>
-                <h2 className="text-2xl font-bold text-green-900 dark:text-green-100 mb-2">
+                <h2
+                  className="text-2xl font-bold mb-2"
+                  style={{ color: "var(--success)" }}
+                >
                   {t("setup:success.title")}
                 </h2>
-                <p className="text-green-800 dark:text-green-200 mb-4">
+                <p className="mb-4" style={{ color: "var(--text-primary)" }}>
                   {t("setup:success.adminCreated", { username: formData.username })}
                 </p>
-                <p className="text-sm text-green-700 dark:text-green-300">
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                   {t("setup:success.redirecting")}
                 </p>
               </div>
@@ -101,7 +110,14 @@ export default function SetupPage(): JSX.Element {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-red-800 dark:text-red-200 text-sm">
+                <div
+                  className="rounded-lg p-3 text-sm"
+                  style={{
+                    background: "rgba(248,81,73,0.10)",
+                    border: "1px solid rgba(248,81,73,0.35)",
+                    color: "var(--danger)",
+                  }}
+                >
                   {error}
                 </div>
               )}
@@ -165,7 +181,7 @@ export default function SetupPage(): JSX.Element {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary w-full font-semibold py-3 px-4 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? t("setup:form.submit.creating") : t("setup:form.submit.create")}
               </button>

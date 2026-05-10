@@ -617,7 +617,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                   void handleYearReport();
                 }}
                 disabled={generatingPdf || !selectedYear}
-                className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+                className="btn-primary px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-50"
               >
                 {generatingPdf ? t("stats:yearReport.generating") : t("stats:yearReport.btn")}
               </button>
@@ -732,18 +732,18 @@ export default function AdvancedStatsPage(): JSX.Element {
               <StatsSeatSection seatStats={seatStats} />
 
               {/* Airline Loyalty Ranking */}
-              <div className="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+              <div className="mt-8 bg-[var(--bg-elevated)] rounded-xl shadow p-6">
                 <AirlineRankingCard />
               </div>
 
               {/* Aircraft (Hulls) Ranking — only shows when at least one
                   flight has a tail number on file (AeroDataBox-enriched). */}
-              <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+              <div className="mt-6 bg-[var(--bg-elevated)] rounded-xl shadow p-6">
                 <AircraftRankingCard />
               </div>
 
               {/* Country Distribution */}
-              <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+              <div className="mt-6 bg-[var(--bg-elevated)] rounded-xl shadow p-6">
                 <CountryDistributionCard />
               </div>
             </>

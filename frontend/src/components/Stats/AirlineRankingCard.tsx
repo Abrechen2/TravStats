@@ -38,10 +38,10 @@ export default function AirlineRankingCard(): JSX.Element {
       <div className="space-y-1.5">
         {airlines.map((row) => (
           <div key={row.airline} className="flex items-center gap-3">
-            <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-5 overflow-hidden">
+            <div className="flex-1 rounded-full h-5 overflow-hidden" style={{ background: "var(--bg-elevated)" }}>
               <div
-                className="bg-blue-500 dark:bg-blue-400 h-full rounded-full transition-all"
-                style={{ width: `${(row.count / maxCount) * 100}%` }}
+                className="h-full rounded-full transition-all"
+                style={{ width: `${(row.count / maxCount) * 100}%`, background: "var(--accent)" }}
               />
             </div>
             <span className="w-28 text-sm truncate" title={row.airline}>

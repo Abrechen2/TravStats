@@ -49,9 +49,9 @@ export default function ParserPage(): JSX.Element {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-[var(--bg-base)]">
       <NavigationBar />
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <header className="bg-[var(--bg-elevated)] border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
@@ -78,11 +78,12 @@ export default function ParserPage(): JSX.Element {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className="py-4 px-1 border-b-2 font-medium text-sm transition-colors"
+                style={
                   activeTab === tab.id
-                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
-                }`}
+                    ? { borderColor: "var(--accent)", color: "var(--accent)" }
+                    : { borderColor: "transparent", color: "var(--text-muted)" }
+                }
               >
                 {tab.label}
               </button>
@@ -94,7 +95,7 @@ export default function ParserPage(): JSX.Element {
         {activeTab === "annotate" && (
           <div className="space-y-6">
             {!uploadedFile ? (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <div className="bg-[var(--bg-elevated)] rounded-lg shadow p-6">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                   {t("parser:annotate.title")}
                 </h2>
@@ -182,7 +183,7 @@ export default function ParserPage(): JSX.Element {
 
         {/* Tab: Community Templates */}
         {activeTab === "community" && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <div className="bg-[var(--bg-elevated)] rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
               {t("parser:communityTemplates.title")}
             </h2>
