@@ -25,6 +25,7 @@ import {
   type Quartile,
 } from "./Globe/heatmapUtils";
 import { buildGlobeLayers } from "./Globe/buildGlobeLayers";
+import { HoverTooltip, type HoverTooltipApi } from "./Globe/HoverTooltip";
 import { PinnedCard } from "./Globe/PinnedCard";
 import { PinnedCardBoundary } from "./Globe/PinnedCardBoundary";
 import type {
@@ -32,7 +33,6 @@ import type {
   CruisePathDatum,
   GlobePinned,
   PointDatum,
-  TooltipState,
 } from "./Globe/globeLayerTypes";
 import type { StyleSpecification } from "maplibre-gl";
 import type { GeoJSONFeature } from "../types";
@@ -302,7 +302,9 @@ export default function GlobeView({
     return STYLE_OPTIONS.some((s) => s.id === stored) ? (stored as StyleId) : "dark";
   });
   const [autoRotate, setAutoRotate] = useState(false);
-  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  // Tooltip lives in a leaf component (HoverTooltip) so onHover updates at
+  // 60–120 Hz don't re-render the whole GlobeView tree. Imperative API only.
+  const tooltipRef = useRef<HoverTooltipApi | null>(null);
   // Map zoom — used as a level-of-detail signal for arc altitude. At
   // low zoom the standard altitude-based arcs look great; at high zoom
   // they become horizontal streaks across the screen because the
@@ -1096,9 +1098,9 @@ export default function GlobeView({
           <div style="color:rgb(${d.color[0]},${d.color[1]},${d.color[2]});font-weight:600;">
             ${escapeHtml(t("map:globe.timesFlown", { count: d.count }))}
           </div>`;
-        setTooltip({ html, x: info.x, y: info.y });
+        tooltipRef.current?.show({ html, x: info.x, y: info.y });
       } else {
-        setTooltip(null);
+        tooltipRef.current?.hide();
       }
     },
     [t]
@@ -1120,9 +1122,9 @@ export default function GlobeView({
             ${d.size} ${escapeHtml(t("map:globe.flight", { count: d.size }))}
           </div>
           ${lastVisitLine}`;
-        setTooltip({ html, x: info.x, y: info.y });
+        tooltipRef.current?.show({ html, x: info.x, y: info.y });
       } else {
-        setTooltip(null);
+        tooltipRef.current?.hide();
       }
     },
     [t, locale]
@@ -1141,9 +1143,9 @@ export default function GlobeView({
           <div style="font-weight:600;">⚓ ${escapeHtml(d.name)}</div>
           ${d.iata !== d.name ? `<div style="opacity:0.85;font-size:11px;">${escapeHtml(d.iata)}</div>` : ""}
           ${lastCallLine}`;
-        setTooltip({ html, x: info.x, y: info.y });
+        tooltipRef.current?.show({ html, x: info.x, y: info.y });
       } else {
-        setTooltip(null);
+        tooltipRef.current?.hide();
       }
     },
     [t, locale]
@@ -1152,9 +1154,9 @@ export default function GlobeView({
   const onCruisePathHover = useCallback((info: PickingInfo<CruisePathDatum>): void => {
     if (info.object && info.x != null && info.y != null) {
       const html = `<div style="font-weight:600;">🚢 ${escapeHtml(info.object.cruiseLabel)}</div>`;
-      setTooltip({ html, x: info.x, y: info.y });
+      tooltipRef.current?.show({ html, x: info.x, y: info.y });
     } else {
-      setTooltip(null);
+      tooltipRef.current?.hide();
     }
   }, []);
 
@@ -1582,26 +1584,10 @@ export default function GlobeView({
         </div>
       )}
 
-      {/* Hover tooltip — pre-escaped HTML (escapeHtml at every interpolation
-          site upstream), positioned at the deck.gl pick coords. Offset
-          slightly so the cursor doesn't sit on top of the popup. */}
-      {tooltip && (
-        <div
-          className="pointer-events-none absolute z-30 rounded px-3 py-2 text-xs"
-          style={{
-            left: tooltip.x + 12,
-            top: tooltip.y + 12,
-            maxWidth: "280px",
-            background: "rgba(13, 17, 23, 0.92)",
-            backdropFilter: "blur(8px)",
-            border: "1px solid rgba(255,255,255,0.22)",
-            color: "rgba(241,245,249,0.95)",
-            fontFamily: "'Inter', sans-serif",
-            boxShadow: "0 4px 14px rgba(0,0,0,0.45)",
-          }}
-          dangerouslySetInnerHTML={{ __html: tooltip.html }}
-        />
-      )}
+      {/* Hover tooltip — leaf component with imperative show/hide so onHover
+          updates at 60–120 Hz don't re-render the parent GlobeView tree. */}
+      <HoverTooltip ref={tooltipRef} />
+
     </div>
   );
 }
