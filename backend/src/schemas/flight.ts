@@ -265,6 +265,13 @@ const requirePairedTimezone = (
  *    BEFORE dep that the handler had silently accepted. NULL `arrivalLocal`
  *    remains legal for `historical` (legitimate date-only bulk imports).
  *
+ *    DATE_ONLY granularity (issue #106A): when either side is DATE_ONLY,
+ *    the time component is a 12:00 placeholder that the server may shift
+ *    via airport-timezone conversion (frontend sends "12:00 local" → CET
+ *    becomes 10:00 UTC, WET becomes 12:00 UTC). A naïve string compare
+ *    can flag a same-day round-trip as arr<dep purely from the TZ shift.
+ *    Compare date-portion only when DATE_ONLY semantics are in play.
+ *
  * 2. Status / time-axis sanity — `flown` and `historical` cannot have a
  *    departure in the future; both states mean the flight has already
  *    happened. `scheduled` past-dated rows are NOT rejected here (a
@@ -272,11 +279,37 @@ const requirePairedTimezone = (
  *    just departed) — the route handler logs them as a warning instead.
  */
 const requireChronologicalOrder = (
-  data: { departureLocal?: string | null; arrivalLocal?: string | null },
+  data: {
+    departureLocal?: string | null;
+    arrivalLocal?: string | null;
+    depTimeSemantics?: string | null;
+    arrTimeSemantics?: string | null;
+  },
   ctx: z.RefinementCtx,
 ): void => {
   if (!data.departureLocal || !data.arrivalLocal) return;
-  if (data.departureLocal > data.arrivalLocal) {
+
+  const depDate = data.departureLocal.slice(0, 10);
+  const arrDate = data.arrivalLocal.slice(0, 10);
+
+  if (depDate < arrDate) return;
+  if (depDate > arrDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'arrival date must not precede departure date',
+      path: ['arrivalLocal'],
+    });
+    return;
+  }
+
+  // Same-day: only reject if wall-clock arrival precedes departure AND
+  // we are certain this isn't a DATE_ONLY row (where 12:00 is a placeholder).
+  const isDateOnly =
+    data.depTimeSemantics === 'DATE_ONLY' ||
+    data.arrTimeSemantics === 'DATE_ONLY' ||
+    (data.departureLocal.endsWith('T12:00') && data.arrivalLocal.endsWith('T12:00'));
+
+  if (!isDateOnly && data.departureLocal > data.arrivalLocal) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: 'arrivalLocal must not precede departureLocal',

@@ -27,7 +27,11 @@ describe("createFlightSchema — chronological order applies to historicals (G1)
     });
     expect(r.success).toBe(false);
     if (!r.success) {
-      expect(r.error.issues.some((i) => /arrivalLocal must not precede/.test(i.message))).toBe(true);
+      expect(
+        r.error.issues.some((i) =>
+          /arrival(Local)? (date )?must not precede (departure(Local)?|departure date)/.test(i.message)
+        )
+      ).toBe(true);
     }
   });
 
@@ -117,7 +121,11 @@ describe("updateFlightSchema — chronological refine now applies (G5)", () => {
     });
     expect(r.success).toBe(false);
     if (!r.success) {
-      expect(r.error.issues.some((i) => /arrivalLocal must not precede/.test(i.message))).toBe(true);
+      expect(
+        r.error.issues.some((i) =>
+          /arrival(Local)? (date )?must not precede (departure(Local)?|departure date)/.test(i.message)
+        )
+      ).toBe(true);
     }
   });
 

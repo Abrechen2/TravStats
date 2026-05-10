@@ -1,6 +1,6 @@
 import { calculateDistance } from '../geo';
 import { getCachedAirports } from '../../services/airportCache';
-import { tzAwareDurationMinutes } from '../timezone';
+import { tzAwareDurationMinutes, type FlightTimeSemantics } from '../timezone';
 import logger from '../logger';
 import type { AirportData } from '../../services/airportLookup';
 import type { FlightData, UniqueStats } from './types';
@@ -218,8 +218,17 @@ export async function calculateUniqueStats(
         (f.arrIcao && timezoneMap.get(f.arrIcao)) ||
         null;
 
-      const durationMinutes = tzAwareDurationMinutes(f.departureTime, f.arrivalTime, depTz, arrTz);
-      const durationHours = durationMinutes / 60;
+      const durationMinutes = tzAwareDurationMinutes(
+        f.departureTime,
+        f.arrivalTime,
+        depTz,
+        arrTz,
+        (f as { depTimeSemantics?: FlightTimeSemantics }).depTimeSemantics,
+        (f as { arrTimeSemantics?: FlightTimeSemantics }).arrTimeSemantics,
+      );
+      // DATE_ONLY rows return null and are skipped from the fastest-route
+      // tournament — placeholder times would produce nonsense ground speeds.
+      const durationHours = durationMinutes === null ? 0 : durationMinutes / 60;
 
       if (durationHours > 0.5) { // Ignore flights with <30min duration (likely bad data)
         const speed = distance / durationHours; // km/h

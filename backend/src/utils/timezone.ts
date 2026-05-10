@@ -8,7 +8,7 @@ import { toZonedTime, fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { getCachedAirport } from '../services/airportCache';
 import logger from './logger';
 
-export type FlightTimeSemantics = 'UTC' | 'LEGACY_FAKE_UTC' | 'UNKNOWN';
+export type FlightTimeSemantics = 'UTC' | 'DATE_ONLY' | 'LEGACY_FAKE_UTC' | 'UNKNOWN';
 
 /**
  * Convert a legacy "fake-UTC" timestamp (wall-clock encoded as UTC) into a
@@ -44,6 +44,8 @@ export function normalizeFlightTimeUtc(
   switch (semantics) {
     case 'UTC':
       return stored;
+    case 'DATE_ONLY':
+      return stored;
     case 'LEGACY_FAKE_UTC':
       return airportTz ? legacyFakeUtcToRealUtc(stored, airportTz) : null;
     case 'UNKNOWN':
@@ -69,7 +71,12 @@ export function tzAwareDurationMinutes(
   arrTz: string | null | undefined,
   depSemantics: FlightTimeSemantics = 'UNKNOWN',
   arrSemantics: FlightTimeSemantics = 'UNKNOWN',
-): number {
+): number | null {
+  // If either side has DATE_ONLY semantics, duration is meaningless (12:00 placeholder)
+  if (depSemantics === 'DATE_ONLY' || arrSemantics === 'DATE_ONLY') {
+    return null;
+  }
+
   // Only re-interpret when both sides are explicitly tagged LEGACY. UTC and
   // UNKNOWN both yield naive diff: UTC because the values are already
   // canonical instants; UNKNOWN because treating it as legacy would wrongly
