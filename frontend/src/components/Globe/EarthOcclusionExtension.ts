@@ -104,6 +104,14 @@ interface ViewportLike {
   longitude?: number;
   latitude?: number;
   zoom?: number;
+  /** deck.gl GlobeViewport exposes the camera position in common-space
+   *  units. For globe view, magnitude / radiusInUnits gives the camera
+   *  distance from Earth's center in Earth radii. */
+  cameraPosition?: readonly [number, number, number];
+  /** [x, y, z] units per meter; for globe, all three are equal and
+   *  multiplying by EARTH_RADIUS_M gives Earth's radius in common-space
+   *  units (typically 256). */
+  distanceScales?: { unitsPerMeter?: readonly [number, number, number] };
 }
 
 interface DrawParams {
@@ -115,13 +123,33 @@ const defaultProps = {
   earthOcclusionFadeBand: { type: "number", value: 0.04, min: 0.001 },
 };
 
-// Same heuristic the GlobeView used for cameraDistance, kept here so the
-// extension is self-contained. At zoom 0 the camera sits ~2.5 ER from
-// Earth center (full hemisphere visible); each zoom step pulls it ~30%
-// closer. The factor 0.7 was tuned empirically against MapLibre's
-// globe view.
-function cameraDistanceFromZoom(zoom: number): number {
-  return 1 + 1.5 * Math.pow(2, -Math.max(0, zoom) * 0.7);
+// Camera distance in Earth radii. Prefer reading the live camera
+// position straight off the deck.gl viewport — that's the only number
+// that's guaranteed to match MapLibre's actual perspective camera.
+// The closed-form `cameraDistanceFromZoom` fallback (used when the
+// viewport doesn't expose cameraPosition / distanceScales — shouldn't
+// happen with deck.gl 9 GlobeViewport, but keep it conservative) is
+// pinned to the safe upper bound so the shader UNDER-clips rather than
+// over-clips at the rim. The previous closed-form (1 + 1.5 * 2^-z*0.7)
+// was tuned for an old viewport assumption and underestimated the real
+// distance by roughly 3× at zoom 1.6, which clipped a 25° band of
+// routes off the visible rim — see commit message for derivation.
+export function cameraDistanceFromViewport(viewport: ViewportLike | undefined): number {
+  const cp = viewport?.cameraPosition;
+  const upm = viewport?.distanceScales?.unitsPerMeter;
+  if (cp && upm && upm[0] > 0) {
+    const radiusInUnits = upm[0] * EARTH_RADIUS_M;
+    if (radiusInUnits > 0) {
+      const mag = Math.sqrt(cp[0] * cp[0] + cp[1] * cp[1] + cp[2] * cp[2]);
+      const dist = mag / radiusInUnits;
+      // Guard against degenerate or above-the-surface camera reads.
+      if (Number.isFinite(dist) && dist > 1.001) return dist;
+    }
+  }
+  // Fallback: assume the camera is far enough out that the entire
+  // visible disk is OK to draw. Better to under-clip than to repeat the
+  // old over-clipping bug.
+  return 6;
 }
 
 export class EarthOcclusionExtension extends LayerExtension {
@@ -137,8 +165,7 @@ export class EarthOcclusionExtension extends LayerExtension {
     const viewport = params?.context?.viewport;
     const lng = (viewport?.longitude ?? 0) * DEG_TO_RAD;
     const lat = (viewport?.latitude ?? 0) * DEG_TO_RAD;
-    const zoom = viewport?.zoom ?? 0;
-    const dist = Math.max(1.001, cameraDistanceFromZoom(zoom));
+    const dist = Math.max(1.001, cameraDistanceFromViewport(viewport));
     const uniforms: EarthOcclusionUniforms = {
       cameraDir: [
         Math.cos(lat) * Math.cos(lng),
