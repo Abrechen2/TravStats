@@ -4,6 +4,72 @@
   "filter": {
     "all": "Overview"
   },
+  "overview": {
+    "loading": "Loading multi-domain stats …",
+    "rangeLabel": "Range",
+    "rangeHint": "Cross-domain — drives KPIs, chart, heatmap and per-domain cards",
+    "kpisLabel": "Overall summary",
+    "scopeLifetime": "Lifetime · all years",
+    "scopeYear": "Year {{year}}",
+    "scopeCompare": "Year {{year}} vs. {{compare}}",
+    "activityLabel": "Activity & distribution",
+    "activityHint": "Toggle which domains contribute",
+    "perDomainLabel": "Per domain",
+    "perDomainHint": "Compact summary — full drill-down lives in the domain tab",
+    "perDomainHintScoped": "Scope: {{year}} · full drill-down in the domain tab",
+    "scopeLabel": "── Overall (all years) ──",
+    "scopeHint": "independent of the year filter above"
+  },
+  "overviewFilter": {
+    "range": "Year",
+    "allYears": "All years",
+    "compareWith": "Compare with"
+  },
+  "overviewKpis": {
+    "experiences": "Total experiences",
+    "noEnabledDomains": "No domain enabled",
+    "countries": "Countries visited",
+    "activeDays": "Active travel days",
+    "activeDaysHint": "Days with at least one activity",
+    "achievements": "Achievements",
+    "achievementsHint": "{{points}} points"
+  },
+  "overviewToggle": {
+    "noData": "no data"
+  },
+  "overviewChart": {
+    "title": "Activity per year",
+    "subtitleStacked": "stacked by domain",
+    "subtitleHighlight": "{{year}} highlighted",
+    "subtitleCompare": "{{year}} vs. {{compare}} highlighted"
+  },
+  "overviewHeatmap": {
+    "title": "Active days {{year}}",
+    "subtitle": "each cell = 1 day with travel activity",
+    "legendLess": "less",
+    "legendMore": "more",
+    "months": {
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Jun",
+      "jul": "Jul",
+      "aug": "Aug",
+      "sep": "Sep",
+      "oct": "Oct",
+      "nov": "Nov",
+      "dec": "Dec"
+    }
+  },
+  "overviewCard": {
+    "noDataYet": "No data yet",
+    "comingSoon": "Coming with V2.X",
+    "yearScopedCount": "{{count}} in {{year}} · {{lifetime}} lifetime",
+    "lifetimeCount": "{{count}} experiences",
+    "detailLink": "Details →"
+  },
   "overview2": {
     "sectionLabel": "Overall summary",
     "sectionHint": "All domains combined",

@@ -32,7 +32,9 @@ import StatsUniqueSection from "../components/Stats/StatsUniqueSection";
 import StatsAirportsSection from "../components/Stats/StatsAirportsSection";
 import StatsSeatSection from "../components/Stats/StatsSeatSection";
 import CruiseStatsSection from "../components/Stats/CruiseStatsSection";
-import OverviewSummarySection from "../components/Stats/OverviewSummarySection";
+import OverviewTab from "../components/Stats/Overview/OverviewTab";
+import { achievementsApi } from "../lib/api/achievements";
+import type { AchievementSummary } from "../types";
 import { generateYearReportPdf } from "../lib/yearReportPdf";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
@@ -55,6 +57,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   const [uniqueStats, setUniqueStats] = useState<UniqueStats | null>(null);
   const [airportStats, setAirportStats] = useState<AirportStats | null>(null);
   const [seatStats, setSeatStats] = useState<SeatStats | null>(null);
+  const [achievementSummary, setAchievementSummary] = useState<AchievementSummary | null>(null);
   const [showCertificate, setShowCertificate] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
@@ -152,7 +155,7 @@ export default function AdvancedStatsPage(): JSX.Element {
         allFlights.filter((f) => f.status === "flown" || f.status === "historical")
       );
 
-      const [fun, business, unique, airports, seat] = await Promise.all([
+      const [fun, business, unique, airports, seat, achievements] = await Promise.all([
         statsApi.getFunStats().catch((err) => {
           logger.error("Failed to load fun stats:", err);
           return null;
@@ -173,6 +176,10 @@ export default function AdvancedStatsPage(): JSX.Element {
           logger.error("Failed to load seat stats:", err);
           return null;
         }),
+        achievementsApi.getAll().catch((err) => {
+          logger.error("Failed to load achievement summary:", err);
+          return null;
+        }),
       ]);
 
       if (fun) setFunStats(fun);
@@ -185,6 +192,7 @@ export default function AdvancedStatsPage(): JSX.Element {
       }
       if (airports) setAirportStats(airports);
       if (seat) setSeatStats(seat);
+      if (achievements) setAchievementSummary(achievements.summary);
     } catch (error) {
       logger.error("Failed to load flights:", error);
     } finally {
@@ -551,13 +559,16 @@ export default function AdvancedStatsPage(): JSX.Element {
         </div>
 
         <div className="container mx-auto px-6 py-8">
-          {/* Cruise tab renders its own stats section and skips the flight
-              content below. Flight + overview ("all") fall through to the
-              existing flight-centric content. */}
+          {/* Gesamt — pure cross-domain overview, no flight deep-dives. */}
+          {filter === "all" && (
+            <OverviewTab flights={flights} achievements={achievementSummary} />
+          )}
+
+          {/* Cruise tab renders its own stats section. */}
           {filter === "cruise" && <CruiseStatsSection />}
 
-          {/* Generate Certificate + Year Report Buttons */}
-          {filter !== "cruise" && flights.length > 0 && (
+          {/* Generate Certificate + Year Report Buttons — flight-only now. */}
+          {filter === "flight" && flights.length > 0 && (
             <div className="flex justify-end mb-4">
               <button
                 onClick={() => setShowCertificate(true)}
@@ -588,14 +599,8 @@ export default function AdvancedStatsPage(): JSX.Element {
             <FlightCertificate stats={certificateStats} onClose={() => setShowCertificate(false)} />
           )}
 
-          {/* Cross-domain summary cards — only on the Gesamt tab. Gives
-              cruise-focused users a sense that their data is present even
-              though the rest of this tab is still flight-centric. */}
-          {filter === "all" && <OverviewSummarySection flightCount={flights.length} />}
-
-          {/* Flight-specific stats block — hidden when the Cruise tab is
-              active so the cruise section above stands on its own. */}
-          {filter !== "cruise" && (
+          {/* Flight-specific stats block — flight tab only. */}
+          {filter === "flight" && (
             <>
               {/* Year Filter + Year-Filtered Summary Cards */}
               <StatsYearFilter
