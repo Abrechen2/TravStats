@@ -31,30 +31,34 @@ export default function OverviewTab({ flights, achievements }: Props): JSX.Eleme
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [compareYear, setCompareYear] = useState<number | null>(null);
   const [compareEnabled, setCompareEnabled] = useState(false);
+  const [didAutoPick, setDidAutoPick] = useState(false);
 
   const years = useMemo(() => collectYears(stats, visible), [stats, visible]);
 
-  // Auto-pick the most recent year once data lands so the year-filter
-  // shows real options rather than only "Alle Jahre".
+  // Auto-pick the most recent year ONCE after data lands. After that, the
+  // user owns selectedYear — clicking "Alle Jahre" must not snap back.
   useEffect(() => {
-    if (selectedYear !== null || years.length === 0) return;
-    const newest = years[years.length - 1];
-    setSelectedYear(newest);
+    if (didAutoPick || years.length === 0) return;
+    setSelectedYear(years[years.length - 1]);
     if (years.length >= 2) {
       setCompareYear(years[years.length - 2]);
       setCompareEnabled(true);
     }
-  }, [years, selectedYear]);
+    setDidAutoPick(true);
+  }, [years, didAutoPick]);
 
-  // Defensive: if the user picks a compareYear that's no longer in the
-  // year list (e.g. they toggled off the only domain that had that year),
-  // fall back to the most recent available alternative.
+  // Defensive: keep compareYear in a valid state. Two collapse cases:
+  //  1. The compare year disappeared from the dataset (e.g. user toggled
+  //     off the only domain that had data for it).
+  //  2. The user picked compareYear == selectedYear — the delta would
+  //     read 0 against itself.
   useEffect(() => {
-    if (compareYear !== null && !years.includes(compareYear)) {
-      const fallback = years.find((y) => y !== selectedYear) ?? null;
-      setCompareYear(fallback);
-      if (fallback === null) setCompareEnabled(false);
-    }
+    if (compareYear === null) return;
+    const stale = !years.includes(compareYear) || compareYear === selectedYear;
+    if (!stale) return;
+    const fallback = pickAdjacentYear(years, selectedYear);
+    setCompareYear(fallback);
+    if (fallback === null) setCompareEnabled(false);
   }, [years, compareYear, selectedYear]);
 
   const agg = aggregate(stats, visible, selectedYear);
@@ -170,6 +174,27 @@ function SectionHeader({ label, hint }: { label: string; hint?: string }): JSX.E
       )}
     </div>
   );
+}
+
+/**
+ * Pick the chronologically closest year to `current` from `years`,
+ * skipping `current` itself. Ties prefer the older year so the user
+ * lands on a "year-over-year change" comparison by default.
+ */
+function pickAdjacentYear(years: number[], current: number | null): number | null {
+  const candidates = years.filter((y) => y !== current);
+  if (candidates.length === 0) return null;
+  if (current === null) return candidates[candidates.length - 1];
+  let best = candidates[0];
+  let bestDist = Math.abs(best - current);
+  for (const y of candidates) {
+    const d = Math.abs(y - current);
+    if (d < bestDist || (d === bestDist && y < best)) {
+      best = y;
+      bestDist = d;
+    }
+  }
+  return best;
 }
 
 function kpiScopeHint(
