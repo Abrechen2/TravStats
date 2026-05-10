@@ -61,7 +61,17 @@ export function FlightsTab(): JSX.Element {
   const [showSpecialModal, setShowSpecialModal] = useState(false);
   const { lookup, lookupMany } = useFlightLookup();
   const setSelection = useFlightSelectionStore((s) => s.setSelection);
+  const detailMode = useFlightSelectionStore((s) => s.detailMode);
   const addToast = useToastStore((s) => s.addToast);
+
+  // The "Route-Details" / "Trip-Details" buttons in the map tooltip flip
+  // detailMode in the store but render their content inside <FlightPanel>.
+  // If the sidebar is closed at the moment the user clicks, the click
+  // would silently update the store and look like nothing happened —
+  // auto-open the sidebar so the details actually show up.
+  useEffect(() => {
+    if (detailMode !== null) setSidebarOpen(true);
+  }, [detailMode]);
 
   const loadGeoJSON = useCallback(async (): Promise<void> => {
     try {
@@ -259,6 +269,7 @@ export function FlightsTab(): JSX.Element {
           if (f) setEditingFlight(f);
         }}
         availableModes={FLIGHT_TAB_MAP_MODES}
+        hideInfoPill
       />
       <button
         type="button"
