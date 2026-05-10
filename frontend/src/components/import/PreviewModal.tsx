@@ -210,7 +210,7 @@ function RowsView({ rows, checked, toggle, isSubmitting, t }: RowsViewProps): JS
     <div className="overflow-auto px-6 py-4">
       <table className="w-full text-sm">
         <thead
-          className="sticky top-0 text-left"
+          className="sticky top-0 z-10 text-left"
           style={{ background: "var(--bg-surface)", color: "var(--text-muted)" }}
         >
           <tr>
