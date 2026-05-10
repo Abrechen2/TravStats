@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
-import { buildMarkerTooltip } from "../map/markerTooltip";
+import { createMarkerTooltip } from "../map/markerTooltip";
 import { ArcLayer, PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { Trip } from "../../types";
@@ -60,20 +60,22 @@ interface PointDatum {
 function DeckGLOverlay({
   layers,
   onClick,
+  getTooltip,
 }: {
   layers: Layer[];
   onClick: (info: PickingInfo) => void;
+  getTooltip: ReturnType<typeof createMarkerTooltip>;
 }): null {
   const overlay = useControl<MapboxOverlay>(
     () =>
       new MapboxOverlay({
         layers,
         pickingRadius: 8,
-        getTooltip: buildMarkerTooltip,
+        getTooltip,
       }),
     { position: "top-left" }
   );
-  overlay.setProps({ layers, pickingRadius: 8, onClick });
+  overlay.setProps({ layers, pickingRadius: 8, onClick, getTooltip });
   return null;
 }
 
@@ -82,7 +84,9 @@ interface TripMapProps {
 }
 
 export default function TripMap({ trip }: TripMapProps): JSX.Element {
-  const { t } = useTranslation(["trips"]);
+  const { t, i18n } = useTranslation(["trips", "map"]);
+  const locale = i18n.language || "de";
+  const getTooltip = useMemo(() => createMarkerTooltip(t, locale), [t, locale]);
   const mapRef = useRef<MapRef | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [projection, setProjection] = useState<Projection>("mercator");
@@ -389,7 +393,9 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
         cursor="grab"
         onLoad={(): void => setMapLoaded(true)}
       >
-        {mapLoaded && <DeckGLOverlay layers={layers} onClick={handleClick} />}
+        {mapLoaded && (
+          <DeckGLOverlay layers={layers} onClick={handleClick} getTooltip={getTooltip} />
+        )}
       </MapGL>
       {empty && (
         <div

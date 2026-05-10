@@ -164,11 +164,20 @@ function buildArcs(
 
 function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
   const airportMap = new Map<string, PointDatum>();
+  const bumpLastVisit = (
+    cur: string | undefined,
+    candidate: string | undefined,
+  ): string | undefined => {
+    if (!candidate) return cur;
+    if (!cur || candidate > cur) return candidate;
+    return cur;
+  };
   for (const f of flights) {
     const dep = f.properties.departureAirport;
     const arr = f.properties.arrivalAirport;
     const coords = getCoordsFromFeature(f);
     if (!dep.iata || !arr.iata || !coords) continue;
+    const departureTime = f.properties.departureTime ?? undefined;
 
     if (!airportMap.has(dep.iata)) {
       airportMap.set(dep.iata, {
@@ -188,8 +197,16 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
     }
     const depPoint = airportMap.get(dep.iata)!;
     const arrPoint = airportMap.get(arr.iata)!;
-    airportMap.set(dep.iata, { ...depPoint, count: depPoint.count + 1 });
-    airportMap.set(arr.iata, { ...arrPoint, count: arrPoint.count + 1 });
+    airportMap.set(dep.iata, {
+      ...depPoint,
+      count: depPoint.count + 1,
+      lastVisit: bumpLastVisit(depPoint.lastVisit, departureTime),
+    });
+    airportMap.set(arr.iata, {
+      ...arrPoint,
+      count: arrPoint.count + 1,
+      lastVisit: bumpLastVisit(arrPoint.lastVisit, departureTime),
+    });
   }
   return [...airportMap.values()];
 }

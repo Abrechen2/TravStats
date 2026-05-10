@@ -13,6 +13,9 @@ interface PortDatum {
    */
   shortLabel: string;
   visits: number;
+  /** ISO date of the most recent stop at this port (max of
+   *  stop.arrivalTime across cruises). Surfaced in the hover tooltip. */
+  lastVisit?: string;
 }
 
 // Match the airport `routes-dot` radius (meters) so flat-map ports
@@ -34,9 +37,13 @@ export function createCruisePortsLayer(cruises: Cruise[]): Layer[] | null {
   for (const cruise of cruises) {
     for (const stop of cruise.stops) {
       if (stop.isAtSea || !stop.port) continue;
+      const stopDate = stop.arrivalTime ?? stop.departureTime ?? undefined;
       const existing = byPort.get(stop.port.id);
       if (existing) {
         existing.visits += 1;
+        if (stopDate && (!existing.lastVisit || stopDate > existing.lastVisit)) {
+          existing.lastVisit = stopDate;
+        }
       } else {
         byPort.set(stop.port.id, {
           position: [stop.port.lon, stop.port.lat],
@@ -44,6 +51,7 @@ export function createCruisePortsLayer(cruises: Cruise[]): Layer[] | null {
           name: stop.port.name,
           shortLabel: stop.port.unlocode ?? stop.port.name,
           visits: 1,
+          lastVisit: stopDate,
         });
       }
     }

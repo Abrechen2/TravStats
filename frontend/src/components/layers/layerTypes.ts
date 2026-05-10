@@ -26,6 +26,9 @@ export interface PointDatum {
   count: number;
   name: string;
   iata: string;
+  /** ISO date of the most recent flight touching this airport.
+   *  Surfaced in the hover tooltip alongside the visit count. */
+  lastVisit?: string;
 }
 
 export interface TripDatum {
