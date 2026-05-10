@@ -467,7 +467,7 @@ export function DeckGLMap({
       { zoom }
     );
     const arrows = createCruiseArrowsLayer(cruises, geometryMap, selectedCruiseId, { zoom });
-    const ports = createCruisePortsLayer(cruises);
+    const ports = createCruisePortsLayer(cruises, zoom);
 
     // Split cruise visuals into a "below" group (arcs/arrows render
     // beneath flight arcs and airport markers) and an "above" group

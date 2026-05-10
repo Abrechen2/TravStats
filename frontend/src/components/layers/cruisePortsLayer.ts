@@ -26,13 +26,28 @@ const PORT_RING_RADIUS_M = 6000;
 const PORT_RGB: [number, number, number] = [56, 189, 248]; // sky-400
 
 /**
+ * Match the airport-label zoom gate from routesLayer
+ * (LABEL_VISIBILITY_MIN_ZOOM). Below this zoom the dots stay visible
+ * but the UN/LOCODE labels are hidden — at world view dozens of
+ * 5-letter codes overlap into noise.
+ */
+const PORT_LABEL_VISIBILITY_MIN_ZOOM = 4;
+
+/**
  * Build a stack of layers (halo ring, solid dot, label) for unique
  * ports visited across all cruises. At-sea stops and stops without a
  * resolved port are ignored.
  *
+ * `zoom` gates the label layer visibility — same threshold as airport
+ * IATA labels (LABEL_VISIBILITY_MIN_ZOOM in routesLayer). Defaults to
+ * "always visible" so legacy callers without zoom plumbing don't break.
+ *
  * Returns `null` when no qualifying ports exist.
  */
-export function createCruisePortsLayer(cruises: Cruise[]): Layer[] | null {
+export function createCruisePortsLayer(
+  cruises: Cruise[],
+  zoom: number = PORT_LABEL_VISIBILITY_MIN_ZOOM,
+): Layer[] | null {
   const byPort = new Map<number, PortDatum>();
   for (const cruise of cruises) {
     for (const stop of cruise.stops) {
@@ -93,6 +108,7 @@ export function createCruisePortsLayer(cruises: Cruise[]): Layer[] | null {
     pickable: true,
   });
 
+  const labelsVisible = zoom >= PORT_LABEL_VISIBILITY_MIN_ZOOM;
   const labelLayer = new TextLayer<PortDatum>({
     id: "cruise-ports-labels",
     data,
@@ -111,6 +127,7 @@ export function createCruisePortsLayer(cruises: Cruise[]): Layer[] | null {
     sizeUnits: "pixels",
     pickable: true,
     billboard: true,
+    visible: labelsVisible,
   });
 
   return [ringLayer, dotLayer, labelLayer];
