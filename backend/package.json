@@ -43,7 +43,7 @@
     "@asteasolutions/zod-to-openapi": "^7.3.4",
     "@kenjiuno/msgreader": "^1.28.0",
     "@prisma/client": "^5.7.0",
-    "archiver": "^7.0.1",
+    "archiver": "^8.0.0",
     "axios": "^1.15.2",
     "bcrypt": "^5.1.1",
     "cheerio": "^1.2.0",
