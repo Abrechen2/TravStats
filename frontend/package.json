@@ -20,7 +20,7 @@
     "@deck.gl/layers": "^9.2.11",
     "@deck.gl/react": "^9.2.11",
     "@hookform/resolvers": "^3.3.3",
-    "@turf/turf": "^6.5.0",
+    "@turf/turf": "^7.3.5",
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.0",
     "axios": "^1.15.2",
