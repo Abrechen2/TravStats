@@ -77,6 +77,12 @@ RUN npm config set fetch-retries 5 \
     && npm config set fetch-retry-maxtimeout 300000 \
     && npm ci --only=production
 COPY --from=backend-builder /app/backend/dist ./dist
+# Bundle one-shot maintenance scripts (e.g. backfillRouteDistance.ts) into
+# the production image so the `docker exec TravStats npx tsx
+# /app/backend/scripts/<name>.ts` workflow advertised in the CHANGELOG
+# actually resolves. These are not part of the running app; they exist
+# only for the operator to invoke explicitly on demand.
+COPY backend/scripts ./scripts
 RUN npx prisma generate
 
 # Write VERSION file for runtime version reporting.
