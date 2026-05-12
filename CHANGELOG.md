@@ -4,6 +4,15 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [1.5.1] - 2026-05-12
+
+### Fixed
+- **`backfillRouteDistance.ts` now actually runs in production** — The v1.5.0 CHANGELOG advertised the script as runnable via `docker exec TravStats npx tsx /app/backend/scripts/backfillRouteDistance.ts`, but the production Dockerfile only copied `backend/dist/` out of the builder stage so `/app/backend/scripts/` did not exist in the shipped image and every operator who followed the documented path got "No such file or directory". The Dockerfile now explicitly copies `backend/scripts/` into the production stage; the documented command resolves as promised.
+- **AeroDataBox lookup now persists airport `shortName` and `municipalityName`** — The v1.5.0 release notes claimed AeroDataBox lookups populate these airport-side columns, but the adapter's airport-object interface declared only `{iata, icao, name}` and the fields were filled only by the airport seeder on first boot — provider responses never reached them. New `enrichAirportMetadata()` helper backfills NULL slots from AeroDataBox responses on every lookup, never overwrites a curated value, invalidates the airport cache after a write. Six new lock-in tests cover the contract: happy-path, never-overwrite-curated, both-already-set no-op, empty-payload no-op, unknown-code, and whitespace trimming.
+
+### Tests
+- Backend Jest: 657 → 663 (+6 for `enrichAirportMetadata`). Frontend Vitest unchanged at 357/357.
+
 ## [1.5.0] - 2026-05-08
 
 ### Added
