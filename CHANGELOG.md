@@ -4,6 +4,22 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.28] - 2026-05-12 (Beta)
+
+### Fixed
+- **Infinite re-render loop on the dashboard fired ~8 GETs/sec at
+  `/api/v1/flights`.** `useEnabledDomains()` returned a fresh
+  `isEnabled` arrow function on every render; `DashboardPage` listed it
+  in a `useEffect` dependency array, so the effect re-ran on every
+  render, called `setCounts({...})` with a new object reference,
+  triggered another render — and so on. With dev-tools open on the
+  Globe view, the network log filled with thousands of 304-cached
+  calls; with caching disabled this would hammer the backend.
+  `MapContainer3D` already documented this trap and worked around it
+  locally; the hook-level fix (memoize `isEnabled` against the
+  `enabled` array via `useCallback`) closes the trap once and for all
+  so future callers cannot trip into it.
+
 ## [2.0.0-beta.27] - 2026-05-10 (Beta)
 
 ### Fixed
