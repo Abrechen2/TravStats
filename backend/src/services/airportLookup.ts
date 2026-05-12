@@ -172,6 +172,51 @@ export async function findOrCreateAirport(code: string): Promise<AirportData | n
 }
 
 /**
+ * Backfill `shortName` and/or `municipalityName` on an existing airport row
+ * when a provider lookup (currently AeroDataBox) returns those fields.
+ *
+ * Only fills in NULL slots — never overwrites a curated value. No-op when
+ * both target fields are already populated or no enrichment data is passed.
+ *
+ * Returns true when an UPDATE was issued (caller can use this for logging /
+ * metrics); false when nothing changed.
+ */
+export async function enrichAirportMetadata(
+  code: string,
+  data: { shortName?: string | null; municipalityName?: string | null },
+): Promise<boolean> {
+  const incomingShort = data.shortName?.trim();
+  const incomingMunicipality = data.municipalityName?.trim();
+  if (!incomingShort && !incomingMunicipality) return false;
+
+  const upperCode = code.toUpperCase();
+  const airport = await prisma.airport.findFirst({
+    where: { OR: [{ iata: upperCode }, { icao: upperCode }] },
+    orderBy: { isClosed: 'asc' },
+    select: { id: true, iata: true, icao: true, shortName: true, municipalityName: true },
+  });
+  if (!airport) return false;
+
+  const patch: { shortName?: string; municipalityName?: string } = {};
+  if (incomingShort && !airport.shortName) patch.shortName = incomingShort;
+  if (incomingMunicipality && !airport.municipalityName) patch.municipalityName = incomingMunicipality;
+  if (Object.keys(patch).length === 0) return false;
+
+  await prisma.airport.update({ where: { id: airport.id }, data: patch });
+
+  if (airport.iata) invalidateAirportCache(airport.iata);
+  if (airport.icao) invalidateAirportCache(airport.icao);
+
+  logger.info({
+    operation: 'airport_metadata_enriched',
+    message: `Backfilled metadata for ${code}: ${Object.keys(patch).join(', ')}`,
+    context: { code, fields: Object.keys(patch) },
+  });
+
+  return true;
+}
+
+/**
  * Lädt Flughafendaten von externen APIs
  * Verwendet mehrere Fallback-Quellen
  */

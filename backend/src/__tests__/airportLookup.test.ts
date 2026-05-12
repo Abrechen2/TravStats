@@ -1,5 +1,5 @@
 import { prisma } from '../db';
-import { findOrCreateAirport } from '../services/airportLookup';
+import { enrichAirportMetadata, findOrCreateAirport } from '../services/airportLookup';
 import { getCachedAirport, getCachedAirports } from '../services/airportCache';
 
 describe('Airport Lookup', () => {
@@ -106,6 +106,99 @@ describe('Airport Lookup', () => {
 
       expect(cachedAirports.size).toBeGreaterThan(0);
       expect(cachedAirports.has('FRA')).toBe(true);
+    });
+  });
+
+  describe('enrichAirportMetadata (v1.5.1 — AeroDataBox-side metadata backfill)', () => {
+    const TEST_CODE = 'TENRICH1';
+
+    beforeEach(async () => {
+      // Reset to a known clean state every test
+      await prisma.airport.deleteMany({ where: { iata: TEST_CODE } });
+      await prisma.airport.create({
+        data: {
+          iata: TEST_CODE,
+          icao: 'XENR',
+          name: 'Test Enrichment Airport',
+          lat: 0,
+          lon: 0,
+        },
+      });
+    });
+
+    afterAll(async () => {
+      await prisma.airport.deleteMany({ where: { iata: TEST_CODE } });
+    });
+
+    it('backfills shortName + municipalityName when both columns are NULL', async () => {
+      const changed = await enrichAirportMetadata(TEST_CODE, {
+        shortName: 'Test Short',
+        municipalityName: 'Testtown',
+      });
+      expect(changed).toBe(true);
+
+      const row = await prisma.airport.findFirst({ where: { iata: TEST_CODE } });
+      expect(row?.shortName).toBe('Test Short');
+      expect(row?.municipalityName).toBe('Testtown');
+    });
+
+    it('never overwrites a curated shortName', async () => {
+      await prisma.airport.update({
+        where: { id: (await prisma.airport.findFirstOrThrow({ where: { iata: TEST_CODE } })).id },
+        data: { shortName: 'Curated Value' },
+      });
+
+      const changed = await enrichAirportMetadata(TEST_CODE, {
+        shortName: 'Provider Override',
+        municipalityName: 'Testtown',
+      });
+      // municipalityName still fills (was NULL), but shortName is preserved.
+      expect(changed).toBe(true);
+
+      const row = await prisma.airport.findFirst({ where: { iata: TEST_CODE } });
+      expect(row?.shortName).toBe('Curated Value');
+      expect(row?.municipalityName).toBe('Testtown');
+    });
+
+    it('is a no-op when both columns are already populated', async () => {
+      await prisma.airport.update({
+        where: { id: (await prisma.airport.findFirstOrThrow({ where: { iata: TEST_CODE } })).id },
+        data: { shortName: 'Existing', municipalityName: 'Existing City' },
+      });
+
+      const changed = await enrichAirportMetadata(TEST_CODE, {
+        shortName: 'New',
+        municipalityName: 'New City',
+      });
+      expect(changed).toBe(false);
+
+      const row = await prisma.airport.findFirst({ where: { iata: TEST_CODE } });
+      expect(row?.shortName).toBe('Existing');
+      expect(row?.municipalityName).toBe('Existing City');
+    });
+
+    it('is a no-op when no enrichment data is passed', async () => {
+      const changed = await enrichAirportMetadata(TEST_CODE, {});
+      expect(changed).toBe(false);
+    });
+
+    it('returns false for a code that does not exist', async () => {
+      const changed = await enrichAirportMetadata('NOSUCHCODE', {
+        shortName: 'x',
+      });
+      expect(changed).toBe(false);
+    });
+
+    it('trims whitespace from the incoming values', async () => {
+      const changed = await enrichAirportMetadata(TEST_CODE, {
+        shortName: '  Whitespace Short  ',
+        municipalityName: '  Whitespace City  ',
+      });
+      expect(changed).toBe(true);
+
+      const row = await prisma.airport.findFirst({ where: { iata: TEST_CODE } });
+      expect(row?.shortName).toBe('Whitespace Short');
+      expect(row?.municipalityName).toBe('Whitespace City');
     });
   });
 });
