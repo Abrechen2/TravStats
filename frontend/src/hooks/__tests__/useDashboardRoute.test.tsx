@@ -113,4 +113,12 @@ describe("useDashboardRoute", () => {
     });
     expect(result.current.mode).toBe("routes");
   });
+
+  it("URL-set mode persists to localStorage so tab-switch round-trip restores it", () => {
+    renderHook(() => useDashboardRoute(), {
+      wrapper: wrapper(["/dashboard/flight?mode=heatmap"]),
+    });
+    const stored = JSON.parse(window.localStorage.getItem(LAST_MODE_KEY) ?? "{}");
+    expect(stored.flight).toBe("heatmap");
+  });
 });

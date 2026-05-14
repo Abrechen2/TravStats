@@ -64,6 +64,18 @@ export function useDashboardRoute(): DashboardRouteState {
     return defaultModeForTab(tab);
   }, [search, tab]);
 
+  // Persist the resolved mode so a later tab-switch round-trip
+  // (/dashboard/flight?mode=heatmap → /dashboard/cruise → /dashboard/flight)
+  // can fall back to it from localStorage. Previously only `setMode` wrote;
+  // a direct URL navigation set the mode for the current view but left
+  // localStorage empty, which broke the "last-used mode per tab" promise.
+  useEffect(() => {
+    const urlMode = search.get("mode");
+    if (urlMode && isModeForTab(tab, urlMode)) {
+      writeLastMode(tab, urlMode);
+    }
+  }, [search, tab]);
+
   const setTab = useCallback(
     (next: DashboardTab) => {
       if (next === "all") {
