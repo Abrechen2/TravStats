@@ -109,6 +109,7 @@
     "tar": ">=7.5.7",
     "lodash": ">=4.17.23",
     "fast-xml-parser": ">=5.7.2",
+    "fast-xml-builder": ">=1.1.7",
     "uuid": "$uuid"
   }
 }
