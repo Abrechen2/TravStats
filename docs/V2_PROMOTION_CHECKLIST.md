@@ -28,7 +28,15 @@ note explaining why).
 - [ ] `post_v2_drift_fix` migration applied successfully against the
   prod-data dump
 - [ ] No `CREATE EXTENSION` statements that were silently introduced
-  (PostGIS was removed deliberately on 2026-04-30 — do not regress)
+  by V2-cycle migrations (PostGIS was removed from `post_v2_drift_fix`
+  on 2026-04-30 — do not regress). **Grandfathered exception:** the
+  initial `20251120163643_init` migration carries
+  `CREATE EXTENSION IF NOT EXISTS "postgis"` from V1 days. Both the
+  prod compose on CT 100 and the dev compose pin
+  `postgis/postgis:15-3.4`, so the statement always succeeds. Schema
+  uses no geometry types; the extension is unused but harmless.
+  Cleanup (DROP EXTENSION + plain `postgres:15-alpine` pin) deferred
+  to a V2.1 housekeeping pass.
 
 ## 3. Asset / runtime requirements
 
