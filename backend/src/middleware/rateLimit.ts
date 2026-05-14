@@ -114,6 +114,13 @@ export const authLimiter = rateLimit({
   message: 'Too many authentication attempts, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  // Bypass in dev/test envs so Playwright e2e suites that loop through
+  // login don't trip the 10/15min ceiling. Production unaffected — the
+  // bypass requires NODE_ENV to be explicitly 'development' or 'test',
+  // which the Docker image never sets.
+  skip: () =>
+    process.env.NODE_ENV === 'development' ||
+    process.env.NODE_ENV === 'test',
   // All attempts count — skipSuccessfulRequests was removed to prevent brute-force bypass
 });
 
