@@ -23,6 +23,12 @@ jest.mock("../services/airportLookup", () => ({
     lat: 0,
     lon: 0,
   })),
+  // v1.5.1: aerodataboxLookup now backfills shortName/municipalityName onto
+  // the local airport row. The unit test doesn't exercise the DB write —
+  // a focused integration test in airportLookup.test.ts covers that
+  // behaviour against a real DB. Here we just stub the call out so the
+  // mapping tests aren't accidentally coupled to it.
+  enrichAirportMetadata: jest.fn(async () => false),
 }));
 
 const apiKeyResolverMock = {

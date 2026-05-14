@@ -94,6 +94,12 @@ COPY backend/data/land-mask.bin ./data/land-mask.bin
 # ENOENT on first call and every cruise leg falls back to the coarse
 # 1° A*, which cuts across narrow Baltic and Adriatic straits.
 COPY backend/data/marnet/marnet.geojson ./data/marnet/marnet.geojson
+# Bundle one-shot maintenance scripts (e.g. backfillRouteDistance.ts) into
+# the production image so the `docker exec TravStats npx tsx
+# /app/backend/scripts/<name>.ts` workflow advertised in the CHANGELOG
+# actually resolves. These are not part of the running app; they exist
+# only for the operator to invoke explicitly on demand.
+COPY backend/scripts ./scripts
 RUN npx prisma generate
 
 # Write VERSION file for runtime version reporting.
