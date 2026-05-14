@@ -4,22 +4,6 @@
   "filter": {
     "all": "Gesamt"
   },
-  "overview": {
-    "loading": "Lade Multi-Domain-Statistiken …",
-    "rangeLabel": "Zeitraum",
-    "rangeHint": "Cross-Domain — wirkt auf KPIs, Chart, Heatmap und Domain-Karten",
-    "kpisLabel": "Gesamt-Übersicht",
-    "scopeLifetime": "Lifetime · alle Jahre",
-    "scopeYear": "Jahr {{year}}",
-    "scopeCompare": "Jahr {{year}} vs. {{compare}}",
-    "activityLabel": "Aktivität & Verteilung",
-    "activityHint": "Toggle: welche Domains sollen einfließen?",
-    "perDomainLabel": "Pro Domain",
-    "perDomainHint": "Kompakt-Zusammenfassung — voller Drill-Down im Domain-Tab",
-    "perDomainHintScoped": "Scope: {{year}} · voller Drill-Down im Domain-Tab",
-    "scopeLabel": "── Gesamt (alle Jahre) ──",
-    "scopeHint": "unabhängig vom Jahres-Filter oben"
-  },
   "overviewFilter": {
     "range": "Jahr",
     "allYears": "Alle Jahre",
@@ -126,6 +110,18 @@
     "linkText": "Zurück zum Dashboard"
   },
   "overview": {
+    "loading": "Lade Multi-Domain-Statistiken …",
+    "rangeLabel": "Zeitraum",
+    "rangeHint": "Cross-Domain — wirkt auf KPIs, Chart, Heatmap und Domain-Karten",
+    "kpisLabel": "Gesamt-Übersicht",
+    "scopeLifetime": "Lifetime · alle Jahre",
+    "scopeYear": "Jahr {{year}}",
+    "scopeCompare": "Jahr {{year}} vs. {{compare}}",
+    "activityLabel": "Aktivität & Verteilung",
+    "activityHint": "Toggle: welche Domains sollen einfließen?",
+    "perDomainLabel": "Pro Domain",
+    "perDomainHint": "Kompakt-Zusammenfassung — voller Drill-Down im Domain-Tab",
+    "perDomainHintScoped": "Scope: {{year}} · voller Drill-Down im Domain-Tab",
     "totalFlights": "Gesamt Flüge",
     "totalDistance": "Gesamt-Distanz",
     "avgDistance": "Durchschn. Distanz",

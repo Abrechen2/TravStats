@@ -4,22 +4,6 @@
   "filter": {
     "all": "Overview"
   },
-  "overview": {
-    "loading": "Loading multi-domain stats …",
-    "rangeLabel": "Range",
-    "rangeHint": "Cross-domain — drives KPIs, chart, heatmap and per-domain cards",
-    "kpisLabel": "Overall summary",
-    "scopeLifetime": "Lifetime · all years",
-    "scopeYear": "Year {{year}}",
-    "scopeCompare": "Year {{year}} vs. {{compare}}",
-    "activityLabel": "Activity & distribution",
-    "activityHint": "Toggle which domains contribute",
-    "perDomainLabel": "Per domain",
-    "perDomainHint": "Compact summary — full drill-down lives in the domain tab",
-    "perDomainHintScoped": "Scope: {{year}} · full drill-down in the domain tab",
-    "scopeLabel": "── Overall (all years) ──",
-    "scopeHint": "independent of the year filter above"
-  },
   "overviewFilter": {
     "range": "Year",
     "allYears": "All years",
@@ -126,6 +110,18 @@
     "linkText": "Back to Dashboard"
   },
   "overview": {
+    "loading": "Loading multi-domain stats …",
+    "rangeLabel": "Range",
+    "rangeHint": "Cross-domain — drives KPIs, chart, heatmap and per-domain cards",
+    "kpisLabel": "Overall summary",
+    "scopeLifetime": "Lifetime · all years",
+    "scopeYear": "Year {{year}}",
+    "scopeCompare": "Year {{year}} vs. {{compare}}",
+    "activityLabel": "Activity & distribution",
+    "activityHint": "Toggle which domains contribute",
+    "perDomainLabel": "Per domain",
+    "perDomainHint": "Compact summary — full drill-down lives in the domain tab",
+    "perDomainHintScoped": "Scope: {{year}} · full drill-down in the domain tab",
     "totalFlights": "Total Flights",
     "totalDistance": "Total Distance",
     "avgDistance": "Avg Distance",
