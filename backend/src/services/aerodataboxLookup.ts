@@ -21,7 +21,7 @@
 
 import axios from "axios";
 import NodeCache from "node-cache";
-import { findOrCreateAirport } from "./airportLookup";
+import { enrichAirportMetadata, findOrCreateAirport } from "./airportLookup";
 import { getApiKey } from "./apiKeyResolver";
 import { recordObservedQuota } from "./apiQuota";
 import logger from "../utils/logger";
@@ -87,6 +87,10 @@ interface AerodataboxMovement {
     iata?: string;
     icao?: string;
     name?: string;
+    /** Shorter display label, e.g. "Heathrow" instead of "London Heathrow Airport". */
+    shortName?: string;
+    /** Municipality / city the airport serves, e.g. "London". */
+    municipalityName?: string;
   };
   scheduledTime?: { utc?: string; local?: string };
   revisedTime?: { utc?: string; local?: string };
@@ -293,6 +297,22 @@ async function mapToLookupResult(
     departureCode ? findOrCreateAirport(departureCode) : Promise.resolve(null),
     arrivalCode ? findOrCreateAirport(arrivalCode) : Promise.resolve(null),
   ]);
+
+  // Backfill airport-level metadata (shortName, municipalityName) when
+  // AeroDataBox surfaces them and the local row is still missing those
+  // columns. Cheap async fire — never overwrites a curated value.
+  if (departureCode) {
+    await enrichAirportMetadata(departureCode, {
+      shortName: flight.departure?.airport?.shortName,
+      municipalityName: flight.departure?.airport?.municipalityName,
+    });
+  }
+  if (arrivalCode) {
+    await enrichAirportMetadata(arrivalCode, {
+      shortName: flight.arrival?.airport?.shortName,
+      municipalityName: flight.arrival?.airport?.municipalityName,
+    });
+  }
 
   const scheduledDeparture = parseAerodataboxUtc(flight.departure?.scheduledTime?.utc);
   const scheduledArrival = parseAerodataboxUtc(flight.arrival?.scheduledTime?.utc);
