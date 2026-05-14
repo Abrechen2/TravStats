@@ -80,6 +80,7 @@
   "overrides": {
     "preact": ">=10.27.3",
     "lodash-es": ">=4.17.23",
-    "uuid": ">=14.0.0"
+    "uuid": ">=14.0.0",
+    "fast-xml-parser": ">=5.7.2"
   }
 }
