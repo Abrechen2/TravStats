@@ -44,7 +44,7 @@
     "@kenjiuno/msgreader": "^1.28.0",
     "@prisma/client": "^5.7.0",
     "archiver": "^7.0.1",
-    "axios": "^1.15.2",
+    "axios": "^1.16.0",
     "bcrypt": "^5.1.1",
     "cheerio": "^1.2.0",
     "cookie-parser": "^1.4.7",
