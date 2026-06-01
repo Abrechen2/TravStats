@@ -60,7 +60,7 @@
     "@types/topojson-client": "^3.1.5",
     "@types/topojson-specification": "^1.0.5",
     "@vitejs/plugin-react": "^4.2.1",
-    "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/coverage-v8": "^4.1.8",
     "autoprefixer": "^10.4.16",
     "eslint": "^8.57.1",
     "eslint-plugin-react": "^7.37.5",
@@ -75,7 +75,7 @@
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.48.1",
     "vite": "^6.4.1",
-    "vitest": "^4.0.15"
+    "vitest": "^4.1.8"
   },
   "license": "AGPL-3.0-only",
   "overrides": {
