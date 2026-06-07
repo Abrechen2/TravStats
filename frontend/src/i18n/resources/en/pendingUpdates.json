@@ -124,6 +124,7 @@
   "apiSource": {
     "airlabs": "AirLabs API",
     "aviationstack": "Aviationstack API",
+    "aerodatabox": "AeroDataBox API",
     "opensky": "OpenSky Network",
     "historicalAggregation": "Historical Enrichment"
   },

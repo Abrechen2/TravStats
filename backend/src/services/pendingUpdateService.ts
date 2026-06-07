@@ -13,6 +13,13 @@ import { getCachedAirports } from './airportCache';
 
 const prismaClient = prisma as PrismaClient;
 
+/**
+ * API sources whose data comes from a live provider: their times are true
+ * UTC and applying them counts as live tracking. Kept in sync with
+ * `FlightLookupSource` in flightLookup.ts.
+ */
+const LIVE_API_SOURCES = ['aviationstack', 'airlabs', 'aerodatabox', 'opensky'];
+
 /** Flight data fields used for original/proposed data snapshots */
 export interface FlightDataSnapshot {
   airline?: string | null;
@@ -591,9 +598,20 @@ export async function applyPendingUpdate(
     }
     if (isHistoricalEnrichment) {
       updateData.routeSource = 'historical_aggregation';
-    } else if (pendingUpdate.apiSource === 'airlabs' || pendingUpdate.apiSource === 'aviationstack') {
+    } else if (LIVE_API_SOURCES.includes(pendingUpdate.apiSource)) {
       updateData.routeSource = 'live_tracking';
       updateData.hasLiveTracking = true;
+      // Live APIs report true UTC. When the stored row still carries legacy
+      // semantics (LEGACY_FAKE_UTC / DATE_ONLY / UNKNOWN), applying a real-UTC
+      // value without upgrading the flag would make the display layer
+      // re-interpret the corrected timestamp via the airport timezone —
+      // shifting every shown time by the airport's UTC offset.
+      if (dataToApply.departureTime && flight.depTimeSemantics !== 'UTC') {
+        updateData.depTimeSemantics = 'UTC';
+      }
+      if (dataToApply.arrivalTime && flight.arrTimeSemantics !== 'UTC') {
+        updateData.arrTimeSemantics = 'UTC';
+      }
     }
 
     // Set data source and last modified by
