@@ -370,3 +370,27 @@ describe("createRoutesLayers", () => {
     expect(width).toBeGreaterThan(0);
   });
 });
+
+describe("arc visibility floor (single far-flung routes stay visible)", () => {
+  it("gives a single flown route a solidly opaque alpha (>= 160)", () => {
+    const single: GeoJSONFeature = {
+      ...mockFlight,
+      properties: { ...mockFlight.properties, id: "lonely", status: "flown" },
+    };
+    const { arcs } = buildRouteData([single], 1);
+    expect(arcs).toHaveLength(1);
+    expect(arcs[0].sourceColor[3]).toBeGreaterThanOrEqual(160);
+  });
+
+  it("sets a 2px minimum width floor on the regular arc layer", () => {
+    const single: GeoJSONFeature = {
+      ...mockFlight,
+      properties: { ...mockFlight.properties, id: "lonely2", status: "flown" },
+    };
+    const layers = createRoutesLayers(buildRouteData([single], 1));
+    const regular = layers.find((l) => l.id === "routes-arc");
+    expect(regular).toBeDefined();
+    const props = regular!.props as unknown as { widthMinPixels: number };
+    expect(props.widthMinPixels).toBeGreaterThanOrEqual(2);
+  });
+});
