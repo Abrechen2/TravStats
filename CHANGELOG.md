@@ -4,6 +4,37 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-rc.2] - 2026-06-09 (Release Candidate)
+
+Second 2.0 release candidate. Data-integrity hardening uncovered while
+verifying real flight data on the rc.1 build, plus a trip-detection UX
+improvement. No schema change.
+
+### Added
+- **Expandable trip-detection cards.** Each auto-detected trip in the
+  "Reisen erkennen" review modal can be expanded to reveal its
+  constituent legs (date · flight number · departure → arrival · status).
+  The proposal payload now carries a `legs` array.
+
+### Fixed
+- **Airport IATA collisions resolved to the wrong airport.** OurAirports
+  assigns synthetic ICAO placeholders (e.g. `US-0226`) to minor airfields,
+  some of which carry a spurious IATA that collides with a real
+  international airport — so a flight to Antananarivo (IATA `TNR`) could be
+  stamped with the coordinates of a tiny "Tulsa Downtown Airpark" and drawn
+  to Oklahoma. Airport lookup now prefers the authoritative airport
+  (active over closed, real 4-letter ICAO over a synthetic placeholder)
+  across the cache, batch and create paths.
+
+### Tooling
+- **`fixMistaggedDurations` maintenance script.** Detects flights whose
+  legacy time-semantics tag inflates/deflates the displayed duration
+  (e.g. a Sydney→Dubai leg showing 21 h instead of 14 h) by comparing the
+  naïve and timezone-converted durations against the great-circle minimum
+  flight time, and retags clearly mis-tagged rows. Genuinely corrupt rows
+  (zero/negative duration) are reported for manual review, never silently
+  changed.
+
 ## [2.0.0-rc.1] - 2026-06-09 (Release Candidate)
 
 First release candidate for **TravStats 2.0** — the multi-domain
