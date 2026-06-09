@@ -251,6 +251,14 @@ export interface UpdateJournalInput {
   weather?: string | null;
 }
 
+export interface ProposedTripLeg {
+  date: string;
+  flightNumber: string | null;
+  depIata: string | null;
+  arrIata: string | null;
+  status: string;
+}
+
 export interface ProposedTrip {
   source: "pnr" | "home_loop" | "continuity";
   flightIds: string[];
@@ -259,6 +267,8 @@ export interface ProposedTrip {
   destination: string;
   span: { from: string; to: string };
   suggestedName: string;
+  /** Per-leg detail for the expandable review card (ordered by departure). */
+  legs: ProposedTripLeg[];
 }
 
 export interface DetectTripsResult {
