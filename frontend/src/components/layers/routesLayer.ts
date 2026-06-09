@@ -21,6 +21,31 @@ function getCoordsFromFeature(
   };
 }
 
+type AirportProps = GeoJSONFeature["properties"]["departureAirport"];
+
+// Stable per-airport identifier used to collapse bidirectional routes. IATA
+// is preferred (human-readable, matches the rendered label), then ICAO for
+// airfields that never got an IATA assignment (common for small / pre-1990
+// airports), then a coordinate-derived key as a last resort so a flight with
+// valid geometry still renders even when both codes are missing.
+//
+// Issue #120: the old gate `if (!dep.iata || !arr.iata) continue` silently
+// dropped 1986-era manual entries to ICAO-only fields — they have valid
+// coordinates (depLat/depLon are non-nullable, so the flight saves) but a
+// null IATA (depIata is nullable), so they vanished from the map entirely.
+function airportId(airport: AirportProps, coord: [number, number]): string {
+  return (
+    airport.iata || airport.icao || `@${coord[0].toFixed(3)},${coord[1].toFixed(3)}`
+  );
+}
+
+// Human-readable airport label for the map marker / aggregation map. Falls
+// back through IATA → ICAO → name → "—" so a code-less airport still shows
+// something meaningful instead of an empty pill.
+function airportLabel(airport: AirportProps): string {
+  return airport.iata || airport.icao || airport.name || "—";
+}
+
 // Soft grey for routes whose only flights are historical (legacy, no longer
 // active). Still useful to render so the user sees them dim in the background.
 const HISTORICAL_COLOR: [number, number, number] = [150, 150, 150];
@@ -61,10 +86,14 @@ function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord>
   for (const f of flights) {
     const dep = f.properties.departureAirport;
     const arr = f.properties.arrivalAirport;
-    if (!dep.iata || !arr.iata) continue;
     const coords = getCoordsFromFeature(f);
     if (!coords) continue;
-    const key = routeKey(dep.iata, arr.iata);
+    // Identify each airport by IATA → ICAO → coordinate key so ICAO-only /
+    // code-less airfields still aggregate instead of being dropped (#120).
+    const key = routeKey(
+      airportId(dep, coords.depCoord),
+      airportId(arr, coords.arrCoord)
+    );
     const isScheduled = f.properties.status === "scheduled";
     const isHistorical = f.properties.status === "historical";
     const existing = records.get(key);
@@ -176,33 +205,37 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
     const dep = f.properties.departureAirport;
     const arr = f.properties.arrivalAirport;
     const coords = getCoordsFromFeature(f);
-    if (!dep.iata || !arr.iata || !coords) continue;
+    if (!coords) continue;
     const departureTime = f.properties.departureTime ?? undefined;
+    // Key by IATA → ICAO → coordinate key so code-less airports still get a
+    // marker (#120). The displayed label falls back the same way.
+    const depKey = airportId(dep, coords.depCoord);
+    const arrKey = airportId(arr, coords.arrCoord);
 
-    if (!airportMap.has(dep.iata)) {
-      airportMap.set(dep.iata, {
+    if (!airportMap.has(depKey)) {
+      airportMap.set(depKey, {
         position: coords.depCoord,
         count: 0,
-        name: dep.name ?? dep.iata,
-        iata: dep.iata,
+        name: dep.name ?? airportLabel(dep),
+        iata: airportLabel(dep),
       });
     }
-    if (!airportMap.has(arr.iata)) {
-      airportMap.set(arr.iata, {
+    if (!airportMap.has(arrKey)) {
+      airportMap.set(arrKey, {
         position: coords.arrCoord,
         count: 0,
-        name: arr.name ?? arr.iata,
-        iata: arr.iata,
+        name: arr.name ?? airportLabel(arr),
+        iata: airportLabel(arr),
       });
     }
-    const depPoint = airportMap.get(dep.iata)!;
-    const arrPoint = airportMap.get(arr.iata)!;
-    airportMap.set(dep.iata, {
+    const depPoint = airportMap.get(depKey)!;
+    const arrPoint = airportMap.get(arrKey)!;
+    airportMap.set(depKey, {
       ...depPoint,
       count: depPoint.count + 1,
       lastVisit: bumpLastVisit(depPoint.lastVisit, departureTime),
     });
-    airportMap.set(arr.iata, {
+    airportMap.set(arrKey, {
       ...arrPoint,
       count: arrPoint.count + 1,
       lastVisit: bumpLastVisit(arrPoint.lastVisit, departureTime),
