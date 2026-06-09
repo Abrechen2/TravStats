@@ -45,7 +45,7 @@
     "@asteasolutions/zod-to-openapi": "^7.3.4",
     "@kenjiuno/msgreader": "^1.28.0",
     "@prisma/client": "^5.7.0",
-    "archiver": "^7.0.1",
+    "archiver": "^8.0.0",
     "axios": "^1.15.2",
     "bcrypt": "^5.1.1",
     "cheerio": "^1.2.0",
@@ -76,7 +76,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/archiver": "^7.0.0",
+    "@types/archiver": "^8.0.0",
     "@types/bcrypt": "^5.0.2",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.17",
