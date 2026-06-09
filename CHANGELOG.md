@@ -4,6 +4,45 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-rc.1] - 2026-06-09 (Release Candidate)
+
+First release candidate for **TravStats 2.0** — the multi-domain
+release. TravStats is no longer a flight-only logbook: it now tracks
+**cruises** as a first-class domain alongside flights, with a shared
+dashboard, shared stats, and a unified import pipeline. This RC
+aggregates the entire `2.0.0-beta.1` … `2.0.0-beta.28` line; see those
+entries below for the granular history.
+
+### Added — Cruise domain
+- **Cruise logbook**: full CRUD for cruises, ships, and ports, with
+  per-cruise itineraries (port calls + sea days).
+- **In-house sea-route renderer**: a vendored Eurostat *marnet*
+  shipping-lane graph with an A* pathfinder (`services/marnet/`)
+  replaces the abandoned `searoute-ts` package, so cruise legs follow
+  real shipping lanes instead of falling back to coarse arcs.
+- **Cruise booking parser**: AIDA / TUI / generic-LLM extraction wired
+  into the email and PDF import routes, with ship/port entity
+  resolution.
+- **Cruise stats**: a dedicated cruise stats page plus cross-domain
+  KPIs (flights + cruises) on the combined "Alle" view.
+
+### Added — Multi-domain platform
+- **Domain-scoped dashboard**: Alle / Flüge / Kreuzfahrten tabs with
+  per-domain visualization modes; the URL carries tab + mode and the
+  last-used mode persists per domain.
+- **Domain registry**: a shared front-/back-end domain registry drives
+  gating, parsing targets, and per-domain brand palettes (dark-only).
+- **Special flights (Sonderflüge)** as a flight sub-type.
+- **Globe modernization**: MapLibre + deck.gl rewrite with GPU-based
+  earth occlusion and smoothed map ↔ globe transitions.
+
+### Fixed
+- **Flights to IATA-less airports no longer vanish from the map**
+  (#120): airfields with only an ICAO code (common for small / pre-1990
+  airports) saved fine but were silently dropped by the route render
+  gate. Airports are now identified by IATA → ICAO → coordinate key, so
+  any leg with valid geometry renders.
+
 ## [2.0.0-beta.28] - 2026-05-12 (Beta)
 
 ### Fixed
