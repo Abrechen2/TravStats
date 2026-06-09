@@ -197,6 +197,79 @@ describe("buildRouteData", () => {
   });
 });
 
+describe("issue #120 — IATA-less airports still render", () => {
+  // 1986-era / small airfields often have only an ICAO code (depIata is
+  // nullable on the Flight row), but valid coordinates (depLat/depLon are
+  // non-nullable, so the flight saves). The old render gate dropped any
+  // flight without an IATA on BOTH dep and arr, making these flights
+  // invisible despite having valid geometry. The gate must instead fall
+  // back to ICAO, then to a coordinate-derived key.
+  const icaoOnlyFlight: GeoJSONFeature = {
+    type: "Feature",
+    properties: {
+      id: "1986-daytona",
+      airline: "Eastern",
+      flightNumber: "EA101",
+      departureAirport: { icao: "KDAB", name: "Daytona Beach", lat: 29.18, lon: -81.06 },
+      arrivalAirport: { icao: "KATL", name: "Atlanta", lat: 33.64, lon: -84.43 },
+      departureTime: "1986-06-15T14:00:00Z",
+      arrivalTime: "1986-06-15T15:30:00Z",
+      status: "flown",
+      distance: 600,
+    },
+    geometry: {
+      type: "LineString",
+      coordinates: [
+        [-81.06, 29.18],
+        [-84.43, 33.64],
+      ],
+    },
+  };
+
+  it("renders a flight whose airports have ICAO but no IATA", () => {
+    const { arcs, points } = buildRouteData([icaoOnlyFlight], 1);
+    expect(arcs).toHaveLength(1);
+    expect(points).toHaveLength(2);
+  });
+
+  it("falls back to coordinates when neither IATA nor ICAO is present", () => {
+    const coordOnly: GeoJSONFeature = {
+      ...icaoOnlyFlight,
+      properties: {
+        ...icaoOnlyFlight.properties,
+        id: "coord-only",
+        departureAirport: { name: "Old Field A", lat: 29.18, lon: -81.06 },
+        arrivalAirport: { name: "Old Field B", lat: 33.64, lon: -84.43 },
+      },
+    };
+    const { arcs, points } = buildRouteData([coordOnly], 1);
+    expect(arcs).toHaveLength(1);
+    expect(points).toHaveLength(2);
+  });
+
+  it("still collapses bidirectional ICAO-only routes into one arc", () => {
+    const reverse: GeoJSONFeature = {
+      ...icaoOnlyFlight,
+      properties: {
+        ...icaoOnlyFlight.properties,
+        id: "1986-return",
+        departureAirport: icaoOnlyFlight.properties.arrivalAirport,
+        arrivalAirport: icaoOnlyFlight.properties.departureAirport,
+      },
+      geometry: {
+        type: "LineString",
+        coordinates: [
+          [-84.43, 33.64],
+          [-81.06, 29.18],
+        ],
+      },
+    };
+    const { arcs } = buildRouteData([icaoOnlyFlight, reverse], 1);
+    expect(arcs).toHaveLength(1);
+    expect(arcs[0].count).toBe(2);
+  });
+});
+
 describe("createRoutesLayers", () => {
   it("returns 7 layers: regular arc, scheduled arc, upcoming arc, ring-inner, ring-outer, dot, labels", () => {
     const layers = createRoutesLayers(buildRouteData([mockFlight], 1));
