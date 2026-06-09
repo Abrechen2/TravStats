@@ -75,7 +75,7 @@ export function FlightsTab(): JSX.Element {
 
   const loadGeoJSON = useCallback(async (): Promise<void> => {
     try {
-      const collection = await flightsApi.getGeoJSON();
+      const collection = await flightsApi.getAllGeoJSON();
       setFlights(collection.features);
     } catch (err: unknown) {
       logger.error("FlightsTab: failed to load GeoJSON", err);

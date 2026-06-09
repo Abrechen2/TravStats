@@ -35,6 +35,29 @@ export const flightsApi = {
     return data;
   },
 
+  /**
+   * Load the COMPLETE GeoJSON feature collection by paginating through the
+   * backend `/geo` endpoint (which caps each page at 500 and defaults to just
+   * 100). The dashboard map needs EVERY flight, not only the most recent page,
+   * otherwise older flights — e.g. a one-off trip from years ago — silently
+   * vanish from every map view. Mirrors the pagination the V1 dashboard did
+   * before the multi-domain refactor dropped it.
+   */
+  getAllGeoJSON: async (filters?: FlightFilters): Promise<GeoJSONFeatureCollection> => {
+    const PAGE = 500;
+    const MAX_PAGES = 100; // safety bound (up to 50k flights)
+    let features: GeoJSONFeatureCollection["features"] = [];
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const { data } = await api.get<GeoJSONFeatureCollection>("/flights/geo", {
+        params: { ...filters, limit: PAGE, offset: page * PAGE },
+      });
+      const batch = data.features ?? [];
+      features = [...features, ...batch];
+      if (batch.length < PAGE) break;
+    }
+    return { type: "FeatureCollection", features };
+  },
+
   getById: async (id: string): Promise<Flight> => {
     const { data } = await api.get<Flight>(`/flights/${id}`);
     return data;
