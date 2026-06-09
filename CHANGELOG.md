@@ -4,6 +4,23 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-rc.3] - 2026-06-09 (Release Candidate)
+
+### Fixed
+- **The dashboard map only showed your 100 most recent flights.** The
+  multi-domain refactor replaced V1's paginated map load with a single
+  unbounded `/geo` request, which the backend caps at 100 (newest first).
+  On accounts with more than 100 flights, every older flight silently
+  vanished from **all** map views (overview, heatmap, globe, journey) — a
+  one-off trip from years ago simply wasn't there. The map now paginates the
+  full set again, so every flight is plotted regardless of age.
+
+### Changed
+- **Single-flown routes are easier to spot.** A route flown just once
+  rendered at the faintest possible treatment (alpha 114, 1px) and was easy
+  to lose in an empty ocean. Raised the visibility floor (alpha ≥ 160,
+  minimum 2px width) so a lone long-haul reads clearly.
+
 ## [2.0.0-rc.2] - 2026-06-09 (Release Candidate)
 
 Second 2.0 release candidate. Data-integrity hardening uncovered while
