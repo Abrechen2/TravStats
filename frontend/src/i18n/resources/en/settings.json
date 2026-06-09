@@ -3,15 +3,39 @@
   "subtitle": "Profile, preferences and security in one place.",
   "roadmap": "Roadmap · Point 9",
   "backToDashboard": "← Back to Dashboard",
+  "tabs": {
+    "general": "General",
+    "flight": "Flight",
+    "cruise": "Cruise"
+  },
+  "errors": {
+    "saveFailed": "Failed to save settings"
+  },
+  "cruisePreferences": {
+    "title": "Cruise preferences",
+    "description": "Defaults for newly created cruises and how they render on the map.",
+    "defaultLine": "Default cruise line",
+    "defaultLinePlaceholder": "e.g. AIDA Cruises",
+    "defaultLineHint": "Prefilled in \"New cruise → Manual\" when no ship is picked.",
+    "defaultCabin": "Default cabin category",
+    "defaultCabinNone": "– no preset –",
+    "showArcs": "Show cruise routes on the map",
+    "showArcsHint": "Bezier lines between departure and arrival ports in the dashboard map."
+  },
   "about": {
     "buildLabel": "Build",
-    "buildVersionHint": "Version that was baked into the container image at build time. This only differs from the displayed version when a promoted RC is running."
+    "buildVersionHint": "Version that was baked into the container image at build time. This only differs from the displayed version when a promoted RC is running.",
+    "dataSources": {
+      "title": "Data sources & attribution",
+      "fullList": "Full list with licenses"
+    }
   },
   "profile": {
     "title": "User Profile",
     "description": "Adjust username, contact information and your profile picture.",
     "changePassword": "Change Password",
     "uploadAvatar": "Upload profile picture",
+    "chooseFile": "Choose file",
     "username": "Username",
     "email": "Email Address",
     "birthdate": "Birthday",
@@ -363,6 +387,7 @@
     "description": "All settings are saved locally and are immediately active."
   },
   "scrollToTop": "Scroll to top",
+  "sectionPicker": "Section",
   "parser": {
     "title": "Parser Configuration",
     "description": "Configure how boarding passes and emails are parsed. Auto mode automatically selects the best available parser.",

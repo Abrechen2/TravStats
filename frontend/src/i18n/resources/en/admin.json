@@ -1,5 +1,6 @@
 {
   "title": "Admin",
+  "sectionPicker": "Section",
   "description": "Manage your self-hosted TravStats instance",
   "loading": "Loading...",
   "tabs": {
@@ -13,6 +14,43 @@
     "logging": "Logging",
     "backups": "Backups",
     "smtp": "Email / SMTP"
+  },
+  "tabs2": {
+    "general": "General",
+    "flight": "Flight",
+    "cruise": "Cruise"
+  },
+  "cruiseMasterData": {
+    "menuLabel": "Ships & Ports",
+    "userAdded": "User-added",
+    "ship": {
+      "title": "Ships",
+      "description": "Catalog from the seed CSV plus user-added entries. User-added ships are marked and kept across re-seeds.",
+      "name": "Name",
+      "cruiseLine": "Cruise line",
+      "year": "Year built",
+      "add": "Add",
+      "searchPlaceholder": "Search ship or cruise line …",
+      "empty": "No results.",
+      "created": "Ship added.",
+      "createFailed": "Failed to add ship.",
+      "missingFields": "Name and cruise line are required."
+    },
+    "port": {
+      "title": "Ports",
+      "description": "Catalog from the seed CSV plus user-added entries. Coordinates in decimal degrees — look unknown ports up on Google Maps.",
+      "name": "Name",
+      "city": "City",
+      "country": "Country",
+      "lat": "Latitude",
+      "lon": "Longitude",
+      "add": "Add",
+      "searchPlaceholder": "Search port or city …",
+      "empty": "No results.",
+      "created": "Port added.",
+      "createFailed": "Failed to add port.",
+      "missingFields": "Name, latitude and longitude are required."
+    }
   },
   "instanceLabel": "Instance",
   "instance": {
@@ -237,8 +275,8 @@
   },
   "demoWarning": {
     "title": "🔓 Demo Account Active",
-    "message": "The demo user account (username: \"demo\", password: \"demo123\") is currently active. This is a security risk in production environments. Deactivate this account after initial testing.",
-    "button": "Deactivate Demo User"
+    "message": "The demo user account (username: \"demo\", password: \"demo123\") is currently active. It is created automatically with sample data on first start. When you no longer need it, delete it here — all demo data (flights, cruises, trips) is removed with it.",
+    "button": "Delete Demo User"
   },
   "systemInfo": {
     "title": "System Information",
@@ -309,7 +347,7 @@
     "confirmExport": "Export all data? This will download a JSON file with all user data.",
     "confirmDeleteLog": "Delete log file \"{{filename}}\"? This action cannot be undone.",
     "confirmCleanupLogs": "Delete old log files based on retention policy? This action cannot be undone.",
-    "confirmDeactivateDemo": "Deactivate the demo user account? This will prevent login with demo credentials."
+    "confirmDeleteDemo": "Delete the demo user account? All demo data (flights, cruises, trips, achievements) will be removed too. Cannot be undone."
   },
   "logging": {
     "title": "Debug Logging & Diagnostics",

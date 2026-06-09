@@ -1,6 +1,106 @@
 {
   "loading": "Lade Statistiken...",
   "back": "← Zurück",
+  "filter": {
+    "all": "Gesamt"
+  },
+  "overviewFilter": {
+    "range": "Jahr",
+    "allYears": "Alle Jahre",
+    "compareWith": "Vergleich mit"
+  },
+  "overviewKpis": {
+    "experiences": "Erlebnisse gesamt",
+    "noEnabledDomains": "Keine Domain aktiviert",
+    "countries": "Länder besucht",
+    "activeDays": "Aktive Reisetage",
+    "activeDaysHint": "Tage mit mind. einer Aktivität",
+    "achievements": "Errungenschaften",
+    "achievementsHint": "{{points}} Punkte"
+  },
+  "overviewToggle": {
+    "noData": "keine Daten"
+  },
+  "overviewChart": {
+    "title": "Aktivität pro Jahr",
+    "subtitleStacked": "gestapelt nach Domain",
+    "subtitleHighlight": "{{year}} hervorgehoben",
+    "subtitleCompare": "{{year}} vs. {{compare}} hervorgehoben"
+  },
+  "overviewHeatmap": {
+    "title": "Aktive Tage {{year}}",
+    "subtitle": "jede Zelle = 1 Tag mit Reise-Aktivität",
+    "legendLess": "weniger",
+    "legendMore": "mehr",
+    "months": {
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mär",
+      "apr": "Apr",
+      "may": "Mai",
+      "jun": "Jun",
+      "jul": "Jul",
+      "aug": "Aug",
+      "sep": "Sep",
+      "oct": "Okt",
+      "nov": "Nov",
+      "dec": "Dez"
+    }
+  },
+  "overviewCard": {
+    "noDataYet": "Noch keine Daten",
+    "comingSoon": "Kommt mit V2.X",
+    "yearScopedCount": "{{count}} {{year}} · {{lifetime}} lifetime",
+    "lifetimeCount": "{{count}} Erlebnisse",
+    "detailLink": "Details →"
+  },
+  "overview2": {
+    "sectionLabel": "Gesamt-Übersicht",
+    "sectionHint": "Alle Domains zusammengefasst",
+    "loadError": "Gesamt-Übersicht konnte nicht geladen werden — bitte erneut einloggen oder Seite neu laden.",
+    "experiences": "Erlebnisse gesamt",
+    "experiencesHint": "{{flights}} Flüge, {{cruises}} Kreuzfahrten",
+    "countries": "Länder gesamt",
+    "points": "Punkte",
+    "pointsHint": "{{count}} freigeschaltete Errungenschaften",
+    "cruiseSeaDays": "Seetage"
+  },
+  "cruiseSection": {
+    "loadError": "Kreuzfahrt-Statistiken konnten nicht geladen werden.",
+    "emptyTitle": "Noch keine Kreuzfahrten",
+    "emptyHint": "Sobald du Kreuzfahrten erfasst, erscheinen hier deine KPIs.",
+    "count": "Kreuzfahrten",
+    "ports": "Häfen",
+    "ships": "Schiffe",
+    "lines": "Reedereien",
+    "seaDays": "Seetage",
+    "countries": "Länder",
+    "totalDistance": "Gesamtdistanz",
+    "longestLeg": "Längste Etappe",
+    "totalDays": "Reisetage gesamt",
+    "avgPortsPerCruise": "Ø Häfen / Cruise",
+    "maxPortsSingle": "Meiste Häfen einer Cruise",
+    "lineLoyaltyMax": "Top-Loyalität (selbe Reederei)",
+    "seaDaysStreak": "Längster Seetag-Streak",
+    "maxDeck": "Höchstes Deck",
+    "revisitRate": "Wiederbesuchsquote",
+    "seaDayShare": "Anteil Seetage",
+    "regionsHeading": "Regionen-Verteilung (Anläufe)",
+    "noRegions": "Keine Region-Daten — Häfen ohne `region`-Feld werden hier nicht gezählt.",
+    "linesLabel": "Reedereien",
+    "countriesLabel": "Besuchte Länder",
+    "regionsLabel": "Befahrene Regionen",
+    "flags": {
+      "balcony": "Balkon-Kabine",
+      "suite": "Suite",
+      "polar": "Polar-Region",
+      "coldWater": "Kaltwasser-Fahrt",
+      "canal": "Kanal-Durchquerung",
+      "dateline": "Datumsgrenze überquert",
+      "birthday": "Geburtstag auf See",
+      "newYears": "Silvester auf See"
+    }
+  },
   "title": "Erweiterte Statistiken",
   "welcome": "Willkommen, {{username}}!",
   "logout": "Abmelden",
@@ -10,12 +110,24 @@
     "linkText": "Zurück zum Dashboard"
   },
   "overview": {
+    "loading": "Lade Multi-Domain-Statistiken …",
+    "rangeLabel": "Zeitraum",
+    "rangeHint": "Cross-Domain — wirkt auf KPIs, Chart, Heatmap und Domain-Karten",
+    "kpisLabel": "Gesamt-Übersicht",
+    "scopeLifetime": "Lifetime · alle Jahre",
+    "scopeYear": "Jahr {{year}}",
+    "scopeCompare": "Jahr {{year}} vs. {{compare}}",
+    "activityLabel": "Aktivität & Verteilung",
+    "activityHint": "Toggle: welche Domains sollen einfließen?",
+    "perDomainLabel": "Pro Domain",
+    "perDomainHint": "Kompakt-Zusammenfassung — voller Drill-Down im Domain-Tab",
+    "perDomainHintScoped": "Scope: {{year}} · voller Drill-Down im Domain-Tab",
     "totalFlights": "Gesamt Flüge",
     "totalDistance": "Gesamt-Distanz",
     "avgDistance": "Durchschn. Distanz",
     "totalFlightTime": "Gesamt Flugzeit",
     "avgFlightDuration": "Durchschnittliche Flugdauer",
-    "hours": "Std",
+    "hours": "h",
     "totalCost": "Gesamtkosten",
     "airlines": "Fluggesellschaften",
     "scopeLabel": "── Gesamt (alle Jahre) ──",

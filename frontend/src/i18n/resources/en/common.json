@@ -23,11 +23,15 @@
     "refresh": "Refresh",
     "loading": "Loading...",
     "saving": "Saving...",
+    "uploading": "Uploading...",
     "deleting": "Deleting...",
     "yes": "Yes",
     "no": "No",
-    "later": "Later"
+    "later": "Later",
+    "details": "Details",
+    "dismiss": "Dismiss"
   },
+  "dismiss": "Dismiss",
   "app": {
     "name": "TravStats",
     "logoAlt": "TravStats Logo"
@@ -132,6 +136,39 @@
   "sort": {
     "ascending": "ascending",
     "descending": "descending"
+  },
+  "domain": {
+    "flight": "Flights",
+    "flight_desc": "Import bookings, routes on the map, airline/airport achievements.",
+    "cruise": "Cruises",
+    "cruise_desc": "Ships, ports, sea days, cruise-line achievements.",
+    "hotel": "Hotels",
+    "hotel_desc": "Overnight stays, chain loyalty, countries/cities.",
+    "poi": "Places",
+    "poi_desc": "Landmarks, restaurants, concerts, any place."
+  },
+  "settings": {
+    "modules": {
+      "title": "Modules",
+      "desc": "Enabled modules show up in navigation, dashboards, map, achievements and stats. Disabled modules are hidden — your data is preserved.",
+      "comingSoon": "soon"
+    }
+  },
+  "setup": {
+    "domains": {
+      "title": "What do you want to track?",
+      "desc": "You can enable or disable modules anytime in Settings.",
+      "soon": "soon"
+    }
+  },
+  "dashboard": {
+    "empty": {
+      "noDomains": "No tracking modules enabled.",
+      "openSettings": "Open Settings → Modules"
+    }
+  },
+  "domainTabs": {
+    "driftFallback": "The \"{{tab}}\" tab was disabled — back to General."
   },
   "update": {
     "available": "Update",

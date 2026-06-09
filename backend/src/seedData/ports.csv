@@ -1,0 +1,673 @@
+name,city,country,unlocode,lat,lon,timezone,region
+Hamburg,Hamburg,Germany,DEHAM,53.5400,9.9700,Europe/Berlin,north_sea
+Kiel,Kiel,Germany,DEKEL,54.3200,10.1333,Europe/Berlin,baltic
+Rostock-Warnemünde,Rostock,Germany,DERSK,54.1833,12.0833,Europe/Berlin,baltic
+Bremerhaven,Bremerhaven,Germany,DEBRV,53.5500,8.5833,Europe/Berlin,north_sea
+Travemünde,Lübeck,Germany,DETRV,53.9583,10.8736,Europe/Berlin,baltic
+Sassnitz,Sassnitz,Germany,DESAS,54.5167,13.6500,Europe/Berlin,baltic
+Wismar,Wismar,Germany,DEWIS,53.8964,11.4583,Europe/Berlin,baltic
+Stralsund,Stralsund,Germany,DESTL,54.3091,13.0816,Europe/Berlin,baltic
+Cuxhaven,Cuxhaven,Germany,DECUX,53.8744,8.6944,Europe/Berlin,north_sea
+Wilhelmshaven,Wilhelmshaven,Germany,DEWVN,53.5167,8.1500,Europe/Berlin,north_sea
+Emden,Emden,Germany,DEEME,53.3667,7.2000,Europe/Berlin,north_sea
+Norderney,Norderney,Germany,DENRD,53.7000,7.1500,Europe/Berlin,north_sea
+Helgoland,Helgoland,Germany,DEHGL,54.1833,7.8833,Europe/Berlin,north_sea
+Amsterdam,Amsterdam,Netherlands,NLAMS,52.3833,4.9000,Europe/Amsterdam,north_sea
+Rotterdam,Rotterdam,Netherlands,NLRTM,51.9000,4.4833,Europe/Amsterdam,north_sea
+IJmuiden,IJmuiden,Netherlands,NLIJM,52.4583,4.6000,Europe/Amsterdam,north_sea
+Hook of Holland,Hoek van Holland,Netherlands,NLHKH,51.9778,4.1325,Europe/Amsterdam,ferry_north_sea
+Den Helder,Den Helder,Netherlands,NLDHR,52.9583,4.7500,Europe/Amsterdam,north_sea
+Vlissingen,Vlissingen,Netherlands,NLVLI,51.4500,3.5667,Europe/Amsterdam,north_sea
+Antwerp,Antwerp,Belgium,BEANR,51.2194,4.4025,Europe/Brussels,north_sea
+Zeebrugge,Zeebrugge,Belgium,BEZEE,51.3308,3.2058,Europe/Brussels,north_sea
+Ostend,Ostend,Belgium,BEOST,51.2333,2.9167,Europe/Brussels,north_sea
+Calais,Calais,France,FRCQF,50.9667,1.8500,Europe/Paris,ferry_channel
+Dunkirk,Dunkirk,France,FRDKK,51.0500,2.3667,Europe/Paris,ferry_channel
+Cherbourg,Cherbourg,France,FRCER,49.6500,-1.6167,Europe/Paris,ferry_channel
+Le Havre,Le Havre,France,FRLEH,49.4944,0.1079,Europe/Paris,channel
+Honfleur,Honfleur,France,FRHFR,49.4167,0.2333,Europe/Paris,channel
+Saint-Malo,Saint-Malo,France,FRSML,48.6500,-2.0167,Europe/Paris,channel
+Roscoff,Roscoff,France,FRROS,48.7167,-3.9833,Europe/Paris,ferry_channel
+Brest,Brest,France,FRBES,48.3833,-4.5000,Europe/Paris,channel
+Nantes,Nantes,France,FRNTE,47.2167,-1.5500,Europe/Paris,iberian_atlantic
+Bordeaux,Bordeaux,France,FRBOD,44.8400,-0.5800,Europe/Paris,river_garonne
+Pauillac,Pauillac,France,FRPAU,45.2000,-0.7500,Europe/Paris,river_garonne
+Marseille,Marseille,France,FRMRS,43.3000,5.3700,Europe/Paris,mediterranean
+Toulon,Toulon,France,FRTLN,43.1167,5.9333,Europe/Paris,mediterranean
+Cannes,Cannes,France,FRCEQ,43.5500,7.0167,Europe/Paris,mediterranean
+Nice,Nice,France,FRNCE,43.7000,7.2700,Europe/Paris,mediterranean
+Villefranche-sur-Mer,Villefranche,France,FRVNF,43.7000,7.3000,Europe/Paris,mediterranean
+Monaco,Monaco,Monaco,MCMON,43.7333,7.4167,Europe/Monaco,mediterranean
+Ajaccio,Ajaccio,France,FRAJA,41.9167,8.7333,Europe/Paris,mediterranean
+Bastia,Bastia,France,FRBIA,42.7000,9.4500,Europe/Paris,mediterranean
+Calvi,Calvi,France,FRCLY,42.5667,8.7500,Europe/Paris,mediterranean
+Porto-Vecchio,Porto-Vecchio,France,FRPVO,41.5917,9.2792,Europe/Paris,mediterranean
+Genoa,Genoa,Italy,ITGOA,44.4100,8.9300,Europe/Rome,mediterranean
+Savona,Savona,Italy,ITSVN,44.3000,8.4833,Europe/Rome,mediterranean
+La Spezia,La Spezia,Italy,ITSPE,44.1000,9.8333,Europe/Rome,mediterranean
+Livorno,Livorno,Italy,ITLIV,43.5500,10.3083,Europe/Rome,mediterranean
+Civitavecchia,Civitavecchia,Italy,ITCVV,42.0900,11.8000,Europe/Rome,mediterranean
+Naples,Naples,Italy,ITNAP,40.8400,14.2500,Europe/Rome,mediterranean
+Salerno,Salerno,Italy,ITSAL,40.6803,14.7644,Europe/Rome,mediterranean
+Capri,Capri,Italy,ITPRJ,40.5500,14.2333,Europe/Rome,mediterranean
+Sorrento,Sorrento,Italy,ITSOR,40.6263,14.3756,Europe/Rome,mediterranean
+Amalfi,Amalfi,Italy,ITAMA,40.6333,14.6000,Europe/Rome,mediterranean
+Palermo,Palermo,Italy,ITPMO,38.1167,13.3667,Europe/Rome,mediterranean
+Messina,Messina,Italy,ITMSN,38.1833,15.5500,Europe/Rome,mediterranean
+Catania,Catania,Italy,ITCTA,37.5000,15.0833,Europe/Rome,mediterranean
+Trapani,Trapani,Italy,ITTPS,38.0167,12.5167,Europe/Rome,mediterranean
+Cagliari,Cagliari,Italy,ITCAG,39.2167,9.1167,Europe/Rome,mediterranean
+Olbia,Olbia,Italy,ITOLB,40.9167,9.5167,Europe/Rome,mediterranean
+Porto Torres,Porto Torres,Italy,ITPTO,40.8333,8.4000,Europe/Rome,mediterranean
+Bari,Bari,Italy,ITBRI,41.1167,16.8667,Europe/Rome,adriatic
+Brindisi,Brindisi,Italy,ITBDS,40.6333,17.9333,Europe/Rome,adriatic
+Ancona,Ancona,Italy,ITAOI,43.6167,13.5167,Europe/Rome,adriatic
+Trieste,Trieste,Italy,ITTRS,45.6500,13.7667,Europe/Rome,adriatic
+Venice,Venice,Italy,ITVCE,45.4300,12.3300,Europe/Rome,adriatic
+Ravenna,Ravenna,Italy,ITRAN,44.4167,12.2000,Europe/Rome,adriatic
+Chioggia,Chioggia,Italy,ITCHG,45.2167,12.2833,Europe/Rome,adriatic
+Cremona,Cremona,Italy,ITCRA,45.1333,10.0250,Europe/Rome,river_po
+Mantua,Mantua,Italy,ITMAN,45.1564,10.7917,Europe/Rome,river_po
+Ferrara,Ferrara,Italy,ITFEZ,44.8333,11.6167,Europe/Rome,river_po
+Polesella,Polesella,Italy,,44.9656,11.7464,Europe/Rome,river_po
+Valletta,Valletta,Malta,MTMLA,35.8989,14.5142,Europe/Malta,mediterranean
+Mgarr,Mgarr,Malta,MTMGR,36.0258,14.3000,Europe/Malta,mediterranean
+Dubrovnik,Dubrovnik,Croatia,HRDBV,42.6500,18.0900,Europe/Zagreb,adriatic
+Split,Split,Croatia,HRSPU,43.5083,16.4400,Europe/Zagreb,adriatic
+Hvar,Hvar,Croatia,HRHVA,43.1729,16.4413,Europe/Zagreb,adriatic
+Korčula,Korčula,Croatia,HRKOR,42.9583,17.1356,Europe/Zagreb,adriatic
+Zadar,Zadar,Croatia,HRZAD,44.1167,15.2333,Europe/Zagreb,adriatic
+Pula,Pula,Croatia,HRPUY,44.8667,13.8500,Europe/Zagreb,adriatic
+Rovinj,Rovinj,Croatia,HRROV,45.0811,13.6386,Europe/Zagreb,adriatic
+Šibenik,Šibenik,Croatia,HRSIB,43.7333,15.9000,Europe/Zagreb,adriatic
+Rijeka,Rijeka,Croatia,HRRJK,45.3389,14.4458,Europe/Zagreb,adriatic
+Kotor,Kotor,Montenegro,MEKOT,42.4244,18.7714,Europe/Podgorica,adriatic
+Bar,Bar,Montenegro,MEBAR,42.0964,19.0907,Europe/Podgorica,adriatic
+Durrës,Durrës,Albania,ALDRZ,41.3167,19.4500,Europe/Tirane,adriatic
+Sarandë,Sarandë,Albania,ALSAR,39.8758,20.0050,Europe/Tirane,adriatic
+Corfu,Corfu,Greece,GRCFU,39.6242,19.9217,Europe/Athens,aegean
+Igoumenitsa,Igoumenitsa,Greece,GRIGO,39.5028,20.2667,Europe/Athens,ferry_aegean
+Patras,Patras,Greece,GRGPA,38.2500,21.7333,Europe/Athens,ferry_aegean
+Athens (Piraeus),Athens,Greece,GRPIR,37.9400,23.6400,Europe/Athens,aegean
+Thessaloniki,Thessaloniki,Greece,GRSKG,40.6403,22.9444,Europe/Athens,aegean
+Volos,Volos,Greece,GRVOL,39.3667,22.9500,Europe/Athens,aegean
+Kavala,Kavala,Greece,GRKVA,40.9333,24.4000,Europe/Athens,aegean
+Heraklion,Heraklion,Greece,GRHER,35.3387,25.1442,Europe/Athens,aegean
+Chania (Souda),Chania,Greece,GRSUD,35.4889,24.0689,Europe/Athens,aegean
+Rhodes,Rhodes,Greece,GRRHO,36.4500,28.2167,Europe/Athens,aegean
+Kos,Kos,Greece,GRKGS,36.8917,27.2889,Europe/Athens,aegean
+Santorini,Santorini,Greece,GRJTR,36.4200,25.4300,Europe/Athens,aegean
+Mykonos,Mykonos,Greece,GRJMK,37.4500,25.3300,Europe/Athens,aegean
+Naxos,Naxos,Greece,GRJNX,37.1056,25.3756,Europe/Athens,aegean
+Paros,Paros,Greece,GRPAS,37.0856,25.1500,Europe/Athens,aegean
+Ios,Ios,Greece,GRIOS,36.7333,25.2833,Europe/Athens,aegean
+Samos,Samos,Greece,GRSMI,37.7547,26.9764,Europe/Athens,aegean
+Lesbos (Mytilini),Mytilini,Greece,GRMJT,39.1078,26.5547,Europe/Athens,aegean
+Chios,Chios,Greece,GRJKH,38.3711,26.1389,Europe/Athens,aegean
+Skiathos,Skiathos,Greece,GRJSI,39.1622,23.4906,Europe/Athens,aegean
+Skopelos,Skopelos,Greece,GRSKO,39.1228,23.7281,Europe/Athens,aegean
+Limnos,Limnos,Greece,GRLMN,39.9333,25.2333,Europe/Athens,aegean
+Kalamata,Kalamata,Greece,GRKLX,37.0167,22.1167,Europe/Athens,aegean
+Nafplio,Nafplio,Greece,GRNAF,37.5667,22.8000,Europe/Athens,aegean
+Monemvasia,Monemvasia,Greece,,36.6889,23.0500,Europe/Athens,aegean
+Istanbul,Istanbul,Türkiye,TRIST,41.0100,28.9800,Europe/Istanbul,mediterranean
+Kuşadası,Kuşadası,Türkiye,TRKUS,37.8600,27.2600,Europe/Istanbul,aegean
+Bodrum,Bodrum,Türkiye,TRBXN,37.0333,27.4333,Europe/Istanbul,aegean
+Marmaris,Marmaris,Türkiye,TRMRM,36.8500,28.2667,Europe/Istanbul,mediterranean
+Antalya,Antalya,Türkiye,TRAYT,36.8333,30.6167,Europe/Istanbul,mediterranean
+Çeşme,Çeşme,Türkiye,TRCES,38.3236,26.3050,Europe/Istanbul,aegean
+İzmir,İzmir,Türkiye,TRIZM,38.4333,27.1500,Europe/Istanbul,aegean
+Limassol,Limassol,Cyprus,CYLMS,34.6750,33.0333,Asia/Nicosia,mediterranean
+Larnaca,Larnaca,Cyprus,CYLCA,34.9167,33.6333,Asia/Nicosia,mediterranean
+Haifa,Haifa,Israel,ILHFA,32.8167,34.9833,Asia/Jerusalem,mediterranean
+Ashdod,Ashdod,Israel,ILASH,31.8000,34.6500,Asia/Jerusalem,mediterranean
+Beirut,Beirut,Lebanon,LBBEY,33.9028,35.5183,Asia/Beirut,mediterranean
+Alexandria,Alexandria,Egypt,EGALY,31.2000,29.9000,Africa/Cairo,mediterranean
+Port Said,Port Said,Egypt,EGPSD,31.2500,32.3000,Africa/Cairo,mediterranean
+Sokhna,Ain Sokhna,Egypt,EGSOK,29.6000,32.3500,Africa/Cairo,red_sea
+Safaga,Safaga,Egypt,EGSGA,26.7333,33.9500,Africa/Cairo,red_sea
+Sharm El Sheikh,Sharm El Sheikh,Egypt,EGSSH,27.8589,34.2811,Africa/Cairo,red_sea
+Aqaba,Aqaba,Jordan,JOAQJ,29.5167,35.0000,Asia/Amman,red_sea
+Tunis,Tunis,Tunisia,TNTUN,36.8000,10.1833,Africa/Tunis,mediterranean
+La Goulette,La Goulette,Tunisia,TNLGN,36.8167,10.3000,Africa/Tunis,mediterranean
+Algiers,Algiers,Algeria,DZALG,36.7667,3.0500,Africa/Algiers,mediterranean
+Casablanca,Casablanca,Morocco,MACAS,33.6000,-7.6167,Africa/Casablanca,iberian_atlantic
+Tangier,Tangier,Morocco,MATNG,35.7833,-5.7833,Africa/Casablanca,mediterranean
+Agadir,Agadir,Morocco,MAAGA,30.4333,-9.6000,Africa/Casablanca,iberian_atlantic
+Barcelona,Barcelona,Spain,ESBCN,41.3500,2.1700,Europe/Madrid,mediterranean
+Tarragona,Tarragona,Spain,ESTAR,41.1167,1.2500,Europe/Madrid,mediterranean
+Valencia,Valencia,Spain,ESVLC,39.4700,-0.3800,Europe/Madrid,mediterranean
+Alicante,Alicante,Spain,ESALC,38.3458,-0.4775,Europe/Madrid,mediterranean
+Cartagena,Cartagena,Spain,ESCAR,37.6000,-0.9833,Europe/Madrid,mediterranean
+Almería,Almería,Spain,ESLEI,36.8333,-2.4667,Europe/Madrid,mediterranean
+Málaga,Málaga,Spain,ESAGP,36.7200,-4.4200,Europe/Madrid,mediterranean
+Algeciras,Algeciras,Spain,ESALG,36.1333,-5.4500,Europe/Madrid,mediterranean
+Cádiz,Cádiz,Spain,ESCAD,36.5333,-6.3000,Europe/Madrid,iberian_atlantic
+Sevilla,Sevilla,Spain,ESSVQ,37.3833,-6.0000,Europe/Madrid,iberian_atlantic
+Vigo,Vigo,Spain,ESVGO,42.2333,-8.7167,Europe/Madrid,iberian_atlantic
+A Coruña,A Coruña,Spain,ESLCG,43.3667,-8.4000,Europe/Madrid,iberian_atlantic
+Bilbao,Bilbao,Spain,ESBIO,43.2611,-2.9250,Europe/Madrid,iberian_atlantic
+Santander,Santander,Spain,ESSDR,43.4647,-3.8044,Europe/Madrid,iberian_atlantic
+Palma de Mallorca,Palma,Spain,ESPMI,39.5700,2.6500,Europe/Madrid,mediterranean
+Mahón,Mahón,Spain,ESMAH,39.8911,4.2658,Europe/Madrid,mediterranean
+Ibiza,Ibiza,Spain,ESIBZ,38.9000,1.4333,Europe/Madrid,mediterranean
+Las Palmas,Las Palmas,Spain,ESLPA,28.1200,-15.4300,Atlantic/Canary,canaries
+Tenerife (Santa Cruz),Santa Cruz,Spain,ESSCT,28.4667,-16.2500,Atlantic/Canary,canaries
+Arrecife,Arrecife,Spain,ESACE,28.9606,-13.5469,Atlantic/Canary,canaries
+Puerto del Rosario,Puerto del Rosario,Spain,ESFUE,28.5000,-13.8667,Atlantic/Canary,canaries
+La Palma,Santa Cruz de la Palma,Spain,ESSPC,28.6833,-17.7667,Atlantic/Canary,canaries
+San Sebastián de La Gomera,San Sebastián de La Gomera,Spain,ESSSG,28.0911,-17.1108,Atlantic/Canary,canaries
+Lisbon,Lisbon,Portugal,PTLIS,38.7200,-9.1300,Europe/Lisbon,iberian_atlantic
+Porto (Leixões),Porto,Portugal,PTLEI,41.1833,-8.7000,Europe/Lisbon,iberian_atlantic
+Funchal,Funchal,Portugal,PTFNC,32.6500,-16.9100,Atlantic/Madeira,madeira
+Porto Santo,Porto Santo,Portugal,PTPXO,33.0667,-16.3500,Atlantic/Madeira,madeira
+Praia da Vitória (Azores),Praia da Vitória,Portugal,PTPDV,38.7333,-27.0667,Atlantic/Azores,atlantic
+Ponta Delgada (Azores),Ponta Delgada,Portugal,PTPDL,37.7411,-25.6711,Atlantic/Azores,atlantic
+Régua,Régua,Portugal,PTREG,41.1592,-7.7892,Europe/Lisbon,river_douro
+Pinhão,Pinhão,Portugal,,41.1894,-7.5469,Europe/Lisbon,river_douro
+Vega de Terrón,Vega de Terrón,Spain,,40.9844,-6.8000,Europe/Madrid,river_douro
+Barca d'Alva,Barca d'Alva,Portugal,,41.0331,-6.9389,Europe/Lisbon,river_douro
+Copenhagen,Copenhagen,Denmark,DKCPH,55.6867,12.5700,Europe/Copenhagen,baltic
+Aarhus,Aarhus,Denmark,DKAAR,56.1500,10.2167,Europe/Copenhagen,baltic
+Esbjerg,Esbjerg,Denmark,DKEBJ,55.4667,8.4500,Europe/Copenhagen,north_sea
+Frederikshavn,Frederikshavn,Denmark,DKFRH,57.4333,10.5333,Europe/Copenhagen,ferry_baltic
+Hirtshals,Hirtshals,Denmark,DKHIR,57.5928,9.9617,Europe/Copenhagen,ferry_baltic
+Helsingør,Helsingør,Denmark,DKHEL,56.0367,12.6133,Europe/Copenhagen,ferry_baltic
+Rønne (Bornholm),Rønne,Denmark,DKRNN,55.1000,14.7000,Europe/Copenhagen,baltic
+Skagen,Skagen,Denmark,DKSKA,57.7167,10.5833,Europe/Copenhagen,ferry_baltic
+Stockholm,Stockholm,Sweden,SESTO,59.3300,18.0600,Europe/Stockholm,baltic
+Göteborg,Göteborg,Sweden,SEGOT,57.7000,11.9500,Europe/Stockholm,north_sea
+Malmö,Malmö,Sweden,SEMMA,55.6000,13.0000,Europe/Stockholm,baltic
+Helsingborg,Helsingborg,Sweden,SEHEL,56.0500,12.7000,Europe/Stockholm,ferry_baltic
+Trelleborg,Trelleborg,Sweden,SETRG,55.3667,13.1500,Europe/Stockholm,ferry_baltic
+Karlskrona,Karlskrona,Sweden,SEKAN,56.1611,15.5867,Europe/Stockholm,ferry_baltic
+Karlshamn,Karlshamn,Sweden,SEKAH,56.1700,14.8600,Europe/Stockholm,ferry_baltic
+Nynäshamn,Nynäshamn,Sweden,SENYN,58.9008,17.9492,Europe/Stockholm,baltic
+Visby,Visby,Sweden,SEVBY,57.6403,18.2956,Europe/Stockholm,baltic
+Strömstad,Strömstad,Sweden,SESDU,58.9333,11.1833,Europe/Stockholm,ferry_north_sea
+Umeå,Umeå,Sweden,SEUME,63.8258,20.2630,Europe/Stockholm,baltic
+Sundsvall,Sundsvall,Sweden,SESDL,62.3908,17.3069,Europe/Stockholm,baltic
+Luleå,Luleå,Sweden,SELLA,65.5836,22.1547,Europe/Stockholm,baltic
+Helsinki,Helsinki,Finland,FIHEL,60.1700,24.9400,Europe/Helsinki,baltic
+Turku,Turku,Finland,FITKU,60.4500,22.2500,Europe/Helsinki,baltic
+Naantali,Naantali,Finland,FINLI,60.4683,22.0264,Europe/Helsinki,baltic
+Mariehamn,Mariehamn,Finland,FIMHQ,60.0975,19.9342,Europe/Helsinki,baltic
+Vaasa,Vaasa,Finland,FIVAA,63.0950,21.6158,Europe/Helsinki,baltic
+Eckerö,Eckerö,Finland,FIECK,60.2167,19.5500,Europe/Helsinki,ferry_baltic
+Hanko,Hanko,Finland,FIHKO,59.8233,22.9500,Europe/Helsinki,baltic
+Kotka,Kotka,Finland,FIKTK,60.4675,26.9458,Europe/Helsinki,baltic
+Oulu,Oulu,Finland,FIOUL,65.0142,25.4719,Europe/Helsinki,baltic
+Tallinn,Tallinn,Estonia,EETLL,59.4400,24.7500,Europe/Tallinn,baltic
+Saaremaa (Kuressaare),Kuressaare,Estonia,EEKUR,58.2483,22.4953,Europe/Tallinn,baltic
+Riga,Riga,Latvia,LVRIX,56.9500,24.1000,Europe/Riga,baltic
+Ventspils,Ventspils,Latvia,LVVNT,57.3833,21.5500,Europe/Riga,baltic
+Liepāja,Liepāja,Latvia,LVLPX,56.5167,21.0167,Europe/Riga,baltic
+Klaipėda,Klaipėda,Lithuania,LTKLJ,55.7167,21.1167,Europe/Vilnius,baltic
+Gdańsk,Gdańsk,Poland,PLGDN,54.3500,18.6500,Europe/Warsaw,baltic
+Gdynia,Gdynia,Poland,PLGDY,54.5189,18.5305,Europe/Warsaw,baltic
+Szczecin,Szczecin,Poland,PLSZZ,53.4333,14.5500,Europe/Warsaw,baltic
+Świnoujście,Świnoujście,Poland,PLSWI,53.9085,14.2475,Europe/Warsaw,ferry_baltic
+Kaliningrad,Kaliningrad,Russia,RUKGD,54.7000,20.5167,Europe/Kaliningrad,baltic
+St. Petersburg,St. Petersburg,Russia,RULED,59.9333,30.3500,Europe/Moscow,baltic
+Moscow,Moscow,Russia,RUMOW,55.7500,37.6167,Europe/Moscow,river_volga
+Uglich,Uglich,Russia,,57.5333,38.3167,Europe/Moscow,river_volga
+Yaroslavl,Yaroslavl,Russia,RUIAR,57.6256,39.8736,Europe/Moscow,river_volga
+Goritsy,Goritsy,Russia,,59.8667,38.3833,Europe/Moscow,river_volga
+Mandrogi,Mandrogi,Russia,,60.7889,33.7889,Europe/Moscow,river_volga
+Kizhi,Kizhi,Russia,,62.0667,35.2167,Europe/Moscow,river_volga
+Petrozavodsk,Petrozavodsk,Russia,RUPES,61.7833,34.3500,Europe/Moscow,river_volga
+Volgograd,Volgograd,Russia,RUVOG,48.7000,44.5167,Europe/Moscow,river_volga
+Astrakhan,Astrakhan,Russia,RUASF,46.3500,48.0333,Europe/Moscow,river_volga
+Oslo,Oslo,Norway,NOOSL,59.9100,10.7500,Europe/Oslo,norwegian_fjords
+Bergen,Bergen,Norway,NOBGO,60.3900,5.3200,Europe/Oslo,norwegian_fjords
+Stavanger,Stavanger,Norway,NOSVG,58.9700,5.7333,Europe/Oslo,norwegian_fjords
+Kristiansand,Kristiansand,Norway,NOKRS,58.1467,7.9956,Europe/Oslo,norwegian_fjords
+Kristiansund,Kristiansund,Norway,NOKSU,63.1167,7.7333,Europe/Oslo,norwegian_fjords
+Trondheim,Trondheim,Norway,NOTRD,63.4361,10.4039,Europe/Oslo,norwegian_fjords
+Geiranger,Geiranger,Norway,NOGEI,62.1000,7.2000,Europe/Oslo,norwegian_fjords
+Hellesylt,Hellesylt,Norway,NOHSY,62.0867,6.8728,Europe/Oslo,norwegian_fjords
+Olden,Olden,Norway,NOOLD,61.8333,6.8167,Europe/Oslo,norwegian_fjords
+Loen,Loen,Norway,,61.8675,6.8400,Europe/Oslo,norwegian_fjords
+Skjolden,Skjolden,Norway,,61.4886,7.5933,Europe/Oslo,norwegian_fjords
+Flåm,Flåm,Norway,NOFLM,60.8600,7.1100,Europe/Oslo,norwegian_fjords
+Eidfjord,Eidfjord,Norway,NOEID,60.4667,7.0667,Europe/Oslo,norwegian_fjords
+Ulvik,Ulvik,Norway,NOULV,60.5667,6.9167,Europe/Oslo,norwegian_fjords
+Ålesund,Ålesund,Norway,NOAES,62.4700,6.1500,Europe/Oslo,norwegian_fjords
+Molde,Molde,Norway,NOMOL,62.7378,7.1606,Europe/Oslo,norwegian_fjords
+Åndalsnes,Åndalsnes,Norway,NOAND,62.5667,7.6833,Europe/Oslo,norwegian_fjords
+Bodø,Bodø,Norway,NOBOO,67.2825,14.3733,Europe/Oslo,norwegian_fjords
+Narvik,Narvik,Norway,NONVK,68.4408,17.4275,Europe/Oslo,norwegian_fjords
+Tromsø,Tromsø,Norway,NOTOS,69.6500,18.9600,Europe/Oslo,norwegian_fjords
+Hammerfest,Hammerfest,Norway,NOHFT,70.6633,23.6822,Europe/Oslo,norwegian_fjords
+Honningsvåg,Honningsvåg,Norway,NOHVG,70.9819,25.9706,Europe/Oslo,norwegian_fjords
+Kirkenes,Kirkenes,Norway,NOKKN,69.7250,30.0461,Europe/Oslo,norwegian_fjords
+Longyearbyen,Longyearbyen,Norway,NOLYR,78.2167,15.6500,Europe/Oslo,arctic
+Ny-Ålesund,Ny-Ålesund,Norway,NONYA,78.9275,11.9300,Europe/Oslo,arctic
+Reykjavík,Reykjavík,Iceland,ISREY,64.1500,-21.9333,Atlantic/Reykjavik,arctic
+Akureyri,Akureyri,Iceland,ISAKU,65.6833,-18.1000,Atlantic/Reykjavik,arctic
+Ísafjörður,Ísafjörður,Iceland,ISIFJ,66.0750,-23.1331,Atlantic/Reykjavik,arctic
+Seyðisfjörður,Seyðisfjörður,Iceland,ISSEJ,65.2628,-14.0086,Atlantic/Reykjavik,arctic
+Heimaey,Vestmannaeyjar,Iceland,ISVEY,63.4364,-20.2700,Atlantic/Reykjavik,arctic
+Tórshavn,Tórshavn,Faroe Islands,FOTHO,62.0117,-6.7717,Atlantic/Faroe,arctic
+Nuuk,Nuuk,Greenland,GLGOH,64.1750,-51.7375,America/Nuuk,arctic
+Ilulissat,Ilulissat,Greenland,GLJAV,69.2167,-51.1000,America/Nuuk,arctic
+Qaqortoq,Qaqortoq,Greenland,GLJJU,60.7167,-46.0333,America/Nuuk,arctic
+Newcastle upon Tyne,Newcastle,United Kingdom,GBNCL,54.9783,-1.6178,Europe/London,north_sea
+Hull,Hull,United Kingdom,GBHUL,53.7456,-0.3367,Europe/London,north_sea
+Harwich,Harwich,United Kingdom,GBHRW,51.9444,1.2856,Europe/London,ferry_north_sea
+Tilbury,Tilbury,United Kingdom,GBTIL,51.4667,0.3500,Europe/London,north_sea
+Dover,Dover,United Kingdom,GBDVR,51.1278,1.3133,Europe/London,ferry_channel
+Folkestone,Folkestone,United Kingdom,GBFKE,51.0833,1.1833,Europe/London,channel
+Portsmouth,Portsmouth,United Kingdom,GBPME,50.8056,-1.0875,Europe/London,channel
+Southampton,Southampton,United Kingdom,GBSOU,50.9000,-1.4000,Europe/London,channel
+Plymouth,Plymouth,United Kingdom,GBPLY,50.3717,-4.1428,Europe/London,channel
+Falmouth,Falmouth,United Kingdom,GBFAL,50.1539,-5.0667,Europe/London,channel
+Dartmouth,Dartmouth,United Kingdom,GBDTM,50.3517,-3.5783,Europe/London,channel
+Liverpool,Liverpool,United Kingdom,GBLIV,53.4083,-2.9917,Europe/London,british_isles
+Holyhead,Holyhead,United Kingdom,GBHLY,53.3083,-4.6333,Europe/London,ferry_channel
+Aberdeen,Aberdeen,United Kingdom,GBABD,57.1497,-2.0844,Europe/London,north_sea
+Edinburgh (Leith),Edinburgh,United Kingdom,GBLEI,55.9750,-3.1700,Europe/London,north_sea
+Greenock,Greenock,United Kingdom,GBGRK,55.9469,-4.7569,Europe/London,british_isles
+Invergordon,Invergordon,United Kingdom,GBINV,57.6925,-4.1683,Europe/London,british_isles
+Lerwick,Lerwick,United Kingdom,GBLER,60.1525,-1.1453,Europe/London,arctic
+Kirkwall,Kirkwall,United Kingdom,GBKWL,58.9847,-2.9603,Europe/London,arctic
+Stornoway,Stornoway,United Kingdom,GBSTO,58.2089,-6.3886,Europe/London,british_isles
+Belfast,Belfast,United Kingdom,GBBEL,54.6097,-5.9300,Europe/London,british_isles
+Dublin,Dublin,Ireland,IEDUB,53.3500,-6.2167,Europe/Dublin,british_isles
+Cork (Cobh),Cobh,Ireland,IEORK,51.8500,-8.2867,Europe/Dublin,british_isles
+Galway,Galway,Ireland,IEGWY,53.2719,-9.0489,Europe/Dublin,british_isles
+Waterford,Waterford,Ireland,IEWAT,52.2583,-7.1119,Europe/Dublin,british_isles
+Köln,Köln,Germany,DECGN,50.9417,6.9583,Europe/Berlin,river_rhine
+Bonn,Bonn,Germany,DEBNJ,50.7333,7.1000,Europe/Berlin,river_rhine
+Düsseldorf,Düsseldorf,Germany,DEDUS,51.2278,6.7733,Europe/Berlin,river_rhine
+Mainz,Mainz,Germany,DEMAI,50.0000,8.2711,Europe/Berlin,river_rhine
+Wiesbaden,Wiesbaden,Germany,DEWIE,50.0825,8.2400,Europe/Berlin,river_rhine
+Mannheim,Mannheim,Germany,DEMHG,49.4878,8.4661,Europe/Berlin,river_rhine
+Heidelberg,Heidelberg,Germany,DEHDB,49.4081,8.6936,Europe/Berlin,river_rhine
+Speyer,Speyer,Germany,DESPY,49.3175,8.4300,Europe/Berlin,river_rhine
+Worms,Worms,Germany,DEWOM,49.6336,8.3597,Europe/Berlin,river_rhine
+Karlsruhe,Karlsruhe,Germany,DEKAE,49.0067,8.4036,Europe/Berlin,river_rhine
+Strasbourg,Strasbourg,France,FRSXB,48.5839,7.7458,Europe/Paris,river_rhine
+Basel,Basel,Switzerland,CHBSL,47.5594,7.5886,Europe/Zurich,river_rhine
+Breisach,Breisach,Germany,DEBSC,48.0306,7.5797,Europe/Berlin,river_rhine
+Kehl,Kehl,Germany,DEKEH,48.5722,7.8056,Europe/Berlin,river_rhine
+Rüdesheim,Rüdesheim,Germany,DERUD,49.9786,7.9244,Europe/Berlin,river_rhine
+Bingen,Bingen,Germany,DEBGN,49.9667,7.8997,Europe/Berlin,river_rhine
+Boppard,Boppard,Germany,DEBOP,50.2333,7.5833,Europe/Berlin,river_rhine
+Sankt Goar,Sankt Goar,Germany,DESTG,50.1567,7.7100,Europe/Berlin,river_rhine
+Koblenz,Koblenz,Germany,DEKOB,50.3500,7.5833,Europe/Berlin,river_rhine
+Andernach,Andernach,Germany,DEAND,50.4322,7.4039,Europe/Berlin,river_rhine
+Linz am Rhein,Linz,Germany,DELZR,50.5694,7.2778,Europe/Berlin,river_rhine
+Remagen,Remagen,Germany,DERMG,50.5764,7.2333,Europe/Berlin,river_rhine
+Cochem,Cochem,Germany,DECOC,50.1444,7.1700,Europe/Berlin,river_moselle
+Bernkastel-Kues,Bernkastel-Kues,Germany,DEBKS,49.9156,7.0719,Europe/Berlin,river_moselle
+Trier,Trier,Germany,DETRI,49.7567,6.6411,Europe/Berlin,river_moselle
+Frankfurt am Main,Frankfurt,Germany,DEFRA,50.1100,8.6822,Europe/Berlin,river_main
+Aschaffenburg,Aschaffenburg,Germany,DEAFE,49.9744,9.1539,Europe/Berlin,river_main
+Miltenberg,Miltenberg,Germany,DEMIL,49.7044,9.2647,Europe/Berlin,river_main
+Wertheim,Wertheim,Germany,DEWER,49.7611,9.5142,Europe/Berlin,river_main
+Würzburg,Würzburg,Germany,DEWUE,49.7917,9.9536,Europe/Berlin,river_main
+Karlstadt,Karlstadt,Germany,DEKLT,49.9606,9.7689,Europe/Berlin,river_main
+Schweinfurt,Schweinfurt,Germany,DESWE,50.0494,10.2228,Europe/Berlin,river_main
+Bamberg,Bamberg,Germany,DEBAM,49.8917,10.8917,Europe/Berlin,river_main
+Nürnberg,Nürnberg,Germany,DENUE,49.4517,11.0775,Europe/Berlin,river_danube
+Regensburg,Regensburg,Germany,DEREG,49.0192,12.0975,Europe/Berlin,river_danube
+Passau,Passau,Germany,DEPAS,48.5747,13.4561,Europe/Berlin,river_danube
+Vilshofen,Vilshofen,Germany,DEVHF,48.6256,13.1869,Europe/Berlin,river_danube
+Engelhartszell,Engelhartszell,Austria,ATEZL,48.5097,13.7297,Europe/Vienna,river_danube
+Linz,Linz,Austria,ATLNZ,48.3000,14.2833,Europe/Vienna,river_danube
+Krems,Krems,Austria,ATKRM,48.4097,15.6125,Europe/Vienna,river_danube
+Dürnstein,Dürnstein,Austria,ATDST,48.3964,15.5189,Europe/Vienna,river_danube
+Melk,Melk,Austria,ATMEK,48.2272,15.3286,Europe/Vienna,river_danube
+Wien,Wien,Austria,ATVIE,48.2083,16.3725,Europe/Vienna,river_danube
+Bratislava,Bratislava,Slovakia,SKBTS,48.1486,17.1078,Europe/Bratislava,river_danube
+Esztergom,Esztergom,Hungary,HUEZT,47.7933,18.7411,Europe/Budapest,river_danube
+Visegrád,Visegrád,Hungary,HUVIS,47.7889,18.9756,Europe/Budapest,river_danube
+Budapest,Budapest,Hungary,HUBUD,47.4979,19.0402,Europe/Budapest,river_danube
+Mohács,Mohács,Hungary,HUMOH,45.9967,18.6856,Europe/Budapest,river_danube
+Vukovar,Vukovar,Croatia,HRVUK,45.3411,19.0058,Europe/Zagreb,river_danube
+Novi Sad,Novi Sad,Serbia,RSNVS,45.2671,19.8335,Europe/Belgrade,river_danube
+Belgrade,Belgrade,Serbia,RSBEG,44.8167,20.4667,Europe/Belgrade,river_danube
+Đerdap,Donji Milanovac,Serbia,,44.4658,22.1517,Europe/Belgrade,river_danube
+Vidin,Vidin,Bulgaria,BGVID,43.9908,22.8775,Europe/Sofia,river_danube
+Ruse,Ruse,Bulgaria,BGRDU,43.8500,25.9667,Europe/Sofia,river_danube
+Calafat,Calafat,Romania,ROCAF,43.9886,22.9389,Europe/Bucharest,river_danube
+Cernavoda,Cernavodă,Romania,ROCND,44.3361,28.0331,Europe/Bucharest,river_danube
+Constanța,Constanța,Romania,ROCND,44.1733,28.6383,Europe/Bucharest,black_sea
+Tulcea,Tulcea,Romania,ROTCE,45.1789,28.8056,Europe/Bucharest,river_danube
+Sulina,Sulina,Romania,ROSUL,45.1533,29.6500,Europe/Bucharest,river_danube
+Paris,Paris,France,FRPAR,48.8566,2.3522,Europe/Paris,river_seine
+Vernon,Vernon,France,FRVRN,49.0908,1.4858,Europe/Paris,river_seine
+Caudebec-en-Caux,Caudebec-en-Caux,France,,49.5267,0.7331,Europe/Paris,river_seine
+Rouen,Rouen,France,FRURO,49.4431,1.0993,Europe/Paris,river_seine
+Lyon,Lyon,France,FRLIO,45.7600,4.8400,Europe/Paris,river_rhone
+Mâcon,Mâcon,France,FRMCN,46.3069,4.8281,Europe/Paris,river_rhone
+Chalon-sur-Saône,Chalon-sur-Saône,France,FRCHO,46.7806,4.8531,Europe/Paris,river_rhone
+Tournon-sur-Rhône,Tournon,France,FRTSR,45.0681,4.8336,Europe/Paris,river_rhone
+Vienne,Vienne,France,FRVIE,45.5253,4.8742,Europe/Paris,river_rhone
+Valence,Valence,France,FRVLC,44.9333,4.8917,Europe/Paris,river_rhone
+Viviers,Viviers,France,FRVVS,44.4833,4.6833,Europe/Paris,river_rhone
+Avignon,Avignon,France,FRAVN,43.9494,4.8056,Europe/Paris,river_rhone
+Arles,Arles,France,FRARL,43.6767,4.6275,Europe/Paris,river_rhone
+Tarascon,Tarascon,France,FRTRZ,43.8056,4.6611,Europe/Paris,river_rhone
+Beaucaire,Beaucaire,France,FRBEA,43.8067,4.6403,Europe/Paris,river_rhone
+Sète,Sète,France,FRSET,43.4053,3.6975,Europe/Paris,mediterranean
+Porto,Porto,Portugal,PTOPO,41.1500,-8.6167,Europe/Lisbon,river_douro
+Hamburg (Elbe),Hamburg,Germany,DEHAM,53.5500,9.9900,Europe/Berlin,river_elbe
+Magdeburg,Magdeburg,Germany,DEMGB,52.1333,11.6167,Europe/Berlin,river_elbe
+Wittenberg,Lutherstadt Wittenberg,Germany,DEWIT,51.8675,12.6469,Europe/Berlin,river_elbe
+Meissen,Meissen,Germany,DEMEI,51.1644,13.4717,Europe/Berlin,river_elbe
+Dresden,Dresden,Germany,DEDRS,51.0500,13.7333,Europe/Berlin,river_elbe
+Pirna,Pirna,Germany,DEPRA,50.9583,13.9389,Europe/Berlin,river_elbe
+Bad Schandau,Bad Schandau,Germany,DEBSD,50.9192,14.1567,Europe/Berlin,river_elbe
+Děčín,Děčín,Czechia,CZDEC,50.7811,14.2147,Europe/Prague,river_elbe
+Litoměřice,Litoměřice,Czechia,CZLTM,50.5394,14.1314,Europe/Prague,river_elbe
+Mělník,Mělník,Czechia,CZMEL,50.3506,14.4742,Europe/Prague,river_elbe
+Prague,Prague,Czechia,CZPRG,50.0833,14.4167,Europe/Prague,river_elbe
+Cairo,Cairo,Egypt,EGCAI,30.0444,31.2358,Africa/Cairo,river_nile
+Giza,Giza,Egypt,EGGIZ,30.0131,31.2089,Africa/Cairo,river_nile
+Aswan,Aswan,Egypt,EGASW,24.0889,32.8997,Africa/Cairo,river_nile
+Luxor,Luxor,Egypt,EGLXR,25.6872,32.6396,Africa/Cairo,river_nile
+Edfu,Edfu,Egypt,,24.9781,32.8731,Africa/Cairo,river_nile
+Esna,Esna,Egypt,,25.2933,32.5536,Africa/Cairo,river_nile
+Kom Ombo,Kom Ombo,Egypt,,24.4667,32.9333,Africa/Cairo,river_nile
+Dendera,Dendera,Egypt,,26.1414,32.6700,Africa/Cairo,river_nile
+Abu Simbel,Abu Simbel,Egypt,,22.3372,31.6258,Africa/Cairo,river_nile
+Yangon,Yangon,Myanmar,MMRGN,16.8000,96.1500,Asia/Yangon,river_irrawaddy
+Mandalay,Mandalay,Myanmar,MMMDL,21.9750,96.0833,Asia/Yangon,river_irrawaddy
+Bagan,Bagan,Myanmar,MMBAG,21.1717,94.8589,Asia/Yangon,river_irrawaddy
+Sagaing,Sagaing,Myanmar,,21.8800,95.9800,Asia/Yangon,river_irrawaddy
+Mingun,Mingun,Myanmar,,22.0339,96.0211,Asia/Yangon,river_irrawaddy
+Pyay,Pyay,Myanmar,,18.8244,95.2178,Asia/Yangon,river_irrawaddy
+Saigon (Ho Chi Minh),Ho Chi Minh City,Vietnam,VNSGN,10.7626,106.6602,Asia/Ho_Chi_Minh,river_mekong
+Cai Be,Cai Be,Vietnam,,10.3672,106.0394,Asia/Ho_Chi_Minh,river_mekong
+Sa Dec,Sa Dec,Vietnam,,10.2961,105.7589,Asia/Ho_Chi_Minh,river_mekong
+Châu Đốc,Châu Đốc,Vietnam,,10.7058,105.1136,Asia/Ho_Chi_Minh,river_mekong
+Phnom Penh,Phnom Penh,Cambodia,KHPNH,11.5564,104.9282,Asia/Phnom_Penh,river_mekong
+Kampong Cham,Kampong Cham,Cambodia,,12.0000,105.4500,Asia/Phnom_Penh,river_mekong
+Siem Reap,Siem Reap,Cambodia,KHREP,13.3672,103.8444,Asia/Phnom_Penh,river_mekong
+Vientiane,Vientiane,Laos,LAVTE,17.9750,102.6333,Asia/Vientiane,river_mekong
+Luang Prabang,Luang Prabang,Laos,LALPQ,19.8833,102.1333,Asia/Vientiane,river_mekong
+Pakbeng,Pakbeng,Laos,,19.9000,101.1333,Asia/Vientiane,river_mekong
+Chiang Saen,Chiang Saen,Thailand,,20.2750,100.0833,Asia/Bangkok,river_mekong
+Shanghai,Shanghai,China,CNSHA,31.2304,121.4737,Asia/Shanghai,east_asia
+Yichang,Yichang,China,CNYCH,30.7000,111.2833,Asia/Shanghai,river_yangtze
+Chongqing,Chongqing,China,CNCQI,29.5500,106.5167,Asia/Shanghai,river_yangtze
+Wuhan,Wuhan,China,CNWUH,30.5833,114.2833,Asia/Shanghai,river_yangtze
+Nanjing,Nanjing,China,CNNKG,32.0500,118.7833,Asia/Shanghai,river_yangtze
+Beijing (Tianjin),Tianjin,China,CNTSN,39.0833,117.2000,Asia/Shanghai,east_asia
+Qingdao,Qingdao,China,CNTAO,36.0667,120.3833,Asia/Shanghai,east_asia
+Xiamen,Xiamen,China,CNXMN,24.4667,118.0833,Asia/Shanghai,east_asia
+Sanya,Sanya,China,CNSYX,18.2528,109.5117,Asia/Shanghai,east_asia
+Shenzhen,Shenzhen,China,CNSZX,22.5333,114.0833,Asia/Shanghai,east_asia
+Hong Kong,Hong Kong,Hong Kong,HKHKG,22.2783,114.1747,Asia/Hong_Kong,east_asia
+Macau,Macau,Macau,MOMFM,22.1667,113.5500,Asia/Macau,east_asia
+Taipei (Keelung),Keelung,Taiwan,TWKEL,25.1333,121.7333,Asia/Taipei,east_asia
+Kaohsiung,Kaohsiung,Taiwan,TWKHH,22.6167,120.2833,Asia/Taipei,east_asia
+Hualien,Hualien,Taiwan,TWHUN,23.9933,121.6011,Asia/Taipei,east_asia
+Busan,Busan,South Korea,KRPUS,35.1000,129.0333,Asia/Seoul,east_asia
+Incheon,Incheon,South Korea,KRINC,37.4667,126.6333,Asia/Seoul,east_asia
+Jeju,Jeju,South Korea,KRCJU,33.5097,126.5219,Asia/Seoul,east_asia
+Tokyo,Tokyo,Japan,JPTYO,35.6500,139.7500,Asia/Tokyo,east_asia
+Yokohama,Yokohama,Japan,JPYOK,35.4500,139.6333,Asia/Tokyo,east_asia
+Kobe,Kobe,Japan,JPUKB,34.6833,135.1833,Asia/Tokyo,east_asia
+Osaka,Osaka,Japan,JPOSA,34.6500,135.5000,Asia/Tokyo,east_asia
+Nagoya,Nagoya,Japan,JPNGO,35.0833,136.8833,Asia/Tokyo,east_asia
+Hakodate,Hakodate,Japan,JPHKD,41.7686,140.7286,Asia/Tokyo,east_asia
+Otaru,Otaru,Japan,JPOTR,43.1903,141.0036,Asia/Tokyo,east_asia
+Aomori,Aomori,Japan,JPAOJ,40.8264,140.7400,Asia/Tokyo,east_asia
+Sendai,Sendai,Japan,JPSDJ,38.2683,140.8694,Asia/Tokyo,east_asia
+Hiroshima,Hiroshima,Japan,JPHIJ,34.3853,132.4553,Asia/Tokyo,east_asia
+Nagasaki,Nagasaki,Japan,JPNGS,32.7503,129.8778,Asia/Tokyo,east_asia
+Naha (Okinawa),Naha,Japan,JPOKA,26.2125,127.6792,Asia/Tokyo,east_asia
+Singapore,Singapore,Singapore,SGSIN,1.2900,103.8500,Asia/Singapore,southeast_asia
+Port Klang,Port Klang,Malaysia,MYPKG,3.0000,101.4000,Asia/Kuala_Lumpur,southeast_asia
+Penang,George Town,Malaysia,MYPEN,5.4167,100.3333,Asia/Kuala_Lumpur,southeast_asia
+Langkawi,Langkawi,Malaysia,MYLGK,6.3500,99.8000,Asia/Kuala_Lumpur,southeast_asia
+Kota Kinabalu,Kota Kinabalu,Malaysia,MYBKI,5.9667,116.0667,Asia/Kuala_Lumpur,southeast_asia
+Phuket,Phuket,Thailand,THPHK,7.8833,98.4000,Asia/Bangkok,southeast_asia
+Bangkok (Laem Chabang),Laem Chabang,Thailand,THLCH,13.0833,100.8833,Asia/Bangkok,southeast_asia
+Ko Samui,Ko Samui,Thailand,THKOS,9.5333,100.0667,Asia/Bangkok,southeast_asia
+Krabi,Krabi,Thailand,THKBV,8.0500,98.9167,Asia/Bangkok,southeast_asia
+Sihanoukville,Sihanoukville,Cambodia,KHKOS,10.6167,103.5333,Asia/Phnom_Penh,southeast_asia
+Da Nang,Da Nang,Vietnam,VNDAD,16.0667,108.2333,Asia/Ho_Chi_Minh,southeast_asia
+Ha Long Bay,Hạ Long,Vietnam,VNHPH,20.9500,107.0833,Asia/Ho_Chi_Minh,southeast_asia
+Nha Trang,Nha Trang,Vietnam,VNNHA,12.2500,109.1833,Asia/Ho_Chi_Minh,southeast_asia
+Hue,Huế,Vietnam,VNHUI,16.4667,107.5833,Asia/Ho_Chi_Minh,southeast_asia
+Manila,Manila,Philippines,PHMNL,14.5833,120.9667,Asia/Manila,southeast_asia
+Cebu,Cebu,Philippines,PHCEB,10.3000,123.9000,Asia/Manila,southeast_asia
+Boracay (Caticlan),Caticlan,Philippines,PHCYR,11.9233,121.9542,Asia/Manila,southeast_asia
+Bali (Benoa),Benoa,Indonesia,IDBOA,-8.7500,115.2167,Asia/Makassar,southeast_asia
+Lombok,Lombok,Indonesia,IDLOP,-8.7333,116.1167,Asia/Makassar,southeast_asia
+Komodo,Komodo,Indonesia,IDKOM,-8.5833,119.4500,Asia/Makassar,southeast_asia
+Jakarta (Tanjung Priok),Jakarta,Indonesia,IDJKT,-6.1167,106.8833,Asia/Jakarta,southeast_asia
+Surabaya,Surabaya,Indonesia,IDSUB,-7.2333,112.7333,Asia/Jakarta,southeast_asia
+Mumbai,Mumbai,India,INBOM,18.9750,72.8258,Asia/Kolkata,indian_ocean
+Cochin,Kochi,India,INCOK,9.9667,76.2667,Asia/Kolkata,indian_ocean
+Goa,Goa (Mormugao),India,INMRM,15.4167,73.8000,Asia/Kolkata,indian_ocean
+Chennai,Chennai,India,INMAA,13.0833,80.2833,Asia/Kolkata,indian_ocean
+Kolkata,Kolkata,India,INCCU,22.5697,88.3697,Asia/Kolkata,indian_ocean
+New Mangalore,Mangalore,India,INIXE,12.9333,74.8333,Asia/Kolkata,indian_ocean
+Colombo,Colombo,Sri Lanka,LKCMB,6.9333,79.8500,Asia/Colombo,indian_ocean
+Malé,Malé,Maldives,MVMLE,4.1750,73.5083,Indian/Maldives,indian_ocean
+Mahé (Victoria),Victoria,Seychelles,SCVIC,-4.6167,55.4500,Indian/Mahe,indian_ocean
+Praslin,Praslin,Seychelles,SCPRA,-4.3167,55.7333,Indian/Mahe,indian_ocean
+Port Louis,Port Louis,Mauritius,MUPLU,-20.1619,57.5028,Indian/Mauritius,indian_ocean
+Saint-Denis,Saint-Denis,Réunion,RERUN,-20.8800,55.4500,Indian/Reunion,indian_ocean
+Antsiranana,Antsiranana,Madagascar,MGDIE,-12.2700,49.2800,Indian/Antananarivo,indian_ocean
+Nosy Be,Nosy Be,Madagascar,MGNOS,-13.4000,48.2667,Indian/Antananarivo,indian_ocean
+Zanzibar,Zanzibar,Tanzania,TZZNZ,-6.1667,39.2000,Africa/Dar_es_Salaam,east_africa
+Mombasa,Mombasa,Kenya,KEMBA,-4.0500,39.6667,Africa/Nairobi,east_africa
+Dar es Salaam,Dar es Salaam,Tanzania,TZDAR,-6.8167,39.2833,Africa/Dar_es_Salaam,east_africa
+Maputo,Maputo,Mozambique,MZMPM,-25.9667,32.5833,Africa/Maputo,east_africa
+Durban,Durban,South Africa,ZADUR,-29.8667,31.0500,Africa/Johannesburg,east_africa
+Cape Town,Cape Town,South Africa,ZACPT,-33.9167,18.4333,Africa/Johannesburg,east_africa
+Mossel Bay,Mossel Bay,South Africa,ZAMZY,-34.1833,22.1500,Africa/Johannesburg,east_africa
+Walvis Bay,Walvis Bay,Namibia,NAWVB,-22.9575,14.5050,Africa/Windhoek,west_africa
+Dakar,Dakar,Senegal,SNDKR,14.6667,-17.4333,Africa/Dakar,west_africa
+Banjul,Banjul,Gambia,GMBJL,13.4500,-16.5833,Africa/Banjul,west_africa
+Tema (Accra),Tema,Ghana,GHTEM,5.6667,-0.0167,Africa/Accra,west_africa
+Lagos,Lagos,Nigeria,NGLOS,6.4500,3.4000,Africa/Lagos,west_africa
+Abidjan,Abidjan,Côte d'Ivoire,CIABJ,5.3167,-4.0333,Africa/Abidjan,west_africa
+Dubai,Dubai,United Arab Emirates,AEDXB,25.2667,55.2833,Asia/Dubai,persian_gulf
+Abu Dhabi,Abu Dhabi,United Arab Emirates,AEAUH,24.4500,54.3833,Asia/Dubai,persian_gulf
+Khasab,Khasab,Oman,OMKHS,26.1733,56.2467,Asia/Muscat,persian_gulf
+Muscat,Muscat,Oman,OMMCT,23.6139,58.5922,Asia/Muscat,persian_gulf
+Salalah,Salalah,Oman,OMSLL,17.0167,54.1000,Asia/Muscat,persian_gulf
+Doha,Doha,Qatar,QADOH,25.2867,51.5333,Asia/Qatar,persian_gulf
+Bahrain,Manama,Bahrain,BHBAH,26.2167,50.5833,Asia/Bahrain,persian_gulf
+Kuwait,Kuwait City,Kuwait,KWKWI,29.3667,47.9667,Asia/Kuwait,persian_gulf
+Sydney,Sydney,Australia,AUSYD,-33.8650,151.2094,Australia/Sydney,oceania
+Melbourne,Melbourne,Australia,AUMEL,-37.8136,144.9631,Australia/Melbourne,oceania
+Brisbane,Brisbane,Australia,AUBNE,-27.4694,153.0250,Australia/Brisbane,oceania
+Cairns,Cairns,Australia,AUCNS,-16.9203,145.7710,Australia/Brisbane,oceania
+Darwin,Darwin,Australia,AUDRW,-12.4633,130.8456,Australia/Darwin,oceania
+Fremantle (Perth),Fremantle,Australia,AUFRE,-32.0556,115.7414,Australia/Perth,oceania
+Adelaide,Adelaide,Australia,AUADL,-34.9286,138.6008,Australia/Adelaide,oceania
+Hobart,Hobart,Australia,AUHBA,-42.8806,147.3250,Australia/Hobart,oceania
+Auckland,Auckland,New Zealand,NZAKL,-36.8485,174.7633,Pacific/Auckland,oceania
+Wellington,Wellington,New Zealand,NZWLG,-41.2865,174.7762,Pacific/Auckland,oceania
+Christchurch (Lyttelton),Lyttelton,New Zealand,NZLYT,-43.6033,172.7242,Pacific/Auckland,oceania
+Dunedin (Port Chalmers),Port Chalmers,New Zealand,NZPOE,-45.8167,170.6167,Pacific/Auckland,oceania
+Bay of Islands,Paihia,New Zealand,NZPHA,-35.2828,174.0908,Pacific/Auckland,oceania
+Tauranga,Tauranga,New Zealand,NZTRG,-37.6833,176.1667,Pacific/Auckland,oceania
+Picton,Picton,New Zealand,NZPCN,-41.2900,174.0017,Pacific/Auckland,oceania
+Akaroa,Akaroa,New Zealand,NZAKR,-43.8033,172.9683,Pacific/Auckland,oceania
+Suva,Suva,Fiji,FJSUV,-18.1333,178.4333,Pacific/Fiji,south_pacific
+Apia,Apia,Samoa,WSAPW,-13.8333,-171.7667,Pacific/Apia,south_pacific
+Nuku'alofa,Nuku'alofa,Tonga,TONUK,-21.1333,-175.2000,Pacific/Tongatapu,south_pacific
+Port Vila,Port Vila,Vanuatu,VUVLI,-17.7333,168.3167,Pacific/Efate,south_pacific
+Nouméa,Nouméa,New Caledonia,NCNOU,-22.2667,166.4500,Pacific/Noumea,south_pacific
+Papeete,Papeete,French Polynesia,PFPPT,-17.5333,-149.5667,Pacific/Tahiti,south_pacific
+Bora Bora,Bora Bora,French Polynesia,PFBOB,-16.4961,-151.7414,Pacific/Tahiti,south_pacific
+Moorea,Moorea,French Polynesia,PFMOZ,-17.5000,-149.8333,Pacific/Tahiti,south_pacific
+Rangiroa,Rangiroa,French Polynesia,PFRGI,-15.1417,-147.7667,Pacific/Tahiti,south_pacific
+Honolulu,Honolulu,United States,USHNL,21.3069,-157.8583,Pacific/Honolulu,south_pacific
+Lahaina (Maui),Lahaina,United States,USLAH,20.8783,-156.6825,Pacific/Honolulu,south_pacific
+Kahului (Maui),Kahului,United States,USOGG,20.8911,-156.4747,Pacific/Honolulu,south_pacific
+Hilo,Hilo,United States,USITO,19.7297,-155.0900,Pacific/Honolulu,south_pacific
+Kona,Kailua-Kona,United States,USKOA,19.7242,-155.9947,Pacific/Honolulu,south_pacific
+Nawiliwili (Kauai),Lihue,United States,USLIH,21.9544,-159.3561,Pacific/Honolulu,south_pacific
+Miami,Miami,United States,USMIA,25.7700,-80.1800,America/New_York,caribbean
+Fort Lauderdale,Fort Lauderdale,United States,USFLL,26.1200,-80.1400,America/New_York,caribbean
+Port Canaveral,Cape Canaveral,United States,USPCV,28.4100,-80.6100,America/New_York,caribbean
+Tampa,Tampa,United States,USTPA,27.9506,-82.4572,America/New_York,caribbean
+Jacksonville,Jacksonville,United States,USJAX,30.3322,-81.6557,America/New_York,north_america_atlantic
+Charleston,Charleston,United States,USCHS,32.7833,-79.9333,America/New_York,north_america_atlantic
+Norfolk,Norfolk,United States,USORF,36.8500,-76.2833,America/New_York,north_america_atlantic
+Baltimore,Baltimore,United States,USBAL,39.2667,-76.6000,America/New_York,north_america_atlantic
+New York (Manhattan),New York,United States,USNYC,40.7128,-74.0060,America/New_York,north_america_atlantic
+Brooklyn (Red Hook),Brooklyn,United States,USBRK,40.6750,-74.0094,America/New_York,north_america_atlantic
+Bayonne (Cape Liberty),Bayonne,United States,USBNJ,40.6592,-74.0786,America/New_York,north_america_atlantic
+Boston,Boston,United States,USBOS,42.3601,-71.0589,America/New_York,north_america_atlantic
+Bar Harbor,Bar Harbor,United States,USBHC,44.3878,-68.2039,America/New_York,north_america_atlantic
+Portland (Maine),Portland,United States,USPWM,43.6591,-70.2568,America/New_York,north_america_atlantic
+Newport (RI),Newport,United States,USNPT,41.4900,-71.3128,America/New_York,north_america_atlantic
+Halifax,Halifax,Canada,CAHAL,44.6488,-63.5752,America/Halifax,north_america_atlantic
+Sydney (Nova Scotia),Sydney,Canada,CASYD,46.1351,-60.1831,America/Halifax,north_america_atlantic
+Charlottetown,Charlottetown,Canada,CACHA,46.2382,-63.1311,America/Halifax,north_america_atlantic
+Quebec City,Quebec City,Canada,CAQUE,46.8139,-71.2080,America/Toronto,north_america_atlantic
+Saguenay,La Baie,Canada,CABAA,48.3389,-70.8728,America/Toronto,north_america_atlantic
+Montreal,Montreal,Canada,CAMTR,45.5017,-73.5673,America/Toronto,north_america_atlantic
+Saint John,Saint John,Canada,CASJB,45.2733,-66.0633,America/Halifax,north_america_atlantic
+St. John's,St. John's,Canada,CAYYT,47.5615,-52.7126,America/St_Johns,north_america_atlantic
+Sept-Îles,Sept-Îles,Canada,CASEI,50.2000,-66.3833,America/Toronto,north_america_atlantic
+Rockland,Rockland,United States,USRCK,44.1037,-69.1089,America/New_York,north_america_atlantic
+Newport News,Newport News,United States,USNNS,36.9728,-76.4283,America/New_York,north_america_atlantic
+New Orleans,New Orleans,United States,USMSY,29.9511,-90.0715,America/Chicago,river_mississippi
+Baton Rouge,Baton Rouge,United States,USBTR,30.4515,-91.1871,America/Chicago,river_mississippi
+Natchez,Natchez,United States,USNAT,31.5604,-91.4032,America/Chicago,river_mississippi
+Vicksburg,Vicksburg,United States,USVKS,32.3526,-90.8779,America/Chicago,river_mississippi
+Memphis,Memphis,United States,USMEM,35.1495,-90.0490,America/Chicago,river_mississippi
+St. Louis,St. Louis,United States,USSTL,38.6270,-90.1994,America/Chicago,river_mississippi
+Hannibal,Hannibal,United States,USHNB,39.7084,-91.3585,America/Chicago,river_mississippi
+Davenport,Davenport,United States,USDVN,41.5236,-90.5776,America/Chicago,river_mississippi
+Dubuque,Dubuque,United States,USDBQ,42.5006,-90.6645,America/Chicago,river_mississippi
+La Crosse,La Crosse,United States,USLSE,43.8014,-91.2396,America/Chicago,river_mississippi
+Red Wing,Red Wing,United States,USRDW,44.5625,-92.5338,America/Chicago,river_mississippi
+Saint Paul,Saint Paul,United States,USSTP,44.9537,-93.0900,America/Chicago,river_mississippi
+Nashville,Nashville,United States,USBNA,36.1627,-86.7816,America/Chicago,river_mississippi
+Chattanooga,Chattanooga,United States,USCHA,35.0456,-85.3097,America/New_York,river_mississippi
+Pittsburgh,Pittsburgh,United States,USPIT,40.4406,-79.9959,America/New_York,river_mississippi
+Cincinnati,Cincinnati,United States,USLUK,39.1031,-84.5120,America/New_York,river_mississippi
+Louisville,Louisville,United States,USLUI,38.2527,-85.7585,America/New_York,river_mississippi
+Astoria,Astoria,United States,USAST,46.1879,-123.8313,America/Los_Angeles,pacific_northwest
+Portland (Oregon),Portland,United States,USPDX,45.5152,-122.6784,America/Los_Angeles,pacific_northwest
+Seattle,Seattle,United States,USSEA,47.6062,-122.3321,America/Los_Angeles,pacific_northwest
+Anacortes,Anacortes,United States,USANC,48.5126,-122.6127,America/Los_Angeles,ferry_pacific_nw
+Friday Harbor,Friday Harbor,United States,USFRD,48.5347,-123.0167,America/Los_Angeles,ferry_pacific_nw
+Bellingham,Bellingham,United States,USBLI,48.7519,-122.4787,America/Los_Angeles,ferry_alaska_marine
+Vancouver,Vancouver,Canada,CAVAN,49.2800,-123.1200,America/Vancouver,pacific_northwest
+Victoria,Victoria,Canada,CAVIC,48.4284,-123.3656,America/Vancouver,pacific_northwest
+Sidney (BC),Sidney,Canada,CASYB,48.6483,-123.3956,America/Vancouver,ferry_pacific_nw
+Tsawwassen,Delta,Canada,CATWN,49.0067,-123.1308,America/Vancouver,ferry_pacific_nw
+Nanaimo,Nanaimo,Canada,CANAI,49.1659,-123.9401,America/Vancouver,ferry_pacific_nw
+Prince Rupert,Prince Rupert,Canada,CAPRR,54.3150,-130.3208,America/Vancouver,pacific_northwest
+San Francisco,San Francisco,United States,USSFO,37.7749,-122.4194,America/Los_Angeles,pacific_northwest
+San Diego,San Diego,United States,USSAN,32.7157,-117.1611,America/Los_Angeles,pacific_northwest
+Long Beach,Long Beach,United States,USLGB,33.7701,-118.1937,America/Los_Angeles,pacific_northwest
+Los Angeles (San Pedro),San Pedro,United States,USLAX,33.7361,-118.2922,America/Los_Angeles,pacific_northwest
+Ensenada,Ensenada,Mexico,MXESE,31.8667,-116.6000,America/Tijuana,pacific_northwest
+Cabo San Lucas,Cabo San Lucas,Mexico,MXCSL,22.8909,-109.9124,America/Mazatlan,central_america
+Mazatlán,Mazatlán,Mexico,MXMZT,23.2333,-106.4167,America/Mazatlan,central_america
+Puerto Vallarta,Puerto Vallarta,Mexico,MXPVR,20.6534,-105.2253,America/Mexico_City,central_america
+Manzanillo,Manzanillo,Mexico,MXZLO,19.0500,-104.3167,America/Mexico_City,central_america
+Acapulco,Acapulco,Mexico,MXACA,16.8634,-99.8901,America/Mexico_City,central_america
+Cozumel,Cozumel,Mexico,MXCZM,20.5100,-86.9500,America/Cancun,caribbean
+Costa Maya,Mahahual,Mexico,MXCSM,18.7306,-87.7100,America/Cancun,caribbean
+Progreso,Progreso,Mexico,MXPGO,21.2833,-89.6667,America/Merida,caribbean
+Belize City,Belize City,Belize,BZBZE,17.5000,-88.1833,America/Belize,caribbean
+Roatán,Roatán,Honduras,HNRTB,16.3275,-86.5253,America/Tegucigalpa,caribbean
+Puerto Limón,Puerto Limón,Costa Rica,CRLIO,9.9908,-83.0353,America/Costa_Rica,caribbean
+Puntarenas,Puntarenas,Costa Rica,CRPAS,9.9764,-84.8378,America/Costa_Rica,central_america
+Colón,Colón,Panama,PACTB,9.3600,-79.8700,America/Panama,caribbean
+Panama City (Fuerte Amador),Panama City,Panama,PAPTY,8.9167,-79.5333,America/Panama,central_america
+Cartagena,Cartagena,Colombia,COCTG,10.3997,-75.5144,America/Bogota,caribbean
+Aruba (Oranjestad),Oranjestad,Aruba,AWAUA,12.5167,-70.0333,America/Aruba,caribbean
+Curaçao (Willemstad),Willemstad,Curaçao,CWWIL,12.1167,-68.9333,America/Curacao,caribbean
+Bonaire (Kralendijk),Kralendijk,Bonaire,BQKRA,12.1500,-68.2667,America/Kralendijk,caribbean
+Grand Cayman (George Town),George Town,Cayman Islands,KYGEC,19.3017,-81.3858,America/Cayman,caribbean
+Falmouth (Jamaica),Falmouth,Jamaica,JMFAL,18.4922,-77.6519,America/Jamaica,caribbean
+Ocho Rios,Ocho Rios,Jamaica,JMOCJ,18.4167,-77.1000,America/Jamaica,caribbean
+Montego Bay,Montego Bay,Jamaica,JMMBJ,18.4667,-77.9167,America/Jamaica,caribbean
+Kingston,Kingston,Jamaica,JMKIN,17.9833,-76.8000,America/Jamaica,caribbean
+Nassau,Nassau,Bahamas,BSNAS,25.0800,-77.3400,America/Nassau,caribbean
+Freeport (Bahamas),Freeport,Bahamas,BSFPO,26.5333,-78.7000,America/Nassau,caribbean
+CocoCay (Berry Islands),Berry Islands,Bahamas,,25.7333,-77.9722,America/Nassau,caribbean
+Half Moon Cay,Half Moon Cay,Bahamas,,24.5750,-75.9500,America/Nassau,caribbean
+Castaway Cay,Castaway Cay,Bahamas,,25.6433,-77.8783,America/Nassau,caribbean
+Great Stirrup Cay,Great Stirrup Cay,Bahamas,,25.8133,-77.9300,America/Nassau,caribbean
+Princess Cays,Princess Cays,Bahamas,,24.9500,-76.3667,America/Nassau,caribbean
+San Juan,San Juan,Puerto Rico,PRSJU,18.4700,-66.1200,America/Puerto_Rico,caribbean
+St. Thomas,Charlotte Amalie,US Virgin Islands,VISTT,18.3400,-64.9300,America/St_Thomas,caribbean
+St. Croix,Frederiksted,US Virgin Islands,VISTX,17.7167,-64.8833,America/St_Thomas,caribbean
+Tortola,Road Town,British Virgin Islands,VGRAD,18.4167,-64.6167,America/Tortola,caribbean
+St. Barts (Gustavia),Gustavia,Saint Barthélemy,BLGUS,17.8967,-62.8500,America/St_Barthelemy,caribbean
+St. Maarten (Philipsburg),Philipsburg,Sint Maarten,SXPHI,18.0233,-63.0419,America/Lower_Princes,caribbean
+Saint-Martin (Marigot),Marigot,Saint Martin,MFMAR,18.0731,-63.0825,America/Marigot,caribbean
+Anguilla,The Valley,Anguilla,AIRBY,18.2167,-63.0500,America/Anguilla,caribbean
+St. Kitts (Basseterre),Basseterre,Saint Kitts and Nevis,KNBAS,17.3000,-62.7333,America/St_Kitts,caribbean
+Antigua (St. John's),St. John's,Antigua and Barbuda,AGSJO,17.1167,-61.8500,America/Antigua,caribbean
+Dominica (Roseau),Roseau,Dominica,DMRSU,15.3000,-61.3833,America/Dominica,caribbean
+Martinique (Fort-de-France),Fort-de-France,Martinique,MQFDF,14.6000,-61.0667,America/Martinique,caribbean
+Guadeloupe (Pointe-à-Pitre),Pointe-à-Pitre,Guadeloupe,GPPTP,16.2400,-61.5333,America/Guadeloupe,caribbean
+St. Lucia (Castries),Castries,Saint Lucia,LCCAS,14.0167,-60.9833,America/St_Lucia,caribbean
+St. Vincent (Kingstown),Kingstown,Saint Vincent and the Grenadines,VCKTN,13.1500,-61.2333,America/St_Vincent,caribbean
+Bequia,Port Elizabeth,Saint Vincent and the Grenadines,VCBQU,13.0086,-61.2403,America/St_Vincent,caribbean
+Mayreau,Mayreau,Saint Vincent and the Grenadines,,12.6358,-61.4264,America/St_Vincent,caribbean
+Tobago Cays,Tobago Cays,Saint Vincent and the Grenadines,,12.6258,-61.3528,America/St_Vincent,caribbean
+Grenada (St. George's),St. George's,Grenada,GDGND,12.0500,-61.7500,America/Grenada,caribbean
+Carriacou,Hillsborough,Grenada,GDCRU,12.4833,-61.4500,America/Grenada,caribbean
+Bridgetown,Bridgetown,Barbados,BBBGI,13.1000,-59.6200,America/Barbados,caribbean
+Trinidad (Port of Spain),Port of Spain,Trinidad and Tobago,TTPOS,10.6500,-61.5167,America/Port_of_Spain,caribbean
+Tobago (Scarborough),Scarborough,Trinidad and Tobago,TTSCB,11.1833,-60.7333,America/Port_of_Spain,caribbean
+La Romana,La Romana,Dominican Republic,DOLRM,18.4275,-68.9728,America/Santo_Domingo,caribbean
+Puerto Plata,Puerto Plata,Dominican Republic,DOPOP,19.7833,-70.6833,America/Santo_Domingo,caribbean
+Punta Cana,Punta Cana,Dominican Republic,DOPUJ,18.5667,-68.3667,America/Santo_Domingo,caribbean
+Samaná,Samaná,Dominican Republic,DOAZS,19.2061,-69.3367,America/Santo_Domingo,caribbean
+Santo Domingo,Santo Domingo,Dominican Republic,DOSDQ,18.4861,-69.9312,America/Santo_Domingo,caribbean
+Havana,Havana,Cuba,CUHAV,23.1333,-82.3833,America/Havana,caribbean
+Cienfuegos,Cienfuegos,Cuba,CUCFG,22.1500,-80.4167,America/Havana,caribbean
+Buenos Aires,Buenos Aires,Argentina,ARBUE,-34.6037,-58.3816,America/Argentina/Buenos_Aires,south_america_atlantic
+Montevideo,Montevideo,Uruguay,UYMVD,-34.9011,-56.1645,America/Montevideo,south_america_atlantic
+Punta del Este,Punta del Este,Uruguay,UYPDP,-34.9667,-54.9500,America/Montevideo,south_america_atlantic
+Rio de Janeiro,Rio de Janeiro,Brazil,BRRIO,-22.9068,-43.1729,America/Sao_Paulo,south_america_atlantic
+Santos,Santos,Brazil,BRSSZ,-23.9667,-46.3333,America/Sao_Paulo,south_america_atlantic
+Salvador,Salvador,Brazil,BRSSA,-12.9714,-38.5014,America/Bahia,south_america_atlantic
+Recife,Recife,Brazil,BRREC,-8.0500,-34.8833,America/Recife,south_america_atlantic
+Fortaleza,Fortaleza,Brazil,BRFOR,-3.7172,-38.5433,America/Fortaleza,south_america_atlantic
+Manaus,Manaus,Brazil,BRMAO,-3.1190,-60.0217,America/Manaus,river_amazon
+Belém,Belém,Brazil,BRBEL,-1.4558,-48.5039,America/Belem,river_amazon
+Iquitos,Iquitos,Peru,PEIQT,-3.7437,-73.2516,America/Lima,river_amazon
+Stanley,Stanley,Falkland Islands,FKPSY,-51.7000,-57.8500,Atlantic/Stanley,antarctic
+Ushuaia,Ushuaia,Argentina,ARUSH,-54.8019,-68.3030,America/Argentina/Ushuaia,antarctic
+Punta Arenas,Punta Arenas,Chile,CLPUQ,-53.1500,-70.9167,America/Santiago,south_america_pacific
+Puerto Montt,Puerto Montt,Chile,CLPMC,-41.4717,-72.9367,America/Santiago,south_america_pacific
+Puerto Williams,Puerto Williams,Chile,CLWPU,-54.9333,-67.6167,America/Santiago,antarctic
+Valparaíso,Valparaíso,Chile,CLVAP,-33.0458,-71.6197,America/Santiago,south_america_pacific
+San Antonio,San Antonio,Chile,CLSAI,-33.5867,-71.6133,America/Santiago,south_america_pacific
+Iquique,Iquique,Chile,CLIQQ,-20.2208,-70.1431,America/Santiago,south_america_pacific
+Arica,Arica,Chile,CLARI,-18.4783,-70.3133,America/Santiago,south_america_pacific
+Callao (Lima),Callao,Peru,PECLL,-12.0500,-77.1500,America/Lima,south_america_pacific
+Salaverry,Salaverry,Peru,PESVY,-8.2167,-78.9833,America/Lima,south_america_pacific
+Guayaquil,Guayaquil,Ecuador,ECGYE,-2.1709,-79.9224,America/Guayaquil,south_america_pacific
+Manta,Manta,Ecuador,ECMEC,-0.9500,-80.7333,America/Guayaquil,south_america_pacific
+Galápagos (Baltra),Baltra,Ecuador,ECGPS,-0.4500,-90.2667,Pacific/Galapagos,south_america_pacific
+Puerto Madryn,Puerto Madryn,Argentina,ARPMY,-42.7681,-65.0381,America/Argentina/Buenos_Aires,south_america_atlantic
+Grytviken,Grytviken,South Georgia,GSGRY,-54.2811,-36.5092,Atlantic/South_Georgia,antarctic
+Seward,Seward,United States,USSWD,60.1200,-149.4400,America/Anchorage,alaska
+Whittier,Whittier,United States,USWTT,60.7733,-148.6850,America/Anchorage,alaska
+Anchorage,Anchorage,United States,USANC,61.2181,-149.9003,America/Anchorage,alaska
+Homer,Homer,United States,USHOM,59.6425,-151.5483,America/Anchorage,alaska
+Kodiak,Kodiak,United States,USKDK,57.7900,-152.4072,America/Anchorage,alaska
+Valdez,Valdez,United States,USVDZ,61.1308,-146.3483,America/Anchorage,alaska
+Cordova,Cordova,United States,USCDV,60.5428,-145.7531,America/Anchorage,alaska
+Dutch Harbor,Unalaska,United States,USDUT,53.8908,-166.5419,America/Adak,alaska
+Juneau,Juneau,United States,USJNU,58.3000,-134.4000,America/Juneau,alaska
+Ketchikan,Ketchikan,United States,USKTN,55.3400,-131.6500,America/Juneau,alaska
+Skagway,Skagway,United States,USSKW,59.4500,-135.3200,America/Juneau,alaska
+Sitka,Sitka,United States,USSIT,57.0531,-135.3300,America/Juneau,alaska
+Wrangell,Wrangell,United States,USWRG,56.4708,-132.3767,America/Juneau,alaska
+Petersburg,Petersburg,United States,USPSG,56.8125,-132.9556,America/Juneau,alaska
+Hoonah (Icy Strait Point),Hoonah,United States,USHNH,58.1100,-135.4200,America/Juneau,alaska
+Haines,Haines,United States,USHNS,59.2358,-135.4456,America/Juneau,alaska

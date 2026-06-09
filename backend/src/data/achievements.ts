@@ -12,12 +12,14 @@ import { prisma } from '../db';
 import logger from '../utils/logger';
 import { seedsPartA } from './achievementSeeds/partA';
 import { seedsPartB } from './achievementSeeds/partB';
+import { seedsPartC } from './achievementSeeds/partC';
 
 export interface AchievementDefinition {
   code: string;
   name: string;
   description: string;
   category: string;
+  domain: 'flight' | 'cruise' | 'shared';
   icon: string;
   tier: string;
   requirement: number;
@@ -26,7 +28,11 @@ export interface AchievementDefinition {
   isHidden?: boolean;
 }
 
-export const achievements: AchievementDefinition[] = [...seedsPartA, ...seedsPartB];
+export const achievements: AchievementDefinition[] = [
+  ...seedsPartA,
+  ...seedsPartB,
+  ...seedsPartC,
+];
 
 /**
  * Ensure all achievements are present in the database
@@ -73,6 +79,7 @@ export async function ensureAchievements(): Promise<void> {
           name: achievement.name,
           description: achievement.description,
           category: achievement.category,
+          domain: achievement.domain,
           icon: achievement.icon,
           tier: achievement.tier,
           requirement: achievement.requirement,

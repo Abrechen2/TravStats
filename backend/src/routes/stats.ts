@@ -11,18 +11,20 @@ import {
   calculateUniqueStats,
   calculateAirportStats,
 } from '../utils/statsCalculator';
+import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from '../utils/cruiseStats';
 import { normalizeHistory } from '../utils/homeAirport';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
-import { statsLimiter } from '../middleware/rateLimit';
 import { tzAwareDurationMinutes, type FlightTimeSemantics } from '../utils/timezone';
 import { normalizeAirline, mergeAirlineCounts } from '../utils/airlineNormalize';
 
 const router = Router();
 
-// All routes require authentication and are rate-limited
+// Authenticated per-user DB aggregations — a single stats page load fans
+// out to 5–10 endpoints (overview, airlines, countries, cruise, etc.), so a
+// per-user rate limit punishes the legitimate user more than it prevents
+// abuse. Same reasoning we applied to /settings. Auth alone is enough here.
 router.use(authenticate);
-router.use(statsLimiter);
 
 // Shared schema for date-range query parameters
 const DateRangeQuerySchema = z.object({
@@ -934,6 +936,118 @@ router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunct
     next(error);
   }
 });
+
+/**
+ * Cruise-domain stats endpoint for the StatsPage cruise tab.
+ *
+ * Loads the user's cruises (excluding cancelled ones, same scope as the
+ * achievement engine uses) and pipes them through the shared
+ * `calculateCruiseStats` util. The heavy Set<string> fields are
+ * serialised to sorted arrays for JSON transport.
+ */
+router.get(
+  '/cruise',
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const [user, cruises] = await Promise.all([
+        prisma.user.findUnique({ where: { id: userId }, select: { birthdate: true } }),
+        prisma.cruise.findMany({
+          where: { userId, status: { not: 'cancelled' } },
+          include: {
+            stops: { include: { port: true } },
+            legs: { orderBy: { ordinal: 'asc' }, select: { distanceKm: true } },
+          },
+        }),
+      ]);
+
+      const cruiseStatsInput: CruiseStatsInput[] = cruises.map((c) => ({
+        id: c.id,
+        shipId: c.shipId,
+        cruiseLine: c.cruiseLine,
+        cabinType: c.cabinType,
+        deck: c.deck,
+        startDate: c.startDate,
+        endDate: c.endDate,
+        stops: c.stops.map((s) => ({
+          portId: s.portId,
+          port: s.port
+            ? {
+                id: s.port.id,
+                name: s.port.name,
+                city: s.port.city,
+                country: s.port.country,
+                region: s.port.region,
+                unlocode: s.port.unlocode,
+                lat: s.port.lat,
+                lon: s.port.lon,
+                timezone: s.port.timezone,
+                isUserAdded: s.port.isUserAdded,
+              }
+            : null,
+          dayNumber: s.dayNumber,
+          isAtSea: s.isAtSea,
+          arrivalTime: s.arrivalTime,
+          departureTime: s.departureTime,
+        })),
+        legDistancesKm: c.legs.map((l) => l.distanceKm),
+      }));
+
+      // calculateCruiseStats expects the birthday as {month, day} for the
+      // birthday-at-sea flag; pass undefined when the user has none set.
+      // Date#getMonth() returns 0-11; rangeContainsMonthDay expects 1-12.
+      // Without the +1, January birthdays would match nothing and every
+      // other birthday would be off by one month — found by Codex audit.
+      const userBirthday = user?.birthdate
+        ? { month: user.birthdate.getMonth() + 1, day: user.birthdate.getDate() }
+        : undefined;
+      const stats = calculateCruiseStats(cruiseStatsInput, userBirthday);
+
+      res.json({
+        // Counts + ladders
+        cruisesCount: stats.cruisesCount,
+        cruisePortsUnique: stats.cruisePortsUnique,
+        cruisePortsSingleMax: stats.cruisePortsSingleMax,
+        cruiseShipsUnique: stats.cruiseShipsUnique,
+        cruiseLinesUnique: stats.cruiseLinesUnique,
+        cruiseLineLoyaltyMax: stats.cruiseLineLoyaltyMax,
+        cruiseLines: Array.from(stats.cruiseLines).sort(),
+        seaDays: stats.seaDays,
+        seaDaysStreak: stats.seaDaysStreak,
+        // Regions + countries (lists already in API; counts derived
+        // client-side)
+        regions: Array.from(stats.regions).sort(),
+        regionVisitCounts: stats.regionVisitCounts,
+        countries: Array.from(stats.countries).sort(),
+        // Distance metrics (added 2026-04-25 with the schematic-routes
+        // pipeline; long-overdue exposure to the stats UI)
+        totalDistanceKm: Math.round(stats.totalDistanceKm),
+        longestLegKm: Math.round(stats.longestLegKm),
+        // Trip-shape derivations
+        totalPortCalls: stats.totalPortCalls,
+        totalCruiseDays: stats.totalCruiseDays,
+        // Cabin / deck signals
+        hasBalconyCabin: stats.hasBalconyCabin,
+        hasSuiteCabin: stats.hasSuiteCabin,
+        maxDeck: stats.maxDeck,
+        // Achievement-style flags
+        hasCanalTransit: stats.hasCanalTransit,
+        hasPolar: stats.hasPolar,
+        hasColdWater: stats.hasColdWater,
+        hasDatelineCrossing: stats.hasDatelineCrossing,
+        hasBirthdayAtSea: stats.hasBirthdayAtSea,
+        hasNewYearsAtSea: stats.hasNewYearsAtSea,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 // ─── Aircraft (tail number) ─────────────────────────────────────────────────
 

@@ -4,6 +4,466 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.28] - 2026-05-12 (Beta)
+
+### Fixed
+- **Infinite re-render loop on the dashboard fired ~8 GETs/sec at
+  `/api/v1/flights`.** `useEnabledDomains()` returned a fresh
+  `isEnabled` arrow function on every render; `DashboardPage` listed it
+  in a `useEffect` dependency array, so the effect re-ran on every
+  render, called `setCounts({...})` with a new object reference,
+  triggered another render — and so on. With dev-tools open on the
+  Globe view, the network log filled with thousands of 304-cached
+  calls; with caching disabled this would hammer the backend.
+  `MapContainer3D` already documented this trap and worked around it
+  locally; the hook-level fix (memoize `isEnabled` against the
+  `enabled` array via `useCallback`) closes the trap once and for all
+  so future callers cannot trip into it.
+
+## [2.0.0-beta.27] - 2026-05-10 (Beta)
+
+### Fixed
+- **Bulk historical refresh aborted client-side after 10 s** while the
+  backend kept running. The default axios timeout is 10 s, but
+  `runBulkRefresh` loops sequentially through up to 25 flights, each
+  calling AeroDataBox / Aviationstack — easily 30–60 s on a healthy
+  link. The UI gave up mid-loop, surfaced a red `timeout of 10000ms
+  exceeded` toast, and the user had to re-click before any data
+  showed up. Bumped the bulk-refresh request to the parser-class
+  180 s timeout so the call stays open for the full server-side
+  iteration.
+- **Settings → Auffrischen-Buttons used raw `bg-blue-600`** instead of
+  the brand-amber `btn-primary`. Side-fix while in the file.
+
+### Performance
+- **Globe hover tooltip moved into a leaf component.** Sweeping the
+  cursor over airport / port labels triggered React re-renders at
+  60–120 Hz of the entire 1600-line `GlobeView` tree (every onHover
+  event called `setTooltip`); on lower-end GPUs this read as visible
+  jank during the cursor-following tooltip. The new `HoverTooltip`
+  exposes an imperative `show / hide` API via `forwardRef`, so only
+  the 30-line tooltip subtree re-renders on cursor movement — the
+  parent and its `MapboxOverlay` setProps stay put.
+- **Aktivität-Panel rows replaced 720 `onMouseEnter` / `onMouseLeave`
+  JS handlers** (2 per row × 354 rows + cruises) with a Tailwind
+  `hover:bg-white/[0.04]` class. The browser now handles row hover
+  purely in CSS — no listeners attached, no inline-style mutation
+  during scroll.
+
+## [2.0.0-beta.26] - 2026-05-10 (Beta)
+
+### Fixed
+- **Sonder-Flug entry was invisible from the dashboard top-bar add
+  button** — `DashboardLayout` mounted `SimplifiedFlightFormV2` without
+  the `onPickSpecialFlight` prop, so the special-flight chooser card
+  silently dropped out of the lookup step for every user coming through
+  this path. The chooser button label was also calling a missing i18n
+  key (`specialFlights:chooser.pickAction`); now uses the correct
+  `chooser.cta`.
+- **NavigationBar missing on Trips pages** — `/trips` and `/trips/:id`
+  had no top-bar at all (no logo, no nav links, no user menu) while
+  every other top-level page mounted `<NavigationBar />`. Added it to
+  both, plus the loading state on `/trips/:id` so the chrome doesn't
+  pop in once the trip resolves.
+- **Map info pill bled through the dashboard's Aktivität toggle on the
+  Alle and Flüge tabs** — `MapContainer3D` rendered a "X Flüge · Y
+  Routen" pill at top-left z-10, sitting under the tab-level
+  Aktivität button + domain-legend chips at z-30. The "Routen" tail
+  peeked out between the two pills. Added a `hideInfoPill` prop and
+  set it on AllTab + FlightsTab.
+- **Route-Details button on the flight tooltip silently did nothing**
+  when the Aktivität sidebar was closed — `<RouteDetailsSidebar>` is
+  rendered inside `<FlightPanel>`, which only mounts while the sidebar
+  is open. Clicking the button just flipped the store flag and looked
+  unresponsive. FlightsTab now auto-opens the sidebar on any non-null
+  `detailMode` transition so the details actually appear.
+
+### Visual / brand
+- **Cruise-port markers + UN/LOCODE labels on the flat map**: hover
+  tooltip ported from globe so airport / port hover bubbles now show
+  IATA + name + count + last-visit / last-call across both surfaces.
+  Labels also gain the same low-zoom hide threshold the airport IATA
+  labels already use.
+- **Globe arc + cruise-path widths** realigned to the flat-map
+  `sqrt(count)` formula so the visual jump between map ↔ globe
+  transitions is smooth instead of jumping in line weight.
+- **Three-round brand-violation sweep** against `BRAND.md`:
+  - Domain-color leaks fixed across AchievementPopup tier gradients,
+    Admin/UserManagement role badge, DataSourceBadges, Stats seat-class
+    and zone bars, Training flight-highlighter palette, FlightCalendar
+    intensity ramp.
+  - Email-import "Beste Option" hero card on the cruise side moved off
+    the retired green/teal pattern to the same brand-amber gradient
+    the flight side already uses; FlightLookupStep "Sonder-Flug" card
+    border moved off Hotel-domain purple to flight-domain amber.
+  - Stats progress bars (aircraft / airline / country) and the Setup +
+    SetupPage success/error banners moved off light-mode Tailwind
+    palette to brand state tokens (`--success` / `--danger` /
+    `--warning` / `--accent`).
+  - Admin LoggingManager + BackupManagement, Training TemplateReview
+    + BoardingPassAnnotation, ParserPage tabs, ReceiptUpload drag-
+    state and AirportSeedingBanner all rerouted to brand tokens.
+  - Cruise port markers on the map now render in the canonical
+    `--domain-cruise` hex (#6fa0d6) instead of sky-400.
+- **Shared tooltip labels** moved out of `map.globe.pinned.*` into a
+  dedicated top-level `map.tooltip.*` namespace shared by both the
+  globe pinned card and the flat-map hover bubble (no functional
+  change, just consistent key location).
+- **Globe edge-clipping fixed** — `EarthOcclusionExtension` now reads
+  the live MapLibre camera distance off the deck.gl viewport instead
+  of an empirical zoom heuristic that was off by 3-22× from the real
+  camera. Routes no longer disappear at the rim when zoomed out.
+
+
+
+### Fixed
+- **Alle-tab map legend now reflects domain pills** — The legend stripe
+  (sky-blue cruise + orange flight) hard-coded both rows, so toggling
+  cruise off in the filter dropdown left the legend lying that cruises
+  were still on screen. Each row is now gated on its domain pill state;
+  if both pills are off, the legend block is hidden entirely.
+
+## [2.0.0-beta.24] - 2026-05-09 (Beta)
+
+### Added
+- **Filter button shows active state** — When the year dropdown picks
+  a specific year or any domain pill is off, the dashboard top-bar
+  Filter button switches to an accent border + the picked year next to
+  the label, and a "n/m" pill displays how many domains are active.
+  Without this indicator users can't tell at a glance whether they're
+  seeing the full dataset or a filtered slice.
+- **"Filter zurücksetzen" link in the dropdown** — Single click to
+  clear year + domain selection back to the unfiltered defaults.
+  Disabled when no filter is active.
+
+## [2.0.0-beta.23] - 2026-05-09 (Beta)
+
+### Fixed
+- **Double tooltip on flat-map airport markers** — Beta.21 added a
+  hover bubble via deck.gl's `getTooltip` to surface full place names
+  on every marker. On the flat map, airport markers already trigger
+  the rich `AirportTooltip` (departures/arrivals/distance/route
+  counts) on click, so the new hover bubble layered a second tooltip
+  on top of the rich one. The hover bubble now skips flat-map
+  airports (`routes-dot` / `routes-label`) and fires only on flat-map
+  ports + every globe marker. Globe airports keep the hover bubble
+  because they have no rich-tooltip equivalent.
+- **Markers clipped where cruise paths cross them** — Globe airport +
+  port markers rendered at altitude 0 while cruise paths sit at 5 km;
+  the depth buffer let the path's fragments occlude the marker dot at
+  shallow camera angles. Lifted both the dot and the label to 8 km
+  altitude (`MARKER_ALTITUDE_M`) so the marker is reliably above any
+  path that crosses it. On the flat map the symptom was different:
+  cruise paths were composed AFTER airport visuals in the layer
+  stack, so they drew on top of airport dots at every intersection.
+  Reordered the flat-map layer composition: cruise arcs/arrows go
+  below flight arcs and airport markers, cruise port halo+dot+label
+  go on top of everything (their pixel-radius cap keeps them readable
+  at every zoom).
+
+## [2.0.0-beta.22] - 2026-05-09 (Beta)
+
+### Fixed
+- **Year + domain filter now actually filters data** — Beta.20 added
+  the year dropdown and domain pill row but only updated the store;
+  the data layer didn't read either. Wired both into the Alle, Flüge,
+  and Kreuzfahrten tabs:
+  - Alle tab filters flights by `departureTime` within the year range
+    and cruises by interval overlap (start/end), and gates each domain
+    on/off via the pill row. Activity panel reflects the same
+    filtered set.
+  - Flüge / Kreuzfahrten apply the year filter only — domain pills are
+    cross-domain and a domain-dedicated tab keeps showing its domain
+    regardless of pill state.
+  - `MapContainer3D` gained a `cruisesOverride` prop that bypasses its
+    internal cruise fetch so the tabs can hand it the pre-filtered set.
+
+## [2.0.0-beta.21] - 2026-05-09 (Beta)
+
+### Changed
+- **Flat-map cruise port labels show UN/LOCODE instead of full name**
+  — Mirrors how airport markers show 3-letter IATA codes ("HAM",
+  "JFK"). Ports now show the 5-letter UN/LOCODE ("DEHAM", "USJFK")
+  with a fallback to the full name when the UN/LOCODE column is null.
+  The Globe view already did this — flat-map was inconsistent.
+
+### Added
+- **Hover tooltip on every airport + port marker** — Shows the full
+  place name in a small dark bubble on hover. Wired through
+  `getTooltip` on every MapboxOverlay (DeckGLMap, GlobeView,
+  CruiseRouteMap, TripMap) using a shared
+  `components/map/markerTooltip.ts` helper. Routes / arcs / paths
+  are explicitly excluded so the cursor stays clean while panning.
+
+## [2.0.0-beta.20] - 2026-05-09 (Beta)
+
+### Changed
+- **Globe mode is now exclusive to the Alle tab** — The 3-D globe is
+  cross-domain by design (mixes flights and cruises on one sphere), so
+  exposing it on per-domain tabs caused two problems: clicking it on
+  Flüge/Kreuzfahrten swapped to a globe view that broke domain scoping,
+  and the heatmap legend never matched. The in-map FAB now takes an
+  `availableModes` subset — `[routes, heatmap, globe]` on Alle,
+  `[routes, heatmap, trips]` on Flüge, and the FAB is hidden entirely
+  on Kreuzfahrten (cruise modes don't map 1:1 to the FAB's Map modes).
+- **Flat-map cruise port markers re-aligned with airport markers** —
+  Ports were a single 4–10 px scatter dot scaled by visit count, while
+  airports are a meter-based dot + halo ring stack. On the same map
+  they read as two unrelated marker systems. The port layer now mirrors
+  the airport stack: 2.2 km solid dot in sky-blue + 6 km halo ring +
+  clickable port-name label (TextLayer, billboarded). Same visual
+  weight at every zoom.
+- **Empty ship-marker toggle removed** — The "Schiffsmarker" checkbox
+  in the globe FAB row had no real handler — toggling it left the
+  layer state untouched. Removed the toggle and the dormant
+  shipMarkers state plumbing in GlobeView and buildGlobeLayers.
+
+### Added
+- **Year + domain dropdown filter** — The dashboard filter dropdown
+  now offers a single year selector (current year + 14 years back, or
+  "Alle Jahre") instead of two from/to date pickers. Per-day
+  precision is unnecessary for the use cases TravStats supports, and
+  consolidates against the Globe day slider so the two don't fight.
+  On the Alle tab a domain pill row toggles flight / cruise / poi
+  visibility together. Store extended with `setYear` (mirrors to the
+  underlying `time` range so existing range-overlap consumers keep
+  working) and `setDomains`.
+
+## [2.0.0-beta.19] - 2026-05-09 (Beta)
+
+### Fixed
+- **Cruise paths clipped into the globe** — Cruise sea-route geometry
+  comes from the backend as 2-D `[lng, lat]` points, so deck.gl
+  rendered the path at exactly altitude 0. That shares depth-buffer
+  values with the sphere mesh and produces visible z-fighting /
+  clipping where segments dip into the globe. Lifted each path
+  point to 5 km altitude in `globe-cruise-paths`'s `getPath` —
+  invisible at any user-relevant zoom but well above the depth
+  precision noise.
+
+## [2.0.0-beta.18] - 2026-05-09 (Beta)
+
+### Fixed
+- **Globe pinned-card "Open last flight" CTA was a no-op** — The CTA
+  was wired to a callback named `onFlightClick` that mapped to
+  `setSelection([flight])` upstream, which only highlights the row in
+  the activity panel. Renamed to `onFlightOpen` and re-wired in
+  AllTab + FlightsTab to actually open the flight edit modal — same
+  modal the activity-panel "Details" button opens.
+
+### Added
+- **Cruise pinned-card now has an "Open cruise" CTA** — Symmetric to
+  the flight CTA. New `onCruiseOpen` prop on GlobeView /
+  MapContainer3D, wired in AllTab to navigate to `/cruises/:id` —
+  same destination the activity-panel cruise "Details" button uses.
+
+## [2.0.0-beta.17] - 2026-05-09 (Beta)
+
+### Fixed
+- **Globe canvas still disappeared on click after beta.16** — Removing
+  `flyToArc` and adding try/catch wasn't enough. Per Gemini's diagnosis
+  (matching upstream issue #512), the actual root cause is MapLibre 5's
+  `locationOccludedOpacity` feature: it performs an internal occlusion
+  pass that does not restore `gl.SCISSOR_TEST`, leaving the shared GL
+  context corrupted on next deck.gl draw. With `interleaved: true` in
+  `MapboxOverlay`, deck.gl and MapLibre share the WebGL context, so any
+  popup creation triggered a state leak that blanked the canvas.
+- **Replaced `maplibregl.Popup` with a custom React overlay** —
+  Pinned-card now mounts as an absolutely-positioned `<div>` whose
+  `left/top` come from `map.project([lng, lat])`, refreshed on every
+  MapLibre `render` event. Back-of-globe culling is replicated in JS
+  via the same dot-product math the EarthOcclusionExtension shader
+  uses. Same UX (anchored, follows camera, fades when occluded), zero
+  GL-state risk.
+- **`PinnedCardBoundary` error boundary around the card** — Defense
+  in depth: a throw inside the React subtree now logs and renders
+  null, instead of bubbling up and unmounting GlobeView.
+
+## [2.0.0-beta.16] - 2026-05-09 (Beta)
+
+### Fixed
+- **Globe disappeared completely on flight-route click** — Critical
+  regression in beta.12-15: clicking an aggregated arc fired both
+  `setPinned()` (mounting the new MapLibre Popup) and a 1.5 s
+  `flyTo()` camera animation. The popup mount + camera flyTo +
+  globe re-render combo crashed the WebGL canvas in some camera
+  states, leaving a black screen instead of the globe. Two-layer
+  fix:
+  - **Drop the camera flyTo on click.** With the popup now anchored
+    to the click coordinate, flying the camera away from where the
+    user just tapped is anti-pattern anyway, and removing it
+    eliminates the race entirely.
+  - **Wrap the popup mount in try/catch + finite-coord guard.** A
+    single throw from MapLibre's projection or anchor-flipping math
+    used to bubble up and unmount the entire GlobeView. Now caught
+    and logged; popup missing is recoverable, canvas going away is
+    not.
+
+## [2.0.0-beta.15] - 2026-05-09 (Beta)
+
+### Changed
+- **Inactive-tab / section-nav contrast bumped consistently** — The
+  TripDetailPage tab fix in beta.10 used a one-off
+  `rgba(230,237,243,0.65)` to lift inactive tabs above the borderline
+  WCAG-AA contrast `--text-muted` (#8b949e) was hitting against
+  `--bg-base`. That fix is now a proper design token, `--text-secondary`
+  (#a8b3bf), applied everywhere the same pattern was leaking through:
+  AdvancedStatsPage tab strip (Alle / Flug / Kreuzfahrt filter),
+  AdminPage tabs + section sidebar, SettingsPage section sidebar, and
+  TripModal sub-tabs. `--text-muted` itself is unchanged and stays
+  reserved for genuinely de-emphasised content (captions, scrollbars,
+  borders).
+
+## [2.0.0-beta.14] - 2026-05-09 (Beta)
+
+### Fixed
+- **Globe pinned-card width stretched to viewport on long content** —
+  The MapLibre Popup wrapper was created with `maxWidth: "none"`, which
+  let the inner card balloon out to the full viewport width as soon as
+  the content didn't naturally cap itself. Capped at `320px` so the
+  inner card's own min/max widths drive the layout.
+- **Cruise card duplicated the port / sea-day count** — Both fields
+  used pluralised i18n keys that already include the count
+  (`{{count}} Häfen`), and then rendered the count again as the value
+  cell, producing rows like `6 HÄFEN  6`. Replaced the pluralised
+  keys with plain `Häfen` / `Seetage` labels.
+- **Port region rendered lowercase** — The `port.region` column in
+  the seed (e.g. `mediterranean`) is the raw enum value. Capitalised
+  for display.
+
+## [2.0.0-beta.13] - 2026-05-09 (Beta)
+
+### Added
+- **Globe pinned-card content density (Phase B)** — The pinned detail
+  card that opens on click now follows a 3-tier hierarchy: heading
+  (icon + identifier), hero stat (the one number you want to see),
+  and a metadata grid of 3-5 high-value facts. Concrete fields:
+  - **Airport**: visit count + name + longest route from here +
+    top airline + top aircraft + last visit date.
+  - **Port**: visit count + country + region + ships visited
+    (truncated to 3) + longest port-call duration + last call.
+  - **Flight route**: times flown + total kilometres (sum across all
+    aggregated flights on this route) + last flight date + aircraft
+    types + top airline + the existing "Open last flight" CTA.
+  - **Cruise**: cruise line + date range + port count + sea-day count
+    + embark / debark ports.
+  All aggregations are pure helpers in `Globe/cardStats.ts` derived
+  from the `flights` / `cruises` arrays already passed to GlobeView —
+  no extra API roundtrip. Card content extracted into
+  `Globe/PinnedCard.tsx` (~330 LoC) so the GlobeView shell stays
+  focused on map + popup lifecycle. 21 new i18n keys per locale.
+
+## [2.0.0-beta.12] - 2026-05-09 (Beta)
+
+### Changed
+- **Globe pinned-card now anchors to the clicked feature** — The detail
+  card that opens when you click an airport, port, route arc, or cruise
+  path used to live in a fixed bottom-right slot, disconnected from
+  the feature it described. It now mounts inside a MapLibre `Popup`
+  bound to the lng/lat where the click landed (`PickingInfo.coordinate`
+  for arcs and cruise paths, `position` for airport/port markers), so
+  the card visually belongs to the feature with a tail pointing at it.
+  MapLibre handles edge-aware anchor flipping near the viewport
+  borders, and `locationOccludedOpacity:0` uses the renderer's own
+  globe-visibility math to fade the card when the anchor rotates to
+  the back of the earth. The card content itself is unchanged in this
+  beta — Phase B (denser content per Gemini + Codex review) lands in
+  the next bump.
+
+## [2.0.0-beta.11] - 2026-05-09 (Beta)
+
+### Fixed
+- **Activity-toggle and legend overlapped on the dashboard `Alle` tab** —
+  The `☰ Aktivität` button and the flight/cruise legend were two
+  independent absolutely-positioned pills with hand-tuned offsets
+  (toggle at `left:12`, legend at `left:128`). Tight gap and variable
+  letter widths caused the legend pill to render on top of the toggle's
+  right edge. Both pills now share a single absolute flex container
+  with `gap:8`, so they auto-flow without offset math; the container as
+  a whole shifts to `left:340` when the sidebar opens.
+
+## [2.0.0-beta.10] - 2026-05-09 (Beta)
+
+### Added
+- **Trip System V2** — A redesigned Trip surface with a dedicated detail page
+  carrying five sub-tabs (Overview / Timeline / Map / Gallery / Logistics).
+  Iterations 1-9 land in this beta: list-card redesign, stops + journal
+  entries, real Map tab with click-to-fly and Globe/Flat projection toggle,
+  per-proposal review flow for trip auto-detection, TripModal split into
+  4 sub-tabs with cover preview, photo gallery with lightbox + upload, and
+  LLM-generated trip summaries via Ollama (gemma3:12b, 3-paragraph DE
+  travel-blog format, persisted to `trip.summary`).
+- **Special Flights as a Flight subtype** — Sightseeing, repositioning,
+  training, and charter flights can now be logged with type-specific
+  metadata (event location, label, lat/lon) without distorting the Flight
+  schema or the Trip system. Special-flight overlays render on top of
+  routes-mode with their own legend and tooltip variant — they are NOT a
+  separate domain or MapMode.
+- **Globe modernization** — The 3D Globe is rewritten on MapLibre 5 +
+  deck.gl `MapboxOverlay` + `useControl`, replacing the legacy
+  `react-globe.gl` + Three.js engine. Earth-occlusion is now GPU
+  per-fragment via a custom deck.gl extension reading camera state every
+  frame. New helper modules (`buildGlobeLayers`, `arcUtils`,
+  `heatmapUtils`, `globeLayerTypes`) replace inline implementations.
+- **Merged 1.5.0 trunk** — beta.10 carries the full 1.5 main payload:
+  FR24 CSV importer, generic CSV importer with column-mapping wizard,
+  shared import preview modal, AeroDataBox extended-field capture,
+  dataSource badges, historical-flight Day select, `POST /import/parse`
+  API endpoint, and the `route_distance` backfill script.
+
+### Changed
+- **Settings → Import promoted to top-level (General tab)** — The
+  1.5.0 import section landed nested under Settings → Flug → Import,
+  one tab-level deep. With V2 multi-domain ahead (cruise / hotel / POI
+  imports) and feedback that the nesting hid the section, Import now
+  lives in the General tab right after Backup. The three tiles
+  (Flightradar24 CSV, generic CSV with mapping wizard, Round-Trip
+  XLSX) and all underlying parsers are unchanged.
+- **Globe default basemap** — From `standard` (openfreemap liberty) to
+  `dark` (CartoDB dark-matter), matching BRAND.md §1.1's dark-only app
+  shell. Users can still pick any style; the choice persists in
+  `sessionStorage`.
+- **TripDetailPage TabBar inactive contrast** — Inactive tab labels
+  brightened from `--text-muted` to white at 65 % opacity with a hover
+  transition to `--text-primary`.
+- **Globe perf** — Texture sharpness, live-mode smoothness, and removal
+  of the night cycle. Frame pacing is now fully GPU-driven.
+
+### Fixed
+- **Trip delete-confirmation heading was nearly invisible** — The `<h2>`
+  in the delete-confirm modal on the Trip detail page was missing an
+  explicit text colour and inherited a muted shade against the dark
+  surface. Resolved by adding `style={{ color: "var(--text-primary)" }}`
+  in line with the existing TripsTab and FlightPanel patterns.
+- **`TEST_LEAK_*` regression-test achievements bled into the user UI** —
+  The `achievements.scheduledLeak.test.ts` regression suite seeds nine
+  `TEST_LEAK_*` rows into the achievements table to verify
+  scheduled-flight isolation, but the seeds remained after the test ran
+  and showed up in the live Achievements page (e.g. "Leak: First
+  Aircraft Type"). The list / recent / leaderboard endpoints now filter
+  `code NOT LIKE 'TEST_%'`, and the dev DB has been cleaned.
+- **deck.gl warning `fontSettings.sdf is required to render outline`** —
+  The IATA label TextLayer set `outlineWidth: 2` + `outlineColor` but
+  never enabled the SDF font flag, so the outline never actually
+  rendered and deck.gl logged a warning every frame.
+  `fontSettings: { sdf: true }` is now set explicitly.
+
+### Database
+- **Four new migrations** — `20260509120000_trip_metadata`,
+  `20260509130000_trip_stops_and_journal`, `20260509140000_trip_photos`,
+  `20260509150000_special_flights_subtype`. All additive, idempotent,
+  zero-downtime safe. Plus the 1.5.0 `_add_aerodatabox_extended_fields`
+  migration carried in via the main merge.
+
+## [2.0.0-beta.9] - 2026-05-05 (Beta)
+
+### Added
+- **Brand token system wired through the app** — `BRAND.md` per-domain palette (flight `#f0a947`, cruise `#6fa0d6`, hotel `#b072d6`, poi `#5ec2b2`) is now the single source of truth. The shared domain registry (`shared/domains.ts` on both backend and frontend) carries the canonical hexes, so dashboard tab strip, AllTab legend, journey layers, and the legend-driven map controls all read from one place. Stats screen consolidated onto a shared `StatCard` surface — ~30 arbitrary Tailwind gradients replaced with brand tokens.
+- **Merged 1.4.0 trunk** — beta.9 carries the full 1.4 main payload: AeroDataBox provider + bulk historical refresh, persisted tail number / Mode-S / codeshare metadata, Aircraft hulls ranking + per-tail profile pages (`/aircraft/:reg`), API tokens for headless ingestion, OpenAPI spec at `/api/v1/openapi.json` + Swagger UI at `/api/v1/docs`, demo account flag (`isDemo`), upgrade-backup hook on container entrypoint.
+
+### Changed
+- **Dark-only theme**, light-mode classes retired across components. `themeStore` simplified to `mapTheme` only — no more `isDarkMode` toggle. `<html class="dark">` is set defensively at boot so a stale `localStorage` payload can't strip it.
+
 ## [1.5.1] - 2026-05-12
 
 ### Fixed

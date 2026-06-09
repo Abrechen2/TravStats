@@ -5,7 +5,10 @@ import { z } from 'zod';
 import logger from '../utils/logger';
 import { extractTextFromPdf, isBcbpText } from '../services/pdfParser';
 import { parseBookingText } from '../services/bookingParser';
+import { parseCruiseBookingText } from '../services/cruiseBookingParser';
+import { resolveCruiseEntities } from '../services/cruiseEntityResolver';
 import { FILE_LIMITS } from '../config/constants';
+import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
 
 const router = Router();
 
@@ -14,6 +17,7 @@ const parsePdfSchema = z.object({
     .string()
     .min(1, 'PDF data is required')
     .max(FILE_LIMITS.PDF_MAX_SIZE * 2, 'PDF too large'), // base64 overhead ~1.37x, use 2x for safety
+  domain: z.enum(PARSER_SUPPORTED_DOMAINS).optional().default('flight'),
 });
 
 /**
@@ -31,7 +35,8 @@ const parsePdfSchema = z.object({
  */
 router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest, res: Response) => {
   try {
-    const { pdfBase64 } = parsePdfSchema.parse(req.body);
+    const parsed = parsePdfSchema.parse(req.body);
+    const { pdfBase64 } = parsed;
     const userId = req.userId;
 
     const buffer = Buffer.from(pdfBase64, 'base64');
@@ -55,10 +60,28 @@ router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest
       });
     }
 
-    logger.info({ userId, chars: pdfText.length }, '[PDF Parse] Text extracted, parsing...');
+    logger.info(
+      { userId, chars: pdfText.length, domain: parsed.domain },
+      '[PDF Parse] Text extracted, parsing...',
+    );
+
+    if (parsed.domain === 'cruise') {
+      const cruiseResult = await parseCruiseBookingText(pdfText);
+      const resolved = await Promise.all(cruiseResult.cruises.map(resolveCruiseEntities));
+      return res.json({
+        cruises: resolved.map((r) => ({
+          input: r.input,
+          shipMatched: r.shipMatched,
+          unmatchedPorts: r.unmatchedPorts,
+        })),
+        parserUsed: cruiseResult.parserUsed,
+        ollamaAvailable: cruiseResult.ollamaAvailable,
+        pdfTextLength: pdfText.length,
+        domain: 'cruise',
+      });
+    }
 
     const bcbpDetected = isBcbpText(pdfText);
-
     const result = await parseBookingText(pdfText, userId);
 
     res.json({

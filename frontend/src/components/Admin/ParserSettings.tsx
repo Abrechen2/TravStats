@@ -183,15 +183,25 @@ export default function ParserSettings({
           </h3>
           {ollamaTestState.status !== "idle" && (
             <span
-              className={`text-xs font-medium px-2 py-1 rounded-full ${
-                ollamaTestState.status === "ok"
-                  ? "bg-green-100 text-green-700"
-                  : ollamaTestState.status === "warn"
-                    ? "bg-yellow-100 text-yellow-700"
-                    : ollamaTestState.status === "error"
-                      ? "bg-red-100 text-red-700"
-                      : "bg-gray-100 text-gray-500"
-              }`}
+              className="text-xs font-medium px-2 py-1 rounded-full"
+              style={{
+                background:
+                  ollamaTestState.status === "ok"
+                    ? "rgba(63,185,80,0.15)"
+                    : ollamaTestState.status === "warn"
+                      ? "rgba(210,153,34,0.15)"
+                      : ollamaTestState.status === "error"
+                        ? "rgba(248,81,73,0.15)"
+                        : "var(--bg-elevated)",
+                color:
+                  ollamaTestState.status === "ok"
+                    ? "var(--success)"
+                    : ollamaTestState.status === "warn"
+                      ? "var(--warning)"
+                      : ollamaTestState.status === "error"
+                        ? "var(--danger)"
+                        : "var(--text-muted)",
+              }}
             >
               {ollamaTestState.status === "ok" && t("admin:parserSettings.ollama.statusConnected")}
               {ollamaTestState.status === "warn" && t("admin:parserSettings.ollama.modelNotFound")}

@@ -21,6 +21,31 @@ function getCoordsFromFeature(
   };
 }
 
+type AirportProps = GeoJSONFeature["properties"]["departureAirport"];
+
+// Stable per-airport identifier used to collapse bidirectional routes. IATA
+// is preferred (human-readable, matches the rendered label), then ICAO for
+// airfields that never got an IATA assignment (common for small / pre-1990
+// airports), then a coordinate-derived key as a last resort so a flight with
+// valid geometry still renders even when both codes are missing.
+//
+// Issue #120: the old gate `if (!dep.iata || !arr.iata) continue` silently
+// dropped 1986-era manual entries to ICAO-only fields — they have valid
+// coordinates (depLat/depLon are non-nullable, so the flight saves) but a
+// null IATA (depIata is nullable), so they vanished from the map entirely.
+function airportId(airport: AirportProps, coord: [number, number]): string {
+  return (
+    airport.iata || airport.icao || `@${coord[0].toFixed(3)},${coord[1].toFixed(3)}`
+  );
+}
+
+// Human-readable airport label for the map marker / aggregation map. Falls
+// back through IATA → ICAO → name → "—" so a code-less airport still shows
+// something meaningful instead of an empty pill.
+function airportLabel(airport: AirportProps): string {
+  return airport.iata || airport.icao || airport.name || "—";
+}
+
 // Soft grey for routes whose only flights are historical (legacy, no longer
 // active). Still useful to render so the user sees them dim in the background.
 const HISTORICAL_COLOR: [number, number, number] = [150, 150, 150];
@@ -61,10 +86,14 @@ function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord>
   for (const f of flights) {
     const dep = f.properties.departureAirport;
     const arr = f.properties.arrivalAirport;
-    if (!dep.iata || !arr.iata) continue;
     const coords = getCoordsFromFeature(f);
     if (!coords) continue;
-    const key = routeKey(dep.iata, arr.iata);
+    // Identify each airport by IATA → ICAO → coordinate key so ICAO-only /
+    // code-less airfields still aggregate instead of being dropped (#120).
+    const key = routeKey(
+      airportId(dep, coords.depCoord),
+      airportId(arr, coords.arrCoord)
+    );
     const isScheduled = f.properties.status === "scheduled";
     const isHistorical = f.properties.status === "historical";
     const existing = records.get(key);
@@ -93,7 +122,16 @@ function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord>
 function buildArcs(
   records: Map<string, RouteRecord>,
   minRouteCount: number,
-  themeColors?: MapLayerColors
+  themeColors?: MapLayerColors,
+  /**
+   * Monochrome color override applied to every route — supersedes the
+   * heatmap branch so callers can project all flights in a single domain
+   * hue. The Alle tab uses this to separate flight-amber arcs from the
+   * separate cruise-blue overlay arcs cleanly. Historical routes still
+   * fall back to grey, since "this is older legacy data" is a
+   * cross-domain semantic the override shouldn't suppress.
+   */
+  paletteOverride?: [number, number, number]
 ): ArcDatum[] {
   const counts = [...records.values()].map((r) => r.count);
   const { q25, q50, q75 } = calcQuantiles(counts.length > 0 ? counts : [0]);
@@ -108,7 +146,9 @@ function buildArcs(
     //      rendered through plain ArcLayer (no shader inject).
     //   3. mixed (hasUpcoming && hasPastFlown) — hardcoded 2-tier red core,
     //      rendered through UpcomingArcLayer which fades blue at both ends.
-    //   4. regular past-only — frequency-driven heatmap, unchanged.
+    //   4. regular past-only — frequency-driven heatmap, or paletteOverride
+    //      when the caller wants to force a domain-specific palette (e.g.
+    //      cruise routes use a different palette than flight heatmaps).
     let color: [number, number, number];
     let alpha: number;
 
@@ -127,8 +167,9 @@ function buildArcs(
       color = r.count <= q50 ? MIXED_RED_LOW : MIXED_RED_HIGH;
       alpha = Math.min(100 + r.count * 14, 230);
     } else {
-      // Regular past-only — frequency-driven heatmap (unchanged behaviour).
-      color = getHeatmapColor(r.count, q25, q50, q75, themeColors);
+      // Regular past-only — frequency-driven heatmap, or domain-scoped
+      // palette when the caller passes paletteOverride.
+      color = paletteOverride ?? getHeatmapColor(r.count, q25, q50, q75, themeColors);
       alpha = Math.min(100 + r.count * 14, 230);
     }
 
@@ -152,44 +193,68 @@ function buildArcs(
 
 function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
   const airportMap = new Map<string, PointDatum>();
+  const bumpLastVisit = (
+    cur: string | undefined,
+    candidate: string | undefined,
+  ): string | undefined => {
+    if (!candidate) return cur;
+    if (!cur || candidate > cur) return candidate;
+    return cur;
+  };
   for (const f of flights) {
     const dep = f.properties.departureAirport;
     const arr = f.properties.arrivalAirport;
     const coords = getCoordsFromFeature(f);
-    if (!dep.iata || !arr.iata || !coords) continue;
+    if (!coords) continue;
+    const departureTime = f.properties.departureTime ?? undefined;
+    // Key by IATA → ICAO → coordinate key so code-less airports still get a
+    // marker (#120). The displayed label falls back the same way.
+    const depKey = airportId(dep, coords.depCoord);
+    const arrKey = airportId(arr, coords.arrCoord);
 
-    if (!airportMap.has(dep.iata)) {
-      airportMap.set(dep.iata, {
+    if (!airportMap.has(depKey)) {
+      airportMap.set(depKey, {
         position: coords.depCoord,
         count: 0,
-        name: dep.name ?? dep.iata,
-        iata: dep.iata,
+        name: dep.name ?? airportLabel(dep),
+        iata: airportLabel(dep),
       });
     }
-    if (!airportMap.has(arr.iata)) {
-      airportMap.set(arr.iata, {
+    if (!airportMap.has(arrKey)) {
+      airportMap.set(arrKey, {
         position: coords.arrCoord,
         count: 0,
-        name: arr.name ?? arr.iata,
-        iata: arr.iata,
+        name: arr.name ?? airportLabel(arr),
+        iata: airportLabel(arr),
       });
     }
-    const depPoint = airportMap.get(dep.iata)!;
-    const arrPoint = airportMap.get(arr.iata)!;
-    airportMap.set(dep.iata, { ...depPoint, count: depPoint.count + 1 });
-    airportMap.set(arr.iata, { ...arrPoint, count: arrPoint.count + 1 });
+    const depPoint = airportMap.get(depKey)!;
+    const arrPoint = airportMap.get(arrKey)!;
+    airportMap.set(depKey, {
+      ...depPoint,
+      count: depPoint.count + 1,
+      lastVisit: bumpLastVisit(depPoint.lastVisit, departureTime),
+    });
+    airportMap.set(arrKey, {
+      ...arrPoint,
+      count: arrPoint.count + 1,
+      lastVisit: bumpLastVisit(arrPoint.lastVisit, departureTime),
+    });
   }
   return [...airportMap.values()];
+}
+
+export interface RouteData {
+  arcs: ArcDatum[];
+  points: PointDatum[];
 }
 
 export function buildRouteData(
   flights: GeoJSONFeature[],
   minRouteCount: number,
-  themeColors?: MapLayerColors
-): {
-  arcs: ArcDatum[];
-  points: PointDatum[];
-} {
+  themeColors?: MapLayerColors,
+  paletteOverride?: [number, number, number]
+): RouteData {
   // Single arc per canonical airport pair (FRA-MUC === MUC-FRA), regardless
   // of whether the route carries past, scheduled, or mixed flights. Frequency
   // drives width + colour. Arcs that carry at least one scheduled flight get
@@ -198,7 +263,7 @@ export function buildRouteData(
   // with the heatmap.
   const records = aggregateAllRoutes(flights);
   return {
-    arcs: buildArcs(records, minRouteCount, themeColors),
+    arcs: buildArcs(records, minRouteCount, themeColors, paletteOverride),
     points: buildAirportPoints(flights),
   };
 }
@@ -208,22 +273,39 @@ const HIGHLIGHT_COLOR: [number, number, number, number] = [245, 158, 11, 255];
 // How many alpha units to keep for dimmed routes (out of 255)
 const DIM_ALPHA = 18;
 
+/**
+ * Below this zoom, IATA labels are hidden — at low zoom levels (world view)
+ * dozens of three-letter codes overlap into illegible noise. The marker
+ * dots stay visible, so users still see where airports are. Above this
+ * threshold there's enough screen space for the labels to read cleanly.
+ */
+const LABEL_VISIBILITY_MIN_ZOOM = 4;
+
+/**
+ * Build the deck.gl layer instances for routes mode from already-computed
+ * arc + point + upcoming-marker data. Caller is expected to memoize
+ * `buildRouteData()`'s output separately with stable deps (flights /
+ * minRouteCount / themeColors / paletteOverride) so selection changes don't
+ * re-trigger the expensive data build — only the layer construction below,
+ * which is cheap.
+ */
 export function createRoutesLayers(
-  flights: GeoJSONFeature[],
-  minRouteCount: number,
+  routeData: RouteData,
   onFlightClick?: (flightId: string | string[]) => void,
   themeColors?: MapLayerColors,
   arcHeight: number = 1,
   selectedIds: string[] = [],
-  onAirportClick?: (iata: string, lon: number, lat: number) => void
+  onAirportClick?: (iata: string, lon: number, lat: number) => void,
+  zoom: number = 5
 ): Layer[] {
-  const { arcs, points } = buildRouteData(flights, minRouteCount, themeColors);
-  const dotRgb = themeColors?.airportDot ?? ([232, 160, 69] as [number, number, number]);
+  const { arcs, points } = routeData;
+  const dotRgb = themeColors?.airportDot ?? ([240, 169, 71] as [number, number, number]);
 
   const selectedSet = new Set(selectedIds);
   const hasSelection = selectedIds.length > 0;
   // Airport opacity: dim when a route is highlighted so pulse rings stand out
   const airportOpacity = hasSelection ? 0.15 : 1;
+  const labelsVisible = zoom >= LABEL_VISIBILITY_MIN_ZOOM;
 
   // Three arc datasets:
   //   - regular: no upcoming flight — heatmap colour through plain ArcLayer.
@@ -353,7 +435,9 @@ export function createRoutesLayers(
       : undefined,
   });
 
-  // IATA code labels — appear above each marker
+  // IATA code labels — appear above each marker. Hidden at low zoom levels
+  // where overlapping codes become illegible; the marker dots remain visible
+  // so users still see airport locations.
   const labelLayer = new TextLayer<PointDatum>({
     id: "routes-labels",
     data: points,
@@ -366,12 +450,14 @@ export function createRoutesLayers(
     backgroundPadding: [5, 3, 5, 3],
     fontFamily: '"Inter", system-ui, monospace',
     fontWeight: "bold",
+    fontSettings: { sdf: true },
     getPixelOffset: [0, -20],
     outlineWidth: 2,
     outlineColor: [0, 0, 0, 120],
     billboard: true,
     characterSet: "auto",
     opacity: airportOpacity,
+    visible: labelsVisible,
     pickable: !!onAirportClick,
     onClick: onAirportClick
       ? ({ object }) => {

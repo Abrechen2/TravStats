@@ -85,19 +85,19 @@ export function AirportTooltip({
     <TooltipContainer
       screenX={screenX}
       screenY={screenY}
-      borderColor="rgba(232,160,69,0.6)"
+      borderColor="rgba(240,169,71,0.6)"
       minWidth="220px"
       maxWidth="300px"
     >
       {/* IATA + ICAO + name */}
       <div className="flex items-baseline gap-2 mb-1">
-        <span className="font-mono font-bold text-base" style={{ color: "rgb(232,160,69)" }}>
+        <span className="font-mono font-bold text-base" style={{ color: "rgb(240,169,71)" }}>
           {iata}
         </span>
         {stats.icao && (
           <span
             className="font-mono text-xs px-1 rounded"
-            style={{ background: "rgba(232,160,69,0.12)", color: "rgba(232,160,69,0.7)" }}
+            style={{ background: "rgba(240,169,71,0.12)", color: "rgba(240,169,71,0.7)" }}
           >
             {stats.icao}
           </span>
@@ -136,8 +136,8 @@ export function AirportTooltip({
                 <span
                   className="ml-3 px-1.5 py-0.5 rounded text-xs font-medium"
                   style={{
-                    background: "rgba(232,160,69,0.15)",
-                    color: "rgb(232,160,69)",
+                    background: "rgba(240,169,71,0.15)",
+                    color: "rgb(240,169,71)",
                   }}
                 >
                   ×{count}

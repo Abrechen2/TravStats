@@ -107,5 +107,74 @@
   "routeDetails": "Route-Details",
   "tripDetails": "Trip-Details",
   "flown": "geflogen",
-  "flightsOnRoute": "Flüge auf dieser Route"
+  "flightsOnRoute": "Flüge auf dieser Route",
+  "tabStrip": {
+    "label": "Bereichswahl",
+    "tabs": {
+      "all": "Alle",
+      "flight": "Flüge",
+      "cruise": "Kreuzfahrten",
+      "poi": "POIs"
+    }
+  },
+  "addPicker": {
+    "button": "Hinzufügen",
+    "flight": "Flug",
+    "cruise": "Kreuzfahrt",
+    "poi": "POI"
+  },
+  "controls": {
+    "mode": "Modus",
+    "filter": "Filter",
+    "addPerTab": {
+      "flight": "Flug hinzufügen",
+      "cruise": "Kreuzfahrt hinzufügen",
+      "poi": "POI hinzufügen"
+    }
+  },
+  "filter": {
+    "title": "Filter",
+    "year": "Jahr",
+    "allYears": "Alle Jahre",
+    "domains": "Domains",
+    "reset": "Filter zurücksetzen",
+    "activeDomainCount": "{{count}} von {{total}} Domains aktiv",
+    "timeFrom": "Von",
+    "timeTo": "Bis",
+    "airline": "Airline",
+    "cruiseLine": "Reederei",
+    "category": "Kategorie"
+  },
+  "modes": {
+    "overview": "Übersicht",
+    "heatmap": "Heatmap",
+    "journey": "Reise",
+    "globe": "Globus",
+    "routes": "Routen",
+    "stats-map": "Flughafen-Frequenz",
+    "trips": "Trips",
+    "sea-routes": "Seerouten",
+    "itinerary": "Itinerar",
+    "port-frequency": "Hafen-Frequenz",
+    "markers": "Marker"
+  },
+  "poi": {
+    "title": "POIs kommen bald",
+    "disabled": "Die POI-Domain ist noch nicht aktiviert. Schalte sie unter Einstellungen → Domains frei.",
+    "enabledEmpty": "Noch keine POIs erfasst.",
+    "goToSettings": "Zu den Einstellungen"
+  },
+  "sidebar": {
+    "cruises": "Kreuzfahrten",
+    "activity": "Aktivität",
+    "flights": "Flüge",
+    "ports": "Häfen",
+    "emptyCruises": "Noch keine Kreuzfahrten.",
+    "emptyActivity": "Noch keine Aktivität.",
+    "filters": {
+      "all": "Alle",
+      "flight": "Flüge",
+      "cruise": "Kreuzfahrten"
+    }
+  }
 }

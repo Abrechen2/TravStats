@@ -31,20 +31,25 @@ interface AchievementPopupProps {
   onClose: () => void;
 }
 
+// Tier gradients stay metal/material-themed (bronze, silver, gold, platinum,
+// diamond). Platinum + diamond previously leaked POI-cyan / cruise-blue and
+// Hotel-purple / pink — per BRAND.md §3 domain hexes never leave their
+// domain. Replaced with cool neutral tones so the metal-tier semantic still
+// reads without claiming domain colour.
 const tierColors = {
   bronze: "from-orange-700 to-orange-500",
   silver: "from-gray-400 to-gray-300",
   gold: "from-yellow-500 to-yellow-400",
-  platinum: "from-cyan-400 to-blue-500",
-  diamond: "from-purple-500 to-pink-500",
+  platinum: "from-slate-400 to-slate-200",
+  diamond: "from-slate-200 to-white",
 };
 
 const tierGlow = {
   bronze: "shadow-orange-500/50",
   silver: "shadow-gray-400/50",
   gold: "shadow-yellow-500/50",
-  platinum: "shadow-cyan-500/50",
-  diamond: "shadow-purple-500/50",
+  platinum: "shadow-slate-300/50",
+  diamond: "shadow-white/40",
 };
 
 export default function AchievementPopup({

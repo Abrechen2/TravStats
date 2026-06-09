@@ -1,0 +1,18 @@
+{
+  "region": "river_rhone",
+  "name": "Rhône",
+  "meanderFactor": 1.1,
+  "anchors": [
+    { "name": "Chalon-sur-Saône", "lat": 46.7806, "lon": 4.8531 },
+    { "name": "Mâcon", "lat": 46.3069, "lon": 4.8281 },
+    { "name": "Lyon", "lat": 45.76, "lon": 4.84 },
+    { "name": "Vienne", "lat": 45.5253, "lon": 4.8742 },
+    { "name": "Tournon-sur-Rhône", "lat": 45.0681, "lon": 4.8336 },
+    { "name": "Valence", "lat": 44.9333, "lon": 4.8917 },
+    { "name": "Viviers", "lat": 44.4833, "lon": 4.6833 },
+    { "name": "Avignon", "lat": 43.9494, "lon": 4.8056 },
+    { "name": "Tarascon", "lat": 43.8056, "lon": 4.6611 },
+    { "name": "Beaucaire", "lat": 43.8067, "lon": 4.6403 },
+    { "name": "Arles", "lat": 43.6767, "lon": 4.6275 }
+  ]
+}

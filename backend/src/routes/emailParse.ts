@@ -2,6 +2,8 @@ import { Router, Response } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { emailParseLimiter } from '../middleware/rateLimit';
 import { parseBookingEmail } from '../services/bookingParser';
+import { parseCruiseBookingText } from '../services/cruiseBookingParser';
+import { resolveCruiseEntities } from '../services/cruiseEntityResolver';
 import { extractEmailFromFile } from '../services/emailExtractor';
 import { uploadEmailFile } from '../middleware/upload';
 import { z } from 'zod';
@@ -9,6 +11,7 @@ import logger from '../utils/logger';
 import fs from 'fs';
 import path from 'path';
 import { validateEmailFile } from '../utils/fileValidation';
+import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
 
 const router = Router();
 
@@ -21,6 +24,7 @@ const parseEmailSchema = z.object({
     (val) => !val || val.length <= 1000,
     { message: 'Subject too long (max 1000 characters)' }
   ),
+  domain: z.enum(PARSER_SUPPORTED_DOMAINS).optional().default('flight'),
 });
 
 /**
@@ -39,11 +43,30 @@ const parseEmailSchema = z.object({
 router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const parsed = parseEmailSchema.parse(req.body);
+
     const emailContent = parsed.emailContent;
     const subject = parsed.subject;
     const userId = req.userId;
 
-    logger.info(`[Email Parse] Parsing email for user ${userId}`);
+    logger.info({ userId, domain: parsed.domain }, '[Email Parse] Parsing email');
+
+    if (parsed.domain === 'cruise') {
+      const combined = subject ? `${subject}\n\n${emailContent}` : emailContent;
+      const cruiseResult = await parseCruiseBookingText(combined);
+      const resolved = await Promise.all(cruiseResult.cruises.map(resolveCruiseEntities));
+      return res.json({
+        cruises: resolved.map((r) => ({
+          input: r.input,
+          shipMatched: r.shipMatched,
+          unmatchedPorts: r.unmatchedPorts,
+        })),
+        parserUsed: cruiseResult.parserUsed,
+        ollamaAvailable: cruiseResult.ollamaAvailable,
+        text: emailContent,
+        subject: subject ?? undefined,
+        domain: 'cruise',
+      });
+    }
 
     const result = await parseBookingEmail(
       subject || undefined,
@@ -105,6 +128,22 @@ router.post(
         });
       }
 
+      // Domain discriminator (optional, defaults to 'flight').
+      // Multipart form-data: rawDomain comes as string from form field.
+      const rawDomain = typeof req.body?.domain === 'string' ? req.body.domain : 'flight';
+      const domainSchema = z.enum(PARSER_SUPPORTED_DOMAINS).optional().default('flight');
+      const domainParse = domainSchema.safeParse(rawDomain);
+      if (!domainParse.success) {
+        if (filePath && fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        return res.status(400).json({
+          error: 'Validation failed',
+          details: domainParse.error.errors,
+        });
+      }
+      const domainValue = domainParse.data;
+
       const userId = req.userId;
       filePath = file.path;
 
@@ -146,7 +185,35 @@ router.post(
         subject: extracted.subject,
         textLength: extracted.text.length,
         hasHtml: !!extracted.html,
+        domain: domainValue,
       }, '[Email Parse File] Email extracted from file');
+
+      if (domainValue === 'cruise') {
+        const combined = extracted.subject
+          ? `${extracted.subject}\n\n${extracted.text}`
+          : extracted.text;
+        const cruiseResult = await parseCruiseBookingText(combined);
+        const resolved = await Promise.all(cruiseResult.cruises.map(resolveCruiseEntities));
+
+        if (filePath && fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          logger.debug({ filePath }, '[Email Parse File] Temporary file deleted');
+        }
+
+        return res.json({
+          cruises: resolved.map((r) => ({
+            input: r.input,
+            shipMatched: r.shipMatched,
+            unmatchedPorts: r.unmatchedPorts,
+          })),
+          parserUsed: cruiseResult.parserUsed,
+          ollamaAvailable: cruiseResult.ollamaAvailable,
+          subject: extracted.subject,
+          text: extracted.text,
+          html: extracted.html ?? undefined,
+          domain: 'cruise',
+        });
+      }
 
       // Parse email with configured parser
       const result = await parseBookingEmail(

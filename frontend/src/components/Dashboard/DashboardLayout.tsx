@@ -1,0 +1,120 @@
+import { useState } from "react";
+import type { JSX, ReactNode } from "react";
+import { useTranslation } from "../../hooks/useTranslation";
+import { useDashboardRoute } from "../../hooks/useDashboardRoute";
+import { useEnabledDomains } from "../../hooks/useEnabledDomains";
+import { flightsApi } from "../../lib/api/flights";
+import { useToastStore } from "../../store/toastStore";
+import { logger } from "../../lib/logger";
+import NavigationBar from "../NavigationBar";
+import SimplifiedFlightFormV2 from "../SimplifiedFlightFormV2";
+import SpecialFlightModal from "../SpecialFlightModal";
+import { CruiseEditModal } from "../Cruise/CruiseEditModal";
+import { DomainTabStrip } from "./DomainTabStrip";
+import { DashboardControlsBar } from "./DashboardControlsBar";
+import { DashboardFilterDropdown } from "./DashboardFilterDropdown";
+import type { FlightInput } from "../../types";
+import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
+
+type AddableDomain = "flight" | "cruise" | "poi";
+
+interface DashboardLayoutProps {
+  children: ReactNode;
+  counts: { flight: number; cruise: number; poi: number };
+  /** Optional refetch hook called after a create-modal saves so the
+   * outer page can refresh counts / per-tab data without a navigation. */
+  onDataChanged?: () => void;
+}
+
+export function DashboardLayout({
+  children,
+  counts,
+  onDataChanged,
+}: DashboardLayoutProps): JSX.Element {
+  // Ensures the dashboard namespace is loaded for children that use t("dashboard:...")
+  const { t } = useTranslation(["dashboard", "flights"]);
+  const { tab, mode, setTab, setMode } = useDashboardRoute();
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [addingDomain, setAddingDomain] = useState<AddableDomain | null>(null);
+  const [showSpecialModal, setShowSpecialModal] = useState(false);
+  const { isEnabled } = useEnabledDomains();
+  const { addToast } = useToastStore();
+
+  const enabledDomains = {
+    flight: isEnabled("flight"),
+    cruise: isEnabled("cruise"),
+    poi: isEnabled("poi"),
+  };
+
+  const handleAdd = (pickedDomain?: AddableDomain): void => {
+    const target = pickedDomain ?? (tab === "all" ? null : (tab as AddableDomain));
+    if (target === "flight" || target === "cruise" || target === "poi") {
+      setAddingDomain(target);
+    }
+  };
+
+  const handleFlightCreate = async (
+    flight: FlightInput,
+    opts?: FlightSubmitOptions
+  ): Promise<void> => {
+    try {
+      await flightsApi.create(flight, opts);
+      addToast("success", t("flights:table.toast.updated"));
+      setAddingDomain(null);
+      onDataChanged?.();
+    } catch (error) {
+      logger.error("Failed to add flight from dashboard:", error);
+      throw error;
+    }
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      <NavigationBar />
+      <DomainTabStrip active={tab} counts={counts} enabled={enabledDomains} onSelect={setTab} />
+      <DashboardControlsBar
+        tab={tab}
+        mode={mode}
+        enabledDomains={enabledDomains}
+        onModeChange={setMode}
+        onFilterOpen={() => setFilterOpen((p) => !p)}
+        onAdd={handleAdd}
+      />
+      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+        {children}
+        <DashboardFilterDropdown tab={tab} open={filterOpen} onClose={() => setFilterOpen(false)} />
+      </div>
+
+      {addingDomain === "flight" && (
+        <SimplifiedFlightFormV2
+          onSubmit={handleFlightCreate}
+          onCancel={() => setAddingDomain(null)}
+          onPickSpecialFlight={() => {
+            setAddingDomain(null);
+            setShowSpecialModal(true);
+          }}
+        />
+      )}
+      <SpecialFlightModal
+        isOpen={showSpecialModal}
+        flight={null}
+        onClose={() => setShowSpecialModal(false)}
+        onSaved={() => {
+          setShowSpecialModal(false);
+          onDataChanged?.();
+        }}
+      />
+      {addingDomain === "cruise" && (
+        <CruiseEditModal
+          mode="create"
+          onClose={() => setAddingDomain(null)}
+          onSaved={() => {
+            setAddingDomain(null);
+            onDataChanged?.();
+          }}
+        />
+      )}
+      {/* POI: deliberately not wired — domain is disabled until V2. */}
+    </div>
+  );
+}

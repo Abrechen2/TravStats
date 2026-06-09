@@ -1,0 +1,31 @@
+name,imo,cruise_line,year_built,gross_tonnage,capacity,status
+AIDAnova,9781865,AIDA Cruises,2018,183900,6600,active
+AIDAcosma,9781877,AIDA Cruises,2021,183900,6600,active
+AIDAprima,9636262,AIDA Cruises,2016,125572,3300,active
+AIDAperla,9636274,AIDA Cruises,2017,125572,3300,active
+AIDAmar,9490052,AIDA Cruises,2012,71304,2192,active
+AIDAbella,9398888,AIDA Cruises,2008,69203,2192,active
+AIDAblu,9398876,AIDA Cruises,2010,71304,2192,active
+AIDAluna,9490040,AIDA Cruises,2009,71304,2192,active
+AIDAsol,9490038,AIDA Cruises,2011,71304,2192,active
+AIDAstella,9601132,AIDA Cruises,2013,71304,2192,active
+Mein Schiff 1,9783564,TUI Cruises,2018,111554,2894,active
+Mein Schiff 2,9834624,TUI Cruises,2019,111554,2894,active
+Mein Schiff 3,9641730,TUI Cruises,2014,99526,2506,active
+Mein Schiff 4,9678408,TUI Cruises,2015,99526,2506,active
+Mein Schiff 5,9710139,TUI Cruises,2016,99526,2534,active
+Mein Schiff 6,9753193,TUI Cruises,2017,99526,2534,active
+Mein Schiff 7,9790153,TUI Cruises,2024,111554,2894,active
+MSC World Europa,9803613,MSC Cruises,2022,215863,6762,active
+MSC Grandiosa,9803585,MSC Cruises,2019,181541,6334,active
+MSC Virtuosa,9803597,MSC Cruises,2021,181541,6334,active
+MSC Seaside,9745377,MSC Cruises,2017,153516,4540,active
+MSC Meraviglia,9760231,MSC Cruises,2017,171598,5714,active
+Costa Toscana,9781841,Costa Cruises,2022,185010,6554,active
+Costa Smeralda,9781839,Costa Cruises,2019,185010,6554,active
+Costa Fascinosa,9479744,Costa Cruises,2012,114147,3800,active
+Wonder of the Seas,9838583,Royal Caribbean International,2022,236857,6988,active
+Icon of the Seas,9838622,Royal Caribbean International,2024,250800,7600,active
+Carnival Celebration,9837785,Carnival Cruise Line,2022,183521,6631,active
+Norwegian Prima,9870553,Norwegian Cruise Line,2022,142500,3215,active
+Europa 2,9616230,Hapag-Lloyd Cruises,2013,42830,500,active

@@ -49,10 +49,10 @@ export default function AircraftRankingCard(): JSX.Element {
             to={`/aircraft/${encodeURIComponent(row.registration)}`}
             className="flex items-center gap-3 group"
           >
-            <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-5 overflow-hidden">
+            <div className="flex-1 rounded-full h-5 overflow-hidden" style={{ background: "var(--bg-elevated)" }}>
               <div
-                className="bg-emerald-500 dark:bg-emerald-400 h-full rounded-full transition-all"
-                style={{ width: `${(row.count / maxCount) * 100}%` }}
+                className="h-full rounded-full transition-all"
+                style={{ width: `${(row.count / maxCount) * 100}%`, background: "var(--accent)" }}
               />
             </div>
             <span

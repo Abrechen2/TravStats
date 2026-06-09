@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { Trip } from "../../types";
+import type { Trip, TripCategory, TripStatus } from "../../types";
 import TripCard from "./TripCard";
 import TripModal from "./TripModal";
 import DetectTripsBanner from "./DetectTripsBanner";
@@ -13,6 +13,27 @@ interface TripsTabProps {
   onTripsChange: () => void;
 }
 
+type StatusFilter = "all" | TripStatus;
+type CategoryFilter = "all" | TripCategory;
+
+const STATUS_OPTIONS: StatusFilter[] = ["all", "planned", "in_progress", "completed"];
+const CATEGORY_OPTIONS: CategoryFilter[] = [
+  "all",
+  "vacation",
+  "business",
+  "weekend",
+  "family",
+  "other",
+];
+
+const CATEGORY_ICON: Record<TripCategory, string> = {
+  vacation: "🏖",
+  business: "💼",
+  weekend: "🎒",
+  family: "👨‍👩‍👧",
+  other: "🗺",
+};
+
 export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.Element {
   const { t } = useTranslation(["trips"]);
   const addToast = useToastStore((s) => s.addToast);
@@ -21,9 +42,9 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Trip | null>(null);
 
-  const handleDelete = async (trip: Trip): Promise<void> => {
-    setDeleteTarget(trip);
-  };
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
+  const [search, setSearch] = useState("");
 
   const handleConfirmDelete = async (): Promise<void> => {
     if (!deleteTarget) return;
@@ -38,66 +59,172 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
     }
   };
 
-  const handleShowOnMap = (trip: Trip): void => {
-    navigate("/", { state: { visMode: "trip-routes", tripId: trip.id } });
+  const handleOpen = (trip: Trip): void => {
+    navigate(`/trips/${trip.id}`);
   };
 
-  return (
-    <div className="p-4">
-      <DetectTripsBanner onChange={onTripsChange} />
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-xs uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-          {t("trips:count", { count: trips.length })}
-        </p>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
-          style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
-        >
-          ＋ {t("trips:createTrip")}
-        </button>
-      </div>
+  // Sort: planned first, then in_progress, then completed by start date desc.
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return trips
+      .filter((trip) => {
+        if (statusFilter !== "all" && trip.status !== statusFilter) return false;
+        if (categoryFilter !== "all" && trip.category !== categoryFilter) return false;
+        if (q.length === 0) return true;
+        const haystack = [
+          trip.name,
+          trip.destinationLabel ?? "",
+          trip.originLabel ?? "",
+          ...trip.tags,
+          ...trip.companions,
+          ...trip.countries,
+        ]
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(q);
+      })
+      .sort((a, b) => {
+        const order: Record<TripStatus, number> = {
+          in_progress: 0,
+          planned: 1,
+          completed: 2,
+        };
+        const so = order[a.status] - order[b.status];
+        if (so !== 0) return so;
+        // For completed: newest first by startDate, falling back to createdAt
+        const at = a.startDate ?? a.createdAt;
+        const bt = b.startDate ?? b.createdAt;
+        return new Date(bt).getTime() - new Date(at).getTime();
+      });
+  }, [trips, statusFilter, categoryFilter, search]);
 
-      {trips.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-2xl mb-2">🗺</p>
-          <p className="font-medium" style={{ color: "var(--text-primary)" }}>
-            {t("trips:noTrips")}
+  const showFilters = trips.length >= 4;
+
+  return (
+    <div className="px-4 pb-12">
+      <div className="max-w-7xl mx-auto">
+        <DetectTripsBanner onChange={onTripsChange} />
+
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <p
+            className="text-xs uppercase tracking-wide"
+            style={{ color: "var(--text-muted)" }}
+          >
+            {trips.length === 0
+              ? t("trips:noTrips")
+              : t("trips:count", { count: filtered.length })}
+            {filtered.length !== trips.length && (
+              <span style={{ opacity: 0.7 }}> / {trips.length}</span>
+            )}
           </p>
-          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-            {t("trips:noTripsDesc")}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {trips.map((trip) => (
-            <TripCard
-              key={trip.id}
-              trip={trip}
-              onEdit={setEditingTrip}
-              onDelete={(tripToDelete) => void handleDelete(tripToDelete)}
-              onShowOnMap={handleShowOnMap}
-            />
-          ))}
-          {/* New trip placeholder card */}
           <button
             onClick={() => setShowCreateModal(true)}
-            className="rounded-xl border border-dashed flex flex-col items-center justify-center min-h-[200px] gap-2 transition-colors hover:border-[var(--accent)]/50"
-            style={{ borderColor: "var(--color-border)", background: "var(--bg-muted)" }}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
           >
-            <span className="text-3xl opacity-20">＋</span>
-            <span className="text-sm" style={{ color: "var(--text-muted)" }}>
-              {t("trips:newTrip")}
-            </span>
-            <span
-              className="text-xs text-center px-4"
-              style={{ color: "var(--text-muted)", opacity: 0.6 }}
-            >
-              {t("trips:newTripDesc")}
-            </span>
+            ＋ {t("trips:createTrip")}
           </button>
         </div>
-      )}
+
+        {showFilters && (
+          <div className="flex items-center gap-2 mb-5 flex-wrap">
+            <FilterGroup>
+              {STATUS_OPTIONS.map((opt) => (
+                <FilterButton
+                  key={opt}
+                  active={statusFilter === opt}
+                  onClick={() => setStatusFilter(opt)}
+                >
+                  {opt === "all" ? t("trips:filterBar.allStatuses") : t(`trips:status.${opt}`)}
+                </FilterButton>
+              ))}
+            </FilterGroup>
+            <FilterGroup>
+              {CATEGORY_OPTIONS.map((opt) => (
+                <FilterButton
+                  key={opt}
+                  active={categoryFilter === opt}
+                  onClick={() => setCategoryFilter(opt)}
+                >
+                  {opt === "all"
+                    ? t("trips:filterBar.allCategories")
+                    : `${CATEGORY_ICON[opt]} ${t(`trips:category.${opt}`)}`}
+                </FilterButton>
+              ))}
+            </FilterGroup>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("trips:filterBar.search")}
+              className="rounded-lg px-3 py-1.5 text-xs ml-auto"
+              style={{
+                background: "var(--bg-surface)",
+                border: "1px solid var(--color-border)",
+                color: "var(--text-primary)",
+                minWidth: 220,
+              }}
+            />
+          </div>
+        )}
+
+        {trips.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-2xl mb-2">🗺</p>
+            <p className="font-medium" style={{ color: "var(--text-primary)" }}>
+              {t("trips:noTrips")}
+            </p>
+            <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
+              {t("trips:noTripsDesc")}
+            </p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div
+            className="text-center py-12 rounded-xl"
+            style={{
+              background: "var(--bg-surface)",
+              border: "1px dashed var(--color-border)",
+              color: "var(--text-muted)",
+            }}
+          >
+            {t("trips:filterBar.noResults")}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filtered.map((trip) => (
+              <TripCard
+                key={trip.id}
+                trip={trip}
+                onOpen={handleOpen}
+                onEdit={setEditingTrip}
+                onDelete={setDeleteTarget}
+              />
+            ))}
+            {/* New trip placeholder card — only on the unfiltered list */}
+            {statusFilter === "all" && categoryFilter === "all" && search === "" && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="rounded-xl border border-dashed flex flex-col items-center justify-center min-h-[280px] gap-2 transition-colors hover:border-[var(--accent)]/50"
+                style={{
+                  borderColor: "var(--color-border)",
+                  background: "var(--bg-muted)",
+                }}
+              >
+                <span className="text-3xl opacity-20">＋</span>
+                <span className="text-sm" style={{ color: "var(--text-muted)" }}>
+                  {t("trips:newTrip")}
+                </span>
+                <span
+                  className="text-xs text-center px-4"
+                  style={{ color: "var(--text-muted)", opacity: 0.6 }}
+                >
+                  {t("trips:newTripDesc")}
+                </span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {(showCreateModal || editingTrip !== null) && (
         <TripModal
@@ -116,7 +243,8 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
 
       {deleteTarget !== null && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.6)" }}
           onKeyDown={(e) => {
             if (e.key === "Escape") setDeleteTarget(null);
           }}
@@ -125,9 +253,15 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
             className="w-full max-w-sm rounded-xl shadow-2xl p-6 space-y-4"
             role="dialog"
             aria-modal="true"
-            style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+            style={{
+              background: "var(--bg-surface)",
+              border: "1px solid var(--color-border)",
+            }}
           >
-            <h2 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
+            <h2
+              className="text-base font-semibold"
+              style={{ color: "var(--text-primary)" }}
+            >
               {t("trips:deleteTripConfirm", { name: deleteTarget.name })}
             </h2>
             <div className="flex justify-end gap-2">
@@ -140,8 +274,8 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
               </button>
               <button
                 onClick={() => void handleConfirmDelete()}
-                className="px-4 py-2 rounded-lg text-sm font-medium"
-                style={{ background: "var(--color-error, #f87171)", color: "#fff" }}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                style={{ background: "var(--danger, #f87171)" }}
               >
                 {t("trips:deleteTrip")}
               </button>
@@ -150,5 +284,39 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
         </div>
       )}
     </div>
+  );
+}
+
+function FilterGroup({ children }: { children: React.ReactNode }): JSX.Element {
+  return (
+    <div
+      className="flex gap-1 rounded-lg p-1"
+      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function FilterButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}): JSX.Element {
+  return (
+    <button
+      onClick={onClick}
+      className="px-3 py-1 rounded-md text-xs transition-colors"
+      style={{
+        background: active ? "var(--bg-muted)" : "transparent",
+        color: active ? "var(--text-primary)" : "var(--text-muted)",
+      }}
+    >
+      {children}
+    </button>
   );
 }

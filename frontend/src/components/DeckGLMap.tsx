@@ -1,21 +1,31 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import Map, { useControl, type MapRef, type MapLayerMouseEvent } from "react-map-gl/maplibre";
+import MapGL, { useControl, type MapRef, type MapLayerMouseEvent } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
-import { LightingEffect, AmbientLight, DirectionalLight } from "@deck.gl/core";
+import { createMarkerTooltip } from "./map/markerTooltip";
+import { LightingEffect } from "@deck.gl/core";
+import { useTranslation } from "../hooks/useTranslation";
 import type { Layer, MapViewState } from "@deck.gl/core";
-import type { GeoJSONFeature, Flight } from "../types";
-import type { VisMode } from "../types/visMode";
-import { createRoutesLayers } from "./layers/routesLayer";
+import type { Cruise, GeoJSONFeature, Flight } from "../types";
+import type { MapMode } from "./MapContainer3D";
+import { buildRouteData, createRoutesLayers } from "./layers/routesLayer";
 import { createHeatmapLayer } from "./layers/heatmapLayer";
-import { createHexagonLayer } from "./layers/hexagonLayer";
-import { createColumnsLayer } from "./layers/columnsLayer";
 import { createTripsLayer, buildTripsData, getTimeRange } from "./layers/tripsLayer";
-import { createContourLayer } from "./layers/contourLayer";
-import { createTripRoutesLayer } from "./layers/tripRoutesLayer";
+import { createSpecialFlightsLayers } from "./layers/specialFlightsLayer";
+import { SpecialFlightTooltip } from "./specialFlights/SpecialFlightTooltip";
+import { getSpecialTooltipAnchor } from "./specialFlights/specialTooltipAnchor";
+import {
+  createCruiseArcsLayer,
+  createCruiseArrowsLayer,
+  type CruiseGeometryMap,
+} from "./layers/cruiseArcsLayer";
+import { createCruisePortsLayer } from "./layers/cruisePortsLayer";
+import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
 import { TimeSlider } from "./TimeSlider";
 import { useThemeStore } from "../store/themeStore";
 import { MAP_LAYER_COLORS } from "../types/mapTheme";
 import { useFlightSelectionStore } from "../store/flightSelectionStore";
+import { useCruiseSelectionStore } from "../store/cruiseSelectionStore";
+import { CruiseTooltip } from "./CruiseTooltip";
 import { computeBbox } from "../utils/mapAnimationHelpers";
 import { usePlaneAnimation } from "../hooks/usePlaneAnimation";
 import { usePulseAnimation } from "../hooks/usePulseAnimation";
@@ -54,40 +64,44 @@ const INITIAL_VIEW_STATE: MapViewState = {
 
 const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
-// Lighting effect for 3D modes — creates shadows/highlights on hexagons and columns
-const ambientLight = new AmbientLight({ color: [255, 255, 255], intensity: 0.6 });
-const directionalLight = new DirectionalLight({
-  color: [255, 255, 255],
-  intensity: 1.8,
-  direction: [-2, -3, -1],
-});
-const lightingEffect = new LightingEffect({ ambientLight, directionalLight });
-
 interface DeckOverlayProps {
   layers: Layer[];
   effects: LightingEffect[];
+  getTooltip: ReturnType<typeof createMarkerTooltip>;
 }
 
-function DeckGLOverlay({ layers, effects }: DeckOverlayProps): null {
+function DeckGLOverlay({ layers, effects, getTooltip }: DeckOverlayProps): null {
   const overlay = useControl<MapboxOverlay>(
-    () => new MapboxOverlay({ layers, effects, pickingRadius: 5 }),
+    () =>
+      new MapboxOverlay({
+        layers,
+        effects,
+        pickingRadius: 5,
+        getTooltip,
+      }),
     { position: "top-left" }
   );
-  overlay.setProps({ layers, effects, pickingRadius: 5 });
+  // Push getTooltip on every render too so language switches propagate
+  // — MapboxOverlay caches the constructor's getTooltip otherwise.
+  overlay.setProps({ layers, effects, pickingRadius: 5, getTooltip });
   return null;
 }
 
 interface DeckGLMapProps {
   flights: GeoJSONFeature[];
-  visMode: VisMode;
+  visMode: MapMode;
   minRouteCount?: number;
   onFlightClick?: (flightId: string) => void;
   onRouteClick?: (flightIds: string[]) => void;
   onEdit?: (flight: Flight) => void;
-  tripList?: Array<{ id: string; color: string }>;
   flightList?: Flight[];
-  activeTripId?: string | null;
   onResetTrip?: () => void;
+  cruises?: Cruise[];
+  /** Extra deck.gl layers appended after all internally-built layers. */
+  extraLayers?: Layer[];
+  /** Override count-based heatmap palette for flight routes — see
+   *  MapContainer3D.flightRouteColor for the motivation. */
+  flightRouteColor?: [number, number, number];
 }
 
 export function DeckGLMap({
@@ -97,31 +111,94 @@ export function DeckGLMap({
   onFlightClick,
   onRouteClick,
   onEdit,
-  tripList,
   flightList,
-  activeTripId,
   onResetTrip,
+  cruises = [],
+  extraLayers,
+  flightRouteColor,
 }: DeckGLMapProps): JSX.Element {
+  const { t, i18n } = useTranslation(["map"]);
+  const locale = i18n.language || "de";
+  const getTooltip = useMemo(() => createMarkerTooltip(t, locale), [t, locale]);
   const mapTheme = useThemeStore((state) => state.mapTheme);
-  const themeColors = MAP_LAYER_COLORS[mapTheme];
+  // Heatmap palette is unchanged by flightRouteColor — the override
+  // is threaded explicitly into createRoutesLayers/buildRouteData so
+  // scheduled-cyan + historical-grey branches get overridden too.
+  // Other layers that read themeColors (airport dots, hex grid) keep
+  // the theme palette regardless of the flight monochrome mode.
+  const themeColors = useMemo(() => MAP_LAYER_COLORS[mapTheme], [mapTheme]);
   const mapRef = useRef<MapRef>(null);
 
   const [mapLoaded, setMapLoaded] = useState(false);
+  // Zoom is read from MapGL viewState on every move so layers can hide
+  // labels / decimate symbols at low zoom. Updated via the move handler
+  // to avoid an extra render path.
+  const [zoom, setZoom] = useState<number>(INITIAL_VIEW_STATE.zoom ?? 2);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [playing, setPlaying] = useState<boolean>(false);
   const deckClickedRef = useRef(false);
 
-  // Store subscription
-  const { selectedIds, selectedFlights, highlightMode, clearSelection, showDetails } =
-    useFlightSelectionStore();
+  // Real A* sea-route geometry for each cruise, indexed by cruise id.
+  // Fetched lazily after mount; the arcs layer renders Bezier until an
+  // entry lands here, then swaps to the computed route. Any fetch
+  // failure is logged via the api client's interceptor and left as
+  // a missing entry — the Bezier fallback keeps the UI working.
+  const [cruiseGeometry, setCruiseGeometry] = useState<Map<string, CruiseRouteFeatureCollection>>(
+    () => new Map()
+  );
 
-  // Auto-pitch: 3D layers need pitch > 0 to be visible
+  // Ref mirror of `cruiseGeometry` so the fetch loop can read the
+  // latest state without re-triggering the effect on every successful
+  // fetch. We only want to re-run when the cruise list itself changes.
+  const cruiseGeometryRef = useRef<Map<string, CruiseRouteFeatureCollection>>(cruiseGeometry);
   useEffect(() => {
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-    const is3D = visMode === "hexagon" || visMode === "columns";
-    map.easeTo({ pitch: is3D ? 45 : 0, duration: 600 });
-  }, [visMode]);
+    cruiseGeometryRef.current = cruiseGeometry;
+  }, [cruiseGeometry]);
+
+  useEffect(() => {
+    if (cruises.length === 0) return;
+    let cancelled = false;
+    // Single batch round-trip for all cruise geometries. Server returns
+    // a {[id]: FeatureCollection} map; we merge into local state. The
+    // server cache makes repeat calls (mode switches, refilters) cheap.
+    // Anything already in state is filtered out so we never re-fetch.
+    const run = async (): Promise<void> => {
+      const missingIds = cruises
+        .map((c) => c.id)
+        .filter((id) => !cruiseGeometryRef.current.has(id));
+      if (missingIds.length === 0) return;
+      try {
+        const batch = await cruiseApi.getGeometryBatch(missingIds);
+        if (cancelled) return;
+        setCruiseGeometry((prev) => {
+          const next = new Map(prev);
+          for (const [id, fc] of batch.entries()) {
+            if (!next.has(id)) next.set(id, fc);
+          }
+          return next;
+        });
+      } catch {
+        // Swallow — interceptor handles logging. Bezier fallback remains.
+      }
+    };
+    void run();
+    return (): void => {
+      cancelled = true;
+    };
+  }, [cruises]);
+
+  // Per-field selectors. Bare `useFlightSelectionStore()` would re-render
+  // the map on every field change in the store; with selectors we only
+  // re-render when the specific field this component reads changes.
+  const selectedIds = useFlightSelectionStore((s) => s.selectedIds);
+  const selectedFlights = useFlightSelectionStore((s) => s.selectedFlights);
+  const highlightMode = useFlightSelectionStore((s) => s.highlightMode);
+  const clearSelection = useFlightSelectionStore((s) => s.clearSelection);
+  const showDetails = useFlightSelectionStore((s) => s.showDetails);
+  const selectedCruiseId = useCruiseSelectionStore((s) => s.selectedCruiseId);
+  const selectedCruise = useCruiseSelectionStore((s) => s.selectedCruise);
+  const setCruiseSelection = useCruiseSelectionStore((s) => s.setSelection);
+  const clearCruiseSelection = useCruiseSelectionStore((s) => s.clearSelection);
 
   // Reset playing state when leaving trips mode (Bug 3)
   useEffect(() => {
@@ -224,6 +301,14 @@ export function DeckGLMap({
     moveRafRef.current = requestAnimationFrame(() => {
       moveRafRef.current = null;
       recomputeAllPositions();
+      const map = mapRef.current?.getMap();
+      if (map) {
+        const z = map.getZoom();
+        // Snap to integer to avoid re-rendering layers on every fractional
+        // zoom tick — only the threshold crossing matters for label visibility.
+        const snapped = Math.round(z);
+        setZoom((prev) => (prev === snapped ? prev : snapped));
+      }
     });
   }, [recomputeAllPositions]);
 
@@ -254,11 +339,20 @@ export function DeckGLMap({
         tooltipGeoRef.current = { mode: "group", points: pts };
       } else {
         const f = selectedFlights[0];
-        if (f.depLon == null || f.arrLon == null || f.depLat == null || f.arrLat == null) return;
-        tooltipGeoRef.current = {
-          mode: "single",
-          points: [[(f.depLon + f.arrLon) / 2, (f.depLat + f.arrLat) / 2]],
-        };
+        // Special flights anchor off event/pattern coords when regular
+        // dep/arr coords would make the tooltip float over empty ocean
+        // (e.g. eclipse chase mid-Atlantic, ZeroG hold pattern).
+        if (f.specialType) {
+          const anchor = getSpecialTooltipAnchor(f);
+          if (!anchor) return;
+          tooltipGeoRef.current = { mode: "single", points: [anchor] };
+        } else {
+          if (f.depLon == null || f.arrLon == null || f.depLat == null || f.arrLat == null) return;
+          tooltipGeoRef.current = {
+            mode: "single",
+            points: [[(f.depLon + f.arrLon) / 2, (f.depLat + f.arrLat) / 2]],
+          };
+        }
       }
 
       recomputeAllPositions();
@@ -303,60 +397,117 @@ export function DeckGLMap({
     [clearSelection]
   );
 
+  // Heavy data build extracted from the layer useMemo so selection changes
+  // (which only need to re-style the existing arcs) don't re-aggregate
+  // flights into routes. Deps are deliberately limited to fields that
+  // actually affect arc/point geometry + base color.
+  const routeData = useMemo(
+    () => buildRouteData(flights, minRouteCount, themeColors, flightRouteColor),
+    [flights, minRouteCount, themeColors, flightRouteColor]
+  );
+
+  // Standalone layer set for Sonder-Flüge — rendered on top of the
+  // normal route layers in "routes" mode so rundowns, eclipse chases,
+  // ZeroG and rocket-launch flights get a distinct visual language
+  // instead of a garbage-collapsed arc from airport to itself. Per the
+  // V2 architectural call, special-flights are an overlay, NOT a new
+  // MapMode.
+  const specialFlightLayers = useMemo(
+    () =>
+      createSpecialFlightsLayers(
+        (flightList ?? []).filter((f) => !!f.specialType),
+        (id) => handleFlightClick(id)
+      ),
+    [flightList, handleFlightClick]
+  );
+
   const layers = useMemo((): Layer[] => {
+    let base: Layer[];
     switch (visMode) {
       case "routes":
-        return createRoutesLayers(
-          flights,
-          minRouteCount,
-          handleFlightClick,
-          themeColors,
-          0.3,
-          selectedIds,
-          handleAirportClick
-        );
+        base = [
+          ...createRoutesLayers(
+            routeData,
+            handleFlightClick,
+            themeColors,
+            0.3,
+            selectedIds,
+            handleAirportClick,
+            zoom
+          ),
+          ...specialFlightLayers,
+        ];
+        break;
       case "heatmap":
-        return [createHeatmapLayer(flights)];
-      case "hexagon":
-        return [createHexagonLayer(flights, themeColors)];
-      case "columns":
-        return [createColumnsLayer(flights, themeColors)];
+        base = [createHeatmapLayer(flights)];
+        break;
       case "trips":
-        return [createTripsLayer(trips, currentTime)];
-      case "contour":
-        return [createContourLayer(flights)];
-      case "trip-routes":
-        return createTripRoutesLayer(
-          flightList ?? [],
-          tripList ?? [],
-          activeTripId,
-          handleFlightClick,
-          selectedIds,
-          handleAirportClick
-        );
+        base = [createTripsLayer(trips, currentTime)];
+        break;
       default:
-        return [];
+        // "globe" is handled by MapContainer3D (GlobeView); DeckGLMap is not
+        // rendered in that mode. All other values are exhaustively covered above.
+        base = [];
     }
+
+    // Cruise arcs + ports are supplemental overlays — always on when cruise
+    // data is present. Gated upstream by the cruise domain being enabled.
+    // The arcs layer splines the coarse waypoints from
+    // /cruises/:id/geometry into smooth curves; until the fetch resolves
+    // for a given cruise, each leg falls back to a 2-vertex direct chord.
+    const geometryMap: CruiseGeometryMap = cruiseGeometry;
+    const arcs = createCruiseArcsLayer(
+      cruises,
+      geometryMap,
+      selectedCruiseId,
+      (cruiseId: string) => {
+        const cruise = cruises.find((c) => c.id === cruiseId);
+        if (cruise) setCruiseSelection(cruise);
+      },
+      { zoom }
+    );
+    const arrows = createCruiseArrowsLayer(cruises, geometryMap, selectedCruiseId, { zoom });
+    const ports = createCruisePortsLayer(cruises, zoom);
+
+    // Split cruise visuals into a "below" group (arcs/arrows render
+    // beneath flight arcs and airport markers) and an "above" group
+    // (port halo/dot/label sit on top of everything). Without this
+    // split cruise paths drew over airport dots at every crossing,
+    // visually clipping the dots.
+    const cruisePathsBelow: Layer[] = [
+      ...(arcs !== null ? [arcs] : []),
+      ...(arrows !== null ? [arrows] : []),
+    ];
+    const cruisePortsAbove: Layer[] = ports ?? [];
+
+    return [
+      ...cruisePathsBelow,
+      ...base,
+      ...cruisePortsAbove,
+      ...(extraLayers ?? []),
+    ];
   }, [
     visMode,
     flights,
-    minRouteCount,
+    routeData,
     trips,
-    tripList,
-    flightList,
-    activeTripId,
     currentTime,
     handleFlightClick,
     handleAirportClick,
     themeColors,
     selectedIds,
+    selectedCruiseId,
+    setCruiseSelection,
+    cruises,
+    cruiseGeometry,
+    extraLayers,
+    zoom,
+    specialFlightLayers,
   ]);
 
-  // Only enable lighting for 3D modes where it makes a visual difference
-  const effects = useMemo(
-    () => (visMode === "hexagon" || visMode === "columns" ? [lightingEffect] : []),
-    [visMode]
-  );
+  // No 3D modes remain — lighting effect is unused but kept as empty array for
+  // the DeckGLOverlay API.
+  const effects: LightingEffect[] = [];
 
   const handleTimeChange = useCallback((value: number | ((prev: number) => number)): void => {
     setCurrentTime((prev) => (typeof value === "function" ? value(prev) : value));
@@ -393,11 +544,12 @@ export function DeckGLMap({
 
       // Background click — clear selection
       clearSelection();
+      clearCruiseSelection();
       setAirportIata(null);
       airportGeoRef.current = null;
       onResetTrip?.();
     },
-    [onRouteClick, handleAirportClick, clearSelection, onResetTrip]
+    [onRouteClick, handleAirportClick, clearSelection, clearCruiseSelection, onResetTrip]
   );
 
   // Interactive layer IDs for native fallback (enables cursor: pointer on hover)
@@ -407,8 +559,9 @@ export function DeckGLMap({
 
   return (
     <div className="relative w-full h-full">
-      <Map
+      <MapGL
         ref={mapRef}
+        reuseMaps
         initialViewState={INITIAL_VIEW_STATE}
         mapStyle={DARK_MAP_STYLE}
         style={{ position: "absolute", inset: "0" }}
@@ -419,7 +572,11 @@ export function DeckGLMap({
         cursor={nativeInteractiveIds ? "pointer" : undefined}
       >
         {webgl2Available && mapLoaded && (
-          <DeckGLOverlay layers={[...layers, ...pulseLayers, ...planeLayers]} effects={effects} />
+          <DeckGLOverlay
+            layers={[...layers, ...pulseLayers, ...planeLayers]}
+            effects={effects}
+            getTooltip={getTooltip}
+          />
         )}
         {!webgl2Available && visMode === "routes" && (
           <NativeRoutesLayer
@@ -428,7 +585,7 @@ export function DeckGLMap({
             selectedIds={selectedIds}
           />
         )}
-      </Map>
+      </MapGL>
 
       {/* Subtle grid overlay — glassmorphism only */}
       {mapTheme === "glassmorphism" && (
@@ -460,7 +617,7 @@ export function DeckGLMap({
           flights={selectedFlights}
           screenX={tooltipPos.x}
           screenY={tooltipPos.y}
-          mode={visMode === "trip-routes" ? "trip-routes" : "routes"}
+          mode="routes"
           onClose={() => {
             clearSelection();
             setTooltipVisible(false);
@@ -468,29 +625,43 @@ export function DeckGLMap({
           }}
           onShowDetails={() => {
             setTooltipVisible(false);
-            showDetails(
-              selectedFlights,
-              visMode === "trip-routes" ? "trip-details" : "route-details"
-            );
+            showDetails(selectedFlights, "route-details");
           }}
         />
       )}
 
-      {tooltipVisible && highlightMode !== "group" && selectedFlights.length > 0 && (
-        <MapTooltip
-          flight={selectedFlights[0]}
-          screenX={tooltipPos.x}
-          screenY={tooltipPos.y}
-          onEdit={(flight) => {
-            clearSelection();
-            onEdit?.(flight);
-          }}
-          onClose={() => {
-            clearSelection();
-            setTooltipVisible(false);
-          }}
-        />
-      )}
+      {tooltipVisible &&
+        highlightMode !== "group" &&
+        selectedFlights.length > 0 &&
+        (selectedFlights[0].specialType ? (
+          <SpecialFlightTooltip
+            flight={selectedFlights[0]}
+            screenX={tooltipPos.x}
+            screenY={tooltipPos.y}
+            onEdit={(flight) => {
+              clearSelection();
+              onEdit?.(flight);
+            }}
+            onClose={() => {
+              clearSelection();
+              setTooltipVisible(false);
+            }}
+          />
+        ) : (
+          <MapTooltip
+            flight={selectedFlights[0]}
+            screenX={tooltipPos.x}
+            screenY={tooltipPos.y}
+            onEdit={(flight) => {
+              clearSelection();
+              onEdit?.(flight);
+            }}
+            onClose={() => {
+              clearSelection();
+              setTooltipVisible(false);
+            }}
+          />
+        ))}
 
       {airportIata && (
         <AirportTooltip
@@ -503,6 +674,10 @@ export function DeckGLMap({
             airportGeoRef.current = null;
           }}
         />
+      )}
+
+      {selectedCruise !== null && (
+        <CruiseTooltip cruise={selectedCruise} onClose={clearCruiseSelection} />
       )}
 
       {!webgl2Available && (

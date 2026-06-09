@@ -222,3 +222,81 @@ export const uploadEmailFile = multer({
     fileSize: FILE_LIMITS.EMAIL_MAX_SIZE,
   },
 });
+
+// =============== Trip photos (iter 7) ===============
+
+const TRIP_PHOTO_DIR = path.join(__dirname, '../../uploads/trip-photos');
+
+try {
+  if (!fs.existsSync(TRIP_PHOTO_DIR)) {
+    fs.mkdirSync(TRIP_PHOTO_DIR, { recursive: true });
+  }
+} catch (error: unknown) {
+  const errMsg = error instanceof Error ? error.message : String(error);
+  logger.warn({
+    operation: 'upload_trip_photo_dir_creation_failed',
+    message: `Could not create trip photo directory: ${TRIP_PHOTO_DIR}`,
+    context: { directory: TRIP_PHOTO_DIR, error: errMsg },
+  });
+}
+
+const tripPhotoStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, TRIP_PHOTO_DIR);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+    const ext = path.extname(file.originalname).toLowerCase();
+    const basename = path.basename(file.originalname, ext);
+    const sanitized = basename.replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 40);
+    cb(null, `${uniqueSuffix}-${sanitized}${ext}`);
+  },
+});
+
+const tripPhotoFilter = (
+  _req: Express.Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback,
+): void => {
+  const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+  if (!allowed.includes(file.mimetype)) {
+    return cb(new Error(`Invalid image type. Allowed: ${allowed.join(', ')}`));
+  }
+  cb(null, true);
+};
+
+export const uploadTripPhotos = multer({
+  storage: tripPhotoStorage,
+  fileFilter: tripPhotoFilter,
+  limits: {
+    fileSize: FILE_LIMITS.TRIP_PHOTO_MAX_SIZE,
+    files: FILE_LIMITS.TRIP_PHOTO_MAX_COUNT,
+  },
+});
+
+export const uploadTripCover = multer({
+  storage: tripPhotoStorage,
+  fileFilter: tripPhotoFilter,
+  limits: {
+    fileSize: FILE_LIMITS.TRIP_PHOTO_MAX_SIZE,
+  },
+});
+
+export function getTripPhotoDir(): string {
+  return TRIP_PHOTO_DIR;
+}
+
+export function deleteTripPhotoFile(filename: string): void {
+  const filePath = path.join(TRIP_PHOTO_DIR, path.basename(filename));
+  if (fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath);
+    } catch (error) {
+      logger.warn({
+        operation: 'upload_trip_photo_delete_error',
+        message: `Failed to delete trip photo file: ${filename}`,
+        context: { filename, error: error instanceof Error ? error.message : 'Unknown error' },
+      });
+    }
+  }
+}

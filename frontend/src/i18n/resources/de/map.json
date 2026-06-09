@@ -49,10 +49,80 @@
     "autoRotation": "Auto-Rotation",
     "timesFlown": "{{count}}x geflogen",
     "flight_one": "Flug",
-    "flight_other": "Flüge"
+    "flight_other": "Flüge",
+    "antipodalSimplified_one": "{{count}} antipodale Route flach dargestellt",
+    "antipodalSimplified_other": "{{count}} antipodale Routen flach dargestellt",
+    "recenter": "Zentrieren",
+    "recenterHint": "Standardansicht wiederherstellen",
+    "openLastFlight": "Letzten Flug öffnen",
+    "weak": "Geschätzte Route",
+    "weakHint": "Mindestens ein Flug ohne IATA-Code wurde anhand der Koordinaten zugeordnet — die Aggregation ist möglicherweise unscharf",
+    "shipMarkers": "Schiffsmarker",
+    "shipMarkersHint": "Hohe Säule an der aktuellen Position jeder sichtbaren Kreuzfahrt",
+    "performance": "Performance",
+    "performanceHint": "Geringere Detailstufe für mehr FPS auf schwächerer Hardware",
+    "performanceAuto": "Auto",
+    "performanceOn": "Lite",
+    "performanceOff": "Voll",
+    "stats": {
+      "title": "Sichtbar",
+      "flights": "Flüge",
+      "routes": "Routen",
+      "flightKm": "Flugstrecke",
+      "cruises": "Kreuzfahrten",
+      "ports": "Häfen",
+      "top": "Top"
+    },
+    "coachmark": {
+      "title": "Willkommen auf dem Globus",
+      "pan": "Ziehen, um die Erde zu drehen",
+      "zoom": "Mausrad zum Zoomen",
+      "click": "Klick auf Marker oder Routen für Details",
+      "autoRotate": "Auto-Rotation lässt den Globus selbst drehen",
+      "dismiss": "Verstanden, los geht's"
+    },
+    "quartileFilterHint": "Klick: nur dieses Häufigkeitsband zeigen",
+    "quartileFilterClear": "Filter zurücksetzen",
+    "pinned": {
+      "lastFlight": "Letzter Flug",
+      "longestRoute": "Längste Strecke",
+      "longestPortCall": "Längster Anlauf",
+      "topAirline": "Top Linie",
+      "topAircraft": "Flugzeug",
+      "country": "Land",
+      "region": "Region",
+      "ships": "Schiffe",
+      "totalKm": "{{count}}× · {{km}} km",
+      "portsLabel": "Häfen",
+      "seaDaysLabel": "Seetage",
+      "embark": "Start",
+      "debark": "Ende",
+      "openCruise": "Cruise öffnen",
+      "durationHours": "{{h}} h {{m}} min"
+    },
+    "timeSlider": {
+      "title": "Zeitachse",
+      "modeOff": "Aus",
+      "modeLive": "Abspielen",
+      "modeFilter": "Filter",
+      "play": "Abspielen",
+      "pause": "Pause",
+      "speed": "Geschw.",
+      "daysPerSec": "{{n}} T/s",
+      "rangeStart": "Von",
+      "rangeEnd": "Bis",
+      "visible": "Sichtbar",
+      "flights": "Flüge",
+      "cruises": "Kreuzfahrten",
+      "noData": "Keine datierten Reisen"
+    }
   },
   "infoPill": {
     "flights": "Flüge",
     "routes": "Routen"
+  },
+  "tooltip": {
+    "lastVisit": "Letzter Besuch",
+    "lastCall": "Letzter Anlauf"
   }
 }

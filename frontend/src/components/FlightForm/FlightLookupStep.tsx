@@ -3,6 +3,7 @@ import HelpIcon from "../Help/HelpIcon";
 import { useTranslation } from "../../hooks/useTranslation";
 import { GlobeLoader } from "../GlobeLoader";
 import type { ParsedBooking } from "../../types";
+import { isCruiseEmailResult, isCruisePdfResult } from "../../lib/api/parse";
 
 const BoardingPassScanner = lazy(() => import("../BoardingPassScanner"));
 const EmailImportTab = lazy(() => import("../import/EmailImportTab"));
@@ -35,6 +36,10 @@ export interface FlightLookupStepProps {
     data: { subject?: string; text?: string; html?: string } | undefined
   ) => void;
   setShowFlightReview: (v: boolean) => void;
+  // Optional: launches SpecialFlightModal. When provided, a "Sonder-Flug"
+  // card appears below the Boarding Pass card. The parent is responsible
+  // for closing this form and opening the special-flight modal.
+  onPickSpecialFlight?: () => void;
 }
 
 export default function FlightLookupStep({
@@ -60,23 +65,36 @@ export default function FlightLookupStep({
   setParserProvider,
   setOriginalEmailData,
   setShowFlightReview,
+  onPickSpecialFlight,
 }: FlightLookupStepProps): JSX.Element {
-  const { t } = useTranslation(["flights", "common"]);
+  const { t } = useTranslation(["flights", "common", "specialFlights"]);
 
   return (
     <div className="space-y-4">
-      {/* Email Import - Beste Option */}
-      <div className="bg-gradient-to-r from-green-900 to-teal-900 border-2 border-green-600 shadow-lg shadow-green-900/50 rounded-xl p-6 mb-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-green-900/70 ring-2 ring-green-500/30">
+      {/* Email Import — "Beste Option" callout. Per BRAND.md §2 recommended /
+          preferred callouts use brand amber, not green. */}
+      <div
+        className="rounded-xl p-6 mb-6 transition-all duration-300 hover:scale-[1.02]"
+        style={{
+          background:
+            "linear-gradient(to right, var(--accent-soft), rgba(240, 169, 71, 0.04))",
+          border: "2px solid var(--accent)",
+          boxShadow: "0 8px 24px rgba(240, 169, 71, 0.18)",
+        }}
+      >
         <div className="flex items-start gap-4">
-          {/* Badge und Icon Bereich */}
           <div className="flex flex-col items-start gap-2 flex-shrink-0">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-yellow-500 text-[var(--text-primary)] shadow-md">
+            <span
+              className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold shadow-md"
+              style={{ background: "var(--accent)", color: "#0d1117" }}
+            >
               ⭐ {t("flights:form.email.bestOption")}
             </span>
-            <div className="text-4xl text-green-300">📧</div>
+            <div className="text-4xl" style={{ color: "var(--accent)" }}>
+              📧
+            </div>
           </div>
 
-          {/* Content Bereich */}
           <div className="flex-1 min-w-0">
             <h3 className={`font-bold text-2xl ${textClass} mb-2`}>
               {t("flights:form.email.title")}
@@ -84,9 +102,12 @@ export default function FlightLookupStep({
             <p className={`text-base ${mutedTextClass} mb-4 font-medium`}>
               {t("flights:form.email.description")}
             </p>
-            <div className={`space-y-2 mb-4`}>
-              <p className="text-sm text-green-300 font-semibold flex items-center gap-2">
-                <span className="text-lg text-green-400">✓</span>
+            <div className="space-y-2 mb-4">
+              <p
+                className="text-sm font-semibold flex items-center gap-2"
+                style={{ color: "var(--accent)" }}
+              >
+                <span className="text-lg">✓</span>
                 {t("flights:form.email.bestOptionDescription")}
               </p>
             </div>
@@ -113,8 +134,14 @@ export default function FlightLookupStep({
         </div>
       </div>
 
-      {/* Boarding Pass Scanner */}
-      <div className="bg-gradient-to-r from-[var(--bg-elevated)] to-[var(--bg-muted)] border border-blue-700 rounded-lg p-4">
+      <div
+        className="rounded-lg p-4"
+        style={{
+          background:
+            "linear-gradient(to right, var(--bg-elevated), var(--bg-muted))",
+          border: "1px solid var(--color-border)",
+        }}
+      >
         <div className="flex items-center justify-between">
           <div>
             <h3 className={`font-semibold text-lg ${textClass}`}>
@@ -129,6 +156,40 @@ export default function FlightLookupStep({
           </button>
         </div>
       </div>
+
+      {/* Special flight — same visual weight as Boarding Pass. Border uses
+          flight-domain accent (amber) since Sonder-Flug is a flight subtype,
+          not the hotel domain. Per BRAND.md §3: domain colours never bleed
+          into other domains. Dark-only (V2). */}
+      {onPickSpecialFlight && (
+        <div
+          className="rounded-lg p-4"
+          style={{
+            background:
+              "linear-gradient(to right, var(--bg-elevated), var(--bg-muted))",
+            border: "1px solid var(--accent)",
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span aria-hidden className="text-2xl">
+                ✨
+              </span>
+              <div>
+                <h3 className={`font-semibold text-lg ${textClass}`}>
+                  {t("specialFlights:chooser.title")}
+                </h3>
+                <p className={`text-sm ${mutedTextClass}`}>
+                  {t("specialFlights:chooser.description")}
+                </p>
+              </div>
+            </div>
+            <button type="button" onClick={onPickSpecialFlight} className="btn-primary">
+              {t("specialFlights:chooser.cta")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Flight Number Input */}
       <div>
@@ -208,12 +269,39 @@ export default function FlightLookupStep({
             </h3>
             <Suspense fallback={<div className="p-6 text-center text-slate-400">Lädt...</div>}>
               <EmailImportTab
-                onResult={(flights, subject, provider, text, html) => {
+                domain="flight"
+                acceptedExtensions={[".eml", ".msg", ".txt", ".pdf"]}
+                onEmailResult={(result) => {
+                  if (isCruiseEmailResult(result)) {
+                    setError(t("flights:form.noFlightsInEmail"));
+                    return;
+                  }
+                  const flights: ParsedBooking[] = result.flights ?? [];
                   if (flights.length > 0) {
                     setParsedFlights(flights);
                     setCurrentFlightIndex(0);
-                    setParserProvider(provider ?? "template");
-                    setOriginalEmailData({ subject, text, html });
+                    setParserProvider(result.provider ?? "template");
+                    setOriginalEmailData({
+                      subject: result.subject,
+                      text: result.text,
+                      html: result.html,
+                    });
+                    setShowEmailUploader(false);
+                    setShowFlightReview(true);
+                  } else {
+                    setError(t("flights:form.noFlightsInEmail"));
+                  }
+                }}
+                onPdfResult={(result) => {
+                  if (isCruisePdfResult(result)) {
+                    setError(t("flights:form.noFlightsInEmail"));
+                    return;
+                  }
+                  if (result.flights.length > 0) {
+                    setParsedFlights(result.flights);
+                    setCurrentFlightIndex(0);
+                    setParserProvider(result.parserUsed ?? "template");
+                    setOriginalEmailData(undefined);
                     setShowEmailUploader(false);
                     setShowFlightReview(true);
                   } else {

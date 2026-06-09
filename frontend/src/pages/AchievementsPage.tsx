@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { achievementsApi } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
@@ -6,8 +6,29 @@ import PageTransition from "../components/PageTransition";
 import { SkeletonAchievementGrid } from "../components/SkeletonLoader";
 import type { Achievement, AchievementSummary, LeaderboardEntry } from "../types";
 import { useTranslation } from "../hooks/useTranslation";
+import { useLocale } from "../hooks/useLocale";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
+import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import type { DomainKey } from "../shared/domains";
+
+/**
+ * Filter achievements down to the ones the user should currently see based on
+ * their enabled domains. `shared` achievements are always visible; anything
+ * else must match one of the user's enabled domains.
+ *
+ * Exported so it can be unit-tested in isolation without spinning up the full
+ * page (which pulls in NavigationBar, framer-motion, auth store, and other
+ * heavy dependencies).
+ */
+export function filterAchievementsByDomain(
+  achievements: Achievement[],
+  enabled: DomainKey[]
+): Achievement[] {
+  return achievements.filter(
+    (a) => a.domain === "shared" || enabled.includes(a.domain as DomainKey)
+  );
+}
 
 const tierTextColorValues: Record<string, string> = {
   bronze: "#f59e0b",
@@ -19,15 +40,32 @@ const tierTextColorValues: Record<string, string> = {
 
 export default function AchievementsPage(): JSX.Element {
   const { t } = useTranslation(["achievements", "common"]);
+  const locale = useLocale();
   const { addToast } = useToastStore();
+  const { enabled } = useEnabledDomains();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [summary, setSummary] = useState<AchievementSummary | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedTier, setSelectedTier] = useState<string>("all");
+  // Domain filter chip row. `all` shows everything the user's enabled domains
+  // allow; `shared` narrows to cross-domain achievements; otherwise a specific
+  // domain. Works on top of `visibleAchievements` which already hides disabled
+  // domains, so this filter is purely a user-picked narrowing.
+  const [selectedDomain, setSelectedDomain] = useState<"all" | "shared" | DomainKey>("all");
   const [showUnlockedOnly, setShowUnlockedOnly] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+
+  // Hide achievements that belong to domains the user hasn't enabled. `shared`
+  // achievements always stay visible. This is the baseline for category counts
+  // and the rendered grid — stats are derived from the backend summary, which
+  // already reflects what the user has unlocked across all domains, so we only
+  // filter the per-card rendering.
+  const visibleAchievements = useMemo(
+    () => filterAchievementsByDomain(achievements, enabled),
+    [achievements, enabled]
+  );
 
   const categoryNames: Record<string, string> = {
     explorer: t("achievements:categories.explorer"),
@@ -81,9 +119,10 @@ export default function AchievementsPage(): JSX.Element {
     }
   };
 
-  const filteredAchievements = achievements.filter((ach) => {
+  const filteredAchievements = visibleAchievements.filter((ach) => {
     if (selectedCategory !== "all" && ach.category !== selectedCategory) return false;
     if (selectedTier !== "all" && ach.tier !== selectedTier) return false;
+    if (selectedDomain !== "all" && ach.domain !== selectedDomain) return false;
     if (showUnlockedOnly && !ach.isUnlocked) return false;
     return true;
   });
@@ -106,7 +145,7 @@ export default function AchievementsPage(): JSX.Element {
           style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
         >
           <NavigationBar />
-          <div className="p-6 pb-24">
+          <div className="p-4 sm:p-6 pb-24">
             <div className="max-w-7xl mx-auto">
               <SkeletonAchievementGrid />
             </div>
@@ -124,7 +163,7 @@ export default function AchievementsPage(): JSX.Element {
           style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
         >
           <NavigationBar />
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <div className="max-w-6xl mx-auto">
               <div className="flex items-center gap-4 mb-6">
                 <button
@@ -134,7 +173,10 @@ export default function AchievementsPage(): JSX.Element {
                 >
                   {t("achievements:leaderboard.backToAchievements")}
                 </button>
-                <h1 className="text-4xl font-bold" style={{ color: "var(--text-primary)" }}>
+                <h1
+                  className="text-3xl sm:text-4xl font-bold"
+                  style={{ color: "var(--text-primary)" }}
+                >
                   🏆 {t("achievements:leaderboard.title")}
                 </h1>
               </div>
@@ -202,7 +244,7 @@ export default function AchievementsPage(): JSX.Element {
                         </div>
                         <div className="text-right">
                           <div className="text-2xl font-bold" style={{ color: "var(--accent)" }}>
-                            {entry.totalPoints.toLocaleString()}
+                            {entry.totalPoints.toLocaleString(locale)}
                           </div>
                           <div className="text-sm" style={{ color: "var(--text-muted)" }}>
                             {t("achievements:leaderboard.points")}
@@ -226,15 +268,18 @@ export default function AchievementsPage(): JSX.Element {
         style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
       >
         <NavigationBar />
-        <div className="p-6 pb-32">
+        <div className="p-4 sm:p-6 pb-32">
           <div className="max-w-7xl mx-auto">
             <div className="mb-6">
-              <h1 className="text-4xl font-bold" style={{ color: "var(--text-primary)" }}>
+              <h1
+                className="text-3xl sm:text-4xl font-bold"
+                style={{ color: "var(--text-primary)" }}
+              >
                 🏆 {t("achievements:title")}
               </h1>
             </div>
             {summary && (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div
                   className="rounded-xl p-6"
                   style={{
@@ -246,7 +291,7 @@ export default function AchievementsPage(): JSX.Element {
                     {t("achievements:summary.totalPoints")}
                   </div>
                   <div className="text-3xl font-bold" style={{ color: "var(--accent)" }}>
-                    {summary.totalPoints.toLocaleString()}
+                    {summary.totalPoints.toLocaleString(locale)}
                   </div>
                 </div>
                 <div
@@ -310,6 +355,55 @@ export default function AchievementsPage(): JSX.Element {
               className="rounded-xl p-6 mb-6"
               style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
             >
+              {/* Domain chip row — lives above the category / tier selects so
+                  the two-level hierarchy (domain → category → tier) reads
+                  top-down. "shared" is kept as its own chip because it's a
+                  useful cut ("what counts everywhere?"). */}
+              <div className="mb-4">
+                <label className="block text-sm mb-2" style={{ color: "var(--text-muted)" }}>
+                  {t("achievements:filters.domain")}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      { id: "all", label: t("achievements:filters.allDomains") },
+                      ...(enabled.includes("flight" as DomainKey)
+                        ? [
+                            {
+                              id: "flight",
+                              label: `✈ ${t("achievements:filters.domainFlight")}`,
+                            },
+                          ]
+                        : []),
+                      ...(enabled.includes("cruise" as DomainKey)
+                        ? [
+                            {
+                              id: "cruise",
+                              label: `🚢 ${t("achievements:filters.domainCruise")}`,
+                            },
+                          ]
+                        : []),
+                      { id: "shared", label: t("achievements:filters.domainShared") },
+                    ] as Array<{ id: "all" | "shared" | DomainKey; label: string }>
+                  ).map((chip) => (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      onClick={(): void => setSelectedDomain(chip.id)}
+                      className="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
+                      style={{
+                        background:
+                          selectedDomain === chip.id ? "var(--accent)" : "var(--bg-elevated)",
+                        color: selectedDomain === chip.id ? "#fff" : "var(--text-muted)",
+                        borderColor:
+                          selectedDomain === chip.id ? "var(--accent)" : "var(--color-border)",
+                      }}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="flex flex-wrap gap-4">
                 <div>
                   <label className="block text-sm mb-2" style={{ color: "var(--text-muted)" }}>

@@ -23,16 +23,23 @@ export interface Flight {
 }
 
 /**
- * Get color class for flight index (for highlighting annotations)
+ * Get color class for flight index (for highlighting annotations).
+ * Training annotation UI needs visually distinct row tints so the user
+ * can track multiple flights in a single email at a glance. Previous
+ * palette (blue, green, orange, purple, red) leaked Cruise / Train /
+ * Hotel domain colours into a flight-only training surface — per
+ * BRAND.md §3 those domain colours stay in their domain. New palette
+ * cycles through brand-amber tints + slate + warm orange — all outside
+ * the domain reservation list.
  */
 export function getFlightColorClass(flightIndex: number): string {
   const colors = [
-    "bg-blue-300 dark:bg-blue-700",
-    "bg-green-300 dark:bg-green-700",
+    "bg-amber-300 dark:bg-amber-700",
+    "bg-yellow-300 dark:bg-yellow-700",
     "bg-orange-300 dark:bg-orange-700",
-    "bg-purple-300 dark:bg-purple-700",
+    "bg-slate-300 dark:bg-slate-700",
   ];
-  return colors[flightIndex % colors.length] || "bg-red-300 dark:bg-red-700";
+  return colors[flightIndex % colors.length] || "bg-stone-300 dark:bg-stone-700";
 }
 
 /**

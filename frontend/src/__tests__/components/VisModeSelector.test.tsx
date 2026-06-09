@@ -51,15 +51,19 @@ describe("VisModeSelector FAB", () => {
     expect(screen.queryByRole("button", { name: "map:visMode.heatmap" })).not.toBeInTheDocument();
   });
 
-  it("shows all 7 mode buttons when open", () => {
+  it("shows all 4 mode buttons when open", () => {
     render(<VisModeSelector {...defaultProps} isOpen={true} />);
     expect(screen.getByRole("button", { name: "map:visMode.routes" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "map:visMode.globe" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "map:visMode.heatmap" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "map:visMode.hexagon" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "map:visMode.columns" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "map:visMode.trips" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "map:visMode.contour" })).toBeInTheDocument();
+    // Retired modes must not appear
+    expect(screen.queryByRole("button", { name: "map:visMode.hexagon" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "map:visMode.columns" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "map:visMode.contour" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "map:visMode.tripRoutes" })
+    ).not.toBeInTheDocument();
   });
 
   it("calls onOpenChange(true) when FAB is clicked while closed", () => {

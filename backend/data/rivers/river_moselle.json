@@ -1,0 +1,11 @@
+{
+  "region": "river_moselle",
+  "name": "Moselle",
+  "meanderFactor": 1.4,
+  "note": "Sparse anchors + extreme meandering; factor compensates",
+  "anchors": [
+    { "name": "Trier", "lat": 49.7567, "lon": 6.6411 },
+    { "name": "Bernkastel-Kues", "lat": 49.9156, "lon": 7.0719 },
+    { "name": "Cochem", "lat": 50.1444, "lon": 7.17 }
+  ]
+}

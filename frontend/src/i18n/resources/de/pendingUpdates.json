@@ -1,6 +1,8 @@
 {
   "title": "Ausstehende Updates",
   "description": "Automatische Flugdaten-Updates überprüfen und verwalten",
+  "appliedAt": "Angewendet am:",
+  "rejectedAt": "Abgelehnt am:",
   "empty": {
     "title": "Keine ausstehenden Updates",
     "description": "Es gibt derzeit keine ausstehenden Flug-Updates. Updates erscheinen hier, wenn automatische Updates aktiviert sind und neue Daten verfügbar sind."
@@ -122,6 +124,7 @@
   "apiSource": {
     "airlabs": "AirLabs API",
     "aviationstack": "Aviationstack API",
+    "aerodatabox": "AeroDataBox API",
     "opensky": "OpenSky Network",
     "historicalAggregation": "Historische Anreicherung"
   },

@@ -1,6 +1,9 @@
 {
   "title": "Training",
   "description": "Train and improve LLM models",
+  "activate": "Activate",
+  "deactivate": "Deactivate",
+  "templateDerived": "Template derived",
   "developerModeNotEnabled": "Developer Mode not enabled",
   "enableDeveloperMode": "Please enable Developer Mode in settings.",
   "goToSettings": "Go to Settings",

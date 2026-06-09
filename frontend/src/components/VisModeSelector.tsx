@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { VisMode } from "../types/visMode";
+import type { MapMode } from "./MapContainer3D";
 import { useTranslation } from "../hooks/useTranslation";
 
 function RoutesIcon(): JSX.Element {
@@ -38,29 +38,6 @@ function HeatmapIcon(): JSX.Element {
   );
 }
 
-function HexagonIcon(): JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path
-        d="M8 2 L13.2 5 L13.2 11 L8 14 L2.8 11 L2.8 5 Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function ColumnsIcon(): JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-      <rect x="1.5" y="9" width="3.5" height="5.5" rx="0.5" opacity="0.5" />
-      <rect x="6.25" y="5.5" width="3.5" height="9" rx="0.5" opacity="0.75" />
-      <rect x="11" y="2" width="3.5" height="12.5" rx="0.5" />
-    </svg>
-  );
-}
-
 function TripsIcon(): JSX.Element {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -71,56 +48,6 @@ function TripsIcon(): JSX.Element {
         strokeLinecap="round"
       />
       <circle cx="14" cy="8" r="2" fill="currentColor" />
-    </svg>
-  );
-}
-
-function ContourIcon(): JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <ellipse cx="8" cy="9" rx="6" ry="3.5" stroke="currentColor" strokeWidth="1" opacity="0.35" />
-      <ellipse
-        cx="8"
-        cy="8.5"
-        rx="4"
-        ry="2.2"
-        stroke="currentColor"
-        strokeWidth="1.1"
-        opacity="0.6"
-      />
-      <ellipse
-        cx="8"
-        cy="8"
-        rx="2.2"
-        ry="1.2"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        opacity="0.85"
-      />
-      <circle cx="8" cy="8" r="0.9" fill="currentColor" />
-    </svg>
-  );
-}
-
-function TripRoutesIcon(): JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path
-        d="M2 13 C5 3, 11 3, 14 7"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        opacity="0.9"
-      />
-      <path
-        d="M2 10 C5 5, 11 5, 14 10"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        opacity="0.55"
-      />
-      <circle cx="2" cy="13" r="1.2" fill="currentColor" />
-      <circle cx="14" cy="7" r="1.2" fill="currentColor" />
     </svg>
   );
 }
@@ -150,33 +77,30 @@ function PlusIcon(): JSX.Element {
   );
 }
 
-const MODE_ICONS: Record<VisMode, () => JSX.Element> = {
+const MODE_ICONS: Record<MapMode, () => JSX.Element> = {
   routes: RoutesIcon,
   globe: GlobeIcon,
   heatmap: HeatmapIcon,
-  hexagon: HexagonIcon,
-  columns: ColumnsIcon,
   trips: TripsIcon,
-  contour: ContourIcon,
-  "trip-routes": TripRoutesIcon,
 };
 
-const MODES: { mode: VisMode; labelKey: string }[] = [
+const MODES: { mode: MapMode; labelKey: string }[] = [
   { mode: "routes", labelKey: "map:visMode.routes" },
   { mode: "globe", labelKey: "map:visMode.globe" },
   { mode: "heatmap", labelKey: "map:visMode.heatmap" },
-  { mode: "hexagon", labelKey: "map:visMode.hexagon" },
-  { mode: "columns", labelKey: "map:visMode.columns" },
   { mode: "trips", labelKey: "map:visMode.trips" },
-  { mode: "contour", labelKey: "map:visMode.contour" },
-  { mode: "trip-routes", labelKey: "map:visMode.tripRoutes" },
 ];
 
 interface VisModeSeelctorProps {
-  current: VisMode;
-  onChange: (mode: VisMode) => void;
+  current: MapMode;
+  onChange: (mode: MapMode) => void;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Restrict which modes appear in the dropdown. Defaults to all 4
+      so existing call sites keep current behaviour. The Alle tab
+      passes the full set; per-domain tabs pass a subset that excludes
+      e.g. `globe` (cross-domain only). */
+  availableModes?: readonly MapMode[];
 }
 
 export function VisModeSelector({
@@ -184,8 +108,13 @@ export function VisModeSelector({
   onChange,
   isOpen,
   onOpenChange,
+  availableModes,
 }: VisModeSeelctorProps): JSX.Element {
   const { t } = useTranslation("map");
+
+  const visibleModes = availableModes
+    ? MODES.filter((m) => availableModes.includes(m.mode))
+    : MODES;
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -200,7 +129,7 @@ export function VisModeSelector({
   }, [handleKeyDown]);
 
   const handleModeClick = useCallback(
-    (mode: VisMode) => {
+    (mode: MapMode) => {
       onChange(mode);
       onOpenChange(false);
     },
@@ -220,7 +149,7 @@ export function VisModeSelector({
             transition={{ duration: 0.15 }}
             className="flex flex-col items-end gap-1.5"
           >
-            {[...MODES].reverse().map(({ mode, labelKey }) => {
+            {[...visibleModes].reverse().map(({ mode, labelKey }) => {
               const active = current === mode;
               const Icon = MODE_ICONS[mode];
               return (

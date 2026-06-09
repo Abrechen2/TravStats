@@ -15,8 +15,9 @@ interface StatsProps {
 }
 
 export default function Stats({ filters = {} }: StatsProps): JSX.Element {
-  const { t } = useTranslation(["stats", "common"]);
+  const { t, i18n } = useTranslation(["stats", "common"]);
   const { units } = useSettingsStore();
+  const lang = i18n.language;
   const [stats, setStats] = useState<StatsType | null>(null);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,7 +150,7 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
             />
           </div>
           <p className="text-3xl font-bold" style={{ color: "var(--accent)" }}>
-            {formatDistance(stats.totalDistance, units.distanceUnit, t)}
+            {formatDistance(stats.totalDistance, units.distanceUnit, t, lang)}
           </p>
         </div>
         <div className="card">
@@ -157,7 +158,7 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
             {t("stats:overview.avgDistance")}
           </p>
           <p className="text-3xl font-bold" style={{ color: "var(--accent)" }}>
-            {formatDistance(stats.avgDistance, units.distanceUnit, t)}
+            {formatDistance(stats.avgDistance, units.distanceUnit, t, lang)}
           </p>
         </div>
         <div className="card">
@@ -266,7 +267,7 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
                       {index + 1}. {route.route}
                     </p>
                     <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                      {formatDistance(route.distance, units.distanceUnit, t)}
+                      {formatDistance(route.distance, units.distanceUnit, t, lang)}
                     </p>
                   </div>
                   <span className="text-sm font-semibold" style={{ color: "var(--accent)" }}>

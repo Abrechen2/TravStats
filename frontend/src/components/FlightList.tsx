@@ -6,6 +6,8 @@ import { formatCurrency as formatCurrencyUtil } from "../lib/units";
 import { resolveAirlineDisplay } from "../lib/airlineUtils";
 import AirlineLogo from "./AirlineLogo";
 import DataSourceBadges from "./DataSourceBadges";
+import SpecialTypeBadge from "./specialFlights/SpecialTypeBadge";
+import type { SpecialType } from "./specialFlights/specialTypeMeta";
 
 interface FlightListProps {
   flights: Flight[];
@@ -115,6 +117,9 @@ export default function FlightList({
                   </h3>
                   {getStatusBadge(flight.status)}
                   {getCategoryBadge(flight.category)}
+                  {flight.specialType && (
+                    <SpecialTypeBadge type={flight.specialType as SpecialType} />
+                  )}
                   {flight.delayMinutes != null && flight.delayMinutes !== 0 && (
                     <span
                       data-testid="delay-badge"
@@ -134,7 +139,11 @@ export default function FlightList({
                   {flight.co2Kg != null && (
                     <span
                       data-testid="co2-chip"
-                      className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                      className="px-2 py-0.5 rounded text-xs font-medium"
+                      style={{
+                        background: "rgba(63,185,80,0.15)",
+                        color: "var(--success)",
+                      }}
                       title={t("flights:actualTimes.co2Label")}
                     >
                       {t("flights:actualTimes.co2Value", { kg: flight.co2Kg })}

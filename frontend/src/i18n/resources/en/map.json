@@ -49,10 +49,80 @@
     "autoRotation": "Auto-Rotation",
     "timesFlown": "Flown {{count}}x",
     "flight_one": "flight",
-    "flight_other": "flights"
+    "flight_other": "flights",
+    "antipodalSimplified_one": "{{count}} antipodal route shown flat",
+    "antipodalSimplified_other": "{{count}} antipodal routes shown flat",
+    "recenter": "Recenter",
+    "recenterHint": "Reset to default view",
+    "openLastFlight": "Open last flight",
+    "weak": "Estimated route",
+    "weakHint": "At least one flight had no IATA code and was matched by coordinates — the aggregation may be approximate",
+    "shipMarkers": "Ship markers",
+    "shipMarkersHint": "Tall column at the current position of every visible cruise",
+    "performance": "Performance",
+    "performanceHint": "Lower detail for higher FPS on weaker hardware",
+    "performanceAuto": "Auto",
+    "performanceOn": "Lite",
+    "performanceOff": "Full",
+    "stats": {
+      "title": "Visible",
+      "flights": "Flights",
+      "routes": "Routes",
+      "flightKm": "Distance",
+      "cruises": "Cruises",
+      "ports": "Ports",
+      "top": "Top"
+    },
+    "coachmark": {
+      "title": "Welcome to the globe",
+      "pan": "Drag to spin the Earth",
+      "zoom": "Scroll to zoom",
+      "click": "Click any marker or route to pin details",
+      "autoRotate": "Auto-Rotation lets the globe spin by itself",
+      "dismiss": "Got it, take me to the globe"
+    },
+    "quartileFilterHint": "Click to isolate this frequency band",
+    "quartileFilterClear": "Clear filter",
+    "pinned": {
+      "lastFlight": "Last flight",
+      "longestRoute": "Longest route",
+      "longestPortCall": "Longest stay",
+      "topAirline": "Top airline",
+      "topAircraft": "Aircraft",
+      "country": "Country",
+      "region": "Region",
+      "ships": "Ships",
+      "totalKm": "{{count}}× · {{km}} km",
+      "portsLabel": "Ports",
+      "seaDaysLabel": "Sea days",
+      "embark": "Embark",
+      "debark": "Debark",
+      "openCruise": "Open cruise",
+      "durationHours": "{{h}} h {{m}} min"
+    },
+    "timeSlider": {
+      "title": "Timeline",
+      "modeOff": "Off",
+      "modeLive": "Play",
+      "modeFilter": "Filter",
+      "play": "Play",
+      "pause": "Pause",
+      "speed": "Speed",
+      "daysPerSec": "{{n}} d/s",
+      "rangeStart": "From",
+      "rangeEnd": "To",
+      "visible": "Visible",
+      "flights": "Flights",
+      "cruises": "Cruises",
+      "noData": "No dated trips"
+    }
   },
   "infoPill": {
     "flights": "Flights",
     "routes": "Routes"
+  },
+  "tooltip": {
+    "lastVisit": "Last visit",
+    "lastCall": "Last call"
   }
 }

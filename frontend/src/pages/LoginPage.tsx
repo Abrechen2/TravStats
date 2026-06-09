@@ -5,6 +5,7 @@ import { authApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { LogoLockup } from "../components/Brand/Logo";
+import { PasswordInput } from "../components/Auth/PasswordInput";
 
 export default function LoginPage(): JSX.Element {
   const { t } = useTranslation(["auth", "common"]);
@@ -22,6 +23,7 @@ export default function LoginPage(): JSX.Element {
   // Forgot password modal state
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [smtpEnabled, setSmtpEnabled] = useState<boolean | null>(null);
+  const [adminContactEmail, setAdminContactEmail] = useState<string | null>(null);
   const [forgotUsername, setForgotUsername] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSuccess, setForgotSuccess] = useState(false);
@@ -30,7 +32,10 @@ export default function LoginPage(): JSX.Element {
   useEffect(() => {
     authApi
       .getSmtpStatus()
-      .then((r) => setSmtpEnabled(r.smtpEnabled))
+      .then((r) => {
+        setSmtpEnabled(r.smtpEnabled);
+        setAdminContactEmail(r.adminContactEmail);
+      })
       .catch(() => setSmtpEnabled(false));
   }, []);
 
@@ -98,19 +103,22 @@ export default function LoginPage(): JSX.Element {
           duration: 0.35,
           ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
         }}
-        className="relative z-10 w-full max-w-sm px-4"
+        className="relative z-10 w-full max-w-sm px-4 sm:px-4"
       >
         {/* Brand lockup */}
         <div className="flex flex-col items-center text-center mb-8 gap-3">
           <LogoLockup size={26} markSize={72} layout="stacked" />
-          <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
-            {t("login.title")}
-          </p>
+          <h1
+            className="mt-2 text-2xl font-display font-semibold tracking-tight"
+            style={{ color: "var(--text-primary)" }}
+          >
+            {t("login.heading")}
+          </h1>
         </div>
 
         {/* Card */}
         <div
-          className="rounded-2xl p-8"
+          className="rounded-2xl px-6 py-8 sm:px-8"
           style={{
             background: "rgba(28, 33, 40, 0.85)",
             backdropFilter: "blur(20px)",
@@ -120,7 +128,7 @@ export default function LoginPage(): JSX.Element {
         >
           {successMessage && (
             <div className="mb-4 p-3 rounded-lg bg-green-900/20 border border-green-500/30">
-              <p className="text-sm text-green-400">{successMessage}</p>
+              <p className="text-sm text-green-400 text-center">{successMessage}</p>
             </div>
           )}
 
@@ -152,34 +160,40 @@ export default function LoginPage(): JSX.Element {
               >
                 {t("login.password")}
               </label>
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input w-full"
                 autoComplete="current-password"
               />
             </div>
 
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && (
+              <p className="text-sm text-red-400 text-center" role="alert">
+                {error}
+              </p>
+            )}
 
             <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
               {loading ? t("login.submitting") : t("login.submit")}
             </button>
           </form>
 
-          <div className="mt-4 flex justify-between items-center text-sm">
+          <div className="mt-5 flex flex-col items-center gap-2 text-sm">
             <span style={{ color: "var(--text-muted)" }}>
               {t("login.noAccount")}{" "}
-              <Link to="/register" className="hover:underline" style={{ color: "var(--accent)" }}>
+              <Link
+                to="/register"
+                className="font-medium hover:underline"
+                style={{ color: "var(--accent)" }}
+              >
                 {t("login.register")}
               </Link>
             </span>
             <button
               type="button"
               onClick={() => setShowForgotModal(true)}
-              className="hover:underline"
+              className="font-medium hover:underline"
               style={{ color: "var(--accent)" }}
             >
               {t("login.forgotPassword")}
@@ -198,6 +212,9 @@ export default function LoginPage(): JSX.Element {
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             style={{ background: "rgba(0,0,0,0.7)" }}
             onClick={handleCloseForgotModal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="forgot-modal-title"
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -210,14 +227,30 @@ export default function LoginPage(): JSX.Element {
                 border: "1px solid var(--color-border)",
               }}
             >
-              <h2 className="text-lg font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
+              <h2
+                id="forgot-modal-title"
+                className="text-lg font-semibold mb-4"
+                style={{ color: "var(--text-primary)" }}
+              >
                 {t("login.forgotPasswordModal.title")}
               </h2>
 
               {smtpEnabled === false ? (
-                <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
-                  {t("login.forgotPasswordModal.noSmtp")}
-                </p>
+                <div className="text-sm space-y-2 mb-4" style={{ color: "var(--text-muted)" }}>
+                  <p>{t("login.forgotPasswordModal.noSmtp")}</p>
+                  {adminContactEmail && (
+                    <p>
+                      {t("login.forgotPasswordModal.noSmtpContact")}{" "}
+                      <a
+                        href={`mailto:${adminContactEmail}`}
+                        className="font-medium hover:underline"
+                        style={{ color: "var(--accent)" }}
+                      >
+                        {adminContactEmail}
+                      </a>
+                    </p>
+                  )}
+                </div>
               ) : forgotSuccess ? (
                 <p className="text-sm text-green-400 mb-4">
                   {t("login.forgotPasswordModal.success")}
@@ -259,8 +292,7 @@ export default function LoginPage(): JSX.Element {
               <button
                 type="button"
                 onClick={handleCloseForgotModal}
-                className="mt-4 w-full text-sm hover:underline"
-                style={{ color: "var(--text-muted)" }}
+                className="btn-secondary w-full mt-4 py-2 text-sm"
               >
                 {t("login.forgotPasswordModal.close")}
               </button>

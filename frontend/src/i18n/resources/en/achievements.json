@@ -32,8 +32,13 @@
   "filters": {
     "category": "Category",
     "tier": "Tier",
+    "domain": "Area",
     "allCategories": "All Categories",
     "allTiers": "All Tiers",
+    "allDomains": "All",
+    "domainFlight": "Flight",
+    "domainCruise": "Cruise",
+    "domainShared": "Shared",
     "showUnlockedOnly": "Show unlocked only"
   },
   "progress": {
@@ -72,48 +77,114 @@
     "awesome": "Awesome!"
   },
   "codes": {
-    "FIRST_FLIGHT": { "name": "Taking Off", "description": "Complete your first flight" },
-    "FREQUENT_FLYER_10": { "name": "Frequent Flyer", "description": "Complete 10 flights" },
-    "FREQUENT_FLYER_25": { "name": "Sky Veteran", "description": "Complete 25 flights" },
-    "FREQUENT_FLYER_50": { "name": "Aviation Enthusiast", "description": "Complete 50 flights" },
-    "FREQUENT_FLYER_100": { "name": "Centurion", "description": "Complete 100 flights" },
-    "FREQUENT_FLYER_250": { "name": "Sky Master", "description": "Complete 250 flights" },
-    "FREQUENT_FLYER_500": { "name": "Legend of the Skies", "description": "Complete 500 flights" },
-    "DISTANCE_1000": { "name": "First Thousand", "description": "Fly 1,000 km" },
-    "DISTANCE_10000": { "name": "Ten Thousand Club", "description": "Fly 10,000 km" },
+    "FIRST_FLIGHT": {
+      "name": "Taking Off",
+      "description": "Complete your first flight"
+    },
+    "FREQUENT_FLYER_10": {
+      "name": "Frequent Flyer",
+      "description": "Complete 10 flights"
+    },
+    "FREQUENT_FLYER_25": {
+      "name": "Sky Veteran",
+      "description": "Complete 25 flights"
+    },
+    "FREQUENT_FLYER_50": {
+      "name": "Aviation Enthusiast",
+      "description": "Complete 50 flights"
+    },
+    "FREQUENT_FLYER_100": {
+      "name": "Centurion",
+      "description": "Complete 100 flights"
+    },
+    "FREQUENT_FLYER_250": {
+      "name": "Sky Master",
+      "description": "Complete 250 flights"
+    },
+    "FREQUENT_FLYER_500": {
+      "name": "Legend of the Skies",
+      "description": "Complete 500 flights"
+    },
+    "DISTANCE_1000": {
+      "name": "First Thousand",
+      "description": "Fly 1,000 km"
+    },
+    "DISTANCE_10000": {
+      "name": "Ten Thousand Club",
+      "description": "Fly 10,000 km"
+    },
     "DISTANCE_50000": {
       "name": "Around the World",
       "description": "Fly 50,000 km (circumference of Earth)"
     },
-    "DISTANCE_100000": { "name": "Globe Trotter", "description": "Fly 100,000 km" },
-    "DISTANCE_250000": { "name": "Distance Warrior", "description": "Fly 250,000 km" },
-    "DISTANCE_500000": { "name": "Orbital Achievement", "description": "Fly 500,000 km" },
-    "COUNTRIES_5": { "name": "Passport Starter", "description": "Visit 5 different countries" },
+    "DISTANCE_100000": {
+      "name": "Globe Trotter",
+      "description": "Fly 100,000 km"
+    },
+    "DISTANCE_250000": {
+      "name": "Distance Warrior",
+      "description": "Fly 250,000 km"
+    },
+    "DISTANCE_500000": {
+      "name": "Orbital Achievement",
+      "description": "Fly 500,000 km"
+    },
+    "COUNTRIES_5": {
+      "name": "Passport Starter",
+      "description": "Visit 5 different countries"
+    },
     "COUNTRIES_10": {
       "name": "International Traveler",
       "description": "Visit 10 different countries"
     },
-    "COUNTRIES_25": { "name": "World Explorer", "description": "Visit 25 different countries" },
-    "COUNTRIES_50": { "name": "Global Citizen", "description": "Visit 50 different countries" },
+    "COUNTRIES_25": {
+      "name": "World Explorer",
+      "description": "Visit 25 different countries"
+    },
+    "COUNTRIES_50": {
+      "name": "Global Citizen",
+      "description": "Visit 50 different countries"
+    },
     "COUNTRIES_100": {
       "name": "Master of Nations",
       "description": "Visit 100 different countries"
     },
-    "AIRLINES_5": { "name": "Airline Sampler", "description": "Fly with 5 different airlines" },
-    "AIRLINES_10": { "name": "Airline Collector", "description": "Fly with 10 different airlines" },
+    "AIRLINES_5": {
+      "name": "Airline Sampler",
+      "description": "Fly with 5 different airlines"
+    },
+    "AIRLINES_10": {
+      "name": "Airline Collector",
+      "description": "Fly with 10 different airlines"
+    },
     "AIRLINES_25": {
       "name": "Airline Enthusiast",
       "description": "Fly with 25 different airlines"
     },
-    "AIRLINES_50": { "name": "Airline Master", "description": "Fly with 50 different airlines" },
-    "AIRPORTS_10": { "name": "Airport Explorer", "description": "Visit 10 different airports" },
-    "AIRPORTS_25": { "name": "Terminal Hopper", "description": "Visit 25 different airports" },
-    "AIRPORTS_50": { "name": "Hub Master", "description": "Visit 50 different airports" },
+    "AIRLINES_50": {
+      "name": "Airline Master",
+      "description": "Fly with 50 different airlines"
+    },
+    "AIRPORTS_10": {
+      "name": "Airport Explorer",
+      "description": "Visit 10 different airports"
+    },
+    "AIRPORTS_25": {
+      "name": "Terminal Hopper",
+      "description": "Visit 25 different airports"
+    },
+    "AIRPORTS_50": {
+      "name": "Hub Master",
+      "description": "Visit 50 different airports"
+    },
     "AIRPORTS_100": {
       "name": "Airport Connoisseur",
       "description": "Visit 100 different airports"
     },
-    "AIRPORTS_200": { "name": "Lord of Terminals", "description": "Visit 200 different airports" },
+    "AIRPORTS_200": {
+      "name": "Lord of Terminals",
+      "description": "Visit 200 different airports"
+    },
     "CONTINENTS_3": {
       "name": "Tri-Continental",
       "description": "Visit airports on 3 different continents"
@@ -174,11 +245,26 @@
       "name": "Yearly Commitment",
       "description": "Complete at least one flight every month for 12 months"
     },
-    "FAVORITE_ROUTE": { "name": "Favorite Route", "description": "Fly the same route 5 times" },
-    "ROUTE_MASTER": { "name": "Route Master", "description": "Fly the same route 10 times" },
-    "COMMUTER": { "name": "Commuter", "description": "Fly the same route 25 times" },
-    "BUSY_MONTH": { "name": "Busy Month", "description": "Complete 10 flights in a single month" },
-    "BUSY_YEAR": { "name": "Busy Year", "description": "Complete 50 flights in a single year" },
+    "FAVORITE_ROUTE": {
+      "name": "Favorite Route",
+      "description": "Fly the same route 5 times"
+    },
+    "ROUTE_MASTER": {
+      "name": "Route Master",
+      "description": "Fly the same route 10 times"
+    },
+    "COMMUTER": {
+      "name": "Commuter",
+      "description": "Fly the same route 25 times"
+    },
+    "BUSY_MONTH": {
+      "name": "Busy Month",
+      "description": "Complete 10 flights in a single month"
+    },
+    "BUSY_YEAR": {
+      "name": "Busy Year",
+      "description": "Complete 50 flights in a single year"
+    },
     "TRANSCONTINENTAL": {
       "name": "Transcontinental",
       "description": "Complete a flight crossing an ocean"
@@ -307,10 +393,6 @@
       "name": "The Contrarian",
       "description": "10 consecutive middle seats — on purpose?"
     },
-    "FOUR_SEASONS_YEAR": {
-      "name": "Four Seasons, One Year",
-      "description": "A flight in every season within a 12-month window"
-    },
     "THE_NOTETAKER": {
       "name": "The Notetaker",
       "description": "10 flights with non-empty notes"
@@ -329,7 +411,7 @@
     },
     "TIGHT_CONNECTOR": {
       "name": "Tight Connector",
-      "description": "Transfer under 45 minutes between two flights — and make it"
+      "description": "A connection of less than 45 minutes between two flights — and you made it"
     },
     "GHOSTFLIGHT": {
       "name": "Ghostflight",
@@ -374,6 +456,194 @@
     "HALLOWEEN_FLYER": {
       "name": "Halloween Flyer",
       "description": "A flight on 31 October — ideally in the dark"
+    },
+    "SPECIAL_FIRST_SIGHTSEEING": {
+      "name": "First Sightseeing",
+      "description": "Complete your first sightseeing / local round trip"
+    },
+    "SPECIAL_FIRST_ZEROG": {
+      "name": "First ZeroG",
+      "description": "Complete your first zero-gravity parabolic flight"
+    },
+    "SPECIAL_FIRST_ECLIPSE": {
+      "name": "Eclipse Chaser",
+      "description": "Complete your first solar-eclipse chase flight"
+    },
+    "SPECIAL_FIRST_ROCKET": {
+      "name": "Rocket Watcher",
+      "description": "Fly to watch a rocket launch"
+    },
+    "SPECIAL_VARIETY_3": {
+      "name": "Special-Flight Collector",
+      "description": "Collect three different kinds of special flight"
+    },
+    "WANDERLUST": {
+      "name": "Wanderlust",
+      "description": "Have 5 planned flights in your calendar"
+    },
+    "GLOBETROTTER_PLANNER": {
+      "name": "Globetrotter Planner",
+      "description": "Have planned flights to 3 different continents"
+    },
+    "YEAR_AHEAD": {
+      "name": "Year Ahead",
+      "description": "Plan a flight more than 12 months in advance"
+    },
+    "SURVIVOR": {
+      "name": "Survivor",
+      "description": "Have your first cancelled flight"
+    },
+    "TURBULENCE_VETERAN": {
+      "name": "Turbulence Veteran",
+      "description": "Survive 5 cancelled flights"
+    },
+    "FIRST_CRUISE": {
+      "name": "Cast Off",
+      "description": "Complete your first cruise"
+    },
+    "SEA_EXPLORER_5": {
+      "name": "Sea Explorer",
+      "description": "Complete 5 cruises"
+    },
+    "CRUISE_ENTHUSIAST_10": {
+      "name": "Cruise Enthusiast",
+      "description": "Complete 10 cruises"
+    },
+    "SEVEN_SEAS_25": {
+      "name": "Seven Seas",
+      "description": "Complete 25 cruises"
+    },
+    "PORT_HOPPER_5": {
+      "name": "Port Hopper",
+      "description": "Visit 5 different ports"
+    },
+    "HARBOR_TOUR_25": {
+      "name": "Harbor Tour",
+      "description": "Visit 25 different ports"
+    },
+    "HARBOR_MASTER_50": {
+      "name": "Harbor Master",
+      "description": "Visit 50 different ports"
+    },
+    "MEGA_CRUISE_10": {
+      "name": "Mega Cruise",
+      "description": "10+ ports of call on a single cruise"
+    },
+    "FLEET_SAMPLER_5": {
+      "name": "Fleet Sampler",
+      "description": "Sail on 5 different ships"
+    },
+    "NAVAL_CURATOR_15": {
+      "name": "Naval Curator",
+      "description": "Sail on 15 different ships"
+    },
+    "LOYAL_SAILOR_3": {
+      "name": "Loyal Sailor",
+      "description": "3 cruises with the same cruise line"
+    },
+    "LINE_HOPPER_5": {
+      "name": "Line Hopper",
+      "description": "Sail with 5 different cruise lines"
+    },
+    "CARNIVAL_COLLECTOR": {
+      "name": "Carnival Collector",
+      "description": "Sail with all 8 Carnival brands (AIDA, Carnival, Costa, Cunard, Holland America, P&O, Princess, Seabourn)"
+    },
+    "CRUISE_DISTANCE_5000": {
+      "name": "Coastal Runner",
+      "description": "5,000 km of cruise distance"
+    },
+    "CRUISE_DISTANCE_20000": {
+      "name": "Open Water",
+      "description": "20,000 km of cruise distance"
+    },
+    "CRUISE_DISTANCE_50000": {
+      "name": "Bluewater Captain",
+      "description": "50,000 km of cruise distance"
+    },
+    "CRUISE_DISTANCE_100000": {
+      "name": "Circumnavigator",
+      "description": "100,000 km of cruise distance (~2.5x around the Earth)"
+    },
+    "SEA_LEGS_1": {
+      "name": "Sea Legs",
+      "description": "Your first sea day"
+    },
+    "SALT_DOG_30": {
+      "name": "Salt Dog",
+      "description": "30 sea days in total"
+    },
+    "TRANSATLANTIC_7": {
+      "name": "Transatlantic",
+      "description": "7+ consecutive sea days"
+    },
+    "CRUISE_MEDITERRANEAN": {
+      "name": "Mediterranean Cruiser",
+      "description": "Visit the Mediterranean"
+    },
+    "CRUISE_CARIBBEAN": {
+      "name": "Caribbean Cruiser",
+      "description": "Visit the Caribbean"
+    },
+    "CRUISE_BALTIC_OR_FJORDS": {
+      "name": "Northern Route",
+      "description": "Sail the Baltic Sea or Norwegian fjords"
+    },
+    "CRUISE_CANAL_TRANSIT": {
+      "name": "Canal Transit",
+      "description": "Transit the Panama or Suez Canal"
+    },
+    "CRUISE_POLAR_EXPLORER": {
+      "name": "Polar Explorer",
+      "description": "Visit Antarctica or the Northwest Passage"
+    },
+    "BALCONY_FIRST": {
+      "name": "First Balcony",
+      "description": "Stay in your first balcony cabin"
+    },
+    "SUITE_FIRST": {
+      "name": "First Suite",
+      "description": "Stay in your first suite"
+    },
+    "TOP_DECK": {
+      "name": "Top Deck",
+      "description": "Stay on deck 12 or higher"
+    },
+    "BIRTHDAY_AT_SEA": {
+      "name": "Birthday at Sea",
+      "description": "Celebrate your birthday on a cruise"
+    },
+    "COLD_WATER_CRUISER": {
+      "name": "Cold Water Cruiser",
+      "description": "Visit Iceland, Alaska or Antarctica"
+    },
+    "CRUISE_OFFROAD": {
+      "name": "Off-Chart Navigator",
+      "description": "A cruise with a leg longer than 3,000 km — a true blue-water crossing"
+    },
+    "DATE_LINE_SAILOR": {
+      "name": "Date Line Sailor",
+      "description": "A cruise leg crossing the International Date Line"
+    },
+    "FLY_SAIL_WEEK": {
+      "name": "Amphibious Week",
+      "description": "A flight and a cruise within 7 days"
+    },
+    "FLY_AND_SAIL": {
+      "name": "Fly & Sail",
+      "description": "A trip combining a flight and a cruise"
+    },
+    "CAPTAINS_LOG_1": {
+      "name": "Captain's Log",
+      "description": "Sail on your first ship"
+    },
+    "NEPTUNES_FAVORITE_50": {
+      "name": "Neptune's Favorite",
+      "description": "Complete 50 cruises"
+    },
+    "NEW_YEARS_AT_SEA": {
+      "name": "New Year's at Sea",
+      "description": "Spend New Year on a cruise"
     }
   }
 }

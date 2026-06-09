@@ -1,0 +1,19 @@
+{
+  "region": "river_mekong",
+  "name": "Mekong",
+  "kmSystem": "Approximate cruise-corridor km from delta mouth (My Tho area = km 0)",
+  "kmDirection": "upstream",
+  "anchors": [
+    { "name": "Saigon (Ho Chi Minh)", "lat": 10.7626, "lon": 106.6602, "km": 80, "note": "Saigon River tributary; cruises start here" },
+    { "name": "Cai Be", "lat": 10.3672, "lon": 106.0394, "km": 130 },
+    { "name": "Sa Dec", "lat": 10.2961, "lon": 105.7589, "km": 175 },
+    { "name": "Châu Đốc", "lat": 10.7058, "lon": 105.1136, "km": 240 },
+    { "name": "Phnom Penh", "lat": 11.5564, "lon": 104.9282, "km": 350 },
+    { "name": "Kampong Cham", "lat": 12.0, "lon": 105.45, "km": 470 },
+    { "name": "Siem Reap", "lat": 13.3672, "lon": 103.8444, "km": 670, "note": "Tonlé Sap lake; via Tonlé Sap river" },
+    { "name": "Vientiane", "lat": 17.975, "lon": 102.6333, "km": 1620 },
+    { "name": "Luang Prabang", "lat": 19.8833, "lon": 102.1333, "km": 1990 },
+    { "name": "Pakbeng", "lat": 19.9, "lon": 101.1333, "km": 2120 },
+    { "name": "Chiang Saen", "lat": 20.275, "lon": 100.0833, "km": 2280 }
+  ]
+}

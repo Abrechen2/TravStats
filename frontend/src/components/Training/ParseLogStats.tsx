@@ -124,7 +124,8 @@ export default function ParseLogStats(): JSX.Element {
           onClick={() => {
             void handleExport();
           }}
-          className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+          className="px-3 py-1.5 text-sm rounded transition-colors"
+          style={{ background: "var(--bg-elevated)", color: "var(--text-primary)" }}
         >
           {t("training:parseLogs.exportBtn")}
         </button>

@@ -1,0 +1,33 @@
+{
+  "region": "river_danube",
+  "name": "Danube",
+  "kmSystem": "Donaukilometer (Sulina mouth = km 0, counted upstream)",
+  "kmDirection": "upstream",
+  "anchors": [
+    { "name": "Sulina", "lat": 45.1533, "lon": 29.65, "km": 0 },
+    { "name": "Tulcea", "lat": 45.1789, "lon": 28.8056, "km": 71 },
+    { "name": "Cernavoda", "lat": 44.3361, "lon": 28.0331, "km": 300 },
+    { "name": "Ruse", "lat": 43.85, "lon": 25.9667, "km": 495 },
+    { "name": "Calafat", "lat": 43.9886, "lon": 22.9389, "km": 795 },
+    { "name": "Vidin", "lat": 43.9908, "lon": 22.8775, "km": 790 },
+    { "name": "Đerdap (Iron Gate)", "lat": 44.4658, "lon": 22.1517, "km": 943 },
+    { "name": "Belgrade", "lat": 44.8167, "lon": 20.4667, "km": 1170 },
+    { "name": "Novi Sad", "lat": 45.2671, "lon": 19.8335, "km": 1255 },
+    { "name": "Vukovar", "lat": 45.3411, "lon": 19.0058, "km": 1335 },
+    { "name": "Mohács", "lat": 45.9967, "lon": 18.6856, "km": 1447 },
+    { "name": "Budapest", "lat": 47.4979, "lon": 19.0402, "km": 1647 },
+    { "name": "Visegrád", "lat": 47.7889, "lon": 18.9756, "km": 1695 },
+    { "name": "Esztergom", "lat": 47.7933, "lon": 18.7411, "km": 1718 },
+    { "name": "Bratislava", "lat": 48.1486, "lon": 17.1078, "km": 1869 },
+    { "name": "Wien", "lat": 48.2083, "lon": 16.3725, "km": 1929 },
+    { "name": "Krems", "lat": 48.4097, "lon": 15.6125, "km": 2003 },
+    { "name": "Dürnstein", "lat": 48.3964, "lon": 15.5189, "km": 2009 },
+    { "name": "Melk", "lat": 48.2272, "lon": 15.3286, "km": 2036 },
+    { "name": "Linz", "lat": 48.3, "lon": 14.2833, "km": 2135 },
+    { "name": "Engelhartszell", "lat": 48.5097, "lon": 13.7297, "km": 2200 },
+    { "name": "Passau", "lat": 48.5747, "lon": 13.4561, "km": 2226 },
+    { "name": "Vilshofen", "lat": 48.6256, "lon": 13.1869, "km": 2249 },
+    { "name": "Regensburg", "lat": 49.0192, "lon": 12.0975, "km": 2376 },
+    { "name": "Nürnberg", "lat": 49.4517, "lon": 11.0775, "km": 2411 }
+  ]
+}

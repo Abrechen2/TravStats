@@ -19,6 +19,12 @@
   --color-border: #30363d;
   --text-primary: #e6edf3;
   --text-muted: #8b949e;
+  /* `--text-secondary` is the readable-but-dimmed shade for inactive
+     tabs, section nav, deselected buttons. Brighter than --text-muted
+     (which is reserved for genuinely-de-emphasised content like
+     captions, scrollbars, borders) so contrast against --bg-base /
+     --bg-surface stays comfortably above WCAG AA. */
+  --text-secondary: #a8b3bf;
 
   /* Brand — amber. Same hex as --domain-flight by design (BRAND.md §3). */
   --accent: #f0a947;
@@ -310,6 +316,38 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Globe pinned-popup — strip MapLibre's default white content
+   chrome since our card has its own dark surface, and tint the
+   tail to match. */
+.globe-pinned-popup .maplibregl-popup-content {
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+  border-radius: 0;
+}
+.globe-pinned-popup .maplibregl-popup-tip {
+  border-top-color: rgba(13, 17, 23, 0.92);
+  border-bottom-color: rgba(13, 17, 23, 0.92);
+  border-left-color: rgba(13, 17, 23, 0.92);
+  border-right-color: rgba(13, 17, 23, 0.92);
+}
+.globe-pinned-popup.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.globe-pinned-popup.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.globe-pinned-popup.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+  border-top-color: rgba(13, 17, 23, 0.92);
+}
+.globe-pinned-popup.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.globe-pinned-popup.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.globe-pinned-popup.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+  border-bottom-color: rgba(13, 17, 23, 0.92);
+}
+.globe-pinned-popup.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: rgba(13, 17, 23, 0.92);
+}
+.globe-pinned-popup.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: rgba(13, 17, 23, 0.92);
 }
 @keyframes ts-globe-spin-rev {
   to {

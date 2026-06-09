@@ -1,0 +1,17 @@
+{
+  "region": "river_volga",
+  "name": "Volga (Moscow-Volga waterway)",
+  "meanderFactor": 1.15,
+  "note": "Cruise itineraries use Volga + Moskva + Lake Ladoga + Svir + Onega; not strictly Volga proper.",
+  "anchors": [
+    { "name": "Moscow", "lat": 55.75, "lon": 37.6167 },
+    { "name": "Uglich", "lat": 57.5333, "lon": 38.3167 },
+    { "name": "Yaroslavl", "lat": 57.6256, "lon": 39.8736 },
+    { "name": "Goritsy", "lat": 59.8667, "lon": 38.3833 },
+    { "name": "Kizhi", "lat": 62.0667, "lon": 35.2167 },
+    { "name": "Petrozavodsk", "lat": 61.7833, "lon": 34.35 },
+    { "name": "Mandrogi", "lat": 60.7889, "lon": 33.7889 },
+    { "name": "Volgograd", "lat": 48.7, "lon": 44.5167 },
+    { "name": "Astrakhan", "lat": 46.35, "lon": 48.0333 }
+  ]
+}

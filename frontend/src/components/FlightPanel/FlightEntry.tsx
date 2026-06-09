@@ -4,6 +4,8 @@ import { QuickActions } from "./QuickActions";
 import { InlineStats } from "./InlineStats";
 import { useFlightSelectionStore } from "../../store/flightSelectionStore";
 import { useTranslation } from "../../hooks/useTranslation";
+import SpecialTypeBadge from "../specialFlights/SpecialTypeBadge";
+import type { SpecialType } from "../specialFlights/specialTypeMeta";
 
 interface FlightEntryProps {
   flight: Flight;
@@ -22,7 +24,8 @@ export function FlightEntry({
 }: FlightEntryProps): JSX.Element {
   const [hovered, setHovered] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
-  const { selectedIds, setSelection } = useFlightSelectionStore();
+  const selectedIds = useFlightSelectionStore((s) => s.selectedIds);
+  const setSelection = useFlightSelectionStore((s) => s.setSelection);
   const { i18n } = useTranslation(["common"]);
   const isSelected = selectedIds.includes(flight.id);
 
@@ -88,6 +91,9 @@ export function FlightEntry({
                 >
                   dupliziert
                 </span>
+              )}
+              {flight.specialType && (
+                <SpecialTypeBadge type={flight.specialType as SpecialType} />
               )}
             </div>
             <div className="text-xs" style={{ color: "var(--text-muted)" }}>

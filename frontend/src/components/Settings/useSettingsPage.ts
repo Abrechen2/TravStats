@@ -38,11 +38,13 @@ export function useSettingsPage() {
     units,
     defaults,
     map,
+    cruise,
     setProfile,
     setDisplay,
     setUnits,
     setDefaults,
     setMap,
+    setCruise,
     saveRemoteSettings,
   } = useSettingsStore();
 
@@ -337,11 +339,13 @@ export function useSettingsPage() {
     units,
     defaults,
     map,
+    cruise,
     setProfile,
     setDisplay,
     setUnits,
     setDefaults,
     setMap,
+    setCruise,
     // Derived
     hasParserAccess,
     // Profile

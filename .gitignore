@@ -109,6 +109,10 @@ backend/data/training/output-*/
 backend/data/training/test-output/
 backend/data/logs/training/
 
+# Land-mask rasterizer cache (downloaded GeoJSON, regenerated on demand).
+# The packed output at backend/data/land-mask.bin IS committed.
+backend/data/.cache/
+
 # Tool-generated directories (never commit)
 .playwright-mcp/
 .superpowers/
@@ -118,9 +122,12 @@ screenshots/
 # repo root during sessions. Tracked PNGs (docs/images/, frontend/public/,
 # test-samples/) are unaffected.
 /*.png
+/*.jpg
+/*.jpeg
 
 # Production logs (never commit)
 ProdLogs/
 .cursor
 /.tmp/
 .gitnexus
+brand-smoke-shots/

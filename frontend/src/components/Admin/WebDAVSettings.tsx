@@ -208,7 +208,7 @@ export default function WebDAVSettings(): JSX.Element {
           disabled={saving}
           className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
         >
-          {saving ? t("common:saving") : t("common:save")}
+          {saving ? t("common:buttons.saving") : t("common:buttons.save")}
         </button>
         <button
           type="button"

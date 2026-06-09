@@ -4,15 +4,22 @@ import userEvent from "@testing-library/user-event";
 import { FlightPanel } from "../../components/FlightPanel";
 import type { Flight } from "../../types";
 
-vi.mock("../../store/flightSelectionStore", () => ({
-  useFlightSelectionStore: vi.fn(() => ({
-    selectedIds: [],
+vi.mock("../../store/flightSelectionStore", () => {
+  const state = {
+    selectedIds: [] as string[],
     selectedFlights: [],
     highlightMode: null,
+    detailMode: null,
     setSelection: vi.fn(),
     clearSelection: vi.fn(),
-  })),
-}));
+    showDetails: vi.fn(),
+  };
+  return {
+    useFlightSelectionStore: vi.fn(<T,>(selector?: (s: typeof state) => T) =>
+      selector ? selector(state) : state
+    ),
+  };
+});
 
 vi.mock("framer-motion", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,

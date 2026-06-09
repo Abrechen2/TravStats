@@ -11,12 +11,17 @@ import AirportSeedingModal from "./components/AirportSeedingModal";
 import { setupApi } from "./lib/api";
 import i18n from "./i18n/config";
 import { useTranslation } from "./hooks/useTranslation";
+import { useEnabledDomains } from "./hooks/useEnabledDomains";
 
 // Lazy load pages for code splitting
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const RegisterPage = lazy(() => import("./pages/RegisterPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const FlightsTablePage = lazy(() => import("./pages/FlightsTablePage"));
+const CruisesPage = lazy(() => import("./pages/CruisesPage"));
+const CruiseDetailPage = lazy(() => import("./pages/CruiseDetailPage"));
+const TripsPage = lazy(() => import("./pages/TripsPage"));
+const TripDetailPage = lazy(() => import("./pages/TripDetailPage"));
 const AchievementsPage = lazy(() => import("./pages/AchievementsPage"));
 const AdvancedStatsPage = lazy(() => import("./pages/AdvancedStatsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
@@ -54,6 +59,7 @@ function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation("common");
+  const { isEnabled } = useEnabledDomains();
   const [setupChecked, setSetupChecked] = useState(false);
   const [showSeedingModal, setShowSeedingModal] = useState(false);
 
@@ -203,13 +209,52 @@ function AppContent() {
               <Route path="/change-password" element={<ForceChangePasswordPage />} />
 
               {/* Protected routes */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route
-                path="/"
+                path="/dashboard"
+                element={isAuthenticated ? <DashboardPage /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/dashboard/:tab"
                 element={isAuthenticated ? <DashboardPage /> : <Navigate to="/login" />}
               />
               <Route
                 path="/flights"
-                element={isAuthenticated ? <FlightsTablePage /> : <Navigate to="/login" />}
+                element={
+                  isAuthenticated && isEnabled("flight") ? (
+                    <FlightsTablePage />
+                  ) : (
+                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                  )
+                }
+              />
+              <Route
+                path="/cruises"
+                element={
+                  isAuthenticated && isEnabled("cruise") ? (
+                    <CruisesPage />
+                  ) : (
+                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                  )
+                }
+              />
+              <Route
+                path="/cruises/:id"
+                element={
+                  isAuthenticated && isEnabled("cruise") ? (
+                    <CruiseDetailPage />
+                  ) : (
+                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                  )
+                }
+              />
+              <Route
+                path="/trips"
+                element={isAuthenticated ? <TripsPage /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/trips/:id"
+                element={isAuthenticated ? <TripDetailPage /> : <Navigate to="/login" />}
               />
               <Route
                 path="/achievements"

@@ -1,0 +1,7 @@
+# Routing-strategy harness — generated artefacts only.
+# Source code (`harness/`, `*.ts`, `*.mjs`, `BRIEF.md`, `APPROACHES.md`)
+# is checked in; the GeoJSON dumps and the JSON summary are run output
+# that re-generates from `npx tsx harness/runner.ts`.
+audit.json
+*.geojson
+harness-out/

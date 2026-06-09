@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import type { Trip } from "../../types";
+import { useState, useEffect, useRef } from "react";
+import type { Trip, TripCategory, TripStatus } from "../../types";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -11,20 +11,108 @@ interface TripModalProps {
   onSaved: () => void;
 }
 
+const STATUSES: TripStatus[] = ["planned", "in_progress", "completed"];
+const CATEGORIES: TripCategory[] = ["vacation", "business", "weekend", "family", "other"];
+
+const CATEGORY_ICON: Record<TripCategory, string> = {
+  vacation: "🏖",
+  business: "💼",
+  weekend: "🎒",
+  family: "👨‍👩‍👧",
+  other: "🗺",
+};
+
+type ModalTab = "general" | "people" | "appearance" | "notes";
+
+const TABS: ReadonlyArray<{ id: ModalTab; icon: string }> = [
+  { id: "general", icon: "📋" },
+  { id: "people", icon: "👥" },
+  { id: "appearance", icon: "🎨" },
+  { id: "notes", icon: "📝" },
+];
+
+// Convert ISO date string ↔ <input type="date"> "YYYY-MM-DD" form. Local
+// timezone is fine here — trip dates are calendar dates, not instants.
+function toDateInput(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+}
+
+function fromDateInput(value: string): string | null {
+  if (!value) return null;
+  return new Date(value + "T00:00:00.000Z").toISOString();
+}
+
+function csvFromArray(arr: string[]): string {
+  return arr.join(", ");
+}
+
+function arrayFromCsv(value: string): string[] {
+  return value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 export default function TripModal({ trip, onClose, onSaved }: TripModalProps): JSX.Element {
   const { t } = useTranslation(["trips", "common"]);
   const addToast = useToastStore((s) => s.addToast);
+
+  const [tab, setTab] = useState<ModalTab>("general");
   const [name, setName] = useState(trip?.name ?? "");
   const [description, setDescription] = useState(trip?.description ?? "");
   const [color, setColor] = useState(trip?.color ?? PALETTE[0]);
+  const [status, setStatus] = useState<TripStatus>(trip?.status ?? "completed");
+  const [category, setCategory] = useState<TripCategory | "">(trip?.category ?? "");
+  const [startDate, setStartDate] = useState(toDateInput(trip?.startDate ?? null));
+  const [endDate, setEndDate] = useState(toDateInput(trip?.endDate ?? null));
+  const [originLabel, setOriginLabel] = useState(trip?.originLabel ?? "");
+  const [destinationLabel, setDestinationLabel] = useState(trip?.destinationLabel ?? "");
+  const [tagsCsv, setTagsCsv] = useState(csvFromArray(trip?.tags ?? []));
+  const [companionsCsv, setCompanionsCsv] = useState(csvFromArray(trip?.companions ?? []));
+  const [notes, setNotes] = useState(trip?.notes ?? "");
+  const [coverImageUrl, setCoverImageUrl] = useState(trip?.coverImageUrl ?? "");
   const [saving, setSaving] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCoverFile = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!trip) {
+      addToast("error", t("trips:modal.coverUploadCreateFirst"));
+      return;
+    }
+    setUploadingCover(true);
+    try {
+      const { coverUrl } = await tripsApi.uploadCover(trip.id, file);
+      setCoverImageUrl(coverUrl);
+      addToast("success", t("trips:gallery.coverUploaded"));
+    } catch {
+      addToast("error", t("trips:gallery.uploadError"));
+    } finally {
+      setUploadingCover(false);
+    }
+  };
 
   useEffect(() => {
-    if (trip) {
-      setName(trip.name);
-      setDescription(trip.description ?? "");
-      setColor(trip.color);
-    }
+    if (!trip) return;
+    setName(trip.name);
+    setDescription(trip.description ?? "");
+    setColor(trip.color);
+    setStatus(trip.status);
+    setCategory(trip.category ?? "");
+    setStartDate(toDateInput(trip.startDate));
+    setEndDate(toDateInput(trip.endDate));
+    setOriginLabel(trip.originLabel ?? "");
+    setDestinationLabel(trip.destinationLabel ?? "");
+    setTagsCsv(csvFromArray(trip.tags));
+    setCompanionsCsv(csvFromArray(trip.companions));
+    setNotes(trip.notes ?? "");
+    setCoverImageUrl(trip.coverImageUrl ?? "");
   }, [trip]);
 
   const handleSave = async (): Promise<void> => {
@@ -36,6 +124,16 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           name: name.trim(),
           description: description.trim() || null,
           color,
+          status,
+          category: category === "" ? null : category,
+          startDate: fromDateInput(startDate),
+          endDate: fromDateInput(endDate),
+          originLabel: originLabel.trim() || null,
+          destinationLabel: destinationLabel.trim() || null,
+          tags: arrayFromCsv(tagsCsv),
+          companions: arrayFromCsv(companionsCsv),
+          notes: notes.trim() || null,
+          coverImageUrl: coverImageUrl.trim() || null,
         });
         addToast("success", t("trips:toasts.updated"));
       } else {
@@ -43,6 +141,16 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           name: name.trim(),
           description: description.trim() || undefined,
           color,
+          status,
+          category: category === "" ? undefined : category,
+          startDate: fromDateInput(startDate) ?? undefined,
+          endDate: fromDateInput(endDate) ?? undefined,
+          originLabel: originLabel.trim() || undefined,
+          destinationLabel: destinationLabel.trim() || undefined,
+          tags: arrayFromCsv(tagsCsv),
+          companions: arrayFromCsv(companionsCsv),
+          notes: notes.trim() || undefined,
+          coverImageUrl: coverImageUrl.trim() || undefined,
         });
         addToast("success", t("trips:toasts.created"));
       }
@@ -54,6 +162,12 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
     }
   };
 
+  const inputStyle: React.CSSProperties = {
+    background: "var(--bg-input, var(--bg-base))",
+    border: "1px solid var(--color-border)",
+    color: "var(--text-primary)",
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -62,7 +176,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
       }}
     >
       <div
-        className="w-full max-w-md rounded-xl shadow-2xl"
+        className="w-full max-w-2xl rounded-xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col"
         role="dialog"
         aria-modal="true"
         style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
@@ -73,75 +187,240 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           </h2>
         </div>
 
-        <div className="p-5 space-y-4">
-          {/* Name */}
-          <div>
-            <label
-              className="block text-sm font-medium mb-1"
-              style={{ color: "var(--text-muted)" }}
-            >
-              {t("trips:modal.nameLabel")}
-            </label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("trips:modal.namePlaceholder")}
-              className="w-full rounded-lg px-3 py-2 text-sm"
-              style={{
-                background: "var(--bg-input)",
-                border: "1px solid var(--color-border)",
-                color: "var(--text-primary)",
-              }}
-            />
-          </div>
+        <div
+          className="flex gap-1 px-3 pt-3"
+          style={{ borderBottom: "1px solid var(--color-border)" }}
+          role="tablist"
+        >
+          {TABS.map((tDef) => {
+            const active = tab === tDef.id;
+            return (
+              <button
+                key={tDef.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setTab(tDef.id)}
+                className="px-3 py-2 text-sm rounded-t-md transition-colors flex items-center gap-1.5"
+                style={{
+                  background: active ? "var(--bg-surface)" : "transparent",
+                  borderBottom: active ? "2px solid var(--accent)" : "2px solid transparent",
+                  color: active ? "var(--text-primary)" : "var(--text-secondary)",
+                  fontWeight: active ? 600 : 400,
+                  marginBottom: "-1px",
+                }}
+              >
+                <span>{tDef.icon}</span>
+                <span>{t(`trips:modalTabs.${tDef.id}`)}</span>
+              </button>
+            );
+          })}
+        </div>
 
-          {/* Description */}
-          <div>
-            <label
-              className="block text-sm font-medium mb-1"
-              style={{ color: "var(--text-muted)" }}
-            >
-              {t("trips:modal.descLabel")}
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder={t("trips:modal.descPlaceholder")}
-              rows={2}
-              className="w-full rounded-lg px-3 py-2 text-sm resize-none"
-              style={{
-                background: "var(--bg-input)",
-                border: "1px solid var(--color-border)",
-                color: "var(--text-primary)",
-              }}
-            />
-          </div>
-
-          {/* Color picker */}
-          <div>
-            <label
-              className="block text-sm font-medium mb-2"
-              style={{ color: "var(--text-muted)" }}
-            >
-              {t("trips:modal.colorLabel")}
-            </label>
-            <div className="flex gap-2 flex-wrap">
-              {PALETTE.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setColor(c)}
-                  aria-label={c}
-                  aria-pressed={color === c}
-                  className="w-7 h-7 rounded-full transition-transform hover:scale-110"
-                  style={{
-                    background: c,
-                    outline: color === c ? `2px solid ${c}` : "none",
-                    outlineOffset: "2px",
-                  }}
+        <div className="p-5 space-y-4 overflow-y-auto flex-1">
+          {tab === "general" && (
+            <>
+              <Field label={t("trips:modal.nameLabel")}>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t("trips:modal.namePlaceholder")}
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={inputStyle}
                 />
-              ))}
-            </div>
-          </div>
+              </Field>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label={t("trips:modal.statusLabel")}>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as TripStatus)}
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={inputStyle}
+                  >
+                    {STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {t(`trips:status.${s}`)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label={t("trips:modal.categoryLabel")}>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value as TripCategory | "")}
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={inputStyle}
+                  >
+                    <option value="">—</option>
+                    {CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {CATEGORY_ICON[c]} {t(`trips:category.${c}`)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label={t("trips:modal.startDateLabel")}>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={inputStyle}
+                  />
+                </Field>
+                <Field label={t("trips:modal.endDateLabel")}>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={inputStyle}
+                  />
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label={t("trips:modal.originLabel")}>
+                  <input
+                    value={originLabel}
+                    onChange={(e) => setOriginLabel(e.target.value)}
+                    placeholder="München"
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={inputStyle}
+                  />
+                </Field>
+                <Field label={t("trips:modal.destinationLabel")}>
+                  <input
+                    value={destinationLabel}
+                    onChange={(e) => setDestinationLabel(e.target.value)}
+                    placeholder="Tokyo, Japan"
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={inputStyle}
+                  />
+                </Field>
+              </div>
+
+              <Field
+                label={t("trips:modal.descLabel")}
+                hint={t("trips:modal.descHint")}
+              >
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder={t("trips:modal.descPlaceholder")}
+                  rows={2}
+                  className="w-full rounded-lg px-3 py-2 text-sm resize-none"
+                  style={inputStyle}
+                />
+              </Field>
+            </>
+          )}
+
+          {tab === "people" && (
+            <>
+              <Field label={t("trips:modal.companionsLabel")}>
+                <input
+                  value={companionsCsv}
+                  onChange={(e) => setCompanionsCsv(e.target.value)}
+                  placeholder="Marie, Tom"
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={inputStyle}
+                />
+              </Field>
+              <CompanionPreview values={arrayFromCsv(companionsCsv)} />
+
+              <Field label={t("trips:modal.tagsLabel")}>
+                <input
+                  value={tagsCsv}
+                  onChange={(e) => setTagsCsv(e.target.value)}
+                  placeholder="kultur, food, fotos"
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={inputStyle}
+                />
+              </Field>
+              <TagPreview values={arrayFromCsv(tagsCsv)} accent={color} />
+            </>
+          )}
+
+          {tab === "appearance" && (
+            <>
+              <Field label={t("trips:modal.coverLabel")}>
+                <div className="flex gap-2">
+                  <input
+                    value={coverImageUrl}
+                    onChange={(e) => setCoverImageUrl(e.target.value)}
+                    placeholder="https://… / /api/v1/trips/…"
+                    className="flex-1 rounded-lg px-3 py-2 text-sm"
+                    style={inputStyle}
+                  />
+                  <input
+                    ref={coverInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(e) => void handleCoverFile(e)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => coverInputRef.current?.click()}
+                    disabled={uploadingCover || !trip}
+                    title={!trip ? t("trips:modal.coverUploadCreateFirst") : undefined}
+                    className="px-3 py-2 rounded-lg text-sm font-medium border disabled:opacity-50"
+                    style={{
+                      borderColor: "var(--accent)",
+                      color: "var(--accent)",
+                    }}
+                  >
+                    {uploadingCover ? "…" : t("trips:modal.coverUploadButton")}
+                  </button>
+                </div>
+              </Field>
+              <CoverPreview url={coverImageUrl} accent={color} title={name || "—"} />
+              <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                {trip ? t("trips:modal.coverUploadReady") : t("trips:modal.coverUploadCreateFirst")}
+              </p>
+
+              <Field label={t("trips:modal.colorLabel")}>
+                <div className="flex gap-2 flex-wrap">
+                  {PALETTE.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setColor(c)}
+                      aria-label={c}
+                      aria-pressed={color === c}
+                      type="button"
+                      className="w-7 h-7 rounded-full transition-transform hover:scale-110"
+                      style={{
+                        background: c,
+                        outline: color === c ? `2px solid ${c}` : "none",
+                        outlineOffset: "2px",
+                      }}
+                    />
+                  ))}
+                </div>
+              </Field>
+            </>
+          )}
+
+          {tab === "notes" && (
+            <Field
+              label={t("trips:modal.notesLabel")}
+              hint={t("trips:modal.notesMarkdownHint")}
+            >
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder={t("trips:modal.notesPlaceholder")}
+                rows={14}
+                className="w-full rounded-lg px-3 py-2 text-sm resize-none font-mono"
+                style={inputStyle}
+              />
+            </Field>
+          )}
         </div>
 
         <div
@@ -150,6 +429,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
         >
           <button
             onClick={onClose}
+            type="button"
             className="px-4 py-2 rounded-lg text-sm"
             style={{ color: "var(--text-muted)" }}
           >
@@ -158,12 +438,116 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           <button
             onClick={() => void handleSave()}
             disabled={!name.trim() || saving}
+            type="button"
             className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--accent)] text-[var(--bg-primary)] disabled:opacity-50"
           >
             {saving ? "…" : t("trips:modal.save")}
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+interface FieldProps {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}
+
+function Field({ label, hint, children }: FieldProps): JSX.Element {
+  return (
+    <div>
+      <label className="block text-xs font-medium uppercase tracking-wide mb-1.5"
+        style={{ color: "var(--text-muted)" }}
+      >
+        {label}
+      </label>
+      {children}
+      {hint && (
+        <p className="text-[11px] mt-1" style={{ color: "var(--text-muted)" }}>
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
+interface CoverPreviewProps {
+  url: string;
+  accent: string;
+  title: string;
+}
+
+function CoverPreview({ url, accent, title }: CoverPreviewProps): JSX.Element {
+  const trimmed = url.trim();
+  return (
+    <div
+      className="rounded-lg overflow-hidden h-32 relative flex items-end p-3"
+      style={{
+        background: trimmed
+          ? `url(${JSON.stringify(trimmed)}) center/cover`
+          : `linear-gradient(135deg, ${accent}40, ${accent}10)`,
+        border: "1px solid var(--color-border)",
+      }}
+    >
+      {!trimmed && (
+        <div
+          className="absolute inset-0 flex items-center justify-center text-3xl opacity-40"
+          aria-hidden
+        >
+          🌍
+        </div>
+      )}
+      <div
+        className="relative font-display font-bold text-lg drop-shadow-lg"
+        style={{ color: trimmed ? "#fff" : "var(--text-primary)" }}
+      >
+        {title}
+      </div>
+    </div>
+  );
+}
+
+function CompanionPreview({ values }: { values: string[] }): JSX.Element | null {
+  if (values.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {values.map((v) => (
+        <span
+          key={v}
+          className="px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5"
+          style={{
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--color-border)",
+            color: "var(--text-primary)",
+          }}
+        >
+          <span aria-hidden>👤</span>
+          {v}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function TagPreview({ values, accent }: { values: string[]; accent: string }): JSX.Element | null {
+  if (values.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {values.map((v) => (
+        <span
+          key={v}
+          className="px-2.5 py-1 rounded-full text-xs"
+          style={{
+            background: `${accent}1f`,
+            border: `1px solid ${accent}66`,
+            color: accent,
+          }}
+        >
+          #{v}
+        </span>
+      ))}
     </div>
   );
 }

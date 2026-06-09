@@ -9,7 +9,6 @@ import { PrismaClient, Flight, Prisma } from '@prisma/client';
 import { lookupFlightDetails, FlightLookupResult } from './flightLookup';
 import { prisma } from '../db';
 import logger from '../utils/logger';
-import { getApiKey } from './apiKeyResolver';
 import { recalculateNextApiCheckAt } from '../utils/smartCheckSchedule';
 import { applyPendingUpdate } from './pendingUpdateService';
 import type { FlightDataSnapshot } from './pendingUpdateService';
@@ -472,14 +471,10 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           changedFields: changedFieldNames, operation: 'significant_changes_found' },
           `Found ${changes.length} change(s) for ${flight.flightNumber}: ${changedFieldNames.join(', ')}`);
 
-        // Determine API source (check user key first, then global, then ENV)
-        const aviationstackKey = await getApiKey('aviationstack', flight.userId);
-        const airlabsKey = await getApiKey('airlabs', flight.userId);
-        const apiSource = aviationstackKey
-          ? 'aviationstack'
-          : airlabsKey
-          ? 'airlabs'
-          : 'unknown';
+        // Attribute the update to the provider that actually served the data.
+        // (Guessing from which keys are configured mislabelled every AirLabs
+        // fallback result as "aviationstack" — prod audit 2026-06-07.)
+        const apiSource = apiData.source ?? 'unknown';
 
         // Create pending update
         const updateId = await createPendingUpdate(

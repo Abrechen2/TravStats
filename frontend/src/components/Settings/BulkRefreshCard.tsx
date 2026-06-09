@@ -167,7 +167,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
           onClick={() => setConfirmOpen(true)}
           disabled={buttonDisabled}
           title={demoBlocked ? t("settings:apiKeys.bulkRefresh.demoBlocked") : undefined}
-          className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-[var(--bg-muted)] disabled:cursor-not-allowed rounded-md transition-colors flex items-center gap-2"
+          className="btn-primary px-3 py-1.5 text-sm font-medium disabled:cursor-not-allowed flex items-center gap-2"
         >
           {running
             ? t("settings:apiKeys.bulkRefresh.running")
@@ -254,7 +254,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
               <button
                 type="button"
                 onClick={handleRun}
-                className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
+                className="btn-primary px-3 py-1.5 text-sm font-medium"
               >
                 {t("settings:apiKeys.bulkRefresh.confirmRun")}
               </button>

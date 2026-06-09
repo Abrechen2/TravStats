@@ -1,0 +1,25 @@
+{
+  "region": "river_mississippi",
+  "name": "Mississippi",
+  "kmSystem": "Lower/Upper Mississippi miles converted to km (Head of Passes = mile 0 / km 0, counted upstream)",
+  "kmDirection": "upstream",
+  "anchors": [
+    { "name": "New Orleans", "lat": 29.9511, "lon": -90.0715, "km": 153 },
+    { "name": "Baton Rouge", "lat": 30.4515, "lon": -91.1871, "km": 367 },
+    { "name": "Natchez", "lat": 31.5604, "lon": -91.4032, "km": 590 },
+    { "name": "Vicksburg", "lat": 32.3526, "lon": -90.8779, "km": 700 },
+    { "name": "Memphis", "lat": 35.1495, "lon": -90.049, "km": 1295 },
+    { "name": "St. Louis", "lat": 38.627, "lon": -90.1994, "km": 1827 },
+    { "name": "Hannibal", "lat": 39.7084, "lon": -91.3585, "km": 1981 },
+    { "name": "Davenport", "lat": 41.5236, "lon": -90.5776, "km": 2179 },
+    { "name": "Dubuque", "lat": 42.5006, "lon": -90.6645, "km": 2294 },
+    { "name": "La Crosse", "lat": 43.8014, "lon": -91.2396, "km": 2451 },
+    { "name": "Red Wing", "lat": 44.5625, "lon": -92.5338, "km": 2603 },
+    { "name": "Saint Paul", "lat": 44.9537, "lon": -93.09, "km": 2660 },
+    { "name": "Chattanooga", "lat": 35.0456, "lon": -85.3097, "km": 1800, "note": "Tennessee River tributary; cruise itineraries via Ohio R." },
+    { "name": "Nashville", "lat": 36.1627, "lon": -86.7816, "km": 1900, "note": "Cumberland River tributary" },
+    { "name": "Louisville", "lat": 38.2527, "lon": -85.7585, "km": 1620, "note": "Ohio River tributary" },
+    { "name": "Cincinnati", "lat": 39.1031, "lon": -84.512, "km": 1750, "note": "Ohio River" },
+    { "name": "Pittsburgh", "lat": 40.4406, "lon": -79.9959, "km": 2400, "note": "Ohio River head" }
+  ]
+}

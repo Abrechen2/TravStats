@@ -1,0 +1,131 @@
+{
+  "nav": { "link": "Kreuzfahrten" },
+  "list": {
+    "title": "Kreuzfahrten",
+    "new": "Kreuzfahrt hinzufügen",
+    "empty": "Noch keine Kreuzfahrten erfasst",
+    "columns": {
+      "ship": "Schiff",
+      "line": "Reederei",
+      "dates": "Termine",
+      "ports": "Häfen",
+      "status": "Status",
+      "cabin": "Kabine",
+      "price": "Preis"
+    }
+  },
+  "detail": {
+    "route": "Route",
+    "cabin": "Kabine",
+    "costs": "Kosten",
+    "meta": "Notizen & Tags"
+  },
+  "field": {
+    "ship": "Schiff",
+    "line": "Reederei",
+    "depart": "Abfahrt",
+    "arrive": "Ankunft",
+    "cabin": "Kabine",
+    "cabinType": "Kategorie",
+    "deck": "Deck",
+    "sea_days": "Seetage",
+    "ports": "Häfen",
+    "distance_nm": "Seemeilen",
+    "bookingReference": "Buchungsnummer",
+    "price": "Preis",
+    "notes": "Notizen",
+    "tags": "Tags",
+    "companions": "Mitreisende",
+    "port_name": "Hafenname",
+    "city": "Stadt",
+    "country": "Land",
+    "lat": "Breite",
+    "lon": "Länge"
+  },
+  "cabinType": {
+    "inside": "Innen",
+    "oceanview": "Außenkabine",
+    "balcony": "Balkon",
+    "suite": "Suite"
+  },
+  "status": {
+    "scheduled": "Geplant",
+    "flown": "Abgeschlossen",
+    "cancelled": "Storniert",
+    "historical": "Historisch"
+  },
+  "stops": {
+    "title": "Hafenfolge",
+    "at_sea": "Auf See",
+    "add": "Stopp hinzufügen",
+    "day": "Tag",
+    "excursion": "Landausflug"
+  },
+  "picker": {
+    "ship_placeholder": "Schiff suchen …",
+    "port_placeholder": "Hafen suchen …",
+    "add_custom_ship": "Neues Schiff anlegen",
+    "add_custom_port": "Neuen Hafen anlegen"
+  },
+  "map": { "layer": "Kreuzfahrten" },
+  "chooser": {
+    "title": "Wie möchtest du die Kreuzfahrt erfassen?",
+    "email": {
+      "label": "Buchungs-E-Mail importieren",
+      "description": "Lade deine Buchungsbestätigung von AIDA, TUI Cruises oder Costa hoch — die Kreuzfahrt wird automatisch erfasst.",
+      "infoLine": "Reederei, Schiff, Häfen und Termine werden übernommen",
+      "badge": "Bald verfügbar",
+      "cta": "E-Mail hochladen"
+    },
+    "manual": {
+      "label": "Manuelle Eingabe",
+      "description": "Schiff, Häfen und Details selbst eintragen",
+      "cta": "Manuell erfassen"
+    },
+    "back": "← Zurück zur Auswahl"
+  },
+  "tabs": {
+    "emailParser": "E-Mail-Parser",
+    "manual": "Manuell",
+    "emailParserTitle": "Buchungs-E-Mail importieren",
+    "emailParserHint": "Das automatische Einlesen von Kreuzfahrt-Bestätigungen (AIDA, TUI Cruises, Costa …) kommt in einer der nächsten Versionen. Bitte Daten vorerst im Reiter „Manuell\" eintragen.",
+    "emailParserStub": "Kreuzfahrt-Parser – bald verfügbar"
+  },
+  "filter": {
+    "title": "Filter",
+    "searchPlaceholder": "Suche nach Schiff oder Reederei …",
+    "status": "Status",
+    "year": "Jahr",
+    "allStatuses": "Alle Status",
+    "allYears": "Alle Jahre",
+    "reset": "Zurücksetzen",
+    "showing": "{{count}} angezeigt"
+  },
+  "form": {
+    "title": "Kreuzfahrt",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "saving": "Speichere …",
+    "createTitle": "Neue Kreuzfahrt",
+    "editTitle": "Kreuzfahrt bearbeiten"
+  },
+  "import": {
+    "button": "PDF importieren",
+    "parsing": "PDF wird analysiert …",
+    "previewTitle": "{{count}} Kreuzfahrt(en) gefunden",
+    "previewHint": "Prüfe die extrahierten Daten und speichere sie. Häfen ohne Treffer in der Datenbank kannst du später im Editor zuordnen.",
+    "save": "Speichern",
+    "saved": "{{count}} Kreuzfahrt(en) gespeichert",
+    "saveError": "Speichern fehlgeschlagen",
+    "parseError": "PDF konnte nicht verarbeitet werden",
+    "noCruises": "Keine Kreuzfahrt im PDF gefunden",
+    "notPdf": "Nur PDF-Dateien werden unterstützt",
+    "shipFromDb": "Schiff aus Datenbank",
+    "shipUnmatched": "Schiff nicht in DB",
+    "shipUnmatchedHint": "Wird als freier Text gespeichert. Du kannst das Schiff im Editor verknüpfen.",
+    "stopsLabel": "Stopps",
+    "stopsValue": "{{ports}} Häfen, {{seaDays}} Seetage",
+    "unmatchedTitle": "Häfen ohne Treffer",
+    "unmatchedHint": "Diese Häfen sind in der Datenbank nicht verfügbar und wurden vorerst als Seetage markiert. Im Editor kannst du sie korrigieren."
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "region": "river_irrawaddy",
+  "name": "Irrawaddy",
+  "meanderFactor": 1.2,
+  "anchors": [
+    { "name": "Yangon", "lat": 16.8, "lon": 96.15 },
+    { "name": "Pyay", "lat": 18.8244, "lon": 95.2178 },
+    { "name": "Bagan", "lat": 21.1717, "lon": 94.8589 },
+    { "name": "Sagaing", "lat": 21.88, "lon": 95.98 },
+    { "name": "Mingun", "lat": 22.0339, "lon": 96.0211 },
+    { "name": "Mandalay", "lat": 21.975, "lon": 96.0833 }
+  ]
+}

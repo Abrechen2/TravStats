@@ -5,12 +5,14 @@ import { z } from 'zod';
 import logger from '../utils/logger';
 import { getParserConfig, parseBoardingPass, getAvailableProviders } from '../services/parsers/factory';
 import { validateBoardingPassImageBase64 } from '../utils/fileValidation';
+import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
 
 const router = Router();
 
 const parseBoardingpassSchema = z.object({
   imageBase64: z.string().min(1, 'Image data is required').max(20 * 1024 * 1024, 'Image too large (max 20MB)'),
   enrichWithApi: z.boolean().optional().default(true),
+  domain: z.enum(PARSER_SUPPORTED_DOMAINS).optional().default('flight'),
 });
 
 /**
@@ -29,7 +31,20 @@ const parseBoardingpassSchema = z.object({
  */
 router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async (req: AuthRequest, res: Response) => {
   try {
-    const { imageBase64, enrichWithApi } = parseBoardingpassSchema.parse(req.body);
+    const parsed = parseBoardingpassSchema.parse(req.body);
+
+    // Defensive guard for future domain expansion (Cruise etc.).
+    // Zod already rejects unknown values; this catches the case where the
+    // enum is later widened but handler logic hasn't been extended yet.
+    if (parsed.domain !== 'flight') {
+      return res.status(501).json({
+        error: 'PARSER_DOMAIN_NOT_IMPLEMENTED',
+        message: `Parsing for domain '${parsed.domain}' is not yet implemented. Add entries manually via the /cruises page.`,
+        domain: parsed.domain,
+      });
+    }
+
+    const { imageBase64, enrichWithApi } = parsed;
     const userId = req.userId!;
 
     // Validate image using magic numbers

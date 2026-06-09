@@ -44,6 +44,8 @@ export interface FlightData {
   departureTime: Date | null;
   arrivalTime: Date | null;
   status: string;
+  /** Sonder-Flug discriminator — `null` for normal scheduled flights. */
+  specialType: string | null;
 }
 
 export interface UserStats {
@@ -103,6 +105,50 @@ export interface UserStats {
   piDayFlights: number;
   piPrecisionFlights: number;
   halloweenFlights: number;
+  // Sonder-Flüge — counts per signature type, plus a distinct-type
+  // counter for the "variety" achievement.
+  specialSightseeingCount: number;
+  specialZerogCount: number;
+  specialEclipseCount: number;
+  specialRocketCount: number;
+  /** Number of distinct specialType values present in the user's
+   *  flights — any of the 8 enum values counts as one. */
+  specialVariety: number;
+  // Cruise stats (V1 multi-domain)
+  cruisesCount: number;
+  cruisePortsUnique: number;
+  cruisePortsSingleMax: number;
+  cruiseShipsUnique: number;
+  cruiseLines: Set<string>;
+  cruiseLinesUnique: number;
+  cruiseLineLoyaltyMax: number;
+  seaDays: number;
+  seaDaysStreak: number;
+  cruiseRegions: Set<string>;
+  hasBalconyCabin: boolean;
+  hasSuiteCabin: boolean;
+  cruiseMaxDeck: number;
+  hasCanalTransit: boolean;
+  hasPolar: boolean;
+  hasColdWater: boolean;
+  hasCruiseBirthdayAtSea: boolean;
+  hasNewYearsAtSea: boolean;
+  /** Sum of great-circle hops between consecutive port calls across
+   * all cruises (km). Approximates total cruise distance for the
+   * cruise distance ladder. */
+  cruiseTotalDistanceKm: number;
+  /** Single longest leg (km) across all cruises. Used by the
+   * Off-Chart Navigator hidden egg to detect open-water crossings. */
+  cruiseLongestLegKm: number;
+  /** True when any cruise leg crosses the antimeridian. Hidden egg. */
+  hasCruiseDatelineCrossing: boolean;
+  // Cross-domain
+  hasFlyAndSailTrip: boolean;
+  /** True when any flight is within ±7 days of any cruise start/end.
+   * Tighter than the trip-bundle Fly & Sail and works even when the
+   * user didn't link the entries via the same trip id. */
+  hasFlyAndSail7d: boolean;
+  cruiseCarnivalBrandsCovered: number; // how many Carnival brands out of the set
 }
 
 export function getContinent(lat: number, lon: number): string | null {
@@ -184,6 +230,36 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     piDayFlights: 0,
     piPrecisionFlights: 0,
     halloweenFlights: 0,
+    specialSightseeingCount: 0,
+    specialZerogCount: 0,
+    specialEclipseCount: 0,
+    specialRocketCount: 0,
+    specialVariety: 0,
+    // Cruise stats — filled in by caller via spread after calculateCruiseStats
+    cruisesCount: 0,
+    cruisePortsUnique: 0,
+    cruisePortsSingleMax: 0,
+    cruiseShipsUnique: 0,
+    cruiseLines: new Set(),
+    cruiseLinesUnique: 0,
+    cruiseLineLoyaltyMax: 0,
+    seaDays: 0,
+    seaDaysStreak: 0,
+    cruiseRegions: new Set(),
+    hasBalconyCabin: false,
+    hasSuiteCabin: false,
+    cruiseMaxDeck: 0,
+    hasCanalTransit: false,
+    hasPolar: false,
+    hasColdWater: false,
+    hasCruiseBirthdayAtSea: false,
+    hasNewYearsAtSea: false,
+    cruiseTotalDistanceKm: 0,
+    cruiseLongestLegKm: 0,
+    hasCruiseDatelineCrossing: false,
+    hasFlyAndSailTrip: false,
+    hasFlyAndSail7d: false,
+    cruiseCarnivalBrandsCovered: 0,
   };
 
   // Collect all unique airport codes from flights
@@ -409,7 +485,25 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
       }
       if (month === 9 && day === 31) stats.halloweenFlights++;         // 31 Oct — Halloween
     }
+
+    // Sonder-Flüge counts — per-type counters for the "first X" single-event
+    // achievements. Every special flight counts regardless of status
+    // (scheduled eclipse chases are milestones in the real world even
+    // before they fly).
+    if (flight.specialType) {
+      if (flight.specialType === 'sightseeing') stats.specialSightseeingCount++;
+      else if (flight.specialType === 'zerog') stats.specialZerogCount++;
+      else if (flight.specialType === 'eclipse') stats.specialEclipseCount++;
+      else if (flight.specialType === 'rocket_launch') stats.specialRocketCount++;
+    }
   }
+
+  // specialVariety — number of distinct specialType values seen.
+  const specialTypeSet = new Set<string>();
+  for (const flight of flights) {
+    if (flight.specialType) specialTypeSet.add(flight.specialType);
+  }
+  stats.specialVariety = specialTypeSet.size;
 
   // Reset shortestSingleFlight if no flights
   if (stats.shortestSingleFlight === Number.POSITIVE_INFINITY) stats.shortestSingleFlight = 0;

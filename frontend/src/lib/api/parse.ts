@@ -1,7 +1,38 @@
 import type { ParsedBooking } from "../../types";
+import type { CruiseInput } from "../../types/cruise";
 
 import { parserApi } from "./client";
 import type { BoardingPassParseResult, EmailParseResult, ProviderAvailability } from "./types";
+
+export interface ParsedCruiseEntry {
+  input: CruiseInput;
+  shipMatched: boolean;
+  unmatchedPorts: { dayNumber: number; portName: string }[];
+}
+
+export interface ParsePdfFlightResult {
+  domain?: "flight";
+  flights: ParsedBooking[];
+  parserUsed: string;
+  ollamaAvailable: boolean;
+  fallbackUsed?: boolean;
+  pdfTextLength: number;
+  bcbpDetected: boolean;
+}
+
+export interface ParsePdfCruiseResult {
+  domain: "cruise";
+  cruises: ParsedCruiseEntry[];
+  parserUsed: string;
+  ollamaAvailable: boolean;
+  pdfTextLength: number;
+}
+
+export type ParsePdfResult = ParsePdfFlightResult | ParsePdfCruiseResult;
+
+export function isCruisePdfResult(r: ParsePdfResult): r is ParsePdfCruiseResult {
+  return r.domain === "cruise";
+}
 
 interface ParserCheckResult {
   available: boolean;
@@ -10,26 +41,74 @@ interface ParserCheckResult {
   metadata?: Record<string, unknown>;
 }
 
+export interface ParseEmailFlightResult extends EmailParseResult {
+  domain?: "flight";
+}
+
+export interface ParseEmailCruiseResult {
+  domain: "cruise";
+  cruises: ParsedCruiseEntry[];
+  parserUsed: string;
+  ollamaAvailable: boolean;
+  subject?: string;
+  text?: string;
+  html?: string;
+}
+
+export type ParseEmailResult = ParseEmailFlightResult | ParseEmailCruiseResult;
+
+export function isCruiseEmailResult(r: ParseEmailResult): r is ParseEmailCruiseResult {
+  return r.domain === "cruise";
+}
+
 // Parse API (Email & Boarding Pass) - Uses parserApi with 180s timeout
 export const parseApi = {
-  parseEmail: async (emailContent: string, subject?: string): Promise<EmailParseResult> => {
-    const { data } = await parserApi.post<EmailParseResult>("/parse-email", {
+  parseEmail: (async (
+    emailContent: string,
+    subject?: string,
+    domain: "flight" | "cruise" = "flight"
+  ) => {
+    const { data } = await parserApi.post<ParseEmailResult>("/parse-email", {
       emailContent,
       subject,
+      domain,
     });
     return data;
+  }) as {
+    (emailContent: string, subject?: string): Promise<ParseEmailFlightResult>;
+    (
+      emailContent: string,
+      subject: string | undefined,
+      domain: "flight"
+    ): Promise<ParseEmailFlightResult>;
+    (
+      emailContent: string,
+      subject: string | undefined,
+      domain: "cruise"
+    ): Promise<ParseEmailCruiseResult>;
+    (
+      emailContent: string,
+      subject: string | undefined,
+      domain: "flight" | "cruise"
+    ): Promise<ParseEmailResult>;
   },
 
-  parseEmailFile: async (file: File): Promise<EmailParseResult> => {
+  parseEmailFile: (async (file: File, domain: "flight" | "cruise" = "flight") => {
     const formData = new FormData();
     formData.append("email", file);
+    formData.append("domain", domain);
 
-    const { data } = await parserApi.post<EmailParseResult>("/parse-email-file", formData, {
+    const { data } = await parserApi.post<ParseEmailResult>("/parse-email-file", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
     });
     return data;
+  }) as {
+    (file: File): Promise<ParseEmailFlightResult>;
+    (file: File, domain: "flight"): Promise<ParseEmailFlightResult>;
+    (file: File, domain: "cruise"): Promise<ParseEmailCruiseResult>;
+    (file: File, domain: "flight" | "cruise"): Promise<ParseEmailResult>;
   },
 
   parseBoardingpass: async (
@@ -43,25 +122,14 @@ export const parseApi = {
     return data;
   },
 
-  parsePdf: async (
-    pdfBase64: string
-  ): Promise<{
-    flights: ParsedBooking[];
-    parserUsed: string;
-    ollamaAvailable: boolean;
-    fallbackUsed?: boolean;
-    pdfTextLength: number;
-    bcbpDetected: boolean;
-  }> => {
-    const { data } = await parserApi.post<{
-      flights: ParsedBooking[];
-      parserUsed: string;
-      ollamaAvailable: boolean;
-      fallbackUsed?: boolean;
-      pdfTextLength: number;
-      bcbpDetected: boolean;
-    }>("/parse-pdf", { pdfBase64 });
+  parsePdf: (async (pdfBase64: string, domain: "flight" | "cruise" = "flight") => {
+    const { data } = await parserApi.post<ParsePdfResult>("/parse-pdf", { pdfBase64, domain });
     return data;
+  }) as {
+    (pdfBase64: string): Promise<ParsePdfFlightResult>;
+    (pdfBase64: string, domain: "flight"): Promise<ParsePdfFlightResult>;
+    (pdfBase64: string, domain: "cruise"): Promise<ParsePdfCruiseResult>;
+    (pdfBase64: string, domain: "flight" | "cruise"): Promise<ParsePdfResult>;
   },
 
   checkOllamaVision: async (): Promise<ParserCheckResult> => {

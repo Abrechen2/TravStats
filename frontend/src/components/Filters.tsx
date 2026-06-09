@@ -253,7 +253,7 @@ export default function Filters({
 
       {showFilters && (
         <div
-          className={`absolute right-0 w-80 rounded-lg shadow-xl z-50 max-h-[calc(100vh-120px)] overflow-y-auto ${openUpward ? "bottom-full mb-2" : "mt-2"}`}
+          className={`absolute right-0 w-80 max-w-[calc(100vw-1.5rem)] rounded-lg shadow-xl z-50 max-h-[calc(100vh-120px)] overflow-y-auto ${openUpward ? "bottom-full mb-2" : "mt-2"}`}
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <div className="p-4">
