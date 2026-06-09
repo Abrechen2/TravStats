@@ -81,6 +81,14 @@ interface FlightUpdateData {
   nextApiCheckAt?: Date | null;
   depTimeSemantics?: string;
   arrTimeSemantics?: string;
+  // Special flights (Sonder-Flüge)
+  specialType?: string | null;
+  eventLat?: number | null;
+  eventLon?: number | null;
+  eventLabel?: string | null;
+  patternLat?: number | null;
+  patternLon?: number | null;
+  specialData?: Prisma.InputJsonValue | Prisma.NullTypes.JsonNull;
   // Boarding pass / email import fields — written on POST, must also be
   // updatable via PUT. Their absence here was a silent-drop bug.
   seatNumber?: string;
@@ -438,6 +446,18 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
           data.status ?? 'scheduled',
           data.flightNumber,
         ),
+        // Special flights (Sonder-Flüge) — non-null specialType marks
+        // this flight as a sub-type. See schemas/flight.ts for the union.
+        specialType: data.specialType ?? null,
+        eventLat: data.eventLat ?? null,
+        eventLon: data.eventLon ?? null,
+        eventLabel: data.eventLabel ?? null,
+        patternLat: data.patternLat ?? null,
+        patternLon: data.patternLon ?? null,
+        specialData:
+          data.specialData === null || data.specialData === undefined
+            ? Prisma.JsonNull
+            : (data.specialData as unknown as Prisma.InputJsonValue),
       },
     });
 
@@ -595,6 +615,7 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
         type: 'Feature',
         properties: {
           id: flight.id,
+          tripId: flight.tripId,
           airline: flight.airline,
           operatingAirline: flight.operatingAirline,
           flightNumber: flight.flightNumber,
@@ -860,6 +881,20 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.tags !== undefined) updateData.tags = data.tags;
     if (data.companions !== undefined) updateData.companions = data.companions;
     if (data.receiptUrl !== undefined) updateData.receiptUrl = data.receiptUrl;
+
+    // Special flights (Sonder-Flüge) — explicit `null` clears, `undefined` leaves untouched
+    if (data.specialType !== undefined) updateData.specialType = data.specialType;
+    if (data.eventLat !== undefined) updateData.eventLat = data.eventLat;
+    if (data.eventLon !== undefined) updateData.eventLon = data.eventLon;
+    if (data.eventLabel !== undefined) updateData.eventLabel = data.eventLabel;
+    if (data.patternLat !== undefined) updateData.patternLat = data.patternLat;
+    if (data.patternLon !== undefined) updateData.patternLon = data.patternLon;
+    if (data.specialData !== undefined) {
+      updateData.specialData =
+        data.specialData === null
+          ? Prisma.JsonNull
+          : (data.specialData as unknown as Prisma.InputJsonValue);
+    }
 
     // Boarding pass / email import fields. POST writes these on create;
     // PUT must propagate them too — without this whitelist the schema

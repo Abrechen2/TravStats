@@ -114,6 +114,24 @@ export interface Flight {
   tripId?: string | null;
   bookingId?: string | null;
   trip?: { id: string; name: string; color: string } | null;
+  // Sonder-Flug (special flights) — flight subtype, see backend schema.
+  // null/undefined → standard line flight, the rest of these fields unused.
+  specialType?:
+    | "sightseeing"
+    | "eclipse"
+    | "rocket_launch"
+    | "zerog"
+    | "aurora"
+    | "training"
+    | "ferry"
+    | "test"
+    | null;
+  eventLat?: number | null;
+  eventLon?: number | null;
+  eventLabel?: string | null;
+  patternLat?: number | null;
+  patternLon?: number | null;
+  specialData?: Record<string, unknown> | null;
 }
 
 export interface Booking {
@@ -126,6 +144,38 @@ export interface Booking {
   currency: string | null;
 }
 
+export type TripStatus = "planned" | "in_progress" | "completed";
+export type TripCategory = "vacation" | "business" | "weekend" | "family" | "other";
+
+export interface TripStop {
+  id: string;
+  tripId: string;
+  orderIdx: number;
+  domain: string | null;
+  sourceId: string | null;
+  title: string;
+  description: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  lat: number | null;
+  lon: number | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TripJournalEntry {
+  id: string;
+  tripId: string;
+  date: string;
+  title: string | null;
+  body: string;
+  mood: string | null;
+  weather: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Trip {
   id: string;
   userId: string;
@@ -134,7 +184,24 @@ export interface Trip {
   color: string;
   createdAt: string;
   updatedAt: string;
-  _count?: { flights: number };
+
+  // Phase-1 metadata redesign — see migration 20260509120000_trip_metadata.
+  // Optional / defaulted on the server. Older rows return defaults.
+  startDate: string | null;
+  endDate: string | null;
+  status: TripStatus;
+  category: TripCategory | null;
+  tags: string[];
+  companions: string[];
+  notes: string | null;
+  summary: string | null;
+  originLabel: string | null;
+  destinationLabel: string | null;
+  coverImageUrl: string | null;
+  icon: string | null;
+  countries: string[];
+
+  _count?: { flights: number; cruises?: number };
   bookings?: Booking[];
   flights?: Pick<
     Flight,
@@ -148,6 +215,28 @@ export interface Trip {
     | "arrLat"
     | "arrLon"
   >[];
+  cruises?: Array<{
+    id: string;
+    cruiseLine: string | null;
+    startDate: string | null;
+    endDate: string | null;
+    status: string;
+    shipId: number | null;
+  }>;
+  stops?: TripStop[];
+  journalEntries?: TripJournalEntry[];
+  photos?: TripPhoto[];
+}
+
+export interface TripPhoto {
+  id: string;
+  url: string;
+  caption: string | null;
+  takenAt: string | null;
+  sortIdx: number;
+  mimetype: string;
+  sizeBytes: number;
+  createdAt: string;
 }
 
 export interface FlightInput {
@@ -213,6 +302,23 @@ export interface FlightInput {
   frequentFlyerNumber?: string;
   bookingClassLetter?: string;
   coPassengers?: string[];
+  // Sonder-Flug (special flights) — see Flight interface
+  specialType?:
+    | "sightseeing"
+    | "eclipse"
+    | "rocket_launch"
+    | "zerog"
+    | "aurora"
+    | "training"
+    | "ferry"
+    | "test"
+    | null;
+  eventLat?: number | null;
+  eventLon?: number | null;
+  eventLabel?: string | null;
+  patternLat?: number | null;
+  patternLon?: number | null;
+  specialData?: Record<string, unknown> | null;
 }
 
 export interface ParsedBooking {
@@ -379,6 +485,10 @@ export interface Achievement {
   unlockedAt?: string | null;
   progress?: number;
   progressPercentage?: number;
+  // Domain the achievement belongs to. `shared` means "always show regardless of
+  // which domains the user enabled". `string` fallback keeps us forward-compatible
+  // with future domains the backend might introduce before the frontend learns them.
+  domain: "flight" | "cruise" | "shared" | string;
 }
 
 export interface AchievementSummary {
@@ -586,6 +696,8 @@ export interface CountryStatsResponse {
   countries: CountryStat[];
   total: number;
 }
+
+export * from "./cruise";
 
 export interface AircraftRankingItem {
   registration: string;

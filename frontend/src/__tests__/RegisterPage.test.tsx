@@ -4,7 +4,16 @@ import { BrowserRouter } from "react-router-dom";
 import RegisterPage from "../pages/RegisterPage";
 import { useAuthStore } from "../store/authStore";
 
-vi.mock("../lib/api");
+vi.mock("../lib/api", () => ({
+  authApi: {
+    register: vi.fn(),
+    getRegistrationStatus: vi.fn().mockResolvedValue({
+      registrationEnabled: true,
+      requiresInvitation: false,
+      limitReached: false,
+    }),
+  },
+}));
 vi.mock("../store/authStore");
 
 // Mock the custom useTranslation hook to avoid async state updates from

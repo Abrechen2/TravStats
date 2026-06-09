@@ -4,7 +4,8 @@
   "description": "Flight tracking backend API",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "npm run init && tsx watch src/index.ts",
+    "dev": "npm run prisma:generate && npm run init && tsx watch src/index.ts",
+    "postinstall": "prisma generate",
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint src",
@@ -23,9 +24,10 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
+    "check:drift": "tsx scripts/check-schema-drift.ts",
     "seed:airports:csv": "node dist/seedAirportsFromCSV.js",
     "backfill:closed-airports": "node dist/scripts/backfillClosedAirports.js",
-    "seed:demo": "node dist/seedDemoUser.js",
+    "seed:demo": "node dist/seedDemoAccount.js",
     "seed:dev-admin": "tsx src/seedDevAdmin.ts",
     "seed:dev-admin-keys": "tsx src/seedDevAdminKeys.ts",
     "dead-code": "ts-prune | grep -v \"(used in module)\"",
@@ -107,6 +109,7 @@
     "tar": ">=7.5.7",
     "lodash": ">=4.17.23",
     "fast-xml-parser": ">=5.7.2",
+    "fast-xml-builder": ">=1.1.7",
     "uuid": "$uuid"
   }
 }

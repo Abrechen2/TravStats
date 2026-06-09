@@ -77,6 +77,23 @@ RUN npm config set fetch-retries 5 \
     && npm config set fetch-retry-maxtimeout 300000 \
     && npm ci --only=production
 COPY --from=backend-builder /app/backend/dist ./dist
+# tsc compiles .ts files only — non-TS assets (CSV seed data) need an
+# explicit copy so seedPortsFromCSV / seedShipsFromCSV find them at
+# dist/seedData/*.csv. Without this, both seeders silently skip with
+# `csv_missing` on first boot, leaving the cruise/ferry domain unable
+# to resolve port + ship references.
+COPY --from=backend-builder /app/backend/src/seedData ./dist/seedData
+# schematicRouter resolves the fine land-mask via __dirname relative to
+# its compiled location (dist/services/...), landing at /app/backend/data/.
+# Without this copy, /api/v1/cruises/geometry(/batch) returns 500 with
+# ENOENT on every request, so cruise paths never render on the globe.
+COPY backend/data/land-mask.bin ./data/land-mask.bin
+# Vendored Eurostat marnet shipping-lane graph used by the marnet
+# pathfinder (services/marnet/marnetGraph.ts). 1.6 MB GeoJSON, ~6 k
+# nodes / ~7.6 k edges. Without this file the marnet router throws
+# ENOENT on first call and every cruise leg falls back to the coarse
+# 1° A*, which cuts across narrow Baltic and Adriatic straits.
+COPY backend/data/marnet/marnet.geojson ./data/marnet/marnet.geojson
 # Bundle one-shot maintenance scripts (e.g. backfillRouteDistance.ts) into
 # the production image so the `docker exec TravStats npx tsx
 # /app/backend/scripts/<name>.ts` workflow advertised in the CHANGELOG

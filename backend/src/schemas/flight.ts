@@ -203,6 +203,26 @@ const baseFlightSchema = z.object({
   aerodataboxQualityTags: z.array(z.string().max(64)).max(20).optional().default([]),
   baggageBelt: z.string().max(20).nullable().optional(),
   checkInDesk: z.string().max(40).nullable().optional(),
+  // Special flights (Sonder-Flüge) — flight subtype, see schema.prisma
+  specialType: z
+    .enum([
+      'sightseeing',
+      'eclipse',
+      'rocket_launch',
+      'zerog',
+      'aurora',
+      'training',
+      'ferry',
+      'test',
+    ])
+    .nullable()
+    .optional(),
+  eventLat: z.number().min(-90).max(90).nullable().optional(),
+  eventLon: z.number().min(-180).max(180).nullable().optional(),
+  eventLabel: z.string().max(120).nullable().optional(),
+  patternLat: z.number().min(-90).max(90).nullable().optional(),
+  patternLon: z.number().min(-180).max(180).nullable().optional(),
+  specialData: z.record(z.unknown()).nullable().optional(),
 });
 
 type LocalTzPair =

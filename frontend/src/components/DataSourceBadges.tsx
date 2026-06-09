@@ -100,55 +100,60 @@ function getDataSourceConfig(
   source: string,
   t: (key: string, options?: Record<string, unknown>) => string
 ): { icon: string; label: string; color: string } | null {
+  // Per BRAND.md §"❌ Don't"-list: don't convey state by colour alone, and
+  // don't borrow domain colours for non-domain UI. The previous palette
+  // (blue/purple/cyan/green for individual data sources) leaked Cruise,
+  // Hotel, POI, and Train domain hexes into a flight-only context.
+  // Differentiation now lives in the icon + label only — every badge
+  // shares the neutral elevated surface. The historical_enrichment
+  // badge keeps brand amber as the single intentional exception
+  // (it's the parser's own "we improved this" stamp, brand voice).
+  const NEUTRAL_BADGE = "bg-[var(--bg-elevated)] text-[var(--text-muted)]";
   const configs: Record<string, { icon: string; label: string; color: string }> = {
     manual: {
       icon: "✏️",
       label: t("flights:dataSource.manual"),
-      color: "bg-[var(--bg-elevated)] text-[var(--text-primary)]",
+      color: NEUTRAL_BADGE,
     },
     email_import: {
       icon: "📧",
       label: t("flights:dataSource.email_import"),
-      color: "bg-blue-100 text-blue-800",
+      color: NEUTRAL_BADGE,
     },
     boarding_pass_scan: {
       icon: "🎫",
       label: t("flights:dataSource.boarding_pass_scan"),
-      color: "bg-purple-100 text-purple-800",
+      color: NEUTRAL_BADGE,
     },
     historical_enrichment: {
       icon: "🔍",
       label: t("flights:dataSource.historical_enrichment"),
-      color: "bg-amber-100 text-amber-800",
+      color: "bg-[var(--accent-soft)] text-[var(--accent)]",
     },
     live_update: {
       icon: "🔄",
       label: t("flights:dataSource.live_update"),
-      color: "bg-green-100 text-green-800",
+      color: NEUTRAL_BADGE,
     },
     api_lookup: {
       icon: "🌐",
       label: t("flights:dataSource.api_lookup"),
-      color: "bg-cyan-100 text-cyan-800",
+      color: NEUTRAL_BADGE,
     },
     imported_fr24: {
       icon: "📊",
       label: t("flights:dataSource.imported_fr24"),
-      // Distinct orange (not amber) to avoid colliding with the
-      // historical_enrichment badge which is also amber and is rendered
-      // on the same flight card whenever an FR24-imported flight is later
-      // enriched in the background.
-      color: "bg-orange-100 text-orange-800",
+      color: NEUTRAL_BADGE,
     },
     imported_generic_csv: {
       icon: "📥",
       label: t("flights:dataSource.imported_generic_csv"),
-      color: "bg-[var(--bg-elevated)] text-[var(--text-muted)]",
+      color: NEUTRAL_BADGE,
     },
     imported_roundtrip: {
       icon: "↻",
       label: t("flights:dataSource.imported_roundtrip"),
-      color: "bg-[var(--bg-elevated)] text-[var(--text-muted)]",
+      color: NEUTRAL_BADGE,
     },
   };
 

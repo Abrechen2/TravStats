@@ -64,6 +64,7 @@ export interface SettingsResponse extends SettingsDataJson {
   autoUpdate: AutoUpdateResponseSettings;
   boardingPassParserStrategy: string | null;
   historicalEnrichment: HistoricalEnrichmentResponseSettings;
+  enabledDomains: string[];
 }
 
 export interface UserSettingsUpdateData {
@@ -77,6 +78,7 @@ export interface UserSettingsUpdateData {
   historicalEnrichmentMinConfidence?: number;
   historicalEnrichmentMaxPerDay?: number;
   boardingPassParserStrategy?: string | null;
+  enabledDomains?: string[];
 }
 
 export interface ParserSettingsUpdateData {

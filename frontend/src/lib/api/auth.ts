@@ -42,8 +42,27 @@ export const authApi = {
     return data;
   },
 
-  getSmtpStatus: async (): Promise<{ smtpEnabled: boolean }> => {
-    const { data } = await api.get<{ smtpEnabled: boolean }>("/auth/smtp-status");
+  getSmtpStatus: async (): Promise<{
+    smtpEnabled: boolean;
+    adminContactEmail: string | null;
+  }> => {
+    const { data } = await api.get<{
+      smtpEnabled: boolean;
+      adminContactEmail: string | null;
+    }>("/auth/smtp-status");
+    return data;
+  },
+
+  getRegistrationStatus: async (): Promise<{
+    registrationEnabled: boolean;
+    requiresInvitation: boolean;
+    limitReached: boolean;
+  }> => {
+    const { data } = await api.get<{
+      registrationEnabled: boolean;
+      requiresInvitation: boolean;
+      limitReached: boolean;
+    }>("/auth/registration-status");
     return data;
   },
 

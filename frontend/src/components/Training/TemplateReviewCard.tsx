@@ -55,20 +55,25 @@ export default function TemplateReviewCard({
   if (!template) return null;
 
   return (
-    <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950">
+    <div
+      className="mt-4 rounded-lg p-4"
+      style={{
+        background: "var(--accent-soft)",
+        border: "1px solid rgba(240,169,71,0.35)",
+      }}
+    >
       <div className="flex items-start justify-between">
         <div>
-          <p className="font-medium text-blue-900 dark:text-blue-100">
+          <p className="font-medium" style={{ color: "var(--text-primary)" }}>
             {t("training:templateDerived")}: <span className="font-bold">{template.name}</span>
           </p>
-          <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
+          <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
             Status:{" "}
             <span
-              className={
-                template.status === "active"
-                  ? "text-green-600 dark:text-green-400"
-                  : "text-yellow-600 dark:text-yellow-400"
-              }
+              style={{
+                color:
+                  template.status === "active" ? "var(--success)" : "var(--warning)",
+              }}
             >
               {template.status}
             </span>
@@ -76,7 +81,8 @@ export default function TemplateReviewCard({
         </div>
         <button
           onClick={onDismiss}
-          className="text-blue-400 hover:text-blue-600"
+          className="hover:opacity-70"
+          style={{ color: "var(--text-muted)" }}
           aria-label={t("common:dismiss")}
         >
           ✕
@@ -86,7 +92,8 @@ export default function TemplateReviewCard({
         {template.status !== "active" && (
           <button
             onClick={handleActivate}
-            className="rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700"
+            className="rounded px-3 py-1 text-sm text-white"
+            style={{ background: "var(--success)" }}
           >
             {t("training:activate")}
           </button>
@@ -94,7 +101,11 @@ export default function TemplateReviewCard({
         {template.status === "active" && (
           <button
             onClick={handleDisable}
-            className="rounded bg-gray-400 px-3 py-1 text-sm text-white hover:bg-gray-500"
+            className="rounded px-3 py-1 text-sm"
+            style={{
+              background: "var(--bg-elevated)",
+              color: "var(--text-muted)",
+            }}
           >
             {t("training:deactivate")}
           </button>

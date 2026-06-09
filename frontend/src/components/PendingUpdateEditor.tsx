@@ -97,7 +97,7 @@ export default function PendingUpdateEditor({
             </h2>
             <button
               onClick={onCancel}
-              aria-label={t("common:actions.close")}
+              aria-label={t("common:buttons.close")}
               className="text-[var(--text-muted)] hover:text-[var(--text-muted)]"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -255,7 +255,7 @@ export default function PendingUpdateEditor({
               onClick={onCancel}
               className="px-4 py-2 bg-[var(--bg-muted)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-elevated)] transition-colors"
             >
-              {t("common:cancel")}
+              {t("common:buttons.cancel")}
             </button>
             <button
               onClick={handleSave}

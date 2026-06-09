@@ -32,7 +32,7 @@ export default function EnrichmentSection({
         />
         <span
           className="px-2 py-0.5 text-xs font-semibold rounded-full self-start mt-1"
-          style={{ background: "rgba(232,160,69,0.15)", color: "var(--accent)" }}
+          style={{ background: "rgba(240,169,71,0.15)", color: "var(--accent)" }}
         >
           Beta
         </span>
@@ -63,7 +63,7 @@ export default function EnrichmentSection({
               <div className="flex gap-2 items-start">
                 <span
                   className="px-2 py-0.5 text-xs font-semibold rounded-full whitespace-nowrap"
-                  style={{ background: "rgba(232,160,69,0.15)", color: "var(--accent)" }}
+                  style={{ background: "rgba(240,169,71,0.15)", color: "var(--accent)" }}
                 >
                   {t("settings:historicalEnrichment.info.modes.slimLabel")}
                 </span>
@@ -76,8 +76,8 @@ export default function EnrichmentSection({
             <div
               className="rounded-lg p-3"
               style={{
-                background: "rgba(232,160,69,0.1)",
-                border: "1px solid rgba(232,160,69,0.3)",
+                background: "rgba(240,169,71,0.1)",
+                border: "1px solid rgba(240,169,71,0.3)",
               }}
             >
               <p className="font-semibold mb-1 text-sm" style={{ color: "var(--accent)" }}>
@@ -164,7 +164,7 @@ export default function EnrichmentSection({
             onClick={onSave}
             disabled={loadingHistoricalEnrichmentSettings}
             className="btn-primary"
-            style={{ boxShadow: "0 0 16px rgba(232,160,69,0.25)" }}
+            style={{ boxShadow: "0 0 16px rgba(240,169,71,0.25)" }}
           >
             {loadingHistoricalEnrichmentSettings
               ? t("common:buttons.saving")

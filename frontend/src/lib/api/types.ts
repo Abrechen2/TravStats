@@ -1,3 +1,4 @@
+import type { DomainKey } from "../../shared/domains";
 import type { ParsedBooking } from "../../types";
 
 // ==================== Shared / Reusable Interfaces ====================
@@ -133,6 +134,7 @@ export interface UserSettings {
   };
   autoUpdate?: AutoUpdateSettings;
   historicalEnrichment?: HistoricalEnrichmentSettings;
+  enabledDomains?: DomainKey[];
   [key: string]: unknown;
 }
 

@@ -18,7 +18,10 @@ import enMap from "./resources/en/map.json";
 import enPendingUpdates from "./resources/en/pendingUpdates.json";
 import enParser from "./resources/en/parser.json";
 import enTrips from "./resources/en/trips.json";
+import enCruise from "./resources/en/cruise.json";
+import enImport from "./resources/en/import.json";
 import enAircraft from "./resources/en/aircraft.json";
+import enSpecialFlights from "./resources/en/specialFlights.json";
 
 import deCommon from "./resources/de/common.json";
 import deDashboard from "./resources/de/dashboard.json";
@@ -35,7 +38,10 @@ import deMap from "./resources/de/map.json";
 import dePendingUpdates from "./resources/de/pendingUpdates.json";
 import deParser from "./resources/de/parser.json";
 import deTrips from "./resources/de/trips.json";
+import deCruise from "./resources/de/cruise.json";
+import deImport from "./resources/de/import.json";
 import deAircraft from "./resources/de/aircraft.json";
+import deSpecialFlights from "./resources/de/specialFlights.json";
 
 // Get initial language: stored preference → browser language → fallback "en"
 const getInitialLanguage = (): string => {
@@ -75,7 +81,10 @@ const resources = {
     pendingUpdates: enPendingUpdates,
     parser: enParser,
     trips: enTrips,
+    cruise: enCruise,
+    import: enImport,
     aircraft: enAircraft,
+    specialFlights: enSpecialFlights,
   },
   de: {
     common: deCommon,
@@ -93,7 +102,10 @@ const resources = {
     pendingUpdates: dePendingUpdates,
     parser: deParser,
     trips: deTrips,
+    cruise: deCruise,
+    import: deImport,
     aircraft: deAircraft,
+    specialFlights: deSpecialFlights,
   },
 };
 
@@ -120,7 +132,10 @@ i18n.use(initReactI18next).init({
     "pendingUpdates",
     "parser",
     "trips",
+    "cruise",
+    "import",
     "aircraft",
+    "specialFlights",
   ],
   interpolation: {
     escapeValue: false, // React already escapes values

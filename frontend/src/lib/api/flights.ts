@@ -6,6 +6,7 @@ import type {
   UserAchievement,
 } from "../../types";
 
+import { API_TIMEOUTS } from "../../config/constants";
 import { api } from "./client";
 
 // Flights API
@@ -90,8 +91,18 @@ export const flightsApi = {
     return data;
   },
 
+  // Bulk refresh loops sequentially through up to 25 flights, each calling
+  // an external historical provider (AeroDataBox / Aviationstack). With the
+  // default 10s timeout the request reliably aborts client-side while the
+  // backend keeps running — confusing the UI and wasting RapidAPI quota on
+  // results that never reach the user. PARSER timeout (180s) matches the
+  // worst-case 25 × 5s upper bound with headroom.
   bulkRefreshRun: async (): Promise<BulkRefreshSummary> => {
-    const { data } = await api.post<BulkRefreshSummary>("/flights/refresh-historical-bulk");
+    const { data } = await api.post<BulkRefreshSummary>(
+      "/flights/refresh-historical-bulk",
+      undefined,
+      { timeout: API_TIMEOUTS.PARSER }
+    );
     return data;
   },
 };

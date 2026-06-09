@@ -4,6 +4,7 @@ import { useAuthStore } from "../store/authStore";
 import { pendingUpdatesApi } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
 import { useClickOutside } from "../hooks/useClickOutside";
+import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { logger } from "../lib/logger";
 import DiagnosticExportModal from "./DiagnosticExportModal";
 import { LogoMark, LogoWordmark } from "./Brand/Logo";
@@ -22,13 +23,14 @@ export default function NavigationBar(): JSX.Element {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useTranslation(["dashboard", "common"]);
+  const { t } = useTranslation(["dashboard", "common", "cruise", "trips"]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pendingUpdatesCount, setPendingUpdatesCount] = useState(0);
   const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
   useClickOutside(mobileMenuRef, closeMobileMenu);
+  const { isEnabled } = useEnabledDomains();
 
   const hasParserAccess = user?.isAdmin ?? false;
 
@@ -64,7 +66,9 @@ export default function NavigationBar(): JSX.Element {
     { path: "/", label: t("dashboard:title"), show: true },
     { path: "/achievements", label: t("dashboard:achievements"), show: true },
     { path: "/stats", label: t("dashboard:stats"), show: true },
-    { path: "/flights", label: t("dashboard:flights"), show: true },
+    { path: "/flights", label: t("dashboard:flights"), show: isEnabled("flight") },
+    { path: "/cruises", label: t("cruise:nav.link"), show: isEnabled("cruise") },
+    { path: "/trips", label: t("trips:tab"), show: true },
     {
       path: "/pending-updates",
       label: t("dashboard:pendingUpdates"),
@@ -146,13 +150,16 @@ export default function NavigationBar(): JSX.Element {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className="relative px-3 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md"
+                    aria-current={active ? "page" : undefined}
+                    className="relative px-3 py-1.5 text-sm transition-colors duration-200 rounded-md"
                     style={{
+                      fontWeight: active ? 600 : 500,
                       color: active
                         ? "var(--accent)"
                         : item.warn
                           ? "var(--warning)"
                           : "var(--text-muted)",
+                      background: active ? "var(--bg-elevated)" : "transparent",
                     }}
                     onMouseEnter={(e) => {
                       if (!active)
@@ -173,7 +180,7 @@ export default function NavigationBar(): JSX.Element {
                     )}
                     {active && (
                       <span
-                        className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+                        className="absolute -bottom-px left-2 right-2 h-[3px] rounded-full"
                         style={{ background: "var(--accent)" }}
                       />
                     )}
@@ -322,15 +329,17 @@ export default function NavigationBar(): JSX.Element {
                   key={item.path}
                   to={item.path}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                  aria-current={active ? "page" : undefined}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors"
                   style={{
+                    fontWeight: active ? 600 : 500,
                     background: active ? "var(--bg-elevated)" : "transparent",
                     color: active
                       ? "var(--accent)"
                       : item.warn
                         ? "var(--warning)"
                         : "var(--text-muted)",
-                    borderLeft: active ? "2px solid var(--accent)" : "2px solid transparent",
+                    borderLeft: active ? "3px solid var(--accent)" : "3px solid transparent",
                   }}
                 >
                   <span className="flex items-center gap-1.5">

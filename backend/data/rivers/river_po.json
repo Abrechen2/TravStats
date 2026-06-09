@@ -1,0 +1,11 @@
+{
+  "region": "river_po",
+  "name": "Po",
+  "meanderFactor": 1.1,
+  "anchors": [
+    { "name": "Cremona", "lat": 45.1333, "lon": 10.025 },
+    { "name": "Mantua", "lat": 45.1564, "lon": 10.7917 },
+    { "name": "Polesella", "lat": 44.9656, "lon": 11.7464 },
+    { "name": "Ferrara", "lat": 44.8333, "lon": 11.6167 }
+  ]
+}

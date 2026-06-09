@@ -9,6 +9,7 @@ export default defineConfig({
   reporter: 'html',
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173',
+    locale: 'de-DE',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },

@@ -1,0 +1,108 @@
+{
+  "button": {
+    "add": "+ Special Flight"
+  },
+  "chooser": {
+    "title": "Special flight?",
+    "description": "Sightseeing loop, eclipse chase, rocket launch, zero-g …",
+    "cta": "Special flight"
+  },
+  "modal": {
+    "title": "Add Special Flight",
+    "editTitle": "Edit Special Flight",
+    "subtitle": "Record a non-scheduled flight"
+  },
+  "type": {
+    "sightseeing": "Sightseeing",
+    "event": "Event flight",
+    "zerog": "ZeroG / Parabolic flight"
+  },
+  "typeDescription": {
+    "sightseeing": "Local loop, departure = arrival",
+    "event": "Eclipse, rocket launch, aurora",
+    "zerog": "Parabolic / zero-gravity flight"
+  },
+  "subtype": {
+    "eclipse": "Solar eclipse",
+    "rocket_launch": "Rocket launch",
+    "aurora": "Aurora",
+    "other": "Other event"
+  },
+  "specialType": {
+    "sightseeing": "Sightseeing",
+    "eclipse": "Eclipse",
+    "rocket_launch": "Rocket launch",
+    "zerog": "ZeroG",
+    "aurora": "Aurora",
+    "training": "Training",
+    "ferry": "Ferry",
+    "test": "Test"
+  },
+  "filter": {
+    "label": "Special flights",
+    "all": "All",
+    "standardOnly": "Standard only",
+    "allSpecial": "Special only"
+  },
+  "legend": {
+    "label": "Special flights"
+  },
+  "field": {
+    "airport": "Airport",
+    "departureAirport": "Departure airport",
+    "arrivalAirport": "Arrival airport",
+    "aircraft": "Aircraft",
+    "aircraftHint": "e.g. Heli H125, Balloon D-XYZA, Cessna 172",
+    "event_label": "Event description",
+    "event_lat": "Event latitude",
+    "event_lon": "Event longitude",
+    "pattern_lat": "Pattern center latitude",
+    "pattern_lon": "Pattern center longitude",
+    "parabolas": "Parabola count",
+    "provider": "Provider",
+    "providerOther": "Provider name",
+    "departureTime": "Departure",
+    "arrivalTime": "Arrival",
+    "notes": "Notes",
+    "tags": "Tags (comma-separated)",
+    "companions": "Companions (comma-separated)"
+  },
+  "picker": {
+    "provider_other": "Other provider"
+  },
+  "subtype_label": {
+    "question": "What kind of event?"
+  },
+  "step": {
+    "pick_type": "Pick a type",
+    "back": "← Change type"
+  },
+  "placeholder": {
+    "eclipse": "Total Solar Eclipse 2026-08-12 — centerline",
+    "rocket_launch": "Starship IFT-X, Boca Chica",
+    "aurora": "Aurora Borealis 2026-11-15, 65°N",
+    "tags": "e.g. bucket-list, anniversary",
+    "companions": "e.g. Max, Anna"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "saving": "Saving..."
+  },
+  "error": {
+    "missingAirport": "Please select an airport.",
+    "invalidCoordinates": "Invalid coordinates.",
+    "saveFailed": "Failed to save."
+  },
+  "location": {
+    "searchLabel": "Search location",
+    "searchPlaceholder": "Type a place …",
+    "searchHint": "e.g. »Tromsø«, »Kennedy Space Center«, »Mauna Kea«",
+    "noResults": "No matches.",
+    "searchError": "Search failed. Please try again.",
+    "advanced": "Advanced",
+    "clear": "✕ Clear position",
+    "attribution": "© OpenStreetMap contributors",
+    "mapAriaLabel": "Map for choosing the event position"
+  }
+}

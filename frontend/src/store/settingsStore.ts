@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { settingsApi } from "../lib/api";
 import { logger } from "../lib/logger";
+import { DOMAIN_KEYS, type DomainKey } from "../shared/domains";
 import { useAuthStore } from "./authStore";
 
 type ThemePreference = "light" | "dark";
@@ -80,6 +81,22 @@ export interface FeaturesSettings {
   trackAircraftRegistration: boolean;
 }
 
+/**
+ * Cruise-domain preferences that pre-fill the cruise entry form and
+ * shape the cruise map layer. Lives in its own slice so future
+ * cruise-specific fields don't mix with flight-specific ones. The
+ * same pattern will apply when hotel / POI domains ship — each gets
+ * its own nested slice, never flat keys like `cruiseDefaultLine`.
+ */
+export interface CruiseSettings {
+  /** Prefilled in "Neue Kreuzfahrt → Manuell" when the ship field is empty. */
+  defaultLine: string;
+  /** Prefilled cabin category on new cruises. `null` = no default. */
+  defaultCabinType: "inside" | "oceanview" | "balcony" | "suite" | null;
+  /** Toggles the cruise arc layer in the dashboard map. */
+  showCruiseArcs: boolean;
+}
+
 export interface ApiKeyStatus {
   hasKey: boolean;
   isShared: boolean;
@@ -100,7 +117,9 @@ export interface SettingsState {
   map: MapSettings;
   notifications: NotificationSettings;
   features: FeaturesSettings;
+  cruise: CruiseSettings;
   apiKeys: ApiKeysStatus | null;
+  enabledDomains: DomainKey[];
   setProfile: SettingsUpdater<ProfileSettings>;
   setDisplay: SettingsUpdater<DisplaySettings>;
   setUnits: SettingsUpdater<UnitsSettings>;
@@ -108,7 +127,9 @@ export interface SettingsState {
   setMap: SettingsUpdater<MapSettings>;
   setNotifications: SettingsUpdater<NotificationSettings>;
   setFeatures: SettingsUpdater<FeaturesSettings>;
+  setCruise: SettingsUpdater<CruiseSettings>;
   setApiKeys: (status: ApiKeysStatus) => void;
+  setEnabledDomains: (keys: DomainKey[]) => void;
   loadApiKeysStatus: () => Promise<void>;
   resetSettings: () => void;
   loadRemoteSettings: () => Promise<void>;
@@ -148,15 +169,17 @@ const defaultSettings: Omit<
   | "setMap"
   | "setNotifications"
   | "setFeatures"
+  | "setCruise"
   | "setApiKeys"
+  | "setEnabledDomains"
   | "loadApiKeysStatus"
   | "resetSettings"
   | "loadRemoteSettings"
   | "saveRemoteSettings"
 > = {
   profile: {
-    username: "Traveler",
-    email: "traveler@example.com",
+    username: "",
+    email: "",
     profilePicture: undefined,
   },
   display: {
@@ -189,7 +212,13 @@ const defaultSettings: Omit<
     enableCostTracking: false,
     trackAircraftRegistration: true,
   },
+  cruise: {
+    defaultLine: "",
+    defaultCabinType: null,
+    showCruiseArcs: true,
+  },
   apiKeys: null,
+  enabledDomains: ["flight"],
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -221,10 +250,15 @@ export const useSettingsStore = create<SettingsState>()(
           notifications: { ...state.notifications, ...updates },
         })),
       setFeatures: (updates) => set((state) => ({ features: { ...state.features, ...updates } })),
+      setCruise: (updates) => set((state) => ({ cruise: { ...state.cruise, ...updates } })),
       setApiKeys: (status) =>
         set(() => ({
           apiKeys: status,
         })),
+      setEnabledDomains: (keys) => {
+        set({ enabledDomains: keys });
+        void settingsApi.update({ enabledDomains: keys });
+      },
       loadApiKeysStatus: async () => {
         try {
           const status = await settingsApi.getApiKeys();
@@ -286,13 +320,36 @@ export const useSettingsStore = create<SettingsState>()(
                 notifications: mergeGroup("notifications") as NotificationSettings,
                 features: mergeGroup("features") as FeaturesSettings,
               };
-              // If profile username is still the default "Traveler", use the
-              // actual account username from the auth store instead.
-              if (newState.profile?.username === "Traveler") {
-                const authUser = useAuthStore.getState().user;
-                if (authUser?.username) {
-                  newState.profile = { ...newState.profile, username: authUser.username };
-                }
+              // Always mirror the auth-store username into profile.username.
+              // If the persisted username belongs to a different account
+              // (previous login still in localStorage), also drop the
+              // email + profile picture so we don't leak them across users.
+              // Also scrub the legacy "traveler@example.com" placeholder
+              // that shipped as a default in earlier builds and got
+              // autosaved into real UserSettings rows.
+              const authUser = useAuthStore.getState().user;
+              if (authUser?.username) {
+                const previousUsername = state.profile?.username ?? "";
+                const userChanged =
+                  previousUsername !== "" && previousUsername !== authUser.username;
+                const incomingEmail = newState.profile?.email ?? "";
+                const email =
+                  userChanged || incomingEmail === "traveler@example.com" ? "" : incomingEmail;
+                newState.profile = {
+                  ...newState.profile,
+                  username: authUser.username,
+                  email,
+                  ...(userChanged ? { profilePicture: undefined } : {}),
+                };
+              }
+              // Validate enabledDomains against the known domain keys —
+              // drop anything the frontend doesn't understand (e.g. a
+              // future domain the backend knows about but we don't yet).
+              if (Array.isArray(remote.enabledDomains)) {
+                const filtered = remote.enabledDomains.filter((k): k is DomainKey =>
+                  (DOMAIN_KEYS as readonly string[]).includes(k as string)
+                );
+                newState.enabledDomains = filtered;
               }
               return newState;
             });
@@ -303,7 +360,17 @@ export const useSettingsStore = create<SettingsState>()(
       },
       saveRemoteSettings: async () => {
         try {
-          const { profile, display, units, defaults, map, notifications, features } = get();
+          const {
+            profile,
+            display,
+            units,
+            defaults,
+            map,
+            notifications,
+            features,
+            cruise,
+            enabledDomains,
+          } = get();
           await settingsApi.update({
             profile,
             display,
@@ -312,6 +379,8 @@ export const useSettingsStore = create<SettingsState>()(
             map,
             notifications,
             features,
+            cruise,
+            enabledDomains,
           });
           // birthdate lives on a separate endpoint (/settings/profile on the
           // User row). Only PUT when the field was explicitly loaded or set

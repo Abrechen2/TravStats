@@ -1,0 +1,46 @@
+import { describe, it, expect } from '@jest/globals';
+import {
+  DOMAIN_KEYS,
+  DOMAINS,
+  AVAILABLE_DOMAINS,
+  isValidDomain,
+  getDomainDescriptor,
+  type DomainKey,
+} from '../../shared/domains';
+
+describe('domain registry', () => {
+  it('exposes all domain keys', () => {
+    expect(DOMAIN_KEYS).toEqual(['flight', 'cruise', 'hotel', 'poi']);
+  });
+
+  it('only lists available domains in AVAILABLE_DOMAINS', () => {
+    expect(AVAILABLE_DOMAINS).toEqual(['flight', 'cruise']);
+    expect(DOMAINS.flight.available).toBe(true);
+    expect(DOMAINS.cruise.available).toBe(true);
+    expect(DOMAINS.hotel.available).toBe(false);
+    expect(DOMAINS.poi.available).toBe(false);
+  });
+
+  it('every descriptor has required fields', () => {
+    for (const key of DOMAIN_KEYS) {
+      const d = DOMAINS[key];
+      expect(d.key).toBe(key);
+      expect(typeof d.available).toBe('boolean');
+      expect(d.i18nKey).toMatch(/^domain\./);
+      expect(d.icon).toBeTruthy();
+      expect(d.color).toMatch(/^#/);
+      expect(d.routePrefix).toMatch(/^\//);
+    }
+  });
+
+  it('isValidDomain validates strings', () => {
+    expect(isValidDomain('flight')).toBe(true);
+    expect(isValidDomain('xxx')).toBe(false);
+    expect(isValidDomain('')).toBe(false);
+  });
+
+  it('getDomainDescriptor returns descriptor or throws on unknown', () => {
+    expect(getDomainDescriptor('flight').key).toBe('flight');
+    expect(() => getDomainDescriptor('unknown' as DomainKey)).toThrow();
+  });
+});

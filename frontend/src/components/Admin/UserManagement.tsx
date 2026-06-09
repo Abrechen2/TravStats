@@ -52,8 +52,8 @@ export default function UserManagement({
           </div>
         }
       />
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow overflow-hidden">
-        <table className="w-full">
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow overflow-x-auto">
+        <table className="w-full min-w-[720px]">
           <thead className="bg-[var(--bg-base)]">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
@@ -95,7 +95,14 @@ export default function UserManagement({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {user.isAdmin ? (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                    <span
+                      className="px-2 py-1 text-xs font-semibold rounded-full"
+                      style={{
+                        background: "var(--accent-soft)",
+                        color: "var(--accent)",
+                        border: "1px solid var(--accent)",
+                      }}
+                    >
                       {t("admin:users.role.admin")}
                     </span>
                   ) : (

@@ -3,16 +3,27 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { FlightGroupItem } from "../../components/FlightPanel/FlightGroupItem";
 import type { Flight } from "../../types";
 
-const setSelection = vi.fn();
-vi.mock("../../store/flightSelectionStore", () => ({
-  useFlightSelectionStore: vi.fn(() => ({
-    selectedIds: [],
+// vi.hoisted lets us declare values that survive vi.mock factory hoisting
+// and stay reachable from the test bodies. setSelection is shared between
+// the mock factory (where the store returns it) and the assertions below.
+const mocks = vi.hoisted(() => ({ setSelection: vi.fn() }));
+
+vi.mock("../../store/flightSelectionStore", () => {
+  const state = {
+    selectedIds: [] as string[],
     selectedFlights: [],
     highlightMode: null,
-    setSelection,
+    detailMode: null,
+    setSelection: mocks.setSelection,
     clearSelection: vi.fn(),
-  })),
-}));
+    showDetails: vi.fn(),
+  };
+  return {
+    useFlightSelectionStore: vi.fn(<T,>(selector?: (s: typeof state) => T) =>
+      selector ? selector(state) : state
+    ),
+  };
+});
 
 const leg1: Flight = {
   id: "f1",
@@ -88,6 +99,6 @@ describe("FlightGroupItem", () => {
       />
     );
     fireEvent.click(screen.getByText(/MUC → FRA → JFK/));
-    expect(setSelection).toHaveBeenCalledWith([leg1, leg2]);
+    expect(mocks.setSelection).toHaveBeenCalledWith([leg1, leg2]);
   });
 });

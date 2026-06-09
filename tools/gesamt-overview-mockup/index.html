@@ -1,0 +1,1482 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gesamt-Tab Mockup — TravStats Multi-Domain</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+      :root {
+        --bg-base: #0d1117;
+        --bg-surface: #161b22;
+        --bg-elevated: #1c2128;
+        --bg-muted: #21262d;
+        --color-border: #30363d;
+        --text-primary: #e6edf3;
+        --text-secondary: #a8b3bf;
+        --text-muted: #8b949e;
+        --accent: #f0a947;
+        --domain-flight: #f0a947;
+        --domain-cruise: #6fa0d6;
+        --domain-hotel: #b072d6;
+        --domain-poi: #5ec2b2;
+        --domain-flight-soft: rgba(240, 169, 71, 0.18);
+        --domain-cruise-soft: rgba(111, 160, 214, 0.18);
+        --domain-hotel-soft: rgba(176, 114, 214, 0.18);
+        --domain-poi-soft: rgba(94, 194, 178, 0.18);
+        --danger: #f85149;
+        --success: #3fb950;
+      }
+
+      * { box-sizing: border-box; }
+      html, body, #root { margin: 0; padding: 0; min-height: 100%; }
+      body {
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg-base);
+        color: var(--text-primary);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .container { max-width: 1152px; margin: 0 auto; padding: 0 24px; }
+
+      /* TAB BAR */
+      .tabbar {
+        display: flex;
+        gap: 4px;
+        padding: 12px 24px 0 24px;
+        border-bottom: 1px solid var(--color-border);
+        background: var(--bg-base);
+      }
+      .tab {
+        padding: 10px 16px;
+        font-size: 14px;
+        font-weight: 500;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: color 0.15s, border-color 0.15s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .tab:hover:not(:disabled) { color: var(--text-primary); }
+      .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+      .tab:disabled { opacity: 0.35; cursor: not-allowed; }
+      .tab .domain-icon { font-size: 14px; }
+      .tab-soon {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: var(--bg-elevated);
+        color: var(--text-muted);
+        margin-left: 4px;
+      }
+
+      /* SECTION HEADERS */
+      .section-head {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        margin: 24px 0 12px 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--color-border);
+      }
+      .section-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-weight: 600;
+        color: var(--text-muted);
+      }
+      .section-hint { font-size: 12px; color: var(--text-muted); }
+
+      /* CARDS */
+      .card {
+        background: var(--bg-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .card-lg { padding: 24px; }
+      .card h3 { margin: 0; font-size: 13px; font-weight: 500; color: var(--text-muted); }
+      .card .kpi-value {
+        font-size: 28px;
+        font-weight: 700;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        color: var(--text-primary);
+        margin-top: 8px;
+      }
+      .card .kpi-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+      .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+      .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+      @media (max-width: 768px) {
+        .grid-4 { grid-template-columns: repeat(2, 1fr); }
+        .grid-2 { grid-template-columns: 1fr; }
+      }
+
+      /* DOMAIN CHIPS */
+      .chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 500;
+        border: 1px solid var(--color-border);
+        background: var(--bg-surface);
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.15s;
+        user-select: none;
+      }
+      .chip:hover:not(.disabled) { border-color: var(--text-muted); }
+      .chip.active { color: var(--text-primary); border-color: var(--domain-color); background: var(--domain-soft); }
+      .chip.disabled { opacity: 0.4; cursor: not-allowed; }
+      .chip .swatch {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: var(--domain-color, var(--text-muted));
+      }
+
+      /* STACKED BAR CHART */
+      .chart {
+        background: var(--bg-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 24px;
+      }
+      .chart-bars {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        align-items: end;
+        gap: 16px;
+        height: 240px;
+        margin-top: 8px;
+      }
+      .bar-col { display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; }
+      .bar-stack {
+        width: 100%;
+        max-width: 64px;
+        display: flex;
+        flex-direction: column-reverse;
+        border-radius: 4px;
+        overflow: hidden;
+        flex: 1;
+        align-self: stretch;
+        margin: 0 auto;
+        background: var(--bg-elevated);
+      }
+      .bar-seg { transition: all 0.3s; min-height: 0; }
+      .bar-label { font-size: 11px; color: var(--text-muted); font-family: ui-monospace, monospace; }
+      .bar-total { font-size: 11px; color: var(--text-primary); font-weight: 600; font-family: ui-monospace, monospace; }
+
+      /* HEATMAP */
+      .heatmap {
+        background: var(--bg-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 24px;
+      }
+      .heatmap-grid {
+        display: grid;
+        grid-template-columns: 80px repeat(31, 1fr);
+        gap: 3px;
+        margin-top: 12px;
+        font-size: 10px;
+      }
+      .heatmap-cell {
+        aspect-ratio: 1;
+        border-radius: 2px;
+        position: relative;
+      }
+      .heatmap-month-label {
+        font-size: 11px;
+        color: var(--text-muted);
+        align-self: center;
+        font-family: ui-monospace, monospace;
+      }
+      .heatmap-tooltip {
+        position: absolute;
+        z-index: 10;
+        bottom: 110%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--bg-elevated);
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        padding: 6px 8px;
+        font-size: 11px;
+        white-space: nowrap;
+        pointer-events: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      }
+      .heatmap-legend {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 12px;
+      }
+      .heatmap-legend .swatch-row { display: flex; gap: 2px; }
+      .heatmap-legend .swatch {
+        width: 14px; height: 14px; border-radius: 2px;
+      }
+
+      /* DOMAIN SUMMARY CARD */
+      .dcard {
+        background: var(--bg-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        position: relative;
+        transition: border-color 0.15s;
+      }
+      .dcard:hover { border-color: var(--domain-color); }
+      .dcard.placeholder { opacity: 0.55; border-style: dashed; }
+      .dcard-head { display: flex; align-items: center; justify-content: space-between; }
+      .dcard-head .left { display: flex; align-items: center; gap: 10px; }
+      .dcard-head .icon {
+        width: 36px; height: 36px;
+        border-radius: 8px;
+        background: var(--domain-soft);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px;
+      }
+      .dcard-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+      .dcard-count { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+      .dcard-link {
+        font-size: 12px;
+        color: var(--domain-color);
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .dcard-link:hover { text-decoration: underline; }
+      .dcard-kpis {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--color-border);
+      }
+      .dcard-kpi label {
+        display: block;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+      }
+      .dcard-kpi .v {
+        font-size: 18px;
+        font-weight: 700;
+        font-family: ui-monospace, monospace;
+        color: var(--text-primary);
+        margin-top: 2px;
+      }
+      .dcard-top {
+        font-size: 12px;
+        color: var(--text-secondary);
+      }
+      .dcard-top .label { color: var(--text-muted); margin-bottom: 4px; }
+      .dcard-top .items { display: flex; gap: 6px; flex-wrap: wrap; }
+      .dcard-top .pill {
+        padding: 3px 8px; border-radius: 999px;
+        background: var(--bg-elevated);
+        border: 1px solid var(--color-border);
+        font-size: 11px;
+      }
+      .dcard-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+      .dcard-badge {
+        display: inline-flex; gap: 4px; align-items: center;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        background: var(--domain-soft);
+        color: var(--text-primary);
+        border: 1px solid var(--color-border);
+      }
+
+      /* MOCKUP CHROME */
+      .mockup-banner {
+        background: linear-gradient(90deg, rgba(240, 169, 71, 0.15), rgba(111, 160, 214, 0.15));
+        border-bottom: 1px solid var(--color-border);
+        padding: 10px 24px;
+        font-size: 12px;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .mockup-banner strong { color: var(--text-primary); }
+      .mockup-banner .controls { display: flex; gap: 16px; align-items: center; }
+      .mockup-banner label { font-size: 11px; cursor: pointer; user-select: none; }
+      .mockup-banner input { vertical-align: middle; margin-right: 4px; }
+
+      .mt-6 { margin-top: 24px; }
+      .mt-8 { margin-top: 32px; }
+
+      /* YEAR FILTER */
+      .yearfilter {
+        background: var(--bg-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 14px 16px;
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .yearfilter .group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+      .yearfilter .group-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+        font-weight: 600;
+      }
+      .ypill {
+        padding: 4px 12px;
+        border-radius: 999px;
+        background: var(--bg-elevated);
+        border: 1px solid var(--color-border);
+        font-size: 12px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.15s;
+        font-family: ui-monospace, monospace;
+      }
+      .ypill:hover { color: var(--text-primary); border-color: var(--text-muted); }
+      .ypill.active {
+        background: var(--accent);
+        color: var(--bg-base);
+        border-color: var(--accent);
+        font-weight: 600;
+      }
+      .ypill.compare-active {
+        background: transparent;
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .yearfilter .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        user-select: none;
+      }
+      .yearfilter select {
+        background: var(--bg-elevated);
+        border: 1px solid var(--color-border);
+        color: var(--text-primary);
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-family: ui-monospace, monospace;
+        cursor: pointer;
+      }
+      .yearfilter select:disabled { opacity: 0.4; cursor: not-allowed; }
+
+      /* DELTA BADGE */
+      .delta {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        font-family: ui-monospace, monospace;
+        margin-top: 6px;
+      }
+      .delta.up { background: rgba(63, 185, 80, 0.18); color: var(--success); }
+      .delta.down { background: rgba(248, 81, 73, 0.18); color: var(--danger); }
+      .delta.flat { background: var(--bg-elevated); color: var(--text-muted); }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel" data-presets="react">
+      const { useState, useMemo } = React;
+
+      // ────────────────────────────────────────────────────────────────────
+      // STUB DATA — realistic-enough numbers to evaluate the layout.
+      // Mirrors the shape the real DomainStats contract will expose.
+      // ────────────────────────────────────────────────────────────────────
+
+      const DOMAINS = {
+        flight: {
+          key: "flight",
+          icon: "✈",
+          label: "Flug",
+          color: "var(--domain-flight)",
+          soft: "var(--domain-flight-soft)",
+          available: true,
+          drillHref: "#stats-flight",
+        },
+        cruise: {
+          key: "cruise",
+          icon: "🚢",
+          label: "Kreuzfahrt",
+          color: "var(--domain-cruise)",
+          soft: "var(--domain-cruise-soft)",
+          available: true,
+          drillHref: "#stats-cruise",
+        },
+        hotel: {
+          key: "hotel",
+          icon: "🏨",
+          label: "Hotel",
+          color: "var(--domain-hotel)",
+          soft: "var(--domain-hotel-soft)",
+          available: false, // V2.X
+          drillHref: "#stats-hotel",
+        },
+        poi: {
+          key: "poi",
+          icon: "📍",
+          label: "Orte",
+          color: "var(--domain-poi)",
+          soft: "var(--domain-poi-soft)",
+          available: false, // V2.X
+          drillHref: "#stats-poi",
+        },
+      };
+
+      const YEARS = [2020, 2021, 2022, 2023, 2024, 2025];
+
+      // Per-domain stub: counts per year, top items, badges, KPIs.
+      const STUB = {
+        flight: {
+          hasData: true,
+          totalEvents: 127,
+          totalDistanceKm: 412_300,
+          totalDurationHours: 642,
+          countries: ["DE","FR","ES","IT","GB","US","JP","TH","SG","AE","NL","CH","AT","DK","SE","NO","FI","PT","TR","GR","HR","CZ","PL"],
+          yearly: { 2020: 22, 2021: 8, 2022: 14, 2023: 28, 2024: 31, 2025: 24 },
+          activeDays: 154,
+          summary: {
+            kpis: [
+              { label: "Distanz", value: "412k km" },
+              { label: "Flugzeit", value: "642h" },
+              { label: "Airlines", value: 18 },
+            ],
+            top: { label: "Top-Airlines", items: ["Lufthansa", "British", "Air France"] },
+            badges: [{ label: "Vielflieger", emoji: "🥇" }, { label: "Long-Haul", emoji: "🌏" }],
+          },
+        },
+        cruise: {
+          hasData: true,
+          totalEvents: 12,
+          totalDistanceKm: 28_400,
+          totalDurationHours: 84 * 24, // sea days × 24
+          countries: ["IT","ES","FR","GR","HR","TR","NO","IS","CY","MT"],
+          yearly: { 2020: 2, 2021: 0, 2022: 1, 2023: 3, 2024: 4, 2025: 2 },
+          activeDays: 134, // total days at sea or in port
+          summary: {
+            kpis: [
+              { label: "Distanz", value: "28k km" },
+              { label: "Seetage", value: 84 },
+              { label: "Häfen", value: 47 },
+            ],
+            top: { label: "Top-Reedereien", items: ["AIDA", "MSC", "Royal Caribbean"] },
+            badges: [{ label: "Polar", emoji: "🧊" }, { label: "Suite", emoji: "👑" }],
+          },
+        },
+        hotel: { hasData: false }, // domain available=false → placeholder card
+        poi: { hasData: false },
+      };
+
+      // ────────────────────────────────────────────────────────────────────
+      // CROSS-DOMAIN AGGREGATION — what the real useDomainStats hook will do.
+      // year === null  → lifetime (all years)
+      // year === 2025  → only that year's data
+      // ────────────────────────────────────────────────────────────────────
+
+      function aggregate(visible, year = null) {
+        const enabledKeys = Object.keys(DOMAINS).filter(
+          (k) => DOMAINS[k].available && STUB[k].hasData && visible[k]
+        );
+        const stats = enabledKeys.map((k) => STUB[k]);
+
+        if (year === null) {
+          const totalEvents = stats.reduce((s, x) => s + x.totalEvents, 0);
+          const eventBreakdown = enabledKeys.map((k) => `${STUB[k].totalEvents} ${DOMAINS[k].label}`);
+          const countries = new Set();
+          stats.forEach((x) => x.countries.forEach((c) => countries.add(c)));
+          const activeDays = stats.reduce((max, x) => Math.max(max, x.activeDays), 0);
+          return { totalEvents, eventBreakdown, countriesCount: countries.size, activeDays, enabledKeys };
+        }
+
+        // Year-scoped — sum yearly[year] per domain. Countries / active days
+        // mocked as a proportional fraction of lifetime (real impl would
+        // aggregate per-year sets server-side). Mockup is layout-only.
+        const totalEvents = enabledKeys.reduce((s, k) => s + (STUB[k].yearly[year] ?? 0), 0);
+        const eventBreakdown = enabledKeys.map((k) => `${STUB[k].yearly[year] ?? 0} ${DOMAINS[k].label}`);
+        const lifetimeTotal = stats.reduce((s, x) => s + x.totalEvents, 0);
+        const ratio = lifetimeTotal > 0 ? totalEvents / lifetimeTotal : 0;
+        const lifetimeCountries = new Set();
+        stats.forEach((x) => x.countries.forEach((c) => lifetimeCountries.add(c)));
+        const lifetimeActiveDays = stats.reduce((max, x) => Math.max(max, x.activeDays), 0);
+        return {
+          totalEvents,
+          eventBreakdown,
+          countriesCount: Math.max(0, Math.round(lifetimeCountries.size * Math.max(ratio, 0.1))),
+          activeDays: Math.max(0, Math.round(lifetimeActiveDays * Math.max(ratio, 0.1))),
+          enabledKeys,
+        };
+      }
+
+      function delta(current, previous) {
+        if (previous === undefined || previous === null) return null;
+        const diff = current - previous;
+        const pct = previous > 0 ? Math.round((diff / previous) * 100) : null;
+        return { diff, pct, sign: diff > 0 ? "up" : diff < 0 ? "down" : "flat" };
+      }
+
+      // ────────────────────────────────────────────────────────────────────
+      // COMPONENTS
+      // ────────────────────────────────────────────────────────────────────
+
+      function TabBar({ activeTab, setActiveTab, futurePreview }) {
+        const tabs = [
+          { key: "all", label: "Gesamt" },
+          { key: "flight", icon: "✈", label: "Flug" },
+          { key: "cruise", icon: "🚢", label: "Kreuzfahrt" },
+          { key: "hotel", icon: "🏨", label: "Hotel", futureOnly: true },
+          { key: "poi", icon: "📍", label: "Orte", futureOnly: true },
+        ];
+        return (
+          <div className="tabbar">
+            {tabs.map((t) => {
+              const disabled = t.futureOnly && !futurePreview;
+              return (
+                <button
+                  key={t.key}
+                  className={`tab ${activeTab === t.key ? "active" : ""}`}
+                  disabled={disabled}
+                  onClick={() => !disabled && setActiveTab(t.key)}
+                >
+                  {t.icon && <span className="domain-icon">{t.icon}</span>} {t.label}
+                  {disabled && <span className="tab-soon">bald</span>}
+                </button>
+              );
+            })}
+          </div>
+        );
+      }
+
+      function DeltaBadge({ d, compareYear }) {
+        if (!d) return null;
+        const arrow = d.sign === "up" ? "↑" : d.sign === "down" ? "↓" : "→";
+        const sign = d.diff > 0 ? "+" : "";
+        return (
+          <span className={`delta ${d.sign}`}>
+            {arrow} {sign}
+            {d.diff} {d.pct !== null && `(${sign}${d.pct}%)`} ggü. {compareYear}
+          </span>
+        );
+      }
+
+      function YearFilter({ selectedYear, setSelectedYear, compareYear, setCompareYear, compareEnabled, setCompareEnabled }) {
+        return (
+          <div className="yearfilter">
+            <div className="group">
+              <span className="group-label">Zeitraum</span>
+              <button
+                className={`ypill ${selectedYear === null ? "active" : ""}`}
+                onClick={() => setSelectedYear(null)}
+              >
+                Alle Jahre
+              </button>
+              {YEARS.map((y) => (
+                <button
+                  key={y}
+                  className={`ypill ${selectedYear === y ? "active" : ""}`}
+                  onClick={() => setSelectedYear(y)}
+                >
+                  {y}
+                </button>
+              ))}
+            </div>
+            <div className="group" style={{ marginLeft: "auto" }}>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={compareEnabled}
+                  disabled={selectedYear === null}
+                  onChange={(e) => setCompareEnabled(e.target.checked)}
+                />
+                Vergleich mit
+              </label>
+              <select
+                value={compareYear ?? ""}
+                disabled={!compareEnabled || selectedYear === null}
+                onChange={(e) => setCompareYear(Number(e.target.value))}
+              >
+                {YEARS.filter((y) => y !== selectedYear).map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        );
+      }
+
+      function CrossDomainKpis({ agg, prevAgg, selectedYear, compareYear, compareEnabled }) {
+        const showDelta = compareEnabled && prevAgg && selectedYear !== null;
+        const scopeLabel =
+          selectedYear === null
+            ? "Lifetime · alle Jahre"
+            : compareEnabled
+            ? `Jahr ${selectedYear} vs. ${compareYear}`
+            : `Jahr ${selectedYear}`;
+
+        const cards = [
+          {
+            label: "Erlebnisse gesamt",
+            value: agg.totalEvents,
+            hint: agg.eventBreakdown.join(" · "),
+            delta: showDelta ? delta(agg.totalEvents, prevAgg.totalEvents) : null,
+          },
+          {
+            label: "Länder besucht",
+            value: agg.countriesCount,
+            delta: showDelta ? delta(agg.countriesCount, prevAgg.countriesCount) : null,
+          },
+          {
+            label: "Aktive Reisetage",
+            value: agg.activeDays,
+            hint: "Tage mit mind. einer Aktivität",
+            delta: showDelta ? delta(agg.activeDays, prevAgg.activeDays) : null,
+          },
+          { label: "Errungenschaften", value: 38, hint: "1.245 Punkte" },
+        ];
+        return (
+          <>
+            <div className="section-head">
+              <span className="section-label">Gesamt-Übersicht</span>
+              <span className="section-hint">{scopeLabel}</span>
+            </div>
+            <div className="grid-4">
+              {cards.map((c) => (
+                <div className="card card-lg" key={c.label}>
+                  <h3>{c.label}</h3>
+                  <div className="kpi-value">{typeof c.value === "number" ? c.value.toLocaleString("de-DE") : c.value}</div>
+                  {c.delta && <DeltaBadge d={c.delta} compareYear={compareYear} />}
+                  {c.hint && <div className="kpi-hint">{c.hint}</div>}
+                </div>
+              ))}
+            </div>
+          </>
+        );
+      }
+
+      function DomainToggleChips({ visible, setVisible, futurePreview }) {
+        const keys = futurePreview ? Object.keys(DOMAINS) : ["flight", "cruise"];
+        return (
+          <div className="chip-row">
+            {keys.map((k) => {
+              const d = DOMAINS[k];
+              const isAvailable = d.available || futurePreview;
+              const stub = STUB[k];
+              const hasData = stub.hasData ?? false;
+              const active = !!visible[k] && hasData;
+              const disabled = !isAvailable || !hasData;
+              return (
+                <button
+                  key={k}
+                  className={`chip ${active ? "active" : ""} ${disabled ? "disabled" : ""}`}
+                  style={{ "--domain-color": d.color, "--domain-soft": d.soft }}
+                  onClick={() => !disabled && setVisible({ ...visible, [k]: !visible[k] })}
+                  disabled={disabled}
+                  title={disabled ? "Diese Domain ist (noch) nicht aktiv" : ""}
+                >
+                  <span className="swatch" style={{ background: d.color }} />
+                  <span>{d.icon}</span>
+                  <span>{d.label}</span>
+                  {!hasData && <span style={{ color: "var(--text-muted)", fontSize: 10 }}>· keine Daten</span>}
+                </button>
+              );
+            })}
+          </div>
+        );
+      }
+
+      function ActivityChart({ visible, selectedYear, compareYear, compareEnabled }) {
+        const series = useMemo(
+          () =>
+            Object.keys(DOMAINS)
+              .filter((k) => visible[k] && STUB[k].hasData)
+              .map((k) => ({ key: k, color: DOMAINS[k].color, label: DOMAINS[k].label, data: STUB[k].yearly })),
+          [visible]
+        );
+        const totals = YEARS.map((y) => series.reduce((s, x) => s + (x.data[y] ?? 0), 0));
+        const max = Math.max(1, ...totals);
+
+        return (
+          <div className="chart">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <h3 style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "var(--text-muted)" }}>Aktivität pro Jahr</h3>
+              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                {selectedYear === null
+                  ? "gestapelt nach Domain"
+                  : compareEnabled
+                  ? `${selectedYear} vs. ${compareYear} hervorgehoben`
+                  : `${selectedYear} hervorgehoben`}
+              </span>
+            </div>
+            <div className="chart-bars">
+              {YEARS.map((y, i) => {
+                const total = totals[i];
+                const isSelected = selectedYear === y;
+                const isCompare = compareEnabled && compareYear === y && selectedYear !== null;
+                const dimmed = selectedYear !== null && !isSelected && !isCompare;
+                return (
+                  <div className="bar-col" key={y}>
+                    <div className="bar-total" style={{ color: dimmed ? "var(--text-muted)" : "var(--text-primary)" }}>{total}</div>
+                    <div
+                      className="bar-stack"
+                      style={{
+                        opacity: dimmed ? 0.35 : 1,
+                        outline: isSelected
+                          ? "2px solid var(--accent)"
+                          : isCompare
+                          ? "2px dashed var(--accent)"
+                          : "none",
+                        outlineOffset: 2,
+                        borderRadius: 4,
+                      }}
+                    >
+                      {series.map((s) => {
+                        const v = s.data[y] ?? 0;
+                        if (v === 0) return null;
+                        const heightPct = (v / max) * 100;
+                        return (
+                          <div
+                            key={s.key}
+                            className="bar-seg"
+                            title={`${s.label}: ${v}`}
+                            style={{
+                              height: `${heightPct}%`,
+                              background: s.color,
+                              borderTop: "1px solid rgba(0,0,0,0.2)",
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div className="bar-label" style={{
+                      color: isSelected ? "var(--accent)" : isCompare ? "var(--accent)" : "var(--text-muted)",
+                      fontWeight: isSelected || isCompare ? 700 : 400,
+                    }}>{y}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
+
+      function Heatmap({ visible, year }) {
+        // Stub: 12 months × 31 days, each cell = total active days that day across visible domains.
+        // Real implementation will map departure / port-call / check-in dates.
+        const months = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+        // Vary the seed by year so the visualisation actually changes when the
+        // year filter flips — proves the heatmap is year-scoped.
+        const seed = (m, d) => (Math.sin(m * 13 + d * 7 + year * 0.3) + 1) * 0.5;
+        const [tip, setTip] = useState(null);
+        const visibleKeys = Object.keys(DOMAINS).filter((k) => visible[k] && STUB[k].hasData);
+
+        function cellFor(m, d) {
+          if (d > 28 && (m === 1 || (m === 0 && d > 30))) return null; // skip Feb >28
+          const base = seed(m, d);
+          const breakdown = {};
+          let total = 0;
+          for (const k of visibleKeys) {
+            const v = base * (k === "flight" ? 0.6 : k === "cruise" ? 0.35 : 0.05) > 0.4 ? 1 : 0;
+            if (v > 0) {
+              breakdown[k] = v;
+              total += v;
+            }
+          }
+          return { total, breakdown };
+        }
+
+        return (
+          <div className="heatmap">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <h3 style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "var(--text-muted)" }}>Aktive Tage {year}</h3>
+              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>jede Zelle = 1 Tag mit Reise-Aktivität</span>
+            </div>
+            <div className="heatmap-grid">
+              <div></div>
+              {[...Array(31)].map((_, i) => (
+                <div key={i} style={{ fontSize: 9, textAlign: "center", color: "var(--text-muted)" }}>
+                  {(i + 1) % 5 === 0 || i === 0 ? i + 1 : ""}
+                </div>
+              ))}
+              {months.map((mLabel, m) => (
+                <React.Fragment key={mLabel}>
+                  <div className="heatmap-month-label">{mLabel}</div>
+                  {[...Array(31)].map((_, d) => {
+                    const cell = cellFor(m, d);
+                    if (!cell) return <div key={d} style={{ background: "transparent" }} />;
+                    const { total, breakdown } = cell;
+                    if (total === 0) {
+                      return (
+                        <div
+                          key={d}
+                          className="heatmap-cell"
+                          style={{ background: "var(--bg-elevated)" }}
+                        />
+                      );
+                    }
+                    // Pick color from the dominant domain in this cell.
+                    const dominant = Object.keys(breakdown)[0] ?? "flight";
+                    const color = DOMAINS[dominant].color;
+                    const opacity = 0.25 + Math.min(total / 3, 1) * 0.65;
+                    const showTip = tip && tip.m === m && tip.d === d;
+                    return (
+                      <div
+                        key={d}
+                        className="heatmap-cell"
+                        onMouseEnter={() => setTip({ m, d, breakdown })}
+                        onMouseLeave={() => setTip(null)}
+                        style={{ background: color, opacity }}
+                      >
+                        {showTip && (
+                          <div className="heatmap-tooltip">
+                            {mLabel} {d + 1}: {Object.entries(breakdown).map(([k, v]) => `${DOMAINS[k].label} ${v}`).join(" · ")}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </React.Fragment>
+              ))}
+            </div>
+            <div className="heatmap-legend">
+              <span>weniger</span>
+              <div className="swatch-row">
+                {[0.15, 0.3, 0.5, 0.75, 1].map((o, i) => (
+                  <div key={i} className="swatch" style={{ background: "var(--accent)", opacity: o }} />
+                ))}
+              </div>
+              <span>mehr</span>
+              <span style={{ marginLeft: 16 }}>
+                Zellfarbe = dominante Domain. Hover: Breakdown.
+              </span>
+            </div>
+          </div>
+        );
+      }
+
+      function DomainSummaryCard({ domainKey, futurePreview, selectedYear, compareYear, compareEnabled }) {
+        const d = DOMAINS[domainKey];
+        const stub = STUB[domainKey];
+        const isPlaceholder = !stub.hasData;
+        const showAtAll = d.available || futurePreview;
+        if (!showAtAll) return null;
+
+        const yearScopedCount =
+          selectedYear !== null && !isPlaceholder ? (stub.yearly[selectedYear] ?? 0) : null;
+        const compareCount =
+          compareEnabled && compareYear !== null && !isPlaceholder
+            ? (stub.yearly[compareYear] ?? 0)
+            : null;
+        const cardDelta = yearScopedCount !== null && compareCount !== null
+          ? delta(yearScopedCount, compareCount)
+          : null;
+
+        return (
+          <div
+            className={`dcard ${isPlaceholder ? "placeholder" : ""}`}
+            style={{ "--domain-color": d.color, "--domain-soft": d.soft }}
+          >
+            <div className="dcard-head">
+              <div className="left">
+                <div className="icon">{d.icon}</div>
+                <div>
+                  <div className="dcard-title">{d.label}</div>
+                  <div className="dcard-count">
+                    {isPlaceholder
+                      ? "Noch keine Daten"
+                      : yearScopedCount !== null
+                      ? `${yearScopedCount} ${selectedYear} · ${stub.totalEvents} lifetime`
+                      : `${stub.totalEvents} Erlebnisse`}
+                  </div>
+                  {cardDelta && <DeltaBadge d={cardDelta} compareYear={compareYear} />}
+                </div>
+              </div>
+              {!isPlaceholder && (
+                <a className="dcard-link" href={d.drillHref}>
+                  Details →
+                </a>
+              )}
+            </div>
+
+            {isPlaceholder ? (
+              <div style={{ fontSize: 12, color: "var(--text-muted)", paddingTop: 8 }}>
+                {!d.available
+                  ? "Kommt mit V2.X. Sobald die Domain aktiviert ist, erscheinen hier deine KPIs automatisch."
+                  : "Noch keine Daten erfasst."}
+              </div>
+            ) : (
+              <>
+                <div className="dcard-kpis">
+                  {stub.summary.kpis.map((k) => (
+                    <div className="dcard-kpi" key={k.label}>
+                      <label>{k.label}</label>
+                      <div className="v">{typeof k.value === "number" ? k.value.toLocaleString("de-DE") : k.value}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="dcard-top">
+                  <div className="label">{stub.summary.top.label}</div>
+                  <div className="items">
+                    {stub.summary.top.items.map((it) => (
+                      <span key={it} className="pill">{it}</span>
+                    ))}
+                  </div>
+                </div>
+                {stub.summary.badges.length > 0 && (
+                  <div className="dcard-badges">
+                    {stub.summary.badges.map((b) => (
+                      <span key={b.label} className="dcard-badge">
+                        <span aria-hidden>{b.emoji}</span>
+                        {b.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        );
+      }
+
+      function DomainSummaryGrid({ futurePreview, selectedYear, compareYear, compareEnabled }) {
+        const keys = futurePreview ? ["flight", "cruise", "hotel", "poi"] : ["flight", "cruise"];
+        return (
+          <>
+            <div className="section-head">
+              <span className="section-label">Pro Domain</span>
+              <span className="section-hint">
+                Kompakt-Zusammenfassung
+                {selectedYear !== null && ` · scoped auf ${selectedYear}`}
+                {" · "}voller Drill-Down im Domain-Tab
+              </span>
+            </div>
+            <div className="grid-2">
+              {keys.map((k) => (
+                <DomainSummaryCard
+                  key={k}
+                  domainKey={k}
+                  futurePreview={futurePreview}
+                  selectedYear={selectedYear}
+                  compareYear={compareYear}
+                  compareEnabled={compareEnabled}
+                />
+              ))}
+            </div>
+          </>
+        );
+      }
+
+      // ────────────────────────────────────────────────────────────────────
+      // GESAMT-TAB (existing content extracted into its own component)
+      // ────────────────────────────────────────────────────────────────────
+
+      function GesamtTab({ futurePreview }) {
+        const [visible, setVisible] = useState({ flight: true, cruise: true, hotel: true, poi: true });
+        const [selectedYear, setSelectedYear] = useState(2025);
+        const [compareYear, setCompareYear] = useState(2024);
+        const [compareEnabled, setCompareEnabled] = useState(true);
+
+        const agg = aggregate(visible, selectedYear);
+        const prevAgg = compareEnabled && selectedYear !== null ? aggregate(visible, compareYear) : null;
+
+        return (
+          <>
+            <div className="section-head">
+              <span className="section-label">Zeitraum</span>
+              <span className="section-hint">Cross-Domain — wirkt auf KPIs, Chart, Heatmap, Domain-Cards</span>
+            </div>
+            <YearFilter
+              selectedYear={selectedYear}
+              setSelectedYear={setSelectedYear}
+              compareYear={compareYear}
+              setCompareYear={setCompareYear}
+              compareEnabled={compareEnabled}
+              setCompareEnabled={setCompareEnabled}
+            />
+
+            <div className="mt-6">
+              <CrossDomainKpis
+                agg={agg}
+                prevAgg={prevAgg}
+                selectedYear={selectedYear}
+                compareYear={compareYear}
+                compareEnabled={compareEnabled}
+              />
+            </div>
+
+            <div className="section-head mt-8">
+              <span className="section-label">Aktivität & Verteilung</span>
+              <span className="section-hint">Toggle: welche Domains sollen einfließen?</span>
+            </div>
+            <DomainToggleChips
+              visible={visible}
+              setVisible={setVisible}
+              futurePreview={futurePreview}
+            />
+            <ActivityChart
+              visible={visible}
+              selectedYear={selectedYear}
+              compareYear={compareYear}
+              compareEnabled={compareEnabled}
+            />
+
+            <div className="mt-6">
+              <Heatmap visible={visible} year={selectedYear ?? 2025} />
+            </div>
+
+            <DomainSummaryGrid
+              futurePreview={futurePreview}
+              selectedYear={selectedYear}
+              compareYear={compareYear}
+              compareEnabled={compareEnabled}
+            />
+          </>
+        );
+      }
+
+      // ────────────────────────────────────────────────────────────────────
+      // FLUG-TAB — mirrors the current AdvancedStatsPage flight block
+      // (year filter → overview KPIs → charts → distance → breakdown).
+      // Stub data, layout-only. Final code KEEPS the existing flight
+      // sections — this view doesn't change in the rollout.
+      // ────────────────────────────────────────────────────────────────────
+
+      function FlightTab() {
+        const f = STUB.flight;
+        return (
+          <>
+            <div className="section-head">
+              <span className="section-label">Jahres-Filter</span>
+              <span className="section-hint">Zeitraum + Vergleich (existiert bereits — unverändert)</span>
+            </div>
+            <div className="card" style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Jahr:</span>
+              {YEARS.map((y) => (
+                <span key={y} className="pill" style={{
+                  padding: "4px 10px", borderRadius: 999,
+                  background: y === 2024 ? "var(--domain-flight-soft)" : "var(--bg-elevated)",
+                  border: "1px solid " + (y === 2024 ? "var(--domain-flight)" : "var(--color-border)"),
+                  fontSize: 12, color: "var(--text-primary)", cursor: "pointer",
+                }}>{y}</span>
+              ))}
+              <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--text-muted)" }}>
+                Vergleich: <em>aus</em>
+              </span>
+            </div>
+
+            <div className="section-head mt-8">
+              <span className="section-label">Übersicht (alle Jahre)</span>
+              <span className="section-hint">unabhängig vom Jahres-Filter</span>
+            </div>
+            <div className="grid-4">
+              {[
+                { label: "Flüge gesamt", value: f.totalEvents },
+                { label: "Flugzeit gesamt", value: "642 h" },
+                { label: "Ø Flugdauer", value: "5,1 h" },
+                { label: "Airlines", value: 18 },
+              ].map((c) => (
+                <div className="card card-lg" key={c.label}>
+                  <h3>{c.label}</h3>
+                  <div className="kpi-value">{typeof c.value === "number" ? c.value.toLocaleString("de-DE") : c.value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="section-head mt-8">
+              <span className="section-label">Zeit-basiert</span>
+              <span className="section-hint">Flüge pro Jahr / Monat / Wochentag</span>
+            </div>
+            <div className="grid-2">
+              <div className="chart" style={{ padding: 20 }}>
+                <h3 style={{ margin: 0, fontSize: 13, color: "var(--text-muted)" }}>Flüge pro Jahr</h3>
+                <div className="chart-bars" style={{ height: 160, marginTop: 16 }}>
+                  {YEARS.map((y) => {
+                    const v = f.yearly[y];
+                    const max = Math.max(...Object.values(f.yearly));
+                    return (
+                      <div className="bar-col" key={y}>
+                        <div className="bar-total">{v}</div>
+                        <div className="bar-stack">
+                          <div className="bar-seg" style={{ height: `${(v / max) * 100}%`, background: "var(--domain-flight)" }} />
+                        </div>
+                        <div className="bar-label">{y}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="chart" style={{ padding: 20 }}>
+                <h3 style={{ margin: 0, fontSize: 13, color: "var(--text-muted)" }}>Wochentage</h3>
+                <div style={{ display: "flex", gap: 8, alignItems: "end", height: 160, marginTop: 16 }}>
+                  {["Mo","Di","Mi","Do","Fr","Sa","So"].map((day, i) => {
+                    const v = [16, 19, 21, 24, 28, 12, 7][i];
+                    return (
+                      <div key={day} style={{ flex: 1, textAlign: "center" }}>
+                        <div style={{ fontSize: 10, color: "var(--text-primary)", fontFamily: "monospace" }}>{v}</div>
+                        <div style={{
+                          height: `${(v / 28) * 130}px`,
+                          background: "var(--domain-flight)",
+                          borderRadius: 3,
+                          margin: "4px 0",
+                        }} />
+                        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{day}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="section-head mt-8">
+              <span className="section-label">Distanz</span>
+              <span className="section-hint">Haversine über alle Flüge</span>
+            </div>
+            <div className="grid-4">
+              {[
+                { label: "Gesamt", value: "412.300 km" },
+                { label: "Ø pro Flug", value: "3.247 km" },
+                { label: "Längster Flug", value: "FRA → SIN · 10.300 km" },
+                { label: "Kürzester Flug", value: "HAM → BRE · 95 km" },
+              ].map((c) => (
+                <div className="card" key={c.label}>
+                  <h3 style={{ fontSize: 11 }}>{c.label}</h3>
+                  <div style={{ fontSize: 16, marginTop: 6, fontFamily: "monospace", color: "var(--text-primary)" }}>{c.value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="section-head mt-8">
+              <span className="section-label">Aufschlüsselung</span>
+              <span className="section-hint">Top-Airlines · Aircraft · Sitzklassen</span>
+            </div>
+            <div className="grid-2">
+              <div className="card">
+                <h3>Top Airlines</h3>
+                <ul style={{ listStyle: "none", padding: 0, margin: "12px 0 0", fontSize: 13 }}>
+                  {[
+                    ["Lufthansa", 42],
+                    ["British Airways", 18],
+                    ["Air France", 14],
+                    ["Singapore Airlines", 11],
+                    ["KLM", 9],
+                  ].map(([name, n]) => (
+                    <li key={name} style={{
+                      display: "flex", justifyContent: "space-between", padding: "6px 0",
+                      borderBottom: "1px solid var(--bg-elevated)",
+                    }}>
+                      <span>{name}</span>
+                      <span style={{ fontFamily: "monospace", color: "var(--text-muted)" }}>{n}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="card">
+                <h3>Sitzklassen</h3>
+                <div style={{ marginTop: 12 }}>
+                  {[
+                    ["Economy", 84, "var(--domain-flight)"],
+                    ["Premium Economy", 18, "#9bb3d4"],
+                    ["Business", 21, "#b072d6"],
+                    ["First", 4, "#5ec2b2"],
+                  ].map(([label, n, color]) => {
+                    const pct = (n / 127) * 100;
+                    return (
+                      <div key={label} style={{ marginBottom: 10 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                          <span>{label}</span>
+                          <span style={{ fontFamily: "monospace", color: "var(--text-muted)" }}>{n} ({Math.round(pct)}%)</span>
+                        </div>
+                        <div style={{ height: 6, background: "var(--bg-elevated)", borderRadius: 3, overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${pct}%`, background: color }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 32, padding: 16, background: "var(--bg-elevated)", borderRadius: 8, fontSize: 12, color: "var(--text-muted)" }}>
+              ℹ️ <strong>Hinweis:</strong> Im echten Build hängen hier zusätzlich an: Calendar/Heatmap (Flug-only),
+              Fun-Stats, Business-Stats, Unique-Stats, Airport-Stats, Seat-Stats, Airline-Loyalty-Ranking,
+              Aircraft-Hulls-Ranking, Country-Distribution. Alles unverändert vom heutigen Stand —
+              dieser Tab ändert sich durch das Refactoring <strong>nicht</strong>.
+            </div>
+          </>
+        );
+      }
+
+      // ────────────────────────────────────────────────────────────────────
+      // KREUZFAHRT-TAB — mirrors the existing CruiseStatsSection (8 hero
+      // KPIs + region bars + sea-day donut + depth grid + tag clouds + flags).
+      // Layout-only stub. Final code KEEPS the existing component.
+      // ────────────────────────────────────────────────────────────────────
+
+      function CruiseTab() {
+        const heroKpis = [
+          ["Kreuzfahrten", 12],
+          ["Gesamtdistanz", "28.400 km"],
+          ["Seetage", 84],
+          ["Häfen", 47],
+          ["Schiffe", 8],
+          ["Reedereien", 4],
+          ["Ø Häfen / Cruise", "5,2"],
+          ["Längste Etappe", "1.830 km"],
+        ];
+        const depthKpis = [
+          ["Meiste Häfen einer Cruise", 14],
+          ["Top-Loyalität (selbe Reederei)", 6],
+          ["Längster Seetag-Streak", 4],
+          ["Höchstes Deck", 14],
+          ["Reisetage gesamt", 134],
+          ["Wiederbesuchsquote", "32 %"],
+          ["Länder", 10],
+        ];
+        const regions = [
+          ["Mittelmeer", 18],
+          ["Karibik", 11],
+          ["Norwegische Fjorde", 6],
+          ["Ostsee", 5],
+          ["Atlantik", 4],
+          ["Pazifik", 2],
+          ["Antarktis", 1],
+        ];
+        const maxRegion = regions[0][1];
+
+        return (
+          <>
+            <div className="section-head">
+              <span className="section-label">Hero-KPIs</span>
+              <span className="section-hint">8 Kennzahlen auf einen Blick</span>
+            </div>
+            <div className="grid-4" style={{ gap: 12 }}>
+              {heroKpis.map(([label, v]) => (
+                <div className="card" key={label}>
+                  <h3 style={{ fontSize: 11 }}>{label}</h3>
+                  <div className="kpi-value" style={{ fontSize: 22 }}>{typeof v === "number" ? v.toLocaleString("de-DE") : v}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="section-head mt-8">
+              <span className="section-label">Regionen & Verteilung</span>
+              <span className="section-hint">Anläufe pro Region · Anteil Seetage</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
+              <div className="card">
+                <h3>Regionen-Verteilung</h3>
+                <ul style={{ listStyle: "none", padding: 0, margin: "12px 0 0" }}>
+                  {regions.map(([name, n]) => (
+                    <li key={name} style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 12, marginBottom: 8 }}>
+                      <span style={{ width: 130, color: "var(--text-primary)" }}>{name}</span>
+                      <div style={{ flex: 1, height: 12, background: "var(--bg-elevated)", borderRadius: 999, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${(n / maxRegion) * 100}%`, background: "var(--domain-cruise)" }} />
+                      </div>
+                      <span style={{ width: 32, textAlign: "right", fontFamily: "monospace", color: "var(--text-primary)" }}>{n}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                <h3 style={{ alignSelf: "flex-start" }}>Anteil Seetage</h3>
+                <div style={{
+                  width: 128, height: 128, borderRadius: "50%",
+                  background: "conic-gradient(var(--domain-cruise) 0deg 226deg, var(--bg-elevated) 226deg 360deg)",
+                  position: "relative", margin: "16px 0",
+                }}>
+                  <div style={{
+                    position: "absolute", inset: 12, borderRadius: "50%",
+                    background: "var(--bg-surface)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 24, fontWeight: 700, fontFamily: "monospace",
+                  }}>63%</div>
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "monospace" }}>84 / 134 d</div>
+              </div>
+            </div>
+
+            <div className="section-head mt-8">
+              <span className="section-label">Tiefe & Loyalität</span>
+              <span className="section-hint">Sekundäre Metriken</span>
+            </div>
+            <div className="grid-4" style={{ gap: 12 }}>
+              {depthKpis.map(([label, v]) => (
+                <div className="card" key={label}>
+                  <h3 style={{ fontSize: 11 }}>{label}</h3>
+                  <div className="kpi-value" style={{ fontSize: 18 }}>{typeof v === "number" ? v.toLocaleString("de-DE") : v}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="section-head mt-8">
+              <span className="section-label">Tag-Wolken</span>
+              <span className="section-hint">Reedereien · Regionen · Länder</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {[
+                ["Reedereien", ["AIDA", "MSC", "Royal Caribbean", "Hapag-Lloyd"]],
+                ["Befahrene Regionen", ["Mittelmeer", "Karibik", "Norwegische Fjorde", "Ostsee", "Atlantik", "Pazifik", "Antarktis"]],
+                ["Besuchte Länder", ["IT","ES","FR","GR","HR","TR","NO","IS","CY","MT"]],
+              ].map(([title, items]) => (
+                <div className="card" key={title}>
+                  <h3>{title}</h3>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                    {items.map((it) => (
+                      <span key={it} className="pill" style={{
+                        padding: "3px 10px", borderRadius: 999,
+                        background: "var(--bg-elevated)",
+                        border: "1px solid var(--color-border)",
+                        fontSize: 11, color: "var(--text-primary)",
+                      }}>{it}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="section-head mt-8">
+              <span className="section-label">Errungenschafts-Flags</span>
+              <span className="section-hint">Boolean-Highlights</span>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {[
+                ["🏝️", "Balkon-Kabine"],
+                ["👑", "Suite"],
+                ["🧊", "Polar-Region"],
+                ["❄️", "Kaltwasser-Fahrt"],
+                ["⛴️", "Kanal-Durchquerung"],
+                ["🌐", "Datumsgrenze überquert"],
+                ["🎂", "Geburtstag auf See"],
+                ["🎇", "Silvester auf See"],
+              ].map(([emoji, label]) => (
+                <span key={label} style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "5px 10px", borderRadius: 6,
+                  background: "var(--domain-cruise-soft)",
+                  border: "1px solid var(--color-border)",
+                  fontSize: 12,
+                }}>
+                  <span aria-hidden>{emoji}</span>
+                  {label}
+                </span>
+              ))}
+            </div>
+
+            <div style={{ marginTop: 32, padding: 16, background: "var(--bg-elevated)", borderRadius: 8, fontSize: 12, color: "var(--text-muted)" }}>
+              ℹ️ Dieser Tab existiert heute schon (<code>CruiseStatsSection</code>) — durch das Refactoring
+              ändert sich hier <strong>nichts</strong>. Die Cross-Domain-Aggregation auf dem
+              Gesamt-Tab konsumiert genau diese Daten via Adapter.
+            </div>
+          </>
+        );
+      }
+
+      // ────────────────────────────────────────────────────────────────────
+      // FUTURE PLACEHOLDER (Hotel + POI when futurePreview enabled)
+      // ────────────────────────────────────────────────────────────────────
+
+      function PlaceholderTab({ icon, label, color }) {
+        return (
+          <div style={{
+            padding: "64px 24px", textAlign: "center",
+            background: "var(--bg-surface)",
+            border: "1px dashed var(--color-border)",
+            borderRadius: 8,
+            marginTop: 24,
+          }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>{icon}</div>
+            <h2 style={{ margin: 0, fontSize: 20, color: "var(--text-primary)" }}>{label} — Kommt mit V2.X</h2>
+            <p style={{ margin: "12px auto 0", maxWidth: 480, fontSize: 13, color: "var(--text-muted)" }}>
+              Sobald die Domain aktiviert ist (<code>available=true</code> in <code>shared/domains.ts</code>)
+              und ein Adapter existiert, erscheinen hier die Domain-spezifischen Stats —
+              ohne Änderung am Gesamt-Tab.
+            </p>
+            <div style={{
+              display: "inline-block", marginTop: 16,
+              padding: "4px 12px", borderRadius: 999,
+              background: color, color: "var(--bg-base)",
+              fontSize: 11, fontWeight: 600,
+            }}>Geplant</div>
+          </div>
+        );
+      }
+
+      // ────────────────────────────────────────────────────────────────────
+      // ROOT
+      // ────────────────────────────────────────────────────────────────────
+
+      function App() {
+        const [activeTab, setActiveTab] = useState("all");
+        const [futurePreview, setFuturePreview] = useState(false);
+
+        // Reset to Gesamt if user disables futurePreview while on a future tab.
+        React.useEffect(() => {
+          if (!futurePreview && (activeTab === "hotel" || activeTab === "poi")) {
+            setActiveTab("all");
+          }
+        }, [futurePreview, activeTab]);
+
+        return (
+          <>
+            <div className="mockup-banner">
+              <span>
+                <strong>Mockup</strong> · Stats-Seite Multi-Domain · keine echten Daten
+              </span>
+              <div className="controls">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={futurePreview}
+                    onChange={(e) => setFuturePreview(e.target.checked)}
+                  />
+                  Hotels + POIs simulieren (V2.X-Vorschau)
+                </label>
+              </div>
+            </div>
+
+            <TabBar activeTab={activeTab} setActiveTab={setActiveTab} futurePreview={futurePreview} />
+
+            <div className="container" style={{ paddingTop: 24, paddingBottom: 64 }}>
+              {activeTab === "all" && <GesamtTab futurePreview={futurePreview} />}
+              {activeTab === "flight" && <FlightTab />}
+              {activeTab === "cruise" && <CruiseTab />}
+              {activeTab === "hotel" && <PlaceholderTab icon="🏨" label="Hotel-Statistik" color="var(--domain-hotel)" />}
+              {activeTab === "poi" && <PlaceholderTab icon="📍" label="Orte-Statistik" color="var(--domain-poi)" />}
+            </div>
+          </>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>

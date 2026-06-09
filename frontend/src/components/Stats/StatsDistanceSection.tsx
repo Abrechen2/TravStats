@@ -2,6 +2,7 @@ import type { Flight } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useSettingsStore } from "../../store/settingsStore";
 import { convertDistance, formatDistance, getDistanceLabel } from "../../lib/units";
+import StatCard from "./StatCard";
 
 interface FlightWithDistance {
   flight: Flight;
@@ -21,8 +22,9 @@ export default function StatsDistanceSection({
   longestDistance,
   shortestDistance,
 }: StatsDistanceSectionProps): JSX.Element {
-  const { t } = useTranslation(["stats"]);
+  const { t, i18n } = useTranslation(["stats"]);
   const { units } = useSettingsStore();
+  const lang = i18n.language;
 
   const earthCircumference = 40075; // km
   const earthCircumnavigations = totalDistance / earthCircumference;
@@ -43,35 +45,23 @@ export default function StatsDistanceSection({
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white shadow-md">
-          <h3 className="text-sm font-medium opacity-90 mb-2">
-            {t("stats:distance.totalDistance")}
-          </h3>
-          <p className="text-4xl font-bold">
-            {convertDistance(totalDistance, units.distanceUnit).toLocaleString(undefined, {
-              maximumFractionDigits: 0,
-            })}
-          </p>
-          <p className="text-sm opacity-75 mt-1">{getDistanceLabel(units.distanceUnit, t)}</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white shadow-md">
-          <h3 className="text-sm font-medium opacity-90 mb-2">
-            {t("stats:distance.avgPerFlight")}
-          </h3>
-          <p className="text-4xl font-bold">
-            {convertDistance(avgDistance, units.distanceUnit).toFixed(0)}
-          </p>
-          <p className="text-sm opacity-75 mt-1">{getDistanceLabel(units.distanceUnit, t)}</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white shadow-md">
-          <h3 className="text-sm font-medium opacity-90 mb-2">
-            {t("stats:distance.earthCircumnavigations")}
-          </h3>
-          <p className="text-4xl font-bold">{earthCircumnavigations.toFixed(2)}</p>
-          <p className="text-sm opacity-75 mt-1">{t("stats:distance.timesAroundEarth")}</p>
-        </div>
+        <StatCard
+          title={t("stats:distance.totalDistance")}
+          value={convertDistance(totalDistance, units.distanceUnit).toLocaleString(lang, {
+            maximumFractionDigits: 0,
+          })}
+          description={getDistanceLabel(units.distanceUnit, t)}
+        />
+        <StatCard
+          title={t("stats:distance.avgPerFlight")}
+          value={convertDistance(avgDistance, units.distanceUnit).toFixed(0)}
+          description={getDistanceLabel(units.distanceUnit, t)}
+        />
+        <StatCard
+          title={t("stats:distance.earthCircumnavigations")}
+          value={earthCircumnavigations.toFixed(2)}
+          description={t("stats:distance.timesAroundEarth")}
+        />
       </div>
 
       <div className="space-y-4">
@@ -94,7 +84,7 @@ export default function StatsDistanceSection({
             />
           </div>
           <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
-            {formatDistance(earthCircumference, units.distanceUnit, t)}{" "}
+            {formatDistance(earthCircumference, units.distanceUnit, t, lang)}{" "}
             {t("stats:distance.circumference")}
           </p>
         </div>
@@ -118,7 +108,8 @@ export default function StatsDistanceSection({
             />
           </div>
           <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
-            {formatDistance(moonDistance, units.distanceUnit, t)} {t("stats:distance.distance")}
+            {formatDistance(moonDistance, units.distanceUnit, t, lang)}{" "}
+            {t("stats:distance.distance")}
           </p>
         </div>
 
@@ -141,8 +132,8 @@ export default function StatsDistanceSection({
             />
           </div>
           <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
-            {formatDistance(marsDistance, units.distanceUnit, t)} {t("stats:distance.distance")} (
-            {t("stats:distance.average")})
+            {formatDistance(marsDistance, units.distanceUnit, t, lang)}{" "}
+            {t("stats:distance.distance")} ({t("stats:distance.average")})
           </p>
         </div>
 
@@ -165,39 +156,30 @@ export default function StatsDistanceSection({
             />
           </div>
           <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
-            {formatDistance(voyagerDistance, units.distanceUnit, t)} {t("stats:distance.fromEarth")}
+            {formatDistance(voyagerDistance, units.distanceUnit, t, lang)}{" "}
+            {t("stats:distance.fromEarth")}
           </p>
         </div>
       </div>
 
-      {/* Longest/Shortest Distance */}
       {longestDistance && shortestDistance && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-          <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-4 text-white shadow-md">
-            <h3 className="text-sm font-medium opacity-90 mb-2">
-              {t("stats:distance.longestDistance")}
-            </h3>
-            <p className="text-2xl font-bold mb-1">
-              {formatDistance(longestDistance.distance, units.distanceUnit, t)}
-            </p>
-            <p className="text-sm opacity-75">
-              {longestDistance.flight.depIata || longestDistance.flight.depIcao} →{" "}
-              {longestDistance.flight.arrIata || longestDistance.flight.arrIcao}
-            </p>
-          </div>
-
-          <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg p-4 text-white shadow-md">
-            <h3 className="text-sm font-medium opacity-90 mb-2">
-              {t("stats:distance.shortestDistance")}
-            </h3>
-            <p className="text-2xl font-bold mb-1">
-              {formatDistance(shortestDistance.distance, units.distanceUnit, t)}
-            </p>
-            <p className="text-sm opacity-75">
-              {shortestDistance.flight.depIata || shortestDistance.flight.depIcao} →{" "}
-              {shortestDistance.flight.arrIata || shortestDistance.flight.arrIcao}
-            </p>
-          </div>
+          <StatCard
+            title={t("stats:distance.longestDistance")}
+            valueSize="sm"
+            value={formatDistance(longestDistance.distance, units.distanceUnit, t, lang)}
+            description={`${longestDistance.flight.depIata || longestDistance.flight.depIcao} → ${
+              longestDistance.flight.arrIata || longestDistance.flight.arrIcao
+            }`}
+          />
+          <StatCard
+            title={t("stats:distance.shortestDistance")}
+            valueSize="sm"
+            value={formatDistance(shortestDistance.distance, units.distanceUnit, t, lang)}
+            description={`${shortestDistance.flight.depIata || shortestDistance.flight.depIcao} → ${
+              shortestDistance.flight.arrIata || shortestDistance.flight.arrIcao
+            }`}
+          />
         </div>
       )}
     </div>

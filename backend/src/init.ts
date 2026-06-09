@@ -12,6 +12,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import logger from './utils/logger';
 import { initializeEncryptionKey } from './utils/encryptionKey';
+import { maybeRunPreMigrationBackup, writeLastDeployedVersion } from './utils/upgradeBackup';
 
 const prisma = new PrismaClient();
 
@@ -117,6 +118,19 @@ async function init() {
       });
     }
 
+    // Step 2.6: Pre-migration backup on major-version bump
+    console.log('2️⃣.6 Checking upgrade-backup trigger...');
+    const upgradeCtx = await maybeRunPreMigrationBackup();
+    if (upgradeCtx.majorBumped) {
+      if (upgradeCtx.backupCreated) {
+        console.log(`   ✅ Pre-upgrade backup created: ${upgradeCtx.backupCreated}\n`);
+      } else {
+        console.log('   ⚠️  Major-version bump detected but backup failed; check warnings above\n');
+      }
+    } else {
+      console.log('   ✅ No major-version bump; skipping upgrade backup\n');
+    }
+
     // Step 3: Run migrations
     console.log('3️⃣  Running database migrations...');
     logger.info({ operation: 'init_migrations', message: 'Running database migrations' });
@@ -127,6 +141,20 @@ async function init() {
       });
       console.log('   ✅ Migrations applied\n');
       logger.info({ operation: 'init_migrations_success', message: 'Migrations applied successfully' });
+      // Persist the version that successfully migrated this data volume.
+      // Used on the next boot to detect future major bumps and trigger
+      // another pre-migration backup. Written only after a green migrate.
+      try {
+        writeLastDeployedVersion(upgradeCtx.currentVersion);
+      } catch (writeError) {
+        logger.warn({
+          operation: 'init_last_version_write_error',
+          message: 'Could not persist last-version marker',
+          error: {
+            message: writeError instanceof Error ? writeError.message : 'Unknown error',
+          },
+        });
+      }
     } catch (error) {
       console.error('   ❌ Migration failed!');
       console.error('   You may need to run: npx prisma migrate dev');
@@ -166,18 +194,31 @@ async function init() {
     console.log('5️⃣  Airport seeding will start after first login\n');
     logger.debug({ operation: 'init_airport_seeding_info', message: 'Airport seeding will start after first login' });
 
-    // Step 6: Optional demo user
-    const createDemoUser = process.env.CREATE_DEMO_USER === 'true';
+    // Step 6: Demo user — seeded automatically on first install (empty
+    // user table) so a fresh box has something to look at right away.
+    // Admins can later delete the demo user via the admin UI; that
+    // cascades through Prisma and removes all seed data with it. The
+    // CREATE_DEMO_USER=true env var stays as a force-override for dev
+    // re-seeding on a non-empty DB.
+    const userCount = await prisma.user.count();
+    const isFirstInstall = userCount === 0;
+    const forceDemo = process.env.CREATE_DEMO_USER === 'true';
+    const shouldSeedDemo = isFirstInstall || forceDemo;
 
-    if (createDemoUser) {
-      console.log('6️⃣  Creating demo user...');
-      logger.info({ operation: 'init_demo_user', message: 'Creating demo user' });
+    if (shouldSeedDemo) {
+      const reason = isFirstInstall ? 'first install' : 'CREATE_DEMO_USER=true';
+      console.log(`6️⃣  Seeding demo user (${reason})...`);
+      logger.info({
+        operation: 'init_demo_user',
+        message: 'Seeding demo user',
+        context: { isFirstInstall, forceDemo },
+      });
       try {
         execSync('npm run seed:demo', {
           stdio: 'inherit',
           cwd: path.join(__dirname, '..')
         });
-        console.log('   ✅ Demo user ready\n');
+        console.log('   ✅ Demo user ready (login: demo / demo123)\n');
         logger.info({ operation: 'init_demo_user_success', message: 'Demo user created successfully' });
       } catch (error) {
         console.error('   ⚠️  Demo user creation failed (may already exist)\n');
@@ -190,8 +231,12 @@ async function init() {
         });
       }
     } else {
-      console.log('6️⃣  Skipping demo user creation (set CREATE_DEMO_USER=true to enable)\n');
-      logger.debug({ operation: 'init_demo_user_skip', message: 'Demo user creation skipped' });
+      console.log(`6️⃣  Skipping demo user (DB already has ${userCount} user(s); set CREATE_DEMO_USER=true to force re-seed)\n`);
+      logger.debug({
+        operation: 'init_demo_user_skip',
+        message: 'Demo user creation skipped',
+        context: { userCount },
+      });
     }
 
     // Step 7: Initialize category-based log streams

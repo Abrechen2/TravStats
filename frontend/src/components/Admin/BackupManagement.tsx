@@ -64,19 +64,19 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.El
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-[var(--bg-surface)] rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
-        <h2 className="text-2xl font-bold text-red-600 mb-4">
+        <h2 className="text-2xl font-bold mb-4" style={{ color: "var(--danger)" }}>
           ⚠️ {t("admin:backup.restore.title")}
         </h2>
 
         <div className="space-y-4 mb-6">
           <div
             className="border rounded-lg p-4"
-            style={{ background: "var(--bg-elevated)", borderColor: "#f87171" }}
+            style={{ background: "var(--bg-elevated)", borderColor: "var(--danger)" }}
           >
-            <p className="font-semibold" style={{ color: "#dc2626" }}>
+            <p className="font-semibold" style={{ color: "var(--danger)" }}>
               {t("admin:backup.restore.warning")}
             </p>
-            <p className="text-sm mt-2" style={{ color: "#dc2626" }}>
+            <p className="text-sm mt-2" style={{ color: "var(--danger)" }}>
               {t("admin:backup.restore.backupFrom", { date: formatDate(backup.completedAt) })}
             </p>
           </div>
@@ -349,16 +349,19 @@ export default function BackupManagement(): JSX.Element {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  // Status colour comes from brand state tokens, not raw Tailwind hexes.
+  // Returns the inline-style object instead of a class so the consumer
+  // applies it via `style={getStatusStyle(...)}`.
+  const getStatusStyle = (status: string): { color: string } => {
     switch (status) {
       case "completed":
-        return "text-green-600";
+        return { color: "var(--success)" };
       case "running":
-        return "text-blue-600";
+        return { color: "var(--accent)" };
       case "failed":
-        return "text-red-600";
+        return { color: "var(--danger)" };
       default:
-        return "text-[var(--text-muted)]";
+        return { color: "var(--text-muted)" };
     }
   };
 
@@ -440,7 +443,7 @@ export default function BackupManagement(): JSX.Element {
           <button
             onClick={handleSaveBackupSettings}
             disabled={savingSettings}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition font-medium text-sm"
+            className="btn-primary px-4 py-2 font-medium text-sm disabled:opacity-50"
           >
             {savingSettings ? t("common:buttons.saving") : t("common:buttons.save")}
           </button>
@@ -514,7 +517,7 @@ export default function BackupManagement(): JSX.Element {
         </div>
       )}
 
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow overflow-hidden">
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow overflow-x-auto">
         <table className="min-w-full divide-y" style={{ borderColor: "var(--color-border)" }}>
           <thead className="bg-[var(--bg-base)]">
             <tr>
@@ -555,7 +558,7 @@ export default function BackupManagement(): JSX.Element {
                     {formatDate(backup.completedAt || backup.startedAt)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`text-sm font-medium ${getStatusColor(backup.status)}`}>
+                    <span className="text-sm font-medium" style={getStatusStyle(backup.status)}>
                       {getStatusText(backup.status)}
                     </span>
                   </td>
@@ -569,7 +572,7 @@ export default function BackupManagement(): JSX.Element {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--text-muted)]">
                     {backup.syncedToCloud ? (
-                      <span className="text-green-600">✓</span>
+                      <span style={{ color: "var(--success)" }}>✓</span>
                     ) : (
                       <span className="text-[var(--text-muted)]">-</span>
                     )}
@@ -580,13 +583,15 @@ export default function BackupManagement(): JSX.Element {
                         <>
                           <button
                             onClick={() => handleDownload(backup)}
-                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                            className="hover:underline"
+                            style={{ color: "var(--accent)" }}
                           >
                             {t("admin:backup.actions.download")}
                           </button>
                           <button
                             onClick={() => setRestoreModal(backup)}
-                            className="text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300"
+                            className="hover:underline"
+                            style={{ color: "var(--warning)" }}
                           >
                             {t("admin:backup.actions.restore")}
                           </button>
@@ -595,7 +600,8 @@ export default function BackupManagement(): JSX.Element {
                       {backup.status !== "running" && (
                         <button
                           onClick={() => handleDelete(backup)}
-                          className="text-red-600 hover:text-red-900"
+                          className="hover:underline"
+                          style={{ color: "var(--danger)" }}
                         >
                           {t("common:buttons.delete")}
                         </button>

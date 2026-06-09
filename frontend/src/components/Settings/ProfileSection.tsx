@@ -76,14 +76,43 @@ export default function ProfileSection({
         </div>
         <div>
           <label className="label">{t("settings:profile.uploadAvatar")}</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={onAvatarUpload}
-            disabled={uploadingProfilePicture}
-            className="text-sm"
-            style={{ color: "var(--text-muted)" }}
-          />
+          {/* Native <input type=file> shows the browser-locale "Choose File"
+              label which conflicts with the app i18n. Hide it visually and
+              drive it from a labelled button so the copy stays under our
+              translation control. */}
+          <label
+            className="btn-secondary inline-flex items-center gap-2 cursor-pointer text-sm"
+            style={{
+              opacity: uploadingProfilePicture ? 0.6 : 1,
+              pointerEvents: uploadingProfilePicture ? "none" : "auto",
+            }}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            {uploadingProfilePicture
+              ? t("common:buttons.uploading", { defaultValue: "Uploading..." })
+              : t("settings:profile.chooseFile", { defaultValue: "Choose file" })}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={onAvatarUpload}
+              disabled={uploadingProfilePicture}
+              className="sr-only"
+            />
+          </label>
         </div>
       </div>
 
@@ -125,7 +154,7 @@ export default function ProfileSection({
           onClick={onSaveProfile}
           disabled={savingProfile}
           className="btn-primary"
-          style={{ boxShadow: "0 0 16px rgba(232,160,69,0.25)" }}
+          style={{ boxShadow: "0 0 16px rgba(240,169,71,0.25)" }}
         >
           {savingProfile
             ? t("common:buttons.saving") || "Speichern..."

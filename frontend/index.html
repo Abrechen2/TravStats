@@ -19,6 +19,11 @@
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
+    <!--
+      Globe textures (~4.3 MB) used to be prefetched here. They're now
+      prefetched on dashboard mount via `prefetchGlobeTextures()` so a
+      cold /login doesn't pay 4 MB for a feature most users never open.
+    -->
   </head>
   <body>
     <div id="root"></div>

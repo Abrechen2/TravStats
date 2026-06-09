@@ -1,6 +1,9 @@
 {
   "title": "Training",
   "description": "Trainiere und verbessere LLM-Modelle",
+  "activate": "Aktivieren",
+  "deactivate": "Deaktivieren",
+  "templateDerived": "Vorlage abgeleitet",
   "developerModeNotEnabled": "Developer Mode nicht aktiviert",
   "enableDeveloperMode": "Bitte aktivieren Sie den Developer Mode in den Einstellungen.",
   "goToSettings": "Zu den Einstellungen",

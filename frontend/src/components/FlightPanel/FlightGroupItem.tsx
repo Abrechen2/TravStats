@@ -19,7 +19,7 @@ export function FlightGroupItem({
   onDuplicate,
   onDelete,
 }: FlightGroupItemProps): JSX.Element {
-  const { setSelection } = useFlightSelectionStore();
+  const setSelection = useFlightSelectionStore((s) => s.setSelection);
 
   const totalDistanceKm = useMemo(
     () =>

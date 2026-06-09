@@ -1,0 +1,11 @@
+{
+  "region": "river_yangtze",
+  "name": "Yangtze",
+  "meanderFactor": 1.2,
+  "anchors": [
+    { "name": "Chongqing", "lat": 29.55, "lon": 106.5167 },
+    { "name": "Yichang", "lat": 30.7, "lon": 111.2833 },
+    { "name": "Wuhan", "lat": 30.5833, "lon": 114.2833 },
+    { "name": "Nanjing", "lat": 32.05, "lon": 118.7833 }
+  ]
+}

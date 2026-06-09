@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { flightsApi, statsApi } from "../lib/api";
 import type { SummaryStats } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
@@ -31,12 +32,18 @@ import StatsBusinessSection from "../components/Stats/StatsBusinessSection";
 import StatsUniqueSection from "../components/Stats/StatsUniqueSection";
 import StatsAirportsSection from "../components/Stats/StatsAirportsSection";
 import StatsSeatSection from "../components/Stats/StatsSeatSection";
+import CruiseStatsSection from "../components/Stats/CruiseStatsSection";
+import OverviewTab from "../components/Stats/Overview/OverviewTab";
+import { achievementsApi } from "../lib/api/achievements";
+import type { AchievementSummary } from "../types";
 import { generateYearReportPdf } from "../lib/yearReportPdf";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
 import { GlobeLoader } from "../components/GlobeLoader";
 import { useMinLoadingState } from "../hooks/useMinLoadingState";
 import PageTransition from "../components/PageTransition";
+import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { DOMAINS, type DomainKey } from "../shared/domains";
 
 export default function AdvancedStatsPage(): JSX.Element {
   const { t } = useTranslation(["stats", "common"]);
@@ -51,8 +58,43 @@ export default function AdvancedStatsPage(): JSX.Element {
   const [uniqueStats, setUniqueStats] = useState<UniqueStats | null>(null);
   const [airportStats, setAirportStats] = useState<AirportStats | null>(null);
   const [seatStats, setSeatStats] = useState<SeatStats | null>(null);
+  const [achievementSummary, setAchievementSummary] = useState<AchievementSummary | null>(null);
   const [showCertificate, setShowCertificate] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  // Domain filter — `?tab=<key>` deep-links into a specific domain tab so
+  // "Details →" links from the cross-domain Gesamt overview can route to
+  // the right drill-down.
+  const { enabled } = useEnabledDomains();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [filter, setFilterState] = useState<DomainKey | "all">(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "all" || tab === "flight" || tab === "cruise" || tab === "hotel" || tab === "poi") {
+      return tab;
+    }
+    return "all";
+  });
+  const setFilter = useCallback(
+    (next: DomainKey | "all") => {
+      setFilterState(next);
+      setSearchParams((prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === "all") params.delete("tab");
+        else params.set("tab", next);
+        return params;
+      });
+    },
+    [setSearchParams]
+  );
+
+  // Sync URL → state when the user navigates back/forward or follows a
+  // deep link from another page (e.g. the Gesamt-tab "Details →").
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    const next: DomainKey | "all" =
+      tab === "flight" || tab === "cruise" || tab === "hotel" || tab === "poi" ? tab : "all";
+    if (next !== filter) setFilterState(next);
+  }, [searchParams, filter]);
 
   // Year filter + comparison state
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -143,7 +185,7 @@ export default function AdvancedStatsPage(): JSX.Element {
         allFlights.filter((f) => f.status === "flown" || f.status === "historical")
       );
 
-      const [fun, business, unique, airports, seat] = await Promise.all([
+      const [fun, business, unique, airports, seat, achievements] = await Promise.all([
         statsApi.getFunStats().catch((err) => {
           logger.error("Failed to load fun stats:", err);
           return null;
@@ -164,6 +206,10 @@ export default function AdvancedStatsPage(): JSX.Element {
           logger.error("Failed to load seat stats:", err);
           return null;
         }),
+        achievementsApi.getAll().catch((err) => {
+          logger.error("Failed to load achievement summary:", err);
+          return null;
+        }),
       ]);
 
       if (fun) setFunStats(fun);
@@ -176,6 +222,7 @@ export default function AdvancedStatsPage(): JSX.Element {
       }
       if (airports) setAirportStats(airports);
       if (seat) setSeatStats(seat);
+      if (achievements) setAchievementSummary(achievements.summary);
     } catch (error) {
       logger.error("Failed to load flights:", error);
     } finally {
@@ -498,9 +545,60 @@ export default function AdvancedStatsPage(): JSX.Element {
       <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
         <NavigationBar />
 
+        {/* Domain top-tab bar — same pattern as SettingsPage / AdminPage.
+            Replaces the earlier display-only chip-row with real content
+            switching: Flug tab keeps the existing flight stats, Kreuzfahrt
+            tab renders CruiseStatsSection, Gesamt shows both. */}
+        <div
+          className="px-4 pt-3"
+          style={{ background: "var(--bg-base)", borderBottom: "1px solid var(--color-border)" }}
+        >
+          <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto">
+            <button
+              type="button"
+              onClick={(): void => setFilter("all")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                filter === "all"
+                  ? "border-[var(--accent)] text-[var(--accent)]"
+                  : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              {t("stats:filter.all")}
+            </button>
+            {enabled.map((k) => {
+              const d = DOMAINS[k];
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={(): void => setFilter(k)}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                    filter === k
+                      ? "border-[var(--accent)] text-[var(--accent)]"
+                      : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  }`}
+                >
+                  <span className="mr-1.5" aria-hidden>
+                    {d.icon}
+                  </span>
+                  {t(`common:${d.i18nKey}`)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="container mx-auto px-6 py-8">
-          {/* Generate Certificate + Year Report Buttons */}
-          {flights.length > 0 && (
+          {/* Gesamt — pure cross-domain overview, no flight deep-dives. */}
+          {filter === "all" && (
+            <OverviewTab flights={flights} achievements={achievementSummary} />
+          )}
+
+          {/* Cruise tab renders its own stats section. */}
+          {filter === "cruise" && <CruiseStatsSection />}
+
+          {/* Generate Certificate + Year Report Buttons — flight-only now. */}
+          {filter === "flight" && flights.length > 0 && (
             <div className="flex justify-end mb-4">
               <button
                 onClick={() => setShowCertificate(true)}
@@ -519,7 +617,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                   void handleYearReport();
                 }}
                 disabled={generatingPdf || !selectedYear}
-                className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+                className="btn-primary px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-50"
               >
                 {generatingPdf ? t("stats:yearReport.generating") : t("stats:yearReport.btn")}
               </button>
@@ -531,120 +629,125 @@ export default function AdvancedStatsPage(): JSX.Element {
             <FlightCertificate stats={certificateStats} onClose={() => setShowCertificate(false)} />
           )}
 
-          {/* Year Filter + Year-Filtered Summary Cards */}
-          <StatsYearFilter
-            availableYears={availableYears}
-            selectedYear={selectedYear}
-            compareYear={compareYear}
-            compareEnabled={compareEnabled}
-            summaryLoading={summaryLoading}
-            yearSummary={yearSummary}
-            compareSummary={compareSummary}
-            onSelectedYearChange={setSelectedYear}
-            onCompareYearChange={setCompareYear}
-            onCompareEnabledChange={setCompareEnabled}
-          />
+          {/* Flight-specific stats block — flight tab only. */}
+          {filter === "flight" && (
+            <>
+              {/* Year Filter + Year-Filtered Summary Cards */}
+              <StatsYearFilter
+                availableYears={availableYears}
+                selectedYear={selectedYear}
+                compareYear={compareYear}
+                compareEnabled={compareEnabled}
+                summaryLoading={summaryLoading}
+                yearSummary={yearSummary}
+                compareSummary={compareSummary}
+                onSelectedYearChange={setSelectedYear}
+                onCompareYearChange={setCompareYear}
+                onCompareEnabledChange={setCompareEnabled}
+              />
 
-          {/* Overview Stats (all-time) — clearly separated from year-scoped */}
-          <div
-            className="flex items-baseline gap-3 mb-3 mt-2"
-            style={{
-              borderBottom: "1px solid var(--color-border)",
-              paddingBottom: "8px",
-            }}
-          >
-            <span
-              className="text-xs uppercase tracking-widest font-semibold"
-              style={{ color: "var(--text-muted)" }}
-            >
-              {t("stats:overview.scopeLabel")}
-            </span>
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-              {t("stats:overview.scopeHint")}
-            </span>
-          </div>
-          <StatsOverviewCards
-            totalFlights={flights.length}
-            totalFlightTime={totalFlightTime}
-            avgFlightDuration={avgFlightDuration}
-            airlineCount={Object.keys(airlineStats).length}
-          />
+              {/* Overview Stats (all-time) — clearly separated from year-scoped */}
+              <div
+                className="flex items-baseline gap-3 mb-3 mt-2"
+                style={{
+                  borderBottom: "1px solid var(--color-border)",
+                  paddingBottom: "8px",
+                }}
+              >
+                <span
+                  className="text-xs uppercase tracking-widest font-semibold"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {t("stats:overview.scopeLabel")}
+                </span>
+                <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  {t("stats:overview.scopeHint")}
+                </span>
+              </div>
+              <StatsOverviewCards
+                totalFlights={flights.length}
+                totalFlightTime={totalFlightTime}
+                avgFlightDuration={avgFlightDuration}
+                airlineCount={Object.keys(airlineStats).length}
+              />
 
-          {/* Time-based Charts */}
-          <StatsChartsSection
-            yearlyData={yearlyData}
-            monthlyData={monthlyData}
-            seasonalData={seasonalData}
-            weekdayData={weekdayData}
-            hasFlights={flights.length > 0}
-          />
+              {/* Time-based Charts */}
+              <StatsChartsSection
+                yearlyData={yearlyData}
+                monthlyData={monthlyData}
+                seasonalData={seasonalData}
+                weekdayData={weekdayData}
+                hasFlights={flights.length > 0}
+              />
 
-          {/* Calendar Views Section */}
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold mb-6" style={{ color: "var(--text-primary)" }}>
-              {t("stats:calendar.title")}
-            </h2>
-            <div className="mb-6">
-              <YearHeatmap flights={flights} />
-            </div>
-            <div>
-              <FlightCalendar flights={flights} />
-            </div>
-          </div>
+              {/* Calendar Views Section */}
+              <div className="mb-8">
+                <h2 className="text-3xl font-bold mb-6" style={{ color: "var(--text-primary)" }}>
+                  {t("stats:calendar.title")}
+                </h2>
+                <div className="mb-6">
+                  <YearHeatmap flights={flights} />
+                </div>
+                <div>
+                  <FlightCalendar flights={flights} />
+                </div>
+              </div>
 
-          {/* Distance Visualization */}
-          <StatsDistanceSection
-            totalDistance={totalDistance}
-            avgDistance={avgDistance}
-            longestDistance={longestDistance}
-            shortestDistance={shortestDistance}
-          />
+              {/* Distance Visualization */}
+              <StatsDistanceSection
+                totalDistance={totalDistance}
+                avgDistance={avgDistance}
+                longestDistance={longestDistance}
+                shortestDistance={shortestDistance}
+              />
 
-          {/* Flight Breakdown: airlines, airports, seat classes, aircraft, status, boarding, longest/shortest */}
-          <StatsFlightBreakdown
-            sortedAirlines={sortedAirlines}
-            sortedAirports={sortedAirports}
-            seatClassStats={seatClassStats}
-            sortedAircraft={sortedAircraft}
-            statusStats={statusStats}
-            boardingGroupStats={boardingGroupStats}
-            longestFlight={longestFlight}
-            shortestFlight={shortestFlight}
-            totalFlights={flights.length}
-          />
+              {/* Flight Breakdown: airlines, airports, seat classes, aircraft, status, boarding, longest/shortest */}
+              <StatsFlightBreakdown
+                sortedAirlines={sortedAirlines}
+                sortedAirports={sortedAirports}
+                seatClassStats={seatClassStats}
+                sortedAircraft={sortedAircraft}
+                statusStats={statusStats}
+                boardingGroupStats={boardingGroupStats}
+                longestFlight={longestFlight}
+                shortestFlight={shortestFlight}
+                totalFlights={flights.length}
+              />
 
-          {/* Fun Statistics */}
-          {funStats && <StatsFunSection funStats={funStats} />}
+              {/* Fun Statistics */}
+              {funStats && <StatsFunSection funStats={funStats} />}
 
-          {/* Business Statistics */}
-          {features.enableCostTracking && businessStats && (
-            <StatsBusinessSection businessStats={businessStats} />
+              {/* Business Statistics */}
+              {features.enableCostTracking && businessStats && (
+                <StatsBusinessSection businessStats={businessStats} />
+              )}
+
+              {/* Unique Statistics */}
+              <StatsUniqueSection uniqueStats={uniqueStats} />
+
+              {/* Airport Statistics */}
+              <StatsAirportsSection airportStats={airportStats} />
+
+              {/* Seat Statistics */}
+              <StatsSeatSection seatStats={seatStats} />
+
+              {/* Airline Loyalty Ranking */}
+              <div className="mt-8 bg-[var(--bg-elevated)] rounded-xl shadow p-6">
+                <AirlineRankingCard />
+              </div>
+
+              {/* Aircraft (Hulls) Ranking — only shows when at least one
+                  flight has a tail number on file (AeroDataBox-enriched). */}
+              <div className="mt-6 bg-[var(--bg-elevated)] rounded-xl shadow p-6">
+                <AircraftRankingCard />
+              </div>
+
+              {/* Country Distribution */}
+              <div className="mt-6 bg-[var(--bg-elevated)] rounded-xl shadow p-6">
+                <CountryDistributionCard />
+              </div>
+            </>
           )}
-
-          {/* Unique Statistics */}
-          <StatsUniqueSection uniqueStats={uniqueStats} />
-
-          {/* Airport Statistics */}
-          <StatsAirportsSection airportStats={airportStats} />
-
-          {/* Seat Statistics */}
-          <StatsSeatSection seatStats={seatStats} />
-
-          {/* Airline Loyalty Ranking */}
-          <div className="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-            <AirlineRankingCard />
-          </div>
-
-          {/* Aircraft (Hulls) Ranking — only shows when at least one
-              flight has a tail number on file (AeroDataBox-enriched). */}
-          <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-            <AircraftRankingCard />
-          </div>
-
-          {/* Country Distribution */}
-          <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-            <CountryDistributionCard />
-          </div>
         </div>
       </div>
     </PageTransition>

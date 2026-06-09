@@ -60,8 +60,8 @@ export default function AutoUpdateSection({
             <div
               className="rounded-lg p-3"
               style={{
-                background: "rgba(232,160,69,0.1)",
-                border: "1px solid rgba(232,160,69,0.3)",
+                background: "rgba(240,169,71,0.1)",
+                border: "1px solid rgba(240,169,71,0.3)",
               }}
             >
               <p className="font-semibold mb-1 text-sm" style={{ color: "var(--accent)" }}>
@@ -166,7 +166,7 @@ export default function AutoUpdateSection({
             onClick={onSave}
             disabled={loadingAutoUpdateSettings}
             className="btn-primary"
-            style={{ boxShadow: "0 0 16px rgba(232,160,69,0.25)" }}
+            style={{ boxShadow: "0 0 16px rgba(240,169,71,0.25)" }}
           >
             {loadingAutoUpdateSettings
               ? t("common:buttons.saving") || "Speichern..."

@@ -604,7 +604,8 @@ export default function BoardingPassAnnotation({
                 </button>
                 <button
                   onClick={handleDeleteSelectedBox}
-                  className="btn-secondary bg-red-600 hover:bg-red-700 text-white"
+                  className="btn-secondary text-white"
+                  style={{ background: "var(--danger)" }}
                 >
                   Box löschen
                 </button>
@@ -649,8 +650,16 @@ export default function BoardingPassAnnotation({
 
         {/* OCR Loading Indicator */}
         {ocrLoading && (
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-300">
-            <p className="text-sm text-blue-700">🔍 OCR läuft... Text wird extrahiert...</p>
+          <div
+            className="p-4 rounded-lg"
+            style={{
+              background: "var(--accent-soft)",
+              border: "1px solid rgba(240,169,71,0.35)",
+            }}
+          >
+            <p className="text-sm" style={{ color: "var(--accent)" }}>
+              🔍 OCR läuft... Text wird extrahiert...
+            </p>
           </div>
         )}
 
@@ -921,13 +930,15 @@ export default function BoardingPassAnnotation({
               {tags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded text-sm"
+                  style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
                 >
                   {tag}
                   <button
                     type="button"
                     onClick={() => handleRemoveTag(tag)}
-                    className="text-blue-600 hover:text-blue-800"
+                    className="hover:opacity-70"
+                    style={{ color: "var(--accent)" }}
                     aria-label={`Tag ${tag} entfernen`}
                   >
                     ×

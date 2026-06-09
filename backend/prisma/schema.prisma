@@ -1,54 +1,53 @@
 // This is your Prisma schema file
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  extensions = [postgis]
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id                    String                  @id @default(uuid())
-  username              String                  @unique
-  passwordHash          String                  @map("password_hash")
-  isAdmin               Boolean                 @default(false) @map("is_admin")
-  isActive              Boolean                 @default(true) @map("is_active")
-  invitedBy             String?                 @map("invited_by")
-  createdAt             DateTime                @default(now()) @map("created_at")
+  id                   String                   @id @default(uuid())
+  username             String                   @unique
+  passwordHash         String                   @map("password_hash")
+  isAdmin              Boolean                  @default(false) @map("is_admin")
+  isActive             Boolean                  @default(true) @map("is_active")
+  invitedBy            String?                  @map("invited_by")
+  createdAt            DateTime                 @default(now()) @map("created_at")
   // Email notification preferences
-  notificationEmail     String?                 @map("notification_email")
-  notifyBefore24h       Boolean                 @default(false) @map("notify_before_24h")
-  notifyBefore2h        Boolean                 @default(false) @map("notify_before_2h")
+  notificationEmail    String?                  @map("notification_email")
+  notifyBefore24h      Boolean                  @default(false) @map("notify_before_24h")
+  notifyBefore2h       Boolean                  @default(false) @map("notify_before_2h")
   // Birthday for the BIRTHDAY_FLIGHT achievement. Only month+day are used;
   // the full DateTime lets us round-trip a year if the user enters one.
-  birthdate             DateTime?               @map("birthdate")
-  resetToken         String?   @unique @map("reset_token")
-  resetTokenExpiry   DateTime? @map("reset_token_expiry")
-  mustChangePassword Boolean   @default(false) @map("must_change_password")
-  changeToken        String?   @unique @map("change_token")
-  changeTokenExpiry  DateTime? @map("change_token_expiry")
+  birthdate            DateTime?                @map("birthdate")
+  resetToken           String?                  @unique @map("reset_token")
+  resetTokenExpiry     DateTime?                @map("reset_token_expiry")
+  mustChangePassword   Boolean                  @default(false) @map("must_change_password")
+  changeToken          String?                  @unique @map("change_token")
+  changeTokenExpiry    DateTime?                @map("change_token_expiry")
   // True for users seeded by `seedDemoUser` (e.g. local dev `admin:admin123`).
   // Used to gate quota-burning admin actions like bulk historical refresh so
   // the dev demo can't drain a real RapidAPI key by accident.
-  isDemo             Boolean   @default(false) @map("is_demo")
-  flights               Flight[]
-  userAchievements      UserAchievement[]
-  settings              UserSettings?
-  analyticsEvents       AnalyticsEvent[]
-  createdInvitations    Invitation[] @relation("CreatedInvitations")
-  usedInvitations       Invitation[] @relation("UsedInvitations")
-  trainingData          TrainingData[]
-  parserTemplates       ParserTemplate[]
-  pendingFlightUpdates  PendingFlightUpdate[]
-  pendingUpdateStats    PendingUpdateStatistics?
-  parseLogs             ParseTrainingLog[]
-  trips     Trip[]
-  bookings  Booking[]
-  apiTokens ApiToken[]
+  isDemo               Boolean                  @default(false) @map("is_demo")
+  flights              Flight[]
+  userAchievements     UserAchievement[]
+  settings             UserSettings?
+  analyticsEvents      AnalyticsEvent[]
+  createdInvitations   Invitation[]             @relation("CreatedInvitations")
+  usedInvitations      Invitation[]             @relation("UsedInvitations")
+  trainingData         TrainingData[]
+  parserTemplates      ParserTemplate[]
+  pendingFlightUpdates PendingFlightUpdate[]
+  pendingUpdateStats   PendingUpdateStatistics?
+  parseLogs            ParseTrainingLog[]
+  trips                Trip[]
+  bookings             Booking[]
+  cruises              Cruise[]
+  apiTokens            ApiToken[]
 
   @@map("users")
 }
@@ -117,61 +116,61 @@ model Airport {
 }
 
 model Flight {
-  id               String   @id @default(uuid())
-  userId           String   @map("user_id")
+  id                   String    @id @default(uuid())
+  userId               String    @map("user_id")
   airline              String?
-  airlineIata          String?  @map("airline_iata")
-  airlineIcao          String?  @map("airline_icao")
-  operatingAirline     String?  @map("operating_airline")
-  operatingAirlineIata String?  @map("operating_airline_iata")
-  operatingAirlineIcao String?  @map("operating_airline_icao")
-  isCodeshare          Boolean? @map("is_codeshare")
-  flightNumber         String?  @map("flight_number")
+  airlineIata          String?   @map("airline_iata")
+  airlineIcao          String?   @map("airline_icao")
+  operatingAirline     String?   @map("operating_airline")
+  operatingAirlineIata String?   @map("operating_airline_iata")
+  operatingAirlineIcao String?   @map("operating_airline_icao")
+  isCodeshare          Boolean?  @map("is_codeshare")
+  flightNumber         String?   @map("flight_number")
   callsign             String?
   aircraft             String?
-  aircraftRegistration String?  @map("aircraft_registration")
-  aircraftModeS        String?  @map("aircraft_mode_s")
-  depIcao          String?  @map("dep_icao")
-  depIata          String?  @map("dep_iata")
-  depName          String?  @map("dep_name")
-  depLat           Float    @map("dep_lat")
-  depLon           Float    @map("dep_lon")
-  arrIcao          String?  @map("arr_icao")
-  arrIata          String?  @map("arr_iata")
-  arrName          String?  @map("arr_name")
-  arrLat           Float    @map("arr_lat")
-  arrLon           Float    @map("arr_lon")
-  departureTime    DateTime? @map("departure_time")
-  arrivalTime      DateTime? @map("arrival_time")
-  status           String   @default("scheduled") // scheduled, flown, cancelled, historical
-  notes            String?
+  aircraftRegistration String?   @map("aircraft_registration")
+  aircraftModeS        String?   @map("aircraft_mode_s")
+  depIcao              String?   @map("dep_icao")
+  depIata              String?   @map("dep_iata")
+  depName              String?   @map("dep_name")
+  depLat               Float     @map("dep_lat")
+  depLon               Float     @map("dep_lon")
+  arrIcao              String?   @map("arr_icao")
+  arrIata              String?   @map("arr_iata")
+  arrName              String?   @map("arr_name")
+  arrLat               Float     @map("arr_lat")
+  arrLon               Float     @map("arr_lon")
+  departureTime        DateTime? @map("departure_time")
+  arrivalTime          DateTime? @map("arrival_time")
+  status               String    @default("scheduled") // scheduled, flown, cancelled, historical
+  notes                String?
   // Boarding Pass Information
-  seatNumber       String?  @map("seat_number")
-  seatClass        String?  @map("seat_class") // economy, premium_economy, business, first
-  boardingGroup    String?  @map("boarding_group")
-  gate             String?
-  terminal         String?
-  bookingReference String?  @map("booking_reference")
-  ticketNumber     String?  @map("ticket_number")
+  seatNumber         String?   @map("seat_number")
+  seatClass          String?   @map("seat_class") // economy, premium_economy, business, first
+  boardingGroup      String?   @map("boarding_group")
+  gate               String?
+  terminal           String?
+  bookingReference   String?   @map("booking_reference")
+  ticketNumber       String?   @map("ticket_number")
   // Costs & categorization
-  price            Float?   @map("price")
-  currency         String?  @default("EUR") @map("currency")
-  taxes            Float?   @map("taxes")
-  fees             Float?   @map("fees")
-  category         String?  @default("private") @map("category") // business, private, vacation
-  tags             String[] @default([]) @map("tags")
-  companions       String[] @default([]) @map("companions")  // User-defined travel group (set manually, vs. coPassengers = auto-parsed from email)
-  receiptUrl       String?  @map("receipt_url")
-  ticketPrice      Float?   @map("ticket_price")
-  createdAt        DateTime @default(now()) @map("created_at")
+  price              Float?    @map("price")
+  currency           String?   @default("EUR") @map("currency")
+  taxes              Float?    @map("taxes")
+  fees               Float?    @map("fees")
+  category           String?   @default("private") @map("category") // business, private, vacation
+  tags               String[]  @default([]) @map("tags")
+  companions         String[]  @default([]) @map("companions") // User-defined travel group (set manually, vs. coPassengers = auto-parsed from email)
+  receiptUrl         String?   @map("receipt_url")
+  ticketPrice        Float?    @map("ticket_price")
+  createdAt          DateTime  @default(now()) @map("created_at")
   // Route tracking
-  actualRoute      Json?    @map("actual_route") // Array of waypoints [{lat, lon, timestamp, country?}]
-  overflownCountries String[] @default([]) @map("overflown_countries")
-  routeDistance    Float?   @map("route_distance")
-  routeSource      String?  @map("route_source") // 'live_tracking', 'historical_aggregation', 'estimated'
-  hasLiveTracking  Boolean  @default(false) @map("has_live_tracking")
+  actualRoute        Json?     @map("actual_route") // Array of waypoints [{lat, lon, timestamp, country?}]
+  overflownCountries String[]  @default([]) @map("overflown_countries")
+  routeDistance      Float?    @map("route_distance")
+  routeSource        String?   @map("route_source") // 'live_tracking', 'historical_aggregation', 'estimated'
+  hasLiveTracking    Boolean   @default(false) @map("has_live_tracking")
   // Data source tracking
-  dataSource       String?  @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup', 'bulk_import', 'imported_fr24', 'imported_generic_csv', 'imported_roundtrip'
+  dataSource         String?   @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup', 'bulk_import', 'imported_fr24', 'imported_generic_csv', 'imported_roundtrip'
   // Time-storage semantics for departureTime / arrivalTime.
   // 'UTC' = canonical real UTC instant (current writes always use this).
   // 'LEGACY_FAKE_UTC' = wall-clock encoded as fake-UTC; needs depTz/arrTz to
@@ -179,24 +178,24 @@ model Flight {
   // 'UNKNOWN' = not yet classified by the backfill script (DB-side default
   // for rows existing at the time of the ADD COLUMN migration). New writes
   // from Prisma default to 'UTC'.
-  depTimeSemantics  String  @default("UTC") @map("dep_time_semantics")
-  arrTimeSemantics  String  @default("UTC") @map("arr_time_semantics")
-  lastModifiedBy   String?  @map("last_modified_by") // 'user', 'auto_update', 'historical_enrichment', 'api'
-  enrichmentHistory Json?   @map("enrichment_history") // Array of enrichment events [{type, timestamp, confidence?, source?}]
+  depTimeSemantics   String    @default("UTC") @map("dep_time_semantics")
+  arrTimeSemantics   String    @default("UTC") @map("arr_time_semantics")
+  lastModifiedBy     String?   @map("last_modified_by") // 'user', 'auto_update', 'historical_enrichment', 'api'
+  enrichmentHistory  Json?     @map("enrichment_history") // Array of enrichment events [{type, timestamp, confidence?, source?}]
 
   // Phase 3: Actual Times, Delay, CO₂
-  actualDeparture     DateTime? @map("actual_departure")
-  actualArrival       DateTime? @map("actual_arrival")
-  delayMinutes        Int?      @map("delay_minutes")
-  co2Kg               Float?    @map("co2_kg")
+  actualDeparture DateTime? @map("actual_departure")
+  actualArrival   DateTime? @map("actual_arrival")
+  delayMinutes    Int?      @map("delay_minutes")
+  co2Kg           Float?    @map("co2_kg")
 
   // Phase 1: Email Template Parsing
   baggageAllowance    String?  @map("baggage_allowance")
   frequentFlyerNumber String?  @map("frequent_flyer_number")
-  bookingClassLetter  String?  @map("booking_class_letter")  // e.g. "Y", "C", "J", "F"
-  coPassengers        String[] @default([]) @map("co_passengers")  // Names parsed from booking email (vs. companions = user-defined travel group)
-  parserTemplate      String?  @map("parser_template")       // e.g. "LH" or null
-  parserConfidence    Int?     @map("parser_confidence")     // 0–100
+  bookingClassLetter  String?  @map("booking_class_letter") // e.g. "Y", "C", "J", "F"
+  coPassengers        String[] @default([]) @map("co_passengers") // Names parsed from booking email (vs. companions = user-defined travel group)
+  parserTemplate      String?  @map("parser_template") // e.g. "LH" or null
+  parserConfidence    Int?     @map("parser_confidence") // 0–100
 
   // AeroDataBox extended fields (v1.5 importers — additive nullable)
   runwayDepartureTime         DateTime?    @map("runway_departure_time")
@@ -208,15 +207,30 @@ model Flight {
   checkInDesk                 String?      @map("check_in_desk")
 
   // Smart API check — scheduled time for next live-data lookup
-  nextApiCheckAt  DateTime? @map("next_api_check_at")
+  nextApiCheckAt DateTime? @map("next_api_check_at")
 
-  tripId    String?  @map("trip_id")
-  bookingId String?  @map("booking_id")
+  tripId    String? @map("trip_id")
+  bookingId String? @map("booking_id")
 
-  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trip      Trip?    @relation(fields: [tripId], references: [id], onDelete: SetNull)
-  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  pendingUpdates    PendingFlightUpdate[]
+  // Special flights (Sonder-Flüge) — non-null specialType marks flight as
+  // non-standard (sightseeing loop, eclipse chase, rocket launch, ZeroG,
+  // aurora, training, ferry, test). When null, flight is a regular line
+  // flight and the new fields are unused. eventLat/Lon mark the off-route
+  // attraction (rocket pad, eclipse path) and patternLat/Lon the optional
+  // hold/orbit pattern centre. specialData is a free-form JSON blob for
+  // type-specific extras (e.g. eclipse magnitude, parabola count).
+  specialType    String? @map("special_type")
+  eventLat       Float?  @map("event_lat")
+  eventLon       Float?  @map("event_lon")
+  eventLabel     String? @map("event_label")
+  patternLat     Float?  @map("pattern_lat")
+  patternLon     Float?  @map("pattern_lon")
+  specialData    Json?   @map("special_data")
+
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip           Trip?                 @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking        Booking?              @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  pendingUpdates PendingFlightUpdate[]
 
   @@index([userId])
   @@index([departureTime])
@@ -226,6 +240,7 @@ model Flight {
   @@index([tripId])
   @@index([bookingId])
   @@index([nextApiCheckAt])
+  @@index([specialType])
   @@map("flights")
 }
 
@@ -235,6 +250,7 @@ model Achievement {
   name             String
   description      String
   category         String // explorer, distance, collector, social, elite, special
+  domain           String            @default("flight") // 'flight' | 'cruise' | 'shared' | future domain keys
   icon             String // icon identifier
   tier             String            @default("bronze") // bronze, silver, gold, platinum, diamond
   requirement      Int // numeric requirement for achievement
@@ -246,6 +262,7 @@ model Achievement {
 
   @@index([category])
   @@index([tier])
+  @@index([domain])
   @@map("achievements")
 }
 
@@ -266,9 +283,10 @@ model UserAchievement {
 }
 
 model UserSettings {
-  id     String @id @default(uuid())
-  userId String @unique @map("user_id")
-  data   Json   @map("data")
+  id             String   @id @default(uuid())
+  userId         String   @unique @map("user_id")
+  enabledDomains String[] @default(["flight"]) @map("enabled_domains")
+  data           Json     @map("data")
 
   // Parser preferences
   preferredVisionParser String? @default("auto") @map("preferred_vision_parser")
@@ -281,13 +299,13 @@ model UserSettings {
   claudeApiKey String? @map("claude_api_key")
 
   // Flight lookup API keys (encrypted at application level)
-  airlabsApiKey String? @map("airlabs_api_key")
+  airlabsApiKey       String? @map("airlabs_api_key")
   aviationstackApiKey String? @map("aviationstack_api_key")
-  aerodataboxApiKey String? @map("aerodatabox_api_key")
-  openskyClientId String? @map("opensky_client_id")
+  aerodataboxApiKey   String? @map("aerodatabox_api_key")
+  openskyClientId     String? @map("opensky_client_id")
   openskyClientSecret String? @map("opensky_client_secret")
-  openskyUsername String? @map("opensky_username")
-  openskyPassword String? @map("opensky_password")
+  openskyUsername     String? @map("opensky_username")
+  openskyPassword     String? @map("opensky_password")
 
   // Auto-update settings
   autoUpdateEnabled          Boolean @default(false) @map("auto_update_enabled")
@@ -304,9 +322,9 @@ model UserSettings {
   boardingPassParserStrategy String? @map("boarding_pass_parser_strategy")
 
   // Historical enrichment settings (Beta)
-  historicalEnrichmentEnabled Boolean @default(false) @map("historical_enrichment_enabled")
-  historicalEnrichmentMinConfidence Int @default(60) @map("historical_enrichment_min_confidence")
-  historicalEnrichmentMaxPerDay Int @default(50) @map("historical_enrichment_max_per_day")
+  historicalEnrichmentEnabled       Boolean @default(false) @map("historical_enrichment_enabled")
+  historicalEnrichmentMinConfidence Int     @default(60) @map("historical_enrichment_min_confidence")
+  historicalEnrichmentMaxPerDay     Int     @default(50) @map("historical_enrichment_max_per_day")
 
   updatedAt DateTime @updatedAt @map("updated_at")
   createdAt DateTime @default(now()) @map("created_at")
@@ -331,21 +349,21 @@ model AnalyticsEvent {
 }
 
 model Invitation {
-  id          String    @id @default(uuid())
-  email       String?
-  token       String    @unique
-  createdBy   String    @map("created_by")
-  expiresAt   DateTime  @map("expires_at")
-  usedAt      DateTime? @map("used_at")
-  usedBy      String?   @map("used_by")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  id        String    @id @default(uuid())
+  email     String?
+  token     String    @unique
+  createdBy String    @map("created_by")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  usedBy    String?   @map("used_by")
+  createdAt DateTime  @default(now()) @map("created_at")
 
   emailStatus String?   @map("email_status")
   emailError  String?   @map("email_error")
   emailSentAt DateTime? @map("email_sent_at")
 
   creator User  @relation("CreatedInvitations", fields: [createdBy], references: [id], onDelete: Cascade)
-  user    User? @relation("UsedInvitations",    fields: [usedBy],    references: [id], onDelete: SetNull)
+  user    User? @relation("UsedInvitations", fields: [usedBy], references: [id], onDelete: SetNull)
 
   @@index([token])
   @@index([createdBy])
@@ -360,17 +378,17 @@ model AdminSettings {
   globalClaudeApiKey String? @map("global_claude_api_key")
 
   // Global flight lookup API keys (encrypted at application level)
-  globalAirlabsApiKey String? @map("global_airlabs_api_key")
+  globalAirlabsApiKey       String? @map("global_airlabs_api_key")
   globalAviationstackApiKey String? @map("global_aviationstack_api_key")
-  globalAerodataboxApiKey String? @map("global_aerodatabox_api_key")
-  globalOpenskyClientId String? @map("global_opensky_client_id")
+  globalAerodataboxApiKey   String? @map("global_aerodatabox_api_key")
+  globalOpenskyClientId     String? @map("global_opensky_client_id")
   globalOpenskyClientSecret String? @map("global_opensky_client_secret")
-  globalOpenskyUsername String? @map("global_opensky_username")
-  globalOpenskyPassword String? @map("global_opensky_password")
+  globalOpenskyUsername     String? @map("global_opensky_username")
+  globalOpenskyPassword     String? @map("global_opensky_password")
 
   // User permissions
-  allowUserApiKeys         Boolean @default(true) @map("allow_user_api_keys")
-  allowUserFlightApiKeys   Boolean @default(true) @map("allow_user_flight_api_keys")
+  allowUserApiKeys       Boolean @default(true) @map("allow_user_api_keys")
+  allowUserFlightApiKeys Boolean @default(true) @map("allow_user_flight_api_keys")
 
   // Default parser settings for new users
   defaultVisionParser String @default("auto") @map("default_vision_parser")
@@ -395,16 +413,16 @@ model AdminSettings {
   // ALLOW_REGISTRATION / FRONTEND_URL ENV variables. ENV is read as fallback
   // only when the column is null / unset (transitional for v1.x).
   instanceName      String? @map("instance_name")
-  maxUsers          Int     @default(10)    @map("max_users")
+  maxUsers          Int     @default(10) @map("max_users")
   allowRegistration Boolean @default(false) @map("allow_registration")
   frontendUrl       String? @map("frontend_url")
 
   // Off-site backup sync via WebDAV — supersedes WEBDAV_* ENV variables.
   // webdavPasswordEncrypted is AES-GCM via encryptApiKey() — never stored plain.
-  webdavSyncEnabled       Boolean @default(false)                @map("webdav_sync_enabled")
-  webdavUrl               String?                                @map("webdav_url")
-  webdavUsername          String?                                @map("webdav_username")
-  webdavPasswordEncrypted String?                                @map("webdav_password_encrypted")
+  webdavSyncEnabled       Boolean @default(false) @map("webdav_sync_enabled")
+  webdavUrl               String? @map("webdav_url")
+  webdavUsername          String? @map("webdav_username")
+  webdavPasswordEncrypted String? @map("webdav_password_encrypted")
   webdavBackupPath        String  @default("/TravStats/backups/") @map("webdav_backup_path")
 
   // === LOGGING CONFIGURATION ===
@@ -495,25 +513,25 @@ model Backup {
 }
 
 model PendingFlightUpdate {
-  id             String   @id @default(uuid())
-  flightId       String   @map("flight_id")
-  userId         String   @map("user_id")
-  status         String   @default("pending") // "pending" | "applied" | "rejected" | "expired" | "edited"
-  originalData   Json     @map("original_data")
-  proposedData   Json     @map("proposed_data")
-  editedData     Json?    @map("edited_data")
-  changes        Json     @map("changes")
-  editedChanges  Json?    @map("edited_changes")
-  apiSource      String   @map("api_source") // "airlabs" | "aviationstack" | "opensky"
-  fetchedAt      DateTime @map("fetched_at")
-  expiresAt      DateTime @map("expires_at")
-  appliedAt      DateTime? @map("applied_at")
-  rejectedAt     DateTime? @map("rejected_at")
-  editedAt       DateTime? @map("edited_at")
-  statisticsImpact Json?  @map("statistics_impact")
-  metadata       Json?    @map("metadata") // For historical enrichment: {sourceFlightsCount, confidence, anomalies, isHistoricalEnrichment, routeConsistency}
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id               String    @id @default(uuid())
+  flightId         String    @map("flight_id")
+  userId           String    @map("user_id")
+  status           String    @default("pending") // "pending" | "applied" | "rejected" | "expired" | "edited"
+  originalData     Json      @map("original_data")
+  proposedData     Json      @map("proposed_data")
+  editedData       Json?     @map("edited_data")
+  changes          Json      @map("changes")
+  editedChanges    Json?     @map("edited_changes")
+  apiSource        String    @map("api_source") // "airlabs" | "aviationstack" | "opensky"
+  fetchedAt        DateTime  @map("fetched_at")
+  expiresAt        DateTime  @map("expires_at")
+  appliedAt        DateTime? @map("applied_at")
+  rejectedAt       DateTime? @map("rejected_at")
+  editedAt         DateTime? @map("edited_at")
+  statisticsImpact Json?     @map("statistics_impact")
+  metadata         Json?     @map("metadata") // For historical enrichment: {sourceFlightsCount, confidence, anomalies, isHistoricalEnrichment, routeConsistency}
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   flight Flight @relation(fields: [flightId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -554,7 +572,7 @@ model ParseTrainingLog {
   parserProvider String   @map("parser_provider")
   createdAt      DateTime @default(now()) @map("created_at")
 
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([templateHit])
@@ -583,6 +601,7 @@ model PendingUpdateStatistics {
 model ParserTemplate {
   id          String   @id @default(uuid())
   userId      String   @map("user_id")
+  domain      String   @default("flight")
   name        String
   status      String   @default("pending") // pending | active | disabled
   fingerprint Json
@@ -592,9 +611,10 @@ model ParserTemplate {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, status])
+  @@index([domain])
   @@map("parser_templates")
 }
 
@@ -604,15 +624,99 @@ model Trip {
   name        String
   description String?
   color       String   @default("#818cf8") @map("color")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  flights  Flight[]
-  bookings Booking[]
+  // Phase-1 metadata redesign — see migration 20260509120000_trip_metadata.
+  // All optional / defaulted so legacy rows stay valid.
+  startDate        DateTime? @map("start_date")
+  endDate          DateTime? @map("end_date")
+  status           String    @default("completed") // planned | in_progress | completed
+  category         String?   // vacation | business | weekend | family | other
+  tags             String[]  @default([])
+  companions       String[]  @default([])
+  notes            String?   // markdown long-form
+  summary          String?   // optional, may be LLM-generated later
+  originLabel      String?   @map("origin_label")
+  destinationLabel String?   @map("destination_label")
+  coverImageUrl    String?   @map("cover_image_url")
+  icon             String?
+  countries        String[]  @default([])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flights        Flight[]
+  bookings       Booking[]
+  cruises        Cruise[]
+  stops          TripStop[]
+  journalEntries TripJournalEntry[]
+  photos         TripPhoto[]
 
   @@index([userId])
+  @@index([userId, status])
   @@map("trips")
+}
+
+model TripPhoto {
+  id        String    @id @default(uuid())
+  tripId    String    @map("trip_id")
+  filename  String
+  mimetype  String
+  sizeBytes Int       @map("size_bytes")
+  caption   String?
+  takenAt   DateTime? @map("taken_at")
+  sortIdx   Int       @default(0) @map("sort_idx")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([tripId, sortIdx])
+  @@map("trip_photos")
+}
+
+model TripStop {
+  id          String    @id @default(uuid())
+  tripId      String    @map("trip_id")
+  orderIdx    Int       @default(0) @map("order_idx")
+  // Free-form DomainKey-style label so the timeline picks the right
+  // colour ("poi", "hotel", "train", "hike", …). Null means "generic".
+  domain      String?
+  // Optional id of an existing flight/cruise/etc. that this stop wraps.
+  sourceId    String?   @map("source_id")
+  title       String
+  description String?
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+  lat         Float?
+  lon         Float?
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([tripId, orderIdx])
+  @@map("trip_stops")
+}
+
+model TripJournalEntry {
+  id        String   @id @default(uuid())
+  tripId    String   @map("trip_id")
+  date      DateTime
+  title     String?
+  body      String
+  mood      String?
+  weather   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([tripId, date])
+  @@map("trip_journal_entries")
 }
 
 model Booking {
@@ -626,12 +730,146 @@ model Booking {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trip    Trip?   @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip    Trip?    @relation(fields: [tripId], references: [id], onDelete: SetNull)
   flights Flight[]
+  cruises Cruise[]
 
   @@index([userId])
   @@index([userId, createdAt])
   @@index([tripId])
   @@map("bookings")
+}
+
+model Cruise {
+  id               String    @id @default(uuid())
+  userId           String    @map("user_id")
+  shipId           Int?      @map("ship_id")
+  shipNameOverride String?   @map("ship_name_override")
+  cruiseLine       String?   @map("cruise_line")
+  departurePortId  Int?      @map("departure_port_id")
+  arrivalPortId    Int?      @map("arrival_port_id")
+  startDate        DateTime? @map("start_date")
+  endDate          DateTime? @map("end_date")
+  status           String    @default("scheduled")
+  cabinNumber      String?   @map("cabin_number")
+  cabinType        String?   @map("cabin_type")
+  deck             Int?
+  bookingReference String?   @map("booking_reference")
+  price            Float?
+  currency         String?   @default("EUR")
+  notes            String?
+  tags             String[]  @default([])
+  companions       String[]  @default([])
+  tripId           String?   @map("trip_id")
+  bookingId        String?   @map("booking_id")
+  parserTemplate   String?   @map("parser_template")
+  parserConfidence Int?      @map("parser_confidence")
+  dataSource       String?   @map("data_source")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ship          Ship?        @relation(fields: [shipId], references: [id], onDelete: SetNull)
+  departurePort Port?        @relation("CruiseDeparture", fields: [departurePortId], references: [id], onDelete: SetNull)
+  arrivalPort   Port?        @relation("CruiseArrival", fields: [arrivalPortId], references: [id], onDelete: SetNull)
+  trip          Trip?        @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking       Booking?     @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  stops         CruiseStop[]
+  legs          CruiseLeg[]
+
+  @@index([userId])
+  @@index([startDate])
+  @@index([status])
+  @@index([cruiseLine])
+  @@index([tripId])
+  @@index([bookingId])
+  @@map("cruises")
+}
+
+model CruiseLeg {
+  id            String   @id @default(uuid())
+  cruiseId      String   @map("cruise_id")
+  ordinal       Int
+  fromPortId    Int      @map("from_port_id")
+  toPortId      Int      @map("to_port_id")
+  distanceKm    Float    @map("distance_km")
+  method        String
+  routerVersion String   @map("router_version")
+  dataVersion   String?  @map("data_version")
+  confidence    String   @default("medium")
+  notes         String?
+  computedAt    DateTime @default(now()) @map("computed_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  cruise   Cruise @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+  fromPort Port   @relation("CruiseLegFromPort", fields: [fromPortId], references: [id], onDelete: Restrict)
+  toPort   Port   @relation("CruiseLegToPort", fields: [toPortId], references: [id], onDelete: Restrict)
+
+  @@unique([cruiseId, ordinal])
+  @@index([cruiseId])
+  @@index([fromPortId])
+  @@index([toPortId])
+  @@index([method])
+  @@map("cruise_legs")
+}
+
+model CruiseStop {
+  id            String    @id @default(uuid())
+  cruiseId      String    @map("cruise_id")
+  portId        Int?      @map("port_id")
+  dayNumber     Int       @map("day_number")
+  isAtSea       Boolean   @default(false) @map("is_at_sea")
+  arrivalTime   DateTime? @map("arrival_time")
+  departureTime DateTime? @map("departure_time")
+  excursionNote String?   @map("excursion_note")
+
+  cruise Cruise @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+  port   Port?  @relation(fields: [portId], references: [id], onDelete: SetNull)
+
+  @@index([cruiseId])
+  @@index([portId])
+  @@map("cruise_stops")
+}
+
+model Ship {
+  id           Int     @id @default(autoincrement())
+  name         String
+  imo          String? @unique
+  cruiseLine   String  @map("cruise_line")
+  yearBuilt    Int?    @map("year_built")
+  grossTonnage Int?    @map("gross_tonnage")
+  capacity     Int?
+  status       String  @default("active")
+  isUserAdded  Boolean @default(false) @map("is_user_added")
+
+  cruises Cruise[]
+
+  @@index([name])
+  @@index([cruiseLine])
+  @@map("ships")
+}
+
+model Port {
+  id          Int     @id @default(autoincrement())
+  name        String
+  city        String?
+  country     String?
+  unlocode    String? @unique
+  lat         Float
+  lon         Float
+  timezone    String?
+  region      String?
+  isUserAdded Boolean @default(false) @map("is_user_added")
+
+  cruisesDeparting Cruise[]     @relation("CruiseDeparture")
+  cruisesArriving  Cruise[]     @relation("CruiseArrival")
+  stops            CruiseStop[]
+  legsFrom         CruiseLeg[]  @relation("CruiseLegFromPort")
+  legsTo           CruiseLeg[]  @relation("CruiseLegToPort")
+
+  @@index([name])
+  @@index([city])
+  @@index([region])
+  @@map("ports")
 }
