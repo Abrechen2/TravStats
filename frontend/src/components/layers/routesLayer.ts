@@ -170,7 +170,12 @@ function buildArcs(
       // Regular past-only — frequency-driven heatmap, or domain-scoped
       // palette when the caller passes paletteOverride.
       color = paletteOverride ?? getHeatmapColor(r.count, q25, q50, q75, themeColors);
-      alpha = Math.min(100 + r.count * 14, 230);
+      // Visibility floor: a single-flown route (count 1) must still read
+      // clearly on its own — a lone long-haul (e.g. a one-off Hawaii trip)
+      // sitting in an otherwise empty ocean was nearly invisible at the old
+      // floor of 114. Start at 160 so frequency still ramps opacity up, but
+      // even a 1× route is solidly opaque.
+      alpha = Math.min(160 + r.count * 14, 230);
     }
 
     // sourceColor === targetColor: arc is uniform colour at the data layer.
@@ -349,7 +354,10 @@ export function createRoutesLayers(
       return d.flightIds.some((id) => selectedSet.has(id)) ? Math.max(base * 2, 4) : base;
     },
     getHeight: arcHeight,
-    widthMinPixels: 1,
+    // Visibility floor: 2 px minimum so a single far-flung route (e.g. a
+    // one-off transpacific leg) stays clearly visible at world zoom instead
+    // of thinning to a barely-perceptible 1 px hairline.
+    widthMinPixels: 2,
     pickable: !!onFlightClick,
     onClick: onFlightClick
       ? ({ object }: { object?: ArcDatum }) => {
