@@ -20,6 +20,32 @@ function getCacheKey(code: string): string {
   return `airport:${code.toUpperCase()}`;
 }
 
+// OurAirports assigns synthetic ICAO placeholders like "US-0226" to minor
+// airfields that have no real 4-letter ICAO. Some of these also carry a
+// spurious IATA that collides with a real international airport.
+const PLACEHOLDER_ICAO = /^[A-Z]{2}-\d+$/;
+
+function isPlaceholderIcao(icao: string | null): boolean {
+  return icao != null && PLACEHOLDER_ICAO.test(icao);
+}
+
+/**
+ * Best-first comparator for IATA/ICAO collisions: active airports rank above
+ * closed ones, and a real 4-letter ICAO ranks above an OurAirports synthetic
+ * placeholder. Without this, a tiny US airfield carrying a bogus IATA can
+ * shadow the real international airport with the same code — e.g. IATA "TNR"
+ * resolved to "Tulsa Downtown Airpark" (US-0226) instead of Ivato /
+ * Antananarivo (FMMI), stamping flights with Oklahoma coordinates.
+ */
+export function compareAirportAuthority(
+  a: { isClosed?: boolean | null; icao: string | null },
+  b: { isClosed?: boolean | null; icao: string | null },
+): number {
+  const closed = (a.isClosed ? 1 : 0) - (b.isClosed ? 1 : 0);
+  if (closed !== 0) return closed;
+  return (isPlaceholderIcao(a.icao) ? 1 : 0) - (isPlaceholderIcao(b.icao) ? 1 : 0);
+}
+
 /**
  * Get airport from cache or database
  * @param code IATA or ICAO code
@@ -47,7 +73,7 @@ export async function getCachedAirport(code: string): Promise<AirportData | null
     context: { code },
   });
 
-  const airport = await prisma.airport.findFirst({
+  const matches = await prisma.airport.findMany({
     where: {
       OR: [
         { iata: upperCode },
@@ -55,6 +81,9 @@ export async function getCachedAirport(code: string): Promise<AirportData | null
       ],
     },
   });
+  // Prefer the authoritative airport when a code collides (real ICAO over a
+  // synthetic US-#### placeholder, active over closed).
+  const airport = [...matches].sort(compareAirportAuthority)[0] ?? null;
 
   if (!airport) {
     // Cache null result for shorter time to avoid repeated DB queries for non-existent airports
@@ -118,8 +147,12 @@ export async function getCachedAirports(codes: string[]): Promise<Map<string, Ai
       },
     });
 
-    // Store in cache and result map
-    for (const airport of airports) {
+    // Store in cache and result map. Iterate best-first so that on an
+    // IATA/ICAO collision the authoritative airport claims the shared code and
+    // the placeholder only keeps its own (e.g. Ivato claims "TNR", the Tulsa
+    // airpark keeps "US-0226").
+    const ranked = [...airports].sort(compareAirportAuthority);
+    for (const airport of ranked) {
       const airportData: AirportData = {
         iata: airport.iata,
         icao: airport.icao,
@@ -132,13 +165,14 @@ export async function getCachedAirports(codes: string[]): Promise<Map<string, Ai
         timezone: airport.timezone || null,
       };
 
-      // Cache by both IATA and ICAO if available
-      if (airport.iata) {
+      // Cache by both IATA and ICAO if available; a code already claimed by a
+      // higher-ranked airport is not overwritten.
+      if (airport.iata && !result.has(airport.iata)) {
         const iataKey = getCacheKey(airport.iata);
         cache.set(iataKey, airportData);
         result.set(airport.iata, airportData);
       }
-      if (airport.icao) {
+      if (airport.icao && !result.has(airport.icao)) {
         const icaoKey = getCacheKey(airport.icao);
         cache.set(icaoKey, airportData);
         result.set(airport.icao, airportData);
