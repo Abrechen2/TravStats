@@ -163,7 +163,7 @@ export function AllTab(): JSX.Element {
       await flightsApi.update(id, updates);
       // Refresh GeoJSON so the map reflects the edit; full-flight lookup
       // will catch up on the next mount.
-      const collection = await flightsApi.getGeoJSON();
+      const collection = await flightsApi.getAllGeoJSON();
       setFlights(collection.features);
       setEditingFlight(null);
     },
@@ -173,7 +173,7 @@ export function AllTab(): JSX.Element {
   useEffect(() => {
     let cancelled = false;
     flightsApi
-      .getGeoJSON()
+      .getAllGeoJSON()
       .then((collection) => {
         if (!cancelled) setFlights(collection.features);
       })
