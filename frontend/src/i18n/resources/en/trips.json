@@ -194,7 +194,14 @@
     "selectAll": "Select all",
     "summary": "{{trips}} selected · {{flights}} flights to be linked",
     "commit": "Create {{count}} journeys",
-    "discard": "Discard"
+    "discard": "Discard",
+    "expandLegs": "Show flights",
+    "collapseLegs": "Hide flights",
+    "legStatus": {
+      "flown": "Flown",
+      "scheduled": "Scheduled",
+      "cancelled": "Cancelled"
+    }
   },
   "summary": {
     "title": "AI summary",

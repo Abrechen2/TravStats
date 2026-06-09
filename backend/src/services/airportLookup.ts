@@ -1,7 +1,7 @@
 import { find as findTimezone } from 'geo-tz';
 import { prisma } from '../db';
 import logger from '../utils/logger';
-import { getCachedAirport, invalidateAirportCache } from './airportCache';
+import { getCachedAirport, invalidateAirportCache, compareAirportAuthority } from './airportCache';
 
 export interface AirportData {
   iata?: string | null;
@@ -109,15 +109,18 @@ export async function findOrCreateAirport(code: string): Promise<AirportData | n
   // This handles the case where cache returned null but airport might exist
   // Prefer the active airport when a closed predecessor shares the same
   // IATA/ICAO (e.g. Munich Airport vs. Munich-Riem, both EDDM/MUC).
-  const existingAirport = await prisma.airport.findFirst({
+  const candidates = await prisma.airport.findMany({
     where: {
       OR: [
         { iata: upperCode },
         { icao: upperCode },
       ],
     },
-    orderBy: { isClosed: 'asc' },
   });
+  // Prefer the authoritative airport on a code collision: active over closed,
+  // and a real ICAO over a synthetic US-#### placeholder (see
+  // compareAirportAuthority).
+  const existingAirport = [...candidates].sort(compareAirportAuthority)[0] ?? null;
 
   if (existingAirport) {
     return existingAirport;

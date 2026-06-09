@@ -55,6 +55,18 @@ interface FlightLite {
   depLon: number;
   arrLat: number;
   arrLon: number;
+  flightNumber: string | null;
+  status: string;
+}
+
+/** One leg of a proposed trip, surfaced so the review UI can expand a
+ *  detected trip into its constituent flights. */
+export interface ProposedTripLeg {
+  date: string;
+  flightNumber: string | null;
+  depIata: string | null;
+  arrIata: string | null;
+  status: string;
 }
 
 export interface ProposedTrip {
@@ -65,6 +77,9 @@ export interface ProposedTrip {
   destination: string;
   span: { from: string; to: string };
   suggestedName: string;
+  /** Per-leg detail for the review modal's expandable card. Ordered by
+   *  departure time. */
+  legs: ProposedTripLeg[];
 }
 
 export interface DetectionResult {
@@ -111,6 +126,7 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
       destination: "?",
       span: { from: "", to: "" },
       suggestedName: p.name,
+      legs: [],
     }));
     const committed = await commitProposals(userId, proposals);
     return await finalizeWithCleanup(committed, userId, dryRun);
@@ -129,6 +145,8 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
       depLon: true,
       arrLat: true,
       arrLon: true,
+      flightNumber: true,
+      status: true,
     },
   });
 
@@ -460,6 +478,13 @@ function makeProposal(
     destination,
     span: { from, to },
     suggestedName: `${origin} ${separator} ${destination} · ${month}`,
+    legs: sorted.map((f) => ({
+      date: f.departureTime ? toYmd(f.departureTime) : "",
+      flightNumber: f.flightNumber,
+      depIata: f.depIata,
+      arrIata: f.arrIata,
+      status: f.status,
+    })),
   };
 }
 

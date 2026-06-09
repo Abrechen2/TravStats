@@ -1,8 +1,11 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { tripsApi } from "../../lib/api";
-import type { ProposedTrip } from "../../lib/api/trips";
+import type { ProposedTrip, ProposedTripLeg } from "../../lib/api/trips";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
+
+/** The project wrapper narrows i18next's `t` to this signature. */
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
 interface DetectReviewModalProps {
   proposals: ProposedTrip[];
@@ -27,6 +30,23 @@ const HEURISTIC_COLOR: Record<ProposedTrip["source"], { bg: string; color: strin
   continuity: { bg: "rgba(240,169,71,0.15)", color: "#f0a947" },
 };
 
+// Per-status chip styling for the expanded leg rows. Unknown statuses
+// fall back to a neutral grey so the chip always renders.
+const LEG_STATUS_COLOR: Record<string, { bg: string; color: string }> = {
+  flown: { bg: "rgba(74,222,128,0.15)", color: "#86efac" },
+  scheduled: { bg: "rgba(96,165,250,0.15)", color: "#93c5fd" },
+  cancelled: { bg: "rgba(248,113,113,0.15)", color: "#fca5a5" },
+};
+const LEG_STATUS_FALLBACK = { bg: "rgba(148,163,184,0.15)", color: "var(--text-muted)" };
+
+/**
+ * Stable per-proposal key. Proposals have no id, but their `flightIds`
+ * uniquely identify the grouping, so we join them for the expansion map.
+ */
+function proposalKey(p: ProposedTrip): string {
+  return p.flightIds.join(",");
+}
+
 /**
  * Per-proposal review flow (Phase-1 iteration 5). The DetectTripsBanner
  * used to commit ALL auto-detected proposals at once via a single
@@ -46,6 +66,18 @@ export default function DetectReviewModal({
     proposals.map((p) => ({ selected: true, name: p.suggestedName }))
   );
   const [committing, setCommitting] = useState(false);
+  // Expanded proposals tracked by their stable flightIds key — multiple
+  // cards may be open at once. Collapsed by default.
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
+
+  const toggleExpanded = useCallback((key: string): void => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
 
   const selectedCount = useMemo(() => state.filter((s) => s.selected).length, [state]);
   const allSelected = selectedCount === state.length && state.length > 0;
@@ -163,45 +195,91 @@ export default function DetectReviewModal({
           {proposals.map((p, i) => {
             const s = state[i];
             const heur = HEURISTIC_COLOR[p.source];
+            const key = proposalKey(p);
+            const isOpen = expanded.has(key);
+            const hasLegs = p.legs.length > 0;
+            const panelId = `detect-legs-${i}`;
             return (
               <div
                 key={`${p.source}-${i}`}
-                className="rounded-xl p-3 flex items-center gap-3 transition-opacity"
+                className="rounded-xl p-3 transition-opacity"
                 style={{
                   background: "var(--bg-elevated)",
                   border: "1px solid var(--color-border)",
                   opacity: s.selected ? 1 : 0.45,
                 }}
               >
-                <Toggle checked={s.selected} onClick={() => togglePart(i)} />
-                <RoutePreview proposal={p} />
-                <div className="flex-1 min-w-0">
-                  <input
-                    value={s.name}
-                    onChange={(e) => renamePart(i, e.target.value)}
-                    className="w-full bg-transparent border-0 text-sm font-semibold outline-none focus:bg-[var(--bg-base)] focus:px-2 focus:py-1 focus:rounded"
-                    style={{ color: "var(--text-primary)" }}
-                  />
-                  <div
-                    className="flex items-center gap-2 mt-1 text-[11px] flex-wrap"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    <span
-                      className="px-1.5 py-0.5 rounded-full uppercase tracking-wide font-semibold"
-                      style={{ background: heur.bg, color: heur.color }}
+                <div className="flex items-center gap-3">
+                  <Toggle checked={s.selected} onClick={() => togglePart(i)} />
+                  <RoutePreview proposal={p} />
+                  <div className="flex-1 min-w-0">
+                    <input
+                      value={s.name}
+                      onChange={(e) => renamePart(i, e.target.value)}
+                      className="w-full bg-transparent border-0 text-sm font-semibold outline-none focus:bg-[var(--bg-base)] focus:px-2 focus:py-1 focus:rounded"
+                      style={{ color: "var(--text-primary)" }}
+                    />
+                    <div
+                      className="flex items-center gap-2 mt-1 text-[11px] flex-wrap"
+                      style={{ color: "var(--text-muted)" }}
                     >
-                      {HEURISTIC_LABEL[p.source]}
-                      {p.pnr && ` · ${p.pnr}`}
-                    </span>
-                    <span>
-                      {p.flightIds.length} {p.flightIds.length === 1 ? "Flug" : "Flüge"}
-                    </span>
-                    <span>· {p.origin} → {p.destination}</span>
-                    {p.span?.from && p.span?.to && (
-                      <span>· {p.span.from} – {p.span.to}</span>
-                    )}
+                      <span
+                        className="px-1.5 py-0.5 rounded-full uppercase tracking-wide font-semibold"
+                        style={{ background: heur.bg, color: heur.color }}
+                      >
+                        {HEURISTIC_LABEL[p.source]}
+                        {p.pnr && ` · ${p.pnr}`}
+                      </span>
+                      <span>
+                        {p.flightIds.length} {p.flightIds.length === 1 ? "Flug" : "Flüge"}
+                      </span>
+                      <span>
+                        · {p.origin} → {p.destination}
+                      </span>
+                      {p.span?.from && p.span?.to && (
+                        <span>
+                          · {p.span.from} – {p.span.to}
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  {hasLegs && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        // Keep expansion independent from selection: the
+                        // chevron lives in the same row as the checkbox,
+                        // so stop the click before it can bubble anywhere.
+                        e.stopPropagation();
+                        toggleExpanded(key);
+                      }}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors hover:bg-[var(--bg-base)]"
+                      style={{ color: "var(--text-muted)" }}
+                      aria-expanded={isOpen}
+                      aria-controls={panelId}
+                      aria-label={
+                        isOpen
+                          ? t("trips:detectReview.collapseLegs", { defaultValue: "Flüge ausblenden" })
+                          : t("trips:detectReview.expandLegs", { defaultValue: "Flüge anzeigen" })
+                      }
+                    >
+                      <svg
+                        viewBox="0 0 16 16"
+                        className="w-4 h-4 transition-transform"
+                        style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.75"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M4 6l4 4 4-4" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
+                {hasLegs && isOpen && <LegList id={panelId} legs={p.legs} t={t} />}
               </div>
             );
           })}
@@ -249,7 +327,12 @@ function Toggle({ checked, onClick, indeterminate }: ToggleProps): JSX.Element {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(e) => {
+        // Selection is fully independent from card expansion — never let
+        // a checkbox click bubble up to any surrounding expand handler.
+        e.stopPropagation();
+        onClick();
+      }}
       className="w-6 h-6 rounded-md flex items-center justify-center transition-colors shrink-0"
       style={{
         background: checked || indeterminate ? "var(--accent)" : "transparent",
@@ -305,5 +388,53 @@ function RoutePreview({ proposal }: RoutePreviewProps): JSX.Element {
         </text>
       </svg>
     </div>
+  );
+}
+
+interface LegListProps {
+  id: string;
+  legs: ProposedTripLeg[];
+  t: TranslateFn;
+}
+
+/**
+ * Compact per-leg breakdown shown when a proposal card is expanded.
+ * One row per leg, already ordered by departure time upstream.
+ */
+function LegList({ id, legs, t }: LegListProps): JSX.Element {
+  return (
+    <ul
+      id={id}
+      className="mt-3 pt-3 space-y-1 list-none"
+      style={{ borderTop: "1px solid var(--color-border)" }}
+    >
+      {legs.map((leg, idx) => {
+        const chip = LEG_STATUS_COLOR[leg.status] ?? LEG_STATUS_FALLBACK;
+        const statusLabel = t(`trips:detectReview.legStatus.${leg.status}`, {
+          defaultValue: leg.status,
+        });
+        return (
+          <li
+            key={`${leg.date}-${leg.flightNumber ?? "?"}-${idx}`}
+            className="flex items-center gap-2 text-[11px]"
+            style={{ color: "var(--text-muted)" }}
+          >
+            <span className="tabular-nums shrink-0">{leg.date}</span>
+            <span className="font-semibold shrink-0" style={{ color: "var(--text-primary)" }}>
+              {leg.flightNumber ?? "—"}
+            </span>
+            <span className="truncate">
+              {leg.depIata ?? "—"} → {leg.arrIata ?? "—"}
+            </span>
+            <span
+              className="ml-auto px-1.5 py-0.5 rounded-full uppercase tracking-wide font-semibold shrink-0"
+              style={{ background: chip.bg, color: chip.color }}
+            >
+              {statusLabel}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
