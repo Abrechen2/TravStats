@@ -194,7 +194,14 @@
     "selectAll": "Alle auswählen",
     "summary": "{{trips}} ausgewählt · {{flights}} Flüge werden zugeordnet",
     "commit": "{{count}} Reisen erstellen",
-    "discard": "Verwerfen"
+    "discard": "Verwerfen",
+    "expandLegs": "Flüge anzeigen",
+    "collapseLegs": "Flüge ausblenden",
+    "legStatus": {
+      "flown": "Geflogen",
+      "scheduled": "Geplant",
+      "cancelled": "Storniert"
+    }
   },
   "summary": {
     "title": "KI-Zusammenfassung",
