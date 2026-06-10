@@ -259,7 +259,6 @@ export const adminApi = {
     globalOpenskyUsername?: string;
     globalOpenskyPassword?: string;
     allowUserFlightApiKeys: boolean;
-    requireUserFlightApiKeys: boolean;
   }> => {
     const { data } = await api.get<{
       globalAirlabsApiKey?: string;
@@ -270,7 +269,6 @@ export const adminApi = {
       globalOpenskyUsername?: string;
       globalOpenskyPassword?: string;
       allowUserFlightApiKeys: boolean;
-      requireUserFlightApiKeys: boolean;
     }>("/admin/api-keys");
     return data;
   },
@@ -284,7 +282,6 @@ export const adminApi = {
     globalOpenskyUsername?: string | null;
     globalOpenskyPassword?: string | null;
     allowUserFlightApiKeys?: boolean;
-    requireUserFlightApiKeys?: boolean;
   }): Promise<MessageResponse> => {
     const { data } = await api.put<MessageResponse>("/admin/api-keys", keys);
     return data;

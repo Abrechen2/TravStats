@@ -75,6 +75,10 @@ export interface CruiseStopInput {
   arrivalTime?: string | null;
   departureTime?: string | null;
   excursionNote?: string;
+  /** UI-only: the resolved Port for this stop, so the stops editor can show
+   *  the selected port when editing an existing cruise. Not sent to the
+   *  backend — the submit mapper strips it (backend Zod also ignores it). */
+  port?: Port | null;
 }
 
 export interface CruiseInput {

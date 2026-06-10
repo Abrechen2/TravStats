@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { parseApi } from "../../lib/api";
 import type { ParsePdfResult } from "../../lib/api/parse";
 import { logger } from "../../lib/logger";
+import { extractApiErrorMessage } from "../../lib/apiError";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useMinLoadingState } from "../../hooks/useMinLoadingState";
 import { GlobeLoader } from "../GlobeLoader";
@@ -54,7 +55,7 @@ export default function PdfImportTab({
         onResult(result);
       } catch (err) {
         logger.error("PdfImportTab: parse failed", err);
-        onError(t("import:pdf.parseError"));
+        onError(extractApiErrorMessage(err, t("import:pdf.parseError")));
       } finally {
         setDropState("idle");
       }

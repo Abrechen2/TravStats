@@ -14,7 +14,20 @@
       "price": "Price"
     }
   },
-  "detail": { "route": "Route", "cabin": "Cabin", "costs": "Costs", "meta": "Notes & tags" },
+  "detail": {
+    "route": "Route",
+    "cabin": "Cabin",
+    "costs": "Costs",
+    "meta": "Notes & tags",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete cruise?",
+    "deleteConfirmMessage": "This cruise will be permanently deleted. This action cannot be undone.",
+    "deleteConfirm": "Delete permanently",
+    "deleteCancel": "Cancel",
+    "deleteSuccess": "Cruise deleted",
+    "deleteError": "Could not delete the cruise"
+  },
   "field": {
     "ship": "Ship",
     "line": "Line",
@@ -37,9 +50,25 @@
     "lat": "Latitude",
     "lon": "Longitude"
   },
-  "cabinType": { "inside": "Inside", "oceanview": "Oceanview", "balcony": "Balcony", "suite": "Suite" },
-  "status": { "scheduled": "Scheduled", "flown": "Completed", "cancelled": "Cancelled", "historical": "Historical" },
-  "stops": { "title": "Itinerary", "at_sea": "At sea", "add": "Add stop", "day": "Day", "excursion": "Excursion" },
+  "cabinType": {
+    "inside": "Inside",
+    "oceanview": "Oceanview",
+    "balcony": "Balcony",
+    "suite": "Suite"
+  },
+  "status": {
+    "scheduled": "Scheduled",
+    "flown": "Completed",
+    "cancelled": "Cancelled",
+    "historical": "Historical"
+  },
+  "stops": {
+    "title": "Itinerary",
+    "at_sea": "At sea",
+    "add": "Add stop",
+    "day": "Day",
+    "excursion": "Excursion"
+  },
   "picker": {
     "ship_placeholder": "Search ship …",
     "port_placeholder": "Search port …",
@@ -47,29 +76,6 @@
     "add_custom_port": "Add custom port"
   },
   "map": { "layer": "Cruises" },
-  "chooser": {
-    "title": "How do you want to add the cruise?",
-    "email": {
-      "label": "Import booking email",
-      "description": "Upload your booking confirmation from AIDA, TUI Cruises or Costa — the cruise will be extracted automatically.",
-      "infoLine": "Line, ship, ports and dates will be filled in for you",
-      "badge": "Coming soon",
-      "cta": "Upload email"
-    },
-    "manual": {
-      "label": "Manual entry",
-      "description": "Enter ship, ports and details yourself",
-      "cta": "Enter manually"
-    },
-    "back": "← Back to choices"
-  },
-  "tabs": {
-    "emailParser": "Email parser",
-    "manual": "Manual",
-    "emailParserTitle": "Import booking email",
-    "emailParserHint": "Automatic parsing of cruise confirmations (AIDA, TUI Cruises, Costa …) is coming in a future release. For now, please enter data under the \"Manual\" tab.",
-    "emailParserStub": "Cruise parser – coming soon"
-  },
   "filter": {
     "title": "Filter",
     "searchPlaceholder": "Search ship or line …",

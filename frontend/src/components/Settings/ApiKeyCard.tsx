@@ -19,6 +19,12 @@ export interface ApiKeyCardProps {
   isShared: boolean;
   hasAccess: boolean;
   value?: string;
+  /** Explicit "the user has saved their own key" signal. User cards MUST
+   *  pass this from `apiKeysStatus.<provider>.hasKey` because their `value`
+   *  is always empty (the GET only returns booleans, never the stored key),
+   *  which would otherwise mislabel an own key as "shared". Admin cards omit
+   *  it and fall back to `!!value` (they pass the masked key back in). */
+  hasOwnKey?: boolean;
   /** Per-provider quota observation. Different providers report this
    *  very differently — see `ProviderQuota` for the variants. */
   quota?: ProviderQuota;
@@ -48,6 +54,7 @@ export default function ApiKeyCard({
   isShared,
   hasAccess,
   value,
+  hasOwnKey: hasOwnKeyProp,
   quota,
   capabilities,
   onChange,
@@ -109,9 +116,12 @@ export default function ApiKeyCard({
           <div className="flex items-center gap-2 mb-1">
             <h3 className="font-semibold text-[var(--text-primary)]">{label}</h3>
             {(() => {
-              // Check if user has own key (for OpenSky, check only clientId)
+              // Prefer the explicit hasOwnKey signal (user cards); fall back
+              // to deriving from the (masked) value for admin cards. For
+              // OpenSky the fallback checks only clientId.
               const hasOwnKey =
-                provider === "opensky" && openskyFields ? !!openskyFields.clientId : !!value;
+                hasOwnKeyProp ??
+                (provider === "opensky" && openskyFields ? !!openskyFields.clientId : !!value);
 
               // If user has own key, show "Eigener Schlüssel"
               if (hasOwnKey) {
