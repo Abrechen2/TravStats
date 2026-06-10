@@ -20,13 +20,9 @@ vi.mock("../../../hooks/useTranslation", () => ({
 }));
 
 describe("CruiseEditModal", () => {
-  // Create mode now opens on the chooser step so users can pick email-parser
-  // or manual entry. Tests have to advance past it before they can interact
-  // with the form. See commit 7811f55 for the refactor.
-  const enterManualStep = async (): Promise<void> => {
-    await userEvent.click(screen.getByRole("button", { name: /chooser\.manual\.cta/i }));
-  };
-
+  // Create mode opens directly on the manual form now — email/PDF import is a
+  // separate flow on the list page (DomainImportButton), so there's no longer
+  // an import-vs-manual chooser step to advance past.
   it("submits a new cruise and calls onSaved", async () => {
     vi.mocked(cruiseApi.create).mockResolvedValue({
       id: "c1",
@@ -37,7 +33,6 @@ describe("CruiseEditModal", () => {
     const onSaved = vi.fn();
 
     render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={onSaved} />);
-    await enterManualStep();
 
     const lineInput = screen.getByLabelText("field.line");
     await userEvent.type(lineInput, "AIDA");
@@ -56,7 +51,6 @@ describe("CruiseEditModal", () => {
     });
 
     render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
-    await enterManualStep();
     await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
 
     expect(await screen.findByText(/invalid payload/i)).toBeInTheDocument();
