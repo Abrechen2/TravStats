@@ -93,6 +93,7 @@
   "trips": {
     "noTrips": "No trips yet",
     "label": "Trips",
+    "selectLabel": "Select trip",
     "flights_one": "flight",
     "flights_other": "flights",
     "unnamed": "Unnamed Trip"

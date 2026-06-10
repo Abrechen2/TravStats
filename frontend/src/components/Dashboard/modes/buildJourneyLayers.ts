@@ -18,16 +18,11 @@ export interface TripGroup {
 // ---------------------------------------------------------------------------
 
 /**
- * Extract `tripId` from a GeoJSON feature's properties.
- *
- * The backend does not yet expose `tripId` on the GeoJSON endpoint, so the
- * `GeoJSONFeature` type does not declare it.  We cast via `unknown` so the
- * helper is forward-compatible once the backend starts including it.
- * Missing or empty-string values are treated the same as `null`.
+ * Extract `tripId` from a GeoJSON feature's properties. The /geo endpoint
+ * exposes it; missing or empty-string values are treated the same as `null`.
  */
 function featureTripId(f: GeoJSONFeature): string | null {
-  const props = (f.properties ?? {}) as Record<string, unknown>;
-  const tid = props["tripId"];
+  const tid = f.properties?.tripId;
   return typeof tid === "string" && tid.length > 0 ? tid : null;
 }
 

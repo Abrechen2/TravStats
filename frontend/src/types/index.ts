@@ -448,6 +448,9 @@ export interface GeoJSONFeature {
     departureTime: string | null;
     arrivalTime: string | null;
     status: string;
+    /** Trip this flight belongs to, if any. Exposed by the /geo endpoint
+     *  so cross-domain journey mode can group flights + cruises by trip. */
+    tripId?: string | null;
     category?: "business" | "private" | "vacation";
     tags?: string[];
     price?: number;

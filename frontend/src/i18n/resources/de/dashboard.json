@@ -93,6 +93,7 @@
   "trips": {
     "noTrips": "Keine Trips vorhanden",
     "label": "Trips",
+    "selectLabel": "Reise auswählen",
     "flights_one": "Flug",
     "flights_other": "Flüge",
     "unnamed": "Unbenannter Trip"
