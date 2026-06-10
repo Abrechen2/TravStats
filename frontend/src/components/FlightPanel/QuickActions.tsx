@@ -1,4 +1,5 @@
 import type { Flight } from "../../types";
+import { useTranslation } from "../../hooks/useTranslation";
 
 interface QuickActionsProps {
   flight: Flight;
@@ -17,17 +18,18 @@ export function QuickActions({
   onDuplicate,
   onDelete,
 }: QuickActionsProps): JSX.Element {
+  const { t } = useTranslation(["flights", "common"]);
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
     <div className="flex gap-1 items-center flex-shrink-0" onClick={stop} onMouseEnter={stop}>
       {(
         [
-          { label: "✏️", title: "Bearbeiten", onClick: () => onEdit(flight) },
-          { label: "🗺️", title: "Auf Map zeigen", onClick: onMapFocus },
-          { label: "📊", title: "Stats", onClick: onStatsToggle },
-          { label: "📋", title: "Duplizieren", onClick: () => onDuplicate(flight) },
-          { label: "🗑️", title: "Löschen", onClick: () => onDelete(flight.id) },
+          { label: "✏️", title: t("common:buttons.edit"), onClick: () => onEdit(flight) },
+          { label: "🗺️", title: t("flights:quickActions.showOnMap"), onClick: onMapFocus },
+          { label: "📊", title: t("flights:quickActions.stats"), onClick: onStatsToggle },
+          { label: "📋", title: t("common:buttons.duplicate"), onClick: () => onDuplicate(flight) },
+          { label: "🗑️", title: t("common:buttons.delete"), onClick: () => onDelete(flight.id) },
         ] as const
       ).map(({ label, title, onClick }) => (
         <button

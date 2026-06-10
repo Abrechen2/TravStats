@@ -288,6 +288,10 @@
     "submit": "Change Password",
     "changing": "Changing password...",
     "error": "Error changing password. Please check your current password.",
+    "required": "Please fill in all fields.",
+    "tooShort": "The new password must be at least 8 characters long.",
+    "mismatch": "The new passwords do not match.",
+    "sameAsOld": "The new password must differ from the current one.",
     "success": "Password changed successfully"
   },
   "training": {

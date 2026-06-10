@@ -34,11 +34,11 @@ describe("QuickActions", () => {
         onDelete={noop}
       />
     );
-    expect(screen.getByLabelText("Bearbeiten")).toBeInTheDocument();
-    expect(screen.getByLabelText("Auf Map zeigen")).toBeInTheDocument();
-    expect(screen.getByLabelText("Stats")).toBeInTheDocument();
-    expect(screen.getByLabelText("Duplizieren")).toBeInTheDocument();
-    expect(screen.getByLabelText("Löschen")).toBeInTheDocument();
+    expect(screen.getByLabelText("common:buttons.edit")).toBeInTheDocument();
+    expect(screen.getByLabelText("flights:quickActions.showOnMap")).toBeInTheDocument();
+    expect(screen.getByLabelText("flights:quickActions.stats")).toBeInTheDocument();
+    expect(screen.getByLabelText("common:buttons.duplicate")).toBeInTheDocument();
+    expect(screen.getByLabelText("common:buttons.delete")).toBeInTheDocument();
   });
 
   it("calls onEdit with flight when edit clicked", () => {
@@ -53,7 +53,7 @@ describe("QuickActions", () => {
         onDelete={noop}
       />
     );
-    fireEvent.click(screen.getByLabelText("Bearbeiten"));
+    fireEvent.click(screen.getByLabelText("common:buttons.edit"));
     expect(onEdit).toHaveBeenCalledWith(flight);
   });
 
@@ -69,7 +69,7 @@ describe("QuickActions", () => {
         onDelete={onDelete}
       />
     );
-    fireEvent.click(screen.getByLabelText("Löschen"));
+    fireEvent.click(screen.getByLabelText("common:buttons.delete"));
     expect(onDelete).toHaveBeenCalledWith("f1");
   });
 
@@ -85,7 +85,7 @@ describe("QuickActions", () => {
         onDelete={noop}
       />
     );
-    fireEvent.click(screen.getByLabelText("Auf Map zeigen"));
+    fireEvent.click(screen.getByLabelText("flights:quickActions.showOnMap"));
     expect(onMapFocus).toHaveBeenCalledTimes(1);
   });
 });

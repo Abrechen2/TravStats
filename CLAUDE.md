@@ -195,18 +195,22 @@ frontend/src/
   frontend must renumber `dayNumber` as `index + 1` after add/remove/reorder
   so numbering stays consecutive.
 - **Dashboard is multi-domain** — `frontend/src/pages/DashboardPage.tsx` is a thin shell delegating to per-tab components under `frontend/src/components/Dashboard/tabs/`. Tab modes are domain-scoped via `frontend/src/types/dashboard.ts` (no more global `VisMode` union). URL carries tab + mode (`/dashboard/<tab>?mode=<mode>`); `localStorage` remembers the last mode per domain. `MapContainer3D` uses a private `MapMode = "routes" | "heatmap" | "trips" | "globe"` internally; retired modes `hexagon`, `contour`, `columns`, `trip-routes` are gone. Flight-only modes are opt-in via `showInternalCruises={false}` on FlightsTab.
-- **Cruise sea-routes** — `backend/src/services/seaRouter.ts` runs the
-  Hybrid v2 pipeline (fine 0.05° great-circle safety → `searoute-ts`
-  with endpoint-snap guard + known-pass whitelist → local 0.05° A*
-  repair of segment land-runs → whole-route 0.1° A* fallback). Frontend
-  fetches the resulting GeoJSON LineString per leg via
-  `GET /api/v1/cruises/:id/geometry` (cached in `CruiseRouteCache`,
-  `CACHE_VERSION` bumps when behaviour changes). The dashboard Cruises
-  tab consumes the Hybrid v2 geometry via `MapContainer3D`. `buildCruiseArc`
-  on the frontend is a Bezier-offset **fallback only**, used when the
-  backend returns no geometry for a leg (landlocked port, disconnected
-  seas). Prototype iteration for routing algorithms lives in
-  `tools/sea-route-lab/` — not wired into the app, browser-only.
+- **Cruise sea-routes** — `backend/src/services/schematicRouter.ts` runs
+  the schematic pipeline (coarse 1° A* water path → Douglas-Peucker
+  simplification to 3–8 waypoints; raw port coords are always the
+  first/last waypoint; if A* fails on a truly disconnected sea it returns
+  a straight `[dep, arr]` chord). This **replaced** the old Hybrid-v2 A*
+  pipeline (`seaRouter.ts`, removed) — the route-cache table was dropped
+  too (migration `20260425200000_drop_cruise_route_cache`; no more
+  `CruiseRouteCache` / `CACHE_VERSION`). The frontend fetches the
+  waypoints per leg via `GET /api/v1/cruises/:id/geometry` and runs a
+  Catmull-Rom spline through them; the dashboard Cruises tab consumes
+  this via `MapContainer3D`. When the backend returns no geometry for a
+  leg, `buildCruiseArcs` (`frontend/src/components/layers/cruiseArcsLayer.ts`)
+  falls back to a straight chord `[[a.lon,a.lat],[b.lon,b.lat]]` — there
+  is no `buildCruiseArc` Bezier helper anymore. Prototype iteration for
+  routing algorithms lives in `tools/sea-route-lab/` — not wired into the
+  app, browser-only.
 - **Marnet shipping-lane router is in-house** — the abandoned
   `searoute-ts` npm package was dropped on 2026-04-30 (its extensionless
   ESM imports broke silently on Node ≥ 22, so every cruise leg was

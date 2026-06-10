@@ -349,6 +349,10 @@ export function AllTab(): JSX.Element {
           flightRouteColor={FLIGHT_RGB}
           availableModes={ALL_TAB_MAP_MODES}
           cruisesOverride={visibleCruises}
+          // journey renders in "routes" visMode but is a synthetic mode not
+          // in the FAB set — hide the FAB so it can't show "Routes" as active
+          // (contradicting the toolbar) or drop the user out of journey.
+          hideVisModeSelector
           hideInfoPill
         />
         {toggleAndLegend}

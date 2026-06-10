@@ -219,19 +219,19 @@ export function useSettingsPage() {
   const handlePasswordChange = async () => {
     setPasswordError("");
     if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      setPasswordError(t("common:messages.error"));
+      setPasswordError(t("settings:password.required"));
       return;
     }
-    if (passwordForm.newPassword.length < 6) {
-      setPasswordError(t("common:messages.error"));
+    if (passwordForm.newPassword.length < 8) {
+      setPasswordError(t("settings:password.tooShort"));
       return;
     }
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setPasswordError(t("common:messages.error"));
+      setPasswordError(t("settings:password.mismatch"));
       return;
     }
     if (passwordForm.oldPassword === passwordForm.newPassword) {
-      setPasswordError(t("common:messages.error"));
+      setPasswordError(t("settings:password.sameAsOld"));
       return;
     }
     setChangingPassword(true);

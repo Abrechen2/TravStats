@@ -93,7 +93,6 @@
       "import": "E-Mail importieren",
       "bestOption": "Beste Option",
       "bestOptionDescription": "Erfasst alle Daten am besten aus Bestätigungs-E-Mails",
-      "notImplemented": "E-Mail-Import ist noch nicht verfügbar. Bitte nutzen Sie die manuelle Eingabe oder den Boarding-Pass-Scan.",
       "textFallback": "Email-Text einfügen (Fallback)",
       "textPlaceholder": "Email-Inhalt hier einfügen...",
       "regexWarning": {
@@ -288,6 +287,10 @@
     "tripAssignedToast": "Reise-Zuordnung aktualisiert",
     "tripAssignFailed": "Reise-Zuordnung fehlgeschlagen — andere Änderungen wurden gespeichert"
   },
+  "quickActions": {
+    "showOnMap": "Auf Karte zeigen",
+    "stats": "Statistiken"
+  },
   "scanner": {
     "title": "Boarding Pass scannen",
     "uploadTitle": "Boarding Pass Foto hochladen",
@@ -303,6 +306,8 @@
     "ollamaUnavailable": "Ollama Vision ist nicht verfügbar. Bitte stellen Sie sicher, dass Ollama läuft und ein Vision-Model installiert ist (z.B. llava).",
     "steps": {
       "load": "Bild wird geladen",
+      "barcode": "Barcode extrahieren",
+      "parser": "Parser ausführen",
       "upload": "Upload zum Server",
       "ollama": "KI-Analyse mit Ollama Vision",
       "api": "API-Abgleich (optional)",

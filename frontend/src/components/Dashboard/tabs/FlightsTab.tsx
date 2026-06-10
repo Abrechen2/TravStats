@@ -269,6 +269,11 @@ export function FlightsTab(): JSX.Element {
           if (f) setEditingFlight(f);
         }}
         availableModes={FLIGHT_TAB_MAP_MODES}
+        // stats-map is a synthetic mode that renders the map in "routes"
+        // visMode via extraLayers. Hiding the in-map FAB there avoids it
+        // showing "Routes" as active (contradicting the toolbar dropdown)
+        // and silently dropping the user out of stats-map on click.
+        hideVisModeSelector={flightMode === "stats-map"}
         hideInfoPill
       />
       <button
