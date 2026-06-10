@@ -108,8 +108,14 @@ export default function MapContainer3D({
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
   const mapTheme = useThemeStore((s) => s.mapTheme);
-  const { enabled: enabledDomains } = useEnabledDomains();
-  const cruiseEnabled = enabledDomains.includes("cruise");
+  const { isEnabled } = useEnabledDomains();
+  // Cruise-specific overlay gate. Deliberately a single-domain check (this
+  // overlay renders cruise data via cruiseApi + the cruise arc layer), not
+  // generic domain iteration — a future hotel/POI overlay would add its own
+  // parallel gate rather than reuse this one. Routed through the memoized
+  // isEnabled() helper (the sanctioned gating API) so the boolean still stays
+  // stable in the effect dep array below (see the beta.28 ref-stability fix).
+  const cruiseEnabled = isEnabled("cruise");
   const [fabOpen, setFabOpen] = useState(false);
   const [internalCruises, setInternalCruises] = useState<Cruise[]>([]);
 

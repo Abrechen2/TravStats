@@ -6,6 +6,7 @@ import { useFlightLookup } from "../../../hooks/useFlightLookup";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { cruiseApi } from "../../../lib/api/cruise";
 import { flightsApi } from "../../../lib/api/flights";
+import { tripsApi } from "../../../lib/api/trips";
 import { logger } from "../../../lib/logger";
 import { DOMAINS } from "../../../shared/domains";
 import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
@@ -14,13 +15,13 @@ import {
   useDashboardFilterStore,
 } from "../../../store/dashboardFilterStore";
 import { useFlightSelectionStore } from "../../../store/flightSelectionStore";
-import type { Flight, GeoJSONFeature } from "../../../types";
+import type { Flight, GeoJSONFeature, Trip } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
 import type { AllMode } from "../../../types/dashboard";
 import { ALL_MODES } from "../../../types/dashboard";
 import FlightEditModal from "../../FlightEditModal";
 import MapContainer3D, { type MapMode } from "../../MapContainer3D";
-import { buildJourneyLayers } from "../modes/buildJourneyLayers";
+import { buildJourneyLayers, groupByTripId } from "../modes/buildJourneyLayers";
 import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
 import type { Layer } from "@deck.gl/core";
 
@@ -69,6 +70,8 @@ export function AllTab(): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
   const [flights, setFlights] = useState<GeoJSONFeature[]>([]);
   const [cruises, setCruises] = useState<Cruise[]>([]);
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { lookup, lookupMany } = useFlightLookup();
   const setSelection = useFlightSelectionStore((s) => s.setSelection);
@@ -201,20 +204,53 @@ export function AllTab(): JSX.Element {
     };
   }, []);
 
+  // Trips power the journey-mode selector (label = trip name).
+  useEffect(() => {
+    let cancelled = false;
+    tripsApi
+      .getAll()
+      .then((list) => {
+        if (!cancelled) setTrips(list);
+      })
+      .catch((err: unknown) => {
+        logger.error("AllTab: failed to load trips", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Current dashboard mode narrowed to AllMode; fall back to "overview" if the
   // active mode is from a different tab (shouldn't happen in practice but keeps
   // types sound).
   const allMode: AllMode = isAllMode(mode) ? mode : "overview";
   const visMode = ALL_MODE_TO_MAP_MODE[allMode];
 
-  // Journey layers: built only when journey mode is active. Renders the first
-  // trip that has both flights and/or cruises sharing a tripId.  When the
-  // backend starts exposing tripId on the GeoJSON endpoint the flight arcs will
-  // auto-populate; until then only cruise legs appear.
+  // Trips that actually have cross-domain data to render, in trip order.
+  // The selector below lets the user pick which one journey mode shows.
+  const journeyTrips = useMemo<Trip[]>(() => {
+    if (allMode !== "journey") return [];
+    const groups = groupByTripId(visibleFlights, visibleCruises);
+    return trips.filter((trip) => groups[trip.id] !== undefined);
+  }, [allMode, visibleFlights, visibleCruises, trips]);
+
+  // Resolve the effective trip: the explicit selection if it still has data,
+  // otherwise fall back to the first available trip so the map is never blank
+  // when trips exist.
+  const effectiveTripId = useMemo<string | null>(() => {
+    if (journeyTrips.length === 0) return null;
+    if (selectedTripId && journeyTrips.some((tr) => tr.id === selectedTripId)) {
+      return selectedTripId;
+    }
+    return journeyTrips[0].id;
+  }, [journeyTrips, selectedTripId]);
+
+  // Journey layers: built only when journey mode is active, for the selected
+  // (or first-available) cross-domain trip.
   const journeyLayers = useMemo<Layer[]>(() => {
     if (allMode !== "journey") return [];
-    return buildJourneyLayers(visibleFlights, visibleCruises, null);
-  }, [allMode, visibleFlights, visibleCruises]);
+    return buildJourneyLayers(visibleFlights, visibleCruises, effectiveTripId);
+  }, [allMode, visibleFlights, visibleCruises, effectiveTripId]);
 
   const handleVisModeChange = useCallback(
     (next: MapMode): void => {
@@ -330,6 +366,55 @@ export function AllTab(): JSX.Element {
     />
   );
 
+  // Journey-mode trip picker, centered at the top. Shows the available
+  // cross-domain trips, or a hint when none exist.
+  const journeySelector = (
+    <div
+      style={{
+        position: "absolute",
+        top: 12,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 30,
+      }}
+    >
+      {journeyTrips.length > 0 ? (
+        <select
+          aria-label={t("dashboard:trips.selectLabel")}
+          value={effectiveTripId ?? ""}
+          onChange={(e) => setSelectedTripId(e.target.value)}
+          style={{
+            padding: "6px 12px",
+            borderRadius: 10,
+            background: "rgba(22,27,34,0.85)",
+            color: "var(--text-primary)",
+            border: "1px solid var(--color-border)",
+            fontSize: 13,
+          }}
+        >
+          {journeyTrips.map((trip) => (
+            <option key={trip.id} value={trip.id}>
+              {trip.name || t("dashboard:trips.unnamed")}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <div
+          style={{
+            padding: "6px 12px",
+            borderRadius: 10,
+            background: "rgba(22,27,34,0.85)",
+            color: "var(--text-muted)",
+            border: "1px solid var(--color-border)",
+            fontSize: 12,
+          }}
+        >
+          {t("dashboard:trips.noTrips")}
+        </div>
+      )}
+    </div>
+  );
+
   // Journey mode takes over the map entirely: it injects its own cross-domain
   // layers and suppresses the internal cruise arcs that MapContainer3D would
   // otherwise render, so only the selected trip is shown.
@@ -356,6 +441,7 @@ export function AllTab(): JSX.Element {
           hideInfoPill
         />
         {toggleAndLegend}
+        {journeySelector}
         {activityPanel}
         {editModal}
       </div>
