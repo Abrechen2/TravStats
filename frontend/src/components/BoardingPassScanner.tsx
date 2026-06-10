@@ -49,8 +49,8 @@ export default function BoardingPassScanner({
 
     const steps: ScanStep[] = [
       { id: "load", label: t("flights:scanner.steps.load"), status: "loading", icon: "📸" },
-      { id: "barcode", label: "Barcode extrahieren", status: "pending", icon: "📱" },
-      { id: "parser", label: "Parser ausführen", status: "pending", icon: "⚙️" },
+      { id: "barcode", label: t("flights:scanner.steps.barcode"), status: "pending", icon: "📱" },
+      { id: "parser", label: t("flights:scanner.steps.parser"), status: "pending", icon: "⚙️" },
       { id: "ocr", label: t("flights:scanner.steps.api"), status: "pending", icon: "🔍" },
       { id: "complete", label: t("flights:scanner.steps.complete"), status: "pending", icon: "✅" },
     ];

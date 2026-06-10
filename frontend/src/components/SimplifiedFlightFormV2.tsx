@@ -232,7 +232,7 @@ export default function SimplifiedFlightFormV2({
       {/* Duplicate Flight Dialog */}
       {form.duplicateFlight && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+          <div className="bg-[var(--bg-elevated)] border border-[var(--color-border)] rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
             <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">
               {t("flights:form.duplicate.title")}
             </h3>
@@ -242,14 +242,14 @@ export default function SimplifiedFlightFormV2({
                 route: `${form.duplicateFlight.depIata ?? "?"} → ${form.duplicateFlight.arrIata ?? "?"}`,
               })}
             </p>
-            <p className="text-xs text-[var(--text-tertiary)] mb-4">
+            <p className="text-xs text-[var(--text-muted)] mb-4">
               {t("flights:form.duplicate.mergeHint")}
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
               <button
                 type="button"
                 onClick={() => form.setDuplicateFlight(null)}
-                className="flex-1 px-4 py-2 border border-[var(--border)] rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
+                className="flex-1 px-4 py-2 border border-[var(--color-border)] rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] transition-colors"
               >
                 {t("flights:form.duplicate.cancel")}
               </button>

@@ -76,7 +76,7 @@ describe("FlightEntry", () => {
     );
     // Hover to show quick actions
     fireEvent.mouseEnter(screen.getByRole("button"));
-    fireEvent.click(screen.getByLabelText("Stats"));
+    fireEvent.click(screen.getByLabelText("flights:quickActions.stats"));
     // InlineStats uses i18n key in tests
     expect(screen.getByText(/stats:distance\.kilometers/)).toBeInTheDocument();
   });

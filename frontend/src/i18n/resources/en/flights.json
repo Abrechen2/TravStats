@@ -93,7 +93,6 @@
       "import": "Import Email",
       "bestOption": "Best Option",
       "bestOptionDescription": "Captures all data best from confirmation emails",
-      "notImplemented": "Email import is not yet implemented. Please use manual entry or boarding pass scan.",
       "textFallback": "Paste email text (fallback)",
       "textPlaceholder": "Paste email content here...",
       "regexWarning": {
@@ -288,6 +287,10 @@
     "tripAssignedToast": "Trip assignment updated",
     "tripAssignFailed": "Trip assignment failed — other changes were saved"
   },
+  "quickActions": {
+    "showOnMap": "Show on map",
+    "stats": "Statistics"
+  },
   "scanner": {
     "title": "Scan Boarding Pass",
     "uploadTitle": "Upload Boarding Pass Photo",
@@ -303,6 +306,8 @@
     "ollamaUnavailable": "Ollama Vision is not available. Please make sure Ollama is running and a Vision model is installed (e.g. llava).",
     "steps": {
       "load": "Loading image",
+      "barcode": "Extracting barcode",
+      "parser": "Running parser",
       "upload": "Upload to server",
       "ollama": "AI analysis with Ollama Vision",
       "api": "API lookup (optional)",

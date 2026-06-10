@@ -33,11 +33,7 @@
     "routes": "Routen",
     "globe": "Globus",
     "heatmap": "Heatmap",
-    "hexagon": "Hexagon",
-    "columns": "3D-Säulen",
     "trips": "Animation",
-    "contour": "Isolinien",
-    "tripRoutes": "Trip-Routen",
     "label": "Darstellung"
   },
   "timeSlider": {

@@ -617,7 +617,6 @@ export function DeckGLMap({
           flights={selectedFlights}
           screenX={tooltipPos.x}
           screenY={tooltipPos.y}
-          mode="routes"
           onClose={() => {
             clearSelection();
             setTooltipVisible(false);

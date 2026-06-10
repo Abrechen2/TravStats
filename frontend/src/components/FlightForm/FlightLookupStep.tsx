@@ -267,7 +267,11 @@ export default function FlightLookupStep({
             <h3 className={`text-xl font-bold ${textClass} mb-4`}>
               {t("flights:form.email.title")}
             </h3>
-            <Suspense fallback={<div className="p-6 text-center text-slate-400">Lädt...</div>}>
+            <Suspense
+              fallback={
+                <div className="p-6 text-center text-slate-400">{t("common:buttons.loading")}</div>
+              }
+            >
               <EmailImportTab
                 domain="flight"
                 acceptedExtensions={[".eml", ".msg", ".txt", ".pdf"]}

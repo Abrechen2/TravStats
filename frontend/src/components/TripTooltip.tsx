@@ -11,7 +11,6 @@ interface TripTooltipProps {
   screenY: number;
   onClose: () => void;
   onShowDetails?: () => void;
-  mode?: "routes" | "trip-routes";
 }
 
 function getRouteEndpoints(sorted: Flight[]): {
@@ -33,17 +32,6 @@ function getRouteEndpoints(sorted: Flight[]): {
   const arrName = otherLeg.arrName ?? arrIata;
 
   return { depName, depIata, arrName, arrIata };
-}
-
-function buildTripChain(sorted: Flight[]): string {
-  const names: string[] = [];
-  for (const f of sorted) {
-    const dep = f.depName?.split(" ")[0] ?? f.depIata ?? "?";
-    const arr = f.arrName?.split(" ")[0] ?? f.arrIata ?? "?";
-    if (names.length === 0 || names[names.length - 1] !== dep) names.push(dep);
-    if (names[names.length - 1] !== arr) names.push(arr);
-  }
-  return names.join(" → ");
 }
 
 function formatDateRange(sorted: Flight[], locale: string): string {
@@ -74,7 +62,6 @@ export function TripTooltip({
   screenY,
   onClose,
   onShowDetails,
-  mode = "routes",
 }: TripTooltipProps): JSX.Element {
   const locale = useLocale();
   const { t } = useTranslation(["dashboard"]);
@@ -85,8 +72,6 @@ export function TripTooltip({
       (b.departureTime ? new Date(b.departureTime).getTime() : 0)
   );
 
-  const tripName = sorted[0]?.trip?.name;
-  const tripColor = sorted[0]?.trip?.color ?? "#f59e0b";
   const dateRange = formatDateRange(sorted, locale);
 
   const totalDistanceKm = sorted.reduce((sum, f) => {
@@ -103,43 +88,27 @@ export function TripTooltip({
   const airlines = [...new Set(sorted.map((f) => f.airline).filter(Boolean))] as string[];
   const seatClasses = [...new Set(sorted.map((f) => f.seatClass).filter(Boolean))] as string[];
 
-  const isTrip = mode === "trip-routes";
   const { depName, depIata, arrName, arrIata } = getRouteEndpoints(sorted);
 
   return (
     <TooltipContainer
       screenX={screenX}
       screenY={screenY}
-      borderColor={isTrip ? tripColor : "var(--accent)"}
+      borderColor="var(--accent)"
       minWidth="280px"
       maxWidth="380px"
     >
-      {isTrip && tripName && (
-        <div
-          className="font-bold text-xs mb-1 uppercase tracking-wider"
-          style={{ color: tripColor }}
-        >
-          {tripName}
-        </div>
-      )}
-
-      {isTrip ? (
+      <div>
         <div className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
-          {buildTripChain(sorted)}
+          {depName} ({depIata})
         </div>
-      ) : (
-        <div>
-          <div className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
-            {depName} ({depIata})
-          </div>
-          <div className="text-xs my-0.5" style={{ color: "var(--text-muted)" }}>
-            →
-          </div>
-          <div className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
-            {arrName} ({arrIata})
-          </div>
+        <div className="text-xs my-0.5" style={{ color: "var(--text-muted)" }}>
+          →
         </div>
-      )}
+        <div className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
+          {arrName} ({arrIata})
+        </div>
+      </div>
 
       <div className="my-2" style={{ borderTop: "1px solid var(--color-border)" }} />
 
@@ -170,7 +139,7 @@ export function TripTooltip({
             className="text-xs px-3 py-1.5 rounded font-medium transition-colors"
             style={{ background: "var(--accent)", color: "white" }}
           >
-            {isTrip ? t("dashboard:tripDetails") : t("dashboard:routeDetails")} →
+            {t("dashboard:routeDetails")} →
           </button>
         ) : (
           <div />

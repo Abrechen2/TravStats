@@ -1,42 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import i18n from "../i18n/config";
-
-// #region agent log
-const debugLog = (
-  location: string,
-  message: string,
-  data: Record<string, unknown> = {},
-  hypothesisId?: string
-): void => {
-  // Only log in development mode
-  if (import.meta.env.MODE !== "development") {
-    return;
-  }
-
-  // Development-only console logging
-  console.log(`[DEBUG ${hypothesisId || "?"}] ${location}: ${message}`, data);
-
-  // Store in localStorage for development debugging (max 100 entries)
-  try {
-    const logEntry = {
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-      sessionId: "debug-session",
-      runId: "run1",
-      hypothesisId,
-    };
-    const stored = localStorage.getItem("debug-logs") || "[]";
-    const logs = JSON.parse(stored);
-    logs.push(logEntry);
-    if (logs.length > 100) logs.shift();
-    localStorage.setItem("debug-logs", JSON.stringify(logs));
-  } catch {
-    // Ignore localStorage errors
-  }
-};
-// #endregion
+import { logger } from "../lib/logger";
 
 interface Props {
   children: ReactNode;
@@ -55,38 +19,16 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
-    // #region agent log
-    debugLog(
-      "ErrorBoundary.tsx:getDerivedStateFromError",
-      "Error caught by boundary",
-      {
-        message: error.message,
-        name: error.name,
-        stack: error.stack,
-      },
-      "A"
-    );
-    // #endregion
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    if (import.meta.env.MODE === "development") {
-      console.error("Error caught by boundary:", error, errorInfo);
-    }
-    // #region agent log
-    debugLog(
-      "ErrorBoundary.tsx:componentDidCatch",
-      "Error details captured",
-      {
-        message: error.message,
-        name: error.name,
-        stack: error.stack,
-        componentStack: errorInfo?.componentStack,
-      },
-      "A"
-    );
-    // #endregion
+    logger.error("Error caught by boundary:", {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      componentStack: errorInfo?.componentStack,
+    });
   }
 
   render(): ReactNode {
