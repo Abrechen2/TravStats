@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { formatInTimeZone } from "date-fns-tz";
 import type { Flight, Trip } from "../types";
 import ReceiptUpload from "./ReceiptUpload";
 import CopyActionButton from "./FlightForm/CopyActionButton";
@@ -25,9 +26,20 @@ function toLocalDatetime(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "";
-  // Format as YYYY-MM-DDTHH:MM for datetime-local input (local timezone)
+  // Format as YYYY-MM-DDTHH:MM for datetime-local input (browser-local). Used
+  // only as the initial seed before the airport timezones resolve — see the
+  // hydration effect, which re-renders these fields as airport-local.
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** Format a UTC instant as a `YYYY-MM-DDTHH:MM` datetime-local value in the
+ *  given IANA timezone (the departure/arrival airport's zone). */
+function utcToZonedInput(iso: string | null, tz: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return formatInTimeZone(d, tz, "yyyy-MM-dd'T'HH:mm");
 }
 
 export default function FlightEditModal({
@@ -37,7 +49,7 @@ export default function FlightEditModal({
   onSave,
 }: FlightEditModalProps): JSX.Element | null {
   const { t, i18n } = useTranslation(["flights", "common", "errors"]);
-  const { features } = useSettingsStore();
+  const { features, display } = useSettingsStore();
   const { airlines: airlineSuggestions, aircraft: aircraftSuggestions } = useSuggestions();
 
   const buildFormData = (f: Flight) => ({
@@ -72,6 +84,17 @@ export default function FlightEditModal({
   const [error, setError] = useState("");
   const [trips, setTrips] = useState<Trip[]>([]);
   const addToast = useToastStore((s) => s.addToast);
+
+  // Airport timezones for the departure/arrival fields. The datetime-local
+  // inputs are seeded browser-local by buildFormData, then re-rendered as
+  // airport-local once these resolve (see the hydration effect). `hydratedRef`
+  // tracks whether the inputs currently hold airport-local values, so submit
+  // pairs them with the matching timezone basis (no-op edits round-trip
+  // losslessly instead of drifting when browser tz != airport tz).
+  const userTz = display?.timezone || "UTC";
+  const [depTz, setDepTz] = useState<string>(userTz);
+  const [arrTz, setArrTz] = useState<string>(userTz);
+  const hydratedRef = useRef(false);
 
   // Load trips for the picker. Failures are non-fatal: if the list fails
   // we just hide the picker rather than blocking the whole edit modal,
@@ -163,7 +186,40 @@ export default function FlightEditModal({
   useEffect(() => {
     setFormData(buildFormData(flight));
     setError("");
+    hydratedRef.current = false;
   }, [flight]);
+
+  // Resolve airport timezones on open, then re-render the time inputs as
+  // airport-local. The submit contract and the arrival estimate already treat
+  // these fields as airport-local, so this makes the whole modal consistent
+  // and fixes the open->save no-op drift. Applied once per flight (guarded by
+  // hydratedRef) so it never clobbers a user edit.
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    void (async () => {
+      const depCode = flight.depIata || flight.depIcao;
+      const arrCode = flight.arrIata || flight.arrIcao;
+      const [depAirport, arrAirport] = await Promise.all([
+        depCode ? airportsApi.getByCode(depCode).catch(() => null) : Promise.resolve(null),
+        arrCode ? airportsApi.getByCode(arrCode).catch(() => null) : Promise.resolve(null),
+      ]);
+      if (cancelled || hydratedRef.current) return;
+      const dTz = depAirport?.timezone || userTz;
+      const aTz = arrAirport?.timezone || userTz;
+      setDepTz(dTz);
+      setArrTz(aTz);
+      setFormData((prev) => ({
+        ...prev,
+        departureTime: utcToZonedInput(flight.departureTime, dTz),
+        arrivalTime: utcToZonedInput(flight.arrivalTime, aTz),
+      }));
+      hydratedRef.current = true;
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, flight, userTz]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,18 +227,14 @@ export default function FlightEditModal({
     setLoading(true);
 
     try {
-      // Resolve the airport timezones for the canonical-UTC submit contract.
-      // Falls back to the user's display timezone if the airport record has no
-      // IANA name.
-      const userTz = useSettingsStore.getState().display?.timezone || "UTC";
-      const depCode = flight.depIata || flight.depIcao;
-      const arrCode = flight.arrIata || flight.arrIcao;
-      const [depAirport, arrAirport] = await Promise.all([
-        depCode ? airportsApi.getByCode(depCode).catch(() => null) : Promise.resolve(null),
-        arrCode ? airportsApi.getByCode(arrCode).catch(() => null) : Promise.resolve(null),
-      ]);
-      const depTz = depAirport?.timezone || userTz;
-      const arrTz = arrAirport?.timezone || userTz;
+      // Pair each wall-clock with the timezone its input was rendered against,
+      // for the canonical-UTC submit contract. Once hydrated the inputs are
+      // airport-local (depTz/arrTz); before that they still hold the
+      // browser-local seed, so fall back to the actual browser timezone — that
+      // way a no-op save reproduces the exact same UTC instant either way.
+      const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone || userTz;
+      const submitDepTz = hydratedRef.current ? depTz : browserTz;
+      const submitArrTz = hydratedRef.current ? arrTz : browserTz;
 
       const updates: Partial<FlightInput> = {
         airline: formData.airline || undefined,
@@ -217,9 +269,9 @@ export default function FlightEditModal({
           : [],
         receiptUrl: formData.receiptUrl || undefined,
         departureLocal: formData.departureTime || undefined,
-        depTimezone: formData.departureTime ? depTz : undefined,
+        depTimezone: formData.departureTime ? submitDepTz : undefined,
         arrivalLocal: formData.arrivalTime || undefined,
-        arrTimezone: formData.arrivalTime ? arrTz : undefined,
+        arrTimezone: formData.arrivalTime ? submitArrTz : undefined,
       };
 
       await onSave(flight.id, updates);
