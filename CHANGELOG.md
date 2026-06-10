@@ -4,6 +4,18 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-rc.4] - 2026-06-10 (Release Candidate)
+
+### Fixed
+- **The map could still drop a flight on very large accounts.** The rc.3
+  fix paginates the full flight set, but the backend ordered each page by
+  `departureTime` alone — a column that is nullable and not unique. At a
+  500-flight page boundary, rows sharing a timestamp (or the cluster of
+  flights with no timestamp at all) could be reordered between requests and
+  silently skipped or drawn twice. Both the paginated flight list and the
+  map's `/geo` feed now sort with a stable `id` tie-breaker, so every
+  flight is loaded exactly once regardless of account size.
+
 ## [2.0.0-rc.3] - 2026-06-09 (Release Candidate)
 
 ### Fixed
