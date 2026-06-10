@@ -514,7 +514,10 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     const [flights, total] = await Promise.all([
       prisma.flight.findMany({
         where,
-        orderBy: { departureTime: 'desc' },
+        // Deterministic tie-breaker: departureTime is nullable and not unique,
+        // so paginating on it alone (skip/take) can skip or duplicate rows at
+        // page boundaries. The id keeps the total order stable.
+        orderBy: [{ departureTime: 'desc' }, { id: 'asc' }],
         skip: query.offset,
         take,
         include: {
@@ -600,7 +603,11 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
 
     const flights = await prisma.flight.findMany({
       where,
-      orderBy: { departureTime: 'desc' },
+      // Deterministic tie-breaker: departureTime is nullable and not unique, so
+      // paginating getAllGeoJSON on it alone would skip/duplicate rows at the
+      // 500-row page boundaries. The id keeps the total order stable, so every
+      // flight is plotted exactly once across all pages.
+      orderBy: [{ departureTime: 'desc' }, { id: 'asc' }],
       skip: query.offset,
       take: query.limit,
     });

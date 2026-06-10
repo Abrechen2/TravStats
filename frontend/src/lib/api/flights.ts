@@ -46,13 +46,13 @@ export const flightsApi = {
   getAllGeoJSON: async (filters?: FlightFilters): Promise<GeoJSONFeatureCollection> => {
     const PAGE = 500;
     const MAX_PAGES = 100; // safety bound (up to 50k flights)
-    let features: GeoJSONFeatureCollection["features"] = [];
+    const features: GeoJSONFeatureCollection["features"] = [];
     for (let page = 0; page < MAX_PAGES; page++) {
       const { data } = await api.get<GeoJSONFeatureCollection>("/flights/geo", {
         params: { ...filters, limit: PAGE, offset: page * PAGE },
       });
       const batch = data.features ?? [];
-      features = [...features, ...batch];
+      features.push(...batch);
       if (batch.length < PAGE) break;
     }
     return { type: "FeatureCollection", features };
