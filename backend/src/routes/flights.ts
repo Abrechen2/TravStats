@@ -189,7 +189,9 @@ const buildFlightWhere = (
   }
 
   // Status (allow multiple selections, explicit empty means no results)
-  const statuses = splitMultiValue(query.status) as Array<'scheduled' | 'flown' | 'cancelled'>;
+  const statuses = splitMultiValue(query.status) as Array<
+    'scheduled' | 'flown' | 'cancelled' | 'historical' | 'duplicated'
+  >;
   if (Array.isArray(query.status) && query.status.length === 0) {
     noResults = true;
   } else if (statuses.length === 1) {

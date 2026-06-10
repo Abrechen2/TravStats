@@ -139,17 +139,20 @@ export default function Filters({
       filters.airline = [...selectedAirlines];
     }
 
-    // Status filter
-    const statuses: Array<"scheduled" | "flown" | "cancelled"> = [];
-    if (showFlown) statuses.push("flown");
-    if (showScheduled) statuses.push("scheduled");
-    if (showCancelled) statuses.push("cancelled");
+    // Status filter. Only flown/scheduled/cancelled have UI toggles;
+    // `historical` and `duplicated` are first-class statuses with no toggle,
+    // so they must stay visible regardless of the toggle state — otherwise a
+    // partial selection silently hides legitimate flights. We always append
+    // them to any status allowlist we send. All three toggles on => omit the
+    // filter entirely (everything shows).
+    const ALWAYS_VISIBLE: Array<"historical" | "duplicated"> = ["historical", "duplicated"];
+    const toggled: Array<"scheduled" | "flown" | "cancelled"> = [];
+    if (showFlown) toggled.push("flown");
+    if (showScheduled) toggled.push("scheduled");
+    if (showCancelled) toggled.push("cancelled");
 
-    if (statuses.length > 0 && statuses.length < 3) {
-      filters.status = statuses;
-    } else if (statuses.length === 0) {
-      // Explicitly send empty array so backend can return zero results
-      filters.status = [];
+    if (toggled.length < 3) {
+      filters.status = [...toggled, ...ALWAYS_VISIBLE];
     }
 
     // Route count (frontend only, not sent to backend) — only emit on map-enabled pages

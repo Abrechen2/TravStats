@@ -393,7 +393,7 @@ export interface FlightFilters {
     | "flown"
     | "cancelled"
     | "historical"
-    | Array<"scheduled" | "flown" | "cancelled" | "historical">;
+    | Array<"scheduled" | "flown" | "cancelled" | "historical" | "duplicated">;
   category?: "business" | "private" | "vacation";
   tags?: string[];
   minPrice?: number;
