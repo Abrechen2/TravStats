@@ -4,6 +4,56 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-rc.5] - 2026-06-10 (Release Candidate)
+
+Full V2 feature audit across both domains — closes a batch of usability
+gaps, mostly in the new cruise module. No schema change.
+
+### Added
+- **Pick which trip the journey map shows.** Journey mode rendered an
+  arbitrary first trip with no way to choose another; it now offers a
+  trip selector (with a hint when no cross-domain trips exist).
+- **Fix unmatched ports during cruise import.** Ports the parser couldn't
+  match were downgraded to sea days and could only be corrected after
+  saving. The import preview now lets you pick the right port per stop
+  before saving.
+- **Delete a cruise.** The cruise detail page now has a delete action
+  (with confirmation) — previously a mis-imported cruise was stuck.
+
+### Fixed
+- **The flight status filter hid historical and duplicated flights.**
+  Unchecking any one status (flown/scheduled/cancelled) silently dropped
+  every historical/duplicated flight; those two statuses now stay visible.
+- **Editing a flight could shift its stored time.** The edit modal showed
+  times in the browser's timezone but saved them as airport-local, so
+  opening and saving without changing anything drifted the departure /
+  arrival when the two timezones differed. Times are now consistently
+  airport-local and round-trip losslessly.
+- **The cruise stops editor showed blank ports when editing.** The selected
+  port is now shown for each existing stop.
+- **Your own flight API key was labeled "Shared".** The provider card now
+  reads the correct per-provider key status.
+- **Cruise import failures were opaque.** The real cause (e.g. Ollama not
+  reachable) is now surfaced instead of a generic "parsing failed".
+- **Change-password accepted too-short passwords.** The modal now enforces
+  the backend's 8-character minimum with specific error messages.
+- **English users saw stray German labels** (flight-row tooltips, scanner
+  steps) and an unstyled duplicate-flight dialog — both fixed.
+
+### Changed
+- **Cruise create opens straight to the form.** Removed the fake
+  email-import chooser (a dead-end stub); real email/PDF import stays on
+  the cruise list page.
+- **Removed the no-op "Require user flight API keys" admin toggle** — it
+  had no backend behaviour.
+- The in-map visualization control is hidden in the airport-frequency and
+  journey modes so it can't contradict the toolbar.
+
+### Tooling
+- Dead-code cleanup (retired 3D map-mode layers + their i18n keys),
+  corrected stale cruise-routing notes in CLAUDE.md, and routed the map's
+  cruise-overlay gate through the domain-gating API.
+
 ## [2.0.0-rc.4] - 2026-06-10 (Release Candidate)
 
 ### Fixed
