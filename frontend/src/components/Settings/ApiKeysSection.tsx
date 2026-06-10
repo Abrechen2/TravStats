@@ -98,6 +98,7 @@ export default function ApiKeysSection({
               getKeyUrl="https://airlabs.co/account"
               isShared={apiKeysStatus?.airlabs.isShared || false}
               hasAccess={apiKeysStatus?.airlabs.hasAccess || false}
+              hasOwnKey={apiKeysStatus?.airlabs.hasKey || false}
               value={apiKeys.airlabsApiKey}
               quota={quotaFor("airlabs")}
               onChange={(value) => onSetApiKeys({ ...apiKeys, airlabsApiKey: value })}
@@ -110,6 +111,7 @@ export default function ApiKeysSection({
               getKeyUrl="https://aviationstack.com/signup"
               isShared={apiKeysStatus?.aviationstack.isShared || false}
               hasAccess={apiKeysStatus?.aviationstack.hasAccess || false}
+              hasOwnKey={apiKeysStatus?.aviationstack.hasKey || false}
               value={apiKeys.aviationstackApiKey}
               quota={quotaFor("aviationstack")}
               onChange={(value) => onSetApiKeys({ ...apiKeys, aviationstackApiKey: value })}
@@ -122,6 +124,7 @@ export default function ApiKeysSection({
               getKeyUrl="https://rapidapi.com/aedbx-aedbx/api/aerodatabox/pricing"
               isShared={apiKeysStatus?.aerodatabox.isShared || false}
               hasAccess={apiKeysStatus?.aerodatabox.hasAccess || false}
+              hasOwnKey={apiKeysStatus?.aerodatabox.hasKey || false}
               value={apiKeys.aerodataboxApiKey}
               quota={quotaFor("aerodatabox")}
               capabilities={["historical365"]}
@@ -136,6 +139,7 @@ export default function ApiKeysSection({
               getKeyUrl="https://opensky-network.org/accounts/register"
               isShared={apiKeysStatus?.opensky.isShared || false}
               hasAccess={apiKeysStatus?.opensky.hasAccess || false}
+              hasOwnKey={apiKeysStatus?.opensky.hasKey || false}
               quota={quotaFor("opensky")}
               openskyFields={{
                 clientId: apiKeys.openskyClientId,

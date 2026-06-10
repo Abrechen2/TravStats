@@ -9,6 +9,8 @@ import TripTimeline, { type TimelineEvent } from "../components/Trip/TripTimelin
 import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
 import { formatDateInTimezone } from "../lib/dateUtils";
+import { useToastStore } from "../store/toastStore";
+import { logger } from "../lib/logger";
 
 const fmtDate = (iso: string | null): string => {
   if (!iso) return "—";
@@ -23,6 +25,24 @@ export default function CruiseDetailPage(): JSX.Element {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<boolean>(false);
+  const [confirmingDelete, setConfirmingDelete] = useState<boolean>(false);
+  const [deleting, setDeleting] = useState<boolean>(false);
+  const addToast = useToastStore((s) => s.addToast);
+
+  const handleDelete = async (): Promise<void> => {
+    if (!id) return;
+    setDeleting(true);
+    try {
+      await cruiseApi.remove(id);
+      addToast("success", t("detail.deleteSuccess"));
+      navigate("/cruises");
+    } catch (err: unknown) {
+      logger.error("CruiseDetailPage: delete failed", err);
+      addToast("error", t("detail.deleteError"));
+      setDeleting(false);
+      setConfirmingDelete(false);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -138,7 +158,14 @@ export default function CruiseDetailPage(): JSX.Element {
               onClick={() => setEditing(true)}
               className="rounded-md bg-[var(--accent)] px-3 py-1 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)]"
             >
-              Edit
+              {t("detail.edit")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              className="rounded-md border border-[var(--danger)]/50 px-3 py-1 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger)]/10"
+            >
+              {t("detail.delete")}
             </button>
           </div>
         </div>
@@ -249,6 +276,41 @@ export default function CruiseDetailPage(): JSX.Element {
               setEditing(false);
             }}
           />
+        )}
+
+        {confirmingDelete && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="w-full max-w-md rounded-lg border border-[var(--color-border)] bg-[var(--bg-elevated)] p-6 shadow-xl">
+              <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                {t("detail.deleteConfirmTitle")}
+              </h3>
+              <p className="mt-2 text-sm text-[var(--text-muted)]">
+                {t("detail.deleteConfirmMessage")}
+              </p>
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(false)}
+                  disabled={deleting}
+                  className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50"
+                >
+                  {t("detail.deleteCancel")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDelete()}
+                  disabled={deleting}
+                  className="rounded-md bg-[var(--danger)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  {t("detail.deleteConfirm")}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

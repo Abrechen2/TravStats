@@ -11,7 +11,6 @@ export interface GlobalApiKeys {
   globalOpenskyUsername?: string;
   globalOpenskyPassword?: string;
   allowUserFlightApiKeys: boolean;
-  requireUserFlightApiKeys: boolean;
 }
 
 export interface ParserApiKeySettings {
@@ -222,27 +221,6 @@ export default function GlobalApiKeysManager({
                       </span>
                       <p className="text-sm text-[var(--text-muted)]">
                         {t("admin:globalApiKeys.allowUserFlightApiKeysDescription")}
-                      </p>
-                    </div>
-                  </label>
-                  <label className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={globalApiKeys.requireUserFlightApiKeys ?? false}
-                      onChange={(e) =>
-                        onGlobalApiKeysChange({
-                          ...globalApiKeys,
-                          requireUserFlightApiKeys: e.target.checked,
-                        })
-                      }
-                      className="checkbox mt-1"
-                    />
-                    <div>
-                      <span className="font-medium text-[var(--text-primary)]">
-                        {t("admin:globalApiKeys.requireUserFlightApiKeys")}
-                      </span>
-                      <p className="text-sm text-[var(--text-muted)]">
-                        {t("admin:globalApiKeys.requireUserFlightApiKeysDescription")}
                       </p>
                     </div>
                   </label>

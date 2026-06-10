@@ -573,8 +573,6 @@
     "requireUserParserApiKeysDescription": "Zwinge Benutzer, eigene API-Schlüssel bereitzustellen. Globale Schlüssel werden nicht verwendet. Nur kostenlose Parser (Ollama, Tesseract, Regex) funktionieren ohne Benutzer-Schlüssel.",
     "allowUserFlightApiKeys": "Benutzern erlauben, eigene Flug-API-Schlüssel zu setzen",
     "allowUserFlightApiKeysDescription": "Benutzer können eigene Flugdaten-API-Schlüssel eingeben. Ihre Schlüssel haben Vorrang vor globalen Schlüsseln.",
-    "requireUserFlightApiKeys": "Von Benutzern verlangen, eigene Flug-API-Schlüssel bereitzustellen",
-    "requireUserFlightApiKeysDescription": "Zwinge Benutzer, eigene Flugdaten-API-Schlüssel bereitzustellen. Globale Schlüssel werden nicht verwendet.",
     "save": "Alle API-Schlüssel speichern",
     "saving": "Wird gespeichert...",
     "saved": "API-Schlüssel erfolgreich gespeichert",

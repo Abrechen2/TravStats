@@ -48,7 +48,7 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
   };
 
   const handlePortChange = (index: number, port: Port): void => {
-    update(index, { portId: port.id });
+    update(index, { portId: port.id, port });
   };
 
   return (
@@ -106,7 +106,10 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
           </label>
           {!stop.isAtSea && (
             <>
-              <PortPicker value={null} onChange={(p): void => handlePortChange(i, p)} />
+              <PortPicker
+                value={stop.port ?? null}
+                onChange={(p): void => handlePortChange(i, p)}
+              />
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <input
                   type="datetime-local"

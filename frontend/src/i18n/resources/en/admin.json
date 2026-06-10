@@ -573,8 +573,6 @@
     "requireUserParserApiKeysDescription": "Force users to provide their own API keys. Global keys will not be used. Only free parsers (Ollama, Tesseract, Regex) will work without user keys.",
     "allowUserFlightApiKeys": "Allow users to set their own flight API keys",
     "allowUserFlightApiKeysDescription": "Users can enter their own flight lookup API keys. Their keys will take precedence over global keys.",
-    "requireUserFlightApiKeys": "Require users to provide their own flight API keys",
-    "requireUserFlightApiKeysDescription": "Force users to provide their own flight lookup API keys. Global keys will not be used.",
     "save": "Save All API Keys",
     "saving": "Saving...",
     "saved": "API keys saved successfully",

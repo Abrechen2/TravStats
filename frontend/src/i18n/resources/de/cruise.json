@@ -18,7 +18,15 @@
     "route": "Route",
     "cabin": "Kabine",
     "costs": "Kosten",
-    "meta": "Notizen & Tags"
+    "meta": "Notizen & Tags",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "deleteConfirmTitle": "Kreuzfahrt löschen?",
+    "deleteConfirmMessage": "Diese Kreuzfahrt wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteConfirm": "Endgültig löschen",
+    "deleteCancel": "Abbrechen",
+    "deleteSuccess": "Kreuzfahrt gelöscht",
+    "deleteError": "Kreuzfahrt konnte nicht gelöscht werden"
   },
   "field": {
     "ship": "Schiff",
@@ -68,29 +76,6 @@
     "add_custom_port": "Neuen Hafen anlegen"
   },
   "map": { "layer": "Kreuzfahrten" },
-  "chooser": {
-    "title": "Wie möchtest du die Kreuzfahrt erfassen?",
-    "email": {
-      "label": "Buchungs-E-Mail importieren",
-      "description": "Lade deine Buchungsbestätigung von AIDA, TUI Cruises oder Costa hoch — die Kreuzfahrt wird automatisch erfasst.",
-      "infoLine": "Reederei, Schiff, Häfen und Termine werden übernommen",
-      "badge": "Bald verfügbar",
-      "cta": "E-Mail hochladen"
-    },
-    "manual": {
-      "label": "Manuelle Eingabe",
-      "description": "Schiff, Häfen und Details selbst eintragen",
-      "cta": "Manuell erfassen"
-    },
-    "back": "← Zurück zur Auswahl"
-  },
-  "tabs": {
-    "emailParser": "E-Mail-Parser",
-    "manual": "Manuell",
-    "emailParserTitle": "Buchungs-E-Mail importieren",
-    "emailParserHint": "Das automatische Einlesen von Kreuzfahrt-Bestätigungen (AIDA, TUI Cruises, Costa …) kommt in einer der nächsten Versionen. Bitte Daten vorerst im Reiter „Manuell\" eintragen.",
-    "emailParserStub": "Kreuzfahrt-Parser – bald verfügbar"
-  },
   "filter": {
     "title": "Filter",
     "searchPlaceholder": "Suche nach Schiff oder Reederei …",
