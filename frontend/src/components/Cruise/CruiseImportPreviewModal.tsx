@@ -1,10 +1,12 @@
 import { useState } from "react";
 import type { JSX } from "react";
 import type { ParsedCruiseEntry } from "../../lib/api/parse";
+import type { Port } from "../../types";
 import { cruiseApi } from "../../lib/api/cruise";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
+import { PortPicker } from "./PortPicker";
 
 interface CruiseImportPreviewModalProps {
   entries: ParsedCruiseEntry[];
@@ -20,14 +22,42 @@ export function CruiseImportPreviewModal({
   const { t } = useTranslation(["cruise", "common"]);
   const addToast = useToastStore((s) => s.addToast);
   const [saving, setSaving] = useState(false);
+  // Editable copy: the user can resolve ports the parser couldn't match
+  // (which the resolver downgraded to sea days) before saving.
+  const [items, setItems] = useState<ParsedCruiseEntry[]>(entries);
+
+  // Upgrade an unmatched sea-day stop to a real port call and drop it from
+  // the entry's unmatched list.
+  const resolvePort = (entryIdx: number, dayNumber: number, port: Port): void => {
+    setItems((prev) =>
+      prev.map((entry, i) => {
+        if (i !== entryIdx) return entry;
+        const stops = (entry.input.stops ?? []).map((s) =>
+          s.dayNumber === dayNumber
+            ? { ...s, portId: port.id, port, isAtSea: false, excursionNote: undefined }
+            : s
+        );
+        return {
+          ...entry,
+          input: { ...entry.input, stops },
+          unmatchedPorts: entry.unmatchedPorts.filter((p) => p.dayNumber !== dayNumber),
+        };
+      })
+    );
+  };
 
   const handleSave = async (): Promise<void> => {
     setSaving(true);
     try {
-      for (const entry of entries) {
-        await cruiseApi.create(entry.input);
+      for (const entry of items) {
+        // Strip the UI-only `port` object the resolver/editor attaches.
+        const input = {
+          ...entry.input,
+          stops: entry.input.stops?.map(({ port: _port, ...rest }) => rest),
+        };
+        await cruiseApi.create(input);
       }
-      addToast("success", t("cruise:import.saved", { count: entries.length }));
+      addToast("success", t("cruise:import.saved", { count: items.length }));
       await onSaved();
     } catch (err: unknown) {
       logger.error("CruiseImportPreviewModal: save failed", err);
@@ -41,13 +71,17 @@ export function CruiseImportPreviewModal({
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-[var(--bg-surface)] p-6">
         <h2 className="mb-4 text-xl font-semibold text-[var(--text-primary)]">
-          {t("cruise:import.previewTitle", { count: entries.length })}
+          {t("cruise:import.previewTitle", { count: items.length })}
         </h2>
         <p className="mb-4 text-sm text-[var(--text-muted)]">{t("cruise:import.previewHint")}</p>
 
         <div className="space-y-4">
-          {entries.map((entry, idx) => (
-            <CruiseImportEntryCard key={idx} entry={entry} />
+          {items.map((entry, idx) => (
+            <CruiseImportEntryCard
+              key={idx}
+              entry={entry}
+              onResolvePort={(dayNumber, port) => resolvePort(idx, dayNumber, port)}
+            />
           ))}
         </div>
 
@@ -74,7 +108,13 @@ export function CruiseImportPreviewModal({
   );
 }
 
-function CruiseImportEntryCard({ entry }: { entry: ParsedCruiseEntry }): JSX.Element {
+function CruiseImportEntryCard({
+  entry,
+  onResolvePort,
+}: {
+  entry: ParsedCruiseEntry;
+  onResolvePort: (dayNumber: number, port: Port) => void;
+}): JSX.Element {
   const { t } = useTranslation(["cruise"]);
   const { input, shipMatched, unmatchedPorts } = entry;
   const stopCount = input.stops?.length ?? 0;
@@ -133,10 +173,19 @@ function CruiseImportEntryCard({ entry }: { entry: ParsedCruiseEntry }): JSX.Ele
 
       {unmatchedPorts.length > 0 && (
         <div className="mt-3 rounded border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-300">
-          <strong>{t("cruise:import.unmatchedTitle")}:</strong>{" "}
-          {unmatchedPorts.map((p) => `Tag ${p.dayNumber}: ${p.portName}`).join(", ")}
+          <strong>{t("cruise:import.unmatchedTitle")}:</strong>
           <div className="mt-1 text-[11px] text-amber-300/80">
             {t("cruise:import.unmatchedHint")}
+          </div>
+          <div className="mt-2 space-y-2">
+            {unmatchedPorts.map((p) => (
+              <div key={p.dayNumber}>
+                <div className="mb-1 text-[var(--text-muted)]">
+                  {t("cruise:stops.day")} {p.dayNumber}: {p.portName}
+                </div>
+                <PortPicker value={null} onChange={(port) => onResolvePort(p.dayNumber, port)} />
+              </div>
+            ))}
           </div>
         </div>
       )}

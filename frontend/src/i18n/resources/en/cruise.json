@@ -111,6 +111,6 @@
     "stopsLabel": "Stops",
     "stopsValue": "{{ports}} ports, {{seaDays}} sea days",
     "unmatchedTitle": "Unmatched ports",
-    "unmatchedHint": "These ports are not in the database and were marked as sea days for now. You can correct them in the editor."
+    "unmatchedHint": "These ports weren't found in the database and were marked as sea days for now. Pick the matching port below, or fix them later in the editor."
   }
 }

@@ -111,6 +111,6 @@
     "stopsLabel": "Stopps",
     "stopsValue": "{{ports}} Häfen, {{seaDays}} Seetage",
     "unmatchedTitle": "Häfen ohne Treffer",
-    "unmatchedHint": "Diese Häfen sind in der Datenbank nicht verfügbar und wurden vorerst als Seetage markiert. Im Editor kannst du sie korrigieren."
+    "unmatchedHint": "Diese Häfen wurden in der Datenbank nicht gefunden und vorerst als Seetage markiert. Wähle unten den passenden Hafen, oder korrigiere sie später im Editor."
   }
 }
