@@ -21,6 +21,7 @@ import SpecialFlightFilter, {
   type SpecialTypeFilter,
 } from "../components/specialFlights/SpecialFlightFilter";
 import ConfirmModal from "../components/Training/ConfirmModal";
+import { TripFilterBar } from "../components/Flights/TripFilterBar";
 import { useToastStore } from "../store/toastStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { API_LIMITS } from "../lib/constants";
@@ -322,39 +323,8 @@ export default function FlightsTablePage(): JSX.Element {
             style={{ border: "1px solid var(--color-border)" }}
           >
             <>
-                {/* Trip filter chips */}
-                <div
-                  className="flex flex-wrap gap-2 px-4 py-2"
-                  style={{ borderBottom: "1px solid var(--color-border)" }}
-                >
-                  {(["all", "with", "without"] as const).map((f) => (
-                    <button
-                      key={f}
-                      onClick={() => setTripFilter(f)}
-                      className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-                        tripFilter === f
-                          ? "bg-[var(--accent)]/20 border-[var(--accent)]/50 text-[var(--accent)]"
-                          : "border-[var(--color-border)] text-[var(--text-muted)]"
-                      }`}
-                    >
-                      {t(`trips:filter.${f}`)}
-                    </button>
-                  ))}
-                  {trips.map((trip) => (
-                    <button
-                      key={trip.id}
-                      onClick={() => setTripFilter(tripFilter === trip.id ? "all" : trip.id)}
-                      className="px-3 py-1 rounded-full text-xs border transition-colors"
-                      style={{
-                        background: tripFilter === trip.id ? `${trip.color}22` : "transparent",
-                        borderColor: `${trip.color}55`,
-                        color: trip.color,
-                      }}
-                    >
-                      ● {trip.name}
-                    </button>
-                  ))}
-                </div>
+                {/* Trip filter — quick chips + searchable popover */}
+                <TripFilterBar trips={trips} value={tripFilter} onChange={setTripFilter} />
 
                 {/* Special-type filter chips */}
                 <SpecialFlightFilter value={specialFilter} onChange={setSpecialFilter} />

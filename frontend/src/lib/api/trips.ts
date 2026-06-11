@@ -63,6 +63,16 @@ export interface CreateBookingInput {
   flightIds?: string[];
 }
 
+/** A trip that qualifies for dissolution (≤2 flights, no other content). */
+export interface MicroTripCandidate {
+  id: string;
+  name: string;
+  color: string;
+  flightCount: number;
+  startDate: string | null;
+  endDate: string | null;
+}
+
 export const tripsApi = {
   getAll: async (): Promise<Trip[]> => {
     const { data } = await api.get<{ trips: Trip[] }>("/trips");
@@ -95,6 +105,32 @@ export const tripsApi = {
   createBooking: async (input: CreateBookingInput): Promise<Booking> => {
     const { data } = await api.post<{ booking: Booking }>("/trips/bookings", input);
     return data.booking;
+  },
+
+  /* ─────────── Cleanup (micro-trip dissolve + merge) ─────────── */
+
+  getMicroTripCandidates: async (): Promise<MicroTripCandidate[]> => {
+    const { data } = await api.get<{ candidates: MicroTripCandidate[] }>("/trips/cleanup/micro");
+    return data.candidates;
+  },
+
+  dissolveMicroTrips: async (
+    tripIds: string[]
+  ): Promise<{ dissolved: number; skipped: number }> => {
+    const { data } = await api.post<{ dissolved: number; skipped: number }>(
+      "/trips/cleanup/dissolve",
+      { tripIds }
+    );
+    return data;
+  },
+
+  merge: async (input: {
+    tripIds: string[];
+    name?: string;
+    targetId?: string;
+  }): Promise<{ tripId: string; merged: number }> => {
+    const { data } = await api.post<{ tripId: string; merged: number }>("/trips/merge", input);
+    return data;
   },
 
   detect: async (

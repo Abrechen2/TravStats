@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import type { Trip, TripCategory, TripStatus } from "../../types";
 import TripCard from "./TripCard";
 import TripModal from "./TripModal";
+import TripCleanupModal from "./TripCleanupModal";
 import DetectTripsBanner from "./DetectTripsBanner";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
@@ -41,6 +42,12 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Trip | null>(null);
+  const [showCleanup, setShowCleanup] = useState(false);
+
+  // Merge mode: clicking a card toggles selection instead of opening it.
+  const [mergeMode, setMergeMode] = useState(false);
+  const [mergeSelection, setMergeSelection] = useState<Set<string>>(new Set());
+  const [showMergeConfirm, setShowMergeConfirm] = useState(false);
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
@@ -61,6 +68,36 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
 
   const handleOpen = (trip: Trip): void => {
     navigate(`/trips/${trip.id}`);
+  };
+
+  const toggleMergeSelection = (trip: Trip): void => {
+    setMergeSelection((prev) => {
+      const next = new Set(prev);
+      if (next.has(trip.id)) {
+        next.delete(trip.id);
+      } else {
+        next.add(trip.id);
+      }
+      return next;
+    });
+  };
+
+  const exitMergeMode = (): void => {
+    setMergeMode(false);
+    setMergeSelection(new Set());
+    setShowMergeConfirm(false);
+  };
+
+  const handleMerge = async (name: string): Promise<void> => {
+    const tripIds = [...mergeSelection];
+    try {
+      await tripsApi.merge({ tripIds, name });
+      addToast("success", t("trips:merge.done"));
+      exitMergeMode();
+      onTripsChange();
+    } catch {
+      addToast("error", t("trips:merge.error"));
+    }
   };
 
   // Sort: planned first, then in_progress, then completed by start date desc.
@@ -117,14 +154,63 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
               <span style={{ opacity: 0.7 }}> / {trips.length}</span>
             )}
           </p>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
-            style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
-          >
-            ＋ {t("trips:createTrip")}
-          </button>
+          <div className="flex items-center gap-2">
+            {trips.length >= 2 && !mergeMode && (
+              <>
+                <button
+                  onClick={() => setShowCleanup(true)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                  style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
+                >
+                  {t("trips:cleanup.button")}
+                </button>
+                <button
+                  onClick={() => setMergeMode(true)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                  style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
+                >
+                  ⇶ {t("trips:merge.button")}
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
+            >
+              ＋ {t("trips:createTrip")}
+            </button>
+          </div>
         </div>
+
+        {mergeMode && (
+          <div
+            className="flex items-center gap-3 mb-4 px-4 py-2.5 rounded-xl text-xs flex-wrap"
+            style={{
+              background: "var(--bg-surface)",
+              border: "1px solid var(--accent)",
+              color: "var(--text-primary)",
+            }}
+          >
+            <span>{t("trips:merge.hint")}</span>
+            <span className="font-semibold" style={{ color: "var(--accent)" }}>
+              {t("trips:merge.selected", { count: mergeSelection.size })}
+            </span>
+            <div className="ml-auto flex gap-2">
+              <button onClick={exitMergeMode} style={{ color: "var(--text-muted)" }}>
+                {t("trips:merge.exit")}
+              </button>
+              <button
+                onClick={() => setShowMergeConfirm(true)}
+                disabled={mergeSelection.size < 2}
+                className="px-3 py-1 rounded-lg font-medium disabled:opacity-50"
+                style={{ background: "var(--accent)", color: "#0d1117" }}
+              >
+                ⇶ {t("trips:merge.confirm")}
+              </button>
+            </div>
+          </div>
+        )}
 
         {showFilters && (
           <div className="flex items-center gap-2 mb-5 flex-wrap">
@@ -192,13 +278,27 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map((trip) => (
-              <TripCard
+              <div
                 key={trip.id}
-                trip={trip}
-                onOpen={handleOpen}
-                onEdit={setEditingTrip}
-                onDelete={setDeleteTarget}
-              />
+                className="rounded-xl"
+                style={
+                  mergeMode
+                    ? {
+                        outline: mergeSelection.has(trip.id)
+                          ? "2px solid var(--accent)"
+                          : "2px solid transparent",
+                        outlineOffset: 2,
+                      }
+                    : undefined
+                }
+              >
+                <TripCard
+                  trip={trip}
+                  onOpen={mergeMode ? toggleMergeSelection : handleOpen}
+                  onEdit={setEditingTrip}
+                  onDelete={setDeleteTarget}
+                />
+              </div>
             ))}
             {/* New trip placeholder card — only on the unfiltered list */}
             {statusFilter === "all" && categoryFilter === "all" && search === "" && (
@@ -225,6 +325,21 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
           </div>
         )}
       </div>
+
+      {showCleanup && (
+        <TripCleanupModal onClose={() => setShowCleanup(false)} onChanged={onTripsChange} />
+      )}
+
+      {showMergeConfirm && (
+        <MergeConfirmModal
+          defaultName={
+            trips.find((trip) => trip.id === [...mergeSelection][0])?.name ?? ""
+          }
+          count={mergeSelection.size}
+          onCancel={() => setShowMergeConfirm(false)}
+          onConfirm={(name) => void handleMerge(name)}
+        />
+      )}
 
       {(showCreateModal || editingTrip !== null) && (
         <TripModal
@@ -283,6 +398,85 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function MergeConfirmModal({
+  defaultName,
+  count,
+  onCancel,
+  onConfirm,
+}: {
+  defaultName: string;
+  count: number;
+  onCancel: () => void;
+  onConfirm: (name: string) => void;
+}): JSX.Element {
+  const { t } = useTranslation(["trips"]);
+  const [name, setName] = useState(defaultName);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.6)" }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onCancel();
+      }}
+    >
+      <div
+        className="w-full max-w-sm rounded-xl shadow-2xl p-6 space-y-4"
+        role="dialog"
+        aria-modal="true"
+        style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+      >
+        <div>
+          <h2 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
+            {t("trips:merge.title")} ({t("trips:merge.selected", { count })})
+          </h2>
+          <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+            {t("trips:merge.intro")}
+          </p>
+        </div>
+        <div>
+          <label
+            className="block text-xs mb-1"
+            htmlFor="merge-trip-name"
+            style={{ color: "var(--text-muted)" }}
+          >
+            {t("trips:merge.nameLabel")}
+          </label>
+          <input
+            id="merge-trip-name"
+            autoFocus
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full rounded-lg px-3 py-2 text-sm"
+            style={{
+              background: "var(--bg-base)",
+              border: "1px solid var(--color-border)",
+              color: "var(--text-primary)",
+            }}
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 rounded-lg text-sm"
+            style={{ color: "var(--text-muted)" }}
+          >
+            {t("trips:modal.cancel")}
+          </button>
+          <button
+            onClick={() => onConfirm(name.trim() || defaultName)}
+            className="px-4 py-2 rounded-lg text-sm font-medium"
+            style={{ background: "var(--accent)", color: "#0d1117" }}
+          >
+            ⇶ {t("trips:merge.confirm")}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

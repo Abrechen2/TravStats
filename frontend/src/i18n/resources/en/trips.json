@@ -80,7 +80,38 @@
   "filter": {
     "all": "All",
     "with": "With Journey",
-    "without": "Without Journey"
+    "without": "Without Journey",
+    "pick": "Filter by journey…",
+    "search": "Search journeys…",
+    "noResults": "No journeys found",
+    "undated": "Undated"
+  },
+  "cleanup": {
+    "button": "🧹 Clean up",
+    "title": "Dissolve micro-journeys",
+    "intro": "These journeys consist of a single booking (max. 2 flights) and contain nothing else. Dissolving removes only the journey container — all flights are kept.",
+    "empty": "No micro-journeys found — all tidy.",
+    "flightCount_one": "{{count}} flight",
+    "flightCount_other": "{{count}} flights",
+    "selectAll": "Select all",
+    "selectNone": "Clear selection",
+    "confirm_one": "Dissolve {{count}} journey",
+    "confirm_other": "Dissolve {{count}} journeys",
+    "done": "{{count}} journeys dissolved — flights are kept",
+    "error": "Dissolve failed"
+  },
+  "merge": {
+    "button": "Merge",
+    "exit": "Exit selection",
+    "hint": "Click journeys to select them for merging",
+    "selected_one": "{{count}} journey selected",
+    "selected_other": "{{count}} journeys selected",
+    "title": "Merge journeys",
+    "nameLabel": "Name of the merged journey",
+    "intro": "All flights, cruises, stops, journal entries and photos move into one journey. The remaining journey containers are removed.",
+    "confirm": "Merge",
+    "done": "Journeys merged",
+    "error": "Merge failed"
   },
   "detail": {
     "backToList": "Back to Journeys",
