@@ -4,6 +4,27 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-rc.6] - 2026-06-11 (Release Candidate)
+
+### Added
+- **Trips are journeys now, not bookings.** Trip auto-detection only
+  proposes real multi-leg journeys (3+ flights) — a plain out-and-back
+  booking stays trip-less. A new "Clean up" tool on the Trips page
+  dissolves legacy one-booking micro-trips (the flights are kept), and
+  a merge mode combines several trips into one real journey.
+- **Compact trip filter in the flight list.** The one-chip-per-trip row
+  (unusable with many trips) is replaced by quick chips for the newest
+  trips plus a searchable, year-grouped "Filter by trip" popover.
+
+### Fixed
+- **Disabled domains no longer leak content.** With the cruise domain
+  switched off, cruises still appeared on the dashboard "All" map, in
+  the cross-domain statistics, on trip detail pages and maps, and behind
+  the dimmed cruise tab (including its controls). Disabled domains are
+  now fully hidden — their data is not even fetched; trip details show a
+  "N cruise segments hidden" hint and disabled dashboard tabs show an
+  enable-in-settings stub instead.
+
 ## [2.0.0-rc.5] - 2026-06-10 (Release Candidate)
 
 Full V2 feature audit across both domains — closes a batch of usability
