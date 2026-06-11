@@ -49,7 +49,7 @@ export function DashboardFilterDropdown({
   open,
   onClose,
 }: DashboardFilterDropdownProps): JSX.Element | null {
-  const { t } = useTranslation(["dashboard"]);
+  const { t } = useTranslation(["dashboard", "common"]);
   const containerRef = useRef<HTMLDivElement>(null);
   const { isEnabled } = useEnabledDomains();
 
@@ -162,7 +162,7 @@ export function DashboardFilterDropdown({
                     fontWeight: active ? 600 : 400,
                   }}
                 >
-                  {t(descriptor.i18nKey)}
+                  {t(`common:${descriptor.i18nKey}`)}
                 </button>
               );
             })}

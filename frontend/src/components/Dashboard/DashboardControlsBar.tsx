@@ -25,7 +25,7 @@ export function DashboardControlsBar({
   onModeChange,
   onFilterOpen,
   onAdd,
-}: DashboardControlsBarProps): JSX.Element {
+}: DashboardControlsBarProps): JSX.Element | null {
   const { t } = useTranslation(["dashboard"]);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const modeRef = useRef<HTMLDivElement>(null);
@@ -57,6 +57,13 @@ export function DashboardControlsBar({
   const domainsHidden = AVAILABLE_DOMAINS.length - filterDomains.length;
   const domainsFiltered = domainsHidden > 0;
   const filterActive = yearActive || domainsFiltered;
+
+  // Domain-gating: a disabled domain's tab renders only the
+  // DomainDisabledNotice stub — mode/filter/add controls would re-open
+  // entry points into the disabled domain (e.g. "+ Kreuzfahrt hinzufügen").
+  if (tab !== "all" && !enabledDomains[tab as AddableDomain]) {
+    return null;
+  }
 
   return (
     <div
