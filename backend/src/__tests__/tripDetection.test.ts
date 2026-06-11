@@ -34,6 +34,15 @@ const f = (overrides: Partial<TestFlight> & Pick<TestFlight, "id">): TestFlight 
 });
 
 describe("tripDetectionService heuristics", () => {
+  describe("Rule of Three (MIN_TRIP_FLIGHTS)", () => {
+    it("requires 3 flights per proposal so single-booking round trips stay trip-less", () => {
+      // detectTrips() filters every heuristic stage by this constant —
+      // a plain out-and-back booking (2 legs) is a booking, not a
+      // journey, and must not flood the trip list with micro-trips.
+      expect(_internals.MIN_TRIP_FLIGHTS).toBe(3);
+    });
+  });
+
   describe("PNR clustering with 30-day span cap", () => {
     it("groups flights sharing a bookingReference", () => {
       const flights = [

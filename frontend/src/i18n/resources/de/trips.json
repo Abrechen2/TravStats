@@ -80,7 +80,38 @@
   "filter": {
     "all": "Alle",
     "with": "Mit Reise",
-    "without": "Ohne Reise"
+    "without": "Ohne Reise",
+    "pick": "Reise filtern…",
+    "search": "Reise suchen…",
+    "noResults": "Keine Reise gefunden",
+    "undated": "Ohne Datum"
+  },
+  "cleanup": {
+    "button": "🧹 Aufräumen",
+    "title": "Mikro-Reisen auflösen",
+    "intro": "Diese Reisen bestehen nur aus einer einzelnen Buchung (max. 2 Flüge) und enthalten sonst keine Inhalte. Beim Auflösen wird nur der Reise-Container entfernt — alle Flüge bleiben erhalten.",
+    "empty": "Keine Mikro-Reisen gefunden — alles aufgeräumt.",
+    "flightCount_one": "{{count}} Flug",
+    "flightCount_other": "{{count}} Flüge",
+    "selectAll": "Alle auswählen",
+    "selectNone": "Auswahl aufheben",
+    "confirm_one": "{{count}} Reise auflösen",
+    "confirm_other": "{{count}} Reisen auflösen",
+    "done": "{{count}} Reisen aufgelöst — die Flüge bleiben erhalten",
+    "error": "Auflösen fehlgeschlagen"
+  },
+  "merge": {
+    "button": "Zusammenführen",
+    "exit": "Auswahl beenden",
+    "hint": "Reisen anklicken, um sie für das Zusammenführen auszuwählen",
+    "selected_one": "{{count}} Reise ausgewählt",
+    "selected_other": "{{count}} Reisen ausgewählt",
+    "title": "Reisen zusammenführen",
+    "nameLabel": "Name der zusammengeführten Reise",
+    "intro": "Alle Flüge, Kreuzfahrten, Stopps, Tagebuch-Einträge und Fotos wandern in eine Reise. Die übrigen Reise-Container werden entfernt.",
+    "confirm": "Zusammenführen",
+    "done": "Reisen zusammengeführt",
+    "error": "Zusammenführen fehlgeschlagen"
   },
   "detail": {
     "backToList": "Zurück zu Reisen",

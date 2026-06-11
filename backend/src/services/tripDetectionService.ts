@@ -3,6 +3,13 @@
  * flights and groups them into trips. Designed for bulk-import flows
  * (xlsx, CSV, AI-agent batch) and as a recovery path for legacy data.
  *
+ * Philosophy (since the trip-selection overhaul): a Trip is a container
+ * for a real JOURNEY, not a mirror of a booking. A plain out-and-back
+ * booking (2 legs) does not need a trip — flights are first-class
+ * without one. Every heuristic therefore only proposes clusters of at
+ * least MIN_TRIP_FLIGHTS (3) flights ("Rule of Three"); smaller groups
+ * stay trip-less. Users can always create a trip manually.
+ *
  * Heuristic stack (in order — first match wins per flight):
  *   1. PNR cluster — flights sharing `bookingReference`, group span <= 30
  *      days. The 30-day cap drops frequent-flyer-IDs (e.g. literal
@@ -44,6 +51,10 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const PNR_MAX_SPAN_DAYS = 30;
 const CONTINUITY_GAP_DAYS = 7;
 const OPEN_JAW_KM = 200; // arr-IATA → next-dep-IATA same metro area
+// "Rule of Three": a simple out-and-back booking (2 legs) is a booking,
+// not a journey — never propose a trip for it. Only multi-leg clusters
+// (>= 3 flights) are journey-shaped enough to suggest a trip container.
+const MIN_TRIP_FLIGHTS = 3;
 
 interface FlightLite {
   id: string;
@@ -169,9 +180,9 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
   // Stage 1 — PNR cluster (auto-linkable)
   const pnrGroups = groupByPnr(flights);
   for (const [pnr, group] of pnrGroups) {
-    if (group.length < 2) continue;
+    if (group.length < MIN_TRIP_FLIGHTS) continue;
     const dedup = dropCancelledDuplicates(group);
-    if (dedup.length < 2) continue;
+    if (dedup.length < MIN_TRIP_FLIGHTS) continue;
     const span = spanDays(dedup);
     if (span > PNR_MAX_SPAN_DAYS) {
       logger.info({
@@ -185,9 +196,12 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
     dedup.forEach((f) => claimed.add(f.id));
   }
 
-  // Stage 2 — Home loop (propose)
+  // Stage 2 — Home loop (propose). Sub-threshold loops stay unclaimed
+  // so their flights remain visible to stage 3 (where they still can't
+  // form a >= MIN_TRIP_FLIGHTS cluster on their own, but may extend one).
   const remaining1 = flights.filter((f) => !claimed.has(f.id));
   for (const cluster of findHomeLoops(remaining1, homeHistory)) {
+    if (cluster.length < MIN_TRIP_FLIGHTS) continue;
     proposed.push(makeProposal("home_loop", cluster, null));
     cluster.forEach((f) => claimed.add(f.id));
   }
@@ -195,7 +209,7 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
   // Stage 3 — Continuity sliding window (propose)
   const remaining2 = flights.filter((f) => !claimed.has(f.id));
   for (const cluster of findContinuityClusters(remaining2)) {
-    if (cluster.length < 2) continue;
+    if (cluster.length < MIN_TRIP_FLIGHTS) continue;
     proposed.push(makeProposal("continuity", cluster, null));
     cluster.forEach((f) => claimed.add(f.id));
   }
@@ -215,6 +229,7 @@ export const _internals = {
   PNR_MAX_SPAN_DAYS,
   CONTINUITY_GAP_DAYS,
   OPEN_JAW_KM,
+  MIN_TRIP_FLIGHTS,
   groupByPnr,
   dropCancelledDuplicates,
   spanDays,

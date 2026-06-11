@@ -16,6 +16,11 @@ import {
 } from "../schemas/trip";
 import logger from "../utils/logger";
 import { detectTrips } from "../services/tripDetectionService";
+import {
+  findMicroTripCandidates,
+  dissolveMicroTrips,
+  mergeTrips,
+} from "../services/tripCleanupService";
 import { summariseTrip, checkOllamaAvailable } from "../services/tripSummaryService";
 import { emailParseLimiter } from "../middleware/rateLimit";
 import {
@@ -159,6 +164,76 @@ router.post("/trips/bookings", authenticate, requireWriteScope, async (req: Auth
     next(error);
   }
 });
+
+const dissolveTripsSchema = z.object({
+  tripIds: z.array(z.string().uuid()).min(1).max(500),
+});
+
+const mergeTripsSchema = z.object({
+  tripIds: z.array(z.string().uuid()).min(2).max(100),
+  name: z.string().min(1).max(200).optional(),
+  targetId: z.string().uuid().optional(),
+});
+
+/**
+ * GET /trips/cleanup/micro — list "micro-trip" candidates: trips that
+ * wrap at most 2 flights and carry no other content (no cruises, stops,
+ * journal entries, photos, notes). These are typically legacy artifacts
+ * of the old per-booking auto-detection. Registered before /trips/:id
+ * so "cleanup" is not consumed as an id.
+ */
+router.get(
+  "/trips/cleanup/micro",
+  authenticate,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const candidates = await findMicroTripCandidates(req.userId!);
+      res.json({ candidates });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * POST /trips/cleanup/dissolve — delete the given micro-trips. Flights
+ * and bookings survive (FK onDelete: SetNull); ids are re-validated
+ * against the candidate criteria server-side.
+ */
+router.post(
+  "/trips/cleanup/dissolve",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { tripIds } = dissolveTripsSchema.parse(req.body);
+      const result = await dissolveMicroTrips(req.userId!, tripIds);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * POST /trips/merge — merge several trips into one journey. All linked
+ * entities move to the target trip; metadata arrays are unioned; source
+ * trips are deleted.
+ */
+router.post(
+  "/trips/merge",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const body = mergeTripsSchema.parse(req.body);
+      const result = await mergeTrips(req.userId!, body);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 /** GET /trips/:id */
 router.get("/trips/:id", authenticate, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
