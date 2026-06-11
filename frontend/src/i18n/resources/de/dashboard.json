@@ -165,6 +165,11 @@
     "enabledEmpty": "Noch keine POIs erfasst.",
     "goToSettings": "Zu den Einstellungen"
   },
+  "tabDisabled": {
+    "title": "Bereich deaktiviert",
+    "body": "Der Bereich „{{domain}}“ ist deaktiviert. Schalte ihn unter Einstellungen → Domains frei, um Inhalte zu sehen.",
+    "goToSettings": "Zu den Einstellungen"
+  },
   "sidebar": {
     "cruises": "Kreuzfahrten",
     "activity": "Aktivität",

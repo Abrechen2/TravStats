@@ -89,6 +89,8 @@
     "tags": "Tags",
     "countries": "Countries",
     "noLinks": "No flights or cruises linked yet.",
+    "hiddenCruises_one": "{{count}} cruise segment hidden — the cruise domain is disabled.",
+    "hiddenCruises_other": "{{count}} cruise segments hidden — the cruise domain is disabled.",
     "flightsCount": "{{count}} Flight",
     "flightsCount_plural": "{{count}} Flights",
     "cruisesCount": "{{count}} Cruise",

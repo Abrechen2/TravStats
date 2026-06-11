@@ -1,5 +1,6 @@
 import { differenceInCalendarDays } from "date-fns";
 import type { Trip, TripCategory, TripStatus } from "../../types";
+import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useSettingsStore } from "../../store/settingsStore";
 
@@ -42,8 +43,13 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
   const dateRange = formatDateRange(start, end, i18n.language);
   const nights = start && end ? Math.max(0, differenceInCalendarDays(end, start)) : null;
 
+  // Domain-gating: with the cruise domain disabled the card must not
+  // advertise cruise segments — count them as absent.
+  const { isEnabled } = useEnabledDomains();
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
-  const cruiseCount = trip._count?.cruises ?? trip.cruises?.length ?? 0;
+  const cruiseCount = isEnabled("cruise")
+    ? (trip._count?.cruises ?? trip.cruises?.length ?? 0)
+    : 0;
 
   const totalCost = trip.bookings?.reduce((sum, b) => sum + (b.price ?? 0), 0) ?? 0;
   const currency = trip.bookings?.find((b) => b.currency)?.currency ?? "EUR";
