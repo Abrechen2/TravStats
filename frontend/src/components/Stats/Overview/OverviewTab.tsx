@@ -4,8 +4,9 @@
 import type { JSX } from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { Flight, AchievementSummary } from "../../../types";
-import { AVAILABLE_DOMAINS, type DomainKey } from "../../../shared/domains";
+import type { DomainKey } from "../../../shared/domains";
 import { useDomainStats } from "../../../lib/stats/domain-stats";
+import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { aggregate, collectYears } from "./aggregate";
 import CrossDomainYearFilter from "./CrossDomainYearFilter";
@@ -23,10 +24,15 @@ interface Props {
 
 export default function OverviewTab({ flights, achievements }: Props): JSX.Element {
   const { t } = useTranslation(["stats"]);
+  // Domain-gating: the overview only ever renders the user's enabled
+  // domains — toggle chips, summary cards, and aggregate inputs alike.
+  // useDomainStats applies the same filter to its fetches, so `stats`
+  // never contains a disabled domain either.
+  const { enabled } = useEnabledDomains();
   const { stats, loading } = useDomainStats({ flights });
 
   const [visible, setVisible] = useState<Partial<Record<DomainKey, boolean>>>(
-    () => Object.fromEntries(AVAILABLE_DOMAINS.map((k) => [k, true]))
+    () => Object.fromEntries(enabled.map((k) => [k, true]))
   );
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [compareYear, setCompareYear] = useState<number | null>(null);
@@ -114,7 +120,12 @@ export default function OverviewTab({ flights, achievements }: Props): JSX.Eleme
           label={t("stats:overview.activityLabel")}
           hint={t("stats:overview.activityHint")}
         />
-        <DomainToggleChips visible={visible} setVisible={setVisible} statsMap={stats} />
+        <DomainToggleChips
+          domains={enabled}
+          visible={visible}
+          setVisible={setVisible}
+          statsMap={stats}
+        />
         <CrossDomainActivityChart
           statsMap={stats}
           visible={visible}
@@ -139,7 +150,7 @@ export default function OverviewTab({ flights, achievements }: Props): JSX.Eleme
           }
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {AVAILABLE_DOMAINS.map((key) => (
+          {enabled.map((key) => (
             <DomainSummaryCard
               key={key}
               domain={key}

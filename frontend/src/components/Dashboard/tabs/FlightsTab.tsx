@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import type { JSX } from "react";
 import type { Layer } from "@deck.gl/core";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
+import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import { useFlightLookup } from "../../../hooks/useFlightLookup";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { flightsApi } from "../../../lib/api/flights";
@@ -18,6 +19,7 @@ import SimplifiedFlightFormV2 from "../../SimplifiedFlightFormV2";
 import SpecialFlightModal from "../../SpecialFlightModal";
 import type { FlightSubmitOptions } from "../../FlightForm/useFlightForm";
 import { buildStatsMapLayer } from "../modes/buildStatsMapLayer";
+import { DomainDisabledNotice } from "./DomainDisabledNotice";
 
 // Maps the dashboard-level FlightMode to what MapContainer3D's visMode prop expects.
 // "stats-map" is delivered via extraLayers — the map itself renders in "routes" mode.
@@ -51,6 +53,8 @@ function nullToUndef<T>(v: T | null | undefined): T | undefined {
 export function FlightsTab(): JSX.Element {
   const { t } = useTranslation(["dashboard", "common", "flights"]);
   const { mode, setMode } = useDashboardRoute();
+  const { isEnabled } = useEnabledDomains();
+  const flightEnabled = isEnabled("flight");
   const [flights, setFlights] = useState<GeoJSONFeature[]>([]);
   const [structuredFlights, setStructuredFlights] = useState<Flight[]>([]);
   const [structuredTotal, setStructuredTotal] = useState(0);
@@ -92,7 +96,10 @@ export function FlightsTab(): JSX.Element {
     }
   }, []);
 
+  // Domain-gating: never fetch flight data while the domain is disabled —
+  // the tab renders the DomainDisabledNotice stub instead (see below).
   useEffect(() => {
+    if (!flightEnabled) return;
     let cancelled = false;
     void Promise.all([loadGeoJSON(), loadStructured()]).then(() => {
       if (cancelled) return;
@@ -100,7 +107,7 @@ export function FlightsTab(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [loadGeoJSON, loadStructured]);
+  }, [flightEnabled, loadGeoJSON, loadStructured]);
 
   const refreshAll = useCallback(async (): Promise<void> => {
     await Promise.all([loadGeoJSON(), loadStructured()]);
@@ -253,6 +260,10 @@ export function FlightsTab(): JSX.Element {
     if (flightMode !== "stats-map") return [];
     return [buildStatsMapLayer(visibleFlights)];
   }, [flightMode, visibleFlights]);
+
+  if (!flightEnabled) {
+    return <DomainDisabledNotice domain="flight" />;
+  }
 
   return (
     <div style={{ position: "absolute", inset: 0 }}>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
+import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import { useFlightLookup } from "../../../hooks/useFlightLookup";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { cruiseApi } from "../../../lib/api/cruise";
@@ -80,11 +81,15 @@ export function AllTab(): JSX.Element {
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
 
   // Global dashboard filter — year populates `time.from/to`, domain
-  // pill row toggles flight/cruise visibility on the Alle tab.
+  // pill row toggles flight/cruise visibility on the Alle tab. The pill
+  // filter is intersected with the user's enabledDomains: a disabled
+  // domain must never surface here, regardless of the pill state (the
+  // pill store defaults to AVAILABLE_DOMAINS, not the user's setting).
+  const { isEnabled } = useEnabledDomains();
   const filterTime = useDashboardFilterStore((s) => s.time);
   const filterDomains = useDashboardFilterStore((s) => s.domains);
-  const flightsVisible = filterDomains.includes("flight");
-  const cruisesVisible = filterDomains.includes("cruise");
+  const flightsVisible = filterDomains.includes("flight") && isEnabled("flight");
+  const cruisesVisible = filterDomains.includes("cruise") && isEnabled("cruise");
 
   // Filter flights by departureTime within the year/time range.
   // Flights without a departureTime stay visible (treat NaN as
@@ -173,7 +178,10 @@ export function AllTab(): JSX.Element {
     []
   );
 
+  // Domain-gating: a disabled domain's data is never fetched, not just
+  // hidden at render time.
   useEffect(() => {
+    if (!isEnabled("flight")) return;
     let cancelled = false;
     flightsApi
       .getAllGeoJSON()
@@ -186,10 +194,11 @@ export function AllTab(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isEnabled]);
 
   // Cruises are fetched so journey mode can group them with flights by tripId.
   useEffect(() => {
+    if (!isEnabled("cruise")) return;
     let cancelled = false;
     cruiseApi
       .list({})
@@ -202,7 +211,7 @@ export function AllTab(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isEnabled]);
 
   // Trips power the journey-mode selector (label = trip name).
   useEffect(() => {

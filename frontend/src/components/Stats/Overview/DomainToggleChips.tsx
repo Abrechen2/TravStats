@@ -2,21 +2,28 @@
 // cross-domain charts and KPIs. Disabled chips signal "domain available
 // but no data yet" or "domain not yet rolled out".
 import type { JSX } from "react";
-import { AVAILABLE_DOMAINS, DOMAINS, type DomainKey } from "../../../shared/domains";
+import { DOMAINS, type DomainKey } from "../../../shared/domains";
 import type { DomainStatsMap } from "../../../lib/stats/domain-stats";
 import { useTranslation } from "../../../hooks/useTranslation";
 
 interface Props {
+  /** Domains to offer chips for — the caller passes the user's enabledDomains. */
+  domains: readonly DomainKey[];
   visible: Partial<Record<DomainKey, boolean>>;
   setVisible: (next: Partial<Record<DomainKey, boolean>>) => void;
   statsMap: DomainStatsMap;
 }
 
-export default function DomainToggleChips({ visible, setVisible, statsMap }: Props): JSX.Element {
+export default function DomainToggleChips({
+  domains,
+  visible,
+  setVisible,
+  statsMap,
+}: Props): JSX.Element {
   const { t } = useTranslation(["stats", "common"]);
   return (
     <div className="flex flex-wrap gap-2 mb-4">
-      {AVAILABLE_DOMAINS.map((key) => {
+      {domains.map((key) => {
         const d = DOMAINS[key];
         const stats = statsMap[key];
         const hasData = stats?.hasData === true;

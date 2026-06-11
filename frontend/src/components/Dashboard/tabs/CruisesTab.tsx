@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
+import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { cruiseApi } from "../../../lib/api/cruise";
 import { logger } from "../../../lib/logger";
@@ -16,6 +17,7 @@ import type { Cruise } from "../../../types/cruise";
 import MapContainer3D from "../../MapContainer3D";
 import { buildPortFrequencyLayer } from "../modes/buildPortFrequencyLayer";
 import { CruiseListPanel } from "../sidebars/CruiseListPanel";
+import { DomainDisabledNotice } from "./DomainDisabledNotice";
 
 interface ItineraryDot {
   lat: number;
@@ -26,6 +28,8 @@ interface ItineraryDot {
 
 export function CruisesTab(): JSX.Element {
   const { mode } = useDashboardRoute();
+  const { isEnabled } = useEnabledDomains();
+  const cruiseEnabled = isEnabled("cruise");
   const { t } = useTranslation(["dashboard"]);
   const [cruises, setCruises] = useState<Cruise[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -45,7 +49,10 @@ export function CruisesTab(): JSX.Element {
     [navigate]
   );
 
+  // Domain-gating: never fetch cruise data while the domain is disabled —
+  // the tab renders the DomainDisabledNotice stub instead (see below).
   useEffect(() => {
+    if (!cruiseEnabled) return;
     let cancelled = false;
     cruiseApi
       .list({})
@@ -58,7 +65,7 @@ export function CruisesTab(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [cruiseEnabled]);
 
   // Apply the global year filter to the cruise set. Domain visibility
   // is intentionally NOT applied here — same rationale as FlightsTab:
@@ -130,6 +137,10 @@ export function CruisesTab(): JSX.Element {
   // In port-frequency mode, suppress the internal cruise arcs so the
   // frequency markers are not obscured by route overlays.
   const showInternalCruises = mode !== "port-frequency";
+
+  if (!cruiseEnabled) {
+    return <DomainDisabledNotice domain="cruise" />;
+  }
 
   return (
     <div style={{ position: "absolute", inset: 0 }}>

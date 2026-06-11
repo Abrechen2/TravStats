@@ -89,6 +89,8 @@
     "tags": "Tags",
     "countries": "Länder",
     "noLinks": "Noch keine Flüge oder Kreuzfahrten verknüpft.",
+    "hiddenCruises_one": "{{count}} Kreuzfahrt-Segment ausgeblendet — der Bereich Kreuzfahrten ist deaktiviert.",
+    "hiddenCruises_other": "{{count}} Kreuzfahrt-Segmente ausgeblendet — der Bereich Kreuzfahrten ist deaktiviert.",
     "flightsCount": "{{count}} Flug",
     "flightsCount_plural": "{{count}} Flüge",
     "cruisesCount": "{{count}} Kreuzfahrt",

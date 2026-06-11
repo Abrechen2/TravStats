@@ -11,7 +11,8 @@ import type { Flight } from "../../../types";
 import { statsApi } from "../../api";
 import { cruiseApi } from "../../api/cruise";
 import { logger } from "../../logger";
-import { AVAILABLE_DOMAINS, type DomainKey } from "../../../shared/domains";
+import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
+import type { DomainKey } from "../../../shared/domains";
 import { adaptFlight } from "./flightStatsAdapter";
 import { adaptCruise } from "./cruiseStatsAdapter";
 import { adaptHotel } from "./hotelStatsAdapter";
@@ -31,6 +32,10 @@ export interface UseDomainStatsResult {
  */
 export function useDomainStats(input: { flights: Flight[] }): UseDomainStatsResult {
   const { flights } = input;
+  // Domain-gating: only the user's enabled domains are fetched — a
+  // disabled domain must not surface in the cross-domain overview, so
+  // its stats are never loaded in the first place.
+  const { enabled } = useEnabledDomains();
   const [stats, setStats] = useState<DomainStatsMap>({});
   const [errors, setErrors] = useState<Partial<Record<DomainKey, string>>>({});
   const [loading, setLoading] = useState(true);
@@ -41,7 +46,7 @@ export function useDomainStats(input: { flights: Flight[] }): UseDomainStatsResu
       const result: DomainStatsMap = {};
       const errs: Partial<Record<DomainKey, string>> = {};
 
-      const tasks = AVAILABLE_DOMAINS.map(async (domain) => {
+      const tasks = enabled.map(async (domain) => {
         try {
           const value = await loadDomain(domain, flights);
           result[domain] = value;
@@ -60,7 +65,7 @@ export function useDomainStats(input: { flights: Flight[] }): UseDomainStatsResu
     return () => {
       cancelled = true;
     };
-  }, [flights]);
+  }, [flights, enabled]);
 
   return { stats, errors, loading };
 }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { JSX } from "react";
+import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { DashboardTab } from "../../types/dashboard";
 import { useDashboardFilterStore } from "../../store/dashboardFilterStore";
@@ -50,6 +51,7 @@ export function DashboardFilterDropdown({
 }: DashboardFilterDropdownProps): JSX.Element | null {
   const { t } = useTranslation(["dashboard"]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { isEnabled } = useEnabledDomains();
 
   const year = useDashboardFilterStore((s) => s.year);
   const setYear = useDashboardFilterStore((s) => s.setYear);
@@ -61,10 +63,14 @@ export function DashboardFilterDropdown({
   const setCruiseFilter = useDashboardFilterStore((s) => s.setCruiseFilter);
   const resetFilter = useDashboardFilterStore((s) => s.reset);
 
+  // Domain-gating: the pill row only offers the user's enabled domains —
+  // a disabled domain must not be toggleable back into view from here.
+  const domainOptions = AVAILABLE_DOMAINS.filter((key) => isEnabled(key));
+
   // "Active" means anything that visibly shrinks the dataset.
   // Drives the Reset button's enabled state.
   const yearActive = year !== null;
-  const domainsFiltered = AVAILABLE_DOMAINS.length !== domains.length;
+  const domainsFiltered = domainOptions.some((key) => !domains.includes(key));
   const flightFiltered = !!flight.airline;
   const cruiseFiltered = !!cruise.cruiseLine;
   const filterActive = yearActive || domainsFiltered || flightFiltered || cruiseFiltered;
@@ -136,7 +142,7 @@ export function DashboardFilterDropdown({
         <div style={{ marginBottom: 16 }}>
           <span style={labelStyle}>{t("dashboard:filter.domains")}</span>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {AVAILABLE_DOMAINS.map((key) => {
+            {domainOptions.map((key) => {
               const active = domains.includes(key);
               const descriptor = DOMAINS[key];
               return (

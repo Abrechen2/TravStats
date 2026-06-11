@@ -165,6 +165,11 @@
     "enabledEmpty": "No POIs yet.",
     "goToSettings": "Open settings"
   },
+  "tabDisabled": {
+    "title": "Domain disabled",
+    "body": "The “{{domain}}” domain is disabled. Activate it under Settings → Domains to see its content.",
+    "goToSettings": "Open settings"
+  },
   "sidebar": {
     "cruises": "Cruises",
     "activity": "Activity",

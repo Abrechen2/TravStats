@@ -4,6 +4,7 @@ import { differenceInCalendarDays } from "date-fns";
 import { tripsApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
+import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useTranslation } from "../hooks/useTranslation";
 import type { Trip, TripJournalEntry, TripStatus, TripStop } from "../types";
 import PageTransition from "../components/PageTransition";
@@ -48,6 +49,24 @@ export default function TripDetailPage(): JSX.Element {
   const [tab, setTab] = useState<TabKey>("overview");
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Domain-gating: when the cruise domain is disabled, every tab gets a
+  // trip copy with the cruise segments stripped, so timeline, map, and
+  // logistics stay cruise-free without per-tab checks. A counter banner
+  // below the tab bar tells the user the segments are hidden, not lost.
+  const { isEnabled } = useEnabledDomains();
+  const cruiseEnabled = isEnabled("cruise");
+  const displayTrip = useMemo<Trip | null>(() => {
+    if (trip === null || cruiseEnabled) return trip;
+    return {
+      ...trip,
+      cruises: [],
+      _count: trip._count ? { ...trip._count, cruises: 0 } : trip._count,
+    };
+  }, [trip, cruiseEnabled]);
+  const hiddenCruiseCount = cruiseEnabled
+    ? 0
+    : (trip?._count?.cruises ?? trip?.cruises?.length ?? 0);
 
   const load = async (): Promise<void> => {
     if (!id) return;
@@ -94,6 +113,8 @@ export default function TripDetailPage(): JSX.Element {
     );
   }
 
+  const shownTrip = displayTrip ?? trip;
+
   return (
     <PageTransition>
       <div
@@ -102,7 +123,7 @@ export default function TripDetailPage(): JSX.Element {
       >
         <NavigationBar />
         <TripHero
-          trip={trip}
+          trip={shownTrip}
           locale={i18n.language}
           t={t}
           onEdit={() => setEditing(true)}
@@ -112,21 +133,33 @@ export default function TripDetailPage(): JSX.Element {
         <TabBar tab={tab} onChange={setTab} t={t} />
 
         <div className="max-w-7xl mx-auto px-4 py-6">
+          {hiddenCruiseCount > 0 && (
+            <div
+              className="mb-4 rounded-lg px-4 py-2.5 text-xs"
+              style={{
+                background: "var(--bg-surface)",
+                border: "1px solid var(--color-border)",
+                color: "var(--text-muted)",
+              }}
+            >
+              ⚓ {t("trips:detail.hiddenCruises", { count: hiddenCruiseCount })}
+            </div>
+          )}
           {tab === "overview" && (
-            <OverviewTab trip={trip} t={t} onChanged={() => void load()} />
+            <OverviewTab trip={shownTrip} t={t} onChanged={() => void load()} />
           )}
           {tab === "timeline" && (
-            <TimelineTab trip={trip} onChanged={() => void load()} t={t} />
+            <TimelineTab trip={shownTrip} onChanged={() => void load()} t={t} />
           )}
-          {tab === "map" && <TripMap trip={trip} />}
+          {tab === "map" && <TripMap trip={shownTrip} />}
           {tab === "gallery" && (
             <TripGallery
-              tripId={trip.id}
-              photos={trip.photos ?? []}
+              tripId={shownTrip.id}
+              photos={shownTrip.photos ?? []}
               onChange={() => void load()}
             />
           )}
-          {tab === "logistics" && <LogisticsTab trip={trip} t={t} />}
+          {tab === "logistics" && <LogisticsTab trip={shownTrip} t={t} />}
         </div>
       </div>
 
@@ -1004,6 +1037,10 @@ function TripStatsRow({
   trip: Trip;
   t: ReturnType<typeof useTranslation>["t"];
 }): JSX.Element {
+  // Domain-gating: the cruise tile disappears entirely when the cruise
+  // domain is disabled (a "0" tile would still advertise the domain).
+  const { isEnabled } = useEnabledDomains();
+  const cruiseEnabled = isEnabled("cruise");
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
   const cruiseCount = trip._count?.cruises ?? trip.cruises?.length ?? 0;
   const totalCost = trip.bookings?.reduce((sum, b) => sum + (b.price ?? 0), 0) ?? 0;
@@ -1012,7 +1049,9 @@ function TripStatsRow({
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
       <StatTile value={flightCount} label={t("trips:detail.stats.flights")} />
-      <StatTile value={cruiseCount} label={t("trips:detail.stats.cruises")} />
+      {cruiseEnabled && (
+        <StatTile value={cruiseCount} label={t("trips:detail.stats.cruises")} />
+      )}
       <StatTile value={trip.countries.length} label={t("trips:detail.stats.countries")} />
       <StatTile value={trip.companions.length} label={t("trips:detail.stats.companions")} />
       <StatTile
