@@ -32,12 +32,22 @@ export interface CruiseData {
   endDate: Date | null;
   stops: CruiseStopData[];
   /**
-   * Per-leg distances (km) in port-call order, as persisted in
-   * `cruise_legs` and routed by the cruiseDistance pipeline. When
-   * present, distance stats use these instead of the inline haversine
-   * fallback. Length must equal `numberOfPortCalls - 1`; mismatched
-   * length means the legs are stale and the calculator falls back to
-   * haversine for the affected cruise.
+   * Departure/arrival ports from the Cruise row. They participate in
+   * the effective port sequence (departure → stops → arrival) so a
+   * minimal A-to-B cruise without a detailed stop list still produces
+   * port, country, region and distance stats. Skipped when they
+   * duplicate the first/last port-call stop.
+   */
+  departurePort?: CruisePortData | null;
+  arrivalPort?: CruisePortData | null;
+  /**
+   * Per-leg distances (km) in effective-sequence order (departure port
+   * → port calls → arrival port), as persisted in `cruise_legs` and
+   * routed by the cruiseDistance pipeline. When present, distance stats
+   * use these instead of the inline haversine fallback. Length must
+   * equal `effectivePortCalls - 1`; mismatched length means the legs
+   * are stale and the calculator falls back to haversine for the
+   * affected cruise.
    */
   legDistancesKm?: number[];
 }
@@ -129,8 +139,33 @@ export function calculateCruiseStats(
     if (cruise.cabinType === 'suite') hasSuiteCabin = true;
     if (cruise.deck !== null && cruise.deck > maxDeck) maxDeck = cruise.deck;
 
+    // Effective itinerary: departure port → sorted stops → arrival port.
+    // Mirrors buildEffectivePortSequence (shared/cruise/portSequence) —
+    // departure/arrival are skipped when they duplicate the first/last
+    // port-call stop.
     const sortedStops = [...cruise.stops].sort((a, b) => a.dayNumber - b.dayNumber);
-    const portCallCount = sortedStops.filter((s) => !s.isAtSea && s.port).length;
+    const portCallStops = sortedStops.filter((s) => !s.isAtSea && s.port);
+    const effectiveStops: CruiseStopData[] = [...sortedStops];
+    if (cruise.departurePort && cruise.departurePort.id !== portCallStops[0]?.port?.id) {
+      effectiveStops.unshift({
+        portId: cruise.departurePort.id,
+        port: cruise.departurePort,
+        dayNumber: 0,
+        isAtSea: false,
+      });
+    }
+    if (
+      cruise.arrivalPort &&
+      cruise.arrivalPort.id !== portCallStops[portCallStops.length - 1]?.port?.id
+    ) {
+      effectiveStops.push({
+        portId: cruise.arrivalPort.id,
+        port: cruise.arrivalPort,
+        dayNumber: Number.MAX_SAFE_INTEGER,
+        isAtSea: false,
+      });
+    }
+    const portCallCount = effectiveStops.filter((s) => !s.isAtSea && s.port).length;
     const persistedLegs = cruise.legDistancesKm;
     const usePersistedLegs =
       Array.isArray(persistedLegs) &&
@@ -140,7 +175,7 @@ export function calculateCruiseStats(
     let currentSeaStreak = 0;
     let prevPortPoint: { lat: number; lon: number } | null = null;
 
-    for (const stop of sortedStops) {
+    for (const stop of effectiveStops) {
       if (stop.isAtSea) {
         seaDays += 1;
         currentSeaStreak += 1;

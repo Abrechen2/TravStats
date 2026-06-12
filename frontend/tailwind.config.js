@@ -10,7 +10,10 @@ export default {
         sans: ["Inter", "sans-serif"],
       },
       colors: {
-        base: "var(--bg-base)",
+        // NOTE: never add a color key named like a core font-size suffix
+        // (`base`, `sm`, `lg`, …) — it generates a `text-<key>` COLOR utility
+        // that shadows the `text-<key>` font-size utility. A `base` key here
+        // once turned every `text-base` element near-black on dark surfaces.
         surface: "var(--bg-surface)",
         elevated: "var(--bg-elevated)",
         border: "var(--color-border)",

@@ -11,6 +11,7 @@ import logger from '../utils/logger';
 import fs from 'fs';
 import path from 'path';
 import { validateEmailFile } from '../utils/fileValidation';
+import { describeParserError } from '../utils/parserErrors';
 import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
 
 const router = Router();
@@ -93,9 +94,10 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
     }
 
     logger.error({ error }, '[Email Parse] Parsing failed');
-    res.status(500).json({
+    const described = describeParserError(error);
+    res.status(described.status).json({
       error: 'Email parsing failed',
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: described.message,
     });
   }
 });
@@ -251,9 +253,10 @@ router.post(
       }
 
       logger.error({ error }, '[Email Parse File] Parsing failed');
-      res.status(500).json({
+      const described = describeParserError(error);
+      res.status(described.status).json({
         error: 'Email file parsing failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: described.message,
       });
     }
   }

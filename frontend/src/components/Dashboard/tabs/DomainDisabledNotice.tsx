@@ -51,7 +51,7 @@ export function DomainDisabledNotice({
           })}
         </p>
         <Link
-          to="/settings#domains"
+          to="/settings#modules"
           style={{
             display: "inline-block",
             padding: "10px 20px",

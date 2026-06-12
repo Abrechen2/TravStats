@@ -46,7 +46,14 @@
     "loadFlights": "Fehler beim Laden der Flüge",
     "exportFailed": "Export fehlgeschlagen",
     "importFailed": "Import fehlgeschlagen",
-    "importPartial": "{{success}} von {{total}} Flügen importiert ({{errors}} Fehler)"
+    "importPartial": "{{success}} von {{total}} Flügen importiert ({{errors}} Fehler)",
+    "loadCruises": "Kreuzfahrten konnten nicht geladen werden. Bitte später erneut versuchen."
+  },
+  "cruiseTab": {
+    "loading": "Kreuzfahrten werden geladen …",
+    "emptyTitle": "Noch keine Kreuzfahrten",
+    "emptyBody": "Füge deine erste Kreuzfahrt über „+ Kreuzfahrt hinzufügen“ hinzu oder importiere eine Buchungs-E-Mail bzw. ein PDF auf der Kreuzfahrten-Seite.",
+    "emptyCta": "Zur Kreuzfahrten-Seite"
   },
   "success": {
     "flightAdded": "Flug erfolgreich hinzugefügt",

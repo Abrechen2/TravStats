@@ -962,6 +962,8 @@ router.get(
           include: {
             stops: { include: { port: true } },
             legs: { orderBy: { ordinal: 'asc' }, select: { distanceKm: true } },
+            departurePort: true,
+            arrivalPort: true,
           },
         }),
       ]);
@@ -995,6 +997,8 @@ router.get(
           arrivalTime: s.arrivalTime,
           departureTime: s.departureTime,
         })),
+        departurePort: c.departurePort,
+        arrivalPort: c.arrivalPort,
         legDistancesKm: c.legs.map((l) => l.distanceKm),
       }));
 
@@ -1006,7 +1010,21 @@ router.get(
       const userBirthday = user?.birthdate
         ? { month: user.birthdate.getMonth() + 1, day: user.birthdate.getDate() }
         : undefined;
-      const stats = calculateCruiseStats(cruiseStatsInput, userBirthday);
+
+      // Defensive parity with the flight stats endpoints: a calculation
+      // error on one malformed cruise must not 500 the whole tab — fall
+      // back to an empty stats object and log the cause.
+      let stats: ReturnType<typeof calculateCruiseStats>;
+      try {
+        stats = calculateCruiseStats(cruiseStatsInput, userBirthday);
+      } catch (calcError) {
+        logger.error({
+          operation: 'cruise_stats_calculation_failed',
+          userId,
+          error: calcError instanceof Error ? calcError.message : calcError,
+        });
+        stats = calculateCruiseStats([], userBirthday);
+      }
 
       res.json({
         // Counts + ladders

@@ -59,6 +59,8 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
         include: {
           stops: { include: { port: true } },
           trip: { include: { flights: true, cruises: true } },
+          departurePort: true,
+          arrivalPort: true,
         },
       }),
     ]);
@@ -173,6 +175,8 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
         arrivalTime: s.arrivalTime,
         departureTime: s.departureTime,
       })),
+      departurePort: c.departurePort,
+      arrivalPort: c.arrivalPort,
     }));
 
     const cruiseStats = calculateCruiseStats(cruiseStatsInput, userBirthday);

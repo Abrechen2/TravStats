@@ -162,7 +162,7 @@ export default function CruisesPage(): JSX.Element {
         </div>
 
         {loading ? (
-          <div className="text-[var(--text-muted)]">Loading …</div>
+          <div className="text-[var(--text-muted)]">{t("list.loading")}</div>
         ) : filtered.length === 0 ? (
           <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-4 py-8 text-center text-[var(--text-muted)]">
             {t("list.empty")}

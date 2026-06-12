@@ -5,6 +5,7 @@ import { prisma } from "../db";
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import { invalidateCruiseEntityCache } from "../services/cruiseEntityResolver";
+import { expandPortSearchTerms } from "../services/portExonyms";
 import logger from "../utils/logger";
 
 const router = Router();
@@ -41,6 +42,12 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
         { city: { contains: q, mode: "insensitive" } },
         { unlocode: { equals: q.toUpperCase() } },
       ];
+      // German exonyms ("Lissabon") expand to the English catalog names
+      // ("Lisbon") so DE users get hits instead of duplicate custom ports.
+      for (const term of expandPortSearchTerms(q)) {
+        where.OR.push({ name: { contains: term, mode: "insensitive" } });
+        where.OR.push({ city: { contains: term, mode: "insensitive" } });
+      }
     }
 
     const ports = await prisma.port.findMany({

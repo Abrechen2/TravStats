@@ -135,7 +135,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        "Unable to save cruise";
+        t("form.saveError");
       setError(msg);
     } finally {
       setSaving(false);
@@ -186,7 +186,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 />
               </div>
               <select
-                aria-label="status"
+                aria-label={t("field.status")}
                 className={`mt-3 ${INPUT_CLASS}`}
                 value={status}
                 onChange={(e): void => setStatus(e.target.value as CruiseStatus)}
@@ -201,8 +201,16 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
 
             <Section title={t("stops.title")}>
               <div className="grid grid-cols-2 gap-3">
-                <PortPicker value={departurePort} onChange={setDeparturePort} />
-                <PortPicker value={arrivalPort} onChange={setArrivalPort} />
+                <PortPicker
+                  value={departurePort}
+                  onChange={setDeparturePort}
+                  label={t("field.departure_port")}
+                />
+                <PortPicker
+                  value={arrivalPort}
+                  onChange={setArrivalPort}
+                  label={t("field.arrival_port")}
+                />
               </div>
               <div className="mt-3">
                 <CruiseStopsEditor stops={stops} onChange={setStops} />
@@ -264,7 +272,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                   placeholder={t("field.price")}
                 />
                 <select
-                  aria-label="currency"
+                  aria-label={t("field.currency")}
                   className={INPUT_CLASS}
                   value={currency}
                   onChange={(e): void => setCurrency(e.target.value)}

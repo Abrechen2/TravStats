@@ -27,7 +27,9 @@ export function ShipPicker({ value, onChange }: Props): JSX.Element {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!query || query.length < 2) {
+    // Don't search when the field merely shows the already-selected ship —
+    // otherwise the dropdown re-opens right after a pick and on modal open.
+    if (!query || query.length < 2 || query === value?.name) {
       setResults([]);
       return;
     }
@@ -40,7 +42,7 @@ export function ShipPicker({ value, onChange }: Props): JSX.Element {
       }
     }, 250);
     return (): void => clearTimeout(handle);
-  }, [query]);
+  }, [query, value?.name]);
 
   const exactMatch = results.some((r) => r.name.toLowerCase() === query.toLowerCase());
 
@@ -63,7 +65,7 @@ export function ShipPicker({ value, onChange }: Props): JSX.Element {
       setNewName("");
       setNewLine("");
     } catch {
-      setError(t("picker.add_custom_ship"));
+      setError(t("picker.createShipError"));
     } finally {
       setSaving(false);
     }
@@ -95,7 +97,7 @@ export function ShipPicker({ value, onChange }: Props): JSX.Element {
           ))}
         </ul>
       )}
-      {query.length >= 2 && !exactMatch && !showAdd && (
+      {query.length >= 2 && query !== value?.name && !exactMatch && !showAdd && (
         <button
           type="button"
           className="mt-2 text-xs text-[var(--accent)] hover:underline"
@@ -131,7 +133,7 @@ export function ShipPicker({ value, onChange }: Props): JSX.Element {
               }}
               className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             >
-              Cancel
+              {t("picker.cancel")}
             </button>
             <button
               type="button"

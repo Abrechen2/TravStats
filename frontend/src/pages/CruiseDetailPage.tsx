@@ -4,6 +4,7 @@ import { cruiseApi } from "../lib/api";
 import type { Cruise } from "../types";
 import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
 import { CruiseRouteMap } from "../components/Cruise/CruiseRouteMap";
+import { buildEffectiveTimeline, countUniquePorts } from "../components/Cruise/cruisePorts";
 import { cruiseStatusPillStyle } from "../components/Cruise/cruiseStatusStyle";
 import TripTimeline, { type TimelineEvent } from "../components/Trip/TripTimeline";
 import NavigationBar from "../components/NavigationBar";
@@ -23,7 +24,7 @@ export default function CruiseDetailPage(): JSX.Element {
   const { t } = useTranslation("cruise");
   const [cruise, setCruise] = useState<Cruise | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState<boolean>(false);
   const [editing, setEditing] = useState<boolean>(false);
   const [confirmingDelete, setConfirmingDelete] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
@@ -53,7 +54,7 @@ export default function CruiseDetailPage(): JSX.Element {
         const c = await cruiseApi.get(id);
         if (!cancelled) setCruise(c);
       } catch {
-        if (!cancelled) setError("Cruise not found");
+        if (!cancelled) setNotFound(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -67,11 +68,11 @@ export default function CruiseDetailPage(): JSX.Element {
     return (
       <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
         <NavigationBar />
-        <div className="p-6 text-[var(--text-muted)]">Loading …</div>
+        <div className="p-6 text-[var(--text-muted)]">{t("detail.loading")}</div>
       </div>
     );
   }
-  if (error !== null || !cruise) {
+  if (notFound || !cruise) {
     return (
       <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
         <NavigationBar />
@@ -83,25 +84,27 @@ export default function CruiseDetailPage(): JSX.Element {
             ← {t("list.title")}
           </button>
           <div className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]">
-            {error ?? "Cruise not found"}
+            {t("detail.notFound")}
           </div>
         </div>
       </div>
     );
   }
 
-  const events: TimelineEvent[] = cruise.stops.map((stop) => ({
-    id: stop.id,
+  // Effective itinerary includes departure/arrival ports so the route list
+  // never reads emptier than the list page's port count for the same cruise.
+  const events: TimelineEvent[] = buildEffectiveTimeline(cruise).map((entry) => ({
+    id: entry.key,
     domain: "cruise",
-    date: stop.arrivalTime ?? cruise.startDate ?? new Date().toISOString(),
-    title: stop.isAtSea ? t("stops.at_sea") : (stop.port?.name ?? "—"),
-    subtitle: stop.isAtSea
+    date: entry.date ?? cruise.startDate ?? new Date().toISOString(),
+    title: entry.isAtSea ? t("stops.at_sea") : (entry.port?.name ?? "—"),
+    subtitle: entry.isAtSea
       ? undefined
-      : [stop.port?.city, stop.port?.country].filter(Boolean).join(", ") || undefined,
-    meta: stop.excursionNote ?? undefined,
+      : [entry.port?.city, entry.port?.country].filter(Boolean).join(", ") || undefined,
+    meta: entry.excursionNote ?? undefined,
   }));
 
-  const portsCount = cruise.stops.filter((s) => !s.isAtSea).length;
+  const portsCount = countUniquePorts(cruise);
   const seaDays = cruise.stops.filter((s) => s.isAtSea).length;
 
   return (
@@ -180,7 +183,7 @@ export default function CruiseDetailPage(): JSX.Element {
               <TripTimeline events={events} />
             ) : (
               <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-4 py-6 text-center text-sm text-[var(--text-muted)]">
-                {t("stops.title")}
+                {t("detail.stopsEmpty")}
               </div>
             )}
           </div>

@@ -1,6 +1,6 @@
 import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
-import type { Cruise } from "../../types";
+import type { Cruise, Port } from "../../types";
 
 interface PortDatum {
   position: [number, number];
@@ -53,26 +53,38 @@ export function createCruisePortsLayer(
   zoom: number = PORT_LABEL_VISIBILITY_MIN_ZOOM,
 ): Layer[] | null {
   const byPort = new Map<number, PortDatum>();
+  const recordVisit = (port: Port, date: string | undefined): void => {
+    const existing = byPort.get(port.id);
+    if (existing) {
+      existing.visits += 1;
+      if (date && (!existing.lastVisit || date > existing.lastVisit)) {
+        existing.lastVisit = date;
+      }
+    } else {
+      byPort.set(port.id, {
+        position: [port.lon, port.lat],
+        portId: port.id,
+        name: port.name,
+        shortLabel: port.unlocode ?? port.name,
+        visits: 1,
+        lastVisit: date,
+      });
+    }
+  };
   for (const cruise of cruises) {
+    const firstPortCall = cruise.stops.find((s) => !s.isAtSea && s.port);
+    const lastPortCall = [...cruise.stops].reverse().find((s) => !s.isAtSea && s.port);
+    // Departure/arrival ports get markers too — skipped only when they
+    // duplicate the first/last port-call stop (counted there instead).
+    if (cruise.departurePort && cruise.departurePort.id !== firstPortCall?.port?.id) {
+      recordVisit(cruise.departurePort, cruise.startDate ?? undefined);
+    }
     for (const stop of cruise.stops) {
       if (stop.isAtSea || !stop.port) continue;
-      const stopDate = stop.arrivalTime ?? stop.departureTime ?? undefined;
-      const existing = byPort.get(stop.port.id);
-      if (existing) {
-        existing.visits += 1;
-        if (stopDate && (!existing.lastVisit || stopDate > existing.lastVisit)) {
-          existing.lastVisit = stopDate;
-        }
-      } else {
-        byPort.set(stop.port.id, {
-          position: [stop.port.lon, stop.port.lat],
-          portId: stop.port.id,
-          name: stop.port.name,
-          shortLabel: stop.port.unlocode ?? stop.port.name,
-          visits: 1,
-          lastVisit: stopDate,
-        });
-      }
+      recordVisit(stop.port, stop.arrivalTime ?? stop.departureTime ?? undefined);
+    }
+    if (cruise.arrivalPort && cruise.arrivalPort.id !== lastPortCall?.port?.id) {
+      recordVisit(cruise.arrivalPort, cruise.endDate ?? undefined);
     }
   }
   const data = Array.from(byPort.values());
