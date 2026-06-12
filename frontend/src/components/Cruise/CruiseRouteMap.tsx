@@ -94,6 +94,8 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
 
   const bboxPoints: Array<[number, number]> = useMemo(() => {
     const pts: Array<[number, number]> = [];
+    if (cruise.departurePort) pts.push([cruise.departurePort.lon, cruise.departurePort.lat]);
+    if (cruise.arrivalPort) pts.push([cruise.arrivalPort.lon, cruise.arrivalPort.lat]);
     for (const stop of cruise.stops) {
       if (stop.port) pts.push([stop.port.lon, stop.port.lat]);
     }
@@ -103,7 +105,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
       }
     }
     return pts;
-  }, [cruise.stops, geometry]);
+  }, [cruise.departurePort, cruise.arrivalPort, cruise.stops, geometry]);
 
   useEffect(() => {
     if (!mapLoaded || didFit.current) return;

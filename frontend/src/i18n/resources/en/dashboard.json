@@ -46,7 +46,14 @@
     "loadFlights": "Failed to load flights",
     "exportFailed": "Export failed",
     "importFailed": "Import failed",
-    "importPartial": "{{success}} of {{total}} flights imported ({{errors}} errors)"
+    "importPartial": "{{success}} of {{total}} flights imported ({{errors}} errors)",
+    "loadCruises": "Could not load cruises. Please try again later."
+  },
+  "cruiseTab": {
+    "loading": "Loading cruises …",
+    "emptyTitle": "No cruises yet",
+    "emptyBody": "Add your first cruise via “+ Add cruise” or import a booking email or PDF on the cruises page.",
+    "emptyCta": "Go to cruises page"
   },
   "success": {
     "flightAdded": "Flight added successfully",

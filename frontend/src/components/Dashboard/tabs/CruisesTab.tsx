@@ -32,6 +32,8 @@ export function CruisesTab(): JSX.Element {
   const cruiseEnabled = isEnabled("cruise");
   const { t } = useTranslation(["dashboard"]);
   const [cruises, setCruises] = useState<Cruise[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const setCruiseSelection = useCruiseSelectionStore((s) => s.setSelection);
   const navigate = useNavigate();
@@ -54,6 +56,8 @@ export function CruisesTab(): JSX.Element {
   useEffect(() => {
     if (!cruiseEnabled) return;
     let cancelled = false;
+    setLoading(true);
+    setLoadError(false);
     cruiseApi
       .list({})
       .then((list) => {
@@ -61,6 +65,10 @@ export function CruisesTab(): JSX.Element {
       })
       .catch((err: unknown) => {
         logger.error({ err }, "CruisesTab: failed to load cruises");
+        if (!cancelled) setLoadError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
@@ -180,6 +188,95 @@ export function CruisesTab(): JSX.Element {
         onSelect={handleSelectCruise}
         onDetails={handleCruiseDetails}
       />
+      {loading && (
+        <div
+          style={{
+            position: "absolute",
+            top: 12,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 30,
+            padding: "6px 14px",
+            borderRadius: 10,
+            background: "rgba(22,27,34,0.85)",
+            color: "var(--text-muted)",
+            border: "1px solid var(--color-border)",
+            fontSize: 13,
+          }}
+        >
+          {t("dashboard:cruiseTab.loading")}
+        </div>
+      )}
+      {!loading && loadError && (
+        <div
+          role="alert"
+          style={{
+            position: "absolute",
+            top: 12,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 30,
+            padding: "8px 16px",
+            borderRadius: 10,
+            background: "rgba(60,20,20,0.92)",
+            color: "var(--danger)",
+            border: "1px solid var(--danger)",
+            fontSize: 13,
+          }}
+        >
+          {t("dashboard:errors.loadCruises")}
+        </div>
+      )}
+      {!loading && !loadError && cruises.length === 0 && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 20,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            style={{
+              pointerEvents: "auto",
+              maxWidth: 420,
+              textAlign: "center",
+              padding: "28px 32px",
+              borderRadius: 16,
+              background: "rgba(22,27,34,0.92)",
+              border: "1px solid var(--color-border)",
+            }}
+          >
+            <div style={{ fontSize: 40, marginBottom: 12 }} aria-hidden>
+              ⚓
+            </div>
+            <h2 style={{ margin: "0 0 8px", color: "var(--text-primary)", fontSize: 18 }}>
+              {t("dashboard:cruiseTab.emptyTitle")}
+            </h2>
+            <p style={{ margin: "0 0 20px", color: "var(--text-muted)", fontSize: 14 }}>
+              {t("dashboard:cruiseTab.emptyBody")}
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate("/cruises")}
+              style={{
+                padding: "10px 20px",
+                background: "var(--accent)",
+                color: "#0d1117",
+                borderRadius: 10,
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              {t("dashboard:cruiseTab.emptyCta")}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -12,6 +12,7 @@ import logger from '../utils/logger';
 import { recalculateNextApiCheckAt } from '../utils/smartCheckSchedule';
 import { applyPendingUpdate } from './pendingUpdateService';
 import type { FlightDataSnapshot } from './pendingUpdateService';
+import { transitionPastCruises } from './cruiseStatusTransition';
 
 const prismaClient = prisma as PrismaClient;
 
@@ -624,6 +625,10 @@ export async function checkAndUpdateAllFlights(): Promise<number> {
     // Clean up zombie flights before the API sweep — reduces wasted API calls
     // on flights that already departed but are stuck in "scheduled".
     await transitionZombieFlights();
+
+    // Same housekeeping for cruises: scheduled cruises whose end date has
+    // long passed flip to completed (no API involved, pure date check).
+    await transitionPastCruises();
 
     // Get all users with auto-update enabled
     const users = await prismaClient.userSettings.findMany({

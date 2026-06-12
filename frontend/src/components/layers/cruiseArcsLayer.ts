@@ -2,6 +2,7 @@ import { PathLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import type { Cruise } from "../../types";
 import type { CruiseRouteFeatureCollection } from "../../lib/api/cruise";
+import { effectivePortSequence } from "../Cruise/cruisePorts";
 import { catmullRomSpline } from "./catmullRom";
 
 interface ArcDatum {
@@ -44,8 +45,9 @@ export type CruiseGeometryMap = ReadonlyMap<string, CruiseRouteFeatureCollection
 /**
  * Build a PathLayer of cruise legs rendered as smooth Catmull-Rom
  * splines through the backend's coarse waypoints. One path per
- * consecutive stop pair within each cruise. At-sea days and stops
- * without a resolved port are skipped.
+ * consecutive pair in the effective port sequence (departure port →
+ * port-call stops → arrival port). At-sea days and stops without a
+ * resolved port are skipped.
  *
  * When the backend hasn't returned geometry for a cruise yet, legs
  * fall back to a 2-vertex direct chord which the spline renders as
@@ -66,17 +68,16 @@ export function buildCruiseArcs(
 ): ArcDatum[] {
   const arcs: ArcDatum[] = [];
   for (const cruise of cruises) {
-    const stops = cruise.stops
-      .filter((s) => !s.isAtSea && s.port !== null)
-      .sort((a, b) => a.dayNumber - b.dayNumber);
+    // Effective sequence includes departure/arrival ports so minimal
+    // A-to-B cruises (no detailed stop list) still draw a route.
+    const ports = effectivePortSequence(cruise);
 
     const geometry = geometryByCruise.get(cruise.id);
     const waypointsByPair = buildWaypointIndex(geometry);
 
-    for (let i = 0; i < stops.length - 1; i++) {
-      const a = stops[i].port;
-      const b = stops[i + 1].port;
-      if (!a || !b) continue;
+    for (let i = 0; i < ports.length - 1; i++) {
+      const a = ports[i];
+      const b = ports[i + 1];
       const routeGeometry = waypointsByPair.get(pairKey(a.id, b.id)) ?? {
         coordinates: [
           [a.lon, a.lat],

@@ -9,6 +9,7 @@ import { parseCruiseBookingText } from '../services/cruiseBookingParser';
 import { resolveCruiseEntities } from '../services/cruiseEntityResolver';
 import { FILE_LIMITS } from '../config/constants';
 import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
+import { describeParserError } from '../utils/parserErrors';
 
 const router = Router();
 
@@ -94,9 +95,10 @@ router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest
       return res.status(400).json({ error: 'Validation failed', details: error.errors });
     }
     logger.error({ error }, '[PDF Parse] Unexpected error');
-    res.status(500).json({
+    const described = describeParserError(error);
+    res.status(described.status).json({
       error: 'PDF parsing failed',
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: described.message,
     });
   }
 });

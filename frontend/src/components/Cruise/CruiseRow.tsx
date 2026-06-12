@@ -1,6 +1,7 @@
 import type { Cruise } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
+import { countUniquePorts } from "./cruisePorts";
 
 interface Props {
   cruise: Cruise;
@@ -14,18 +15,7 @@ const fmtDate = (iso: string | null): string => {
 
 export function CruiseRow({ cruise, onOpen }: Props): JSX.Element {
   const { t } = useTranslation("cruise");
-  // Count unique ports across departure / arrival / port-call stops. The
-  // bare stops filter undercounts cruises whose itinerary lives in
-  // departurePort + arrivalPort only (e.g. PDF imports with no detailed
-  // stop list, or simple A-to-B trips). De-duplicate by portId so a
-  // round-trip with the same departure/arrival port still reads "1".
-  const portIds = new Set<number>();
-  if (cruise.departurePort?.id != null) portIds.add(cruise.departurePort.id);
-  if (cruise.arrivalPort?.id != null) portIds.add(cruise.arrivalPort.id);
-  for (const stop of cruise.stops) {
-    if (!stop.isAtSea && stop.port?.id != null) portIds.add(stop.port.id);
-  }
-  const portsCount = portIds.size;
+  const portsCount = countUniquePorts(cruise);
   const displayLine = cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? "—";
   const displayShip = cruise.ship?.name ?? cruise.shipNameOverride ?? "—";
   const price = cruise.price !== null ? `${cruise.price.toFixed(2)} ${cruise.currency ?? ""}` : "—";

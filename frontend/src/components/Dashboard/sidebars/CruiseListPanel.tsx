@@ -70,7 +70,8 @@ export function CruiseListPanel({
         cruises.map((c) => {
           const ports = c.stops.filter((s) => !s.isAtSea).length;
           const startLabel = c.startDate ? formatDateInTimezone(c.startDate, "UTC") : "—";
-          const title = c.ship?.name ?? c.shipNameOverride ?? c.cruiseLine ?? "Cruise";
+          const title =
+            c.ship?.name ?? c.shipNameOverride ?? c.cruiseLine ?? t("cruise:map.fallbackTitle");
           return (
             <div
               key={c.id}

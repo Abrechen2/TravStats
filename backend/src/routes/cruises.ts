@@ -6,6 +6,7 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { createCruiseSchema, updateCruiseSchema, cruiseQuerySchema } from '../schemas/cruise';
 import { checkAndUpdateAchievements } from '../utils/achievements';
+import { buildEffectivePortSequence } from '../shared/cruise/portSequence';
 import { computeSchematicRoute } from '../services/schematicRouter';
 import { recomputeLegsForCruise } from '../services/cruiseDistance/cruiseLegService';
 import logger from '../utils/logger';
@@ -29,27 +30,37 @@ interface GeometryFeatureCollection {
 }
 
 type CruiseStopWithPort = Prisma.CruiseStopGetPayload<{ include: { port: true } }>;
+type PortRow = Prisma.PortGetPayload<Record<string, never>>;
+
+interface CruiseGeometryInput {
+  stops: CruiseStopWithPort[];
+  departurePort: PortRow | null;
+  arrivalPort: PortRow | null;
+}
 
 /**
  * Compute the GeoJSON FeatureCollection for one cruise's itinerary.
- * Each consecutive port-pair becomes one LineString. Sea-day and
+ * The route covers departure port → port-call stops → arrival port;
+ * each consecutive port-pair becomes one LineString. Sea-day and
  * unmatched stops are skipped — they don't contribute legs. The
  * underlying `computeSchematicRoute` is cached, so calling this in a
  * batch over the same set of port-pairs is essentially free after the
  * first miss.
  */
 async function buildCruiseGeometry(
-  stops: CruiseStopWithPort[],
+  cruise: CruiseGeometryInput,
 ): Promise<{ collection: GeometryFeatureCollection; routedLegs: number; directLegs: number }> {
-  const ordered = stops.filter((s) => !s.isAtSea && s.port !== null);
+  const portCalls = cruise.stops
+    .filter((s) => !s.isAtSea && s.port !== null)
+    .map((s) => s.port as PortRow);
+  const ordered = buildEffectivePortSequence(cruise.departurePort, portCalls, cruise.arrivalPort);
   const features: GeometryFeature[] = [];
   let routedLegs = 0;
   let directLegs = 0;
 
   for (let i = 0; i < ordered.length - 1; i++) {
-    const a = ordered[i].port;
-    const b = ordered[i + 1].port;
-    if (!a || !b) continue;
+    const a = ordered[i];
+    const b = ordered[i + 1];
 
     const route = await computeSchematicRoute(
       { id: a.id, name: a.name, city: a.city, country: a.country, unlocode: a.unlocode, lat: a.lat, lon: a.lon },
@@ -184,7 +195,11 @@ router.post('/geometry/batch', async (req: AuthRequest, res: Response, next: Nex
 
     const cruises = await prisma.cruise.findMany({
       where: { id: { in: parsed.data.ids }, userId },
-      include: { stops: { include: { port: true }, orderBy: { dayNumber: 'asc' as const } } },
+      include: {
+        stops: { include: { port: true }, orderBy: { dayNumber: 'asc' as const } },
+        departurePort: true,
+        arrivalPort: true,
+      },
     });
 
     const computedAt = Date.now();
@@ -196,7 +211,7 @@ router.post('/geometry/batch', async (req: AuthRequest, res: Response, next: Nex
     // miss, so concurrency just amortises the cache misses across
     // cruises without overloading anything.
     const results = await Promise.all(
-      cruises.map(async (cruise) => ({ id: cruise.id, ...(await buildCruiseGeometry(cruise.stops)) })),
+      cruises.map(async (cruise) => ({ id: cruise.id, ...(await buildCruiseGeometry(cruise)) })),
     );
     for (const r of results) {
       data[r.id] = r.collection;
@@ -225,12 +240,16 @@ router.get('/:id/geometry', async (req: AuthRequest, res: Response, next: NextFu
     const userId = requireUser(req);
     const cruise = await prisma.cruise.findFirst({
       where: { id: req.params.id, userId },
-      include: { stops: { include: { port: true }, orderBy: { dayNumber: 'asc' as const } } },
+      include: {
+        stops: { include: { port: true }, orderBy: { dayNumber: 'asc' as const } },
+        departurePort: true,
+        arrivalPort: true,
+      },
     });
     if (!cruise) throw new AppError('Cruise not found', 404);
 
     const computedAt = Date.now();
-    const { collection, routedLegs, directLegs } = await buildCruiseGeometry(cruise.stops);
+    const { collection, routedLegs, directLegs } = await buildCruiseGeometry(cruise);
 
     logger.info({
       operation: 'cruise_geometry_computed',
@@ -337,6 +356,13 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
             })),
           });
         }
+      }
+
+      // Legs span departure port → stops → arrival port, so a changed
+      // departure/arrival port invalidates them just like changed stops.
+      const portsChanged =
+        'departurePortId' in parsed.data || 'arrivalPortId' in parsed.data;
+      if (stops !== undefined || portsChanged) {
         await recomputeLegsForCruise(existing.id, tx);
       }
 

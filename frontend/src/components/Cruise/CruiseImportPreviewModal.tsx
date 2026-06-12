@@ -147,7 +147,7 @@ function CruiseImportEntryCard({
         <dd className="text-[var(--text-primary)]">{input.endDate ?? "—"}</dd>
         <dt>{t("cruise:field.cabin")}</dt>
         <dd className="text-[var(--text-primary)]">
-          {[input.cabinNumber, input.cabinType, input.deck && `Deck ${input.deck}`]
+          {[input.cabinNumber, input.cabinType, input.deck && `${t("cruise:field.deck")} ${input.deck}`]
             .filter(Boolean)
             .join(" · ") || "—"}
         </dd>

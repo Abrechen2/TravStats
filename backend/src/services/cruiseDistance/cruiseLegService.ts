@@ -12,17 +12,12 @@
 
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../../db";
+import { buildEffectivePortSequence } from "../../shared/cruise/portSequence";
 import { computeLegDistance } from "./index";
 import type { PortPoint } from "./types";
 
 /** Bumps when the orchestrator's calculator chain or chaining logic changes. */
 export const ORCHESTRATOR_VERSION = "1.0.0";
-
-interface PortCallStop {
-  portId: number;
-  dayNumber: number;
-  port: PortPoint | null;
-}
 
 export async function recomputeLegsForCruise(
   cruiseId: string,
@@ -30,37 +25,54 @@ export async function recomputeLegsForCruise(
 ): Promise<number> {
   const client = tx ?? prisma;
 
-  const stops = await client.cruiseStop.findMany({
-    where: { cruiseId, isAtSea: false, portId: { not: null } },
-    orderBy: { dayNumber: "asc" },
-    include: { port: true },
+  const [cruise, stops] = await Promise.all([
+    client.cruise.findUnique({
+      where: { id: cruiseId },
+      include: { departurePort: true, arrivalPort: true },
+    }),
+    client.cruiseStop.findMany({
+      where: { cruiseId, isAtSea: false, portId: { not: null } },
+      orderBy: { dayNumber: "asc" },
+      include: { port: true },
+    }),
+  ]);
+
+  const toPortPoint = (p: {
+    id: number;
+    lat: number;
+    lon: number;
+    unlocode: string | null;
+    region: string | null;
+  }): PortPoint => ({
+    id: p.id,
+    lat: p.lat,
+    lon: p.lon,
+    unlocode: p.unlocode,
+    region: p.region,
   });
 
-  const portCalls: PortCallStop[] = stops
-    .filter((s): s is typeof s & { portId: number; port: NonNullable<typeof s.port> } =>
-      s.portId !== null && s.port !== null,
-    )
-    .map((s) => ({
-      portId: s.portId,
-      dayNumber: s.dayNumber,
-      port: {
-        id: s.port.id,
-        lat: s.port.lat,
-        lon: s.port.lon,
-        unlocode: s.port.unlocode,
-        region: s.port.region,
-      },
-    }));
+  const portCallPorts = stops
+    .filter((s): s is typeof s & { port: NonNullable<typeof s.port> } => s.port !== null)
+    .map((s) => toPortPoint(s.port));
+
+  // Legs cover the full route: departure port → port calls → arrival
+  // port. Without this, a cruise whose itinerary lives only in
+  // departurePort/arrivalPort produced zero legs — no distance stats
+  // and no route on the map.
+  const sequence = buildEffectivePortSequence(
+    cruise?.departurePort ? toPortPoint(cruise.departurePort) : null,
+    portCallPorts,
+    cruise?.arrivalPort ? toPortPoint(cruise.arrivalPort) : null,
+  );
 
   await client.cruiseLeg.deleteMany({ where: { cruiseId } });
 
-  if (portCalls.length < 2) return 0;
+  if (sequence.length < 2) return 0;
 
   const rows: Prisma.CruiseLegCreateManyInput[] = [];
-  for (let i = 1; i < portCalls.length; i++) {
-    const from = portCalls[i - 1].port;
-    const to = portCalls[i].port;
-    if (!from || !to) continue;
+  for (let i = 1; i < sequence.length; i++) {
+    const from = sequence[i - 1];
+    const to = sequence[i];
 
     const computed = await computeLegDistance(from, to);
     rows.push({

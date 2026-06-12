@@ -67,7 +67,8 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
                 type="button"
                 onClick={(): void => move(i, -1)}
                 disabled={i === 0}
-                aria-label="move up"
+                aria-label={t("stops.moveUp")}
+                title={t("stops.moveUp")}
                 className="px-1 disabled:opacity-30"
               >
                 ↑
@@ -76,7 +77,8 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
                 type="button"
                 onClick={(): void => move(i, 1)}
                 disabled={i === stops.length - 1}
-                aria-label="move down"
+                aria-label={t("stops.moveDown")}
+                title={t("stops.moveDown")}
                 className="px-1 disabled:opacity-30"
               >
                 ↓
@@ -85,7 +87,8 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
                 type="button"
                 onClick={(): void => remove(i)}
                 className="px-1 text-[var(--danger)] hover:text-[var(--danger)]"
-                aria-label="remove"
+                aria-label={t("stops.remove")}
+                title={t("stops.remove")}
               >
                 ×
               </button>

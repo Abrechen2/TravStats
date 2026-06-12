@@ -243,4 +243,72 @@ describe('calculateCruiseStats', () => {
     // If the stale legs were used, distance would be > 0.
     expect(s.totalDistanceKm).toBe(0);
   });
+
+  it('includes departure/arrival ports in port, country and region stats', () => {
+    const cruises: CruiseData[] = [
+      {
+        id: 'c-deparr',
+        shipId: null,
+        cruiseLine: null,
+        cabinType: null,
+        deck: null,
+        startDate: null,
+        endDate: null,
+        departurePort: port(10, 'northern-europe', 'Germany'),
+        arrivalPort: port(11, 'iberian-atlantic', 'Portugal'),
+        stops: [{ portId: null, port: null, dayNumber: 1, isAtSea: true }],
+      },
+    ];
+    const s = calculateCruiseStats(cruises);
+    expect(s.cruisePortsUnique).toBe(2);
+    expect(s.totalPortCalls).toBe(2);
+    expect(s.countries.has('Germany')).toBe(true);
+    expect(s.countries.has('Portugal')).toBe(true);
+    expect(s.regions.has('northern-europe')).toBe(true);
+  });
+
+  it('does not double-count departure/arrival that duplicate first/last port call', () => {
+    const cruises: CruiseData[] = [
+      {
+        id: 'c-dup',
+        shipId: null,
+        cruiseLine: null,
+        cabinType: null,
+        deck: null,
+        startDate: null,
+        endDate: null,
+        departurePort: port(1, 'baltic', 'DE'),
+        arrivalPort: port(2, 'baltic', 'DK'),
+        stops: [
+          { portId: 1, port: port(1, 'baltic', 'DE'), dayNumber: 1, isAtSea: false },
+          { portId: 2, port: port(2, 'baltic', 'DK'), dayNumber: 2, isAtSea: false },
+        ],
+      },
+    ];
+    const s = calculateCruiseStats(cruises);
+    expect(s.totalPortCalls).toBe(2);
+    expect(s.cruisePortsUnique).toBe(2);
+  });
+
+  it('accepts persisted legs sized to the effective sequence (dep + stops + arr)', () => {
+    const cruises: CruiseData[] = [
+      {
+        id: 'c-eff-legs',
+        shipId: null,
+        cruiseLine: null,
+        cabinType: null,
+        deck: null,
+        startDate: null,
+        endDate: null,
+        departurePort: port(10, 'northern-europe', 'Germany'),
+        arrivalPort: port(11, 'iberian-atlantic', 'Portugal'),
+        stops: [{ portId: 1, port: port(1, 'channel', 'UK'), dayNumber: 1, isAtSea: false }],
+        // Effective sequence: dep(10) → 1 → arr(11) = 3 port calls → 2 legs.
+        legDistancesKm: [700.5, 800.25],
+      },
+    ];
+    const s = calculateCruiseStats(cruises);
+    expect(s.totalDistanceKm).toBeCloseTo(700.5 + 800.25, 1);
+    expect(s.longestLegKm).toBeCloseTo(800.25, 1);
+  });
 });

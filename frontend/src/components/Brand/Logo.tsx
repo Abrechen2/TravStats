@@ -1,7 +1,8 @@
 // TravStats brand system — final logo (v1.0, locked 2026-04-18).
 //
 // The mark is a luggage-tag silhouette with the "TS" monogram and a
-// V1.0 micro-line. The wordmark is Inter Medium with a cross-dot glyph
+// version micro-line (major.minor of the app generation, bumped per major
+// release). The wordmark is Inter Medium with a cross-dot glyph
 // between TRAV and STATS. All surfaces read `color` as a hex string or
 // CSS variable; callers should pass `var(--accent)` / `var(--text-primary)`
 // to inherit the app's theme tokens.
@@ -85,7 +86,7 @@ export function LogoMark({
         letterSpacing="2"
         opacity="0.6"
       >
-        V1.0
+        V2.0
       </text>
     </svg>
   );

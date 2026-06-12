@@ -4,6 +4,7 @@
     "title": "Kreuzfahrten",
     "new": "Kreuzfahrt hinzufügen",
     "empty": "Noch keine Kreuzfahrten erfasst",
+    "loading": "Kreuzfahrten werden geladen …",
     "columns": {
       "ship": "Schiff",
       "line": "Reederei",
@@ -15,6 +16,9 @@
     }
   },
   "detail": {
+    "loading": "Kreuzfahrt wird geladen …",
+    "notFound": "Kreuzfahrt nicht gefunden",
+    "stopsEmpty": "Noch keine Stopps erfasst — füge sie über „Bearbeiten“ hinzu.",
     "route": "Route",
     "cabin": "Kabine",
     "costs": "Kosten",
@@ -44,6 +48,10 @@
     "notes": "Notizen",
     "tags": "Tags",
     "companions": "Mitreisende",
+    "status": "Status",
+    "currency": "Währung",
+    "departure_port": "Abfahrtshafen",
+    "arrival_port": "Ankunftshafen",
     "port_name": "Hafenname",
     "city": "Stadt",
     "country": "Land",
@@ -67,15 +75,22 @@
     "at_sea": "Auf See",
     "add": "Stopp hinzufügen",
     "day": "Tag",
-    "excursion": "Landausflug"
+    "excursion": "Landausflug",
+    "moveUp": "Nach oben verschieben",
+    "moveDown": "Nach unten verschieben",
+    "remove": "Stopp entfernen"
   },
   "picker": {
     "ship_placeholder": "Schiff suchen …",
     "port_placeholder": "Hafen suchen …",
     "add_custom_ship": "Neues Schiff anlegen",
-    "add_custom_port": "Neuen Hafen anlegen"
+    "add_custom_port": "Neuen Hafen anlegen",
+    "cancel": "Abbrechen",
+    "invalidLatLon": "Ungültige Koordinaten — Breite ±90, Länge ±180",
+    "createShipError": "Schiff konnte nicht angelegt werden",
+    "createPortError": "Hafen konnte nicht angelegt werden"
   },
-  "map": { "layer": "Kreuzfahrten" },
+  "map": { "layer": "Kreuzfahrten", "fallbackTitle": "Kreuzfahrt" },
   "filter": {
     "title": "Filter",
     "searchPlaceholder": "Suche nach Schiff oder Reederei …",
@@ -92,7 +107,8 @@
     "save": "Speichern",
     "saving": "Speichere …",
     "createTitle": "Neue Kreuzfahrt",
-    "editTitle": "Kreuzfahrt bearbeiten"
+    "editTitle": "Kreuzfahrt bearbeiten",
+    "saveError": "Kreuzfahrt konnte nicht gespeichert werden"
   },
   "import": {
     "button": "PDF importieren",

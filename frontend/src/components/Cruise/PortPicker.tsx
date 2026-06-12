@@ -6,6 +6,8 @@ import { useTranslation } from "../../hooks/useTranslation";
 interface Props {
   value: Port | null;
   onChange: (port: Port) => void;
+  /** Visible field label (e.g. departure vs arrival port). */
+  label?: string;
 }
 
 /**
@@ -16,7 +18,7 @@ interface Props {
  * - Offers an "add custom" flow when no exact-name match is present, capturing
  *   required lat/lon and optional city/country, then creating via `portsApi.create`.
  */
-export function PortPicker({ value, onChange }: Props): JSX.Element {
+export function PortPicker({ value, onChange, label }: Props): JSX.Element {
   const { t } = useTranslation("cruise");
   const [query, setQuery] = useState<string>(value?.name ?? "");
   const [results, setResults] = useState<Port[]>([]);
@@ -30,7 +32,9 @@ export function PortPicker({ value, onChange }: Props): JSX.Element {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!query || query.length < 2) {
+    // Don't search when the field merely shows the already-selected port —
+    // otherwise the dropdown re-opens right after a pick and on modal open.
+    if (!query || query.length < 2 || query === value?.name) {
       setResults([]);
       return;
     }
@@ -43,7 +47,7 @@ export function PortPicker({ value, onChange }: Props): JSX.Element {
       }
     }, 250);
     return (): void => clearTimeout(handle);
-  }, [query]);
+  }, [query, value?.name]);
 
   const exactMatch = results.some((r) => r.name.toLowerCase() === query.toLowerCase());
 
@@ -72,7 +76,7 @@ export function PortPicker({ value, onChange }: Props): JSX.Element {
       lon < -180 ||
       lon > 180
     ) {
-      setError("Invalid lat/lon");
+      setError(t("picker.invalidLatLon"));
       return;
     }
     setSaving(true);
@@ -95,7 +99,7 @@ export function PortPicker({ value, onChange }: Props): JSX.Element {
       setNewLat("");
       setNewLon("");
     } catch {
-      setError(t("picker.add_custom_port"));
+      setError(t("picker.createPortError"));
     } finally {
       setSaving(false);
     }
@@ -105,10 +109,14 @@ export function PortPicker({ value, onChange }: Props): JSX.Element {
 
   return (
     <div className="relative">
+      {label !== undefined && (
+        <span className="mb-1 block text-xs text-[var(--text-muted)]">{label}</span>
+      )}
       <input
         role="combobox"
         aria-expanded={results.length > 0}
         aria-autocomplete="list"
+        aria-label={label ?? t("picker.port_placeholder")}
         className="w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none"
         placeholder={t("picker.port_placeholder")}
         value={query}
@@ -133,7 +141,7 @@ export function PortPicker({ value, onChange }: Props): JSX.Element {
           })}
         </ul>
       )}
-      {query.length >= 2 && !exactMatch && !showAdd && (
+      {query.length >= 2 && query !== value?.name && !exactMatch && !showAdd && (
         <button
           type="button"
           className="mt-2 text-xs text-[var(--accent)] hover:underline"
@@ -199,7 +207,7 @@ export function PortPicker({ value, onChange }: Props): JSX.Element {
               }}
               className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             >
-              Cancel
+              {t("picker.cancel")}
             </button>
             <button
               type="button"

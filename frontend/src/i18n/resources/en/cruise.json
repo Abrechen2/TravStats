@@ -4,6 +4,7 @@
     "title": "Cruises",
     "new": "Add cruise",
     "empty": "No cruises yet",
+    "loading": "Loading cruises …",
     "columns": {
       "ship": "Ship",
       "line": "Line",
@@ -15,6 +16,9 @@
     }
   },
   "detail": {
+    "loading": "Loading cruise …",
+    "notFound": "Cruise not found",
+    "stopsEmpty": "No stops yet — add them via “Edit”.",
     "route": "Route",
     "cabin": "Cabin",
     "costs": "Costs",
@@ -44,6 +48,10 @@
     "notes": "Notes",
     "tags": "Tags",
     "companions": "Companions",
+    "status": "Status",
+    "currency": "Currency",
+    "departure_port": "Departure port",
+    "arrival_port": "Arrival port",
     "port_name": "Port name",
     "city": "City",
     "country": "Country",
@@ -67,15 +75,22 @@
     "at_sea": "At sea",
     "add": "Add stop",
     "day": "Day",
-    "excursion": "Excursion"
+    "excursion": "Excursion",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove stop"
   },
   "picker": {
     "ship_placeholder": "Search ship …",
     "port_placeholder": "Search port …",
     "add_custom_ship": "Add custom ship",
-    "add_custom_port": "Add custom port"
+    "add_custom_port": "Add custom port",
+    "cancel": "Cancel",
+    "invalidLatLon": "Invalid coordinates — latitude ±90, longitude ±180",
+    "createShipError": "Could not create the ship",
+    "createPortError": "Could not create the port"
   },
-  "map": { "layer": "Cruises" },
+  "map": { "layer": "Cruises", "fallbackTitle": "Cruise" },
   "filter": {
     "title": "Filter",
     "searchPlaceholder": "Search ship or line …",
@@ -92,7 +107,8 @@
     "save": "Save",
     "saving": "Saving …",
     "createTitle": "New cruise",
-    "editTitle": "Edit cruise"
+    "editTitle": "Edit cruise",
+    "saveError": "Could not save the cruise"
   },
   "import": {
     "button": "Import PDF",
