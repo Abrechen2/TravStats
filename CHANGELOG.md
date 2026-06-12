@@ -4,6 +4,48 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-rc.7] - 2026-06-12 (Release Candidate)
+
+Closes the findings of the V2 function & usability audit. No schema change.
+
+### Fixed
+- **Unreadable form fields on dark surfaces.** A Tailwind color named
+  `base` shadowed the `text-base` font-size utility and rendered
+  datetime inputs and dropdowns (e.g. in the cruise editor) near-black
+  on the dark theme.
+- **Minimal cruises were invisible.** A cruise entered with only a
+  departure and arrival port (no detailed stop list) drew no route on
+  any map, listed neither port on its detail page, and reported
+  contradictory port counts (4 in the list vs 0 on the detail page).
+  Routes, distances, statistics and achievements now all run over the
+  full departure → stops → arrival sequence, and changing the
+  departure/arrival port recomputes the route.
+- **Past cruises stayed "Scheduled" forever.** Scheduled cruises whose
+  end date passed more than 48 hours ago now flip to Completed
+  automatically — cancelled and historical entries are never touched.
+- **"Go to settings" on a disabled dashboard tab led nowhere.** The
+  link now lands directly on the Modules section.
+- **English leftovers in the German UI.** Loading, not-found and
+  save-error messages, picker buttons and screen-reader labels across
+  the cruise surfaces are now properly localized (DE/EN), and the logo
+  badge reads V2.0 instead of V1.0.
+- **Parser failures exposed raw internals.** When the LLM parser
+  (Ollama/OpenAI/Claude) is unreachable, the import dialog now shows a
+  clear, actionable message instead of a connection stack trace — and
+  the cruise statistics endpoint no longer fails entirely when a single
+  cruise carries malformed data.
+
+### Added
+- **German port names in the port search.** Typing "Lissabon",
+  "Kopenhagen" or "Venedig" now finds Lisbon, Copenhagen and Venice —
+  about 80 common German exonyms map to the English catalog names,
+  matching even while you type.
+- **Cruise dashboard tab states.** The cruise map tab now shows a
+  loading indicator, an error banner when data can't be fetched, and an
+  empty-state card guiding new users to add or import their first
+  cruise. The cruise editor labels its departure/arrival port fields,
+  and search dropdowns no longer pop open on their own.
+
 ## [2.0.0-rc.6] - 2026-06-11 (Release Candidate)
 
 ### Added
