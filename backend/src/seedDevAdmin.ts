@@ -11,6 +11,7 @@
  * NEVER run against a production DB. The DATABASE_URL gate in CLAUDE.local.md
  * (localhost:5433/flights_dev) is the operator's responsibility.
  */
+import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import { seedDemoUser } from "./seedDemoUser";
 import { loadPools, seedCruises } from "./seedDemoAccount";
@@ -30,16 +31,21 @@ void (async () => {
   // to flip the toggle through the UI every time the dev DB is wiped.
   const admin = await prisma.user.findUnique({ where: { username: "admin" } });
   if (admin) {
+    // Give the dev admin a home airport (Munich, matching the demo flight hub)
+    // so the fly & cruise import pre-fills the home-side flight airport.
+    const settingsData = {
+      homeAirportHistory: [{ iata: "MUC", fromDate: "2015-01-01", toDate: null }],
+    } as unknown as Prisma.InputJsonValue;
     await prisma.userSettings.upsert({
       where: { userId: admin.id },
       create: {
         userId: admin.id,
         enabledDomains: ["flight", "cruise"],
-        data: {},
+        data: settingsData,
       },
-      update: { enabledDomains: ["flight", "cruise"] },
+      update: { enabledDomains: ["flight", "cruise"], data: settingsData },
     });
-    console.log("   Multi-domain enabled: flight, cruise");
+    console.log("   Multi-domain enabled: flight, cruise · home airport: MUC");
 
     // Demo cruises — seedDemoUser ships only flights + trips, so the dev
     // admin's Kreuzfahrten tab would otherwise be empty. Reuse the cruise
