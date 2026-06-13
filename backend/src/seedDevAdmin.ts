@@ -13,6 +13,7 @@
  */
 import { prisma } from "./db";
 import { seedDemoUser } from "./seedDemoUser";
+import { loadPools, seedCruises } from "./seedDemoAccount";
 
 void (async () => {
   await seedDemoUser({
@@ -39,6 +40,33 @@ void (async () => {
       update: { enabledDomains: ["flight", "cruise"] },
     });
     console.log("   Multi-domain enabled: flight, cruise");
+
+    // Demo cruises — seedDemoUser ships only flights + trips, so the dev
+    // admin's Kreuzfahrten tab would otherwise be empty. Reuse the cruise
+    // templates from seedDemoAccount. Idempotent: clear this user's cruises
+    // first (CruiseStop cascades on cruise delete).
+    const { ships, ports } = await loadPools();
+    await prisma.cruise.deleteMany({ where: { userId: admin.id } });
+    await seedCruises(admin.id, ships, ports);
+
+    // Ollama parser config (cruise/flight booking import). Read from env so
+    // the machine-specific URL stays out of the repo (see CLAUDE.local.md).
+    // /parser-capabilities and the admin parser-settings UI read admin_settings,
+    // not the env vars — so persist them here when provided.
+    const ollamaUrl = process.env.OLLAMA_URL;
+    const ollamaModel = process.env.OLLAMA_MODEL;
+    if (ollamaUrl && ollamaModel) {
+      const existing = await prisma.adminSettings.findFirst();
+      if (existing) {
+        await prisma.adminSettings.update({
+          where: { id: existing.id },
+          data: { ollamaUrl, ollamaModel },
+        });
+      } else {
+        await prisma.adminSettings.create({ data: { ollamaUrl, ollamaModel } });
+      }
+      console.log(`   Ollama configured: ${ollamaModel} @ ${ollamaUrl}`);
+    }
   }
   await prisma.$disconnect();
 })();
