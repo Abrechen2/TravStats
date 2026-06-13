@@ -65,7 +65,8 @@ describe("backfillCo2", () => {
   it("dry-run reports candidates without writing", async () => {
     const local: PrismaClient = prisma as unknown as PrismaClient;
     const result = await backfillCo2(local, { dryRun: true, batchSize: 500 });
-    expect(result.scanned).toBeGreaterThanOrEqual(3);
+    // Two seeded rows are guaranteed NULL; other suites may add more.
+    expect(result.scanned).toBeGreaterThanOrEqual(2);
     expect(result.updated).toBeGreaterThanOrEqual(2);
 
     const stillNull = await prisma.flight.count({
