@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { AirportTooltip } from "./AirportTooltip";
-import type { Flight } from "../types";
+import type { GeoJSONFeature } from "../types";
 
 // Mock i18next used by useTranslation hook
 vi.mock("../hooks/useTranslation", () => ({
@@ -21,24 +21,29 @@ vi.mock("../hooks/useLocale", () => ({
   useLocale: () => "en-US",
 }));
 
-function makeFlight(overrides: Partial<Flight> = {}): Flight {
+function makeFeature(overrides: Partial<GeoJSONFeature["properties"]> = {}): GeoJSONFeature {
   return {
-    id: "1",
-    userId: "u1",
-    depIata: "MUC",
-    depIcao: "EDDM",
-    arrIata: "FRA",
-    arrIcao: "EDDF",
-    depName: "Munich Airport",
-    arrName: "Frankfurt Airport",
-    depLat: 48.354,
-    depLon: 11.786,
-    arrLat: 50.033,
-    arrLon: 8.571,
-    airline: "Lufthansa",
-    status: "flown",
-    ...overrides,
-  } as Flight;
+    type: "Feature",
+    properties: {
+      id: "1",
+      airline: "Lufthansa",
+      flightNumber: "LH123",
+      departureAirport: { iata: "MUC", icao: "EDDM", name: "Munich Airport", lat: 48.354, lon: 11.786 },
+      arrivalAirport: { iata: "FRA", icao: "EDDF", name: "Frankfurt Airport", lat: 50.033, lon: 8.571 },
+      departureTime: "2024-01-01T08:00:00Z",
+      arrivalTime: "2024-01-01T09:00:00Z",
+      status: "flown",
+      distance: 300,
+      ...overrides,
+    },
+    geometry: {
+      type: "LineString",
+      coordinates: [
+        [11.786, 48.354],
+        [8.571, 50.033],
+      ],
+    },
+  };
 }
 
 describe("AirportTooltip", () => {
@@ -48,11 +53,26 @@ describe("AirportTooltip", () => {
         iata="MUC"
         screenX={100}
         screenY={100}
-        flights={[makeFlight()]}
+        flights={[makeFeature()]}
         onClose={() => {}}
       />
     );
     expect(screen.getByText("MUC")).toBeInTheDocument();
+  });
+
+  it("counts flights touching the airport", () => {
+    render(
+      <AirportTooltip
+        iata="MUC"
+        screenX={100}
+        screenY={100}
+        flights={[makeFeature(), makeFeature({ id: "2" })]}
+        onClose={() => {}}
+      />
+    );
+    // Two departures from MUC → "2" total with 2↑ 0↓
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText(/2↑ 0↓/)).toBeInTheDocument();
   });
 
   it("shows ICAO code from departure flight", () => {
@@ -61,7 +81,7 @@ describe("AirportTooltip", () => {
         iata="MUC"
         screenX={100}
         screenY={100}
-        flights={[makeFlight({ depIata: "MUC", depIcao: "EDDM" })]}
+        flights={[makeFeature()]}
         onClose={() => {}}
       />
     );
@@ -74,7 +94,7 @@ describe("AirportTooltip", () => {
         iata="FRA"
         screenX={100}
         screenY={100}
-        flights={[makeFlight({ arrIata: "FRA", arrIcao: "EDDF" })]}
+        flights={[makeFeature()]}
         onClose={() => {}}
       />
     );
@@ -82,13 +102,16 @@ describe("AirportTooltip", () => {
   });
 
   it("does not render ICAO when unavailable", () => {
-    const flight = makeFlight({ depIata: "MUC", depIcao: undefined, arrIcao: undefined });
+    const feature = makeFeature({
+      departureAirport: { iata: "MUC", name: "Munich Airport" },
+      arrivalAirport: { iata: "FRA", name: "Frankfurt Airport" },
+    });
     render(
       <AirportTooltip
         iata="MUC"
         screenX={100}
         screenY={100}
-        flights={[flight]}
+        flights={[feature]}
         onClose={() => {}}
       />
     );
