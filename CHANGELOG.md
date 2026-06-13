@@ -4,6 +4,26 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-rc.9] - 2026-06-13 (Release Candidate)
+
+Cruise-import overhaul on top of rc.8. No schema change.
+
+### Fixed
+- **Duplicate "Add cruise" button.** The dashboard cruise tab showed two
+  "+ Kreuzfahrt hinzufügen" buttons; the correctly-placed toolbar button
+  now opens the import chooser, and the stray floating one is gone.
+
+### Added
+- **Editable cruise import preview.** After a booking is parsed, every
+  field is editable inline before saving — the matched ship and ports now
+  show by name, with an expandable itinerary editor, and missing/unmatched
+  fields are flagged. (The preview was previously read-only.)
+- **Fly & cruise flights.** Cruise bookings that bundle flights now extract
+  those flights too: they appear as opt-in cards with airports pre-filled
+  (your home airport + the nearest airport to the embarkation/disembarkation
+  port, all editable), and the cruise plus its flights can be grouped into
+  one trip so the journey map shows fly → cruise → fly.
+
 ## [2.0.0-rc.8] - 2026-06-13 (Release Candidate)
 
 Bug fixes and import/UX improvements on top of rc.7. No schema change.
