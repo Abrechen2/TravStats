@@ -85,12 +85,35 @@ export const cruiseApi = {
   },
 };
 
+/**
+ * A port candidate resolved from the external geocoder (not yet in the DB).
+ * Has no `id`/`unlocode` — selecting one POSTs it to /ports to persist it.
+ */
+export interface GeocodedPort {
+  name: string;
+  city: string | null;
+  country: string | null;
+  lat: number;
+  lon: number;
+  source: "geocoder";
+}
+
 export const portsApi = {
   search: async (q: string, region?: string): Promise<Port[]> => {
     const params: Record<string, string> = {};
     if (q) params.q = q;
     if (region) params.region = region;
     const { data } = await api.get<Envelope<Port[]>>("/ports", { params });
+    return data.data;
+  },
+  /**
+   * External geocoder fallback for ports missing from the local catalog.
+   * Returns [] on error — callers treat it as a soft enhancement.
+   */
+  geocode: async (q: string): Promise<GeocodedPort[]> => {
+    const { data } = await api.get<Envelope<GeocodedPort[]>>("/ports/geocode", {
+      params: { q },
+    });
     return data.data;
   },
   create: async (input: {
