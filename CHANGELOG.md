@@ -4,6 +4,20 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-rc.12] - 2026-06-13 (Release Candidate)
+
+### Fixed
+- **Cruise import preview triggered a render-loop.** The editable import
+  preview reported its state through an effect whose dependencies changed
+  on every render, causing a "Maximum update depth exceeded" loop
+  (~193 console errors per import). Saving still worked but the screen
+  thrashed; the reporting is now stable and the preview renders cleanly.
+- **Imported fly & cruise trip was mislabeled "completed".** A booking with
+  bundled flights auto-creates a trip; with no explicit status it fell back
+  to the "completed" default, so an upcoming voyage showed as already done.
+  The status is now derived from the cruise dates (upcoming → planned,
+  past → completed, in range → in progress).
+
 ## [2.0.0-rc.11] - 2026-06-13 (Release Candidate)
 
 ### Fixed
