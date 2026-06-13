@@ -485,7 +485,7 @@ async function ensureUserSettings(userId: string): Promise<void> {
   });
 }
 
-async function loadPools(): Promise<{
+export async function loadPools(): Promise<{
   airports: Map<string, AirportRow>;
   ships: Map<string, ShipRow>;
   ports: Map<string, PortRow>;
@@ -696,7 +696,7 @@ async function seedFlights(userId: string, airports: Map<string, AirportRow>): P
   console.log(`   → created ${rows.length} flights`);
 }
 
-async function seedCruises(
+export async function seedCruises(
   userId: string,
   ships: Map<string, ShipRow>,
   ports: Map<string, PortRow>,
@@ -940,11 +940,16 @@ async function main(): Promise<void> {
   console.log(`   Achievements: ${ac}`);
 }
 
-main()
-  .catch((err) => {
-    console.error("❌ Seed failed:", err);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// Only auto-run the full demo seed when executed directly (npm run seed:demo).
+// Guarded so other seeders (e.g. seedDevAdmin) can import loadPools/seedCruises
+// without triggering a complete demo-account seed + premature $disconnect.
+if (require.main === module) {
+  main()
+    .catch((err) => {
+      console.error("❌ Seed failed:", err);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
