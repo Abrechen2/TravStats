@@ -17,6 +17,7 @@ import type { Cruise } from "../../../types/cruise";
 import MapContainer3D from "../../MapContainer3D";
 import { buildPortFrequencyLayer } from "../modes/buildPortFrequencyLayer";
 import { CruiseListPanel } from "../sidebars/CruiseListPanel";
+import { CruiseAddChooser } from "../../Cruise/CruiseAddChooser";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
 
 interface ItineraryDot {
@@ -30,13 +31,28 @@ export function CruisesTab(): JSX.Element {
   const { mode } = useDashboardRoute();
   const { isEnabled } = useEnabledDomains();
   const cruiseEnabled = isEnabled("cruise");
-  const { t } = useTranslation(["dashboard"]);
+  const { t } = useTranslation(["dashboard", "cruise"]);
   const [cruises, setCruises] = useState<Cruise[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
   const setCruiseSelection = useCruiseSelectionStore((s) => s.setSelection);
   const navigate = useNavigate();
+
+  const loadCruises = useCallback(async (): Promise<void> => {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const list = await cruiseApi.list({});
+      setCruises(list);
+    } catch (err: unknown) {
+      logger.error({ err }, "CruisesTab: failed to load cruises");
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const handleSelectCruise = useCallback(
     (cruise: Cruise): void => {
@@ -55,25 +71,8 @@ export function CruisesTab(): JSX.Element {
   // the tab renders the DomainDisabledNotice stub instead (see below).
   useEffect(() => {
     if (!cruiseEnabled) return;
-    let cancelled = false;
-    setLoading(true);
-    setLoadError(false);
-    cruiseApi
-      .list({})
-      .then((list) => {
-        if (!cancelled) setCruises(list);
-      })
-      .catch((err: unknown) => {
-        logger.error({ err }, "CruisesTab: failed to load cruises");
-        if (!cancelled) setLoadError(true);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [cruiseEnabled]);
+    void loadCruises();
+  }, [cruiseEnabled, loadCruises]);
 
   // Apply the global year filter to the cruise set. Domain visibility
   // is intentionally NOT applied here — same rationale as FlightsTab:
@@ -181,6 +180,25 @@ export function CruisesTab(): JSX.Element {
       >
         ☰ {t("dashboard:sidebar.cruises")}
       </button>
+      <button
+        type="button"
+        onClick={() => setShowAdd(true)}
+        style={{
+          position: "absolute",
+          top: 12,
+          right: 12,
+          zIndex: 30,
+          padding: "6px 14px",
+          borderRadius: 10,
+          background: "var(--accent)",
+          color: "#0d1117",
+          border: "none",
+          cursor: "pointer",
+          fontWeight: 600,
+        }}
+      >
+        + {t("cruise:add.title")}
+      </button>
       <CruiseListPanel
         cruises={visibleCruises}
         isOpen={sidebarOpen}
@@ -261,7 +279,7 @@ export function CruisesTab(): JSX.Element {
             </p>
             <button
               type="button"
-              onClick={() => navigate("/cruises")}
+              onClick={() => setShowAdd(true)}
               style={{
                 padding: "10px 20px",
                 background: "var(--accent)",
@@ -272,10 +290,13 @@ export function CruisesTab(): JSX.Element {
                 fontWeight: 600,
               }}
             >
-              {t("dashboard:cruiseTab.emptyCta")}
+              + {t("cruise:add.title")}
             </button>
           </div>
         </div>
+      )}
+      {showAdd && (
+        <CruiseAddChooser onClose={() => setShowAdd(false)} onSaved={loadCruises} />
       )}
     </div>
   );

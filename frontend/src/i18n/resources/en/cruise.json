@@ -110,6 +110,21 @@
     "editTitle": "Edit cruise",
     "saveError": "Could not save the cruise"
   },
+  "add": {
+    "title": "Add cruise",
+    "back": "Back",
+    "import": {
+      "best": "Best option",
+      "title": "Import booking",
+      "hint": "Read in a booking email (.eml/.msg) or PDF — auto-detected.",
+      "cta": "Import"
+    },
+    "manual": {
+      "title": "Enter manually",
+      "hint": "Add ship, route and ports yourself.",
+      "cta": "Start"
+    }
+  },
   "import": {
     "button": "Import PDF",
     "parsing": "Parsing PDF …",
