@@ -36,6 +36,7 @@
     "jspdf-autotable": "^5.0.7",
     "jsqr": "^1.4.0",
     "maplibre-gl": "^5.19.0",
+    "qrcode.react": "^4.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.49.2",

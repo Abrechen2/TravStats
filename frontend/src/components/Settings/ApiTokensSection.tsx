@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -300,6 +301,24 @@ export default function ApiTokensSection(): JSX.Element {
               >
                 {copyOk ? t("settings:apiTokens.copied") : t("settings:apiTokens.copy")}
               </button>
+            </div>
+            <div className="flex flex-col items-center gap-2 pt-1">
+              <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                {t("settings:apiTokens.appQrTitle")}
+              </p>
+              <div className="rounded-lg bg-white p-3">
+                <QRCodeSVG
+                  value={JSON.stringify({
+                    server: window.location.origin,
+                    token: justCreated.plaintext,
+                  })}
+                  size={176}
+                  level="M"
+                />
+              </div>
+              <p className="text-xs text-center" style={{ color: "var(--text-muted)" }}>
+                {t("settings:apiTokens.appQrHint")}
+              </p>
             </div>
             <div className="flex justify-end pt-2">
               <button
