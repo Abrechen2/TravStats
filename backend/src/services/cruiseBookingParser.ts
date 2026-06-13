@@ -1,6 +1,7 @@
 import http from "http";
 import https from "https";
 import logger from "../utils/logger";
+import { getAdminParserSettings } from "./parserSettings";
 
 const CRUISE_CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
 const CRUISE_CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
@@ -327,6 +328,11 @@ export class CruiseBookingParser {
     this.model = options.model ?? process.env.OLLAMA_MODEL ?? "gemma3:12b";
   }
 
+  /** The resolved Ollama base URL this parser will talk to (for diagnostics). */
+  get endpoint(): string {
+    return this.url;
+  }
+
   async checkAvailability(): Promise<boolean> {
     try {
       const res = await fetchGet(`${this.url}/api/tags`);
@@ -454,11 +460,45 @@ export async function parseCruiseBookingText(
   text: string,
   options?: CruiseBookingParserOptions,
 ): Promise<CruiseParseResult> {
-  const parser = getCruiseBookingParser(options);
+  // Resolve the Ollama endpoint from admin settings first, mirroring the flight
+  // text parser (services/parsers/config.ts). The Settings "Test" button reads
+  // the same admin-configured URL, so the cruise parser MUST consult it too —
+  // otherwise a correctly configured remote Ollama is silently ignored and every
+  // cruise parse falls back to localhost:11434 → ECONNREFUSED. Explicit options
+  // (used by tests) still win; env vars remain the final fallback.
+  const resolved = await resolveCruiseParserOptions(options);
+  const parser = getCruiseBookingParser(resolved);
   const ollamaAvailable = await parser.checkAvailability();
   if (!ollamaAvailable) {
-    throw new Error("Ollama is not reachable — cannot parse cruise booking");
+    throw new Error(
+      `Ollama is not reachable at ${parser.endpoint} — cannot parse cruise booking. ` +
+        `Check the parser configuration in Settings (Ollama URL / model).`,
+    );
   }
   const cruises = await parser.parseText(text);
   return { cruises, parserUsed: "ollama", ollamaAvailable: true };
+}
+
+/**
+ * Merge explicit options over admin-configured settings over env/defaults.
+ * Returns undefined when nothing is configured so the constructor applies its
+ * own env/localhost fallback unchanged.
+ */
+async function resolveCruiseParserOptions(
+  options?: CruiseBookingParserOptions,
+): Promise<CruiseBookingParserOptions | undefined> {
+  if (options?.url && options?.model) return options;
+  let adminUrl: string | undefined;
+  let adminModel: string | undefined;
+  try {
+    const admin = await getAdminParserSettings();
+    adminUrl = admin?.ollamaUrl ?? undefined;
+    adminModel = admin?.ollamaModel ?? undefined;
+  } catch (err) {
+    logger.warn({ err }, "[Cruise Parser] Failed to load admin parser settings");
+  }
+  return {
+    url: options?.url ?? adminUrl ?? process.env.OLLAMA_URL ?? undefined,
+    model: options?.model ?? adminModel ?? process.env.OLLAMA_MODEL ?? undefined,
+  };
 }

@@ -60,7 +60,10 @@ type ActiveSection =
 type TabId = "general" | "flight" | "cruise";
 
 // Which tab each admin section belongs to. Everything falls in "general"
-// unless it's inherently domain-specific. Parser training is flight-only;
+// unless it's inherently domain-specific. The parser config (Ollama URL /
+// model, OCR/regex defaults) is cross-domain — the cruise parser depends on
+// the same Ollama endpoint as flights — so it lives under "general", not
+// "flight" (where cruise-only users never found it; see issue #129).
 // cruiseMasterData (ship + port management) lives under the cruise tab.
 const TAB_FOR_SECTION: Record<ActiveSection, TabId> = {
   system: "general",
@@ -71,7 +74,7 @@ const TAB_FOR_SECTION: Record<ActiveSection, TabId> = {
   logging: "general",
   backups: "general",
   smtp: "general",
-  parsers: "flight",
+  parsers: "general",
   cruiseMasterData: "cruise",
 };
 
@@ -94,15 +97,12 @@ export default function AdminPage(): JSX.Element {
   // Tab state + URL sync + drift guard live in the shared useDomainTabs
   // hook. Filtered by enabledDomains, URL param "tab", activeTab resets
   // to "general" if its domain gets disabled mid-session.
+  // The admin "Flug" tab was dropped once its only section (parser config)
+  // moved to "Allgemein" — an empty domain tab is worse UX than none. Flight
+  // admin settings can re-add a tab here if a flight-specific section appears.
   const { tabs, activeTab, setActiveTab } = useDomainTabs<TabId>({
     tabConfig: [
       { id: "general", label: t("admin:tabs2.general") || "Allgemein" },
-      {
-        id: "flight",
-        label: t("admin:tabs2.flight") || "Flug",
-        icon: DOMAINS.flight.icon,
-        requiresDomain: "flight",
-      },
       {
         id: "cruise",
         label: t("admin:tabs2.cruise") || "Kreuzfahrt",
