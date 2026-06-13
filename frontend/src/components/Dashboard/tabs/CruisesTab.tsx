@@ -17,7 +17,6 @@ import type { Cruise } from "../../../types/cruise";
 import MapContainer3D from "../../MapContainer3D";
 import { buildPortFrequencyLayer } from "../modes/buildPortFrequencyLayer";
 import { CruiseListPanel } from "../sidebars/CruiseListPanel";
-import { CruiseAddChooser } from "../../Cruise/CruiseAddChooser";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
 
 interface ItineraryDot {
@@ -31,12 +30,11 @@ export function CruisesTab(): JSX.Element {
   const { mode } = useDashboardRoute();
   const { isEnabled } = useEnabledDomains();
   const cruiseEnabled = isEnabled("cruise");
-  const { t } = useTranslation(["dashboard", "cruise"]);
+  const { t } = useTranslation(["dashboard"]);
   const [cruises, setCruises] = useState<Cruise[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showAdd, setShowAdd] = useState(false);
   const setCruiseSelection = useCruiseSelectionStore((s) => s.setSelection);
   const navigate = useNavigate();
 
@@ -180,25 +178,6 @@ export function CruisesTab(): JSX.Element {
       >
         ☰ {t("dashboard:sidebar.cruises")}
       </button>
-      <button
-        type="button"
-        onClick={() => setShowAdd(true)}
-        style={{
-          position: "absolute",
-          top: 12,
-          right: 12,
-          zIndex: 30,
-          padding: "6px 14px",
-          borderRadius: 10,
-          background: "var(--accent)",
-          color: "#0d1117",
-          border: "none",
-          cursor: "pointer",
-          fontWeight: 600,
-        }}
-      >
-        + {t("cruise:add.title")}
-      </button>
       <CruiseListPanel
         cruises={visibleCruises}
         isOpen={sidebarOpen}
@@ -279,7 +258,7 @@ export function CruisesTab(): JSX.Element {
             </p>
             <button
               type="button"
-              onClick={() => setShowAdd(true)}
+              onClick={() => navigate("/cruises")}
               style={{
                 padding: "10px 20px",
                 background: "var(--accent)",
@@ -290,13 +269,10 @@ export function CruisesTab(): JSX.Element {
                 fontWeight: 600,
               }}
             >
-              + {t("cruise:add.title")}
+              {t("dashboard:cruiseTab.emptyCta")}
             </button>
           </div>
         </div>
-      )}
-      {showAdd && (
-        <CruiseAddChooser onClose={() => setShowAdd(false)} onSaved={loadCruises} />
       )}
     </div>
   );
