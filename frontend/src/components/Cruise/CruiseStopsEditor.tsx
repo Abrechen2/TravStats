@@ -2,6 +2,16 @@ import { PortPicker } from "./PortPicker";
 import type { CruiseStopInput, Port } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 
+// Stop arrival/departure are PORT-LOCAL wall-clock times — a ship arrives at
+// "08:00" in the port's own time, independent of the viewer's timezone. Treat
+// the datetime-local value as timezone-neutral and pin it to a literal UTC
+// instant. Using `new Date(value).toISOString()` instead shifted the time by
+// the browser's UTC offset on every save (display sliced the UTC ISO straight
+// back), so a stored "08:00" reappeared as "06:00" and could roll to the
+// previous day — the same asymmetry that dropped cruise start/end dates.
+const fromStopInput = (local: string): string | null =>
+  local ? `${local}:00.000Z` : null;
+
 interface Props {
   stops: CruiseStopInput[];
   onChange: (stops: CruiseStopInput[]) => void;
@@ -119,7 +129,7 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
                   value={stop.arrivalTime?.slice(0, 16) ?? ""}
                   onChange={(e): void =>
                     update(i, {
-                      arrivalTime: e.target.value ? new Date(e.target.value).toISOString() : null,
+                      arrivalTime: fromStopInput(e.target.value),
                     })
                   }
                   className="rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-xs text-[var(--text-primary)]"
@@ -130,7 +140,7 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
                   value={stop.departureTime?.slice(0, 16) ?? ""}
                   onChange={(e): void =>
                     update(i, {
-                      departureTime: e.target.value ? new Date(e.target.value).toISOString() : null,
+                      departureTime: fromStopInput(e.target.value),
                     })
                   }
                   className="rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-xs text-[var(--text-primary)]"
