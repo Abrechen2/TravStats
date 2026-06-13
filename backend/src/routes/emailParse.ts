@@ -3,7 +3,7 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { emailParseLimiter } from '../middleware/rateLimit';
 import { parseBookingEmail } from '../services/bookingParser';
 import { parseCruiseBookingText } from '../services/cruiseBookingParser';
-import { resolveCruiseEntities } from '../services/cruiseEntityResolver';
+import { resolveCruiseEntities, hydrateResolvedCruises } from '../services/cruiseEntityResolver';
 import { extractEmailFromFile } from '../services/emailExtractor';
 import { uploadEmailFile } from '../middleware/upload';
 import { z } from 'zod';
@@ -55,12 +55,9 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
       const combined = subject ? `${subject}\n\n${emailContent}` : emailContent;
       const cruiseResult = await parseCruiseBookingText(combined);
       const resolved = await Promise.all(cruiseResult.cruises.map(resolveCruiseEntities));
+      const cruises = await hydrateResolvedCruises(resolved);
       return res.json({
-        cruises: resolved.map((r) => ({
-          input: r.input,
-          shipMatched: r.shipMatched,
-          unmatchedPorts: r.unmatchedPorts,
-        })),
+        cruises,
         parserUsed: cruiseResult.parserUsed,
         ollamaAvailable: cruiseResult.ollamaAvailable,
         text: emailContent,
@@ -196,6 +193,7 @@ router.post(
           : extracted.text;
         const cruiseResult = await parseCruiseBookingText(combined);
         const resolved = await Promise.all(cruiseResult.cruises.map(resolveCruiseEntities));
+        const cruises = await hydrateResolvedCruises(resolved);
 
         if (filePath && fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
@@ -203,11 +201,7 @@ router.post(
         }
 
         return res.json({
-          cruises: resolved.map((r) => ({
-            input: r.input,
-            shipMatched: r.shipMatched,
-            unmatchedPorts: r.unmatchedPorts,
-          })),
+          cruises,
           parserUsed: cruiseResult.parserUsed,
           ollamaAvailable: cruiseResult.ollamaAvailable,
           subject: extracted.subject,

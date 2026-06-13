@@ -2,6 +2,18 @@ import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
 const mockParseCruiseBookingText = jest.fn();
 const mockResolveCruiseEntities = jest.fn();
+// Pass-through hydration: keep input/shipMatched/unmatchedPorts, add empty
+// display objects (matches the real signature's enrichment).
+const mockHydrateResolvedCruises = jest.fn(
+  async (resolved: Array<Record<string, unknown>>) =>
+    resolved.map((r) => ({
+      ...r,
+      ship: null,
+      departurePort: null,
+      arrivalPort: null,
+      stopPorts: {},
+    }))
+);
 const mockParseBookingEmail = jest.fn();
 const mockExtractEmailFromFile = jest.fn();
 
@@ -10,6 +22,7 @@ jest.mock("../services/cruiseBookingParser", () => ({
 }));
 jest.mock("../services/cruiseEntityResolver", () => ({
   resolveCruiseEntities: mockResolveCruiseEntities,
+  hydrateResolvedCruises: mockHydrateResolvedCruises,
 }));
 jest.mock("../services/bookingParser", () => ({
   parseBookingEmail: mockParseBookingEmail,
