@@ -130,8 +130,9 @@ export function CruiseImportPreviewModal({
           {entries.map((entry, idx) => (
             <CruiseImportEntryEditor
               key={idx}
+              index={idx}
               entry={entry}
-              onChange={(data): void => handleEntryChange(idx, data)}
+              onChange={handleEntryChange}
             />
           ))}
         </div>
@@ -219,10 +220,12 @@ interface EditableFlight {
 
 function CruiseImportEntryEditor({
   entry,
+  index,
   onChange,
 }: {
   entry: ParsedCruiseEntry;
-  onChange: (data: EntryData) => void;
+  index: number;
+  onChange: (index: number, data: EntryData) => void;
 }): JSX.Element {
   const { t } = useTranslation("cruise");
   const { input } = entry;
@@ -315,10 +318,17 @@ function CruiseImportEntryEditor({
         };
       });
 
-    const tripLabel =
-      `${ship?.name ?? overrideName ?? t("import.tripDefault")}${startDate ? ` ${startDate.slice(0, 4)}` : ""}`.trim();
+    // Derive a default trip label from the ship/override name + year. No t()
+    // here on purpose: react-i18next's `t` can change identity between renders,
+    // and any unstable value in this effect's deps drives an infinite
+    // setState→render loop. The parent falls back to t("import.tripDefault")
+    // when this comes back empty.
+    const shipName = ship?.name ?? overrideName ?? "";
+    const tripLabel = shipName
+      ? `${shipName}${startDate ? ` ${startDate.slice(0, 4)}` : ""}`
+      : "";
 
-    onChange({ input: builtInput, flightInputs, tripLabel });
+    onChange(index, { input: builtInput, flightInputs, tripLabel });
   }, [
     ship,
     cruiseLine,
@@ -336,8 +346,8 @@ function CruiseImportEntryEditor({
     stops,
     flights,
     overrideName,
+    index,
     onChange,
-    t,
   ]);
 
   const portStops = stops.filter((s) => !s.isAtSea).length;
