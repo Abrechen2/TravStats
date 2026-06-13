@@ -6,6 +6,7 @@ import { boardingPassParseLimiter } from "../middleware/rateLimit";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { decodeBcbp, looksLikeBcbp } from "../utils/bcbp";
+import { decodeBarcodeFromImageBase64 } from "../utils/barcodeImage";
 import { getParserConfig, parseBoardingPass } from "../services/parsers/factory";
 import { validateBoardingPassImageBase64 } from "../utils/fileValidation";
 import { getCachedAirport } from "../services/airportCache";
@@ -54,7 +55,25 @@ router.post("/propose", authenticate, boardingPassParseLimiter, async (req: Auth
     const { barcode, imageBase64 } = proposeSchema.parse(req.body);
 
     // --- 1. Barcode = source of truth (deterministic, error-corrected) ------
-    const decoded = barcode && looksLikeBcbp(barcode) ? decodeBcbp(barcode) : null;
+    // The scan path sends the decoded barcode string directly. The upload path
+    // sends only an image — read the Aztec/PDF417 barcode out of it, because
+    // boarding-pass OCR is unreliable and the barcode is exact.
+    let barcodeStr = barcode;
+    let barcodeFromImage = false;
+    if (!barcodeStr && imageBase64) {
+      const fromImage = await decodeBarcodeFromImageBase64(imageBase64);
+      if (fromImage) {
+        barcodeStr = fromImage;
+        barcodeFromImage = true;
+      }
+    }
+    const decoded = barcodeStr && looksLikeBcbp(barcodeStr) ? decodeBcbp(barcodeStr) : null;
+    if (barcodeFromImage && decoded) {
+      logger.info(
+        { flightNumber: decoded.flightNumber, route: `${decoded.fromCode} → ${decoded.toCode}` },
+        "[BoardingPassPropose] barcode read from uploaded image"
+      );
+    }
     let flightNumber = decoded?.flightNumber;
     let fromCode = decoded?.fromCode;
     let toCode = decoded?.toCode;
