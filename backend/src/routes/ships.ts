@@ -2,13 +2,15 @@ import { Router, Response, NextFunction } from "express";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../db";
-import { authenticate, AuthRequest } from "../middleware/auth";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import { invalidateCruiseEntityCache } from "../services/cruiseEntityResolver";
 import logger from "../utils/logger";
 
 const router = Router();
 router.use(authenticate);
+// Read-only PATs may search ships (GET) but not create them (POST).
+router.use(requireWriteScope);
 
 const listQuerySchema = z.object({
   q: z.string().max(100).optional(),

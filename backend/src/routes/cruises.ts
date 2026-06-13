@@ -2,7 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../db';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { createCruiseSchema, updateCruiseSchema, cruiseQuerySchema } from '../schemas/cruise';
 import { checkAndUpdateAchievements } from '../utils/achievements';
@@ -87,6 +87,9 @@ async function buildCruiseGeometry(
 
 const router = Router();
 router.use(authenticate);
+// Method-aware: GET passes through, so read-only PATs keep read access but
+// cannot POST/PATCH/DELETE cruises — consistent with flights/trips.
+router.use(requireWriteScope);
 
 const CRUISE_INCLUDE = {
   ship: true,
