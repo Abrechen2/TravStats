@@ -55,7 +55,7 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
       const combined = subject ? `${subject}\n\n${emailContent}` : emailContent;
       const cruiseResult = await parseCruiseBookingText(combined);
       const resolved = await Promise.all(cruiseResult.cruises.map(resolveCruiseEntities));
-      const cruises = await hydrateResolvedCruises(resolved);
+      const cruises = await hydrateResolvedCruises(resolved, userId);
       return res.json({
         cruises,
         parserUsed: cruiseResult.parserUsed,
@@ -193,7 +193,7 @@ router.post(
           : extracted.text;
         const cruiseResult = await parseCruiseBookingText(combined);
         const resolved = await Promise.all(cruiseResult.cruises.map(resolveCruiseEntities));
-        const cruises = await hydrateResolvedCruises(resolved);
+        const cruises = await hydrateResolvedCruises(resolved, userId);
 
         if (filePath && fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);

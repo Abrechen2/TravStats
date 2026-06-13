@@ -69,7 +69,7 @@ router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest
     if (parsed.domain === 'cruise') {
       const cruiseResult = await parseCruiseBookingText(pdfText);
       const resolved = await Promise.all(cruiseResult.cruises.map(resolveCruiseEntities));
-      const cruises = await hydrateResolvedCruises(resolved);
+      const cruises = await hydrateResolvedCruises(resolved, userId);
       return res.json({
         cruises,
         parserUsed: cruiseResult.parserUsed,
