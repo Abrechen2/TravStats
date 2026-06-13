@@ -4,6 +4,37 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.1.0] - 2026-06-13
+
+### Added
+- **Worldwide port catalog** — The cruise port catalog grew from ~670 to
+  over 12,000 seaports (imported from the public UN/LOCODE dataset), so ports
+  like Taranto that were previously missing now resolve directly in manual
+  entry and import.
+- **Port map-search fallback** — When a port isn't in the catalog, the picker
+  looks it up via OpenStreetMap and fills in its coordinates automatically
+  instead of forcing manual latitude/longitude entry.
+
+### Fixed
+- **Cruise dates were lost or shifted** — Entering only a date in the cruise
+  form left it unsaved (so it never appeared in the overview), and entered
+  dates could drift to the previous day across timezones. Cruise start/end are
+  now date-only and timezone-stable.
+- **Accented ports weren't found** — Searching "Malaga", "Warnemunde" or
+  "Tromso" returned nothing because the catalog stores accented names; the
+  search now ignores diacritics. Added German exonyms (e.g. Tarent → Taranto).
+- **Cruise PDF/email import extracted nothing** — Real "Mein Schiff" bookings
+  parsed to empty results because the LLM extraction prompt was
+  over-constrained; the rewritten prompt reliably extracts ship, dates, cabin,
+  price, itinerary ports and bundled fly & cruise flights.
+- **Port search failures were hidden** — A network or auth error during port
+  search now surfaces an error instead of silently looking like "no results".
+
+### Security
+- **API write-scope on cruise endpoints** — Cruise, port and ship write
+  endpoints now require a write-scoped Personal Access Token (consistent with
+  flights/trips), and the new port-lookup endpoint is rate-limited per user.
+
 ## [2.0.1] - 2026-06-13
 
 ### Fixed
