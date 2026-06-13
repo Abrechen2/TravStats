@@ -94,7 +94,7 @@ export function CruiseImportPreviewModal({
       const flightIds: string[] = [];
       for (const f of allFlights) {
         const created = await flightsApi.create(f, { force: true });
-        flightIds.push(created.id);
+        if (created.id) flightIds.push(created.id);
       }
       if (tripId && flightIds.length > 0) {
         await tripsApi.assignFlights(tripId, { flightIds, action: "add" });
