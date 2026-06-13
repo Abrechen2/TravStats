@@ -25,6 +25,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import { hashPassword } from "./utils/password";
 import { checkAndUpdateAchievements } from "./utils/achievements";
+import { calculateCo2Kg, toSeatClass } from "./services/co2Calculator";
 
 type AirportRow = {
   id: number;
@@ -575,7 +576,13 @@ function buildFlightRow(
     companions,
     coPassengers,
     ticketPrice: hasPrice ? Math.round(80 + Math.random() * (cls === "first" ? 5000 : cls === "business" ? 2500 : 600)) : null,
-    co2Kg: status === "flown" ? Math.round(distance * 0.18) : null,
+    co2Kg: calculateCo2Kg({
+      depLat: dep.lat,
+      depLon: dep.lon,
+      arrLat: arr.lat,
+      arrLon: arr.lon,
+      seatClass: toSeatClass(cls),
+    }),
     actualDeparture: hasActualTimes && depOut ? addHours(depOut, (delayMinutes ?? 0) / 60) : null,
     actualArrival: hasActualTimes && arrTime ? addHours(arrTime, (delayMinutes ?? 0) / 60) : null,
     delayMinutes,
