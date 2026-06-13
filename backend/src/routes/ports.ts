@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../db";
 import { authenticate, AuthRequest } from "../middleware/auth";
+import { portGeocodeLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import { invalidateCruiseEntityCache } from "../services/cruiseEntityResolver";
 import { expandPortSearchTerms } from "../services/portExonyms";
@@ -84,7 +85,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
 // which isn't in the vendored CSV) to coordinates so the user can add it as a
 // port without typing lat/lon by hand. Results carry source:"geocoder" and no
 // id — the client POSTs the chosen one back to /ports to persist it.
-router.get("/geocode", async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/geocode", portGeocodeLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const parsed = listQuerySchema.safeParse(req.query);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
