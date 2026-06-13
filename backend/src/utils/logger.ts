@@ -68,6 +68,18 @@ const categoryStreams: Map<string, pino.StreamEntry> = new Map();
 const pinoConfig: pino.LoggerOptions = {
   level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
 
+  // Serializers run before the `log` formatter and turn Error instances into
+  // plain, enumerable objects. Without this, `logger.error({ error }, ...)`
+  // logged `"error":{}` because an Error's `message`/`stack` are
+  // non-enumerable and JSON.stringify drops them. We map both the standard
+  // `err` key and the project-wide `error` convention; non-Error values pass
+  // through untouched so existing `{ error: someObject }` sites are unaffected.
+  serializers: {
+    err: pino.stdSerializers.err,
+    error: (value: unknown) =>
+      value instanceof Error ? pino.stdSerializers.err(value) : value,
+  },
+
   formatters: {
     level: (label) => ({ level: label }),
 
