@@ -76,6 +76,24 @@ export const airportSearchBurstLimiter = rateLimit({
 });
 
 /**
+ * Per-user/IP limit for the external port geocoder (`/ports/geocode`).
+ *
+ * The geocoder proxies to OpenStreetMap Nominatim, which the service throttles
+ * GLOBALLY to ≤1 req/s to honour their usage policy. Without a per-caller cap,
+ * a single spammy client could monopolise that global throttle and starve the
+ * geocoder for everyone. 30/min per caller is ample for debounced typeahead
+ * (it only fires when the local catalog has no match) while bounding abuse.
+ */
+export const portGeocodeLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: patAwareMax(30),
+  message: 'Too many port lookups in a short time — please slow down',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
  * Rate limiter for flight creation
  * Allows 20 flight creations per hour per IP
  */

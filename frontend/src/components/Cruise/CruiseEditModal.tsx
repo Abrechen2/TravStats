@@ -27,15 +27,21 @@ const STATUSES: CruiseStatus[] = ["scheduled", "flown", "cancelled", "historical
 const CABIN_TYPES: CabinType[] = ["inside", "oceanview", "balcony", "suite"];
 const CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
 
-const toLocalInput = (iso: string | null | undefined): string => {
-  if (!iso) return "";
-  return iso.slice(0, 16);
-};
+// Cruise start/end are date-granular (a voyage spans whole days). Use a
+// date-only round-trip pinned to UTC midnight. This fixes two bugs:
+//   1. A `datetime-local` input stays EMPTY until BOTH date and time are set,
+//      so a user who picked only a date sent "" → null → the date silently
+//      vanished from the overview. A `type="date"` input yields a value from
+//      the date alone.
+//   2. `new Date(local).toISOString()` converted the picked wall-clock from the
+//      browser timezone to UTC, while display sliced the UTC ISO straight back
+//      into the picker — so a date drifted to the previous day (e.g. Berlin
+//      00:00 → stored 22:00Z → shown as the day before). Pinning to a literal
+//      UTC instant keeps the round-trip stable and timezone-neutral.
+const toDateInput = (iso: string | null | undefined): string => (iso ? iso.slice(0, 10) : "");
 
-const fromLocalInput = (local: string): string | null => {
-  if (!local) return null;
-  return new Date(local).toISOString();
-};
+const fromDateInput = (date: string): string | null =>
+  date ? `${date}T00:00:00.000Z` : null;
 
 const splitCsv = (v: string): string[] =>
   v
@@ -47,9 +53,9 @@ const INPUT_CLASS =
   "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-3 text-base text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none";
 
 // color-scheme: dark tells the browser to render native picker widgets
-// (calendar icon, spinners) in dark mode colors. Without it, datetime-local
-// inputs render the TT.MM.JJJJ placeholder mask in a nearly-black color
-// that is unreadable on our dark surface.
+// (calendar icon, spinners) in dark mode colors. Without it, date /
+// datetime-local inputs render the TT.MM.JJJJ placeholder mask in a
+// nearly-black color that is unreadable on our dark surface.
 const DARK_PICKER_STYLE: React.CSSProperties = { colorScheme: "dark" };
 
 /**
@@ -62,8 +68,8 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
 
   const [ship, setShip] = useState<Ship | null>(cruise?.ship ?? null);
   const [cruiseLine, setCruiseLine] = useState<string>(cruise?.cruiseLine ?? "");
-  const [startDate, setStartDate] = useState<string>(toLocalInput(cruise?.startDate));
-  const [endDate, setEndDate] = useState<string>(toLocalInput(cruise?.endDate));
+  const [startDate, setStartDate] = useState<string>(toDateInput(cruise?.startDate));
+  const [endDate, setEndDate] = useState<string>(toDateInput(cruise?.endDate));
   const [status, setStatus] = useState<CruiseStatus>(cruise?.status ?? "scheduled");
 
   const [departurePort, setDeparturePort] = useState<Port | null>(cruise?.departurePort ?? null);
@@ -111,8 +117,8 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
         cruiseLine: cruiseLine || undefined,
         departurePortId: departurePort?.id ?? null,
         arrivalPortId: arrivalPort?.id ?? null,
-        startDate: fromLocalInput(startDate),
-        endDate: fromLocalInput(endDate),
+        startDate: fromDateInput(startDate),
+        endDate: fromDateInput(endDate),
         status,
         cabinNumber: cabinNumber || undefined,
         cabinType: (cabinType || undefined) as CabinType | undefined,
@@ -169,7 +175,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
               />
               <div className="mt-3 grid grid-cols-2 gap-3">
                 <input
-                  type="datetime-local"
+                  type="date"
                   aria-label={t("field.depart")}
                   className={INPUT_CLASS}
                   style={DARK_PICKER_STYLE}
@@ -177,7 +183,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                   onChange={(e): void => setStartDate(e.target.value)}
                 />
                 <input
-                  type="datetime-local"
+                  type="date"
                   aria-label={t("field.arrive")}
                   className={INPUT_CLASS}
                   style={DARK_PICKER_STYLE}

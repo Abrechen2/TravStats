@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { portsApi } from "../../lib/api";
+import { portsApi, type GeocodedPort } from "../../lib/api";
 import type { Port } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 
@@ -22,6 +22,12 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
   const { t } = useTranslation("cruise");
   const [query, setQuery] = useState<string>(value?.name ?? "");
   const [results, setResults] = useState<Port[]>([]);
+  // External geocoder fallback: populated only when the local catalog has no
+  // match, so a user can still find ports missing from the vendored CSV
+  // (e.g. Taranto) without typing coordinates by hand.
+  const [geocoded, setGeocoded] = useState<GeocodedPort[]>([]);
+  const [searching, setSearching] = useState<boolean>(false);
+  const [searchError, setSearchError] = useState<boolean>(false);
   const [showAdd, setShowAdd] = useState<boolean>(false);
   const [newName, setNewName] = useState<string>("");
   const [newCity, setNewCity] = useState<string>("");
@@ -36,17 +42,43 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
     // otherwise the dropdown re-opens right after a pick and on modal open.
     if (!query || query.length < 2 || query === value?.name) {
       setResults([]);
+      setGeocoded([]);
+      setSearchError(false);
       return;
     }
+    let cancelled = false;
     const handle = setTimeout(async () => {
+      setSearching(true);
+      setSearchError(false);
       try {
         const r = await portsApi.search(query);
-        setResults(Array.isArray(r) ? r : []);
+        if (cancelled) return;
+        const local = Array.isArray(r) ? r : [];
+        setResults(local);
+        // Only reach out to the external geocoder when the local catalog has
+        // nothing — keeps it cheap and offline-first.
+        if (local.length === 0) {
+          const g = await portsApi.geocode(query);
+          if (!cancelled) setGeocoded(Array.isArray(g) ? g : []);
+        } else {
+          setGeocoded([]);
+        }
       } catch {
-        setResults([]);
+        // Surface the failure instead of silently showing "no results", which
+        // previously masked auth/network errors as an empty catalog.
+        if (!cancelled) {
+          setResults([]);
+          setGeocoded([]);
+          setSearchError(true);
+        }
+      } finally {
+        if (!cancelled) setSearching(false);
       }
-    }, 250);
-    return (): void => clearTimeout(handle);
+    }, 300);
+    return (): void => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
   }, [query, value?.name]);
 
   const exactMatch = results.some((r) => r.name.toLowerCase() === query.toLowerCase());
@@ -62,6 +94,31 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
     onChange(port);
     setQuery(port.name);
     setResults([]);
+    setGeocoded([]);
+  };
+
+  // Persist a geocoder candidate as a real port, then select it. Saves the
+  // user from re-typing name/coordinates in the manual "add custom" form.
+  const handleSelectGeocoded = async (g: GeocodedPort): Promise<void> => {
+    setSaving(true);
+    setError(null);
+    try {
+      const port = await portsApi.create({
+        name: g.name,
+        city: g.city ?? undefined,
+        country: g.country ?? undefined,
+        lat: g.lat,
+        lon: g.lon,
+      });
+      onChange(port);
+      setQuery(port.name);
+      setResults([]);
+      setGeocoded([]);
+    } catch {
+      setError(t("picker.createPortError"));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const save = async (): Promise<void> => {
@@ -141,18 +198,52 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
           })}
         </ul>
       )}
-      {query.length >= 2 && query !== value?.name && !exactMatch && !showAdd && (
-        <button
-          type="button"
-          className="mt-2 text-xs text-[var(--accent)] hover:underline"
-          onClick={(): void => {
-            setNewName(query);
-            setShowAdd(true);
-          }}
-        >
-          {t("picker.add_custom_port")}
-        </button>
+      {/* Geocoder fallback — only shown when the local catalog had no match. */}
+      {results.length === 0 && geocoded.length > 0 && (
+        <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] shadow-lg">
+          <li className="px-3 py-1 text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+            {t("picker.via_geocoder")}
+          </li>
+          {geocoded.map((g, i) => {
+            const location = [g.city, g.country].filter(Boolean).join(", ");
+            return (
+              <li key={`${g.lat},${g.lon},${i}`}>
+                <button
+                  type="button"
+                  disabled={saving}
+                  className="w-full px-3 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] disabled:opacity-50"
+                  onClick={(): void => {
+                    void handleSelectGeocoded(g);
+                  }}
+                >
+                  {g.name}
+                  {location && <span className="text-[var(--text-muted)]"> — {location}</span>}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       )}
+      {searchError && (
+        <p className="mt-1 text-xs text-[var(--danger)]">{t("picker.searchError")}</p>
+      )}
+      {query.length >= 2 &&
+        query !== value?.name &&
+        !exactMatch &&
+        geocoded.length === 0 &&
+        !searching &&
+        !showAdd && (
+          <button
+            type="button"
+            className="mt-2 text-xs text-[var(--accent)] hover:underline"
+            onClick={(): void => {
+              setNewName(query);
+              setShowAdd(true);
+            }}
+          >
+            {t("picker.add_custom_port")}
+          </button>
+        )}
       {showAdd && (
         <div className="mt-2 space-y-2 rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-3">
           <input
