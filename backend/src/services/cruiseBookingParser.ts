@@ -19,6 +19,24 @@ export interface ParsedCruiseStop {
   excursionNote?: string;
 }
 
+const FLIGHT_CABINS = ["economy", "premium_economy", "business", "first"] as const;
+export type FlightCabinClass = (typeof FLIGHT_CABINS)[number];
+
+/** A flight mentioned inside a fly & cruise booking. Tentative by nature —
+ *  exact times/airports are usually released only ~4 months before departure,
+ *  so most fields are optional. */
+export interface ParsedFlight {
+  flightNumber?: string;
+  airline?: string;
+  /** "outbound" = the flight to the cruise (before embarkation); "return" =
+   *  the flight home (after disembarkation). */
+  direction?: "outbound" | "return";
+  date?: string;
+  departureAirport?: string;
+  arrivalAirport?: string;
+  cabinClass?: FlightCabinClass;
+}
+
 export interface ParsedCruise {
   shipName?: string;
   cruiseLine?: string;
@@ -33,6 +51,8 @@ export interface ParsedCruise {
   price?: number;
   currency?: CruiseCurrency;
   stops: ParsedCruiseStop[];
+  /** Flights bundled with the cruise (fly & cruise). Empty when none. */
+  flights: ParsedFlight[];
   parserTemplate: string;
   parserConfidence: number;
   missing: string[];
@@ -55,6 +75,7 @@ CRITICAL RULES (violating any of these is a failure):
 6. Dates: use ISO 8601 ("2025-12-19" or "2025-12-19T18:00"). German "19.11.2025" becomes "2025-11-19".
 7. Booking reference is found near labels like "Vorgang-Nr.", "Buchungsnummer", "Reservierung". Strip suffixes after "/" — "4507252/4" -> "4507252".
 8. Price: copy the per-cruise total in EUR (often listed under "Reisepreis" or as a sum at the end of a Leistungen / "Posten" block). When the document lists a per-person price ("pro Person") and there are 2 travelers, the cruise total is 2 × that price.
+9. FLIGHTS (fly & cruise): If the booking bundles flights — look for "Voraussichtliche Flugzeiten", "Flug", or an airline + flight number ("Lufthansa LH 2080", "Eurowings EW 9876") — add them to a "flights" array on the cruise. For each flight: flightNumber WITHOUT a space ("LH 2080" -> "LH2080"), airline ("Lufthansa"), direction ("outbound" = the flight TO the cruise before embarkation, "return" = the flight home after disembarkation; when two flights are listed the first is usually outbound), date (ISO if stated, otherwise null — these are often only approximate), departureAirport + arrivalAirport (IATA code or city name ONLY if explicitly stated, otherwise null), cabinClass ("economy"|"premium_economy"|"business"|"first"; "Economy Class" -> "economy"). If no flights are mentioned, output "flights": [].
 
 EXAMPLE INPUT EXCERPT:
 Mein Schiff 4
@@ -65,9 +86,10 @@ Reisepreis pro Person 1.249,00 € — 2 Personen
 Tag 1 Hamburg ab 18:00
 Tag 2 Auf See
 Tag 3 Bergen 08:00 - 17:00
+Voraussichtliche Flugzeiten: Economy Class Lufthansa LH 2080
 
 EXPECTED OUTPUT:
-{"cruises":[{"shipName":"Mein Schiff 4","cruiseLine":"TUI Cruises","startDate":"2025-11-19","endDate":"2025-12-03","cabinNumber":"7102","cabinType":"inside","deck":7,"bookingReference":"1234567","price":2498.00,"currency":"EUR","stops":[{"dayNumber":1,"isAtSea":false,"portName":"Hamburg","departureTime":"2025-11-19T18:00"},{"dayNumber":2,"isAtSea":true,"portName":null},{"dayNumber":3,"isAtSea":false,"portName":"Bergen","arrivalTime":"2025-11-21T08:00","departureTime":"2025-11-21T17:00"}]}]}
+{"cruises":[{"shipName":"Mein Schiff 4","cruiseLine":"TUI Cruises","startDate":"2025-11-19","endDate":"2025-12-03","cabinNumber":"7102","cabinType":"inside","deck":7,"bookingReference":"1234567","price":2498.00,"currency":"EUR","stops":[{"dayNumber":1,"isAtSea":false,"portName":"Hamburg","departureTime":"2025-11-19T18:00"},{"dayNumber":2,"isAtSea":true,"portName":null},{"dayNumber":3,"isAtSea":false,"portName":"Bergen","arrivalTime":"2025-11-21T08:00","departureTime":"2025-11-21T17:00"}],"flights":[{"flightNumber":"LH2080","airline":"Lufthansa","direction":"outbound","date":"2025-11-19","departureAirport":null,"arrivalAirport":null,"cabinClass":"economy"}]}]}
 /no_think`;
 
 // We tried Ollama's structured-output mode (`format: <jsonSchema>`, Ollama 0.5+)
@@ -177,6 +199,16 @@ interface RawCruiseStop {
   excursionNote?: unknown;
 }
 
+interface RawCruiseFlight {
+  flightNumber?: unknown;
+  airline?: unknown;
+  direction?: unknown;
+  date?: unknown;
+  departureAirport?: unknown;
+  arrivalAirport?: unknown;
+  cabinClass?: unknown;
+}
+
 interface RawCruise {
   shipName?: unknown;
   cruiseLine?: unknown;
@@ -191,6 +223,30 @@ interface RawCruise {
   price?: unknown;
   currency?: unknown;
   stops?: unknown;
+  flights?: unknown;
+}
+
+function isFlightCabin(v: unknown): v is FlightCabinClass {
+  return typeof v === "string" && (FLIGHT_CABINS as readonly string[]).includes(v);
+}
+
+function normalizeFlight(raw: RawCruiseFlight): ParsedFlight | null {
+  const flightNumber = asString(raw.flightNumber);
+  const airline = asString(raw.airline);
+  // Drop pure noise: a "flight" with neither a number nor an airline is unusable.
+  if (!flightNumber && !airline) return null;
+  const dir = asString(raw.direction);
+  const direction = dir === "return" ? "return" : dir === "outbound" ? "outbound" : undefined;
+  return {
+    // "LH 2080" -> "LH2080" to match the flight-number lookup format.
+    flightNumber: flightNumber ? flightNumber.replace(/\s+/g, "") : undefined,
+    airline,
+    direction,
+    date: asString(raw.date),
+    departureAirport: asString(raw.departureAirport),
+    arrivalAirport: asString(raw.arrivalAirport),
+    cabinClass: isFlightCabin(raw.cabinClass) ? raw.cabinClass : undefined,
+  };
 }
 
 function normalizeStop(raw: RawCruiseStop, index: number): ParsedCruiseStop {
@@ -219,6 +275,11 @@ function normalizeCruise(raw: RawCruise): ParsedCruise {
   stops.sort((a, b) => a.dayNumber - b.dayNumber);
   for (let i = 0; i < stops.length; i++) stops[i] = { ...stops[i], dayNumber: i + 1 };
 
+  const flightsArray = Array.isArray(raw.flights) ? (raw.flights as unknown[]) : [];
+  const flights = flightsArray
+    .map((entry) => normalizeFlight((entry ?? {}) as RawCruiseFlight))
+    .filter((f): f is ParsedFlight => f !== null);
+
   const cruise: ParsedCruise = {
     shipName: asString(raw.shipName),
     cruiseLine: asString(raw.cruiseLine),
@@ -236,6 +297,7 @@ function normalizeCruise(raw: RawCruise): ParsedCruise {
     price: asNumber(raw.price),
     currency: isCurrency(raw.currency) ? raw.currency : undefined,
     stops,
+    flights,
     parserTemplate: "ollama-cruise",
     parserConfidence: 80,
     missing: [],

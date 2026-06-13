@@ -1,13 +1,35 @@
 import type { ParsedBooking } from "../../types";
-import type { CruiseInput } from "../../types/cruise";
+import type { CruiseInput, Port, Ship } from "../../types/cruise";
 
 import { parserApi } from "./client";
 import type { BoardingPassParseResult, EmailParseResult, ProviderAvailability } from "./types";
+
+/** A flight bundled with a fly & cruise booking. Tentative — most fields may
+ *  be absent (exact times/airports are usually released ~4 months out). */
+export interface ParsedFlightSuggestion {
+  flightNumber?: string;
+  airline?: string;
+  direction?: "outbound" | "return";
+  date?: string;
+  departureAirport?: string;
+  arrivalAirport?: string;
+  cabinClass?: "economy" | "premium_economy" | "business" | "first";
+}
 
 export interface ParsedCruiseEntry {
   input: CruiseInput;
   shipMatched: boolean;
   unmatchedPorts: { dayNumber: number; portName: string }[];
+  /** Fly & cruise flights detected in the same booking. */
+  flights?: ParsedFlightSuggestion[];
+  /** Resolved display objects for the matched ids in `input`, so the import
+   *  editor can show + edit the matched ship/ports inline (the /ships and
+   *  /ports routes are search-only — no get-by-id). `stopPorts` is keyed by
+   *  the stop's `dayNumber`. Absent on older backends. */
+  ship?: Ship | null;
+  departurePort?: Port | null;
+  arrivalPort?: Port | null;
+  stopPorts?: Record<number, Port>;
 }
 
 export interface ParsePdfFlightResult {

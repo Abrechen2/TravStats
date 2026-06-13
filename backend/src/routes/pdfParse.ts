@@ -6,7 +6,7 @@ import logger from '../utils/logger';
 import { extractTextFromPdf, isBcbpText } from '../services/pdfParser';
 import { parseBookingText } from '../services/bookingParser';
 import { parseCruiseBookingText } from '../services/cruiseBookingParser';
-import { resolveCruiseEntities } from '../services/cruiseEntityResolver';
+import { resolveCruiseEntities, hydrateResolvedCruises } from '../services/cruiseEntityResolver';
 import { FILE_LIMITS } from '../config/constants';
 import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
 import { describeParserError } from '../utils/parserErrors';
@@ -69,12 +69,9 @@ router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest
     if (parsed.domain === 'cruise') {
       const cruiseResult = await parseCruiseBookingText(pdfText);
       const resolved = await Promise.all(cruiseResult.cruises.map(resolveCruiseEntities));
+      const cruises = await hydrateResolvedCruises(resolved);
       return res.json({
-        cruises: resolved.map((r) => ({
-          input: r.input,
-          shipMatched: r.shipMatched,
-          unmatchedPorts: r.unmatchedPorts,
-        })),
+        cruises,
         parserUsed: cruiseResult.parserUsed,
         ollamaAvailable: cruiseResult.ollamaAvailable,
         pdfTextLength: pdfText.length,

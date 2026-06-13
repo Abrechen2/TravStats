@@ -1,7 +1,8 @@
+import type { Port, Ship } from "@prisma/client";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import type { CruiseInput } from "../schemas/cruise";
-import type { ParsedCruise, ParsedCruiseStop } from "./cruiseBookingParser";
+import type { ParsedCruise, ParsedCruiseStop, ParsedFlight } from "./cruiseBookingParser";
 
 // In-memory cache for ship + port candidate lists. Both tables are populated
 // from a static CSV at boot and mutated only via /ports POST and /ships POST
@@ -28,6 +29,9 @@ export interface ResolvedCruise {
   input: CruiseInput;
   shipMatched: boolean;
   unmatchedPorts: { dayNumber: number; portName: string }[];
+  /** Fly & cruise flights bundled with the booking, passed through verbatim
+   *  for the import preview to turn into editable flight cards. */
+  flights: ParsedFlight[];
 }
 
 function normalize(value: string): string {
@@ -194,7 +198,12 @@ export async function resolveCruiseEntities(
     stops,
   };
 
-  return { input, shipMatched: ship.id !== null, unmatchedPorts: unmatched };
+  return {
+    input,
+    shipMatched: ship.id !== null,
+    unmatchedPorts: unmatched,
+    flights: parsed.flights ?? [],
+  };
 }
 
 function mapStop(
@@ -241,4 +250,68 @@ function mapStop(
     departureTime: stop.departureTime,
     excursionNote: excursion,
   };
+}
+
+/**
+ * A resolved cruise enriched with the full Ship / Port rows for every matched
+ * id. The import preview uses these to DISPLAY and let the user edit the
+ * matched ship and ports inline — `input` itself stays IDs-only (that's what
+ * gets POSTed). `stopPorts` is keyed by `dayNumber`.
+ */
+export interface HydratedParsedCruise extends ResolvedCruise {
+  ship: Ship | null;
+  departurePort: Port | null;
+  arrivalPort: Port | null;
+  stopPorts: Record<number, Port>;
+}
+
+/**
+ * Batch-hydrate a list of resolved cruises: collect every matched ship/port id
+ * across all entries, fetch the full rows in two queries, and attach them so
+ * the frontend can seed its pickers without a get-by-id endpoint (which the
+ * search-only /ships and /ports routes don't offer).
+ */
+export async function hydrateResolvedCruises(
+  resolved: ResolvedCruise[],
+): Promise<HydratedParsedCruise[]> {
+  const shipIds = new Set<number>();
+  const portIds = new Set<number>();
+  for (const r of resolved) {
+    if (r.input.shipId != null) shipIds.add(r.input.shipId);
+    if (r.input.departurePortId != null) portIds.add(r.input.departurePortId);
+    if (r.input.arrivalPortId != null) portIds.add(r.input.arrivalPortId);
+    for (const s of r.input.stops ?? []) {
+      if (s.portId != null) portIds.add(s.portId);
+    }
+  }
+
+  const [ships, ports] = await Promise.all([
+    shipIds.size > 0
+      ? prisma.ship.findMany({ where: { id: { in: [...shipIds] } } })
+      : Promise.resolve([] as Ship[]),
+    portIds.size > 0
+      ? prisma.port.findMany({ where: { id: { in: [...portIds] } } })
+      : Promise.resolve([] as Port[]),
+  ]);
+  const shipMap = new Map(ships.map((s) => [s.id, s]));
+  const portMap = new Map(ports.map((p) => [p.id, p]));
+
+  return resolved.map((r) => {
+    const stopPorts: Record<number, Port> = {};
+    for (const s of r.input.stops ?? []) {
+      if (s.portId != null) {
+        const port = portMap.get(s.portId);
+        if (port) stopPorts[s.dayNumber] = port;
+      }
+    }
+    return {
+      ...r,
+      ship: r.input.shipId != null ? shipMap.get(r.input.shipId) ?? null : null,
+      departurePort:
+        r.input.departurePortId != null ? portMap.get(r.input.departurePortId) ?? null : null,
+      arrivalPort:
+        r.input.arrivalPortId != null ? portMap.get(r.input.arrivalPortId) ?? null : null,
+      stopPorts,
+    };
+  });
 }
