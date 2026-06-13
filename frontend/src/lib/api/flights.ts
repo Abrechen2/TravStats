@@ -71,8 +71,20 @@ export const flightsApi = {
     if (opts.force) params.set("force", "true");
     else if (opts.merge) params.set("merge", "true");
     const qs = params.toString();
-    const { data } = await api.post<Flight>(`/flights${qs ? `?${qs}` : ""}`, flight);
-    return data;
+    // POST /flights wraps the created (or merged) flight as
+    // { flight, mergedFields?, newAchievements? } — NOT a bare Flight.
+    // Flatten to the Flight (so callers get a real `id`), preserving the
+    // extras some callers read (the merged-fields toast).
+    const { data } = await api.post<{
+      flight: Flight;
+      mergedFields?: string[];
+      newAchievements?: unknown[];
+    }>(`/flights${qs ? `?${qs}` : ""}`, flight);
+    return {
+      ...data.flight,
+      mergedFields: data.mergedFields,
+      newAchievements: data.newAchievements,
+    } as Flight;
   },
 
   // Updates accept the canonical-UTC submit contract — partial FlightInput
