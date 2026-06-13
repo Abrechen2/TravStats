@@ -73,29 +73,39 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
   const [tagsCsv, setTagsCsv] = useState(csvFromArray(trip?.tags ?? []));
   const [companionsCsv, setCompanionsCsv] = useState(csvFromArray(trip?.companions ?? []));
   const [notes, setNotes] = useState(trip?.notes ?? "");
-  const [coverImageUrl, setCoverImageUrl] = useState(trip?.coverImageUrl ?? "");
+  // Cover is upload-only. The chosen file is buffered and uploaded on save,
+  // so it works even while creating a brand-new trip (before an id exists).
+  // `coverUrl` holds the existing server cover; `coverFile`/`coverPreview`
+  // hold a pending local pick; `removeCover` marks an explicit clear.
+  const [coverUrl, setCoverUrl] = useState(trip?.coverImageUrl ?? "");
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [removeCover, setRemoveCover] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  const handleCoverFile = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+  // Release the object URL of a pending pick when it changes or on unmount.
+  useEffect(() => {
+    return () => {
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+    };
+  }, [coverPreview]);
+
+  const handlePickCover = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!trip) {
-      addToast("error", t("trips:modal.coverUploadCreateFirst"));
-      return;
-    }
-    setUploadingCover(true);
-    try {
-      const { coverUrl } = await tripsApi.uploadCover(trip.id, file);
-      setCoverImageUrl(coverUrl);
-      addToast("success", t("trips:gallery.coverUploaded"));
-    } catch {
-      addToast("error", t("trips:gallery.uploadError"));
-    } finally {
-      setUploadingCover(false);
-    }
+    setCoverFile(file);
+    setCoverPreview(URL.createObjectURL(file));
+    setRemoveCover(false);
+  };
+
+  const handleRemoveCover = (): void => {
+    setCoverFile(null);
+    setCoverPreview(null);
+    setCoverUrl("");
+    setRemoveCover(true);
   };
 
   useEffect(() => {
@@ -112,15 +122,22 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
     setTagsCsv(csvFromArray(trip.tags));
     setCompanionsCsv(csvFromArray(trip.companions));
     setNotes(trip.notes ?? "");
-    setCoverImageUrl(trip.coverImageUrl ?? "");
+    setCoverUrl(trip.coverImageUrl ?? "");
+    setCoverFile(null);
+    setCoverPreview(null);
+    setRemoveCover(false);
   }, [trip]);
 
   const handleSave = async (): Promise<void> => {
     if (!name.trim()) return;
     setSaving(true);
     try {
+      // The cover image is never sent as a field here — it's uploaded
+      // separately below. We only touch coverImageUrl to clear an existing
+      // cover when the user explicitly removed it.
+      let savedTrip: Trip;
       if (trip) {
-        await tripsApi.update(trip.id, {
+        savedTrip = await tripsApi.update(trip.id, {
           name: name.trim(),
           description: description.trim() || null,
           color,
@@ -133,11 +150,10 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           tags: arrayFromCsv(tagsCsv),
           companions: arrayFromCsv(companionsCsv),
           notes: notes.trim() || null,
-          coverImageUrl: coverImageUrl.trim() || null,
+          ...(removeCover ? { coverImageUrl: null } : {}),
         });
-        addToast("success", t("trips:toasts.updated"));
       } else {
-        await tripsApi.create({
+        savedTrip = await tripsApi.create({
           name: name.trim(),
           description: description.trim() || undefined,
           color,
@@ -150,10 +166,24 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           tags: arrayFromCsv(tagsCsv),
           companions: arrayFromCsv(companionsCsv),
           notes: notes.trim() || undefined,
-          coverImageUrl: coverImageUrl.trim() || undefined,
         });
-        addToast("success", t("trips:toasts.created"));
       }
+
+      // Upload a freshly picked cover against the now-guaranteed trip id.
+      // A failure here shouldn't lose the saved trip data — surface a
+      // cover-specific error but still treat the save as done.
+      if (coverFile) {
+        setUploadingCover(true);
+        try {
+          await tripsApi.uploadCover(savedTrip.id, coverFile);
+        } catch {
+          addToast("error", t("trips:gallery.uploadError"));
+        } finally {
+          setUploadingCover(false);
+        }
+      }
+
+      addToast("success", trip ? t("trips:toasts.updated") : t("trips:toasts.created"));
       onSaved();
     } catch {
       addToast("error", trip ? t("trips:toasts.updateError") : t("trips:toasts.createError"));
@@ -349,40 +379,51 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           {tab === "appearance" && (
             <>
               <Field label={t("trips:modal.coverLabel")}>
-                <div className="flex gap-2">
-                  <input
-                    value={coverImageUrl}
-                    onChange={(e) => setCoverImageUrl(e.target.value)}
-                    placeholder="https://… / /api/v1/trips/…"
-                    className="flex-1 rounded-lg px-3 py-2 text-sm"
-                    style={inputStyle}
-                  />
-                  <input
-                    ref={coverInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    className="hidden"
-                    onChange={(e) => void handleCoverFile(e)}
-                  />
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handlePickCover}
+                />
+                <CoverPreview
+                  url={coverPreview ?? coverUrl}
+                  accent={color}
+                  title={name || "—"}
+                  onClick={() => coverInputRef.current?.click()}
+                />
+                <div className="flex gap-2 mt-2">
                   <button
                     type="button"
                     onClick={() => coverInputRef.current?.click()}
-                    disabled={uploadingCover || !trip}
-                    title={!trip ? t("trips:modal.coverUploadCreateFirst") : undefined}
+                    disabled={uploadingCover}
                     className="px-3 py-2 rounded-lg text-sm font-medium border disabled:opacity-50"
-                    style={{
-                      borderColor: "var(--accent)",
-                      color: "var(--accent)",
-                    }}
+                    style={{ borderColor: "var(--accent)", color: "var(--accent)" }}
                   >
-                    {uploadingCover ? "…" : t("trips:modal.coverUploadButton")}
+                    {uploadingCover
+                      ? "…"
+                      : coverPreview || coverUrl
+                        ? t("trips:modal.coverUploadReplace")
+                        : t("trips:modal.coverUploadButton")}
                   </button>
+                  {(coverPreview || coverUrl) && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveCover}
+                      disabled={uploadingCover}
+                      className="px-3 py-2 rounded-lg text-sm font-medium border disabled:opacity-50"
+                      style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
+                    >
+                      {t("trips:modal.coverRemove")}
+                    </button>
+                  )}
                 </div>
+                <p className="text-[11px] mt-1" style={{ color: "var(--text-muted)" }}>
+                  {coverFile && !trip
+                    ? t("trips:modal.coverPending")
+                    : t("trips:modal.coverUploadReady")}
+                </p>
               </Field>
-              <CoverPreview url={coverImageUrl} accent={color} title={name || "—"} />
-              <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-                {trip ? t("trips:modal.coverUploadReady") : t("trips:modal.coverUploadCreateFirst")}
-              </p>
 
               <Field label={t("trips:modal.colorLabel")}>
                 <div className="flex gap-2 flex-wrap">
@@ -477,13 +518,23 @@ interface CoverPreviewProps {
   url: string;
   accent: string;
   title: string;
+  onClick?: () => void;
 }
 
-function CoverPreview({ url, accent, title }: CoverPreviewProps): JSX.Element {
+function CoverPreview({ url, accent, title, onClick }: CoverPreviewProps): JSX.Element {
   const trimmed = url.trim();
   return (
     <div
-      className="rounded-lg overflow-hidden h-32 relative flex items-end p-3"
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className={`rounded-lg overflow-hidden h-32 relative flex items-end p-3${onClick ? " cursor-pointer" : ""}`}
       style={{
         background: trimmed
           ? `url(${JSON.stringify(trimmed)}) center/cover`
