@@ -4,6 +4,15 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-rc.10] - 2026-06-13 (Release Candidate)
+
+### Fixed
+- **Cruise import failed to save bookings that list only dates, no times.**
+  Itinerary stop times extracted as a bare date (e.g. `2026-06-15T00:00`,
+  without seconds or offset) were rejected by the cruise validation, so the
+  whole import 400'd on save. Partial datetimes are now coerced to full ISO
+  on the way in.
+
 ## [2.0.0-rc.9] - 2026-06-13 (Release Candidate)
 
 Cruise-import overhaul on top of rc.8. No schema change.
