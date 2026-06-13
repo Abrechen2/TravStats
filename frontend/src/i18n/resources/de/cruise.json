@@ -110,6 +110,21 @@
     "editTitle": "Kreuzfahrt bearbeiten",
     "saveError": "Kreuzfahrt konnte nicht gespeichert werden"
   },
+  "add": {
+    "title": "Kreuzfahrt hinzufügen",
+    "back": "Zurück",
+    "import": {
+      "best": "Beste Option",
+      "title": "Buchung importieren",
+      "hint": "Buchungs-E-Mail (.eml/.msg) oder PDF einlesen — wird automatisch erkannt.",
+      "cta": "Importieren"
+    },
+    "manual": {
+      "title": "Manuell eingeben",
+      "hint": "Schiff, Route und Häfen selbst erfassen.",
+      "cta": "Starten"
+    }
+  },
   "import": {
     "button": "PDF importieren",
     "parsing": "PDF wird analysiert …",

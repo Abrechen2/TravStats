@@ -3,9 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { cruiseApi } from "../lib/api";
 import type { Cruise, CruiseStatus } from "../types";
 import { CruiseRow } from "../components/Cruise/CruiseRow";
-import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
-import DomainImportButton from "../components/import/DomainImportButton";
-import { useCruiseImportAdapter } from "../components/import/adapters/cruiseAdapter";
+import { CruiseAddChooser } from "../components/Cruise/CruiseAddChooser";
 import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
 
@@ -17,10 +15,9 @@ const STATUSES: CruiseStatus[] = ["scheduled", "flown", "cancelled", "historical
 export default function CruisesPage(): JSX.Element {
   const { t } = useTranslation("cruise");
   const navigate = useNavigate();
-  const cruiseImportAdapter = useCruiseImportAdapter();
   const [cruises, setCruises] = useState<Cruise[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [showCreate, setShowCreate] = useState<boolean>(false);
+  const [showAdd, setShowAdd] = useState<boolean>(false);
 
   // Filter state — mirrors the flights filter panel conceptually but the
   // data domain is smaller so we inline rather than reuse <Filters />.
@@ -148,17 +145,14 @@ export default function CruisesPage(): JSX.Element {
       <div className="mx-auto max-w-6xl px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold text-[var(--text-primary)]">{t("list.title")}</h1>
-          <div className="flex flex-wrap items-center gap-2">
-            <DomainImportButton adapter={cruiseImportAdapter} onItemsCreated={reload} />
-            <button
-              type="button"
-              onClick={() => setShowCreate(true)}
-              className="btn-primary flex items-center gap-2 whitespace-nowrap"
-            >
-              <span>+</span>
-              <span>{t("list.new")}</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowAdd(true)}
+            className="btn-primary flex items-center gap-2 whitespace-nowrap"
+          >
+            <span>+</span>
+            <span>{t("add.title")}</span>
+          </button>
         </div>
 
         {loading ? (
@@ -190,15 +184,8 @@ export default function CruisesPage(): JSX.Element {
           </div>
         )}
 
-        {showCreate && (
-          <CruiseEditModal
-            mode="create"
-            onClose={() => setShowCreate(false)}
-            onSaved={async () => {
-              setShowCreate(false);
-              await reload();
-            }}
-          />
+        {showAdd && (
+          <CruiseAddChooser onClose={() => setShowAdd(false)} onSaved={reload} />
         )}
       </div>
     </div>
