@@ -1,4 +1,5 @@
 import { calculateDistance } from '../geo';
+import { calculateCo2Kg, toSeatClass } from '../../services/co2Calculator';
 import { getCachedAirports } from '../../services/airportCache';
 import { normalizeAirline } from '../airlineNormalize';
 import logger from '../logger';
@@ -120,18 +121,24 @@ export async function calculateFunStats(flights: FlightData[]): Promise<FunStats
   const maxFlightsOnDay = Math.max(0, ...Object.values(flightsByDate));
   const fastestDay = Object.entries(flightsByDate).find(([, count]) => count === maxFlightsOnDay)?.[0];
 
-  // CO2 footprint in elephants (rough estimate: 1kg CO2 per km, elephant = 4000kg).
-  // Distance-based, time-insensitive.
+  // CO2 footprint in elephants (elephant = 4000kg). Single source of truth
+  // is calculateCo2Kg (distance band + cabin-class multiplier) — the same
+  // model stamped onto each flight's co2Kg column. Recomputed here from
+  // coords + seatClass so the dashboard aggregate always matches the
+  // per-flight figures shown in the flight list. Time-insensitive.
+  const ELEPHANT_KG = 4000;
   let totalCO2kg = 0;
-  countableFlights.forEach(f => {
-    if (f.depLat != null && f.depLon != null && f.arrLat != null && f.arrLon != null) {
-      const dist = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
-      // Rough estimate: 0.25kg CO2 per passenger per km for short haul, 0.2kg for long haul
-      const co2PerKm = dist < 1500 ? 0.25 : 0.2;
-      totalCO2kg += dist * co2PerKm;
-    }
+  countableFlights.forEach((f) => {
+    const co2 = calculateCo2Kg({
+      depLat: f.depLat,
+      depLon: f.depLon,
+      arrLat: f.arrLat,
+      arrLon: f.arrLon,
+      seatClass: toSeatClass(f.seatClass),
+    });
+    if (co2 !== null) totalCO2kg += co2;
   });
-  const elephants = totalCO2kg / 4000;
+  const elephants = totalCO2kg / ELEPHANT_KG;
 
   // Milestone years — years with most flights. Year is reliable for
   // historical flights too.
