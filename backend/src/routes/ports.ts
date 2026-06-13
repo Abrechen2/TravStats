@@ -6,6 +6,7 @@ import { authenticate, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import { invalidateCruiseEntityCache } from "../services/cruiseEntityResolver";
 import { expandPortSearchTerms } from "../services/portExonyms";
+import { geocodePort } from "../services/portGeocoder";
 import logger from "../utils/logger";
 
 const router = Router();
@@ -72,6 +73,27 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       LIMIT ${limit}
     `);
 
+    res.json({ success: true, data: ports });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// External geocoder fallback: when the local catalog has no match, the
+// frontend calls this to resolve an arbitrary place name (e.g. "Taranto",
+// which isn't in the vendored CSV) to coordinates so the user can add it as a
+// port without typing lat/lon by hand. Results carry source:"geocoder" and no
+// id — the client POSTs the chosen one back to /ports to persist it.
+router.get("/geocode", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const parsed = listQuerySchema.safeParse(req.query);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    const { q } = parsed.data;
+    if (!q || q.trim().length < 2) {
+      res.json({ success: true, data: [] });
+      return;
+    }
+    const ports = await geocodePort(q);
     res.json({ success: true, data: ports });
   } catch (err) {
     next(err);
