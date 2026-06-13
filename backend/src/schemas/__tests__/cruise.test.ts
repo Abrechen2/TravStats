@@ -61,6 +61,39 @@ describe('cruise schemas', () => {
     expect(r.success).toBe(false);
   });
 
+  it('coerces partial datetimes (no seconds/offset) on stops to full ISO', () => {
+    // The LLM cruise parser emits times like "2026-06-15T00:00"; strict
+    // datetime() would reject them and the import save would 400.
+    const r = createCruiseSchema.safeParse({
+      ...minimalValid,
+      startDate: '2026-06-15',
+      endDate: '2026-06-29T00:00',
+      stops: [
+        { portId: 1, dayNumber: 1, isAtSea: false, departureTime: '2026-06-15T00:00' },
+        { portId: null, dayNumber: 2, isAtSea: true },
+        { portId: 2, dayNumber: 3, isAtSea: false, arrivalTime: '2026-06-17T08:00' },
+      ],
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      // Coerced to a full ISO datetime (exact instant depends on the host TZ
+      // for offset-less inputs; prod runs UTC). Just assert the shape is valid.
+      const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+      expect(r.data.stops?.[0].departureTime).toMatch(ISO);
+      expect(r.data.stops?.[2].arrivalTime).toMatch(ISO);
+      // A date-only input parses as UTC midnight regardless of host TZ.
+      expect(r.data.startDate).toBe('2026-06-15T00:00:00.000Z');
+    }
+  });
+
+  it('still rejects a genuinely unparseable datetime', () => {
+    const r = createCruiseSchema.safeParse({
+      ...minimalValid,
+      stops: [{ portId: 1, dayNumber: 1, isAtSea: false, arrivalTime: 'not-a-date' }],
+    });
+    expect(r.success).toBe(false);
+  });
+
   it('updateCruiseSchema requires at least one field', () => {
     expect(updateCruiseSchema.safeParse({}).success).toBe(false);
   });

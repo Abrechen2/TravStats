@@ -9,13 +9,27 @@ const emptyToUndefined = z
   .optional()
   .transform((v) => (v === '' ? undefined : v));
 
+// Accept partial datetimes and coerce them to full ISO 8601. The cruise
+// booking parser emits times like "2026-06-17T08:00" (no seconds/offset),
+// which a strict `z.string().datetime()` rejects — and unedited stops in the
+// import preview keep that raw value. Coerce any parseable string to a full
+// ISO string; genuinely invalid strings fall through to the strict check.
+const isoDateTime = z.preprocess(
+  (v) => {
+    if (typeof v !== 'string' || v === '') return undefined;
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? v : d.toISOString();
+  },
+  z.string().datetime().nullable().optional(),
+);
+
 const stopSchema = z
   .object({
     portId: z.number().int().positive().nullable().optional(),
     dayNumber: z.number().int().min(1).max(365),
     isAtSea: z.boolean().default(false),
-    arrivalTime: z.string().datetime().nullable().optional(),
-    departureTime: z.string().datetime().nullable().optional(),
+    arrivalTime: isoDateTime,
+    departureTime: isoDateTime,
     excursionNote: z.string().max(500).optional(),
   })
   .refine((s) => s.isAtSea || (s.portId !== null && s.portId !== undefined), {
@@ -29,8 +43,8 @@ const baseCruiseSchema = z.object({
   cruiseLine: emptyToUndefined,
   departurePortId: z.number().int().positive().nullable().optional(),
   arrivalPortId: z.number().int().positive().nullable().optional(),
-  startDate: z.string().datetime().nullable().optional(),
-  endDate: z.string().datetime().nullable().optional(),
+  startDate: isoDateTime,
+  endDate: isoDateTime,
   status: z.enum(STATUSES).default('scheduled'),
   cabinNumber: z.string().max(20).optional(),
   cabinType: z.enum(CABIN_TYPES).optional(),
