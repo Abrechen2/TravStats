@@ -4,6 +4,14 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-rc.11] - 2026-06-13 (Release Candidate)
+
+### Fixed
+- **Fly & cruise import failed at the final save step.** Importing a cruise
+  with bundled flights created the cruise and the flights, but then errored
+  while grouping them into a trip — the flight IDs were sent empty. The trip
+  now links the cruise and its flights correctly.
+
 ## [2.0.0-rc.10] - 2026-06-13 (Release Candidate)
 
 ### Fixed
