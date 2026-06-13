@@ -259,8 +259,10 @@ function CruiseImportEntryEditor({
       date:
         dateOnly(f.date) ||
         (f.direction === "return" ? dateOnly(input.endDate) : dateOnly(input.startDate)),
-      depAirport: null,
-      arrAirport: null,
+      // Pre-filled by the backend (home airport + nearest airport to the
+      // port); fully editable below.
+      depAirport: f.departureAirport ?? null,
+      arrAirport: f.arrivalAirport ?? null,
       seatClass: f.cabinClass ?? "",
       direction: f.direction,
     }))

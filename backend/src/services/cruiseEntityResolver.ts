@@ -3,6 +3,8 @@ import { prisma } from "../db";
 import logger from "../utils/logger";
 import type { CruiseInput } from "../schemas/cruise";
 import type { ParsedCruise, ParsedCruiseStop, ParsedFlight } from "./cruiseBookingParser";
+import { findNearestAirport, type AirportData } from "./airportLookup";
+import { getCurrentHomeAirport, normalizeHistory } from "../utils/homeAirport";
 
 // In-memory cache for ship + port candidate lists. Both tables are populated
 // from a static CSV at boot and mutated only via /ports POST and /ships POST
@@ -258,11 +260,40 @@ function mapStop(
  * matched ship and ports inline — `input` itself stays IDs-only (that's what
  * gets POSTed). `stopPorts` is keyed by `dayNumber`.
  */
-export interface HydratedParsedCruise extends ResolvedCruise {
+/** A bundled flight with its dep/arr airports pre-filled (home airport on the
+ *  home side, nearest airport to the embarkation/disembarkation port on the
+ *  cruise side). All editable on the frontend. */
+export interface HydratedFlight {
+  flightNumber?: string;
+  airline?: string;
+  direction?: "outbound" | "return";
+  date?: string;
+  cabinClass?: ParsedFlight["cabinClass"];
+  departureAirport: AirportData | null;
+  arrivalAirport: AirportData | null;
+}
+
+export interface HydratedParsedCruise extends Omit<ResolvedCruise, "flights"> {
   ship: Ship | null;
   departurePort: Port | null;
   arrivalPort: Port | null;
   stopPorts: Record<number, Port>;
+  flights: HydratedFlight[];
+}
+
+// Cruise ports are often well outside a 5km airport radius (e.g. Kiel -> HAM
+// ~90km), so use a generous search radius for the fly & cruise pre-fill.
+const PORT_AIRPORT_RADIUS_KM = 250;
+
+async function getHomeAirport(userId: string | undefined): Promise<AirportData | null> {
+  if (!userId) return null;
+  const settings = await prisma.userSettings.findUnique({ where: { userId } });
+  const history = normalizeHistory(
+    (settings?.data as { homeAirportHistory?: unknown } | null)?.homeAirportHistory,
+  );
+  const iata = getCurrentHomeAirport(history);
+  if (!iata) return null;
+  return prisma.airport.findFirst({ where: { iata, isClosed: false } });
 }
 
 /**
@@ -273,7 +304,9 @@ export interface HydratedParsedCruise extends ResolvedCruise {
  */
 export async function hydrateResolvedCruises(
   resolved: ResolvedCruise[],
+  userId: string | undefined,
 ): Promise<HydratedParsedCruise[]> {
+  const homeAirport = await getHomeAirport(userId);
   const shipIds = new Set<number>();
   const portIds = new Set<number>();
   for (const r of resolved) {
@@ -296,22 +329,70 @@ export async function hydrateResolvedCruises(
   const shipMap = new Map(ships.map((s) => [s.id, s]));
   const portMap = new Map(ports.map((p) => [p.id, p]));
 
-  return resolved.map((r) => {
-    const stopPorts: Record<number, Port> = {};
-    for (const s of r.input.stops ?? []) {
-      if (s.portId != null) {
-        const port = portMap.get(s.portId);
-        if (port) stopPorts[s.dayNumber] = port;
+  return Promise.all(
+    resolved.map(async (r): Promise<HydratedParsedCruise> => {
+      const stopPorts: Record<number, Port> = {};
+      for (const s of r.input.stops ?? []) {
+        if (s.portId != null) {
+          const port = portMap.get(s.portId);
+          if (port) stopPorts[s.dayNumber] = port;
+        }
       }
-    }
+
+      const ship = r.input.shipId != null ? shipMap.get(r.input.shipId) ?? null : null;
+      const departurePort =
+        r.input.departurePortId != null ? portMap.get(r.input.departurePortId) ?? null : null;
+      const arrivalPort =
+        r.input.arrivalPortId != null ? portMap.get(r.input.arrivalPortId) ?? null : null;
+
+      const flights = r.flights.length
+        ? await hydrateFlights(r, stopPorts, departurePort, arrivalPort, homeAirport)
+        : [];
+
+      return { ...r, ship, departurePort, arrivalPort, stopPorts, flights };
+    }),
+  );
+}
+
+/**
+ * Pre-fill each flight's dep/arr airports: home airport on the home side,
+ * nearest airport to the embarkation/disembarkation port on the cruise side.
+ * Outbound = home -> embarkation; return = disembarkation -> home. The user
+ * can change any of them in the import editor.
+ */
+async function hydrateFlights(
+  r: ResolvedCruise,
+  stopPorts: Record<number, Port>,
+  departurePort: Port | null,
+  arrivalPort: Port | null,
+  homeAirport: AirportData | null,
+): Promise<HydratedFlight[]> {
+  const portStops = (r.input.stops ?? [])
+    .filter((s) => !s.isAtSea && s.portId != null)
+    .sort((a, b) => a.dayNumber - b.dayNumber);
+  const embarkPort =
+    departurePort ?? (portStops[0] ? stopPorts[portStops[0].dayNumber] ?? null : null);
+  const disembarkPort =
+    arrivalPort ??
+    (portStops.length ? stopPorts[portStops[portStops.length - 1].dayNumber] ?? null : null);
+
+  const [embarkAirport, disembarkAirport] = await Promise.all([
+    embarkPort ? findNearestAirport(embarkPort.lat, embarkPort.lon, PORT_AIRPORT_RADIUS_KM) : null,
+    disembarkPort
+      ? findNearestAirport(disembarkPort.lat, disembarkPort.lon, PORT_AIRPORT_RADIUS_KM)
+      : null,
+  ]);
+
+  return r.flights.map((f) => {
+    const isReturn = f.direction === "return";
     return {
-      ...r,
-      ship: r.input.shipId != null ? shipMap.get(r.input.shipId) ?? null : null,
-      departurePort:
-        r.input.departurePortId != null ? portMap.get(r.input.departurePortId) ?? null : null,
-      arrivalPort:
-        r.input.arrivalPortId != null ? portMap.get(r.input.arrivalPortId) ?? null : null,
-      stopPorts,
+      flightNumber: f.flightNumber,
+      airline: f.airline,
+      direction: f.direction,
+      date: f.date,
+      cabinClass: f.cabinClass,
+      departureAirport: isReturn ? disembarkAirport : homeAirport,
+      arrivalAirport: isReturn ? homeAirport : embarkAirport,
     };
   });
 }

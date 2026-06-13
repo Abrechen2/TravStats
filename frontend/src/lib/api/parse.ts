@@ -2,18 +2,20 @@ import type { ParsedBooking } from "../../types";
 import type { CruiseInput, Port, Ship } from "../../types/cruise";
 
 import { parserApi } from "./client";
-import type { BoardingPassParseResult, EmailParseResult, ProviderAvailability } from "./types";
+import type { Airport, BoardingPassParseResult, EmailParseResult, ProviderAvailability } from "./types";
 
-/** A flight bundled with a fly & cruise booking. Tentative — most fields may
- *  be absent (exact times/airports are usually released ~4 months out). */
+/** A flight bundled with a fly & cruise booking. Tentative — exact times come
+ *  ~4 months out. Airports are pre-filled by the backend (home airport on the
+ *  home side, nearest airport to the embarkation/disembarkation port on the
+ *  cruise side) and are editable in the import preview. */
 export interface ParsedFlightSuggestion {
   flightNumber?: string;
   airline?: string;
   direction?: "outbound" | "return";
   date?: string;
-  departureAirport?: string;
-  arrivalAirport?: string;
   cabinClass?: "economy" | "premium_economy" | "business" | "first";
+  departureAirport?: Airport | null;
+  arrivalAirport?: Airport | null;
 }
 
 export interface ParsedCruiseEntry {
