@@ -667,7 +667,7 @@ export function DeckGLMap({
           iata={airportIata}
           screenX={airportPos.x}
           screenY={airportPos.y}
-          flights={flightList ?? []}
+          flights={flights}
           onClose={() => {
             setAirportIata(null);
             airportGeoRef.current = null;

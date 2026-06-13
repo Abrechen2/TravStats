@@ -1,6 +1,5 @@
 import { useMemo } from "react";
-import type { Flight } from "../types";
-import { calculateDistance } from "../lib/geo";
+import type { GeoJSONFeature } from "../types";
 import { useLocale } from "../hooks/useLocale";
 import { useTranslation } from "../hooks/useTranslation";
 import { TooltipContainer } from "./TooltipContainer";
@@ -9,7 +8,9 @@ interface AirportTooltipProps {
   iata: string;
   screenX: number;
   screenY: number;
-  flights: Flight[];
+  /** Same GeoJSON feature set that draws the route arcs — the tooltip
+      aggregates these so its counts always match what's on the map. */
+  flights: GeoJSONFeature[];
   onClose: () => void;
 }
 
@@ -38,29 +39,30 @@ export function AirportTooltip({
     const airlinesSet = new Set<string>();
 
     for (const f of flights) {
-      const isDep = f.depIata === iata;
-      const isArr = f.arrIata === iata;
+      const dep = f.properties.departureAirport;
+      const arr = f.properties.arrivalAirport;
+      const isDep = dep.iata === iata;
+      const isArr = arr.iata === iata;
       if (!isDep && !isArr) continue;
 
       if (isDep) {
         departures++;
-        if (!name && f.depName) name = f.depName;
-        if (!icao && f.depIcao) icao = f.depIcao;
-        if (f.arrIata) {
-          routeCounts.set(f.arrIata, (routeCounts.get(f.arrIata) ?? 0) + 1);
+        if (!name && dep.name) name = dep.name;
+        if (!icao && dep.icao) icao = dep.icao;
+        if (arr.iata) {
+          routeCounts.set(arr.iata, (routeCounts.get(arr.iata) ?? 0) + 1);
         }
       }
       if (isArr) {
         arrivals++;
-        if (!name && f.arrName) name = f.arrName;
-        if (!icao && f.arrIcao) icao = f.arrIcao;
-        if (f.depIata) {
-          routeCounts.set(f.depIata, (routeCounts.get(f.depIata) ?? 0) + 1);
+        if (!name && arr.name) name = arr.name;
+        if (!icao && arr.icao) icao = arr.icao;
+        if (dep.iata) {
+          routeCounts.set(dep.iata, (routeCounts.get(dep.iata) ?? 0) + 1);
         }
       }
-      if (f.airline) airlinesSet.add(f.airline);
-      if (f.depLat != null && f.depLon != null && f.arrLat != null && f.arrLon != null)
-        totalKm += calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
+      if (f.properties.airline) airlinesSet.add(f.properties.airline);
+      totalKm += f.properties.distance ?? 0;
     }
 
     const topRoutes = [...routeCounts.entries()]
