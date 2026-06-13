@@ -9,7 +9,7 @@ import { logger } from "../../lib/logger";
 import NavigationBar from "../NavigationBar";
 import SimplifiedFlightFormV2 from "../SimplifiedFlightFormV2";
 import SpecialFlightModal from "../SpecialFlightModal";
-import { CruiseEditModal } from "../Cruise/CruiseEditModal";
+import { CruiseAddChooser } from "../Cruise/CruiseAddChooser";
 import { DomainTabStrip } from "./DomainTabStrip";
 import { DashboardControlsBar } from "./DashboardControlsBar";
 import { DashboardFilterDropdown } from "./DashboardFilterDropdown";
@@ -105,13 +105,9 @@ export function DashboardLayout({
         }}
       />
       {addingDomain === "cruise" && (
-        <CruiseEditModal
-          mode="create"
+        <CruiseAddChooser
           onClose={() => setAddingDomain(null)}
-          onSaved={() => {
-            setAddingDomain(null);
-            onDataChanged?.();
-          }}
+          onSaved={() => onDataChanged?.()}
         />
       )}
       {/* POI: deliberately not wired — domain is disabled until V2. */}
