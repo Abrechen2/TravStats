@@ -4,6 +4,27 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.1] - 2026-06-13
+
+### Fixed
+- **Cruise parsing ignored the configured Ollama server.** The cruise
+  booking parser always connected to `localhost:11434` instead of the
+  Ollama URL/model set in admin settings, so a correctly configured — and
+  successfully tested — remote Ollama was never actually used. Cruise
+  PDF/email imports failed with an "LLM unreachable" error even though the
+  connection test passed. The parser now resolves its endpoint from admin
+  settings, matching the flight parser.
+- **Parser failures were logged as an empty object.** Backend error logs
+  showed `error:{}` with no message or stack for parser errors (and 16
+  other call sites), hiding the root cause. Errors now serialize their
+  message and stack, and the Ollama-unreachable error names the endpoint
+  and points to Settings.
+
+### Changed
+- **LLM parser configuration moved to the General admin tab.** The Ollama /
+  parser settings sat under the "Flight" admin tab, where cruise-only users
+  never found them; they now live under "General".
+
 ## [2.0.0-rc.12] - 2026-06-13 (Release Candidate)
 
 ### Fixed
