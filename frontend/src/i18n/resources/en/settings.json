@@ -723,6 +723,8 @@
     "justCreatedWarning": "Copy this token NOW — it will not be shown again. Only the hash is persisted.",
     "copy": "Copy",
     "copied": "Copied!",
+    "appQrTitle": "For the TravStats app",
+    "appQrHint": "In the app, go to Settings → “Scan server & token via QR”. Contains the server address and token.",
     "dismiss": "Got it",
     "errors": {
       "load": "Failed to load tokens",
