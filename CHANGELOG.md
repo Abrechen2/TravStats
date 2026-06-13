@@ -4,6 +4,32 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-rc.8] - 2026-06-13 (Release Candidate)
+
+Bug fixes and import/UX improvements on top of rc.7. No schema change.
+
+### Fixed
+- **Airport popups always showed "0 flights".** Clicking an airport on
+  the map opened a card reporting 0 total flights and no routes, even
+  though the map clearly drew arcs through it. The popup now aggregates
+  the same flight data that draws the routes, so totals, top routes,
+  airlines and distances match the map on every tab and honour the
+  active year filter.
+- **Inconsistent CO₂ figures.** The per-flight CO₂ value, the dashboard
+  "elephants" aggregate and the demo data each used a different formula,
+  so the numbers disagreed. All three now use one model (distance band ×
+  cabin-class factor), and a one-shot backfill fills in CO₂ for older
+  flights that never had it computed.
+
+### Changed
+- **Trip cover image is now an upload.** The trip editor lets you upload
+  an image file for the cover directly — including while creating a new
+  trip — instead of pasting an image URL.
+- **Cruise add flow matches flights.** Adding a cruise now opens a single
+  chooser like the flight form: import a booking (email or PDF, auto-
+  detected) or enter it manually — on both the Cruises page and the
+  dashboard cruise tab.
+
 ## [2.0.0-rc.7] - 2026-06-12 (Release Candidate)
 
 Closes the findings of the V2 function & usability audit. No schema change.
