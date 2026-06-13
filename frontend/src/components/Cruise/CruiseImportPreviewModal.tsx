@@ -9,6 +9,7 @@ import type {
   FlightInput,
   Port,
   Ship,
+  TripStatus,
 } from "../../types";
 // AirportAutocomplete + airportsApi use the lib/api Airport (stricter `name`);
 // use the same one so its value/onChange line up, then it flows into FlightInput.
@@ -50,6 +51,29 @@ interface EntryData {
 }
 
 /**
+ * Derive the auto-created trip's date span + status from the imported cruises.
+ * Without an explicit status the backend falls back to the Trip Prisma default
+ * ("completed"), which mislabels an upcoming fly & cruise booking — an
+ * embarkation two days from now would otherwise show as "Abgeschlossen".
+ */
+export function deriveTripMeta(
+  data: EntryData[],
+  now: Date
+): { startDate?: string; endDate?: string; status: TripStatus } {
+  const starts = data.map((e) => e.input.startDate).filter((d): d is string => !!d);
+  const ends = data.map((e) => e.input.endDate).filter((d): d is string => !!d);
+  const startDate = starts.length ? starts.reduce((a, b) => (a < b ? a : b)) : undefined;
+  const endDate = ends.length ? ends.reduce((a, b) => (a > b ? a : b)) : undefined;
+
+  let status: TripStatus = "completed";
+  if (startDate && new Date(startDate) > now) status = "planned";
+  else if (endDate && new Date(endDate) < now) status = "completed";
+  else if (startDate) status = "in_progress";
+
+  return { startDate, endDate, status };
+}
+
+/**
  * Post-parse review for imported cruises + bundled fly & cruise flights.
  * Each cruise is an editable audit card; detected flights become opt-in
  * editable cards; everything can be grouped into one Trip on save.
@@ -83,7 +107,10 @@ export function CruiseImportPreviewModal({
       const allFlights = entryData.flatMap((e) => e.flightInputs);
       let tripId: string | undefined;
       if (groupAsTrip && (allFlights.length > 0 || entryData.length > 1)) {
-        const trip = await tripsApi.create({ name: tripName.trim() || defaultTripName });
+        const trip = await tripsApi.create({
+          name: tripName.trim() || defaultTripName,
+          ...deriveTripMeta(entryData, new Date()),
+        });
         tripId = trip.id;
       }
 
