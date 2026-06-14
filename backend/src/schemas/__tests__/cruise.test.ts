@@ -86,6 +86,31 @@ describe('cruise schemas', () => {
     }
   });
 
+  it('accepts a date-only stop date and coerces it to UTC midnight (#132)', () => {
+    const r = createCruiseSchema.safeParse({
+      ...minimalValid,
+      stops: [
+        { portId: 1, dayNumber: 1, isAtSea: false, date: '2027-10-08' },
+        { portId: null, dayNumber: 2, isAtSea: true, date: '2027-10-09' },
+      ],
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.stops?.[0].date).toBe('2027-10-08T00:00:00.000Z');
+      expect(r.data.stops?.[1].date).toBe('2027-10-09T00:00:00.000Z');
+    }
+  });
+
+  it('accepts routeName and drops the empty string to undefined (#133)', () => {
+    const withName = createCruiseSchema.safeParse({ ...minimalValid, routeName: 'Kanaren mit Marokko' });
+    expect(withName.success).toBe(true);
+    if (withName.success) expect(withName.data.routeName).toBe('Kanaren mit Marokko');
+
+    const empty = createCruiseSchema.safeParse({ ...minimalValid, routeName: '' });
+    expect(empty.success).toBe(true);
+    if (empty.success) expect(empty.data.routeName).toBeUndefined();
+  });
+
   it('still rejects a genuinely unparseable datetime', () => {
     const r = createCruiseSchema.safeParse({
       ...minimalValid,

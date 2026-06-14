@@ -114,6 +114,25 @@ describe("resolveCruiseEntities", () => {
     expect(result.input.stops?.[0].portId).toBe(21);
   });
 
+  it("passes per-stop dates through for both port calls and sea days (#132)", async () => {
+    const cruise = baseParsedCruise({
+      stops: [
+        { dayNumber: 1, isAtSea: false, portName: "Hamburg", date: "2025-12-19" },
+        { dayNumber: 2, isAtSea: true, date: "2025-12-20" },
+      ],
+    });
+    const result = await resolveCruiseEntities(cruise);
+    expect(result.input.stops?.[0]).toMatchObject({ portId: 10, date: "2025-12-19" });
+    expect(result.input.stops?.[1]).toMatchObject({ isAtSea: true, date: "2025-12-20" });
+  });
+
+  it("propagates routeName into CruiseInput (#133)", async () => {
+    const result = await resolveCruiseEntities(
+      baseParsedCruise({ routeName: "Kanaren mit Marokko" }),
+    );
+    expect(result.input.routeName).toBe("Kanaren mit Marokko");
+  });
+
   it("propagates cabin + price + booking metadata into CruiseInput", async () => {
     const result = await resolveCruiseEntities(baseParsedCruise());
     expect(result.input.cabinNumber).toBe("8123");

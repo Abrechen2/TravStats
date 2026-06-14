@@ -139,19 +139,27 @@ describe('Cruises API', () => {
         .set('Cookie', authCookie)
         .send({
           cruiseLine: 'New Line',
+          routeName: 'Kanaren mit Marokko',
           departurePortId: portId,
           arrivalPortId: portId,
           startDate: '2026-08-01T12:00:00Z',
           endDate: '2026-08-08T10:00:00Z',
           status: 'scheduled',
           stops: [
-            { portId, dayNumber: 1, isAtSea: false },
-            { dayNumber: 2, isAtSea: true, portId: null },
+            { portId, dayNumber: 1, isAtSea: false, date: '2026-08-01' },
+            { dayNumber: 2, isAtSea: true, portId: null, date: '2026-08-02' },
           ],
         });
       expect(res.status).toBe(201);
       expect(res.body.data.stops.length).toBe(2);
       expect(res.body.data.userId).toBe(userId);
+      // #133 routeName + #132 per-stop dates persist and round-trip.
+      expect(res.body.data.routeName).toBe('Kanaren mit Marokko');
+      const stops = [...res.body.data.stops].sort(
+        (a: { dayNumber: number }, b: { dayNumber: number }) => a.dayNumber - b.dayNumber,
+      );
+      expect(stops[0].date).toBe('2026-08-01T00:00:00.000Z');
+      expect(stops[1].date).toBe('2026-08-02T00:00:00.000Z');
     });
 
     it('rejects invalid payload', async () => {

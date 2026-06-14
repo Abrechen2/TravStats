@@ -138,6 +138,11 @@ export default function CruiseDetailPage(): JSX.Element {
               <p className="text-sm text-[var(--text-muted)]">
                 {cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? "—"}
               </p>
+              {cruise.routeName && (
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {cruise.routeName}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">

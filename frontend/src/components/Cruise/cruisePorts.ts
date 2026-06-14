@@ -66,7 +66,9 @@ export function buildEffectiveTimeline(cruise: Cruise): EffectiveTimelineEntry[]
     stop,
     port: stop.port ?? null,
     isAtSea: stop.isAtSea,
-    date: stop.arrivalTime ?? null,
+    // Prefer the explicit per-stop date; fall back to the arrival timestamp for
+    // older stops imported before the date field existed.
+    date: stop.date ?? stop.arrivalTime ?? null,
     excursionNote: stop.excursionNote ?? null,
   }));
 

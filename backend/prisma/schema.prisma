@@ -749,6 +749,7 @@ model Cruise {
   cruiseLine       String?   @map("cruise_line")
   departurePortId  Int?      @map("departure_port_id")
   arrivalPortId    Int?      @map("arrival_port_id")
+  routeName        String?   @map("route_name")
   startDate        DateTime? @map("start_date")
   endDate          DateTime? @map("end_date")
   status           String    @default("scheduled")
@@ -819,6 +820,7 @@ model CruiseStop {
   cruiseId      String    @map("cruise_id")
   portId        Int?      @map("port_id")
   dayNumber     Int       @map("day_number")
+  date          DateTime?
   isAtSea       Boolean   @default(false) @map("is_at_sea")
   arrivalTime   DateTime? @map("arrival_time")
   departureTime DateTime? @map("departure_time")

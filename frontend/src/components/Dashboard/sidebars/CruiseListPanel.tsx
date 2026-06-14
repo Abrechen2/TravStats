@@ -123,6 +123,13 @@ export function CruiseListPanel({
               >
                 {startLabel} · {ports} {t("dashboard:sidebar.ports")}
               </div>
+              {c.routeName && (
+                <div
+                  style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2, marginLeft: 20 }}
+                >
+                  {c.routeName}
+                </div>
+              )}
             </div>
           );
         })

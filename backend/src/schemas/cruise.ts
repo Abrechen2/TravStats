@@ -27,6 +27,11 @@ const stopSchema = z
   .object({
     portId: z.number().int().positive().nullable().optional(),
     dayNumber: z.number().int().min(1).max(365),
+    // Calendar date of the stop. Booking confirmations list a date per stop
+    // (often without clock times), so this captures it even when arrival/
+    // departure times are absent. Coerced to a full ISO instant via isoDateTime
+    // ("2027-10-08" -> "2027-10-08T00:00:00.000Z").
+    date: isoDateTime,
     isAtSea: z.boolean().default(false),
     arrivalTime: isoDateTime,
     departureTime: isoDateTime,
@@ -41,6 +46,13 @@ const baseCruiseSchema = z.object({
   shipId: z.number().int().positive().nullable().optional(),
   shipNameOverride: emptyToUndefined,
   cruiseLine: emptyToUndefined,
+  // Official itinerary / route name from the booking confirmation
+  // (e.g. "Kanaren mit Marokko"), distinct from the trip's user label.
+  routeName: z
+    .string()
+    .max(120)
+    .optional()
+    .transform((v) => (v ? v : undefined)),
   departurePortId: z.number().int().positive().nullable().optional(),
   arrivalPortId: z.number().int().positive().nullable().optional(),
   startDate: isoDateTime,

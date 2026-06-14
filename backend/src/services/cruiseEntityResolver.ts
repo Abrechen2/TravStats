@@ -186,6 +186,7 @@ export async function resolveCruiseEntities(
     shipId: ship.id ?? undefined,
     shipNameOverride: ship.id ? undefined : parsed.shipName,
     cruiseLine: ship.line,
+    routeName: parsed.routeName,
     departurePortId: departurePort?.id ?? undefined,
     arrivalPortId: arrivalPort?.id ?? undefined,
     startDate: parsed.startDate,
@@ -218,6 +219,7 @@ function mapStop(
     return {
       portId: null,
       dayNumber: index + 1,
+      date: stop.date,
       isAtSea: true,
       arrivalTime: stop.arrivalTime,
       departureTime: stop.departureTime,
@@ -245,6 +247,7 @@ function mapStop(
   return {
     portId: match?.id ?? null,
     dayNumber: index + 1,
+    date: stop.date,
     // Force isAtSea=true when the port could not be resolved to keep the Zod
     // refinement happy. The user can correct this in the UI by picking a port.
     isAtSea: !match,
