@@ -4,6 +4,35 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.2.0] - 2026-06-14
+
+### Added
+- **Cruise itinerary dates** — Each cruise stop now stores its calendar date,
+  extracted from booking confirmations on import (even when no arrival or
+  departure times are listed) and editable per stop, including sea days. Stop
+  dates appear on the cruise detail timeline. (#132)
+- **Cruise route name** — Cruises gain an optional route/itinerary name
+  (e.g. "Kanaren mit Marokko") as printed on booking confirmations, captured
+  on import and shown in the cruise list and detail header. (#133)
+
+### Fixed
+- **German and local port names now match on cruise import** — The importer
+  resolves German exonyms ("Lissabon", "Singapur", "Venedig") and local
+  endonyms ("Lisboa", "Roma", "Napoli") to the correct catalog port instead
+  of leaving them unmatched, with a fuzzy fallback for near spellings. Rome
+  and Florence map to their actual ports of call (Civitavecchia, Livorno),
+  and a short catalog name can no longer be mis-matched to a longer parsed
+  name ("Atlantis" no longer matches "Atla").
+- **Airport selectors no longer auto-expand on modal open** — Pre-filled
+  airport fields (such as the fly & cruise import preview) only open their
+  dropdown when focused, instead of all popping open at once when a dialog
+  opens.
+
+### Changed
+- **Consistent "Add flight" button placement** — The flights page now shows a
+  heading with the "Add flight" button right-aligned, matching the cruises and
+  trips pages.
+
 ## [2.1.0] - 2026-06-13
 
 ### Added
