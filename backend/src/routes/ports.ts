@@ -2,14 +2,18 @@ import { Router, Response, NextFunction } from "express";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../db";
-import { authenticate, AuthRequest } from "../middleware/auth";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
+import { portGeocodeLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import { invalidateCruiseEntityCache } from "../services/cruiseEntityResolver";
 import { expandPortSearchTerms } from "../services/portExonyms";
+import { geocodePort } from "../services/portGeocoder";
 import logger from "../utils/logger";
 
 const router = Router();
 router.use(authenticate);
+// Read-only PATs may search/geocode ports (GET) but not create them (POST).
+router.use(requireWriteScope);
 
 const listQuerySchema = z.object({
   q: z.string().max(100).optional(),
@@ -34,37 +38,65 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
     const { q, region, limit } = parsed.data;
 
-    const where: Prisma.PortWhereInput = {};
-    if (region) where.region = region;
-    if (q && q.length > 0) {
-      where.OR = [
-        { name: { contains: q, mode: "insensitive" } },
-        { city: { contains: q, mode: "insensitive" } },
-        { unlocode: { equals: q.toUpperCase() } },
-      ];
-      // German exonyms ("Lissabon") expand to the English catalog names
-      // ("Lisbon") so DE users get hits instead of duplicate custom ports.
-      for (const term of expandPortSearchTerms(q)) {
-        where.OR.push({ name: { contains: term, mode: "insensitive" } });
-        where.OR.push({ city: { contains: term, mode: "insensitive" } });
-      }
-    }
-
-    const ports = await prisma.port.findMany({
-      where,
-      take: limit,
-      orderBy: { name: "asc" },
-    });
-
-    if (q && q.length > 0) {
-      const upper = q.toUpperCase();
-      ports.sort((a, b) => {
-        const ax = a.unlocode === upper ? 0 : 1;
-        const bx = b.unlocode === upper ? 0 : 1;
-        return ax - bx;
+    // No search term → simple structured listing (optionally region-scoped).
+    if (!q || q.length === 0) {
+      const ports = await prisma.port.findMany({
+        where: region ? { region } : {},
+        take: limit,
+        orderBy: { name: "asc" },
       });
+      res.json({ success: true, data: ports });
+      return;
     }
 
+    // Search is diacritic-INSENSITIVE: users type ASCII ("Malaga", "Warnemunde",
+    // "Tromso") but the catalog stores accented names ("Málaga", "Warnemünde",
+    // "Tromsø"). Plain ILIKE never matches across the fold, so we run both the
+    // column and the needle through Postgres `unaccent` (enabled via migration).
+    // German exonyms ("Lissabon" → "Lisbon") still expand to extra needles.
+    const upper = q.toUpperCase();
+    const needles = [q, ...expandPortSearchTerms(q)];
+    const likeConditions = needles.flatMap((term) => {
+      const pattern = `%${term}%`;
+      return [
+        Prisma.sql`unaccent(name) ILIKE unaccent(${pattern})`,
+        Prisma.sql`unaccent(coalesce(city, '')) ILIKE unaccent(${pattern})`,
+      ];
+    });
+    // Exact UNLOCODE match (e.g. "ITTAR") is always a candidate.
+    likeConditions.push(Prisma.sql`unlocode = ${upper}`);
+
+    const ports = await prisma.$queryRaw<Array<Record<string, unknown>>>(Prisma.sql`
+      SELECT id, name, city, country, unlocode, lat, lon, timezone, region,
+             is_user_added AS "isUserAdded"
+      FROM ports
+      WHERE (${Prisma.join(likeConditions, " OR ")})
+        ${region ? Prisma.sql`AND region = ${region}` : Prisma.empty}
+      ORDER BY (unlocode = ${upper}) DESC, name ASC
+      LIMIT ${limit}
+    `);
+
+    res.json({ success: true, data: ports });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// External geocoder fallback: when the local catalog has no match, the
+// frontend calls this to resolve an arbitrary place name (e.g. "Taranto",
+// which isn't in the vendored CSV) to coordinates so the user can add it as a
+// port without typing lat/lon by hand. Results carry source:"geocoder" and no
+// id — the client POSTs the chosen one back to /ports to persist it.
+router.get("/geocode", portGeocodeLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const parsed = listQuerySchema.safeParse(req.query);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    const { q } = parsed.data;
+    if (!q || q.trim().length < 2) {
+      res.json({ success: true, data: [] });
+      return;
+    }
+    const ports = await geocodePort(q);
     res.json({ success: true, data: ports });
   } catch (err) {
     next(err);

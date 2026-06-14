@@ -44,6 +44,7 @@ function makeCruise(stops: Cruise["stops"]): Cruise {
     ship: null,
     shipNameOverride: null,
     cruiseLine: "AIDA Cruises",
+    routeName: null,
     departurePortId: null,
     departurePort: null,
     arrivalPortId: null,

@@ -1,12 +1,16 @@
 /**
- * German exonym expansion for port search.
+ * German exonym + local-endonym expansion for port search and import.
  *
  * The port catalog stores English/UN-LOCODE names ("Lisbon", "Venice"),
- * but the primary user base types German exonyms ("Lissabon",
- * "Venedig") — which previously returned zero hits and pushed users
- * into creating duplicate custom ports. `expandPortSearchTerms` maps a
- * (possibly partial) German query onto the matching English names so
- * the route can OR them into its contains-search.
+ * but two sources disagree with that spelling:
+ *  - the primary user base types German exonyms ("Lissabon", "Venedig"),
+ *  - cruise booking confirmations sometimes print the local endonym
+ *    ("Lisboa", "Roma", "Napoli", "Venezia").
+ * Both previously returned zero hits — pushing users into duplicate
+ * custom ports, and leaving imported cruise stops unmatched.
+ * `expandPortSearchTerms` maps a (possibly partial) query onto the
+ * matching English catalog names so the search route can OR them into its
+ * contains-search and the cruise resolver can match them to a port.
  *
  * Matching is prefix-based in both directions so suggestions appear
  * while the user is still typing ("Lissab" → "Lisbon").
@@ -14,11 +18,22 @@
 
 const GERMAN_PORT_EXONYMS: Record<string, string> = {
   lissabon: "Lisbon",
+  // Local endonyms printed on booking confirmations (non-German).
+  lisboa: "Lisbon",
+  // Rome/Florence have no Italian catalog port of that name — the cruise
+  // ports are Civitavecchia and Livorno respectively. Map both the local
+  // endonym and the German exonym (below) to the real port of call.
+  roma: "Civitavecchia",
+  napoli: "Naples",
+  venezia: "Venice",
+  firenze: "Livorno",
+  genova: "Genoa",
+  københavn: "Copenhagen",
   kopenhagen: "Copenhagen",
   venedig: "Venice",
   genua: "Genoa",
   neapel: "Naples",
-  rom: "Rome",
+  rom: "Civitavecchia",
   athen: "Athens",
   piräus: "Piraeus",
   korfu: "Corfu",
@@ -40,9 +55,13 @@ const GERMAN_PORT_EXONYMS: Record<string, string> = {
   "st. petersburg": "Saint Petersburg",
   sevilla: "Seville",
   triest: "Trieste",
+  tarent: "Taranto",
+  apulien: "Taranto",
+  sardinien: "Sardinia",
+  korsika: "Corsica",
   edinburg: "Edinburgh",
   mailand: "Milan",
-  florenz: "Florence",
+  florenz: "Livorno",
   livorno: "Livorno",
   syrakus: "Syracuse",
   messina: "Messina",

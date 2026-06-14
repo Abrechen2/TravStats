@@ -35,6 +35,7 @@
   "field": {
     "ship": "Ship",
     "line": "Line",
+    "routeName": "Route name",
     "depart": "Depart",
     "arrive": "Arrive",
     "cabin": "Cabin",
@@ -90,6 +91,7 @@
     "at_sea": "At sea",
     "add": "Add stop",
     "day": "Day",
+    "date": "Date",
     "excursion": "Excursion",
     "moveUp": "Move up",
     "moveDown": "Move down",
@@ -103,7 +105,9 @@
     "cancel": "Cancel",
     "invalidLatLon": "Invalid coordinates — latitude ±90, longitude ±180",
     "createShipError": "Could not create the ship",
-    "createPortError": "Could not create the port"
+    "createPortError": "Could not create the port",
+    "via_geocoder": "Map search (OpenStreetMap)",
+    "searchError": "Port search failed - please try again"
   },
   "map": { "layer": "Cruises", "fallbackTitle": "Cruise" },
   "filter": {

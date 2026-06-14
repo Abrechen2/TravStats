@@ -2,7 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../db';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { createCruiseSchema, updateCruiseSchema, cruiseQuerySchema } from '../schemas/cruise';
 import { checkAndUpdateAchievements } from '../utils/achievements';
@@ -87,6 +87,9 @@ async function buildCruiseGeometry(
 
 const router = Router();
 router.use(authenticate);
+// Method-aware: GET passes through, so read-only PATs keep read access but
+// cannot POST/PATCH/DELETE cruises — consistent with flights/trips.
+router.use(requireWriteScope);
 
 const CRUISE_INCLUDE = {
   ship: true,
@@ -293,6 +296,7 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
             cruiseId: created.id,
             portId: s.portId ?? null,
             dayNumber: s.dayNumber,
+            date: s.date ? new Date(s.date) : null,
             isAtSea: s.isAtSea,
             arrivalTime: s.arrivalTime ? new Date(s.arrivalTime) : null,
             departureTime: s.departureTime ? new Date(s.departureTime) : null,
@@ -349,6 +353,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
               cruiseId: existing.id,
               portId: s.portId ?? null,
               dayNumber: s.dayNumber,
+              date: s.date ? new Date(s.date) : null,
               isAtSea: s.isAtSea,
               arrivalTime: s.arrivalTime ? new Date(s.arrivalTime) : null,
               departureTime: s.departureTime ? new Date(s.departureTime) : null,

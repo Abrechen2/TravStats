@@ -101,7 +101,15 @@ export default function AirportAutocomplete({
           setResults(airports);
         }
 
-        setIsOpen(true);
+        // Only auto-open the dropdown when the field is actually focused (the
+        // user is typing/interacting). Otherwise a programmatic query sync —
+        // e.g. a pre-filled value when a modal first mounts — would pop every
+        // autocomplete open on open. Focus-driven opening still covers the
+        // type-to-search and onFocus paths.
+        const input = wrapperRef.current?.querySelector("input");
+        if (document.activeElement === input) {
+          setIsOpen(true);
+        }
       } catch (error) {
         logger.error("Airport search failed:", error);
         setResults([]);

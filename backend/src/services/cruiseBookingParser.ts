@@ -14,6 +14,9 @@ export interface ParsedCruiseStop {
   city?: string;
   country?: string;
   dayNumber: number;
+  /** Calendar date of the stop ("YYYY-MM-DD"). Booking confirmations list a
+   *  date per stop, often without clock times — this captures it regardless. */
+  date?: string;
   isAtSea: boolean;
   arrivalTime?: string;
   departureTime?: string;
@@ -41,6 +44,9 @@ export interface ParsedFlight {
 export interface ParsedCruise {
   shipName?: string;
   cruiseLine?: string;
+  /** Official itinerary / route name from the confirmation, e.g.
+   *  "Kanaren mit Marokko". Distinct from the trip's user-defined label. */
+  routeName?: string;
   startDate?: string;
   endDate?: string;
   departurePortName?: string;
@@ -65,33 +71,27 @@ export interface CruiseParseResult {
   ollamaAvailable: boolean;
 }
 
-const SYSTEM_PROMPT = `You extract cruise booking data from real German booking confirmations.
+const SYSTEM_PROMPT = `You extract structured data from German cruise booking confirmations (TUI "Mein Schiff", AIDA, and similar).
 
-CRITICAL RULES (violating any of these is a failure):
-1. Every value MUST be copied verbatim from the source text. NEVER output placeholder strings like "Port Name", "Arrival Time", "Ship Name", "string", "Cabin Number" etc. If the document does not contain a value for a field, output null.
-2. Read the actual itinerary in the document. Stops with concrete port names ("Hamburg", "Bergen", "Funchal", "Las Palmas") MUST have isAtSea=false and portName set to the real city/port name from the text. Only days literally labeled "Seetag" / "Auf See" / "Sea Day" / "Erholung auf See" may be isAtSea=true.
-3. Map German cabin descriptors: "Innenkabine"/"Innen" -> "inside"; "Aussenkabine"/"Außenkabine"/"Meerblick" -> "oceanview"; "Balkon"/"Balkonkabine"/"Verandakabine" -> "balcony"; "Suite"/"Junior Suite" -> "suite".
-4. Include every itinerary stop including embarkation (day 1) and disembarkation (final day). dayNumber is 1-based and consecutive (1, 2, 3, ...).
-5. Currency is the 3-letter ISO code; "€" -> "EUR".
-6. Dates: use ISO 8601 ("2025-12-19" or "2025-12-19T18:00"). German "19.11.2025" becomes "2025-11-19".
-7. Booking reference is found near labels like "Vorgang-Nr.", "Buchungsnummer", "Reservierung". Strip suffixes after "/" — "4507252/4" -> "4507252".
-8. Price: copy the per-cruise total in EUR (often listed under "Reisepreis" or as a sum at the end of a Leistungen / "Posten" block). When the document lists a per-person price ("pro Person") and there are 2 travelers, the cruise total is 2 × that price.
-9. FLIGHTS (fly & cruise): If the booking bundles flights — look for "Voraussichtliche Flugzeiten", "Flug", or an airline + flight number ("Lufthansa LH 2080", "Eurowings EW 9876") — add them to a "flights" array on the cruise. For each flight: flightNumber WITHOUT a space ("LH 2080" -> "LH2080"), airline ("Lufthansa"), direction ("outbound" = the flight TO the cruise before embarkation, "return" = the flight home after disembarkation; when two flights are listed the first is usually outbound), date (ISO if stated, otherwise null — these are often only approximate), departureAirport + arrivalAirport (IATA code or city name ONLY if explicitly stated, otherwise null), cabinClass ("economy"|"premium_economy"|"business"|"first"; "Economy Class" -> "economy"). If no flights are mentioned, output "flights": [].
+Return ONLY this JSON, with no prose before or after: {"cruises":[ CRUISE ]}.
+There is almost always exactly ONE cruise — return a single-element array. Return more than one cruise ONLY if the document clearly lists separate voyages, each with its own date range.
 
-EXAMPLE INPUT EXCERPT:
-Mein Schiff 4
-Vorgang-Nr.: 1234567/2
-Reisetermin: 19.11.2025 - 03.12.2025
-Innenkabine, Deck 7, Kabine 7102
-Reisepreis pro Person 1.249,00 € — 2 Personen
-Tag 1 Hamburg ab 18:00
-Tag 2 Auf See
-Tag 3 Bergen 08:00 - 17:00
-Voraussichtliche Flugzeiten: Economy Class Lufthansa LH 2080
+Copy every value VERBATIM from the document. If a value is not in the text, use null. NEVER output placeholder strings like "Ship Name", "Port", "Cabin Number", "string".
 
-EXPECTED OUTPUT:
-{"cruises":[{"shipName":"Mein Schiff 4","cruiseLine":"TUI Cruises","startDate":"2025-11-19","endDate":"2025-12-03","cabinNumber":"7102","cabinType":"inside","deck":7,"bookingReference":"1234567","price":2498.00,"currency":"EUR","stops":[{"dayNumber":1,"isAtSea":false,"portName":"Hamburg","departureTime":"2025-11-19T18:00"},{"dayNumber":2,"isAtSea":true,"portName":null},{"dayNumber":3,"isAtSea":false,"portName":"Bergen","arrivalTime":"2025-11-21T08:00","departureTime":"2025-11-21T17:00"}],"flights":[{"flightNumber":"LH2080","airline":"Lufthansa","direction":"outbound","date":"2025-11-19","departureAirport":null,"arrivalAirport":null,"cabinClass":"economy"}]}]}
-/no_think`;
+A CRUISE object has these fields:
+- shipName: e.g. "Mein Schiff 1", "AIDAcosma".
+- cruiseLine: e.g. "TUI Cruises", "AIDA Cruises".
+- routeName: the itinerary/route name as printed, e.g. "Kanaren mit Marokko", "Mittelmeer Klassik", "Metropolen ab Hamburg". null if none is given.
+- startDate, endDate: ISO "YYYY-MM-DD". German "08.10.2027" -> "2027-10-08". A range like "Ihr Reisedatum: 08.10. - 29.10.2027" means startDate "2027-10-08", endDate "2027-10-29".
+- bookingReference: found near "Vorgang-Nr.", "Buchungsnummer", "Reservierung"; drop any "/x" suffix ("4507252/4" -> "4507252").
+- cabinNumber, deck (a number), cabinType: map "Innen"/"Innenkabine" -> "inside"; "Außen"/"Meerblick" -> "oceanview"; "Balkon"/"Veranda" -> "balcony"; "Suite"/"Junior Suite" -> "suite".
+- price: the total cruise price as a number. If only a per-person price is shown ("pro Person") for 2 travellers, multiply by 2.
+- currency: 3-letter ISO code; "€" -> "EUR".
+- stops: the itinerary IN ORDER, one object per day. Each stop is {"portName","date","isAtSea","arrivalTime","departureTime"}. A real port ("Bayonne","Halifax","Funchal","Miami") has isAtSea=false and portName set to the place name. A day labelled "Seetag" / "Auf See" / "Erholung auf See" / "Sea Day" has isAtSea=true and portName=null. date is the stop's calendar date as ISO "YYYY-MM-DD" (German "10.10.2027" -> "2027-10-10"); ALWAYS fill it from the itinerary (e.g. "08.10.2027 Bayonne - 09.10.2027 Seetag" -> first stop date "2027-10-08", second "2027-10-09"), even when no clock times are given. arrivalTime/departureTime are ISO "YYYY-MM-DDTHH:mm" or null.
+- flights: bundled fly & cruise flights, otherwise []. Each flight is {"flightNumber" (no spaces, "LH 2080" -> "LH2080"),"airline","direction" ("outbound" = to the cruise before embarkation, "return" = home after disembarkation),"date","departureAirport","arrivalAirport","cabinClass" ("economy"|"premium_economy"|"business"|"first")}.
+
+EXAMPLE OUTPUT:
+{"cruises":[{"shipName":"Mein Schiff 4","cruiseLine":"TUI Cruises","routeName":"Norwegen mit Lofoten","startDate":"2025-11-19","endDate":"2025-12-03","cabinNumber":"7102","cabinType":"inside","deck":7,"bookingReference":"1234567","price":2498.00,"currency":"EUR","stops":[{"portName":"Hamburg","date":"2025-11-19","isAtSea":false,"departureTime":"2025-11-19T18:00"},{"portName":null,"date":"2025-11-20","isAtSea":true},{"portName":"Bergen","date":"2025-11-21","isAtSea":false,"arrivalTime":"2025-11-21T08:00","departureTime":"2025-11-21T17:00"}],"flights":[]}]}`;
 
 // We tried Ollama's structured-output mode (`format: <jsonSchema>`, Ollama 0.5+)
 // but with both gemma3:12b and qwen3:30b it forced the models to fill in
@@ -194,6 +194,7 @@ interface RawCruiseStop {
   city?: unknown;
   country?: unknown;
   dayNumber?: unknown;
+  date?: unknown;
   isAtSea?: unknown;
   arrivalTime?: unknown;
   departureTime?: unknown;
@@ -213,6 +214,7 @@ interface RawCruiseFlight {
 interface RawCruise {
   shipName?: unknown;
   cruiseLine?: unknown;
+  routeName?: unknown;
   startDate?: unknown;
   endDate?: unknown;
   departurePortName?: unknown;
@@ -250,6 +252,21 @@ function normalizeFlight(raw: RawCruiseFlight): ParsedFlight | null {
   };
 }
 
+/**
+ * Normalize a date-ish string to ISO "YYYY-MM-DD". Accepts the model's ISO
+ * output as-is and converts a German "DD.MM.YYYY" fallback, so a date leaking
+ * through in the source format still reaches the DB correctly.
+ */
+function normalizeDateString(value: unknown): string | undefined {
+  const s = asString(value);
+  if (!s) return undefined;
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const de = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (de) return `${de[3]}-${de[2].padStart(2, "0")}-${de[1].padStart(2, "0")}`;
+  return s;
+}
+
 function normalizeStop(raw: RawCruiseStop, index: number): ParsedCruiseStop {
   const isAtSea = asBoolean(raw.isAtSea);
   const dayNumber = asNumber(raw.dayNumber);
@@ -258,6 +275,7 @@ function normalizeStop(raw: RawCruiseStop, index: number): ParsedCruiseStop {
     city: asString(raw.city),
     country: asString(raw.country),
     dayNumber: dayNumber !== undefined && dayNumber > 0 ? Math.floor(dayNumber) : index + 1,
+    date: normalizeDateString(raw.date),
     isAtSea,
     arrivalTime: asString(raw.arrivalTime),
     departureTime: asString(raw.departureTime),
@@ -284,6 +302,7 @@ function normalizeCruise(raw: RawCruise): ParsedCruise {
   const cruise: ParsedCruise = {
     shipName: asString(raw.shipName),
     cruiseLine: asString(raw.cruiseLine),
+    routeName: asString(raw.routeName),
     startDate: asString(raw.startDate),
     endDate: asString(raw.endDate),
     departurePortName: asString(raw.departurePortName),

@@ -260,6 +260,7 @@ function CruiseImportEntryEditor({
 
   const [ship, setShip] = useState<Ship | null>(entry.ship ?? null);
   const [cruiseLine, setCruiseLine] = useState(input.cruiseLine ?? "");
+  const [routeName, setRouteName] = useState(input.routeName ?? "");
   const [startDate, setStartDate] = useState(dateOnly(input.startDate));
   const [endDate, setEndDate] = useState(dateOnly(input.endDate));
   const [status, setStatus] = useState<CruiseStatus>(input.status ?? "scheduled");
@@ -307,6 +308,7 @@ function CruiseImportEntryEditor({
       shipId: ship?.id ?? undefined,
       shipNameOverride: ship ? undefined : overrideName ?? undefined,
       cruiseLine: cruiseLine.trim() || undefined,
+      routeName: routeName.trim() || undefined,
       departurePortId: departurePort?.id ?? undefined,
       arrivalPortId: arrivalPort?.id ?? undefined,
       startDate: toIsoNoon(startDate),
@@ -359,6 +361,7 @@ function CruiseImportEntryEditor({
   }, [
     ship,
     cruiseLine,
+    routeName,
     startDate,
     endDate,
     status,
@@ -410,6 +413,16 @@ function CruiseImportEntryEditor({
           </p>
         )}
       </div>
+
+      {/* Route name */}
+      <Field label={t("field.routeName")}>
+        <input
+          value={routeName}
+          onChange={(e): void => setRouteName(e.target.value)}
+          placeholder={t("field.routeName")}
+          className={INPUT}
+        />
+      </Field>
 
       {/* Dates + status */}
       <div className="grid grid-cols-3 gap-3">

@@ -24,6 +24,7 @@ const stop = (id: string, p: Port | null, isAtSea: boolean, dayNumber: number): 
   portId: p?.id ?? null,
   port: p,
   dayNumber,
+  date: null,
   isAtSea,
   arrivalTime: null,
   departureTime: null,
@@ -96,6 +97,19 @@ describe("buildEffectiveTimeline", () => {
     ]);
     expect(timeline[0].date).toBe(cruise.startDate);
     expect(timeline[timeline.length - 1].date).toBe(cruise.endDate);
+  });
+
+  it("prefers the explicit per-stop date over the arrival timestamp (#132)", () => {
+    const cruise = baseCruise({
+      stops: [
+        { ...stop("s1", SOUTHAMPTON, false, 1), date: "2027-10-08T00:00:00.000Z" },
+        { ...stop("s2", LISBON, false, 2), date: null, arrivalTime: "2027-10-09T08:00:00.000Z" },
+      ],
+    });
+    const timeline = buildEffectiveTimeline(cruise);
+    expect(timeline[0].date).toBe("2027-10-08T00:00:00.000Z");
+    // Falls back to arrivalTime when date is absent (legacy stops).
+    expect(timeline[1].date).toBe("2027-10-09T08:00:00.000Z");
   });
 
   it("skips departure/arrival entries that duplicate the first/last port call", () => {
