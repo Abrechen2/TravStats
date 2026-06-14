@@ -5,6 +5,7 @@ import type { CruiseInput } from "../schemas/cruise";
 import type { ParsedCruise, ParsedCruiseStop, ParsedFlight } from "./cruiseBookingParser";
 import { findNearestAirport, type AirportData } from "./airportLookup";
 import { getCurrentHomeAirport, normalizeHistory } from "../utils/homeAirport";
+import { expandPortSearchTerms } from "./portExonyms";
 
 // In-memory cache for ship + port candidate lists. Both tables are populated
 // from a static CSV at boot and mutated only via /ports POST and /ships POST
@@ -66,8 +67,57 @@ function similarity(needle: string, candidate: string): number {
   const c = normalize(candidate);
   if (!n || !c) return 0;
   if (n === c) return 100;
-  if (c.startsWith(n) || n.startsWith(c)) return 80;
-  if (c.includes(n) || n.includes(c)) return 60;
+  // Candidate is the fuller string (catalog carries a region/suffix the parsed
+  // name omits, e.g. "Bayonne" ⊆ "Bayonne (Cape Liberty)"): always safe.
+  if (c.startsWith(n)) return 80;
+  if (c.includes(n)) return 60;
+  // Needle is the fuller string (parsed name has extra text): only trust it
+  // when the catalog token is substantial, so a short catalog name can't be
+  // swallowed by a longer needle — e.g. "Atlantis" must NOT match "Atla".
+  if (c.length >= 5 && n.startsWith(c)) return 80;
+  if (c.length >= 5 && n.includes(c)) return 60;
+  return 0;
+}
+
+/**
+ * Bounded Levenshtein distance — returns the true distance, or `max + 1`
+ * as soon as the lower bound provably exceeds `max` (cheap early-out so we
+ * never do the full DP for far-apart strings across ~12k port candidates).
+ */
+function levenshtein(a: string, b: string, max: number): number {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const curr = [i];
+    let rowMin = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      const v = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+      curr[j] = v;
+      if (v < rowMin) rowMin = v;
+    }
+    if (rowMin > max) return max + 1;
+    prev = curr;
+  }
+  return prev[b.length];
+}
+
+/**
+ * Fuzzy name match for close spellings the exonym map doesn't cover —
+ * e.g. the Portuguese endonym "Lisboa" vs the catalog "Lisbon", or minor
+ * transliteration drift. Deliberately strict (edit distance ≤1 on names
+ * ≥5 chars, ≤2 on names ≥8) so it never out-ranks a real prefix/contains
+ * hit and rarely fires on unrelated ports. Scored below `similarity`'s
+ * exact/startsWith tiers but above its 60 acceptance threshold.
+ */
+function fuzzyNameScore(needle: string, candidate: string): number {
+  const n = normalize(needle);
+  const c = normalize(candidate);
+  if (!n || !c || n[0] !== c[0]) return 0;
+  const shorter = Math.min(n.length, c.length);
+  if (shorter < 5) return 0;
+  if (levenshtein(n, c, 1) <= 1) return 75;
+  if (shorter >= 8 && levenshtein(n, c, 2) <= 2) return 70;
   return 0;
 }
 
@@ -127,6 +177,12 @@ async function loadPortCandidates(): Promise<PortCandidate[]> {
   return cachedPorts;
 }
 
+/** Best name score for one needle against one candidate string (exact/
+ *  startsWith/contains via `similarity`, then the fuzzy fallback). */
+function nameScore(needle: string, candidate: string): number {
+  return Math.max(similarity(needle, candidate), fuzzyNameScore(needle, candidate));
+}
+
 function findBestPort(
   needle: { name?: string; city?: string; country?: string },
   candidates: PortCandidate[],
@@ -137,15 +193,22 @@ function findBestPort(
   const [bareName, parenHint] = needle.name ? splitParenSuffix(needle.name) : [undefined, undefined];
   const country = needle.country ?? parenHint;
 
+  // Expand German exonyms / local endonyms to their English catalog names
+  // ("Lissabon"/"Lisboa" → "Lisbon", "Singapur" → "Singapore"). Booking
+  // confirmations are German/local, the catalog is English — without this
+  // every exonym port falls through to "unmatched" on import.
+  const nameNeedles = bareName ? [bareName, ...expandPortSearchTerms(bareName)] : [];
+  const cityNeedles = needle.city ? [needle.city, ...expandPortSearchTerms(needle.city)] : [];
+
   let best: { score: number; port: PortCandidate | null } = { score: 0, port: null };
   for (const port of candidates) {
     let score = 0;
-    if (bareName) {
-      score = Math.max(score, similarity(bareName, port.name));
-      if (port.city) score = Math.max(score, similarity(bareName, port.city));
+    for (const nn of nameNeedles) {
+      score = Math.max(score, nameScore(nn, port.name));
+      if (port.city) score = Math.max(score, nameScore(nn, port.city));
     }
-    if (needle.city && port.city) {
-      score = Math.max(score, similarity(needle.city, port.city));
+    for (const cn of cityNeedles) {
+      if (port.city) score = Math.max(score, nameScore(cn, port.city));
     }
     // Country / region acts as a tiebreaker. Use either the explicit country
     // field or the paren-hint pulled from "Sydney (Neuschottland)".
