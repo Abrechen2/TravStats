@@ -21,6 +21,25 @@ describe("CruiseStopsEditor", () => {
     ]);
   });
 
+  it("shows a date input for every stop (incl. sea days) and emits a UTC-midnight ISO (#132)", async () => {
+    const stops = [{ portId: null, dayNumber: 1, isAtSea: true }];
+    const onChange = vi.fn();
+    render(<CruiseStopsEditor stops={stops} onChange={onChange} />);
+    const dateInput = screen.getByLabelText("stops.date");
+    expect(dateInput).toBeInTheDocument();
+    await userEvent.type(dateInput, "2027-10-08");
+    const emitted = onChange.mock.calls.at(-1)?.[0] as Array<{ date: string | null }>;
+    expect(emitted[0].date).toBe("2027-10-08T00:00:00.000Z");
+  });
+
+  it("renders an existing stop date in the date input", () => {
+    const stops = [
+      { portId: null, dayNumber: 1, isAtSea: true, date: "2027-10-08T00:00:00.000Z" },
+    ];
+    render(<CruiseStopsEditor stops={stops} onChange={vi.fn()} />);
+    expect(screen.getByLabelText("stops.date")).toHaveValue("2027-10-08");
+  });
+
   it("removes a stop and renumbers subsequent days", async () => {
     const stops = [
       { portId: 1, dayNumber: 1, isAtSea: false },

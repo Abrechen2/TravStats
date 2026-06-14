@@ -35,6 +35,7 @@
   "field": {
     "ship": "Schiff",
     "line": "Reederei",
+    "routeName": "Routenname",
     "depart": "Abfahrt",
     "arrive": "Ankunft",
     "cabin": "Kabine",
@@ -90,6 +91,7 @@
     "at_sea": "Auf See",
     "add": "Stopp hinzufügen",
     "day": "Tag",
+    "date": "Datum",
     "excursion": "Landausflug",
     "moveUp": "Nach oben verschieben",
     "moveDown": "Nach unten verschieben",

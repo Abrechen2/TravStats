@@ -68,6 +68,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
 
   const [ship, setShip] = useState<Ship | null>(cruise?.ship ?? null);
   const [cruiseLine, setCruiseLine] = useState<string>(cruise?.cruiseLine ?? "");
+  const [routeName, setRouteName] = useState<string>(cruise?.routeName ?? "");
   const [startDate, setStartDate] = useState<string>(toDateInput(cruise?.startDate));
   const [endDate, setEndDate] = useState<string>(toDateInput(cruise?.endDate));
   const [status, setStatus] = useState<CruiseStatus>(cruise?.status ?? "scheduled");
@@ -79,6 +80,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
       portId: s.portId,
       port: s.port,
       dayNumber: s.dayNumber,
+      date: s.date,
       isAtSea: s.isAtSea,
       arrivalTime: s.arrivalTime,
       departureTime: s.departureTime,
@@ -115,6 +117,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
       const input: CruiseInput = {
         shipId: ship?.id ?? null,
         cruiseLine: cruiseLine || undefined,
+        routeName: routeName || undefined,
         departurePortId: departurePort?.id ?? null,
         arrivalPortId: arrivalPort?.id ?? null,
         startDate: fromDateInput(startDate),
@@ -172,6 +175,13 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 value={cruiseLine}
                 onChange={(e): void => setCruiseLine(e.target.value)}
                 placeholder={t("field.line")}
+              />
+              <input
+                className={`mt-3 ${INPUT_CLASS}`}
+                aria-label={t("field.routeName")}
+                value={routeName}
+                onChange={(e): void => setRouteName(e.target.value)}
+                placeholder={t("field.routeName")}
               />
               <div className="mt-3 grid grid-cols-2 gap-3">
                 <input

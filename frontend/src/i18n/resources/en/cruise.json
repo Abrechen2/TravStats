@@ -35,6 +35,7 @@
   "field": {
     "ship": "Ship",
     "line": "Line",
+    "routeName": "Route name",
     "depart": "Depart",
     "arrive": "Arrive",
     "cabin": "Cabin",
@@ -90,6 +91,7 @@
     "at_sea": "At sea",
     "add": "Add stop",
     "day": "Day",
+    "date": "Date",
     "excursion": "Excursion",
     "moveUp": "Move up",
     "moveDown": "Move down",

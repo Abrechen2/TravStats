@@ -107,6 +107,29 @@ describe("CruiseBookingParser", () => {
     expect(cruise.stops.map((s) => s.dayNumber)).toEqual([1, 2, 3, 4]);
   });
 
+  it("extracts per-stop dates (incl. German DD.MM.YYYY) and routeName (#132/#133)", async () => {
+    mock.setResponse({
+      response: JSON.stringify([
+        {
+          shipName: "Mein Schiff 1",
+          routeName: "Kanaren mit Marokko",
+          startDate: "2027-10-08",
+          endDate: "2027-10-10",
+          stops: [
+            { dayNumber: 1, isAtSea: false, portName: "Bayonne", date: "2027-10-08" },
+            { dayNumber: 2, isAtSea: true, date: "2027-10-09" },
+            // German format leaking through must still normalize to ISO.
+            { dayNumber: 3, isAtSea: false, portName: "Boston", date: "10.10.2027" },
+          ],
+        },
+      ]),
+    });
+
+    const [cruise] = await parser.parseText("…");
+    expect(cruise.routeName).toBe("Kanaren mit Marokko");
+    expect(cruise.stops.map((s) => s.date)).toEqual(["2027-10-08", "2027-10-09", "2027-10-10"]);
+  });
+
   it("strips invalid cabinType / currency rather than passing junk through", async () => {
     mock.setResponse({
       response: JSON.stringify([

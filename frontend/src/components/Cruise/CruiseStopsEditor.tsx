@@ -12,6 +12,12 @@ import { useTranslation } from "../../hooks/useTranslation";
 const fromStopInput = (local: string): string | null =>
   local ? `${local}:00.000Z` : null;
 
+// Stop date is date-granular (the calendar day of the call). Pin to UTC
+// midnight so the round-trip stays timezone-neutral, same as the cruise
+// start/end dates — see CruiseEditModal for the rationale.
+const fromDateInput = (date: string): string | null =>
+  date ? `${date}T00:00:00.000Z` : null;
+
 interface Props {
   stops: CruiseStopInput[];
   onChange: (stops: CruiseStopInput[]) => void;
@@ -104,6 +110,14 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
               </button>
             </div>
           </div>
+          <input
+            type="date"
+            value={stop.date?.slice(0, 10) ?? ""}
+            onChange={(e): void => update(i, { date: fromDateInput(e.target.value) })}
+            style={{ colorScheme: "dark" }}
+            className="mb-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-xs text-[var(--text-primary)]"
+            aria-label={t("stops.date")}
+          />
           <label className="mb-2 flex items-center gap-2 text-xs text-[var(--text-muted)]">
             <input
               type="checkbox"
