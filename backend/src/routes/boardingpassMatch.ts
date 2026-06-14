@@ -1,4 +1,5 @@
 import { Router, Response } from "express";
+import { fromZonedTime } from "date-fns-tz";
 import { z } from "zod";
 
 import { authenticate, AuthRequest } from "../middleware/auth";
@@ -130,7 +131,11 @@ router.post("/propose", authenticate, boardingPassParseLimiter, async (req: Auth
     const arrival = await resolveAirport(toCode);
 
     // --- 4. Match against an existing flight (preview only) -----------------
-    const match = await findExistingFlight(userId, flightNumber, date, pnr);
+    // Pass the departure timezone so the day-window is computed the same way
+    // the create path stores `departureTime` (local midnight → UTC). Without
+    // this, a flight from a UTC+ airport is stored on the previous UTC day and
+    // the matcher misses it → false "create" → duplicate on re-scan.
+    const match = await findExistingFlight(userId, flightNumber, date, pnr, departure?.timezone);
     let fillsFields: string[] = [];
     if (match) {
       if (seatNumber && !match.seatNumber) fillsFields.push("seatNumber");
@@ -231,12 +236,20 @@ const MATCH_SELECT = {
  * Same match key the /flights create path uses (normalized flight number +
  * same UTC calendar day), so the preview agrees with what ?merge=true will do.
  * PNR is a stronger key, so try it first when present.
+ *
+ * The day-window MUST be derived the same way the create path stores
+ * `departureTime`: local midnight in the departure airport's timezone, then
+ * converted to UTC (see flights.ts `toUtcDate` + its dedup window). Building
+ * the window from the bare date as UTC midnight instead would, for a UTC+
+ * airport, miss the stored flight (which sits on the previous UTC day) and
+ * wrongly propose "create" — re-scanning the same pass then duplicates it.
  */
-async function findExistingFlight(
+export async function findExistingFlight(
   userId: string,
   flightNumber: string | undefined,
   date: string | undefined,
-  pnr: string | undefined
+  pnr: string | undefined,
+  depTimezone: string | null | undefined
 ): Promise<FlightMatch | null> {
   if (pnr) {
     const byPnr = await prisma.flight.findFirst({
@@ -247,8 +260,12 @@ async function findExistingFlight(
   }
 
   if (flightNumber && date) {
-    const dayStart = new Date(`${date}T00:00:00.000Z`);
-    if (!Number.isNaN(dayStart.getTime())) {
+    const departureUtc = depTimezone
+      ? fromZonedTime(`${date}T00:00`, depTimezone)
+      : new Date(`${date}T00:00:00.000Z`);
+    if (!Number.isNaN(departureUtc.getTime())) {
+      const dayStart = new Date(departureUtc);
+      dayStart.setUTCHours(0, 0, 0, 0);
       const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
       const candidates = await prisma.flight.findMany({
         where: { userId, departureTime: { gte: dayStart, lt: dayEnd } },
