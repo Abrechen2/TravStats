@@ -307,7 +307,10 @@ export default function FlightsTablePage(): JSX.Element {
 
         {/* Main Content */}
         <div className="container mx-auto px-4 py-6 max-w-screen-2xl">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
+              {t("dashboard:flightsTitle")}
+            </h1>
             <button
               className="btn-primary flex items-center gap-2 whitespace-nowrap"
               onClick={() => setShowAddFlight(true)}
