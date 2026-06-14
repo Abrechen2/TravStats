@@ -29,6 +29,8 @@ export interface CruiseStop {
   portId: number | null;
   port: Port | null;
   dayNumber: number;
+  /** Calendar date of the stop (ISO) or null. */
+  date: string | null;
   isAtSea: boolean;
   arrivalTime: string | null;
   departureTime: string | null;
@@ -45,6 +47,7 @@ export interface Cruise {
   ship: Ship | null;
   shipNameOverride: string | null;
   cruiseLine: string | null;
+  routeName: string | null;
   departurePortId: number | null;
   departurePort: Port | null;
   arrivalPortId: number | null;
@@ -71,6 +74,7 @@ export interface Cruise {
 export interface CruiseStopInput {
   portId: number | null;
   dayNumber: number;
+  date?: string | null;
   isAtSea: boolean;
   arrivalTime?: string | null;
   departureTime?: string | null;
@@ -85,6 +89,7 @@ export interface CruiseInput {
   shipId?: number | null;
   shipNameOverride?: string;
   cruiseLine?: string;
+  routeName?: string;
   departurePortId?: number | null;
   arrivalPortId?: number | null;
   startDate?: string | null;

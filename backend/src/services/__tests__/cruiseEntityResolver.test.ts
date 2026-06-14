@@ -21,6 +21,9 @@ const PORTS = [
   { id: 10, name: "Hamburg", city: "Hamburg", country: "Germany" },
   { id: 11, name: "Bergen", city: "Bergen", country: "Norway" },
   { id: 12, name: "Geirangerfjord", city: "Geiranger", country: "Norway" },
+  { id: 13, name: "Lisbon", city: "Lisbon", country: "Portugal" },
+  { id: 14, name: "Civitavecchia", city: "Civitavecchia", country: "Italy" },
+  { id: 15, name: "Atla", city: "Atla", country: "Estonia" },
 ];
 
 function baseParsedCruise(overrides: Partial<ParsedCruise> = {}): ParsedCruise {
@@ -100,6 +103,31 @@ describe("resolveCruiseEntities", () => {
     expect(stop.excursionNote).toContain("Atlantis");
   });
 
+  it("matches German exonyms and local endonyms to the English catalog port", async () => {
+    const cruise = baseParsedCruise({
+      stops: [
+        { dayNumber: 1, isAtSea: false, portName: "Lissabon" }, // German exonym
+        { dayNumber: 2, isAtSea: false, portName: "Lisboa" }, // Portuguese endonym (fuzzy + map)
+        { dayNumber: 3, isAtSea: false, portName: "Rom" }, // exonym → real cruise port
+      ],
+    });
+    const result = await resolveCruiseEntities(cruise);
+    expect(result.input.stops?.[0].portId).toBe(13); // Lisbon
+    expect(result.input.stops?.[1].portId).toBe(13); // Lisbon
+    expect(result.input.stops?.[2].portId).toBe(14); // Civitavecchia (port of Rome)
+    expect(result.unmatchedPorts).toHaveLength(0);
+  });
+
+  it("does not let a short catalog name swallow a longer parsed name", async () => {
+    // "Atlantis" must not match the 4-char port "Atla" via startsWith/contains.
+    const cruise = baseParsedCruise({
+      stops: [{ dayNumber: 1, isAtSea: false, portName: "Atlantis" }],
+    });
+    const result = await resolveCruiseEntities(cruise);
+    expect(result.input.stops?.[0].portId).toBeNull();
+    expect(result.unmatchedPorts).toEqual([{ dayNumber: 1, portName: "Atlantis" }]);
+  });
+
   it("uses city + country as tiebreaker for ambiguous port names", async () => {
     portFindMany.mockResolvedValueOnce([
       { id: 20, name: "Springfield", city: "Springfield", country: "United States" },
@@ -112,6 +140,25 @@ describe("resolveCruiseEntities", () => {
     });
     const result = await resolveCruiseEntities(cruise);
     expect(result.input.stops?.[0].portId).toBe(21);
+  });
+
+  it("passes per-stop dates through for both port calls and sea days (#132)", async () => {
+    const cruise = baseParsedCruise({
+      stops: [
+        { dayNumber: 1, isAtSea: false, portName: "Hamburg", date: "2025-12-19" },
+        { dayNumber: 2, isAtSea: true, date: "2025-12-20" },
+      ],
+    });
+    const result = await resolveCruiseEntities(cruise);
+    expect(result.input.stops?.[0]).toMatchObject({ portId: 10, date: "2025-12-19" });
+    expect(result.input.stops?.[1]).toMatchObject({ isAtSea: true, date: "2025-12-20" });
+  });
+
+  it("propagates routeName into CruiseInput (#133)", async () => {
+    const result = await resolveCruiseEntities(
+      baseParsedCruise({ routeName: "Kanaren mit Marokko" }),
+    );
+    expect(result.input.routeName).toBe("Kanaren mit Marokko");
   });
 
   it("propagates cabin + price + booking metadata into CruiseInput", async () => {
