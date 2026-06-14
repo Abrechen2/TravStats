@@ -28,7 +28,8 @@ describe("CruiseStopsEditor", () => {
     const dateInput = screen.getByLabelText("stops.date");
     expect(dateInput).toBeInTheDocument();
     await userEvent.type(dateInput, "2027-10-08");
-    const emitted = onChange.mock.calls.at(-1)?.[0] as Array<{ date: string | null }>;
+    const calls = onChange.mock.calls;
+    const emitted = calls[calls.length - 1][0] as Array<{ date: string | null }>;
     expect(emitted[0].date).toBe("2027-10-08T00:00:00.000Z");
   });
 

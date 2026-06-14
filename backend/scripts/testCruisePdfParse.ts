@@ -45,6 +45,7 @@ async function main(): Promise<void> {
     console.log(`  shipMatched:        ${entry.shipMatched}`);
     console.log(`  ship:               ${entry.input.shipNameOverride ?? `(id ${entry.input.shipId})`}`);
     console.log(`  cruiseLine:         ${entry.input.cruiseLine ?? "—"}`);
+    console.log(`  routeName:          ${entry.input.routeName ?? "—"}`);
     console.log(`  startDate:          ${entry.input.startDate ?? "—"}`);
     console.log(`  endDate:            ${entry.input.endDate ?? "—"}`);
     console.log(`  cabin:              ${[entry.input.cabinNumber, entry.input.cabinType, entry.input.deck && `Deck ${entry.input.deck}`].filter(Boolean).join(" · ") || "—"}`);
@@ -53,9 +54,10 @@ async function main(): Promise<void> {
     console.log(`  stops (${entry.input.stops?.length ?? 0}):`);
     for (const s of entry.input.stops ?? []) {
       const tag = s.isAtSea ? "SEA  " : `port=${s.portId ?? "null"}`.padEnd(11);
+      const date = (s.date ?? "----------").slice(0, 10);
       const time = [s.arrivalTime, s.departureTime].filter(Boolean).join(" → ");
       const note = s.excursionNote ? `  [${s.excursionNote}]` : "";
-      console.log(`    Day ${s.dayNumber.toString().padStart(2)}: ${tag} ${time}${note}`);
+      console.log(`    Day ${s.dayNumber.toString().padStart(2)}: ${date}  ${tag} ${time}${note}`);
     }
     if (entry.unmatchedPorts.length > 0) {
       console.log(`  unmatched ports:    ${entry.unmatchedPorts.map((p) => `Day ${p.dayNumber}: ${p.portName}`).join(", ")}`);
