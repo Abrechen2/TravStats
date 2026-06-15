@@ -358,6 +358,12 @@ model UserSettings {
   historicalEnrichmentMinConfidence Int     @default(60) @map("historical_enrichment_min_confidence")
   historicalEnrichmentMaxPerDay     Int     @default(50) @map("historical_enrichment_max_per_day")
 
+  // Mobile app preferences backup/sync blob (units, formats, …). Opaque
+  // JSON owned by the mobile client; the server only stores + serves it.
+  // PAT / device identity are NOT stored here.
+  appPrefs          Json?     @map("app_prefs")
+  appPrefsUpdatedAt DateTime? @map("app_prefs_updated_at")
+
   updatedAt DateTime @updatedAt @map("updated_at")
   createdAt DateTime @default(now()) @map("created_at")
 
