@@ -170,7 +170,7 @@ app.use(requestLoggerMiddleware);
 // HEALTHCHECK and the nginx upstream probe) and `/api/v1/health` (versioned,
 // matches the public-API URL convention documented for external callers).
 const healthHandler = (_req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: appVersion });
 };
 app.get('/health', healthHandler);
 app.get('/api/v1/health', healthHandler);

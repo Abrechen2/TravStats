@@ -68,6 +68,14 @@
         "label": "Öffentliche URL",
         "help": "Basis-URL für Einladungslinks und Passwort-Reset-Mails. Leer lassen, um die Anfrage-URL automatisch zu verwenden."
       },
+      "publicUrl": {
+        "label": "Öffentliche URL (Geräte-Pairing)",
+        "help": "Von außen erreichbare Adresse dieser Instanz, die für den QR-Code zum Geräte-Pairing verwendet wird, damit sich die mobile App auch außerhalb des LAN verbinden kann. Leer lassen, um die Anfrage-URL automatisch zu verwenden."
+      },
+      "lanUrl": {
+        "label": "Interne URL (LAN)",
+        "help": "Optionale lokale Adresse dieser Instanz für Geräte im selben Netzwerk (z. B. http://192.168.1.10:3010)."
+      },
       "maxUsers": {
         "label": "Maximale Benutzer",
         "help": "Harter Deckel für die Anzahl Konten. Empfohlen 1–10 für kleine Gruppen."
