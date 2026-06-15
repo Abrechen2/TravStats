@@ -48,6 +48,7 @@ model User {
   bookings             Booking[]
   cruises              Cruise[]
   apiTokens            ApiToken[]
+  pairingCodes         PairingCode[]
 
   @@map("users")
 }
@@ -81,8 +82,39 @@ model ApiToken {
   revokedAt   DateTime? @map("revoked_at")
   createdAt   DateTime  @default(now()) @map("created_at")
 
+  // Device-pairing metadata. Populated when a token is minted via the
+  // mobile pairing flow (POST /api/v1/pairing/claim). `deviceId` lets the
+  // claim path revoke a prior token for the same physical device so a
+  // re-pair doesn't leave orphaned credentials behind.
+  deviceId    String?   @map("device_id")
+  platform    String?
+  appVersion  String?   @map("app_version")
+
   @@index([userId])
+  @@index([userId, deviceId])
   @@map("api_tokens")
+}
+
+/// One-time pairing codes for the mobile device-pairing flow.
+///
+/// A browser session calls POST /api/v1/pairing/start, which creates a
+/// short-lived code (10 min). Only its SHA-256 (`codeHash`) is persisted —
+/// the plaintext is shown to the user as a QR / typed code and never stored.
+/// The mobile app posts the plaintext to POST /api/v1/pairing/claim, which
+/// atomically consumes the row (sets `consumedAt`) and mints a device PAT.
+/// `consumedAt` guards against double-claims: a conditional update on
+/// `consumedAt = null` means only one concurrent claim can win.
+model PairingCode {
+  id         String    @id @default(uuid())
+  codeHash   String    @unique @map("code_hash")
+  userId     String    @map("user_id")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("pairing_codes")
 }
 
 model Airport {
