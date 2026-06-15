@@ -11,14 +11,22 @@ describe("Pairing API", () => {
   let userId: string;
   let authCookie: string;
   let bearerToken: string;
+  let otherUserId: string;
+  let otherAuthCookie: string;
 
   beforeAll(async () => {
-    await prisma.user.deleteMany({ where: { username: "pairingroute" } });
+    await prisma.user.deleteMany({ where: { username: { in: ["pairingroute", "pairingroute2"] } } });
     const u = await prisma.user.create({
       data: { username: "pairingroute", passwordHash: await hashPassword("password123") },
     });
     userId = u.id;
     authCookie = `auth_token=${generateToken(u.id)}`;
+
+    const other = await prisma.user.create({
+      data: { username: "pairingroute2", passwordHash: await hashPassword("password123") },
+    });
+    otherUserId = other.id;
+    otherAuthCookie = `auth_token=${generateToken(other.id)}`;
 
     // A real PAT so we can exercise the Bearer / cookie-only branches.
     const gen = await generateApiToken();
@@ -39,9 +47,9 @@ describe("Pairing API", () => {
   });
 
   afterAll(async () => {
-    await prisma.pairingCode.deleteMany({ where: { userId } });
-    await prisma.apiToken.deleteMany({ where: { userId } });
-    await prisma.user.delete({ where: { id: userId } });
+    await prisma.pairingCode.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
+    await prisma.apiToken.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
+    await prisma.user.deleteMany({ where: { id: { in: [userId, otherUserId] } } });
     await prisma.$disconnect();
   });
 
@@ -67,13 +75,14 @@ describe("Pairing API", () => {
     });
   });
 
-  describe("GET /api/v1/pairing/status/:code", () => {
+  describe("POST /api/v1/pairing/status", () => {
     it("reports unclaimed then claimed", async () => {
       const { code } = await generatePairingCode(userId);
 
       const unclaimed = await request(app)
-        .get(`/api/v1/pairing/status/${code}`)
-        .set("Cookie", authCookie);
+        .post("/api/v1/pairing/status")
+        .set("Cookie", authCookie)
+        .send({ code });
       expect(unclaimed.status).toBe(200);
       expect(unclaimed.body.claimed).toBe(false);
 
@@ -82,10 +91,35 @@ describe("Pairing API", () => {
         .send({ code, deviceName: "Pixel 8", deviceId: "dev-status" });
 
       const claimed = await request(app)
-        .get(`/api/v1/pairing/status/${code}`)
-        .set("Cookie", authCookie);
+        .post("/api/v1/pairing/status")
+        .set("Cookie", authCookie)
+        .send({ code });
       expect(claimed.body.claimed).toBe(true);
       expect(claimed.body.deviceName).toBe("Pixel 8");
+    });
+
+    it("does not leak another user's code status (ownership check)", async () => {
+      // User A mints + claims a code; user B must not be able to read it.
+      const { code } = await generatePairingCode(userId);
+      await request(app)
+        .post("/api/v1/pairing/claim")
+        .send({ code, deviceName: "A's phone", deviceId: "dev-owner" });
+
+      const res = await request(app)
+        .post("/api/v1/pairing/status")
+        .set("Cookie", otherAuthCookie)
+        .send({ code });
+      expect(res.status).toBe(200);
+      expect(res.body.claimed).toBe(false);
+      expect(res.body.deviceName).toBeUndefined();
+    });
+
+    it("400s a malformed code", async () => {
+      const res = await request(app)
+        .post("/api/v1/pairing/status")
+        .set("Cookie", authCookie)
+        .send({ code: "not-a-code" });
+      expect(res.status).toBe(400);
     });
   });
 
@@ -98,7 +132,7 @@ describe("Pairing API", () => {
 
       expect(res.status).toBe(201);
       expect(res.body.token).toMatch(/^ts_pat_/);
-      expect(typeof res.body.server).toBe("string");
+      expect(res.body.server).toBeUndefined();
       expect(res.body.user.username).toBe("pairingroute");
 
       const minted = await prisma.apiToken.findFirst({

@@ -102,13 +102,25 @@ describe("pairingService", () => {
 
   describe("getPairingStatus", () => {
     it("reports not-found for an unknown code", async () => {
-      const status = await getPairingStatus(`${PAIRING_CODE_PREFIX}${"0".repeat(32)}`);
+      const status = await getPairingStatus(`${PAIRING_CODE_PREFIX}${"0".repeat(32)}`, userId);
       expect(status).toEqual({ found: false, claimed: false });
     });
 
     it("reports unclaimed for a fresh code", async () => {
       const { code } = await generatePairingCode(userId);
-      expect(await getPairingStatus(code)).toEqual({ found: true, claimed: false });
+      expect(await getPairingStatus(code, userId)).toEqual({ found: true, claimed: false });
+    });
+
+    it("reports not-found when the code is owned by another user", async () => {
+      const { code } = await generatePairingCode(userId);
+      const other = await prisma.user.create({
+        data: { username: `pairingsvc-other-${Date.now()}`, passwordHash: await hashPassword("password123") },
+      });
+      try {
+        expect(await getPairingStatus(code, other.id)).toEqual({ found: false, claimed: false });
+      } finally {
+        await prisma.user.delete({ where: { id: other.id } });
+      }
     });
 
     it("reports claimed + deviceName once consumed and a device token exists", async () => {
@@ -125,7 +137,7 @@ describe("pairingService", () => {
         },
       });
 
-      const status = await getPairingStatus(code);
+      const status = await getPairingStatus(code, userId);
       expect(status.found).toBe(true);
       expect(status.claimed).toBe(true);
       expect(status.deviceName).toBe("Pixel 8");

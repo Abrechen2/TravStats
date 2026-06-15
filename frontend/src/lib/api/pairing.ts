@@ -31,9 +31,9 @@ export const pairingApi = {
   },
 
   status: async (code: string): Promise<PairingStatus> => {
-    const { data } = await api.get<PairingStatus>(
-      `/pairing/status/${encodeURIComponent(code)}`,
-    );
+    // POST with the code in the body so it never lands in the HTTP access log
+    // (request URLs are logged, body values are not).
+    const { data } = await api.post<PairingStatus>("/pairing/status", { code });
     return data;
   },
 };

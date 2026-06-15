@@ -4,7 +4,7 @@ import { authenticate, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import { pairingClaimLimiter } from "../middleware/rateLimit";
 import { prisma } from "../db";
-import { claimPairingSchema } from "../schemas/pairing";
+import { claimPairingSchema, statusPairingSchema } from "../schemas/pairing";
 import {
   generatePairingCode,
   getPairingStatus,
@@ -21,7 +21,9 @@ import { securityLogger } from "../utils/logger";
  *   1. Browser (cookie session) POSTs /start → gets a one-time code + the
  *      public base URL to show as a QR.
  *   2. Mobile app POSTs /claim with the code → exchanges it for a device PAT.
- *   3. Browser polls GET /status/:code to learn when the phone has paired.
+ *   3. Browser polls POST /status (code in the body) to learn when the phone
+ *      has paired. The code travels in the body — not the URL — so it never
+ *      lands in the HTTP access log.
  *   4. App POSTs /unpair (Bearer) to self-revoke its token.
  *
  * Auth posture per route is deliberately mixed, so `authenticate` is applied
@@ -74,15 +76,20 @@ router.post(
   },
 );
 
-// GET /status/:code — poll whether the code has been claimed (cookie only).
-router.get(
-  "/status/:code",
+// POST /status — poll whether the code has been claimed (cookie only). The
+// code rides in the body so it never appears in the HTTP access-log URL.
+router.post(
+  "/status",
   authenticate,
   cookieOnly,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       if (!req.userId) throw new AppError("Unauthorized", 401);
-      const status = await getPairingStatus(req.params.code);
+      const parsed = statusPairingSchema.safeParse(req.body);
+      if (!parsed.success) {
+        throw new AppError(parsed.error.issues[0]?.message ?? "Invalid input", 400);
+      }
+      const status = await getPairingStatus(parsed.data.code, req.userId);
       res.json({
         claimed: status.claimed,
         ...(status.deviceName ? { deviceName: status.deviceName } : {}),
@@ -156,9 +163,10 @@ router.post(
         },
       });
 
+      // The app keeps the URL it scanned; returning a server URL here would be
+      // a Host-spoofable field it ignores, so we omit it.
       res.status(201).json({
         token: generated.plaintext,
-        server: await getPublicBaseUrl(req),
         user: { username: user?.username ?? null },
       });
     } catch (err) {

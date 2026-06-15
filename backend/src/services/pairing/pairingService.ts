@@ -91,18 +91,26 @@ export async function verifyAndConsume(code: string): Promise<string | null> {
  * Look up the status of a pairing code by its plaintext. Used by the browser
  * polling endpoint to learn when the phone has claimed the code.
  *
+ * Ownership is enforced: a code only belongs to the user who minted it, so a
+ * mismatched (or unknown) code is reported as not-found rather than leaking
+ * another user's claim state to an authenticated attacker.
+ *
  * `deviceName` is best-effort: there is no hard FK from a code to the token it
  * minted, so we surface the label of the most recent device token created for
  * the owning user at/after the code was consumed.
  */
-export async function getPairingStatus(code: string): Promise<PairingStatus> {
+export async function getPairingStatus(
+  code: string,
+  requestingUserId: string,
+): Promise<PairingStatus> {
   const codeHash = tokenLookupHash(code);
   const row = await prisma.pairingCode.findUnique({
     where: { codeHash },
     select: { userId: true, consumedAt: true },
   });
 
-  if (!row) return { found: false, claimed: false };
+  // Unknown code or a code owned by another user — never reveal it exists.
+  if (!row || row.userId !== requestingUserId) return { found: false, claimed: false };
   if (!row.consumedAt) return { found: true, claimed: false };
 
   const token = await prisma.apiToken.findFirst({
