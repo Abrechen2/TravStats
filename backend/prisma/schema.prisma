@@ -449,6 +449,14 @@ model AdminSettings {
   allowRegistration Boolean @default(false) @map("allow_registration")
   frontendUrl       String? @map("frontend_url")
 
+  // Public base URL the mobile app should talk to after pairing (e.g.
+  // https://travstats.example.com). Surfaced by the device-pairing flow so a
+  // freshly paired phone knows the externally reachable origin instead of the
+  // LAN address the browser happened to be on. `lanUrl` is an optional
+  // secondary hint for on-network clients.
+  publicUrl         String? @map("public_url")
+  lanUrl            String? @map("lan_url")
+
   // Off-site backup sync via WebDAV — supersedes WEBDAV_* ENV variables.
   // webdavPasswordEncrypted is AES-GCM via encryptApiKey() — never stored plain.
   webdavSyncEnabled       Boolean @default(false) @map("webdav_sync_enabled")

@@ -24,6 +24,18 @@ const instancePatchSchema = z.object({
     .max(500)
     .refine((v) => v === '' || /^https?:\/\//.test(v), 'Must be a valid http(s) URL')
     .optional(),
+  publicUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((v) => v === '' || /^https?:\/\//.test(v), 'Must be a valid http(s) URL')
+    .optional(),
+  lanUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((v) => v === '' || /^https?:\/\//.test(v), 'Must be a valid http(s) URL')
+    .optional(),
 });
 
 router.get('/instance-settings', async (_req: AuthRequest, res: Response, next: NextFunction) => {
@@ -44,6 +56,12 @@ router.put('/instance-settings', async (req: AuthRequest, res: Response, next: N
       ...(patch.allowRegistration !== undefined && { allowRegistration: patch.allowRegistration }),
       ...(patch.frontendUrl !== undefined && {
         frontendUrl: patch.frontendUrl === '' ? null : patch.frontendUrl,
+      }),
+      ...(patch.publicUrl !== undefined && {
+        publicUrl: patch.publicUrl === '' ? null : patch.publicUrl,
+      }),
+      ...(patch.lanUrl !== undefined && {
+        lanUrl: patch.lanUrl === '' ? null : patch.lanUrl,
       }),
     });
     res.json({ settings });
