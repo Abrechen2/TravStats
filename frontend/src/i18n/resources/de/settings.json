@@ -727,7 +727,7 @@
   },
   "apiTokens": {
     "title": "API-Tokens",
-    "description": "Persönliche Zugriffstokens für externe Tools, AI-Agenten und Skripte. Ein Token wird genau einmal beim Erstellen angezeigt — danach nie wieder.",
+    "description": "Persönliche Zugriffstokens für KI-Agenten, Skripte und externe Apps. Zum Verbinden der TravStats-App nutze stattdessen „Geräte\". Ein Token wird genau einmal beim Erstellen angezeigt — danach nie wieder.",
     "docsTitle": "API-Dokumentation",
     "docsBody": "Vollständige Endpoints, Beispiele und Schemas — interaktiv ausprobieren mit deinem Token.",
     "docsLink": "Swagger UI öffnen →",
@@ -751,8 +751,6 @@
     "justCreatedWarning": "Kopiere diesen Token JETZT — er wird nicht erneut angezeigt. Nur der Hash wird gespeichert.",
     "copy": "Kopieren",
     "copied": "Kopiert!",
-    "appQrTitle": "Für die TravStats-App",
-    "appQrHint": "In der App unter Einstellungen → „Server & Token per QR scannen“ einlesen. Enthält Server-Adresse und Token.",
     "dismiss": "Verstanden",
     "errors": {
       "load": "Tokens konnten nicht geladen werden",
