@@ -59,7 +59,7 @@
     "geo-tz": "^8.1.6",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.3",
-    "multer": "^2.1.1",
+    "multer": "^2.2.0",
     "node-cache": "^5.1.2",
     "node-cron": "^3.0.3",
     "node-html-parser": "^7.1.0",
