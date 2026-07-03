@@ -87,6 +87,22 @@ describe('GET /api/v1/stats/timeseries', () => {
     expect(feb.distanceKm).toBe(500);
   });
 
+  it('trims the all-time series to the data range (no empty 1970 buckets)', async () => {
+    mockFlightFindMany.mockResolvedValue([
+      {
+        depIata: 'FRA', depIcao: null, depLat: 50, depLon: 8,
+        arrIata: 'JFK', arrIcao: null, arrLat: 40, arrLon: -73,
+        departureTime: new Date('2024-06-10T00:00:00Z'), arrivalTime: null,
+        depTimeSemantics: 'LOCAL', arrTimeSemantics: 'LOCAL',
+      },
+    ]);
+    const res = await request(app).get('/api/v1/stats/timeseries?window=all&granularity=year');
+    expect(res.status).toBe(200);
+    // Without trimming this would span 1970..current; trimmed it is just the data year.
+    expect(res.body.series.map((p: { period: string }) => p.period)).toEqual(['2024']);
+    expect(res.body.current.count).toBe(1);
+  });
+
   it('rejects an invalid domain', async () => {
     const res = await request(app).get('/api/v1/stats/timeseries?domain=hotel');
     expect(res.status).toBe(400);

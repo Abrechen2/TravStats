@@ -1,5 +1,12 @@
 import { describe, it, expect } from "@jest/globals";
-import { resolveWindow, bucketSeries, sumTotals, type DatedRow } from "./timeseries";
+import {
+  resolveWindow,
+  bucketSeries,
+  sumTotals,
+  trimZeroEdges,
+  type DatedRow,
+  type TimeseriesPoint,
+} from "./timeseries";
 
 const NOW = new Date(Date.UTC(2026, 6, 15)); // 2026-07-15
 
@@ -85,5 +92,32 @@ describe("sumTotals", () => {
   });
   it("returns zeros for an empty list", () => {
     expect(sumTotals([])).toEqual({ count: 0, distanceKm: 0, durationMin: 0 });
+  });
+});
+
+describe("trimZeroEdges", () => {
+  const pt = (period: string, count: number): TimeseriesPoint => ({
+    period,
+    count,
+    distanceKm: count * 100,
+    durationMin: count * 60,
+  });
+
+  it("removes leading and trailing zero buckets but keeps interior gaps", () => {
+    const series = [pt("1970", 0), pt("2019", 0), pt("2020", 3), pt("2021", 0), pt("2022", 5), pt("2023", 0)];
+    expect(trimZeroEdges(series).map((p) => p.period)).toEqual(["2020", "2021", "2022"]);
+  });
+
+  it("returns an empty array when every bucket is zero", () => {
+    expect(trimZeroEdges([pt("1970", 0), pt("1971", 0)])).toEqual([]);
+  });
+
+  it("leaves a series with no edge zeros unchanged", () => {
+    const series = [pt("2020", 1), pt("2021", 2)];
+    expect(trimZeroEdges(series)).toEqual(series);
+  });
+
+  it("returns an empty array for empty input", () => {
+    expect(trimZeroEdges([])).toEqual([]);
   });
 });
