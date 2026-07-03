@@ -72,6 +72,14 @@ const baseCruiseSchema = z.object({
   companions: z.array(z.string().max(100)).max(50).optional(),
   tripId: z.string().uuid().nullable().optional(),
   bookingId: z.string().uuid().nullable().optional(),
+  // Optional user-selectable map color. `#` prefix is optional to accept
+  // both raw hex and the format the color-picker's `<input type="color">`
+  // emits. `null` clears back to the auto-derived per-cruise color.
+  color: z
+    .string()
+    .regex(/^#?[0-9a-fA-F]{6}$/)
+    .optional()
+    .nullable(),
   stops: z.array(stopSchema).max(60).optional(),
 });
 

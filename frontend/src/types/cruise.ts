@@ -55,6 +55,8 @@ export interface Cruise {
   startDate: string | null;
   endDate: string | null;
   status: CruiseStatus;
+  /** Optional user-selectable map color (hex). Null = auto-derived from id. */
+  color?: string | null;
   cabinNumber: string | null;
   cabinType: CabinType | null;
   deck: number | null;
@@ -95,6 +97,8 @@ export interface CruiseInput {
   startDate?: string | null;
   endDate?: string | null;
   status?: CruiseStatus;
+  /** Optional user-selectable map color (hex). Null = auto-derived from id. */
+  color?: string | null;
   cabinNumber?: string;
   cabinType?: CabinType;
   deck?: number;

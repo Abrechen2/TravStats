@@ -123,6 +123,28 @@ describe('cruise schemas', () => {
     expect(updateCruiseSchema.safeParse({}).success).toBe(false);
   });
 
+  it('accepts a valid hex color with or without the leading #', () => {
+    const withHash = createCruiseSchema.safeParse({ ...minimalValid, color: '#e88374' });
+    expect(withHash.success).toBe(true);
+    if (withHash.success) expect(withHash.data.color).toBe('#e88374');
+
+    const withoutHash = createCruiseSchema.safeParse({ ...minimalValid, color: 'e88374' });
+    expect(withoutHash.success).toBe(true);
+  });
+
+  it('accepts an explicit null color (clears back to auto-derived)', () => {
+    const r = updateCruiseSchema.safeParse({ color: null });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.color).toBeNull();
+  });
+
+  it('rejects an invalid hex color', () => {
+    expect(createCruiseSchema.safeParse({ ...minimalValid, color: 'not-a-color' }).success).toBe(
+      false,
+    );
+    expect(createCruiseSchema.safeParse({ ...minimalValid, color: '#ff00' }).success).toBe(false);
+  });
+
   it('cruiseQuerySchema accepts line filter', () => {
     expect(cruiseQuerySchema.safeParse({ cruiseLine: 'AIDA' }).success).toBe(true);
   });
