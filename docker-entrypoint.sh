@@ -29,6 +29,36 @@ else
     echo "[entrypoint] Logging to files may be disabled - using console only"
 fi
 
+# Persist user uploads on the data volume (issue #152)
+# The backend writes uploads (receipts, trip photos, parser emails, training
+# samples) to /app/backend/uploads via path.join(__dirname, '../../uploads').
+# That path lives in the container's ephemeral layer and is wiped on every
+# image update, so uploads vanished after each container recreation. Relocate
+# it onto the mounted /app/data volume with a symlink so uploads survive
+# updates out of the box — no extra manual bind-mount required. This runs
+# before supervisord starts the backend, so the symlink is in place before the
+# app's ensureUploadDir() creates its receipts/emails/trip-photos subfolders.
+UPLOADS_LINK="/app/backend/uploads"
+UPLOADS_TARGET="/app/data/uploads"
+if mkdir -p "$UPLOADS_TARGET" 2>/dev/null; then
+    chown "${NODE_UID:-1000}:${NODE_GID:-1000}" "$UPLOADS_TARGET" 2>/dev/null || true
+    if [ -L "$UPLOADS_LINK" ]; then
+        echo "[entrypoint] ✅ Uploads already persisted on the data volume (symlink present)"
+    elif [ -e "$UPLOADS_LINK" ]; then
+        # A real directory already exists — an operator bind-mounted
+        # /app/backend/uploads themselves (the documented pre-#152 workaround).
+        # Their data already persists there, so leave the mount untouched
+        # rather than risk clobbering it.
+        echo "[entrypoint] Uploads path is an existing directory (operator bind-mount) — leaving it in place"
+    elif ln -s "$UPLOADS_TARGET" "$UPLOADS_LINK" 2>/dev/null; then
+        echo "[entrypoint] ✅ Uploads symlinked onto the data volume ($UPLOADS_TARGET)"
+    else
+        echo "[entrypoint] ⚠️  Could not create uploads symlink — uploads may not persist across updates"
+    fi
+else
+    echo "[entrypoint] ⚠️  Could not create $UPLOADS_TARGET — uploads will use the ephemeral container layer"
+fi
+
 # Auto-generate JWT_SECRET if not set
 # Store in /app/data/secrets (single volume, see resolveSecretsDir in jwtSecret.ts).
 # Legacy paths (/app/secrets from pre-1.0 installs, root-of-data from pre-0.2)
