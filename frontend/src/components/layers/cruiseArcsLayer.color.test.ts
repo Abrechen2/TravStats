@@ -14,13 +14,13 @@ function cruise(id: string, status: string, color?: string): Cruise {
 }
 
 describe("buildCruiseArcs colorMode", () => {
-  it("status mode: past cruise = periwinkle", () => {
+  it("status mode: past cruise = blue", () => {
     const arcs = buildCruiseArcs([cruise("c1", "flown")], new Map(), { colorMode: "status" });
-    expect(arcs[0].color).toEqual([111, 160, 214]);
+    expect(arcs[0].color).toEqual([74, 144, 217]);
   });
-  it("status mode: scheduled cruise = light periwinkle (planned)", () => {
+  it("status mode: scheduled cruise = cyan (planned)", () => {
     const arcs = buildCruiseArcs([cruise("c1", "scheduled")], new Map(), { colorMode: "status" });
-    expect(arcs[0].color).toEqual([169, 195, 224]);
+    expect(arcs[0].color).toEqual([34, 211, 238]);
   });
   it("perCruise mode: distinct cruises get distinct colors", () => {
     const a = buildCruiseArcs([cruise("c1", "flown")], new Map(), { colorMode: "perCruise" });

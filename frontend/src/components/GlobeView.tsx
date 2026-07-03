@@ -900,7 +900,7 @@ export default function GlobeView({
       const legDates = cruiseLegDatesByCruise.get(cruise.id) ?? [];
       // Resolved once per cruise — same helper the flat map's
       // cruiseArcsLayer.ts uses, so both renderers agree pixel-for-pixel
-      // on "status" two-tone (periwinkle/planned) vs. "perCruise" hues.
+      // on "status" two-tone (blue/cyan) vs. "perCruise" hues.
       const color = resolveCruiseArcColor(cruise, cruiseColorMode);
       // Index legs by "from:to" so we can pair geometry to date in O(1).
       const dateByPair = new Map<string, CruiseLegDates>();

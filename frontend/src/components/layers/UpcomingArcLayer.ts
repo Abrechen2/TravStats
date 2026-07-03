@@ -14,7 +14,7 @@ export interface UpcomingArcLayerExtraProps {
   /**
    * RGB (0-255) tip color for the gradient at both arc ends. Defaults to
    * the sky-blue used by the single flight-domain view. The two-tone
-   * "Alle" view passes gold here so the mixed-route tips read consistently
+   * "Alle" view passes coral here so the mixed-route tips read consistently
    * with the two-tone pure-scheduled color (see routesLayer.ts).
    */
   edgeColor?: [number, number, number];
@@ -23,11 +23,12 @@ export interface UpcomingArcLayerExtraProps {
 /**
  * ArcLayer subclass that renders the same arc geometry but applies a
  * symmetric edge-tipped gradient: hardcoded red (or orange, in two-tone)
- * core in the middle, fading to `edgeColor` at BOTH ends. Used for *mixed*
- * routes only — i.e. routes that have ALREADY been flown AND carry an
- * upcoming scheduled flight. The tips on each side "Zahnpasta" the arc into
- * an edge → core → edge stroke that reads as "this route is both lived-in
- * and has more flights coming" without any second visual element.
+ * core in the middle, fading to `edgeColor` (coral, in two-tone) at BOTH
+ * ends. Used for *mixed* routes only — i.e. routes that have ALREADY been
+ * flown AND carry an upcoming scheduled flight. The tips on each side
+ * "Zahnpasta" the arc into an edge → core → edge stroke that reads as
+ * "this route is both lived-in and has more flights coming" without any
+ * second visual element.
  *
  * Pure-scheduled routes (upcoming, never flown) skip this layer entirely
  * and render through plain ArcLayer with `SCHEDULED_BLUE` /

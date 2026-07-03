@@ -27,9 +27,9 @@ describe("buildRouteData statusTwoTone", () => {
     const { arcs } = buildRouteData(flights, 1, undefined, undefined, true);
     expect(rgb(arcs[0].sourceColor)).toEqual([240, 169, 71]);
   });
-  it("colors scheduled routes gold in two-tone (not blue)", () => {
+  it("colors scheduled routes coral in two-tone (not blue)", () => {
     const { arcs } = buildRouteData([feat("1", "scheduled", [0, 0], [1, 1])], 1, undefined, undefined, true);
-    expect(rgb(arcs[0].sourceColor)).toEqual([242, 201, 76]);
+    expect(rgb(arcs[0].sourceColor)).toEqual([251, 113, 133]);
   });
   it("without two-tone, historical stays grey (regression guard)", () => {
     const { arcs } = buildRouteData([feat("1", "historical", [0, 0], [1, 1])], 1);
