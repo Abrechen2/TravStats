@@ -59,3 +59,78 @@ export function resolveWindow(
   const prevFrom = startOfMonthUTC(now, -23);
   return { from, to, prevFrom, prevTo: from };
 }
+
+export interface DatedRow {
+  date: Date;
+  distanceKm: number;
+  durationMin: number;
+}
+
+export interface TimeseriesPoint {
+  period: string;
+  count: number;
+  distanceKm: number;
+  durationMin: number;
+}
+
+export interface WindowTotals {
+  count: number;
+  distanceKm: number;
+  durationMin: number;
+}
+
+function periodKey(d: Date, g: Granularity): string {
+  const y = d.getUTCFullYear();
+  if (g === "year") return String(y);
+  return `${y}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Ordered list of bucket-start Dates covering [from, to). */
+function bucketStarts(from: Date, to: Date, g: Granularity): Date[] {
+  const out: Date[] = [];
+  let cur =
+    g === "year"
+      ? new Date(Date.UTC(from.getUTCFullYear(), 0, 1))
+      : new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1));
+  while (cur.getTime() < to.getTime()) {
+    out.push(cur);
+    cur =
+      g === "year"
+        ? new Date(Date.UTC(cur.getUTCFullYear() + 1, 0, 1))
+        : new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() + 1, 1));
+  }
+  return out;
+}
+
+export function bucketSeries(
+  rows: DatedRow[],
+  granularity: Granularity,
+  from: Date,
+  to: Date,
+): TimeseriesPoint[] {
+  const buckets = new Map<string, TimeseriesPoint>();
+  for (const start of bucketStarts(from, to, granularity)) {
+    const key = periodKey(start, granularity);
+    buckets.set(key, { period: key, count: 0, distanceKm: 0, durationMin: 0 });
+  }
+  for (const r of rows) {
+    if (r.date.getTime() < from.getTime() || r.date.getTime() >= to.getTime()) continue;
+    const point = buckets.get(periodKey(r.date, granularity));
+    if (!point) continue;
+    point.count += 1;
+    point.distanceKm += r.distanceKm;
+    point.durationMin += r.durationMin;
+  }
+  return Array.from(buckets.values());
+}
+
+export function sumTotals(rows: DatedRow[]): WindowTotals {
+  return rows.reduce<WindowTotals>(
+    (acc, r) => ({
+      count: acc.count + 1,
+      distanceKm: acc.distanceKm + r.distanceKm,
+      durationMin: acc.durationMin + r.durationMin,
+    }),
+    { count: 0, distanceKm: 0, durationMin: 0 },
+  );
+}

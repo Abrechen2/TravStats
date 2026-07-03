@@ -1,7 +1,13 @@
 import { describe, it, expect } from "@jest/globals";
-import { resolveWindow } from "./timeseries";
+import { resolveWindow, bucketSeries, sumTotals, type DatedRow } from "./timeseries";
 
 const NOW = new Date(Date.UTC(2026, 6, 15)); // 2026-07-15
+
+const row = (iso: string, km: number, min: number): DatedRow => ({
+  date: new Date(iso),
+  distanceKm: km,
+  durationMin: min,
+});
 
 describe("resolveWindow", () => {
   it("rolling12m spans the 12 months ending with the current month", () => {
@@ -35,5 +41,49 @@ describe("resolveWindow", () => {
     expect(w.to.toISOString()).toBe("2023-06-01T00:00:00.000Z");
     expect(w.prevFrom).toBeNull();
     expect(w.prevTo).toBeNull();
+  });
+});
+
+describe("bucketSeries", () => {
+  it("zero-fills every month in the window and slots rows by month", () => {
+    const from = new Date(Date.UTC(2025, 0, 1));
+    const to = new Date(Date.UTC(2025, 3, 1)); // Jan, Feb, Mar
+    const rows = [row("2025-01-10", 100, 60), row("2025-01-20", 50, 30), row("2025-03-05", 200, 120)];
+    const series = bucketSeries(rows, "month", from, to);
+    expect(series.map((p) => p.period)).toEqual(["2025-01", "2025-02", "2025-03"]);
+    expect(series[0]).toEqual({ period: "2025-01", count: 2, distanceKm: 150, durationMin: 90 });
+    expect(series[1]).toEqual({ period: "2025-02", count: 0, distanceKm: 0, durationMin: 0 });
+    expect(series[2]).toEqual({ period: "2025-03", count: 1, distanceKm: 200, durationMin: 120 });
+  });
+
+  it("buckets by year when granularity is year", () => {
+    const from = new Date(Date.UTC(2022, 0, 1));
+    const to = new Date(Date.UTC(2025, 0, 1)); // 2022, 2023, 2024
+    const rows = [row("2022-05-01", 10, 5), row("2024-11-01", 20, 8)];
+    const series = bucketSeries(rows, "year", from, to);
+    expect(series.map((p) => p.period)).toEqual(["2022", "2023", "2024"]);
+    expect(series[0].count).toBe(1);
+    expect(series[1].count).toBe(0);
+    expect(series[2].count).toBe(1);
+  });
+
+  it("excludes rows on the exclusive upper bound", () => {
+    const from = new Date(Date.UTC(2025, 0, 1));
+    const to = new Date(Date.UTC(2025, 1, 1));
+    const series = bucketSeries([row("2025-02-01", 1, 1)], "month", from, to);
+    expect(series).toEqual([{ period: "2025-01", count: 0, distanceKm: 0, durationMin: 0 }]);
+  });
+});
+
+describe("sumTotals", () => {
+  it("sums count, distance and duration", () => {
+    expect(sumTotals([row("2025-01-01", 100, 60), row("2025-02-01", 50, 30)])).toEqual({
+      count: 2,
+      distanceKm: 150,
+      durationMin: 90,
+    });
+  });
+  it("returns zeros for an empty list", () => {
+    expect(sumTotals([])).toEqual({ count: 0, distanceKm: 0, durationMin: 0 });
   });
 });
