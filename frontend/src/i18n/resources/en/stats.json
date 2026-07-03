@@ -21,6 +21,9 @@
   "overviewToggle": {
     "noData": "no data"
   },
+  "timeRange": {
+    "noData": "No data in this range"
+  },
   "overviewChart": {
     "title": "Activity per year",
     "subtitleStacked": "stacked by domain",
