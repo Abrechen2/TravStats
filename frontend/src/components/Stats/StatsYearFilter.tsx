@@ -2,7 +2,7 @@ import type { SummaryStats } from "../../lib/api";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useSettingsStore } from "../../store/settingsStore";
 import { convertDistance, formatCurrency, getDistanceLabel } from "../../lib/units";
-import DeltaBadge from "./DeltaBadge";
+import TrendDelta from "./TrendDelta";
 
 interface StatsYearFilterProps {
   availableYears: number[];
@@ -168,9 +168,9 @@ export default function StatsYearFilter({
                   {yearSummary.totalFlights}
                 </p>
                 {compareSummary !== null && (
-                  <DeltaBadge
+                  <TrendDelta
                     current={yearSummary.totalFlights}
-                    compare={compareSummary.totalFlights}
+                    previous={compareSummary.totalFlights}
                   />
                 )}
               </div>
@@ -202,9 +202,9 @@ export default function StatsYearFilter({
                   <span className="text-lg ml-1">{getDistanceLabel(units.distanceUnit, t)}</span>
                 </p>
                 {compareSummary !== null && (
-                  <DeltaBadge
+                  <TrendDelta
                     current={yearSummary.totalDistance}
-                    compare={compareSummary.totalDistance}
+                    previous={compareSummary.totalDistance}
                   />
                 )}
               </div>
@@ -235,9 +235,9 @@ export default function StatsYearFilter({
                   <span className="text-lg ml-1">{t("stats:overview.hours")}</span>
                 </p>
                 {compareSummary !== null && (
-                  <DeltaBadge
+                  <TrendDelta
                     current={yearSummary.totalFlightTime}
-                    compare={compareSummary.totalFlightTime}
+                    previous={compareSummary.totalFlightTime}
                   />
                 )}
               </div>
@@ -267,7 +267,7 @@ export default function StatsYearFilter({
                   {formatCurrency(yearSummary.totalCost, units.currency)}
                 </p>
                 {compareSummary !== null && (
-                  <DeltaBadge current={yearSummary.totalCost} compare={compareSummary.totalCost} />
+                  <TrendDelta current={yearSummary.totalCost} previous={compareSummary.totalCost} />
                 )}
               </div>
               {compareSummary !== null && (
