@@ -767,6 +767,11 @@ model Cruise {
   parserTemplate   String?   @map("parser_template")
   parserConfidence Int?      @map("parser_confidence")
   dataSource       String?   @map("data_source")
+  // Optional user-selectable map color (hex, e.g. "#e88374"). Nullable —
+  // null means "auto-derive from cruise id" (see resolveCruiseColor on the
+  // frontend). Unlike Trip.color, there is no default so existing rows stay
+  // null and keep their derived color.
+  color            String?   @map("color")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 

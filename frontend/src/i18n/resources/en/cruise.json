@@ -22,6 +22,7 @@
     "route": "Route",
     "cabin": "Cabin",
     "costs": "Costs",
+    "mapColor": "Map color",
     "meta": "Notes & tags",
     "edit": "Edit",
     "delete": "Delete",
@@ -66,7 +67,9 @@
     "flightDate": "Date",
     "flightClass": "Class",
     "departPortAirport": "From airport",
-    "arrivePortAirport": "To airport"
+    "arrivePortAirport": "To airport",
+    "color": "Color",
+    "colorAuto": "Automatic (derived from cruise ID)"
   },
   "seatClass": {
     "economy": "Economy",
