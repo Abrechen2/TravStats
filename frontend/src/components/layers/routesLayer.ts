@@ -60,6 +60,10 @@ export const SCHEDULED_BLUE: [number, number, number] = [80, 200, 255];
 export const MIXED_RED_LOW: [number, number, number] = [248, 113, 113];
 export const MIXED_RED_HIGH: [number, number, number] = [220, 38, 38];
 
+// Two-tone "Alle" view: past family (historical + mixed core) collapses to the
+// flight domain orange; upcoming stays SCHEDULED_BLUE (+ UpcomingArcLayer tips).
+const TWO_TONE_PAST: [number, number, number] = [240, 169, 71];
+
 
 interface RouteRecord {
   key: string;
@@ -131,7 +135,17 @@ function buildArcs(
    * fall back to grey, since "this is older legacy data" is a
    * cross-domain semantic the override shouldn't suppress.
    */
-  paletteOverride?: [number, number, number]
+  paletteOverride?: [number, number, number],
+  /**
+   * When true, collapses the past-family coloring (allHistorical + mixed
+   * core) into a single flight-domain orange (TWO_TONE_PAST) instead of the
+   * default grey / two-tier red. Used by the "Alle" (all-domains) view so
+   * flight routes read consistently orange regardless of history status;
+   * upcoming legs still render sky-blue (+ UpcomingArcLayer blue tips).
+   * Defaults to false/undefined so the single-flight-domain view is
+   * visually unchanged.
+   */
+  statusTwoTone?: boolean
 ): ArcDatum[] {
   const counts = [...records.values()].map((r) => r.count);
   const { q25, q50, q75 } = calcQuantiles(counts.length > 0 ? counts : [0]);
@@ -153,18 +167,19 @@ function buildArcs(
     let alpha: number;
 
     if (r.allHistorical) {
-      color = HISTORICAL_COLOR;
-      alpha = HISTORICAL_ALPHA;
+      color = statusTwoTone ? TWO_TONE_PAST : HISTORICAL_COLOR;
+      alpha = statusTwoTone ? Math.min(160 + r.count * 14, 230) : HISTORICAL_ALPHA;
     } else if (r.hasUpcoming && !r.hasPastFlown) {
       // Pure-scheduled — never-flown route with an upcoming flight. Solid
       // sky-blue across the whole arc, no shader gradient.
       color = SCHEDULED_BLUE;
       alpha = Math.min(140 + r.count * 14, 230);
     } else if (r.hasUpcoming && r.hasPastFlown) {
-      // Mixed — hardcoded 2-tier red core; UpcomingArcLayer fades blue at
-      // both ends. Below median frequency: red-400. At/above median:
-      // red-600.
-      color = r.count <= q50 ? MIXED_RED_LOW : MIXED_RED_HIGH;
+      // Mixed — in two-tone mode, the core collapses to the flight orange
+      // (UpcomingArcLayer's blue tips over it read as "past + upcoming").
+      // Otherwise: hardcoded 2-tier red core. Below median frequency:
+      // red-400. At/above median: red-600.
+      color = statusTwoTone ? TWO_TONE_PAST : r.count <= q50 ? MIXED_RED_LOW : MIXED_RED_HIGH;
       alpha = Math.min(100 + r.count * 14, 230);
     } else {
       // Regular past-only — frequency-driven heatmap, or domain-scoped
@@ -258,7 +273,8 @@ export function buildRouteData(
   flights: GeoJSONFeature[],
   minRouteCount: number,
   themeColors?: MapLayerColors,
-  paletteOverride?: [number, number, number]
+  paletteOverride?: [number, number, number],
+  statusTwoTone?: boolean
 ): RouteData {
   // Single arc per canonical airport pair (FRA-MUC === MUC-FRA), regardless
   // of whether the route carries past, scheduled, or mixed flights. Frequency
@@ -268,7 +284,7 @@ export function buildRouteData(
   // with the heatmap.
   const records = aggregateAllRoutes(flights);
   return {
-    arcs: buildArcs(records, minRouteCount, themeColors, paletteOverride),
+    arcs: buildArcs(records, minRouteCount, themeColors, paletteOverride, statusTwoTone),
     points: buildAirportPoints(flights),
   };
 }
