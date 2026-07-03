@@ -5,7 +5,11 @@ import { calcQuantiles, getHeatmapColor } from "./layerTypes";
 import type { ArcDatum, PointDatum } from "./layerTypes";
 import type { MapLayerColors } from "../../types/mapTheme";
 import { UpcomingArcLayer } from "./UpcomingArcLayer";
-import { FLIGHT_STATUS_PAST_COLOR, FLIGHT_STATUS_SCHEDULED_COLOR } from "../../lib/statusColors";
+import {
+  FLIGHT_STATUS_PAST_COLOR,
+  FLIGHT_STATUS_SCHEDULED_COLOR,
+  FLIGHT_STATUS_UPCOMING_COLOR,
+} from "../../lib/statusColors";
 
 function routeKey(a: string, b: string): string {
   return [a, b].sort().join("-");
@@ -65,7 +69,10 @@ export const MIXED_RED_HIGH: [number, number, number] = [220, 38, 38];
 // Two-tone "Alle" view: past family (historical + mixed core + regular
 // past-only) collapses to the flight domain orange, sourced directly from
 // statusColors.ts (the single source of truth shared with the globe);
-// upcoming stays SCHEDULED_BLUE (+ UpcomingArcLayer tips).
+// upcoming collapses to FLIGHT_STATUS_UPCOMING_COLOR (gold) instead of
+// SCHEDULED_BLUE, + gold UpcomingArcLayer tips on mixed routes. The single
+// flight-domain view (statusTwoTone unset) is unaffected — it keeps
+// SCHEDULED_BLUE + the default blue tips.
 
 interface RouteRecord {
   key: string;
@@ -144,8 +151,9 @@ function buildArcs(
    * (FLIGHT_STATUS_PAST_COLOR, imported from statusColors.ts) instead of the
    * default grey / two-tier red / heatmap. Used by the "Alle" (all-domains)
    * view so flight routes read consistently orange regardless of history
-   * status; upcoming legs still render sky-blue (+ UpcomingArcLayer blue
-   * tips). This branch self-gates on `statusTwoTone` alone — it does not
+   * status; upcoming legs render gold (FLIGHT_STATUS_UPCOMING_COLOR) +
+   * gold UpcomingArcLayer tips instead of the single-view's sky-blue.
+   * This branch self-gates on `statusTwoTone` alone — it does not
    * depend on `paletteOverride` being passed, so callers that set
    * `statusTwoTone` without a matching `paletteOverride` still get the
    * correct orange instead of silently falling back to the heatmap.
@@ -163,10 +171,12 @@ function buildArcs(
 
     // Four-way category resolution. Priority:
     //   1. allHistorical — dim grey, lowest precedence.
-    //   2. pure-scheduled (hasUpcoming && !hasPastFlown) — solid sky-blue,
-    //      rendered through plain ArcLayer (no shader inject).
-    //   3. mixed (hasUpcoming && hasPastFlown) — hardcoded 2-tier red core,
-    //      rendered through UpcomingArcLayer which fades blue at both ends.
+    //   2. pure-scheduled (hasUpcoming && !hasPastFlown) — solid sky-blue
+    //      (gold in two-tone), rendered through plain ArcLayer (no shader
+    //      inject).
+    //   3. mixed (hasUpcoming && hasPastFlown) — hardcoded 2-tier red core
+    //      (orange in two-tone), rendered through UpcomingArcLayer which
+    //      fades blue (gold in two-tone) at both ends.
     //   4. regular past-only — frequency-driven heatmap, or paletteOverride
     //      when the caller wants to force a domain-specific palette (e.g.
     //      cruise routes use a different palette than flight heatmaps).
@@ -178,8 +188,11 @@ function buildArcs(
       alpha = statusTwoTone ? Math.min(160 + r.count * 14, 230) : HISTORICAL_ALPHA;
     } else if (r.hasUpcoming && !r.hasPastFlown) {
       // Pure-scheduled — never-flown route with an upcoming flight. Solid
-      // sky-blue across the whole arc, no shader gradient.
-      color = SCHEDULED_BLUE;
+      // across the whole arc, no shader gradient. Two-tone ("Alle") mode
+      // renders gold (warm, pairs with the orange past-color and stays
+      // distinct from the cool cruise blues); the single flight-domain
+      // view keeps the original sky-blue unchanged.
+      color = statusTwoTone ? FLIGHT_STATUS_UPCOMING_COLOR : SCHEDULED_BLUE;
       alpha = Math.min(140 + r.count * 14, 230);
     } else if (r.hasUpcoming && r.hasPastFlown) {
       // Mixed — in two-tone mode, the core collapses to the flight orange
@@ -334,7 +347,15 @@ export function createRoutesLayers(
   arcHeight: number = 1,
   selectedIds: string[] = [],
   onAirportClick?: (iata: string, lon: number, lat: number) => void,
-  zoom: number = 5
+  zoom: number = 5,
+  /**
+   * Mirrors `buildRouteData`'s `statusTwoTone` flag so the mixed-route
+   * `UpcomingArcLayer` tips match the two-tone "Alle" view's gold
+   * pure-scheduled color instead of the single-view's default sky-blue.
+   * Defaults to false/undefined so the single-flight-domain view's tips
+   * are visually unchanged.
+   */
+  statusTwoTone?: boolean
 ): Layer[] {
   const { arcs, points } = routeData;
   const dotRgb = themeColors?.airportDot ?? ([240, 169, 71] as [number, number, number]);
@@ -419,13 +440,17 @@ export function createRoutesLayers(
     ...sharedArcProps,
   });
 
-  // Mixed routes — already flown AND carry an upcoming flight. Red core
-  // (data layer), blue tips (UpcomingArcLayer fragment shader). Layer id
-  // kept as `routes-arc-upcoming` for layer-state continuity (selection
-  // state, picking buffers).
+  // Mixed routes — already flown AND carry an upcoming flight. Red/orange
+  // core (data layer), blue/gold tips (UpcomingArcLayer fragment shader).
+  // Layer id kept as `routes-arc-upcoming` for layer-state continuity
+  // (selection state, picking buffers). Two-tone mode passes gold as the
+  // tip color to match the pure-scheduled arcs' FLIGHT_STATUS_UPCOMING_COLOR;
+  // otherwise `edgeColor` is omitted and UpcomingArcLayer falls back to its
+  // default sky-blue, keeping the single flight-domain view unchanged.
   const upcomingArcLayer = new UpcomingArcLayer<ArcDatum>({
     id: "routes-arc-upcoming",
     data: mixedArcs,
+    ...(statusTwoTone ? { edgeColor: FLIGHT_STATUS_UPCOMING_COLOR } : {}),
     ...sharedArcProps,
   });
 

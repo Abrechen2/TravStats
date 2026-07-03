@@ -23,7 +23,7 @@ import type {
 } from "./globeLayerTypes";
 import {
   FLIGHT_STATUS_PAST_COLOR,
-  FLIGHT_STATUS_SCHEDULED_COLOR,
+  FLIGHT_STATUS_UPCOMING_COLOR,
 } from "../../lib/statusColors";
 
 // Alpha applied uniformly to every cruise path — the RGB itself is
@@ -38,11 +38,12 @@ const PORT_DOT_COLOR: [number, number, number, number] = [56, 189, 248, 230];
  * Resolve a flight arc's render color. Mirrors the flat map's
  * `routesLayer.ts` collapsing rule exactly: when `statusTwoTone` is
  * active, every route becomes flight-orange (`FLIGHT_STATUS_PAST_COLOR`)
- * unless it's pure-scheduled (never flown), which stays sky-blue
- * (`FLIGHT_STATUS_SCHEDULED_COLOR`). Otherwise falls back to the
- * existing single-tint override (`flightRouteColor`) or the per-route
- * count heatmap color — unchanged behaviour for callers that don't pass
- * `statusTwoTone` (e.g. journey mode).
+ * unless it's pure-scheduled (never flown), which renders gold
+ * (`FLIGHT_STATUS_UPCOMING_COLOR`) — warm, to stay distinct from the
+ * cool cruise blues sharing the same "Alle" globe. Otherwise falls back
+ * to the existing single-tint override (`flightRouteColor`) or the
+ * per-route count heatmap color — unchanged behaviour for callers that
+ * don't pass `statusTwoTone` (e.g. journey mode).
  *
  * Exported as a pure function (no deck.gl / React dependency) so it's
  * unit-testable in isolation.
@@ -56,7 +57,7 @@ export function resolveFlightArcColor(
   }
 ): [number, number, number] {
   if (opts.statusTwoTone) {
-    return status === "scheduled" ? FLIGHT_STATUS_SCHEDULED_COLOR : FLIGHT_STATUS_PAST_COLOR;
+    return status === "scheduled" ? FLIGHT_STATUS_UPCOMING_COLOR : FLIGHT_STATUS_PAST_COLOR;
   }
   return opts.flightRouteColor ?? heatmapColor;
 }

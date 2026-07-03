@@ -337,7 +337,7 @@ export function AllTab(): JSX.Element {
                   style={{
                     width: 14,
                     height: 2,
-                    background: "rgb(80,200,255)",
+                    background: "rgb(242,201,76)",
                     borderRadius: 2,
                   }}
                 />

@@ -11,10 +11,10 @@ describe("resolveFlightArcColor", () => {
     ]);
   });
 
-  it("colors a pure-scheduled route blue in two-tone mode", () => {
+  it("colors a pure-scheduled route gold in two-tone mode", () => {
     expect(
       resolveFlightArcColor("scheduled", HEATMAP_FALLBACK, { statusTwoTone: true })
-    ).toEqual([80, 200, 255]);
+    ).toEqual([242, 201, 76]);
   });
 
   it("two-tone mode ignores flightRouteColor — status wins", () => {

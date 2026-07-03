@@ -27,13 +27,17 @@ describe("buildRouteData statusTwoTone", () => {
     const { arcs } = buildRouteData(flights, 1, undefined, undefined, true);
     expect(rgb(arcs[0].sourceColor)).toEqual([240, 169, 71]);
   });
-  it("keeps scheduled routes blue in two-tone", () => {
+  it("colors scheduled routes gold in two-tone (not blue)", () => {
     const { arcs } = buildRouteData([feat("1", "scheduled", [0, 0], [1, 1])], 1, undefined, undefined, true);
-    expect(rgb(arcs[0].sourceColor)).toEqual([80, 200, 255]);
+    expect(rgb(arcs[0].sourceColor)).toEqual([242, 201, 76]);
   });
   it("without two-tone, historical stays grey (regression guard)", () => {
     const { arcs } = buildRouteData([feat("1", "historical", [0, 0], [1, 1])], 1);
     expect(rgb(arcs[0].sourceColor)).toEqual([150, 150, 150]);
+  });
+  it("without two-tone, scheduled routes stay blue (single flight view unchanged)", () => {
+    const { arcs } = buildRouteData([feat("1", "scheduled", [0, 0], [1, 1])], 1);
+    expect(rgb(arcs[0].sourceColor)).toEqual([80, 200, 255]);
   });
   it("colors a past-only (all-flown, non-historical) route orange in two-tone with NO paletteOverride", () => {
     // Proves the regular past-only `else` branch self-gates on statusTwoTone
