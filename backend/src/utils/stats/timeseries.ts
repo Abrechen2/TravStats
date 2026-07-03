@@ -138,3 +138,18 @@ export function sumTotals(rows: DatedRow[]): WindowTotals {
     { count: 0, distanceKm: 0, durationMin: 0 },
   );
 }
+
+/**
+ * Drop leading and trailing zero-count buckets while keeping interior gaps.
+ * Used for the unbounded "all-time" window, whose series would otherwise
+ * zero-fill from the Unix epoch (1970) to today — a long run of empty
+ * buckets before the user's first record. Interior zero buckets (a gap year
+ * between two active years) are preserved because they carry meaning.
+ */
+export function trimZeroEdges(series: TimeseriesPoint[]): TimeseriesPoint[] {
+  let start = 0;
+  let end = series.length;
+  while (start < end && series[start].count === 0) start += 1;
+  while (end > start && series[end - 1].count === 0) end -= 1;
+  return series.slice(start, end);
+}

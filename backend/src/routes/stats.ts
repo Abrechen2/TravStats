@@ -21,6 +21,7 @@ import {
   resolveWindow,
   bucketSeries,
   sumTotals,
+  trimZeroEdges,
   type DatedRow,
 } from '../utils/stats/timeseries';
 
@@ -363,11 +364,19 @@ router.get('/timeseries', async (req: AuthRequest, res: Response, next: NextFunc
       w.prevFrom && w.prevTo ? fetchRows(userId, w.prevFrom, w.prevTo) : Promise.resolve([] as DatedRow[]),
     ]);
 
+    const rawSeries = bucketSeries(currentRows, granularity, w.from, w.to);
+    // The all-time window spans from the Unix epoch, so trim the leading/
+    // trailing empty buckets down to the user's actual data range. Bounded
+    // windows (rolling12m, year, explicit range) keep their zero buckets —
+    // those empty periods are meaningful context.
+    const series =
+      window === 'all' && !fromDate && !toDate ? trimZeroEdges(rawSeries) : rawSeries;
+
     res.json({
       domain,
       granularity,
       window: { from: w.from.toISOString(), to: w.to.toISOString() },
-      series: bucketSeries(currentRows, granularity, w.from, w.to),
+      series,
       current: sumTotals(currentRows),
       previous: sumTotals(previousRows),
     });
