@@ -4,6 +4,19 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.2.1] - 2026-07-03
+
+### Fixed
+- **Uploaded photos now survive container updates** — Trip photos, receipts and
+  imported files were stored inside the container instead of on the mounted data
+  volume, so they disappeared on every image update. Uploads now live on the
+  persistent `/app/data` volume automatically, with no extra bind-mount
+  required; an existing manual upload mount is detected and left untouched. (#152)
+- **Large photo and PDF uploads no longer fail** — The built-in web server
+  capped request bodies at 1 MB and rejected larger photo or PDF uploads with a
+  "content too large" error. The limit is now 100 MB, in line with the file
+  sizes the app already accepts. (#153)
+
 ## [2.2.0] - 2026-06-14
 
 ### Added
