@@ -5,6 +5,19 @@
 **Relates to:** GitHub issue #150 (cruises indistinguishable on the map)
 **Package A** of the A+B batch (B = app globe, separate spec).
 
+**Owner-approved 2026-07-03: "such dir Farben aus, alles erledigen."** Resolutions to §10:
+(1) palette finalized by me (below, tunable on DEV); (2) user-editable per-cruise
+`color` **is included** in Phase 1; (3) the globe (Phase 2) **is included** — do everything.
+
+**Final palette (Phase 1, tunable on DEV):**
+- Flight past → orange `#f0a947` `[240,169,71]` (full alpha)
+- Flight upcoming → blue `#5ab0f0` `[90,176,240]`
+- Cruise past → periwinkle `#6fa0d6` `[111,160,214]` (full alpha)
+- Cruise planned → light periwinkle `#a9c3e0` `[169,195,224]` (lower alpha — reinforces "upcoming")
+- Per-cruise derived palette (#150, Cruises tab): a curated 10-hue set avoiding the four
+  status colors above and the domain colors (flight orange / cruise periwinkle / hotel
+  purple `#b072d6` / poi teal `#5ec2b2`) — greens, rose, amber-gold, violet, etc.
+
 ---
 
 ## 1. Goal & scope
@@ -93,7 +106,7 @@ The globe (`GlobeView.tsx` + `buildGlobeLayers.ts`) colors flight arcs by count-
 ## 9. Definition of done (Phase 1)
 "Alle" map: flights orange(past)/blue(upcoming) with orange→blue mixed gradient, no grey/red; cruises cruise-color(past)/planned(upcoming). Single flight view visually unchanged. Cruises tab: each cruise a distinct color (#150), planned dimmed. Legend matches. `tsc`/lint/vitest green. Owner tunes hexes on DEV. (User-editable per-cruise color included if D4-override is kept in the plan.)
 
-## 10. Open confirmations for owner review
-- The 4 hex values (esp. `#a9c3e0` planned-cruise vs the two blues — likely needs a visual tweak).
-- Keep the optional user-editable `color` (with its migration) in Phase 1, or ship derived-only first and add the picker later?
-- Include the globe (Phase 2) now or defer?
+## 10. Owner review — RESOLVED (2026-07-03)
+- Hex values: finalized above (§ header) by me; tunable live on DEV.
+- User-editable per-cruise `color` + hand-written additive migration: **included in Phase 1**.
+- Globe (Phase 2, same two-tone + per-cruise scheme): **included** — do everything.
