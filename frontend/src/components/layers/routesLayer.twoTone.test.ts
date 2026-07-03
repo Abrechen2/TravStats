@@ -35,4 +35,11 @@ describe("buildRouteData statusTwoTone", () => {
     const { arcs } = buildRouteData([feat("1", "historical", [0, 0], [1, 1])], 1);
     expect(rgb(arcs[0].sourceColor)).toEqual([150, 150, 150]);
   });
+  it("colors a past-only (all-flown, non-historical) route orange in two-tone with NO paletteOverride", () => {
+    // Proves the regular past-only `else` branch self-gates on statusTwoTone
+    // alone — it must not depend on a paletteOverride (e.g. flightRouteColor)
+    // being passed in to land on the flight-domain orange.
+    const { arcs } = buildRouteData([feat("1", "flown", [0, 0], [1, 1])], 1, undefined, undefined, true);
+    expect(rgb(arcs[0].sourceColor)).toEqual([240, 169, 71]);
+  });
 });

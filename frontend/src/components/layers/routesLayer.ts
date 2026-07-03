@@ -62,10 +62,10 @@ export const SCHEDULED_BLUE: [number, number, number] = FLIGHT_STATUS_SCHEDULED_
 export const MIXED_RED_LOW: [number, number, number] = [248, 113, 113];
 export const MIXED_RED_HIGH: [number, number, number] = [220, 38, 38];
 
-// Two-tone "Alle" view: past family (historical + mixed core) collapses to the
-// flight domain orange; upcoming stays SCHEDULED_BLUE (+ UpcomingArcLayer tips).
-const TWO_TONE_PAST: [number, number, number] = FLIGHT_STATUS_PAST_COLOR;
-
+// Two-tone "Alle" view: past family (historical + mixed core + regular
+// past-only) collapses to the flight domain orange, sourced directly from
+// statusColors.ts (the single source of truth shared with the globe);
+// upcoming stays SCHEDULED_BLUE (+ UpcomingArcLayer tips).
 
 interface RouteRecord {
   key: string;
@@ -140,10 +140,15 @@ function buildArcs(
   paletteOverride?: [number, number, number],
   /**
    * When true, collapses the past-family coloring (allHistorical + mixed
-   * core) into a single flight-domain orange (TWO_TONE_PAST) instead of the
-   * default grey / two-tier red. Used by the "Alle" (all-domains) view so
-   * flight routes read consistently orange regardless of history status;
-   * upcoming legs still render sky-blue (+ UpcomingArcLayer blue tips).
+   * core + regular past-only) into a single flight-domain orange
+   * (FLIGHT_STATUS_PAST_COLOR, imported from statusColors.ts) instead of the
+   * default grey / two-tier red / heatmap. Used by the "Alle" (all-domains)
+   * view so flight routes read consistently orange regardless of history
+   * status; upcoming legs still render sky-blue (+ UpcomingArcLayer blue
+   * tips). This branch self-gates on `statusTwoTone` alone — it does not
+   * depend on `paletteOverride` being passed, so callers that set
+   * `statusTwoTone` without a matching `paletteOverride` still get the
+   * correct orange instead of silently falling back to the heatmap.
    * Defaults to false/undefined so the single-flight-domain view is
    * visually unchanged.
    */
@@ -169,7 +174,7 @@ function buildArcs(
     let alpha: number;
 
     if (r.allHistorical) {
-      color = statusTwoTone ? TWO_TONE_PAST : HISTORICAL_COLOR;
+      color = statusTwoTone ? FLIGHT_STATUS_PAST_COLOR : HISTORICAL_COLOR;
       alpha = statusTwoTone ? Math.min(160 + r.count * 14, 230) : HISTORICAL_ALPHA;
     } else if (r.hasUpcoming && !r.hasPastFlown) {
       // Pure-scheduled — never-flown route with an upcoming flight. Solid
@@ -181,12 +186,22 @@ function buildArcs(
       // (UpcomingArcLayer's blue tips over it read as "past + upcoming").
       // Otherwise: hardcoded 2-tier red core. Below median frequency:
       // red-400. At/above median: red-600.
-      color = statusTwoTone ? TWO_TONE_PAST : r.count <= q50 ? MIXED_RED_LOW : MIXED_RED_HIGH;
+      color = statusTwoTone
+        ? FLIGHT_STATUS_PAST_COLOR
+        : r.count <= q50
+          ? MIXED_RED_LOW
+          : MIXED_RED_HIGH;
       alpha = Math.min(100 + r.count * 14, 230);
     } else {
-      // Regular past-only — frequency-driven heatmap, or domain-scoped
-      // palette when the caller passes paletteOverride.
-      color = paletteOverride ?? getHeatmapColor(r.count, q25, q50, q75, themeColors);
+      // Regular past-only — in two-tone mode, self-gates to the same
+      // flight-domain orange as the other two branches above (do NOT rely
+      // on paletteOverride to carry the two-tone color — a caller that
+      // passes statusTwoTone without a matching paletteOverride must still
+      // land on orange, not silently fall through to the heatmap).
+      // Otherwise: domain-scoped palette override, or frequency heatmap.
+      color = statusTwoTone
+        ? FLIGHT_STATUS_PAST_COLOR
+        : (paletteOverride ?? getHeatmapColor(r.count, q25, q50, q75, themeColors));
       // Visibility floor: a single-flown route (count 1) must still read
       // clearly on its own — a lone long-haul (e.g. a one-off Hawaii trip)
       // sitting in an otherwise empty ocean was nearly invisible at the old
