@@ -37,7 +37,6 @@ function hexToRgb(hex: string): [number, number, number] {
   ];
 }
 const FLIGHT_RGB = hexToRgb(DOMAINS.flight.color);
-const CRUISE_HEX = DOMAINS.cruise.color;
 
 // Maps the dashboard-level AllMode to what MapContainer3D's visMode prop expects.
 // "journey" uses extraLayers with showInternalCruises=false so it has full
@@ -317,36 +316,68 @@ export function AllTab(): JSX.Element {
           }}
         >
           {flightsVisible && (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span
-                aria-hidden
-                style={{
-                  width: 14,
-                  height: 2,
-                  background: DOMAINS.flight.color,
-                  borderRadius: 2,
-                }}
-              />
-              <span style={{ color: "var(--text-primary)" }}>
-                {t("dashboard:sidebar.filters.flight")}
+            <>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span
+                  aria-hidden
+                  style={{
+                    width: 14,
+                    height: 2,
+                    background: "rgb(240,169,71)",
+                    borderRadius: 2,
+                  }}
+                />
+                <span style={{ color: "var(--text-primary)" }}>
+                  {t("dashboard:legend.flightPast")}
+                </span>
               </span>
-            </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span
+                  aria-hidden
+                  style={{
+                    width: 14,
+                    height: 2,
+                    background: "rgb(80,200,255)",
+                    borderRadius: 2,
+                  }}
+                />
+                <span style={{ color: "var(--text-primary)" }}>
+                  {t("dashboard:legend.flightUpcoming")}
+                </span>
+              </span>
+            </>
           )}
           {cruisesVisible && (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span
-                aria-hidden
-                style={{
-                  width: 14,
-                  height: 2,
-                  background: CRUISE_HEX,
-                  borderRadius: 2,
-                }}
-              />
-              <span style={{ color: "var(--text-primary)" }}>
-                {t("dashboard:sidebar.filters.cruise")}
+            <>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span
+                  aria-hidden
+                  style={{
+                    width: 14,
+                    height: 2,
+                    background: "rgb(111,160,214)",
+                    borderRadius: 2,
+                  }}
+                />
+                <span style={{ color: "var(--text-primary)" }}>
+                  {t("dashboard:legend.cruisePast")}
+                </span>
               </span>
-            </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span
+                  aria-hidden
+                  style={{
+                    width: 14,
+                    height: 2,
+                    background: "rgb(169,195,224)",
+                    borderRadius: 2,
+                  }}
+                />
+                <span style={{ color: "var(--text-primary)" }}>
+                  {t("dashboard:legend.cruisePlanned")}
+                </span>
+              </span>
+            </>
           )}
         </div>
       )}
