@@ -443,7 +443,8 @@ export function DeckGLMap({
             0.3,
             selectedIds,
             handleAirportClick,
-            zoom
+            zoom,
+            statusTwoTone
           ),
           ...specialFlightLayers,
         ];
@@ -517,6 +518,7 @@ export function DeckGLMap({
     zoom,
     specialFlightLayers,
     cruiseColorMode,
+    statusTwoTone,
   ]);
 
   // No 3D modes remain — lighting effect is unused but kept as empty array for
