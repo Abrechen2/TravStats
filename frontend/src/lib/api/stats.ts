@@ -12,12 +12,17 @@ import type {
 } from "../../types";
 
 import { api } from "./client";
-import type { SummaryParams, SummaryResponse } from "./types";
+import type { SummaryParams, SummaryResponse, TimeseriesParams, TimeseriesResponse } from "./types";
 
 // Stats API
 export const statsApi = {
   getSummary: async (params?: SummaryParams): Promise<SummaryResponse> => {
     const { data } = await api.get<SummaryResponse>("/stats/summary", { params });
+    return data;
+  },
+
+  getTimeseries: async (params?: TimeseriesParams): Promise<TimeseriesResponse> => {
+    const { data } = await api.get<TimeseriesResponse>("/stats/timeseries", { params });
     return data;
   },
 
