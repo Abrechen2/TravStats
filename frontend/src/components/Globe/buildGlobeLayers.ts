@@ -14,17 +14,14 @@ import {
   EarthOcclusionExtension,
   type EarthOcclusionExtensionProps,
 } from "./EarthOcclusionExtension";
-import type { Quartile } from "./heatmapUtils";
+import type { HeatmapThresholds, Quartile } from "./heatmapUtils";
 import type {
   ArcDatum,
   CruisePathDatum,
   GlobePinned,
   PointDatum,
 } from "./globeLayerTypes";
-import {
-  FLIGHT_STATUS_PAST_COLOR,
-  FLIGHT_STATUS_SCHEDULED_COLOR,
-} from "../../lib/statusColors";
+import { flightStatusTint, frequencyIntensity } from "../../lib/statusColors";
 
 // Alpha applied uniformly to every cruise path — the RGB itself is
 // resolved per-leg in GlobeView's `cruisePaths` builder (status two-tone
@@ -37,12 +34,17 @@ const PORT_DOT_COLOR: [number, number, number, number] = [56, 189, 248, 230];
 /**
  * Resolve a flight arc's render color. Mirrors the flat map's
  * `routesLayer.ts` collapsing rule exactly: when `statusTwoTone` is
- * active, every route becomes flight-orange (`FLIGHT_STATUS_PAST_COLOR`)
- * unless it's pure-scheduled (never flown), which stays sky-blue
- * (`FLIGHT_STATUS_SCHEDULED_COLOR`). Otherwise falls back to the
- * existing single-tint override (`flightRouteColor`) or the per-route
- * count heatmap color — unchanged behaviour for callers that don't pass
- * `statusTwoTone` (e.g. journey mode).
+ * active, every route resolves to the flight-orange hue family
+ * (`flightStatusTint(false, t)`) unless it's pure-scheduled (never
+ * flown), which resolves to the blue hue family
+ * (`flightStatusTint(true, t)`). `t` is the route's frequency intensity
+ * against the dataset's quartile thresholds (`frequencyIntensity`), so
+ * rare routes read soft and frequent routes read vivid within each hue —
+ * the same frequency signal the flat map's routesLayer applies.
+ * Otherwise falls back to the existing single-tint override
+ * (`flightRouteColor`) or the per-route count heatmap color — unchanged
+ * behaviour for callers that don't pass `statusTwoTone` (e.g. journey
+ * mode).
  *
  * Exported as a pure function (no deck.gl / React dependency) so it's
  * unit-testable in isolation.
@@ -50,13 +52,16 @@ const PORT_DOT_COLOR: [number, number, number, number] = [56, 189, 248, 230];
 export function resolveFlightArcColor(
   status: ArcDatum["status"],
   heatmapColor: [number, number, number],
+  count: number,
+  thresholds: HeatmapThresholds,
   opts: {
     flightRouteColor?: [number, number, number];
     statusTwoTone?: boolean;
   }
 ): [number, number, number] {
   if (opts.statusTwoTone) {
-    return status === "scheduled" ? FLIGHT_STATUS_SCHEDULED_COLOR : FLIGHT_STATUS_PAST_COLOR;
+    const t = frequencyIntensity(count, thresholds.q25, thresholds.q50, thresholds.q75);
+    return flightStatusTint(status === "scheduled", t);
   }
   return opts.flightRouteColor ?? heatmapColor;
 }
@@ -116,6 +121,15 @@ export interface BuildGlobeLayersOptions {
   portPoints: PointDatum[];
   headFlightArc: ArcDatum | null;
   activeQuartile: Quartile | null;
+  /**
+   * The dataset's flight-route frequency thresholds (q25/q50/q75/max),
+   * already computed by `GlobeView` via `calculateHeatmapThresholds` for
+   * the count heatmap. Reused by `resolveFlightArcColor` to derive each
+   * arc's `frequencyIntensity` when `statusTwoTone` is active, so the
+   * two-tone scheme's saturation ramp is driven by the same quartiles as
+   * the heatmap/legend instead of a second, independent computation.
+   */
+  heatmapThresholds: HeatmapThresholds;
   lite: boolean;
   occlusionExt: EarthOcclusionExtension;
   occlusionProps: EarthOcclusionExtensionProps;
@@ -152,6 +166,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     portPoints,
     headFlightArc,
     activeQuartile,
+    heatmapThresholds,
     lite,
     occlusionExt,
     occlusionProps,
@@ -164,13 +179,16 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     statusTwoTone,
   } = opts;
   // Pick the per-arc colour. With `statusTwoTone` set, every arc is
-  // orange/blue by status (see `resolveFlightArcColor`); otherwise with
-  // `flightRouteColor` set, every arc gets that single tint; otherwise
-  // the per-arc quartile heatmap applies. Active-quartile alpha dimming
-  // is preserved in all cases so the click-to-isolate filter still reads
-  // visually.
+  // orange/blue by status, saturated by its own frequency intensity (see
+  // `resolveFlightArcColor`); otherwise with `flightRouteColor` set, every
+  // arc gets that single tint; otherwise the per-arc quartile heatmap
+  // applies. Active-quartile alpha dimming is preserved in all cases so
+  // the click-to-isolate filter still reads visually.
   const arcColor = (d: ArcDatum, baseAlpha: number): [number, number, number, number] => {
-    const rgb = resolveFlightArcColor(d.status, d.color, { flightRouteColor, statusTwoTone });
+    const rgb = resolveFlightArcColor(d.status, d.color, d.count, heatmapThresholds, {
+      flightRouteColor,
+      statusTwoTone,
+    });
     return [rgb[0], rgb[1], rgb[2], baseAlpha];
   };
 
@@ -189,7 +207,9 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       getPath: (d) => d.waypoints,
       getColor: (d) =>
         arcColor(d, activeQuartile === null || activeQuartile === d.quartile ? 235 : 35),
-      updateTriggers: { getColor: [activeQuartile, flightRouteColor, statusTwoTone] },
+      updateTriggers: {
+        getColor: [activeQuartile, flightRouteColor, statusTwoTone, heatmapThresholds],
+      },
       // Match the flat-map routes-layer formula so flight-arc thickness
       // is consistent across map ↔ globe transitions: sqrt(count) px,
       // 1 flight → 1 px, 16 flights → 4 px (cap). The earlier
@@ -241,7 +261,9 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       getPath: (d) => d.waypoints,
       getColor: (d) =>
         arcColor(d, activeQuartile === null || activeQuartile === d.quartile ? 160 : 25),
-      updateTriggers: { getColor: [activeQuartile, flightRouteColor, statusTwoTone] },
+      updateTriggers: {
+        getColor: [activeQuartile, flightRouteColor, statusTwoTone, heatmapThresholds],
+      },
       getWidth: 1,
       widthUnits: "pixels",
       widthMinPixels: 1,
