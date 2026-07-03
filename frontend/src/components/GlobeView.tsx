@@ -38,6 +38,7 @@ import type { StyleSpecification } from "maplibre-gl";
 import type { GeoJSONFeature } from "../types";
 import type { Cruise } from "../types/cruise";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
+import { resolveCruiseArcColor, type CruiseColorMode } from "../lib/cruiseColor";
 import { logger } from "../lib/logger";
 import { escapeHtml } from "../lib/escapeHtml";
 import { useTranslation } from "../hooks/useTranslation";
@@ -79,8 +80,18 @@ interface GlobeViewProps {
   onCruiseOpen?: (cruiseId: string) => void;
   /** When set, every flight arc renders in this RGB instead of the
       heatmap palette. Same prop semantics as `MapContainer3D.flightRouteColor`
-      on the flat map. */
+      on the flat map. Superseded by `statusTwoTone` when that's set. */
   flightRouteColor?: [number, number, number];
+  /** Split flight arcs into a two-tone gradient by status (scheduled vs.
+      past/historical) instead of a single flightRouteColor fill or the
+      count heatmap. Same prop semantics as `MapContainer3D.statusTwoTone`
+      on the flat map. */
+  statusTwoTone?: boolean;
+  /** Color strategy for cruise paths: shared two-tone by status, or a
+      distinct hue per cruise. Same prop semantics as
+      `MapContainer3D.cruiseColorMode` on the flat map. Defaults to
+      `"status"`. */
+  cruiseColorMode?: CruiseColorMode;
   minRouteCount?: number;
 }
 
@@ -290,6 +301,8 @@ export default function GlobeView({
   onFlightOpen,
   onCruiseOpen,
   flightRouteColor,
+  statusTwoTone,
+  cruiseColorMode = "status",
   minRouteCount = 1,
 }: GlobeViewProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
@@ -612,6 +625,13 @@ export default function GlobeView({
       departure: { iata?: string; name?: string };
       arrival: { iata?: string; name?: string };
       weak: boolean;
+      // Route carries at least one scheduled flight / at least one
+      // flight that's actually been flown (i.e. status !== 'scheduled').
+      // Mirrors routesLayer.ts's RouteRecord — combined, these two flags
+      // simplify to a "past" vs. "scheduled" two-tone bucket: a route is
+      // "scheduled" only when EVERY flight on it is still scheduled.
+      hasUpcoming: boolean;
+      hasPastFlown: boolean;
     }
     const routes = new Map<string, RouteAcc>();
     for (const flight of filteredFlights) {
@@ -634,12 +654,15 @@ export default function GlobeView({
       // falls back to a coord-rounded sentinel. This may collapse
       // multiple flights that were similar-but-not-identical routes.
       const flightWeak = !dep?.iata || !arr?.iata;
+      const isScheduled = flight.properties?.status === "scheduled";
       const key = createRouteKey(depKey, arrKey);
       const existing = routes.get(key);
       if (existing) {
         existing.count++;
         existing.flightIds.push(flight.properties.id);
         if (flightWeak) existing.weak = true;
+        if (isScheduled) existing.hasUpcoming = true;
+        if (!isScheduled) existing.hasPastFlown = true;
       } else {
         routes.set(key, {
           count: 1,
@@ -649,6 +672,8 @@ export default function GlobeView({
           departure: dep ?? {},
           arrival: arr ?? {},
           weak: flightWeak,
+          hasUpcoming: isScheduled,
+          hasPastFlown: !isScheduled,
         });
       }
     }
@@ -665,6 +690,10 @@ export default function GlobeView({
       // appears visually, but without the polar-ring artifact a high-
       // altitude arc would produce.
       const quartile = getQuartile(r.count, thresholds);
+      // Pure-scheduled (never flown) → "scheduled"; everything else
+      // (historical-only, mixed, regular past-only) collapses to "past" —
+      // mirrors routesLayer.ts's statusTwoTone collapsing rule exactly.
+      const status: ArcDatum["status"] = r.hasUpcoming && !r.hasPastFlown ? "scheduled" : "past";
       if (distanceKm >= ANTIPODAL_DISTANCE_KM) {
         antipodals.push({
           from: r.from,
@@ -677,6 +706,7 @@ export default function GlobeView({
           color: getHeatmapColor(r.count, thresholds),
           quartile,
           weak: r.weak,
+          status,
         });
         continue;
       }
@@ -692,6 +722,7 @@ export default function GlobeView({
         color: getHeatmapColor(r.count, thresholds),
         quartile,
         weak: r.weak,
+        status,
       });
     }
     return { arcsData: arcs, antipodalArcs: antipodals, heatmapThresholds: thresholds };
@@ -867,6 +898,10 @@ export default function GlobeView({
       if (!fc) continue;
       const label = cruise.ship?.name ?? cruise.shipNameOverride ?? cruise.cruiseLine ?? "Cruise";
       const legDates = cruiseLegDatesByCruise.get(cruise.id) ?? [];
+      // Resolved once per cruise — same helper the flat map's
+      // cruiseArcsLayer.ts uses, so both renderers agree pixel-for-pixel
+      // on "status" two-tone (periwinkle/planned) vs. "perCruise" hues.
+      const color = resolveCruiseArcColor(cruise, cruiseColorMode);
       // Index legs by "from:to" so we can pair geometry to date in O(1).
       const dateByPair = new Map<string, CruiseLegDates>();
       for (const ld of legDates) dateByPair.set(`${ld.fromPortId}:${ld.toPortId}`, ld);
@@ -890,7 +925,13 @@ export default function GlobeView({
               const partialSwapped = truncatePolyline(swapped, p);
               if (partialSwapped.length < 2) continue;
               const partial = partialSwapped.map(([lat, lng]) => [lng, lat] as [number, number]);
-              out.push({ path: partial, cruiseId: cruise.id, cruiseLabel: label });
+              out.push({
+                path: partial,
+                cruiseId: cruise.id,
+                cruiseLabel: label,
+                status: cruise.status,
+                color,
+              });
               continue;
             }
             // p >= 1: full leg falls through to push-full below
@@ -904,7 +945,7 @@ export default function GlobeView({
           if (ld && !legVisibleFilter(ld, sliderFilterStart, sliderFilterEnd)) continue;
         }
 
-        out.push({ path, cruiseId: cruise.id, cruiseLabel: label });
+        out.push({ path, cruiseId: cruise.id, cruiseLabel: label, status: cruise.status, color });
       }
     }
     return out;
@@ -912,6 +953,7 @@ export default function GlobeView({
     cruises,
     cruiseGeometry,
     cruiseLegDatesByCruise,
+    cruiseColorMode,
     sliderMode,
     sliderCurrent,
     sliderFilterStart,
@@ -1021,6 +1063,7 @@ export default function GlobeView({
       departure: latest.properties.departureAirport ?? {},
       arrival: latest.properties.arrivalAirport ?? {},
       weak: false,
+      status: latest.properties?.status === "scheduled" ? "scheduled" : "past",
     };
   }, [sliderMode, filteredFlights, lite, altitudeFactor]);
 
@@ -1180,6 +1223,7 @@ export default function GlobeView({
         flyToArc,
         setPinned,
         flightRouteColor,
+        statusTwoTone,
       }),
     [
       arcsData,
@@ -1198,6 +1242,7 @@ export default function GlobeView({
       occlusionExt,
       occlusionProps,
       flightRouteColor,
+      statusTwoTone,
     ]
   );
 

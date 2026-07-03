@@ -3,6 +3,8 @@
 // reference them without import cycles.
 
 import type { Quartile } from "./heatmapUtils";
+import type { Rgb } from "../../lib/cruiseColor";
+import type { CruiseStatus } from "../../types/cruise";
 
 export interface ArcDatum {
   from: [number, number];
@@ -28,6 +30,17 @@ export interface ArcDatum {
    * count.
    */
   weak: boolean;
+  /**
+   * Simplified two-tone status category for this aggregated route:
+   * `"scheduled"` only when EVERY constituent flight is still scheduled
+   * (pure-scheduled, never flown); `"past"` otherwise — this collapses
+   * historical-only, mixed (flown + scheduled), and regular past-only
+   * routes into one bucket, mirroring the flat map's
+   * `routesLayer.ts`/`statusTwoTone` collapsing rule. Consumed by
+   * `buildGlobeLayers`'s `resolveFlightArcColor` when `statusTwoTone`
+   * is active; ignored otherwise.
+   */
+  status: "past" | "scheduled";
 }
 
 export interface PointDatum {
@@ -46,6 +59,16 @@ export interface CruisePathDatum {
   path: [number, number][];
   cruiseId: string;
   cruiseLabel: string;
+  status: CruiseStatus;
+  /**
+   * Pre-resolved tint for this leg — `"status"` mode: periwinkle (past)
+   * or a lighter "planned" tint (scheduled); `"perCruise"` mode: a
+   * distinct hue via `resolveCruiseColor`. Resolved once per cruise in
+   * `GlobeView`'s `cruisePaths` builder via `resolveCruiseArcColor`, the
+   * same helper the flat map's `cruiseArcsLayer.ts` uses, so both
+   * renderers agree pixel-for-pixel.
+   */
+  color: Rgb;
 }
 
 export interface TooltipState {
