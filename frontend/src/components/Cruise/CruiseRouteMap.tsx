@@ -82,7 +82,10 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   );
 
   const layers: Layer[] = useMemo(() => {
-    const arcsLayer = createCruiseArcsLayer([cruise], geometryMap, null, undefined, { zoom });
+    const arcsLayer = createCruiseArcsLayer([cruise], geometryMap, null, undefined, {
+      zoom,
+      colorMode: "perCruise",
+    });
     const arrowsLayer = createCruiseArrowsLayer([cruise], geometryMap, null, { zoom });
     const portsLayers = createCruisePortsLayer([cruise], zoom);
     return [

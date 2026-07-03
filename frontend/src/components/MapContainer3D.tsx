@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useState, useMemo, useEffect } from "react";
 import { DeckGLMap } from "./DeckGLMap";
+import type { CruiseColorMode } from "./layers/cruiseArcsLayer";
 import { GlobeLoader } from "./GlobeLoader";
 import { VisModeSelector } from "./VisModeSelector";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
@@ -63,6 +64,12 @@ interface MapContainer3DProps {
    */
   statusTwoTone?: boolean;
   /**
+   * Color strategy for cruise arcs/arrows: shared two-tone by status, or
+   * a distinct hue per cruise. Passed straight through to DeckGLMap.
+   * Defaults to `"status"`.
+   */
+  cruiseColorMode?: CruiseColorMode;
+  /**
    * Restrict which vis modes appear in the in-map FAB selector. Defaults
    * to all 4 (existing behaviour). Per-domain tabs pass a subset that
    * excludes cross-domain-only modes like `globe`.
@@ -109,6 +116,7 @@ export default function MapContainer3D({
   showInternalCruises = true,
   flightRouteColor,
   statusTwoTone,
+  cruiseColorMode,
   availableModes,
   hideVisModeSelector = false,
   hideInfoPill = false,
@@ -221,6 +229,7 @@ export default function MapContainer3D({
             extraLayers={extraLayers}
             flightRouteColor={flightRouteColor}
             statusTwoTone={statusTwoTone}
+            cruiseColorMode={cruiseColorMode}
           />
         )}
       </div>
