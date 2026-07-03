@@ -14,9 +14,9 @@ describe("TrendDelta", () => {
     expect(screen.getByText(/↓/)).toBeInTheDocument();
   });
 
-  it("omits percent when previous is zero", () => {
-    render(<TrendDelta current={5} previous={0} />);
-    expect(screen.queryByText(/%/)).toBeNull();
+  it("renders nothing when there is no previous window (previous <= 0)", () => {
+    const { container } = render(<TrendDelta current={5} previous={0} />);
+    expect(container.firstChild).toBeNull();
   });
 
   it("renders the compare label when provided", () => {
