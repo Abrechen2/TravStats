@@ -17,6 +17,7 @@ import {
   createCruiseArcsLayer,
   createCruiseArrowsLayer,
   type CruiseGeometryMap,
+  type CruiseColorMode,
 } from "./layers/cruiseArcsLayer";
 import { createCruisePortsLayer } from "./layers/cruisePortsLayer";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
@@ -106,6 +107,9 @@ interface DeckGLMapProps {
    *  historical) instead of a single flightRouteColor fill — see
    *  buildRouteData in layers/routesLayer.ts. */
   statusTwoTone?: boolean;
+  /** Color strategy for cruise arcs/arrows: shared two-tone by status, or
+   *  a distinct hue per cruise. Defaults to `"status"`. */
+  cruiseColorMode?: CruiseColorMode;
 }
 
 export function DeckGLMap({
@@ -121,6 +125,7 @@ export function DeckGLMap({
   extraLayers,
   flightRouteColor,
   statusTwoTone,
+  cruiseColorMode = "status",
 }: DeckGLMapProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
@@ -469,9 +474,12 @@ export function DeckGLMap({
         const cruise = cruises.find((c) => c.id === cruiseId);
         if (cruise) setCruiseSelection(cruise);
       },
-      { zoom }
+      { zoom, colorMode: cruiseColorMode }
     );
-    const arrows = createCruiseArrowsLayer(cruises, geometryMap, selectedCruiseId, { zoom });
+    const arrows = createCruiseArrowsLayer(cruises, geometryMap, selectedCruiseId, {
+      zoom,
+      colorMode: cruiseColorMode,
+    });
     const ports = createCruisePortsLayer(cruises, zoom);
 
     // Split cruise visuals into a "below" group (arcs/arrows render
@@ -508,6 +516,7 @@ export function DeckGLMap({
     extraLayers,
     zoom,
     specialFlightLayers,
+    cruiseColorMode,
   ]);
 
   // No 3D modes remain — lighting effect is unused but kept as empty array for

@@ -159,6 +159,7 @@ export function CruisesTab(): JSX.Element {
         showInternalCruises={showInternalCruises}
         hideVisModeSelector
         cruisesOverride={visibleCruises}
+        cruiseColorMode="perCruise"
       />
       <button
         type="button"
