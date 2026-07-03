@@ -115,11 +115,15 @@ export function bucketSeries(
   }
   for (const r of rows) {
     if (r.date.getTime() < from.getTime() || r.date.getTime() >= to.getTime()) continue;
-    const point = buckets.get(periodKey(r.date, granularity));
+    const key = periodKey(r.date, granularity);
+    const point = buckets.get(key);
     if (!point) continue;
-    point.count += 1;
-    point.distanceKm += r.distanceKm;
-    point.durationMin += r.durationMin;
+    buckets.set(key, {
+      period: point.period,
+      count: point.count + 1,
+      distanceKm: point.distanceKm + r.distanceKm,
+      durationMin: point.durationMin + r.durationMin,
+    });
   }
   return Array.from(buckets.values());
 }
