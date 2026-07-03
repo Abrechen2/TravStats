@@ -5,6 +5,7 @@ import { calcQuantiles, getHeatmapColor } from "./layerTypes";
 import type { ArcDatum, PointDatum } from "./layerTypes";
 import type { MapLayerColors } from "../../types/mapTheme";
 import { UpcomingArcLayer } from "./UpcomingArcLayer";
+import { FLIGHT_STATUS_PAST_COLOR, FLIGHT_STATUS_SCHEDULED_COLOR } from "../../lib/statusColors";
 
 function routeKey(a: string, b: string): string {
   return [a, b].sort().join("-");
@@ -53,7 +54,8 @@ const HISTORICAL_ALPHA = 140;
 
 // Sky-blue for pure-scheduled (never-flown) routes. Matches EDGE_COLOR_GLSL
 // in UpcomingArcLayer: 0.3137 * 255 ≈ 80, 0.7843 * 255 ≈ 200, 1.0 * 255 = 255.
-export const SCHEDULED_BLUE: [number, number, number] = [80, 200, 255];
+// Sourced from statusColors.ts so the globe agrees pixel-for-pixel.
+export const SCHEDULED_BLUE: [number, number, number] = FLIGHT_STATUS_SCHEDULED_COLOR;
 // Two-tier red for mixed-route (flown + scheduled) cores. Below median
 // frequency: lighter red (Tailwind red-400). At/above median: deeper red
 // (Tailwind red-600). The blue tips of UpcomingArcLayer fade these in.
@@ -62,7 +64,7 @@ export const MIXED_RED_HIGH: [number, number, number] = [220, 38, 38];
 
 // Two-tone "Alle" view: past family (historical + mixed core) collapses to the
 // flight domain orange; upcoming stays SCHEDULED_BLUE (+ UpcomingArcLayer tips).
-const TWO_TONE_PAST: [number, number, number] = [240, 169, 71];
+const TWO_TONE_PAST: [number, number, number] = FLIGHT_STATUS_PAST_COLOR;
 
 
 interface RouteRecord {

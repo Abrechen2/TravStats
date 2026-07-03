@@ -212,6 +212,8 @@ export default function MapContainer3D({
               onFlightOpen={onFlightOpen ?? onFlightClick}
               onCruiseOpen={onCruiseOpen}
               flightRouteColor={flightRouteColor}
+              statusTwoTone={statusTwoTone}
+              cruiseColorMode={cruiseColorMode}
               minRouteCount={minRouteCount}
             />
           </Suspense>

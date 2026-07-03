@@ -5,21 +5,13 @@ import type { CruiseStatus } from "../../types/cruise";
 import type { CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 import { effectivePortSequence } from "../Cruise/cruisePorts";
 import { catmullRomSpline } from "./catmullRom";
-import { resolveCruiseColor, type Rgb } from "../../lib/cruiseColor";
+import { resolveCruiseArcColor, type CruiseColorMode, type Rgb } from "../../lib/cruiseColor";
 
 /** How cruise arcs/arrows are tinted: shared two-tone by status, or a
- *  distinct hue per cruise (#150). */
-export type CruiseColorMode = "status" | "perCruise";
-
-// Status-mode colors: periwinkle for already-happened legs, a lighter
-// tint for scheduled (future) legs so upcoming cruises read as "planned".
-const CRUISE_PAST: Rgb = [111, 160, 214]; // #6fa0d6
-const CRUISE_PLANNED: Rgb = [169, 195, 224]; // #a9c3e0
-
-function cruiseArcColor(cruise: Cruise, mode: CruiseColorMode): Rgb {
-  if (mode === "perCruise") return resolveCruiseColor(cruise);
-  return cruise.status === "scheduled" ? CRUISE_PLANNED : CRUISE_PAST;
-}
+ *  distinct hue per cruise (#150). Re-exported from the shared color lib
+ *  so existing `import { type CruiseColorMode } from "./layers/cruiseArcsLayer"`
+ *  call sites (MapContainer3D, DeckGLMap) keep working unchanged. */
+export type { CruiseColorMode };
 
 interface ArcDatum {
   path: [number, number][];
@@ -98,7 +90,7 @@ export function buildCruiseArcs(
 
     const geometry = geometryByCruise.get(cruise.id);
     const waypointsByPair = buildWaypointIndex(geometry);
-    const color = cruiseArcColor(cruise, mode);
+    const color = resolveCruiseArcColor(cruise, mode);
     const planned = cruise.status === "scheduled";
 
     for (let i = 0; i < ports.length - 1; i++) {
