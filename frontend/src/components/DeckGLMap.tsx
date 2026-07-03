@@ -102,6 +102,10 @@ interface DeckGLMapProps {
   /** Override count-based heatmap palette for flight routes — see
    *  MapContainer3D.flightRouteColor for the motivation. */
   flightRouteColor?: [number, number, number];
+  /** Split flight arcs into a two-tone gradient by status (scheduled vs.
+   *  historical) instead of a single flightRouteColor fill — see
+   *  buildRouteData in layers/routesLayer.ts. */
+  statusTwoTone?: boolean;
 }
 
 export function DeckGLMap({
@@ -116,6 +120,7 @@ export function DeckGLMap({
   cruises = [],
   extraLayers,
   flightRouteColor,
+  statusTwoTone,
 }: DeckGLMapProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
@@ -402,8 +407,8 @@ export function DeckGLMap({
   // flights into routes. Deps are deliberately limited to fields that
   // actually affect arc/point geometry + base color.
   const routeData = useMemo(
-    () => buildRouteData(flights, minRouteCount, themeColors, flightRouteColor),
-    [flights, minRouteCount, themeColors, flightRouteColor]
+    () => buildRouteData(flights, minRouteCount, themeColors, flightRouteColor, statusTwoTone),
+    [flights, minRouteCount, themeColors, flightRouteColor, statusTwoTone]
   );
 
   // Standalone layer set for Sonder-Flüge — rendered on top of the
