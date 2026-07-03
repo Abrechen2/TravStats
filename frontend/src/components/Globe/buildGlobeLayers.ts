@@ -38,9 +38,9 @@ const PORT_DOT_COLOR: [number, number, number, number] = [56, 189, 248, 230];
  * Resolve a flight arc's render color. Mirrors the flat map's
  * `routesLayer.ts` collapsing rule exactly: when `statusTwoTone` is
  * active, every route becomes flight-orange (`FLIGHT_STATUS_PAST_COLOR`)
- * unless it's pure-scheduled (never flown), which renders gold
+ * unless it's pure-scheduled (never flown), which renders coral
  * (`FLIGHT_STATUS_UPCOMING_COLOR`) — warm, to stay distinct from the
- * cool cruise blues sharing the same "Alle" globe. Otherwise falls back
+ * cool cruise blues/cyans sharing the same "Alle" globe. Otherwise falls back
  * to the existing single-tint override (`flightRouteColor`) or the
  * per-route count heatmap color — unchanged behaviour for callers that
  * don't pass `statusTwoTone` (e.g. journey mode).

@@ -16,8 +16,8 @@ export const FLIGHT_STATUS_PAST_COLOR: Rgb = [240, 169, 71];
  *  `FLIGHT_STATUS_UPCOMING_COLOR`) — keep this unchanged so the single
  *  view's scheduled routes stay visually identical. */
 export const FLIGHT_STATUS_SCHEDULED_COLOR: Rgb = [80, 200, 255];
-/** Gold (#f2c94c) — pure-scheduled (never-flown) flight routes, but ONLY
+/** Coral (#fb7185) — pure-scheduled (never-flown) flight routes, but ONLY
  *  in the two-tone "Alle" (multi-domain) view. Warm to pair with the
  *  orange past-color and stay visually distinct from the cool cruise
- *  blues/periwinkles that share the same map. */
-export const FLIGHT_STATUS_UPCOMING_COLOR: Rgb = [242, 201, 76];
+ *  blues/cyans that share the same map. */
+export const FLIGHT_STATUS_UPCOMING_COLOR: Rgb = [251, 113, 133];

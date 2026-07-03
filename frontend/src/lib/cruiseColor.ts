@@ -1,9 +1,9 @@
 export type Rgb = [number, number, number];
 
 // Curated distinct hues for telling individual cruises apart (#150). Chosen to
-// avoid the four status colors (flight orange/blue, cruise periwinkle/light-
-// periwinkle) and the domain colors (flight #f0a947, cruise #6fa0d6, hotel
-// #b072d6, poi #5ec2b2). Dark-theme legible.
+// avoid the four status colors (flight orange/coral, cruise blue/cyan) and
+// the domain colors (flight #f0a947, cruise #6fa0d6, hotel #b072d6, poi
+// #5ec2b2). Dark-theme legible.
 export const CRUISE_DISTINCT_PALETTE: Rgb[] = [
   [232, 131, 116], // coral
   [244, 191, 79], // gold
@@ -52,18 +52,18 @@ export function resolveCruiseColor(cruise: { id: string; color?: string | null }
  *  (`components/GlobeView.tsx`) so the two renderers can't drift apart. */
 export type CruiseColorMode = "status" | "perCruise";
 
-// Status-mode colors: periwinkle for already-happened legs, a lighter
-// tint for scheduled (future) legs so upcoming cruises read as "planned".
-export const CRUISE_STATUS_PAST_COLOR: Rgb = [111, 160, 214]; // #6fa0d6
-export const CRUISE_STATUS_PLANNED_COLOR: Rgb = [169, 195, 224]; // #a9c3e0
+// Status-mode colors: blue for already-happened legs, cyan for scheduled
+// (future) legs so upcoming cruises read as clearly "planned".
+export const CRUISE_STATUS_PAST_COLOR: Rgb = [74, 144, 217]; // #4a90d9
+export const CRUISE_STATUS_PLANNED_COLOR: Rgb = [34, 211, 238]; // #22d3ee
 
 /**
  * Resolve a cruise's arc/path tint for the given color mode. `"status"`
- * collapses every cruise into periwinkle (already sailed) or a lighter
- * "planned" tint (still scheduled); `"perCruise"` hands off to
- * `resolveCruiseColor` for a distinct hue per cruise (#150). Shared by
- * both the flat map and the globe so the two renderers agree pixel-for-
- * pixel on what each mode looks like.
+ * collapses every cruise into blue (already sailed) or cyan ("planned",
+ * still scheduled); `"perCruise"` hands off to `resolveCruiseColor` for
+ * a distinct hue per cruise (#150). Shared by both the flat map and the
+ * globe so the two renderers agree pixel-for-pixel on what each mode
+ * looks like.
  */
 export function resolveCruiseArcColor(
   cruise: { id: string; status: string; color?: string | null },

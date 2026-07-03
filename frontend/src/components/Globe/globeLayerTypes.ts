@@ -61,8 +61,8 @@ export interface CruisePathDatum {
   cruiseLabel: string;
   status: CruiseStatus;
   /**
-   * Pre-resolved tint for this leg — `"status"` mode: periwinkle (past)
-   * or a lighter "planned" tint (scheduled); `"perCruise"` mode: a
+   * Pre-resolved tint for this leg — `"status"` mode: blue (past)
+   * or cyan ("planned", scheduled); `"perCruise"` mode: a
    * distinct hue via `resolveCruiseColor`. Resolved once per cruise in
    * `GlobeView`'s `cruisePaths` builder via `resolveCruiseArcColor`, the
    * same helper the flat map's `cruiseArcsLayer.ts` uses, so both
