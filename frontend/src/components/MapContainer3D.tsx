@@ -56,6 +56,13 @@ interface MapContainer3DProps {
    */
   flightRouteColor?: [number, number, number];
   /**
+   * Split flight arcs into a two-tone gradient by status (scheduled vs.
+   * historical) instead of a single flightRouteColor fill. Passed straight
+   * through to DeckGLMap's buildRouteData call; undefined on tabs that keep
+   * the default single-color/heatmap behaviour.
+   */
+  statusTwoTone?: boolean;
+  /**
    * Restrict which vis modes appear in the in-map FAB selector. Defaults
    * to all 4 (existing behaviour). Per-domain tabs pass a subset that
    * excludes cross-domain-only modes like `globe`.
@@ -101,6 +108,7 @@ export default function MapContainer3D({
   extraLayers,
   showInternalCruises = true,
   flightRouteColor,
+  statusTwoTone,
   availableModes,
   hideVisModeSelector = false,
   hideInfoPill = false,
@@ -212,6 +220,7 @@ export default function MapContainer3D({
             onResetTrip={onResetTrip}
             extraLayers={extraLayers}
             flightRouteColor={flightRouteColor}
+            statusTwoTone={statusTwoTone}
           />
         )}
       </div>

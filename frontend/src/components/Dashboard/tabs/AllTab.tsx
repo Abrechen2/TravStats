@@ -464,6 +464,7 @@ export function AllTab(): JSX.Element {
         visMode={visMode}
         onVisModeChange={handleVisModeChange}
         flightRouteColor={FLIGHT_RGB}
+        statusTwoTone
         onFlightClick={handleFlightClick}
         onRouteClick={handleRouteClick}
         onFlightOpen={handlePanelFlightDetails}
