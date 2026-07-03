@@ -40,6 +40,8 @@
   --domain-cruise: #6fa0d6;
   --domain-cruise-soft: rgba(111, 160, 214, 0.1);
   --domain-cruise-locked: rgba(111, 160, 214, 0.18);
+  --domain-cruise-planned: #a9c3e0;
+  --domain-cruise-planned-soft: rgba(169, 195, 224, 0.1);
 
   --domain-hotel: #b072d6;
   --domain-hotel-soft: rgba(176, 114, 214, 0.1);
