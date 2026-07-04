@@ -5,6 +5,7 @@ import { ensureStructure } from "./guildStructure.js";
 import { postRulesAndWelcome } from "./rulesMessage.js";
 import { writeState } from "./state.js";
 import { runServe } from "./reactionRole.js";
+import { runRead } from "./readChannel.js";
 import { log } from "./log.js";
 
 async function runSetup(client: Client, guildId: string, dryRun: boolean): Promise<void> {
@@ -29,6 +30,19 @@ async function main(): Promise<void> {
     return; // serve keeps the process alive
   }
 
+  if (command === "read") {
+    const channelName = process.argv[3];
+    if (!channelName) {
+      log("Usage: tsx src/index.ts read <channel-name> [limit]");
+      process.exitCode = 1;
+      return;
+    }
+    const limitArg = Number(process.argv[4] ?? "20");
+    const limit = Number.isInteger(limitArg) && limitArg > 0 && limitArg <= 100 ? limitArg : 20;
+    await runRead(client, token, guildId, channelName, limit);
+    return; // runRead owns login + destroy
+  }
+
   if (command === "setup") {
     client.once("clientReady", async () => {
       try {
@@ -44,7 +58,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  log("Usage: tsx src/index.ts <setup|serve> [--dry-run]");
+  log("Usage: tsx src/index.ts <setup|serve|read> [--dry-run] [channel] [limit]");
   process.exitCode = 1;
 }
 
