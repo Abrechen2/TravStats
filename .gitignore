@@ -99,8 +99,11 @@ backend/eng.traineddata
 # Dev scripts
 backend/scripts/test-parser-samples.ts
 
-# Lab / scratch tooling — workspace for ad-hoc experiments, never commit
-tools/
+# Lab / scratch tooling — workspace for ad-hoc experiments, never commit.
+# `tools/*` (not `tools/`) so specific committed tools can be re-included below.
+tools/*
+# Committed, non-scratch tools (real deliverables, tracked normally):
+!tools/discord-setup/
 frontend/test-export.xlsx
 
 # Training data and outputs (should not be committed)
