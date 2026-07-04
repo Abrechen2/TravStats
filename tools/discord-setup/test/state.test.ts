@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { readState, writeState, STATE_PATH } from "../src/state.js";
 
 afterEach(() => {
@@ -20,5 +20,19 @@ describe("state", () => {
     writeState({ guildId: "123", rulesMessageId: "456" });
     writeState({ guildId: "123", rulesMessageId: "789" });
     expect(readState()).toEqual([{ guildId: "123", rulesMessageId: "789" }]);
+  });
+
+  it("filters out malformed entries", () => {
+    writeFileSync(
+      STATE_PATH,
+      JSON.stringify([
+        { guildId: "123", rulesMessageId: "456" },
+        { guildId: 999, rulesMessageId: "numeric-guild-id" },
+        { nope: true },
+        "not-an-object",
+      ]),
+      "utf8",
+    );
+    expect(readState()).toEqual([{ guildId: "123", rulesMessageId: "456" }]);
   });
 });

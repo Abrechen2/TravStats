@@ -1,6 +1,7 @@
 import { EmbedBuilder } from "discord.js";
 
 export const RULES_MARKER = "travstats-rules-v1";
+export const WELCOME_MARKER = "travstats-welcome-v1";
 
 const RULES_DE = [
   "**1. Sei respektvoll** — keine Beleidigungen, Belästigung oder Hassrede.",
@@ -52,5 +53,5 @@ export function buildWelcomeEmbed(): EmbedBuilder {
         "➡️ Read the rules and ask setup questions in **#install-help**.",
       ].join("\n"),
     )
-    .setFooter({ text: "travstats-welcome-v1" });
+    .setFooter({ text: WELCOME_MARKER });
 }
