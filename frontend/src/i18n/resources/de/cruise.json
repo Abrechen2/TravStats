@@ -13,7 +13,13 @@
       "ports": "Häfen",
       "status": "Status",
       "cabin": "Kabine",
-      "price": "Preis"
+      "price": "Preis",
+      "actions": "Aktionen"
+    },
+    "delete": {
+      "confirm": "Kreuzfahrt „{{ship}}“ wirklich löschen?",
+      "done": "Kreuzfahrt gelöscht",
+      "error": "Löschen fehlgeschlagen"
     }
   },
   "detail": {
