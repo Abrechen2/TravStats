@@ -13,7 +13,13 @@
       "ports": "Ports",
       "status": "Status",
       "cabin": "Cabin",
-      "price": "Price"
+      "price": "Price",
+      "actions": "Actions"
+    },
+    "delete": {
+      "confirm": "Delete cruise \"{{ship}}\"?",
+      "done": "Cruise deleted",
+      "error": "Failed to delete cruise"
     }
   },
   "detail": {
