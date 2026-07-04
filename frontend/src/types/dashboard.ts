@@ -4,10 +4,10 @@ export type DashboardTab = (typeof DASHBOARD_TABS)[number];
 export const ALL_MODES = ["overview", "heatmap", "journey", "globe"] as const;
 export type AllMode = (typeof ALL_MODES)[number];
 
-export const FLIGHT_MODES = ["routes", "heatmap", "stats-map", "trips"] as const;
+export const FLIGHT_MODES = ["routes", "heatmap", "stats-map", "trips", "globe"] as const;
 export type FlightMode = (typeof FLIGHT_MODES)[number];
 
-export const CRUISE_MODES = ["sea-routes", "itinerary", "port-frequency"] as const;
+export const CRUISE_MODES = ["sea-routes", "itinerary", "port-frequency", "globe"] as const;
 export type CruiseMode = (typeof CRUISE_MODES)[number];
 
 export const POI_MODES = ["markers", "heatmap"] as const;

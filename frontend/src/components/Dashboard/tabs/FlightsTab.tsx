@@ -28,6 +28,7 @@ const FLIGHT_MODE_TO_MAP_MODE: Record<FlightMode, MapMode> = {
   heatmap: "heatmap",
   "stats-map": "routes",
   trips: "trips",
+  globe: "globe",
 };
 
 // Reverse-maps MapMode back to the closest FlightMode so the VisModeSelector
@@ -37,11 +38,12 @@ const MAP_MODE_TO_FLIGHT_MODE: Partial<Record<MapMode, FlightMode>> = {
   routes: "routes",
   heatmap: "heatmap",
   trips: "trips",
+  globe: "globe",
 };
 
 // Subset of MapMode values offered by the in-map FAB on the Flüge tab.
-// Globe is cross-domain — only exposed on the Alle tab.
-const FLIGHT_TAB_MAP_MODES: readonly MapMode[] = ["routes", "heatmap", "trips"];
+// Globe renders flight-only here (cruises suppressed via showInternalCruises).
+const FLIGHT_TAB_MAP_MODES: readonly MapMode[] = ["routes", "heatmap", "trips", "globe"];
 
 // Convert nullable DB columns to undefined so Zod .optional() accepts them
 // when re-creating a flight (duplicate). See project memory note on
@@ -293,7 +295,9 @@ export function FlightsTab(): JSX.Element {
         style={{
           position: "absolute",
           top: 12,
-          left: 12,
+          // Shift out of the way when the list panel (320px) is open so it
+          // doesn't overlap — matches the Alle tab's toggle behaviour.
+          left: sidebarOpen ? 340 : 12,
           zIndex: 30,
           padding: "6px 12px",
           borderRadius: 10,
