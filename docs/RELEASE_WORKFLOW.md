@@ -46,7 +46,7 @@ SSH into a CT via the Proxmox node: `ssh -i ~/.ssh/id_ed25519 root@192.168.178.1
 
 | Tag | Where | Runs on | When | Immutable |
 |---|---|---|---|---|
-| `:X.Y.Z-beta.N` | GHCR | **Beta** (CT106) | forward dev line, early feature / app testing | yes |
+| `:X.Y.Z-beta.N` | GHCR (+ git tag + GH pre-release) | **Beta** (CT106) | forward dev line, early feature / app testing | yes |
 | `:X.Y.Z-rc.N` | GHCR | **RC Server** (CT107) | imminent release, validated vs prod data | yes |
 | `:X.Y.Z` `:latest` `:stable` | GHCR **+ Docker Hub** | **Prod** (CT100) | after promotion (byte-identical retag) | yes |
 | `:rc-latest` | Docker Hub | — | rolling pointer to newest RC | no |
