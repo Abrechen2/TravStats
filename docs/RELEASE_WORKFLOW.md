@@ -1,21 +1,31 @@
 # TravStats Release & Update Workflow
 
 Canonical release process: how a change goes from a dev branch to production,
-via an RC that is first validated on a **prod-data mirror** before it ever
-touches prod. Supersedes the older "RC straight to prod" flow and the old
-"beta server" terminology.
+via an RC that is first validated on a **prod-data mirror** before it is
+promoted to prod. Prod only ever runs **final** tags — an RC never touches prod.
 
-> **Terminology:** CT106 is the **RC Server** (formerly "beta server"). It
-> runs release candidates against a copy of prod data — it is a staging
-> mirror, not a separate beta track.
+> **Terminology (3-tier, since 2026-07-04):** three non-prod roles, split so a
+> hotfix RC can be validated without disturbing the forward feature line:
+> - **Beta** — CT106 (`ct106-travstats-beta`, `trav.abrechen2.de`). Rolling home
+>   of the **forward dev line** (`dev/vX.Y`, e.g. 2.3.0) and the external
+>   Mobile-App testers. Its own persistent data — **never** prod-cloned.
+> - **RC Server** — a dedicated CT, a **prod-data mirror**. Validates the
+>   **imminent release** (any patch or the maturing minor) against real prod
+>   data right before promote. Re-cloned from prod each round; ephemeral state.
+> - **Prod** — CT100. Real users, **final tags only**, changed only on promote.
+>
+> This replaces the earlier single "RC Server = CT106" role, which collided with
+> CT106's job as the external app-Beta (a prod clone would wipe beta-tester
+> data, and one server can't stage a patch RC and the 2.3.0 beta at once).
 
 ## 1. Environments
 
 | Stage | Host | Reachable | DB (container) | Role |
 |---|---|---|---|---|
 | **Local Dev** | dev machine | `8000` / `3000` | dev DB `:5433` (`flights_dev`) | Build, TDD, rehearse migrations |
-| **RC Server** | CT106 (pve-node3) | `192.168.178.123:3010` | `travstats-db-beta` (`flights`) | **Validate the RC against a copy of prod data** |
-| **Prod** | CT100 (pve-node3, HA) | `192.168.178.120:3010` | `travstats-db` (`flights`) | Real users |
+| **Beta** | CT106 (pve-node3) | `192.168.178.123:3010`, `trav.abrechen2.de` | `travstats-db-beta` | Forward dev line + external app testers; own persistent data, rolling |
+| **RC Server** | CT107 (pve-node3) — **new** | `192.168.178.<new>:3010` | `travstats-db-rc` | **Prod-data mirror** — validate the imminent release before promote; re-cloned each round |
+| **Prod** | CT100 (pve-node3, HA) | `192.168.178.120:3010` | `travstats-db` (`flights`) | Real users; **final tags only**, on promote |
 | **Web** | CT133 | `travstats.de` | — | Marketing/Wiki, `version.ts` kept in lockstep |
 | **External** | Norbert (Unraid) | `192.168.178.202:3080` | own | Third-party user, pulls final `:latest` only |
 
@@ -50,26 +60,31 @@ retag of the exact RC image that was validated.
                                                    │
                         ┌──────────────────────────┘
                         ▼
- [3] RC SERVER      ──▶ clone Prod data → RC-Server DB
-     (CT106)            deploy :rc.N, migrate additively, UAT on real data
+ [3] RC SERVER      ──▶ clone Prod data → RC-Server DB (dedicated prod-mirror CT)
+     (prod mirror)      deploy :rc.N, migrate additively, UAT on real data
                         │
               ok? ──yes─┤        no → back to [0], cut rc.N+1, re-stage
                         ▼
- [4] PROD           ──▶ deploy the SAME :rc.N image to CT100, health + user UAT
-     (CT100)
-                        │
-              ok? ──yes─┤        no → back to [0], cut rc.N+1
-                        ▼
- [5] PROMOTE        ──▶ retag rc → :X.Y.Z / :latest / :stable (byte-identical)
+ [4] PROMOTE        ──▶ retag rc → :X.Y.Z / :latest / :stable (byte-identical)
                         Docker Hub mirror
+                        ▼
+ [5] PROD           ──▶ deploy the FINAL tag to CT100 (never an :rc), health + UAT
+     (CT100)
                         ▼
  [6] RELEASE        ──▶ /release (GH release --latest), bump Web version.ts,
                         external users pull :latest
+
+ (parallel track)  Beta ──▶ forward dev line (dev/vX.Y) rolls onto CT106 for
+     (CT106)               feature + Mobile-App testing; own data, not prod-cloned.
+                           Promotes into [1]–[6] when that line becomes the
+                           imminent release.
 ```
 
-**Key difference from the old flow:** the RC lands on the **RC Server first**
-(against a copy of prod data), and only then on prod. Migrations that break do
-so on the mirror, never on prod.
+**Two key differences from the old flow:** (1) the RC is validated on a
+**dedicated prod-mirror RC Server** — separate from the CT106 **Beta**, so a
+hotfix RC never wipes beta-tester data or evicts the 2.3.0 beta. (2) **Prod is
+promoted, not RC-deployed** — CT100 only ever runs a final tag. A broken
+migration breaks on the mirror, never on prod.
 
 ## 4. Stage detail
 
@@ -84,10 +99,12 @@ dev branch, merge to `main`, git tag `vX.Y.Z-rc.N`, GitHub **Pre-release**
 `cd backend && npx tsc --noEmit && npm run lint && npm test -- --forceExit`
 and `cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run`.
 
-**[3] RC Server (the staging gate)** —
+**[3] RC Server (the staging gate)** — the dedicated **prod-mirror** CT (NOT the
+CT106 Beta).
 1. **Clone Prod DB → RC-Server DB** so the RC runs against real data
-   (`scripts/stage-rc-from-prod.sh`).
-2. Deploy `:X.Y.Z-rc.N` to CT106; the container entrypoint runs
+   (`scripts/stage-rc-from-prod.sh`; `CT_RC`/`DB_RC_CONTAINER` env target the RC
+   Server, not CT106).
+2. Deploy `:X.Y.Z-rc.N` to the RC Server; the container entrypoint runs
    `prisma migrate deploy`, lifting the prod data additively onto the new schema.
 3. UAT against realistic data. **If a migration breaks here, it did NOT break prod.**
 4. *(optional)* Add a known UAT login without using real prod credentials by running
@@ -96,11 +113,12 @@ and `cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run`.
    with demo data (idempotent). The RC's `DATABASE_URL` already points at the RC DB.
    Note the prod image has no `tsx`, so run the compiled `dist/*.js`, not `npm run seed:*`.
 
-**[4] Prod** — deploy the *same* validated `:rc.N` image to CT100, bump the
-`APP_VERSION` env alongside it, run the health check (`/health`), do final UAT.
+**[4] Promote** (only on explicit "promote"/"final" command) — retag the
+validated RC to `:X.Y.Z` / `:latest` / `:stable` (byte-identical), mirror to
+Docker Hub. No rebuild — this is the gate between the RC Server and prod.
 
-**[5] Promote** (only on explicit "promote"/"final" command) — retag the RC to
-`:X.Y.Z` / `:latest` / `:stable` (byte-identical), mirror to Docker Hub.
+**[5] Prod** — deploy the **final** tag to CT100 (never an `:rc`), bump the
+`APP_VERSION` env alongside it, run the health check (`/health`), do final UAT.
 
 **[6] Release** — `/release` (GitHub release `--latest`), bump
 `TravStatsWeb/src/data/version.ts` + redeploy the apex, external instances pull `:latest`.
@@ -130,7 +148,13 @@ scripts/stage-rc-from-prod.sh      # dump Prod DB → restore into RC-Server DB
 `dev/v2.3` holds the colors feature + Wave A stats + mobile-app server side
 (pairing, app-settings, boarding-pass). Its first RC:
 
+The 2.3.0 line lives on the **Beta** (CT106) for app/feature testing while it
+matures. When it is the imminent release it enters the ship pipeline:
+
 1. `[1]/[2]` cut + build `ghcr.io/abrechen2/travstats:2.3.0-rc.1`.
-2. `[3]` `scripts/stage-rc-from-prod.sh`, then deploy `:2.3.0-rc.1` to the RC Server (CT106).
-3. `[4]` on green UAT, deploy the same image to Prod (CT100).
-4. `[5]/[6]` on your "promote", retag to `:2.3.0`/`:latest`/`:stable`, mirror, release.
+2. `[3]` `scripts/stage-rc-from-prod.sh` → deploy `:2.3.0-rc.1` to the **RC Server**
+   (the prod-mirror CT, not the CT106 Beta); UAT on real data.
+3. `[4]` on green UAT and your "promote", retag to `:2.3.0`/`:latest`/`:stable`
+   (byte-identical) + Docker Hub mirror.
+4. `[5]/[6]` deploy the **final** `:2.3.0` to Prod (CT100), then `/release`
+   (GH `--latest`) + bump the Web `version.ts`.
