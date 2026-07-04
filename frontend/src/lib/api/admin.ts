@@ -492,6 +492,8 @@ export const adminApi = {
       maxUsers: number;
       allowRegistration: boolean;
       frontendUrl: string | null;
+      publicUrl: string | null;
+      lanUrl: string | null;
     };
   }> => {
     const { data } = await api.get<{
@@ -500,6 +502,8 @@ export const adminApi = {
         maxUsers: number;
         allowRegistration: boolean;
         frontendUrl: string | null;
+        publicUrl: string | null;
+        lanUrl: string | null;
       };
     }>("/admin/instance-settings");
     return data;
@@ -510,12 +514,16 @@ export const adminApi = {
     maxUsers?: number;
     allowRegistration?: boolean;
     frontendUrl?: string;
+    publicUrl?: string;
+    lanUrl?: string;
   }): Promise<{
     settings: {
       instanceName: string;
       maxUsers: number;
       allowRegistration: boolean;
       frontendUrl: string | null;
+      publicUrl: string | null;
+      lanUrl: string | null;
     };
   }> => {
     const { data } = await api.put<{
@@ -524,6 +532,8 @@ export const adminApi = {
         maxUsers: number;
         allowRegistration: boolean;
         frontendUrl: string | null;
+        publicUrl: string | null;
+        lanUrl: string | null;
       };
     }>("/admin/instance-settings", patch);
     return data;

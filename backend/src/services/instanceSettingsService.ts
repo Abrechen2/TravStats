@@ -7,6 +7,8 @@
  * "all config via env" deployments works without an explicit import step.
  */
 
+import type { Request } from "express";
+
 import { prisma } from "../db";
 import { encryptApiKey, decryptApiKey } from "../utils/encryption";
 import logger from "../utils/logger";
@@ -16,6 +18,8 @@ export interface InstanceSettings {
   maxUsers: number;
   allowRegistration: boolean;
   frontendUrl: string | null;
+  publicUrl: string | null;
+  lanUrl: string | null;
 }
 
 export interface WebDAVSettings {
@@ -50,6 +54,8 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
       process.env.FRONTEND_URL ??
       process.env.CORS_ORIGIN?.split(",")[0]?.trim() ??
       null,
+    publicUrl: row.publicUrl ?? process.env.PUBLIC_URL ?? null,
+    lanUrl: row.lanUrl ?? process.env.LAN_URL ?? null,
   };
 }
 
@@ -68,10 +74,34 @@ export async function updateInstanceSettings(
       ...(patch.frontendUrl !== undefined && {
         frontendUrl: patch.frontendUrl || null,
       }),
+      ...(patch.publicUrl !== undefined && {
+        publicUrl: patch.publicUrl || null,
+      }),
+      ...(patch.lanUrl !== undefined && {
+        lanUrl: patch.lanUrl || null,
+      }),
     },
   });
   logger.info({ operation: "instance_settings_updated", fields: Object.keys(patch) });
   return getInstanceSettings();
+}
+
+/**
+ * Resolve the base URL the mobile app (or any external client) should use to
+ * reach this instance. Prefers the admin-configured `publicUrl`; falls back to
+ * the origin derived from the incoming request (protocol + host) so a fresh
+ * deployment that hasn't set the field still hands out a usable address.
+ *
+ * The returned value never carries a trailing slash.
+ */
+export async function getPublicBaseUrl(req: Request): Promise<string> {
+  const { publicUrl } = await getInstanceSettings();
+  if (publicUrl) return publicUrl.replace(/\/+$/, "");
+
+  // `req.protocol` already honours `trust proxy` (set in index.ts) so it
+  // reflects the X-Forwarded-Proto from nginx rather than the internal http.
+  const host = req.get("host") ?? `localhost:${process.env.PORT ?? "8000"}`;
+  return `${req.protocol}://${host}`.replace(/\/+$/, "");
 }
 
 /**
