@@ -64,6 +64,15 @@ ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d po
 ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d postgres -c \"CREATE DATABASE $DB_NAME OWNER $DB_USER;\""
 ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER pg_restore -U $DB_USER -d $DB_NAME --no-owner $DUMP"
 
+# Re-apply RC-specific settings the prod clone wiped. The prod dump carries
+# prod's admin_settings, so the mobile-app pairing URL (public_url) now points
+# at prod, not the RC — the app's QR would encode an address it can't reach.
+# Set RC_PUBLIC_URL to the RC's own public address (e.g. https://trav.abrechen2.de).
+if [ -n "${RC_PUBLIC_URL:-}" ]; then
+  echo "==> Re-set RC public_url = $RC_PUBLIC_URL (prod clone wiped it)"
+  ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d $DB_NAME -c \"update admin_settings set public_url='$RC_PUBLIC_URL';\""
+fi
+
 echo "==> [5/6] Restart RC-Server app (entrypoint runs prisma migrate deploy)"
 ssh_node "pct exec $CT_RC -- sh -c 'docker start $APP_RC_CONTAINER'"
 
