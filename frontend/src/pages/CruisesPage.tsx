@@ -6,6 +6,7 @@ import { CruiseRow } from "../components/Cruise/CruiseRow";
 import { CruiseAddChooser } from "../components/Cruise/CruiseAddChooser";
 import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
+import { sortCruises, type CruiseSortKey, type SortOrder } from "../components/Cruise/sortCruises";
 
 type StatusFilter = CruiseStatus | "all";
 type YearFilter = number | "all";
@@ -24,6 +25,18 @@ export default function CruisesPage(): JSX.Element {
   const [search, setSearch] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [yearFilter, setYearFilter] = useState<YearFilter>("all");
+  const [sortBy, setSortBy] = useState<CruiseSortKey>("date");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+
+  const handleSort = (col: CruiseSortKey): void => {
+    if (col === sortBy) {
+      setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(col);
+      // date/price/ports default to desc (biggest/newest first); text asc.
+      setSortOrder(col === "ship" || col === "line" || col === "status" ? "asc" : "desc");
+    }
+  };
 
   const reload = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -66,6 +79,11 @@ export default function CruisesPage(): JSX.Element {
       return true;
     });
   }, [cruises, search, statusFilter, yearFilter]);
+
+  const sorted = useMemo(
+    () => sortCruises(filtered, sortBy, sortOrder),
+    [filtered, sortBy, sortOrder]
+  );
 
   const resetFilters = (): void => {
     setSearch("");
@@ -166,17 +184,107 @@ export default function CruisesPage(): JSX.Element {
             <table className="w-full text-sm min-w-[640px]">
               <thead className="bg-[var(--bg-surface)] text-[var(--text-muted)]">
                 <tr>
-                  <th className="px-3 py-2 text-left">{t("list.columns.ship")}</th>
-                  <th className="px-3 py-2 text-left">{t("list.columns.line")}</th>
-                  <th className="px-3 py-2 text-left">{t("list.columns.dates")}</th>
-                  <th className="px-3 py-2 text-left">{t("list.columns.ports")}</th>
-                  <th className="px-3 py-2 text-left">{t("list.columns.status")}</th>
+                  <th className="px-3 py-2 text-left">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("ship")}
+                      className="inline-flex items-center gap-1 hover:text-[var(--text-primary)]"
+                      aria-label={t("list.sortBy", { col: t("list.columns.ship") })}
+                    >
+                      {t("list.columns.ship")}
+                      <span
+                        aria-hidden
+                        className={sortBy === "ship" ? "text-[var(--accent)]" : "opacity-0"}
+                      >
+                        {sortBy === "ship" ? (sortOrder === "asc" ? "▲" : "▼") : "▲"}
+                      </span>
+                    </button>
+                  </th>
+                  <th className="px-3 py-2 text-left">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("line")}
+                      className="inline-flex items-center gap-1 hover:text-[var(--text-primary)]"
+                      aria-label={t("list.sortBy", { col: t("list.columns.line") })}
+                    >
+                      {t("list.columns.line")}
+                      <span
+                        aria-hidden
+                        className={sortBy === "line" ? "text-[var(--accent)]" : "opacity-0"}
+                      >
+                        {sortBy === "line" ? (sortOrder === "asc" ? "▲" : "▼") : "▲"}
+                      </span>
+                    </button>
+                  </th>
+                  <th className="px-3 py-2 text-left">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("date")}
+                      className="inline-flex items-center gap-1 hover:text-[var(--text-primary)]"
+                      aria-label={t("list.sortBy", { col: t("list.columns.dates") })}
+                    >
+                      {t("list.columns.dates")}
+                      <span
+                        aria-hidden
+                        className={sortBy === "date" ? "text-[var(--accent)]" : "opacity-0"}
+                      >
+                        {sortBy === "date" ? (sortOrder === "asc" ? "▲" : "▼") : "▲"}
+                      </span>
+                    </button>
+                  </th>
+                  <th className="px-3 py-2 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("ports")}
+                      className="inline-flex items-center justify-end gap-1 hover:text-[var(--text-primary)]"
+                      aria-label={t("list.sortBy", { col: t("list.columns.ports") })}
+                    >
+                      {t("list.columns.ports")}
+                      <span
+                        aria-hidden
+                        className={sortBy === "ports" ? "text-[var(--accent)]" : "opacity-0"}
+                      >
+                        {sortBy === "ports" ? (sortOrder === "asc" ? "▲" : "▼") : "▲"}
+                      </span>
+                    </button>
+                  </th>
+                  <th className="px-3 py-2 text-left">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("status")}
+                      className="inline-flex items-center gap-1 hover:text-[var(--text-primary)]"
+                      aria-label={t("list.sortBy", { col: t("list.columns.status") })}
+                    >
+                      {t("list.columns.status")}
+                      <span
+                        aria-hidden
+                        className={sortBy === "status" ? "text-[var(--accent)]" : "opacity-0"}
+                      >
+                        {sortBy === "status" ? (sortOrder === "asc" ? "▲" : "▼") : "▲"}
+                      </span>
+                    </button>
+                  </th>
                   <th className="px-3 py-2 text-left">{t("list.columns.cabin")}</th>
-                  <th className="px-3 py-2 text-right">{t("list.columns.price")}</th>
+                  <th className="px-3 py-2 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("price")}
+                      className="inline-flex items-center justify-end gap-1 hover:text-[var(--text-primary)]"
+                      aria-label={t("list.sortBy", { col: t("list.columns.price") })}
+                    >
+                      {t("list.columns.price")}
+                      <span
+                        aria-hidden
+                        className={sortBy === "price" ? "text-[var(--accent)]" : "opacity-0"}
+                      >
+                        {sortBy === "price" ? (sortOrder === "asc" ? "▲" : "▼") : "▲"}
+                      </span>
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((c) => (
+                {sorted.map((c) => (
                   <CruiseRow key={c.id} cruise={c} onOpen={() => navigate(`/cruises/${c.id}`)} />
                 ))}
               </tbody>
