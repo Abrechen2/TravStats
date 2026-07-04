@@ -26,11 +26,30 @@ import {
   FLIGHT_STATUS_UPCOMING_COLOR,
 } from "../../lib/statusColors";
 
-// Alpha applied uniformly to every cruise path — the RGB itself is
-// resolved per-leg in GlobeView's `cruisePaths` builder (status two-tone
-// or per-cruise hue via `resolveCruiseArcColor`), so this layer only
-// owns the constant opacity, not the color.
+// Alpha applied to a cruise path. The RGB itself is resolved per-leg in
+// GlobeView's `cruisePaths` builder (status two-tone or per-cruise hue via
+// `resolveCruiseArcColor`), so this layer only owns the opacity, not the
+// color. Planned (scheduled) cruises render dimmer than past ones —
+// matching the flat map's `cruiseArcsLayer` PLANNED_ALPHA so the two
+// renderers agree on how "not yet sailed" reads.
 const CRUISE_PATH_ALPHA = 230;
+const CRUISE_PATH_PLANNED_ALPHA = 150;
+
+/**
+ * Resolve a cruise leg's render color (RGB + alpha). Mirrors the flat
+ * map's `cruiseArcsLayer` planned-dimming: scheduled cruises get a
+ * lower alpha so "not yet sailed" reads the same on the globe as on the
+ * flat map. The hue is already resolved upstream (status two-tone or
+ * per-cruise) — this only layers on the status-dependent opacity.
+ *
+ * Exported as a pure function so it's unit-testable without deck.gl.
+ */
+export function resolveCruisePathColor(
+  d: Pick<CruisePathDatum, "color" | "status">
+): [number, number, number, number] {
+  const alpha = d.status === "scheduled" ? CRUISE_PATH_PLANNED_ALPHA : CRUISE_PATH_ALPHA;
+  return [d.color[0], d.color[1], d.color[2], alpha];
+}
 const AIRPORT_DOT_COLOR: [number, number, number, number] = [251, 191, 36, 230];
 const PORT_DOT_COLOR: [number, number, number, number] = [56, 189, 248, 230];
 
@@ -283,16 +302,11 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
         ),
       // `d.color` is pre-resolved per-leg in GlobeView's `cruisePaths`
       // builder (status two-tone or per-cruise hue via
-      // `resolveCruiseArcColor`) — this layer just applies the shared
-      // alpha on top. No updateTriggers needed: the accessor only reads
-      // `d`, so a new `cruisePaths` array reference already forces
-      // deck.gl to re-evaluate it.
-      getColor: (d: CruisePathDatum): [number, number, number, number] => [
-        d.color[0],
-        d.color[1],
-        d.color[2],
-        CRUISE_PATH_ALPHA,
-      ],
+      // `resolveCruiseArcColor`) — this layer applies the status-aware
+      // alpha on top (planned cruises dimmer, matching the flat map). No
+      // updateTriggers needed: the accessor only reads `d`, so a new
+      // `cruisePaths` array reference already forces deck.gl to re-evaluate.
+      getColor: resolveCruisePathColor,
       // Pin to 2 px to match the flat-map cruiseArcsLayer default —
       // visually heavier than a single-flight arc (1 px) so cruise
       // routes still read distinct, but no longer dominate the globe
