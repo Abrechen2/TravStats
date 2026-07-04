@@ -6,6 +6,7 @@ import { postRulesAndWelcome } from "./rulesMessage.js";
 import { writeState } from "./state.js";
 import { runServe } from "./reactionRole.js";
 import { runRead } from "./readChannel.js";
+import { runReply } from "./replyThread.js";
 import {
   runAnnounce,
   readRepoVersion,
@@ -69,6 +70,18 @@ async function main(): Promise<void> {
     return; // runRead owns login + destroy
   }
 
+  if (command === "reply") {
+    const threadQuery = process.argv[3];
+    const message = process.argv.slice(4).filter((a) => a !== "--dry-run").join(" ");
+    if (!threadQuery || !message) {
+      log('Usage: tsx src/index.ts reply <thread-id-or-title> <message…> [--dry-run]');
+      process.exitCode = 1;
+      return;
+    }
+    await runReply(client, token, guildId, threadQuery, message, dryRun);
+    return; // runReply owns login + destroy
+  }
+
   if (command === "setup") {
     client.once("clientReady", async () => {
       try {
@@ -85,11 +98,12 @@ async function main(): Promise<void> {
   }
 
   log(
-    "Usage: tsx src/index.ts <setup|serve|read|announce> [--dry-run] [args]\n" +
-      "  setup [--dry-run]           provision the server\n" +
-      "  serve                       run the reaction-role listener (unused if no ✈️)\n" +
-      "  read <channel> [limit]      print recent messages of a channel\n" +
-      "  announce <rc|release> [ver] post a release/RC announcement",
+    "Usage: tsx src/index.ts <setup|serve|read|announce|reply> [--dry-run] [args]\n" +
+      "  setup [--dry-run]              provision the server\n" +
+      "  serve                          run the reaction-role listener (unused if no ✈️)\n" +
+      "  read <channel> [limit]         print recent messages of a channel\n" +
+      "  announce <rc|release> [ver]    post a release/RC announcement\n" +
+      "  reply <thread> <message…>      reply in a forum thread (e.g. a #bug-report post)",
   );
   process.exitCode = 1;
 }
