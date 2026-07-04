@@ -1,7 +1,6 @@
 import React, { lazy, Suspense, useState, useMemo, useEffect } from "react";
 import { DeckGLMap } from "./DeckGLMap";
 import { GlobeLoader } from "./GlobeLoader";
-import { VisModeSelector } from "./VisModeSelector";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { Layer } from "@deck.gl/core";
 
@@ -35,7 +34,6 @@ interface MapContainer3DProps {
       clicked — should navigate to the cruise detail page. */
   onCruiseOpen?: (cruiseId: string) => void;
   visMode: MapMode;
-  onVisModeChange: (mode: MapMode) => void;
   minRouteCount?: number;
   filterSlot?: React.ReactNode;
   onResetTrip?: () => void;
@@ -55,18 +53,6 @@ interface MapContainer3DProps {
    * it undefined to keep the count-encoded heatmap behaviour.
    */
   flightRouteColor?: [number, number, number];
-  /**
-   * Restrict which vis modes appear in the in-map FAB selector. Defaults
-   * to all 4 (existing behaviour). Per-domain tabs pass a subset that
-   * excludes cross-domain-only modes like `globe`.
-   */
-  availableModes?: readonly MapMode[];
-  /**
-   * Hide the in-map mode FAB entirely. Used by tabs that own mode
-   * switching outside the map (e.g. CruisesTab uses the dashboard-level
-   * mode dropdown only — its modes don't map 1:1 to MapMode).
-   */
-  hideVisModeSelector?: boolean;
   /**
    * Hide the top-left "<count> Flüge · <count> Routen" info pill.
    * Used by tabs that render their own overlay at top-left (e.g.
@@ -94,15 +80,12 @@ export default function MapContainer3D({
   onFlightOpen,
   onCruiseOpen,
   visMode,
-  onVisModeChange,
   minRouteCount = 1,
   filterSlot,
   onResetTrip,
   extraLayers,
   showInternalCruises = true,
   flightRouteColor,
-  availableModes,
-  hideVisModeSelector = false,
   hideInfoPill = false,
   cruisesOverride,
 }: MapContainer3DProps): JSX.Element {
@@ -116,7 +99,6 @@ export default function MapContainer3D({
   // isEnabled() helper (the sanctioned gating API) so the boolean still stays
   // stable in the effect dep array below (see the beta.28 ref-stability fix).
   const cruiseEnabled = isEnabled("cruise");
-  const [fabOpen, setFabOpen] = useState(false);
   const [internalCruises, setInternalCruises] = useState<Cruise[]>([]);
 
   // Fetch cruises as supplemental map overlay. User hides by disabling
@@ -216,15 +198,6 @@ export default function MapContainer3D({
         )}
       </div>
 
-      {/* Backdrop — dims map when FAB is open, click to close */}
-      {fabOpen && (
-        <div
-          className="absolute inset-0 z-10"
-          style={{ background: "rgba(10, 8, 30, 0.45)", backdropFilter: "blur(1px)" }}
-          onClick={() => setFabOpen(false)}
-        />
-      )}
-
       {/* Special-flight legend — routes mode only, only when we have
           at least one special flight to explain. Sits as an overlay,
           NOT a separate MapMode (per the V2 architectural call). */}
@@ -261,19 +234,14 @@ export default function MapContainer3D({
         </div>
       )}
 
-      {/* Bottom-right stack: mode FAB (top) + filter FAB (bottom) */}
-      <div className="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2">
-        {!hideVisModeSelector && (
-          <VisModeSelector
-            current={visMode}
-            onChange={onVisModeChange}
-            isOpen={fabOpen}
-            onOpenChange={setFabOpen}
-            availableModes={availableModes}
-          />
-        )}
-        {filterSlot}
-      </div>
+      {/* Bottom-right: filter FAB only. The in-map mode FAB was removed —
+          mode switching lives solely in the top "Modus" dropdown (the FAB
+          duplicated it). */}
+      {filterSlot && (
+        <div className="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2">
+          {filterSlot}
+        </div>
+      )}
     </div>
   );
 }

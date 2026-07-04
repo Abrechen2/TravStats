@@ -52,6 +52,14 @@ const HEAD_MARKER_RADIUS_M = 10_000;
 // the user observed. 5 km is invisible at any user-relevant zoom but
 // safely above the precision noise of the fragment depth.
 const CRUISE_PATH_ALTITUDE_M = 5_000;
+// Night-shade cells sit just above the sphere so the globe mesh's depth
+// buffer occludes the far side directly. Earlier the shade sat at
+// altitude 0 with `depthCompare: "always"` and relied solely on the
+// occlusion extension's per-frame horizon cull to hide the back — during
+// movement that cull lags one frame, flashing far-side dark cells as
+// black triangles. A small altitude + real depth testing kills the flash
+// (the sphere is opaque in the depth buffer regardless of frame timing).
+const NIGHT_SHADE_ALTITUDE_M = 1_500;
 // Airport + port markers (and their labels) lift slightly above the
 // cruise-path altitude so they render ON TOP of cruise paths rather
 // than getting visually clipped where a path intersects the marker.
@@ -156,17 +164,22 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     // Day/night shade — a fine grid of small quads over the night
     // hemisphere, alpha ramped from the terminator inward (soft
     // twilight band). Rendered first so flight arcs / markers draw on
-    // top. depthCompare "always" avoids z-fighting the globe mesh; the
-    // occlusion extension clips far-side cells so the back doesn't
-    // bleed through the front.
+    // top. Lifted to NIGHT_SHADE_ALTITUDE_M and depth-tested (NOT
+    // `depthCompare: "always"`) so the globe mesh occludes far-side cells
+    // via the shared depth buffer with zero frame lag — this removes the
+    // "black triangles flicker on move" the always-depth + occlusion-only
+    // cull produced. The occlusion extension is kept purely for the soft
+    // alpha fade across the limb; `depthWriteEnabled: false` keeps the
+    // shade from occluding the arcs / markers drawn after it.
     new SolidPolygonLayer<NightCell>({
       id: "globe-night-shade",
       data: nightCells,
       visible: showNight,
-      getPolygon: (d) => d.polygon,
+      getPolygon: (d) =>
+        d.polygon.map((p) => [p[0], p[1], NIGHT_SHADE_ALTITUDE_M] as [number, number, number]),
       filled: true,
       getFillColor: (d) => [8, 14, 34, Math.round(d.shade * 150)],
-      parameters: { depthCompare: "always", depthWriteEnabled: false, cullMode: "none" },
+      parameters: { depthWriteEnabled: false, cullMode: "none" },
       pickable: false,
       extensions: [occlusionExt],
       ...occlusionProps,
