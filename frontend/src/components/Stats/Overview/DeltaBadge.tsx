@@ -1,5 +1,6 @@
 // Small inline pill that shows year-over-year delta with an arrow + percent.
 import type { JSX } from "react";
+import { useTranslation } from "../../../hooks/useTranslation";
 import type { DeltaInfo } from "./aggregate";
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export default function DeltaBadge({ d, compareYear }: Props): JSX.Element | null {
+  const { t } = useTranslation(["stats"]);
   if (!d || compareYear === null) return null;
   const arrow = d.sign === "up" ? "↑" : d.sign === "down" ? "↓" : "→";
   const sign = d.diff > 0 ? "+" : "";
@@ -32,7 +34,9 @@ export default function DeltaBadge({ d, compareYear }: Props): JSX.Element | nul
           {d.pct}%)
         </span>
       )}
-      <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>ggü. {compareYear}</span>
+      <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>
+        {t("stats:yearFilter.vs", { year: compareYear })}
+      </span>
     </span>
   );
 }
