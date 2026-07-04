@@ -16,10 +16,10 @@ describe("content", () => {
     expect(text).toContain("Ban");
   });
 
-  it("rules embed mentions the airplane beta reaction in DE and EN", () => {
+  it("rules embed does not advertise the ✈️ self-service beta reaction (manual assignment)", () => {
     const text = JSON.stringify(buildRulesEmbed().toJSON());
-    expect(text).toContain("✈️");
-    expect(text.toLowerCase()).toContain("beta");
+    expect(text).not.toContain("✈️");
+    expect(text.toLowerCase()).not.toContain("beta-tester");
   });
 
   it("rules embed includes an English mirror", () => {

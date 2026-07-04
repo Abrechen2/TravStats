@@ -1,6 +1,5 @@
 import { Guild, TextChannel, ChannelType } from "discord.js";
 import { buildRulesEmbed, buildWelcomeEmbed, RULES_MARKER, WELCOME_MARKER } from "./content.js";
-import { BETA_REACTION } from "./config.js";
 import { log, dryRunLog } from "./log.js";
 
 function findTextChannel(guild: Guild, name: string): TextChannel | null {
@@ -25,7 +24,7 @@ export async function postRulesAndWelcome(
   const welcome = findTextChannel(guild, "welcome");
 
   if (dryRun) {
-    dryRunLog("post/refresh rules embed + ✈️ reaction, post welcome embed");
+    dryRunLog("post/refresh rules embed, post welcome embed");
     return null;
   }
   if (!rules) {
@@ -50,10 +49,6 @@ export async function postRulesAndWelcome(
     messageId = sent.id;
     log("posted rules message");
   }
-
-  const target = await rules.messages.fetch(messageId);
-  const reacted = target.reactions.cache.some((r) => r.emoji.name === BETA_REACTION);
-  if (!reacted) await target.react(BETA_REACTION);
 
   if (welcome) {
     const welcomeRecent = await welcome.messages.fetch({ limit: 20 });
