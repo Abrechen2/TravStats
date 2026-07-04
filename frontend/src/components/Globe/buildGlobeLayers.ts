@@ -12,7 +12,6 @@ import {
   PathLayer,
   ScatterplotLayer,
   SolidPolygonLayer,
-  TextLayer,
 } from "@deck.gl/layers";
 import { PathStyleExtension, type PathStyleExtensionProps } from "@deck.gl/extensions";
 import type { Layer, PickingInfo } from "@deck.gl/core";
@@ -30,16 +29,15 @@ import type {
 } from "./globeLayerTypes";
 
 const CRUISE_PATH_COLOR: [number, number, number, number] = [80, 180, 255, 230];
-const AIRPORT_DOT_COLOR: [number, number, number, number] = [251, 191, 36, 230];
-const PORT_DOT_COLOR: [number, number, number, number] = [56, 189, 248, 230];
 
-// Airport + port markers are pixel-sized via ScatterplotLayer so they
-// stay the same on-screen size regardless of zoom. The ColumnLayer
-// (3-D extruded cylinder) variant looked nice at low zoom but
-// ballooned to city-covering pillars at high zoom — the user's
-// "marker max size = current low-zoom appearance" requirement maps
-// cleanly to a constant pixel diameter.
-const MARKER_RADIUS_PX = 5;
+// Default marker appearance — exported so GlobeView can seed the user
+// customisation state from the same source of truth. Airports + ports
+// are pixel-sized via ScatterplotLayer so they stay a constant
+// on-screen size regardless of zoom (the ColumnLayer variant ballooned
+// to city-covering pillars at high zoom).
+export const DEFAULT_AIRPORT_COLOR: [number, number, number] = [251, 191, 36];
+export const DEFAULT_PORT_COLOR: [number, number, number] = [56, 189, 248];
+export const DEFAULT_MARKER_RADIUS_PX = 5;
 // Head-flight arrival marker keeps a little 3-D pop via ColumnLayer,
 // but airports + ports go flat. The numbers below are only used by
 // the head-flight column.
@@ -106,12 +104,18 @@ export interface BuildGlobeLayersOptions {
    * on the flat map.
    */
   flightRouteColor?: [number, number, number];
+  /** User multiplier on flight-arc line width (1 = default). */
+  arcWidthScale: number;
+  /** Airport marker fill colour (RGB); alpha is applied internally. */
+  airportColor: [number, number, number];
+  /** Cruise-port marker fill colour (RGB); alpha applied internally. */
+  portColor: [number, number, number];
+  /** Airport/port marker radius in pixels. */
+  markerRadius: number;
   /** Fine night-side grid cells (from the day/night terminator). */
   nightCells: NightCell[];
   /** Toggle the day/night shade overlay. */
   showNight: boolean;
-  /** Toggle airport/port IATA labels. */
-  showLabels: boolean;
 }
 
 export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
@@ -132,9 +136,12 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     onCruisePathHover,
     setPinned,
     flightRouteColor,
+    arcWidthScale,
+    airportColor,
+    portColor,
+    markerRadius,
     nightCells,
     showNight,
-    showLabels,
   } = opts;
   // Pick the per-arc colour. With `flightRouteColor` set, every arc
   // gets that single tint; otherwise the per-arc quartile heatmap
@@ -179,16 +186,19 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       getPath: (d) => d.waypoints,
       getColor: (d) =>
         arcColor(d, activeQuartile === null || activeQuartile === d.quartile ? 235 : 35),
-      updateTriggers: { getColor: [activeQuartile, flightRouteColor] },
       // Match the flat-map routes-layer formula so flight-arc thickness
       // is consistent across map ↔ globe transitions: sqrt(count) px,
-      // 1 flight → 1 px, 16 flights → 4 px (cap). The earlier
-      // log2-based curve started at 2.5 px which read as too heavy on
-      // the globe.
-      getWidth: (d) => Math.min(Math.sqrt(d.count), 4),
+      // 1 flight → 1 px, 16 flights → 4 px (cap), then the user width
+      // multiplier. The earlier log2-based curve started at 2.5 px which
+      // read as too heavy on the globe.
+      getWidth: (d) => Math.min(Math.sqrt(d.count), 4) * arcWidthScale,
+      updateTriggers: {
+        getColor: [activeQuartile, flightRouteColor],
+        getWidth: [arcWidthScale],
+      },
       widthUnits: "pixels",
-      widthMinPixels: 1,
-      widthMaxPixels: 4,
+      widthMinPixels: 1 * arcWidthScale,
+      widthMaxPixels: 4 * arcWidthScale,
       capRounded: true,
       jointRounded: true,
       // Waypoints are pre-unwrapped (lng can exceed ±180 to stay
@@ -312,8 +322,9 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       id: "globe-airport-dots",
       data: airportPoints,
       getPosition: (d) => [d.position[0], d.position[1], MARKER_ALTITUDE_M],
-      getFillColor: AIRPORT_DOT_COLOR,
-      getRadius: MARKER_RADIUS_PX,
+      getFillColor: [airportColor[0], airportColor[1], airportColor[2], 230],
+      getRadius: markerRadius,
+      updateTriggers: { getFillColor: [airportColor], getRadius: [markerRadius] },
       radiusUnits: "pixels",
       stroked: true,
       getLineColor: [13, 17, 23, 220],
@@ -338,8 +349,9 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       id: "globe-port-dots",
       data: portPoints,
       getPosition: (d) => [d.position[0], d.position[1], MARKER_ALTITUDE_M],
-      getFillColor: PORT_DOT_COLOR,
-      getRadius: MARKER_RADIUS_PX,
+      getFillColor: [portColor[0], portColor[1], portColor[2], 230],
+      getRadius: markerRadius,
+      updateTriggers: { getFillColor: [portColor], getRadius: [markerRadius] },
       radiusUnits: "pixels",
       stroked: true,
       getLineColor: [13, 17, 23, 220],
@@ -360,76 +372,13 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       extensions: [occlusionExt],
       ...occlusionProps,
     } as ConstructorParameters<typeof ScatterplotLayer<PointDatum>>[0] & EarthOcclusionExtensionProps),
-    // IATA / UN/LOCODE labels above the markers. Same TextLayer
-    // pattern the flat-map routesLayer uses — clickable, so tapping
-    // the label opens the same pinned card as tapping the marker.
-    // SDF font enables the dark outline against the basemap.
-    new TextLayer<PointDatum>({
-      id: "globe-airport-labels",
-      data: airportPoints,
-      visible: showLabels,
-      getPosition: (d) => [d.position[0], d.position[1], MARKER_ALTITUDE_M],
-      getText: (d) => d.iata,
-      getSize: 11,
-      getColor: [255, 255, 255, 240],
-      getBackgroundColor: [22, 27, 34, 210],
-      background: true,
-      backgroundPadding: [4, 2, 4, 2],
-      fontFamily: '"Inter", system-ui, monospace',
-      fontWeight: "bold",
-      fontSettings: { sdf: true },
-      outlineWidth: 2,
-      outlineColor: [0, 0, 0, 160],
-      getPixelOffset: [0, -16],
-      billboard: true,
-      characterSet: "auto",
-      pickable: true,
-      onHover: onAirportHover,
-      onClick: ({ object }: { object?: PointDatum }): void => {
-        if (!object) return;
-        setPinned({
-          kind: "airport",
-          data: object,
-          anchorLngLat: [object.position[0], object.position[1]],
-        });
-      },
-      parameters: { depthCompare: "always" as const },
-      extensions: [occlusionExt],
-      ...occlusionProps,
-    } as ConstructorParameters<typeof TextLayer<PointDatum>>[0] & EarthOcclusionExtensionProps),
-    new TextLayer<PointDatum>({
-      id: "globe-port-labels",
-      data: portPoints,
-      visible: showLabels,
-      getPosition: (d) => [d.position[0], d.position[1], MARKER_ALTITUDE_M],
-      getText: (d) => d.iata,
-      getSize: 11,
-      getColor: [255, 255, 255, 240],
-      getBackgroundColor: [22, 27, 34, 210],
-      background: true,
-      backgroundPadding: [4, 2, 4, 2],
-      fontFamily: '"Inter", system-ui, monospace',
-      fontWeight: "bold",
-      fontSettings: { sdf: true },
-      outlineWidth: 2,
-      outlineColor: [0, 0, 0, 160],
-      getPixelOffset: [0, -16],
-      billboard: true,
-      characterSet: "auto",
-      pickable: true,
-      onHover: onPortHover,
-      onClick: ({ object }: { object?: PointDatum }): void => {
-        if (!object) return;
-        setPinned({
-          kind: "port",
-          data: object,
-          anchorLngLat: [object.position[0], object.position[1]],
-        });
-      },
-      parameters: { depthCompare: "always" as const },
-      extensions: [occlusionExt],
-      ...occlusionProps,
-    } as ConstructorParameters<typeof TextLayer<PointDatum>>[0] & EarthOcclusionExtensionProps),
+    // NOTE: IATA / UN-LOCODE labels are intentionally NOT a deck.gl
+    // TextLayer here. deck.gl 9's billboard TextLayer/IconLayer does not
+    // render under MapLibre's globe projection in interleaved mode (the
+    // identical layer renders fine on the flat mercator map). Labels are
+    // drawn instead as an HTML overlay — see `GlobeLabelsOverlay`, which
+    // projects each marker to screen space with the same front-face cull
+    // as the pinned card.
     // Live-mode "head" highlight: bright orange overlay on the most
     // recent flight in the live window. Drawn AFTER everything else so
     // it visually pops above the heatmap. Pickable so the user can

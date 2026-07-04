@@ -1,0 +1,184 @@
+// HTML overlay for airport / port IATA labels on the globe.
+//
+// Why not a deck.gl TextLayer? deck.gl 9's billboard TextLayer/IconLayer
+// does not render under MapLibre's globe projection in interleaved mode
+// (the same layer renders fine on the flat mercator map). Rather than
+// fight the GPU path, we project each label to screen space in JS —
+// exactly the `map.project()` + dot-product front-face cull the pinned
+// detail card already uses — and position a plain DOM pill there.
+//
+// Performance: the positions are written straight to `node.style` inside
+// the MapLibre `render` handler, bypassing React re-renders. MapLibre
+// only emits `render` while the camera is actually moving, so a static
+// globe costs nothing; a rotating one costs ~80 cheap style writes per
+// frame.
+
+import { useEffect, useMemo, useRef } from "react";
+import type { MapRef } from "react-map-gl/maplibre";
+import type { PointDatum } from "./globeLayerTypes";
+
+const DEG = Math.PI / 180;
+
+interface LabelPoint {
+  iata: string;
+  lng: number;
+  lat: number;
+  kind: "airport" | "port";
+  /** Visit weight — higher wins when two labels would overlap. */
+  weight: number;
+}
+
+interface PlacedBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface GlobeLabelsOverlayProps {
+  mapRef: React.RefObject<MapRef | null>;
+  /** Attaches the render listener only once MapLibre is confirmed ready. */
+  mapReady: boolean;
+  airports: PointDatum[];
+  ports: PointDatum[];
+  visible: boolean;
+}
+
+// Sky-blue for ports, near-white for airports — ties each label to its
+// marker colour (PORT_DOT_COLOR / AIRPORT_DOT_COLOR) without shouting.
+const AIRPORT_TEXT = "rgba(255,255,255,0.94)";
+const PORT_TEXT = "rgba(125,211,252,0.96)";
+
+export function GlobeLabelsOverlay({
+  mapRef,
+  mapReady,
+  airports,
+  ports,
+  visible,
+}: GlobeLabelsOverlayProps): JSX.Element | null {
+  const points = useMemo<LabelPoint[]>(() => {
+    if (!visible) return [];
+    const toPts = (arr: PointDatum[], kind: "airport" | "port"): LabelPoint[] =>
+      arr
+        .filter((p) => p.iata)
+        .map((p) => ({
+          iata: p.iata,
+          lng: p.position[0],
+          lat: p.position[1],
+          kind,
+          weight: p.size ?? 0,
+        }));
+    // Sort by weight desc so the busiest markers claim screen space first
+    // during collision culling; ties keep airports ahead of ports.
+    return [...toPts(airports, "airport"), ...toPts(ports, "port")].sort(
+      (a, b) => b.weight - a.weight
+    );
+  }, [airports, ports, visible]);
+
+  const nodeRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !mapReady || points.length === 0) return;
+
+    const update = (): void => {
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+      const camLng = center.lng * DEG;
+      const camLat = center.lat * DEG;
+      // Camera surface-normal direction (unit vector from Earth centre).
+      const camX = Math.cos(camLat) * Math.cos(camLng);
+      const camY = Math.cos(camLat) * Math.sin(camLng);
+      const camZ = Math.sin(camLat);
+      // Same horizon threshold heuristic the pinned-card cull uses.
+      const dist = 1 + 1.5 * Math.pow(2, -Math.max(0, zoom) * 0.7);
+      const cosHorizon = 1.0 / Math.max(1.001, dist);
+
+      // Greedy screen-space collision cull: points are pre-sorted by
+      // weight, so the busiest markers place first and crowd out the
+      // rest. Keeps the overview clean (no label soup) without a hard
+      // zoom gate — labels reveal naturally as zooming spreads them out.
+      const placed: PlacedBox[] = [];
+      const LABEL_H = 16;
+      const overlaps = (b: PlacedBox): boolean => {
+        for (let j = 0; j < placed.length; j++) {
+          const q = placed[j];
+          if (
+            b.x < q.x + q.w &&
+            b.x + b.w > q.x &&
+            b.y < q.y + q.h &&
+            b.y + b.h > q.y
+          ) {
+            return true;
+          }
+        }
+        return false;
+      };
+
+      for (let i = 0; i < points.length; i++) {
+        const node = nodeRefs.current[i];
+        if (!node) continue;
+        const pt = points[i];
+        const aLng = pt.lng * DEG;
+        const aLat = pt.lat * DEG;
+        const cosLat = Math.cos(aLat);
+        const dot =
+          camX * (cosLat * Math.cos(aLng)) +
+          camY * (cosLat * Math.sin(aLng)) +
+          camZ * Math.sin(aLat);
+        if (dot <= cosHorizon) {
+          if (node.style.display !== "none") node.style.display = "none";
+          continue;
+        }
+        const p = map.project([pt.lng, pt.lat]);
+        // Estimate the pill box (centred on x, sitting above the dot).
+        const w = pt.iata.length * 7 + 12;
+        const box: PlacedBox = { x: p.x - w / 2, y: p.y - 13 - LABEL_H, w, h: LABEL_H };
+        if (overlaps(box)) {
+          if (node.style.display !== "none") node.style.display = "none";
+          continue;
+        }
+        placed.push(box);
+        if (node.style.display === "none") node.style.display = "";
+        // Anchor the pill centred just above the marker dot.
+        node.style.transform = `translate(-50%, -100%) translate(${p.x}px, ${p.y - 13}px)`;
+      }
+    };
+
+    update();
+    map.on("render", update);
+    return () => {
+      map.off("render", update);
+    };
+  }, [mapRef, mapReady, points]);
+
+  if (!visible || points.length === 0) return null;
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
+      {points.map((pt, i) => (
+        <div
+          key={`${pt.kind}-${pt.iata}-${i}`}
+          ref={(el) => {
+            nodeRefs.current[i] = el;
+          }}
+          className="absolute left-0 top-0 whitespace-nowrap rounded font-semibold tabular-nums"
+          style={{
+            display: "none",
+            fontSize: "11px",
+            lineHeight: "14px",
+            letterSpacing: "0.02em",
+            padding: "1px 5px",
+            color: pt.kind === "port" ? PORT_TEXT : AIRPORT_TEXT,
+            background: "rgba(13,17,23,0.72)",
+            border: "1px solid rgba(255,255,255,0.10)",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.45)",
+            backdropFilter: "blur(2px)",
+          }}
+        >
+          {pt.iata}
+        </div>
+      ))}
+    </div>
+  );
+}

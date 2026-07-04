@@ -43,6 +43,22 @@
   "globe": {
     "routeFrequency": "Route Frequency",
     "autoRotation": "Auto-Rotation",
+    "panel": {
+      "title": "Map",
+      "layers": "Layers",
+      "labels": "Labels",
+      "dayNight": "Day / Night",
+      "placeLabels": "Place names",
+      "terrain": "Terrain",
+      "basemap": "Base map",
+      "appearance": "Customise",
+      "routes": "Routes",
+      "frequency": "Frequency",
+      "width": "Width",
+      "airports": "Airports",
+      "ports": "Ports",
+      "size": "Size"
+    },
     "timesFlown": "Flown {{count}}x",
     "flight_one": "flight",
     "flight_other": "flights",
