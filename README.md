@@ -12,19 +12,22 @@ It's a logbook, not a live tracker — you record trips manually, scan a boardin
 [![GHCR](https://img.shields.io/badge/container-ghcr.io-181717?logo=github)](https://github.com/Abrechen2/TravStats/pkgs/container/travstats)
 [![Docker Hub](https://img.shields.io/docker/pulls/abrechen2/travstats?logo=docker&label=Docker%20Hub)](https://hub.docker.com/r/abrechen2/travstats)
 [![CI](https://github.com/Abrechen2/TravStats/actions/workflows/ci.yml/badge.svg)](https://github.com/Abrechen2/TravStats/actions/workflows/ci.yml)
+[![Discord](https://img.shields.io/badge/Discord-join%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/CRnjB9f78t)
 
 </div>
 
 ---
 
 <p align="center">
-  <img src="docs/images/map-2d.png" alt="2D route map centred on Munich with 120 flights radiating across Europe" width="85%" />
+  <img src="docs/images/globe.png" alt="Interactive 3D globe with flights and cruises radiating from a Munich hub across Europe, Asia and the Atlantic" width="90%" />
+  <br />
+  <sub>Multi-domain 3D globe — flights and cruises on one map, colour-coded by frequency and status</sub>
 </p>
 
 ## Why TravStats
 
-Log every flight you take (cruises landing in v2), visualise your routes
-on interactive 2D and 3D maps, collect 101 achievements, and import flights
+Log every flight **and cruise** you take, visualise your routes on
+interactive 2D and 3D maps, collect 140+ achievements, and import flights
 from boarding passes (QR / PDF417 / OCR), confirmation emails, or
 Excel/CSV — all on your own server, no cloud, no telemetry.
 
@@ -35,9 +38,10 @@ AirLabs / Aviationstack / OpenSky, but everything you record lives in
 your own PostgreSQL. No accounts on someone else's servers, no analytics,
 no ads.
 
-- 🗺️ **Six map modes** — Routes, Heatmap, Hexagon, 3D columns, animated Trips, 3D Globe
-- 📊 **Year-over-year statistics** across flights, distance, seats, classes, routes
-- 🏆 **101 Battlefield-style achievements** across five categories
+- 🚢 **Flights *and* cruises** — import a cruise from email or PDF: the ship, every port of call and sea day; fly-and-cruise trips link both
+- 🗺️ **Multi-domain maps** — routes, heatmap, animated trips and a 3D globe for flights and cruises, colour-coded by frequency and status
+- 📊 **Cross-domain statistics** — distance, countries, active days, top airlines and cruise lines, with year and all-time views
+- 🏆 **140+ achievements** across flights, cruises and cross-domain — bronze to diamond
 - 🎫 **Boarding-pass scanner** — QR / barcode / OCR
 - 📧 **Email import** — plain text, HTML, Outlook `.msg`, `.eml`, with optional local LLM parsing via Ollama
 - 📑 **Excel/CSV round-trip import** — export, edit in Excel, re-import; rows with an `id` update existing flights
@@ -52,12 +56,20 @@ no ads.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/certificate.png" alt="Vintage passport-style flight certificate" /></td>
-    <td width="50%"><img src="docs/images/achievements.png" alt="Achievements gallery with 101 unlockables" /></td>
+    <td width="50%"><img src="docs/images/cruises.png" alt="Cruise list across Royal Caribbean, AIDA, MSC, TUI and more with dates, ports, status and price" /></td>
+    <td width="50%"><img src="docs/images/cruise-detail.png" alt="Cruise detail: a Norwegian-fjords itinerary with port timeline and sea-route map" /></td>
   </tr>
   <tr>
-    <td align="center"><sub>Downloadable PNG certificate with your totals</sub></td>
-    <td align="center"><sub>101 Battlefield-style achievements</sub></td>
+    <td align="center"><sub>Every cruise — ship, line, ports, sea days, status</sub></td>
+    <td align="center"><sub>Per-cruise itinerary with the reconstructed sea route</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/stats.png" alt="Cross-domain statistics: lifetime totals, countries, active days and a stacked activity-per-year chart" /></td>
+    <td width="50%"><img src="docs/images/achievements.png" alt="Achievements gallery with 143 unlockables across flights, cruises and cross-domain" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Cross-domain stats with year and all-time views</sub></td>
+    <td align="center"><sub>140+ achievements, bronze to diamond</sub></td>
   </tr>
 </table>
 
@@ -121,11 +133,11 @@ moving tags. Pick the one your platform defaults to.
 
 | Tag | Points to | Use for |
 |---|---|---|
-| `:latest`, `:stable` | Latest stable release (currently `1.2.1`) | Normal production. Auto-updates to the next promoted release. |
-| `:X.Y.Z` (e.g. `:1.2.1`) | Pinned immutable release | Reproducible installs, audit, regulated environments. |
-| `:rc-latest` | Newest Release Candidate (currently `1.3.0-rc.7`) | Beta testers — receive every fresh RC via `docker compose pull`. May include breaking schema changes across major bumps; an in-place backup is taken automatically on first start of a new major. |
+| `:latest`, `:stable` | Latest stable release (currently `2.2.0`) | Normal production. Auto-updates to the next promoted release. |
+| `:X.Y.Z` (e.g. `:2.2.0`) | Pinned immutable release | Reproducible installs, audit, regulated environments. |
+| `:rc-latest` | Newest Release Candidate (currently `2.2.1-rc.1`) | Beta testers — receive every fresh RC via `docker compose pull`. May include breaking schema changes across major bumps; an in-place backup is taken automatically on first start of a new major. |
 
-Specific RC tags (`:1.3.0-rc.1`, `:2.0.0-beta.8`) and dev builds live on
+Specific RC tags (`:2.2.1-rc.1`, `:2.0.0-beta.8`) and dev builds live on
 GHCR only — Docker Hub only mirrors the moving tags above plus pinned
 final releases.
 
@@ -167,8 +179,10 @@ scanning cover the full feature set.
 ## What's in a release
 
 See [CHANGELOG.md](CHANGELOG.md) for the full history and
-[ROADMAP.md](ROADMAP.md) for where things are heading (cruises module,
-CO₂ tracking, trip planner, PWA).
+[ROADMAP.md](ROADMAP.md) for where things are heading. A native iOS &
+Android app (boarding-pass scan, a 3D globe of your travels) is in the
+works — no release date yet; hotels & places-of-interest, CO₂ tracking
+and a trip planner are on the map too.
 
 ## Security
 
