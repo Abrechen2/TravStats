@@ -152,12 +152,8 @@ export function CruisesTab(): JSX.Element {
       <MapContainer3D
         flights={[]}
         visMode="routes"
-        onVisModeChange={() => {
-          /* cruise tab manages its own mode via useDashboardRoute */
-        }}
         extraLayers={extraLayers}
         showInternalCruises={showInternalCruises}
-        hideVisModeSelector
         cruisesOverride={visibleCruises}
       />
       <button
