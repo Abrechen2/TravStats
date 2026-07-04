@@ -68,9 +68,13 @@ ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER pg_restore -U $DB_USER
 # prod's admin_settings, so the mobile-app pairing URL (public_url) now points
 # at prod, not the RC — the app's QR would encode an address it can't reach.
 # Set RC_PUBLIC_URL to the RC's own public address (e.g. https://trav.abrechen2.de).
+#
+# Guarded with an IF EXISTS: older release lines (e.g. 2.2.x) predate the
+# public_url column, and a bare UPDATE would error out and abort the whole
+# staging run mid-way. Wrapping it in a DO block makes staging schema-agnostic.
 if [ -n "${RC_PUBLIC_URL:-}" ]; then
-  echo "==> Re-set RC public_url = $RC_PUBLIC_URL (prod clone wiped it)"
-  ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d $DB_NAME -c \"update admin_settings set public_url='$RC_PUBLIC_URL';\""
+  echo "==> Re-set RC public_url = $RC_PUBLIC_URL (if the column exists)"
+  ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d $DB_NAME -c \"DO \\\$\\\$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='admin_settings' AND column_name='public_url') THEN UPDATE admin_settings SET public_url='$RC_PUBLIC_URL'; ELSE RAISE NOTICE 'public_url column absent (pre-pairing schema) — skipped'; END IF; END \\\$\\\$;\""
 fi
 
 echo "==> [5/6] Restart RC-Server app (entrypoint runs prisma migrate deploy)"
