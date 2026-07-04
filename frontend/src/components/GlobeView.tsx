@@ -25,6 +25,7 @@ import {
   type Quartile,
 } from "./Globe/heatmapUtils";
 import { buildGlobeLayers } from "./Globe/buildGlobeLayers";
+import { nightCells as computeNightCells } from "./Globe/sunPosition";
 import { HoverTooltip, type HoverTooltipApi } from "./Globe/HoverTooltip";
 import { PinnedCard } from "./Globe/PinnedCard";
 import { PinnedCardBoundary } from "./Globe/PinnedCardBoundary";
@@ -302,6 +303,19 @@ export default function GlobeView({
     return STYLE_OPTIONS.some((s) => s.id === stored) ? (stored as StyleId) : "dark";
   });
   const [autoRotate, setAutoRotate] = useState(false);
+  // Day/night terminator overlay. `nightTick` recomputes the night grid on a
+  // slow interval so the shade drifts with real time (60 s is far finer than
+  // the terminator visibly moves at globe zoom).
+  const [showNight, setShowNight] = useState(true);
+  const [nightTick, setNightTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNightTick(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const nightCellsData = useMemo(
+    () => (showNight ? computeNightCells(new Date(nightTick)) : []),
+    [showNight, nightTick],
+  );
   // Tooltip lives in a leaf component (HoverTooltip) so onHover updates at
   // 60–120 Hz don't re-render the whole GlobeView tree. Imperative API only.
   const tooltipRef = useRef<HoverTooltipApi | null>(null);
@@ -1180,6 +1194,8 @@ export default function GlobeView({
         flyToArc,
         setPinned,
         flightRouteColor,
+        nightCells: nightCellsData,
+        showNight,
       }),
     [
       arcsData,
@@ -1198,6 +1214,8 @@ export default function GlobeView({
       occlusionExt,
       occlusionProps,
       flightRouteColor,
+      nightCellsData,
+      showNight,
     ]
   );
 
@@ -1345,6 +1363,16 @@ export default function GlobeView({
               className="cursor-pointer"
             />
             <span className="text-xs font-medium">🌍 {t("map:globe.autoRotation")}</span>
+          </label>
+          {/* Spike toggle — needs i18n keys (map:globe.dayNight) before it ships. */}
+          <label className="mt-2 flex cursor-pointer select-none items-center gap-2">
+            <input
+              type="checkbox"
+              checked={showNight}
+              onChange={(e) => setShowNight(e.target.checked)}
+              className="cursor-pointer"
+            />
+            <span className="text-xs font-medium">🌓 Tag / Nacht</span>
           </label>
           <button
             type="button"

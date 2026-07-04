@@ -7,13 +7,20 @@
 // caller wraps this in `useMemo` and supplies the same dependency list
 // it would have used inline; nothing in here depends on render scope.
 
-import { ColumnLayer, PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
+import {
+  ColumnLayer,
+  PathLayer,
+  ScatterplotLayer,
+  SolidPolygonLayer,
+  TextLayer,
+} from "@deck.gl/layers";
 import { PathStyleExtension, type PathStyleExtensionProps } from "@deck.gl/extensions";
 import type { Layer, PickingInfo } from "@deck.gl/core";
 import {
   EarthOcclusionExtension,
   type EarthOcclusionExtensionProps,
 } from "./EarthOcclusionExtension";
+import type { NightCell } from "./sunPosition";
 import type { Quartile } from "./heatmapUtils";
 import type {
   ArcDatum,
@@ -99,6 +106,10 @@ export interface BuildGlobeLayersOptions {
    * on the flat map.
    */
   flightRouteColor?: [number, number, number];
+  /** Fine night-side grid cells (from the day/night terminator). */
+  nightCells: NightCell[];
+  /** Toggle the day/night shade overlay. */
+  showNight: boolean;
 }
 
 export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
@@ -119,6 +130,8 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     onCruisePathHover,
     setPinned,
     flightRouteColor,
+    nightCells,
+    showNight,
   } = opts;
   // Pick the per-arc colour. With `flightRouteColor` set, every arc
   // gets that single tint; otherwise the per-arc quartile heatmap
@@ -130,6 +143,25 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
   };
 
   return [
+    // Day/night shade — a fine grid of small quads over the night
+    // hemisphere, alpha ramped from the terminator inward (soft
+    // twilight band). Rendered first so flight arcs / markers draw on
+    // top. depthCompare "always" avoids z-fighting the globe mesh; the
+    // occlusion extension clips far-side cells so the back doesn't
+    // bleed through the front.
+    new SolidPolygonLayer<NightCell>({
+      id: "globe-night-shade",
+      data: nightCells,
+      visible: showNight,
+      getPolygon: (d) => d.polygon,
+      filled: true,
+      getFillColor: (d) => [8, 14, 34, Math.round(d.shade * 150)],
+      parameters: { depthCompare: "always", depthWriteEnabled: false, cullMode: "none" },
+      pickable: false,
+      extensions: [occlusionExt],
+      ...occlusionProps,
+      updateTriggers: { getFillColor: [nightCells] },
+    }),
     // Flight arcs as PathLayer with pre-tessellated great-circle
     // waypoints. ArcLayer.greatCircle is broken on globe projection
     // (height computed in screen-space → invisible) — explicit
