@@ -60,7 +60,7 @@ describe("CrossDomainKpis", () => {
         achievements={null}
       />
     );
-    expect(screen.queryByText(/ggü/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/yearFilter\.vs/)).not.toBeInTheDocument();
   });
 
   it("renders delta badges when compare is enabled and year is set", () => {
@@ -74,7 +74,7 @@ describe("CrossDomainKpis", () => {
         achievements={null}
       />
     );
-    const ggBadges = screen.getAllByText(/ggü/);
+    const ggBadges = screen.getAllByText(/yearFilter\.vs/);
     expect(ggBadges.length).toBeGreaterThan(0);
   });
 
