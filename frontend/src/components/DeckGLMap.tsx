@@ -7,6 +7,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 import { applyMapOverlays } from "./Globe/mapOverlays";
 import { FlatMapControlPanel } from "./map/FlatMapControlPanel";
+import { FLAT_BASEMAPS, resolveFlatStyle, type FlatStyleId } from "./map/basemapStyles";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { MapMode } from "./MapContainer3D";
@@ -65,12 +66,11 @@ const INITIAL_VIEW_STATE: MapViewState = {
   bearing: 0,
 };
 
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
-
 // Persisted flat-map appearance preferences (own key, separate from the
 // globe's — the two maps have different marker units so they don't share
 // a blob). Survives reloads via localStorage.
 interface FlatAppearance {
+  styleId?: FlatStyleId;
   routeColor?: [number, number, number] | null;
   arcWidthScale?: number;
   markerColor?: [number, number, number] | null;
@@ -172,6 +172,9 @@ export function DeckGLMap({
   // panel) + style-level overlays, persisted so the look survives reloads.
   // `routeColor === null` keeps the frequency palette; a value tints every
   // arc. `markerColor === null` keeps the theme airport-dot colour.
+  const [styleId, setStyleId] = useState<FlatStyleId>(
+    () => loadFlatAppearance().styleId ?? "dark"
+  );
   const [routeColor, setRouteColor] = useState<[number, number, number] | null>(
     () => loadFlatAppearance().routeColor ?? null
   );
@@ -195,6 +198,7 @@ export function DeckGLMap({
   );
   useEffect(() => {
     saveFlatAppearance({
+      styleId,
       routeColor,
       arcWidthScale,
       markerColor,
@@ -204,6 +208,7 @@ export function DeckGLMap({
       showPlaceLabels,
     });
   }, [
+    styleId,
     routeColor,
     arcWidthScale,
     markerColor,
@@ -220,6 +225,32 @@ export function DeckGLMap({
     if (!map || !mapLoaded) return;
     applyMapOverlays(map, { showTerrain, showPlaceLabels });
   }, [mapLoaded, showTerrain, showPlaceLabels]);
+  // Mirror the toggles into refs so the once-mounted style.load handler
+  // below reads current values after a basemap swap wipes the overlays.
+  const showTerrainRef = useRef(showTerrain);
+  const showPlaceLabelsRef = useRef(showPlaceLabels);
+  useEffect(() => {
+    showTerrainRef.current = showTerrain;
+  }, [showTerrain]);
+  useEffect(() => {
+    showPlaceLabelsRef.current = showPlaceLabels;
+  }, [showPlaceLabels]);
+  // A basemap swap (styleId change) reloads the MapLibre style, wiping the
+  // hillshade source/layer and resetting symbol visibility — re-apply on
+  // every style.load from the latest toggle values.
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !mapLoaded) return;
+    const reapply = (): void =>
+      applyMapOverlays(map, {
+        showTerrain: showTerrainRef.current,
+        showPlaceLabels: showPlaceLabelsRef.current,
+      });
+    map.on("style.load", reapply);
+    return () => {
+      map.off("style.load", reapply);
+    };
+  }, [mapLoaded]);
   // Zoom is read from MapGL viewState on every move so layers can hide
   // labels / decimate symbols at low zoom. Updated via the move handler
   // to avoid an extra render path.
@@ -661,7 +692,7 @@ export function DeckGLMap({
         ref={mapRef}
         reuseMaps
         initialViewState={INITIAL_VIEW_STATE}
-        mapStyle={DARK_MAP_STYLE}
+        mapStyle={resolveFlatStyle(styleId)}
         style={{ position: "absolute", inset: "0" }}
         onLoad={() => setMapLoaded(true)}
         onMove={handleMapMove}
@@ -695,6 +726,9 @@ export function DeckGLMap({
           onShowPlaceLabelsChange={setShowPlaceLabels}
           showTerrain={showTerrain}
           onShowTerrainChange={setShowTerrain}
+          styleOptions={FLAT_BASEMAPS}
+          styleId={styleId}
+          onStyleChange={(id) => setStyleId(id as FlatStyleId)}
           routeColor={routeColor}
           onRouteColorChange={setRouteColor}
           arcWidthScale={arcWidthScale}

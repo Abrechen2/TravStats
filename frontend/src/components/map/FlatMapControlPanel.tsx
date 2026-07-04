@@ -25,6 +25,10 @@ export interface FlatMapControlPanelProps {
   showTerrain: boolean;
   onShowTerrainChange: (v: boolean) => void;
 
+  styleOptions: readonly { id: string; label: string }[];
+  styleId: string;
+  onStyleChange: (id: string) => void;
+
   routeColor: [number, number, number] | null;
   onRouteColorChange: (c: [number, number, number] | null) => void;
   arcWidthScale: number;
@@ -46,6 +50,9 @@ export function FlatMapControlPanel({
   onShowPlaceLabelsChange,
   showTerrain,
   onShowTerrainChange,
+  styleOptions,
+  styleId,
+  onStyleChange,
   routeColor,
   onRouteColorChange,
   arcWidthScale,
@@ -110,6 +117,33 @@ export function FlatMapControlPanel({
                 icon="⛰️"
                 label={t("map:globe.panel.terrain")}
               />
+            </div>
+          </div>
+
+          {/* Basemap */}
+          <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
+            <SectionLabel>{t("map:globe.panel.basemap")}</SectionLabel>
+            <div className="grid grid-cols-3 gap-1">
+              {styleOptions.map((opt) => {
+                const active = opt.id === styleId;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => onStyleChange(opt.id)}
+                    className="cursor-pointer rounded-md px-1.5 py-1 text-[11px] font-medium transition-colors"
+                    style={{
+                      background: active ? `rgba(${ACCENT},0.16)` : "rgba(255,255,255,0.04)",
+                      color: active ? `rgb(${ACCENT})` : "rgba(241,245,249,0.72)",
+                      border: active
+                        ? `1px solid rgba(${ACCENT},0.55)`
+                        : "1px solid rgba(255,255,255,0.06)",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
