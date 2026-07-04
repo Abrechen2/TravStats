@@ -68,6 +68,14 @@
         "label": "Public URL",
         "help": "Base URL used for invitation links and password-reset emails. Leave empty to auto-detect from the request URL."
       },
+      "publicUrl": {
+        "label": "Public URL (device pairing)",
+        "help": "Externally reachable address of this instance, used for the device-pairing QR code so the mobile app can connect from outside the LAN. Leave empty to auto-detect from the request URL."
+      },
+      "lanUrl": {
+        "label": "Internal URL (LAN)",
+        "help": "Optional local address of this instance for devices on the same network (e.g. http://192.168.1.10:3010)."
+      },
       "maxUsers": {
         "label": "Maximum users",
         "help": "Hard cap on the number of accounts. Recommended 1–10 for small groups."

@@ -41,6 +41,12 @@ export const sanitizedApiTokenShape = {
   expiresAt: z.string().datetime().nullable(),
   revokedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
+  // Device-pairing metadata. Non-null only for tokens minted via the
+  // mobile pairing flow — lets the web distinguish app devices from
+  // agent/script tokens and pick a platform icon. `hash`/`lookupHash`
+  // remain excluded.
+  deviceId: z.string().nullable(),
+  platform: z.string().nullable(),
 } as const;
 
 export const sanitizedApiTokenSchema = z.object(sanitizedApiTokenShape);
