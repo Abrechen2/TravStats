@@ -59,11 +59,11 @@ export interface GlobeControlPanelProps {
 
 const clamp255 = (n: number): number => Math.max(0, Math.min(255, n));
 
-function rgbToHex([r, g, b]: [number, number, number]): string {
+export function rgbToHex([r, g, b]: [number, number, number]): string {
   return "#" + [r, g, b].map((c) => clamp255(Math.round(c)).toString(16).padStart(2, "0")).join("");
 }
 
-function hexToRgb(hex: string): [number, number, number] {
+export function hexToRgb(hex: string): [number, number, number] {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
   if (!m) return [255, 255, 255];
   const int = parseInt(m[1], 16);
@@ -71,7 +71,7 @@ function hexToRgb(hex: string): [number, number, number] {
 }
 
 /** Small labelled colour-swatch input backed by a native <input type=color>. */
-function ColorField({
+export function ColorField({
   label,
   value,
   onChange,
@@ -100,13 +100,13 @@ function ColorField({
   );
 }
 
-const ACCENT = "240,169,71"; // amber — the app's primary action colour
-const PANEL_BG = "rgba(13,17,23,0.85)";
-const HAIRLINE = "rgba(255,255,255,0.08)";
-const BORDER = "rgba(255,255,255,0.12)";
-const TEXT = "rgba(241,245,249,0.95)";
+export const ACCENT = "240,169,71"; // amber — the app's primary action colour
+export const PANEL_BG = "rgba(13,17,23,0.85)";
+export const HAIRLINE = "rgba(255,255,255,0.08)";
+export const BORDER = "rgba(255,255,255,0.12)";
+export const TEXT = "rgba(241,245,249,0.95)";
 
-function SectionLabel({ children }: { children: React.ReactNode }): JSX.Element {
+export function SectionLabel({ children }: { children: React.ReactNode }): JSX.Element {
   return (
     <div
       className="mb-1.5 text-[10px] font-semibold uppercase"
@@ -117,7 +117,7 @@ function SectionLabel({ children }: { children: React.ReactNode }): JSX.Element 
   );
 }
 
-function Toggle({
+export function Toggle({
   checked,
   onChange,
   icon,
