@@ -1,0 +1,23 @@
+{
+  "name": "travstats-discord-setup",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Idempotent Discord server setup bot for TravStats",
+  "scripts": {
+    "setup": "tsx src/index.ts setup",
+    "setup:dry": "tsx src/index.ts setup --dry-run",
+    "serve": "tsx src/index.ts serve",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest --run"
+  },
+  "dependencies": {
+    "discord.js": "^14.26.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}
