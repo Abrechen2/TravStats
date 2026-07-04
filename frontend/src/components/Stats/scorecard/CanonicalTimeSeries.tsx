@@ -10,7 +10,10 @@ interface CanonicalTimeSeriesProps {
 
 // The single canonical flights-per-period chart. Zero-baseline bars (HIG/M3:
 // bar heights stay proportional). Replaces the redundant yearly+monthly pair.
-export default function CanonicalTimeSeries({ series, title }: CanonicalTimeSeriesProps): JSX.Element {
+export default function CanonicalTimeSeries({
+  series,
+  title,
+}: CanonicalTimeSeriesProps): JSX.Element {
   const { t } = useTranslation(["stats"]);
   const hasData = series.some((p) => p.count > 0);
 
@@ -26,8 +29,17 @@ export default function CanonicalTimeSeries({ series, title }: CanonicalTimeSeri
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={series}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-            <XAxis dataKey="period" stroke="var(--text-muted)" tick={{ fill: "var(--text-muted)", fontSize: 11 }} />
-            <YAxis allowDecimals={false} domain={[0, "auto"]} stroke="var(--text-muted)" tick={{ fill: "var(--text-muted)", fontSize: 11 }} />
+            <XAxis
+              dataKey="period"
+              stroke="var(--text-muted)"
+              tick={{ fill: "var(--text-muted)", fontSize: 11 }}
+            />
+            <YAxis
+              allowDecimals={false}
+              domain={[0, "auto"]}
+              stroke="var(--text-muted)"
+              tick={{ fill: "var(--text-muted)", fontSize: 11 }}
+            />
             <Tooltip
               contentStyle={{
                 background: "var(--bg-elevated)",
@@ -36,11 +48,19 @@ export default function CanonicalTimeSeries({ series, title }: CanonicalTimeSeri
                 color: "var(--text-primary)",
               }}
             />
-            <Bar dataKey="count" fill="var(--accent)" radius={[4, 4, 0, 0]} name={t("stats:timeBasedAnalytics.flightsLabel")} />
+            <Bar
+              dataKey="count"
+              fill="var(--accent)"
+              radius={[4, 4, 0, 0]}
+              name={t("stats:timeBasedAnalytics.flightsLabel")}
+            />
           </BarChart>
         </ResponsiveContainer>
       ) : (
-        <div className="flex items-center justify-center h-[300px]" style={{ color: "var(--text-muted)" }}>
+        <div
+          className="flex items-center justify-center h-[300px]"
+          style={{ color: "var(--text-muted)" }}
+        >
           <p>{t("stats:timeRange.noData")}</p>
         </div>
       )}

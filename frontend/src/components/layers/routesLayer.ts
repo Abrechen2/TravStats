@@ -39,9 +39,7 @@ type AirportProps = GeoJSONFeature["properties"]["departureAirport"];
 // coordinates (depLat/depLon are non-nullable, so the flight saves) but a
 // null IATA (depIata is nullable), so they vanished from the map entirely.
 function airportId(airport: AirportProps, coord: [number, number]): string {
-  return (
-    airport.iata || airport.icao || `@${coord[0].toFixed(3)},${coord[1].toFixed(3)}`
-  );
+  return airport.iata || airport.icao || `@${coord[0].toFixed(3)},${coord[1].toFixed(3)}`;
 }
 
 // Human-readable airport label for the map marker / aggregation map. Falls
@@ -103,10 +101,7 @@ function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord>
     if (!coords) continue;
     // Identify each airport by IATA → ICAO → coordinate key so ICAO-only /
     // code-less airfields still aggregate instead of being dropped (#120).
-    const key = routeKey(
-      airportId(dep, coords.depCoord),
-      airportId(arr, coords.arrCoord)
-    );
+    const key = routeKey(airportId(dep, coords.depCoord), airportId(arr, coords.arrCoord));
     const isScheduled = f.properties.status === "scheduled";
     const isHistorical = f.properties.status === "historical";
     const existing = records.get(key);
@@ -245,7 +240,7 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
   const airportMap = new Map<string, PointDatum>();
   const bumpLastVisit = (
     cur: string | undefined,
-    candidate: string | undefined,
+    candidate: string | undefined
   ): string | undefined => {
     if (!candidate) return cur;
     if (!cur || candidate > cur) return candidate;

@@ -148,10 +148,10 @@ export function DashboardControlsBar({
         onClick={onFilterOpen}
         aria-pressed={filterActive}
         style={{
-          background: filterActive ? "var(--map-active-bg, rgba(240,169,71,0.14))" : "var(--bg-surface)",
-          border: filterActive
-            ? "1px solid var(--accent)"
-            : "1px solid var(--color-border)",
+          background: filterActive
+            ? "var(--map-active-bg, rgba(240,169,71,0.14))"
+            : "var(--bg-surface)",
+          border: filterActive ? "1px solid var(--accent)" : "1px solid var(--color-border)",
           padding: "6px 12px",
           borderRadius: "10px",
           color: filterActive ? "var(--accent)" : "var(--text-primary)",

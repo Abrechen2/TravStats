@@ -50,7 +50,7 @@ const PORT_LABEL_VISIBILITY_MIN_ZOOM = 4;
  */
 export function createCruisePortsLayer(
   cruises: Cruise[],
-  zoom: number = PORT_LABEL_VISIBILITY_MIN_ZOOM,
+  zoom: number = PORT_LABEL_VISIBILITY_MIN_ZOOM
 ): Layer[] | null {
   const byPort = new Map<number, PortDatum>();
   const recordVisit = (port: Port, date: string | undefined): void => {

@@ -494,12 +494,7 @@ export function DeckGLMap({
     ];
     const cruisePortsAbove: Layer[] = ports ?? [];
 
-    return [
-      ...cruisePathsBelow,
-      ...base,
-      ...cruisePortsAbove,
-      ...(extraLayers ?? []),
-    ];
+    return [...cruisePathsBelow, ...base, ...cruisePortsAbove, ...(extraLayers ?? [])];
   }, [
     visMode,
     flights,

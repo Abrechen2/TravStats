@@ -340,7 +340,9 @@ describe("createRoutesLayers", () => {
       ...mixedFlown,
       properties: { ...mixedFlown.properties, id: "mix-sch-1", status: "scheduled" },
     };
-    const layers = createRoutesLayers(buildRouteData([flown, scheduledOnly, mixedFlown, mixedScheduled], 1));
+    const layers = createRoutesLayers(
+      buildRouteData([flown, scheduledOnly, mixedFlown, mixedScheduled], 1)
+    );
     const regular = layers.find((l) => l.id === "routes-arc");
     const pureScheduled = layers.find((l) => l.id === "routes-arc-scheduled");
     const mixed = layers.find((l) => l.id === "routes-arc-upcoming");

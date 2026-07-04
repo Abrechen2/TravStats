@@ -35,7 +35,10 @@ export default function CountryDistributionCard(): JSX.Element {
       <div className="space-y-1.5">
         {countries.map((row) => (
           <div key={row.country} className="flex items-center gap-3">
-            <div className="flex-1 rounded-full h-5 overflow-hidden" style={{ background: "var(--bg-elevated)" }}>
+            <div
+              className="flex-1 rounded-full h-5 overflow-hidden"
+              style={{ background: "var(--bg-elevated)" }}
+            >
               <div
                 className="h-full rounded-full transition-all"
                 style={{ width: `${(row.count / maxCount) * 100}%`, background: "var(--accent)" }}

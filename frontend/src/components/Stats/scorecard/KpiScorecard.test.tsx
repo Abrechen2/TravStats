@@ -4,8 +4,24 @@ import KpiScorecard from "./KpiScorecard";
 import type { ScorecardTileVM } from "./ScorecardTile";
 
 const tiles: ScorecardTileVM[] = [
-  { key: "flights", label: "Flüge", value: "42", takeaway: "letzte 12 Monate", points: [1, 2, 3], current: 42, previous: 30 },
-  { key: "distance", label: "Distanz", value: "88.000 km", takeaway: "letzte 12 Monate", points: [3, 2, 1], current: 88000, previous: 90000 },
+  {
+    key: "flights",
+    label: "Flüge",
+    value: "42",
+    takeaway: "letzte 12 Monate",
+    points: [1, 2, 3],
+    current: 42,
+    previous: 30,
+  },
+  {
+    key: "distance",
+    label: "Distanz",
+    value: "88.000 km",
+    takeaway: "letzte 12 Monate",
+    points: [3, 2, 1],
+    current: 88000,
+    previous: 90000,
+  },
 ];
 
 describe("KpiScorecard", () => {

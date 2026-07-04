@@ -12,7 +12,11 @@ interface TrendDeltaProps {
 // previous window by design). Only a unit-agnostic percentage is shown; the
 // raw absolute diff is never rendered since consumers pass mixed units
 // (km/mi, minutes/hours, currency) that TrendDelta cannot format correctly.
-export default function TrendDelta({ current, previous, compareLabel }: TrendDeltaProps): JSX.Element | null {
+export default function TrendDelta({
+  current,
+  previous,
+  compareLabel,
+}: TrendDeltaProps): JSX.Element | null {
   if (previous <= 0) {
     return null;
   }
@@ -21,8 +25,13 @@ export default function TrendDelta({ current, previous, compareLabel }: TrendDel
   const sign = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
   const arrow = sign === "up" ? "↑" : sign === "down" ? "↓" : "→";
   const bg =
-    sign === "up" ? "rgba(63, 185, 80, 0.18)" : sign === "down" ? "rgba(248, 81, 73, 0.18)" : "var(--bg-elevated)";
-  const fg = sign === "up" ? "var(--success)" : sign === "down" ? "var(--danger)" : "var(--text-muted)";
+    sign === "up"
+      ? "rgba(63, 185, 80, 0.18)"
+      : sign === "down"
+        ? "rgba(248, 81, 73, 0.18)"
+        : "var(--bg-elevated)";
+  const fg =
+    sign === "up" ? "var(--success)" : sign === "down" ? "var(--danger)" : "var(--text-muted)";
 
   return (
     <span

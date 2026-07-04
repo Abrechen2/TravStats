@@ -32,11 +32,14 @@ describe("PreviewModal", () => {
   it("renders one row per input plus the table header", () => {
     render(
       <PreviewModal
-        rows={[row(), row({ sourceRowIndex: 1, flightNumber: "AA1234", flightNumberNormalised: "AA1234" })]}
+        rows={[
+          row(),
+          row({ sourceRowIndex: 1, flightNumber: "AA1234", flightNumberNormalised: "AA1234" }),
+        ]}
         summary={{ ok: 2, problems: 0, duplicates: 0, unresolvable: 0 }}
         onCommit={vi.fn().mockResolvedValue({ committed: 2, failedChunks: 0 })}
         onClose={vi.fn()}
-      />,
+      />
     );
     expect(screen.getAllByRole("row")).toHaveLength(3);
   });
@@ -48,7 +51,7 @@ describe("PreviewModal", () => {
         summary={{ ok: 0, problems: 1, duplicates: 0, unresolvable: 1 }}
         onCommit={vi.fn()}
         onClose={vi.fn()}
-      />,
+      />
     );
     const cb = screen.getByRole("checkbox");
     expect(cb).not.toBeChecked();
@@ -73,7 +76,7 @@ describe("PreviewModal", () => {
         summary={{ ok: 0, problems: 1, duplicates: 0, unresolvable: 0 }}
         onCommit={vi.fn().mockResolvedValue({ committed: 1, failedChunks: 0 })}
         onClose={vi.fn()}
-      />,
+      />
     );
     const cb = screen.getByRole("checkbox");
     expect(cb).toBeChecked();
@@ -89,7 +92,7 @@ describe("PreviewModal", () => {
         summary={{ ok: 0, problems: 0, duplicates: 1, unresolvable: 0 }}
         onCommit={vi.fn().mockResolvedValue({ committed: 1, failedChunks: 0 })}
         onClose={vi.fn()}
-      />,
+      />
     );
     const cb = screen.getByRole("checkbox");
     expect(cb).toBeChecked();
@@ -104,7 +107,7 @@ describe("PreviewModal", () => {
         summary={{ ok: 1, problems: 0, duplicates: 0, unresolvable: 0 }}
         onCommit={onCommit}
         onClose={vi.fn()}
-      />,
+      />
     );
     fireEvent.click(screen.getByText("settings:import.preview.commit"));
     await waitFor(() => {
@@ -121,7 +124,7 @@ describe("PreviewModal", () => {
         summary={{ ok: 1, problems: 0, duplicates: 1, unresolvable: 0 }}
         onCommit={onCommit}
         onClose={vi.fn()}
-      />,
+      />
     );
     const checkboxes = screen.getAllByRole("checkbox");
     fireEvent.click(checkboxes[1]);
@@ -137,7 +140,7 @@ describe("PreviewModal", () => {
         summary={{ ok: 1, problems: 0, duplicates: 0, unresolvable: 0 }}
         onCommit={onCommit}
         onClose={vi.fn()}
-      />,
+      />
     );
     fireEvent.click(screen.getByText("settings:import.preview.commit"));
     await waitFor(() => {

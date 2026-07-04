@@ -227,7 +227,6 @@ export default function SettingsPage(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, activeSection]);
 
-
   return (
     <PageTransition>
       <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>

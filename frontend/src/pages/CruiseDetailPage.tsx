@@ -139,9 +139,7 @@ export default function CruiseDetailPage(): JSX.Element {
                 {cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? "—"}
               </p>
               {cruise.routeName && (
-                <p className="text-sm font-medium text-[var(--text-primary)]">
-                  {cruise.routeName}
-                </p>
+                <p className="text-sm font-medium text-[var(--text-primary)]">{cruise.routeName}</p>
               )}
             </div>
           </div>

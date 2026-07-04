@@ -185,10 +185,7 @@ export default function TripDetailPage(): JSX.Element {
             role="dialog"
             aria-modal="true"
           >
-            <h2
-              className="text-base font-semibold"
-              style={{ color: "var(--text-primary)" }}
-            >
+            <h2 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
               {t("trips:deleteTripConfirm", { name: trip.name })}
             </h2>
             <div className="flex justify-end gap-2">
@@ -299,12 +296,13 @@ function TripHero({ trip, locale, t, onEdit, onDelete }: TripHeroProps): JSX.Ele
         </div>
         <div className="flex flex-wrap gap-3 mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
           {dateRange && <span>{dateRange}</span>}
-          {nights !== null && nights > 0 && (
-            <span>· {t("trips:nights", { count: nights })}</span>
-          )}
+          {nights !== null && nights > 0 && <span>· {t("trips:nights", { count: nights })}</span>}
           {trip.destinationLabel && <span>· 📍 {trip.destinationLabel}</span>}
           {trip.companions.length > 0 && (
-            <span>· 👥 {trip.companions.slice(0, 3).join(", ")}{trip.companions.length > 3 ? " …" : ""}</span>
+            <span>
+              · 👥 {trip.companions.slice(0, 3).join(", ")}
+              {trip.companions.length > 3 ? " …" : ""}
+            </span>
           )}
         </div>
       </div>
@@ -609,10 +607,7 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
       {empty ? (
         <Placeholder text={t("trips:detail.timeline.noEvents")} />
       ) : (
-        <ol
-          className="relative pl-7"
-          style={{ listStyle: "none", margin: 0 }}
-        >
+        <ol className="relative pl-7" style={{ listStyle: "none", margin: 0 }}>
           <span
             aria-hidden
             className="absolute top-3 bottom-3 w-px"
@@ -795,9 +790,10 @@ function StopCard({
 }): JSX.Element {
   const s = ev.stop;
   const icon = STOP_DOMAIN_ICON[s.domain ?? "other"] ?? "📍";
-  const subtitle = s.lat != null && s.lon != null
-    ? `${s.lat.toFixed(3)}, ${s.lon.toFixed(3)}`
-    : s.description ?? null;
+  const subtitle =
+    s.lat != null && s.lon != null
+      ? `${s.lat.toFixed(3)}, ${s.lon.toFixed(3)}`
+      : (s.description ?? null);
   return (
     <EventCard
       icon={icon}
@@ -903,7 +899,9 @@ function LogisticsTab({
           className="rounded-xl"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
-          <PanelHeader>{t("trips:detail.logistics.flights")} ({flights.length})</PanelHeader>
+          <PanelHeader>
+            {t("trips:detail.logistics.flights")} ({flights.length})
+          </PanelHeader>
           <table className="w-full text-sm">
             <thead>
               <tr
@@ -917,22 +915,18 @@ function LogisticsTab({
             </thead>
             <tbody>
               {flights.map((f) => (
-                <tr
-                  key={f.id}
-                  style={{ borderTop: "1px solid var(--color-border)" }}
-                >
-                  <td className="px-4 py-2.5 whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
+                <tr key={f.id} style={{ borderTop: "1px solid var(--color-border)" }}>
+                  <td
+                    className="px-4 py-2.5 whitespace-nowrap"
+                    style={{ color: "var(--text-muted)" }}
+                  >
                     {f.departureTime ? new Date(f.departureTime).toLocaleDateString() : "—"}
                   </td>
                   <td className="px-4 py-2.5 font-mono">
                     {f.depIata ?? "???"} → {f.arrIata ?? "???"}
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <Link
-                      to="/flights"
-                      className="text-xs"
-                      style={{ color: "var(--accent)" }}
-                    >
+                    <Link to="/flights" className="text-xs" style={{ color: "var(--accent)" }}>
                       öffnen
                     </Link>
                   </td>
@@ -948,7 +942,9 @@ function LogisticsTab({
           className="rounded-xl"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
-          <PanelHeader>{t("trips:detail.logistics.cruises")} ({cruises.length})</PanelHeader>
+          <PanelHeader>
+            {t("trips:detail.logistics.cruises")} ({cruises.length})
+          </PanelHeader>
           <table className="w-full text-sm">
             <thead>
               <tr
@@ -963,7 +959,10 @@ function LogisticsTab({
             <tbody>
               {cruises.map((c) => (
                 <tr key={c.id} style={{ borderTop: "1px solid var(--color-border)" }}>
-                  <td className="px-4 py-2.5 whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
+                  <td
+                    className="px-4 py-2.5 whitespace-nowrap"
+                    style={{ color: "var(--text-muted)" }}
+                  >
                     {c.startDate ? new Date(c.startDate).toLocaleDateString() : "—"}
                   </td>
                   <td className="px-4 py-2.5">{c.cruiseLine ?? "Kreuzfahrt"}</td>
@@ -1014,9 +1013,7 @@ function LogisticsTab({
                 <tr key={b.id} style={{ borderTop: "1px solid var(--color-border)" }}>
                   <td className="px-4 py-2.5 font-mono">{b.pnr ?? "—"}</td>
                   <td className="px-4 py-2.5 text-right">
-                    {b.price != null
-                      ? `${b.currency ?? "EUR"} ${b.price.toFixed(2)}`
-                      : "—"}
+                    {b.price != null ? `${b.currency ?? "EUR"} ${b.price.toFixed(2)}` : "—"}
                   </td>
                 </tr>
               ))}
@@ -1049,9 +1046,7 @@ function TripStatsRow({
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
       <StatTile value={flightCount} label={t("trips:detail.stats.flights")} />
-      {cruiseEnabled && (
-        <StatTile value={cruiseCount} label={t("trips:detail.stats.cruises")} />
-      )}
+      {cruiseEnabled && <StatTile value={cruiseCount} label={t("trips:detail.stats.cruises")} />}
       <StatTile value={trip.countries.length} label={t("trips:detail.stats.countries")} />
       <StatTile value={trip.companions.length} label={t("trips:detail.stats.companions")} />
       <StatTile
@@ -1103,10 +1098,7 @@ function SummaryPanel({
         typeof err === "object" && err !== null && "response" in err
           ? ((err as { response?: { status?: number } }).response?.status ?? 0)
           : 0;
-      addToast(
-        "error",
-        status === 503 ? t("trips:summary.unavailable") : t("trips:summary.error"),
-      );
+      addToast("error", status === 503 ? t("trips:summary.unavailable") : t("trips:summary.error"));
     } finally {
       setGenerating(false);
     }
@@ -1117,8 +1109,7 @@ function SummaryPanel({
       <div
         className="rounded-xl p-4 flex items-center gap-3"
         style={{
-          background:
-            "linear-gradient(135deg, rgba(240,169,71,0.06), rgba(74,166,176,0.04))",
+          background: "linear-gradient(135deg, rgba(240,169,71,0.06), rgba(74,166,176,0.04))",
           border: "1px dashed var(--color-border)",
         }}
       >

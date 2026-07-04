@@ -45,7 +45,9 @@ export default function Sparkline({
       aria-hidden="true"
       style={{ display: "block", overflow: "visible" }}
     >
-      {filled && <polygon points={area} fill="var(--accent-soft, rgba(240,169,71,0.18))" stroke="none" />}
+      {filled && (
+        <polygon points={area} fill="var(--accent-soft, rgba(240,169,71,0.18))" stroke="none" />
+      )}
       <polyline
         points={line}
         fill="none"

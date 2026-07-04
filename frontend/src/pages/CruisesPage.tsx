@@ -184,9 +184,7 @@ export default function CruisesPage(): JSX.Element {
           </div>
         )}
 
-        {showAdd && (
-          <CruiseAddChooser onClose={() => setShowAdd(false)} onSaved={reload} />
-        )}
+        {showAdd && <CruiseAddChooser onClose={() => setShowAdd(false)} onSaved={reload} />}
       </div>
     </div>
   );
