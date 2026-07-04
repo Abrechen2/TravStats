@@ -88,10 +88,13 @@ computed on read, not stored.
 **`LodgingStay`** — the event (mirrors `Cruise`):
 `id`, `lodgingId→Lodging(cascade)`, `userId` (denormalized for query/ownership/stats),
 `tripId String?→Trip(SetNull)`, `bookingId String?→Booking(SetNull)`,
-`checkIn DateTime`, `checkOut DateTime`, `status String @default("completed")`
+`checkIn DateTime`, `checkOut DateTime` (**stored as hotel-local time**, like
+flight airport-local times — do not normalize to UTC),
+`status String @default("completed")`
 (`planned`|`completed`|`cancelled`), `roomNumber?`, `roomCategory?`,
 `board?` (`none`|`breakfast`|`half`|`full`|`all_inclusive`),
 `pricePerNight Float?`, `currency String? @default("EUR")`, `totalPrice Float?`,
+`isAwardStay Boolean @default(false)` (paid with points/miles — for loyalty stats),
 `ratingRoom/ratingBreakfast/ratingService/ratingOverall Float?` (1–5, half ok),
 `roomAmenities String[]`, `bookingReference?`, `membershipId String?→LodgingMembership(SetNull)`,
 `receiptUrl?` (attached confirmation, like `Flight.receiptUrl`), `companions String[]`,
@@ -214,21 +217,69 @@ by date with flights/cruises. Mirrors the direct-FK approach cruises use
 
 ## 9. Stats & achievements
 
-- **Stats:** total lodgings, total stays, **total nights**, nights/year,
-  avg nights/stay, longest stay, total/avg spend (currency-aware), by
-  chain/country; feeds the cross-domain scorecard (nights + spend + countries).
-- **Achievements** (partD): first hotel; 5/10/25/50 hotels; 10/50/100/365 nights;
-  3/5/10 chains; all star tiers stayed (1★–5★); chain loyalty (N stays same
-  chain); N countries with a stay; longest single stay; all board types;
-  (camping tiers later). Fire-and-forget on stay POST/PATCH.
+`utils/lodgingStats.ts::calculateLodgingStats` builds the stats bag (mirrors
+`cruiseStats.ts`), consumed by `GET /stats/lodging`, the dashboard, the
+cross-domain scorecard, and the achievement checks. **Cancelled stays are
+excluded** (like `status != 'cancelled'` for cruises).
+
+### 9.1 Statistics catalog
+- **Volume:** #lodgings, #stays, **total nights** (headline), nights/year +
+  /month, avg nights/stay, longest stay, #chains, #cities, #countries.
+- **Ratings:** overall avg; avg room/breakfast/service separately; best/worst
+  hotel; rating distribution.
+- **Spend:** total **per currency** (no cross-currency sum without conversion —
+  see §17), avg/night, most/least expensive stay, spend per year/chain/country,
+  award-vs-cash nights.
+- **Loyalty/chains:** nights per chain (ranking), favorite chain, memberships +
+  tier, chain-vs-independent ratio.
+- **Geo:** countries (→ cross-domain "countries visited"), cities,
+  most-visited hotel/city, map coverage.
+- **Time:** seasonality (by month), weekend-vs-weekday, upcoming/planned stays.
+- **Type (camping-ready):** hotel-vs-campsite nights.
+- **Cross-domain (`achievementStats.ts` union):** nights + spend into the
+  scorecard; countries union (flight+cruise+lodging); **"Fly & Stay"** (a trip
+  with a flight + a stay); **"Grand Tour"** (flight + cruise + stay in one trip).
+
+### 9.2 Achievements catalog (`data/achievementSeeds/partD.ts`, bronze→diamond)
+Extend the `AchievementDefinition.domain` union with `'lodging'`. Fire-and-forget
+`checkAndUpdateAchievements` on stay POST/PATCH; **pair stay DELETEs with
+achievement cleanup** (engine is monotonic — see the orphaned-achievements
+lesson). Requirement types feed a stats bag in `achievementStats.ts`
+(`lodgingsCount`, `lodgingNights`, `lodgingChainsUnique`, `lodgingCountries`,
+`lodgingChainLoyalty`, `lodgingStarTiersAll`, `lodgingSpendPerNight`,
+`lodgingAwardNights`, `lodgingSameHotelRepeat`, `flyAndStay`, `grandTour`, …).
+
+- **Volume:** First Check-in; Hotel Collector 5/10/25/50/100; Frequent Guest
+  10/25/50/100 stays; Night Owl 10/50/100/**365 ("a year of nights")**/1000
+  nights; Long Stay 7/14/30 nights in one stay.
+- **Chains & loyalty:** Chain Explorer 3/5/10/20; Brand Loyalty 5/10/25 stays
+  same chain; Collector (stayed at all major chains — like "Carnival
+  Collector"); Status Seeker (reach Gold/Platinum in a program); Independent Fan.
+- **Quality:** Five-Star Night; Star Collector (stayed 1★–5★ all tiers); Critic
+  (rate N stays); Breakfast Gourmet (N × breakfast 5★).
+- **Geography:** Border Crosser 3/5/10/25 countries; Continental (N continents);
+  City Hopper (N cities).
+- **Price/patterns:** Budget (stay under X/night); Luxury (over Y/night); Points
+  Pro (N award nights); Returner (same hotel N×); New Year's Guest (check-in
+  spanning Dec 31); Four Seasons (a stay in each season).
+- **Board/amenities:** All-Inclusive; Spa Day (hotel with spa); Amenity
+  Collector.
+- **Cross-domain:** Fly & Stay (flight + stay in a trip); Grand Tour (flight +
+  cruise + stay).
+- **Camping (later):** First Campsite; camping-nights tiers; "Under the Stars".
+
+Target ~40–50 achievements (cruise has ~30).
 
 ## 10. Import pipeline (Phase B)
 
 Parse (LLM) → normalize (+`missing[]`) → resolve (chain fuzzy-match; **hotel
 dedup** vs the user's existing lodgings by name+city; geocode address) → hydrate
 for preview → user reviews/edits → confirm → persist: **create-or-reuse `Lodging`**
-+ create `LodgingStay`. Persist is an explicit user action, not automatic (as with
-cruise). The 7 `test-samples/Hotel Buchungen/*.msg` are the regression fixtures
++ create `LodgingStay`. **Stay-level dedup:** re-importing the same confirmation
+must not double the stay — match on lodging + check-in date + booking reference
+(like the boarding-pass dedup) and offer update-vs-skip. Persist is an explicit
+user action, not automatic (as with cruise). The 7
+`test-samples/Hotel Buchungen/*.msg` are the regression fixtures
 (multiple chains + independents, two platform formats); the existing `.msg`→text
 extraction handles the binary format.
 
@@ -288,7 +339,17 @@ keyed enrichers (Amadeus/Foursquare); loyalty-tier progress ("N nights to next
 tier"); spend analytics dashboard; **Immich photo linking per stay** (once the
 Immich feature ships — cross-feature synergy).
 
-## 17. Open questions
-None blocking. Confirmed: domain `lodging` (generic models + `type`), 1–5 star
-ratings, standalone-or-trip stays, hotel dedup on import, OSM geocoding free
+## 17. Open questions / considerations
+Confirmed: domain `lodging` (generic models + `type`), 1–5 star ratings,
+standalone-or-trip stays, hotel + stay dedup on import, OSM geocoding free
 default, POI/camping deferred, phased A/B/C.
+
+Decide during Phase A:
+- **Currency aggregation:** total spend across mixed currencies (EUR + CHF …).
+  v1 default = **per-currency breakdown** (no silent summing). A base-currency
+  setting with optional FX conversion is a later add.
+- **Nights across a year/month boundary:** a 30.12→02.01 stay must **allocate
+  nights to the correct year/month** in `nights/year` stats (not just count by
+  check-in year).
+- **Rating scale storage:** `Float` to allow half-stars (4.5); UI is a
+  5-star picker with half steps.
