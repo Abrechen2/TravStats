@@ -54,8 +54,15 @@ ssh_node "pct pull $CT_PROD $DUMP $DUMP && pct push $CT_RC $DUMP $DUMP"
 echo "==> [3/6] Stop RC-Server app ($APP_RC_CONTAINER) to release DB connections"
 ssh_node "pct exec $CT_RC -- sh -c 'docker stop $APP_RC_CONTAINER'"
 
-echo "==> [4/6] Restore into RC-Server DB (drop + recreate objects)"
-ssh_node "pct exec $CT_RC -- sh -c 'docker cp $DUMP $DB_RC_CONTAINER:$DUMP && docker exec $DB_RC_CONTAINER pg_restore -U $DB_USER -d $DB_NAME --clean --if-exists --no-owner $DUMP'"
+echo "==> [4/6] Recreate RC-Server DB + restore (PostGIS-safe: restore into an EMPTY DB)"
+# --clean/--if-exists into an existing PostGIS DB fights the extension-managed
+# objects (spatial_ref_sys etc.). Dropping and recreating the DB and restoring
+# into it empty lets the dump recreate the extension + data cleanly.
+ssh_node "pct exec $CT_RC -- docker cp $DUMP $DB_RC_CONTAINER:$DUMP"
+ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d postgres -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='$DB_NAME' AND pid<>pg_backend_pid();\""
+ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d postgres -c \"DROP DATABASE IF EXISTS $DB_NAME;\""
+ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d postgres -c \"CREATE DATABASE $DB_NAME OWNER $DB_USER;\""
+ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER pg_restore -U $DB_USER -d $DB_NAME --no-owner $DUMP"
 
 echo "==> [5/6] Restart RC-Server app (entrypoint runs prisma migrate deploy)"
 ssh_node "pct exec $CT_RC -- sh -c 'docker start $APP_RC_CONTAINER'"

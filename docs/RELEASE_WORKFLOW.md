@@ -90,6 +90,11 @@ and `cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run`.
 2. Deploy `:X.Y.Z-rc.N` to CT106; the container entrypoint runs
    `prisma migrate deploy`, lifting the prod data additively onto the new schema.
 3. UAT against realistic data. **If a migration breaks here, it did NOT break prod.**
+4. *(optional)* Add a known UAT login without using real prod credentials by running
+   the compiled demo seed inside the RC container:
+   `docker exec -w /app/backend <rc-app> node dist/seedDevAdmin.js` → `admin:admin123`
+   with demo data (idempotent). The RC's `DATABASE_URL` already points at the RC DB.
+   Note the prod image has no `tsx`, so run the compiled `dist/*.js`, not `npm run seed:*`.
 
 **[4] Prod** — deploy the *same* validated `:rc.N` image to CT100, bump the
 `APP_VERSION` env alongside it, run the health check (`/health`), do final UAT.
