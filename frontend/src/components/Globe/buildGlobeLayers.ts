@@ -110,6 +110,8 @@ export interface BuildGlobeLayersOptions {
   nightCells: NightCell[];
   /** Toggle the day/night shade overlay. */
   showNight: boolean;
+  /** Toggle airport/port IATA labels. */
+  showLabels: boolean;
 }
 
 export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
@@ -132,6 +134,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     flightRouteColor,
     nightCells,
     showNight,
+    showLabels,
   } = opts;
   // Pick the per-arc colour. With `flightRouteColor` set, every arc
   // gets that single tint; otherwise the per-arc quartile heatmap
@@ -364,6 +367,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     new TextLayer<PointDatum>({
       id: "globe-airport-labels",
       data: airportPoints,
+      visible: showLabels,
       getPosition: (d) => [d.position[0], d.position[1], MARKER_ALTITUDE_M],
       getText: (d) => d.iata,
       getSize: 11,
@@ -396,6 +400,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     new TextLayer<PointDatum>({
       id: "globe-port-labels",
       data: portPoints,
+      visible: showLabels,
       getPosition: (d) => [d.position[0], d.position[1], MARKER_ALTITUDE_M],
       getText: (d) => d.iata,
       getSize: 11,

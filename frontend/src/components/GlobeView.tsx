@@ -307,6 +307,7 @@ export default function GlobeView({
   // slow interval so the shade drifts with real time (60 s is far finer than
   // the terminator visibly moves at globe zoom).
   const [showNight, setShowNight] = useState(true);
+  const [showLabels, setShowLabels] = useState(true);
   const [nightTick, setNightTick] = useState(() => Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setNightTick(Date.now()), 60_000);
@@ -1196,6 +1197,7 @@ export default function GlobeView({
         flightRouteColor,
         nightCells: nightCellsData,
         showNight,
+        showLabels,
       }),
     [
       arcsData,
@@ -1216,6 +1218,7 @@ export default function GlobeView({
       flightRouteColor,
       nightCellsData,
       showNight,
+      showLabels,
     ]
   );
 
@@ -1355,6 +1358,7 @@ export default function GlobeView({
             fontFamily: "'Inter', sans-serif",
           }}
         >
+          <div className="mb-2 text-[11px] font-semibold opacity-90">🗺️ Darstellung</div>
           <label className="flex cursor-pointer select-none items-center gap-2">
             <input
               type="checkbox"
@@ -1373,6 +1377,16 @@ export default function GlobeView({
               className="cursor-pointer"
             />
             <span className="text-xs font-medium">🌓 Tag / Nacht</span>
+          </label>
+          {/* Spike toggle — needs i18n keys (map:globe.labels) before it ships. */}
+          <label className="mt-2 flex cursor-pointer select-none items-center gap-2">
+            <input
+              type="checkbox"
+              checked={showLabels}
+              onChange={(e) => setShowLabels(e.target.checked)}
+              className="cursor-pointer"
+            />
+            <span className="text-xs font-medium">🏷️ Labels</span>
           </label>
           <button
             type="button"
