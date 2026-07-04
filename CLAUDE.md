@@ -108,6 +108,14 @@ Use the `deploy` skill. Runs fully automatically up to the RC deploy:
 5. Writes `backend/VERSION` + `CHANGELOG.md` and commits.
 6. Builds the RC Docker image, pushes to GHCR, deploys the RC tag to
    prod, health check and cleanup. Stops and waits for promotion.
+7. **Announce the RC in Discord** — after the RC is live, post to
+   `#beta-channel`:
+   ```bash
+   cd tools/discord-setup && npm run announce rc <RC_TAG>   # e.g. 2.3.0-rc.1
+   ```
+   Reads the matching `CHANGELOG.md` entry automatically (the `-rc.N`
+   suffix is stripped for the lookup). Needs `tools/discord-setup/.env`
+   (bot token + guild id) — see `tools/discord-setup/README.md`.
 
 ### `/release` — GitHub release (after promotion only)
 Use the `release` skill. Requires the final tags (`:X.Y.Z` / `:latest`
@@ -115,6 +123,11 @@ Use the `release` skill. Requires the final tags (`:X.Y.Z` / `:latest`
 skill refuses to run otherwise. Aggregates every changelog entry since
 the last GitHub release, creates a git tag, publishes a GitHub release
 with `--latest`. No new deploy — the code is already running.
+After the GitHub release is published, **announce it in Discord** — post
+to `#announcements`:
+```bash
+cd tools/discord-setup && npm run announce release <X.Y.Z>   # e.g. 2.3.0
+```
 
 ## Build Checks (MANDATORY before `/deploy`)
 
@@ -313,7 +326,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **TravStats** (4569 symbols, 11686 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **TravStats** (4686 symbols, 11888 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
