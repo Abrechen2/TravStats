@@ -28,7 +28,7 @@ export function buildRulesEmbed(): EmbedBuilder {
     .setColor(0xf0a947)
     .addFields(
       { name: "Regeln (DE)", value: RULES_DE },
-      { name: "Eskalation", value: "VerWarnung → Timeout → Kick → Ban." },
+      { name: "Eskalation", value: "Warnung → Timeout → Kick → Ban." },
       { name: "Beta", value: "Reagiere mit ✈️, um die **Beta-Tester**-Channels freizuschalten." },
       { name: "Rules (EN)", value: RULES_EN },
       { name: "Escalation", value: "Warning → Timeout → Kick → Ban. React with ✈️ to unlock the Beta-Tester channels." },
