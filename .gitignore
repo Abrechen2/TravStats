@@ -131,3 +131,7 @@ ProdLogs/
 /.tmp/
 .gitnexus
 brand-smoke-shots/
+
+# Playwright test artifacts (never commit)
+/playwright-report/
+/test-results/
