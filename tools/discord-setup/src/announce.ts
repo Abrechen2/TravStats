@@ -4,16 +4,45 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { log } from "./log.js";
 
-export type AnnounceType = "rc" | "release";
+// The three announce lanes mirror the release tiers (see docs/RELEASE_WORKFLOW.md):
+//   beta    — forward dev line, `-beta.N` builds on the Beta server (CT106)
+//   rc      — prod candidates, `-rc.N` validated on the RC Server (CT107)
+//   release — final `X.Y.Z`, promoted to prod (CT100)
+export type AnnounceType = "beta" | "rc" | "release";
 
 const REPO_URL = "https://github.com/abrechen2/travstats";
-const RC_COLOR = 0x7bc47f;
-const RELEASE_COLOR = 0xf0a947;
 const MAX_NOTES = 3500; // Discord embed description caps at 4096
 
-const CHANNEL_FOR: Record<AnnounceType, string> = {
-  rc: "beta-channel",
-  release: "announcements",
+interface AnnounceStyle {
+  readonly channel: string;
+  readonly color: number;
+  readonly title: (v: string) => string;
+  readonly intro: string;
+}
+
+const STYLE: Record<AnnounceType, AnnounceStyle> = {
+  beta: {
+    channel: "beta-channel",
+    color: 0x4aa6b0,
+    title: (v) => `🧪 Beta ${v}`,
+    intro:
+      "A new beta build from the forward dev line is live on the Beta server. " +
+      "Try it and share feedback in **#beta-feedback**.",
+  },
+  rc: {
+    channel: "release-candidate",
+    color: 0x7bc47f,
+    title: (v) => `🚦 Release Candidate ${v}`,
+    intro:
+      "A release candidate has been validated against prod data and is lined up " +
+      "to ship. Final testing — report anything in **#beta-feedback**.",
+  },
+  release: {
+    channel: "announcements",
+    color: 0xf0a947,
+    title: (v) => `🚀 TravStats ${v} released`,
+    intro: "A new version is out.",
+  },
 };
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -30,7 +59,7 @@ export function readRepoChangelog(): string | null {
 }
 
 export function channelForType(type: AnnounceType): string {
-  return CHANNEL_FOR[type];
+  return STYLE[type].channel;
 }
 
 export function buildAnnounceEmbed(
@@ -38,18 +67,15 @@ export function buildAnnounceEmbed(
   version: string,
   notes: string | null,
 ): EmbedBuilder {
-  const isRc = type === "rc";
-  const intro = isRc
-    ? "A new release candidate is live for testing. Please try it and report issues in **#beta-feedback**."
-    : "A new version is out.";
+  const style = STYLE[type];
   const body = notes && notes.trim().length > 0 ? notes.trim() : "See the changelog for details.";
   const truncated = body.length > MAX_NOTES ? `${body.slice(0, MAX_NOTES)}\n…` : body;
   const releaseUrl = `${REPO_URL}/releases/tag/v${version}`;
 
   return new EmbedBuilder()
-    .setTitle(isRc ? `🧪 Release Candidate ${version}` : `🚀 TravStats ${version} released`)
-    .setColor(isRc ? RC_COLOR : RELEASE_COLOR)
-    .setDescription(`${intro}\n\n${truncated}\n\n🔗 ${releaseUrl}`)
+    .setTitle(style.title(version))
+    .setColor(style.color)
+    .setDescription(`${style.intro}\n\n${truncated}\n\n🔗 ${releaseUrl}`)
     .setFooter({ text: `travstats-release-${version}` });
 }
 

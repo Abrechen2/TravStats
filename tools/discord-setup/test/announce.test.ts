@@ -2,14 +2,23 @@ import { describe, it, expect } from "vitest";
 import { buildAnnounceEmbed, channelForType } from "../src/announce.js";
 
 describe("channelForType", () => {
-  it("routes rc to beta-channel and release to announcements", () => {
-    expect(channelForType("rc")).toBe("beta-channel");
+  it("routes beta → beta-channel, rc → release-candidate, release → announcements", () => {
+    expect(channelForType("beta")).toBe("beta-channel");
+    expect(channelForType("rc")).toBe("release-candidate");
     expect(channelForType("release")).toBe("announcements");
   });
 });
 
 describe("buildAnnounceEmbed", () => {
-  it("builds an RC embed with the testing intro and green color", () => {
+  it("builds a beta embed with the beta title and teal color", () => {
+    const data = buildAnnounceEmbed("beta", "2.3.0-beta.1", "- Feature A").toJSON();
+    expect(data.title).toContain("Beta 2.3.0-beta.1");
+    expect(data.color).toBe(0x4aa6b0);
+    expect(data.description).toContain("beta-feedback");
+    expect(data.description).toContain("releases/tag/v2.3.0-beta.1");
+  });
+
+  it("builds an RC embed with the candidate title and green color", () => {
     const data = buildAnnounceEmbed("rc", "2.3.0-rc.1", "- Feature A").toJSON();
     expect(data.title).toContain("Release Candidate 2.3.0-rc.1");
     expect(data.color).toBe(0x7bc47f);
