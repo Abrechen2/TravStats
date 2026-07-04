@@ -1,5 +1,7 @@
-import { Client } from "discord.js";
+import { Client, ForumChannel } from "discord.js";
 import { log } from "./log.js";
+
+const MAX_FORUM_THREADS = 15;
 
 /**
  * Format a single fetched message as one readable line. Falls back to a
@@ -12,9 +14,39 @@ export function formatMessage(authorTag: string, iso: string, content: string): 
 }
 
 /**
- * On-demand reader: log in, fetch the most recent messages of one text
- * channel (by name) in the target guild, print them oldest-first, then
- * disconnect. Not a persistent connection — one shot per invocation.
+ * Read a forum channel: forums hold their posts as threads, so enumerate the
+ * threads (active + archived, newest first, capped) and print each thread's
+ * messages up to perThreadLimit.
+ */
+async function readForum(forum: ForumChannel, perThreadLimit: number): Promise<void> {
+  const active = await forum.threads.fetchActive();
+  const archived = await forum.threads.fetchArchived().catch(() => null);
+  const threads = [
+    ...active.threads.values(),
+    ...(archived ? [...archived.threads.values()] : []),
+  ];
+  if (threads.length === 0) {
+    log(`#${forum.name} has no posts yet.`);
+    return;
+  }
+
+  const shown = threads.slice(0, MAX_FORUM_THREADS);
+  const suffix = threads.length > MAX_FORUM_THREADS ? ` of ${threads.length}` : "";
+  log(`=== ${shown.length}${suffix} post(s) in forum #${forum.name} ===`);
+  for (const thread of shown) {
+    log(`\n--- post: "${thread.name}" ---`);
+    const messages = await thread.messages.fetch({ limit: perThreadLimit });
+    for (const message of [...messages.values()].reverse()) {
+      log(formatMessage(message.author.tag, message.createdAt.toISOString(), message.content));
+    }
+  }
+}
+
+/**
+ * On-demand reader: log in, fetch the most recent messages of one channel
+ * (text channel by name, or all posts of a forum channel) in the target
+ * guild, print them oldest-first, then disconnect. Not a persistent
+ * connection — one shot per invocation.
  */
 export async function runRead(
   client: Client,
@@ -34,10 +66,12 @@ export async function runRead(
         log(`Channel #${channelName} not found in the guild.`);
         return;
       }
+      if (channel instanceof ForumChannel) {
+        await readForum(channel, limit);
+        return;
+      }
       if (!channel.isTextBased()) {
-        log(
-          `#${channelName} is not a readable text channel (forums hold their posts in threads, not directly).`,
-        );
+        log(`#${channelName} is not a readable text or forum channel.`);
         return;
       }
 
@@ -48,8 +82,7 @@ export async function runRead(
       }
 
       log(`=== last ${messages.size} message(s) in #${channelName} (oldest first) ===`);
-      const ordered = [...messages.values()].reverse();
-      for (const message of ordered) {
+      for (const message of [...messages.values()].reverse()) {
         log(formatMessage(message.author.tag, message.createdAt.toISOString(), message.content));
       }
     } catch (err) {
