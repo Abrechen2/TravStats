@@ -607,20 +607,68 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
       {empty ? (
         <Placeholder text={t("trips:detail.timeline.noEvents")} />
       ) : (
-        <ol className="relative pl-7" style={{ listStyle: "none", margin: 0 }}>
-          <span
-            aria-hidden
-            className="absolute top-3 bottom-3 w-px"
-            style={{ left: 10, background: "var(--color-border)" }}
-          />
-          {events.map((ev) => (
-            <li key={ev.id} className="relative mb-3">
+        <ol
+          className="relative pl-7"
+          style={{ listStyle: "none", margin: 0 }}
+        >
+          {events.map((ev, i) => {
+            const isFirst = i === 0;
+            const isLast = i === events.length - 1;
+            return (
+            <li
+              key={ev.id}
+              className="relative"
+              style={{ marginBottom: isLast ? 0 : 12 }}
+            >
+              {/*
+                Connector line drawn as two half-segments per item so it runs
+                exactly dot-to-dot with no stub above the first or below the
+                last dot (regardless of card height). `bottom: -12` bridges the
+                12px marginBottom gap to the next item's top edge.
+              */}
+              {!isFirst && (
+                <span
+                  aria-hidden
+                  className="absolute"
+                  style={{
+                    left: -18,
+                    top: 0,
+                    bottom: "50%",
+                    width: 2,
+                    transform: "translateX(-50%)",
+                    background: "var(--color-border)",
+                  }}
+                />
+              )}
+              {!isLast && (
+                <span
+                  aria-hidden
+                  className="absolute"
+                  style={{
+                    left: -18,
+                    top: "50%",
+                    bottom: -12,
+                    width: 2,
+                    transform: "translateX(-50%)",
+                    background: "var(--color-border)",
+                  }}
+                />
+              )}
+              {/*
+                Dot: filled, vertically centered on the card (the li tightly
+                wraps its card, so top:50% is the card's centre) and horizontally
+                centered on the connector line. The base-coloured ring masks the
+                line where it passes behind the dot.
+              */}
               <span
                 aria-hidden
-                className="absolute -left-[26px] top-4 w-3 h-3 rounded-full"
+                className="absolute w-3 h-3 rounded-full"
                 style={{
-                  border: `2px solid ${dotColor(ev)}`,
-                  background: "var(--bg-base)",
+                  left: -18,
+                  top: "50%",
+                  transform: "translate(-50%, -50%)",
+                  background: dotColor(ev),
+                  boxShadow: "0 0 0 3px var(--bg-base)",
                 }}
               />
               {ev.kind === "flight" && <FlightCard ev={ev} />}
@@ -640,7 +688,8 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
                 />
               )}
             </li>
-          ))}
+            );
+          })}
         </ol>
       )}
 
