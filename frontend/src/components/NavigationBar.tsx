@@ -267,7 +267,7 @@ export default function NavigationBar(): JSX.Element {
                   Star
                 </a>
                 <a
-                  href="https://discord.gg/xQkkQT2WU"
+                  href="https://discord.gg/CRnjB9f78t"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-colors duration-150"
@@ -429,7 +429,7 @@ export default function NavigationBar(): JSX.Element {
                 Star
               </a>
               <a
-                href="https://discord.gg/xQkkQT2WU"
+                href="https://discord.gg/CRnjB9f78t"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-1 flex-1 py-1 rounded text-[11px] font-medium transition-colors duration-150"
