@@ -36,9 +36,7 @@ import CruiseStatsSection from "../components/Stats/CruiseStatsSection";
 import OverviewTab from "../components/Stats/Overview/OverviewTab";
 import KpiScorecard from "../components/Stats/scorecard/KpiScorecard";
 import type { ScorecardTileVM } from "../components/Stats/scorecard/ScorecardTile";
-import TimeRangeControl, {
-  type WindowKind,
-} from "../components/Stats/scorecard/TimeRangeControl";
+import TimeRangeControl, { type WindowKind } from "../components/Stats/scorecard/TimeRangeControl";
 import CanonicalTimeSeries from "../components/Stats/scorecard/CanonicalTimeSeries";
 import type { TimeseriesResponse } from "../lib/api/types";
 import { formatDistance } from "../lib/units";
@@ -206,9 +204,7 @@ export default function AdvancedStatsPage(): JSX.Element {
       // Historical flights have unreliable times (often 12:00 placeholders) but contribute
       // accurately to airport/distance/airline/route counts, and `calculateDuration` falls
       // back to a great-circle estimate for DATE_ONLY rows so duration aggregates stay sane.
-      setFlights(
-        allFlights.filter((f) => f.status === "flown" || f.status === "historical")
-      );
+      setFlights(allFlights.filter((f) => f.status === "flown" || f.status === "historical"));
 
       const [fun, business, unique, airports, seat, achievements] = await Promise.all([
         statsApi.getFunStats().catch((err) => {
@@ -596,9 +592,7 @@ export default function AdvancedStatsPage(): JSX.Element {
 
         <div className="container mx-auto px-6 py-8">
           {/* Gesamt — pure cross-domain overview, no flight deep-dives. */}
-          {filter === "all" && (
-            <OverviewTab flights={flights} achievements={achievementSummary} />
-          )}
+          {filter === "all" && <OverviewTab flights={flights} achievements={achievementSummary} />}
 
           {/* Cruise tab renders its own stats section. */}
           {filter === "cruise" && <CruiseStatsSection />}

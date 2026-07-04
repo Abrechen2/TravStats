@@ -105,10 +105,7 @@ export function DashboardLayout({
         }}
       />
       {addingDomain === "cruise" && (
-        <CruiseAddChooser
-          onClose={() => setAddingDomain(null)}
-          onSaved={() => onDataChanged?.()}
-        />
+        <CruiseAddChooser onClose={() => setAddingDomain(null)} onSaved={() => onDataChanged?.()} />
       )}
       {/* POI: deliberately not wired — domain is disabled until V2. */}
     </div>

@@ -28,12 +28,7 @@ import { buildGlobeLayers } from "./Globe/buildGlobeLayers";
 import { HoverTooltip, type HoverTooltipApi } from "./Globe/HoverTooltip";
 import { PinnedCard } from "./Globe/PinnedCard";
 import { PinnedCardBoundary } from "./Globe/PinnedCardBoundary";
-import type {
-  ArcDatum,
-  CruisePathDatum,
-  GlobePinned,
-  PointDatum,
-} from "./Globe/globeLayerTypes";
+import type { ArcDatum, CruisePathDatum, GlobePinned, PointDatum } from "./Globe/globeLayerTypes";
 import type { StyleSpecification } from "maplibre-gl";
 import type { GeoJSONFeature } from "../types";
 import type { Cruise } from "../types/cruise";
@@ -334,9 +329,7 @@ export default function GlobeView({
   // only need to scale them down enough that the bow doesn't dominate
   // the screen at street level.
   const altitudeFactor =
-    Math.round(
-      Math.max(0.25, Math.min(1, 1 - 0.18 * Math.max(0, mapZoom - 1))) * 20
-    ) / 20;
+    Math.round(Math.max(0.25, Math.min(1, 1 - 0.18 * Math.max(0, mapZoom - 1))) * 20) / 20;
 
   // EarthOcclusionExtension props are static — the extension reads the
   // live camera (lng / lat / zoom) from `viewport` inside its draw()
@@ -376,8 +369,7 @@ export default function GlobeView({
     if (liteMode === "on") return true;
     if (liteMode === "off") return false;
     return (
-      flights.length >= LITE_AUTO_ARC_THRESHOLD ||
-      cruises.length >= LITE_AUTO_CRUISE_THRESHOLD
+      flights.length >= LITE_AUTO_ARC_THRESHOLD || cruises.length >= LITE_AUTO_CRUISE_THRESHOLD
     );
   }, [liteMode, flights.length, cruises.length]);
   // First-run coachmark: shown on the first ever globe visit, dismissed
@@ -730,10 +722,7 @@ export default function GlobeView({
 
   const airportPoints = useMemo<PointDatum[]>(() => {
     const seen = new Map<string, PointDatum>();
-    const bumpLastVisit = (
-      cur: PointDatum,
-      candidate: string | undefined,
-    ): string | undefined => {
+    const bumpLastVisit = (cur: PointDatum, candidate: string | undefined): string | undefined => {
       if (!candidate) return cur.lastVisit;
       if (!cur.lastVisit || candidate > cur.lastVisit) return candidate;
       return cur.lastVisit;
@@ -845,9 +834,7 @@ export default function GlobeView({
           Math.sin(aLat),
         ];
         const dotProd =
-          camDir[0] * anchorDir[0] +
-          camDir[1] * anchorDir[1] +
-          camDir[2] * anchorDir[2];
+          camDir[0] * anchorDir[0] + camDir[1] * anchorDir[1] + camDir[2] * anchorDir[2];
         // cameraDistanceFromZoom heuristic, mirrored from the shader
         const dist = 1 + 1.5 * Math.pow(2, -Math.max(0, zoom) * 0.7);
         const cosHorizon = 1.0 / Math.max(1.001, dist);
@@ -995,9 +982,7 @@ export default function GlobeView({
         const cur = seen.get(port.id);
         if (cur) {
           const nextLast =
-            visitIso && (!cur.lastVisit || visitIso > cur.lastVisit)
-              ? visitIso
-              : cur.lastVisit;
+            visitIso && (!cur.lastVisit || visitIso > cur.lastVisit) ? visitIso : cur.lastVisit;
           seen.set(port.id, { ...cur, size: cur.size + 1, lastVisit: nextLast });
         } else {
           seen.set(port.id, {
@@ -1300,10 +1285,7 @@ export default function GlobeView({
           user scrubs. Lives top-right because the top-left is owned by
           the dashboard's Aktivität sidebar (would otherwise overlap). */}
       {(liveStats.flights > 0 || liveStats.cruises > 0) && (
-        <div
-          className="absolute top-4 right-4 z-10"
-          style={{ pointerEvents: "auto" }}
-        >
+        <div className="absolute top-4 right-4 z-10" style={{ pointerEvents: "auto" }}>
           <div
             className="rounded-md p-3 text-xs"
             style={{
@@ -1352,7 +1334,8 @@ export default function GlobeView({
                 </div>
               )}
               {liveStats.topAirport && (
-                <div className="mt-1.5 border-t pt-1 text-[10px] opacity-80"
+                <div
+                  className="mt-1.5 border-t pt-1 text-[10px] opacity-80"
                   style={{ borderColor: "rgba(255,255,255,0.12)" }}
                 >
                   <span className="opacity-75">{t("map:globe.stats.top")}:</span>{" "}
@@ -1421,7 +1404,8 @@ export default function GlobeView({
               }}
             >
               <option value="auto">
-                {t("map:globe.performanceAuto")} ({lite ? t("map:globe.performanceOn") : t("map:globe.performanceOff")})
+                {t("map:globe.performanceAuto")} (
+                {lite ? t("map:globe.performanceOn") : t("map:globe.performanceOff")})
               </option>
               <option value="on">{t("map:globe.performanceOn")}</option>
               <option value="off">{t("map:globe.performanceOff")}</option>
@@ -1576,9 +1560,7 @@ export default function GlobeView({
               boxShadow: "0 12px 36px rgba(0,0,0,0.6)",
             }}
           >
-            <div className="mb-2 text-base font-semibold">
-              {t("map:globe.coachmark.title")}
-            </div>
+            <div className="mb-2 text-base font-semibold">{t("map:globe.coachmark.title")}</div>
             <ul className="mb-4 space-y-1.5 text-[12px] opacity-90">
               <li>🖱️ {t("map:globe.coachmark.pan")}</li>
               <li>🔍 {t("map:globe.coachmark.zoom")}</li>
@@ -1632,7 +1614,6 @@ export default function GlobeView({
       {/* Hover tooltip — leaf component with imperative show/hide so onHover
           updates at 60–120 Hz don't re-render the parent GlobeView tree. */}
       <HoverTooltip ref={tooltipRef} />
-
     </div>
   );
 }

@@ -16,7 +16,7 @@ export interface CommitResult {
 
 export async function commitPreviewRows(
   rows: PreviewRowEnriched[],
-  dataSource: "imported_fr24" | "imported_generic_csv",
+  dataSource: "imported_fr24" | "imported_generic_csv"
 ): Promise<CommitResult> {
   const failures: CommitChunkFailure[] = [];
   let committed = 0;

@@ -34,9 +34,7 @@ describe("CruiseStopsEditor", () => {
   });
 
   it("renders an existing stop date in the date input", () => {
-    const stops = [
-      { portId: null, dayNumber: 1, isAtSea: true, date: "2027-10-08T00:00:00.000Z" },
-    ];
+    const stops = [{ portId: null, dayNumber: 1, isAtSea: true, date: "2027-10-08T00:00:00.000Z" }];
     render(<CruiseStopsEditor stops={stops} onChange={vi.fn()} />);
     expect(screen.getByLabelText("stops.date")).toHaveValue("2027-10-08");
   });

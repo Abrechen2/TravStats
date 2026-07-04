@@ -56,8 +56,7 @@ const COLOR_PALETTE = [
 //      UTC instant keeps the round-trip stable and timezone-neutral.
 const toDateInput = (iso: string | null | undefined): string => (iso ? iso.slice(0, 10) : "");
 
-const fromDateInput = (date: string): string | null =>
-  date ? `${date}T00:00:00.000Z` : null;
+const fromDateInput = (date: string): string | null => (date ? `${date}T00:00:00.000Z` : null);
 
 const splitCsv = (v: string): string[] =>
   v

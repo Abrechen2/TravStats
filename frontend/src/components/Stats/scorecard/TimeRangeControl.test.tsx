@@ -23,6 +23,9 @@ describe("TimeRangeControl", () => {
 
   it("marks the active option as pressed", () => {
     render(<TimeRangeControl value="year" onChange={() => {}} />);
-    expect(screen.getByText("stats:timeRange.year").closest("button")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("stats:timeRange.year").closest("button")).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
   });
 });

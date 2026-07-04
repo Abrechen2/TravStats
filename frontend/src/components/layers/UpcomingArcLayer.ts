@@ -40,10 +40,7 @@ export interface UpcomingArcLayerExtraProps {
  * the injected GLSL source (not a uniform) — same approach as the
  * previous hardcoded constant, just parameterised per-instance.
  */
-export class UpcomingArcLayer<DataT = unknown> extends ArcLayer<
-  DataT,
-  UpcomingArcLayerExtraProps
-> {
+export class UpcomingArcLayer<DataT = unknown> extends ArcLayer<DataT, UpcomingArcLayerExtraProps> {
   static layerName = "UpcomingArcLayer";
   static defaultProps = {
     ...ArcLayer.defaultProps,

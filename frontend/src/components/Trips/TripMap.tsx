@@ -90,9 +90,9 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
   const mapRef = useRef<MapRef | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [projection, setProjection] = useState<Projection>("mercator");
-  const [cruiseGeometry, setCruiseGeometry] = useState<
-    Map<string, CruiseRouteFeatureCollection>
-  >(() => new Map());
+  const [cruiseGeometry, setCruiseGeometry] = useState<Map<string, CruiseRouteFeatureCollection>>(
+    () => new Map()
+  );
   const didFit = useRef(false);
 
   const cruiseIds = useMemo(() => (trip.cruises ?? []).map((c) => c.id), [trip.cruises]);

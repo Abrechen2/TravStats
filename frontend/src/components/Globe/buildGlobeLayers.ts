@@ -15,16 +15,8 @@ import {
   type EarthOcclusionExtensionProps,
 } from "./EarthOcclusionExtension";
 import type { Quartile } from "./heatmapUtils";
-import type {
-  ArcDatum,
-  CruisePathDatum,
-  GlobePinned,
-  PointDatum,
-} from "./globeLayerTypes";
-import {
-  FLIGHT_STATUS_PAST_COLOR,
-  FLIGHT_STATUS_UPCOMING_COLOR,
-} from "../../lib/statusColors";
+import type { ArcDatum, CruisePathDatum, GlobePinned, PointDatum } from "./globeLayerTypes";
+import { FLIGHT_STATUS_PAST_COLOR, FLIGHT_STATUS_UPCOMING_COLOR } from "../../lib/statusColors";
 
 // Alpha applied to a cruise path. The RGB itself is resolved per-leg in
 // GlobeView's `cruisePaths` builder (status two-tone or per-cruise hue via
@@ -118,7 +110,7 @@ const MARKER_ALTITUDE_M = 8_000;
 // picks or when the pipeline doesn't compute one.
 function pickingCoordToLngLat(
   coordinate: number[] | undefined,
-  fallbackPath: ReadonlyArray<readonly number[]>,
+  fallbackPath: ReadonlyArray<readonly number[]>
 ): [number, number] {
   if (coordinate && coordinate.length >= 2) {
     return [coordinate[0], coordinate[1]];
@@ -240,10 +232,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
         // the popup mount + globe re-render was crashing the canvas
         // in some camera states (regression observed on beta.15).
       },
-      extensions: [
-        new PathStyleExtension({ dash: true, highPrecisionDash: true }),
-        occlusionExt,
-      ],
+      extensions: [new PathStyleExtension({ dash: true, highPrecisionDash: true }), occlusionExt],
       getDashArray: (d: ArcDatum) => (d.weak ? [4, 3] : [0, 0]),
       dashJustified: true,
       dashGapPickable: false,
@@ -297,9 +286,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       // Lift each [lng, lat] point to [lng, lat, alt] so the line
       // renders just above the sphere instead of through it.
       getPath: (d) =>
-        d.path.map(
-          (p) => [p[0], p[1], CRUISE_PATH_ALTITUDE_M] as [number, number, number],
-        ),
+        d.path.map((p) => [p[0], p[1], CRUISE_PATH_ALTITUDE_M] as [number, number, number]),
       // `d.color` is pre-resolved per-leg in GlobeView's `cruisePaths`
       // builder (status two-tone or per-cruise hue via
       // `resolveCruiseArcColor`) — this layer applies the status-aware
@@ -317,10 +304,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       widthMaxPixels: 3,
       capRounded: true,
       jointRounded: true,
-      extensions: [
-        new PathStyleExtension({ dash: true, highPrecisionDash: true }),
-        occlusionExt,
-      ],
+      extensions: [new PathStyleExtension({ dash: true, highPrecisionDash: true }), occlusionExt],
       getDashArray: [6, 3],
       dashJustified: true,
       dashGapPickable: false,
@@ -369,7 +353,8 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       },
       extensions: [occlusionExt],
       ...occlusionProps,
-    } as ConstructorParameters<typeof ScatterplotLayer<PointDatum>>[0] & EarthOcclusionExtensionProps),
+    } as ConstructorParameters<typeof ScatterplotLayer<PointDatum>>[0] &
+      EarthOcclusionExtensionProps),
     new ScatterplotLayer<PointDatum>({
       id: "globe-port-dots",
       data: portPoints,
@@ -395,7 +380,8 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       },
       extensions: [occlusionExt],
       ...occlusionProps,
-    } as ConstructorParameters<typeof ScatterplotLayer<PointDatum>>[0] & EarthOcclusionExtensionProps),
+    } as ConstructorParameters<typeof ScatterplotLayer<PointDatum>>[0] &
+      EarthOcclusionExtensionProps),
     // IATA / UN/LOCODE labels above the markers. Same TextLayer
     // pattern the flat-map routesLayer uses — clickable, so tapping
     // the label opens the same pinned card as tapping the marker.
@@ -494,8 +480,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
             },
             extensions: [occlusionExt],
             ...occlusionProps,
-          } as ConstructorParameters<typeof PathLayer<ArcDatum>>[0] &
-            EarthOcclusionExtensionProps),
+          } as ConstructorParameters<typeof PathLayer<ArcDatum>>[0] & EarthOcclusionExtensionProps),
           // Head endpoint dot — column at the arrival airport of the
           // most-recent flight, so the eye lands on "where the trail
           // ends right now".
