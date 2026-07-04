@@ -12,6 +12,7 @@ It's a logbook, not a live tracker — you record trips manually, scan a boardin
 [![GHCR](https://img.shields.io/badge/container-ghcr.io-181717?logo=github)](https://github.com/Abrechen2/TravStats/pkgs/container/travstats)
 [![Docker Hub](https://img.shields.io/docker/pulls/abrechen2/travstats?logo=docker&label=Docker%20Hub)](https://hub.docker.com/r/abrechen2/travstats)
 [![CI](https://github.com/Abrechen2/TravStats/actions/workflows/ci.yml/badge.svg)](https://github.com/Abrechen2/TravStats/actions/workflows/ci.yml)
+[![Discord](https://img.shields.io/badge/Discord-join%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQkkQT2WU)
 
 </div>
 
