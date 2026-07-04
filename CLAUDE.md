@@ -74,6 +74,11 @@ git branch -d fix/<slug>
 
 ### RC-first rule (every release, no exceptions)
 
+> **Full pipeline + staging:** see **`docs/RELEASE_WORKFLOW.md`**. Since
+> 2026-07-04 the RC lands on the **RC Server** (CT106, a prod-DATA mirror)
+> FIRST — cloned via `scripts/stage-rc-from-prod.sh` — and only then on prod.
+> "RC Server" is the renamed role of the former beta server (host unchanged).
+
 Every release — major, minor, patch, security fix, beta bump — starts
 as a **Release Candidate**:
 
