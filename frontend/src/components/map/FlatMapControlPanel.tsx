@@ -31,12 +31,15 @@ export interface FlatMapControlPanelProps {
   onArcWidthScaleChange: (n: number) => void;
   markerColor: [number, number, number] | null;
   onMarkerColorChange: (c: [number, number, number] | null) => void;
+  portColor: [number, number, number] | null;
+  onPortColorChange: (c: [number, number, number] | null) => void;
   markerSizeScale: number;
   onMarkerSizeScaleChange: (n: number) => void;
 }
 
-// Theme default airport-dot amber, shown when markerColor is null (Auto).
+// Defaults shown when a colour is null (Auto): airport amber, port blue.
 const DEFAULT_MARKER: [number, number, number] = [240, 169, 71];
+const DEFAULT_PORT: [number, number, number] = [56, 189, 248];
 
 export function FlatMapControlPanel({
   showPlaceLabels,
@@ -49,6 +52,8 @@ export function FlatMapControlPanel({
   onArcWidthScaleChange,
   markerColor,
   onMarkerColorChange,
+  portColor,
+  onPortColorChange,
   markerSizeScale,
   onMarkerSizeScaleChange,
 }: FlatMapControlPanelProps): JSX.Element {
@@ -158,30 +163,42 @@ export function FlatMapControlPanel({
               />
             </div>
 
-            {/* Airport marker colour */}
+            {/* Airport + port marker colours (Auto resets both to theme). */}
             <div className="mt-1.5 flex items-center justify-between gap-2 py-0.5">
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => onMarkerColorChange(null)}
-                  className="cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors"
-                  style={{
-                    background: markerColor === null ? `rgba(${ACCENT},0.16)` : "rgba(255,255,255,0.04)",
-                    color: markerColor === null ? `rgb(${ACCENT})` : "rgba(241,245,249,0.7)",
-                    border:
-                      markerColor === null
-                        ? `1px solid rgba(${ACCENT},0.55)`
-                        : "1px solid rgba(255,255,255,0.06)",
-                  }}
-                >
-                  {t("map:globe.panel.auto")}
-                </button>
-                <ColorField
-                  label={t("map:globe.panel.airports")}
-                  value={markerColor ?? DEFAULT_MARKER}
-                  onChange={(c) => onMarkerColorChange(c)}
-                />
-              </div>
+              <ColorField
+                label={t("map:globe.panel.airports")}
+                value={markerColor ?? DEFAULT_MARKER}
+                onChange={(c) => onMarkerColorChange(c)}
+              />
+              <ColorField
+                label={t("map:globe.panel.ports")}
+                value={portColor ?? DEFAULT_PORT}
+                onChange={(c) => onPortColorChange(c)}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  onMarkerColorChange(null);
+                  onPortColorChange(null);
+                }}
+                className="cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors"
+                style={{
+                  background:
+                    markerColor === null && portColor === null
+                      ? `rgba(${ACCENT},0.16)`
+                      : "rgba(255,255,255,0.04)",
+                  color:
+                    markerColor === null && portColor === null
+                      ? `rgb(${ACCENT})`
+                      : "rgba(241,245,249,0.7)",
+                  border:
+                    markerColor === null && portColor === null
+                      ? `1px solid rgba(${ACCENT},0.55)`
+                      : "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
+                {t("map:globe.panel.auto")}
+              </button>
             </div>
 
             {/* Marker size */}
