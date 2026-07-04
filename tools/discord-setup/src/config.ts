@@ -73,8 +73,17 @@ export const CATEGORIES: readonly CategoryDef[] = [
     name: "BETA",
     visibility: "beta",
     channels: [
-      { name: "beta-channel", kind: "text" },
-      { name: "beta-feedback", kind: "text" },
+      {
+        name: "beta-channel",
+        kind: "text",
+        topic: "Beta builds (-beta.N) from the forward dev line — early feature testing.",
+      },
+      {
+        name: "release-candidate",
+        kind: "text",
+        topic: "Release candidates (-rc.N) validated against prod data, lined up to ship.",
+      },
+      { name: "beta-feedback", kind: "text", topic: "Feedback + bug reports for beta and RC builds." },
     ],
   },
   {

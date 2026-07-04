@@ -40,8 +40,8 @@ async function main(): Promise<void> {
 
   if (command === "announce") {
     const type = process.argv[3];
-    if (type !== "rc" && type !== "release") {
-      log("Usage: tsx src/index.ts announce <rc|release> [version]");
+    if (type !== "beta" && type !== "rc" && type !== "release") {
+      log("Usage: tsx src/index.ts announce <beta|rc|release> [version]");
       process.exitCode = 1;
       return;
     }
@@ -102,7 +102,7 @@ async function main(): Promise<void> {
       "  setup [--dry-run]              provision the server\n" +
       "  serve                          run the reaction-role listener (unused if no ✈️)\n" +
       "  read <channel> [limit]         print recent messages of a channel\n" +
-      "  announce <rc|release> [ver]    post a release/RC announcement\n" +
+      "  announce <beta|rc|release> [v] post a beta/RC/release announcement\n" +
       "  reply <thread> <message…>      reply in a forum thread (e.g. a #bug-report post)",
   );
   process.exitCode = 1;
