@@ -1,4 +1,5 @@
 import { Client } from "discord.js";
+import { readFileSync } from "node:fs";
 import { createClient, loadEnv } from "./client.js";
 import { ensureRoles } from "./roles.js";
 import { ensureStructure } from "./guildStructure.js";
@@ -72,9 +73,21 @@ async function main(): Promise<void> {
 
   if (command === "reply") {
     const threadQuery = process.argv[3];
-    const message = process.argv.slice(4).filter((a) => a !== "--dry-run").join(" ");
+    // Multi-line messages do not survive shell/npm arg-passing reliably, so a
+    // `--file <path>` reads the message verbatim from a UTF-8 file (preferred
+    // for anything with newlines). Otherwise join the remaining CLI args.
+    const fileIdx = process.argv.indexOf("--file");
+    let message: string;
+    if (fileIdx !== -1 && process.argv[fileIdx + 1]) {
+      message = readFileSync(process.argv[fileIdx + 1], "utf8").replace(/\s+$/, "");
+    } else {
+      message = process.argv
+        .slice(4)
+        .filter((a) => a !== "--dry-run")
+        .join(" ");
+    }
     if (!threadQuery || !message) {
-      log('Usage: tsx src/index.ts reply <thread-id-or-title> <message…> [--dry-run]');
+      log('Usage: tsx src/index.ts reply <thread-id-or-title> (<message…> | --file <path>) [--dry-run]');
       process.exitCode = 1;
       return;
     }
@@ -103,7 +116,7 @@ async function main(): Promise<void> {
       "  serve                          run the reaction-role listener (unused if no ✈️)\n" +
       "  read <channel> [limit]         print recent messages of a channel\n" +
       "  announce <beta|rc|release> [v] post a beta/RC/release announcement\n" +
-      "  reply <thread> <message…>      reply in a forum thread (e.g. a #bug-report post)",
+      "  reply <thread> <message…>      reply in a forum thread (use --file <path> for multi-line)",
   );
   process.exitCode = 1;
 }
