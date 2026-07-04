@@ -9,6 +9,7 @@
     "setup:dry": "tsx src/index.ts setup --dry-run",
     "serve": "tsx src/index.ts serve",
     "read": "tsx src/index.ts read",
+    "announce": "tsx src/index.ts announce",
     "typecheck": "tsc --noEmit",
     "test": "vitest --run"
   },

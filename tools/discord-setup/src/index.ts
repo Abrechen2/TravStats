@@ -6,6 +6,13 @@ import { postRulesAndWelcome } from "./rulesMessage.js";
 import { writeState } from "./state.js";
 import { runServe } from "./reactionRole.js";
 import { runRead } from "./readChannel.js";
+import {
+  runAnnounce,
+  readRepoVersion,
+  readRepoChangelog,
+  AnnounceType,
+} from "./announce.js";
+import { extractChangelogEntry } from "./changelog.js";
 import { log } from "./log.js";
 
 async function runSetup(client: Client, guildId: string, dryRun: boolean): Promise<void> {
@@ -28,6 +35,25 @@ async function main(): Promise<void> {
   if (command === "serve") {
     await runServe(client, token, guildId);
     return; // serve keeps the process alive
+  }
+
+  if (command === "announce") {
+    const type = process.argv[3];
+    if (type !== "rc" && type !== "release") {
+      log("Usage: tsx src/index.ts announce <rc|release> [version]");
+      process.exitCode = 1;
+      return;
+    }
+    const version = process.argv[4] ?? readRepoVersion();
+    if (!version) {
+      log("No version given and backend/VERSION could not be read.");
+      process.exitCode = 1;
+      return;
+    }
+    const changelog = readRepoChangelog();
+    const notes = changelog ? extractChangelogEntry(changelog, version) : null;
+    await runAnnounce(client, token, guildId, type as AnnounceType, version, notes);
+    return; // runAnnounce owns login + destroy
   }
 
   if (command === "read") {
@@ -58,7 +84,13 @@ async function main(): Promise<void> {
     return;
   }
 
-  log("Usage: tsx src/index.ts <setup|serve|read> [--dry-run] [channel] [limit]");
+  log(
+    "Usage: tsx src/index.ts <setup|serve|read|announce> [--dry-run] [args]\n" +
+      "  setup [--dry-run]           provision the server\n" +
+      "  serve                       run the reaction-role listener (unused if no ✈️)\n" +
+      "  read <channel> [limit]      print recent messages of a channel\n" +
+      "  announce <rc|release> [ver] post a release/RC announcement",
+  );
   process.exitCode = 1;
 }
 
