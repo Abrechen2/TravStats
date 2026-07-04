@@ -86,14 +86,17 @@ text-created channels, then re-run `npm run setup`.
 ## 6. Reading a channel on demand
 
 ```bash
-npm run read feature-request        # last 20 messages (default)
-npm run read install-help 50        # last 50 messages
+npm run read install-help 50        # text channel: last 50 messages
+npm run read feature-request        # forum channel: recent posts + their messages
 ```
 
 Logs in, prints the channel's recent messages oldest-first, then disconnects
-— no persistent connection. Forum channels aren't directly readable (their
-posts live in threads). If message bodies show `(no text content)`, enable
-the Message Content intent (step 1).
+— no persistent connection. For a **text/voice channel** it prints the last
+`limit` messages (default 20). For a **forum channel** it lists the recent
+posts (threads) and prints each post's messages (up to `limit` per post,
+newest 15 posts). Message content is returned via the REST API without the
+privileged Message Content intent; if bodies ever show `(no text content)`,
+enable that intent (step 1).
 
 ## 7. Release & RC announcements
 
