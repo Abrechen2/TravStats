@@ -8,6 +8,7 @@
     "setup": "tsx src/index.ts setup",
     "setup:dry": "tsx src/index.ts setup --dry-run",
     "serve": "tsx src/index.ts serve",
+    "read": "tsx src/index.ts read",
     "typecheck": "tsc --noEmit",
     "test": "vitest --run"
   },
