@@ -5,6 +5,7 @@
     "new": "Add cruise",
     "empty": "No cruises yet",
     "loading": "Loading cruises …",
+    "sortBy": "Sort by {{col}}",
     "columns": {
       "ship": "Ship",
       "line": "Line",
