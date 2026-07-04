@@ -15,6 +15,7 @@ Commands (`npm run <name>`):
 | `setup` | Provision the server (idempotent). `setup:dry` previews without changes. |
 | `read <channel> [limit]` | Print the most recent messages of a text channel. |
 | `announce <rc\|release> [version]` | Post a release/RC announcement embed. |
+| `reply <thread> <message…>` | Reply in a forum thread (e.g. a `#bug-report` post), matched by id or title substring. `--dry-run` previews without posting. |
 | `serve` | Optional: run the ✈️ reaction-role listener (see below). |
 
 ## 1. Create the bot

@@ -10,6 +10,7 @@
     "serve": "tsx src/index.ts serve",
     "read": "tsx src/index.ts read",
     "announce": "tsx src/index.ts announce",
+    "reply": "tsx src/index.ts reply",
     "typecheck": "tsc --noEmit",
     "test": "vitest --run"
   },
