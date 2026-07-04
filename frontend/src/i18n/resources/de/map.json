@@ -57,7 +57,8 @@
       "width": "Stärke",
       "airports": "Flughäfen",
       "ports": "Häfen",
-      "size": "Größe"
+      "size": "Größe",
+      "auto": "Auto"
     },
     "timesFlown": "{{count}}x geflogen",
     "flight_one": "Flug",
