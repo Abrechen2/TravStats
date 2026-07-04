@@ -48,10 +48,21 @@ const PORT_LABEL_VISIBILITY_MIN_ZOOM = 4;
  *
  * Returns `null` when no qualifying ports exist.
  */
+/** Appearance overrides for cruise-port markers (from the flat-map panel). */
+export interface PortsAppearance {
+  /** Port marker fill/ring colour (RGB). Falls back to the built-in blue. */
+  portColor?: [number, number, number];
+  /** Multiplier on the port marker + ring pixel radii (1 = default). */
+  portSizeScale?: number;
+}
+
 export function createCruisePortsLayer(
   cruises: Cruise[],
   zoom: number = PORT_LABEL_VISIBILITY_MIN_ZOOM,
+  appearance: PortsAppearance = {},
 ): Layer[] | null {
+  const { portColor, portSizeScale = 1 } = appearance;
+  const portRgb = portColor ?? PORT_RGB;
   const byPort = new Map<number, PortDatum>();
   const recordVisit = (port: Port, date: string | undefined): void => {
     const existing = byPort.get(port.id);
@@ -95,10 +106,10 @@ export function createCruisePortsLayer(
     data,
     getPosition: (d) => d.position,
     getRadius: PORT_RING_RADIUS_M,
-    radiusMinPixels: 7,
-    radiusMaxPixels: 14,
+    radiusMinPixels: 7 * portSizeScale,
+    radiusMaxPixels: 14 * portSizeScale,
     getFillColor: [0, 0, 0, 0],
-    getLineColor: [...PORT_RGB, 80] as [number, number, number, number],
+    getLineColor: [...portRgb, 80] as [number, number, number, number],
     stroked: true,
     filled: false,
     lineWidthMinPixels: 1,
@@ -114,9 +125,9 @@ export function createCruisePortsLayer(
     // sub-pixel meters at low zoom collapse to just the white stroke
     // (visible "clipping"), and at very high zoom the meter radius
     // would balloon to cover the entire port city.
-    radiusMinPixels: 4,
-    radiusMaxPixels: 8,
-    getFillColor: [...PORT_RGB, 220] as [number, number, number, number],
+    radiusMinPixels: 4 * portSizeScale,
+    radiusMaxPixels: 8 * portSizeScale,
+    getFillColor: [...portRgb, 220] as [number, number, number, number],
     getLineColor: [255, 255, 255, 220],
     lineWidthUnits: "pixels",
     getLineWidth: 1,

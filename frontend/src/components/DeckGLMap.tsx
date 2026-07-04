@@ -74,6 +74,7 @@ interface FlatAppearance {
   routeColor?: [number, number, number] | null;
   arcWidthScale?: number;
   markerColor?: [number, number, number] | null;
+  portColor?: [number, number, number] | null;
   markerSizeScale?: number;
   showTerrain?: boolean;
   showPlaceLabels?: boolean;
@@ -180,6 +181,9 @@ export function DeckGLMap({
   const [markerColor, setMarkerColor] = useState<[number, number, number] | null>(
     () => loadFlatAppearance().markerColor ?? null
   );
+  const [portColor, setPortColor] = useState<[number, number, number] | null>(
+    () => loadFlatAppearance().portColor ?? null
+  );
   const [markerSizeScale, setMarkerSizeScale] = useState<number>(
     () => loadFlatAppearance().markerSizeScale ?? 1
   );
@@ -194,11 +198,20 @@ export function DeckGLMap({
       routeColor,
       arcWidthScale,
       markerColor,
+      portColor,
       markerSizeScale,
       showTerrain,
       showPlaceLabels,
     });
-  }, [routeColor, arcWidthScale, markerColor, markerSizeScale, showTerrain, showPlaceLabels]);
+  }, [
+    routeColor,
+    arcWidthScale,
+    markerColor,
+    portColor,
+    markerSizeScale,
+    showTerrain,
+    showPlaceLabels,
+  ]);
   // Apply the style-level overlays (relief hillshade + basemap place
   // names) once the map is loaded and whenever a toggle flips. Same
   // generic MapLibre helper the globe uses.
@@ -545,7 +558,10 @@ export function DeckGLMap({
       { zoom }
     );
     const arrows = createCruiseArrowsLayer(cruises, geometryMap, selectedCruiseId, { zoom });
-    const ports = createCruisePortsLayer(cruises, zoom);
+    const ports = createCruisePortsLayer(cruises, zoom, {
+      portColor: portColor ?? undefined,
+      portSizeScale: markerSizeScale,
+    });
 
     // Split cruise visuals into a "below" group (arcs/arrows render
     // beneath flight arcs and airport markers) and an "above" group
@@ -582,6 +598,7 @@ export function DeckGLMap({
     zoom,
     specialFlightLayers,
     markerColor,
+    portColor,
     markerSizeScale,
     arcWidthScale,
   ]);
@@ -684,6 +701,8 @@ export function DeckGLMap({
           onArcWidthScaleChange={setArcWidthScale}
           markerColor={markerColor}
           onMarkerColorChange={setMarkerColor}
+          portColor={portColor}
+          onPortColorChange={setPortColor}
           markerSizeScale={markerSizeScale}
           onMarkerSizeScaleChange={setMarkerSizeScale}
         />
