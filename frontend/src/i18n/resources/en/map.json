@@ -57,7 +57,8 @@
       "width": "Width",
       "airports": "Airports",
       "ports": "Ports",
-      "size": "Size"
+      "size": "Size",
+      "auto": "Auto"
     },
     "timesFlown": "Flown {{count}}x",
     "flight_one": "flight",

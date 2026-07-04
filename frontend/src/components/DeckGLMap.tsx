@@ -4,6 +4,9 @@ import { MapboxOverlay } from "@deck.gl/mapbox";
 import { createMarkerTooltip } from "./map/markerTooltip";
 import { LightingEffect } from "@deck.gl/core";
 import { useTranslation } from "../hooks/useTranslation";
+import { logger } from "../lib/logger";
+import { applyMapOverlays } from "./Globe/mapOverlays";
+import { FlatMapControlPanel } from "./map/FlatMapControlPanel";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { MapMode } from "./MapContainer3D";
@@ -63,6 +66,40 @@ const INITIAL_VIEW_STATE: MapViewState = {
 };
 
 const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+
+// Persisted flat-map appearance preferences (own key, separate from the
+// globe's — the two maps have different marker units so they don't share
+// a blob). Survives reloads via localStorage.
+interface FlatAppearance {
+  routeColor?: [number, number, number] | null;
+  arcWidthScale?: number;
+  markerColor?: [number, number, number] | null;
+  markerSizeScale?: number;
+  showTerrain?: boolean;
+  showPlaceLabels?: boolean;
+}
+
+const FLAT_APPEARANCE_KEY = "flatMapAppearance.v1";
+
+function loadFlatAppearance(): FlatAppearance {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(FLAT_APPEARANCE_KEY);
+    return raw ? (JSON.parse(raw) as FlatAppearance) : {};
+  } catch (err) {
+    logger.warn("DeckGLMap: failed to read appearance prefs", err);
+    return {};
+  }
+}
+
+function saveFlatAppearance(data: FlatAppearance): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(FLAT_APPEARANCE_KEY, JSON.stringify(data));
+  } catch (err) {
+    logger.warn("DeckGLMap: failed to persist appearance prefs", err);
+  }
+}
 
 interface DeckOverlayProps {
   layers: Layer[];
@@ -130,6 +167,46 @@ export function DeckGLMap({
   const mapRef = useRef<MapRef>(null);
 
   const [mapLoaded, setMapLoaded] = useState(false);
+  // Flat-map appearance customisation (mirrors the globe's "Anpassung"
+  // panel) + style-level overlays, persisted so the look survives reloads.
+  // `routeColor === null` keeps the frequency palette; a value tints every
+  // arc. `markerColor === null` keeps the theme airport-dot colour.
+  const [routeColor, setRouteColor] = useState<[number, number, number] | null>(
+    () => loadFlatAppearance().routeColor ?? null
+  );
+  const [arcWidthScale, setArcWidthScale] = useState<number>(
+    () => loadFlatAppearance().arcWidthScale ?? 1
+  );
+  const [markerColor, setMarkerColor] = useState<[number, number, number] | null>(
+    () => loadFlatAppearance().markerColor ?? null
+  );
+  const [markerSizeScale, setMarkerSizeScale] = useState<number>(
+    () => loadFlatAppearance().markerSizeScale ?? 1
+  );
+  const [showTerrain, setShowTerrain] = useState<boolean>(
+    () => loadFlatAppearance().showTerrain ?? false
+  );
+  const [showPlaceLabels, setShowPlaceLabels] = useState<boolean>(
+    () => loadFlatAppearance().showPlaceLabels ?? true
+  );
+  useEffect(() => {
+    saveFlatAppearance({
+      routeColor,
+      arcWidthScale,
+      markerColor,
+      markerSizeScale,
+      showTerrain,
+      showPlaceLabels,
+    });
+  }, [routeColor, arcWidthScale, markerColor, markerSizeScale, showTerrain, showPlaceLabels]);
+  // Apply the style-level overlays (relief hillshade + basemap place
+  // names) once the map is loaded and whenever a toggle flips. Same
+  // generic MapLibre helper the globe uses.
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !mapLoaded) return;
+    applyMapOverlays(map, { showTerrain, showPlaceLabels });
+  }, [mapLoaded, showTerrain, showPlaceLabels]);
   // Zoom is read from MapGL viewState on every move so layers can hide
   // labels / decimate symbols at low zoom. Updated via the move handler
   // to avoid an extra render path.
@@ -402,8 +479,8 @@ export function DeckGLMap({
   // flights into routes. Deps are deliberately limited to fields that
   // actually affect arc/point geometry + base color.
   const routeData = useMemo(
-    () => buildRouteData(flights, minRouteCount, themeColors, flightRouteColor),
-    [flights, minRouteCount, themeColors, flightRouteColor]
+    () => buildRouteData(flights, minRouteCount, themeColors, routeColor ?? flightRouteColor),
+    [flights, minRouteCount, themeColors, routeColor, flightRouteColor]
   );
 
   // Standalone layer set for Sonder-Flüge — rendered on top of the
@@ -433,7 +510,8 @@ export function DeckGLMap({
             0.3,
             selectedIds,
             handleAirportClick,
-            zoom
+            zoom,
+            { markerColor: markerColor ?? undefined, markerSizeScale, arcWidthScale }
           ),
           ...specialFlightLayers,
         ];
@@ -503,6 +581,9 @@ export function DeckGLMap({
     extraLayers,
     zoom,
     specialFlightLayers,
+    markerColor,
+    markerSizeScale,
+    arcWidthScale,
   ]);
 
   // No 3D modes remain — lighting effect is unused but kept as empty array for
@@ -586,6 +667,27 @@ export function DeckGLMap({
           />
         )}
       </MapGL>
+
+      {/* Consolidated map control panel — same design + kit as the globe.
+          Layers (place names / relief) + appearance (route + airport
+          marker colour / width / size), so the port/airport look is
+          adjustable from the individual tab views too. */}
+      <div className="absolute bottom-4 left-4 z-20" style={{ pointerEvents: "auto" }}>
+        <FlatMapControlPanel
+          showPlaceLabels={showPlaceLabels}
+          onShowPlaceLabelsChange={setShowPlaceLabels}
+          showTerrain={showTerrain}
+          onShowTerrainChange={setShowTerrain}
+          routeColor={routeColor}
+          onRouteColorChange={setRouteColor}
+          arcWidthScale={arcWidthScale}
+          onArcWidthScaleChange={setArcWidthScale}
+          markerColor={markerColor}
+          onMarkerColorChange={setMarkerColor}
+          markerSizeScale={markerSizeScale}
+          onMarkerSizeScaleChange={setMarkerSizeScale}
+        />
+      </div>
 
       {/* Subtle grid overlay — glassmorphism only */}
       {mapTheme === "glassmorphism" && (

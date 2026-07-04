@@ -294,6 +294,17 @@ const LABEL_VISIBILITY_MIN_ZOOM = 4;
  * re-trigger the expensive data build — only the layer construction below,
  * which is cheap.
  */
+/** User appearance overrides for the flat routes map (mirrors the globe's
+ *  "Anpassung" panel). All optional — omitted fields keep the defaults. */
+export interface RoutesAppearance {
+  /** Airport marker fill colour (RGB). Falls back to the theme colour. */
+  markerColor?: [number, number, number];
+  /** Multiplier on the airport marker + ring radii (1 = default). */
+  markerSizeScale?: number;
+  /** Multiplier on flight-arc width (1 = default). */
+  arcWidthScale?: number;
+}
+
 export function createRoutesLayers(
   routeData: RouteData,
   onFlightClick?: (flightId: string | string[]) => void,
@@ -301,10 +312,13 @@ export function createRoutesLayers(
   arcHeight: number = 1,
   selectedIds: string[] = [],
   onAirportClick?: (iata: string, lon: number, lat: number) => void,
-  zoom: number = 5
+  zoom: number = 5,
+  appearance: RoutesAppearance = {}
 ): Layer[] {
   const { arcs, points } = routeData;
-  const dotRgb = themeColors?.airportDot ?? ([240, 169, 71] as [number, number, number]);
+  const { markerColor, markerSizeScale = 1, arcWidthScale = 1 } = appearance;
+  const dotRgb =
+    markerColor ?? themeColors?.airportDot ?? ([240, 169, 71] as [number, number, number]);
 
   const selectedSet = new Set(selectedIds);
   const hasSelection = selectedIds.length > 0;
@@ -346,18 +360,20 @@ export function createRoutesLayers(
       // ones. Cap at 4 px (was 7) — multiplier dropped from 1.3 to 1.0 so
       // 1 flight = 1 px, 16 flights = max 4 px (smooth ramp across realistic
       // counts).
-      if (d.isHistorical) return 1.2;
-      const base = Math.min(Math.sqrt(d.count) * 1.0, 4);
+      if (d.isHistorical) return 1.2 * arcWidthScale;
+      const base = Math.min(Math.sqrt(d.count) * 1.0, 4) * arcWidthScale;
       if (!hasSelection) return base;
       // Selected fallback floor matches the new max so a selected mixed
       // route doesn't pop bigger than the unselected cap.
-      return d.flightIds.some((id) => selectedSet.has(id)) ? Math.max(base * 2, 4) : base;
+      return d.flightIds.some((id) => selectedSet.has(id))
+        ? Math.max(base * 2, 4 * arcWidthScale)
+        : base;
     },
     getHeight: arcHeight,
     // Visibility floor: 2 px minimum so a single far-flung route (e.g. a
     // one-off transpacific leg) stays clearly visible at world zoom instead
     // of thinning to a barely-perceptible 1 px hairline.
-    widthMinPixels: 2,
+    widthMinPixels: 2 * arcWidthScale,
     pickable: !!onFlightClick,
     onClick: onFlightClick
       ? ({ object }: { object?: ArcDatum }) => {
@@ -401,7 +417,8 @@ export function createRoutesLayers(
     id: "routes-ring-inner",
     data: points,
     getPosition: (d) => d.position,
-    getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1000,
+    getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1000 * markerSizeScale,
+    updateTriggers: { getRadius: [markerSizeScale], getLineColor: [dotRgb] },
     getFillColor: [0, 0, 0, 0],
     getLineColor: [...dotRgb, 180] as [number, number, number, number],
     stroked: true,
@@ -416,7 +433,8 @@ export function createRoutesLayers(
     id: "routes-ring-outer",
     data: points,
     getPosition: (d) => d.position,
-    getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1800,
+    getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1800 * markerSizeScale,
+    updateTriggers: { getRadius: [markerSizeScale], getLineColor: [dotRgb] },
     getFillColor: [0, 0, 0, 0],
     getLineColor: [...dotRgb, 60] as [number, number, number, number],
     stroked: true,
@@ -431,7 +449,8 @@ export function createRoutesLayers(
     id: "routes-dot",
     data: points,
     getPosition: (d) => d.position,
-    getRadius: () => 2200,
+    getRadius: () => 2200 * markerSizeScale,
+    updateTriggers: { getRadius: [markerSizeScale], getFillColor: [dotRgb] },
     getFillColor: [...dotRgb, 220] as [number, number, number, number],
     stroked: false,
     opacity: airportOpacity,
