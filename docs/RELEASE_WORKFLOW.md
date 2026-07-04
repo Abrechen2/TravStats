@@ -44,14 +44,26 @@ SSH into a CT via the Proxmox node: `ssh -i ~/.ssh/id_ed25519 root@192.168.178.1
 
 ### Tag strategy
 
-| Tag | Where | When | Immutable |
-|---|---|---|---|
-| `:X.Y.Z-rc.N` | GHCR | RC cut, every staging round | yes |
-| `:X.Y.Z` `:latest` `:stable` | GHCR **+ Docker Hub** | after promotion (byte-identical retag) | yes |
-| `:rc-latest` | Docker Hub | rolling pointer to newest RC | no |
+| Tag | Where | Runs on | When | Immutable |
+|---|---|---|---|---|
+| `:X.Y.Z-beta.N` | GHCR | **Beta** (CT106) | forward dev line, early feature / app testing | yes |
+| `:X.Y.Z-rc.N` | GHCR | **RC Server** (CT107) | imminent release, validated vs prod data | yes |
+| `:X.Y.Z` `:latest` `:stable` | GHCR **+ Docker Hub** | **Prod** (CT100) | after promotion (byte-identical retag) | yes |
+| `:rc-latest` | Docker Hub | — | rolling pointer to newest RC | no |
+
+**Suffix convention:** `-beta.N` = "in development, on the Beta server for app/feature
+testing"; `-rc.N` = "prod candidate, validated against prod data on the RC Server".
+A maturing line rolls as `-beta.N` and only switches to `-rc.N` once it is the
+*next-to-ship* release (no rebuild — just tag the next build `-rc`).
 
 **Rule:** a final tag is never a fresh build — always a `docker buildx imagetools create`
 retag of the exact RC image that was validated.
+
+### Discord announce lanes (mirror the tiers)
+
+`tools/discord-setup`: `announce beta` → `#beta-channel`, `announce rc` →
+`#release-candidate`, `announce release` → `#announcements`. Draft first, post on
+the user's OK.
 
 ## 3. The pipeline (stages 0–6)
 
