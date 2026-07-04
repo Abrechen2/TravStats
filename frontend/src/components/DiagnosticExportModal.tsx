@@ -81,19 +81,14 @@ export default function DiagnosticExportModal({
     }
   };
 
-  const handleReportBug = async (): Promise<void> => {
+  const handleReportBug = (): void => {
     if (!bundle) return;
 
-    // Try to copy first. If it fails, still open the issue URL so the user
-    // at least gets a prefilled form — they can use the Download button as
-    // a fallback to attach the bundle manually.
-    let copied = true;
-    try {
-      await handleCopyInternal();
-    } catch (err: unknown) {
-      logger.error("Clipboard write failed:", err);
-      copied = false;
-    }
+    // The bundle carries log tails (24h app + 7d error), so it is usually too
+    // large to paste into GitHub's form field ("more characters than allowed").
+    // Download it instead so the user can drag the .json file into the report —
+    // the bug template supports attaching it. (#157)
+    handleDownload();
 
     const url =
       "https://github.com/Abrechen2/TravStats/issues/new" +
@@ -102,11 +97,7 @@ export default function DiagnosticExportModal({
       "&labels=bug";
     window.open(url, "_blank", "noopener,noreferrer");
 
-    if (copied) {
-      addToast("info", t("common:diagnostic.reportBugOpened"));
-    } else {
-      addToast("error", t("common:diagnostic.copyFailed"));
-    }
+    addToast("info", t("common:diagnostic.reportBugOpened"));
   };
 
   const handleDownload = (): void => {
