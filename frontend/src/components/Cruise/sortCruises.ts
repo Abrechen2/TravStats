@@ -1,16 +1,15 @@
-import type { Cruise } from "../../types";
+import type { Cruise, CruiseStatus } from "../../types";
 import { countUniquePorts } from "./cruisePorts";
 
 export type CruiseSortKey = "date" | "ship" | "line" | "ports" | "status" | "price";
 export type SortOrder = "asc" | "desc";
 
-// Upcoming-first rank when ascending; unknown → end.
-const STATUS_RANK: Record<string, number> = {
+// Upcoming-first rank when ascending; unknown → end (see `?? 99` fallback below).
+const STATUS_RANK: Record<CruiseStatus, number> = {
   scheduled: 0,
   flown: 1,
   historical: 2,
-  duplicated: 3,
-  cancelled: 4,
+  cancelled: 3,
 };
 
 const shipName = (c: Cruise): string => (c.ship?.name ?? c.shipNameOverride ?? "").trim();
