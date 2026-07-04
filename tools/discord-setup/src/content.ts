@@ -49,8 +49,8 @@ export function buildWelcomeEmbed(): EmbedBuilder {
         "🔗 GitHub: https://github.com/abrechen2/travstats",
         "📖 Docs: https://travstats.de/docs/",
         "",
-        "➡️ Lies die <#rules> und frag bei Setup-Fragen in **#install-help**.",
-        "➡️ Read the rules and ask setup questions in **#install-help**.",
+        "➡️ Lies die Regeln in #rules und frag bei Setup-Fragen in **#install-help**.",
+        "➡️ Read the rules in #rules and ask setup questions in **#install-help**.",
       ].join("\n"),
     )
     .setFooter({ text: WELCOME_MARKER });

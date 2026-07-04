@@ -58,9 +58,12 @@ Forum channels (`bug-report`, `feature-request`) and announcement channels
 (`announcements`, `changelog`) require the server to have **Community mode**
 enabled (Server Settings → **Enable Community**). If Community mode is off
 when `setup` runs, those channels are created as regular text channels
-instead — `setup` logs a warning when this happens. Once you enable
-Community mode in Server Settings, re-run `npm run setup` to upgrade the
-existing channels to the correct forum/announcement type.
+instead — `setup` logs a warning when this happens. Enabling Community mode
+and re-running `npm run setup` will **not** convert those existing text
+channels — channels are matched by name and skipped if they already exist.
+To get the correct forum/announcement type, enable Community mode in Server
+Settings, **delete** the text-created channels, then re-run `npm run setup`
+so it recreates them with the right type.
 
 ## 5. Idempotency
 
