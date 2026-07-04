@@ -24,11 +24,23 @@ import {
   getQuartile,
   type Quartile,
 } from "./Globe/heatmapUtils";
-import { buildGlobeLayers } from "./Globe/buildGlobeLayers";
+import {
+  buildGlobeLayers,
+  DEFAULT_AIRPORT_COLOR,
+  DEFAULT_PORT_COLOR,
+  DEFAULT_MARKER_RADIUS_PX,
+} from "./Globe/buildGlobeLayers";
 import { nightCells as computeNightCells } from "./Globe/sunPosition";
 import { HoverTooltip, type HoverTooltipApi } from "./Globe/HoverTooltip";
 import { PinnedCard } from "./Globe/PinnedCard";
 import { PinnedCardBoundary } from "./Globe/PinnedCardBoundary";
+import { GlobeLabelsOverlay } from "./Globe/GlobeLabelsOverlay";
+import { applyMapOverlays } from "./Globe/mapOverlays";
+import {
+  GlobeControlPanel,
+  type StyleId,
+  type LiteMode,
+} from "./Globe/GlobeControlPanel";
 import type {
   ArcDatum,
   CruisePathDatum,
@@ -89,8 +101,9 @@ interface GlobeViewProps {
 // Style options — six tokenless basemaps, modelled after geojson.io.
 // CARTO + OpenFreeMap + ESRI World Imagery + OSM Standard. None of
 // them require an API key.
+// `StyleId` / `LiteMode` are defined in and imported from GlobeControlPanel
+// so the panel and this component share one source of truth.
 // ────────────────────────────────────────────────────────────────────
-type StyleId = "standard" | "light" | "dark" | "voyager" | "satellite" | "osm";
 
 interface SkyConfig {
   "sky-color": string;
@@ -114,9 +127,9 @@ const SKY_LIGHT: SkyConfig = {
   "horizon-color": "#a8c0d6",
   "fog-color": "#e2e8f0",
   "fog-ground-blend": 0.5,
-  "horizon-fog-blend": 0.6,
+  "horizon-fog-blend": 0,
   "sky-horizon-blend": 0.7,
-  "atmosphere-blend": 1.0,
+  "atmosphere-blend": 0,
 };
 
 const SKY_DARK: SkyConfig = {
@@ -124,9 +137,9 @@ const SKY_DARK: SkyConfig = {
   "horizon-color": "#3b3f5e",
   "fog-color": "#1f2937",
   "fog-ground-blend": 0.5,
-  "horizon-fog-blend": 0.6,
+  "horizon-fog-blend": 0,
   "sky-horizon-blend": 0.7,
-  "atmosphere-blend": 1.0,
+  "atmosphere-blend": 0,
 };
 
 const SKY_VOYAGER: SkyConfig = {
@@ -134,9 +147,9 @@ const SKY_VOYAGER: SkyConfig = {
   "horizon-color": "#7aa3c8",
   "fog-color": "#cfe0ee",
   "fog-ground-blend": 0.5,
-  "horizon-fog-blend": 0.6,
+  "horizon-fog-blend": 0,
   "sky-horizon-blend": 0.7,
-  "atmosphere-blend": 1.0,
+  "atmosphere-blend": 0,
 };
 
 const SKY_SATELLITE: SkyConfig = {
@@ -144,9 +157,9 @@ const SKY_SATELLITE: SkyConfig = {
   "horizon-color": "#3a4a6e",
   "fog-color": "#0b1a2a",
   "fog-ground-blend": 0.4,
-  "horizon-fog-blend": 0.55,
+  "horizon-fog-blend": 0,
   "sky-horizon-blend": 0.7,
-  "atmosphere-blend": 1.0,
+  "atmosphere-blend": 0,
 };
 
 const buildRasterStyle = (
@@ -285,6 +298,39 @@ function DeckGLOverlay({ layers }: DeckOverlayProps): null {
   return null;
 }
 
+// Persisted map-appearance preferences (survives reloads via localStorage).
+interface GlobeAppearance {
+  routeColor?: [number, number, number] | null;
+  arcWidthScale?: number;
+  airportColor?: [number, number, number];
+  portColor?: [number, number, number];
+  markerRadius?: number;
+  showTerrain?: boolean;
+  showPlaceLabels?: boolean;
+}
+
+const GLOBE_APPEARANCE_KEY = "globeAppearance.v1";
+
+function loadGlobeAppearance(): GlobeAppearance {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(GLOBE_APPEARANCE_KEY);
+    return raw ? (JSON.parse(raw) as GlobeAppearance) : {};
+  } catch (err) {
+    logger.warn("GlobeView: failed to read appearance prefs", err);
+    return {};
+  }
+}
+
+function saveGlobeAppearance(data: GlobeAppearance): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(GLOBE_APPEARANCE_KEY, JSON.stringify(data));
+  } catch (err) {
+    logger.warn("GlobeView: failed to persist appearance prefs", err);
+  }
+}
+
 export default function GlobeView({
   flights = [],
   cruises = [],
@@ -308,6 +354,59 @@ export default function GlobeView({
   // the terminator visibly moves at globe zoom).
   const [showNight, setShowNight] = useState(true);
   const [showLabels, setShowLabels] = useState(true);
+  // Map-appearance customisation (the panel's "Anpassung" section) plus
+  // the style-level overlays, all persisted to localStorage so a user's
+  // look survives reloads. `routeColor === null` keeps the per-route
+  // frequency heatmap; a value overrides every arc with one solid tint.
+  // The prop `flightRouteColor` (set by some parent tabs) seeds the
+  // initial route colour when nothing is stored yet.
+  const [routeColor, setRouteColor] = useState<[number, number, number] | null>(
+    () => loadGlobeAppearance().routeColor ?? flightRouteColor ?? null
+  );
+  const [arcWidthScale, setArcWidthScale] = useState<number>(
+    () => loadGlobeAppearance().arcWidthScale ?? 1
+  );
+  const [airportColor, setAirportColor] = useState<[number, number, number]>(
+    () => loadGlobeAppearance().airportColor ?? DEFAULT_AIRPORT_COLOR
+  );
+  const [portColor, setPortColor] = useState<[number, number, number]>(
+    () => loadGlobeAppearance().portColor ?? DEFAULT_PORT_COLOR
+  );
+  const [markerRadius, setMarkerRadius] = useState<number>(
+    () => loadGlobeAppearance().markerRadius ?? DEFAULT_MARKER_RADIUS_PX
+  );
+  // Style-level overlays (relief hillshade + basemap place names).
+  const [showTerrain, setShowTerrain] = useState<boolean>(
+    () => loadGlobeAppearance().showTerrain ?? false
+  );
+  const [showPlaceLabels, setShowPlaceLabels] = useState<boolean>(
+    () => loadGlobeAppearance().showPlaceLabels ?? true
+  );
+
+  // Persist every appearance / overlay choice as one blob.
+  useEffect(() => {
+    saveGlobeAppearance({
+      routeColor,
+      arcWidthScale,
+      airportColor,
+      portColor,
+      markerRadius,
+      showTerrain,
+      showPlaceLabels,
+    });
+  }, [routeColor, arcWidthScale, airportColor, portColor, markerRadius, showTerrain, showPlaceLabels]);
+
+  // Mirror the overlay toggles into refs so the `style.load` re-apply
+  // handler (which is created once) always reads the current values.
+  const showTerrainRef = useRef(showTerrain);
+  const showPlaceLabelsRef = useRef(showPlaceLabels);
+  useEffect(() => {
+    showTerrainRef.current = showTerrain;
+  }, [showTerrain]);
+  useEffect(() => {
+    showPlaceLabelsRef.current = showPlaceLabels;
+  }, [showPlaceLabels]);
+
   const [nightTick, setNightTick] = useState(() => Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setNightTick(Date.now()), 60_000);
@@ -357,7 +456,6 @@ export default function GlobeView({
   // halves column disk resolution, and disables auto-highlight on
   // pickable layers. Tri-state: "auto" lets the dataset thresholds
   // decide; "on" / "off" override forever (within a session).
-  type LiteMode = "auto" | "on" | "off";
   const [liteMode, setLiteMode] = useState<LiteMode>(() => {
     if (typeof window === "undefined") return "auto";
     const stored = window.sessionStorage.getItem("globeLiteMode");
@@ -564,12 +662,28 @@ export default function GlobeView({
       } catch (err) {
         logger.warn("GlobeView: setSky failed", err);
       }
+      // A style swap wipes the hillshade source/layer and resets symbol
+      // visibility — re-apply both from the latest toggle values.
+      applyMapOverlays(map, {
+        showTerrain: showTerrainRef.current,
+        showPlaceLabels: showPlaceLabelsRef.current,
+      });
     };
     map.on("style.load", reapply);
     return () => {
       map.off("style.load", reapply);
     };
   }, [mapReady]);
+
+  // Apply the style-level overlays on initial ready and whenever a
+  // toggle flips (basemap swaps are handled by the `style.load` reapply
+  // above). Idempotent, so the overlap with initial load is harmless.
+  useEffect(() => {
+    if (!mapReady) return;
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    applyMapOverlays(map, { showTerrain, showPlaceLabels });
+  }, [mapReady, showTerrain, showPlaceLabels]);
 
   // Auto-rotation loop. Drives `map.jumpTo` ~60 fps with a constant
   // angular velocity (4 deg/s = one revolution / 90 s).
@@ -1194,10 +1308,13 @@ export default function GlobeView({
         onCruisePathHover,
         flyToArc,
         setPinned,
-        flightRouteColor,
+        flightRouteColor: routeColor ?? undefined,
+        arcWidthScale,
+        airportColor,
+        portColor,
+        markerRadius,
         nightCells: nightCellsData,
         showNight,
-        showLabels,
       }),
     [
       arcsData,
@@ -1215,10 +1332,13 @@ export default function GlobeView({
       onPortHover,
       occlusionExt,
       occlusionProps,
-      flightRouteColor,
+      routeColor,
+      arcWidthScale,
+      airportColor,
+      portColor,
+      markerRadius,
       nightCellsData,
       showNight,
-      showLabels,
     ]
   );
 
@@ -1281,17 +1401,21 @@ export default function GlobeView({
           style={{ pointerEvents: "auto" }}
         >
           <div
-            className="rounded-md p-3 text-xs"
+            className="rounded-xl p-3 text-xs"
             style={{
-              background: "rgba(13, 17, 23, 0.78)",
-              backdropFilter: "blur(12px)",
-              border: "1px solid rgba(255,255,255,0.18)",
+              background: "rgba(13, 17, 23, 0.85)",
+              backdropFilter: "blur(14px)",
+              border: "1px solid rgba(255,255,255,0.12)",
               color: "rgba(241,245,249,0.95)",
               fontFamily: "'Inter', sans-serif",
-              minWidth: 160,
+              minWidth: 168,
+              boxShadow: "0 8px 28px rgba(0,0,0,0.45)",
             }}
           >
-            <div className="mb-1.5 text-[11px] font-semibold opacity-90">
+            <div
+              className="mb-1.5 text-[10px] font-semibold uppercase"
+              style={{ letterSpacing: "0.08em", color: "rgba(241,245,249,0.45)" }}
+            >
               {t("map:globe.stats.title")}
             </div>
             <div className="space-y-0.5 text-[11px]">
@@ -1343,163 +1467,44 @@ export default function GlobeView({
         </div>
       )}
 
-      {/* Bottom-left stack: auto-rotate toggle + heatmap legend */}
-      <div
-        className="absolute bottom-4 left-4 z-10 flex flex-col items-start gap-2"
-        style={{ pointerEvents: "auto" }}
-      >
-        <div
-          className="rounded-md p-3 text-xs"
-          style={{
-            background: "rgba(13, 17, 23, 0.78)",
-            backdropFilter: "blur(12px)",
-            border: "1px solid rgba(255,255,255,0.18)",
-            color: "rgba(241,245,249,0.95)",
-            fontFamily: "'Inter', sans-serif",
-          }}
-        >
-          <div className="mb-2 text-[11px] font-semibold opacity-90">🗺️ Darstellung</div>
-          <label className="flex cursor-pointer select-none items-center gap-2">
-            <input
-              type="checkbox"
-              checked={autoRotate}
-              onChange={(e) => setAutoRotate(e.target.checked)}
-              className="cursor-pointer"
-            />
-            <span className="text-xs font-medium">🌍 {t("map:globe.autoRotation")}</span>
-          </label>
-          {/* Spike toggle — needs i18n keys (map:globe.dayNight) before it ships. */}
-          <label className="mt-2 flex cursor-pointer select-none items-center gap-2">
-            <input
-              type="checkbox"
-              checked={showNight}
-              onChange={(e) => setShowNight(e.target.checked)}
-              className="cursor-pointer"
-            />
-            <span className="text-xs font-medium">🌓 Tag / Nacht</span>
-          </label>
-          {/* Spike toggle — needs i18n keys (map:globe.labels) before it ships. */}
-          <label className="mt-2 flex cursor-pointer select-none items-center gap-2">
-            <input
-              type="checkbox"
-              checked={showLabels}
-              onChange={(e) => setShowLabels(e.target.checked)}
-              className="cursor-pointer"
-            />
-            <span className="text-xs font-medium">🏷️ Labels</span>
-          </label>
-          <button
-            type="button"
-            onClick={onRecenter}
-            className="mt-2 flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs transition-colors"
-            style={{
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.18)",
-              color: "rgba(241,245,249,0.95)",
-            }}
-            title={t("map:globe.recenterHint")}
-          >
-            <span aria-hidden>🧭</span>
-            <span className="font-medium">{t("map:globe.recenter")}</span>
-          </button>
-          <div
-            className="mt-1.5 flex items-center justify-between gap-2"
-            title={t("map:globe.performanceHint")}
-          >
-            <span className="text-xs font-medium">⚡ {t("map:globe.performance")}</span>
-            <select
-              value={liteMode}
-              onChange={(e) => onLiteModeChange(e.target.value as LiteMode)}
-              className="cursor-pointer rounded px-1.5 py-0.5 text-[11px]"
-              style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.18)",
-                color: "rgba(241,245,249,0.95)",
-              }}
-            >
-              <option value="auto">
-                {t("map:globe.performanceAuto")} ({lite ? t("map:globe.performanceOn") : t("map:globe.performanceOff")})
-              </option>
-              <option value="on">{t("map:globe.performanceOn")}</option>
-              <option value="off">{t("map:globe.performanceOff")}</option>
-            </select>
-          </div>
-        </div>
-
-        {arcsData.length > 0 && (
-          <div
-            className="rounded-md p-3 text-xs"
-            style={{
-              background: "rgba(13, 17, 23, 0.78)",
-              backdropFilter: "blur(12px)",
-              border: "1px solid rgba(255,255,255,0.18)",
-              color: "rgba(241,245,249,0.95)",
-              fontFamily: "'Inter', sans-serif",
-            }}
-          >
-            <div className="mb-1.5 text-[11px] font-semibold opacity-90">
-              {t("map:globe.routeFrequency")}
-            </div>
-            <div className="space-y-1">
-              {legendRanges.map(({ q, color, label }) => {
-                const active = activeQuartile === q;
-                return (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setActiveQuartile(active ? null : q)}
-                    className="flex w-full cursor-pointer items-center gap-2 rounded px-1.5 py-0.5 transition-colors"
-                    style={{
-                      background: active ? "rgba(255,255,255,0.10)" : "transparent",
-                      opacity: activeQuartile === null || active ? 1 : 0.55,
-                    }}
-                    title={t("map:globe.quartileFilterHint")}
-                  >
-                    <div className="h-0.5 w-7" style={{ backgroundColor: color }} />
-                    <span className="text-[11px]">{label}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {activeQuartile !== null && (
-              <button
-                type="button"
-                onClick={() => setActiveQuartile(null)}
-                className="mt-1.5 cursor-pointer text-[10px] underline opacity-70 hover:opacity-100"
-              >
-                {t("map:globe.quartileFilterClear")}
-              </button>
-            )}
-            {antipodalArcs.length > 0 && (
-              <div
-                className="mt-2 border-t pt-1.5 text-[10px] opacity-70"
-                style={{ borderColor: "rgba(255,255,255,0.12)" }}
-              >
-                {t("map:globe.antipodalSimplified", { count: antipodalArcs.length })}
-              </div>
-            )}
-            {arcsData.some((a) => a.weak) && (
-              <div
-                className="mt-2 flex items-center gap-2 border-t pt-1.5 text-[10px] opacity-75"
-                style={{ borderColor: "rgba(255,255,255,0.12)" }}
-                title={t("map:globe.weakHint")}
-              >
-                <svg width="28" height="2" viewBox="0 0 28 2" aria-hidden>
-                  <line
-                    x1="0"
-                    y1="1"
-                    x2="28"
-                    y2="1"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeDasharray="4 3"
-                  />
-                </svg>
-                <span>{t("map:globe.weak")}</span>
-              </div>
-            )}
-          </div>
-        )}
+      {/* Consolidated map controls — layers, basemap, frequency filter,
+          performance + recenter in one collapsible panel (own design). */}
+      <div className="absolute bottom-4 left-4 z-10" style={{ pointerEvents: "auto" }}>
+        <GlobeControlPanel
+          autoRotate={autoRotate}
+          onAutoRotateChange={setAutoRotate}
+          showNight={showNight}
+          onShowNightChange={setShowNight}
+          showLabels={showLabels}
+          onShowLabelsChange={setShowLabels}
+          showTerrain={showTerrain}
+          onShowTerrainChange={setShowTerrain}
+          showPlaceLabels={showPlaceLabels}
+          onShowPlaceLabelsChange={setShowPlaceLabels}
+          styleOptions={STYLE_OPTIONS}
+          styleId={styleId}
+          onStyleChange={onStyleChange}
+          liteMode={liteMode}
+          lite={lite}
+          onLiteModeChange={onLiteModeChange}
+          onRecenter={onRecenter}
+          legendRanges={legendRanges}
+          activeQuartile={activeQuartile}
+          onQuartileChange={setActiveQuartile}
+          hasArcs={arcsData.length > 0}
+          antipodalCount={antipodalArcs.length}
+          hasWeakArcs={arcsData.some((a) => a.weak)}
+          routeColor={routeColor}
+          onRouteColorChange={setRouteColor}
+          arcWidthScale={arcWidthScale}
+          onArcWidthScaleChange={setArcWidthScale}
+          airportColor={airportColor}
+          onAirportColorChange={setAirportColor}
+          portColor={portColor}
+          onPortColorChange={setPortColor}
+          markerRadius={markerRadius}
+          onMarkerRadiusChange={setMarkerRadius}
+        />
       </div>
 
       {/* Top-center: time slider. Lives in its own opaque bar so
@@ -1513,42 +1518,6 @@ export default function GlobeView({
           visibleFlights={filteredFlights.length}
           visibleCruises={new Set(cruisePaths.map((p) => p.cruiseId)).size}
         />
-      </div>
-
-      {/* Bottom-center: basemap style picker, flush with the screen edge. */}
-      <div
-        className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2"
-        style={{ pointerEvents: "auto" }}
-      >
-        <div
-          className="flex gap-1 rounded-md p-1"
-          style={{
-            background: "rgba(13, 17, 23, 0.78)",
-            backdropFilter: "blur(12px)",
-            border: "1px solid rgba(255,255,255,0.18)",
-            fontFamily: "'Inter', sans-serif",
-          }}
-        >
-          {STYLE_OPTIONS.map((opt) => {
-            const active = opt.id === styleId;
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => onStyleChange(opt.id)}
-                className="rounded px-3 py-1 text-xs font-medium transition-colors"
-                style={{
-                  background: active ? "rgba(120, 200, 255, 0.18)" : "transparent",
-                  color: active ? "#bae6fd" : "rgba(241,245,249,0.78)",
-                  border: active ? "1px solid rgba(120, 200, 255, 0.55)" : "1px solid transparent",
-                  cursor: "pointer",
-                }}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       {/* First-run coachmark — semi-modal centered hint, dismissible
@@ -1597,6 +1566,16 @@ export default function GlobeView({
           </div>
         </div>
       )}
+
+      {/* IATA / port labels — HTML overlay (deck.gl billboard text does
+          not render under the globe projection; see GlobeLabelsOverlay). */}
+      <GlobeLabelsOverlay
+        mapRef={mapRef}
+        mapReady={mapReady}
+        airports={airportPoints}
+        ports={portPoints}
+        visible={showLabels}
+      />
 
       {/* Pinned detail card — custom React overlay positioned via
           map.project() on every render frame. Replaces the MapLibre
