@@ -26,5 +26,8 @@ describe("permissionsFor", () => {
     expect((perms & PermissionFlagsBits.KickMembers) === PermissionFlagsBits.KickMembers).toBe(true);
     expect((perms & PermissionFlagsBits.BanMembers) === PermissionFlagsBits.BanMembers).toBe(true);
     expect((perms & PermissionFlagsBits.ModerateMembers) === PermissionFlagsBits.ModerateMembers).toBe(true);
+    expect((perms & PermissionFlagsBits.ManageMessages) === PermissionFlagsBits.ManageMessages).toBe(true);
+    expect((perms & PermissionFlagsBits.ManageThreads) === PermissionFlagsBits.ManageThreads).toBe(true);
+    expect((perms & PermissionFlagsBits.ViewAuditLog) === PermissionFlagsBits.ViewAuditLog).toBe(true);
   });
 });
