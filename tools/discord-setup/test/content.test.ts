@@ -12,7 +12,7 @@ describe("content", () => {
     for (const n of ["1.", "2.", "3.", "4.", "5.", "6.", "7."]) {
       expect(text).toContain(n);
     }
-    expect(text).toContain("Warnung");
+    expect(text).toContain("Warning");
     expect(text).toContain("Ban");
   });
 
@@ -22,10 +22,11 @@ describe("content", () => {
     expect(text.toLowerCase()).not.toContain("beta-tester");
   });
 
-  it("rules embed includes an English mirror", () => {
+  it("rules embed is English-only (no German copy)", () => {
     const text = JSON.stringify(buildRulesEmbed().toJSON());
     expect(text).toContain("Be respectful");
-    expect(text).toContain("Sei respektvoll");
+    expect(text).not.toContain("Sei respektvoll");
+    expect(text).not.toContain("Regeln");
   });
 
   it("welcome embed names TravStats and links docs", () => {

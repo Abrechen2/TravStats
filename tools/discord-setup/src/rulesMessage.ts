@@ -52,11 +52,17 @@ export async function postRulesAndWelcome(
 
   if (welcome) {
     const welcomeRecent = await welcome.messages.fetch({ limit: 20 });
-    const hasWelcome = welcomeRecent.some(
+    const mineWelcome = welcomeRecent.find(
       (m) => m.author.id === guild.client.user?.id &&
         m.embeds.some((e) => e.footer?.text === WELCOME_MARKER),
     );
-    if (!hasWelcome) await welcome.send({ embeds: [buildWelcomeEmbed()] });
+    if (mineWelcome) {
+      await mineWelcome.edit({ embeds: [buildWelcomeEmbed()] });
+      log("updated existing welcome message");
+    } else {
+      await welcome.send({ embeds: [buildWelcomeEmbed()] });
+      log("posted welcome message");
+    }
   }
 
   return messageId;
