@@ -42,6 +42,7 @@
     "react-hook-form": "^7.49.2",
     "react-i18next": "^14.0.0",
     "react-map-gl": "^8.1.0",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^6.30.3",
     "recharts": "^3.4.1",
     "tesseract.js": "^6.0.1",

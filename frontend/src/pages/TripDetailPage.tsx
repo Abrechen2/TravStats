@@ -11,6 +11,7 @@ import PageTransition from "../components/PageTransition";
 import NavigationBar from "../components/NavigationBar";
 import TripModal from "../components/Trips/TripModal";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
+import JournalViewModal from "../components/Trips/JournalViewModal";
 import StopModal from "../components/Trips/StopModal";
 import TripMap from "../components/Trips/TripMap";
 import TripGallery from "../components/Trips/TripGallery";
@@ -510,6 +511,7 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
   const [adding, setAdding] = useState<null | "journal" | "stop">(null);
   const [editingJournal, setEditingJournal] = useState<TripJournalEntry | null>(null);
+  const [viewingJournal, setViewingJournal] = useState<TripJournalEntry | null>(null);
   const [editingStop, setEditingStop] = useState<TripStop | null>(null);
 
   const events = useMemo<TimelineEvent[]>(() => {
@@ -683,6 +685,7 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
               {ev.kind === "journal" && (
                 <JournalCard
                   ev={ev}
+                  onView={() => setViewingJournal(ev.entry)}
                   onEdit={() => setEditingJournal(ev.entry)}
                   onDelete={() => void handleDeleteJournal(ev.entry)}
                 />
@@ -706,6 +709,16 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
             setAdding(null);
             setEditingJournal(null);
             onChanged();
+          }}
+        />
+      )}
+      {viewingJournal && (
+        <JournalViewModal
+          entry={viewingJournal}
+          onClose={() => setViewingJournal(null)}
+          onEdit={() => {
+            setEditingJournal(viewingJournal);
+            setViewingJournal(null);
           }}
         />
       )}
@@ -859,10 +872,12 @@ function StopCard({
 
 function JournalCard({
   ev,
+  onView,
   onEdit,
   onDelete,
 }: {
   ev: Extract<TimelineEvent, { kind: "journal" }>;
+  onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }): JSX.Element {
@@ -878,20 +893,34 @@ function JournalCard({
       subtitle={meta ?? null}
       meta={e.title ? truncate(e.body, 200) : undefined}
       date={ev.date}
-      actions={<RowActions onEdit={onEdit} onDelete={onDelete} />}
+      actions={<RowActions onView={onView} onEdit={onEdit} onDelete={onDelete} />}
     />
   );
 }
 
 function RowActions({
+  onView,
   onEdit,
   onDelete,
 }: {
+  onView?: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }): JSX.Element {
   return (
     <div className="flex gap-1 mt-1">
+      {onView && (
+        <button
+          type="button"
+          onClick={onView}
+          className="text-[11px] px-1.5 py-0.5 rounded"
+          style={{ color: "var(--text-muted)" }}
+          aria-label="view"
+          title="view"
+        >
+          👁
+        </button>
+      )}
       <button
         type="button"
         onClick={onEdit}
