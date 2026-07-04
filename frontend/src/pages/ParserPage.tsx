@@ -73,7 +73,7 @@ export default function ParserPage(): JSX.Element {
 
         {/* Tabs */}
         <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
-          <nav className="flex gap-6 sm:gap-8 overflow-x-auto whitespace-nowrap">
+          <nav className="flex gap-6 sm:gap-8 overflow-x-auto overflow-y-hidden whitespace-nowrap">
             {tabs.map((tab) => (
               <button
                 key={tab.id}

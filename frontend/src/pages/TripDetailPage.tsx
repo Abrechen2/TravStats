@@ -345,7 +345,7 @@ function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
         borderBottom: "1px solid var(--color-border)",
       }}
     >
-      <div className="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto">
+      <div className="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto overflow-y-hidden">
         {TABS.map((key) => {
           const isActive = tab === key;
           return (
