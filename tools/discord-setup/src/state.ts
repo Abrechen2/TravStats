@@ -17,7 +17,11 @@ export function readState(): SetupState[] {
   if (!Array.isArray(parsed)) return [];
   return parsed.filter(
     (e): e is SetupState =>
-      typeof e === "object" && e !== null && "guildId" in e && "rulesMessageId" in e,
+      typeof e === "object" &&
+      e !== null &&
+      typeof (e as { guildId?: unknown }).guildId === "string" &&
+      (typeof (e as { rulesMessageId?: unknown }).rulesMessageId === "string" ||
+        (e as { rulesMessageId?: unknown }).rulesMessageId === null),
   );
 }
 

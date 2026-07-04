@@ -1,5 +1,5 @@
 import { Guild, TextChannel, ChannelType } from "discord.js";
-import { buildRulesEmbed, buildWelcomeEmbed, RULES_MARKER } from "./content.js";
+import { buildRulesEmbed, buildWelcomeEmbed, RULES_MARKER, WELCOME_MARKER } from "./content.js";
 import { BETA_REACTION } from "./config.js";
 import { log, dryRunLog } from "./log.js";
 
@@ -15,9 +15,13 @@ export async function postRulesAndWelcome(
   rulesChannelId: string | null,
   dryRun: boolean,
 ): Promise<string | null> {
-  const rules = rulesChannelId
-    ? ((await guild.channels.fetch(rulesChannelId)) as TextChannel | null)
-    : findTextChannel(guild, "rules");
+  let rules: TextChannel | null;
+  if (rulesChannelId) {
+    const raw = await guild.channels.fetch(rulesChannelId);
+    rules = raw instanceof TextChannel ? raw : null;
+  } else {
+    rules = findTextChannel(guild, "rules");
+  }
   const welcome = findTextChannel(guild, "welcome");
 
   if (dryRun) {
@@ -55,7 +59,7 @@ export async function postRulesAndWelcome(
     const welcomeRecent = await welcome.messages.fetch({ limit: 20 });
     const hasWelcome = welcomeRecent.some(
       (m) => m.author.id === guild.client.user?.id &&
-        m.embeds.some((e) => e.footer?.text === "travstats-welcome-v1"),
+        m.embeds.some((e) => e.footer?.text === WELCOME_MARKER),
     );
     if (!hasWelcome) await welcome.send({ embeds: [buildWelcomeEmbed()] });
   }
