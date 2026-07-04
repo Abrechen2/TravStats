@@ -565,7 +565,7 @@ export default function AdminPage(): JSX.Element {
         className="px-4 pt-3"
         style={{ background: "var(--bg-base)", borderBottom: "1px solid var(--color-border)" }}
       >
-        <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto whitespace-nowrap">
+        <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto overflow-y-hidden whitespace-nowrap">
           {tabs.map((tab) => (
             <button
               key={tab.id}
