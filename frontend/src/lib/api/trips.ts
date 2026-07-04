@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { API_TIMEOUTS } from "../../config/constants";
 import type {
   Trip,
   Booking,
@@ -226,8 +227,13 @@ export const tripsApi = {
   summarize: async (
     tripId: string
   ): Promise<{ summary: string; model: string; durationMs: number }> => {
+    // Ollama generation routinely takes >10s, so use the long PARSER timeout —
+    // the 10s DEFAULT aborts the request while the backend is still generating,
+    // surfacing an error toast even though the summary succeeds server-side.
     const { data } = await api.post<{ summary: string; model: string; durationMs: number }>(
-      `/trips/${tripId}/summarize`
+      `/trips/${tripId}/summarize`,
+      undefined,
+      { timeout: API_TIMEOUTS.PARSER }
     );
     return data;
   },
