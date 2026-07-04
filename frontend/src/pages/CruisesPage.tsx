@@ -25,6 +25,7 @@ export default function CruisesPage(): JSX.Element {
   const [showAdd, setShowAdd] = useState<boolean>(false);
   const [editingCruise, setEditingCruise] = useState<Cruise | null>(null);
   const [cruiseToDelete, setCruiseToDelete] = useState<Cruise | null>(null);
+  const [duplicateSource, setDuplicateSource] = useState<Cruise | null>(null);
 
   // Filter state — mirrors the flights filter panel conceptually but the
   // data domain is smaller so we inline rather than reuse <Filters />.
@@ -42,6 +43,12 @@ export default function CruisesPage(): JSX.Element {
       // date/price/ports default to desc (biggest/newest first); text asc.
       setSortOrder(col === "ship" || col === "line" || col === "status" ? "asc" : "desc");
     }
+  };
+
+  const startDuplicate = (c: Cruise): void => {
+    // Copy everything but identity + dates + booking ref, so the user sets new
+    // dates. CruiseEditModal(create) seeds its form from this and calls create().
+    setDuplicateSource({ ...c, startDate: null, endDate: null, bookingReference: null });
   };
 
   const reload = useCallback(async (): Promise<void> => {
@@ -300,7 +307,7 @@ export default function CruisesPage(): JSX.Element {
                       <CruiseRowActions
                         cruise={c}
                         onEdit={setEditingCruise}
-                        onDuplicate={/* Task 5 */ () => undefined}
+                        onDuplicate={startDuplicate}
                         onDelete={(id) => setCruiseToDelete(sorted.find((x) => x.id === id) ?? null)}
                       />
                     }
@@ -319,6 +326,17 @@ export default function CruisesPage(): JSX.Element {
             onClose={() => setEditingCruise(null)}
             onSaved={async () => {
               setEditingCruise(null);
+              await reload();
+            }}
+          />
+        )}
+        {duplicateSource && (
+          <CruiseEditModal
+            mode="create"
+            cruise={duplicateSource}
+            onClose={() => setDuplicateSource(null)}
+            onSaved={async () => {
+              setDuplicateSource(null);
               await reload();
             }}
           />

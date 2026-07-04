@@ -6,6 +6,7 @@
     "empty": "Noch keine Kreuzfahrten erfasst",
     "loading": "Kreuzfahrten werden geladen …",
     "sortBy": "Nach {{col}} sortieren",
+    "duplicate": "Duplizieren",
     "columns": {
       "ship": "Schiff",
       "line": "Reederei",

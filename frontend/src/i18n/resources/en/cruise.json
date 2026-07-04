@@ -6,6 +6,7 @@
     "empty": "No cruises yet",
     "loading": "Loading cruises …",
     "sortBy": "Sort by {{col}}",
+    "duplicate": "Duplicate",
     "columns": {
       "ship": "Ship",
       "line": "Line",
