@@ -91,7 +91,8 @@ computed on read, not stored.
 `checkIn DateTime`, `checkOut DateTime` (**stored as hotel-local time**, like
 flight airport-local times — do not normalize to UTC),
 `status String @default("completed")`
-(`planned`|`completed`|`cancelled`), `roomNumber?`, `roomCategory?`,
+(`scheduled`|`completed`|`cancelled` — **aligned with cruise/flight**, derived
+from dates on create + auto-flipped, see §8.1), `roomNumber?`, `roomCategory?`,
 `board?` (`none`|`breakfast`|`half`|`full`|`all_inclusive`),
 `pricePerNight Float?`, `currency String? @default("EUR")`, `totalPrice Float?`,
 `isAwardStay Boolean @default(false)` (paid with points/miles — for loyalty stats),
@@ -214,6 +215,34 @@ entries: **Check-in** (title = lodging name, detail = check-in date/time) and
 **Check-out** (title = lodging name, detail = check-out date/time) — interleaved
 by date with flights/cruises. Mirrors the direct-FK approach cruises use
 (`Trip.cruises`), not the manual `TripStop` list.
+
+### 8.1 Status lifecycle & trip-planning integration
+
+Lodging plugs into TravStats's plan→experience→retrospect lifecycle, using the
+**existing cross-domain status vocabulary** (no new one):
+
+- **Event status `scheduled | completed | cancelled`** (same as cruise; flight
+  uses `scheduled|flown|cancelled`). On create, status is **derived from dates**
+  (check-out in the past → `completed`, future → `scheduled`) — the same
+  "status-from-dates" approach trips/cruise-import use — and maintained by the
+  **auto-flip engine** (`scheduled` → `completed` once check-out passes,
+  mirroring the flight `zombie_auto_flown` flip). Heed the zombie-flip lesson:
+  don't let a future-dated `scheduled` stay fire "completed" stats early.
+- **Reservation** = a `scheduled` `LodgingStay` **with a booking** (from import or
+  manual) — a confirmed future stay, shown in the trip timeline.
+- **Cancelled** = kept as a record, **excluded from stats/achievements**
+  (`status != 'cancelled'`).
+- **Tentative planning (not yet booked)** reuses the generic **`TripStop`**
+  (`domain='hotel'`): while planning a trip you add a placeholder ("3 nights,
+  hotel TBD, Bergen"); when you book it, it **promotes to a real `LodgingStay`**
+  (`scheduled`). This keeps event status consistent across domains and reuses the
+  existing timeline machinery instead of adding a `planned` event state.
+- **Trip = the hub:** a `Trip` (`planned → in_progress → completed`, derived from
+  its date range/contents) bundles flights + cruises + stays + TripStops + journal
+  + photos chronologically; its status advances as its events' dates pass. Stats,
+  achievements, the map, and cross-domain rollups ("Fly & Stay", "Grand Tour")
+  only count `completed` events. Lodging is one more domain contributor into this
+  container, not a standalone island.
 
 ## 9. Stats & achievements
 
