@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { ChannelType } from "discord.js";
-import { channelTypeFor, planChannels } from "../src/guildStructure.js";
+import { ChannelType, PermissionFlagsBits } from "discord.js";
+import { channelTypeFor, planChannels, withReadOnlyDeny } from "../src/guildStructure.js";
 
 describe("channelTypeFor", () => {
   it("maps text/voice regardless of community mode", () => {
@@ -25,5 +25,32 @@ describe("planChannels", () => {
     expect(actions.find((a) => a.name === "general")?.op).toBe("skip");
     expect(actions.find((a) => a.name === "rules")?.op).toBe("skip");
     expect(actions.find((a) => a.name === "showcase")?.op).toBe("create");
+  });
+});
+
+describe("withReadOnlyDeny", () => {
+  it("merges SendMessages into an existing @everyone deny (single entry, both perms)", () => {
+    const result = withReadOnlyDeny(
+      [{ id: "everyone", deny: [PermissionFlagsBits.ViewChannel] }],
+      "everyone",
+    );
+    const everyone = result.filter((o) => o.id === "everyone");
+    expect(everyone).toHaveLength(1);
+    expect(everyone[0].deny).toContain(PermissionFlagsBits.ViewChannel);
+    expect(everyone[0].deny).toContain(PermissionFlagsBits.SendMessages);
+  });
+
+  it("adds a new @everyone deny when none exists", () => {
+    const result = withReadOnlyDeny([], "everyone");
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("everyone");
+    expect(result[0].deny).toEqual([PermissionFlagsBits.SendMessages]);
+  });
+
+  it("does not mutate the input", () => {
+    const input = [{ id: "everyone", deny: [PermissionFlagsBits.ViewChannel] }];
+    withReadOnlyDeny(input, "everyone");
+    expect(input).toHaveLength(1);
+    expect(input[0].deny).toEqual([PermissionFlagsBits.ViewChannel]);
   });
 });

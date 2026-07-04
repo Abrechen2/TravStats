@@ -1,10 +1,4 @@
-import {
-  Guild,
-  ChannelType,
-  PermissionFlagsBits,
-  OverwriteResolvable,
-  CategoryChannel,
-} from "discord.js";
+import { Guild, ChannelType, PermissionFlagsBits, CategoryChannel } from "discord.js";
 import { CATEGORIES, CategoryDef, ChannelDef, ChannelKind } from "./config.js";
 import { log, dryRunLog } from "./log.js";
 
@@ -43,11 +37,17 @@ export function planChannels(existingNames: readonly string[]): ChannelAction[] 
   );
 }
 
+export interface PermOverwrite {
+  id: string;
+  allow?: bigint[];
+  deny?: bigint[];
+}
+
 function roleId(guild: Guild, name: string): string | null {
   return guild.roles.cache.find((r) => r.name === name)?.id ?? null;
 }
 
-function categoryOverwrites(guild: Guild, cat: CategoryDef): OverwriteResolvable[] {
+function categoryOverwrites(guild: Guild, cat: CategoryDef): PermOverwrite[] {
   const everyone = guild.roles.everyone.id;
   const mod = roleId(guild, "Moderator");
   const maintainer = roleId(guild, "Maintainer");
@@ -68,6 +68,25 @@ function categoryOverwrites(guild: Guild, cat: CategoryDef): OverwriteResolvable
     ];
   }
   return [];
+}
+
+// Merge a read-only SendMessages deny into an existing @everyone overwrite
+// rather than adding a duplicate entry for the same id (Discord keeps only
+// one overwrite per target id). Returns a new array; never mutates inputs.
+export function withReadOnlyDeny(
+  overwrites: readonly PermOverwrite[],
+  everyoneId: string,
+): PermOverwrite[] {
+  const idx = overwrites.findIndex((o) => o.id === everyoneId);
+  if (idx === -1) {
+    return [...overwrites, { id: everyoneId, deny: [PermissionFlagsBits.SendMessages] }];
+  }
+  const existing = overwrites[idx];
+  const merged: PermOverwrite = {
+    ...existing,
+    deny: [...(existing.deny ?? []), PermissionFlagsBits.SendMessages],
+  };
+  return overwrites.map((o, i) => (i === idx ? merged : o));
 }
 
 async function ensureCategory(guild: Guild, cat: CategoryDef, dryRun: boolean): Promise<CategoryChannel | null> {
@@ -108,10 +127,8 @@ async function ensureChannel(
     dryRunLog(`create #${ch.name} (${ch.kind}) in ${cat.name}`);
     return null;
   }
-  const overwrites = categoryOverwrites(guild, cat);
-  if (ch.readOnly) {
-    overwrites.push({ id: guild.roles.everyone.id, deny: [PermissionFlagsBits.SendMessages] });
-  }
+  const base = categoryOverwrites(guild, cat);
+  const overwrites = ch.readOnly ? withReadOnlyDeny(base, guild.roles.everyone.id) : base;
   const created = await guild.channels.create({
     name: ch.name,
     type: channelTypeFor(ch.kind, communityEnabled),
