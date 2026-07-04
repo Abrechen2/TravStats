@@ -7,10 +7,11 @@ body:
     attributes:
       value: |
         Thanks for taking the time to report a bug! The Diagnose-Export in
-        the TravStats admin area produces a scrubbed JSON bundle — please
-        paste it into the "Diagnostic bundle" field below. The "Report Bug"
-        button in the app opens this form with the version field
-        pre-filled and the bundle already on your clipboard.
+        the TravStats admin area produces a scrubbed JSON bundle. The
+        "Report Bug" button in the app opens this form with the version
+        pre-filled and **downloads the bundle** — please **drag that
+        `.json` file into the comment field** below (it's usually too
+        large to paste into the field).
 
   - type: input
     id: summary
@@ -59,11 +60,12 @@ body:
   - type: textarea
     id: diagnostic
     attributes:
-      label: Diagnostic bundle
+      label: Diagnostic bundle (optional)
       description: |
-        Paste the JSON bundle here (it was copied to your clipboard when
-        you clicked "Report Bug"), or drag the downloaded `.json` file
-        into the comment field below this form.
+        Prefer to **attach the downloaded `travstats-diagnostic-*.json`
+        file** (drag it into the comment field below this form) — the
+        bundle is usually too large to paste here. Only paste it inline if
+        it is small.
       render: json
 
   - type: textarea
