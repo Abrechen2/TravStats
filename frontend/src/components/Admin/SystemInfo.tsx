@@ -139,13 +139,20 @@ export default function SystemInfo({
             <dt className="text-sm text-[var(--text-muted)]">{t("admin:systemInfo.version")}</dt>
             <dd className="text-lg font-medium text-[var(--text-primary)]">
               {systemInfo.version}
+              {/*
+                On a promoted `:latest` the image is a byte-identical retag of
+                the RC, so buildVersion still carries the `-rc.N` suffix. Show
+                only the clean release version; expose the build provenance in a
+                hover tooltip (still in the diagnostic bundle for debugging). (#156)
+              */}
               {systemInfo.buildVersion && systemInfo.buildVersion !== systemInfo.version && (
                 <span
-                  className="ml-2 text-sm font-normal"
+                  className="ml-1.5 align-middle text-xs font-normal cursor-help"
                   style={{ color: "var(--text-muted)" }}
-                  title={t("admin:systemInfo.buildVersionHint")}
+                  title={`${t("admin:systemInfo.buildLabel")}: ${systemInfo.buildVersion} — ${t("admin:systemInfo.buildVersionHint")}`}
+                  aria-label={`${t("admin:systemInfo.buildLabel")}: ${systemInfo.buildVersion}`}
                 >
-                  ({t("admin:systemInfo.buildLabel")}: {systemInfo.buildVersion})
+                  ⓘ
                 </span>
               )}
             </dd>
