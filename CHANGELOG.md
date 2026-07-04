@@ -4,7 +4,7 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
-## [2.2.1] - 2026-07-03
+## [2.2.1] - 2026-07-04
 
 ### Fixed
 - **Uploaded photos now survive container updates** — Trip photos, receipts and
@@ -16,6 +16,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
   capped request bodies at 1 MB and rejected larger photo or PDF uploads with a
   "content too large" error. The limit is now 100 MB, in line with the file
   sizes the app already accepts. (#153)
+- **Trip timeline dots align on the connector line** — On a journey's timeline
+  the event dots sat slightly off the vertical line at an inconsistent height
+  and were drawn as hollow rings. They are now filled, centred on each event
+  card, and sit exactly on the line, which runs cleanly from the first to the
+  last event. (Discord bug report)
+- **Correct plurals for trip counts** — Trip counters always showed the
+  singular form (e.g. "532 Nacht", "4 Flug"). German and English plurals now
+  render correctly ("532 Nächte", "4 Flüge"). (Discord bug report)
 
 ## [2.2.0] - 2026-06-14
 
