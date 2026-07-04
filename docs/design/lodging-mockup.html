@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lodging Domain (Hotels) — Mockup</title>
+<style>
+  :root {
+    --bg:#0b0f16; --board:#0e131c; --surface:#151b24; --surface-2:#1b2330;
+    --border:#232c38; --border-soft:#1c242f;
+    --text:#e7edf4; --text-dim:#8c99aa; --text-faint:#5c6878;
+    --accent:#f0a947; --accent-ink:#1a1205;      /* primary action (app amber) */
+    --lodging:#d4778f; --lodging-bg:rgba(212,119,143,.12);  /* lodging domain accent (rose) */
+    --star:#f2b950;                               /* star gold */
+    --ok:#4ec98a; --ok-bg:rgba(78,201,138,.12);
+    --warn:#e0b24a; --warn-bg:rgba(224,178,74,.12);
+    --err:#f2708a; --err-bg:rgba(242,112,138,.10);
+    --radius:10px; --radius-sm:7px;
+    --mono:ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;} body{margin:0;}
+  .page{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh;padding:0 0 72px;}
+  .masthead{border-bottom:1px solid var(--border-soft);padding:18px 24px;display:flex;align-items:center;gap:14px;background:linear-gradient(180deg,#0d121b,var(--bg));}
+  .logo{font-weight:800;letter-spacing:.04em;font-size:15px;} .logo b{color:var(--accent);}
+  .masthead .tag{margin-left:auto;font-size:12px;color:var(--text-dim);border:1px solid var(--border);border-radius:999px;padding:4px 11px;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px;}
+  .lede{padding:34px 0 8px;} .lede h1{font-size:22px;margin:0 0 6px;letter-spacing:-.01em;text-wrap:balance;} .lede p{color:var(--text-dim);margin:0;max-width:64ch;}
+  .screen{margin-top:40px;}
+  .cap{display:flex;align-items:baseline;gap:10px;margin:0 0 12px;}
+  .cap .num{font-family:var(--mono);font-size:12px;color:var(--lodging);border:1px solid var(--border);border-radius:6px;padding:1px 7px;}
+  .cap h2{font-size:15px;margin:0;font-weight:650;} .cap .note{color:var(--text-faint);font-size:13px;margin-left:auto;}
+  .frame{background:var(--board);border:1px solid var(--border);border-radius:14px;padding:22px;position:relative;overflow:hidden;}
+
+  .btn{font:inherit;font-size:13.5px;font-weight:600;border-radius:var(--radius-sm);padding:8px 14px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);display:inline-flex;align-items:center;gap:7px;white-space:nowrap;}
+  .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;}
+  .btn.lodging{border-color:rgba(212,119,143,.45);color:#f0b8c8;background:var(--lodging-bg);}
+  .btn.ghost{background:transparent;} .btn.sm{font-size:12.5px;padding:5px 10px;}
+  .pill{font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;}
+  .pill.lodging{background:var(--lodging-bg);color:#f0b8c8;} .pill.ok{background:var(--ok-bg);color:var(--ok);} .pill.warn{background:var(--warn-bg);color:var(--warn);} .pill.trip{background:rgba(240,169,71,.13);color:var(--accent);}
+  .count{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .stars{color:var(--star);letter-spacing:1px;font-size:13px;}
+  .stars .off{color:#3a434f;}
+
+  /* toolbar + stat strip */
+  .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .toolbar h3{margin:0;font-size:17px;} .toolbar .search{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 11px;color:var(--text-dim);font-size:13px;min-width:200px;}
+  .toolbar .actions{margin-left:auto;display:flex;gap:9px;}
+  .stat-strip{display:flex;gap:22px;padding:12px 2px 16px;flex-wrap:wrap;border-bottom:1px solid var(--border-soft);margin-bottom:10px;}
+  .stat-strip .s{display:flex;flex-direction:column;} .stat-strip .s b{font-size:20px;font-variant-numeric:tabular-nums;} .stat-strip .s span{font-size:11.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th{text-align:left;color:var(--text-faint);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--border-soft);}
+  td{padding:11px 10px;border-bottom:1px solid var(--border-soft);}
+  tr:last-child td{border-bottom:0;}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .h-name{font-weight:600;} .h-sub{color:var(--text-faint);font-size:12px;}
+  .type-ic{margin-right:7px;}
+
+  /* detail two-col */
+  .cols{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;}
+  @media (max-width:760px){.cols{grid-template-columns:1fr;}}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  .card .h{padding:13px 16px;border-bottom:1px solid var(--border-soft);font-weight:650;font-size:13.5px;display:flex;align-items:center;gap:9px;}
+  .card .b{padding:15px 16px;}
+  .hoteltop{display:flex;gap:14px;align-items:flex-start;margin-bottom:6px;}
+  .hoteltop .badge{width:46px;height:46px;border-radius:11px;background:var(--lodging-bg);display:grid;place-items:center;font-size:22px;flex:0 0 auto;}
+  .hoteltop h3{margin:0;font-size:18px;} .hoteltop .meta{color:var(--text-dim);font-size:13px;margin-top:3px;}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+  .chip{font-size:11.5px;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:6px;padding:3px 9px;color:var(--text-dim);}
+  .stay{border:1px solid var(--border-soft);border-radius:9px;padding:12px 14px;margin-top:10px;}
+  .stay .row1{display:flex;align-items:center;gap:10px;} .stay .row1 .d{font-weight:600;font-size:13.5px;} .stay .row1 .n{color:var(--text-faint);font-size:12px;} .stay .row1 .right{margin-left:auto;display:flex;gap:8px;align-items:center;}
+  .stay .row2{display:flex;gap:16px;margin-top:8px;font-size:12.5px;color:var(--text-dim);flex-wrap:wrap;}
+  .stay .row2 b{color:var(--text);font-weight:600;}
+  .rate-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;} .rate-row .lbl{color:var(--text-dim);}
+  .kv{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;} .kv .k{color:var(--text-dim);}
+
+  /* map */
+  .map{border-radius:10px;overflow:hidden;border:1px solid var(--border);}
+  .map-toolbar{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border-bottom:1px solid var(--border-soft);} .map-toolbar .sub{color:var(--text-faint);font-size:12px;margin-left:auto;}
+  .map-canvas{position:relative;height:320px;background:radial-gradient(130% 130% at 55% 35%,#12202e,#0a141d 60%,#070d13);}
+  .pin{position:absolute;width:32px;height:32px;border-radius:9px;border:2px solid rgba(255,255,255,.85);box-shadow:0 3px 10px rgba(0,0,0,.55);display:grid;place-items:center;font-size:14px;transform:translate(-50%,-50%);background:var(--lodging);}
+  .pin::after{content:'';position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:rgba(255,255,255,.85);}
+  .map-mini{height:190px;}
+
+  /* modal */
+  .modal-stage{background:repeating-linear-gradient(45deg,rgba(255,255,255,.012) 0 12px,transparent 12px 24px),#070a10;border-radius:12px;padding:26px;display:grid;place-items:center;}
+  .modal{width:100%;max-width:560px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.55);overflow:hidden;}
+  .modal header{padding:15px 18px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:9px;} .modal header h3{margin:0;font-size:15px;}
+  .modal .body{padding:16px 18px;display:grid;grid-template-columns:1fr 1fr;gap:13px;max-height:400px;overflow-y:auto;}
+  .modal footer{padding:13px 18px;border-top:1px solid var(--border-soft);display:flex;align-items:center;gap:10px;}
+  .field{display:flex;flex-direction:column;gap:5px;} .field.full{grid-column:1/-1;}
+  .field label{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-faint);}
+  .input{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font:inherit;font-size:13.5px;}
+  .starpick{font-size:17px;color:var(--star);letter-spacing:2px;} .starpick .off{color:#3a434f;}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:var(--bg);}
+  .seg button{font:inherit;font-size:11.5px;font-weight:600;padding:6px 10px;border:0;background:transparent;color:var(--text-dim);} .seg button.on{background:var(--lodging-bg);color:#f0b8c8;}
+
+  /* import preview */
+  .imp-hd{display:flex;align-items:center;gap:10px;margin-bottom:12px;} .imp-hd .file{font-family:var(--mono);font-size:12px;color:var(--text-dim);}
+  .match{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:9px;background:var(--ok-bg);border:1px solid rgba(78,201,138,.25);font-size:13px;margin-bottom:12px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .fld{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:9px 11px;} .fld .k{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.03em;} .fld .v{font-size:13.5px;margin-top:2px;} .fld.miss{border-style:dashed;} .fld.miss .v{color:var(--warn);}
+
+  .legend{margin-top:26px;color:var(--text-faint);font-size:12.5px;display:flex;gap:18px;flex-wrap:wrap;} .legend span{display:inline-flex;align-items:center;gap:6px;} .sw{width:12px;height:12px;border-radius:3px;display:inline-block;}
+</style></head><body>
+
+<div class="page">
+  <div class="masthead"><div class="logo">TRAV<b>+</b>STATS</div><div class="tag">Mockup · Domain „Unterkünfte"</div></div>
+  <div class="wrap">
+    <div class="lede">
+      <h1>Unterkünfte — Hotels (später Camping)</h1>
+      <p>Neue Domain <code>lodging</code>, gespiegelt an Cruise. Hotel = wiederverwendbarer Ort · Aufenthalte = die Events (standalone oder Trip-verknüpft). Screens: Liste, Hotel-Detail mit Aufenthalten, Stay-Editor, Karte, Import-Vorschau. Echte Namen aus den Sample-Buchungen.</p>
+    </div>
+
+    <!-- ① List -->
+    <div class="screen">
+      <div class="cap"><span class="num">01</span><h2>Hotel-Liste</h2><span class="note">suchen · filtern · sortieren</span></div>
+      <div class="frame">
+        <div class="toolbar">
+          <h3>Unterkünfte</h3>
+          <input class="search" value="Suche Hotel / Kette / Ort…" readonly />
+          <div class="actions">
+            <button class="btn ghost sm">Typ: Alle ▾</button>
+            <button class="btn ghost sm">Jahr: Alle ▾</button>
+            <button class="btn lodging">＋ Hotel</button>
+            <button class="btn">⬆ Import</button>
+          </div>
+        </div>
+        <div class="stat-strip">
+          <div class="s"><b>7</b><span>Hotels</span></div>
+          <div class="s"><b>11</b><span>Aufenthalte</span></div>
+          <div class="s"><b>21</b><span>Nächte</span></div>
+          <div class="s"><b>5</b><span>Ketten</span></div>
+          <div class="s"><b>2.155 €</b><span>Ausgaben</span></div>
+          <div class="s"><b>★ 4,1</b><span>Ø Bewertung</span></div>
+        </div>
+        <table>
+          <tr><th>Hotel</th><th>Kette</th><th>Ort</th><th class="num">Aufenth.</th><th class="num">Nächte</th><th>Bewertung</th><th class="num">Ausgaben</th></tr>
+          <tr><td><span class="type-ic">🏨</span><span class="h-name">NH Ludwigsburg</span></td><td>NH Hotels</td><td>Ludwigsburg 🇩🇪</td><td class="num">2</td><td class="num">3</td><td><span class="stars">★★★★<span class="off">★</span></span> 4,3</td><td class="num">340 €</td></tr>
+          <tr><td><span class="type-ic">🏨</span><span class="h-name">Novotel Suites Berlin</span></td><td>Accor</td><td>Berlin 🇩🇪</td><td class="num">3</td><td class="num">5</td><td><span class="stars">★★★★<span class="off">★</span></span> 4,0</td><td class="num">690 €</td></tr>
+          <tr><td><span class="type-ic">🏨</span><span class="h-name">Vienna House Easy Landsberg</span></td><td>Wyndham</td><td>Landsberg 🇩🇪</td><td class="num">1</td><td class="num">2</td><td><span class="stars">★★★<span class="off">★★</span></span> 3,5</td><td class="num">180 €</td></tr>
+          <tr><td><span class="type-ic">🏨</span><span class="h-name">Engimatt City &amp; Garden</span></td><td class="h-sub">— unabhängig</td><td>Zürich 🇨🇭</td><td class="num">2</td><td class="num">4</td><td><span class="stars">★★★★<span class="off">★</span></span> 4,0</td><td class="num">840 CHF</td></tr>
+          <tr><td><span class="type-ic">🏨</span><span class="h-name">Hotel Stiegler B&amp;B</span></td><td class="h-sub">— unabhängig</td><td>Berchtesgaden 🇩🇪</td><td class="num">1</td><td class="num">2</td><td><span class="stars">★★★★<span style="color:var(--star)">⯪</span></span> 4,5</td><td class="num">190 €</td></tr>
+          <tr><td><span class="type-ic">🏨</span><span class="h-name">Bastion Hotel Zoetermeer</span></td><td>Bastion</td><td>Zoetermeer 🇳🇱</td><td class="num">1</td><td class="num">1</td><td><span class="stars">★★★<span class="off">★★</span></span> 3,8</td><td class="num">110 €</td></tr>
+          <tr><td><span class="type-ic">🏨</span><span class="h-name">Novina Sleep Inn</span></td><td>Novina</td><td>Herzogenaurach 🇩🇪</td><td class="num">1</td><td class="num">2</td><td><span class="stars">★★★★<span class="off">★</span></span> 4,0</td><td class="num">160 €</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ② Detail -->
+    <div class="screen">
+      <div class="cap"><span class="num">02</span><h2>Hotel-Detail mit Aufenthalten</h2><span class="note">Ort wird über Aufenthalte wiederverwendet</span></div>
+      <div class="frame">
+        <div class="cols">
+          <div>
+            <div class="hoteltop">
+              <div class="badge">🏨</div>
+              <div>
+                <h3>NH Ludwigsburg</h3>
+                <div class="meta">NH Hotels · <span class="stars">★★★★</span> 4 Sterne · Pflugfelder Str. 36, 71636 Ludwigsburg</div>
+                <div class="meta">Ø Bewertung <b style="color:var(--star)">★ 4,3</b> · aus 2 Aufenthalten</div>
+              </div>
+            </div>
+            <div class="chips"><span class="chip">🧖 Spa</span><span class="chip">🏋️ Fitness</span><span class="chip">🅿️ Parkplatz</span><span class="chip">📶 WLAN</span><span class="chip">🍽️ Restaurant</span></div>
+
+            <div style="margin-top:16px;font-size:12px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;">Aufenthalte</div>
+            <div class="stay">
+              <div class="row1"><span class="d">14.–16.05.2024</span><span class="n">· 2 Nächte · Zimmer 214, Superior</span><span class="right"><span class="pill trip">🧳 Reise: Messe VDI</span><span class="stars">★★★★<span class="off">★</span></span></span></div>
+              <div class="row2"><span>Frühstück <b>★4</b></span><span>Service <b>★5</b></span><span>Zimmer <b>★4</b></span><span><b>95 €</b>/Nacht</span><span>Ref <b>NH8842</b></span></div>
+            </div>
+            <div class="stay">
+              <div class="row1"><span class="d">09.–10.11.2023</span><span class="n">· 1 Nacht · Zimmer 118, Standard</span><span class="right"><span class="stars">★★★★<span style="color:var(--star)">⯪</span></span></span></div>
+              <div class="row2"><span>Frühstück <b>★5</b></span><span>Service <b>★4</b></span><span>Zimmer <b>★4</b></span><span><b>150 €</b>/Nacht</span><span>NH Rewards</span></div>
+            </div>
+          </div>
+          <div style="display:grid;gap:14px;align-content:start;">
+            <div class="map map-mini"><div class="map-canvas map-mini"><div class="pin" style="left:50%;top:50%">🏨</div></div></div>
+            <div class="card"><div class="h">🏷️ Kette</div><div class="b"><div class="kv"><span class="k">NH Hotels</span><span>3 Hotels · 6 Nächte</span></div></div></div>
+            <div class="card"><div class="h">🎫 Mitgliedschaft</div><div class="b"><div class="kv"><span class="k">NH Rewards</span><span class="pill lodging">Gold</span></div><div class="kv"><span class="k">Nr.</span><span class="count">••• 4471</span></div></div></div>
+            <div class="card"><div class="h">★ Ø-Bewertung</div><div class="b"><div class="rate-row"><span class="lbl">Zimmer</span><span class="stars">★★★★<span class="off">★</span></span></div><div class="rate-row"><span class="lbl">Frühstück</span><span class="stars">★★★★<span style="color:var(--star)">⯪</span></span></div><div class="rate-row"><span class="lbl">Service</span><span class="stars">★★★★<span style="color:var(--star)">⯪</span></span></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ③ Stay editor -->
+    <div class="screen">
+      <div class="cap"><span class="num">03</span><h2>Aufenthalt bearbeiten</h2><span class="note">standalone oder Trip-verknüpft</span></div>
+      <div class="modal-stage">
+        <div class="modal">
+          <header><span>🛏️</span><h3>Aufenthalt · NH Ludwigsburg</h3></header>
+          <div class="body">
+            <div class="field"><label>Anreise</label><input class="input" value="14.05.2024  15:00" readonly /></div>
+            <div class="field"><label>Abreise</label><input class="input" value="16.05.2024  11:00" readonly /></div>
+            <div class="field"><label>Zimmernummer</label><input class="input" value="214" readonly /></div>
+            <div class="field"><label>Zimmerkategorie</label><input class="input" value="Superior Doppelzimmer" readonly /></div>
+            <div class="field full"><label>Verpflegung</label><div class="seg"><button>Keine</button><button class="on">Frühstück</button><button>Halbpension</button><button>Vollpension</button><button>All-inclusive</button></div></div>
+            <div class="field"><label>Preis / Nacht</label><input class="input" value="95,00" readonly /></div>
+            <div class="field"><label>Währung</label><input class="input" value="EUR €" readonly /></div>
+            <div class="field"><label>Bewertung Zimmer</label><div class="starpick">★★★★<span class="off">★</span></div></div>
+            <div class="field"><label>Bewertung Frühstück</label><div class="starpick">★★★★<span class="off">★</span></div></div>
+            <div class="field"><label>Bewertung Service</label><div class="starpick">★★★★★</div></div>
+            <div class="field"><label>Bewertung Gesamt</label><div class="starpick">★★★★<span class="off">★</span></div></div>
+            <div class="field full"><label>Zimmerausstattung</label><div class="chips"><span class="chip">🔒 Safe</span><span class="chip">🍾 Minibar</span><span class="chip">🛁 Badewanne</span><span class="chip">＋ hinzufügen</span></div></div>
+            <div class="field"><label>Buchungsreferenz</label><input class="input" value="NH8842" readonly /></div>
+            <div class="field"><label>Mitgliedschaft</label><input class="input" value="NH Rewards · Gold" readonly /></div>
+            <div class="field"><label>Reise verknüpfen</label><input class="input" value="Messe VDI (Mai 2024)" readonly /></div>
+            <div class="field"><label>Bestätigung</label><input class="input" value="📎 NH_Ludwigsburg.pdf" readonly /></div>
+          </div>
+          <footer><span class="pill lodging">2 Nächte</span><span style="margin-left:auto"></span><button class="btn ghost">Abbrechen</button><button class="btn primary">Speichern</button></footer>
+        </div>
+      </div>
+    </div>
+
+    <!-- ④ Map -->
+    <div class="screen">
+      <div class="cap"><span class="num">04</span><h2>Hotels auf der Karte</h2><span class="note">Koordinaten aus Adresse (OSM-Geocoding, frei)</span></div>
+      <div class="frame">
+        <div class="map">
+          <div class="map-toolbar"><span class="pill lodging">📍 7 Hotels verortet</span><span class="sub count">Deutschland · Schweiz · Niederlande</span></div>
+          <div class="map-canvas">
+            <div class="pin" style="left:44%;top:70%">🏨</div>
+            <div class="pin" style="left:46%;top:64%">🏨</div>
+            <div class="pin" style="left:58%;top:38%">🏨</div>
+            <div class="pin" style="left:50%;top:56%">🏨</div>
+            <div class="pin" style="left:48%;top:78%">🏨</div>
+            <div class="pin" style="left:33%;top:44%">🏨</div>
+            <div class="pin" style="left:45%;top:60%">🏨</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑤ Import preview -->
+    <div class="screen">
+      <div class="cap"><span class="num">05</span><h2>Import-Vorschau</h2><span class="note">Buchungsbestätigung → Parser → Dedup → Geocoding</span></div>
+      <div class="frame">
+        <div class="imp-hd"><span>📧</span><span class="file">Buchungsbestätigung_ NH Ludwigsburg (260308233983).msg</span><span class="pill warn" style="margin-left:auto">Confidence 0,86</span></div>
+        <div class="match"><span>✅</span><div><b>Bestehendes Hotel erkannt: „NH Ludwigsburg"</b> — der neue Aufenthalt wird angehängt (kein Duplikat). Adresse per OSM geocodet 📍.</div></div>
+        <div class="grid2">
+          <div class="fld"><div class="k">Hotel</div><div class="v">NH Ludwigsburg · NH Hotels</div></div>
+          <div class="fld"><div class="k">Adresse → Koordinaten</div><div class="v">Pflugfelder Str. 36 · 48.90, 9.19 ✓</div></div>
+          <div class="fld"><div class="k">Anreise → Abreise</div><div class="v">14.05.2024 → 16.05.2024 · 2 Nächte</div></div>
+          <div class="fld"><div class="k">Zimmer</div><div class="v">Superior · Nr. 214</div></div>
+          <div class="fld"><div class="k">Preis</div><div class="v">95 €/Nacht · 190 € gesamt</div></div>
+          <div class="fld"><div class="k">Buchungsreferenz</div><div class="v">260308233983</div></div>
+          <div class="fld miss"><div class="k">Bewertungen</div><div class="v">fehlen — später ergänzen</div></div>
+          <div class="fld miss"><div class="k">Verpflegung</div><div class="v">nicht erkannt</div></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px;"><span style="margin-left:auto"></span><button class="btn ghost">Verwerfen</button><button class="btn primary">Aufenthalt übernehmen</button></div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><i class="sw" style="background:var(--lodging)"></i> Rosa = Domain „Unterkünfte"</span>
+      <span><i class="sw" style="background:var(--accent)"></i> Amber = primäre Aktion / Trip</span>
+      <span><i class="sw" style="background:var(--star)"></i> ★ 1–5 Bewertungen</span>
+      <span><i class="sw" style="background:var(--ok)"></i> Dedup-Match / Geocode ok</span>
+    </div>
+  </div>
+</div>
+</body></html>
