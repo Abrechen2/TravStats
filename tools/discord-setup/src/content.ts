@@ -30,9 +30,8 @@ export function buildRulesEmbed(): EmbedBuilder {
     .addFields(
       { name: "Regeln (DE)", value: RULES_DE },
       { name: "Eskalation", value: "Warnung → Timeout → Kick → Ban." },
-      { name: "Beta", value: "Reagiere mit ✈️, um die **Beta-Tester**-Channels freizuschalten." },
       { name: "Rules (EN)", value: RULES_EN },
-      { name: "Escalation", value: "Warning → Timeout → Kick → Ban. React with ✈️ to unlock the Beta-Tester channels." },
+      { name: "Escalation", value: "Warning → Timeout → Kick → Ban." },
     )
     .setFooter({ text: RULES_MARKER });
 }
