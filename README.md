@@ -23,8 +23,8 @@ It's a logbook, not a live tracker — you record trips manually, scan a boardin
 
 ## Why TravStats
 
-Log every flight you take (cruises landing in v2), visualise your routes
-on interactive 2D and 3D maps, collect 101 achievements, and import flights
+Log every flight **and cruise** you take, visualise your routes on
+interactive 2D and 3D maps, collect 140+ achievements, and import flights
 from boarding passes (QR / PDF417 / OCR), confirmation emails, or
 Excel/CSV — all on your own server, no cloud, no telemetry.
 
@@ -35,9 +35,10 @@ AirLabs / Aviationstack / OpenSky, but everything you record lives in
 your own PostgreSQL. No accounts on someone else's servers, no analytics,
 no ads.
 
-- 🗺️ **Six map modes** — Routes, Heatmap, Hexagon, 3D columns, animated Trips, 3D Globe
-- 📊 **Year-over-year statistics** across flights, distance, seats, classes, routes
-- 🏆 **101 Battlefield-style achievements** across five categories
+- 🚢 **Flights *and* cruises** — import a cruise from email or PDF: the ship, every port of call and sea day; fly-and-cruise trips link both
+- 🗺️ **Multi-domain maps** — routes, heatmap, animated trips and a 3D globe for flights and cruises, colour-coded by frequency and status
+- 📊 **Cross-domain statistics** — distance, countries, active days, top airlines and cruise lines, with year and all-time views
+- 🏆 **140+ achievements** across flights, cruises and cross-domain — bronze to diamond
 - 🎫 **Boarding-pass scanner** — QR / barcode / OCR
 - 📧 **Email import** — plain text, HTML, Outlook `.msg`, `.eml`, with optional local LLM parsing via Ollama
 - 📑 **Excel/CSV round-trip import** — export, edit in Excel, re-import; rows with an `id` update existing flights
@@ -53,7 +54,7 @@ no ads.
 <table>
   <tr>
     <td width="50%"><img src="docs/images/certificate.png" alt="Vintage passport-style flight certificate" /></td>
-    <td width="50%"><img src="docs/images/achievements.png" alt="Achievements gallery with 101 unlockables" /></td>
+    <td width="50%"><img src="docs/images/achievements.png" alt="Achievements gallery with 140+ unlockables" /></td>
   </tr>
   <tr>
     <td align="center"><sub>Downloadable PNG certificate with your totals</sub></td>
@@ -167,8 +168,10 @@ scanning cover the full feature set.
 ## What's in a release
 
 See [CHANGELOG.md](CHANGELOG.md) for the full history and
-[ROADMAP.md](ROADMAP.md) for where things are heading (cruises module,
-CO₂ tracking, trip planner, PWA).
+[ROADMAP.md](ROADMAP.md) for where things are heading. A native iOS &
+Android app (boarding-pass scan, a 3D globe of your travels) is in the
+works — no release date yet; hotels & places-of-interest, CO₂ tracking
+and a trip planner are on the map too.
 
 ## Security
 
