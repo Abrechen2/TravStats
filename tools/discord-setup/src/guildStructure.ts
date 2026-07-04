@@ -148,8 +148,8 @@ export async function ensureStructure(
   await guild.channels.fetch();
   const communityEnabled = guild.features.includes("COMMUNITY");
   if (!communityEnabled) {
-    log("Community mode is OFF — bug-report/feature-request/announcements will be created as text channels.");
-    log("Enable Community in Server Settings → Enable Community, then re-run to upgrade them.");
+    log("Community mode is OFF — bug-report/feature-request/announcements/changelog are being created as text channels.");
+    log("To get real forum/announcement channels: enable Community in Server Settings, DELETE those text channels, then re-run setup. (Existing channels are matched by name and are NOT converted in place.)");
   }
   let rulesChannelId: string | null = null;
   for (const cat of CATEGORIES) {
