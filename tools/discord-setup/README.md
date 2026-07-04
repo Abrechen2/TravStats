@@ -1,13 +1,21 @@
 # TravStats Discord Setup Bot
 
-Standalone `discord.js` (TypeScript) setup bot that idempotently provisions
-the TravStats Discord server. It creates the categories, channels, roles and
-permission overwrites, posts the rules/welcome embeds, and then runs a small
-persistent listener that grants the `Beta-Tester` role when a member reacts
-✈️ to the rules message (and removes it if they un-react). The whole server
-layout is described as immutable data in `src/config.ts`, mirroring the
-Sublarr Discord layout; pure planner functions diff desired-vs-existing state
-(unit-tested with Vitest), and thin applier functions call the Discord API.
+Standalone `discord.js` (TypeScript) utility for the TravStats Discord server.
+It idempotently provisions the server (categories, channels, roles, permission
+overwrites, rules/welcome embeds), can read a channel's recent messages on
+demand, and posts release/RC announcements. The whole server layout is
+described as immutable data in `src/config.ts`, mirroring the Sublarr Discord
+layout; pure planner functions diff desired-vs-existing state (unit-tested with
+Vitest), and thin applier functions call the Discord API.
+
+Commands (`npm run <name>`):
+
+| Command | What it does |
+|---|---|
+| `setup` | Provision the server (idempotent). `setup:dry` previews without changes. |
+| `read <channel> [limit]` | Print the most recent messages of a text channel. |
+| `announce <rc\|release> [version]` | Post a release/RC announcement embed. |
+| `serve` | Optional: run the ✈️ reaction-role listener (see below). |
 
 ## 1. Create the bot
 
@@ -15,10 +23,10 @@ Sublarr Discord layout; pure planner functions diff desired-vs-existing state
    → **New Application**.
 2. Open the **Bot** tab → **Reset Token** → copy the token into `.env`
    (see below). Treat it like a password — never commit it.
-3. No privileged intents need to be enabled beyond the defaults. The
-   **Message Content** intent is **not** required — the bot only needs
-   `GuildMessageReactions` to detect the ✈️ reaction, which does not require
-   a privileged intent.
+3. For `setup`/`announce`/`serve`, no privileged intents are required. For
+   `read`, if message **content** comes back empty, enable the **Message
+   Content** intent (Bot tab → *Privileged Gateway Intents*) — it is only
+   needed to read the text of messages that don't mention the bot.
 
 ## 2. Invite the bot to your server
 
@@ -29,23 +37,20 @@ https://discord.com/api/oauth2/authorize?client_id=<APP_ID>&scope=bot&permission
 Replace `<APP_ID>` with the Application ID from the Developer Portal's
 **General Information** tab.
 
-`permissions=8` grants **Administrator**, which is the simplest option for
-running `setup` (it needs to create categories/channels, roles, and
-permission overwrites, and post messages). For least-privilege after the
-initial setup, the bot only needs **Manage Roles**, **Manage Channels**,
-**Read Messages/View Channels**, **Send Messages**, and **Add Reactions** to
-run `npm run serve` — you can narrow the bot's role permissions down to
-those once `setup` has finished.
+`permissions=8` grants **Administrator**, the simplest option for running
+`setup` (it creates categories/channels, roles, permission overwrites, and
+posts messages). For least-privilege afterward, the bot only needs **Manage
+Roles**, **Manage Channels**, **View Channels**, **Send Messages**, and
+**Read Message History**.
 
 ## 3. Run it
 
 ```bash
 cd tools/discord-setup
 npm install
-cp .env.example .env   # fill in DISCORD_BOT_TOKEN + DISCORD_GUILD_ID
-npm run setup:dry       # preview — logs every action, makes no changes
-npm run setup            # provision the server for real
-npm run serve             # keep running for the ✈️ reaction-role
+cp .env.example .env    # fill in DISCORD_BOT_TOKEN + DISCORD_GUILD_ID
+npm run setup:dry        # preview — logs every action, makes no changes
+npm run setup             # provision the server for real
 ```
 
 `DISCORD_GUILD_ID` is the target server's ID (enable Developer Mode in
@@ -55,15 +60,18 @@ Server ID**).
 ## 4. Community mode
 
 Forum channels (`bug-report`, `feature-request`) and announcement channels
-(`announcements`, `changelog`) require the server to have **Community mode**
-enabled (Server Settings → **Enable Community**). If Community mode is off
-when `setup` runs, those channels are created as regular text channels
-instead — `setup` logs a warning when this happens. Enabling Community mode
-and re-running `npm run setup` will **not** convert those existing text
-channels — channels are matched by name and skipped if they already exist.
-To get the correct forum/announcement type, enable Community mode in Server
-Settings, **delete** the text-created channels, then re-run `npm run setup`
-so it recreates them with the right type.
+(`announcements`, `changelog`) require **Community mode** (Server Settings →
+**Enable Community**). If Community mode is off when `setup` runs, those
+channels are created as regular text channels and `setup` logs a warning.
+Enabling Community mode and re-running `npm run setup` will **not** convert
+existing text channels — channels are matched by name and skipped if they
+already exist. To get the correct type, enable Community mode, **delete** the
+text-created channels, then re-run `npm run setup`.
+
+> Note: enabling Community mode on a fresh server makes Discord create a
+> couple of default channels (e.g. a rules and a community-updates channel).
+> After `setup`, tidy any leftovers — move/rename or delete the Discord
+> defaults so only the intended structure remains.
 
 ## 5. Idempotency
 
@@ -71,27 +79,51 @@ so it recreates them with the right type.
 
 - **Roles** are patched in place (name/color/permissions), never duplicated.
 - **Categories and channels** are skipped if a channel with the same name
-  already exists anywhere in the guild — nothing is re-created or
-  re-parented.
-- **The rules/welcome message** is edited in place (via `.state.json`,
-  which records the message ID from the first run) instead of posting a
-  new one each time.
+  already exists anywhere in the guild.
+- **The rules and welcome messages** are edited in place (found via a marker
+  in their embed footer) instead of posting new ones.
 
-This means you can safely re-run `setup` after enabling Community mode, or
-after tweaking `src/config.ts`, without ending up with duplicate roles,
-channels, or messages.
+## 6. Reading a channel on demand
 
-## 6. Hosting `serve`
+```bash
+npm run read feature-request        # last 20 messages (default)
+npm run read install-help 50        # last 50 messages
+```
 
-`npm run serve` is a long-running process — it must **stay running** for
-the ✈️ reaction-role to keep working (a Discord bot only receives gateway
-events, like reactions, while its client is connected). It does not exit on
-its own. Run it under a process supervisor such as `pm2` or a `systemd`
-unit, or inside a small always-on container, ideally on the same host as
-the main TravStats deployment. If the process stops, members can still
-react to the rules message, but the bot won't see it until `serve` is
-started again — no reactions are lost retroactively, since only reactions
-recorded from that point onward are read.
+Logs in, prints the channel's recent messages oldest-first, then disconnects
+— no persistent connection. Forum channels aren't directly readable (their
+posts live in threads). If message bodies show `(no text content)`, enable
+the Message Content intent (step 1).
+
+## 7. Release & RC announcements
+
+```bash
+npm run announce rc 2.3.0-rc.1      # → posts to #beta-channel
+npm run announce release 2.3.0      # → posts to #announcements
+```
+
+The version argument is optional; without it the bot reads `backend/VERSION`.
+The announcement body is taken from the matching `CHANGELOG.md` entry (for an
+RC, the `-rc.N` suffix is stripped so it finds the base `X.Y.Z` entry), plus a
+link to the GitHub release tag. If no changelog entry is found, it posts a
+short notice with the link.
+
+**Deploy/release integration** (see the root `CLAUDE.md`):
+
+- `/deploy` (after the RC is live on prod) → `npm run announce rc <RC_TAG>`
+- `/release` (after the GitHub release is published) → `npm run announce release <X.Y.Z>`
+
+## 8. Optional: ✈️ reaction-role (`serve`)
+
+The tool also ships a self-service beta opt-in: a persistent listener that
+grants the `Beta-Tester` role when a member reacts ✈️ to the rules message.
+**It is not enabled in the current deployment** — the rules embed does not
+advertise the ✈️ reaction and `setup` does not post it, because Beta-Tester is
+assigned manually. To enable it, re-add the reaction line to
+`src/content.ts`/`rulesMessage.ts`, run `setup`, and keep `npm run serve`
+running under a process supervisor (`pm2`/`systemd`/a small container) — a bot
+only receives reaction events while connected; reactions made while `serve` is
+down are not seen retroactively.
 
 ## Development
 
@@ -100,8 +132,7 @@ npm run typecheck   # tsc --noEmit
 npm test              # vitest --run
 ```
 
-Only the pure planner/config/state/log functions (Tasks 1–6 of the design)
-have unit tests. The live Discord I/O (`setup`'s appliers, `serve`'s
-listener) has no offline mock of the Discord gateway and is instead
-verified against a throwaway test guild — adding a mock would test the
-mock, not the bot.
+Pure planner/config/state/changelog/embed functions are unit-tested. The live
+Discord I/O (appliers, listeners, read/announce posting) has no offline mock
+of the Discord gateway and is verified against a real test guild instead —
+mocking the gateway would test the mock, not the bot.
