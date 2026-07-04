@@ -47,8 +47,15 @@ export default function CruisesPage(): JSX.Element {
 
   const startDuplicate = (c: Cruise): void => {
     // Copy everything but identity + dates + booking ref, so the user sets new
-    // dates. CruiseEditModal(create) seeds its form from this and calls create().
-    setDuplicateSource({ ...c, startDate: null, endDate: null, bookingReference: null });
+    // dates. Also reset status so the copy isn't pre-marked flown/cancelled.
+    // CruiseEditModal(create) seeds its form from this and calls create().
+    setDuplicateSource({
+      ...c,
+      startDate: null,
+      endDate: null,
+      bookingReference: null,
+      status: "scheduled",
+    });
   };
 
   const reload = useCallback(async (): Promise<void> => {
@@ -209,7 +216,7 @@ export default function CruisesPage(): JSX.Element {
                         aria-hidden
                         className={sortBy === "ship" ? "text-[var(--accent)]" : "opacity-0"}
                       >
-                        {sortBy === "ship" ? (sortOrder === "asc" ? "▲" : "▼") : "▲"}
+                        {sortBy === "ship" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
                       </span>
                     </button>
                   </th>
@@ -225,7 +232,7 @@ export default function CruisesPage(): JSX.Element {
                         aria-hidden
                         className={sortBy === "line" ? "text-[var(--accent)]" : "opacity-0"}
                       >
-                        {sortBy === "line" ? (sortOrder === "asc" ? "▲" : "▼") : "▲"}
+                        {sortBy === "line" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
                       </span>
                     </button>
                   </th>
@@ -241,7 +248,7 @@ export default function CruisesPage(): JSX.Element {
                         aria-hidden
                         className={sortBy === "date" ? "text-[var(--accent)]" : "opacity-0"}
                       >
-                        {sortBy === "date" ? (sortOrder === "asc" ? "▲" : "▼") : "▲"}
+                        {sortBy === "date" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
                       </span>
                     </button>
                   </th>
@@ -257,7 +264,7 @@ export default function CruisesPage(): JSX.Element {
                         aria-hidden
                         className={sortBy === "ports" ? "text-[var(--accent)]" : "opacity-0"}
                       >
-                        {sortBy === "ports" ? (sortOrder === "asc" ? "▲" : "▼") : "▲"}
+                        {sortBy === "ports" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
                       </span>
                     </button>
                   </th>
@@ -273,7 +280,7 @@ export default function CruisesPage(): JSX.Element {
                         aria-hidden
                         className={sortBy === "status" ? "text-[var(--accent)]" : "opacity-0"}
                       >
-                        {sortBy === "status" ? (sortOrder === "asc" ? "▲" : "▼") : "▲"}
+                        {sortBy === "status" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
                       </span>
                     </button>
                   </th>
@@ -290,7 +297,7 @@ export default function CruisesPage(): JSX.Element {
                         aria-hidden
                         className={sortBy === "price" ? "text-[var(--accent)]" : "opacity-0"}
                       >
-                        {sortBy === "price" ? (sortOrder === "asc" ? "▲" : "▼") : "▲"}
+                        {sortBy === "price" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
                       </span>
                     </button>
                   </th>
@@ -308,7 +315,7 @@ export default function CruisesPage(): JSX.Element {
                         cruise={c}
                         onEdit={setEditingCruise}
                         onDuplicate={startDuplicate}
-                        onDelete={(id) => setCruiseToDelete(sorted.find((x) => x.id === id) ?? null)}
+                        onDelete={() => setCruiseToDelete(c)}
                       />
                     }
                   />
