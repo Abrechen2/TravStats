@@ -154,10 +154,10 @@ export default function CruiseDetailPage(): JSX.Element {
               {fmtDate(cruise.startDate)} – {fmtDate(cruise.endDate)}
             </span>
             <span className="rounded-md border border-[var(--color-border)] bg-[var(--bg-base)] px-2 py-1">
-              {portsCount} {t("field.ports")}
+              {portsCount} {t("field.ports", { count: portsCount })}
             </span>
             <span className="rounded-md border border-[var(--color-border)] bg-[var(--bg-base)] px-2 py-1">
-              {seaDays} {t("field.sea_days")}
+              {seaDays} {t("field.sea_days", { count: seaDays })}
             </span>
             <span
               className="rounded-full px-2 py-1 font-semibold"

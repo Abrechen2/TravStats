@@ -91,10 +91,10 @@ export function CruiseTooltip({ cruise, onClose }: CruiseTooltipProps): JSX.Elem
           {startDate} – {endDate}
         </span>
         <span style={chipStyle}>
-          {ports} {t("cruise:field.ports")}
+          {ports} {t("cruise:field.ports", { count: ports })}
         </span>
         <span style={chipStyle}>
-          {seaDays} {t("cruise:field.sea_days")}
+          {seaDays} {t("cruise:field.sea_days", { count: seaDays })}
         </span>
         {price !== null && <span style={chipStyle}>{price}</span>}
       </div>
