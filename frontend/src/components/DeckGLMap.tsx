@@ -657,6 +657,14 @@ export function DeckGLMap({
   // the DeckGLOverlay API.
   const effects: LightingEffect[] = [];
 
+  // Enriched /geo feature for the currently selected flight — its dep/arr
+  // country codes feed the flags in the click tooltip (the structured Flight
+  // doesn't carry a country).
+  const selectedGeo = useMemo(() => {
+    const id = selectedFlights[0]?.id;
+    return id ? flights.find((f) => f.properties.id === id) : undefined;
+  }, [selectedFlights, flights]);
+
   const handleTimeChange = useCallback((value: number | ((prev: number) => number)): void => {
     setCurrentTime((prev) => (typeof value === "function" ? value(prev) : value));
   }, []);
@@ -838,6 +846,8 @@ export function DeckGLMap({
             flight={selectedFlights[0]}
             screenX={tooltipPos.x}
             screenY={tooltipPos.y}
+            depCountry={selectedGeo?.properties.departureAirport.country}
+            arrCountry={selectedGeo?.properties.arrivalAirport.country}
             onEdit={(flight) => {
               clearSelection();
               onEdit?.(flight);

@@ -113,6 +113,41 @@
     display: none; /* Chrome / Safari / WebKit */
   }
 
+  /* Pulsing ring drawn over the selected globe marker. Centred on its
+     container's origin (positioned at the marker's screen point). */
+  @keyframes map-pulse {
+    0% {
+      transform: translate(-50%, -50%) scale(0.35);
+      opacity: 0.7;
+    }
+    70% {
+      opacity: 0.12;
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(2.6);
+      opacity: 0;
+    }
+  }
+  .map-pulse-ring {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 9999px;
+    border: 2px solid var(--pulse-color, #f0a947);
+    pointer-events: none;
+    will-change: transform, opacity;
+    animation: map-pulse 1.8s cubic-bezier(0, 0.55, 0.45, 1) infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .map-pulse-ring {
+      animation: none;
+      opacity: 0.3;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+
   /* ─── Buttons ──────────────────────────────────────────── */
   .btn {
     @apply px-4 py-2 rounded-lg font-medium transition-all duration-200
