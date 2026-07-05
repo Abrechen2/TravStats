@@ -190,8 +190,7 @@
     "shipUnmatched": "Ship not in DB",
     "shipUnmatchedHint": "Stored as free text. You can link the ship in the editor.",
     "stopsLabel": "Stops",
-    "stopsValue": "{{ports}} ports, {{seaDays}} sea days",
     "unmatchedTitle": "Unmatched ports",
-    "unmatchedHint": "These ports weren't found in the database and were marked as sea days for now. Pick the matching port below, or fix them later in the editor."
+    "unmatchedHint": "These ports weren't found in the catalog and were marked as unresolved — they stay ports (not sea days). Pick the matching port below, or resolve them later in the editor."
   }
 }

@@ -561,7 +561,8 @@ function CruiseImportEntryEditor({
           className="flex w-full items-center justify-between rounded-md border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--text-primary)] hover:border-[var(--accent)]"
         >
           <span>
-            {t("import.stopsEdit")} · {t("import.stopsValue", { ports: portStops, seaDays })}
+            {t("import.stopsEdit")} · {portStops} {t("field.ports", { count: portStops })},{" "}
+            {seaDays} {t("field.sea_days", { count: seaDays })}
           </span>
           <span>{showStops ? "▴" : "▾"}</span>
         </button>
