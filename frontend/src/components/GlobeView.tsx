@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
@@ -1645,6 +1645,32 @@ export default function GlobeView({
           stack (interleaved deck.gl 9 + globe projection). Visibility
           flag from the JS-side dot-product check fades the card when
           the anchor rotates to the back of the globe. */}
+      {/* Pulse ring on the selected marker (airports + ports). Drawn under
+          the pinned card, non-interactive; reduced-motion shows a static
+          ring. Colour follows the domain. */}
+      {pinned &&
+        (pinned.kind === "airport" || pinned.kind === "port") &&
+        popupScreenPos &&
+        popupScreenPos.visible && (
+          <div
+            className="pointer-events-none absolute z-20"
+            style={{ left: popupScreenPos.x, top: popupScreenPos.y }}
+          >
+            {[0, 0.6].map((delay) => (
+              <span
+                key={delay}
+                className="map-pulse-ring"
+                style={
+                  {
+                    "--pulse-color": pinned.kind === "port" ? "#6fa0d6" : "#f0a947",
+                    animationDelay: `${delay}s`,
+                  } as CSSProperties
+                }
+              />
+            ))}
+          </div>
+        )}
+
       {pinned && popupScreenPos && popupScreenPos.visible && (
         <div
           className="absolute z-30 pointer-events-auto"
