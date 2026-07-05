@@ -26,6 +26,7 @@ const stop = (id: string, p: Port | null, isAtSea: boolean, dayNumber: number): 
   arrivalTime: null,
   departureTime: null,
   excursionNote: null,
+  unresolvedPortName: null,
 });
 
 const baseCruise = (overrides: Partial<Cruise>): Cruise =>

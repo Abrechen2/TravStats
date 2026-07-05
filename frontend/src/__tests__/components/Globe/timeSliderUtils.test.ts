@@ -35,6 +35,7 @@ const stop = (overrides: Partial<CruiseStop>): CruiseStop => ({
   arrivalTime: null,
   departureTime: null,
   excursionNote: null,
+  unresolvedPortName: null,
   ...overrides,
 });
 

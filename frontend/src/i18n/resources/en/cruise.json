@@ -106,7 +106,9 @@
     "excursion": "Excursion",
     "moveUp": "Move up",
     "moveDown": "Move down",
-    "remove": "Remove stop"
+    "remove": "Remove stop",
+    "unresolved": "Unresolved port",
+    "unresolvedHint": "Pick a port from the catalog to resolve this stop."
   },
   "picker": {
     "ship_placeholder": "Search ship …",
