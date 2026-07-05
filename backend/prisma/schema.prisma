@@ -876,6 +876,9 @@ model CruiseStop {
   arrivalTime   DateTime? @map("arrival_time")
   departureTime DateTime? @map("departure_time")
   excursionNote String?   @map("excursion_note")
+  // Third stop state: a port whose name could not be matched to the catalog on
+  // import. portId=null AND isAtSea=false AND this set => unresolved port.
+  unresolvedPortName String? @map("unresolved_port_name")
 
   cruise Cruise @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
   port   Port?  @relation(fields: [portId], references: [id], onDelete: SetNull)
