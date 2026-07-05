@@ -50,7 +50,12 @@ export const DEFAULT_MARKER_RADIUS_PX = 5;
 // but airports + ports go flat. The numbers below are only used by
 // the head-flight column.
 const HEAD_MARKER_HEIGHT_M = 90_000;
-const HEAD_MARKER_RADIUS_M = 10_000;
+// Radius is in PIXELS (radiusUnits: "pixels" below) — a touch larger than
+// the ~5 px airport dots so the live-mode head marker pops. This was
+// previously 10_000 ("meters" by the name) but read as 10 000 *pixels*,
+// painting a canvas-filling amber disk the moment live mode drew a head
+// marker (the scrub-time full-screen amber flood).
+const HEAD_MARKER_RADIUS_PX = 8;
 
 // Lift cruise paths a few km off the sphere surface so they don't
 // z-fight with / clip into the globe. The path geometry comes from the
@@ -476,7 +481,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
             getFillColor: [240, 169, 71, 235],
             getElevation: HEAD_MARKER_HEIGHT_M,
             elevationScale: 1,
-            radius: HEAD_MARKER_RADIUS_M,
+            radius: HEAD_MARKER_RADIUS_PX,
             radiusUnits: "pixels",
             diskResolution: lite ? 8 : 16,
             extruded: false,
