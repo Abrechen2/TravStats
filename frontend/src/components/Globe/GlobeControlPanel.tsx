@@ -28,6 +28,7 @@ import {
   type AppearanceDomain,
   type DomainAppearanceState,
 } from "../map/controlPanelKit";
+import { MapChromeSections } from "../map/MapChromeSections";
 import type { LabelsMode } from "../map/labelPriority";
 import {
   DEFAULT_AIRPORT_COLOR,
@@ -143,8 +144,11 @@ export function GlobeControlPanel({
 
       {expanded && (
         <div className="scrollbar-none min-h-0 overflow-y-auto overflow-x-hidden px-3 pb-3">
+          {/* Modus + Filter + Add — folded in from the old top toolbar */}
+          <MapChromeSections />
+
           {/* Layers */}
-          <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="pt-2.5">
+          <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
             <SectionLabel>{t("map:globe.panel.layers")}</SectionLabel>
             <div className="-mx-1 flex flex-col gap-0.5">
               <Toggle
