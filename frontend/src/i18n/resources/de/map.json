@@ -61,7 +61,10 @@
       "auto": "Auto",
       "standard": "Standard",
       "domainFlight": "Flüge",
-      "domainCruise": "Kreuzfahrten"
+      "domainCruise": "Kreuzfahrten",
+      "off": "Aus",
+      "labelsImportant": "Wichtige",
+      "labelsAll": "Alle"
     },
     "timesFlown": "{{count}}x geflogen",
     "flight_one": "Flug",

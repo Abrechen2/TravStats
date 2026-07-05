@@ -2,6 +2,7 @@ import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import type { Cruise, Port } from "../../types";
 import { toPortLabel } from "../map/portLabel";
+import { pickLabelled, type LabelsMode } from "../map/labelPriority";
 
 interface PortDatum {
   position: [number, number];
@@ -56,6 +57,9 @@ export interface PortsAppearance {
   portColor?: [number, number, number];
   /** Multiplier on the port marker + ring pixel radii (1 = default). */
   portSizeScale?: number;
+  /** Port-label reveal: off / key ports only (priority by visits, the
+   *  default) / all. Replaces the old hard zoom gate. */
+  labelsMode?: LabelsMode;
 }
 
 export function createCruisePortsLayer(
@@ -63,7 +67,7 @@ export function createCruisePortsLayer(
   zoom: number = PORT_LABEL_VISIBILITY_MIN_ZOOM,
   appearance: PortsAppearance = {},
 ): Layer[] | null {
-  const { portColor, portSizeScale = 1 } = appearance;
+  const { portColor, portSizeScale = 1, labelsMode = "important" } = appearance;
   const portRgb = portColor ?? PORT_RGB;
   const byPort = new Map<number, PortDatum>();
   const recordVisit = (port: Port, date: string | undefined): void => {
@@ -137,10 +141,12 @@ export function createCruisePortsLayer(
     pickable: true,
   });
 
-  const labelsVisible = zoom >= PORT_LABEL_VISIBILITY_MIN_ZOOM;
+  // Priority label reveal: the most-visited ports keep their label even
+  // when zoomed out; the rest fill in as the zoom budget grows.
+  const labelData = pickLabelled(data, (d) => d.visits, labelsMode, zoom);
   const labelLayer = new TextLayer<PortDatum>({
     id: "cruise-ports-labels",
-    data,
+    data: labelData,
     getPosition: (d) => d.position,
     getText: (d) => d.shortLabel,
     getColor: [241, 245, 249, 235],
@@ -156,7 +162,7 @@ export function createCruisePortsLayer(
     sizeUnits: "pixels",
     pickable: true,
     billboard: true,
-    visible: labelsVisible,
+    visible: labelsMode !== "off",
   });
 
   return [ringLayer, dotLayer, labelLayer];

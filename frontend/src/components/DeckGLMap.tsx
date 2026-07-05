@@ -8,6 +8,7 @@ import { logger } from "../lib/logger";
 import { applyMapOverlays } from "./Globe/mapOverlays";
 import { FlatMapControlPanel } from "./map/FlatMapControlPanel";
 import type { AppearanceDomain } from "./map/controlPanelKit";
+import type { LabelsMode } from "./map/labelPriority";
 import { FLAT_BASEMAPS, resolveFlatStyle, type FlatStyleId } from "./map/basemapStyles";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
@@ -85,6 +86,7 @@ interface FlatAppearance {
   // Style overlays
   showTerrain?: boolean;
   showPlaceLabels?: boolean;
+  labelsMode?: LabelsMode;
   /** @deprecated pre-split single marker size — migrated to
    *  airportSizeScale + portSizeScale on read. */
   markerSizeScale?: number;
@@ -220,6 +222,9 @@ export function DeckGLMap({
   const [showPlaceLabels, setShowPlaceLabels] = useState<boolean>(
     () => loadFlatAppearance().showPlaceLabels ?? true
   );
+  const [labelsMode, setLabelsMode] = useState<LabelsMode>(
+    () => loadFlatAppearance().labelsMode ?? "important"
+  );
   useEffect(() => {
     saveFlatAppearance({
       styleId,
@@ -233,6 +238,7 @@ export function DeckGLMap({
       portSizeScale,
       showTerrain,
       showPlaceLabels,
+      labelsMode,
     });
   }, [
     styleId,
@@ -246,6 +252,7 @@ export function DeckGLMap({
     portSizeScale,
     showTerrain,
     showPlaceLabels,
+    labelsMode,
   ]);
   // Apply the style-level overlays (relief hillshade + basemap place
   // names) once the map is loaded and whenever a toggle flips. Same
@@ -585,7 +592,7 @@ export function DeckGLMap({
             selectedIds,
             handleAirportClick,
             zoom,
-            { markerColor: markerColor ?? undefined, markerSizeScale: airportSizeScale, arcWidthScale }
+            { markerColor: markerColor ?? undefined, markerSizeScale: airportSizeScale, arcWidthScale, labelsMode }
           ),
           ...specialFlightLayers,
         ];
@@ -632,6 +639,7 @@ export function DeckGLMap({
     const ports = createCruisePortsLayer(cruises, zoom, {
       portColor: portColor ?? undefined,
       portSizeScale,
+      labelsMode,
     });
 
     // Split cruise visuals into a "below" group (arcs/arrows render
@@ -675,6 +683,7 @@ export function DeckGLMap({
     arcWidthScale,
     cruiseRouteColor,
     cruiseArcWidthScale,
+    labelsMode,
   ]);
 
   // No 3D modes remain — lighting effect is unused but kept as empty array for
@@ -769,6 +778,8 @@ export function DeckGLMap({
           onShowPlaceLabelsChange={setShowPlaceLabels}
           showTerrain={showTerrain}
           onShowTerrainChange={setShowTerrain}
+          labelsMode={labelsMode}
+          onLabelsModeChange={setLabelsMode}
           styleOptions={FLAT_BASEMAPS}
           styleId={styleId}
           onStyleChange={(id) => setStyleId(id as FlatStyleId)}
