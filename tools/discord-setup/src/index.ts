@@ -42,18 +42,36 @@ async function main(): Promise<void> {
   if (command === "announce") {
     const type = process.argv[3];
     if (type !== "beta" && type !== "rc" && type !== "release") {
-      log("Usage: tsx src/index.ts announce <beta|rc|release> [version]");
+      log(
+        "Usage: tsx src/index.ts announce <beta|rc|release> [version] [--notes-file <path> | --notes <text>]",
+      );
       process.exitCode = 1;
       return;
     }
-    const version = process.argv[4] ?? readRepoVersion();
+    const versionArg = process.argv[4];
+    const version =
+      versionArg && !versionArg.startsWith("--") ? versionArg : readRepoVersion();
     if (!version) {
       log("No version given and backend/VERSION could not be read.");
       process.exitCode = 1;
       return;
     }
-    const changelog = readRepoChangelog();
-    const notes = changelog ? extractChangelogEntry(changelog, version) : null;
+    // Optional custom notes override. Betas ship from the dev branch, whose
+    // version has no CHANGELOG entry, so `--notes-file <path>` (or inline
+    // `--notes "text"`) lets the announcement carry real release notes instead
+    // of the generic "See the changelog" fallback. Without either flag it reads
+    // the matching CHANGELOG entry as before.
+    const notesFileIdx = process.argv.indexOf("--notes-file");
+    const notesInlineIdx = process.argv.indexOf("--notes");
+    let notes: string | null;
+    if (notesFileIdx !== -1 && process.argv[notesFileIdx + 1]) {
+      notes = readFileSync(process.argv[notesFileIdx + 1], "utf8").replace(/\s+$/, "");
+    } else if (notesInlineIdx !== -1 && process.argv[notesInlineIdx + 1]) {
+      notes = process.argv[notesInlineIdx + 1];
+    } else {
+      const changelog = readRepoChangelog();
+      notes = changelog ? extractChangelogEntry(changelog, version) : null;
+    }
     await runAnnounce(client, token, guildId, type as AnnounceType, version, notes);
     return; // runAnnounce owns login + destroy
   }
@@ -115,7 +133,8 @@ async function main(): Promise<void> {
       "  setup [--dry-run]              provision the server\n" +
       "  serve                          run the reaction-role listener (unused if no ✈️)\n" +
       "  read <channel> [limit]         print recent messages of a channel\n" +
-      "  announce <beta|rc|release> [v] post a beta/RC/release announcement\n" +
+      "  announce <beta|rc|release> [v] [--notes-file <path> | --notes <text>]\n" +
+      "                                post a beta/RC/release announcement\n" +
       "  reply <thread> <message…>      reply in a forum thread (use --file <path> for multi-line)",
   );
   process.exitCode = 1;
