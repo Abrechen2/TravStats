@@ -1131,6 +1131,7 @@ router.get(
           isAtSea: s.isAtSea,
           arrivalTime: s.arrivalTime,
           departureTime: s.departureTime,
+          unresolvedPortName: s.unresolvedPortName,
         })),
         departurePort: c.departurePort,
         arrivalPort: c.arrivalPort,
