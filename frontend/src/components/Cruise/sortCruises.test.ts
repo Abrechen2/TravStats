@@ -31,6 +31,7 @@ function stopAt(dayNumber: number, portId: number): CruiseStop {
     arrivalTime: null,
     departureTime: null,
     excursionNote: null,
+    unresolvedPortName: null,
   };
 }
 

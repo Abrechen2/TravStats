@@ -106,7 +106,9 @@
     "excursion": "Landausflug",
     "moveUp": "Nach oben verschieben",
     "moveDown": "Nach unten verschieben",
-    "remove": "Stopp entfernen"
+    "remove": "Stopp entfernen",
+    "unresolved": "Nicht aufgelöster Hafen",
+    "unresolvedHint": "Wähle einen Hafen aus dem Katalog, um diesen Stopp aufzulösen."
   },
   "picker": {
     "ship_placeholder": "Schiff suchen …",
