@@ -126,3 +126,32 @@ describe("buildEffectiveTimeline", () => {
     expect(timeline.map((e) => e.port?.name)).toEqual(["Hamburg", "Lisbon"]);
   });
 });
+
+describe("countUniquePorts with unresolved stops", () => {
+  it("counts an unresolved stop as a port and dedupes by name", () => {
+    const cruise = baseCruise({
+      departurePort: null,
+      arrivalPort: null,
+      stops: [
+        stop("s1", port(1, "Kiel"), false, 1),
+        { ...stop("s2", null, false, 2), unresolvedPortName: "Taranto" },
+        { ...stop("s3", null, false, 3), unresolvedPortName: " taranto " },
+        stop("s4", null, true, 4),
+      ],
+    });
+    expect(countUniquePorts(cruise)).toBe(2); // Kiel(id 1) + one Taranto
+  });
+});
+
+describe("buildEffectiveTimeline carries unresolvedPortName", () => {
+  it("exposes the unresolved name on the entry", () => {
+    const cruise = baseCruise({
+      departurePort: null,
+      arrivalPort: null,
+      stops: [{ ...stop("s1", null, false, 1), unresolvedPortName: "Taranto" }],
+    });
+    const entry = buildEffectiveTimeline(cruise).find((e) => e.unresolvedPortName);
+    expect(entry?.unresolvedPortName).toBe("Taranto");
+    expect(entry?.isAtSea).toBe(false);
+  });
+});
