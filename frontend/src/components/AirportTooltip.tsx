@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type { GeoJSONFeature } from "../types";
 import { useLocale } from "../hooks/useLocale";
 import { useTranslation } from "../hooks/useTranslation";
-import { flagEmoji } from "../lib/flagEmoji";
+import { FlagImg } from "../lib/countryFlag";
 import { TooltipContainer } from "./TooltipContainer";
 
 interface AirportTooltipProps {
@@ -97,12 +97,8 @@ export function AirportTooltip({
       maxWidth="300px"
     >
       {/* Flag + IATA + ICAO + name */}
-      <div className="flex items-baseline gap-2 mb-1">
-        {stats.country && flagEmoji(stats.country) && (
-          <span className="text-base leading-none" aria-hidden>
-            {flagEmoji(stats.country)}
-          </span>
-        )}
+      <div className="flex items-center gap-2 mb-1">
+        <FlagImg country={stats.country} height={14} />
         <span className="font-mono font-bold text-base" style={{ color: "rgb(240,169,71)" }}>
           {iata}
         </span>
