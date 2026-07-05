@@ -141,6 +141,7 @@
       "cruises": "Cruises",
       "allTime": "All",
       "reset": "Reset",
+      "scrubHint": "Drag to scrub through time",
       "noData": "No dated trips"
     }
   },
