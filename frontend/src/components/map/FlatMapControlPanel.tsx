@@ -25,10 +25,6 @@ import {
 import { DEFAULT_CRUISE_ROUTE_COLOR } from "../Globe/buildGlobeLayers";
 import type { LabelsMode } from "./labelPriority";
 
-// Flat-map ranges. Marker + route widths are unitless multipliers here
-// (the deck.gl layers apply them to their own pixel/meter bases).
-const ROUTE_WIDTH = { min: 0.5, max: 3, step: 0.25 };
-const MARKER_SIZE = { min: 0.4, max: 2.5, step: 0.1 };
 const FLIGHT_ROUTE_DEFAULT: [number, number, number] = [240, 169, 71];
 const FLIGHT_MARKER_DEFAULT: [number, number, number] = [240, 169, 71];
 // Brand cruise blue — matches the port markers + the globe cruise routes.
@@ -175,22 +171,16 @@ export function FlatMapControlPanel({
               onRouteColorChange={flightAppearance.onRouteColorChange}
               routeAutoLabel={t("map:globe.panel.frequency")}
               widthLabel={t("map:globe.panel.width")}
-              width={flightAppearance.arcWidthScale}
-              widthMin={ROUTE_WIDTH.min}
-              widthMax={ROUTE_WIDTH.max}
-              widthStep={ROUTE_WIDTH.step}
-              onWidthChange={flightAppearance.onArcWidthScaleChange}
+              routeWidth={flightAppearance.routeWidth}
+              onRouteWidthChange={flightAppearance.onRouteWidthChange}
               markerLabel={t("map:globe.panel.airports")}
               markerColor={flightAppearance.markerColor}
               markerDefault={FLIGHT_MARKER_DEFAULT}
               onMarkerColorChange={flightAppearance.onMarkerColorChange}
               markerAutoLabel={t("map:globe.panel.auto")}
               sizeLabel={t("map:globe.panel.size")}
-              size={flightAppearance.markerSize}
-              sizeMin={MARKER_SIZE.min}
-              sizeMax={MARKER_SIZE.max}
-              sizeStep={MARKER_SIZE.step}
-              onSizeChange={flightAppearance.onMarkerSizeChange}
+              markerSize={flightAppearance.markerSize}
+              onMarkerSizeChange={flightAppearance.onMarkerSizeChange}
             />
           )}
           {appearanceDomains.includes("cruise") && (
@@ -202,22 +192,16 @@ export function FlatMapControlPanel({
               onRouteColorChange={cruiseAppearance.onRouteColorChange}
               routeAutoLabel={t("map:globe.panel.standard")}
               widthLabel={t("map:globe.panel.width")}
-              width={cruiseAppearance.arcWidthScale}
-              widthMin={ROUTE_WIDTH.min}
-              widthMax={ROUTE_WIDTH.max}
-              widthStep={ROUTE_WIDTH.step}
-              onWidthChange={cruiseAppearance.onArcWidthScaleChange}
+              routeWidth={cruiseAppearance.routeWidth}
+              onRouteWidthChange={cruiseAppearance.onRouteWidthChange}
               markerLabel={t("map:globe.panel.ports")}
               markerColor={cruiseAppearance.markerColor}
               markerDefault={CRUISE_MARKER_DEFAULT}
               onMarkerColorChange={cruiseAppearance.onMarkerColorChange}
               markerAutoLabel={t("map:globe.panel.auto")}
               sizeLabel={t("map:globe.panel.size")}
-              size={cruiseAppearance.markerSize}
-              sizeMin={MARKER_SIZE.min}
-              sizeMax={MARKER_SIZE.max}
-              sizeStep={MARKER_SIZE.step}
-              onSizeChange={cruiseAppearance.onMarkerSizeChange}
+              markerSize={cruiseAppearance.markerSize}
+              onMarkerSizeChange={cruiseAppearance.onMarkerSizeChange}
             />
           )}
         </div>

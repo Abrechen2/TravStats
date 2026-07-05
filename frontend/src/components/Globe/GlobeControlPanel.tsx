@@ -38,10 +38,6 @@ import {
 export type StyleId = "standard" | "light" | "dark" | "voyager" | "satellite" | "osm";
 export type LiteMode = "auto" | "on" | "off";
 
-// Route width + marker radius ranges for the globe. Marker radius is in
-// on-screen pixels (ScatterplotLayer radiusUnits: "pixels").
-const ROUTE_WIDTH = { min: 0.5, max: 3, step: 0.25 };
-const MARKER_RADIUS = { min: 3, max: 10, step: 0.5 };
 const FLIGHT_ROUTE_DEFAULT: [number, number, number] = [240, 169, 71];
 
 export interface GlobeControlPanelProps {
@@ -231,22 +227,16 @@ export function GlobeControlPanel({
               onRouteColorChange={flightAppearance.onRouteColorChange}
               routeAutoLabel={t("map:globe.panel.frequency")}
               widthLabel={t("map:globe.panel.width")}
-              width={flightAppearance.arcWidthScale}
-              widthMin={ROUTE_WIDTH.min}
-              widthMax={ROUTE_WIDTH.max}
-              widthStep={ROUTE_WIDTH.step}
-              onWidthChange={flightAppearance.onArcWidthScaleChange}
+              routeWidth={flightAppearance.routeWidth}
+              onRouteWidthChange={flightAppearance.onRouteWidthChange}
               markerLabel={t("map:globe.panel.airports")}
               markerColor={flightAppearance.markerColor}
               markerDefault={DEFAULT_AIRPORT_COLOR}
               onMarkerColorChange={flightAppearance.onMarkerColorChange}
               markerAutoLabel={t("map:globe.panel.auto")}
               sizeLabel={t("map:globe.panel.size")}
-              size={flightAppearance.markerSize}
-              sizeMin={MARKER_RADIUS.min}
-              sizeMax={MARKER_RADIUS.max}
-              sizeStep={MARKER_RADIUS.step}
-              onSizeChange={flightAppearance.onMarkerSizeChange}
+              markerSize={flightAppearance.markerSize}
+              onMarkerSizeChange={flightAppearance.onMarkerSizeChange}
             />
           )}
           {appearanceDomains.includes("cruise") && (
@@ -258,22 +248,16 @@ export function GlobeControlPanel({
               onRouteColorChange={cruiseAppearance.onRouteColorChange}
               routeAutoLabel={t("map:globe.panel.standard")}
               widthLabel={t("map:globe.panel.width")}
-              width={cruiseAppearance.arcWidthScale}
-              widthMin={ROUTE_WIDTH.min}
-              widthMax={ROUTE_WIDTH.max}
-              widthStep={ROUTE_WIDTH.step}
-              onWidthChange={cruiseAppearance.onArcWidthScaleChange}
+              routeWidth={cruiseAppearance.routeWidth}
+              onRouteWidthChange={cruiseAppearance.onRouteWidthChange}
               markerLabel={t("map:globe.panel.ports")}
               markerColor={cruiseAppearance.markerColor}
               markerDefault={DEFAULT_PORT_COLOR}
               onMarkerColorChange={cruiseAppearance.onMarkerColorChange}
               markerAutoLabel={t("map:globe.panel.auto")}
               sizeLabel={t("map:globe.panel.size")}
-              size={cruiseAppearance.markerSize}
-              sizeMin={MARKER_RADIUS.min}
-              sizeMax={MARKER_RADIUS.max}
-              sizeStep={MARKER_RADIUS.step}
-              onSizeChange={cruiseAppearance.onMarkerSizeChange}
+              markerSize={cruiseAppearance.markerSize}
+              onMarkerSizeChange={cruiseAppearance.onMarkerSizeChange}
             />
           )}
 

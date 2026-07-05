@@ -64,7 +64,10 @@
       "domainCruise": "Kreuzfahrten",
       "off": "Aus",
       "labelsImportant": "Wichtige",
-      "labelsAll": "Alle"
+      "labelsAll": "Alle",
+      "widthThin": "Dünn",
+      "widthNormal": "Normal",
+      "widthThick": "Dick"
     },
     "timesFlown": "{{count}}x geflogen",
     "flight_one": "Flug",
