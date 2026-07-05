@@ -50,8 +50,10 @@ import {
   NATIVE_AIRPORT_CIRCLE_ID,
 } from "./NativeRoutesLayer";
 
-// Delay before showing the flight tooltip — lets the flyTo animation settle first
-const TOOLTIP_DELAY_MS = 1800;
+// Small delay before the click tooltip appears — just enough for the flyTo
+// to start so the card doesn't flash at the old anchor, then it rides the
+// reprojection as the camera moves. Was 1800 ms, which read as sluggish.
+const TOOLTIP_DELAY_MS = 220;
 
 /** Check once whether WebGL2 is available (deck.gl requires it). */
 function hasWebGL2(): boolean {

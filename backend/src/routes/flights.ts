@@ -614,6 +614,35 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
       take: query.limit,
     });
 
+    // Flights don't store a departure/arrival country — resolve the ISO
+    // alpha-2 code per airport in one batch so the map overlays can render a
+    // country flag. Keyed by IATA first, then ICAO, so code-less airfields
+    // still resolve when they have an ICAO.
+    const iatas = new Set<string>();
+    const icaos = new Set<string>();
+    for (const f of flights) {
+      if (f.depIata) iatas.add(f.depIata);
+      if (f.arrIata) iatas.add(f.arrIata);
+      if (f.depIcao) icaos.add(f.depIcao);
+      if (f.arrIcao) icaos.add(f.arrIcao);
+    }
+    const countryByIata = new Map<string, string>();
+    const countryByIcao = new Map<string, string>();
+    if (iatas.size > 0 || icaos.size > 0) {
+      const airports = await prisma.airport.findMany({
+        where: {
+          OR: [{ iata: { in: [...iatas] } }, { icao: { in: [...icaos] } }],
+        },
+        select: { iata: true, icao: true, country: true },
+      });
+      for (const a of airports) {
+        if (a.country && a.iata) countryByIata.set(a.iata, a.country);
+        if (a.country && a.icao) countryByIcao.set(a.icao, a.country);
+      }
+    }
+    const airportCountry = (iata: string | null, icao: string | null): string | null =>
+      (iata && countryByIata.get(iata)) || (icao && countryByIcao.get(icao)) || null;
+
     const features = flights.map(flight => {
       const arcPoints = generateArcPoints(
         [flight.depLon, flight.depLat],
@@ -634,11 +663,13 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
             icao: flight.depIcao,
             iata: flight.depIata,
             name: flight.depName,
+            country: airportCountry(flight.depIata, flight.depIcao),
           },
           arrivalAirport: {
             icao: flight.arrIcao,
             iata: flight.arrIata,
             name: flight.arrName,
+            country: airportCountry(flight.arrIata, flight.arrIcao),
           },
           departureTime: flight.departureTime,
           arrivalTime: flight.arrivalTime,
