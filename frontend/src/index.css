@@ -103,6 +103,16 @@
 }
 
 @layer components {
+  /* Hide the scrollbar while keeping the element scrollable (used by the
+     map control panel so its scroll area reads as a clean surface). */
+  .scrollbar-none {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* legacy Edge/IE */
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none; /* Chrome / Safari / WebKit */
+  }
+
   /* ─── Buttons ──────────────────────────────────────────── */
   .btn {
     @apply px-4 py-2 rounded-lg font-medium transition-all duration-200
