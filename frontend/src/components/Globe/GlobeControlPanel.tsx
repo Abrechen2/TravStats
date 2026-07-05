@@ -18,6 +18,7 @@ import type { Quartile } from "./heatmapUtils";
 import {
   AppearanceSection,
   SectionLabel,
+  SegControl,
   Toggle,
   ACCENT,
   PANEL_BG,
@@ -27,6 +28,7 @@ import {
   type AppearanceDomain,
   type DomainAppearanceState,
 } from "../map/controlPanelKit";
+import type { LabelsMode } from "../map/labelPriority";
 import {
   DEFAULT_AIRPORT_COLOR,
   DEFAULT_PORT_COLOR,
@@ -47,8 +49,8 @@ export interface GlobeControlPanelProps {
   onAutoRotateChange: (v: boolean) => void;
   showNight: boolean;
   onShowNightChange: (v: boolean) => void;
-  showLabels: boolean;
-  onShowLabelsChange: (v: boolean) => void;
+  labelsMode: LabelsMode;
+  onLabelsModeChange: (v: LabelsMode) => void;
   showTerrain: boolean;
   onShowTerrainChange: (v: boolean) => void;
   showPlaceLabels: boolean;
@@ -82,8 +84,8 @@ export function GlobeControlPanel({
   onAutoRotateChange,
   showNight,
   onShowNightChange,
-  showLabels,
-  onShowLabelsChange,
+  labelsMode,
+  onLabelsModeChange,
   showTerrain,
   onShowTerrainChange,
   showPlaceLabels,
@@ -150,12 +152,6 @@ export function GlobeControlPanel({
             <SectionLabel>{t("map:globe.panel.layers")}</SectionLabel>
             <div className="-mx-1 flex flex-col gap-0.5">
               <Toggle
-                checked={showLabels}
-                onChange={onShowLabelsChange}
-                icon="🏷️"
-                label={t("map:globe.panel.labels")}
-              />
-              <Toggle
                 checked={showNight}
                 onChange={onShowNightChange}
                 icon="🌓"
@@ -178,6 +174,22 @@ export function GlobeControlPanel({
                 onChange={onAutoRotateChange}
                 icon="🌍"
                 label={t("map:globe.autoRotation")}
+              />
+            </div>
+            {/* Marker labels: off / key markers only / all */}
+            <div className="mt-2">
+              <div className="mb-1 flex items-center gap-2 px-1 text-xs font-medium" style={{ color: TEXT }}>
+                <span aria-hidden style={{ opacity: 0.9 }}>🏷️</span>
+                {t("map:globe.panel.labels")}
+              </div>
+              <SegControl<LabelsMode>
+                value={labelsMode}
+                onChange={onLabelsModeChange}
+                options={[
+                  { value: "off", label: t("map:globe.panel.off") },
+                  { value: "important", label: t("map:globe.panel.labelsImportant") },
+                  { value: "all", label: t("map:globe.panel.labelsAll") },
+                ]}
               />
             </div>
           </div>

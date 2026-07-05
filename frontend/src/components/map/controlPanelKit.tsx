@@ -150,6 +150,49 @@ function AutoPill({
   );
 }
 
+/** A segmented button row — the same visual grammar as the basemap grid.
+ *  Reused for labels mode, marker-size presets, route-width presets, etc. */
+export function SegControl<V extends string>({
+  value,
+  onChange,
+  options,
+  columns,
+}: {
+  value: V;
+  onChange: (v: V) => void;
+  options: readonly { value: V; label: string; icon?: string }[];
+  columns?: number;
+}): JSX.Element {
+  const cols = columns ?? options.length;
+  return (
+    <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+      {options.map((opt) => {
+        const active = opt.value === value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className="flex cursor-pointer flex-col items-center gap-0.5 rounded-md px-1.5 py-1 text-[11px] font-medium transition-colors"
+            style={{
+              background: active ? `rgba(${ACCENT},0.16)` : "rgba(255,255,255,0.04)",
+              color: active ? `rgb(${ACCENT})` : "rgba(241,245,249,0.72)",
+              border: active ? `1px solid rgba(${ACCENT},0.55)` : "1px solid rgba(255,255,255,0.06)",
+            }}
+          >
+            {opt.icon && (
+              <span aria-hidden className="text-[13px] leading-none">
+                {opt.icon}
+              </span>
+            )}
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function SliderRow({
   label,
   value,

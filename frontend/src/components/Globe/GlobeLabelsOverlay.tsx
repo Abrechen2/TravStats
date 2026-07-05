@@ -16,6 +16,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { MapRef } from "react-map-gl/maplibre";
 import type { PointDatum } from "./globeLayerTypes";
+import type { LabelsMode } from "../map/labelPriority";
 
 const DEG = Math.PI / 180;
 
@@ -42,7 +43,9 @@ export interface GlobeLabelsOverlayProps {
   mapReady: boolean;
   airports: PointDatum[];
   ports: PointDatum[];
-  visible: boolean;
+  /** off = no labels · important = greedy collision (busiest win) · all =
+   *  every front-facing label, overlap allowed. */
+  mode: LabelsMode;
 }
 
 // Sky-blue for ports, near-white for airports — ties each label to its
@@ -55,10 +58,10 @@ export function GlobeLabelsOverlay({
   mapReady,
   airports,
   ports,
-  visible,
+  mode,
 }: GlobeLabelsOverlayProps): JSX.Element | null {
   const points = useMemo<LabelPoint[]>(() => {
-    if (!visible) return [];
+    if (mode === "off") return [];
     const toPts = (arr: PointDatum[], kind: "airport" | "port"): LabelPoint[] =>
       arr
         .map((p) => ({
@@ -75,7 +78,7 @@ export function GlobeLabelsOverlay({
     return [...toPts(airports, "airport"), ...toPts(ports, "port")].sort(
       (a, b) => b.weight - a.weight
     );
-  }, [airports, ports, visible]);
+  }, [airports, ports, mode]);
 
   const nodeRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -148,7 +151,9 @@ export function GlobeLabelsOverlay({
           w: w + PAD_X * 2,
           h: LABEL_H + PAD_Y * 2,
         };
-        if (overlaps(box)) {
+        // "all" mode shows every front-facing label; "important" culls
+        // overlaps so the busiest (pre-sorted) markers keep their labels.
+        if (mode !== "all" && overlaps(box)) {
           if (node.style.display !== "none") node.style.display = "none";
           continue;
         }
@@ -164,9 +169,9 @@ export function GlobeLabelsOverlay({
     return () => {
       map.off("render", update);
     };
-  }, [mapRef, mapReady, points]);
+  }, [mapRef, mapReady, points, mode]);
 
-  if (!visible || points.length === 0) return null;
+  if (mode === "off" || points.length === 0) return null;
 
   return (
     <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">

@@ -32,6 +32,7 @@ import {
   DEFAULT_CRUISE_ROUTE_COLOR,
 } from "./Globe/buildGlobeLayers";
 import type { AppearanceDomain } from "./map/controlPanelKit";
+import type { LabelsMode } from "./map/labelPriority";
 import { nightCells as computeNightCells } from "./Globe/sunPosition";
 import { HoverTooltip, type HoverTooltipApi } from "./Globe/HoverTooltip";
 import { PinnedCard } from "./Globe/PinnedCard";
@@ -319,6 +320,7 @@ interface GlobeAppearance {
   // Style overlays
   showTerrain?: boolean;
   showPlaceLabels?: boolean;
+  labelsMode?: LabelsMode;
   /** @deprecated pre-split single marker radius — migrated to
    *  airportRadius + portRadius on read. */
   markerRadius?: number;
@@ -369,7 +371,11 @@ export default function GlobeView({
   // slow interval so the shade drifts with real time (60 s is far finer than
   // the terminator visibly moves at globe zoom).
   const [showNight, setShowNight] = useState(true);
-  const [showLabels, setShowLabels] = useState(true);
+  // Marker-label reveal: off / key markers only (greedy screen-space
+  // collision, the default) / all (ignore overlap). Persisted.
+  const [labelsMode, setLabelsMode] = useState<LabelsMode>(
+    () => loadGlobeAppearance().labelsMode ?? "important"
+  );
   // Map-appearance customisation (the panel's "Anpassung" section) plus
   // the style-level overlays, all persisted to localStorage so a user's
   // look survives reloads. `routeColor === null` keeps the per-route
@@ -426,6 +432,7 @@ export default function GlobeView({
       portRadius,
       showTerrain,
       showPlaceLabels,
+      labelsMode,
     });
   }, [
     routeColor,
@@ -438,6 +445,7 @@ export default function GlobeView({
     portRadius,
     showTerrain,
     showPlaceLabels,
+    labelsMode,
   ]);
 
   // Mirror the overlay toggles into refs so the `style.load` re-apply
@@ -1528,8 +1536,8 @@ export default function GlobeView({
           onAutoRotateChange={setAutoRotate}
           showNight={showNight}
           onShowNightChange={setShowNight}
-          showLabels={showLabels}
-          onShowLabelsChange={setShowLabels}
+          labelsMode={labelsMode}
+          onLabelsModeChange={setLabelsMode}
           showTerrain={showTerrain}
           onShowTerrainChange={setShowTerrain}
           showPlaceLabels={showPlaceLabels}
@@ -1638,7 +1646,7 @@ export default function GlobeView({
         mapReady={mapReady}
         airports={airportPoints}
         ports={portPoints}
-        visible={showLabels}
+        mode={labelsMode}
       />
 
       {/* Pinned detail card — custom React overlay positioned via

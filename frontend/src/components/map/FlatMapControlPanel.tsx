@@ -12,6 +12,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import {
   AppearanceSection,
   SectionLabel,
+  SegControl,
   Toggle,
   ACCENT,
   PANEL_BG,
@@ -22,6 +23,7 @@ import {
   type DomainAppearanceState,
 } from "./controlPanelKit";
 import { DEFAULT_CRUISE_ROUTE_COLOR } from "../Globe/buildGlobeLayers";
+import type { LabelsMode } from "./labelPriority";
 
 // Flat-map ranges. Marker + route widths are unitless multipliers here
 // (the deck.gl layers apply them to their own pixel/meter bases).
@@ -37,6 +39,8 @@ export interface FlatMapControlPanelProps {
   onShowPlaceLabelsChange: (v: boolean) => void;
   showTerrain: boolean;
   onShowTerrainChange: (v: boolean) => void;
+  labelsMode: LabelsMode;
+  onLabelsModeChange: (v: LabelsMode) => void;
 
   styleOptions: readonly { id: string; label: string }[];
   styleId: string;
@@ -53,6 +57,8 @@ export function FlatMapControlPanel({
   onShowPlaceLabelsChange,
   showTerrain,
   onShowTerrainChange,
+  labelsMode,
+  onLabelsModeChange,
   styleOptions,
   styleId,
   onStyleChange,
@@ -112,6 +118,22 @@ export function FlatMapControlPanel({
                 onChange={onShowTerrainChange}
                 icon="⛰️"
                 label={t("map:globe.panel.terrain")}
+              />
+            </div>
+            {/* Marker labels: off / key markers only / all */}
+            <div className="mt-2">
+              <div className="mb-1 flex items-center gap-2 px-1 text-xs font-medium" style={{ color: TEXT }}>
+                <span aria-hidden style={{ opacity: 0.9 }}>🏷️</span>
+                {t("map:globe.panel.labels")}
+              </div>
+              <SegControl<LabelsMode>
+                value={labelsMode}
+                onChange={onLabelsModeChange}
+                options={[
+                  { value: "off", label: t("map:globe.panel.off") },
+                  { value: "important", label: t("map:globe.panel.labelsImportant") },
+                  { value: "all", label: t("map:globe.panel.labelsAll") },
+                ]}
               />
             </div>
           </div>

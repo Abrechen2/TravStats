@@ -5,6 +5,7 @@ import { calcQuantiles, getHeatmapColor } from "./layerTypes";
 import type { ArcDatum, PointDatum } from "./layerTypes";
 import type { MapLayerColors } from "../../types/mapTheme";
 import { UpcomingArcLayer } from "./UpcomingArcLayer";
+import { pickLabelled, type LabelsMode } from "../map/labelPriority";
 
 function routeKey(a: string, b: string): string {
   return [a, b].sort().join("-");
@@ -278,13 +279,6 @@ const HIGHLIGHT_COLOR: [number, number, number, number] = [245, 158, 11, 255];
 // How many alpha units to keep for dimmed routes (out of 255)
 const DIM_ALPHA = 18;
 
-/**
- * Below this zoom, IATA labels are hidden — at low zoom levels (world view)
- * dozens of three-letter codes overlap into illegible noise. The marker
- * dots stay visible, so users still see where airports are. Above this
- * threshold there's enough screen space for the labels to read cleanly.
- */
-const LABEL_VISIBILITY_MIN_ZOOM = 4;
 
 /**
  * Build the deck.gl layer instances for routes mode from already-computed
@@ -303,6 +297,9 @@ export interface RoutesAppearance {
   markerSizeScale?: number;
   /** Multiplier on flight-arc width (1 = default). */
   arcWidthScale?: number;
+  /** Marker-label reveal: off / key markers only (priority by frequency,
+   *  the default) / all. Replaces the old hard zoom gate. */
+  labelsMode?: LabelsMode;
 }
 
 export function createRoutesLayers(
@@ -316,7 +313,7 @@ export function createRoutesLayers(
   appearance: RoutesAppearance = {}
 ): Layer[] {
   const { arcs, points } = routeData;
-  const { markerColor, markerSizeScale = 1, arcWidthScale = 1 } = appearance;
+  const { markerColor, markerSizeScale = 1, arcWidthScale = 1, labelsMode = "important" } = appearance;
   const dotRgb =
     markerColor ?? themeColors?.airportDot ?? ([240, 169, 71] as [number, number, number]);
 
@@ -324,7 +321,9 @@ export function createRoutesLayers(
   const hasSelection = selectedIds.length > 0;
   // Airport opacity: dim when a route is highlighted so pulse rings stand out
   const airportOpacity = hasSelection ? 0.15 : 1;
-  const labelsVisible = zoom >= LABEL_VISIBILITY_MIN_ZOOM;
+  // Priority label reveal: the busiest airports keep their label even when
+  // zoomed out; smaller ones fill in as the zoom budget grows.
+  const labelPoints = pickLabelled(points, (p) => p.count, labelsMode, zoom);
 
   // Three arc datasets:
   //   - regular: no upcoming flight — heatmap colour through plain ArcLayer.
@@ -467,7 +466,7 @@ export function createRoutesLayers(
   // so users still see airport locations.
   const labelLayer = new TextLayer<PointDatum>({
     id: "routes-labels",
-    data: points,
+    data: labelPoints,
     getPosition: (d) => d.position,
     getText: (d) => d.iata,
     getSize: 12,
@@ -484,7 +483,7 @@ export function createRoutesLayers(
     billboard: true,
     characterSet: "auto",
     opacity: airportOpacity,
-    visible: labelsVisible,
+    visible: labelsMode !== "off",
     pickable: !!onAirportClick,
     onClick: onAirportClick
       ? ({ object }) => {

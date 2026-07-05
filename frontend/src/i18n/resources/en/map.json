@@ -61,7 +61,10 @@
       "auto": "Auto",
       "standard": "Default",
       "domainFlight": "Flights",
-      "domainCruise": "Cruises"
+      "domainCruise": "Cruises",
+      "off": "Off",
+      "labelsImportant": "Key",
+      "labelsAll": "All"
     },
     "timesFlown": "Flown {{count}}x",
     "flight_one": "flight",
