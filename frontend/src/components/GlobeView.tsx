@@ -38,6 +38,7 @@ import {
   type MarkerSize,
 } from "./map/controlPanelKit";
 import type { LabelsMode } from "./map/labelPriority";
+import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 
 // Base marker radius (px) a size preset scales. off → 0 (hidden).
 const GLOBE_MARKER_BASE_PX = 5;
@@ -314,46 +315,6 @@ function DeckGLOverlay({ layers }: DeckOverlayProps): null {
   return null;
 }
 
-// Persisted map-appearance preferences (survives reloads via localStorage).
-interface GlobeAppearance {
-  // Flight domain
-  routeColor?: [number, number, number] | null;
-  flightRouteWidth?: RouteWidth;
-  airportColor?: [number, number, number] | null;
-  flightMarkerSize?: MarkerSize;
-  // Cruise domain
-  cruiseRouteColor?: [number, number, number] | null;
-  cruiseRouteWidth?: RouteWidth;
-  portColor?: [number, number, number] | null;
-  cruiseMarkerSize?: MarkerSize;
-  // Style overlays
-  showTerrain?: boolean;
-  showPlaceLabels?: boolean;
-  labelsMode?: LabelsMode;
-}
-
-const GLOBE_APPEARANCE_KEY = "globeAppearance.v1";
-
-function loadGlobeAppearance(): GlobeAppearance {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(GLOBE_APPEARANCE_KEY);
-    return raw ? (JSON.parse(raw) as GlobeAppearance) : {};
-  } catch (err) {
-    logger.warn("GlobeView: failed to read appearance prefs", err);
-    return {};
-  }
-}
-
-function saveGlobeAppearance(data: GlobeAppearance): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(GLOBE_APPEARANCE_KEY, JSON.stringify(data));
-  } catch (err) {
-    logger.warn("GlobeView: failed to persist appearance prefs", err);
-  }
-}
-
 export default function GlobeView({
   flights = [],
   cruises = [],
@@ -368,9 +329,8 @@ export default function GlobeView({
   const mapRef = useRef<MapRef>(null);
 
   const [styleId, setStyleId] = useState<StyleId>(() => {
-    if (typeof window === "undefined") return "dark";
-    const stored = window.sessionStorage.getItem("globeStyleId");
-    return STYLE_OPTIONS.some((s) => s.id === stored) ? (stored as StyleId) : "dark";
+    const stored = loadMapAppearance().styleId;
+    return stored && STYLE_OPTIONS.some((s) => s.id === stored) ? (stored as StyleId) : "dark";
   });
   const [autoRotate, setAutoRotate] = useState(false);
   // Day/night terminator overlay. `nightTick` recomputes the night grid on a
@@ -380,7 +340,7 @@ export default function GlobeView({
   // Marker-label reveal: off / key markers only (greedy screen-space
   // collision, the default) / all (ignore overlap). Persisted.
   const [labelsMode, setLabelsMode] = useState<LabelsMode>(
-    () => loadGlobeAppearance().labelsMode ?? "important"
+    () => loadMapAppearance().labelsMode ?? "important"
   );
   // Map-appearance customisation (the panel's "Anpassung" section) plus
   // the style-level overlays, all persisted to localStorage so a user's
@@ -391,43 +351,44 @@ export default function GlobeView({
   // Flight-domain appearance. `routeColor === null` keeps the per-route
   // frequency heatmap; a value overrides every arc with one solid tint.
   const [routeColor, setRouteColor] = useState<[number, number, number] | null>(
-    () => loadGlobeAppearance().routeColor ?? flightRouteColor ?? null
+    () => loadMapAppearance().routeColor ?? flightRouteColor ?? null
   );
   const [flightRouteWidth, setFlightRouteWidth] = useState<RouteWidth>(
-    () => loadGlobeAppearance().flightRouteWidth ?? "normal"
+    () => loadMapAppearance().flightRouteWidth ?? "normal"
   );
   // Marker colours are nullable: null = brand default (the "Auto" pill).
   const [airportColor, setAirportColor] = useState<[number, number, number] | null>(
-    () => loadGlobeAppearance().airportColor ?? null
+    () => loadMapAppearance().airportColor ?? null
   );
   const [flightMarkerSize, setFlightMarkerSize] = useState<MarkerSize>(
-    () => loadGlobeAppearance().flightMarkerSize ?? "m"
+    () => loadMapAppearance().flightMarkerSize ?? "m"
   );
   // Cruise-domain appearance. `cruiseRouteColor === null` keeps the brand
   // cruise blue; a value overrides it.
   const [cruiseRouteColor, setCruiseRouteColor] = useState<[number, number, number] | null>(
-    () => loadGlobeAppearance().cruiseRouteColor ?? null
+    () => loadMapAppearance().cruiseRouteColor ?? null
   );
   const [cruiseRouteWidth, setCruiseRouteWidth] = useState<RouteWidth>(
-    () => loadGlobeAppearance().cruiseRouteWidth ?? "normal"
+    () => loadMapAppearance().cruiseRouteWidth ?? "normal"
   );
   const [portColor, setPortColor] = useState<[number, number, number] | null>(
-    () => loadGlobeAppearance().portColor ?? null
+    () => loadMapAppearance().portColor ?? null
   );
   const [cruiseMarkerSize, setCruiseMarkerSize] = useState<MarkerSize>(
-    () => loadGlobeAppearance().cruiseMarkerSize ?? "m"
+    () => loadMapAppearance().cruiseMarkerSize ?? "m"
   );
   // Style-level overlays (relief hillshade + basemap place names).
   const [showTerrain, setShowTerrain] = useState<boolean>(
-    () => loadGlobeAppearance().showTerrain ?? false
+    () => loadMapAppearance().showTerrain ?? false
   );
   const [showPlaceLabels, setShowPlaceLabels] = useState<boolean>(
-    () => loadGlobeAppearance().showPlaceLabels ?? true
+    () => loadMapAppearance().showPlaceLabels ?? true
   );
 
   // Persist every appearance / overlay choice as one blob.
   useEffect(() => {
-    saveGlobeAppearance({
+    saveMapAppearance({
+      styleId,
       routeColor,
       flightRouteWidth,
       airportColor,
@@ -441,6 +402,7 @@ export default function GlobeView({
       labelsMode,
     });
   }, [
+    styleId,
     routeColor,
     flightRouteWidth,
     airportColor,
@@ -642,14 +604,9 @@ export default function GlobeView({
     currentStyleRef.current = currentStyle;
   }, [currentStyle]);
 
-  const onStyleChange = useCallback((next: StyleId) => {
-    setStyleId(next);
-    try {
-      window.sessionStorage.setItem("globeStyleId", next);
-    } catch {
-      // sessionStorage may be unavailable in private mode — opt-in only
-    }
-  }, []);
+  // Basemap choice persists via the shared appearance blob (save effect
+  // below), so it carries across the 2D ↔ 3D switch.
+  const onStyleChange = useCallback((next: StyleId) => setStyleId(next), []);
 
   // Apply globe projection + sky on initial load. Driven by
   // react-map-gl's onLoad — the only event that fires after the map ref
