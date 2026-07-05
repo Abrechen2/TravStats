@@ -7,8 +7,9 @@
 // Phase B of the Globe pinned-card UX rework. Phase A (Popup anchor +
 // occlusion) shipped in beta.12.
 
-import type { JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { flagEmoji } from "../../lib/flagEmoji";
 import type { GeoJSONFeature } from "../../types";
 import type { Cruise } from "../../types/cruise";
 import type { GlobePinned } from "./globeLayerTypes";
@@ -66,8 +67,26 @@ export function PinnedCard({
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
 
+  // Subtle entrance: fade + lift on mount (each pin remounts this card).
+  // Pure transition — no keyframes — and it collapses to nothing under
+  // prefers-reduced-motion because the initial + final states are one frame
+  // apart when transitions are disabled.
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setShown(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
   return (
-    <div className="rounded-md p-3 text-xs" style={SURFACE}>
+    <div
+      className="rounded-md p-3 text-xs"
+      style={{
+        ...SURFACE,
+        opacity: shown ? 1 : 0,
+        transform: shown ? "translateY(0) scale(1)" : "translateY(6px) scale(0.98)",
+        transition: "opacity .26s cubic-bezier(0.16,1,0.3,1), transform .26s cubic-bezier(0.16,1,0.3,1)",
+      }}
+    >
       <div className="mb-2 flex items-start justify-between gap-2">
         <Heading pinned={pinned} />
         <button
@@ -118,26 +137,40 @@ export function PinnedCard({
 
 function Heading({ pinned }: { pinned: GlobePinned }): JSX.Element {
   switch (pinned.kind) {
-    case "arc":
+    case "arc": {
+      const depFlag = flagEmoji(pinned.data.departure.country);
+      const arrFlag = flagEmoji(pinned.data.arrival.country);
       return (
-        <div className="text-[12px] font-semibold">
-          ✈ {pinned.data.departure.iata ?? "?"} ↔{" "}
-          {pinned.data.arrival.iata ?? "?"}
+        <div className="flex items-center gap-1.5 text-[13px] font-semibold">
+          <span>{depFlag || "✈"}</span>
+          <span>{pinned.data.departure.iata ?? "?"}</span>
+          <span className="opacity-50">↔</span>
+          <span>{arrFlag}</span>
+          <span>{pinned.data.arrival.iata ?? "?"}</span>
         </div>
       );
-    case "airport":
+    }
+    case "airport": {
+      const flag = flagEmoji(pinned.data.country);
       return (
-        <div className="text-[12px] font-semibold">✈ {pinned.data.iata}</div>
+        <div className="flex items-center gap-1.5 text-[13px] font-semibold">
+          <span>{flag || "✈"}</span>
+          <span>{pinned.data.iata}</span>
+        </div>
       );
-    case "port":
+    }
+    case "port": {
+      const flag = flagEmoji(pinned.data.country);
       return (
-        <div className="text-[12px] font-semibold">⚓ {pinned.data.name}</div>
+        <div className="flex items-center gap-1.5 text-[13px] font-semibold">
+          <span>{flag || "⚓"}</span>
+          <span>{pinned.data.name}</span>
+        </div>
       );
+    }
     case "cruise":
       return (
-        <div className="text-[12px] font-semibold">
-          🚢 {pinned.data.cruiseLabel}
-        </div>
+        <div className="text-[13px] font-semibold">🚢 {pinned.data.cruiseLabel}</div>
       );
   }
 }

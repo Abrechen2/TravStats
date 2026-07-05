@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { GeoJSONFeature } from "../types";
 import { useLocale } from "../hooks/useLocale";
 import { useTranslation } from "../hooks/useTranslation";
+import { flagEmoji } from "../lib/flagEmoji";
 import { TooltipContainer } from "./TooltipContainer";
 
 interface AirportTooltipProps {
@@ -32,6 +33,7 @@ export function AirportTooltip({
   const stats = useMemo(() => {
     let name: string | null = null;
     let icao: string | null = null;
+    let country: string | null = null;
     let departures = 0;
     let arrivals = 0;
     let totalKm = 0;
@@ -49,6 +51,7 @@ export function AirportTooltip({
         departures++;
         if (!name && dep.name) name = dep.name;
         if (!icao && dep.icao) icao = dep.icao;
+        if (!country && dep.country) country = dep.country;
         if (arr.iata) {
           routeCounts.set(arr.iata, (routeCounts.get(arr.iata) ?? 0) + 1);
         }
@@ -57,6 +60,7 @@ export function AirportTooltip({
         arrivals++;
         if (!name && arr.name) name = arr.name;
         if (!icao && arr.icao) icao = arr.icao;
+        if (!country && arr.country) country = arr.country;
         if (dep.iata) {
           routeCounts.set(dep.iata, (routeCounts.get(dep.iata) ?? 0) + 1);
         }
@@ -73,6 +77,7 @@ export function AirportTooltip({
     return {
       name,
       icao,
+      country,
       departures,
       arrivals,
       totalKm,
@@ -91,8 +96,13 @@ export function AirportTooltip({
       minWidth="220px"
       maxWidth="300px"
     >
-      {/* IATA + ICAO + name */}
+      {/* Flag + IATA + ICAO + name */}
       <div className="flex items-baseline gap-2 mb-1">
+        {stats.country && flagEmoji(stats.country) && (
+          <span className="text-base leading-none" aria-hidden>
+            {flagEmoji(stats.country)}
+          </span>
+        )}
         <span className="font-mono font-bold text-base" style={{ color: "rgb(240,169,71)" }}>
           {iata}
         </span>
