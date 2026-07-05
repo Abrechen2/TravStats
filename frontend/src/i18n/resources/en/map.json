@@ -107,6 +107,8 @@
     "quartileFilterClear": "Clear filter",
     "pinned": {
       "flightsOnRoute": "Flights on this route",
+      "flightListShow": "List (+{{count}})",
+      "flightListHide": "Less",
       "lastFlight": "Last flight",
       "longestRoute": "Longest route",
       "longestPortCall": "Longest stay",

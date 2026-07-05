@@ -212,7 +212,11 @@ function Place({
   );
 }
 
-/** Compact flight list on the pinned route card — airline name + number + date. */
+const ARC_FLIGHTS_COLLAPSED = 2;
+
+/** Compact flight list on the pinned route card — airline name + number +
+ *  date. Shows the two most recent by default; a "Liste (+N)" button reveals
+ *  the rest inline (scrollable), so the card never runs off-screen. */
 function ArcFlights({
   flights,
   flightIds,
@@ -224,21 +228,36 @@ function ArcFlights({
   locale: string;
   t: ReturnType<typeof useTranslation>["t"];
 }): JSX.Element | null {
+  const [expanded, setExpanded] = useState(false);
   const ids = new Set(flightIds);
   const rows = flights
     .filter((f) => ids.has(f.properties.id))
     .sort((a, b) =>
       (b.properties.departureTime ?? "").localeCompare(a.properties.departureTime ?? "")
-    )
-    .slice(0, 4);
+    );
   if (rows.length === 0) return null;
+  const shown = expanded ? rows : rows.slice(0, ARC_FLIGHTS_COLLAPSED);
+  const more = rows.length - ARC_FLIGHTS_COLLAPSED;
+
   return (
     <div className="mt-2 border-t pt-2" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
-      <div style={LABEL_STYLE} className="mb-1.5">
-        {t("map:globe.pinned.flightsOnRoute")}
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <span style={LABEL_STYLE}>{t("map:globe.pinned.flightsOnRoute")}</span>
+        {more > 0 && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="cursor-pointer text-[10px] font-medium"
+            style={{ color: "rgb(240,169,71)" }}
+          >
+            {expanded
+              ? t("map:globe.pinned.flightListHide")
+              : t("map:globe.pinned.flightListShow", { count: more })}
+          </button>
+        )}
       </div>
-      <div className="space-y-1">
-        {rows.map((f) => (
+      <div className="space-y-1 overflow-y-auto" style={{ maxHeight: expanded ? 132 : undefined }}>
+        {shown.map((f) => (
           <div key={f.properties.id} className="flex items-center gap-2 text-[11px]">
             <span className="font-medium">{f.properties.airline ?? "—"}</span>
             <span className="font-mono opacity-50">{f.properties.flightNumber ?? ""}</span>
