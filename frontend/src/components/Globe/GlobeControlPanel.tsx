@@ -142,7 +142,7 @@ export function GlobeControlPanel({
       </button>
 
       {expanded && (
-        <div className="min-h-0 overflow-y-auto px-3 pb-3">
+        <div className="min-h-0 overflow-y-auto overflow-x-hidden px-3 pb-3">
           {/* Layers */}
           <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="pt-2.5">
             <SectionLabel>{t("map:globe.panel.layers")}</SectionLabel>
