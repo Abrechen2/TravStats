@@ -107,14 +107,14 @@ export function ColorField({
   return (
     <label className="flex cursor-pointer items-center gap-1.5">
       <span
-        className="relative inline-block h-4 w-4 shrink-0 rounded"
+        className="relative inline-block h-4 w-4 shrink-0 overflow-hidden rounded"
         style={{ background: rgbToHex(value), border: "1px solid rgba(255,255,255,0.25)" }}
       >
         <input
           type="color"
           value={rgbToHex(value)}
           onChange={(e) => onChange(hexToRgb(e.target.value))}
-          className="absolute inset-0 cursor-pointer opacity-0"
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
         />
       </span>
       {label && (
