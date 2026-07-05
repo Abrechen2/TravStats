@@ -101,6 +101,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
       arrivalTime: s.arrivalTime,
       departureTime: s.departureTime,
       excursionNote: s.excursionNote ?? undefined,
+      unresolvedPortName: s.unresolvedPortName,
     }))
   );
 

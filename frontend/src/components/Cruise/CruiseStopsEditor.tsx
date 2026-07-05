@@ -62,7 +62,7 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
   };
 
   const handlePortChange = (index: number, port: Port): void => {
-    update(index, { portId: port.id, port });
+    update(index, { portId: port.id, port, unresolvedPortName: null });
   };
 
   return (
@@ -131,6 +131,15 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
           </label>
           {!stop.isAtSea && (
             <>
+              {stop.portId == null && stop.unresolvedPortName ? (
+                <div className="mb-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-200">
+                  <span className="font-medium">🔶 {t("stops.unresolved")}:</span>{" "}
+                  {stop.unresolvedPortName}
+                  <div className="mt-0.5 text-[11px] text-amber-300/80">
+                    {t("stops.unresolvedHint")}
+                  </div>
+                </div>
+              ) : null}
               <PortPicker
                 value={stop.port ?? null}
                 onChange={(p): void => handlePortChange(i, p)}
