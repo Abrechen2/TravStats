@@ -139,6 +139,8 @@
       "visible": "Sichtbar",
       "flights": "Flüge",
       "cruises": "Kreuzfahrten",
+      "allTime": "Alle",
+      "reset": "Zurücksetzen",
       "noData": "Keine datierten Reisen"
     }
   },

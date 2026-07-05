@@ -139,6 +139,8 @@
       "visible": "Visible",
       "flights": "Flights",
       "cruises": "Cruises",
+      "allTime": "All",
+      "reset": "Reset",
       "noData": "No dated trips"
     }
   },
