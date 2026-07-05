@@ -190,8 +190,7 @@
     "shipUnmatched": "Schiff nicht in DB",
     "shipUnmatchedHint": "Wird als freier Text gespeichert. Du kannst das Schiff im Editor verknüpfen.",
     "stopsLabel": "Stopps",
-    "stopsValue": "{{ports}} Häfen, {{seaDays}} Seetage",
     "unmatchedTitle": "Häfen ohne Treffer",
-    "unmatchedHint": "Diese Häfen wurden in der Datenbank nicht gefunden und vorerst als Seetage markiert. Wähle unten den passenden Hafen, oder korrigiere sie später im Editor."
+    "unmatchedHint": "Diese Häfen wurden im Katalog nicht gefunden und als „nicht aufgelöst\" markiert – sie bleiben Häfen (keine Seetage). Wähle unten den passenden Hafen, oder löse sie später im Editor auf."
   }
 }
