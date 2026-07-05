@@ -65,6 +65,7 @@ import type { Cruise } from "../types/cruise";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
 import { logger } from "../lib/logger";
 import { escapeHtml } from "../lib/escapeHtml";
+import { flagEmoji } from "../lib/flagEmoji";
 import { useTranslation } from "../hooks/useTranslation";
 import { useTimeSliderStore } from "../store/timeSliderStore";
 import { GlobeTimeSlider } from "./Globe/GlobeTimeSlider";
@@ -916,6 +917,7 @@ export default function GlobeView({
             size: 1,
             iata: dep.iata,
             name: dep.name ?? dep.iata,
+            country: dep.country ?? undefined,
             lastVisit: departureTime,
           });
         }
@@ -935,6 +937,7 @@ export default function GlobeView({
             size: 1,
             iata: arr.iata,
             name: arr.name ?? arr.iata,
+            country: arr.country ?? undefined,
             lastVisit: departureTime,
           });
         }
@@ -1152,6 +1155,8 @@ export default function GlobeView({
             // On-map pill shows the readable port name, not the raw
             // UN/LOCODE (the tooltip still surfaces the code via `iata`).
             label: toPortLabel(port.name),
+            // Flag from the LOCODE country prefix (only when it's a real code).
+            country: port.unlocode ? port.unlocode.slice(0, 2) : undefined,
             lastVisit: visitIso,
           });
         }
@@ -1279,7 +1284,7 @@ export default function GlobeView({
         const d = info.object;
         const html = `
           <div style="font-weight:600;margin-bottom:2px;">
-            ${escapeHtml(d.departure.iata ?? "UNK")} ↔ ${escapeHtml(d.arrival.iata ?? "UNK")}
+            ${flagEmoji(d.departure.country)} ${escapeHtml(d.departure.iata ?? "UNK")} ↔ ${flagEmoji(d.arrival.country)} ${escapeHtml(d.arrival.iata ?? "UNK")}
           </div>
           <div style="font-size:11px;opacity:0.85;margin-bottom:4px;">
             ${escapeHtml(d.departure.name ?? "Unknown")} ↔ ${escapeHtml(d.arrival.name ?? "Unknown")}
@@ -1305,7 +1310,7 @@ export default function GlobeView({
             </div>`
           : "";
         const html = `
-          <div style="font-weight:600;">${escapeHtml(d.iata)}</div>
+          <div style="font-weight:600;">${flagEmoji(d.country)} ${escapeHtml(d.iata)}</div>
           <div style="opacity:0.85;font-size:11px;">${escapeHtml(d.name)}</div>
           <div style="color:#fbbf24;margin-top:2px;">
             ${d.size} ${escapeHtml(t("map:globe.flight", { count: d.size }))}
@@ -1329,7 +1334,7 @@ export default function GlobeView({
             </div>`
           : "";
         const html = `
-          <div style="font-weight:600;">⚓ ${escapeHtml(d.name)}</div>
+          <div style="font-weight:600;">${d.country ? flagEmoji(d.country) : "⚓"} ${escapeHtml(d.name)}</div>
           ${d.iata !== d.name ? `<div style="opacity:0.85;font-size:11px;">${escapeHtml(d.iata)}</div>` : ""}
           ${lastCallLine}`;
         tooltipRef.current?.show({ html, x: info.x, y: info.y });
