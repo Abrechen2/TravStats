@@ -9,7 +9,7 @@
 
 import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { FlagImg, countryName } from "../../lib/countryFlag";
+import { FlagImg, countryName, countryFromUnlocode } from "../../lib/countryFlag";
 import type { GeoJSONFeature } from "../../types";
 import type { Cruise } from "../../types/cruise";
 import type { GlobePinned } from "./globeLayerTypes";
@@ -271,6 +271,40 @@ function ArcFlights({
   );
 }
 
+/** Row of the unique country flags a cruise visits, in itinerary order.
+ *  One country → a single big flag; several → a small-flag row (each country
+ *  shown once). Codes come from the ports' UN/LOCODE prefixes. */
+function CruiseFlags({ cruise }: { cruise: Cruise }): JSX.Element | null {
+  const codes: string[] = [];
+  const seen = new Set<string>();
+  const add = (unlocode?: string | null): void => {
+    const cc = countryFromUnlocode(unlocode);
+    if (cc && !seen.has(cc)) {
+      seen.add(cc);
+      codes.push(cc);
+    }
+  };
+  add(cruise.departurePort?.unlocode);
+  for (const stop of cruise.stops) add(stop.port?.unlocode);
+  add(cruise.arrivalPort?.unlocode);
+
+  if (codes.length === 0) return null;
+  if (codes.length === 1) {
+    return (
+      <div className="mb-2">
+        <FlagImg country={codes[0]} height={26} />
+      </div>
+    );
+  }
+  return (
+    <div className="mb-2 flex flex-wrap items-center gap-1.5">
+      {codes.map((cc) => (
+        <FlagImg key={cc} country={cc} height={14} />
+      ))}
+    </div>
+  );
+}
+
 // ─── Airport body ─────────────────────────────────────────────────
 
 interface BodyCommonProps {
@@ -450,6 +484,7 @@ function CruiseBody({
   onCruiseOpen?: (cruiseId: string) => void;
 } & BodyCommonProps): JSX.Element {
   const stats = getCruiseStats(cruises, pinned.data.cruiseId);
+  const cruise = cruises.find((c) => c.id === pinned.data.cruiseId);
   if (!stats) {
     return (
       <div className="text-[11px] opacity-85">
@@ -466,6 +501,7 @@ function CruiseBody({
   return (
     <>
       {stats.line && <SubHeading>{stats.line}</SubHeading>}
+      {cruise && <CruiseFlags cruise={cruise} />}
       <Hero color="#7dd3fc">{dateRange}</Hero>
       <Grid>
         <Row label={t("map:globe.pinned.portsLabel")} value={String(stats.portCount)} />
