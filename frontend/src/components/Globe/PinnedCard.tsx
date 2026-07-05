@@ -9,7 +9,7 @@
 
 import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { flagEmoji } from "../../lib/flagEmoji";
+import { FlagImg } from "../../lib/countryFlag";
 import type { GeoJSONFeature } from "../../types";
 import type { Cruise } from "../../types/cruise";
 import type { GlobePinned } from "./globeLayerTypes";
@@ -137,37 +137,42 @@ export function PinnedCard({
 
 function Heading({ pinned }: { pinned: GlobePinned }): JSX.Element {
   switch (pinned.kind) {
-    case "arc": {
-      const depFlag = flagEmoji(pinned.data.departure.country);
-      const arrFlag = flagEmoji(pinned.data.arrival.country);
+    case "arc":
       return (
         <div className="flex items-center gap-1.5 text-[13px] font-semibold">
-          <span>{depFlag || "✈"}</span>
+          {pinned.data.departure.country ? (
+            <FlagImg country={pinned.data.departure.country} height={13} />
+          ) : (
+            <span>✈</span>
+          )}
           <span>{pinned.data.departure.iata ?? "?"}</span>
           <span className="opacity-50">↔</span>
-          <span>{arrFlag}</span>
+          <FlagImg country={pinned.data.arrival.country} height={13} />
           <span>{pinned.data.arrival.iata ?? "?"}</span>
         </div>
       );
-    }
-    case "airport": {
-      const flag = flagEmoji(pinned.data.country);
+    case "airport":
       return (
         <div className="flex items-center gap-1.5 text-[13px] font-semibold">
-          <span>{flag || "✈"}</span>
+          {pinned.data.country ? (
+            <FlagImg country={pinned.data.country} height={13} />
+          ) : (
+            <span>✈</span>
+          )}
           <span>{pinned.data.iata}</span>
         </div>
       );
-    }
-    case "port": {
-      const flag = flagEmoji(pinned.data.country);
+    case "port":
       return (
         <div className="flex items-center gap-1.5 text-[13px] font-semibold">
-          <span>{flag || "⚓"}</span>
+          {pinned.data.country ? (
+            <FlagImg country={pinned.data.country} height={13} />
+          ) : (
+            <span>⚓</span>
+          )}
           <span>{pinned.data.name}</span>
         </div>
       );
-    }
     case "cruise":
       return (
         <div className="text-[13px] font-semibold">🚢 {pinned.data.cruiseLabel}</div>
