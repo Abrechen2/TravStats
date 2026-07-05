@@ -307,7 +307,9 @@ export function AppearanceSection({
           <AutoPill
             active={routeColor === null}
             label={routeAutoLabel}
-            onClick={() => onRouteColorChange(null)}
+            // Toggle: on → frequency/auto (null); off → the solid default
+            // colour, so the button switches both ways.
+            onClick={() => onRouteColorChange(routeColor === null ? routeDefault : null)}
           />
           <ColorField label="" value={routeColor ?? routeDefault} onChange={onRouteColorChange} />
         </div>
