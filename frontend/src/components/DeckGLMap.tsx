@@ -4,7 +4,6 @@ import { MapboxOverlay } from "@deck.gl/mapbox";
 import { createMarkerTooltip } from "./map/markerTooltip";
 import { LightingEffect } from "@deck.gl/core";
 import { useTranslation } from "../hooks/useTranslation";
-import { logger } from "../lib/logger";
 import { applyMapOverlays } from "./Globe/mapOverlays";
 import { FlatMapControlPanel } from "./map/FlatMapControlPanel";
 import {
@@ -15,6 +14,7 @@ import {
   type MarkerSize,
 } from "./map/controlPanelKit";
 import type { LabelsMode } from "./map/labelPriority";
+import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 import { FLAT_BASEMAPS, resolveFlatStyle, type FlatStyleId } from "./map/basemapStyles";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
@@ -75,49 +75,6 @@ const INITIAL_VIEW_STATE: MapViewState = {
   pitch: 0,
   bearing: 0,
 };
-
-// Persisted flat-map appearance preferences (own key, separate from the
-// globe's — the two maps have different marker units so they don't share
-// a blob). Survives reloads via localStorage.
-interface FlatAppearance {
-  styleId?: FlatStyleId;
-  // Flight domain
-  routeColor?: [number, number, number] | null;
-  flightRouteWidth?: RouteWidth;
-  markerColor?: [number, number, number] | null;
-  flightMarkerSize?: MarkerSize;
-  // Cruise domain
-  cruiseRouteColor?: [number, number, number] | null;
-  cruiseRouteWidth?: RouteWidth;
-  portColor?: [number, number, number] | null;
-  cruiseMarkerSize?: MarkerSize;
-  // Style overlays
-  showTerrain?: boolean;
-  showPlaceLabels?: boolean;
-  labelsMode?: LabelsMode;
-}
-
-const FLAT_APPEARANCE_KEY = "flatMapAppearance.v1";
-
-function loadFlatAppearance(): FlatAppearance {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(FLAT_APPEARANCE_KEY);
-    return raw ? (JSON.parse(raw) as FlatAppearance) : {};
-  } catch (err) {
-    logger.warn("DeckGLMap: failed to read appearance prefs", err);
-    return {};
-  }
-}
-
-function saveFlatAppearance(data: FlatAppearance): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(FLAT_APPEARANCE_KEY, JSON.stringify(data));
-  } catch (err) {
-    logger.warn("DeckGLMap: failed to persist appearance prefs", err);
-  }
-}
 
 interface DeckOverlayProps {
   layers: Layer[];
@@ -193,49 +150,49 @@ export function DeckGLMap({
   // `routeColor === null` keeps the frequency palette; a value tints every
   // arc. `markerColor === null` keeps the theme airport-dot colour.
   const [styleId, setStyleId] = useState<FlatStyleId>(
-    () => loadFlatAppearance().styleId ?? "dark"
+    () => loadMapAppearance().styleId ?? "dark"
   );
   // Flight-domain appearance.
   const [routeColor, setRouteColor] = useState<[number, number, number] | null>(
-    () => loadFlatAppearance().routeColor ?? null
+    () => loadMapAppearance().routeColor ?? null
   );
   const [flightRouteWidth, setFlightRouteWidth] = useState<RouteWidth>(
-    () => loadFlatAppearance().flightRouteWidth ?? "normal"
+    () => loadMapAppearance().flightRouteWidth ?? "normal"
   );
   const [markerColor, setMarkerColor] = useState<[number, number, number] | null>(
-    () => loadFlatAppearance().markerColor ?? null
+    () => loadMapAppearance().airportColor ?? null
   );
   const [flightMarkerSize, setFlightMarkerSize] = useState<MarkerSize>(
-    () => loadFlatAppearance().flightMarkerSize ?? "m"
+    () => loadMapAppearance().flightMarkerSize ?? "m"
   );
   // Cruise-domain appearance.
   const [cruiseRouteColor, setCruiseRouteColor] = useState<[number, number, number] | null>(
-    () => loadFlatAppearance().cruiseRouteColor ?? null
+    () => loadMapAppearance().cruiseRouteColor ?? null
   );
   const [cruiseRouteWidth, setCruiseRouteWidth] = useState<RouteWidth>(
-    () => loadFlatAppearance().cruiseRouteWidth ?? "normal"
+    () => loadMapAppearance().cruiseRouteWidth ?? "normal"
   );
   const [portColor, setPortColor] = useState<[number, number, number] | null>(
-    () => loadFlatAppearance().portColor ?? null
+    () => loadMapAppearance().portColor ?? null
   );
   const [cruiseMarkerSize, setCruiseMarkerSize] = useState<MarkerSize>(
-    () => loadFlatAppearance().cruiseMarkerSize ?? "m"
+    () => loadMapAppearance().cruiseMarkerSize ?? "m"
   );
   const [showTerrain, setShowTerrain] = useState<boolean>(
-    () => loadFlatAppearance().showTerrain ?? false
+    () => loadMapAppearance().showTerrain ?? false
   );
   const [showPlaceLabels, setShowPlaceLabels] = useState<boolean>(
-    () => loadFlatAppearance().showPlaceLabels ?? true
+    () => loadMapAppearance().showPlaceLabels ?? true
   );
   const [labelsMode, setLabelsMode] = useState<LabelsMode>(
-    () => loadFlatAppearance().labelsMode ?? "important"
+    () => loadMapAppearance().labelsMode ?? "important"
   );
   useEffect(() => {
-    saveFlatAppearance({
+    saveMapAppearance({
       styleId,
       routeColor,
       flightRouteWidth,
-      markerColor,
+      airportColor: markerColor,
       flightMarkerSize,
       cruiseRouteColor,
       cruiseRouteWidth,
