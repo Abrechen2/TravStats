@@ -91,4 +91,19 @@ describe("CruiseStopsEditor", () => {
       expect.objectContaining({ portId: 42, unresolvedPortName: null }),
     ]);
   });
+
+  it("clears the unresolved port name when toggling a stop to at-sea", async () => {
+    const onChange = vi.fn();
+    render(
+      <CruiseStopsEditor
+        stops={[{ portId: null, dayNumber: 1, isAtSea: false, unresolvedPortName: "Taranto" }]}
+        onChange={onChange}
+      />
+    );
+    await userEvent.click(screen.getByRole("checkbox"));
+
+    expect(onChange).toHaveBeenCalledWith([
+      expect.objectContaining({ isAtSea: true, unresolvedPortName: null }),
+    ]);
+  });
 });
