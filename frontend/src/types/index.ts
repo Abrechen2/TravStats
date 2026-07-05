@@ -438,6 +438,8 @@ export interface GeoJSONFeature {
       /** ISO 3166-1 alpha-2 country code (from /geo enrichment) — drives
        *  the flag in the map overlays. */
       country?: string | null;
+      /** City the airport serves (from /geo enrichment). */
+      city?: string | null;
       lat?: number;
       lon?: number;
     };
@@ -446,6 +448,7 @@ export interface GeoJSONFeature {
       iata?: string;
       name?: string;
       country?: string | null;
+      city?: string | null;
       lat?: number;
       lon?: number;
     };

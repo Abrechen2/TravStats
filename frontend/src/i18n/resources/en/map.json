@@ -106,6 +106,7 @@
     "quartileFilterHint": "Click to isolate this frequency band",
     "quartileFilterClear": "Clear filter",
     "pinned": {
+      "flightsOnRoute": "Flights on this route",
       "lastFlight": "Last flight",
       "longestRoute": "Longest route",
       "longestPortCall": "Longest stay",

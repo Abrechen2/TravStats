@@ -9,7 +9,7 @@
 
 import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { FlagImg } from "../../lib/countryFlag";
+import { FlagImg, countryName } from "../../lib/countryFlag";
 import type { GeoJSONFeature } from "../../types";
 import type { Cruise } from "../../types/cruise";
 import type { GlobePinned } from "./globeLayerTypes";
@@ -139,34 +139,35 @@ function Heading({ pinned }: { pinned: GlobePinned }): JSX.Element {
   switch (pinned.kind) {
     case "arc":
       return (
-        <div className="flex items-center gap-1.5 text-[13px] font-semibold">
+        <div className="flex items-center gap-2 text-[14px] font-semibold">
           {pinned.data.departure.country ? (
-            <FlagImg country={pinned.data.departure.country} height={13} />
+            <FlagImg country={pinned.data.departure.country} height={18} />
           ) : (
             <span>✈</span>
           )}
           <span>{pinned.data.departure.iata ?? "?"}</span>
           <span className="opacity-50">↔</span>
-          <FlagImg country={pinned.data.arrival.country} height={13} />
+          <FlagImg country={pinned.data.arrival.country} height={18} />
           <span>{pinned.data.arrival.iata ?? "?"}</span>
         </div>
       );
     case "airport":
       return (
-        <div className="flex items-center gap-1.5 text-[13px] font-semibold">
+        <div className="flex items-center gap-2 text-[16px] font-semibold">
           {pinned.data.country ? (
-            <FlagImg country={pinned.data.country} height={13} />
+            <FlagImg country={pinned.data.country} height={22} />
           ) : (
             <span>✈</span>
           )}
           <span>{pinned.data.iata}</span>
+          <IcaoPill icao={pinned.data.icao} />
         </div>
       );
     case "port":
       return (
-        <div className="flex items-center gap-1.5 text-[13px] font-semibold">
+        <div className="flex items-center gap-2 text-[15px] font-semibold">
           {pinned.data.country ? (
-            <FlagImg country={pinned.data.country} height={13} />
+            <FlagImg country={pinned.data.country} height={20} />
           ) : (
             <span>⚓</span>
           )}
@@ -178,6 +179,77 @@ function Heading({ pinned }: { pinned: GlobePinned }): JSX.Element {
         <div className="text-[13px] font-semibold">🚢 {pinned.data.cruiseLabel}</div>
       );
   }
+}
+
+function IcaoPill({ icao }: { icao?: string }): JSX.Element | null {
+  if (!icao) return null;
+  return (
+    <span
+      className="rounded px-1.5 py-0.5 font-mono text-[10px]"
+      style={{ color: "rgba(241,245,249,0.5)", background: "rgba(255,255,255,0.06)" }}
+    >
+      {icao}
+    </span>
+  );
+}
+
+/** "City, Country" line — country name derived from the ISO code. */
+function Place({
+  city,
+  country,
+  locale,
+}: {
+  city?: string | null;
+  country?: string | null;
+  locale: string;
+}): JSX.Element | null {
+  const parts = [city, countryName(country, locale)].filter((s): s is string => !!s);
+  if (parts.length === 0) return null;
+  return (
+    <div className="mb-2 text-[11px]" style={{ color: "rgba(241,245,249,0.55)" }}>
+      {parts.join(", ")}
+    </div>
+  );
+}
+
+/** Compact flight list on the pinned route card — airline name + number + date. */
+function ArcFlights({
+  flights,
+  flightIds,
+  locale,
+  t,
+}: {
+  flights: GeoJSONFeature[];
+  flightIds: string[];
+  locale: string;
+  t: ReturnType<typeof useTranslation>["t"];
+}): JSX.Element | null {
+  const ids = new Set(flightIds);
+  const rows = flights
+    .filter((f) => ids.has(f.properties.id))
+    .sort((a, b) =>
+      (b.properties.departureTime ?? "").localeCompare(a.properties.departureTime ?? "")
+    )
+    .slice(0, 4);
+  if (rows.length === 0) return null;
+  return (
+    <div className="mt-2 border-t pt-2" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
+      <div style={LABEL_STYLE} className="mb-1.5">
+        {t("map:globe.pinned.flightsOnRoute")}
+      </div>
+      <div className="space-y-1">
+        {rows.map((f) => (
+          <div key={f.properties.id} className="flex items-center gap-2 text-[11px]">
+            <span className="font-medium">{f.properties.airline ?? "—"}</span>
+            <span className="font-mono opacity-50">{f.properties.flightNumber ?? ""}</span>
+            <span className="ml-auto tabular-nums opacity-55">
+              {f.properties.departureTime ? formatDate(f.properties.departureTime, locale) : ""}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // ─── Airport body ─────────────────────────────────────────────────
@@ -197,6 +269,7 @@ function AirportBody({
   return (
     <>
       <SubHeading>{pinned.data.name}</SubHeading>
+      <Place city={pinned.data.city} country={pinned.data.country} locale={locale} />
       <Hero color="#fbbf24">
         {stats.totalVisits}{" "}
         {t("map:globe.flight", { count: stats.totalVisits })}
@@ -243,6 +316,7 @@ function PortBody({
       {pinned.data.iata !== pinned.data.name && (
         <SubHeading>{pinned.data.iata}</SubHeading>
       )}
+      <Place city={pinned.data.city} country={pinned.data.country} locale={locale} />
       <Hero color="#7dd3fc">
         {stats.totalVisits} {t("map:airportMarkers.visits")}
       </Hero>
@@ -293,10 +367,19 @@ function ArcBody({
   const colorRgb = `rgb(${pinned.data.color[0]},${pinned.data.color[1]},${pinned.data.color[2]})`;
   return (
     <>
-      <SubHeading>
-        {pinned.data.departure.name ?? pinned.data.departure.iata ?? "?"} →{" "}
-        {pinned.data.arrival.name ?? pinned.data.arrival.iata ?? "?"}
-      </SubHeading>
+      <div className="mb-2.5 space-y-1.5">
+        {[pinned.data.departure, pinned.data.arrival].map((ep, i) => {
+          const place = [ep.city, countryName(ep.country, locale)].filter((s): s is string => !!s).join(", ");
+          return (
+            <div key={i} className="text-[11px]">
+              <div className="text-[12px] font-medium" style={{ color: "rgba(241,245,249,0.92)" }}>
+                {ep.iata ?? "?"} · {ep.name ?? ""}
+              </div>
+              {place && <div style={{ color: "rgba(241,245,249,0.5)" }}>{place}</div>}
+            </div>
+          );
+        })}
+      </div>
       <Hero color={colorRgb}>
         {t("map:globe.pinned.totalKm", {
           count: pinned.data.count,
@@ -320,6 +403,7 @@ function ArcBody({
           <Row label={t("map:globe.pinned.topAirline")} value={stats.topAirline} />
         )}
       </Grid>
+      <ArcFlights flights={flights} flightIds={pinned.data.flightIds} locale={locale} t={t} />
       {onFlightOpen && pinned.data.flightIds.length > 0 && (
         <Cta
           label={t("map:globe.openLastFlight")}

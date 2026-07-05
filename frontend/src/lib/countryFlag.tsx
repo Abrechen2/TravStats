@@ -23,6 +23,24 @@ export function countryFromUnlocode(unlocode?: string | null): string | undefine
   return cc ? cc.toUpperCase() : undefined;
 }
 
+// Localised country name from the ISO code, via the browser's built-in
+// Intl.DisplayNames — no data table needed, follows the app language.
+const nameCache = new Map<string, Intl.DisplayNames>();
+export function countryName(code?: string | null, locale = "de"): string {
+  const cc = normCc(code);
+  if (!cc) return "";
+  try {
+    let dn = nameCache.get(locale);
+    if (!dn) {
+      dn = new Intl.DisplayNames([locale], { type: "region" });
+      nameCache.set(locale, dn);
+    }
+    return dn.of(cc.toUpperCase()) ?? "";
+  } catch {
+    return "";
+  }
+}
+
 function flagUrl(cc: string): string {
   return `https://flagcdn.com/${cc}.svg`;
 }

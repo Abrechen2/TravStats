@@ -65,7 +65,7 @@ import type { Cruise } from "../types/cruise";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
 import { logger } from "../lib/logger";
 import { escapeHtml } from "../lib/escapeHtml";
-import { flagImgHtml } from "../lib/countryFlag";
+import { flagImgHtml, countryName } from "../lib/countryFlag";
 import { useTranslation } from "../hooks/useTranslation";
 import { useTimeSliderStore } from "../store/timeSliderStore";
 import { GlobeTimeSlider } from "./Globe/GlobeTimeSlider";
@@ -917,6 +917,8 @@ export default function GlobeView({
             size: 1,
             iata: dep.iata,
             name: dep.name ?? dep.iata,
+            icao: dep.icao,
+            city: dep.city ?? undefined,
             country: dep.country ?? undefined,
             lastVisit: departureTime,
           });
@@ -937,6 +939,8 @@ export default function GlobeView({
             size: 1,
             iata: arr.iata,
             name: arr.name ?? arr.iata,
+            icao: arr.icao,
+            city: arr.city ?? undefined,
             country: arr.country ?? undefined,
             lastVisit: departureTime,
           });
@@ -1152,6 +1156,7 @@ export default function GlobeView({
             size: 1,
             iata: port.unlocode ?? port.name,
             name: port.name,
+            city: port.city ?? undefined,
             // On-map pill shows the readable port name, not the raw
             // UN/LOCODE (the tooltip still surfaces the code via `iata`).
             label: toPortLabel(port.name),
@@ -1282,14 +1287,15 @@ export default function GlobeView({
     (info: PickingInfo<ArcDatum>): void => {
       if (info.object && info.x != null && info.y != null) {
         const d = info.object;
+        const epLine = (ep: { iata?: string; name?: string; country?: string | null }): string =>
+          `<div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;padding:1px 0;">
+            ${flagImgHtml(ep.country, 18)}<span>${escapeHtml(ep.iata ?? "UNK")}</span>
+            <span style="opacity:0.6;font-weight:500;font-size:11px;">${escapeHtml(ep.name ?? "")}</span>
+          </div>`;
         const html = `
-          <div style="font-weight:600;margin-bottom:2px;">
-            ${flagImgHtml(d.departure.country)} ${escapeHtml(d.departure.iata ?? "UNK")} ↔ ${flagImgHtml(d.arrival.country)} ${escapeHtml(d.arrival.iata ?? "UNK")}
-          </div>
-          <div style="font-size:11px;opacity:0.85;margin-bottom:4px;">
-            ${escapeHtml(d.departure.name ?? "Unknown")} ↔ ${escapeHtml(d.arrival.name ?? "Unknown")}
-          </div>
-          <div style="color:rgb(${d.color[0]},${d.color[1]},${d.color[2]});font-weight:600;">
+          ${epLine(d.departure)}
+          ${epLine(d.arrival)}
+          <div style="color:rgb(${d.color[0]},${d.color[1]},${d.color[2]});font-weight:600;margin-top:4px;">
             ${escapeHtml(t("map:globe.timesFlown", { count: d.count }))}
           </div>`;
         tooltipRef.current?.show({ html, x: info.x, y: info.y });
@@ -1309,10 +1315,18 @@ export default function GlobeView({
               ${escapeHtml(t("map:tooltip.lastVisit"))}: ${escapeHtml(formatTooltipDate(d.lastVisit, locale))}
             </div>`
           : "";
+        const icaoPill = d.icao
+          ? `<span style="font-size:10px;font-family:monospace;color:rgba(241,245,249,0.5);background:rgba(255,255,255,0.06);border-radius:4px;padding:1px 5px;">${escapeHtml(d.icao)}</span>`
+          : "";
+        const place = [d.city, countryName(d.country, locale)].filter(Boolean).join(", ");
+        const placeLine = place
+          ? `<div style="opacity:0.62;font-size:10.5px;margin-top:2px;">${escapeHtml(place)}</div>`
+          : "";
         const html = `
-          <div style="font-weight:600;">${flagImgHtml(d.country)} ${escapeHtml(d.iata)}</div>
-          <div style="opacity:0.85;font-size:11px;">${escapeHtml(d.name)}</div>
-          <div style="color:#fbbf24;margin-top:2px;">
+          <div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;">${flagImgHtml(d.country, 19)}<span>${escapeHtml(d.iata)}</span>${icaoPill}</div>
+          <div style="opacity:0.88;font-size:11.5px;margin-top:3px;">${escapeHtml(d.name)}</div>
+          ${placeLine}
+          <div style="color:#fbbf24;margin-top:4px;">
             ${d.size} ${escapeHtml(t("map:globe.flight", { count: d.size }))}
           </div>
           ${lastVisitLine}`;
@@ -1333,9 +1347,18 @@ export default function GlobeView({
               ${escapeHtml(t("map:tooltip.lastCall"))}: ${escapeHtml(formatTooltipDate(d.lastVisit, locale))}
             </div>`
           : "";
+        const place = [d.city, countryName(d.country, locale)].filter(Boolean).join(", ");
+        const placeLine = place
+          ? `<div style="opacity:0.62;font-size:10.5px;margin-top:2px;">${escapeHtml(place)}</div>`
+          : "";
+        const codeLine =
+          d.iata !== d.name
+            ? `<div style="opacity:0.55;font-size:10px;font-family:monospace;margin-top:2px;">${escapeHtml(d.iata)}</div>`
+            : "";
         const html = `
-          <div style="font-weight:600;">${d.country ? flagImgHtml(d.country) : "⚓"} ${escapeHtml(d.name)}</div>
-          ${d.iata !== d.name ? `<div style="opacity:0.85;font-size:11px;">${escapeHtml(d.iata)}</div>` : ""}
+          <div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;">${d.country ? flagImgHtml(d.country, 19) : "⚓"}<span>${escapeHtml(d.name)}</span></div>
+          ${placeLine}
+          ${codeLine}
           ${lastCallLine}`;
         tooltipRef.current?.show({ html, x: info.x, y: info.y });
       } else {
