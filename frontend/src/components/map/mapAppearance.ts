@@ -34,15 +34,58 @@ export interface MapAppearance {
 }
 
 const KEY = "mapAppearance.v2";
+// Pre-consolidation blobs — migrated once into the shared key so existing
+// users keep their customised look after the switch.
+const LEGACY_GLOBE = "globeAppearance.v1";
+const LEGACY_FLAT = "flatMapAppearance.v1";
 
-export function loadMapAppearance(): MapAppearance {
-  if (typeof window === "undefined") return {};
+function readBlob(key: string): MapAppearance & { markerColor?: [number, number, number] | null } {
   try {
-    const raw = window.localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as MapAppearance) : {};
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
   }
+}
+
+// Merge the old split blobs. The flat map called the airport colour
+// `markerColor`; map it onto the shared `airportColor`. Flat wins on overlap
+// (it also carried the basemap id).
+function migrateLegacy(): MapAppearance {
+  const globe = readBlob(LEGACY_GLOBE);
+  const flat = readBlob(LEGACY_FLAT);
+  const { markerColor, ...flatRest } = flat;
+  const merged: MapAppearance = { ...globe, ...flatRest };
+  const airportColor = markerColor ?? globe.airportColor;
+  if (airportColor !== undefined) merged.airportColor = airportColor;
+  return merged;
+}
+
+export function loadMapAppearance(): MapAppearance {
+  if (typeof window === "undefined") return {};
+  let raw: string | null = null;
+  try {
+    raw = window.localStorage.getItem(KEY);
+  } catch {
+    return {};
+  }
+  if (raw) {
+    try {
+      return JSON.parse(raw) as MapAppearance;
+    } catch {
+      return {};
+    }
+  }
+  // No shared blob yet — pull the legacy settings across one time.
+  const migrated = migrateLegacy();
+  if (Object.keys(migrated).length > 0) {
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify(migrated));
+    } catch {
+      // localStorage unavailable — persistence is opt-in.
+    }
+  }
+  return migrated;
 }
 
 /** Merge-write: only the given keys change, the rest of the blob is kept. */
