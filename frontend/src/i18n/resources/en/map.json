@@ -58,7 +58,10 @@
       "airports": "Airports",
       "ports": "Ports",
       "size": "Size",
-      "auto": "Auto"
+      "auto": "Auto",
+      "standard": "Default",
+      "domainFlight": "Flights",
+      "domainCruise": "Cruises"
     },
     "timesFlown": "Flown {{count}}x",
     "flight_one": "flight",

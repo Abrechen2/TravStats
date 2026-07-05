@@ -29,12 +29,15 @@ import {
   DEFAULT_AIRPORT_COLOR,
   DEFAULT_PORT_COLOR,
   DEFAULT_MARKER_RADIUS_PX,
+  DEFAULT_CRUISE_ROUTE_COLOR,
 } from "./Globe/buildGlobeLayers";
+import type { AppearanceDomain } from "./map/controlPanelKit";
 import { nightCells as computeNightCells } from "./Globe/sunPosition";
 import { HoverTooltip, type HoverTooltipApi } from "./Globe/HoverTooltip";
 import { PinnedCard } from "./Globe/PinnedCard";
 import { PinnedCardBoundary } from "./Globe/PinnedCardBoundary";
 import { GlobeLabelsOverlay } from "./Globe/GlobeLabelsOverlay";
+import { toPortLabel } from "./map/portLabel";
 import { applyMapOverlays } from "./Globe/mapOverlays";
 import {
   GlobeControlPanel,
@@ -95,6 +98,9 @@ interface GlobeViewProps {
       on the flat map. */
   flightRouteColor?: [number, number, number];
   minRouteCount?: number;
+  /** Which domain appearance sections the control panel exposes. Globe
+      currently only mounts on the Alle tab, so this defaults to both. */
+  appearanceDomains?: readonly AppearanceDomain[];
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -300,13 +306,22 @@ function DeckGLOverlay({ layers }: DeckOverlayProps): null {
 
 // Persisted map-appearance preferences (survives reloads via localStorage).
 interface GlobeAppearance {
+  // Flight domain
   routeColor?: [number, number, number] | null;
   arcWidthScale?: number;
-  airportColor?: [number, number, number];
-  portColor?: [number, number, number];
-  markerRadius?: number;
+  airportColor?: [number, number, number] | null;
+  airportRadius?: number;
+  // Cruise domain
+  cruiseRouteColor?: [number, number, number] | null;
+  cruiseArcWidthScale?: number;
+  portColor?: [number, number, number] | null;
+  portRadius?: number;
+  // Style overlays
   showTerrain?: boolean;
   showPlaceLabels?: boolean;
+  /** @deprecated pre-split single marker radius — migrated to
+   *  airportRadius + portRadius on read. */
+  markerRadius?: number;
 }
 
 const GLOBE_APPEARANCE_KEY = "globeAppearance.v1";
@@ -338,6 +353,7 @@ export default function GlobeView({
   onCruiseOpen,
   flightRouteColor,
   minRouteCount = 1,
+  appearanceDomains = ["flight", "cruise"],
 }: GlobeViewProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
@@ -360,20 +376,34 @@ export default function GlobeView({
   // frequency heatmap; a value overrides every arc with one solid tint.
   // The prop `flightRouteColor` (set by some parent tabs) seeds the
   // initial route colour when nothing is stored yet.
+  // Flight-domain appearance. `routeColor === null` keeps the per-route
+  // frequency heatmap; a value overrides every arc with one solid tint.
   const [routeColor, setRouteColor] = useState<[number, number, number] | null>(
     () => loadGlobeAppearance().routeColor ?? flightRouteColor ?? null
   );
   const [arcWidthScale, setArcWidthScale] = useState<number>(
     () => loadGlobeAppearance().arcWidthScale ?? 1
   );
-  const [airportColor, setAirportColor] = useState<[number, number, number]>(
-    () => loadGlobeAppearance().airportColor ?? DEFAULT_AIRPORT_COLOR
+  // Marker colours are nullable: null = brand default (the "Auto" pill).
+  const [airportColor, setAirportColor] = useState<[number, number, number] | null>(
+    () => loadGlobeAppearance().airportColor ?? null
   );
-  const [portColor, setPortColor] = useState<[number, number, number]>(
-    () => loadGlobeAppearance().portColor ?? DEFAULT_PORT_COLOR
+  const [airportRadius, setAirportRadius] = useState<number>(
+    () => loadGlobeAppearance().airportRadius ?? loadGlobeAppearance().markerRadius ?? DEFAULT_MARKER_RADIUS_PX
   );
-  const [markerRadius, setMarkerRadius] = useState<number>(
-    () => loadGlobeAppearance().markerRadius ?? DEFAULT_MARKER_RADIUS_PX
+  // Cruise-domain appearance. `cruiseRouteColor === null` keeps the brand
+  // cruise blue; a value overrides it.
+  const [cruiseRouteColor, setCruiseRouteColor] = useState<[number, number, number] | null>(
+    () => loadGlobeAppearance().cruiseRouteColor ?? null
+  );
+  const [cruiseArcWidthScale, setCruiseArcWidthScale] = useState<number>(
+    () => loadGlobeAppearance().cruiseArcWidthScale ?? 1
+  );
+  const [portColor, setPortColor] = useState<[number, number, number] | null>(
+    () => loadGlobeAppearance().portColor ?? null
+  );
+  const [portRadius, setPortRadius] = useState<number>(
+    () => loadGlobeAppearance().portRadius ?? loadGlobeAppearance().markerRadius ?? DEFAULT_MARKER_RADIUS_PX
   );
   // Style-level overlays (relief hillshade + basemap place names).
   const [showTerrain, setShowTerrain] = useState<boolean>(
@@ -389,12 +419,26 @@ export default function GlobeView({
       routeColor,
       arcWidthScale,
       airportColor,
+      airportRadius,
+      cruiseRouteColor,
+      cruiseArcWidthScale,
       portColor,
-      markerRadius,
+      portRadius,
       showTerrain,
       showPlaceLabels,
     });
-  }, [routeColor, arcWidthScale, airportColor, portColor, markerRadius, showTerrain, showPlaceLabels]);
+  }, [
+    routeColor,
+    arcWidthScale,
+    airportColor,
+    airportRadius,
+    cruiseRouteColor,
+    cruiseArcWidthScale,
+    portColor,
+    portRadius,
+    showTerrain,
+    showPlaceLabels,
+  ]);
 
   // Mirror the overlay toggles into refs so the `style.load` re-apply
   // handler (which is created once) always reads the current values.
@@ -1092,6 +1136,9 @@ export default function GlobeView({
             size: 1,
             iata: port.unlocode ?? port.name,
             name: port.name,
+            // On-map pill shows the readable port name, not the raw
+            // UN/LOCODE (the tooltip still surfaces the code via `iata`).
+            label: toPortLabel(port.name),
             lastVisit: visitIso,
           });
         }
@@ -1310,9 +1357,12 @@ export default function GlobeView({
         setPinned,
         flightRouteColor: routeColor ?? undefined,
         arcWidthScale,
-        airportColor,
-        portColor,
-        markerRadius,
+        cruiseRouteColor: cruiseRouteColor ?? DEFAULT_CRUISE_ROUTE_COLOR,
+        cruiseArcWidthScale,
+        airportColor: airportColor ?? DEFAULT_AIRPORT_COLOR,
+        portColor: portColor ?? DEFAULT_PORT_COLOR,
+        airportRadius,
+        portRadius,
         nightCells: nightCellsData,
         showNight,
       }),
@@ -1334,9 +1384,12 @@ export default function GlobeView({
       occlusionProps,
       routeColor,
       arcWidthScale,
+      cruiseRouteColor,
+      cruiseArcWidthScale,
       airportColor,
       portColor,
-      markerRadius,
+      airportRadius,
+      portRadius,
       nightCellsData,
       showNight,
     ]
@@ -1494,16 +1547,27 @@ export default function GlobeView({
           hasArcs={arcsData.length > 0}
           antipodalCount={antipodalArcs.length}
           hasWeakArcs={arcsData.some((a) => a.weak)}
-          routeColor={routeColor}
-          onRouteColorChange={setRouteColor}
-          arcWidthScale={arcWidthScale}
-          onArcWidthScaleChange={setArcWidthScale}
-          airportColor={airportColor}
-          onAirportColorChange={setAirportColor}
-          portColor={portColor}
-          onPortColorChange={setPortColor}
-          markerRadius={markerRadius}
-          onMarkerRadiusChange={setMarkerRadius}
+          appearanceDomains={appearanceDomains}
+          flightAppearance={{
+            routeColor,
+            onRouteColorChange: setRouteColor,
+            arcWidthScale,
+            onArcWidthScaleChange: setArcWidthScale,
+            markerColor: airportColor,
+            onMarkerColorChange: setAirportColor,
+            markerSize: airportRadius,
+            onMarkerSizeChange: setAirportRadius,
+          }}
+          cruiseAppearance={{
+            routeColor: cruiseRouteColor,
+            onRouteColorChange: setCruiseRouteColor,
+            arcWidthScale: cruiseArcWidthScale,
+            onArcWidthScaleChange: setCruiseArcWidthScale,
+            markerColor: portColor,
+            onMarkerColorChange: setPortColor,
+            markerSize: portRadius,
+            onMarkerSizeChange: setPortRadius,
+          }}
         />
       </div>
 

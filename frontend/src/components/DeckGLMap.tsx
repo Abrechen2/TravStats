@@ -7,6 +7,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 import { applyMapOverlays } from "./Globe/mapOverlays";
 import { FlatMapControlPanel } from "./map/FlatMapControlPanel";
+import type { AppearanceDomain } from "./map/controlPanelKit";
 import { FLAT_BASEMAPS, resolveFlatStyle, type FlatStyleId } from "./map/basemapStyles";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
@@ -71,13 +72,22 @@ const INITIAL_VIEW_STATE: MapViewState = {
 // a blob). Survives reloads via localStorage.
 interface FlatAppearance {
   styleId?: FlatStyleId;
+  // Flight domain
   routeColor?: [number, number, number] | null;
   arcWidthScale?: number;
   markerColor?: [number, number, number] | null;
+  airportSizeScale?: number;
+  // Cruise domain
+  cruiseRouteColor?: [number, number, number] | null;
+  cruiseArcWidthScale?: number;
   portColor?: [number, number, number] | null;
-  markerSizeScale?: number;
+  portSizeScale?: number;
+  // Style overlays
   showTerrain?: boolean;
   showPlaceLabels?: boolean;
+  /** @deprecated pre-split single marker size — migrated to
+   *  airportSizeScale + portSizeScale on read. */
+  markerSizeScale?: number;
 }
 
 const FLAT_APPEARANCE_KEY = "flatMapAppearance.v1";
@@ -140,6 +150,8 @@ interface DeckGLMapProps {
   /** Override count-based heatmap palette for flight routes — see
    *  MapContainer3D.flightRouteColor for the motivation. */
   flightRouteColor?: [number, number, number];
+  /** Which domain appearance sections the control panel exposes. */
+  appearanceDomains?: readonly AppearanceDomain[];
 }
 
 export function DeckGLMap({
@@ -154,6 +166,7 @@ export function DeckGLMap({
   cruises = [],
   extraLayers,
   flightRouteColor,
+  appearanceDomains = ["flight", "cruise"],
 }: DeckGLMapProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
@@ -175,6 +188,7 @@ export function DeckGLMap({
   const [styleId, setStyleId] = useState<FlatStyleId>(
     () => loadFlatAppearance().styleId ?? "dark"
   );
+  // Flight-domain appearance.
   const [routeColor, setRouteColor] = useState<[number, number, number] | null>(
     () => loadFlatAppearance().routeColor ?? null
   );
@@ -184,11 +198,21 @@ export function DeckGLMap({
   const [markerColor, setMarkerColor] = useState<[number, number, number] | null>(
     () => loadFlatAppearance().markerColor ?? null
   );
+  const [airportSizeScale, setAirportSizeScale] = useState<number>(
+    () => loadFlatAppearance().airportSizeScale ?? loadFlatAppearance().markerSizeScale ?? 1
+  );
+  // Cruise-domain appearance.
+  const [cruiseRouteColor, setCruiseRouteColor] = useState<[number, number, number] | null>(
+    () => loadFlatAppearance().cruiseRouteColor ?? null
+  );
+  const [cruiseArcWidthScale, setCruiseArcWidthScale] = useState<number>(
+    () => loadFlatAppearance().cruiseArcWidthScale ?? 1
+  );
   const [portColor, setPortColor] = useState<[number, number, number] | null>(
     () => loadFlatAppearance().portColor ?? null
   );
-  const [markerSizeScale, setMarkerSizeScale] = useState<number>(
-    () => loadFlatAppearance().markerSizeScale ?? 1
+  const [portSizeScale, setPortSizeScale] = useState<number>(
+    () => loadFlatAppearance().portSizeScale ?? loadFlatAppearance().markerSizeScale ?? 1
   );
   const [showTerrain, setShowTerrain] = useState<boolean>(
     () => loadFlatAppearance().showTerrain ?? false
@@ -202,8 +226,11 @@ export function DeckGLMap({
       routeColor,
       arcWidthScale,
       markerColor,
+      airportSizeScale,
+      cruiseRouteColor,
+      cruiseArcWidthScale,
       portColor,
-      markerSizeScale,
+      portSizeScale,
       showTerrain,
       showPlaceLabels,
     });
@@ -212,8 +239,11 @@ export function DeckGLMap({
     routeColor,
     arcWidthScale,
     markerColor,
+    airportSizeScale,
+    cruiseRouteColor,
+    cruiseArcWidthScale,
     portColor,
-    markerSizeScale,
+    portSizeScale,
     showTerrain,
     showPlaceLabels,
   ]);
@@ -555,7 +585,7 @@ export function DeckGLMap({
             selectedIds,
             handleAirportClick,
             zoom,
-            { markerColor: markerColor ?? undefined, markerSizeScale, arcWidthScale }
+            { markerColor: markerColor ?? undefined, markerSizeScale: airportSizeScale, arcWidthScale }
           ),
           ...specialFlightLayers,
         ];
@@ -578,6 +608,11 @@ export function DeckGLMap({
     // /cruises/:id/geometry into smooth curves; until the fetch resolves
     // for a given cruise, each leg falls back to a 2-vertex direct chord.
     const geometryMap: CruiseGeometryMap = cruiseGeometry;
+    const cruiseArcAppearance = {
+      zoom,
+      arcColor: cruiseRouteColor ?? undefined,
+      arcWidthScale: cruiseArcWidthScale,
+    };
     const arcs = createCruiseArcsLayer(
       cruises,
       geometryMap,
@@ -586,12 +621,17 @@ export function DeckGLMap({
         const cruise = cruises.find((c) => c.id === cruiseId);
         if (cruise) setCruiseSelection(cruise);
       },
-      { zoom }
+      cruiseArcAppearance
     );
-    const arrows = createCruiseArrowsLayer(cruises, geometryMap, selectedCruiseId, { zoom });
+    const arrows = createCruiseArrowsLayer(
+      cruises,
+      geometryMap,
+      selectedCruiseId,
+      cruiseArcAppearance
+    );
     const ports = createCruisePortsLayer(cruises, zoom, {
       portColor: portColor ?? undefined,
-      portSizeScale: markerSizeScale,
+      portSizeScale,
     });
 
     // Split cruise visuals into a "below" group (arcs/arrows render
@@ -630,8 +670,11 @@ export function DeckGLMap({
     specialFlightLayers,
     markerColor,
     portColor,
-    markerSizeScale,
+    airportSizeScale,
+    portSizeScale,
     arcWidthScale,
+    cruiseRouteColor,
+    cruiseArcWidthScale,
   ]);
 
   // No 3D modes remain — lighting effect is unused but kept as empty array for
@@ -729,16 +772,27 @@ export function DeckGLMap({
           styleOptions={FLAT_BASEMAPS}
           styleId={styleId}
           onStyleChange={(id) => setStyleId(id as FlatStyleId)}
-          routeColor={routeColor}
-          onRouteColorChange={setRouteColor}
-          arcWidthScale={arcWidthScale}
-          onArcWidthScaleChange={setArcWidthScale}
-          markerColor={markerColor}
-          onMarkerColorChange={setMarkerColor}
-          portColor={portColor}
-          onPortColorChange={setPortColor}
-          markerSizeScale={markerSizeScale}
-          onMarkerSizeScaleChange={setMarkerSizeScale}
+          appearanceDomains={appearanceDomains}
+          flightAppearance={{
+            routeColor,
+            onRouteColorChange: setRouteColor,
+            arcWidthScale,
+            onArcWidthScaleChange: setArcWidthScale,
+            markerColor,
+            onMarkerColorChange: setMarkerColor,
+            markerSize: airportSizeScale,
+            onMarkerSizeChange: setAirportSizeScale,
+          }}
+          cruiseAppearance={{
+            routeColor: cruiseRouteColor,
+            onRouteColorChange: setCruiseRouteColor,
+            arcWidthScale: cruiseArcWidthScale,
+            onArcWidthScaleChange: setCruiseArcWidthScale,
+            markerColor: portColor,
+            onMarkerColorChange: setPortColor,
+            markerSize: portSizeScale,
+            onMarkerSizeChange: setPortSizeScale,
+          }}
         />
       </div>
 

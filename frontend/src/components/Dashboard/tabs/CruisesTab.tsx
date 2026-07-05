@@ -155,6 +155,7 @@ export function CruisesTab(): JSX.Element {
         extraLayers={extraLayers}
         showInternalCruises={showInternalCruises}
         cruisesOverride={visibleCruises}
+        appearanceDomains={["cruise"]}
       />
       <button
         type="button"

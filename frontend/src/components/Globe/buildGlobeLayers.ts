@@ -28,7 +28,12 @@ import type {
   PointDatum,
 } from "./globeLayerTypes";
 
-const CRUISE_PATH_COLOR: [number, number, number, number] = [80, 180, 255, 230];
+// Default cruise-route colour — the canonical cruise-domain blue
+// (BRAND.md §3, --domain-cruise = rgb(111,160,214)). Matches the port
+// marker default + the flat-map cruise arcs so ship routes read the same
+// on the globe and the 2D map. Alpha is applied at the layer.
+export const DEFAULT_CRUISE_ROUTE_COLOR: [number, number, number] = [111, 160, 214];
+const CRUISE_PATH_ALPHA = 230;
 
 // Default marker appearance — exported so GlobeView can seed the user
 // customisation state from the same source of truth. Airports + ports
@@ -36,7 +41,10 @@ const CRUISE_PATH_COLOR: [number, number, number, number] = [80, 180, 255, 230];
 // on-screen size regardless of zoom (the ColumnLayer variant ballooned
 // to city-covering pillars at high zoom).
 export const DEFAULT_AIRPORT_COLOR: [number, number, number] = [251, 191, 36];
-export const DEFAULT_PORT_COLOR: [number, number, number] = [56, 189, 248];
+// Brand cruise blue (BRAND.md §3, --domain-cruise) — same default as the
+// flat-map port markers + cruise routes so ports read identically on both
+// maps. Was sky-400 [56,189,248], a different blue outside the palette.
+export const DEFAULT_PORT_COLOR: [number, number, number] = [111, 160, 214];
 export const DEFAULT_MARKER_RADIUS_PX = 5;
 // Head-flight arrival marker keeps a little 3-D pop via ColumnLayer,
 // but airports + ports go flat. The numbers below are only used by
@@ -52,14 +60,19 @@ const HEAD_MARKER_RADIUS_M = 10_000;
 // the user observed. 5 km is invisible at any user-relevant zoom but
 // safely above the precision noise of the fragment depth.
 const CRUISE_PATH_ALTITUDE_M = 5_000;
-// Night-shade cells sit just above the sphere so the globe mesh's depth
-// buffer occludes the far side directly. Earlier the shade sat at
-// altitude 0 with `depthCompare: "always"` and relied solely on the
-// occlusion extension's per-frame horizon cull to hide the back — during
-// movement that cull lags one frame, flashing far-side dark cells as
-// black triangles. A small altitude + real depth testing kills the flash
-// (the sphere is opaque in the depth buffer regardless of frame timing).
-const NIGHT_SHADE_ALTITUDE_M = 1_500;
+// Night-shade cells sit above the sphere so the globe mesh's depth buffer
+// occludes the far side directly (no per-frame occlusion-extension lag).
+//
+// The altitude has to clear the CHORD SAG of each flat quad, not just be
+// "a little" above the surface. A 2.5° cell rendered as a flat polygon has
+// its 4 corners on the sphere but its interior chords under it: the cell
+// centroid dips ~R·(1/cos(1.77°) − 1) ≈ 3 km below the corner radius. At a
+// 1.5 km lift the centroid therefore sank ~1.5 km INTO the sphere and got
+// depth-clipped, punching a hole in the middle of every cell — the mottled
+// "Flecken" across the night side. Lifting to 10 km keeps the whole cell
+// (centroid included) clearly above the sphere, so the shade reads as a
+// smooth wash. 10 km is < 0.2 % of Earth's radius — invisible at globe zoom.
+const NIGHT_SHADE_ALTITUDE_M = 10_000;
 // Airport + port markers (and their labels) lift slightly above the
 // cruise-path altitude so they render ON TOP of cruise paths rather
 // than getting visually clipped where a path intersects the marker.
@@ -114,12 +127,18 @@ export interface BuildGlobeLayersOptions {
   flightRouteColor?: [number, number, number];
   /** User multiplier on flight-arc line width (1 = default). */
   arcWidthScale: number;
+  /** Cruise-route colour (RGB); alpha applied internally. */
+  cruiseRouteColor: [number, number, number];
+  /** User multiplier on cruise-path line width (1 = default). */
+  cruiseArcWidthScale: number;
   /** Airport marker fill colour (RGB); alpha is applied internally. */
   airportColor: [number, number, number];
   /** Cruise-port marker fill colour (RGB); alpha applied internally. */
   portColor: [number, number, number];
-  /** Airport/port marker radius in pixels. */
-  markerRadius: number;
+  /** Airport marker radius in pixels. */
+  airportRadius: number;
+  /** Cruise-port marker radius in pixels. */
+  portRadius: number;
   /** Fine night-side grid cells (from the day/night terminator). */
   nightCells: NightCell[];
   /** Toggle the day/night shade overlay. */
@@ -145,9 +164,12 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     setPinned,
     flightRouteColor,
     arcWidthScale,
+    cruiseRouteColor,
+    cruiseArcWidthScale,
     airportColor,
     portColor,
-    markerRadius,
+    airportRadius,
+    portRadius,
     nightCells,
     showNight,
   } = opts;
@@ -166,11 +188,18 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     // twilight band). Rendered first so flight arcs / markers draw on
     // top. Lifted to NIGHT_SHADE_ALTITUDE_M and depth-tested (NOT
     // `depthCompare: "always"`) so the globe mesh occludes far-side cells
-    // via the shared depth buffer with zero frame lag — this removes the
-    // "black triangles flicker on move" the always-depth + occlusion-only
-    // cull produced. The occlusion extension is kept purely for the soft
-    // alpha fade across the limb; `depthWriteEnabled: false` keeps the
-    // shade from occluding the arcs / markers drawn after it.
+    // via the shared depth buffer with zero frame lag.
+    //
+    // NO EarthOcclusionExtension here (deliberately). The extension does a
+    // per-fragment horizon fade using a camera uniform that lags one frame
+    // behind MapLibre's during rotation — on this altitude-lifted shade
+    // that lag flashed the terminator/limb cells on every move (the
+    // residual "night overlay flicker" after the globe-mesh fix). The
+    // shared depth buffer already hides the far side instantly, so the
+    // extension is redundant; dropping it kills the flicker. The layer's
+    // own `d.shade` alpha ramp still gives the soft twilight band.
+    // `depthWriteEnabled: false` keeps the shade from occluding the arcs /
+    // markers drawn after it.
     new SolidPolygonLayer<NightCell>({
       id: "globe-night-shade",
       data: nightCells,
@@ -181,8 +210,6 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       getFillColor: (d) => [8, 14, 34, Math.round(d.shade * 150)],
       parameters: { depthWriteEnabled: false, cullMode: "none" },
       pickable: false,
-      extensions: [occlusionExt],
-      ...occlusionProps,
       updateTriggers: { getFillColor: [nightCells] },
     }),
     // Flight arcs as PathLayer with pre-tessellated great-circle
@@ -293,17 +320,25 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
         d.path.map(
           (p) => [p[0], p[1], CRUISE_PATH_ALTITUDE_M] as [number, number, number],
         ),
-      getColor: CRUISE_PATH_COLOR,
-      // Pin to 2 px to match the flat-map cruiseArcsLayer default —
-      // visually heavier than a single-flight arc (1 px) so cruise
-      // routes still read distinct, but no longer dominate the globe
-      // the way the earlier 2.5 px setting did.
-      getWidth: () => 2,
+      getColor: [
+        cruiseRouteColor[0],
+        cruiseRouteColor[1],
+        cruiseRouteColor[2],
+        CRUISE_PATH_ALPHA,
+      ],
+      // Base 2 px (matches the flat-map cruiseArcsLayer default — visually
+      // heavier than a single-flight arc so cruise routes read distinct)
+      // times the user's cruise-width multiplier.
+      getWidth: () => 2 * cruiseArcWidthScale,
       widthUnits: "pixels",
       widthMinPixels: 1,
-      widthMaxPixels: 3,
+      widthMaxPixels: 3 * cruiseArcWidthScale,
       capRounded: true,
       jointRounded: true,
+      updateTriggers: {
+        getColor: [cruiseRouteColor],
+        getWidth: [cruiseArcWidthScale],
+      },
       extensions: [
         new PathStyleExtension({ dash: true, highPrecisionDash: true }),
         occlusionExt,
@@ -336,8 +371,8 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       data: airportPoints,
       getPosition: (d) => [d.position[0], d.position[1], MARKER_ALTITUDE_M],
       getFillColor: [airportColor[0], airportColor[1], airportColor[2], 230],
-      getRadius: markerRadius,
-      updateTriggers: { getFillColor: [airportColor], getRadius: [markerRadius] },
+      getRadius: airportRadius,
+      updateTriggers: { getFillColor: [airportColor], getRadius: [airportRadius] },
       radiusUnits: "pixels",
       stroked: true,
       getLineColor: [13, 17, 23, 220],
@@ -363,8 +398,8 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       data: portPoints,
       getPosition: (d) => [d.position[0], d.position[1], MARKER_ALTITUDE_M],
       getFillColor: [portColor[0], portColor[1], portColor[2], 230],
-      getRadius: markerRadius,
-      updateTriggers: { getFillColor: [portColor], getRadius: [markerRadius] },
+      getRadius: portRadius,
+      updateTriggers: { getFillColor: [portColor], getRadius: [portRadius] },
       radiusUnits: "pixels",
       stroked: true,
       getLineColor: [13, 17, 23, 220],

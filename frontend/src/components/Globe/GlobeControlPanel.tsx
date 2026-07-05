@@ -1,19 +1,46 @@
 // Consolidated map control panel for the globe.
 //
-// Replaces the four scattered floating clusters (Darstellung toggles,
-// Routenfrequenz legend, basemap style strip, performance/recenter) with
-// a single collapsible surface in the app's own design language: dark
-// glass, hairline dividers, uppercase section labels, one amber accent.
+// One collapsible surface in the app's own design language: dark glass,
+// hairline dividers, uppercase section labels, one amber accent. Global
+// sections (Ebenen / Basiskarte) sit on top; below them the appearance
+// controls are split into one stacked section PER DOMAIN (Flüge,
+// Kreuzfahrten, …). Which domain sections show is driven by
+// `appearanceDomains` so a single-domain tab only surfaces the relevant
+// controls, while the Alle tab shows them all — and every domain section
+// is the exact same `AppearanceSection`, so the layout stays identical
+// across modes.
 //
-// State lives in GlobeView; this component is presentation + callbacks
-// only, so the same panel can later back the flat 2D map.
+// State lives in GlobeView; this component is presentation + callbacks.
 
 import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Quartile } from "./heatmapUtils";
+import {
+  AppearanceSection,
+  SectionLabel,
+  Toggle,
+  ACCENT,
+  PANEL_BG,
+  HAIRLINE,
+  BORDER,
+  TEXT,
+  type AppearanceDomain,
+  type DomainAppearanceState,
+} from "../map/controlPanelKit";
+import {
+  DEFAULT_AIRPORT_COLOR,
+  DEFAULT_PORT_COLOR,
+  DEFAULT_CRUISE_ROUTE_COLOR,
+} from "./buildGlobeLayers";
 
 export type StyleId = "standard" | "light" | "dark" | "voyager" | "satellite" | "osm";
 export type LiteMode = "auto" | "on" | "off";
+
+// Route width + marker radius ranges for the globe. Marker radius is in
+// on-screen pixels (ScatterplotLayer radiusUnits: "pixels").
+const ROUTE_WIDTH = { min: 0.5, max: 3, step: 0.25 };
+const MARKER_RADIUS = { min: 3, max: 10, step: 0.5 };
+const FLIGHT_ROUTE_DEFAULT: [number, number, number] = [240, 169, 71];
 
 export interface GlobeControlPanelProps {
   autoRotate: boolean;
@@ -44,128 +71,10 @@ export interface GlobeControlPanelProps {
   antipodalCount: number;
   hasWeakArcs: boolean;
 
-  // Appearance customisation
-  routeColor: [number, number, number] | null;
-  onRouteColorChange: (c: [number, number, number] | null) => void;
-  arcWidthScale: number;
-  onArcWidthScaleChange: (n: number) => void;
-  airportColor: [number, number, number];
-  onAirportColorChange: (c: [number, number, number]) => void;
-  portColor: [number, number, number];
-  onPortColorChange: (c: [number, number, number]) => void;
-  markerRadius: number;
-  onMarkerRadiusChange: (n: number) => void;
-}
-
-const clamp255 = (n: number): number => Math.max(0, Math.min(255, n));
-
-export function rgbToHex([r, g, b]: [number, number, number]): string {
-  return "#" + [r, g, b].map((c) => clamp255(Math.round(c)).toString(16).padStart(2, "0")).join("");
-}
-
-export function hexToRgb(hex: string): [number, number, number] {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
-  if (!m) return [255, 255, 255];
-  const int = parseInt(m[1], 16);
-  return [(int >> 16) & 255, (int >> 8) & 255, int & 255];
-}
-
-/** Small labelled colour-swatch input backed by a native <input type=color>. */
-export function ColorField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: [number, number, number];
-  onChange: (c: [number, number, number]) => void;
-}): JSX.Element {
-  return (
-    <label className="flex cursor-pointer items-center gap-1.5">
-      <span
-        className="relative inline-block h-4 w-4 shrink-0 rounded"
-        style={{ background: rgbToHex(value), border: "1px solid rgba(255,255,255,0.25)" }}
-      >
-        <input
-          type="color"
-          value={rgbToHex(value)}
-          onChange={(e) => onChange(hexToRgb(e.target.value))}
-          className="absolute inset-0 cursor-pointer opacity-0"
-        />
-      </span>
-      <span className="text-[11px]" style={{ color: "rgba(241,245,249,0.8)" }}>
-        {label}
-      </span>
-    </label>
-  );
-}
-
-export const ACCENT = "240,169,71"; // amber — the app's primary action colour
-export const PANEL_BG = "rgba(13,17,23,0.85)";
-export const HAIRLINE = "rgba(255,255,255,0.08)";
-export const BORDER = "rgba(255,255,255,0.12)";
-export const TEXT = "rgba(241,245,249,0.95)";
-
-export function SectionLabel({ children }: { children: React.ReactNode }): JSX.Element {
-  return (
-    <div
-      className="mb-1.5 text-[10px] font-semibold uppercase"
-      style={{ letterSpacing: "0.08em", color: "rgba(241,245,249,0.45)" }}
-    >
-      {children}
-    </div>
-  );
-}
-
-export function Toggle({
-  checked,
-  onChange,
-  icon,
-  label,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  icon: string;
-  label: string;
-}): JSX.Element {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 transition-colors"
-      style={{ background: "transparent" }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-    >
-      <span className="flex items-center gap-2 text-xs font-medium" style={{ color: TEXT }}>
-        <span aria-hidden style={{ opacity: 0.9 }}>
-          {icon}
-        </span>
-        {label}
-      </span>
-      {/* Switch track */}
-      <span
-        className="relative inline-block shrink-0 rounded-full transition-colors"
-        style={{
-          width: 30,
-          height: 17,
-          background: checked ? `rgba(${ACCENT},0.9)` : "rgba(255,255,255,0.14)",
-        }}
-      >
-        <span
-          className="absolute rounded-full bg-white transition-transform"
-          style={{
-            width: 13,
-            height: 13,
-            top: 2,
-            left: 2,
-            transform: checked ? "translateX(13px)" : "translateX(0)",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.4)",
-          }}
-        />
-      </span>
-    </button>
-  );
+  /** Which domain appearance sections to show, in render order. */
+  appearanceDomains: readonly AppearanceDomain[];
+  flightAppearance: DomainAppearanceState;
+  cruiseAppearance: DomainAppearanceState;
 }
 
 export function GlobeControlPanel({
@@ -192,16 +101,9 @@ export function GlobeControlPanel({
   hasArcs,
   antipodalCount,
   hasWeakArcs,
-  routeColor,
-  onRouteColorChange,
-  arcWidthScale,
-  onArcWidthScaleChange,
-  airportColor,
-  onAirportColorChange,
-  portColor,
-  onPortColorChange,
-  markerRadius,
-  onMarkerRadiusChange,
+  appearanceDomains,
+  flightAppearance,
+  cruiseAppearance,
 }: GlobeControlPanelProps): JSX.Element {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
@@ -307,87 +209,61 @@ export function GlobeControlPanel({
             </div>
           </div>
 
-          {/* Appearance customisation — route + marker colours / sizes */}
-          <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
-            <SectionLabel>{t("map:globe.panel.appearance")}</SectionLabel>
-
-            {/* Route colour: "frequency" (heatmap) or a solid custom tint */}
-            <div className="flex items-center justify-between gap-2 py-0.5">
-              <span className="text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
-                {t("map:globe.panel.routes")}
-              </span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => onRouteColorChange(null)}
-                  className="cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors"
-                  style={{
-                    background: routeColor === null ? `rgba(${ACCENT},0.16)` : "rgba(255,255,255,0.04)",
-                    color: routeColor === null ? `rgb(${ACCENT})` : "rgba(241,245,249,0.7)",
-                    border:
-                      routeColor === null
-                        ? `1px solid rgba(${ACCENT},0.55)`
-                        : "1px solid rgba(255,255,255,0.06)",
-                  }}
-                >
-                  {t("map:globe.panel.frequency")}
-                </button>
-                <ColorField
-                  label=""
-                  value={routeColor ?? [240, 169, 71]}
-                  onChange={(c) => onRouteColorChange(c)}
-                />
-              </div>
-            </div>
-
-            {/* Route width */}
-            <div className="flex items-center justify-between gap-2 py-0.5">
-              <span className="text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
-                {t("map:globe.panel.width")}
-              </span>
-              <input
-                type="range"
-                min={0.5}
-                max={3}
-                step={0.25}
-                value={arcWidthScale}
-                onChange={(e) => onArcWidthScaleChange(Number(e.target.value))}
-                className="h-1 w-28 cursor-pointer"
-                style={{ accentColor: `rgb(${ACCENT})` }}
-              />
-            </div>
-
-            {/* Marker colours */}
-            <div className="mt-1.5 flex items-center justify-between gap-2 py-0.5">
-              <ColorField
-                label={t("map:globe.panel.airports")}
-                value={airportColor}
-                onChange={onAirportColorChange}
-              />
-              <ColorField
-                label={t("map:globe.panel.ports")}
-                value={portColor}
-                onChange={onPortColorChange}
-              />
-            </div>
-
-            {/* Marker size */}
-            <div className="flex items-center justify-between gap-2 py-0.5">
-              <span className="text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
-                {t("map:globe.panel.size")}
-              </span>
-              <input
-                type="range"
-                min={3}
-                max={10}
-                step={0.5}
-                value={markerRadius}
-                onChange={(e) => onMarkerRadiusChange(Number(e.target.value))}
-                className="h-1 w-28 cursor-pointer"
-                style={{ accentColor: `rgb(${ACCENT})` }}
-              />
-            </div>
-          </div>
+          {/* Per-domain appearance sections (Flüge / Kreuzfahrten / …) */}
+          {appearanceDomains.includes("flight") && (
+            <AppearanceSection
+              title={t("map:globe.panel.domainFlight")}
+              routeLabel={t("map:globe.panel.routes")}
+              routeColor={flightAppearance.routeColor}
+              routeDefault={FLIGHT_ROUTE_DEFAULT}
+              onRouteColorChange={flightAppearance.onRouteColorChange}
+              routeAutoLabel={t("map:globe.panel.frequency")}
+              widthLabel={t("map:globe.panel.width")}
+              width={flightAppearance.arcWidthScale}
+              widthMin={ROUTE_WIDTH.min}
+              widthMax={ROUTE_WIDTH.max}
+              widthStep={ROUTE_WIDTH.step}
+              onWidthChange={flightAppearance.onArcWidthScaleChange}
+              markerLabel={t("map:globe.panel.airports")}
+              markerColor={flightAppearance.markerColor}
+              markerDefault={DEFAULT_AIRPORT_COLOR}
+              onMarkerColorChange={flightAppearance.onMarkerColorChange}
+              markerAutoLabel={t("map:globe.panel.auto")}
+              sizeLabel={t("map:globe.panel.size")}
+              size={flightAppearance.markerSize}
+              sizeMin={MARKER_RADIUS.min}
+              sizeMax={MARKER_RADIUS.max}
+              sizeStep={MARKER_RADIUS.step}
+              onSizeChange={flightAppearance.onMarkerSizeChange}
+            />
+          )}
+          {appearanceDomains.includes("cruise") && (
+            <AppearanceSection
+              title={t("map:globe.panel.domainCruise")}
+              routeLabel={t("map:globe.panel.routes")}
+              routeColor={cruiseAppearance.routeColor}
+              routeDefault={DEFAULT_CRUISE_ROUTE_COLOR}
+              onRouteColorChange={cruiseAppearance.onRouteColorChange}
+              routeAutoLabel={t("map:globe.panel.standard")}
+              widthLabel={t("map:globe.panel.width")}
+              width={cruiseAppearance.arcWidthScale}
+              widthMin={ROUTE_WIDTH.min}
+              widthMax={ROUTE_WIDTH.max}
+              widthStep={ROUTE_WIDTH.step}
+              onWidthChange={cruiseAppearance.onArcWidthScaleChange}
+              markerLabel={t("map:globe.panel.ports")}
+              markerColor={cruiseAppearance.markerColor}
+              markerDefault={DEFAULT_PORT_COLOR}
+              onMarkerColorChange={cruiseAppearance.onMarkerColorChange}
+              markerAutoLabel={t("map:globe.panel.auto")}
+              sizeLabel={t("map:globe.panel.size")}
+              size={cruiseAppearance.markerSize}
+              sizeMin={MARKER_RADIUS.min}
+              sizeMax={MARKER_RADIUS.max}
+              sizeStep={MARKER_RADIUS.step}
+              onSizeChange={cruiseAppearance.onMarkerSizeChange}
+            />
+          )}
 
           {/* Frequency filter (only when arcs exist) */}
           {hasArcs && (

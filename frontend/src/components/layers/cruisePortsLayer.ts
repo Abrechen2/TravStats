@@ -1,15 +1,17 @@
 import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import type { Cruise, Port } from "../../types";
+import { toPortLabel } from "../map/portLabel";
 
 interface PortDatum {
   position: [number, number];
   portId: number;
   name: string;
   /**
-   * Short label rendered on the marker — UN/LOCODE if available
-   * (5-letter international port code, e.g. "DEHAM"), falling back
-   * to the full port name. Mirrors airport markers showing IATA codes.
+   * Readable label rendered on the marker — the port name, lightly
+   * normalised + truncated via `toPortLabel`. Airports show their IATA
+   * code, but UN/LOCODEs ("ITCVV") mean nothing to users, so ports show
+   * the real name instead.
    */
   shortLabel: string;
   visits: number;
@@ -76,7 +78,7 @@ export function createCruisePortsLayer(
         position: [port.lon, port.lat],
         portId: port.id,
         name: port.name,
-        shortLabel: port.unlocode ?? port.name,
+        shortLabel: toPortLabel(port.name),
         visits: 1,
         lastVisit: date,
       });

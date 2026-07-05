@@ -58,7 +58,10 @@
       "airports": "Flughäfen",
       "ports": "Häfen",
       "size": "Größe",
-      "auto": "Auto"
+      "auto": "Auto",
+      "standard": "Standard",
+      "domainFlight": "Flüge",
+      "domainCruise": "Kreuzfahrten"
     },
     "timesFlown": "{{count}}x geflogen",
     "flight_one": "Flug",
