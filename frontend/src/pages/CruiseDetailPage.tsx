@@ -97,10 +97,16 @@ export default function CruiseDetailPage(): JSX.Element {
     id: entry.key,
     domain: "cruise",
     date: entry.date ?? cruise.startDate ?? new Date().toISOString(),
-    title: entry.isAtSea ? t("stops.at_sea") : (entry.port?.name ?? "—"),
+    title: entry.isAtSea
+      ? t("stops.at_sea")
+      : entry.port?.name ?? (entry.unresolvedPortName ? `🔶 ${entry.unresolvedPortName}` : "—"),
     subtitle: entry.isAtSea
       ? undefined
-      : [entry.port?.city, entry.port?.country].filter(Boolean).join(", ") || undefined,
+      : entry.port
+        ? [entry.port.city, entry.port.country].filter(Boolean).join(", ") || undefined
+        : entry.unresolvedPortName
+          ? t("stops.unresolved")
+          : undefined,
     meta: entry.excursionNote ?? undefined,
   }));
 
