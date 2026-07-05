@@ -141,6 +141,7 @@
       "cruises": "Kreuzfahrten",
       "allTime": "Alle",
       "reset": "Zurücksetzen",
+      "scrubHint": "Ziehen zum Durchsuchen der Zeit",
       "noData": "Keine datierten Reisen"
     }
   },

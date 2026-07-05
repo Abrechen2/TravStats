@@ -4,9 +4,13 @@
 //   • bars per month — flights (amber) stacked with cruises (blue), so you
 //     see WHEN you travelled, not a blank slider.
 //   • drag across the bars → a [start,end] filter (store mode "filter").
-//   • ▶ play → the playhead sweeps the range (store mode "live"); bars light
-//     up as it passes.
+//   • grab the handle and drag → scrub time by hand (store mode "live").
+//   • ▶ play → the handle sweeps the range on its own; bars light up as it
+//     passes. Speed presets tune how fast.
 //   • reset (✕) → show everything (store mode "off").
+//
+// Collapsed to a slim strip by default so it barely covers the map; it
+// grows to the full control surface on hover (or while playing / dragging).
 //
 // State still lives in `useTimeSliderStore`; this component only drives it,
 // so GlobeView's visibility logic is unchanged.
@@ -21,6 +25,11 @@ const AMBER = "240,169,71";
 const CRUISE = "111,160,214";
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+// Bar-row height in each state. The row animates between the two so the
+// strip "unfolds" rather than snapping.
+const BAR_H_COLLAPSED = 22;
+const BAR_H_EXPANDED = 64;
+
 interface Props {
   buckets: MonthBucket[];
   visibleFlights: number;
@@ -29,9 +38,7 @@ interface Props {
 }
 
 const fmt = (d: Date | null, locale: string): string =>
-  d
-    ? d.toLocaleDateString(locale, { year: "numeric", month: "short" })
-    : "—";
+  d ? d.toLocaleDateString(locale, { year: "numeric", month: "short" }) : "—";
 
 export const GlobeTimeHistogram = ({
   buckets,
@@ -95,11 +102,11 @@ export const GlobeTimeHistogram = ({
     return () => cancelAnimationFrame(raf);
   }, [mode, isPlaying, speed, rangeMin, rangeMax, setCurrentDate, setPlaying]);
 
-  // ── Brush drag over the bars ────────────────────────────────────────
-  const trackRef = useRef<HTMLDivElement>(null);
-  const dragStartRef = useRef<number | null>(null); // fraction 0..1
-  const [dragRange, setDragRange] = useState<[number, number] | null>(null);
+  // ── Hover / interaction expansion ───────────────────────────────────
+  const [hovered, setHovered] = useState(false);
 
+  // ── Geometry helpers ────────────────────────────────────────────────
+  const trackRef = useRef<HTMLDivElement>(null);
   const fracAt = (clientX: number): number => {
     const el = trackRef.current;
     if (!el) return 0;
@@ -107,7 +114,7 @@ export const GlobeTimeHistogram = ({
     return Math.max(0, Math.min(1, (clientX - r.left) / r.width));
   };
   const dateAtFrac = (frac: number): Date => {
-    if (!rangeMin || !rangeMax) return new Date();
+    if (!rangeMin || !rangeMax) return new Date(0);
     return new Date(rangeMin.getTime() + frac * (rangeMax.getTime() - rangeMin.getTime()));
   };
   const fracOfDate = (d: Date): number => {
@@ -117,19 +124,23 @@ export const GlobeTimeHistogram = ({
     return Math.max(0, Math.min(1, (d.getTime() - rangeMin.getTime()) / span));
   };
 
-  const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>): void => {
+  // ── Brush drag over the bars (→ filter window) ──────────────────────
+  const dragStartRef = useRef<number | null>(null); // fraction 0..1
+  const [dragRange, setDragRange] = useState<[number, number] | null>(null);
+
+  const onTrackDown = (e: ReactPointerEvent<HTMLDivElement>): void => {
     if (disabled || !rangeMin || !rangeMax) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const f = fracAt(e.clientX);
     dragStartRef.current = f;
     setDragRange([f, f]);
   };
-  const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>): void => {
+  const onTrackMove = (e: ReactPointerEvent<HTMLDivElement>): void => {
     if (dragStartRef.current === null) return;
     const f = fracAt(e.clientX);
     setDragRange([dragStartRef.current, f]);
   };
-  const onPointerUp = (e: ReactPointerEvent<HTMLDivElement>): void => {
+  const onTrackUp = (e: ReactPointerEvent<HTMLDivElement>): void => {
     if (dragStartRef.current === null) return;
     const startF = dragStartRef.current;
     const endF = fracAt(e.clientX);
@@ -143,6 +154,30 @@ export const GlobeTimeHistogram = ({
     const [lo, hi] = startF <= endF ? [startF, endF] : [endF, startF];
     setMode("filter");
     setFilterRange(dateAtFrac(lo), dateAtFrac(hi));
+  };
+
+  // ── Scrub handle drag (→ live cursor, by hand) ──────────────────────
+  const scrubbingRef = useRef(false);
+  const [scrubbing, setScrubbing] = useState(false);
+
+  const onHandleDown = (e: ReactPointerEvent<HTMLDivElement>): void => {
+    if (disabled || !rangeMin || !rangeMax) return;
+    e.stopPropagation(); // don't start a brush drag
+    e.currentTarget.setPointerCapture(e.pointerId);
+    scrubbingRef.current = true;
+    setScrubbing(true);
+    if (mode !== "live") setMode("live");
+    setPlaying(false);
+    setCurrentDate(dateAtFrac(fracAt(e.clientX)));
+  };
+  const onHandleMove = (e: ReactPointerEvent<HTMLDivElement>): void => {
+    if (!scrubbingRef.current) return;
+    setCurrentDate(dateAtFrac(fracAt(e.clientX)));
+  };
+  const onHandleUp = (): void => {
+    if (!scrubbingRef.current) return;
+    scrubbingRef.current = false;
+    setScrubbing(false);
   };
 
   const onPlay = (): void => {
@@ -159,20 +194,28 @@ export const GlobeTimeHistogram = ({
     );
   }
 
+  const expanded = hovered || isPlaying || dragRange !== null || scrubbing;
+
   const maxTotal = Math.max(1, ...buckets.map((b) => b.flights + b.cruises));
-  const inFilter = mode === "filter" && filterStart && filterEnd;
+  const inFilter = mode === "filter" && filterStart !== null && filterEnd !== null;
   const filterLo = inFilter ? fracOfDate(filterStart) : 0;
   const filterHi = inFilter ? fracOfDate(filterEnd) : 1;
-  const playFrac = mode === "live" && currentDate ? fracOfDate(currentDate) : null;
 
-  // Which bar (index) the playhead is over — highlighted while playing.
-  const barFrac = (i: number): [number, number] => [i / buckets.length, (i + 1) / buckets.length];
+  // Which bar the live cursor is over — highlighted while playing/scrubbing.
+  const liveFrac = mode === "live" && currentDate ? fracOfDate(currentDate) : null;
   const playBar =
-    playFrac === null ? -1 : Math.min(buckets.length - 1, Math.floor(playFrac * buckets.length));
+    liveFrac === null ? -1 : Math.min(buckets.length - 1, Math.floor(liveFrac * buckets.length));
 
   const activeDrag = dragRange
     ? [Math.min(dragRange[0], dragRange[1]), Math.max(dragRange[0], dragRange[1])]
     : null;
+
+  // The scrub handle shows in every mode except filter (where the brush
+  // owns the strip). In off mode it rests at the far right ("now") as a
+  // hint that it can be grabbed; in live mode it tracks the cursor.
+  const showHandle = mode !== "filter";
+  const handleFrac = liveFrac ?? 1;
+  const handleGhost = mode !== "live";
 
   // Readout: range (filter) / current date (live) / all.
   const readout =
@@ -184,83 +227,109 @@ export const GlobeTimeHistogram = ({
 
   return (
     <div
-      className="flex items-stretch gap-3 rounded-xl border p-3"
-      style={{ ...panelStyle, minWidth: 460, maxWidth: 720 }}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+      className="flex items-stretch gap-3 rounded-xl border"
+      style={{
+        ...panelStyle,
+        padding: expanded ? 12 : "6px 10px",
+        minWidth: expanded ? 460 : 300,
+        maxWidth: 720,
+        transition: "min-width 160ms ease, padding 160ms ease",
+      }}
     >
-      {/* Play + speed */}
-      <div className="flex flex-col items-center justify-center gap-1.5">
-        <button
-          type="button"
-          onClick={onPlay}
-          disabled={disabled}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-sm text-[#0a0d13] transition-opacity hover:opacity-90"
-          style={{ background: `rgb(${AMBER})`, boxShadow: `0 3px 10px rgba(${AMBER},0.35)` }}
-          aria-label={t(`map:globe.timeSlider.${isPlaying ? "pause" : "play"}`)}
-          title={t(`map:globe.timeSlider.${isPlaying ? "pause" : "play"}`)}
-        >
-          {isPlaying ? "❚❚" : "▶"}
-        </button>
-        <div className="flex gap-0.5">
-          {SPEED_OPTIONS.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setSpeed(s)}
-              className="rounded px-1 py-0.5 text-[9px] tabular-nums transition-colors"
-              style={
-                speed === s
-                  ? { color: `rgb(${AMBER})`, background: `rgba(${AMBER},0.15)` }
-                  : { color: "rgba(241,245,249,0.4)" }
-              }
-              title={t("map:globe.timeSlider.daysPerSec", { n: s })}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Histogram + readout + axis */}
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex items-baseline justify-between">
-          <span
-            className="flex items-center gap-1.5 text-[11px] font-semibold"
-            style={{ color: "rgba(241,245,249,0.62)" }}
+      {/* Play + speed — only when expanded */}
+      {expanded && (
+        <div className="flex flex-col items-center justify-center gap-1.5">
+          <button
+            type="button"
+            onClick={onPlay}
+            disabled={disabled}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-sm text-[#0a0d13] transition-opacity hover:opacity-90"
+            style={{ background: `rgb(${AMBER})`, boxShadow: `0 3px 10px rgba(${AMBER},0.35)` }}
+            aria-label={t(`map:globe.timeSlider.${isPlaying ? "pause" : "play"}`)}
+            title={t(`map:globe.timeSlider.${isPlaying ? "pause" : "play"}`)}
           >
-            📊 {t("map:globe.timeSlider.title")}
-          </span>
-          <span className="flex items-center gap-2 text-[12px] font-semibold tabular-nums">
-            <span>{readout}</span>
-            <span style={{ color: "rgba(241,245,249,0.55)", fontWeight: 500 }}>
-              · {visibleFlights} {t("map:globe.timeSlider.flights")} · {visibleCruises}{" "}
-              {t("map:globe.timeSlider.cruises")}
-            </span>
-            {mode !== "off" && (
-              <button
-                type="button"
-                onClick={() => reset()}
-                className="ml-1 rounded px-1.5 text-[11px] leading-none"
-                style={{ color: "rgba(241,245,249,0.6)", background: "rgba(255,255,255,0.06)" }}
-                title={t("map:globe.timeSlider.reset")}
-              >
-                ✕
-              </button>
-            )}
-          </span>
+            {isPlaying ? "❚❚" : "▶"}
+          </button>
+          <div className="flex gap-0.5" role="group" aria-label={t("map:globe.timeSlider.speed")}>
+            {SPEED_OPTIONS.map((s) => {
+              const on = speed === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSpeed(s)}
+                  aria-pressed={on}
+                  className="rounded px-1.5 py-0.5 text-[10px] font-semibold tabular-nums transition-colors"
+                  style={
+                    on
+                      ? {
+                          color: "#0a0d13",
+                          background: `rgb(${AMBER})`,
+                        }
+                      : {
+                          color: "rgba(241,245,249,0.5)",
+                          background: "rgba(255,255,255,0.06)",
+                        }
+                  }
+                  title={t("map:globe.timeSlider.daysPerSec", { n: s })}
+                >
+                  {s}
+                </button>
+              );
+            })}
+          </div>
         </div>
+      )}
+
+      {/* Histogram + (expanded) readout + axis */}
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        {expanded && (
+          <div className="flex items-baseline justify-between">
+            <span
+              className="flex items-center gap-1.5 text-[11px] font-semibold"
+              style={{ color: "rgba(241,245,249,0.62)" }}
+            >
+              📊 {t("map:globe.timeSlider.title")}
+            </span>
+            <span className="flex items-center gap-2 text-[12px] font-semibold tabular-nums">
+              <span>{readout}</span>
+              <span style={{ color: "rgba(241,245,249,0.55)", fontWeight: 500 }}>
+                · {visibleFlights} {t("map:globe.timeSlider.flights")} · {visibleCruises}{" "}
+                {t("map:globe.timeSlider.cruises")}
+              </span>
+              {mode !== "off" && (
+                <button
+                  type="button"
+                  onClick={() => reset()}
+                  className="ml-1 rounded px-1.5 text-[11px] leading-none"
+                  style={{ color: "rgba(241,245,249,0.6)", background: "rgba(255,255,255,0.06)" }}
+                  title={t("map:globe.timeSlider.reset")}
+                >
+                  ✕
+                </button>
+              )}
+            </span>
+          </div>
+        )}
 
         {/* the bars */}
         <div
           ref={trackRef}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          className="relative flex h-[64px] cursor-crosshair touch-none items-end gap-[2px] px-[1px]"
+          onPointerDown={onTrackDown}
+          onPointerMove={onTrackMove}
+          onPointerUp={onTrackUp}
+          className="relative flex cursor-crosshair touch-none items-end gap-[2px] px-[1px]"
+          style={{
+            height: expanded ? BAR_H_EXPANDED : BAR_H_COLLAPSED,
+            transition: "height 160ms ease",
+          }}
         >
           {buckets.map((b, i) => {
             const total = b.flights + b.cruises;
             const h = total === 0 ? 3 : 6 + (total / maxTotal) * 94;
-            const [bf0, bf1] = barFrac(i);
+            const [bf0, bf1] = [i / buckets.length, (i + 1) / buckets.length];
             const outside = inFilter && (bf1 <= filterLo || bf0 >= filterHi);
             const isPlay = i === playBar;
             const fShare = total ? (b.flights / total) * 100 : 0;
@@ -304,23 +373,51 @@ export const GlobeTimeHistogram = ({
               }}
             />
           )}
-          {/* playhead */}
-          {playFrac !== null && (
+
+          {/* draggable scrub handle (playhead) */}
+          {showHandle && (
             <div
-              className="pointer-events-none absolute -top-1 -bottom-1 w-[2px]"
-              style={{ left: `${playFrac * 100}%`, background: "#fff", boxShadow: "0 0 8px rgba(255,255,255,0.7)" }}
-            />
+              onPointerDown={onHandleDown}
+              onPointerMove={onHandleMove}
+              onPointerUp={onHandleUp}
+              className="group absolute -top-1.5 -bottom-1.5 z-10 flex touch-none justify-center"
+              style={{
+                left: `calc(${handleFrac * 100}% - 8px)`,
+                width: 16,
+                cursor: "ew-resize",
+                opacity: handleGhost && !scrubbing ? 0.5 : 1,
+              }}
+              title={t("map:globe.timeSlider.scrubHint")}
+              aria-label={t("map:globe.timeSlider.scrubHint")}
+            >
+              {/* the line */}
+              <div
+                className="w-[2px]"
+                style={{ background: "#fff", boxShadow: "0 0 8px rgba(255,255,255,0.7)" }}
+              />
+              {/* the knob */}
+              <div
+                className="absolute top-0 h-3 w-3 rounded-full border transition-transform group-hover:scale-110"
+                style={{
+                  background: "#fff",
+                  borderColor: `rgba(${AMBER},0.9)`,
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.5)",
+                }}
+              />
+            </div>
           )}
         </div>
 
-        {/* year axis */}
-        <div
-          className="flex justify-between px-[2px] text-[9.5px] tabular-nums"
-          style={{ color: "rgba(241,245,249,0.4)" }}
-        >
-          <span>{rangeMin.getUTCFullYear()}</span>
-          <span>{rangeMax.getUTCFullYear()}</span>
-        </div>
+        {/* year axis — expanded only */}
+        {expanded && (
+          <div
+            className="flex justify-between px-[2px] text-[9.5px] tabular-nums"
+            style={{ color: "rgba(241,245,249,0.4)" }}
+          >
+            <span>{rangeMin.getUTCFullYear()}</span>
+            <span>{rangeMax.getUTCFullYear()}</span>
+          </div>
+        )}
       </div>
     </div>
   );
