@@ -626,22 +626,28 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
       if (f.depIcao) icaos.add(f.depIcao);
       if (f.arrIcao) icaos.add(f.arrIcao);
     }
-    const countryByIata = new Map<string, string>();
-    const countryByIcao = new Map<string, string>();
+    interface AirportInfo {
+      country: string | null;
+      city: string | null;
+    }
+    const infoByIata = new Map<string, AirportInfo>();
+    const infoByIcao = new Map<string, AirportInfo>();
     if (iatas.size > 0 || icaos.size > 0) {
       const airports = await prisma.airport.findMany({
         where: {
           OR: [{ iata: { in: [...iatas] } }, { icao: { in: [...icaos] } }],
         },
-        select: { iata: true, icao: true, country: true },
+        select: { iata: true, icao: true, country: true, city: true },
       });
       for (const a of airports) {
-        if (a.country && a.iata) countryByIata.set(a.iata, a.country);
-        if (a.country && a.icao) countryByIcao.set(a.icao, a.country);
+        const info: AirportInfo = { country: a.country ?? null, city: a.city ?? null };
+        if (a.iata) infoByIata.set(a.iata, info);
+        if (a.icao) infoByIcao.set(a.icao, info);
       }
     }
-    const airportCountry = (iata: string | null, icao: string | null): string | null =>
-      (iata && countryByIata.get(iata)) || (icao && countryByIcao.get(icao)) || null;
+    const airportInfo = (iata: string | null, icao: string | null): AirportInfo =>
+      (iata ? infoByIata.get(iata) : undefined) ??
+      (icao ? infoByIcao.get(icao) : undefined) ?? { country: null, city: null };
 
     const features = flights.map(flight => {
       const arcPoints = generateArcPoints(
@@ -663,13 +669,15 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
             icao: flight.depIcao,
             iata: flight.depIata,
             name: flight.depName,
-            country: airportCountry(flight.depIata, flight.depIcao),
+            country: airportInfo(flight.depIata, flight.depIcao).country,
+            city: airportInfo(flight.depIata, flight.depIcao).city,
           },
           arrivalAirport: {
             icao: flight.arrIcao,
             iata: flight.arrIata,
             name: flight.arrName,
-            country: airportCountry(flight.arrIata, flight.arrIcao),
+            country: airportInfo(flight.arrIata, flight.arrIcao).country,
+            city: airportInfo(flight.arrIata, flight.arrIcao).city,
           },
           departureTime: flight.departureTime,
           arrivalTime: flight.arrivalTime,

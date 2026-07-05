@@ -106,6 +106,7 @@
     "quartileFilterHint": "Klick: nur dieses Häufigkeitsband zeigen",
     "quartileFilterClear": "Filter zurücksetzen",
     "pinned": {
+      "flightsOnRoute": "Flüge auf dieser Route",
       "lastFlight": "Letzter Flug",
       "longestRoute": "Längste Strecke",
       "longestPortCall": "Längster Anlauf",

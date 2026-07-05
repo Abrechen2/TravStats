@@ -18,8 +18,8 @@ export interface ArcDatum {
   flightIds: string[];
   color: [number, number, number];
   quartile: Quartile;
-  departure: { iata?: string; name?: string; country?: string | null };
-  arrival: { iata?: string; name?: string; country?: string | null };
+  departure: { iata?: string; icao?: string; name?: string; city?: string | null; country?: string | null };
+  arrival: { iata?: string; icao?: string; name?: string; city?: string | null; country?: string | null };
   /**
    * Set when at least one constituent flight had no IATA on either
    * endpoint and we fell back to coordinate-rounded identity. The arc
@@ -35,6 +35,10 @@ export interface PointDatum {
   size: number;
   iata: string;
   name: string;
+  /** ICAO code (airports only) — shown alongside the IATA in the pinned card. */
+  icao?: string;
+  /** City the airport/port serves — shown as "City, Country" in overlays. */
+  city?: string | null;
   /** Display label for the on-map pill. Airports leave this unset and
    *  fall back to `iata`; ports set it to the readable port name (see
    *  `toPortLabel`) so the overlay never shows a raw UN/LOCODE. */
