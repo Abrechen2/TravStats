@@ -446,11 +446,8 @@ function ArcBody({
             value={formatDate(stats.lastFlightDate, locale)}
           />
         )}
-        {stats.aircraftTypes.length > 0 && (
-          <Row
-            label={t("map:globe.pinned.topAircraft")}
-            value={stats.aircraftTypes.slice(0, 3).join(", ") + (stats.aircraftTypes.length > 3 ? "…" : "")}
-          />
+        {stats.topAircraft && (
+          <Row label={t("map:globe.pinned.topAircraft")} value={stats.topAircraft} />
         )}
         {stats.topAirline && (
           <Row label={t("map:globe.pinned.topAirline")} value={stats.topAirline} />
