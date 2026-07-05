@@ -301,11 +301,15 @@ function mapStop(
   // Unmatched named ports become a first-class unresolved stop: the name is
   // preserved in its own field, the stop stays a port (not a sea day), and the
   // user can resolve it to a catalog port later. The excursion note stays clean.
+  const hasName = Boolean(stop.portName);
   return {
     portId: match?.id ?? null,
     dayNumber: index + 1,
     date: stop.date,
-    isAtSea: false,
+    // A non-sea stop with neither a matched port nor a name has nothing to
+    // preserve — degrade it to a sea day so it stays Zod-valid (the unresolved
+    // state requires a name).
+    isAtSea: !match && !hasName,
     arrivalTime: stop.arrivalTime,
     departureTime: stop.departureTime,
     excursionNote: stop.excursionNote,

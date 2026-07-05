@@ -124,6 +124,7 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
                 update(i, {
                   isAtSea: e.target.checked,
                   portId: e.target.checked ? null : stop.portId,
+                  unresolvedPortName: e.target.checked ? null : stop.unresolvedPortName,
                 })
               }
             />
