@@ -20,7 +20,8 @@ import type { PointDatum } from "./globeLayerTypes";
 const DEG = Math.PI / 180;
 
 interface LabelPoint {
-  iata: string;
+  /** Text drawn in the pill — IATA for airports, readable name for ports. */
+  text: string;
   lng: number;
   lat: number;
   kind: "airport" | "port";
@@ -60,14 +61,15 @@ export function GlobeLabelsOverlay({
     if (!visible) return [];
     const toPts = (arr: PointDatum[], kind: "airport" | "port"): LabelPoint[] =>
       arr
-        .filter((p) => p.iata)
         .map((p) => ({
-          iata: p.iata,
+          // Ports carry a readable `label`; airports fall back to IATA.
+          text: p.label ?? p.iata,
           lng: p.position[0],
           lat: p.position[1],
           kind,
           weight: p.size ?? 0,
-        }));
+        }))
+        .filter((p) => p.text.length > 0);
     // Sort by weight desc so the busiest markers claim screen space first
     // during collision culling; ties keep airports ahead of ports.
     return [...toPts(airports, "airport"), ...toPts(ports, "port")].sort(
@@ -100,6 +102,12 @@ export function GlobeLabelsOverlay({
       // zoom gate — labels reveal naturally as zooming spreads them out.
       const placed: PlacedBox[] = [];
       const LABEL_H = 16;
+      // Breathing room around each pill so labels don't sit edge-to-edge
+      // in dense clusters (e.g. the Mediterranean). The collision box is
+      // inflated by this padding; the pill itself is still anchored on the
+      // raw projected point below.
+      const PAD_X = 4;
+      const PAD_Y = 3;
       const overlaps = (b: PlacedBox): boolean => {
         for (let j = 0; j < placed.length; j++) {
           const q = placed[j];
@@ -131,9 +139,15 @@ export function GlobeLabelsOverlay({
           continue;
         }
         const p = map.project([pt.lng, pt.lat]);
-        // Estimate the pill box (centred on x, sitting above the dot).
-        const w = pt.iata.length * 7 + 12;
-        const box: PlacedBox = { x: p.x - w / 2, y: p.y - 13 - LABEL_H, w, h: LABEL_H };
+        // Estimate the pill box (centred on x, sitting above the dot),
+        // inflated by the padding so neighbours keep a visible gap.
+        const w = pt.text.length * 7 + 12;
+        const box: PlacedBox = {
+          x: p.x - w / 2 - PAD_X,
+          y: p.y - 13 - LABEL_H - PAD_Y,
+          w: w + PAD_X * 2,
+          h: LABEL_H + PAD_Y * 2,
+        };
         if (overlaps(box)) {
           if (node.style.display !== "none") node.style.display = "none";
           continue;
@@ -158,7 +172,7 @@ export function GlobeLabelsOverlay({
     <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
       {points.map((pt, i) => (
         <div
-          key={`${pt.kind}-${pt.iata}-${i}`}
+          key={`${pt.kind}-${pt.text}-${i}`}
           ref={(el) => {
             nodeRefs.current[i] = el;
           }}
@@ -176,7 +190,7 @@ export function GlobeLabelsOverlay({
             backdropFilter: "blur(2px)",
           }}
         >
-          {pt.iata}
+          {pt.text}
         </div>
       ))}
     </div>

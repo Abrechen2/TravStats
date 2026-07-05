@@ -249,6 +249,7 @@ export function FlightsTab(): JSX.Element {
         visMode={visMode}
         extraLayers={statsMapLayers}
         showInternalCruises={false}
+        appearanceDomains={["flight"]}
         onFlightClick={handleFlightClick}
         onRouteClick={handleRouteClick}
         onFlightOpen={(flightId) => {

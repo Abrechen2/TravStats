@@ -1,23 +1,36 @@
 // Consolidated control panel for the flat 2D routes map.
 //
-// Shares the globe panel's exact design language by reusing its exported
-// building blocks (Toggle, ColorField, section tokens). The flat map has
-// fewer axes than the globe — no auto-rotation / day-night / globe-only
-// frequency filter — so this panel carries just the layers (place names,
-// relief) and appearance (route + airport-marker) that apply here.
+// Structurally identical to the globe panel: global EBENEN / BASISKARTE
+// sections on top, then one stacked AppearanceSection per domain (Flüge /
+// Kreuzfahrten), gated by `appearanceDomains`. The flat map has fewer
+// global axes than the globe (no auto-rotation / day-night / frequency
+// filter), but the per-domain appearance controls are the exact same
+// component, so route + marker tuning reads the same across every mode.
 
 import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
-  Toggle,
-  ColorField,
+  AppearanceSection,
   SectionLabel,
+  Toggle,
   ACCENT,
   PANEL_BG,
   HAIRLINE,
   BORDER,
   TEXT,
-} from "../Globe/GlobeControlPanel";
+  type AppearanceDomain,
+  type DomainAppearanceState,
+} from "./controlPanelKit";
+import { DEFAULT_CRUISE_ROUTE_COLOR } from "../Globe/buildGlobeLayers";
+
+// Flat-map ranges. Marker + route widths are unitless multipliers here
+// (the deck.gl layers apply them to their own pixel/meter bases).
+const ROUTE_WIDTH = { min: 0.5, max: 3, step: 0.25 };
+const MARKER_SIZE = { min: 0.4, max: 2.5, step: 0.1 };
+const FLIGHT_ROUTE_DEFAULT: [number, number, number] = [240, 169, 71];
+const FLIGHT_MARKER_DEFAULT: [number, number, number] = [240, 169, 71];
+// Brand cruise blue — matches the port markers + the globe cruise routes.
+const CRUISE_MARKER_DEFAULT: [number, number, number] = [111, 160, 214];
 
 export interface FlatMapControlPanelProps {
   showPlaceLabels: boolean;
@@ -29,21 +42,11 @@ export interface FlatMapControlPanelProps {
   styleId: string;
   onStyleChange: (id: string) => void;
 
-  routeColor: [number, number, number] | null;
-  onRouteColorChange: (c: [number, number, number] | null) => void;
-  arcWidthScale: number;
-  onArcWidthScaleChange: (n: number) => void;
-  markerColor: [number, number, number] | null;
-  onMarkerColorChange: (c: [number, number, number] | null) => void;
-  portColor: [number, number, number] | null;
-  onPortColorChange: (c: [number, number, number] | null) => void;
-  markerSizeScale: number;
-  onMarkerSizeScaleChange: (n: number) => void;
+  /** Which domain appearance sections to show, in render order. */
+  appearanceDomains: readonly AppearanceDomain[];
+  flightAppearance: DomainAppearanceState;
+  cruiseAppearance: DomainAppearanceState;
 }
-
-// Defaults shown when a colour is null (Auto): airport amber, port blue.
-const DEFAULT_MARKER: [number, number, number] = [240, 169, 71];
-const DEFAULT_PORT: [number, number, number] = [56, 189, 248];
 
 export function FlatMapControlPanel({
   showPlaceLabels,
@@ -53,16 +56,9 @@ export function FlatMapControlPanel({
   styleOptions,
   styleId,
   onStyleChange,
-  routeColor,
-  onRouteColorChange,
-  arcWidthScale,
-  onArcWidthScaleChange,
-  markerColor,
-  onMarkerColorChange,
-  portColor,
-  onPortColorChange,
-  markerSizeScale,
-  onMarkerSizeScaleChange,
+  appearanceDomains,
+  flightAppearance,
+  cruiseAppearance,
 }: FlatMapControlPanelProps): JSX.Element {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
@@ -147,111 +143,61 @@ export function FlatMapControlPanel({
             </div>
           </div>
 
-          {/* Appearance */}
-          <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
-            <SectionLabel>{t("map:globe.panel.appearance")}</SectionLabel>
-
-            {/* Route colour */}
-            <div className="flex items-center justify-between gap-2 py-0.5">
-              <span className="text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
-                {t("map:globe.panel.routes")}
-              </span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => onRouteColorChange(null)}
-                  className="cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors"
-                  style={{
-                    background: routeColor === null ? `rgba(${ACCENT},0.16)` : "rgba(255,255,255,0.04)",
-                    color: routeColor === null ? `rgb(${ACCENT})` : "rgba(241,245,249,0.7)",
-                    border:
-                      routeColor === null
-                        ? `1px solid rgba(${ACCENT},0.55)`
-                        : "1px solid rgba(255,255,255,0.06)",
-                  }}
-                >
-                  {t("map:globe.panel.frequency")}
-                </button>
-                <ColorField
-                  label=""
-                  value={routeColor ?? [240, 169, 71]}
-                  onChange={(c) => onRouteColorChange(c)}
-                />
-              </div>
-            </div>
-
-            {/* Route width */}
-            <div className="flex items-center justify-between gap-2 py-0.5">
-              <span className="text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
-                {t("map:globe.panel.width")}
-              </span>
-              <input
-                type="range"
-                min={0.5}
-                max={3}
-                step={0.25}
-                value={arcWidthScale}
-                onChange={(e) => onArcWidthScaleChange(Number(e.target.value))}
-                className="h-1 w-28 cursor-pointer"
-                style={{ accentColor: `rgb(${ACCENT})` }}
-              />
-            </div>
-
-            {/* Airport + port marker colours (Auto resets both to theme). */}
-            <div className="mt-1.5 flex items-center justify-between gap-2 py-0.5">
-              <ColorField
-                label={t("map:globe.panel.airports")}
-                value={markerColor ?? DEFAULT_MARKER}
-                onChange={(c) => onMarkerColorChange(c)}
-              />
-              <ColorField
-                label={t("map:globe.panel.ports")}
-                value={portColor ?? DEFAULT_PORT}
-                onChange={(c) => onPortColorChange(c)}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  onMarkerColorChange(null);
-                  onPortColorChange(null);
-                }}
-                className="cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors"
-                style={{
-                  background:
-                    markerColor === null && portColor === null
-                      ? `rgba(${ACCENT},0.16)`
-                      : "rgba(255,255,255,0.04)",
-                  color:
-                    markerColor === null && portColor === null
-                      ? `rgb(${ACCENT})`
-                      : "rgba(241,245,249,0.7)",
-                  border:
-                    markerColor === null && portColor === null
-                      ? `1px solid rgba(${ACCENT},0.55)`
-                      : "1px solid rgba(255,255,255,0.06)",
-                }}
-              >
-                {t("map:globe.panel.auto")}
-              </button>
-            </div>
-
-            {/* Marker size */}
-            <div className="flex items-center justify-between gap-2 py-0.5">
-              <span className="text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
-                {t("map:globe.panel.size")}
-              </span>
-              <input
-                type="range"
-                min={0.4}
-                max={2.5}
-                step={0.1}
-                value={markerSizeScale}
-                onChange={(e) => onMarkerSizeScaleChange(Number(e.target.value))}
-                className="h-1 w-28 cursor-pointer"
-                style={{ accentColor: `rgb(${ACCENT})` }}
-              />
-            </div>
-          </div>
+          {/* Per-domain appearance sections (Flüge / Kreuzfahrten / …) */}
+          {appearanceDomains.includes("flight") && (
+            <AppearanceSection
+              title={t("map:globe.panel.domainFlight")}
+              routeLabel={t("map:globe.panel.routes")}
+              routeColor={flightAppearance.routeColor}
+              routeDefault={FLIGHT_ROUTE_DEFAULT}
+              onRouteColorChange={flightAppearance.onRouteColorChange}
+              routeAutoLabel={t("map:globe.panel.frequency")}
+              widthLabel={t("map:globe.panel.width")}
+              width={flightAppearance.arcWidthScale}
+              widthMin={ROUTE_WIDTH.min}
+              widthMax={ROUTE_WIDTH.max}
+              widthStep={ROUTE_WIDTH.step}
+              onWidthChange={flightAppearance.onArcWidthScaleChange}
+              markerLabel={t("map:globe.panel.airports")}
+              markerColor={flightAppearance.markerColor}
+              markerDefault={FLIGHT_MARKER_DEFAULT}
+              onMarkerColorChange={flightAppearance.onMarkerColorChange}
+              markerAutoLabel={t("map:globe.panel.auto")}
+              sizeLabel={t("map:globe.panel.size")}
+              size={flightAppearance.markerSize}
+              sizeMin={MARKER_SIZE.min}
+              sizeMax={MARKER_SIZE.max}
+              sizeStep={MARKER_SIZE.step}
+              onSizeChange={flightAppearance.onMarkerSizeChange}
+            />
+          )}
+          {appearanceDomains.includes("cruise") && (
+            <AppearanceSection
+              title={t("map:globe.panel.domainCruise")}
+              routeLabel={t("map:globe.panel.routes")}
+              routeColor={cruiseAppearance.routeColor}
+              routeDefault={DEFAULT_CRUISE_ROUTE_COLOR}
+              onRouteColorChange={cruiseAppearance.onRouteColorChange}
+              routeAutoLabel={t("map:globe.panel.standard")}
+              widthLabel={t("map:globe.panel.width")}
+              width={cruiseAppearance.arcWidthScale}
+              widthMin={ROUTE_WIDTH.min}
+              widthMax={ROUTE_WIDTH.max}
+              widthStep={ROUTE_WIDTH.step}
+              onWidthChange={cruiseAppearance.onArcWidthScaleChange}
+              markerLabel={t("map:globe.panel.ports")}
+              markerColor={cruiseAppearance.markerColor}
+              markerDefault={CRUISE_MARKER_DEFAULT}
+              onMarkerColorChange={cruiseAppearance.onMarkerColorChange}
+              markerAutoLabel={t("map:globe.panel.auto")}
+              sizeLabel={t("map:globe.panel.size")}
+              size={cruiseAppearance.markerSize}
+              sizeMin={MARKER_SIZE.min}
+              sizeMax={MARKER_SIZE.max}
+              sizeStep={MARKER_SIZE.step}
+              onSizeChange={cruiseAppearance.onMarkerSizeChange}
+            />
+          )}
         </div>
       )}
     </div>

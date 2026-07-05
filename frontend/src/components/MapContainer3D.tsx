@@ -3,6 +3,7 @@ import { DeckGLMap } from "./DeckGLMap";
 import { GlobeLoader } from "./GlobeLoader";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { Layer } from "@deck.gl/core";
+import type { AppearanceDomain } from "./map/controlPanelKit";
 
 /**
  * The narrow set of map-rendering modes that MapContainer3D actually implements.
@@ -69,6 +70,13 @@ interface MapContainer3DProps {
    * variant.
    */
   cruisesOverride?: readonly Cruise[];
+  /**
+   * Which domain appearance sections the map control panel exposes. The
+   * Alle tab passes both; single-domain tabs pass just their own domain
+   * so the panel only surfaces the relevant route/marker controls.
+   * Defaults to both for callers that don't specify.
+   */
+  appearanceDomains?: readonly AppearanceDomain[];
 }
 
 export default function MapContainer3D({
@@ -88,6 +96,7 @@ export default function MapContainer3D({
   flightRouteColor,
   hideInfoPill = false,
   cruisesOverride,
+  appearanceDomains = ["flight", "cruise"],
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
   const mapTheme = useThemeStore((s) => s.mapTheme);
@@ -179,6 +188,7 @@ export default function MapContainer3D({
               onCruiseOpen={onCruiseOpen}
               flightRouteColor={flightRouteColor}
               minRouteCount={minRouteCount}
+              appearanceDomains={appearanceDomains}
             />
           </Suspense>
         ) : (
@@ -194,6 +204,7 @@ export default function MapContainer3D({
             onResetTrip={onResetTrip}
             extraLayers={extraLayers}
             flightRouteColor={flightRouteColor}
+            appearanceDomains={appearanceDomains}
           />
         )}
       </div>
