@@ -69,16 +69,18 @@ import { escapeHtml } from "../lib/escapeHtml";
 import { flagImgHtml, countryName } from "../lib/countryFlag";
 import { useTranslation } from "../hooks/useTranslation";
 import { useTimeSliderStore } from "../store/timeSliderStore";
-import { GlobeTimeSlider } from "./Globe/GlobeTimeSlider";
+import { GlobeTimeHistogram } from "./Globe/GlobeTimeHistogram";
 import {
   computeCruiseLegDates,
   computeTimeRange,
+  computeMonthlyBuckets,
   flightVisibleFilter,
   flightVisibleLive,
   legProgress,
   legVisibleFilter,
   truncatePolyline,
   type CruiseLegDates,
+  type MonthBucket,
 } from "./Globe/timeSliderUtils";
 
 /**
@@ -572,6 +574,12 @@ export default function GlobeView({
     const range = computeTimeRange(flights, cruises);
     if (range) setSliderRange(range.min, range.max);
   }, [flights, cruises, setSliderRange]);
+
+  // Monthly activity buckets for the time histogram (flights + cruises).
+  const monthBuckets = useMemo<MonthBucket[]>(() => {
+    const range = computeTimeRange(flights, cruises);
+    return range ? computeMonthlyBuckets(flights, cruises, range.min, range.max) : [];
+  }, [flights, cruises]);
 
   // Per-leg date metadata for every cruise. Computed once per cruises
   // identity. Keyed by cruiseId so the live-mode partial-draw can pair
@@ -1569,14 +1577,14 @@ export default function GlobeView({
         />
       </div>
 
-      {/* Top-center: time slider. Lives in its own opaque bar so
-          mode toggles (Off / Live / Filter) read clearly against any
-          basemap. Style picker stays bottom-center below. */}
+      {/* Top-center: activity histogram — filter (brush) + playback (▶) in
+          one strip, replacing the old three-mode slider. */}
       <div
         className="absolute top-3 left-1/2 z-10 -translate-x-1/2"
         style={{ pointerEvents: "auto" }}
       >
-        <GlobeTimeSlider
+        <GlobeTimeHistogram
+          buckets={monthBuckets}
           visibleFlights={filteredFlights.length}
           visibleCruises={new Set(cruisePaths.map((p) => p.cruiseId)).size}
         />
