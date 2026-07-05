@@ -179,5 +179,10 @@
     "noNotes": "Keine Release Notes vorhanden.",
     "dismiss": "Diese Version ignorieren",
     "close": "Schließen"
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "message": "Diese Seite existiert nicht oder wurde verschoben.",
+    "back": "Zum Dashboard"
   }
 }

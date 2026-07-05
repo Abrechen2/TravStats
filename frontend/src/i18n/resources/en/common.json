@@ -179,5 +179,10 @@
     "noNotes": "No release notes available.",
     "dismiss": "Ignore this version",
     "close": "Close"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "message": "This page doesn't exist or has moved.",
+    "back": "Back to dashboard"
   }
 }
