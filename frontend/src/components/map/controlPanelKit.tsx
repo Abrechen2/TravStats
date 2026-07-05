@@ -7,6 +7,8 @@
 // Flüge section and the Kreuzfahrten section are the exact same component
 // with different labels + ranges.
 
+import { useTranslation } from "../../hooks/useTranslation";
+
 // ── Design tokens ────────────────────────────────────────────────────
 export const ACCENT = "240,169,71"; // amber — the app's primary action colour
 export const PANEL_BG = "rgba(13,17,23,0.85)";
@@ -193,44 +195,32 @@ export function SegControl<V extends string>({
   );
 }
 
-function SliderRow({
-  label,
-  value,
-  min,
-  max,
-  step,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  onChange: (n: number) => void;
-}): JSX.Element {
-  return (
-    <div className="flex items-center justify-between gap-2 py-0.5">
-      <span className="text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
-        {label}
-      </span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="h-1 w-28 cursor-pointer"
-        style={{ accentColor: `rgb(${ACCENT})` }}
-      />
-    </div>
-  );
-}
-
 // ── Per-domain appearance section ────────────────────────────────────
 /** The map domains that get their own appearance section. Extend when a
  *  new domain (hotels, …) grows an on-map route/marker representation. */
 export type AppearanceDomain = "flight" | "cruise";
+
+// ── Appearance presets ───────────────────────────────────────────────
+// Route width + marker size are chosen from labelled presets (Dünn/Normal/
+// Dick, Aus/S/M/L) rather than raw sliders — quicker to hit a good look,
+// and "Aus" cleanly hides a domain's markers. The maps below translate a
+// preset to the numeric scale the deck.gl layers already consume.
+export type RouteWidth = "thin" | "normal" | "thick";
+export type MarkerSize = "off" | "s" | "m" | "l";
+
+export const ROUTE_WIDTH_SCALE: Record<RouteWidth, number> = {
+  thin: 0.6,
+  normal: 1,
+  thick: 1.6,
+};
+export const MARKER_SIZE_SCALE: Record<MarkerSize, number> = {
+  off: 0, // radius × 0 → hidden
+  s: 0.7,
+  m: 1,
+  l: 1.45,
+};
+export const ROUTE_WIDTHS: readonly RouteWidth[] = ["thin", "normal", "thick"];
+export const MARKER_SIZES: readonly MarkerSize[] = ["off", "s", "m", "l"];
 
 /**
  * One domain's appearance state + setters, shared verbatim by the globe
@@ -242,12 +232,12 @@ export type AppearanceDomain = "flight" | "cruise";
 export interface DomainAppearanceState {
   routeColor: [number, number, number] | null;
   onRouteColorChange: (c: [number, number, number] | null) => void;
-  arcWidthScale: number;
-  onArcWidthScaleChange: (n: number) => void;
+  routeWidth: RouteWidth;
+  onRouteWidthChange: (w: RouteWidth) => void;
   markerColor: [number, number, number] | null;
   onMarkerColorChange: (c: [number, number, number] | null) => void;
-  markerSize: number;
-  onMarkerSizeChange: (n: number) => void;
+  markerSize: MarkerSize;
+  onMarkerSizeChange: (s: MarkerSize) => void;
 }
 
 export interface AppearanceSectionProps {
@@ -262,11 +252,8 @@ export interface AppearanceSectionProps {
   /** Pill text for the route reset — "Frequenz" (flights) / "Standard" (cruises). */
   routeAutoLabel: string;
   widthLabel: string;
-  width: number;
-  widthMin: number;
-  widthMax: number;
-  widthStep: number;
-  onWidthChange: (n: number) => void;
+  routeWidth: RouteWidth;
+  onRouteWidthChange: (w: RouteWidth) => void;
   // Marker row
   markerLabel: string;
   markerColor: [number, number, number] | null;
@@ -275,19 +262,17 @@ export interface AppearanceSectionProps {
   /** Pill text for the marker reset ("Auto"). */
   markerAutoLabel: string;
   sizeLabel: string;
-  size: number;
-  sizeMin: number;
-  sizeMax: number;
-  sizeStep: number;
-  onSizeChange: (n: number) => void;
+  markerSize: MarkerSize;
+  onMarkerSizeChange: (s: MarkerSize) => void;
 }
 
 /**
- * One domain's slice of the appearance controls: route colour + width and
- * marker colour + size. Rendered identically for every domain so a user
- * sees the same layout whether they're tuning flights or cruises. Null
- * colour = "auto" (frequency heatmap for flight routes, brand default
- * otherwise); the pill toggles back to null.
+ * One domain's slice of the appearance controls: route colour + width preset
+ * and marker colour + size preset. Rendered identically for every domain so
+ * a user sees the same layout whether they're tuning flights or cruises.
+ * Null colour = "auto" (frequency heatmap for flight routes, brand default
+ * otherwise); the pill toggles back to null. Marker size "Aus" hides the
+ * domain's markers.
  */
 export function AppearanceSection({
   title,
@@ -297,23 +282,18 @@ export function AppearanceSection({
   onRouteColorChange,
   routeAutoLabel,
   widthLabel,
-  width,
-  widthMin,
-  widthMax,
-  widthStep,
-  onWidthChange,
+  routeWidth,
+  onRouteWidthChange,
   markerLabel,
   markerColor,
   markerDefault,
   onMarkerColorChange,
   markerAutoLabel,
   sizeLabel,
-  size,
-  sizeMin,
-  sizeMax,
-  sizeStep,
-  onSizeChange,
+  markerSize,
+  onMarkerSizeChange,
 }: AppearanceSectionProps): JSX.Element {
+  const { t } = useTranslation();
   return (
     <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
       <SectionLabel>{title}</SectionLabel>
@@ -333,18 +313,24 @@ export function AppearanceSection({
         </div>
       </div>
 
-      {/* Route width */}
-      <SliderRow
-        label={widthLabel}
-        value={width}
-        min={widthMin}
-        max={widthMax}
-        step={widthStep}
-        onChange={onWidthChange}
-      />
+      {/* Route width preset */}
+      <div className="mt-1.5">
+        <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
+          {widthLabel}
+        </div>
+        <SegControl<RouteWidth>
+          value={routeWidth}
+          onChange={onRouteWidthChange}
+          options={[
+            { value: "thin", label: t("map:globe.panel.widthThin") },
+            { value: "normal", label: t("map:globe.panel.widthNormal") },
+            { value: "thick", label: t("map:globe.panel.widthThick") },
+          ]}
+        />
+      </div>
 
       {/* Marker colour + Auto reset */}
-      <div className="mt-1.5 flex items-center justify-between gap-2 py-0.5">
+      <div className="mt-2 flex items-center justify-between gap-2 py-0.5">
         <ColorField
           label={markerLabel}
           value={markerColor ?? markerDefault}
@@ -357,15 +343,22 @@ export function AppearanceSection({
         />
       </div>
 
-      {/* Marker size */}
-      <SliderRow
-        label={sizeLabel}
-        value={size}
-        min={sizeMin}
-        max={sizeMax}
-        step={sizeStep}
-        onChange={onSizeChange}
-      />
+      {/* Marker size preset (Aus / S / M / L) */}
+      <div className="mt-1">
+        <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
+          {sizeLabel}
+        </div>
+        <SegControl<MarkerSize>
+          value={markerSize}
+          onChange={onMarkerSizeChange}
+          options={[
+            { value: "off", label: t("map:globe.panel.off") },
+            { value: "s", label: "S" },
+            { value: "m", label: "M" },
+            { value: "l", label: "L" },
+          ]}
+        />
+      </div>
     </div>
   );
 }

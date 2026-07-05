@@ -64,7 +64,10 @@
       "domainCruise": "Cruises",
       "off": "Off",
       "labelsImportant": "Key",
-      "labelsAll": "All"
+      "labelsAll": "All",
+      "widthThin": "Thin",
+      "widthNormal": "Normal",
+      "widthThick": "Thick"
     },
     "timesFlown": "Flown {{count}}x",
     "flight_one": "flight",
