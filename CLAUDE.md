@@ -207,11 +207,19 @@ frontend/src/
   in `backend/src/shared/domains.ts` and its frontend mirror at
   `frontend/src/shared/domains.ts`. Shared code paths iterate
   `AVAILABLE_DOMAINS`, never `enabledDomains.includes('flight')`.
-- **Cruise stops** — each stop is either a port call (`portId` set,
-  `isAtSea = false`) or a sea day (`portId = null`, `isAtSea = true`).
-  Zod rejects the union where both are unset. The stops editor on the
-  frontend must renumber `dayNumber` as `index + 1` after add/remove/reorder
-  so numbering stays consecutive.
+- **Cruise stops (3-state invariant)** — each stop is exactly one of:
+  (1) **matched port** — `portId` set, `isAtSea = false`,
+  `unresolvedPortName = null`; (2) **sea day** — `isAtSea = true`,
+  `portId = null`, `unresolvedPortName = null`; (3) **unresolved port** —
+  `portId = null`, `isAtSea = false`, `unresolvedPortName` non-empty (an
+  imported port that couldn't be matched to the catalog; the name is
+  preserved, the stop stays a port call, the user resolves it later). Zod
+  (`schemas/cruise.ts`) rejects any other combination. An unresolved stop
+  counts as a port call (`totalPortCalls`, frontend `countUniquePorts`) but
+  is coordinate-less, so it's excluded from legs/distance/map. The stops
+  editor must renumber `dayNumber` as `index + 1` after add/remove/reorder,
+  and clear `unresolvedPortName` whenever a stop becomes a matched port or a
+  sea day.
 - **Dashboard is multi-domain** — `frontend/src/pages/DashboardPage.tsx` is a thin shell delegating to per-tab components under `frontend/src/components/Dashboard/tabs/`. Tab modes are domain-scoped via `frontend/src/types/dashboard.ts` (no more global `VisMode` union). URL carries tab + mode (`/dashboard/<tab>?mode=<mode>`); `localStorage` remembers the last mode per domain. `MapContainer3D` uses a private `MapMode = "routes" | "heatmap" | "trips" | "globe"` internally; retired modes `hexagon`, `contour`, `columns`, `trip-routes` are gone. Flight-only modes are opt-in via `showInternalCruises={false}` on FlightsTab.
 - **Cruise sea-routes** — `backend/src/services/schematicRouter.ts` runs
   the schematic pipeline (coarse 1° A* water path → Douglas-Peucker
@@ -326,7 +334,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **all-view-colors** (4700 symbols, 12155 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **all-view-colors** (4758 symbols, 12233 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
