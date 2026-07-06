@@ -5,6 +5,7 @@ import { calcQuantiles, getHeatmapColor } from "./layerTypes";
 import type { ArcDatum, PointDatum } from "./layerTypes";
 import type { MapLayerColors } from "../../types/mapTheme";
 import { UpcomingArcLayer } from "./UpcomingArcLayer";
+import { pickLabelled, type LabelsMode } from "../map/labelPriority";
 import {
   FLIGHT_STATUS_PAST_COLOR,
   FLIGHT_STATUS_SCHEDULED_COLOR,
@@ -319,13 +320,6 @@ const HIGHLIGHT_COLOR: [number, number, number, number] = [245, 158, 11, 255];
 // How many alpha units to keep for dimmed routes (out of 255)
 const DIM_ALPHA = 18;
 
-/**
- * Below this zoom, IATA labels are hidden — at low zoom levels (world view)
- * dozens of three-letter codes overlap into illegible noise. The marker
- * dots stay visible, so users still see where airports are. Above this
- * threshold there's enough screen space for the labels to read cleanly.
- */
-const LABEL_VISIBILITY_MIN_ZOOM = 4;
 
 /**
  * Build the deck.gl layer instances for routes mode from already-computed
@@ -335,6 +329,20 @@ const LABEL_VISIBILITY_MIN_ZOOM = 4;
  * re-trigger the expensive data build — only the layer construction below,
  * which is cheap.
  */
+/** User appearance overrides for the flat routes map (mirrors the globe's
+ *  "Anpassung" panel). All optional — omitted fields keep the defaults. */
+export interface RoutesAppearance {
+  /** Airport marker fill colour (RGB). Falls back to the theme colour. */
+  markerColor?: [number, number, number];
+  /** Multiplier on the airport marker + ring radii (1 = default). */
+  markerSizeScale?: number;
+  /** Multiplier on flight-arc width (1 = default). */
+  arcWidthScale?: number;
+  /** Marker-label reveal: off / key markers only (priority by frequency,
+   *  the default) / all. Replaces the old hard zoom gate. */
+  labelsMode?: LabelsMode;
+}
+
 export function createRoutesLayers(
   routeData: RouteData,
   onFlightClick?: (flightId: string | string[]) => void,
@@ -343,6 +351,7 @@ export function createRoutesLayers(
   selectedIds: string[] = [],
   onAirportClick?: (iata: string, lon: number, lat: number) => void,
   zoom: number = 5,
+  appearance: RoutesAppearance = {},
   /**
    * Mirrors `buildRouteData`'s `statusTwoTone` flag so the mixed-route
    * `UpcomingArcLayer` tips match the two-tone "Alle" view's coral
@@ -353,13 +362,17 @@ export function createRoutesLayers(
   statusTwoTone?: boolean
 ): Layer[] {
   const { arcs, points } = routeData;
-  const dotRgb = themeColors?.airportDot ?? ([240, 169, 71] as [number, number, number]);
+  const { markerColor, markerSizeScale = 1, arcWidthScale = 1, labelsMode = "important" } = appearance;
+  const dotRgb =
+    markerColor ?? themeColors?.airportDot ?? ([240, 169, 71] as [number, number, number]);
 
   const selectedSet = new Set(selectedIds);
   const hasSelection = selectedIds.length > 0;
   // Airport opacity: dim when a route is highlighted so pulse rings stand out
   const airportOpacity = hasSelection ? 0.15 : 1;
-  const labelsVisible = zoom >= LABEL_VISIBILITY_MIN_ZOOM;
+  // Priority label reveal: the busiest airports keep their label even when
+  // zoomed out; smaller ones fill in as the zoom budget grows.
+  const labelPoints = pickLabelled(points, (p) => p.count, labelsMode, zoom);
 
   // Three arc datasets:
   //   - regular: no upcoming flight — heatmap colour through plain ArcLayer.
@@ -395,18 +408,20 @@ export function createRoutesLayers(
       // ones. Cap at 4 px (was 7) — multiplier dropped from 1.3 to 1.0 so
       // 1 flight = 1 px, 16 flights = max 4 px (smooth ramp across realistic
       // counts).
-      if (d.isHistorical) return 1.2;
-      const base = Math.min(Math.sqrt(d.count) * 1.0, 4);
+      if (d.isHistorical) return 1.2 * arcWidthScale;
+      const base = Math.min(Math.sqrt(d.count) * 1.0, 4) * arcWidthScale;
       if (!hasSelection) return base;
       // Selected fallback floor matches the new max so a selected mixed
       // route doesn't pop bigger than the unselected cap.
-      return d.flightIds.some((id) => selectedSet.has(id)) ? Math.max(base * 2, 4) : base;
+      return d.flightIds.some((id) => selectedSet.has(id))
+        ? Math.max(base * 2, 4 * arcWidthScale)
+        : base;
     },
     getHeight: arcHeight,
     // Visibility floor: 2 px minimum so a single far-flung route (e.g. a
     // one-off transpacific leg) stays clearly visible at world zoom instead
     // of thinning to a barely-perceptible 1 px hairline.
-    widthMinPixels: 2,
+    widthMinPixels: 2 * arcWidthScale,
     pickable: !!onFlightClick,
     onClick: onFlightClick
       ? ({ object }: { object?: ArcDatum }) => {
@@ -454,7 +469,8 @@ export function createRoutesLayers(
     id: "routes-ring-inner",
     data: points,
     getPosition: (d) => d.position,
-    getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1000,
+    getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1000 * markerSizeScale,
+    updateTriggers: { getRadius: [markerSizeScale], getLineColor: [dotRgb] },
     getFillColor: [0, 0, 0, 0],
     getLineColor: [...dotRgb, 180] as [number, number, number, number],
     stroked: true,
@@ -469,7 +485,8 @@ export function createRoutesLayers(
     id: "routes-ring-outer",
     data: points,
     getPosition: (d) => d.position,
-    getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1800,
+    getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1800 * markerSizeScale,
+    updateTriggers: { getRadius: [markerSizeScale], getLineColor: [dotRgb] },
     getFillColor: [0, 0, 0, 0],
     getLineColor: [...dotRgb, 60] as [number, number, number, number],
     stroked: true,
@@ -484,7 +501,8 @@ export function createRoutesLayers(
     id: "routes-dot",
     data: points,
     getPosition: (d) => d.position,
-    getRadius: () => 2200,
+    getRadius: () => 2200 * markerSizeScale,
+    updateTriggers: { getRadius: [markerSizeScale], getFillColor: [dotRgb] },
     getFillColor: [...dotRgb, 220] as [number, number, number, number],
     stroked: false,
     opacity: airportOpacity,
@@ -501,7 +519,7 @@ export function createRoutesLayers(
   // so users still see airport locations.
   const labelLayer = new TextLayer<PointDatum>({
     id: "routes-labels",
-    data: points,
+    data: labelPoints,
     getPosition: (d) => d.position,
     getText: (d) => d.iata,
     getSize: 12,
@@ -518,7 +536,7 @@ export function createRoutesLayers(
     billboard: true,
     characterSet: "auto",
     opacity: airportOpacity,
-    visible: labelsVisible,
+    visible: labelsMode !== "off",
     pickable: !!onAirportClick,
     onClick: onAirportClick
       ? ({ object }) => {

@@ -4,6 +4,7 @@ import type { GeoJSONFeature } from "../../../types";
 import {
   computeCruiseLegDates,
   computeTimeRange,
+  computeMonthlyBuckets,
   flightVisibleFilter,
   flightVisibleLive,
   legProgress,
@@ -283,5 +284,38 @@ describe("truncatePolyline", () => {
     const p = truncatePolyline(eq, 1 / 3);
     const last = p[p.length - 1];
     expect(last[1]).toBeCloseTo(1, 5);
+  });
+});
+
+describe("computeMonthlyBuckets", () => {
+  it("counts flights + cruises per month across the range", () => {
+    const flights = [
+      flightFeat("2022-07-05T10:00:00Z"),
+      flightFeat("2022-07-20T10:00:00Z"),
+      flightFeat("2022-09-01T10:00:00Z"),
+      flightFeat(null), // no date → ignored
+    ];
+    const cruises = [baseCruise({ startDate: "2022-08-10T00:00:00Z" })];
+    const min = new Date("2022-07-01T00:00:00Z");
+    const max = new Date("2022-09-30T00:00:00Z");
+
+    const buckets = computeMonthlyBuckets(flights, cruises, min, max);
+
+    expect(buckets).toHaveLength(3); // Jul, Aug, Sep
+    expect(buckets[0].flights).toBe(2);
+    expect(buckets[0].start.getUTCMonth()).toBe(6); // July
+    expect(buckets[1].cruises).toBe(1); // Aug
+    expect(buckets[2].flights).toBe(1); // Sep
+  });
+
+  it("returns contiguous months even when empty", () => {
+    const buckets = computeMonthlyBuckets(
+      [],
+      [],
+      new Date("2023-01-15T00:00:00Z"),
+      new Date("2023-04-15T00:00:00Z")
+    );
+    expect(buckets).toHaveLength(4);
+    expect(buckets.every((b) => b.flights === 0 && b.cruises === 0)).toBe(true);
   });
 });
