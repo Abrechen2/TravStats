@@ -152,13 +152,10 @@ export function CruisesTab(): JSX.Element {
       <MapContainer3D
         flights={[]}
         visMode={mode === "globe" ? "globe" : "routes"}
-        onVisModeChange={() => {
-          /* cruise tab manages its own mode via useDashboardRoute */
-        }}
         extraLayers={extraLayers}
         showInternalCruises={showInternalCruises}
-        hideVisModeSelector
         cruisesOverride={visibleCruises}
+        appearanceDomains={["cruise"]}
         cruiseColorMode="perCruise"
       />
       <button

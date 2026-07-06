@@ -1,18 +1,17 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDashboardRoute } from "../../hooks/useDashboardRoute";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { flightsApi } from "../../lib/api/flights";
 import { useToastStore } from "../../store/toastStore";
+import { useDashboardChromeStore } from "../../store/dashboardChromeStore";
 import { logger } from "../../lib/logger";
 import NavigationBar from "../NavigationBar";
 import SimplifiedFlightFormV2 from "../SimplifiedFlightFormV2";
 import SpecialFlightModal from "../SpecialFlightModal";
 import { CruiseAddChooser } from "../Cruise/CruiseAddChooser";
 import { DomainTabStrip } from "./DomainTabStrip";
-import { DashboardControlsBar } from "./DashboardControlsBar";
-import { DashboardFilterDropdown } from "./DashboardFilterDropdown";
 import type { FlightInput } from "../../types";
 import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
 
@@ -33,8 +32,7 @@ export function DashboardLayout({
 }: DashboardLayoutProps): JSX.Element {
   // Ensures the dashboard namespace is loaded for children that use t("dashboard:...")
   const { t } = useTranslation(["dashboard", "flights"]);
-  const { tab, mode, setTab, setMode } = useDashboardRoute();
-  const [filterOpen, setFilterOpen] = useState(false);
+  const { tab, setTab } = useDashboardRoute();
   const [addingDomain, setAddingDomain] = useState<AddableDomain | null>(null);
   const [showSpecialModal, setShowSpecialModal] = useState(false);
   const { isEnabled } = useEnabledDomains();
@@ -52,6 +50,21 @@ export function DashboardLayout({
       setAddingDomain(target);
     }
   };
+
+  // The "+ hinzufügen" action now lives in the in-map control panel, which
+  // is rendered several layers below this layout. It signals an add request
+  // through the chrome store; open the matching modal here. Guarded by a
+  // seen-tick ref so re-renders don't re-open the modal — only a genuine
+  // new request (higher tick) fires.
+  const addTick = useDashboardChromeStore((s) => s.addTick);
+  const seenTickRef = useRef(addTick);
+  useEffect(() => {
+    if (addTick === seenTickRef.current) return;
+    seenTickRef.current = addTick;
+    handleAdd(useDashboardChromeStore.getState().addDomain ?? undefined);
+    // handleAdd only reads `tab`, which is current at effect time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addTick]);
 
   const handleFlightCreate = async (
     flight: FlightInput,
@@ -72,18 +85,10 @@ export function DashboardLayout({
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <NavigationBar />
       <DomainTabStrip active={tab} counts={counts} enabled={enabledDomains} onSelect={setTab} />
-      <DashboardControlsBar
-        tab={tab}
-        mode={mode}
-        enabledDomains={enabledDomains}
-        onModeChange={setMode}
-        onFilterOpen={() => setFilterOpen((p) => !p)}
-        onAdd={handleAdd}
-      />
-      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-        {children}
-        <DashboardFilterDropdown tab={tab} open={filterOpen} onClose={() => setFilterOpen(false)} />
-      </div>
+      {/* Modus / Filter / + hinzufügen moved into the in-map control panel
+          (MapChromeSections) — the map is now the single control surface,
+          so no toolbar sits between the tab strip and the map. */}
+      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>{children}</div>
 
       {addingDomain === "flight" && (
         <SimplifiedFlightFormV2

@@ -48,25 +48,12 @@ const ALL_MODE_TO_MAP_MODE: Record<AllMode, MapMode> = {
   globe: "globe",
 };
 
-// Reverse-maps MapMode back to the closest AllMode so the VisModeSelector
-// inside MapContainer3D can keep the URL in sync when the user changes mode
-// from within the map controls.
-const MAP_MODE_TO_ALL_MODE: Partial<Record<MapMode, AllMode>> = {
-  routes: "overview",
-  heatmap: "heatmap",
-  globe: "globe",
-};
-
-// Subset of MapMode values offered by the in-map FAB on the Alle tab.
-// Globe is cross-domain and only exposed here.
-const ALL_TAB_MAP_MODES: readonly MapMode[] = ["routes", "heatmap", "globe"];
-
 function isAllMode(mode: unknown): mode is AllMode {
   return typeof mode === "string" && (ALL_MODES as readonly string[]).includes(mode);
 }
 
 export function AllTab(): JSX.Element {
-  const { mode, setMode } = useDashboardRoute();
+  const { mode } = useDashboardRoute();
   const { t } = useTranslation(["dashboard"]);
   const [flights, setFlights] = useState<GeoJSONFeature[]>([]);
   const [cruises, setCruises] = useState<Cruise[]>([]);
@@ -259,16 +246,6 @@ export function AllTab(): JSX.Element {
     if (allMode !== "journey") return [];
     return buildJourneyLayers(visibleFlights, visibleCruises, effectiveTripId);
   }, [allMode, visibleFlights, visibleCruises, effectiveTripId]);
-
-  const handleVisModeChange = useCallback(
-    (next: MapMode): void => {
-      const mapped = MAP_MODE_TO_ALL_MODE[next];
-      if (mapped !== undefined) {
-        setMode(mapped);
-      }
-    },
-    [setMode]
-  );
 
   // Toggle + legend share one flex row so they auto-flow without
   // manual left-offset math. The whole row shifts right when the
@@ -464,7 +441,6 @@ export function AllTab(): JSX.Element {
         <MapContainer3D
           flights={[]}
           visMode="routes"
-          onVisModeChange={handleVisModeChange}
           extraLayers={journeyLayers}
           showInternalCruises={false}
           onFlightClick={handleFlightClick}
@@ -472,12 +448,7 @@ export function AllTab(): JSX.Element {
           onFlightOpen={handlePanelFlightDetails}
           onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
           flightRouteColor={FLIGHT_RGB}
-          availableModes={ALL_TAB_MAP_MODES}
           cruisesOverride={visibleCruises}
-          // journey renders in "routes" visMode but is a synthetic mode not
-          // in the FAB set — hide the FAB so it can't show "Routes" as active
-          // (contradicting the toolbar) or drop the user out of journey.
-          hideVisModeSelector
           hideInfoPill
         />
         {toggleAndLegend}
@@ -493,7 +464,6 @@ export function AllTab(): JSX.Element {
       <MapContainer3D
         flights={visibleFlights}
         visMode={visMode}
-        onVisModeChange={handleVisModeChange}
         flightRouteColor={FLIGHT_RGB}
         statusTwoTone
         cruiseColorMode="status"
@@ -501,7 +471,6 @@ export function AllTab(): JSX.Element {
         onRouteClick={handleRouteClick}
         onFlightOpen={handlePanelFlightDetails}
         onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
-        availableModes={ALL_TAB_MAP_MODES}
         cruisesOverride={visibleCruises}
         hideInfoPill
       />

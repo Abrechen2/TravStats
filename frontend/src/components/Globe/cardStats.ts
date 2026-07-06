@@ -29,7 +29,8 @@ export interface PortCardStats {
 export interface ArcCardStats {
   totalKm: number;
   lastFlightDate: string | null;
-  aircraftTypes: string[];
+  /** Most-frequently-flown aircraft type on this route. */
+  topAircraft: string | null;
   topAirline: string | null;
 }
 
@@ -162,9 +163,7 @@ export function getArcStats(
   return {
     totalKm,
     lastFlightDate: maxDate(matched.map((f) => f.properties.departureTime)),
-    aircraftTypes: Array.from(
-      new Set(matched.map((f) => f.properties.aircraft).filter((a): a is string => !!a))
-    ),
+    topAircraft: modeOf(matched.map((f) => f.properties.aircraft)),
     topAirline: modeOf(matched.map((f) => f.properties.airline)),
   };
 }
