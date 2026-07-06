@@ -13,12 +13,7 @@ import { FlagImg, countryName, countryFromUnlocode } from "../../lib/countryFlag
 import type { GeoJSONFeature } from "../../types";
 import type { Cruise } from "../../types/cruise";
 import type { GlobePinned } from "./globeLayerTypes";
-import {
-  getAirportStats,
-  getArcStats,
-  getCruiseStats,
-  getPortStats,
-} from "./cardStats";
+import { getAirportStats, getArcStats, getCruiseStats, getPortStats } from "./cardStats";
 
 interface PinnedCardProps {
   pinned: GlobePinned;
@@ -101,12 +96,7 @@ export function PinnedCard({
       </div>
 
       {pinned.kind === "airport" && (
-        <AirportBody
-          pinned={pinned}
-          flights={flights}
-          locale={locale}
-          t={t}
-        />
+        <AirportBody pinned={pinned} flights={flights} locale={locale} t={t} />
       )}
       {pinned.kind === "port" && (
         <PortBody pinned={pinned} cruises={cruises} locale={locale} t={t} />
@@ -317,15 +307,17 @@ function AirportBody({
   flights,
   locale,
   t,
-}: { pinned: Extract<GlobePinned, { kind: "airport" }>; flights: GeoJSONFeature[] } & BodyCommonProps): JSX.Element {
+}: {
+  pinned: Extract<GlobePinned, { kind: "airport" }>;
+  flights: GeoJSONFeature[];
+} & BodyCommonProps): JSX.Element {
   const stats = getAirportStats(flights, pinned.data.iata);
   return (
     <>
       <SubHeading>{pinned.data.name}</SubHeading>
       <Place city={pinned.data.city} country={pinned.data.country} locale={locale} />
       <Hero color="#fbbf24">
-        {stats.totalVisits}{" "}
-        {t("map:globe.flight", { count: stats.totalVisits })}
+        {stats.totalVisits} {t("map:globe.flight", { count: stats.totalVisits })}
       </Hero>
       <Grid>
         {stats.longestRoute && (
@@ -338,16 +330,10 @@ function AirportBody({
           <Row label={t("map:globe.pinned.topAirline")} value={stats.topAirline} />
         )}
         {stats.topAircraft && (
-          <Row
-            label={t("map:globe.pinned.topAircraft")}
-            value={stats.topAircraft}
-          />
+          <Row label={t("map:globe.pinned.topAircraft")} value={stats.topAircraft} />
         )}
         {stats.lastVisitDate && (
-          <Row
-            label={t("map:tooltip.lastVisit")}
-            value={formatDate(stats.lastVisitDate, locale)}
-          />
+          <Row label={t("map:tooltip.lastVisit")} value={formatDate(stats.lastVisitDate, locale)} />
         )}
       </Grid>
     </>
@@ -361,7 +347,10 @@ function PortBody({
   cruises,
   locale,
   t,
-}: { pinned: Extract<GlobePinned, { kind: "port" }>; cruises: Cruise[] } & BodyCommonProps): JSX.Element {
+}: {
+  pinned: Extract<GlobePinned, { kind: "port" }>;
+  cruises: Cruise[];
+} & BodyCommonProps): JSX.Element {
   const portKey = pinned.data.iata !== pinned.data.name ? pinned.data.iata : pinned.data.name;
   const stats = getPortStats(cruises, portKey);
   return (
@@ -374,9 +363,7 @@ function PortBody({
         {stats.totalVisits} {t("map:airportMarkers.visits")}
       </Hero>
       <Grid>
-        {stats.country && (
-          <Row label={t("map:globe.pinned.country")} value={stats.country} />
-        )}
+        {stats.country && <Row label={t("map:globe.pinned.country")} value={stats.country} />}
         {stats.region && (
           <Row label={t("map:globe.pinned.region")} value={capitalize(stats.region)} />
         )}
@@ -393,10 +380,7 @@ function PortBody({
           />
         )}
         {stats.lastCallDate && (
-          <Row
-            label={t("map:tooltip.lastCall")}
-            value={formatDate(stats.lastCallDate, locale)}
-          />
+          <Row label={t("map:tooltip.lastCall")} value={formatDate(stats.lastCallDate, locale)} />
         )}
       </Grid>
     </>
@@ -483,11 +467,7 @@ function CruiseBody({
   const stats = getCruiseStats(cruises, pinned.data.cruiseId);
   const cruise = cruises.find((c) => c.id === pinned.data.cruiseId);
   if (!stats) {
-    return (
-      <div className="text-[11px] opacity-85">
-        {t("map:visMode.tripRoutes")}
-      </div>
-    );
+    return <div className="text-[11px] opacity-85">{t("map:visMode.tripRoutes")}</div>;
   }
 
   const dateRange =
@@ -503,9 +483,7 @@ function CruiseBody({
       <Grid>
         <Row label={t("map:globe.pinned.portsLabel")} value={String(stats.portCount)} />
         <Row label={t("map:globe.pinned.seaDaysLabel")} value={String(stats.seaDays)} />
-        {stats.embarkPort && (
-          <Row label={t("map:globe.pinned.embark")} value={stats.embarkPort} />
-        )}
+        {stats.embarkPort && <Row label={t("map:globe.pinned.embark")} value={stats.embarkPort} />}
         {stats.debarkPort && stats.debarkPort !== stats.embarkPort && (
           <Row label={t("map:globe.pinned.debark")} value={stats.debarkPort} />
         )}
@@ -523,20 +501,12 @@ function CruiseBody({
 // ─── Tier-2/3 building blocks ─────────────────────────────────────
 
 function SubHeading({ children }: { children: React.ReactNode }): JSX.Element {
-  return (
-    <div className="mb-2 text-[11px] opacity-85">{children}</div>
-  );
+  return <div className="mb-2 text-[11px] opacity-85">{children}</div>;
 }
 
-function Hero({
-  children,
-  color,
-}: { children: React.ReactNode; color: string }): JSX.Element {
+function Hero({ children, color }: { children: React.ReactNode; color: string }): JSX.Element {
   return (
-    <div
-      className="mb-3 text-[13px]"
-      style={{ color, fontWeight: 700 }}
-    >
+    <div className="mb-3 text-[13px]" style={{ color, fontWeight: 700 }}>
       {children}
     </div>
   );
@@ -557,10 +527,7 @@ function Row({ label, value }: { label: string; value: string }): JSX.Element {
   );
 }
 
-function Cta({
-  label,
-  onClick,
-}: { label: string; onClick: () => void }): JSX.Element {
+function Cta({ label, onClick }: { label: string; onClick: () => void }): JSX.Element {
   return (
     <button
       type="button"
@@ -605,10 +572,7 @@ function formatDate(iso: string, locale: string): string {
   }
 }
 
-function formatDuration(
-  minutes: number,
-  t: ReturnType<typeof useTranslation>["t"],
-): string {
+function formatDuration(minutes: number, t: ReturnType<typeof useTranslation>["t"]): string {
   const h = Math.floor(minutes / 60);
   const m = Math.round(minutes - h * 60);
   return t("map:globe.pinned.durationHours", { h, m });

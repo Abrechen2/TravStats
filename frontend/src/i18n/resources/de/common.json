@@ -38,8 +38,8 @@
   },
   "diagnostic": {
     "reportBug": "Fehler melden",
-    "reportBugOpened": "Bundle kopiert – im neuen Tab einfügen",
-    "reportBugHint": "Öffnet GitHub mit einem vorausgefüllten Fehler-Template und kopiert das Diagnose-Bundle in die Zwischenablage",
+    "reportBugOpened": "Bundle heruntergeladen – die .json-Datei im neuen Tab in den Report ziehen",
+    "reportBugHint": "Öffnet GitHub mit vorausgefülltem Fehler-Template und lädt das Diagnose-Bundle zum Anhängen herunter (zum Einfügen meist zu groß)",
     "title": "Diagnose-Export für GitHub-Issue",
     "description": "Lade ein bereinigtes Diagnose-Paket herunter, das du einem GitHub-Issue anhängen kannst. Das Paket enthält die letzten Log-Einträge sowie System- und Versionsinfos. Alle persönlichen Daten wurden entfernt:",
     "scrubList": {

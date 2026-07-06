@@ -315,6 +315,23 @@ export const passwordResetLimiter = rateLimit({
 });
 
 /**
+ * Rate limiter for the public device-pairing claim endpoint.
+ *
+ * `/pairing/claim` is unauthenticated by design (the mobile app has no
+ * credentials yet — it's exchanging a one-time code for a token), so it's
+ * keyed by IP. The code itself is a 128-bit secret with a 10-minute TTL, but a
+ * tight per-IP cap blocks brute-force enumeration of the code space. 10/15min
+ * is ample for a human pairing a handful of devices.
+ */
+export const pairingClaimLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'Too many pairing attempts, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
  * Rate limiter for diagnostic bundle export.
  * Generous enough for a user iterating on a bug report, tight enough that
  * the endpoint can't be used to scrape logs.

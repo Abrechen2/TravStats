@@ -9,14 +9,12 @@ import { useTranslation } from "../../hooks/useTranslation";
 // the browser's UTC offset on every save (display sliced the UTC ISO straight
 // back), so a stored "08:00" reappeared as "06:00" and could roll to the
 // previous day — the same asymmetry that dropped cruise start/end dates.
-const fromStopInput = (local: string): string | null =>
-  local ? `${local}:00.000Z` : null;
+const fromStopInput = (local: string): string | null => (local ? `${local}:00.000Z` : null);
 
 // Stop date is date-granular (the calendar day of the call). Pin to UTC
 // midnight so the round-trip stays timezone-neutral, same as the cruise
 // start/end dates — see CruiseEditModal for the rationale.
-const fromDateInput = (date: string): string | null =>
-  date ? `${date}T00:00:00.000Z` : null;
+const fromDateInput = (date: string): string | null => (date ? `${date}T00:00:00.000Z` : null);
 
 interface Props {
   stops: CruiseStopInput[];

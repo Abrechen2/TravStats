@@ -5,6 +5,8 @@
     "new": "Add cruise",
     "empty": "No cruises yet",
     "loading": "Loading cruises …",
+    "sortBy": "Sort by {{col}}",
+    "duplicate": "Duplicate",
     "columns": {
       "ship": "Ship",
       "line": "Line",
@@ -12,7 +14,13 @@
       "ports": "Ports",
       "status": "Status",
       "cabin": "Cabin",
-      "price": "Price"
+      "price": "Price",
+      "actions": "Actions"
+    },
+    "delete": {
+      "confirm": "Delete cruise \"{{ship}}\"?",
+      "done": "Cruise deleted",
+      "error": "Failed to delete cruise"
     }
   },
   "detail": {
@@ -22,6 +30,7 @@
     "route": "Route",
     "cabin": "Cabin",
     "costs": "Costs",
+    "mapColor": "Map color",
     "meta": "Notes & tags",
     "edit": "Edit",
     "delete": "Delete",
@@ -66,7 +75,9 @@
     "flightDate": "Date",
     "flightClass": "Class",
     "departPortAirport": "From airport",
-    "arrivePortAirport": "To airport"
+    "arrivePortAirport": "To airport",
+    "color": "Color",
+    "colorAuto": "Automatic (derived from cruise ID)"
   },
   "seatClass": {
     "economy": "Economy",

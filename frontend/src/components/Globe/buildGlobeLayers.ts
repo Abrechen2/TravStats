@@ -21,19 +21,21 @@ import {
 } from "./EarthOcclusionExtension";
 import type { NightCell } from "./sunPosition";
 import type { Quartile } from "./heatmapUtils";
-import type {
-  ArcDatum,
-  CruisePathDatum,
-  GlobePinned,
-  PointDatum,
-} from "./globeLayerTypes";
+import type { ArcDatum, CruisePathDatum, GlobePinned, PointDatum } from "./globeLayerTypes";
+import { FLIGHT_STATUS_PAST_COLOR, FLIGHT_STATUS_UPCOMING_COLOR } from "../../lib/statusColors";
 
 // Default cruise-route colour — the canonical cruise-domain blue
 // (BRAND.md §3, --domain-cruise = rgb(111,160,214)). Matches the port
 // marker default + the flat-map cruise arcs so ship routes read the same
-// on the globe and the 2D map. Alpha is applied at the layer.
+// on the globe and the 2D map. Used as the "Standard" swatch default in
+// the appearance panels; the actual per-leg render color is resolved in
+// GlobeView's `cruisePaths` builder (user override, else `colorMode`).
 export const DEFAULT_CRUISE_ROUTE_COLOR: [number, number, number] = [111, 160, 214];
+// Alpha applied to a cruise path. Planned (scheduled) cruises render
+// dimmer than past ones — matching the flat map's `cruiseArcsLayer`
+// PLANNED_ALPHA so the two renderers agree on how "not yet sailed" reads.
 const CRUISE_PATH_ALPHA = 230;
+const CRUISE_PATH_PLANNED_ALPHA = 150;
 
 // Default marker appearance — exported so GlobeView can seed the user
 // customisation state from the same source of truth. Airports + ports
@@ -46,6 +48,52 @@ export const DEFAULT_AIRPORT_COLOR: [number, number, number] = [251, 191, 36];
 // maps. Was sky-400 [56,189,248], a different blue outside the palette.
 export const DEFAULT_PORT_COLOR: [number, number, number] = [111, 160, 214];
 export const DEFAULT_MARKER_RADIUS_PX = 5;
+
+/**
+ * Resolve a cruise leg's render color (RGB + alpha). Mirrors the flat
+ * map's `cruiseArcsLayer` planned-dimming: scheduled cruises get a
+ * lower alpha so "not yet sailed" reads the same on the globe as on the
+ * flat map. The hue is already resolved upstream in GlobeView's
+ * `cruisePaths` builder (a user color override wins, else `colorMode`'s
+ * status/per-cruise palette) — this only layers on the status-dependent
+ * opacity.
+ *
+ * Exported as a pure function so it's unit-testable without deck.gl.
+ */
+export function resolveCruisePathColor(
+  d: Pick<CruisePathDatum, "color" | "status">
+): [number, number, number, number] {
+  const alpha = d.status === "scheduled" ? CRUISE_PATH_PLANNED_ALPHA : CRUISE_PATH_ALPHA;
+  return [d.color[0], d.color[1], d.color[2], alpha];
+}
+
+/**
+ * Resolve a flight arc's render color. Mirrors the flat map's
+ * `routesLayer.ts` collapsing rule exactly: when `statusTwoTone` is
+ * active, every route becomes flight-orange (`FLIGHT_STATUS_PAST_COLOR`)
+ * unless it's pure-scheduled (never flown), which renders coral
+ * (`FLIGHT_STATUS_UPCOMING_COLOR`) — warm, to stay distinct from the
+ * cool cruise blues/cyans sharing the same "Alle" globe. Otherwise falls back
+ * to the existing single-tint override (`flightRouteColor`) or the
+ * per-route count heatmap color — unchanged behaviour for callers that
+ * don't pass `statusTwoTone` (e.g. journey mode).
+ *
+ * Exported as a pure function (no deck.gl / React dependency) so it's
+ * unit-testable in isolation.
+ */
+export function resolveFlightArcColor(
+  status: ArcDatum["status"],
+  heatmapColor: [number, number, number],
+  opts: {
+    flightRouteColor?: [number, number, number];
+    statusTwoTone?: boolean;
+  }
+): [number, number, number] {
+  if (opts.statusTwoTone) {
+    return status === "scheduled" ? FLIGHT_STATUS_UPCOMING_COLOR : FLIGHT_STATUS_PAST_COLOR;
+  }
+  return opts.flightRouteColor ?? heatmapColor;
+}
 // Head-flight arrival marker keeps a little 3-D pop via ColumnLayer,
 // but airports + ports go flat. The numbers below are only used by
 // the head-flight column.
@@ -94,7 +142,7 @@ const MARKER_ALTITUDE_M = 8_000;
 // picks or when the pipeline doesn't compute one.
 function pickingCoordToLngLat(
   coordinate: number[] | undefined,
-  fallbackPath: ReadonlyArray<readonly number[]>,
+  fallbackPath: ReadonlyArray<readonly number[]>
 ): [number, number] {
   if (coordinate && coordinate.length >= 2) {
     return [coordinate[0], coordinate[1]];
@@ -127,13 +175,18 @@ export interface BuildGlobeLayersOptions {
    * heatmap palette derived from per-route quartile. The quartile
    * dimming (active filter) is preserved as alpha so the filter still
    * works visually. Same prop semantics as `MapContainer3D.flightRouteColor`
-   * on the flat map.
+   * on the flat map. Superseded by `statusTwoTone` when that's set.
    */
   flightRouteColor?: [number, number, number];
+  /**
+   * Split flight arcs into a two-tone gradient by status (scheduled vs.
+   * past/historical) instead of a single flightRouteColor fill or the
+   * count heatmap. Same prop semantics as `MapContainer3D.statusTwoTone`
+   * on the flat map — see `resolveFlightArcColor`.
+   */
+  statusTwoTone?: boolean;
   /** User multiplier on flight-arc line width (1 = default). */
   arcWidthScale: number;
-  /** Cruise-route colour (RGB); alpha applied internally. */
-  cruiseRouteColor: [number, number, number];
   /** User multiplier on cruise-path line width (1 = default). */
   cruiseArcWidthScale: number;
   /** Airport marker fill colour (RGB); alpha is applied internally. */
@@ -168,8 +221,8 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     onCruisePathHover,
     setPinned,
     flightRouteColor,
+    statusTwoTone,
     arcWidthScale,
-    cruiseRouteColor,
     cruiseArcWidthScale,
     airportColor,
     portColor,
@@ -178,12 +231,14 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     nightCells,
     showNight,
   } = opts;
-  // Pick the per-arc colour. With `flightRouteColor` set, every arc
-  // gets that single tint; otherwise the per-arc quartile heatmap
-  // applies. Active-quartile alpha dimming is preserved either way so
-  // the click-to-isolate filter still reads visually.
+  // Pick the per-arc colour. With `statusTwoTone` set, every arc is
+  // orange/blue by status (see `resolveFlightArcColor`); otherwise with
+  // `flightRouteColor` set, every arc gets that single tint; otherwise
+  // the per-arc quartile heatmap applies. Active-quartile alpha dimming
+  // is preserved in all cases so the click-to-isolate filter still reads
+  // visually.
   const arcColor = (d: ArcDatum, baseAlpha: number): [number, number, number, number] => {
-    const rgb = flightRouteColor ?? d.color;
+    const rgb = resolveFlightArcColor(d.status, d.color, { flightRouteColor, statusTwoTone });
     return [rgb[0], rgb[1], rgb[2], baseAlpha];
   };
 
@@ -238,7 +293,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       // read as too heavy on the globe.
       getWidth: (d) => Math.min(Math.sqrt(d.count), 4) * arcWidthScale,
       updateTriggers: {
-        getColor: [activeQuartile, flightRouteColor],
+        getColor: [activeQuartile, flightRouteColor, statusTwoTone],
         getWidth: [arcWidthScale],
       },
       widthUnits: "pixels",
@@ -265,10 +320,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
         // the popup mount + globe re-render was crashing the canvas
         // in some camera states (regression observed on beta.15).
       },
-      extensions: [
-        new PathStyleExtension({ dash: true, highPrecisionDash: true }),
-        occlusionExt,
-      ],
+      extensions: [new PathStyleExtension({ dash: true, highPrecisionDash: true }), occlusionExt],
       getDashArray: (d: ArcDatum) => (d.weak ? [4, 3] : [0, 0]),
       dashJustified: true,
       dashGapPickable: false,
@@ -286,7 +338,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       getPath: (d) => d.waypoints,
       getColor: (d) =>
         arcColor(d, activeQuartile === null || activeQuartile === d.quartile ? 160 : 25),
-      updateTriggers: { getColor: [activeQuartile, flightRouteColor] },
+      updateTriggers: { getColor: [activeQuartile, flightRouteColor, statusTwoTone] },
       getWidth: 1,
       widthUnits: "pixels",
       widthMinPixels: 1,
@@ -322,15 +374,15 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       // Lift each [lng, lat] point to [lng, lat, alt] so the line
       // renders just above the sphere instead of through it.
       getPath: (d) =>
-        d.path.map(
-          (p) => [p[0], p[1], CRUISE_PATH_ALTITUDE_M] as [number, number, number],
-        ),
-      getColor: [
-        cruiseRouteColor[0],
-        cruiseRouteColor[1],
-        cruiseRouteColor[2],
-        CRUISE_PATH_ALPHA,
-      ],
+        d.path.map((p) => [p[0], p[1], CRUISE_PATH_ALTITUDE_M] as [number, number, number]),
+      // `d.color` is pre-resolved per-leg in GlobeView's `cruisePaths`
+      // builder (a user color override wins, else status two-tone or
+      // per-cruise hue via `resolveCruiseArcColor`) — this layer applies
+      // the status-aware alpha on top (planned cruises dimmer, matching
+      // the flat map). No updateTriggers needed for color: the accessor
+      // only reads `d`, so a new `cruisePaths` array reference already
+      // forces deck.gl to re-evaluate.
+      getColor: resolveCruisePathColor,
       // Base 2 px (matches the flat-map cruiseArcsLayer default — visually
       // heavier than a single-flight arc so cruise routes read distinct)
       // times the user's cruise-width multiplier.
@@ -341,13 +393,9 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       capRounded: true,
       jointRounded: true,
       updateTriggers: {
-        getColor: [cruiseRouteColor],
         getWidth: [cruiseArcWidthScale],
       },
-      extensions: [
-        new PathStyleExtension({ dash: true, highPrecisionDash: true }),
-        occlusionExt,
-      ],
+      extensions: [new PathStyleExtension({ dash: true, highPrecisionDash: true }), occlusionExt],
       getDashArray: [6, 3],
       dashJustified: true,
       dashGapPickable: false,
@@ -397,7 +445,8 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       },
       extensions: [occlusionExt],
       ...occlusionProps,
-    } as ConstructorParameters<typeof ScatterplotLayer<PointDatum>>[0] & EarthOcclusionExtensionProps),
+    } as ConstructorParameters<typeof ScatterplotLayer<PointDatum>>[0] &
+      EarthOcclusionExtensionProps),
     new ScatterplotLayer<PointDatum>({
       id: "globe-port-dots",
       data: portPoints,
@@ -462,8 +511,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
             },
             extensions: [occlusionExt],
             ...occlusionProps,
-          } as ConstructorParameters<typeof PathLayer<ArcDatum>>[0] &
-            EarthOcclusionExtensionProps),
+          } as ConstructorParameters<typeof PathLayer<ArcDatum>>[0] & EarthOcclusionExtensionProps),
           // Head endpoint dot — column at the arrival airport of the
           // most-recent flight, so the eye lands on "where the trail
           // ends right now".

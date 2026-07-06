@@ -6,8 +6,8 @@ import { useTranslation } from "../../hooks/useTranslation";
 
 interface StopModalProps {
   tripId: string;
-  stop: TripStop | null;     // null = create
-  defaultDate?: string;       // pre-fill startDate when creating
+  stop: TripStop | null; // null = create
+  defaultDate?: string; // pre-fill startDate when creating
   onClose: () => void;
   onSaved: () => void;
 }
@@ -92,10 +92,7 @@ export default function StopModal({
       }
       onSaved();
     } catch {
-      addToast(
-        "error",
-        stop ? t("trips:toasts.updateError") : t("trips:toasts.createError")
-      );
+      addToast("error", stop ? t("trips:toasts.updateError") : t("trips:toasts.createError"));
     } finally {
       setSaving(false);
     }
@@ -228,13 +225,7 @@ export default function StopModal({
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}): JSX.Element {
+function Field({ label, children }: { label: string; children: React.ReactNode }): JSX.Element {
   return (
     <div>
       <label

@@ -65,7 +65,7 @@ export interface PortsAppearance {
 export function createCruisePortsLayer(
   cruises: Cruise[],
   zoom: number = PORT_LABEL_VISIBILITY_MIN_ZOOM,
-  appearance: PortsAppearance = {},
+  appearance: PortsAppearance = {}
 ): Layer[] | null {
   const { portColor, portSizeScale = 1, labelsMode = "important" } = appearance;
   const portRgb = portColor ?? PORT_RGB;

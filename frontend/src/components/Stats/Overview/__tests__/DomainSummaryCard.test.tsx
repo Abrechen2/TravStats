@@ -149,6 +149,6 @@ describe("DomainSummaryCard", () => {
         compareEnabled={true}
       />
     );
-    expect(screen.getByText(/ggü/)).toBeInTheDocument();
+    expect(screen.getByText(/yearFilter\.vs/)).toBeInTheDocument();
   });
 });

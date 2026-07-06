@@ -28,6 +28,7 @@ const FLIGHT_MODE_TO_MAP_MODE: Record<FlightMode, MapMode> = {
   heatmap: "heatmap",
   "stats-map": "routes",
   trips: "trips",
+  globe: "globe",
 };
 
 // Convert nullable DB columns to undefined so Zod .optional() accepts them
@@ -264,7 +265,9 @@ export function FlightsTab(): JSX.Element {
         style={{
           position: "absolute",
           top: 12,
-          left: 12,
+          // Shift out of the way when the list panel (320px) is open so it
+          // doesn't overlap — matches the Alle tab's toggle behaviour.
+          left: sidebarOpen ? 340 : 12,
           zIndex: 30,
           padding: "6px 12px",
           borderRadius: 10,

@@ -21,6 +21,24 @@
   "overviewToggle": {
     "noData": "keine Daten"
   },
+  "timeRange": {
+    "rolling12m": "12 Monate",
+    "year": "Jahr",
+    "all": "Gesamt",
+    "noData": "Keine Daten in diesem Zeitraum"
+  },
+  "scorecard": {
+    "flights": "Flüge",
+    "distance": "Distanz",
+    "flightTime": "Flugzeit",
+    "takeawayRolling": "letzte 12 Monate",
+    "takeawayYear": "im Jahr {{year}}",
+    "takeawayAll": "insgesamt",
+    "comparePrev": "ggü. Vorzeitraum"
+  },
+  "canonicalChart": {
+    "flightsTitle": "Flüge pro Zeitraum"
+  },
   "overviewChart": {
     "title": "Aktivität pro Jahr",
     "subtitleStacked": "gestapelt nach Domain",

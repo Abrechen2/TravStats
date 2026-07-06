@@ -27,6 +27,22 @@ const STATUSES: CruiseStatus[] = ["scheduled", "flown", "cancelled", "historical
 const CABIN_TYPES: CabinType[] = ["inside", "oceanview", "balcony", "suite"];
 const CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
 
+// Hex mirror of CRUISE_DISTINCT_PALETTE (lib/cruiseColor.ts) — the same
+// distinct hues the map's auto-derive falls back to, so a manual pick still
+// looks consistent with un-colored cruises. Keep both palettes in sync.
+const COLOR_PALETTE = [
+  "#e88374",
+  "#f4bf4f",
+  "#7ec87a",
+  "#5fc2b2",
+  "#82aaff",
+  "#b284e0",
+  "#e88ac4",
+  "#d6a05c",
+  "#78cdd6",
+  "#b0c46c",
+] as const;
+
 // Cruise start/end are date-granular (a voyage spans whole days). Use a
 // date-only round-trip pinned to UTC midnight. This fixes two bugs:
 //   1. A `datetime-local` input stays EMPTY until BOTH date and time are set,
@@ -40,8 +56,7 @@ const CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
 //      UTC instant keeps the round-trip stable and timezone-neutral.
 const toDateInput = (iso: string | null | undefined): string => (iso ? iso.slice(0, 10) : "");
 
-const fromDateInput = (date: string): string | null =>
-  date ? `${date}T00:00:00.000Z` : null;
+const fromDateInput = (date: string): string | null => (date ? `${date}T00:00:00.000Z` : null);
 
 const splitCsv = (v: string): string[] =>
   v
@@ -72,6 +87,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
   const [startDate, setStartDate] = useState<string>(toDateInput(cruise?.startDate));
   const [endDate, setEndDate] = useState<string>(toDateInput(cruise?.endDate));
   const [status, setStatus] = useState<CruiseStatus>(cruise?.status ?? "scheduled");
+  const [color, setColor] = useState<string | null>(cruise?.color ?? null);
 
   const [departurePort, setDeparturePort] = useState<Port | null>(cruise?.departurePort ?? null);
   const [arrivalPort, setArrivalPort] = useState<Port | null>(cruise?.arrivalPort ?? null);
@@ -123,6 +139,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
         startDate: fromDateInput(startDate),
         endDate: fromDateInput(endDate),
         status,
+        color,
         cabinNumber: cabinNumber || undefined,
         cabinType: (cabinType || undefined) as CabinType | undefined,
         deck: deck ? Number.parseInt(deck, 10) : undefined,
@@ -213,6 +230,47 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                   </option>
                 ))}
               </select>
+            </Section>
+
+            <Section title={t("detail.mapColor")}>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={(): void => setColor(null)}
+                  aria-label={t("field.colorAuto")}
+                  title={t("field.colorAuto")}
+                  aria-pressed={color === null}
+                  className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-dashed text-xs transition-transform hover:scale-110"
+                  style={{
+                    borderColor: color === null ? "var(--accent)" : "var(--color-border)",
+                    color: "var(--text-muted)",
+                  }}
+                >
+                  ×
+                </button>
+                {COLOR_PALETTE.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={(): void => setColor(c)}
+                    aria-label={c}
+                    aria-pressed={color === c}
+                    className="h-7 w-7 rounded-full transition-transform hover:scale-110"
+                    style={{
+                      background: c,
+                      outline: color === c ? `2px solid ${c}` : "none",
+                      outlineOffset: "2px",
+                    }}
+                  />
+                ))}
+                <input
+                  type="color"
+                  aria-label={t("field.color")}
+                  value={color ?? "#000000"}
+                  onChange={(e): void => setColor(e.target.value)}
+                  className="h-7 w-9 cursor-pointer rounded border border-[var(--color-border)] bg-transparent p-0"
+                />
+              </div>
             </Section>
 
             <Section title={t("stops.title")}>

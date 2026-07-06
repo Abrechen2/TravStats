@@ -29,6 +29,7 @@ import {
   createCruiseArcsLayer,
   createCruiseArrowsLayer,
   type CruiseGeometryMap,
+  type CruiseColorMode,
 } from "./layers/cruiseArcsLayer";
 import { createCruisePortsLayer } from "./layers/cruisePortsLayer";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
@@ -116,6 +117,13 @@ interface DeckGLMapProps {
   flightRouteColor?: [number, number, number];
   /** Which domain appearance sections the control panel exposes. */
   appearanceDomains?: readonly AppearanceDomain[];
+  /** Split flight arcs into a two-tone gradient by status (scheduled vs.
+   *  historical) instead of a single flightRouteColor fill — see
+   *  buildRouteData in layers/routesLayer.ts. */
+  statusTwoTone?: boolean;
+  /** Color strategy for cruise arcs/arrows: shared two-tone by status, or
+   *  a distinct hue per cruise. Defaults to `"status"`. */
+  cruiseColorMode?: CruiseColorMode;
 }
 
 export function DeckGLMap({
@@ -131,6 +139,8 @@ export function DeckGLMap({
   extraLayers,
   flightRouteColor,
   appearanceDomains = ["flight", "cruise"],
+  statusTwoTone,
+  cruiseColorMode = "status",
 }: DeckGLMapProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
@@ -522,8 +532,15 @@ export function DeckGLMap({
   // flights into routes. Deps are deliberately limited to fields that
   // actually affect arc/point geometry + base color.
   const routeData = useMemo(
-    () => buildRouteData(flights, minRouteCount, themeColors, routeColor ?? flightRouteColor),
-    [flights, minRouteCount, themeColors, routeColor, flightRouteColor]
+    () =>
+      buildRouteData(
+        flights,
+        minRouteCount,
+        themeColors,
+        routeColor ?? flightRouteColor,
+        statusTwoTone
+      ),
+    [flights, minRouteCount, themeColors, routeColor, flightRouteColor, statusTwoTone]
   );
 
   // Standalone layer set for Sonder-Flüge — rendered on top of the
@@ -559,7 +576,8 @@ export function DeckGLMap({
               markerSizeScale: MARKER_SIZE_SCALE[flightMarkerSize],
               arcWidthScale: ROUTE_WIDTH_SCALE[flightRouteWidth],
               labelsMode,
-            }
+            },
+            statusTwoTone
           ),
           ...specialFlightLayers,
         ];
@@ -586,6 +604,7 @@ export function DeckGLMap({
       zoom,
       arcColor: cruiseRouteColor ?? undefined,
       arcWidthScale: ROUTE_WIDTH_SCALE[cruiseRouteWidth],
+      colorMode: cruiseColorMode,
     };
     const arcs = createCruiseArcsLayer(
       cruises,
@@ -620,12 +639,7 @@ export function DeckGLMap({
     ];
     const cruisePortsAbove: Layer[] = ports ?? [];
 
-    return [
-      ...cruisePathsBelow,
-      ...base,
-      ...cruisePortsAbove,
-      ...(extraLayers ?? []),
-    ];
+    return [...cruisePathsBelow, ...base, ...cruisePortsAbove, ...(extraLayers ?? [])];
   }, [
     visMode,
     flights,
@@ -651,6 +665,8 @@ export function DeckGLMap({
     cruiseRouteColor,
     cruiseRouteWidth,
     labelsMode,
+    cruiseColorMode,
+    statusTwoTone,
   ]);
 
   // No 3D modes remain — lighting effect is unused but kept as empty array for

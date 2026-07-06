@@ -1,20 +1,33 @@
 import { PathLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import type { Cruise } from "../../types";
+import type { CruiseStatus } from "../../types/cruise";
 import type { CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 import { effectivePortSequence } from "../Cruise/cruisePorts";
 import { catmullRomSpline } from "./catmullRom";
+import { resolveCruiseArcColor, type CruiseColorMode, type Rgb } from "../../lib/cruiseColor";
+
+/** How cruise arcs/arrows are tinted: shared two-tone by status, or a
+ *  distinct hue per cruise (#150). Re-exported from the shared color lib
+ *  so existing `import { type CruiseColorMode } from "./layers/cruiseArcsLayer"`
+ *  call sites (MapContainer3D, DeckGLMap) keep working unchanged. */
+export type { CruiseColorMode };
 
 interface ArcDatum {
   path: [number, number][];
   cruiseId: string;
   cruiseLine: string | null;
+  status: CruiseStatus;
+  color: Rgb;
+  planned: boolean;
 }
 
 interface ArrowDatum {
   position: [number, number];
   angleDeg: number;
   cruiseId: string;
+  color: Rgb;
+  planned: boolean;
 }
 
 interface CruiseArcBuildOptions {
@@ -25,13 +38,17 @@ interface CruiseArcBuildOptions {
    */
   zoom?: number;
   /**
-   * Base cruise-route colour (RGB), from the map control panel's
-   * Kreuzfahrten appearance section. Falls back to the brand cruise
-   * blue. `buildCruiseArcs` ignores it — it only shapes the layer.
+   * Base cruise-route colour (RGB) override, from the map control panel's
+   * Kreuzfahrten appearance section. When set, it takes precedence over
+   * `colorMode`'s status/per-cruise palette for every arc/arrow. Falls
+   * back to the brand cruise blue when neither this nor `colorMode`
+   * resolves a color.
    */
   arcColor?: [number, number, number];
   /** User multiplier on cruise-arc line width (1 = default). */
   arcWidthScale?: number;
+  /** Color strategy for arcs/arrows when `arcColor` is unset. Defaults to `"status"`. */
+  colorMode?: CruiseColorMode;
 }
 
 // Brand cruise blue (BRAND.md §3, --domain-cruise). Shared default with
@@ -80,6 +97,7 @@ export function buildCruiseArcs(
   geometryByCruise: CruiseGeometryMap = new Map(),
   options: CruiseArcBuildOptions = {}
 ): ArcDatum[] {
+  const mode = options.colorMode ?? "status";
   const arcs: ArcDatum[] = [];
   for (const cruise of cruises) {
     // Effective sequence includes departure/arrival ports so minimal
@@ -88,6 +106,10 @@ export function buildCruiseArcs(
 
     const geometry = geometryByCruise.get(cruise.id);
     const waypointsByPair = buildWaypointIndex(geometry);
+    // An explicit user color override (map control panel) wins over the
+    // colorMode-driven status/per-cruise palette for every arc.
+    const color = options.arcColor ?? resolveCruiseArcColor(cruise, mode);
+    const planned = cruise.status === "scheduled";
 
     for (let i = 0; i < ports.length - 1; i++) {
       const a = ports[i];
@@ -104,6 +126,9 @@ export function buildCruiseArcs(
         path: buildRenderableRoutePath(routeGeometry, options),
         cruiseId: cruise.id,
         cruiseLine: cruise.cruiseLine,
+        status: cruise.status,
+        color,
+        planned,
       });
     }
   }
@@ -131,15 +156,16 @@ export function createCruiseArcsLayer(
   const widthScale = options.arcWidthScale ?? 1;
   const DIM_ALPHA = 90;
   const FULL_ALPHA = 220;
+  const PLANNED_ALPHA = 150;
 
   return new PathLayer<ArcDatum>({
     id: "cruise-arcs",
     data: arcs,
     getPath: (d) => d.path,
     getColor: (d) => {
-      if (!hasSelection) return [...BASE_COLOR, FULL_ALPHA];
-      if (d.cruiseId === selectedCruiseId) return [...HIGHLIGHT_COLOR, FULL_ALPHA];
-      return [...BASE_COLOR, DIM_ALPHA];
+      if (hasSelection && d.cruiseId === selectedCruiseId) return [...HIGHLIGHT_COLOR, FULL_ALPHA];
+      const base = d.planned ? PLANNED_ALPHA : FULL_ALPHA;
+      return [...d.color, hasSelection ? DIM_ALPHA : base];
     },
     getWidth: (d) => (d.cruiseId === selectedCruiseId ? 3 * widthScale : 2 * widthScale),
     widthUnits: "pixels",
@@ -179,7 +205,7 @@ export function createCruiseArrowsLayer(
   for (const arc of arcs) {
     const anchor = pickArrowAnchor(arc.path);
     if (anchor === null) continue;
-    arrows.push({ ...anchor, cruiseId: arc.cruiseId });
+    arrows.push({ ...anchor, cruiseId: arc.cruiseId, color: arc.color, planned: arc.planned });
   }
   if (arrows.length === 0) return null;
 
@@ -188,6 +214,7 @@ export function createCruiseArrowsLayer(
   const HIGHLIGHT_COLOR = CRUISE_HIGHLIGHT_COLOR;
   const DIM_ALPHA = 90;
   const FULL_ALPHA = 230;
+  const PLANNED_ALPHA = 150;
 
   return new TextLayer<ArrowDatum>({
     id: "cruise-arc-arrows",
@@ -201,9 +228,9 @@ export function createCruiseArrowsLayer(
     getText: () => "▶",
     getAngle: (d) => d.angleDeg,
     getColor: (d) => {
-      if (!hasSelection) return [...BASE_COLOR, FULL_ALPHA];
-      if (d.cruiseId === selectedCruiseId) return [...HIGHLIGHT_COLOR, FULL_ALPHA];
-      return [...BASE_COLOR, DIM_ALPHA];
+      if (hasSelection && d.cruiseId === selectedCruiseId) return [...HIGHLIGHT_COLOR, FULL_ALPHA];
+      const base = d.planned ? PLANNED_ALPHA : FULL_ALPHA;
+      return [...d.color, hasSelection ? DIM_ALPHA : base];
     },
     getSize: 16,
     sizeUnits: "pixels",

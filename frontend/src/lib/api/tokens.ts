@@ -22,6 +22,10 @@ export interface ApiToken {
   expiresAt: string | null;
   revokedAt: string | null;
   createdAt: string;
+  /** Non-null only for tokens minted via the mobile pairing flow. */
+  deviceId: string | null;
+  /** Device platform reported at pairing time (e.g. "ios", "android"). */
+  platform: string | null;
 }
 
 export interface CreatedApiToken extends ApiToken {

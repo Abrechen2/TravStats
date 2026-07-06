@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildEffectiveTimeline,
-  countUniquePorts,
-} from "../../../components/Cruise/cruisePorts";
+import { buildEffectiveTimeline, countUniquePorts } from "../../../components/Cruise/cruisePorts";
 import type { Cruise, CruiseStop, Port } from "../../../types";
 
 const port = (id: number, name: string): Port => ({

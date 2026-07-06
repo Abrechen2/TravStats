@@ -1,0 +1,127 @@
+import { Client } from "discord.js";
+import { readFileSync } from "node:fs";
+import { createClient, loadEnv } from "./client.js";
+import { ensureRoles } from "./roles.js";
+import { ensureStructure } from "./guildStructure.js";
+import { postRulesAndWelcome } from "./rulesMessage.js";
+import { writeState } from "./state.js";
+import { runServe } from "./reactionRole.js";
+import { runRead } from "./readChannel.js";
+import { runReply } from "./replyThread.js";
+import {
+  runAnnounce,
+  readRepoVersion,
+  readRepoChangelog,
+  AnnounceType,
+} from "./announce.js";
+import { extractChangelogEntry } from "./changelog.js";
+import { log } from "./log.js";
+
+async function runSetup(client: Client, guildId: string, dryRun: boolean): Promise<void> {
+  const guild = await client.guilds.fetch(guildId);
+  const full = await guild.fetch();
+  log(dryRun ? "=== DRY RUN — no changes will be made ===" : "=== TravStats setup ===");
+  await ensureRoles(full, dryRun);
+  const { rulesChannelId } = await ensureStructure(full, dryRun);
+  const rulesMessageId = await postRulesAndWelcome(full, rulesChannelId, dryRun);
+  if (!dryRun) writeState({ guildId, rulesMessageId });
+  log("done.");
+}
+
+async function main(): Promise<void> {
+  const command = process.argv[2];
+  const dryRun = process.argv.includes("--dry-run");
+  const { token, guildId } = loadEnv();
+  const client = createClient();
+
+  if (command === "serve") {
+    await runServe(client, token, guildId);
+    return; // serve keeps the process alive
+  }
+
+  if (command === "announce") {
+    const type = process.argv[3];
+    if (type !== "beta" && type !== "rc" && type !== "release") {
+      log("Usage: tsx src/index.ts announce <beta|rc|release> [version]");
+      process.exitCode = 1;
+      return;
+    }
+    const version = process.argv[4] ?? readRepoVersion();
+    if (!version) {
+      log("No version given and backend/VERSION could not be read.");
+      process.exitCode = 1;
+      return;
+    }
+    const changelog = readRepoChangelog();
+    const notes = changelog ? extractChangelogEntry(changelog, version) : null;
+    await runAnnounce(client, token, guildId, type as AnnounceType, version, notes);
+    return; // runAnnounce owns login + destroy
+  }
+
+  if (command === "read") {
+    const channelName = process.argv[3];
+    if (!channelName) {
+      log("Usage: tsx src/index.ts read <channel-name> [limit]");
+      process.exitCode = 1;
+      return;
+    }
+    const limitArg = Number(process.argv[4] ?? "20");
+    const limit = Number.isInteger(limitArg) && limitArg > 0 && limitArg <= 100 ? limitArg : 20;
+    await runRead(client, token, guildId, channelName, limit);
+    return; // runRead owns login + destroy
+  }
+
+  if (command === "reply") {
+    const threadQuery = process.argv[3];
+    // Multi-line messages do not survive shell/npm arg-passing reliably, so a
+    // `--file <path>` reads the message verbatim from a UTF-8 file (preferred
+    // for anything with newlines). Otherwise join the remaining CLI args.
+    const fileIdx = process.argv.indexOf("--file");
+    let message: string;
+    if (fileIdx !== -1 && process.argv[fileIdx + 1]) {
+      message = readFileSync(process.argv[fileIdx + 1], "utf8").replace(/\s+$/, "");
+    } else {
+      message = process.argv
+        .slice(4)
+        .filter((a) => a !== "--dry-run")
+        .join(" ");
+    }
+    if (!threadQuery || !message) {
+      log('Usage: tsx src/index.ts reply <thread-id-or-title> (<message…> | --file <path>) [--dry-run]');
+      process.exitCode = 1;
+      return;
+    }
+    await runReply(client, token, guildId, threadQuery, message, dryRun);
+    return; // runReply owns login + destroy
+  }
+
+  if (command === "setup") {
+    client.once("clientReady", async () => {
+      try {
+        await runSetup(client, guildId, dryRun);
+      } catch (err) {
+        log(`ERROR: ${err instanceof Error ? err.message : String(err)}`);
+        process.exitCode = 1;
+      } finally {
+        await client.destroy();
+      }
+    });
+    await client.login(token);
+    return;
+  }
+
+  log(
+    "Usage: tsx src/index.ts <setup|serve|read|announce|reply> [--dry-run] [args]\n" +
+      "  setup [--dry-run]              provision the server\n" +
+      "  serve                          run the reaction-role listener (unused if no ✈️)\n" +
+      "  read <channel> [limit]         print recent messages of a channel\n" +
+      "  announce <beta|rc|release> [v] post a beta/RC/release announcement\n" +
+      "  reply <thread> <message…>      reply in a forum thread (use --file <path> for multi-line)",
+  );
+  process.exitCode = 1;
+}
+
+main().catch((err: unknown) => {
+  log(`FATAL: ${err instanceof Error ? err.message : String(err)}`);
+  process.exitCode = 1;
+});

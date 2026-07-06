@@ -5,6 +5,8 @@
     "new": "Kreuzfahrt hinzufügen",
     "empty": "Noch keine Kreuzfahrten erfasst",
     "loading": "Kreuzfahrten werden geladen …",
+    "sortBy": "Nach {{col}} sortieren",
+    "duplicate": "Duplizieren",
     "columns": {
       "ship": "Schiff",
       "line": "Reederei",
@@ -12,7 +14,13 @@
       "ports": "Häfen",
       "status": "Status",
       "cabin": "Kabine",
-      "price": "Preis"
+      "price": "Preis",
+      "actions": "Aktionen"
+    },
+    "delete": {
+      "confirm": "Kreuzfahrt „{{ship}}“ wirklich löschen?",
+      "done": "Kreuzfahrt gelöscht",
+      "error": "Löschen fehlgeschlagen"
     }
   },
   "detail": {
@@ -22,6 +30,7 @@
     "route": "Route",
     "cabin": "Kabine",
     "costs": "Kosten",
+    "mapColor": "Kartenfarbe",
     "meta": "Notizen & Tags",
     "edit": "Bearbeiten",
     "delete": "Löschen",
@@ -66,7 +75,9 @@
     "flightDate": "Datum",
     "flightClass": "Klasse",
     "departPortAirport": "Abflughafen",
-    "arrivePortAirport": "Zielflughafen"
+    "arrivePortAirport": "Zielflughafen",
+    "color": "Farbe",
+    "colorAuto": "Automatisch (aus Kreuzfahrt-ID abgeleitet)"
   },
   "seatClass": {
     "economy": "Economy",
