@@ -1,23 +1,24 @@
 // Dashboard chrome, folded into the in-map control panel.
 //
-// The Modus switcher, the year/domain Filter, and the "+ hinzufügen"
-// action used to live in a toolbar above the map (DashboardControlsBar +
-// DashboardFilterDropdown). Both are gone — every dashboard mode renders a
-// map with this panel, so the panel is the single, always-present control
-// surface. These three sections sit at the top of both the globe and the
-// flat-map panel.
+// The Modus switcher and the year/domain Filter used to live in a toolbar
+// above the map (DashboardControlsBar + DashboardFilterDropdown). That
+// toolbar is gone — every dashboard mode renders a map with this panel, so
+// the panel is the control surface for these two. These sections sit at the
+// top of both the globe and the flat-map panel.
+//
+// The "+ hinzufügen" action does NOT live here — it's a floating top-right
+// overlay on the map (AddDomainPicker, mounted by DashboardLayout), a
+// deliberately separate, always-reachable control rather than one more
+// entry buried in this panel.
 //
 // Everything here reads global state directly (react-router route + the
-// two Zustand stores), so there is no prop-drilling through the map tree.
-// The one thing the panel can't do locally — open an add-modal — is
-// bridged through useDashboardChromeStore (see that file).
+// dashboardFilterStore), so there is no prop-drilling through the map tree.
 
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDashboardRoute } from "../../hooks/useDashboardRoute";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useDashboardFilterStore } from "../../store/dashboardFilterStore";
-import { useDashboardChromeStore, type AddableDomain } from "../../store/dashboardChromeStore";
 import { TAB_MODE_REGISTRY, type DashboardMode } from "../../types/dashboard";
 import { AVAILABLE_DOMAINS, DOMAINS, type DomainKey } from "../../shared/domains";
 import { SectionLabel, SegControl, ACCENT, HAIRLINE, BORDER, TEXT } from "./controlPanelKit";
@@ -58,7 +59,6 @@ export function MapChromeSections(): JSX.Element {
   const domains = useDashboardFilterStore((s) => s.domains);
   const setDomains = useDashboardFilterStore((s) => s.setDomains);
   const resetFilter = useDashboardFilterStore((s) => s.reset);
-  const requestAdd = useDashboardChromeStore((s) => s.requestAdd);
 
   const modes = TAB_MODE_REGISTRY[tab].modes;
   const yearOptions = buildYearOptions();
@@ -72,14 +72,6 @@ export function MapChromeSections(): JSX.Element {
     const next = domains.includes(key) ? domains.filter((d) => d !== key) : [...domains, key];
     setDomains(next);
   };
-
-  // Which "+ hinzufügen" buttons to show: on the Alle tab one per enabled
-  // domain; on a single-domain tab just that domain (the panel only renders
-  // when the tab's domain is enabled, so no gating needed here).
-  const addDomains: AddableDomain[] =
-    tab === "all"
-      ? (domainOptions.filter((d) => d !== "poi") as AddableDomain[])
-      : [tab as AddableDomain];
 
   return (
     <>
@@ -163,23 +155,6 @@ export function MapChromeSections(): JSX.Element {
               {t("dashboard:filter.reset")}
             </button>
           )}
-        </div>
-      </Section>
-
-      {/* Add */}
-      <Section>
-        <div className="flex flex-wrap gap-1.5">
-          {addDomains.map((d) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => requestAdd(d)}
-              className="flex-1 cursor-pointer rounded-md px-2 py-1.5 text-[11px] font-semibold transition-opacity hover:opacity-90"
-              style={{ background: `rgb(${ACCENT})`, color: "#0d1117", border: "none" }}
-            >
-              + {t(`dashboard:addPicker.${d}`)}
-            </button>
-          ))}
         </div>
       </Section>
     </>

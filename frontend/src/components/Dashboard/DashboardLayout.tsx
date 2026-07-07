@@ -1,21 +1,19 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDashboardRoute } from "../../hooks/useDashboardRoute";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { flightsApi } from "../../lib/api/flights";
 import { useToastStore } from "../../store/toastStore";
-import { useDashboardChromeStore } from "../../store/dashboardChromeStore";
 import { logger } from "../../lib/logger";
 import NavigationBar from "../NavigationBar";
 import SimplifiedFlightFormV2 from "../SimplifiedFlightFormV2";
 import SpecialFlightModal from "../SpecialFlightModal";
 import { CruiseAddChooser } from "../Cruise/CruiseAddChooser";
 import { DomainTabStrip } from "./DomainTabStrip";
+import { AddDomainPicker, type AddableDomain } from "./AddDomainPicker";
 import type { FlightInput } from "../../types";
 import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
-
-type AddableDomain = "flight" | "cruise" | "poi";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -44,28 +42,6 @@ export function DashboardLayout({
     poi: isEnabled("poi"),
   };
 
-  const handleAdd = (pickedDomain?: AddableDomain): void => {
-    const target = pickedDomain ?? (tab === "all" ? null : (tab as AddableDomain));
-    if (target === "flight" || target === "cruise" || target === "poi") {
-      setAddingDomain(target);
-    }
-  };
-
-  // The "+ hinzufügen" action now lives in the in-map control panel, which
-  // is rendered several layers below this layout. It signals an add request
-  // through the chrome store; open the matching modal here. Guarded by a
-  // seen-tick ref so re-renders don't re-open the modal — only a genuine
-  // new request (higher tick) fires.
-  const addTick = useDashboardChromeStore((s) => s.addTick);
-  const seenTickRef = useRef(addTick);
-  useEffect(() => {
-    if (addTick === seenTickRef.current) return;
-    seenTickRef.current = addTick;
-    handleAdd(useDashboardChromeStore.getState().addDomain ?? undefined);
-    // handleAdd only reads `tab`, which is current at effect time.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addTick]);
-
   const handleFlightCreate = async (
     flight: FlightInput,
     opts?: FlightSubmitOptions
@@ -85,10 +61,29 @@ export function DashboardLayout({
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <NavigationBar />
       <DomainTabStrip active={tab} counts={counts} enabled={enabledDomains} onSelect={setTab} />
-      {/* Modus / Filter / + hinzufügen moved into the in-map control panel
-          (MapChromeSections) — the map is now the single control surface,
-          so no toolbar sits between the tab strip and the map. */}
-      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>{children}</div>
+      {/* Modus / Filter moved into the in-map control panel (MapChromeSections)
+          — the map is the control surface for those. The "+ hinzufügen"
+          action is a separate floating overlay, top-right over the map: a
+          single button everywhere, opening a domain picker on the "Alle"
+          tab (several domains could apply) or going straight to that tab's
+          own domain on a single-domain tab. */}
+      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+        {children}
+        <div style={{ position: "absolute", top: 16, right: 16, zIndex: 30 }}>
+          {tab === "all" ? (
+            <AddDomainPicker enabled={enabledDomains} onPick={setAddingDomain} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAddingDomain(tab as AddableDomain)}
+              className="cursor-pointer rounded-lg px-3 py-2 text-[13px] font-semibold shadow-lg transition-opacity hover:opacity-90"
+              style={{ background: "rgb(240,169,71)", color: "#0d1117", border: "none" }}
+            >
+              + {t(`dashboard:controls.addPerTab.${tab}`)}
+            </button>
+          )}
+        </div>
+      </div>
 
       {addingDomain === "flight" && (
         <SimplifiedFlightFormV2
