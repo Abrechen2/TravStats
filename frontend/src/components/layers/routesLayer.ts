@@ -5,7 +5,7 @@ import { calcQuantiles, getHeatmapColor } from "./layerTypes";
 import type { ArcDatum, PointDatum } from "./layerTypes";
 import type { MapLayerColors } from "../../types/mapTheme";
 import { UpcomingArcLayer } from "./UpcomingArcLayer";
-import { pickLabelled, type LabelsMode } from "../map/labelPriority";
+import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
 import {
   FLIGHT_STATUS_PAST_COLOR,
   FLIGHT_STATUS_SCHEDULED_COLOR,
@@ -372,7 +372,18 @@ export function createRoutesLayers(
   const airportOpacity = hasSelection ? 0.15 : 1;
   // Priority label reveal: the busiest airports keep their label even when
   // zoomed out; smaller ones fill in as the zoom budget grows.
-  const labelPoints = pickLabelled(points, (p) => p.count, labelsMode, zoom);
+  // pickLabelled's zoom budget only caps the *count* shown — it has no idea
+  // where two labels land on screen, so a cluster of busy airports close
+  // together (e.g. MUC/FRA/VIE/ZRH/CDG) can all be "in budget" and still
+  // stack on top of each other. declutterByDistance adds real screen-space
+  // spacing on top of that budget, favouring the busier airport when two
+  // are too close (#label-overlap). Skipped in "all" mode — the user
+  // explicitly asked to see every label, overlap included.
+  const budgeted = pickLabelled(points, (p) => p.count, labelsMode, zoom);
+  const labelPoints =
+    labelsMode === "all"
+      ? budgeted
+      : declutterByDistance(budgeted, (p) => p.count, (p) => p.position, zoom);
 
   // Three arc datasets:
   //   - regular: no upcoming flight — heatmap colour through plain ArcLayer.
@@ -516,7 +527,8 @@ export function createRoutesLayers(
 
   // IATA code labels — appear above each marker. Hidden at low zoom levels
   // where overlapping codes become illegible; the marker dots remain visible
-  // so users still see airport locations.
+  // so users still see airport locations. `labelPoints` above is already
+  // decluttered by screen distance (#label-overlap), not just count-budgeted.
   const labelLayer = new TextLayer<PointDatum>({
     id: "routes-labels",
     data: labelPoints,

@@ -2,7 +2,7 @@ import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import type { Cruise, Port } from "../../types";
 import { toPortLabel } from "../map/portLabel";
-import { pickLabelled, type LabelsMode } from "../map/labelPriority";
+import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
 
 interface PortDatum {
   position: [number, number];
@@ -142,8 +142,15 @@ export function createCruisePortsLayer(
   });
 
   // Priority label reveal: the most-visited ports keep their label even
-  // when zoomed out; the rest fill in as the zoom budget grows.
-  const labelData = pickLabelled(data, (d) => d.visits, labelsMode, zoom);
+  // when zoomed out; the rest fill in as the zoom budget grows. Then
+  // decluttered by screen distance so a dense cluster of busy ports doesn't
+  // stack labels on top of each other (#label-overlap) — skipped in "all"
+  // mode, where the user explicitly asked to see every label.
+  const budgeted = pickLabelled(data, (d) => d.visits, labelsMode, zoom);
+  const labelData =
+    labelsMode === "all"
+      ? budgeted
+      : declutterByDistance(budgeted, (d) => d.visits, (d) => d.position, zoom);
   const labelLayer = new TextLayer<PortDatum>({
     id: "cruise-ports-labels",
     data: labelData,
