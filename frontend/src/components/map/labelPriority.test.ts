@@ -1,8 +1,16 @@
 import { describe, it, expect } from "vitest";
-import { labelBudget, pickLabelled } from "./labelPriority";
+import { declutterByDistance, labelBudget, pickLabelled } from "./labelPriority";
 
 const w = (n: number) => ({ v: n });
 const weightOf = (x: { v: number }) => x.v;
+
+interface GeoPoint {
+  weight: number;
+  position: [number, number];
+}
+const geo = (weight: number, lon: number, lat: number): GeoPoint => ({ weight, position: [lon, lat] });
+const geoWeight = (p: GeoPoint) => p.weight;
+const geoPosition = (p: GeoPoint) => p.position;
 
 describe("labelBudget", () => {
   it("grows monotonically with zoom", () => {
@@ -46,5 +54,51 @@ describe("pickLabelled", () => {
   it("returns all items when they fit under budget", () => {
     const picked = pickLabelled(items, weightOf, "important", 6); // huge budget
     expect(picked).toHaveLength(items.length);
+  });
+});
+
+describe("declutterByDistance", () => {
+  it("returns everything unchanged when the list is empty or a singleton", () => {
+    expect(declutterByDistance([], geoWeight, geoPosition, 5)).toEqual([]);
+    const one = [geo(10, 11.79, 48.35)];
+    expect(declutterByDistance(one, geoWeight, geoPosition, 5)).toEqual(one);
+  });
+
+  it("keeps all markers when they're far enough apart on screen", () => {
+    // Roughly Munich, Tokyo, New York, Sydney — nothing here is remotely
+    // close at any sane zoom.
+    const farApart = [geo(10, 11.79, 48.35), geo(5, 139.84, 35.65), geo(8, -73.97, 40.71), geo(3, 151.21, -33.87)];
+    expect(declutterByDistance(farApart, geoWeight, geoPosition, 5)).toHaveLength(4);
+  });
+
+  it("keeps only the heaviest marker in a dense regional cluster (#label-overlap)", () => {
+    // Munich/Frankfurt/Vienna/Zurich/Paris-CDG-like cluster: all real central
+    // European hubs within ~700km of each other. At a middling zoom where
+    // pickLabelled alone would let all five "fit the budget", they're still
+    // only a few dozen screen pixels apart — declutterByDistance is the pass
+    // that actually notices and thins them out.
+    const hubs = [
+      geo(500, 11.79, 48.35), // MUC — heaviest
+      geo(300, 8.57, 50.03), // FRA
+      geo(200, 16.57, 48.11), // VIE
+      geo(150, 8.55, 47.46), // ZRH
+      geo(100, 2.55, 49.01), // CDG
+    ];
+    const kept = declutterByDistance(hubs, geoWeight, geoPosition, 2);
+    expect(kept).toHaveLength(1);
+    expect(kept[0].weight).toBe(500);
+  });
+
+  it("prefers the heavier of two markers that are too close, even when the lighter one comes first", () => {
+    const close = [geo(10, 11.79, 48.35), geo(50, 11.8, 48.36)];
+    const kept = declutterByDistance(close, geoWeight, geoPosition, 5);
+    expect(kept).toHaveLength(1);
+    expect(kept[0].weight).toBe(50);
+  });
+
+  it("respects a smaller minPixelGap, revealing more markers", () => {
+    const close = [geo(10, 11.79, 48.35), geo(50, 11.8, 48.36)];
+    const kept = declutterByDistance(close, geoWeight, geoPosition, 5, 0);
+    expect(kept).toHaveLength(2);
   });
 });
