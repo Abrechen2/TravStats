@@ -17,10 +17,9 @@
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useTimeSliderStore, type TimeSliderSpeed } from "../../store/timeSliderStore";
+import { useTimeSliderStore } from "../../store/timeSliderStore";
 import type { MonthBucket } from "./timeSliderUtils";
 
-const SPEED_OPTIONS: TimeSliderSpeed[] = [7, 30, 90, 365];
 const AMBER = "240,169,71";
 const CRUISE = "111,160,214";
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -35,6 +34,30 @@ interface Props {
   visibleFlights: number;
   visibleCruises: number;
   disabled?: boolean;
+}
+
+// "Nice" step sizes for a year axis, in ascending order — pick the smallest
+// one that keeps the tick count at or under `maxTicks` so a wide range
+// (say 2012–2026) doesn't print every single year.
+const NICE_YEAR_STEPS = [1, 2, 5, 10, 20, 25, 50, 100];
+
+/**
+ * Evenly-ish spaced year labels across [minYear, maxYear], not just the two
+ * endpoints — a range spanning several years used to show only its start
+ * and end, which reads as "the axis ends abruptly" rather than a real
+ * timeline. Always includes both endpoints (even if that means the final
+ * gap is shorter than `step`) so the actual range bounds stay visible.
+ */
+export function computeYearTicks(minYear: number, maxYear: number, maxTicks = 6): number[] {
+  if (maxYear <= minYear) return [minYear];
+  const span = maxYear - minYear;
+  const step =
+    NICE_YEAR_STEPS.find((s) => Math.floor(span / s) + 1 <= maxTicks) ??
+    NICE_YEAR_STEPS[NICE_YEAR_STEPS.length - 1];
+  const ticks: number[] = [];
+  for (let y = minYear; y < maxYear; y += step) ticks.push(y);
+  ticks.push(maxYear);
+  return ticks;
 }
 
 const fmt = (d: Date | null, locale: string): string =>
@@ -61,7 +84,6 @@ export const GlobeTimeHistogram = ({
   const setCurrentDate = useTimeSliderStore((s) => s.setCurrentDate);
   const setPlaying = useTimeSliderStore((s) => s.setPlaying);
   const togglePlaying = useTimeSliderStore((s) => s.togglePlaying);
-  const setSpeed = useTimeSliderStore((s) => s.setSpeed);
   const setFilterRange = useTimeSliderStore((s) => s.setFilterRange);
   const reset = useTimeSliderStore((s) => s.reset);
 
@@ -238,7 +260,11 @@ export const GlobeTimeHistogram = ({
         transition: "min-width 160ms ease, padding 160ms ease",
       }}
     >
-      {/* Play + speed — only when expanded */}
+      {/* Play — only when expanded. The per-speed (7/30/90/365 days/sec)
+          selector that used to sit under this button was removed: it read
+          as broken to users since its effect only shows up mid-playback and
+          disappears again once the run finishes — playback now always runs
+          at DEFAULT_SPEED (timeSliderStore.ts). */}
       {expanded && (
         <div className="flex flex-col items-center justify-center gap-1.5">
           <button
@@ -252,34 +278,6 @@ export const GlobeTimeHistogram = ({
           >
             {isPlaying ? "❚❚" : "▶"}
           </button>
-          <div className="flex gap-0.5" role="group" aria-label={t("map:globe.timeSlider.speed")}>
-            {SPEED_OPTIONS.map((s) => {
-              const on = speed === s;
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setSpeed(s)}
-                  aria-pressed={on}
-                  className="rounded px-1.5 py-0.5 text-[10px] font-semibold tabular-nums transition-colors"
-                  style={
-                    on
-                      ? {
-                          color: "#0a0d13",
-                          background: `rgb(${AMBER})`,
-                        }
-                      : {
-                          color: "rgba(241,245,249,0.5)",
-                          background: "rgba(255,255,255,0.06)",
-                        }
-                  }
-                  title={t("map:globe.timeSlider.daysPerSec", { n: s })}
-                >
-                  {s}
-                </button>
-              );
-            })}
-          </div>
         </div>
       )}
 
@@ -374,15 +372,21 @@ export const GlobeTimeHistogram = ({
             />
           )}
 
-          {/* draggable scrub handle (playhead) */}
+          {/* draggable scrub handle (playhead). The vertical overhang past
+              the bars (6px expanded) is fixed in absolute terms, so it has
+              to shrink in the collapsed 22px-tall strip (2px) — otherwise it
+              eats the entire collapsed padding and sits flush against the
+              panel's rounded border instead of looking like a handle. */}
           {showHandle && (
             <div
               onPointerDown={onHandleDown}
               onPointerMove={onHandleMove}
               onPointerUp={onHandleUp}
-              className="group absolute -top-1.5 -bottom-1.5 z-10 flex touch-none justify-center"
+              className="group absolute z-10 flex touch-none justify-center"
               style={{
                 left: `calc(${handleFrac * 100}% - 8px)`,
+                top: expanded ? -6 : -2,
+                bottom: expanded ? -6 : -2,
                 width: 16,
                 cursor: "ew-resize",
                 opacity: handleGhost && !scrubbing ? 0.5 : 1,
@@ -408,14 +412,30 @@ export const GlobeTimeHistogram = ({
           )}
         </div>
 
-        {/* year axis — expanded only */}
+        {/* year axis — expanded only. Ticks sit at their real chronological
+            position (via fracOfDate), not evenly spaced by index — the
+            range rarely starts/ends on a year boundary, so a plain
+            flex/justify-between row would misplace every intermediate
+            label. */}
         {expanded && (
-          <div
-            className="flex justify-between px-[2px] text-[9.5px] tabular-nums"
-            style={{ color: "rgba(241,245,249,0.4)" }}
-          >
-            <span>{rangeMin.getUTCFullYear()}</span>
-            <span>{rangeMax.getUTCFullYear()}</span>
+          <div className="relative h-[11px] text-[9.5px] tabular-nums" style={{ color: "rgba(241,245,249,0.4)" }}>
+            {computeYearTicks(rangeMin.getUTCFullYear(), rangeMax.getUTCFullYear()).map((year, i, arr) => {
+              const frac = fracOfDate(new Date(Date.UTC(year, 0, 1)));
+              const isFirst = i === 0;
+              const isLast = i === arr.length - 1;
+              return (
+                <span
+                  key={year}
+                  className="absolute px-[2px]"
+                  style={{
+                    left: `${frac * 100}%`,
+                    transform: isFirst ? "none" : isLast ? "translateX(-100%)" : "translateX(-50%)",
+                  }}
+                >
+                  {year}
+                </span>
+              );
+            })}
           </div>
         )}
       </div>
