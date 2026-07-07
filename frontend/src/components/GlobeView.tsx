@@ -1484,9 +1484,12 @@ export default function GlobeView({
       {/* Top-right stats overlay — driven by the same slider-filtered
           data as the globe layers, so numbers tick in real time as the
           user scrubs. Lives top-right because the top-left is owned by
-          the dashboard's Aktivität sidebar (would otherwise overlap). */}
+          the dashboard's Aktivität sidebar (would otherwise overlap).
+          Offset down (top-16, not top-4) to clear DashboardLayout's
+          "+ hinzufügen" button, which lives in the same corner and is
+          always present regardless of map mode. */}
       {(liveStats.flights > 0 || liveStats.cruises > 0) && (
-        <div className="absolute top-4 right-4 z-10" style={{ pointerEvents: "auto" }}>
+        <div className="absolute top-16 right-4 z-10" style={{ pointerEvents: "auto" }}>
           <div
             className="rounded-xl p-3 text-xs"
             style={{
