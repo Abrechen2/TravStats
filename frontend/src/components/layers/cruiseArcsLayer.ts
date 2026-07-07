@@ -1,4 +1,4 @@
-import { PathLayer, TextLayer } from "@deck.gl/layers";
+import { IconLayer, PathLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import type { Cruise } from "../../types";
 import type { CruiseStatus } from "../../types/cruise";
@@ -216,32 +216,61 @@ export function createCruiseArrowsLayer(
   const FULL_ALPHA = 230;
   const PLANNED_ALPHA = 150;
 
-  return new TextLayer<ArrowDatum>({
+  const iconFor = (d: ArrowDatum): { url: string; width: number; height: number } => {
+    if (hasSelection && d.cruiseId === selectedCruiseId) {
+      return arrowIcon(rgba(HIGHLIGHT_COLOR, FULL_ALPHA));
+    }
+    const alpha = hasSelection ? DIM_ALPHA : d.planned ? PLANNED_ALPHA : FULL_ALPHA;
+    return arrowIcon(rgba(d.color, alpha));
+  };
+
+  return new IconLayer<ArrowDatum>({
     id: "cruise-arc-arrows",
     data: arrows,
-    // The default deck.gl font atlas only covers ASCII; the arrow
-    // glyph (U+25B6) must be opted in via characterSet, otherwise
-    // every label silently fails to render with "Missing character"
-    // warnings.
-    characterSet: ["▶"],
     getPosition: (d) => d.position,
-    getText: () => "▶",
+    getIcon: iconFor,
     getAngle: (d) => d.angleDeg,
-    getColor: (d) => {
-      if (hasSelection && d.cruiseId === selectedCruiseId) return [...HIGHLIGHT_COLOR, FULL_ALPHA];
-      const base = d.planned ? PLANNED_ALPHA : FULL_ALPHA;
-      return [...d.color, hasSelection ? DIM_ALPHA : base];
-    },
-    getSize: 16,
+    getSize: ARROW_DISPLAY_HEIGHT,
     sizeUnits: "pixels",
-    fontFamily: "sans-serif",
-    fontWeight: "bold",
-    background: false,
     pickable: false,
     updateTriggers: {
-      getColor: [selectedCruiseId, BASE_COLOR],
+      getIcon: [selectedCruiseId, BASE_COLOR],
     },
   });
+}
+
+// Elongated chevron (nose at the right edge, angle 0 = pointing east) with a
+// thin white border so the arrow reads clearly against both the route line
+// and the basemap (#160 — Discord bug report "Pfeil auf Kreuzfahrt Routen
+// ungenau"). The border is baked into the icon itself (SVG stroke) rather
+// than tinted via IconLayer's getColor, since getColor multiplies the whole
+// icon uniformly and would tint the border away from white too.
+const ARROW_ICON_WIDTH = 22;
+const ARROW_ICON_HEIGHT = 16;
+// Rendered screen height in pixels — deliberately smaller than the icon's
+// native size above so the border stroke stays crisp at typical map zooms.
+const ARROW_DISPLAY_HEIGHT = 10;
+const arrowIconCache = new Map<string, { url: string; width: number; height: number }>();
+
+function rgba([r, g, b]: Rgb, alpha: number): string {
+  return `rgba(${r},${g},${b},${(alpha / 255).toFixed(3)})`;
+}
+
+function arrowIcon(fill: string): { url: string; width: number; height: number } {
+  const cached = arrowIconCache.get(fill);
+  if (cached) return cached;
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${ARROW_ICON_WIDTH}" height="${ARROW_ICON_HEIGHT}" ` +
+    `viewBox="0 0 ${ARROW_ICON_WIDTH} ${ARROW_ICON_HEIGHT}">` +
+    `<path d="M 21 8 L 2 1.5 L 8.5 8 L 2 14.5 Z" fill="${fill}" stroke="white" stroke-width="1.25" stroke-linejoin="round"/>` +
+    `</svg>`;
+  const icon = {
+    url: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,
+    width: ARROW_ICON_WIDTH,
+    height: ARROW_ICON_HEIGHT,
+  };
+  arrowIconCache.set(fill, icon);
+  return icon;
 }
 
 /**
@@ -261,12 +290,16 @@ function pickArrowAnchor(
   const [x0, y0] = path[tailIdx];
   const [x1, y1] = path[headIdx];
   const dx = x1 - x0;
-  // TextLayer rotates clockwise in screen space; geographic latitude
-  // increases northward (screen y is inverted), so we negate dy to
-  // get a screen-space heading that matches the visible segment.
+  // deck.gl's icon/text rotation shader rotates the local (pre-flip) offset
+  // and only afterwards negates its y-component, which nets out to a
+  // standard y-up getAngle convention (angle 0 = pointing +x/east, positive
+  // = counterclockwise on screen — verified against icon-layer-vertex.glsl.js).
+  // Geographic latitude already increases "up" the same way, so the raw
+  // lat delta is used directly with no extra sign flip (#160 — a previous
+  // version negated dy here, which mirrored every arrow vertically).
   const dy = y1 - y0;
   if (dx === 0 && dy === 0) return null;
-  const angleDeg = (Math.atan2(-dy, dx) * 180) / Math.PI;
+  const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
   return { position: [x1, y1], angleDeg };
 }
 
