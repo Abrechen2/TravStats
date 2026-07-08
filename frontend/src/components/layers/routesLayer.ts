@@ -264,6 +264,9 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
         count: 0,
         name: dep.name ?? airportLabel(dep),
         iata: airportLabel(dep),
+        icao: dep.icao,
+        country: dep.country,
+        city: dep.city,
       });
     }
     if (!airportMap.has(arrKey)) {
@@ -272,6 +275,9 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
         count: 0,
         name: arr.name ?? airportLabel(arr),
         iata: airportLabel(arr),
+        icao: arr.icao,
+        country: arr.country,
+        city: arr.city,
       });
     }
     const depPoint = airportMap.get(depKey)!;
