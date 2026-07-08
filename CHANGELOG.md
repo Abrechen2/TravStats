@@ -4,6 +4,21 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.2.2] - 2026-07-04
+
+### Fixed
+- **No phantom vertical scrollbar on horizontal tab bars** — the trip-detail,
+  admin, statistics and parser tab bars no longer show a stray vertical scroll
+  bar; horizontal scrolling on small screens is unaffected. (#155)
+- **Bug reports attach the diagnostic bundle as a file** — "Report a bug" now
+  downloads the bundle for you to drag into the GitHub form instead of copying
+  it for a paste that GitHub rejects as too large. (#157)
+- **Admin panel shows the clean release version** — after switching an RC image
+  back to the release tag, the panel no longer looks stuck on the RC version;
+  the exact build is shown on hover. (#156)
+- **Correct English comparison label in statistics** — the year-over-year delta
+  badge showed the German "ggü." in the English UI; it now reads "vs".
+
 ## [2.2.1] - 2026-07-04
 
 ### Fixed
