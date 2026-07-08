@@ -31,8 +31,8 @@ export default function OverviewTab({ flights, achievements }: Props): JSX.Eleme
   const { enabled } = useEnabledDomains();
   const { stats, loading } = useDomainStats({ flights });
 
-  const [visible, setVisible] = useState<Partial<Record<DomainKey, boolean>>>(
-    () => Object.fromEntries(enabled.map((k) => [k, true]))
+  const [visible, setVisible] = useState<Partial<Record<DomainKey, boolean>>>(() =>
+    Object.fromEntries(enabled.map((k) => [k, true]))
   );
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [compareYear, setCompareYear] = useState<number | null>(null);

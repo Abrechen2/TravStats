@@ -181,6 +181,12 @@
     "save": "Speichern",
     "cancel": "Abbrechen"
   },
+  "journalView": {
+    "view": "Ansehen",
+    "close": "Schließen",
+    "edit": "Bearbeiten",
+    "untitled": "Tagebuch-Eintrag"
+  },
   "stopModal": {
     "createTitle": "Stopp / Ort hinzufügen",
     "editTitle": "Stopp bearbeiten",

@@ -35,6 +35,8 @@ export interface CruiseStop {
   arrivalTime: string | null;
   departureTime: string | null;
   excursionNote: string | null;
+  /** Set on an unresolved port: name-only stop, portId=null, isAtSea=false. */
+  unresolvedPortName: string | null;
 }
 
 export type CruiseStatus = "scheduled" | "flown" | "cancelled" | "historical";
@@ -55,6 +57,8 @@ export interface Cruise {
   startDate: string | null;
   endDate: string | null;
   status: CruiseStatus;
+  /** Optional user-selectable map color (hex). Null = auto-derived from id. */
+  color?: string | null;
   cabinNumber: string | null;
   cabinType: CabinType | null;
   deck: number | null;
@@ -79,6 +83,9 @@ export interface CruiseStopInput {
   arrivalTime?: string | null;
   departureTime?: string | null;
   excursionNote?: string;
+  /** Unresolved port name (import couldn't match the catalog). Cleared when
+   *  the user picks a real port. */
+  unresolvedPortName?: string | null;
   /** UI-only: the resolved Port for this stop, so the stops editor can show
    *  the selected port when editing an existing cruise. Not sent to the
    *  backend — the submit mapper strips it (backend Zod also ignores it). */
@@ -95,6 +102,8 @@ export interface CruiseInput {
   startDate?: string | null;
   endDate?: string | null;
   status?: CruiseStatus;
+  /** Optional user-selectable map color (hex). Null = auto-derived from id. */
+  color?: string | null;
   cabinNumber?: string;
   cabinType?: CabinType;
   deck?: number;

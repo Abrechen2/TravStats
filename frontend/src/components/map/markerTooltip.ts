@@ -88,7 +88,7 @@ type TFn = (key: string, options?: Record<string, unknown>) => string;
  */
 export function createMarkerTooltip(
   t: TFn,
-  locale: string,
+  locale: string
 ): (info: PickingInfo) => { html: string; style: Record<string, string> } | null {
   return function getTooltip(info: PickingInfo) {
     const layerId = info.layer?.id;
@@ -116,12 +116,7 @@ export function createMarkerTooltip(
   };
 }
 
-function renderAirportHtml(
-  d: AirportDatum,
-  heading: string,
-  t: TFn,
-  locale: string,
-): string {
+function renderAirportHtml(d: AirportDatum, heading: string, t: TFn, locale: string): string {
   const name = d.name && d.name !== heading ? d.name : null;
   const count = typeof d.count === "number" && d.count > 0 ? d.count : null;
   const lastVisit = d.lastVisit ?? null;
@@ -134,33 +129,28 @@ function renderAirportHtml(
   if (count !== null) {
     lines.push(
       `<div style="color:#fbbf24;margin-top:2px;">${count} ${escapeHtml(
-        t("map:globe.flight", { count }),
-      )}</div>`,
+        t("map:globe.flight", { count })
+      )}</div>`
     );
   }
   if (lastVisit) {
     lines.push(
       `<div style="opacity:0.75;font-size:10.5px;margin-top:3px;">${escapeHtml(
-        t("map:tooltip.lastVisit"),
-      )}: ${escapeHtml(formatDate(lastVisit, locale))}</div>`,
+        t("map:tooltip.lastVisit")
+      )}: ${escapeHtml(formatDate(lastVisit, locale))}</div>`
     );
   }
   return lines.join("");
 }
 
-function renderPortHtml(
-  d: PortDatum,
-  heading: string,
-  t: TFn,
-  locale: string,
-): string {
+function renderPortHtml(d: PortDatum, heading: string, t: TFn, locale: string): string {
   const sub =
     d.shortLabel && d.shortLabel !== heading
       ? d.shortLabel
       : d.iata && d.iata !== heading
         ? d.iata
         : null;
-  const visits = (d.visits ?? d.size) ?? null;
+  const visits = d.visits ?? d.size ?? null;
   const lastCall = d.lastVisit ?? null;
 
   const lines: string[] = [];
@@ -171,15 +161,15 @@ function renderPortHtml(
   if (visits !== null && visits > 0) {
     lines.push(
       `<div style="color:#7dd3fc;margin-top:2px;">${visits} ${escapeHtml(
-        t("map:airportMarkers.visits"),
-      )}</div>`,
+        t("map:airportMarkers.visits")
+      )}</div>`
     );
   }
   if (lastCall) {
     lines.push(
       `<div style="opacity:0.75;font-size:10.5px;margin-top:3px;">${escapeHtml(
-        t("map:tooltip.lastCall"),
-      )}: ${escapeHtml(formatDate(lastCall, locale))}</div>`,
+        t("map:tooltip.lastCall")
+      )}: ${escapeHtml(formatDate(lastCall, locale))}</div>`
     );
   }
   return lines.join("");

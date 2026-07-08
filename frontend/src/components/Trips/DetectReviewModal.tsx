@@ -83,10 +83,7 @@ export default function DetectReviewModal({
   const allSelected = selectedCount === state.length && state.length > 0;
   const totalFlights = useMemo(
     () =>
-      proposals.reduce(
-        (sum, p, idx) => sum + (state[idx]?.selected ? p.flightIds.length : 0),
-        0
-      ),
+      proposals.reduce((sum, p, idx) => sum + (state[idx]?.selected ? p.flightIds.length : 0), 0),
     [proposals, state]
   );
 
@@ -178,7 +175,11 @@ export default function DetectReviewModal({
           className="px-5 py-3 flex items-center gap-3"
           style={{ borderBottom: "1px solid var(--color-border)" }}
         >
-          <Toggle checked={allSelected} onClick={toggleAll} indeterminate={!allSelected && selectedCount > 0} />
+          <Toggle
+            checked={allSelected}
+            onClick={toggleAll}
+            indeterminate={!allSelected && selectedCount > 0}
+          />
           <strong className="text-sm">
             {t("trips:detectReview.selectAll", { defaultValue: "Alle auswählen" })}
           </strong>
@@ -259,7 +260,9 @@ export default function DetectReviewModal({
                       aria-controls={panelId}
                       aria-label={
                         isOpen
-                          ? t("trips:detectReview.collapseLegs", { defaultValue: "Flüge ausblenden" })
+                          ? t("trips:detectReview.collapseLegs", {
+                              defaultValue: "Flüge ausblenden",
+                            })
                           : t("trips:detectReview.expandLegs", { defaultValue: "Flüge anzeigen" })
                       }
                     >

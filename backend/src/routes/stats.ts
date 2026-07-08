@@ -17,6 +17,13 @@ import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
 import { tzAwareDurationMinutes, type FlightTimeSemantics } from '../utils/timezone';
 import { normalizeAirline, mergeAirlineCounts } from '../utils/airlineNormalize';
+import {
+  resolveWindow,
+  bucketSeries,
+  sumTotals,
+  trimZeroEdges,
+  type DatedRow,
+} from '../utils/stats/timeseries';
 
 const router = Router();
 
@@ -38,6 +45,16 @@ const SummaryQuerySchema = z.object({
   toDate: z.string().optional(),
   year: z.coerce.number().int().min(1900).max(2100).optional(),
   compareYear: z.coerce.number().int().min(1900).max(2100).optional(),
+});
+
+// Timeseries endpoint — bucketed series + current/previous window totals
+const TimeseriesQuerySchema = z.object({
+  domain: z.enum(['flight', 'cruise']).default('flight'),
+  granularity: z.enum(['month', 'year']).default('month'),
+  window: z.enum(['rolling12m', 'year', 'all']).default('rolling12m'),
+  year: z.coerce.number().int().min(1900).max(2100).optional(),
+  fromDate: z.string().optional(),
+  toDate: z.string().optional(),
 });
 
 interface SummaryStats {
@@ -245,6 +262,124 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
       const summary = await computeSummary(buildWhere(userId, fromDate, toDate, year));
       res.json(summary);
     }
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Build a UTC-timezone map for a set of flight rows (mirrors computeSummary).
+async function buildTzMap(
+  rows: Array<{ depIata: string | null; depIcao: string | null; arrIata: string | null; arrIcao: string | null }>,
+): Promise<Map<string, string>> {
+  const codes = new Set<string>();
+  for (const f of rows) {
+    if (f.depIata) codes.add(f.depIata);
+    if (f.depIcao) codes.add(f.depIcao);
+    if (f.arrIata) codes.add(f.arrIata);
+    if (f.arrIcao) codes.add(f.arrIcao);
+  }
+  const map = new Map<string, string>();
+  try {
+    const airports = await getCachedAirports(Array.from(codes));
+    for (const [code, data] of airports.entries()) {
+      if (data?.timezone) map.set(code, data.timezone);
+    }
+  } catch {
+    // timezone lookup failed — durations fall back to naïve diff
+  }
+  return map;
+}
+
+async function fetchFlightDatedRows(
+  userId: string,
+  from: Date,
+  to: Date,
+): Promise<DatedRow[]> {
+  const rows = await prisma.flight.findMany({
+    where: {
+      userId,
+      status: { in: ['flown', 'historical'] },
+      departureTime: { gte: from, lt: to },
+    },
+    select: {
+      depIata: true, depIcao: true, depLat: true, depLon: true,
+      arrIata: true, arrIcao: true, arrLat: true, arrLon: true,
+      departureTime: true, arrivalTime: true,
+      depTimeSemantics: true, arrTimeSemantics: true,
+    },
+  });
+  const tzMap = await buildTzMap(rows);
+  return rows.map((f) => {
+    const depTz = (f.depIata && tzMap.get(f.depIata)) || (f.depIcao && tzMap.get(f.depIcao)) || null;
+    const arrTz = (f.arrIata && tzMap.get(f.arrIata)) || (f.arrIcao && tzMap.get(f.arrIcao)) || null;
+    const durationMin =
+      f.departureTime && f.arrivalTime
+        ? tzAwareDurationMinutes(
+            f.departureTime, f.arrivalTime, depTz, arrTz,
+            f.depTimeSemantics as FlightTimeSemantics,
+            f.arrTimeSemantics as FlightTimeSemantics,
+          ) ?? 0
+        : 0;
+    return {
+      date: f.departureTime as Date,
+      distanceKm: calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon),
+      durationMin,
+    };
+  });
+}
+
+async function fetchCruiseDatedRows(
+  userId: string,
+  from: Date,
+  to: Date,
+): Promise<DatedRow[]> {
+  const rows = await prisma.cruise.findMany({
+    where: { userId, status: { not: 'cancelled' }, startDate: { gte: from, lt: to } },
+    select: { startDate: true, legs: { select: { distanceKm: true } } },
+  });
+  return rows.map((c) => ({
+    date: c.startDate as Date,
+    distanceKm: c.legs.reduce((sum, l) => sum + (l.distanceKm ?? 0), 0),
+    durationMin: 0,
+  }));
+}
+
+// GET /api/v1/stats/timeseries — bucketed series (month|year) + current/previous
+// window totals, domain-parameterized (flight|cruise). Powers the Wave A
+// stats redesign's trend charts.
+router.get('/timeseries', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.userId!;
+    const parsed = TimeseriesQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      return;
+    }
+    const { domain, granularity, window, year, fromDate, toDate } = parsed.data;
+    const w = resolveWindow(window, year, fromDate, toDate, new Date());
+
+    const fetchRows = domain === 'cruise' ? fetchCruiseDatedRows : fetchFlightDatedRows;
+    const [currentRows, previousRows] = await Promise.all([
+      fetchRows(userId, w.from, w.to),
+      w.prevFrom && w.prevTo ? fetchRows(userId, w.prevFrom, w.prevTo) : Promise.resolve([] as DatedRow[]),
+    ]);
+
+    const rawSeries = bucketSeries(currentRows, granularity, w.from, w.to);
+    // The all-time window spans from the Unix epoch, so trim the leading/
+    // trailing empty buckets down to the user's actual data range. Bounded
+    // windows (rolling12m, year, explicit range) keep their zero buckets —
+    // those empty periods are meaningful context.
+    const series =
+      window === 'all' && !fromDate && !toDate ? trimZeroEdges(rawSeries) : rawSeries;
+
+    res.json({
+      domain,
+      granularity,
+      window: { from: w.from.toISOString(), to: w.to.toISOString() },
+      series,
+      current: sumTotals(currentRows),
+      previous: sumTotals(previousRows),
+    });
   } catch (error) {
     next(error);
   }
@@ -996,6 +1131,7 @@ router.get(
           isAtSea: s.isAtSea,
           arrivalTime: s.arrivalTime,
           departureTime: s.departureTime,
+          unresolvedPortName: s.unresolvedPortName,
         })),
         departurePort: c.departurePort,
         arrivalPort: c.arrivalPort,

@@ -12,14 +12,7 @@
  */
 
 export type SpecialType =
-  | "sightseeing"
-  | "eclipse"
-  | "rocket_launch"
-  | "zerog"
-  | "aurora"
-  | "training"
-  | "ferry"
-  | "test";
+  "sightseeing" | "eclipse" | "rocket_launch" | "zerog" | "aurora" | "training" | "ferry" | "test";
 
 export const SPECIAL_TYPES: readonly SpecialType[] = [
   "sightseeing",

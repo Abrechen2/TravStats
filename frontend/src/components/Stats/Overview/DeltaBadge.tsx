@@ -20,11 +20,7 @@ export default function DeltaBadge({ d, compareYear }: Props): JSX.Element | nul
         ? "rgba(248, 81, 73, 0.18)"
         : "var(--bg-elevated)";
   const fg =
-    d.sign === "up"
-      ? "var(--success)"
-      : d.sign === "down"
-        ? "var(--danger)"
-        : "var(--text-muted)";
+    d.sign === "up" ? "var(--success)" : d.sign === "down" ? "var(--danger)" : "var(--text-muted)";
   return (
     <span
       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold font-mono mt-1.5"
@@ -32,7 +28,12 @@ export default function DeltaBadge({ d, compareYear }: Props): JSX.Element | nul
     >
       {arrow} {sign}
       {d.diff}
-      {d.pct !== null && <span>({sign}{d.pct}%)</span>}
+      {d.pct !== null && (
+        <span>
+          ({sign}
+          {d.pct}%)
+        </span>
+      )}
       <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>
         {t("stats:yearFilter.vs", { year: compareYear })}
       </span>

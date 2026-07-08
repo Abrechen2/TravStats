@@ -334,10 +334,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
                 </Field>
               </div>
 
-              <Field
-                label={t("trips:modal.descLabel")}
-                hint={t("trips:modal.descHint")}
-              >
+              <Field label={t("trips:modal.descLabel")} hint={t("trips:modal.descHint")}>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -448,10 +445,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           )}
 
           {tab === "notes" && (
-            <Field
-              label={t("trips:modal.notesLabel")}
-              hint={t("trips:modal.notesMarkdownHint")}
-            >
+            <Field label={t("trips:modal.notesLabel")} hint={t("trips:modal.notesMarkdownHint")}>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -499,7 +493,8 @@ interface FieldProps {
 function Field({ label, hint, children }: FieldProps): JSX.Element {
   return (
     <div>
-      <label className="block text-xs font-medium uppercase tracking-wide mb-1.5"
+      <label
+        className="block text-xs font-medium uppercase tracking-wide mb-1.5"
         style={{ color: "var(--text-muted)" }}
       >
         {label}

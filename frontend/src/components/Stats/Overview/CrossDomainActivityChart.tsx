@@ -37,7 +37,9 @@ export default function CrossDomainActivityChart({
 
   const series: Series[] = useMemo(() => {
     const out: Series[] = [];
-    for (const [key, stats] of Object.entries(statsMap) as Array<[DomainKey, typeof statsMap[DomainKey]]>) {
+    for (const [key, stats] of Object.entries(statsMap) as Array<
+      [DomainKey, (typeof statsMap)[DomainKey]]
+    >) {
       if (!stats || !isWithData(stats)) continue;
       if (visible[key] === false) continue;
       out.push({

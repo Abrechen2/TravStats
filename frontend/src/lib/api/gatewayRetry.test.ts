@@ -75,7 +75,10 @@ describe("attachGatewayRetry", () => {
     let calls = 0;
     const adapter = async (config: InternalAxiosRequestConfig) => {
       calls++;
-      const err = new Error("HTTP 502") as Error & { response?: { status: number }; config?: unknown };
+      const err = new Error("HTTP 502") as Error & {
+        response?: { status: number };
+        config?: unknown;
+      };
       err.response = { status: 502 };
       err.config = config;
       throw err;
@@ -91,7 +94,10 @@ describe("attachGatewayRetry", () => {
     let calls = 0;
     const adapter = async (config: InternalAxiosRequestConfig) => {
       calls++;
-      const err = new Error("HTTP 401") as Error & { response?: { status: number }; config?: unknown };
+      const err = new Error("HTTP 401") as Error & {
+        response?: { status: number };
+        config?: unknown;
+      };
       err.response = { status: 401 };
       err.config = config;
       throw err;

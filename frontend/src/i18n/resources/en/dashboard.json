@@ -189,5 +189,11 @@
       "flight": "Flights",
       "cruise": "Cruises"
     }
+  },
+  "legend": {
+    "flightPast": "Flights (flown)",
+    "flightUpcoming": "Flights (upcoming)",
+    "cruisePast": "Cruises (sailed)",
+    "cruisePlanned": "Cruises (planned)"
   }
 }

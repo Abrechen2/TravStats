@@ -7,7 +7,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 interface JournalEntryModalProps {
   tripId: string;
   entry: TripJournalEntry | null; // null = create
-  defaultDate?: string;            // pre-fill date when creating
+  defaultDate?: string; // pre-fill date when creating
   onClose: () => void;
   onSaved: () => void;
 }
@@ -76,10 +76,7 @@ export default function JournalEntryModal({
       }
       onSaved();
     } catch {
-      addToast(
-        "error",
-        entry ? t("trips:toasts.updateError") : t("trips:toasts.createError")
-      );
+      addToast("error", entry ? t("trips:toasts.updateError") : t("trips:toasts.createError"));
     } finally {
       setSaving(false);
     }
@@ -186,13 +183,7 @@ export default function JournalEntryModal({
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}): JSX.Element {
+function Field({ label, children }: { label: string; children: React.ReactNode }): JSX.Element {
   return (
     <div>
       <label
