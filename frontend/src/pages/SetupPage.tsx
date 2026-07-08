@@ -68,7 +68,10 @@ export default function SetupPage(): JSX.Element {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--bg-base)" }}>
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: "var(--bg-base)" }}
+    >
       <div className="max-w-md w-full">
         <div className="bg-[var(--bg-elevated)] rounded-lg shadow-xl p-8">
           <div className="text-center mb-8">
@@ -93,10 +96,7 @@ export default function SetupPage(): JSX.Element {
                 }}
               >
                 <div className="text-5xl mb-4">✅</div>
-                <h2
-                  className="text-2xl font-bold mb-2"
-                  style={{ color: "var(--success)" }}
-                >
+                <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--success)" }}>
                   {t("setup:success.title")}
                 </h2>
                 <p className="mb-4" style={{ color: "var(--text-primary)" }}>

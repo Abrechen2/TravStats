@@ -144,7 +144,10 @@ export default function TripCleanupModal({
                   <span className="text-sm truncate" style={{ color: "var(--text-primary)" }}>
                     {c.name}
                   </span>
-                  <span className="ml-auto text-xs whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
+                  <span
+                    className="ml-auto text-xs whitespace-nowrap"
+                    style={{ color: "var(--text-muted)" }}
+                  >
                     {t("trips:cleanup.flightCount", { count: c.flightCount })} · {formatRange(c)}
                   </span>
                 </label>

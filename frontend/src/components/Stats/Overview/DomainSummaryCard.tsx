@@ -53,9 +53,7 @@ export default function DomainSummaryCard({
               {t(`common:${d.i18nKey}`)}
             </div>
             <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-              {d.available
-                ? t("stats:overviewCard.noDataYet")
-                : t("stats:overviewCard.comingSoon")}
+              {d.available ? t("stats:overviewCard.noDataYet") : t("stats:overviewCard.comingSoon")}
             </div>
           </div>
         </div>
@@ -63,13 +61,11 @@ export default function DomainSummaryCard({
     );
   }
 
-  const yearScopedCount =
-    selectedYear !== null ? (stats.yearlyEvents[selectedYear] ?? 0) : null;
+  const yearScopedCount = selectedYear !== null ? (stats.yearlyEvents[selectedYear] ?? 0) : null;
   const compareCount =
     compareEnabled && compareYear !== null ? (stats.yearlyEvents[compareYear] ?? 0) : null;
-  const cardDelta = yearScopedCount !== null && compareCount !== null
-    ? delta(yearScopedCount, compareCount)
-    : null;
+  const cardDelta =
+    yearScopedCount !== null && compareCount !== null ? delta(yearScopedCount, compareCount) : null;
 
   return (
     <div

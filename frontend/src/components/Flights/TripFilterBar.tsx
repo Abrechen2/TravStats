@@ -48,7 +48,10 @@ export function TripFilterBar({ trips, value, onChange }: TripFilterBarProps): J
     };
   }, [open]);
 
-  const sortedTrips = useMemo(() => [...trips].sort((a, b) => tripSortKey(b) - tripSortKey(a)), [trips]);
+  const sortedTrips = useMemo(
+    () => [...trips].sort((a, b) => tripSortKey(b) - tripSortKey(a)),
+    [trips]
+  );
 
   // Newest trips inline; the actively selected trip always gets a chip
   // even when it lives further down the list.
@@ -67,9 +70,10 @@ export function TripFilterBar({ trips, value, onChange }: TripFilterBarProps): J
   // first; trips without a date sort last under their own label).
   const groupedTrips = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const matching = q.length === 0
-      ? sortedTrips
-      : sortedTrips.filter((trip) => trip.name.toLowerCase().includes(q));
+    const matching =
+      q.length === 0
+        ? sortedTrips
+        : sortedTrips.filter((trip) => trip.name.toLowerCase().includes(q));
     const groups = new Map<string, Trip[]>();
     for (const trip of matching) {
       const key = trip.startDate

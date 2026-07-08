@@ -614,6 +614,41 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
       take: query.limit,
     });
 
+    // Flights don't store a departure/arrival country — resolve the ISO
+    // alpha-2 code per airport in one batch so the map overlays can render a
+    // country flag. Keyed by IATA first, then ICAO, so code-less airfields
+    // still resolve when they have an ICAO.
+    const iatas = new Set<string>();
+    const icaos = new Set<string>();
+    for (const f of flights) {
+      if (f.depIata) iatas.add(f.depIata);
+      if (f.arrIata) iatas.add(f.arrIata);
+      if (f.depIcao) icaos.add(f.depIcao);
+      if (f.arrIcao) icaos.add(f.arrIcao);
+    }
+    interface AirportInfo {
+      country: string | null;
+      city: string | null;
+    }
+    const infoByIata = new Map<string, AirportInfo>();
+    const infoByIcao = new Map<string, AirportInfo>();
+    if (iatas.size > 0 || icaos.size > 0) {
+      const airports = await prisma.airport.findMany({
+        where: {
+          OR: [{ iata: { in: [...iatas] } }, { icao: { in: [...icaos] } }],
+        },
+        select: { iata: true, icao: true, country: true, city: true },
+      });
+      for (const a of airports) {
+        const info: AirportInfo = { country: a.country ?? null, city: a.city ?? null };
+        if (a.iata) infoByIata.set(a.iata, info);
+        if (a.icao) infoByIcao.set(a.icao, info);
+      }
+    }
+    const airportInfo = (iata: string | null, icao: string | null): AirportInfo =>
+      (iata ? infoByIata.get(iata) : undefined) ??
+      (icao ? infoByIcao.get(icao) : undefined) ?? { country: null, city: null };
+
     const features = flights.map(flight => {
       const arcPoints = generateArcPoints(
         [flight.depLon, flight.depLat],
@@ -634,11 +669,15 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
             icao: flight.depIcao,
             iata: flight.depIata,
             name: flight.depName,
+            country: airportInfo(flight.depIata, flight.depIcao).country,
+            city: airportInfo(flight.depIata, flight.depIcao).city,
           },
           arrivalAirport: {
             icao: flight.arrIcao,
             iata: flight.arrIata,
             name: flight.arrName,
+            country: airportInfo(flight.arrIata, flight.arrIcao).country,
+            city: airportInfo(flight.arrIata, flight.arrIcao).city,
           },
           departureTime: flight.departureTime,
           arrivalTime: flight.arrivalTime,

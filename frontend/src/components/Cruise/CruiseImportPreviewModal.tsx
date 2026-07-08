@@ -227,7 +227,9 @@ function Field({
     <div>
       <label className="mb-1 flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
         {label}
-        {missing && <span className="text-[10px] normal-case text-red-300">({t("import.missing")})</span>}
+        {missing && (
+          <span className="text-[10px] normal-case text-red-300">({t("import.missing")})</span>
+        )}
       </label>
       {children}
     </div>
@@ -306,7 +308,7 @@ function CruiseImportEntryEditor({
   useEffect(() => {
     const builtInput: CruiseInput = {
       shipId: ship?.id ?? undefined,
-      shipNameOverride: ship ? undefined : overrideName ?? undefined,
+      shipNameOverride: ship ? undefined : (overrideName ?? undefined),
       cruiseLine: cruiseLine.trim() || undefined,
       routeName: routeName.trim() || undefined,
       departurePortId: departurePort?.id ?? undefined,
@@ -353,9 +355,7 @@ function CruiseImportEntryEditor({
     // setState→render loop. The parent falls back to t("import.tripDefault")
     // when this comes back empty.
     const shipName = ship?.name ?? overrideName ?? "";
-    const tripLabel = shipName
-      ? `${shipName}${startDate ? ` ${startDate.slice(0, 4)}` : ""}`
-      : "";
+    const tripLabel = shipName ? `${shipName}${startDate ? ` ${startDate.slice(0, 4)}` : ""}` : "";
 
     onChange(index, { input: builtInput, flightInputs, tripLabel });
   }, [
@@ -534,7 +534,11 @@ function CruiseImportEntryEditor({
 
       {/* Overview departure / arrival ports */}
       <div className="grid grid-cols-2 gap-3">
-        <PortPicker label={t("field.departPort")} value={departurePort} onChange={setDeparturePort} />
+        <PortPicker
+          label={t("field.departPort")}
+          value={departurePort}
+          onChange={setDeparturePort}
+        />
         <PortPicker label={t("field.arrivePort")} value={arrivalPort} onChange={setArrivalPort} />
       </div>
 
@@ -557,7 +561,8 @@ function CruiseImportEntryEditor({
           className="flex w-full items-center justify-between rounded-md border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--text-primary)] hover:border-[var(--accent)]"
         >
           <span>
-            {t("import.stopsEdit")} · {t("import.stopsValue", { ports: portStops, seaDays })}
+            {t("import.stopsEdit")} · {portStops} {t("field.ports", { count: portStops })},{" "}
+            {seaDays} {t("field.sea_days", { count: seaDays })}
           </span>
           <span>{showStops ? "▴" : "▾"}</span>
         </button>
@@ -579,11 +584,7 @@ function CruiseImportEntryEditor({
           </div>
           <div className="space-y-3">
             {flights.map((f, i) => (
-              <FlightCard
-                key={i}
-                flight={f}
-                onChange={(patch): void => updateFlight(i, patch)}
-              />
+              <FlightCard key={i} flight={f} onChange={(patch): void => updateFlight(i, patch)} />
             ))}
           </div>
         </div>

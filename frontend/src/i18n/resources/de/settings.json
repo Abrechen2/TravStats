@@ -697,9 +697,37 @@
       "movedFromDashboard": "Der Flug-Import ist jetzt hier — unter Einstellungen → Import."
     }
   },
+  "devices": {
+    "title": "Geräte",
+    "description": "Verbinde die TravStats-App auf deinem Smartphone. Scanne den QR-Code in der App, um das Gerät anzumelden — ein gerätegebundenes Token wird dabei automatisch erstellt.",
+    "connectButton": "Neues Gerät verbinden",
+    "qrTitle": "Mit der TravStats-App scannen",
+    "qrHint": "App öffnen → Einstellungen → „Gerät verbinden\" und diesen Code scannen.",
+    "countdown": "Läuft ab in {{time}}",
+    "expired": "Code abgelaufen",
+    "retry": "Neuen Code erzeugen",
+    "cancel": "Abbrechen",
+    "done": "Fertig",
+    "claimed": "✅ {{name}} verbunden",
+    "unnamedDevice": "Gerät",
+    "noPublicUrl": "Es ist keine öffentliche URL konfiguriert. Lege in den Admin-Einstellungen eine öffentliche Adresse fest, damit die App den Server erreichen kann.",
+    "existingTitle": "Verbundene Geräte",
+    "empty": "Noch keine Geräte verbunden.",
+    "lastUsed": "Zuletzt: {{when}}",
+    "neverUsed": "Noch nie benutzt",
+    "ip": "IP {{ip}}",
+    "revoked": "Abgemeldet",
+    "unpairButton": "Abmelden",
+    "confirmUnpair": "Gerät wirklich abmelden? Die App auf diesem Gerät verliert sofort den Zugriff.",
+    "errors": {
+      "load": "Geräte konnten nicht geladen werden",
+      "start": "Kopplung konnte nicht gestartet werden",
+      "unpair": "Gerät konnte nicht abgemeldet werden"
+    }
+  },
   "apiTokens": {
     "title": "API-Tokens",
-    "description": "Persönliche Zugriffstokens für externe Tools, AI-Agenten und Skripte. Ein Token wird genau einmal beim Erstellen angezeigt — danach nie wieder.",
+    "description": "Persönliche Zugriffstokens für KI-Agenten, Skripte und externe Apps. Zum Verbinden der TravStats-App nutze stattdessen „Geräte\". Ein Token wird genau einmal beim Erstellen angezeigt — danach nie wieder.",
     "docsTitle": "API-Dokumentation",
     "docsBody": "Vollständige Endpoints, Beispiele und Schemas — interaktiv ausprobieren mit deinem Token.",
     "docsLink": "Swagger UI öffnen →",

@@ -32,6 +32,7 @@ const PendingUpdatesPage = lazy(() => import("./pages/PendingUpdatesPage"));
 const AircraftPage = lazy(() => import("./pages/AircraftPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const ForceChangePasswordPage = lazy(() => import("./pages/ForceChangePasswordPage"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 function LoadingFallback(): JSX.Element {
   return (
@@ -289,6 +290,10 @@ function AppContent() {
               <Route
                 path="/aircraft/:registration"
                 element={isAuthenticated ? <AircraftPage /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="*"
+                element={isAuthenticated ? <NotFoundPage /> : <Navigate to="/login" replace />}
               />
             </Routes>
           </AnimatePresence>

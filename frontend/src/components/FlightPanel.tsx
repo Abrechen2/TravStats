@@ -190,13 +190,13 @@ export function FlightPanel({
     <AnimatePresence>
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-30" onClick={onClose} aria-hidden="true" />
+          <div className="absolute inset-0 z-10" onClick={onClose} aria-hidden="true" />
           <motion.div
             initial={{ x: -380 }}
             animate={{ x: 0 }}
             exit={{ x: -380 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed left-0 top-14 bottom-0 w-80 max-w-[calc(100vw-3rem)] z-40 flex flex-col overflow-hidden"
+            className="absolute left-0 top-0 bottom-0 w-80 max-w-[calc(100vw-3rem)] z-20 flex flex-col overflow-hidden"
             style={{
               background: "rgba(22,27,34,0.95)",
               backdropFilter: "blur(20px)",

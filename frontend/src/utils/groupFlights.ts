@@ -1,8 +1,7 @@
 import type { Flight } from "../types";
 
 export type FlightGroup =
-  | { type: "single"; flight: Flight }
-  | { type: "multileg"; flights: Flight[]; label: string };
+  { type: "single"; flight: Flight } | { type: "multileg"; flights: Flight[]; label: string };
 
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 

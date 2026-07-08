@@ -20,6 +20,8 @@ export interface CruiseStopData {
   isAtSea: boolean;
   arrivalTime?: Date | null;
   departureTime?: Date | null;
+  /** Set on an unresolved port (portId=null, isAtSea=false). Counts as a port call. */
+  unresolvedPortName?: string | null;
 }
 
 export interface CruiseData {
@@ -222,6 +224,13 @@ export function calculateCruiseStats(
           }
           prevPortPoint = here;
           portCallIndex += 1;
+        } else if (stop.unresolvedPortName) {
+          // Unresolved port: a real port call (name preserved) but coordinate-
+          // less, so it counts toward port-call totals only — no distance, no
+          // unique-port id, no country/region. It does not advance
+          // prevPortPoint/portCallIndex (those track routed legs between
+          // catalog ports).
+          totalPortCalls += 1;
         }
       }
     }
