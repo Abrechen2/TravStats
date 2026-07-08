@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { API_TIMEOUTS } from "../../config/constants";
 import type {
   Trip,
   Booking,
@@ -154,15 +155,8 @@ export const tripsApi = {
     const { data } = await api.post<{ stop: TripStop }>(`/trips/${tripId}/stops`, input);
     return data.stop;
   },
-  updateStop: async (
-    tripId: string,
-    stopId: string,
-    input: UpdateStopInput
-  ): Promise<TripStop> => {
-    const { data } = await api.patch<{ stop: TripStop }>(
-      `/trips/${tripId}/stops/${stopId}`,
-      input
-    );
+  updateStop: async (tripId: string, stopId: string, input: UpdateStopInput): Promise<TripStop> => {
+    const { data } = await api.patch<{ stop: TripStop }>(`/trips/${tripId}/stops/${stopId}`, input);
     return data.stop;
   },
   deleteStop: async (tripId: string, stopId: string): Promise<void> => {
@@ -175,10 +169,7 @@ export const tripsApi = {
     tripId: string,
     input: CreateJournalInput
   ): Promise<TripJournalEntry> => {
-    const { data } = await api.post<{ entry: TripJournalEntry }>(
-      `/trips/${tripId}/journal`,
-      input
-    );
+    const { data } = await api.post<{ entry: TripJournalEntry }>(`/trips/${tripId}/journal`, input);
     return data.entry;
   },
   updateJournalEntry: async (
@@ -201,21 +192,19 @@ export const tripsApi = {
   uploadPhotos: async (tripId: string, files: File[]): Promise<TripPhoto[]> => {
     const fd = new FormData();
     for (const f of files) fd.append("photos", f);
-    const { data } = await api.post<{ photos: TripPhoto[] }>(
-      `/trips/${tripId}/photos`,
-      fd,
-      { headers: { "Content-Type": "multipart/form-data" } },
-    );
+    const { data } = await api.post<{ photos: TripPhoto[] }>(`/trips/${tripId}/photos`, fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return data.photos;
   },
   updatePhoto: async (
     tripId: string,
     photoId: string,
-    input: { caption?: string | null; takenAt?: string | null; sortIdx?: number },
+    input: { caption?: string | null; takenAt?: string | null; sortIdx?: number }
   ): Promise<TripPhoto> => {
     const { data } = await api.patch<{ photo: TripPhoto }>(
       `/trips/${tripId}/photos/${photoId}`,
-      input,
+      input
     );
     return data.photo;
   },
@@ -228,7 +217,7 @@ export const tripsApi = {
     const { data } = await api.post<{ trip: Trip; coverUrl: string }>(
       `/trips/${tripId}/cover`,
       fd,
-      { headers: { "Content-Type": "multipart/form-data" } },
+      { headers: { "Content-Type": "multipart/form-data" } }
     );
     return data;
   },
@@ -236,10 +225,15 @@ export const tripsApi = {
   /* ─────────── LLM summary ─────────── */
 
   summarize: async (
-    tripId: string,
+    tripId: string
   ): Promise<{ summary: string; model: string; durationMs: number }> => {
+    // Ollama generation routinely takes >10s, so use the long PARSER timeout —
+    // the 10s DEFAULT aborts the request while the backend is still generating,
+    // surfacing an error toast even though the summary succeeds server-side.
     const { data } = await api.post<{ summary: string; model: string; durationMs: number }>(
       `/trips/${tripId}/summarize`,
+      undefined,
+      { timeout: API_TIMEOUTS.PARSER }
     );
     return data;
   },

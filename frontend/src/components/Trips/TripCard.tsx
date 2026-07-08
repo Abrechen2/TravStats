@@ -47,9 +47,7 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
   // advertise cruise segments — count them as absent.
   const { isEnabled } = useEnabledDomains();
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
-  const cruiseCount = isEnabled("cruise")
-    ? (trip._count?.cruises ?? trip.cruises?.length ?? 0)
-    : 0;
+  const cruiseCount = isEnabled("cruise") ? (trip._count?.cruises ?? trip.cruises?.length ?? 0) : 0;
 
   const totalCost = trip.bookings?.reduce((sum, b) => sum + (b.price ?? 0), 0) ?? 0;
   const currency = trip.bookings?.find((b) => b.currency)?.currency ?? "EUR";
@@ -63,7 +61,11 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
   const categoryIcon = trip.category ? CATEGORY_ICON[trip.category] : null;
 
   const cover = trip.coverImageUrl
-    ? { backgroundImage: `url(${trip.coverImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+    ? {
+        backgroundImage: `url(${trip.coverImageUrl})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }
     : { background: `linear-gradient(135deg, ${trip.color}, ${trip.color}33 70%, var(--bg-base))` };
 
   return (
@@ -85,8 +87,7 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
         <div
           className="absolute inset-0"
           style={{
-            background:
-              "linear-gradient(to bottom, transparent 35%, rgba(13,17,23,0.85) 100%)",
+            background: "linear-gradient(to bottom, transparent 35%, rgba(13,17,23,0.85) 100%)",
           }}
         />
         <span
@@ -133,7 +134,10 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
         )}
 
         {trip.destinationLabel && (
-          <p className="text-xs mt-1.5 truncate" style={{ color: "var(--text-primary)", opacity: 0.85 }}>
+          <p
+            className="text-xs mt-1.5 truncate"
+            style={{ color: "var(--text-primary)", opacity: 0.85 }}
+          >
             📍 {trip.destinationLabel}
           </p>
         )}
@@ -183,14 +187,21 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
         >
           <Stat
             value={cruiseCount > 0 ? `${flightCount} · ${cruiseCount}` : `${flightCount}`}
-            label={cruiseCount > 0 ? "Fl · Kr" : t("trips:flightCount", { count: flightCount }).split(" ").slice(-1)[0]}
+            label={
+              cruiseCount > 0
+                ? "Fl · Kr"
+                : t("trips:flightCount", { count: flightCount }).split(" ").slice(-1)[0]
+            }
           />
+          <Stat value={distanceKm > 0 ? formatDistance(distanceKm) : "—"} label="km" />
           <Stat
-            value={distanceKm > 0 ? formatDistance(distanceKm) : "—"}
-            label="km"
-          />
-          <Stat
-            value={trip.countries.length > 0 ? trip.countries.length : flightCount > 0 || cruiseCount > 0 ? "?" : "—"}
+            value={
+              trip.countries.length > 0
+                ? trip.countries.length
+                : flightCount > 0 || cruiseCount > 0
+                  ? "?"
+                  : "—"
+            }
             label={t("trips:detail.stats.countries")}
           />
           <Stat
@@ -246,10 +257,7 @@ function Stat({ value, label }: { value: string | number; label: string }): JSX.
       <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
         {value}
       </div>
-      <div
-        className="text-[10px] uppercase tracking-wide"
-        style={{ color: "var(--text-muted)" }}
-      >
+      <div className="text-[10px] uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
         {label}
       </div>
     </div>
@@ -295,12 +303,7 @@ function estimateFlightDistanceKm(trip: Trip): number {
   if (!trip.flights) return 0;
   let sum = 0;
   for (const f of trip.flights) {
-    if (
-      f.depLat == null ||
-      f.depLon == null ||
-      f.arrLat == null ||
-      f.arrLon == null
-    ) {
+    if (f.depLat == null || f.depLon == null || f.arrLat == null || f.arrLon == null) {
       continue;
     }
     sum += haversineKm(f.depLat, f.depLon, f.arrLat, f.arrLon);

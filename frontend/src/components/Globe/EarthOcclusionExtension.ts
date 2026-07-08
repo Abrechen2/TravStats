@@ -156,7 +156,7 @@ export class EarthOcclusionExtension extends LayerExtension {
   static defaultProps = defaultProps;
   static extensionName = "EarthOcclusionExtension";
 
-  getShaders(): { modules: typeof shaderModule[]; inject: typeof injection } {
+  getShaders(): { modules: (typeof shaderModule)[]; inject: typeof injection } {
     return { modules: [shaderModule], inject: injection };
   }
 
@@ -167,18 +167,16 @@ export class EarthOcclusionExtension extends LayerExtension {
     const lat = (viewport?.latitude ?? 0) * DEG_TO_RAD;
     const dist = Math.max(1.001, cameraDistanceFromViewport(viewport));
     const uniforms: EarthOcclusionUniforms = {
-      cameraDir: [
-        Math.cos(lat) * Math.cos(lng),
-        Math.cos(lat) * Math.sin(lng),
-        Math.sin(lat),
-      ],
+      cameraDir: [Math.cos(lat) * Math.cos(lng), Math.cos(lat) * Math.sin(lng), Math.sin(lat)],
       cosHorizon: 1.0 / dist,
       fadeBand: props.earthOcclusionFadeBand,
       altitudeBoost: 1.0 / EARTH_RADIUS_M,
       enabled: props.earthOcclusionEnabled ? 1 : 0,
     };
-    (this as unknown as {
-      setShaderModuleProps: (props: Record<string, unknown>) => void;
-    }).setShaderModuleProps({ earthOcclusion: uniforms });
+    (
+      this as unknown as {
+        setShaderModuleProps: (props: Record<string, unknown>) => void;
+      }
+    ).setShaderModuleProps({ earthOcclusion: uniforms });
   }
 }

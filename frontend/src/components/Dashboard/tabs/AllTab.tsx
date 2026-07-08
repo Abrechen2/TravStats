@@ -37,7 +37,6 @@ function hexToRgb(hex: string): [number, number, number] {
   ];
 }
 const FLIGHT_RGB = hexToRgb(DOMAINS.flight.color);
-const CRUISE_HEX = DOMAINS.cruise.color;
 
 // Maps the dashboard-level AllMode to what MapContainer3D's visMode prop expects.
 // "journey" uses extraLayers with showInternalCruises=false so it has full
@@ -49,25 +48,12 @@ const ALL_MODE_TO_MAP_MODE: Record<AllMode, MapMode> = {
   globe: "globe",
 };
 
-// Reverse-maps MapMode back to the closest AllMode so the VisModeSelector
-// inside MapContainer3D can keep the URL in sync when the user changes mode
-// from within the map controls.
-const MAP_MODE_TO_ALL_MODE: Partial<Record<MapMode, AllMode>> = {
-  routes: "overview",
-  heatmap: "heatmap",
-  globe: "globe",
-};
-
-// Subset of MapMode values offered by the in-map FAB on the Alle tab.
-// Globe is cross-domain and only exposed here.
-const ALL_TAB_MAP_MODES: readonly MapMode[] = ["routes", "heatmap", "globe"];
-
 function isAllMode(mode: unknown): mode is AllMode {
   return typeof mode === "string" && (ALL_MODES as readonly string[]).includes(mode);
 }
 
 export function AllTab(): JSX.Element {
-  const { mode, setMode } = useDashboardRoute();
+  const { mode } = useDashboardRoute();
   const { t } = useTranslation(["dashboard"]);
   const [flights, setFlights] = useState<GeoJSONFeature[]>([]);
   const [cruises, setCruises] = useState<Cruise[]>([]);
@@ -261,16 +247,6 @@ export function AllTab(): JSX.Element {
     return buildJourneyLayers(visibleFlights, visibleCruises, effectiveTripId);
   }, [allMode, visibleFlights, visibleCruises, effectiveTripId]);
 
-  const handleVisModeChange = useCallback(
-    (next: MapMode): void => {
-      const mapped = MAP_MODE_TO_ALL_MODE[next];
-      if (mapped !== undefined) {
-        setMode(mapped);
-      }
-    },
-    [setMode]
-  );
-
   // Toggle + legend share one flex row so they auto-flow without
   // manual left-offset math. The whole row shifts right when the
   // sidebar opens so the chips clear the panel.
@@ -317,36 +293,68 @@ export function AllTab(): JSX.Element {
           }}
         >
           {flightsVisible && (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span
-                aria-hidden
-                style={{
-                  width: 14,
-                  height: 2,
-                  background: DOMAINS.flight.color,
-                  borderRadius: 2,
-                }}
-              />
-              <span style={{ color: "var(--text-primary)" }}>
-                {t("dashboard:sidebar.filters.flight")}
+            <>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span
+                  aria-hidden
+                  style={{
+                    width: 14,
+                    height: 2,
+                    background: "rgb(240,169,71)",
+                    borderRadius: 2,
+                  }}
+                />
+                <span style={{ color: "var(--text-primary)" }}>
+                  {t("dashboard:legend.flightPast")}
+                </span>
               </span>
-            </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span
+                  aria-hidden
+                  style={{
+                    width: 14,
+                    height: 2,
+                    background: "rgb(251,113,133)",
+                    borderRadius: 2,
+                  }}
+                />
+                <span style={{ color: "var(--text-primary)" }}>
+                  {t("dashboard:legend.flightUpcoming")}
+                </span>
+              </span>
+            </>
           )}
           {cruisesVisible && (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span
-                aria-hidden
-                style={{
-                  width: 14,
-                  height: 2,
-                  background: CRUISE_HEX,
-                  borderRadius: 2,
-                }}
-              />
-              <span style={{ color: "var(--text-primary)" }}>
-                {t("dashboard:sidebar.filters.cruise")}
+            <>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span
+                  aria-hidden
+                  style={{
+                    width: 14,
+                    height: 2,
+                    background: "rgb(74,144,217)",
+                    borderRadius: 2,
+                  }}
+                />
+                <span style={{ color: "var(--text-primary)" }}>
+                  {t("dashboard:legend.cruisePast")}
+                </span>
               </span>
-            </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span
+                  aria-hidden
+                  style={{
+                    width: 14,
+                    height: 2,
+                    background: "rgb(34,211,238)",
+                    borderRadius: 2,
+                  }}
+                />
+                <span style={{ color: "var(--text-primary)" }}>
+                  {t("dashboard:legend.cruisePlanned")}
+                </span>
+              </span>
+            </>
           )}
         </div>
       )}
@@ -433,7 +441,6 @@ export function AllTab(): JSX.Element {
         <MapContainer3D
           flights={[]}
           visMode="routes"
-          onVisModeChange={handleVisModeChange}
           extraLayers={journeyLayers}
           showInternalCruises={false}
           onFlightClick={handleFlightClick}
@@ -441,12 +448,7 @@ export function AllTab(): JSX.Element {
           onFlightOpen={handlePanelFlightDetails}
           onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
           flightRouteColor={FLIGHT_RGB}
-          availableModes={ALL_TAB_MAP_MODES}
           cruisesOverride={visibleCruises}
-          // journey renders in "routes" visMode but is a synthetic mode not
-          // in the FAB set — hide the FAB so it can't show "Routes" as active
-          // (contradicting the toolbar) or drop the user out of journey.
-          hideVisModeSelector
           hideInfoPill
         />
         {toggleAndLegend}
@@ -462,13 +464,13 @@ export function AllTab(): JSX.Element {
       <MapContainer3D
         flights={visibleFlights}
         visMode={visMode}
-        onVisModeChange={handleVisModeChange}
         flightRouteColor={FLIGHT_RGB}
+        statusTwoTone
+        cruiseColorMode="status"
         onFlightClick={handleFlightClick}
         onRouteClick={handleRouteClick}
         onFlightOpen={handlePanelFlightDetails}
         onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
-        availableModes={ALL_TAB_MAP_MODES}
         cruisesOverride={visibleCruises}
         hideInfoPill
       />

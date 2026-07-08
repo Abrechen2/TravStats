@@ -1,0 +1,37 @@
+import { describe, it, expect } from "vitest";
+import { buildRulesEmbed, buildWelcomeEmbed, RULES_MARKER } from "../src/content.js";
+
+describe("content", () => {
+  it("rules embed carries the idempotency marker in the footer", () => {
+    const data = buildRulesEmbed().toJSON();
+    expect(data.footer?.text).toContain(RULES_MARKER);
+  });
+
+  it("rules embed lists all seven rules and the escalation line", () => {
+    const text = JSON.stringify(buildRulesEmbed().toJSON());
+    for (const n of ["1.", "2.", "3.", "4.", "5.", "6.", "7."]) {
+      expect(text).toContain(n);
+    }
+    expect(text).toContain("Warning");
+    expect(text).toContain("Ban");
+  });
+
+  it("rules embed does not advertise the ✈️ self-service beta reaction (manual assignment)", () => {
+    const text = JSON.stringify(buildRulesEmbed().toJSON());
+    expect(text).not.toContain("✈️");
+    expect(text.toLowerCase()).not.toContain("beta-tester");
+  });
+
+  it("rules embed is English-only (no German copy)", () => {
+    const text = JSON.stringify(buildRulesEmbed().toJSON());
+    expect(text).toContain("Be respectful");
+    expect(text).not.toContain("Sei respektvoll");
+    expect(text).not.toContain("Regeln");
+  });
+
+  it("welcome embed names TravStats and links docs", () => {
+    const text = JSON.stringify(buildWelcomeEmbed().toJSON());
+    expect(text).toContain("TravStats");
+    expect(text).toContain("travstats.de/docs");
+  });
+});

@@ -28,7 +28,25 @@ describe("MapTooltip", () => {
     render(
       <MapTooltip flight={flight} screenX={300} screenY={200} onEdit={vi.fn()} onClose={vi.fn()} />
     );
-    expect(screen.getByText("MUC → JFK")).toBeInTheDocument();
+    // Endpoints render as separate spans now (each preceded by a flag).
+    expect(screen.getByText("MUC")).toBeInTheDocument();
+    expect(screen.getByText("JFK")).toBeInTheDocument();
+  });
+
+  it("renders endpoint flags when countries are provided", () => {
+    render(
+      <MapTooltip
+        flight={flight}
+        screenX={300}
+        screenY={200}
+        onEdit={vi.fn()}
+        onClose={vi.fn()}
+        depCountry="DE"
+        arrCountry="US"
+      />
+    );
+    const flags = document.querySelectorAll('img[src*="flagcdn.com"]');
+    expect(flags).toHaveLength(2);
   });
 
   it("renders airline and flight number", () => {

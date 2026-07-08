@@ -74,6 +74,11 @@ git branch -d fix/<slug>
 
 ### RC-first rule (every release, no exceptions)
 
+> **Full pipeline + staging:** see **`docs/RELEASE_WORKFLOW.md`**. Since
+> 2026-07-04 the RC lands on the **RC Server** (CT106, a prod-DATA mirror)
+> FIRST — cloned via `scripts/stage-rc-from-prod.sh` — and only then on prod.
+> "RC Server" is the renamed role of the former beta server (host unchanged).
+
 Every release — major, minor, patch, security fix, beta bump — starts
 as a **Release Candidate**:
 
@@ -103,6 +108,14 @@ Use the `deploy` skill. Runs fully automatically up to the RC deploy:
 5. Writes `backend/VERSION` + `CHANGELOG.md` and commits.
 6. Builds the RC Docker image, pushes to GHCR, deploys the RC tag to
    prod, health check and cleanup. Stops and waits for promotion.
+7. **Announce the RC in Discord** — after the RC is live, post to
+   `#beta-channel`:
+   ```bash
+   cd tools/discord-setup && npm run announce rc <RC_TAG>   # e.g. 2.3.0-rc.1
+   ```
+   Reads the matching `CHANGELOG.md` entry automatically (the `-rc.N`
+   suffix is stripped for the lookup). Needs `tools/discord-setup/.env`
+   (bot token + guild id) — see `tools/discord-setup/README.md`.
 
 ### `/release` — GitHub release (after promotion only)
 Use the `release` skill. Requires the final tags (`:X.Y.Z` / `:latest`
@@ -110,6 +123,11 @@ Use the `release` skill. Requires the final tags (`:X.Y.Z` / `:latest`
 skill refuses to run otherwise. Aggregates every changelog entry since
 the last GitHub release, creates a git tag, publishes a GitHub release
 with `--latest`. No new deploy — the code is already running.
+After the GitHub release is published, **announce it in Discord** — post
+to `#announcements`:
+```bash
+cd tools/discord-setup && npm run announce release <X.Y.Z>   # e.g. 2.3.0
+```
 
 ## Build Checks (MANDATORY before `/deploy`)
 
@@ -189,11 +207,19 @@ frontend/src/
   in `backend/src/shared/domains.ts` and its frontend mirror at
   `frontend/src/shared/domains.ts`. Shared code paths iterate
   `AVAILABLE_DOMAINS`, never `enabledDomains.includes('flight')`.
-- **Cruise stops** — each stop is either a port call (`portId` set,
-  `isAtSea = false`) or a sea day (`portId = null`, `isAtSea = true`).
-  Zod rejects the union where both are unset. The stops editor on the
-  frontend must renumber `dayNumber` as `index + 1` after add/remove/reorder
-  so numbering stays consecutive.
+- **Cruise stops (3-state invariant)** — each stop is exactly one of:
+  (1) **matched port** — `portId` set, `isAtSea = false`,
+  `unresolvedPortName = null`; (2) **sea day** — `isAtSea = true`,
+  `portId = null`, `unresolvedPortName = null`; (3) **unresolved port** —
+  `portId = null`, `isAtSea = false`, `unresolvedPortName` non-empty (an
+  imported port that couldn't be matched to the catalog; the name is
+  preserved, the stop stays a port call, the user resolves it later). Zod
+  (`schemas/cruise.ts`) rejects any other combination. An unresolved stop
+  counts as a port call (`totalPortCalls`, frontend `countUniquePorts`) but
+  is coordinate-less, so it's excluded from legs/distance/map. The stops
+  editor must renumber `dayNumber` as `index + 1` after add/remove/reorder,
+  and clear `unresolvedPortName` whenever a stop becomes a matched port or a
+  sea day.
 - **Dashboard is multi-domain** — `frontend/src/pages/DashboardPage.tsx` is a thin shell delegating to per-tab components under `frontend/src/components/Dashboard/tabs/`. Tab modes are domain-scoped via `frontend/src/types/dashboard.ts` (no more global `VisMode` union). URL carries tab + mode (`/dashboard/<tab>?mode=<mode>`); `localStorage` remembers the last mode per domain. `MapContainer3D` uses a private `MapMode = "routes" | "heatmap" | "trips" | "globe"` internally; retired modes `hexagon`, `contour`, `columns`, `trip-routes` are gone. Flight-only modes are opt-in via `showInternalCruises={false}` on FlightsTab.
 - **Cruise sea-routes** — `backend/src/services/schematicRouter.ts` runs
   the schematic pipeline (coarse 1° A* water path → Douglas-Peucker
@@ -308,7 +334,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **TravStats** (4569 symbols, 11686 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **all-view-colors** (4758 symbols, 12233 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -324,7 +350,7 @@ This project is indexed by GitNexus as **TravStats** (4569 symbols, 11686 relati
 
 1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
 2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
-3. `READ gitnexus://repo/TravStats/process/{processName}` — trace the full execution flow step by step
+3. `READ gitnexus://repo/all-view-colors/process/{processName}` — trace the full execution flow step by step
 4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
 
 ## When Refactoring
@@ -363,10 +389,10 @@ This project is indexed by GitNexus as **TravStats** (4569 symbols, 11686 relati
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/TravStats/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/TravStats/clusters` | All functional areas |
-| `gitnexus://repo/TravStats/processes` | All execution flows |
-| `gitnexus://repo/TravStats/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/all-view-colors/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/all-view-colors/clusters` | All functional areas |
+| `gitnexus://repo/all-view-colors/processes` | All execution flows |
+| `gitnexus://repo/all-view-colors/process/{name}` | Step-by-step execution trace |
 
 ## Self-Check Before Finishing
 

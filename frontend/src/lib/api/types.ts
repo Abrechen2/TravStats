@@ -345,6 +345,39 @@ export interface SummaryParams {
   compareYear?: number;
 }
 
+// ==================== Timeseries Types ====================
+
+export interface TimeseriesPoint {
+  period: string; // "YYYY-MM" | "YYYY"
+  count: number;
+  distanceKm: number;
+  durationMin: number;
+}
+
+export interface TimeseriesTotals {
+  count: number;
+  distanceKm: number;
+  durationMin: number;
+}
+
+export interface TimeseriesResponse {
+  domain: "flight" | "cruise";
+  granularity: "month" | "year";
+  window: { from: string; to: string };
+  series: TimeseriesPoint[];
+  current: TimeseriesTotals;
+  previous: TimeseriesTotals;
+}
+
+export interface TimeseriesParams {
+  domain?: "flight" | "cruise";
+  granularity?: "month" | "year";
+  window?: "rolling12m" | "year" | "all";
+  year?: number;
+  fromDate?: string;
+  toDate?: string;
+}
+
 // ==================== Airport Interface ====================
 
 export interface Airport {
