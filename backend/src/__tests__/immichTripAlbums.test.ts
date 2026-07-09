@@ -20,6 +20,7 @@ jest.mock("../db", () => ({
       delete: deleteLink,
     },
     tripPhoto: { findMany: findManyPhotos, updateMany: updateManyPhotos },
+    trip: { findUnique: jest.fn(), update: jest.fn() },
     adminSettings: { findFirst: jest.fn() },
   },
 }));
@@ -217,6 +218,10 @@ describe("POST /trips/:id/immich/albums", () => {
 describe("DELETE /trips/:id/immich/albums/:linkId", () => {
   beforeEach(() => {
     findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "import" });
+    const { prisma } = jest.requireMock("../db") as {
+      prisma: { trip: { findUnique: jest.Mock; update: jest.Mock } };
+    };
+    prisma.trip.findUnique.mockResolvedValue(null);
   });
 
   it("keeps the copies by default, severing the FK so the cascade cannot eat them", async () => {
@@ -257,6 +262,22 @@ describe("DELETE /trips/:id/immich/albums/:linkId", () => {
     const res = await request(makeApp()).delete("/api/v1/trips/trip-1/immich/albums/link-x");
     expect(res.status).toBe(404);
     expect(deleteLink).not.toHaveBeenCalled();
+  });
+
+  it("clears the trip cover when the unlinked album provided it", async () => {
+    const { prisma } = jest.requireMock("../db") as {
+      prisma: { trip: { findUnique: jest.Mock; update: jest.Mock } };
+    };
+    prisma.trip.findUnique.mockResolvedValue({
+      coverImageUrl: "/api/v1/trips/trip-1/immich/albums/link-1/assets/x/file?size=preview",
+    });
+
+    await request(makeApp()).delete("/api/v1/trips/trip-1/immich/albums/link-1");
+
+    expect(prisma.trip.update).toHaveBeenCalledWith({
+      where: { id: "trip-1" },
+      data: { coverImageUrl: null },
+    });
   });
 });
 

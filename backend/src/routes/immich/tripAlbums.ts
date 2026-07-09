@@ -248,6 +248,16 @@ router.delete(
         }
       }
 
+      // A live cover points at this link's proxy URL. Deleting the link would
+      // leave the trip card rendering a 404 image, so clear it first.
+      const trip = await prisma.trip.findUnique({
+        where: { id: tripId },
+        select: { coverImageUrl: true },
+      });
+      if (trip?.coverImageUrl?.includes(`/immich/albums/${link.id}/`)) {
+        await prisma.trip.update({ where: { id: tripId }, data: { coverImageUrl: null } });
+      }
+
       await prisma.tripImmichAlbum.delete({ where: { id: link.id } });
       invalidateAlbumAssets(userId, link.immichAlbumId);
 
