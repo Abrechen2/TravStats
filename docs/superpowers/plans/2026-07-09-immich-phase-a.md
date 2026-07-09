@@ -39,6 +39,22 @@ Fetched from `https://raw.githubusercontent.com/immich-app/immich/main/open-api/
 5. **Storage location is already correct.** `getTripPhotoDir()` resolves to `backend/uploads/trip-photos`, which the Docker entrypoint symlinks to `/app/data/uploads/...` (commit `0ed9e9cc`). Imported copies therefore land on the data volume and in backups — no change needed.
 6. **Phase A drops `searchByDateRange`.** It is only consumed by Phase B. YAGNI.
 
+## Execution order
+
+Tasks are **not** executed in heading order. `immichImport.ts` is a leaf module,
+so it is built before the routes that consume it — that way no task has to ship a
+stub with empty function bodies:
+
+```
+1 → 2 → 3 → 4 → 5 → 6 → 9 → 7 → 8 → 16 → 10 → 11 → 12 → 13 → 14 → 15
+                        ↑   ↑   ↑    ↑
+             import service │   │    └── routes exposing the service
+                    trip↔album routes │
+                          image proxy ┘
+```
+
+Task 16 lives in the file next to Task 9 (the service it exposes), not at the end.
+
 ## Global Constraints
 
 - TypeScript `strict: true`. **`any` is FORBIDDEN** — use `unknown` + type guards.
@@ -2355,7 +2371,7 @@ git commit -m "feat(immich): add connection tester and user/admin settings endpo
 - Test: `backend/src/__tests__/immichTripAlbums.test.ts`
 
 **Interfaces:**
-- Consumes: `resolveTrip` from `routes/trips`; `getImmichConnection`, `getImmichDefaultMode` (Task 4); `createImmichClient` (Task 3); `getCachedAlbumAssets`, `invalidateAlbumAssets` (Task 5); `linkAlbumsSchema`, `unlinkQuerySchema` (Task 2); `startAlbumImport` (Task 9 — imported lazily, see Step 5 note).
+- Consumes: `resolveTrip` from `routes/trips`; `getImmichConnection`, `getImmichDefaultMode` (Task 4); `createImmichClient` (Task 3); `getCachedAlbumAssets`, `invalidateAlbumAssets` (Task 5); `linkAlbumsSchema`, `unlinkQuerySchema` (Task 2); `startAlbumImport`, `deleteImportedPhotoFiles` (Task 9, already built).
 - Produces:
   - `GET /api/v1/trips/:id/immich/albums` → `{ albums: Array<ImmichAlbum & { linked: boolean; linkId: string | null }>, defaultMode: ImmichMode }`
   - `POST /api/v1/trips/:id/immich/albums` → `{ links: LinkedAlbumDto[] }` (201)
@@ -3032,20 +3048,14 @@ app.use('/api/v1', immichTripRoutes);
 Run: `cd backend && npx jest src/__tests__/immichTripAlbums.test.ts --forceExit`
 Expected: PASS — 14 tests.
 
-`immichImport.ts` is built in Task 9, but `tripAlbums.ts` imports it now and `tsc` will fail without it. Create the signature-only stub first — Task 9 replaces the bodies:
-
-```typescript
-// backend/src/services/immich/immichImport.ts — filled in by Task 9.
-export async function startAlbumImport(_userId: string, _linkId: string): Promise<void> {}
-export function deleteImportedPhotoFiles(_filenames: string[]): void {}
-```
+`startAlbumImport` and `deleteImportedPhotoFiles` already exist — Task 9 built them. Import them from `../../services/immich/immichImport`; do not create a stub.
 
 - [ ] **Step 7: Typecheck, lint, commit**
 
 ```bash
 cd backend && npx tsc --noEmit && npm run lint && cd ..
 git add backend/src/routes/immich/tripAlbums.ts backend/src/routes/trips.ts backend/src/index.ts \
-        backend/src/services/immich/immichImport.ts backend/src/__tests__/immichTripAlbums.test.ts
+        backend/src/__tests__/immichTripAlbums.test.ts
 git commit -m "feat(immich): link, unlink and list trip albums"
 ```
 
@@ -3422,19 +3432,23 @@ git commit -m "feat(immich): stream album images through an ownership-checked pr
 
 ---
 
-## Task 9: Import pipeline, re-sync and storage estimate
+## Task 9: Import pipeline service
+
+> **Execution order:** this task runs **before Task 7**. `immichImport.ts` has no
+> dependency on the route layer, so building the real service first means Task 7
+> can import it directly instead of a stub. The routes that expose this service
+> live in **Task 9R**, which runs after Tasks 7 and 8.
 
 Import mode downloads originals into the existing trip-photo directory (which the Docker entrypoint symlinks onto the data volume, so copies land in backups) and creates ordinary `TripPhoto` rows tagged with `immichAssetId`. Idempotency comes from the `(tripId, immichAssetId)` unique index, so re-sync only fetches what is missing.
 
 There is no job queue in this repo — only `node-cron` schedulers. We mirror the established `airportSeedingService` pattern: a DB status row, a `running` guard against concurrent runs, and periodic progress updates the UI polls.
 
 **Files:**
-- Rewrite: `backend/src/services/immich/immichImport.ts` (replacing the Task-7 stub)
-- Modify: `backend/src/routes/immich/tripAlbums.ts` (add resync / job / estimate routes)
+- Create: `backend/src/services/immich/immichImport.ts`
 - Test: `backend/src/__tests__/immichImport.test.ts`
 
 **Interfaces:**
-- Consumes: `createImmichClient` (Task 3); `getImmichConnection` (Task 4); `invalidateAlbumAssets` (Task 5); `getTripPhotoDir`, `deleteTripPhotoFile` from `middleware/upload`; `FILE_LIMITS` from `config/constants`.
+- Consumes: `createImmichClient` (Task 3); `getImmichConnection` (Task 4); `invalidateAlbumAssets` (Task 5); `getTripPhotoDir`, `deleteTripPhotoFile` from `middleware/upload`.
 - Produces:
   - `async function startAlbumImport(userId: string, linkId: string): Promise<void>` — fire-and-forget; never throws to the caller
   - `async function estimateAlbumImport(userId: string, albumId: string): Promise<{ assetCount: number; totalBytes: number }>`
@@ -3442,7 +3456,6 @@ There is no job queue in this repo — only `node-cron` schedulers. We mirror th
   - `function deleteImportedPhotoFiles(filenames: string[]): void`
   - `interface ImportJobDto { status: "pending" | "running" | "completed" | "failed"; totalAssets: number; processedAssets: number; failedAssets: number; error: string | null }`
   - `const IMPORT_ALLOWED_MIME_TYPES: readonly string[]`
-  - Routes: `POST /trips/:id/immich/albums/:linkId/resync` → `{ job: ImportJobDto }` (202); `GET /trips/:id/immich/albums/:linkId/import-job` → `{ job: ImportJobDto | null }`; `GET /trips/:id/immich/estimate?albumId=<id>` → `{ assetCount, totalBytes }`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -3918,7 +3931,39 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
 Run: `cd backend && npx jest src/__tests__/immichImport.test.ts --forceExit`
 Expected: PASS — 10 tests.
 
-- [ ] **Step 5: Add the resync / job / estimate routes**
+- [ ] **Step 5: Typecheck, lint, commit**
+
+`immichImport.ts` is a leaf module at this point — nothing imports it yet. Task 7 will.
+
+```bash
+cd backend && npx tsc --noEmit && npm run lint && cd ..
+git add backend/src/services/immich/immichImport.ts backend/src/__tests__/immichImport.test.ts
+git commit -m "feat(immich): add import pipeline with progress job and storage estimate"
+```
+
+---
+
+## Task 16: Import routes — resync, job status, storage estimate
+
+> **Execution order:** runs **after Task 7 and Task 8**, despite its number — it
+> appends to the router Task 7 created and uses the rate limiter Task 8 added.
+> It is numbered 16 (not "9R") so each task has a unique number the brief
+> extractor can match; it sits here in the file because it belongs beside the
+> import service it exposes.
+
+Expose the Task-9 service over HTTP: a storage estimate for the picker, a re-sync trigger, and a job-status endpoint the gallery polls.
+
+**Files:**
+- Modify: `backend/src/routes/immich/tripAlbums.ts` (append routes)
+
+**Interfaces:**
+- Consumes: `startAlbumImport`, `estimateAlbumImport`, `getImportJob` (Task 9); `resolveTrip`, `resolveLink`, `sendImmichFailure` (Task 7); `immichImportLimiter` (Task 8).
+- Produces:
+  - `GET /api/v1/trips/:id/immich/estimate?albumId=<id>` → `{ assetCount, totalBytes }`
+  - `POST /api/v1/trips/:id/immich/albums/:linkId/resync` → `{ job: ImportJobDto }` (202)
+  - `GET /api/v1/trips/:id/immich/albums/:linkId/import-job` → `{ job: ImportJobDto | null }`
+
+- [ ] **Step 1: Add the resync / job / estimate routes**
 
 Append to `backend/src/routes/immich/tripAlbums.ts`, before `export default router;`. Extend the existing import of `immichImport` to bring in `estimateAlbumImport` and `getImportJob`, and import `immichImportLimiter` from `../../middleware/rateLimit`.
 
@@ -3988,18 +4033,19 @@ router.get(
 );
 ```
 
-- [ ] **Step 6: Re-run the whole Immich backend suite**
+- [ ] **Step 2: Re-run the whole Immich backend suite**
+
+The route additions are covered by the existing `immichTripAlbums` and `immichImport` suites; this confirms nothing regressed.
 
 Run: `cd backend && npx jest src/__tests__/immich --forceExit`
 Expected: PASS — all Immich suites green.
 
-- [ ] **Step 7: Typecheck, lint, commit**
+- [ ] **Step 3: Typecheck, lint, commit**
 
 ```bash
 cd backend && npx tsc --noEmit && npm run lint && cd ..
-git add backend/src/services/immich/immichImport.ts backend/src/routes/immich/tripAlbums.ts \
-        backend/src/__tests__/immichImport.test.ts
-git commit -m "feat(immich): add import pipeline, re-sync and storage estimate"
+git add backend/src/routes/immich/tripAlbums.ts
+git commit -m "feat(immich): expose re-sync, import-job status and storage estimate"
 ```
 
 ---
