@@ -1,5 +1,6 @@
 import type { PickingInfo } from "@deck.gl/core";
 import { escapeHtml } from "../../lib/escapeHtml";
+import { flagImgHtml, countryName } from "../../lib/countryFlag";
 
 // Marker layer ids that should surface a hover tooltip with the rich
 // content (short label + full name + visit count + last visit date).
@@ -26,7 +27,10 @@ const PORT_LAYER_IDS = new Set<string>([
 
 interface AirportDatum {
   readonly iata?: string;
+  readonly icao?: string;
   readonly name?: string;
+  readonly country?: string | null;
+  readonly city?: string | null;
   /** Visits / flight count touching this airport. */
   readonly count?: number;
   /** ISO date of the most recent flight touching this airport. */
@@ -120,11 +124,24 @@ function renderAirportHtml(d: AirportDatum, heading: string, t: TFn, locale: str
   const name = d.name && d.name !== heading ? d.name : null;
   const count = typeof d.count === "number" && d.count > 0 ? d.count : null;
   const lastVisit = d.lastVisit ?? null;
+  const icaoPill = d.icao
+    ? `<span style="font-size:10px;font-family:monospace;color:rgba(241,245,249,0.5);background:rgba(255,255,255,0.06);border-radius:4px;padding:1px 5px;">${escapeHtml(d.icao)}</span>`
+    : "";
+  const place = [d.city, countryName(d.country, locale)].filter(Boolean).join(", ");
 
   const lines: string[] = [];
-  lines.push(`<div style="font-weight:600;">${escapeHtml(heading)}</div>`);
+  lines.push(
+    `<div style="display:flex;align-items:center;gap:8px;font-weight:600;">${flagImgHtml(d.country, 16)}<span>${escapeHtml(heading)}</span>${icaoPill}</div>`
+  );
   if (name) {
-    lines.push(`<div style="opacity:0.85;font-size:11px;">${escapeHtml(name)}</div>`);
+    lines.push(
+      `<div style="opacity:0.85;font-size:11px;margin-top:2px;">${escapeHtml(name)}</div>`
+    );
+  }
+  if (place) {
+    lines.push(
+      `<div style="opacity:0.62;font-size:10.5px;margin-top:2px;">${escapeHtml(place)}</div>`
+    );
   }
   if (count !== null) {
     lines.push(
