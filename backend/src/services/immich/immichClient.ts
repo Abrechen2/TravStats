@@ -12,6 +12,7 @@
  *    original has its own endpoint.
  */
 import axios, { AxiosRequestConfig } from "axios";
+import logger from "../../utils/logger";
 import {
   ImmichAlbum,
   ImmichAsset,
@@ -83,17 +84,31 @@ function toImmichError(error: unknown, context: string): ImmichError {
     return new ImmichError("protocol", `Immich returned ${status} for ${context}`, status);
   }
 
+  // Not an axios error at all — something genuinely unexpected (a programming
+  // error, a thrown non-Error value, ...). The ImmichError we return keeps the
+  // taxonomy the routes/UI depend on, but the original error and its stack
+  // would otherwise vanish entirely, so log it here to keep the diagnostic
+  // trail.
+  logger.error({
+    message: "immich_client_unexpected_error",
+    error,
+    context: { context },
+  });
+
   return new ImmichError("protocol", `Unexpected Immich failure (${context})`);
 }
 
 function mapAsset(raw: unknown): ImmichAsset | null {
   if (!isRecord(raw) || typeof raw.id !== "string") return null;
+  // Immich also has non-photo/video asset kinds (e.g. AUDIO). Coercing an
+  // unexpected type into IMAGE would route it into the photo pipeline; drop
+  // it instead — the caller already filters out `null`.
+  if (raw.type !== "IMAGE" && raw.type !== "VIDEO") return null;
   const exif = isRecord(raw.exifInfo) ? raw.exifInfo : undefined;
-  const type = raw.type === "VIDEO" ? "VIDEO" : "IMAGE";
 
   return {
     id: raw.id,
-    type,
+    type: raw.type,
     fileCreatedAt: asString(raw.fileCreatedAt, new Date(0).toISOString()),
     originalFileName: asString(raw.originalFileName, `${raw.id}.bin`),
     mimeType: asString(raw.originalMimeType, "application/octet-stream"),
@@ -149,17 +164,26 @@ export function createImmichClient(conn: ImmichConnection): ImmichClient {
       if (!Array.isArray(data)) {
         throw new ImmichError("protocol", "Immich returned an unexpected album payload");
       }
-      return data.filter(isRecord).map((raw) => ({
-        id: asString(raw.id, ""),
-        albumName: asString(raw.albumName, ""),
-        assetCount: asNumberOrNull(raw.assetCount) ?? 0,
-        thumbnailAssetId:
-          typeof raw.albumThumbnailAssetId === "string" ? raw.albumThumbnailAssetId : null,
-      }));
+      // A missing/non-string id would otherwise collide as `{ id: "" }` — drop
+      // it instead, consistent with mapAsset's handling of malformed assets.
+      return data
+        .filter(isRecord)
+        .filter(
+          (raw): raw is Record<string, unknown> & { id: string } =>
+            typeof raw.id === "string" && raw.id.length > 0,
+        )
+        .map((raw) => ({
+          id: raw.id,
+          albumName: asString(raw.albumName, ""),
+          assetCount: asNumberOrNull(raw.assetCount) ?? 0,
+          thumbnailAssetId:
+            typeof raw.albumThumbnailAssetId === "string" ? raw.albumThumbnailAssetId : null,
+        }));
     },
 
     async listAlbumAssets(albumId: string): Promise<ImmichAsset[]> {
       const collected: ImmichAsset[] = [];
+      let truncated = false;
 
       for (let page = 1; page <= MAX_PAGES; page += 1) {
         let data: unknown;
@@ -184,11 +208,32 @@ export function createImmichClient(conn: ImmichConnection): ImmichClient {
         }
 
         if (typeof assets.nextPage !== "string") break;
+        // Immich still reports more pages, but we've hit the hard cap — the
+        // gallery this returns is a silent partial unless we say so here.
+        if (page === MAX_PAGES) truncated = true;
+      }
+
+      if (truncated) {
+        logger.warn({
+          message: "immich_album_assets_truncated",
+          context: { albumId, maxPages: MAX_PAGES, collectedCount: collected.length },
+        });
       }
 
       return collected;
     },
 
+    /**
+     * Returns a live upstream stream. The caller owns it: attach an `error`
+     * listener or pipe it through `stream/promises` `pipeline()` — adding a
+     * listener here would swallow errors the caller needs to see (or react to
+     * with e.g. `res.destroy()`).
+     *
+     * `STREAM_TIMEOUT_MS` only bounds axios' connect/header phase; once the
+     * response starts streaming, axios enforces no timeout on the body
+     * transfer for `responseType: "stream"` — the name promises more than it
+     * delivers here.
+     */
     async fetchAssetStream(assetId: string, size: ImmichAssetSize): Promise<ImmichAssetStream> {
       const suffix =
         size === "original"
