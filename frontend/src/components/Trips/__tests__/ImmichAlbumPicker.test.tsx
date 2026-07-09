@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // vi.hoisted lets these vi.fn()s survive vi.mock factory hoisting and stay
@@ -96,6 +96,58 @@ describe("ImmichAlbumPicker", () => {
 
     await waitFor(() => expect(estimateImport).toHaveBeenCalledWith("trip-1", "a1"));
     await waitFor(() => expect(screen.getByText("albums.estimate")).toBeInTheDocument());
+  });
+
+  it("fetches and shows a storage estimate when the user's default mode is import", async () => {
+    listAlbums.mockResolvedValue({ albums: ALBUMS, defaultMode: "import" });
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("checkbox", { name: /Rome/ }));
+
+    await waitFor(() => expect(estimateImport).toHaveBeenCalledTimes(1));
+    expect(estimateImport).toHaveBeenCalledWith("trip-1", "a1");
+    await waitFor(() => expect(screen.getByText("albums.estimate")).toBeInTheDocument());
+  });
+
+  it("issues no estimate request when the user's default mode is link", async () => {
+    renderPicker(); // beforeEach sets defaultMode: "link"
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("checkbox", { name: /Rome/ }));
+
+    expect(estimateImport).not.toHaveBeenCalled();
+  });
+
+  it("does not resurrect a deselected album when its in-flight estimate resolves", async () => {
+    listAlbums.mockResolvedValue({ albums: ALBUMS, defaultMode: "import" });
+    let resolveEstimate: (value: { assetCount: number; totalBytes: number }) => void = () => {};
+    estimateImport.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveEstimate = resolve;
+        })
+    );
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("checkbox", { name: /Rome/ }));
+    await waitFor(() => expect(estimateImport).toHaveBeenCalledTimes(1));
+
+    // Deselect before the in-flight estimate resolves.
+    await user.click(screen.getByRole("checkbox", { name: /Rome/ }));
+    expect(screen.getByRole("checkbox", { name: /Rome/ })).not.toBeChecked();
+
+    await act(async () => {
+      resolveEstimate({ assetCount: 12, totalBytes: 25_000_000 });
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole("checkbox", { name: /Rome/ })).not.toBeChecked();
+    expect(screen.queryByText("albums.estimate")).not.toBeInTheDocument();
   });
 
   it("does not link anything when nothing is selected", async () => {

@@ -57,23 +57,12 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
     };
   }, [tripId]);
 
-  const toggle = (albumId: string): void => {
-    setSelected((prev) => {
-      if (prev[albumId]) {
-        const { [albumId]: _removed, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [albumId]: { mode: defaultMode, estimateBytes: null } };
-    });
-  };
-
-  const setMode = async (albumId: string, mode: ImmichMode): Promise<void> => {
-    setSelected((prev) =>
-      prev[albumId] ? { ...prev, [albumId]: { mode, estimateBytes: null } } : prev
-    );
+  // Only "copy" costs disk, so only "copy" pays for an estimate round-trip —
+  // whether the album landed in import mode via the user's configured
+  // defaultMode or an explicit mode-button click.
+  const fetchEstimateIfImport = async (albumId: string, mode: ImmichMode): Promise<void> => {
     if (mode !== "import") return;
 
-    // Only "copy" costs disk, so only "copy" pays for an estimate round-trip.
     const estimate = await immichApi.estimateImport(tripId, albumId);
     setSelected((prev) =>
       // The album may have been deselected (or switched back to link) while
@@ -83,6 +72,32 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
         ? { ...prev, [albumId]: { mode: "import", estimateBytes: estimate.totalBytes } }
         : prev
     );
+  };
+
+  // Single code path for putting an album into a given mode: write the
+  // selection, then lazily fetch the estimate if that mode is "import".
+  const selectAlbum = (albumId: string, mode: ImmichMode): void => {
+    setSelected((prev) => ({ ...prev, [albumId]: { mode, estimateBytes: null } }));
+    void fetchEstimateIfImport(albumId, mode);
+  };
+
+  const toggle = (albumId: string): void => {
+    const album = albums.find((a) => a.id === albumId);
+    if (album?.linked) return; // an already-linked album can never be selected
+
+    if (selected[albumId]) {
+      setSelected((prev) => {
+        const { [albumId]: _removed, ...rest } = prev;
+        return rest;
+      });
+      return;
+    }
+    selectAlbum(albumId, defaultMode);
+  };
+
+  const setMode = (albumId: string, mode: ImmichMode): void => {
+    if (!selected[albumId]) return;
+    selectAlbum(albumId, mode);
   };
 
   const handleConfirm = async (): Promise<void> => {
@@ -147,7 +162,7 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
                         className={`rounded px-2 py-0.5 text-xs ${
                           selection.mode === mode ? "bg-sky-600" : "border border-slate-600"
                         }`}
-                        onClick={() => void setMode(album.id, mode)}
+                        onClick={() => setMode(album.id, mode)}
                       >
                         {mode === "link" ? t("modeLink") : t("modeImport")}
                       </button>
@@ -165,7 +180,12 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
         </ul>
 
         <footer className="mt-4 flex justify-end gap-2">
-          <button type="button" className="px-3 py-1.5 text-sm" onClick={onClose}>
+          <button
+            type="button"
+            disabled={linking}
+            className="px-3 py-1.5 text-sm disabled:opacity-40"
+            onClick={onClose}
+          >
             {t("albums.cancel")}
           </button>
           <button
