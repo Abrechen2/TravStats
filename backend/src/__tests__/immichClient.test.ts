@@ -9,8 +9,16 @@ import axios from "axios";
 jest.mock("axios");
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
+jest.mock("../utils/logger", () => ({
+  __esModule: true,
+  default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+}));
+
 import { createImmichClient } from "../services/immich/immichClient";
 import { ImmichError, ImmichConnection } from "../services/immich/types";
+import logger from "../utils/logger";
+
+const mockedLogger = logger as jest.Mocked<typeof logger>;
 
 const CONN: ImmichConnection = {
   baseUrl: "https://immich.lan",
@@ -46,6 +54,21 @@ describe("getServerVersion", () => {
     await expect(createImmichClient(CONN).getServerVersion()).rejects.toMatchObject({
       kind: "protocol",
     });
+  });
+
+  it("logs the original error when a non-axios failure is thrown", async () => {
+    const original = new Error("socket hang up, no idea why");
+    mockedAxios.get.mockRejectedValueOnce(original);
+
+    await expect(createImmichClient(CONN).getServerVersion()).rejects.toMatchObject({
+      kind: "protocol",
+    });
+    expect(mockedLogger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "immich_client_unexpected_error",
+        error: original,
+      }),
+    );
   });
 });
 
@@ -95,6 +118,19 @@ describe("listAlbums", () => {
   it("rejects a non-array body as kind=protocol", async () => {
     mockedAxios.get.mockResolvedValueOnce({ data: { albums: [] } });
     await expect(createImmichClient(CONN).listAlbums()).rejects.toMatchObject({ kind: "protocol" });
+  });
+
+  it("drops an album with a missing or non-string id (consistent with mapAsset)", async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: [
+        { id: "a1", albumName: "Rome", assetCount: 1, albumThumbnailAssetId: null },
+        { albumName: "NoId", assetCount: 2 },
+        { id: 123, albumName: "NumericId", assetCount: 3 },
+        { id: "", albumName: "EmptyId", assetCount: 4 },
+      ],
+    });
+    const albums = await createImmichClient(CONN).listAlbums();
+    expect(albums.map((a) => a.id)).toEqual(["a1"]);
   });
 });
 
@@ -165,6 +201,45 @@ describe("listAlbumAssets", () => {
     const assets = await createImmichClient(CONN).listAlbumAssets("album-1");
     expect(mockedAxios.post).toHaveBeenCalledTimes(50);
     expect(assets).toHaveLength(50);
+  });
+
+  it("logs a warning when MAX_PAGES truncates a large album", async () => {
+    mockedAxios.post.mockResolvedValue({
+      data: { assets: { items: [asset("x")], nextPage: "99" } },
+    });
+    await createImmichClient(CONN).listAlbumAssets("album-1");
+    expect(mockedLogger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "immich_album_assets_truncated",
+        context: expect.objectContaining({
+          albumId: "album-1",
+          maxPages: 50,
+          collectedCount: 50,
+        }),
+      }),
+    );
+  });
+
+  it("does not log a truncation warning for a normal 2-page album", async () => {
+    mockedAxios.post
+      .mockResolvedValueOnce({ data: { assets: { items: [asset("p1")], nextPage: "2" } } })
+      .mockResolvedValueOnce({ data: { assets: { items: [asset("p2")], nextPage: null } } });
+
+    await createImmichClient(CONN).listAlbumAssets("album-1");
+    expect(mockedLogger.warn).not.toHaveBeenCalled();
+  });
+
+  it("drops an asset with an unexpected type instead of coercing it to IMAGE", async () => {
+    mockedAxios.post.mockResolvedValueOnce({
+      data: {
+        assets: {
+          items: [asset("p1"), { ...asset("p2"), type: "AUDIO" }],
+          nextPage: null,
+        },
+      },
+    });
+    const assets = await createImmichClient(CONN).listAlbumAssets("album-1");
+    expect(assets.map((a) => a.id)).toEqual(["p1"]);
   });
 
   it("maps 404 to kind=notFound (deleted album)", async () => {
