@@ -43,6 +43,8 @@ interface PortDatum {
   /** UN/LOCODE for globe-port-dots — the globe carries it as `iata`
    *  while the flat map carries it as `shortLabel`. */
   readonly iata?: string;
+  readonly country?: string | null;
+  readonly city?: string | null;
   /** Visits / cruise-stop count at this port. */
   readonly visits?: number;
   /** Globe carries the same number as `size` instead of `visits`. */
@@ -169,11 +171,22 @@ function renderPortHtml(d: PortDatum, heading: string, t: TFn, locale: string): 
         : null;
   const visits = d.visits ?? d.size ?? null;
   const lastCall = d.lastVisit ?? null;
+  const place = [d.city, countryName(d.country, locale)].filter(Boolean).join(", ");
+  const flagOrAnchor = d.country ? flagImgHtml(d.country, 16) : "⚓";
 
   const lines: string[] = [];
-  lines.push(`<div style="font-weight:600;">⚓ ${escapeHtml(heading)}</div>`);
+  lines.push(
+    `<div style="display:flex;align-items:center;gap:8px;font-weight:600;">${flagOrAnchor}<span>${escapeHtml(heading)}</span></div>`
+  );
   if (sub) {
-    lines.push(`<div style="opacity:0.85;font-size:11px;">${escapeHtml(sub)}</div>`);
+    lines.push(
+      `<div style="opacity:0.85;font-size:11px;margin-top:2px;">${escapeHtml(sub)}</div>`
+    );
+  }
+  if (place) {
+    lines.push(
+      `<div style="opacity:0.62;font-size:10.5px;margin-top:2px;">${escapeHtml(place)}</div>`
+    );
   }
   if (visits !== null && visits > 0) {
     lines.push(
