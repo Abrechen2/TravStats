@@ -45,6 +45,17 @@ describe("getCachedAlbumAssets", () => {
     expect(load).toHaveBeenCalledTimes(2);
   });
 
+  it("treats an entry exactly at the TTL boundary as stale", async () => {
+    const load = jest.fn(async () => [asset("p1")]);
+    await getCachedAlbumAssets("u1", "a1", load);
+
+    // Exact boundary, not TTL+1 — catches a `>` -> `>=` regression in the
+    // expiry check that the other TTL test would miss.
+    jest.advanceTimersByTime(ASSET_CACHE_TTL_MS);
+    await getCachedAlbumAssets("u1", "a1", load);
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
   it("scopes entries per user and per album", async () => {
     const load = jest.fn(async () => [asset("p1")]);
     await getCachedAlbumAssets("u1", "a1", load);
@@ -90,5 +101,35 @@ describe("invalidateAlbumAssets", () => {
     invalidateAlbumAssets("u1", "a1");
     await getCachedAlbumAssets("u1", "a1", load);
     expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not let a load already in flight repopulate the cache after invalidation", async () => {
+    let resolveLoad: (value: ImmichAsset[]) => void = () => {};
+    const staleLoad = jest.fn(
+      () =>
+        new Promise<ImmichAsset[]>((resolve) => {
+          resolveLoad = resolve;
+        }),
+    );
+
+    // Caller X starts a load; it is registered in-flight but not yet
+    // resolved.
+    const inFlightCall = getCachedAlbumAssets("u1", "a1", staleLoad);
+
+    // Caller Y invalidates while X's load is still pending.
+    invalidateAlbumAssets("u1", "a1");
+
+    // X's load now resolves with data fetched before the invalidation.
+    resolveLoad([asset("stale")]);
+
+    // X still receives its own result — the invalidation must not affect
+    // the caller who already asked, only the cache write.
+    await expect(inFlightCall).resolves.toEqual([asset("stale")]);
+
+    // The next caller must NOT see the stale value served from cache; it
+    // must trigger a brand-new upstream load.
+    const freshLoad = jest.fn(async () => [asset("fresh")]);
+    await expect(getCachedAlbumAssets("u1", "a1", freshLoad)).resolves.toEqual([asset("fresh")]);
+    expect(freshLoad).toHaveBeenCalledTimes(1);
   });
 });
