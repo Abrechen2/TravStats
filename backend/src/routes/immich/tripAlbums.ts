@@ -1,0 +1,320 @@
+/**
+ * Trip <-> Immich album linking.
+ *
+ * Lives outside `routes/trips.ts` because that file is already at the 800-line
+ * hard maximum. Ownership is enforced by the same `resolveTrip` guard every
+ * other trip sub-route uses, plus a link-belongs-to-trip check.
+ *
+ * Immich failures never surface as a 500: they become a 502 with a
+ * machine-readable `error` kind so the gallery can render a degraded panel
+ * instead of crashing.
+ */
+import { Router, Response, NextFunction } from "express";
+import { prisma } from "../../db";
+import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
+import { AppError } from "../../middleware/errorHandler";
+import { resolveTrip } from "../trips";
+import { linkAlbumsSchema, unlinkQuerySchema } from "../../schemas/immich";
+import { createImmichClient } from "../../services/immich/immichClient";
+import { getImmichConnection, getImmichDefaultMode } from "../../services/immich/immichResolver";
+import { getCachedAlbumAssets, invalidateAlbumAssets } from "../../services/immich/immichAssetCache";
+import { deleteImportedPhotoFiles, startAlbumImport } from "../../services/immich/immichImport";
+import { ImmichAsset, ImmichConnection, ImmichError, ImmichMode } from "../../services/immich/types";
+import logger from "../../utils/logger";
+
+const router = Router();
+
+export interface LinkedAlbumDto {
+  id: string;
+  immichAlbumId: string;
+  albumName: string;
+  assetCount: number;
+  thumbnailAssetId: string | null;
+  mode: ImmichMode;
+  sortIdx: number;
+  lastSyncedAt: string | null;
+}
+
+export interface GalleryAssetDto {
+  id: string;
+  url: string;
+  previewUrl: string;
+  takenAt: string | null;
+  lat: number | null;
+  lon: number | null;
+}
+
+/** Turn any Immich failure into a 502 + kind. Anything else bubbles as-is. */
+function sendImmichFailure(res: Response, error: unknown, next: NextFunction): void {
+  if (error instanceof ImmichError) {
+    logger.warn({ message: "immich_upstream_failure", context: { kind: error.kind } });
+    res.status(502).json({ error: error.kind, message: error.message });
+    return;
+  }
+  next(error);
+}
+
+/** Resolve the connection or answer 409 — "you have not configured Immich". */
+async function requireConnection(userId: string, res: Response): Promise<ImmichConnection | null> {
+  const conn = await getImmichConnection(userId);
+  if (!conn) {
+    res.status(409).json({ error: "notConfigured", message: "No Immich connection configured" });
+    return null;
+  }
+  return conn;
+}
+
+/** The link must exist AND belong to the trip the caller already proved they own. */
+async function resolveLink(
+  tripId: string,
+  linkId: string,
+): Promise<{ id: string; immichAlbumId: string; mode: string }> {
+  const link = await prisma.tripImmichAlbum.findFirst({
+    where: { id: linkId, tripId },
+    select: { id: true, immichAlbumId: true, mode: true },
+  });
+  if (!link) throw new AppError("Linked album not found", 404);
+  return link;
+}
+
+const toLinkDto = (row: {
+  id: string;
+  immichAlbumId: string;
+  albumName: string;
+  assetCount: number;
+  thumbnailAssetId: string | null;
+  mode: string;
+  sortIdx: number;
+  lastSyncedAt: Date | null;
+}): LinkedAlbumDto => ({
+  id: row.id,
+  immichAlbumId: row.immichAlbumId,
+  albumName: row.albumName,
+  assetCount: row.assetCount,
+  thumbnailAssetId: row.thumbnailAssetId,
+  mode: row.mode === "import" ? "import" : "link",
+  sortIdx: row.sortIdx,
+  lastSyncedAt: row.lastSyncedAt?.toISOString() ?? null,
+});
+
+const proxyUrl = (tripId: string, linkId: string, assetId: string, size: string): string =>
+  `/api/v1/trips/${tripId}/immich/albums/${linkId}/assets/${assetId}/file?size=${size}`;
+
+/* ─── Album picker ─── */
+
+router.get(
+  "/trips/:id/immich/albums",
+  authenticate,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      await resolveTrip(userId, req.params.id);
+
+      const conn = await requireConnection(userId, res);
+      if (!conn) return;
+
+      const albums = await createImmichClient(conn).listAlbums();
+      const links = await prisma.tripImmichAlbum.findMany({
+        where: { tripId: req.params.id },
+        select: { id: true, immichAlbumId: true },
+      });
+      const linkByAlbum = new Map(links.map((l) => [l.immichAlbumId, l.id]));
+
+      res.json({
+        albums: albums.map((album) => ({
+          ...album,
+          linked: linkByAlbum.has(album.id),
+          linkId: linkByAlbum.get(album.id) ?? null,
+        })),
+        defaultMode: await getImmichDefaultMode(userId),
+      });
+    } catch (error) {
+      sendImmichFailure(res, error, next);
+    }
+  },
+);
+
+/* ─── Link ─── */
+
+router.post(
+  "/trips/:id/immich/albums",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const tripId = req.params.id;
+      await resolveTrip(userId, tripId);
+
+      const { albums: requested } = linkAlbumsSchema.parse(req.body);
+      const conn = await requireConnection(userId, res);
+      if (!conn) return;
+
+      // Only albums the user's own Immich actually exposes may be linked —
+      // this is the ownership boundary for every later proxy request.
+      const available = await createImmichClient(conn).listAlbums();
+      const byId = new Map(available.map((a) => [a.id, a]));
+      const unknown = requested.filter((r) => !byId.has(r.immichAlbumId));
+      if (unknown.length > 0) {
+        throw new AppError(`Unknown Immich album: ${unknown[0].immichAlbumId}`, 400);
+      }
+
+      const existing = await prisma.tripImmichAlbum.findMany({
+        where: { tripId },
+        select: { sortIdx: true },
+        orderBy: { sortIdx: "desc" },
+        take: 1,
+      });
+      let nextIdx = (existing[0]?.sortIdx ?? -1) + 1;
+
+      await prisma.tripImmichAlbum.createMany({
+        data: requested.map((r) => {
+          const album = byId.get(r.immichAlbumId)!;
+          return {
+            tripId,
+            immichAlbumId: album.id,
+            albumName: album.albumName,
+            assetCount: album.assetCount,
+            thumbnailAssetId: album.thumbnailAssetId,
+            mode: r.mode,
+            sortIdx: nextIdx++,
+          };
+        }),
+        skipDuplicates: true,
+      });
+
+      const links = await prisma.tripImmichAlbum.findMany({
+        where: { tripId },
+        orderBy: { sortIdx: "asc" },
+      });
+
+      // Import mode downloads in the background; the UI polls the job.
+      for (const link of links) {
+        const wasRequested = requested.some((r) => r.immichAlbumId === link.immichAlbumId);
+        if (wasRequested && link.mode === "import") {
+          void startAlbumImport(userId, link.id);
+        }
+      }
+
+      logger.info({
+        message: "immich_albums_linked",
+        context: { userId, tripId, count: requested.length },
+      });
+
+      res.status(201).json({ links: links.map(toLinkDto) });
+    } catch (error) {
+      sendImmichFailure(res, error, next);
+    }
+  },
+);
+
+/* ─── Unlink ─── */
+
+router.delete(
+  "/trips/:id/immich/albums/:linkId",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const tripId = req.params.id;
+      await resolveTrip(userId, tripId);
+
+      const link = await resolveLink(tripId, req.params.linkId);
+      const { deleteCopies } = unlinkQuerySchema.parse(req.query);
+
+      if (link.mode === "import") {
+        if (deleteCopies) {
+          // Remove the bytes first: the cascade would drop the rows and orphan
+          // the files, and an orphaned file is invisible to every later cleanup.
+          const photos = await prisma.tripPhoto.findMany({
+            where: { immichAlbumLinkId: link.id },
+            select: { filename: true },
+          });
+          deleteImportedPhotoFiles(photos.map((p) => p.filename));
+        } else {
+          // Keep the copies as ordinary uploads by severing the FK, otherwise
+          // `onDelete: Cascade` would delete them with the link row.
+          await prisma.tripPhoto.updateMany({
+            where: { immichAlbumLinkId: link.id },
+            data: { immichAlbumLinkId: null },
+          });
+        }
+      }
+
+      await prisma.tripImmichAlbum.delete({ where: { id: link.id } });
+      invalidateAlbumAssets(userId, link.immichAlbumId);
+
+      logger.info({
+        message: "immich_album_unlinked",
+        context: { userId, tripId, linkId: link.id, deleteCopies },
+      });
+
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/* ─── Assets of one linked album ─── */
+
+router.get(
+  "/trips/:id/immich/albums/:linkId/assets",
+  authenticate,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const tripId = req.params.id;
+      await resolveTrip(userId, tripId);
+
+      const link = await resolveLink(tripId, req.params.linkId);
+
+      if (link.mode === "import") {
+        const photos = await prisma.tripPhoto.findMany({
+          where: { immichAlbumLinkId: link.id },
+          orderBy: { sortIdx: "asc" },
+          select: { id: true, tripId: true, takenAt: true, lat: true, lon: true },
+        });
+        const fileUrl = (photoId: string): string =>
+          `/api/v1/trips/${tripId}/photos/${photoId}/file`;
+
+        res.json({
+          assets: photos.map((p) => ({
+            id: p.id,
+            url: fileUrl(p.id),
+            previewUrl: fileUrl(p.id),
+            takenAt: p.takenAt?.toISOString() ?? null,
+            lat: p.lat,
+            lon: p.lon,
+          })),
+        });
+        return;
+      }
+
+      const conn = await requireConnection(userId, res);
+      if (!conn) return;
+
+      const assets = await getCachedAlbumAssets(userId, link.immichAlbumId, () =>
+        createImmichClient(conn).listAlbumAssets(link.immichAlbumId),
+      );
+
+      res.json({
+        assets: assets
+          .filter((a: ImmichAsset) => a.type === "IMAGE")
+          .map((a: ImmichAsset) => ({
+            id: a.id,
+            url: proxyUrl(tripId, link.id, a.id, "thumbnail"),
+            previewUrl: proxyUrl(tripId, link.id, a.id, "preview"),
+            takenAt: a.fileCreatedAt,
+            lat: a.lat,
+            lon: a.lon,
+          })),
+      });
+    } catch (error) {
+      sendImmichFailure(res, error, next);
+    }
+  },
+);
+
+export default router;
