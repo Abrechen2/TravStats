@@ -230,6 +230,7 @@ export function Slider({
       </div>
       <input
         type="range"
+        aria-label={label}
         min={min}
         max={max}
         step={step}
@@ -246,28 +247,6 @@ export function Slider({
 /** The map domains that get their own appearance section. Extend when a
  *  new domain (hotels, …) grows an on-map route/marker representation. */
 export type AppearanceDomain = "flight" | "cruise";
-
-// ── Appearance presets ───────────────────────────────────────────────
-// Route width + marker size are chosen from labelled presets (Dünn/Normal/
-// Dick, Aus/S/M/L) rather than raw sliders — quicker to hit a good look,
-// and "Aus" cleanly hides a domain's markers. The maps below translate a
-// preset to the numeric scale the deck.gl layers already consume.
-export type RouteWidth = "thin" | "normal" | "thick";
-export type MarkerSize = "off" | "s" | "m" | "l";
-
-export const ROUTE_WIDTH_SCALE: Record<RouteWidth, number> = {
-  thin: 0.6,
-  normal: 1,
-  thick: 1.6,
-};
-export const MARKER_SIZE_SCALE: Record<MarkerSize, number> = {
-  off: 0, // radius × 0 → hidden
-  s: 0.7,
-  m: 1,
-  l: 1.45,
-};
-export const ROUTE_WIDTHS: readonly RouteWidth[] = ["thin", "normal", "thick"];
-export const MARKER_SIZES: readonly MarkerSize[] = ["off", "s", "m", "l"];
 
 /**
  * One domain's appearance state + setters, shared verbatim by the globe
