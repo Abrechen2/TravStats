@@ -55,3 +55,37 @@ describe("createMarkerTooltip — airports", () => {
     expect(getTooltip(makeInfo("some-other-layer", {}))).toBeNull();
   });
 });
+
+describe("createMarkerTooltip — ports", () => {
+  const getTooltip = createMarkerTooltip(t, "de");
+
+  it("includes a flag and place line when country/city are present", () => {
+    const result = getTooltip(
+      makeInfo("cruise-ports", {
+        name: "Civitavecchia",
+        shortLabel: "Civitavecchia",
+        country: "IT",
+        city: "Civitavecchia",
+        visits: 4,
+        lastVisit: "2024-05-01",
+      })
+    );
+    expect(result).not.toBeNull();
+    expect(result!.html).toContain("flagcdn.com/it.svg");
+    expect(result!.html).toContain("Civitavecchia, Italien");
+    expect(result!.html).toContain("4");
+  });
+
+  it("falls back to the anchor glyph when country is absent", () => {
+    const result = getTooltip(
+      makeInfo("cruise-ports-labels", {
+        name: "Unnamed Port",
+        shortLabel: "Unnamed Port",
+        visits: 1,
+      })
+    );
+    expect(result).not.toBeNull();
+    expect(result!.html).not.toContain("flagcdn.com");
+    expect(result!.html).toContain("⚓");
+  });
+});
