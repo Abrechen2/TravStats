@@ -95,7 +95,7 @@ describe("immichApi trip albums", () => {
 describe("immichFailureKind", () => {
   it("extracts the kind from a 409 notConfigured", () => {
     expect(immichFailureKind({ response: { status: 409, data: { error: "notConfigured" } } })).toBe(
-      "notConfigured",
+      "notConfigured"
     );
   });
 
