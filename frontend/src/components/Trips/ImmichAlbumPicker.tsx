@@ -1,0 +1,183 @@
+import { useEffect, useState } from "react";
+import { useTranslation } from "../../hooks/useTranslation";
+import { immichApi, immichFailureKind } from "../../lib/api/immich";
+import type { ImmichAlbumSummary, ImmichFailureKind, ImmichMode } from "../../types/immich";
+
+const UNITS = ["B", "KB", "MB", "GB", "TB"] as const;
+
+export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), UNITS.length - 1);
+  const value = bytes / 1024 ** exponent;
+  return exponent === 0 ? `${value} B` : `${value.toFixed(1)} ${UNITS[exponent]}`;
+}
+
+interface Props {
+  tripId: string;
+  onClose: () => void;
+  onLinked: () => void;
+}
+
+interface Selection {
+  mode: ImmichMode;
+  estimateBytes: number | null;
+}
+
+/**
+ * Multi-select album picker. Import mode is the expensive choice, so its
+ * storage cost is fetched lazily — only for albums the user actually flips to
+ * "copy" — and shown before the link is confirmed.
+ */
+export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props): JSX.Element {
+  const { t } = useTranslation("immich");
+
+  const [albums, setAlbums] = useState<ImmichAlbumSummary[]>([]);
+  const [defaultMode, setDefaultMode] = useState<ImmichMode>("link");
+  const [selected, setSelected] = useState<Record<string, Selection>>({});
+  const [failure, setFailure] = useState<ImmichFailureKind | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [linking, setLinking] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const data = await immichApi.listAlbums(tripId);
+        if (cancelled) return;
+        setAlbums(data.albums);
+        setDefaultMode(data.defaultMode);
+      } catch (error) {
+        if (!cancelled) setFailure(immichFailureKind(error) ?? "unreachable");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tripId]);
+
+  const toggle = (albumId: string): void => {
+    setSelected((prev) => {
+      if (prev[albumId]) {
+        const { [albumId]: _removed, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [albumId]: { mode: defaultMode, estimateBytes: null } };
+    });
+  };
+
+  const setMode = async (albumId: string, mode: ImmichMode): Promise<void> => {
+    setSelected((prev) =>
+      prev[albumId] ? { ...prev, [albumId]: { mode, estimateBytes: null } } : prev
+    );
+    if (mode !== "import") return;
+
+    // Only "copy" costs disk, so only "copy" pays for an estimate round-trip.
+    const estimate = await immichApi.estimateImport(tripId, albumId);
+    setSelected((prev) =>
+      // The album may have been deselected (or switched back to link) while
+      // the estimate was in flight — never resurrect it into the selection,
+      // and never overwrite a mode the user has since changed away from.
+      prev[albumId] && prev[albumId].mode === "import"
+        ? { ...prev, [albumId]: { mode: "import", estimateBytes: estimate.totalBytes } }
+        : prev
+    );
+  };
+
+  const handleConfirm = async (): Promise<void> => {
+    setLinking(true);
+    try {
+      await immichApi.linkAlbums(
+        tripId,
+        Object.entries(selected).map(([immichAlbumId, s]) => ({ immichAlbumId, mode: s.mode }))
+      );
+      onLinked();
+      onClose();
+    } catch (error) {
+      setFailure(immichFailureKind(error) ?? "unreachable");
+    } finally {
+      setLinking(false);
+    }
+  };
+
+  const count = Object.keys(selected).length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-lg bg-slate-900 p-4">
+        <h2 className="mb-3 text-lg font-semibold">{t("albums.pickerTitle")}</h2>
+
+        {failure && <p className="text-sm text-rose-400">{t(`errors.${failure}`)}</p>}
+        {!loading && !failure && albums.length === 0 && (
+          <p className="text-sm text-slate-400">{t("albums.empty")}</p>
+        )}
+
+        <ul className="space-y-2">
+          {albums.map((album) => {
+            const selection = selected[album.id];
+            return (
+              <li key={album.id} className="rounded border border-slate-700 p-2">
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    aria-label={album.albumName}
+                    disabled={album.linked}
+                    checked={Boolean(selection)}
+                    onChange={() => toggle(album.id)}
+                  />
+                  <span className="flex-1">
+                    <span className="block">{album.albumName}</span>
+                    <span className="block text-xs text-slate-400">
+                      {t("albums.photoCount", { count: album.assetCount })}
+                    </span>
+                  </span>
+                  {album.linked && (
+                    <span className="text-xs text-slate-500">{t("albums.alreadyLinked")}</span>
+                  )}
+                </label>
+
+                {selection && (
+                  <div className="mt-2 flex items-center gap-2 pl-7">
+                    {(["link", "import"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        aria-pressed={selection.mode === mode}
+                        className={`rounded px-2 py-0.5 text-xs ${
+                          selection.mode === mode ? "bg-sky-600" : "border border-slate-600"
+                        }`}
+                        onClick={() => void setMode(album.id, mode)}
+                      >
+                        {mode === "link" ? t("modeLink") : t("modeImport")}
+                      </button>
+                    ))}
+                    {selection.estimateBytes !== null && (
+                      <span className="text-xs text-amber-400">
+                        {t("albums.estimate", { size: formatBytes(selection.estimateBytes) })}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+
+        <footer className="mt-4 flex justify-end gap-2">
+          <button type="button" className="px-3 py-1.5 text-sm" onClick={onClose}>
+            {t("albums.cancel")}
+          </button>
+          <button
+            type="button"
+            disabled={count === 0 || linking}
+            className="rounded bg-sky-600 px-3 py-1.5 text-sm disabled:opacity-40"
+            onClick={() => void handleConfirm()}
+          >
+            {t("albums.confirm", { count })}
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
+}
