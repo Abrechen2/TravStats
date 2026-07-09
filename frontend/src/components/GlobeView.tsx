@@ -25,13 +25,7 @@ import {
   type Quartile,
 } from "./Globe/heatmapUtils";
 import { buildGlobeLayers, DEFAULT_AIRPORT_COLOR, DEFAULT_PORT_COLOR } from "./Globe/buildGlobeLayers";
-import {
-  ROUTE_WIDTH_SCALE,
-  MARKER_SIZE_SCALE,
-  type AppearanceDomain,
-  type RouteWidth,
-  type MarkerSize,
-} from "./map/controlPanelKit";
+import { type AppearanceDomain } from "./map/controlPanelKit";
 import type { LabelsMode } from "./map/labelPriority";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 
@@ -363,29 +357,29 @@ export default function GlobeView({
   const [routeColor, setRouteColor] = useState<[number, number, number] | null>(
     () => loadMapAppearance().routeColor ?? flightRouteColor ?? null
   );
-  const [flightRouteWidth, setFlightRouteWidth] = useState<RouteWidth>(
-    () => loadMapAppearance().flightRouteWidth ?? "normal"
+  const [flightRouteWidth, setFlightRouteWidth] = useState<number>(
+    () => loadMapAppearance().flightRouteWidth ?? 1
   );
   // Marker colours are nullable: null = brand default (the "Auto" pill).
   const [airportColor, setAirportColor] = useState<[number, number, number] | null>(
     () => loadMapAppearance().airportColor ?? null
   );
-  const [flightMarkerSize, setFlightMarkerSize] = useState<MarkerSize>(
-    () => loadMapAppearance().flightMarkerSize ?? "m"
+  const [flightMarkerSize, setFlightMarkerSize] = useState<number>(
+    () => loadMapAppearance().flightMarkerSize ?? 1
   );
   // Cruise-domain appearance. `cruiseRouteColor === null` keeps the brand
   // cruise blue; a value overrides it.
   const [cruiseRouteColor, setCruiseRouteColor] = useState<[number, number, number] | null>(
     () => loadMapAppearance().cruiseRouteColor ?? null
   );
-  const [cruiseRouteWidth, setCruiseRouteWidth] = useState<RouteWidth>(
-    () => loadMapAppearance().cruiseRouteWidth ?? "normal"
+  const [cruiseRouteWidth, setCruiseRouteWidth] = useState<number>(
+    () => loadMapAppearance().cruiseRouteWidth ?? 1
   );
   const [portColor, setPortColor] = useState<[number, number, number] | null>(
     () => loadMapAppearance().portColor ?? null
   );
-  const [cruiseMarkerSize, setCruiseMarkerSize] = useState<MarkerSize>(
-    () => loadMapAppearance().cruiseMarkerSize ?? "m"
+  const [cruiseMarkerSize, setCruiseMarkerSize] = useState<number>(
+    () => loadMapAppearance().cruiseMarkerSize ?? 1
   );
   // Style-level overlays (relief hillshade + basemap place names).
   const [showTerrain, setShowTerrain] = useState<boolean>(
@@ -1394,12 +1388,12 @@ export default function GlobeView({
         setPinned,
         flightRouteColor: routeColor ?? undefined,
         statusTwoTone,
-        arcWidthScale: ROUTE_WIDTH_SCALE[flightRouteWidth],
-        cruiseArcWidthScale: ROUTE_WIDTH_SCALE[cruiseRouteWidth],
+        arcWidthScale: flightRouteWidth,
+        cruiseArcWidthScale: cruiseRouteWidth,
         airportColor: airportColor ?? DEFAULT_AIRPORT_COLOR,
         portColor: portColor ?? DEFAULT_PORT_COLOR,
-        airportRadius: GLOBE_MARKER_BASE_PX * MARKER_SIZE_SCALE[flightMarkerSize],
-        portRadius: GLOBE_MARKER_BASE_PX * MARKER_SIZE_SCALE[cruiseMarkerSize],
+        airportRadius: GLOBE_MARKER_BASE_PX * flightMarkerSize,
+        portRadius: GLOBE_MARKER_BASE_PX * cruiseMarkerSize,
         nightCells: nightCellsData,
         showNight,
       }),
