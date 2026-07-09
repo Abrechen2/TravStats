@@ -356,6 +356,7 @@ export const immichProxyLimiter = rateLimit({
   max: patAwareMax(RATE_LIMITS.IMMICH_PROXY_MAX),
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: userOrIpKey,
 });
 
 /**
@@ -367,4 +368,5 @@ export const immichImportLimiter = rateLimit({
   max: patAwareMax(RATE_LIMITS.IMMICH_IMPORT_MAX),
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: userOrIpKey,
 });
