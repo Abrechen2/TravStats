@@ -98,4 +98,43 @@ describe("PhotoLightbox", () => {
     );
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("shows the button's accessible name flipping to gallery.coverSet once the request resolves", async () => {
+    // This exists to catch a re-introduced static aria-label on the set-cover
+    // button: if that label ever comes back, the button's accessible name
+    // would freeze on "gallery.setAsCover" and this assertion would fail even
+    // though `coverSet` state flipped correctly.
+    const user = userEvent.setup();
+    renderBox(0);
+
+    await user.click(screen.getByRole("button", { name: "gallery.setAsCover" }));
+
+    await screen.findByRole("button", { name: "gallery.coverSet" });
+  });
+
+  it("does not confirm the cover on the photo the user navigated to while the request was in flight", async () => {
+    const user = userEvent.setup();
+    let resolveCover: (value: { coverImageUrl: string }) => void = () => {};
+    setPhotoCover.mockReturnValue(
+      new Promise((resolve) => {
+        resolveCover = resolve;
+      })
+    );
+
+    renderBox(0);
+
+    await user.click(screen.getByRole("button", { name: "gallery.setAsCover" }));
+    // Still pending — navigate to the next item before the request resolves.
+    await user.click(screen.getByRole("button", { name: "gallery.next" }));
+    expect(screen.getByRole("img")).toHaveAttribute("src", "/a1.jpg");
+
+    resolveCover({ coverImageUrl: "/cover-photo" });
+
+    // Give the resolved promise's microtask a tick to flush into state.
+    await waitFor(() => expect(setPhotoCover).toHaveBeenCalledWith("trip-1", "p1"));
+    // The confirmation belongs to item 0 (p1), never to the item now on
+    // screen (a1) — the button here must still read "set as cover".
+    expect(screen.getByRole("button", { name: "gallery.setAsCover" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "gallery.coverSet" })).not.toBeInTheDocument();
+  });
 });
