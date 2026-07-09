@@ -132,6 +132,10 @@ interface PortCandidate {
   name: string;
   city: string | null;
   country: string | null;
+  /** Sea region ("mediterranean", …). A fully-catalogued port carries one;
+   *  bare placeholder collisions (e.g. "Naples, Maine") don't — used as a
+   *  last-resort tiebreak on same-name candidates (#169). */
+  region: string | null;
 }
 
 async function loadShipCandidates(): Promise<ShipCandidate[]> {
@@ -172,7 +176,7 @@ async function resolveShip(
 async function loadPortCandidates(): Promise<PortCandidate[]> {
   if (cachedPorts) return cachedPorts;
   cachedPorts = await prisma.port.findMany({
-    select: { id: true, name: true, city: true, country: true },
+    select: { id: true, name: true, city: true, country: true, region: true },
   });
   return cachedPorts;
 }
@@ -215,6 +219,14 @@ function findBestPort(
     if (country && port.country && similarity(country, port.country) >= 60) {
       score += 5;
     }
+    // Bare-name collision tiebreak (#169): the catalog has two "Naples"
+    // (Napoli/Italy with a region, Naples/Maine/USA without). With no country
+    // hint both score identically on the name, and DB order decided the winner
+    // — landing on the US placeholder. Prefer the region-bearing (fully
+    // catalogued) port. Kept at +2, below the smallest name-tier gap (5), so
+    // it only breaks otherwise-equal ties and never lifts a weaker name match
+    // over a stronger one or across the 60 acceptance threshold.
+    if (port.region) score += 2;
     if (score > best.score) best = { score, port };
   }
 
