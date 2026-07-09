@@ -206,4 +206,53 @@ describe("PUT /admin/immich", () => {
       }),
     );
   });
+
+  it("encrypts and stores a genuinely new API key", async () => {
+    adminSettingsFindFirst
+      .mockResolvedValueOnce({ id: 1, globalImmichApiKey: "enc:old-key" })
+      .mockResolvedValueOnce({ id: 1, globalImmichApiKey: "enc:brand-new-key" });
+
+    await request(makeApp(immichAdminRouter))
+      .put("/immich")
+      .send({ apiKey: "brand-new-key" });
+
+    expect(adminSettingsUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+        data: { globalImmichApiKey: "enc:brand-new-key" },
+      }),
+    );
+  });
+
+  it("clears the stored key when apiKey is explicitly null", async () => {
+    adminSettingsFindFirst
+      .mockResolvedValueOnce({ id: 1, globalImmichApiKey: "enc:old-key" })
+      .mockResolvedValueOnce({ id: 1, globalImmichApiKey: null });
+
+    await request(makeApp(immichAdminRouter))
+      .put("/immich")
+      .send({ apiKey: null });
+
+    expect(adminSettingsUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+        data: { globalImmichApiKey: null },
+      }),
+    );
+  });
+
+  it("leaves the stored key untouched when apiKey is omitted", async () => {
+    adminSettingsFindFirst
+      .mockResolvedValueOnce({ id: 1, globalImmichApiKey: "enc:existing-key" })
+      .mockResolvedValueOnce({ id: 1, globalImmichApiKey: "enc:existing-key" });
+
+    await request(makeApp(immichAdminRouter))
+      .put("/immich")
+      .send({ baseUrl: "https://immich.lan" });
+
+    const call = adminSettingsUpdate.mock.calls[0][0];
+    expect(call.where).toEqual({ id: 1 });
+    expect(call.data).toHaveProperty("globalImmichBaseUrl", "https://immich.lan");
+    expect(call.data).not.toHaveProperty("globalImmichApiKey");
+  });
 });
