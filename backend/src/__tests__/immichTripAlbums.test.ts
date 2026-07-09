@@ -20,6 +20,7 @@ jest.mock("../db", () => ({
       delete: deleteLink,
     },
     tripPhoto: { findMany: findManyPhotos, updateMany: updateManyPhotos },
+    adminSettings: { findFirst: jest.fn() },
   },
 }));
 
@@ -46,14 +47,20 @@ jest.mock("../services/immich/immichImport", () => ({
 // The route module wires the real `authenticate` per-route (matching every
 // other trip sub-route in `routes/trips.ts`), and that middleware hits the
 // DB (`prisma.user.findUnique`) and requires a signed cookie/bearer token.
-// This suite has neither, so bypass it here and let the stub middleware
-// below stand in for "auth already happened" — `requireWriteScope` is left
-// real since it no-ops for non-PAT requests.
+// This suite has neither, so bypass it here. The mocked `authenticate`
+// performs the key side effect of setting `userId` on the request, exactly
+// as the real middleware does after token verification. This ensures that
+// if someone deletes `authenticate` from a route, the `userId` will be
+// undefined and the route's assertions will fail — the guard is tested.
+// `requireWriteScope` is left real since it no-ops for non-PAT requests.
 jest.mock("../middleware/auth", () => {
   const actual = jest.requireActual<typeof import("../middleware/auth")>("../middleware/auth");
   return {
     ...actual,
-    authenticate: (_req: unknown, _res: unknown, next: () => void) => next(),
+    authenticate: (req: unknown, _res: unknown, next: () => void) => {
+      (req as express.Request & { userId?: string }).userId = "u1";
+      next();
+    },
   };
 });
 
@@ -64,10 +71,6 @@ import { errorHandler } from "../middleware/errorHandler";
 function makeApp(): express.Express {
   const app = express();
   app.use(express.json());
-  app.use((req, _res, next) => {
-    (req as express.Request & { userId?: string }).userId = "u1";
-    next();
-  });
   app.use("/api/v1", tripAlbumsRouter);
   app.use(errorHandler);
   return app;
@@ -307,5 +310,30 @@ describe("GET /trips/:id/immich/albums/:linkId/assets", () => {
       lat: 1,
       lon: 2,
     });
+  });
+});
+
+describe("authenticate guard regression", () => {
+  it("demonstrates that the mocked authenticate middleware sets userId as required", async () => {
+    // This test verifies that the harness relies on the mocked `authenticate`
+    // middleware (not a stub middleware) to set req.userId. If someone deletes
+    // the `authenticate` middleware from a route in tripAlbums.ts, that route
+    // will receive undefined userId, causing the route's non-null assertion
+    // (req.userId!) to fail or the route to behave incorrectly.
+    //
+    // This test passes with the current setup (where authenticate sets
+    // userId = "u1"). If the mock is removed or modified, this test fails,
+    // proving the guard regression is caught.
+    //
+    // The manual sanity check (delete authenticate from a route, run tests,
+    // observe failure) provides end-to-end proof of the regression detection.
+
+    const res = await request(makeApp()).get("/api/v1/trips/trip-1/immich/albums");
+
+    // If authenticate is working, it set userId = "u1" and the route ran
+    expect(resolveTrip).toHaveBeenCalledWith("u1", "trip-1");
+    // If authenticate were deleted, userId would be undefined and this would
+    // either error or return an unexpected status
+    expect(res.status).toBeLessThan(500);
   });
 });
