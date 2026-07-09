@@ -30,6 +30,7 @@ const ARC_LAYER_IDS = new Set<string>([
   "routes-arc-scheduled",
   "routes-arc-upcoming",
 ]);
+const CRUISE_PATH_LAYER_IDS = new Set<string>(["cruise-arcs"]);
 
 interface AirportDatum {
   readonly iata?: string;
@@ -64,6 +65,10 @@ interface ArcTooltipDatum {
   readonly arrival?: { iata?: string; name?: string; country?: string | null };
   readonly count?: number;
   readonly sourceColor?: readonly [number, number, number, number];
+}
+
+interface CruisePathTooltipDatum {
+  readonly cruiseLine?: string | null;
 }
 
 const SURFACE_STYLE: Record<string, string> = {
@@ -135,6 +140,13 @@ export function createMarkerTooltip(
       const datum = info.object as ArcTooltipDatum | undefined | null;
       if (!datum || !datum.departure || !datum.arrival) return null;
       const html = renderArcHtml(datum, t);
+      return { html, style: SURFACE_STYLE };
+    }
+
+    if (CRUISE_PATH_LAYER_IDS.has(layerId)) {
+      const datum = info.object as CruisePathTooltipDatum | undefined | null;
+      if (!datum) return null;
+      const html = `<div style="font-weight:600;">🚢 ${escapeHtml(datum.cruiseLine ?? "Cruise")}</div>`;
       return { html, style: SURFACE_STYLE };
     }
 
