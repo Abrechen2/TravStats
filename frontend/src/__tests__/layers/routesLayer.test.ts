@@ -70,6 +70,50 @@ describe("buildRouteData", () => {
     expect(jfk).toMatchObject({ icao: "KJFK", country: "US", city: "New York" });
   });
 
+  it("carries departure/arrival identity (iata, icao, name, country, city) onto each arc", () => {
+    const flightWithGeo: GeoJSONFeature = {
+      ...mockFlight,
+      properties: {
+        ...mockFlight.properties,
+        id: "geo-arc-1",
+        departureAirport: {
+          iata: "FRA",
+          icao: "EDDF",
+          name: "Frankfurt",
+          country: "DE",
+          city: "Frankfurt",
+          lat: 50.03,
+          lon: 8.57,
+        },
+        arrivalAirport: {
+          iata: "JFK",
+          icao: "KJFK",
+          name: "New York",
+          country: "US",
+          city: "New York",
+          lat: 40.64,
+          lon: -73.78,
+        },
+      },
+    };
+    const { arcs } = buildRouteData([flightWithGeo], 1);
+    expect(arcs).toHaveLength(1);
+    expect(arcs[0].departure).toEqual({
+      iata: "FRA",
+      icao: "EDDF",
+      name: "Frankfurt",
+      country: "DE",
+      city: "Frankfurt",
+    });
+    expect(arcs[0].arrival).toEqual({
+      iata: "JFK",
+      icao: "KJFK",
+      name: "New York",
+      country: "US",
+      city: "New York",
+    });
+  });
+
   it("aggregates bidirectional routes (FRA-JFK === JFK-FRA)", () => {
     const reverse: GeoJSONFeature = {
       ...mockFlight,
