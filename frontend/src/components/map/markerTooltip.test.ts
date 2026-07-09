@@ -89,3 +89,28 @@ describe("createMarkerTooltip — ports", () => {
     expect(result!.html).toContain("⚓");
   });
 });
+
+describe("createMarkerTooltip — routes", () => {
+  const getTooltip = createMarkerTooltip(t, "de");
+
+  it("shows flag + iata + name for both endpoints plus times-flown", () => {
+    const result = getTooltip(
+      makeInfo("routes-arc", {
+        departure: { iata: "MUC", name: "Munich Airport", country: "DE" },
+        arrival: { iata: "JFK", name: "New York", country: "US" },
+        count: 3,
+        sourceColor: [240, 169, 71, 220],
+      })
+    );
+    expect(result).not.toBeNull();
+    expect(result!.html).toContain("flagcdn.com/de.svg");
+    expect(result!.html).toContain("flagcdn.com/us.svg");
+    expect(result!.html).toContain("MUC");
+    expect(result!.html).toContain("JFK");
+    expect(result!.html).toContain("3× geflogen");
+  });
+
+  it("returns null when the arc datum has no departure/arrival identity", () => {
+    expect(getTooltip(makeInfo("routes-arc-scheduled", { count: 1 }))).toBeNull();
+  });
+});
