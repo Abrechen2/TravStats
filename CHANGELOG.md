@@ -4,15 +4,24 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
-## [2.3.0-rc.1] - 2026-07-08 (Release Candidate)
+## [2.3.0-rc.2] - 2026-07-09 (Release Candidate)
 
-First release candidate for **TravStats 2.3**. Aggregates the entire
+Release candidate for **TravStats 2.3**. Aggregates the entire
 `dev/v2.3` forward line — a redesigned map/globe appearance system,
 per-cruise and status-based map coloring, a new statistics scorecard,
 unresolved cruise ports, device pairing for the companion app, and
 more.
 
 ### Added
+- **Continuous map sliders** — line width and marker size are now
+  stepless sliders with a live value (replacing the fixed Thin/Normal/
+  Thick and Off/S/M/L presets), on both the 2D map and the globe, plus a
+  new **cruise route-arrow size** slider (0 hides the arrows).
+- **2D-map hover tooltips match the globe** — airports, ports, flight
+  routes and cruise routes now show a country flag, ICAO/IATA code,
+  place and count on hover.
+- **POI/stop labels on the trip map** — trip stops (POIs, hotels, …)
+  show their name on the map instead of a bare coloured dot.
 - **Redesigned map & globe experience** — consolidated appearance
   control panel shared between the 2D map and globe, mode-aware
   presets (marker size, route width, basemap parity), readable
@@ -48,6 +57,11 @@ more.
 - A proper 404 page for unknown routes (was a blank page).
 
 ### Fixed
+- Cruise stops with an ambiguous name (e.g. "Naples") now resolve to
+  the correctly-catalogued port instead of a same-named placeholder in
+  another country (#169).
+- The globe's activity time-histogram no longer overlaps the map legend
+  on the "All" tab.
 - Cruise-arc arrows now point in the correct travel direction and have
   a bordered, easier-to-read shape (Discord bug report #160).
 - Overlapping airport/port labels in dense map clusters are
