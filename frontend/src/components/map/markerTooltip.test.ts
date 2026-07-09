@@ -114,3 +114,19 @@ describe("createMarkerTooltip — routes", () => {
     expect(getTooltip(makeInfo("routes-arc-scheduled", { count: 1 }))).toBeNull();
   });
 });
+
+describe("createMarkerTooltip — cruise path", () => {
+  const getTooltip = createMarkerTooltip(t, "de");
+
+  it("shows the cruise line for a cruise-arcs hover", () => {
+    const result = getTooltip(makeInfo("cruise-arcs", { cruiseLine: "AIDA Cruises" }));
+    expect(result).not.toBeNull();
+    expect(result!.html).toContain("AIDA Cruises");
+  });
+
+  it("falls back to a generic label when cruiseLine is null", () => {
+    const result = getTooltip(makeInfo("cruise-arcs", { cruiseLine: null }));
+    expect(result).not.toBeNull();
+    expect(result!.html).toContain("Cruise");
+  });
+});
