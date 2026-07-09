@@ -74,7 +74,7 @@ export const immichApi = {
   },
 
   async listAlbums(
-    tripId: string,
+    tripId: string
   ): Promise<{ albums: ImmichAlbumSummary[]; defaultMode: ImmichMode }> {
     const { data } = await api.get(`/trips/${tripId}/immich/albums`);
     return data;
@@ -82,7 +82,7 @@ export const immichApi = {
 
   async linkAlbums(
     tripId: string,
-    albums: Array<{ immichAlbumId: string; mode: ImmichMode }>,
+    albums: Array<{ immichAlbumId: string; mode: ImmichMode }>
   ): Promise<{ links: LinkedAlbum[] }> {
     const { data } = await api.post(`/trips/${tripId}/immich/albums`, { albums });
     return data;
@@ -92,10 +92,7 @@ export const immichApi = {
     await api.delete(`/trips/${tripId}/immich/albums/${linkId}?deleteCopies=${deleteCopies}`);
   },
 
-  async getAlbumAssets(
-    tripId: string,
-    linkId: string,
-  ): Promise<{ assets: ImmichGalleryAsset[] }> {
+  async getAlbumAssets(tripId: string, linkId: string): Promise<{ assets: ImmichGalleryAsset[] }> {
     const { data } = await api.get(`/trips/${tripId}/immich/albums/${linkId}/assets`);
     return data;
   },
@@ -118,7 +115,7 @@ export const immichApi = {
   async setImmichCover(
     tripId: string,
     linkId: string,
-    assetId: string,
+    assetId: string
   ): Promise<{ coverImageUrl: string }> {
     const { data } = await api.post(`/trips/${tripId}/immich/cover`, { linkId, assetId });
     return data;
