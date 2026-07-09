@@ -1604,14 +1604,11 @@ export default function GlobeView({
       </div>
 
       {/* Top-center: activity histogram — filter (brush) + playback (▶) in
-          one strip, replacing the old three-mode slider. Offset down (top-16,
-          not top-3) to clear the dashboard's Aktivität legend strip: on the
-          "Alle" tab that legend carries four domain items and grows ~700px
-          wide, reaching the viewport centre, so a top-3 centred histogram
-          overlapped it. Same offset the top-right stats overlay uses to clear
-          the top chrome. */}
+          one strip, replacing the old three-mode slider. Sits at the top
+          centre: the dashboard's colour legend now lives in a bottom-right
+          table (AllTab), so the top band is clear. */}
       <div
-        className="absolute top-16 left-1/2 z-10 -translate-x-1/2"
+        className="absolute top-3 left-1/2 z-10 -translate-x-1/2"
         style={{ pointerEvents: "auto" }}
       >
         <GlobeTimeHistogram

@@ -247,116 +247,75 @@ export function AllTab(): JSX.Element {
     return buildJourneyLayers(visibleFlights, visibleCruises, effectiveTripId);
   }, [allMode, visibleFlights, visibleCruises, effectiveTripId]);
 
-  // Toggle + legend share one flex row so they auto-flow without
-  // manual left-offset math. The whole row shifts right when the
-  // sidebar opens so the chips clear the panel.
-  const toggleAndLegend = (
-    <div
+  // The ☰ Aktivität toggle stays top-left (it opens the activity sidebar).
+  // Shifts right when the sidebar is open so it clears the panel.
+  const activityToggle = (
+    <button
+      type="button"
+      onClick={() => setSidebarOpen((prev) => !prev)}
       style={{
         position: "absolute",
         top: 12,
         left: sidebarOpen ? 340 : 12,
         zIndex: 30,
-        display: "flex",
-        gap: 8,
-        alignItems: "center",
+        padding: "6px 12px",
+        borderRadius: 10,
+        background: "rgba(22,27,34,0.85)",
+        color: "var(--text-primary)",
+        border: "1px solid var(--color-border)",
+        cursor: "pointer",
+        whiteSpace: "nowrap",
         transition: "left 0.2s ease",
       }}
     >
-      <button
-        type="button"
-        onClick={() => setSidebarOpen((prev) => !prev)}
-        style={{
-          padding: "6px 12px",
-          borderRadius: 10,
-          background: "rgba(22,27,34,0.85)",
-          color: "var(--text-primary)",
-          border: "1px solid var(--color-border)",
-          cursor: "pointer",
-          whiteSpace: "nowrap",
-        }}
-      >
-        ☰ {t("dashboard:sidebar.activity")}
-      </button>
-      {(flightsVisible || cruisesVisible) && (
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            padding: "6px 12px",
-            borderRadius: 10,
-            background: "rgba(22,27,34,0.85)",
-            color: "var(--text-muted)",
-            border: "1px solid var(--color-border)",
-            fontSize: 12,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {flightsVisible && (
-            <>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <span
-                  aria-hidden
-                  style={{
-                    width: 14,
-                    height: 2,
-                    background: "rgb(240,169,71)",
-                    borderRadius: 2,
-                  }}
-                />
-                <span style={{ color: "var(--text-primary)" }}>
-                  {t("dashboard:legend.flightPast")}
-                </span>
-              </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <span
-                  aria-hidden
-                  style={{
-                    width: 14,
-                    height: 2,
-                    background: "rgb(251,113,133)",
-                    borderRadius: 2,
-                  }}
-                />
-                <span style={{ color: "var(--text-primary)" }}>
-                  {t("dashboard:legend.flightUpcoming")}
-                </span>
-              </span>
-            </>
-          )}
-          {cruisesVisible && (
-            <>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <span
-                  aria-hidden
-                  style={{
-                    width: 14,
-                    height: 2,
-                    background: "rgb(74,144,217)",
-                    borderRadius: 2,
-                  }}
-                />
-                <span style={{ color: "var(--text-primary)" }}>
-                  {t("dashboard:legend.cruisePast")}
-                </span>
-              </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <span
-                  aria-hidden
-                  style={{
-                    width: 14,
-                    height: 2,
-                    background: "rgb(34,211,238)",
-                    borderRadius: 2,
-                  }}
-                />
-                <span style={{ color: "var(--text-primary)" }}>
-                  {t("dashboard:legend.cruisePlanned")}
-                </span>
-              </span>
-            </>
-          )}
-        </div>
+      ☰ {t("dashboard:sidebar.activity")}
+    </button>
+  );
+
+  // One colour-key row: a short line swatch + its label.
+  const legendRow = (color: string, label: string): JSX.Element => (
+    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <span
+        aria-hidden
+        style={{ width: 14, height: 2, background: color, borderRadius: 2, flexShrink: 0 }}
+      />
+      <span style={{ color: "var(--text-primary)" }}>{label}</span>
+    </span>
+  );
+
+  // Colour key as a compact table pinned bottom-right — out of the top band
+  // so it never collides with the globe's time histogram or the top-left
+  // controls. Renders only the visible domains' rows.
+  const legendTable = (flightsVisible || cruisesVisible) && (
+    <div
+      style={{
+        position: "absolute",
+        bottom: 12,
+        right: 12,
+        zIndex: 30,
+        display: "flex",
+        flexDirection: "column",
+        gap: 6,
+        padding: "8px 12px",
+        borderRadius: 10,
+        background: "rgba(22,27,34,0.85)",
+        color: "var(--text-muted)",
+        border: "1px solid var(--color-border)",
+        fontSize: 12,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {flightsVisible && (
+        <>
+          {legendRow("rgb(240,169,71)", t("dashboard:legend.flightPast"))}
+          {legendRow("rgb(251,113,133)", t("dashboard:legend.flightUpcoming"))}
+        </>
+      )}
+      {cruisesVisible && (
+        <>
+          {legendRow("rgb(74,144,217)", t("dashboard:legend.cruisePast"))}
+          {legendRow("rgb(34,211,238)", t("dashboard:legend.cruisePlanned"))}
+        </>
       )}
     </div>
   );
@@ -451,7 +410,8 @@ export function AllTab(): JSX.Element {
           cruisesOverride={visibleCruises}
           hideInfoPill
         />
-        {toggleAndLegend}
+        {activityToggle}
+        {legendTable}
         {journeySelector}
         {activityPanel}
         {editModal}
@@ -474,7 +434,8 @@ export function AllTab(): JSX.Element {
         cruisesOverride={visibleCruises}
         hideInfoPill
       />
-      {toggleAndLegend}
+      {activityToggle}
+      {legendTable}
       {activityPanel}
       {editModal}
     </div>
