@@ -589,7 +589,7 @@ bash scripts/preview/build-preview-image.sh poi
 
 Expected: each ends with `pushed ghcr.io/abrechen2/travstats:preview-<slot> (<sha>)`.
 
-If a build fails because the worktree's dependencies were never installed, run `npm run install:all` inside that worktree first — the `dev/immich-albums` and `dev/hotels` worktrees were set up but never had `install:all` run.
+The Dockerfile runs `npm ci` in its own build stages, so the worktree needs no local `node_modules` — do not run `install:all` first. There is no `.dockerignore` in this repo; the build context is the whole worktree, which is small only because those worktrees were never `npm install`ed. If one of them has a `node_modules/`, expect a slow context upload.
 
 - [ ] **Step 5: Deploy both slots**
 
