@@ -3,6 +3,8 @@
 // reference them without import cycles.
 
 import type { Quartile } from "./heatmapUtils";
+import type { Rgb } from "../../lib/cruiseColor";
+import type { CruiseStatus } from "../../types/cruise";
 
 export interface ArcDatum {
   from: [number, number];
@@ -18,8 +20,8 @@ export interface ArcDatum {
   flightIds: string[];
   color: [number, number, number];
   quartile: Quartile;
-  departure: { iata?: string; name?: string };
-  arrival: { iata?: string; name?: string };
+  departure: { iata?: string; icao?: string; name?: string; city?: string | null; country?: string | null };
+  arrival: { iata?: string; icao?: string; name?: string; city?: string | null; country?: string | null };
   /**
    * Set when at least one constituent flight had no IATA on either
    * endpoint and we fell back to coordinate-rounded identity. The arc
@@ -28,6 +30,17 @@ export interface ArcDatum {
    * count.
    */
   weak: boolean;
+  /**
+   * Simplified two-tone status category for this aggregated route:
+   * `"scheduled"` only when EVERY constituent flight is still scheduled
+   * (pure-scheduled, never flown); `"past"` otherwise — this collapses
+   * historical-only, mixed (flown + scheduled), and regular past-only
+   * routes into one bucket, mirroring the flat map's
+   * `routesLayer.ts`/`statusTwoTone` collapsing rule. Consumed by
+   * `buildGlobeLayers`'s `resolveFlightArcColor` when `statusTwoTone`
+   * is active; ignored otherwise.
+   */
+  status: "past" | "scheduled";
 }
 
 export interface PointDatum {
@@ -35,6 +48,17 @@ export interface PointDatum {
   size: number;
   iata: string;
   name: string;
+  /** ICAO code (airports only) — shown alongside the IATA in the pinned card. */
+  icao?: string;
+  /** City the airport/port serves — shown as "City, Country" in overlays. */
+  city?: string | null;
+  /** Display label for the on-map pill. Airports leave this unset and
+   *  fall back to `iata`; ports set it to the readable port name (see
+   *  `toPortLabel`) so the overlay never shows a raw UN/LOCODE. */
+  label?: string;
+  /** ISO 3166-1 alpha-2 country code — drives the overlay flag. Airports
+   *  from /geo enrichment; ports from the UN/LOCODE prefix. */
+  country?: string;
   /** ISO date of the most recent flight or cruise stop touching this
    *  marker; surfaced in the hover tooltip. Undefined when no dated
    *  events exist for this marker (extremely rare — would mean every
@@ -46,6 +70,16 @@ export interface CruisePathDatum {
   path: [number, number][];
   cruiseId: string;
   cruiseLabel: string;
+  status: CruiseStatus;
+  /**
+   * Pre-resolved tint for this leg — `"status"` mode: blue (past)
+   * or cyan ("planned", scheduled); `"perCruise"` mode: a
+   * distinct hue via `resolveCruiseColor`. Resolved once per cruise in
+   * `GlobeView`'s `cruisePaths` builder via `resolveCruiseArcColor`, the
+   * same helper the flat map's `cruiseArcsLayer.ts` uses, so both
+   * renderers agree pixel-for-pixel.
+   */
+  color: Rgb;
 }
 
 export interface TooltipState {

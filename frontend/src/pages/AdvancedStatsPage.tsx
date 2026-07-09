@@ -34,6 +34,12 @@ import StatsAirportsSection from "../components/Stats/StatsAirportsSection";
 import StatsSeatSection from "../components/Stats/StatsSeatSection";
 import CruiseStatsSection from "../components/Stats/CruiseStatsSection";
 import OverviewTab from "../components/Stats/Overview/OverviewTab";
+import KpiScorecard from "../components/Stats/scorecard/KpiScorecard";
+import type { ScorecardTileVM } from "../components/Stats/scorecard/ScorecardTile";
+import TimeRangeControl, { type WindowKind } from "../components/Stats/scorecard/TimeRangeControl";
+import CanonicalTimeSeries from "../components/Stats/scorecard/CanonicalTimeSeries";
+import type { TimeseriesResponse } from "../lib/api/types";
+import { formatDistance } from "../lib/units";
 import { achievementsApi } from "../lib/api/achievements";
 import type { AchievementSummary } from "../types";
 import { generateYearReportPdf } from "../lib/yearReportPdf";
@@ -46,7 +52,7 @@ import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { DOMAINS, type DomainKey } from "../shared/domains";
 
 export default function AdvancedStatsPage(): JSX.Element {
-  const { t } = useTranslation(["stats", "common"]);
+  const { t, i18n } = useTranslation(["stats", "common"]);
   const { units, features } = useSettingsStore();
   const { user } = useAuthStore();
   const addToast = useToastStore((state) => state.addToast);
@@ -61,6 +67,8 @@ export default function AdvancedStatsPage(): JSX.Element {
   const [achievementSummary, setAchievementSummary] = useState<AchievementSummary | null>(null);
   const [showCertificate, setShowCertificate] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [rangeWindow, setRangeWindow] = useState<WindowKind>("rolling12m");
+  const [timeseries, setTimeseries] = useState<TimeseriesResponse | null>(null);
 
   // Domain filter — `?tab=<key>` deep-links into a specific domain tab so
   // "Details →" links from the cross-domain Gesamt overview can route to
@@ -158,6 +166,21 @@ export default function AdvancedStatsPage(): JSX.Element {
     loadFlights();
   }, []);
 
+  // Canonical timeseries backing the scorecard tiles + chart. "all" groups by
+  // year server-side, everything else by month; "year" reuses the existing
+  // selectedYear so there's no second year picker in the scorecard row.
+  useEffect(() => {
+    const granularity = rangeWindow === "all" ? "year" : "month";
+    const year = rangeWindow === "year" ? (selectedYear ?? undefined) : undefined;
+    statsApi
+      .getTimeseries({ domain: "flight", granularity, window: rangeWindow, year })
+      .then(setTimeseries)
+      .catch((err: unknown) => {
+        logger.error("Failed to load timeseries", err);
+        setTimeseries(null);
+      });
+  }, [rangeWindow, selectedYear]);
+
   const loadFlights = async (): Promise<void> => {
     try {
       setLoading(true);
@@ -181,9 +204,7 @@ export default function AdvancedStatsPage(): JSX.Element {
       // Historical flights have unreliable times (often 12:00 placeholders) but contribute
       // accurately to airport/distance/airline/route counts, and `calculateDuration` falls
       // back to a great-circle estimate for DATE_ONLY rows so duration aggregates stay sane.
-      setFlights(
-        allFlights.filter((f) => f.status === "flown" || f.status === "historical")
-      );
+      setFlights(allFlights.filter((f) => f.status === "flown" || f.status === "historical"));
 
       const [fun, business, unique, airports, seat, achievements] = await Promise.all([
         statsApi.getFunStats().catch((err) => {
@@ -380,21 +401,6 @@ export default function AdvancedStatsPage(): JSX.Element {
   );
 
   // Time-based analytics
-  const flightsPerMonth = flights.reduce(
-    (acc, flight) => {
-      if (!flight.departureTime) return acc;
-      const date = new Date(flight.departureTime);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      acc[key] = (acc[key] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
-
-  const monthlyData = Object.entries(flightsPerMonth)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([month, count]) => ({ month, flights: count }));
-
   const flightsPerYear = flights.reduce(
     (acc, flight) => {
       if (!flight.departureTime) return acc;
@@ -404,10 +410,6 @@ export default function AdvancedStatsPage(): JSX.Element {
     },
     {} as Record<number, number>
   );
-
-  const yearlyData = Object.entries(flightsPerYear)
-    .sort(([a], [b]) => Number(a) - Number(b))
-    .map(([year, count]) => ({ year, flights: count }));
 
   const availableYears: number[] = Object.keys(flightsPerYear)
     .map(Number)
@@ -553,7 +555,7 @@ export default function AdvancedStatsPage(): JSX.Element {
           className="px-4 pt-3"
           style={{ background: "var(--bg-base)", borderBottom: "1px solid var(--color-border)" }}
         >
-          <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto">
+          <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto overflow-y-hidden">
             <button
               type="button"
               onClick={(): void => setFilter("all")}
@@ -590,9 +592,7 @@ export default function AdvancedStatsPage(): JSX.Element {
 
         <div className="container mx-auto px-6 py-8">
           {/* Gesamt — pure cross-domain overview, no flight deep-dives. */}
-          {filter === "all" && (
-            <OverviewTab flights={flights} achievements={achievementSummary} />
-          )}
+          {filter === "all" && <OverviewTab flights={flights} achievements={achievementSummary} />}
 
           {/* Cruise tab renders its own stats section. */}
           {filter === "cruise" && <CruiseStatsSection />}
@@ -632,6 +632,63 @@ export default function AdvancedStatsPage(): JSX.Element {
           {/* Flight-specific stats block — flight tab only. */}
           {filter === "flight" && (
             <>
+              {/* Scorecard: time-range control + KPI tiles + canonical chart.
+                  Replaces the old separate "Yearly Trend"/"Monthly Flights"
+                  charts with one range-driven view. */}
+              {(() => {
+                const takeaway =
+                  rangeWindow === "rolling12m"
+                    ? t("stats:scorecard.takeawayRolling")
+                    : rangeWindow === "year"
+                      ? t("stats:scorecard.takeawayYear", { year: selectedYear ?? "" })
+                      : t("stats:scorecard.takeawayAll");
+                const counts = timeseries?.series.map((p) => p.count) ?? [];
+                const distances = timeseries?.series.map((p) => Math.round(p.distanceKm)) ?? [];
+                const durations =
+                  timeseries?.series.map((p) => Math.round(p.durationMin / 60)) ?? [];
+                const cur = timeseries?.current ?? { count: 0, distanceKm: 0, durationMin: 0 };
+                const prev = timeseries?.previous ?? { count: 0, distanceKm: 0, durationMin: 0 };
+                const tiles: ScorecardTileVM[] = [
+                  {
+                    key: "flights",
+                    label: t("stats:scorecard.flights"),
+                    value: String(cur.count),
+                    takeaway,
+                    points: counts,
+                    current: cur.count,
+                    previous: prev.count,
+                  },
+                  {
+                    key: "distance",
+                    label: t("stats:scorecard.distance"),
+                    value: formatDistance(cur.distanceKm, units.distanceUnit, t, i18n.language),
+                    takeaway,
+                    points: distances,
+                    current: cur.distanceKm,
+                    previous: prev.distanceKm,
+                  },
+                  {
+                    key: "flightTime",
+                    label: t("stats:scorecard.flightTime"),
+                    value: `${Math.round(cur.durationMin / 60)} h`,
+                    takeaway,
+                    points: durations,
+                    current: cur.durationMin,
+                    previous: prev.durationMin,
+                  },
+                ];
+                return (
+                  <>
+                    <TimeRangeControl value={rangeWindow} onChange={setRangeWindow} />
+                    <KpiScorecard tiles={tiles} />
+                    <CanonicalTimeSeries
+                      series={timeseries?.series ?? []}
+                      title={t("stats:canonicalChart.flightsTitle")}
+                    />
+                  </>
+                );
+              })()}
+
               {/* Year Filter + Year-Filtered Summary Cards */}
               <StatsYearFilter
                 availableYears={availableYears}
@@ -673,8 +730,6 @@ export default function AdvancedStatsPage(): JSX.Element {
 
               {/* Time-based Charts */}
               <StatsChartsSection
-                yearlyData={yearlyData}
-                monthlyData={monthlyData}
                 seasonalData={seasonalData}
                 weekdayData={weekdayData}
                 hasFlights={flights.length > 0}

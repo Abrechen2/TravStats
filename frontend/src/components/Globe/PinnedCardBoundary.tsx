@@ -29,7 +29,7 @@ export class PinnedCardBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo): void {
     logger.error(
       { err: error, componentStack: info.componentStack },
-      "globe.pinned-card.render-failed",
+      "globe.pinned-card.render-failed"
     );
   }
 

@@ -2,7 +2,12 @@ import type { ParsedBooking } from "../../types";
 import type { CruiseInput, Port, Ship } from "../../types/cruise";
 
 import { parserApi } from "./client";
-import type { Airport, BoardingPassParseResult, EmailParseResult, ProviderAvailability } from "./types";
+import type {
+  Airport,
+  BoardingPassParseResult,
+  EmailParseResult,
+  ProviderAvailability,
+} from "./types";
 
 /** A flight bundled with a fly & cruise booking. Tentative — exact times come
  *  ~4 months out. Airports are pre-filled by the backend (home airport on the

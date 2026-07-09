@@ -36,10 +36,37 @@ const stopSchema = z
     arrivalTime: isoDateTime,
     departureTime: isoDateTime,
     excursionNote: z.string().max(500).optional(),
+    // Third stop state: an imported port whose name could not be matched to the
+    // catalog. Carried as a name-only stop (no portId, not a sea day) so it is
+    // never lost; the user resolves it later via the PortPicker.
+    unresolvedPortName: z.string().trim().min(1).max(200).nullable().optional(),
   })
-  .refine((s) => s.isAtSea || (s.portId !== null && s.portId !== undefined), {
-    message: 'A stop must either be at sea or reference a port',
-    path: ['portId'],
+  // 3-state invariant: a stop is valid iff it is a sea day, OR references a
+  // port, OR carries an unresolved port name — and never mixes those.
+  .superRefine((s, ctx) => {
+    const hasPort = s.portId !== null && s.portId !== undefined;
+    const hasUnresolved = s.unresolvedPortName !== null && s.unresolvedPortName !== undefined;
+    if (!s.isAtSea && !hasPort && !hasUnresolved) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'A stop must be at sea, reference a port, or carry an unresolved port name',
+        path: ['portId'],
+      });
+    }
+    if (hasPort && hasUnresolved) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'A stop cannot be both a matched port and an unresolved port',
+        path: ['unresolvedPortName'],
+      });
+    }
+    if (s.isAtSea && (hasPort || hasUnresolved)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'A sea day cannot reference a port or an unresolved port name',
+        path: ['isAtSea'],
+      });
+    }
   });
 
 const baseCruiseSchema = z.object({
@@ -72,6 +99,14 @@ const baseCruiseSchema = z.object({
   companions: z.array(z.string().max(100)).max(50).optional(),
   tripId: z.string().uuid().nullable().optional(),
   bookingId: z.string().uuid().nullable().optional(),
+  // Optional user-selectable map color. `#` prefix is optional to accept
+  // both raw hex and the format the color-picker's `<input type="color">`
+  // emits. `null` clears back to the auto-derived per-cruise color.
+  color: z
+    .string()
+    .regex(/^#?[0-9a-fA-F]{6}$/)
+    .optional()
+    .nullable(),
   stops: z.array(stopSchema).max(60).optional(),
 });
 

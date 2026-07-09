@@ -35,16 +35,10 @@ export default function StatCard({
         color: "var(--text-primary)",
       }}
     >
-      <h3
-        className="mb-2 text-sm font-medium"
-        style={{ color: "var(--text-muted)" }}
-      >
+      <h3 className="mb-2 text-sm font-medium" style={{ color: "var(--text-muted)" }}>
         {title}
       </h3>
-      <p
-        className={`mb-1 font-bold ${VALUE_CLASS[valueSize]}`}
-        style={{ color: "var(--accent)" }}
-      >
+      <p className={`mb-1 font-bold ${VALUE_CLASS[valueSize]}`} style={{ color: "var(--accent)" }}>
         {value}
       </p>
       <p className="text-sm opacity-75">{description}</p>

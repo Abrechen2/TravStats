@@ -143,13 +143,8 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
         <DetectTripsBanner onChange={onTripsChange} />
 
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <p
-            className="text-xs uppercase tracking-wide"
-            style={{ color: "var(--text-muted)" }}
-          >
-            {trips.length === 0
-              ? t("trips:noTrips")
-              : t("trips:count", { count: filtered.length })}
+          <p className="text-xs uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+            {trips.length === 0 ? t("trips:noTrips") : t("trips:count", { count: filtered.length })}
             {filtered.length !== trips.length && (
               <span style={{ opacity: 0.7 }}> / {trips.length}</span>
             )}
@@ -332,9 +327,7 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
 
       {showMergeConfirm && (
         <MergeConfirmModal
-          defaultName={
-            trips.find((trip) => trip.id === [...mergeSelection][0])?.name ?? ""
-          }
+          defaultName={trips.find((trip) => trip.id === [...mergeSelection][0])?.name ?? ""}
           count={mergeSelection.size}
           onCancel={() => setShowMergeConfirm(false)}
           onConfirm={(name) => void handleMerge(name)}
@@ -373,10 +366,7 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
               border: "1px solid var(--color-border)",
             }}
           >
-            <h2
-              className="text-base font-semibold"
-              style={{ color: "var(--text-primary)" }}
-            >
+            <h2 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
               {t("trips:deleteTripConfirm", { name: deleteTarget.name })}
             </h2>
             <div className="flex justify-end gap-2">

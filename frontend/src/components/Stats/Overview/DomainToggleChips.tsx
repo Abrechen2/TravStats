@@ -40,7 +40,9 @@ export default function DomainToggleChips({
             disabled={disabled}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
-              background: active ? "color-mix(in srgb, var(--domain-color) 14%, transparent)" : "var(--bg-surface)",
+              background: active
+                ? "color-mix(in srgb, var(--domain-color) 14%, transparent)"
+                : "var(--bg-surface)",
               color: active ? "var(--text-primary)" : "var(--text-secondary)",
               borderColor: active ? d.color : "var(--color-border)",
               ["--domain-color" as string]: d.color,

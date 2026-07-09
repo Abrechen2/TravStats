@@ -34,24 +34,23 @@ const fakeBundle = {
 
 describe("DiagnosticExportModal — Report Bug", () => {
   const openMock = vi.fn();
-  const writeTextMock = vi.fn().mockResolvedValue(undefined);
+  const createObjectURLMock = vi.fn(() => "blob:mock");
 
   beforeEach(() => {
     vi.clearAllMocks();
     (diagnosticExportApi.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(fakeBundle);
     vi.stubGlobal("open", openMock);
-    Object.defineProperty(window.navigator, "clipboard", {
-      value: { writeText: writeTextMock },
-      configurable: true,
-    });
-    Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
+    // jsdom lacks these; the bug-report flow downloads the bundle as a file
+    // (too large to paste into GitHub — #157).
+    URL.createObjectURL = createObjectURLMock;
+    URL.revokeObjectURL = vi.fn();
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("copies the bundle JSON and opens a prefilled GitHub issue URL", async () => {
+  it("downloads the bundle file and opens a prefilled GitHub issue URL", async () => {
     render(<DiagnosticExportModal isOpen={true} onClose={() => {}} />);
 
     await waitFor(() =>
@@ -60,8 +59,8 @@ describe("DiagnosticExportModal — Report Bug", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "common:diagnostic.reportBug" }));
 
-    // 1. Clipboard got the JSON
-    expect(writeTextMock).toHaveBeenCalledWith(JSON.stringify(fakeBundle, null, 2));
+    // 1. The bundle was downloaded as a file (a blob URL was created)
+    expect(createObjectURLMock).toHaveBeenCalledTimes(1);
 
     // 2. window.open called once with prefilled URL
     expect(openMock).toHaveBeenCalledTimes(1);
@@ -75,23 +74,6 @@ describe("DiagnosticExportModal — Report Bug", () => {
 
     // 3. Success toast fired (reportBugOpened)
     expect(mockAddToast).toHaveBeenCalledWith("info", "common:diagnostic.reportBugOpened");
-  });
-
-  it("opens the issue URL even if clipboard write fails", async () => {
-    writeTextMock.mockRejectedValueOnce(new Error("clipboard denied"));
-
-    render(<DiagnosticExportModal isOpen={true} onClose={() => {}} />);
-
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "common:diagnostic.reportBug" })).toBeEnabled()
-    );
-
-    await userEvent.click(screen.getByRole("button", { name: "common:diagnostic.reportBug" }));
-
-    // URL still opened
-    expect(openMock).toHaveBeenCalledTimes(1);
-    // Fallback toast warns the user
-    expect(mockAddToast).toHaveBeenCalledWith("error", "common:diagnostic.copyFailed");
   });
 
   it("disables the Report Bug button until the bundle has loaded", () => {

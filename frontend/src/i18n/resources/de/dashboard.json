@@ -189,5 +189,11 @@
       "flight": "Flüge",
       "cruise": "Kreuzfahrten"
     }
+  },
+  "legend": {
+    "flightPast": "Flüge (geflogen)",
+    "flightUpcoming": "Flüge (geplant)",
+    "cruisePast": "Kreuzfahrten (gefahren)",
+    "cruisePlanned": "Kreuzfahrten (geplant)"
   }
 }

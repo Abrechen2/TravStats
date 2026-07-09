@@ -8,9 +8,8 @@
  * neither — so callers never surface an empty string.
  */
 export function extractApiErrorMessage(err: unknown, fallback: string): string {
-  const data = (
-    err as { response?: { data?: { error?: string; message?: string } } } | undefined
-  )?.response?.data;
+  const data = (err as { response?: { data?: { error?: string; message?: string } } } | undefined)
+    ?.response?.data;
   const candidate = data?.message ?? data?.error;
   return candidate && candidate.trim().length > 0 ? candidate : fallback;
 }

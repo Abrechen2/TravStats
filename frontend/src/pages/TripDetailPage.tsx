@@ -11,6 +11,7 @@ import PageTransition from "../components/PageTransition";
 import NavigationBar from "../components/NavigationBar";
 import TripModal from "../components/Trips/TripModal";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
+import JournalViewModal from "../components/Trips/JournalViewModal";
 import StopModal from "../components/Trips/StopModal";
 import TripMap from "../components/Trips/TripMap";
 import TripGallery from "../components/Trips/TripGallery";
@@ -185,10 +186,7 @@ export default function TripDetailPage(): JSX.Element {
             role="dialog"
             aria-modal="true"
           >
-            <h2
-              className="text-base font-semibold"
-              style={{ color: "var(--text-primary)" }}
-            >
+            <h2 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
               {t("trips:deleteTripConfirm", { name: trip.name })}
             </h2>
             <div className="flex justify-end gap-2">
@@ -299,12 +297,13 @@ function TripHero({ trip, locale, t, onEdit, onDelete }: TripHeroProps): JSX.Ele
         </div>
         <div className="flex flex-wrap gap-3 mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
           {dateRange && <span>{dateRange}</span>}
-          {nights !== null && nights > 0 && (
-            <span>· {t("trips:nights", { count: nights })}</span>
-          )}
+          {nights !== null && nights > 0 && <span>· {t("trips:nights", { count: nights })}</span>}
           {trip.destinationLabel && <span>· 📍 {trip.destinationLabel}</span>}
           {trip.companions.length > 0 && (
-            <span>· 👥 {trip.companions.slice(0, 3).join(", ")}{trip.companions.length > 3 ? " …" : ""}</span>
+            <span>
+              · 👥 {trip.companions.slice(0, 3).join(", ")}
+              {trip.companions.length > 3 ? " …" : ""}
+            </span>
           )}
         </div>
       </div>
@@ -345,7 +344,7 @@ function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
         borderBottom: "1px solid var(--color-border)",
       }}
     >
-      <div className="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto">
+      <div className="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto overflow-y-hidden">
         {TABS.map((key) => {
           const isActive = tab === key;
           return (
@@ -512,6 +511,7 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
   const [adding, setAdding] = useState<null | "journal" | "stop">(null);
   const [editingJournal, setEditingJournal] = useState<TripJournalEntry | null>(null);
+  const [viewingJournal, setViewingJournal] = useState<TripJournalEntry | null>(null);
   const [editingStop, setEditingStop] = useState<TripStop | null>(null);
 
   const events = useMemo<TimelineEvent[]>(() => {
@@ -613,19 +613,64 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
           className="relative pl-7"
           style={{ listStyle: "none", margin: 0 }}
         >
-          <span
-            aria-hidden
-            className="absolute top-3 bottom-3 w-px"
-            style={{ left: 10, background: "var(--color-border)" }}
-          />
-          {events.map((ev) => (
-            <li key={ev.id} className="relative mb-3">
+          {events.map((ev, i) => {
+            const isFirst = i === 0;
+            const isLast = i === events.length - 1;
+            return (
+            <li
+              key={ev.id}
+              className="relative"
+              style={{ marginBottom: isLast ? 0 : 12 }}
+            >
+              {/*
+                Connector line drawn as two half-segments per item so it runs
+                exactly dot-to-dot with no stub above the first or below the
+                last dot (regardless of card height). `bottom: -12` bridges the
+                12px marginBottom gap to the next item's top edge.
+              */}
+              {!isFirst && (
+                <span
+                  aria-hidden
+                  className="absolute"
+                  style={{
+                    left: -18,
+                    top: 0,
+                    bottom: "50%",
+                    width: 2,
+                    transform: "translateX(-50%)",
+                    background: "var(--color-border)",
+                  }}
+                />
+              )}
+              {!isLast && (
+                <span
+                  aria-hidden
+                  className="absolute"
+                  style={{
+                    left: -18,
+                    top: "50%",
+                    bottom: -12,
+                    width: 2,
+                    transform: "translateX(-50%)",
+                    background: "var(--color-border)",
+                  }}
+                />
+              )}
+              {/*
+                Dot: filled, vertically centered on the card (the li tightly
+                wraps its card, so top:50% is the card's centre) and horizontally
+                centered on the connector line. The base-coloured ring masks the
+                line where it passes behind the dot.
+              */}
               <span
                 aria-hidden
-                className="absolute -left-[26px] top-4 w-3 h-3 rounded-full"
+                className="absolute w-3 h-3 rounded-full"
                 style={{
-                  border: `2px solid ${dotColor(ev)}`,
-                  background: "var(--bg-base)",
+                  left: -18,
+                  top: "50%",
+                  transform: "translate(-50%, -50%)",
+                  background: dotColor(ev),
+                  boxShadow: "0 0 0 3px var(--bg-base)",
                 }}
               />
               {ev.kind === "flight" && <FlightCard ev={ev} />}
@@ -640,12 +685,14 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
               {ev.kind === "journal" && (
                 <JournalCard
                   ev={ev}
+                  onView={() => setViewingJournal(ev.entry)}
                   onEdit={() => setEditingJournal(ev.entry)}
                   onDelete={() => void handleDeleteJournal(ev.entry)}
                 />
               )}
             </li>
-          ))}
+            );
+          })}
         </ol>
       )}
 
@@ -662,6 +709,16 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
             setAdding(null);
             setEditingJournal(null);
             onChanged();
+          }}
+        />
+      )}
+      {viewingJournal && (
+        <JournalViewModal
+          entry={viewingJournal}
+          onClose={() => setViewingJournal(null)}
+          onEdit={() => {
+            setEditingJournal(viewingJournal);
+            setViewingJournal(null);
           }}
         />
       )}
@@ -795,9 +852,10 @@ function StopCard({
 }): JSX.Element {
   const s = ev.stop;
   const icon = STOP_DOMAIN_ICON[s.domain ?? "other"] ?? "📍";
-  const subtitle = s.lat != null && s.lon != null
-    ? `${s.lat.toFixed(3)}, ${s.lon.toFixed(3)}`
-    : s.description ?? null;
+  const subtitle =
+    s.lat != null && s.lon != null
+      ? `${s.lat.toFixed(3)}, ${s.lon.toFixed(3)}`
+      : (s.description ?? null);
   return (
     <EventCard
       icon={icon}
@@ -814,10 +872,12 @@ function StopCard({
 
 function JournalCard({
   ev,
+  onView,
   onEdit,
   onDelete,
 }: {
   ev: Extract<TimelineEvent, { kind: "journal" }>;
+  onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }): JSX.Element {
@@ -833,20 +893,34 @@ function JournalCard({
       subtitle={meta ?? null}
       meta={e.title ? truncate(e.body, 200) : undefined}
       date={ev.date}
-      actions={<RowActions onEdit={onEdit} onDelete={onDelete} />}
+      actions={<RowActions onView={onView} onEdit={onEdit} onDelete={onDelete} />}
     />
   );
 }
 
 function RowActions({
+  onView,
   onEdit,
   onDelete,
 }: {
+  onView?: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }): JSX.Element {
   return (
     <div className="flex gap-1 mt-1">
+      {onView && (
+        <button
+          type="button"
+          onClick={onView}
+          className="text-[11px] px-1.5 py-0.5 rounded"
+          style={{ color: "var(--text-muted)" }}
+          aria-label="view"
+          title="view"
+        >
+          👁
+        </button>
+      )}
       <button
         type="button"
         onClick={onEdit}
@@ -903,7 +977,9 @@ function LogisticsTab({
           className="rounded-xl"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
-          <PanelHeader>{t("trips:detail.logistics.flights")} ({flights.length})</PanelHeader>
+          <PanelHeader>
+            {t("trips:detail.logistics.flights")} ({flights.length})
+          </PanelHeader>
           <table className="w-full text-sm">
             <thead>
               <tr
@@ -917,22 +993,18 @@ function LogisticsTab({
             </thead>
             <tbody>
               {flights.map((f) => (
-                <tr
-                  key={f.id}
-                  style={{ borderTop: "1px solid var(--color-border)" }}
-                >
-                  <td className="px-4 py-2.5 whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
+                <tr key={f.id} style={{ borderTop: "1px solid var(--color-border)" }}>
+                  <td
+                    className="px-4 py-2.5 whitespace-nowrap"
+                    style={{ color: "var(--text-muted)" }}
+                  >
                     {f.departureTime ? new Date(f.departureTime).toLocaleDateString() : "—"}
                   </td>
                   <td className="px-4 py-2.5 font-mono">
                     {f.depIata ?? "???"} → {f.arrIata ?? "???"}
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <Link
-                      to="/flights"
-                      className="text-xs"
-                      style={{ color: "var(--accent)" }}
-                    >
+                    <Link to="/flights" className="text-xs" style={{ color: "var(--accent)" }}>
                       öffnen
                     </Link>
                   </td>
@@ -948,7 +1020,9 @@ function LogisticsTab({
           className="rounded-xl"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
-          <PanelHeader>{t("trips:detail.logistics.cruises")} ({cruises.length})</PanelHeader>
+          <PanelHeader>
+            {t("trips:detail.logistics.cruises")} ({cruises.length})
+          </PanelHeader>
           <table className="w-full text-sm">
             <thead>
               <tr
@@ -963,7 +1037,10 @@ function LogisticsTab({
             <tbody>
               {cruises.map((c) => (
                 <tr key={c.id} style={{ borderTop: "1px solid var(--color-border)" }}>
-                  <td className="px-4 py-2.5 whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
+                  <td
+                    className="px-4 py-2.5 whitespace-nowrap"
+                    style={{ color: "var(--text-muted)" }}
+                  >
                     {c.startDate ? new Date(c.startDate).toLocaleDateString() : "—"}
                   </td>
                   <td className="px-4 py-2.5">{c.cruiseLine ?? "Kreuzfahrt"}</td>
@@ -1014,9 +1091,7 @@ function LogisticsTab({
                 <tr key={b.id} style={{ borderTop: "1px solid var(--color-border)" }}>
                   <td className="px-4 py-2.5 font-mono">{b.pnr ?? "—"}</td>
                   <td className="px-4 py-2.5 text-right">
-                    {b.price != null
-                      ? `${b.currency ?? "EUR"} ${b.price.toFixed(2)}`
-                      : "—"}
+                    {b.price != null ? `${b.currency ?? "EUR"} ${b.price.toFixed(2)}` : "—"}
                   </td>
                 </tr>
               ))}
@@ -1049,9 +1124,7 @@ function TripStatsRow({
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
       <StatTile value={flightCount} label={t("trips:detail.stats.flights")} />
-      {cruiseEnabled && (
-        <StatTile value={cruiseCount} label={t("trips:detail.stats.cruises")} />
-      )}
+      {cruiseEnabled && <StatTile value={cruiseCount} label={t("trips:detail.stats.cruises")} />}
       <StatTile value={trip.countries.length} label={t("trips:detail.stats.countries")} />
       <StatTile value={trip.companions.length} label={t("trips:detail.stats.companions")} />
       <StatTile
@@ -1103,10 +1176,7 @@ function SummaryPanel({
         typeof err === "object" && err !== null && "response" in err
           ? ((err as { response?: { status?: number } }).response?.status ?? 0)
           : 0;
-      addToast(
-        "error",
-        status === 503 ? t("trips:summary.unavailable") : t("trips:summary.error"),
-      );
+      addToast("error", status === 503 ? t("trips:summary.unavailable") : t("trips:summary.error"));
     } finally {
       setGenerating(false);
     }
@@ -1117,8 +1187,7 @@ function SummaryPanel({
       <div
         className="rounded-xl p-4 flex items-center gap-3"
         style={{
-          background:
-            "linear-gradient(135deg, rgba(240,169,71,0.06), rgba(74,166,176,0.04))",
+          background: "linear-gradient(135deg, rgba(240,169,71,0.06), rgba(74,166,176,0.04))",
           border: "1px dashed var(--color-border)",
         }}
       >
