@@ -45,10 +45,20 @@ jest.mock("../middleware/upload", () => ({
   deleteTripPhotoFile: jest.fn(),
 }));
 
+const loggerWarn = jest.fn();
+const loggerInfo = jest.fn();
+const loggerError = jest.fn();
+jest.mock("../utils/logger", () => ({
+  __esModule: true,
+  default: { warn: loggerWarn, info: loggerInfo, error: loggerError, debug: jest.fn() },
+}));
+
 import {
   startAlbumImport,
   estimateAlbumImport,
   IMPORT_ALLOWED_MIME_TYPES,
+  IMPORT_STALE_AFTER_MS,
+  clearImportGuards,
 } from "../services/immich/immichImport";
 
 const asset = (id: string, over: Record<string, unknown> = {}) => ({
@@ -65,6 +75,7 @@ const asset = (id: string, over: Record<string, unknown> = {}) => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  clearImportGuards();
   writtenFiles.length = 0;
   getImmichConnection.mockResolvedValue({ baseUrl: "https://immich.lan", apiKey: "k", source: "user" });
   linkFindUnique.mockResolvedValue({
@@ -155,7 +166,7 @@ describe("startAlbumImport", () => {
   });
 
   it("refuses to start a second run while one is already running", async () => {
-    jobFindUnique.mockResolvedValue({ id: "job-1", status: "running" });
+    jobFindUnique.mockResolvedValue({ id: "job-1", status: "running", updatedAt: new Date() });
 
     await startAlbumImport("u1", "link-1");
 
@@ -190,6 +201,71 @@ describe("startAlbumImport", () => {
     getImmichConnection.mockResolvedValue(null);
     await startAlbumImport("u1", "link-1");
     expect(listAlbumAssets).not.toHaveBeenCalled();
+  });
+});
+
+describe("startAlbumImport concurrency guard", () => {
+  it("in-memory guard: two calls fired without awaiting the first result in exactly one listAlbumAssets call", async () => {
+    let resolveAssets!: (value: ReturnType<typeof asset>[]) => void;
+    listAlbumAssets.mockReturnValue(
+      new Promise<ReturnType<typeof asset>[]>((resolve) => {
+        resolveAssets = resolve;
+      }),
+    );
+
+    const first = startAlbumImport("u1", "link-1");
+    const second = startAlbumImport("u1", "link-1");
+
+    resolveAssets([asset("p1")]);
+    await Promise.all([first, second]);
+
+    expect(listAlbumAssets).toHaveBeenCalledTimes(1);
+  });
+
+  it("releases the guard after a completed run so a later re-sync proceeds", async () => {
+    listAlbumAssets.mockResolvedValue([asset("p1")]);
+
+    await startAlbumImport("u1", "link-1");
+    await startAlbumImport("u1", "link-1");
+
+    expect(listAlbumAssets).toHaveBeenCalledTimes(2);
+  });
+
+  it("releases the guard after a failed run so a later re-sync proceeds", async () => {
+    listAlbumAssets.mockRejectedValueOnce(new Error("immich down"));
+    await startAlbumImport("u1", "link-1");
+
+    listAlbumAssets.mockResolvedValueOnce([asset("p1")]);
+    await startAlbumImport("u1", "link-1");
+
+    expect(listAlbumAssets).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("startAlbumImport stale running-job reclaim", () => {
+  it("reclaims a running job whose last progress write is older than IMPORT_STALE_AFTER_MS", async () => {
+    const staleUpdatedAt = new Date(Date.now() - IMPORT_STALE_AFTER_MS - 60_000);
+    jobFindUnique.mockResolvedValue({ id: "job-1", status: "running", updatedAt: staleUpdatedAt });
+    listAlbumAssets.mockResolvedValue([asset("p1")]);
+
+    await startAlbumImport("u1", "link-1");
+
+    expect(listAlbumAssets).toHaveBeenCalledTimes(1);
+    expect(loggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "immich_import_reclaimed_stale_job",
+        context: expect.objectContaining({ linkId: "link-1" }),
+      }),
+    );
+  });
+
+  it("still refuses a running job whose last progress write is fresh", async () => {
+    jobFindUnique.mockResolvedValue({ id: "job-1", status: "running", updatedAt: new Date() });
+
+    await startAlbumImport("u1", "link-1");
+
+    expect(listAlbumAssets).not.toHaveBeenCalled();
+    expect(jobUpsert).not.toHaveBeenCalled();
   });
 });
 
