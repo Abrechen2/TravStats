@@ -63,9 +63,4 @@ export interface ImportEstimate {
  * Why an Immich-backed request failed. `notConfigured` comes back as 409 from
  * our own API; the rest are upstream kinds surfaced as 502.
  */
-export type ImmichFailureKind =
-  | "notConfigured"
-  | "unreachable"
-  | "auth"
-  | "notFound"
-  | "protocol";
+export type ImmichFailureKind = "notConfigured" | "unreachable" | "auth" | "notFound" | "protocol";
