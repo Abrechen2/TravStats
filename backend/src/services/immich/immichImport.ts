@@ -33,6 +33,31 @@ export const IMPORT_ALLOWED_MIME_TYPES = [
 /** Keep the event loop responsive on a 5000-photo album. */
 const CHUNK_SIZE = 10;
 
+/**
+ * Crash-recovery escape hatch, NOT a time limit on legitimate long imports.
+ * A live run keeps refreshing the job row's `updatedAt` (every
+ * `immichImportJob.update` call during the chunk loop bumps Prisma's
+ * `@updatedAt` field), so a genuinely still-running import never looks
+ * stale. Only a `running` row whose last progress write predates this
+ * window is presumed to belong to a process that died mid-import (e.g. a
+ * container restart) and is safe to reclaim.
+ */
+export const IMPORT_STALE_AFTER_MS = 30 * 60_000;
+
+/**
+ * In-flight `linkId`s for this process. A single Node process serves every
+ * import here (no job queue), so a `Set` closes the TOCTOU window between
+ * reading the job row and writing its `running` status: the check-and-add
+ * below happens with no `await` in between, so two near-simultaneous calls
+ * for the same `linkId` cannot both slip past it.
+ */
+const inFlightImports = new Set<string>();
+
+/** Test seam. Never called from production code. */
+export function clearImportGuards(): void {
+  inFlightImports.clear();
+}
+
 export interface ImportJobDto {
   status: "pending" | "running" | "completed" | "failed";
   totalAssets: number;
@@ -72,6 +97,14 @@ export async function getImportJob(linkId: string): Promise<ImportJobDto | null>
   };
 }
 
+/**
+ * Quotes the importable size of the WHOLE album, not a "how much is left to
+ * sync" delta — it has no notion of already-imported assets. The signature
+ * is deliberately `albumId`-only (no `tripId`), which makes such a delta
+ * structurally impossible here. Do not repurpose this for a
+ * remaining-to-sync UI without adding that parameter; it will quote the
+ * wrong (too-large) number.
+ */
 export async function estimateAlbumImport(
   userId: string,
   albumId: string,
@@ -137,99 +170,120 @@ async function importAsset(
  * the request that triggered it.
  */
 export async function startAlbumImport(userId: string, linkId: string): Promise<void> {
+  // Synchronous check-and-add — no `await` between them — so two calls that
+  // arrive close together for the same `linkId` cannot both pass this gate.
+  if (inFlightImports.has(linkId)) {
+    logger.info({ message: "immich_import_already_running", context: { linkId } });
+    return;
+  }
+  inFlightImports.add(linkId);
+
   try {
-    const existing = await prisma.immichImportJob.findUnique({ where: { albumLinkId: linkId } });
-    if (existing?.status === "running") {
-      logger.info({ message: "immich_import_already_running", context: { linkId } });
-      return;
-    }
-
-    const link = await prisma.tripImmichAlbum.findUnique({ where: { id: linkId } });
-    if (!link) return;
-
-    const conn = await getImmichConnection(userId);
-    if (!conn) {
-      logger.warn({ message: "immich_import_no_connection", context: { linkId } });
-      return;
-    }
-
-    const runningJob = {
-      status: "running",
-      startedAt: new Date(),
-      completedAt: null,
-      error: null,
-      processedAssets: 0,
-      failedAssets: 0,
-    };
-    await prisma.immichImportJob.upsert({
-      where: { albumLinkId: linkId },
-      update: runningJob,
-      create: { albumLinkId: linkId, ...runningJob },
-    });
-
-    const client = createImmichClient(conn);
-    let processed = 0;
-    let failed = 0;
-
     try {
-      const all = await client.listAlbumAssets(link.immichAlbumId);
-      const importable = all.filter(isImportable);
-
-      const alreadyImported = await prisma.tripPhoto.findMany({
-        where: { tripId: link.tripId, immichAssetId: { not: null } },
-        select: { immichAssetId: true },
-      });
-      const seen = new Set(alreadyImported.map((p) => p.immichAssetId));
-      const todo = importable.filter((a) => !seen.has(a.id));
-
-      await prisma.immichImportJob.update({
-        where: { albumLinkId: linkId },
-        data: { totalAssets: todo.length },
-      });
-
-      for (let i = 0; i < todo.length; i += CHUNK_SIZE) {
-        const chunk = todo.slice(i, i + CHUNK_SIZE);
-        const results = await Promise.all(
-          chunk.map((asset) => importAsset(client, link.tripId, linkId, asset)),
-        );
-        processed += results.filter(Boolean).length;
-        failed += results.filter((ok) => !ok).length;
-
-        await prisma.immichImportJob.update({
-          where: { albumLinkId: linkId },
-          data: { processedAssets: processed, failedAssets: failed },
+      const existing = await prisma.immichImportJob.findUnique({ where: { albumLinkId: linkId } });
+      if (existing?.status === "running") {
+        const staleForMs = Date.now() - existing.updatedAt.getTime();
+        if (staleForMs < IMPORT_STALE_AFTER_MS) {
+          logger.info({ message: "immich_import_already_running", context: { linkId } });
+          return;
+        }
+        logger.warn({
+          message: "immich_import_reclaimed_stale_job",
+          context: { linkId, staleForMs, lastProgressAt: existing.updatedAt.toISOString() },
         });
       }
 
-      await prisma.immichImportJob.update({
-        where: { albumLinkId: linkId },
-        data: {
-          status: "completed",
-          completedAt: new Date(),
-          processedAssets: processed,
-          failedAssets: failed,
-        },
-      });
-      await prisma.tripImmichAlbum.update({
-        where: { id: linkId },
-        data: { lastSyncedAt: new Date(), assetCount: importable.length },
-      });
-      invalidateAlbumAssets(userId, link.immichAlbumId);
+      const link = await prisma.tripImmichAlbum.findUnique({ where: { id: linkId } });
+      if (!link) return;
 
-      logger.info({
-        message: "immich_import_completed",
-        context: { linkId, processed, failed },
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Import failed";
-      logger.error({ message: "immich_import_failed", error, context: { linkId } });
-      await prisma.immichImportJob.update({
+      const conn = await getImmichConnection(userId);
+      if (!conn) {
+        logger.warn({ message: "immich_import_no_connection", context: { linkId } });
+        return;
+      }
+
+      const runningJob = {
+        status: "running",
+        startedAt: new Date(),
+        completedAt: null,
+        error: null,
+        processedAssets: 0,
+        failedAssets: 0,
+      };
+      await prisma.immichImportJob.upsert({
         where: { albumLinkId: linkId },
-        data: { status: "failed", error: message, completedAt: new Date() },
+        update: runningJob,
+        create: { albumLinkId: linkId, ...runningJob },
       });
+
+      const client = createImmichClient(conn);
+      let processed = 0;
+      let failed = 0;
+
+      try {
+        const all = await client.listAlbumAssets(link.immichAlbumId);
+        const importable = all.filter(isImportable);
+
+        const alreadyImported = await prisma.tripPhoto.findMany({
+          where: { tripId: link.tripId, immichAssetId: { not: null } },
+          select: { immichAssetId: true },
+        });
+        const seen = new Set(alreadyImported.map((p) => p.immichAssetId));
+        const todo = importable.filter((a) => !seen.has(a.id));
+
+        await prisma.immichImportJob.update({
+          where: { albumLinkId: linkId },
+          data: { totalAssets: todo.length },
+        });
+
+        for (let i = 0; i < todo.length; i += CHUNK_SIZE) {
+          const chunk = todo.slice(i, i + CHUNK_SIZE);
+          const results = await Promise.all(
+            chunk.map((asset) => importAsset(client, link.tripId, linkId, asset)),
+          );
+          processed += results.filter(Boolean).length;
+          failed += results.filter((ok) => !ok).length;
+
+          await prisma.immichImportJob.update({
+            where: { albumLinkId: linkId },
+            data: { processedAssets: processed, failedAssets: failed },
+          });
+        }
+
+        await prisma.immichImportJob.update({
+          where: { albumLinkId: linkId },
+          data: {
+            status: "completed",
+            completedAt: new Date(),
+            processedAssets: processed,
+            failedAssets: failed,
+          },
+        });
+        await prisma.tripImmichAlbum.update({
+          where: { id: linkId },
+          data: { lastSyncedAt: new Date(), assetCount: importable.length },
+        });
+        invalidateAlbumAssets(userId, link.immichAlbumId);
+
+        logger.info({
+          message: "immich_import_completed",
+          context: { linkId, processed, failed },
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Import failed";
+        logger.error({ message: "immich_import_failed", error, context: { linkId } });
+        await prisma.immichImportJob.update({
+          where: { albumLinkId: linkId },
+          data: { status: "failed", error: message, completedAt: new Date() },
+        });
+      }
+    } catch (error) {
+      // Last line of defence: a fire-and-forget job must never reject.
+      logger.error({ message: "immich_import_crashed", error, context: { linkId } });
     }
-  } catch (error) {
-    // Last line of defence: a fire-and-forget job must never reject.
-    logger.error({ message: "immich_import_crashed", error, context: { linkId } });
+  } finally {
+    // Always release, even on an early return or an unforeseen throw — a
+    // crashed or failed run must not permanently block the next re-sync.
+    inFlightImports.delete(linkId);
   }
 }
