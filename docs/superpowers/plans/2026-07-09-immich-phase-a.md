@@ -134,9 +134,10 @@ import { prisma } from "../db";
 
 const USER = "immich-schema-test-user";
 
+// `User` requires `passwordHash` (not `password`) and has no `email` column.
 async function makeUser(): Promise<string> {
   const user = await prisma.user.create({
-    data: { username: `${USER}-${Date.now()}`, password: "x", email: null },
+    data: { username: `${USER}-${Date.now()}-${Math.random()}`, passwordHash: "x" },
   });
   return user.id;
 }
