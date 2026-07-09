@@ -49,7 +49,7 @@ export async function getCachedAlbumAssets(
 
   // A failed load must not be cached — `finally` clears the in-flight slot so
   // the next caller retries upstream instead of adopting a rejected promise.
-  const promise = load()
+  const promise: Promise<ImmichAsset[]> = load()
     .then((assets) => {
       // Only write back if no invalidation happened while this load was in
       // flight. Otherwise we'd resurrect data fetched before the
@@ -62,7 +62,10 @@ export async function getCachedAlbumAssets(
       return assets;
     })
     .finally(() => {
-      inFlight.delete(key);
+      // Only retract our own registration. An invalidation may have replaced it
+      // with a newer load, and deleting by key alone would orphan that load's
+      // in-flight entry and cause a redundant upstream call.
+      if (inFlight.get(key) === promise) inFlight.delete(key);
     });
 
   inFlight.set(key, promise);
@@ -81,4 +84,10 @@ export function clearImmichAssetCache(): void {
   entries.clear();
   inFlight.clear();
   generations.clear();
+}
+
+/** Test seam. Never called from production code. Returns the promise in inFlight for a key, or undefined. */
+export function getInFlightPromise(userId: string, albumId: string): Promise<ImmichAsset[]> | undefined {
+  const key = keyOf(userId, albumId);
+  return inFlight.get(key);
 }
