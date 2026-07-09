@@ -29,5 +29,12 @@ done
 out=$(DRY_RUN=1 CTID=100 bash "$SCRIPT" beta 9.9.9 2>&1; echo "rc=$?")
 check "refuses CTID != 134" "yes" "$([[ "$out" == *"rc=1"* ]] && echo yes || echo no)"
 
+# 5. rejects a tag containing shell metacharacters (command injection attempt)
+out=$(DRY_RUN=1 bash "$SCRIPT" beta 'x|e' 2>&1; echo "rc=$?")
+check "rejects tag with pipe/shell metachars" "yes" "$([[ "$out" == *"rc=2"* ]] && echo yes || echo no)"
+
+out=$(DRY_RUN=1 bash "$SCRIPT" beta 'a$(id)' 2>&1; echo "rc=$?")
+check "rejects tag with command substitution" "yes" "$([[ "$out" == *"rc=2"* ]] && echo yes || echo no)"
+
 echo "passed=$pass failed=$fail"
 [[ $fail -eq 0 ]]

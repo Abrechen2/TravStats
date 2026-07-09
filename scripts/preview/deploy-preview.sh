@@ -23,6 +23,9 @@ case "$slot" in
   *) echo "usage: $0 <beta|immich|poi> <ghcr-tag>" >&2; exit 2 ;;
 esac
 [[ -n "$tag" ]] || { echo "usage: $0 <beta|immich|poi> <ghcr-tag>" >&2; exit 2; }
+if ! [[ "$tag" =~ ^[A-Za-z0-9._-]+$ ]]; then
+  echo "invalid tag: $tag (allowed: A-Za-z0-9._-)" >&2; exit 2
+fi
 
 echo "slot=$slot host=$host port=$port tag=$tag"
 [[ "$DRY_RUN" == "1" ]] && { echo "dry run, stopping"; exit 0; }
