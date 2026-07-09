@@ -28,7 +28,7 @@ fi
   set -e
   command -v docker >/dev/null 2>&1 || {
     apt-get update -qq
-    apt-get install -y -qq curl ca-certificates
+    apt-get install -y -qq curl ca-certificates gnupg
     curl -fsSL https://get.docker.com | sh
   }
   docker network inspect preview-net >/dev/null 2>&1 || docker network create preview-net
