@@ -9,7 +9,6 @@
 // Map-specific chrome that has no 2D↔3D meaning (globe auto-rotation, day/
 // night, performance mode) stays out of here — those live per map.
 
-import type { RouteWidth, MarkerSize } from "./controlPanelKit";
 import type { LabelsMode } from "./labelPriority";
 
 /** The 6 tokenless basemaps — same id set on the globe and the flat map. */
@@ -19,14 +18,16 @@ export interface MapAppearance {
   styleId?: BasemapId;
   // Flight domain
   routeColor?: [number, number, number] | null;
-  flightRouteWidth?: RouteWidth;
+  flightRouteWidth?: number;
   airportColor?: [number, number, number] | null;
-  flightMarkerSize?: MarkerSize;
+  flightMarkerSize?: number;
   // Cruise domain
   cruiseRouteColor?: [number, number, number] | null;
-  cruiseRouteWidth?: RouteWidth;
+  cruiseRouteWidth?: number;
   portColor?: [number, number, number] | null;
-  cruiseMarkerSize?: MarkerSize;
+  cruiseMarkerSize?: number;
+  /** Multiplier on cruise direction-arrow size (1 = default, 0 = arrows off). */
+  cruiseArrowScale?: number;
   // Layers
   showTerrain?: boolean;
   showPlaceLabels?: boolean;
@@ -61,6 +62,43 @@ function migrateLegacy(): MapAppearance {
   return merged;
 }
 
+// Legacy blobs stored width/size as enum strings ("thin"/"m"/…). Coerce them
+// to the numeric scale they used to map to, so an existing user's saved look
+// survives the switch to continuous sliders. New writes are already numbers.
+function widthScale(v: unknown): number | undefined {
+  if (typeof v === "number") return v;
+  if (v === "thin") return 0.6;
+  if (v === "normal") return 1;
+  if (v === "thick") return 1.6;
+  return undefined;
+}
+function sizeScale(v: unknown): number | undefined {
+  if (typeof v === "number") return v;
+  if (v === "off") return 0;
+  if (v === "s") return 0.7;
+  if (v === "m") return 1;
+  if (v === "l") return 1.45;
+  return undefined;
+}
+
+/** Coerce legacy enum width/size values to numbers; leave everything else as-is. */
+export function normalizeAppearance(raw: Record<string, unknown>): MapAppearance {
+  const out: MapAppearance = { ...(raw as MapAppearance) };
+  const fw = widthScale(raw.flightRouteWidth);
+  const cw = widthScale(raw.cruiseRouteWidth);
+  const fm = sizeScale(raw.flightMarkerSize);
+  const cm = sizeScale(raw.cruiseMarkerSize);
+  if (fw === undefined) delete out.flightRouteWidth;
+  else out.flightRouteWidth = fw;
+  if (cw === undefined) delete out.cruiseRouteWidth;
+  else out.cruiseRouteWidth = cw;
+  if (fm === undefined) delete out.flightMarkerSize;
+  else out.flightMarkerSize = fm;
+  if (cm === undefined) delete out.cruiseMarkerSize;
+  else out.cruiseMarkerSize = cm;
+  return out;
+}
+
 export function loadMapAppearance(): MapAppearance {
   if (typeof window === "undefined") return {};
   let raw: string | null = null;
@@ -71,7 +109,7 @@ export function loadMapAppearance(): MapAppearance {
   }
   if (raw) {
     try {
-      return JSON.parse(raw) as MapAppearance;
+      return normalizeAppearance(JSON.parse(raw) as Record<string, unknown>);
     } catch {
       return {};
     }
@@ -85,7 +123,7 @@ export function loadMapAppearance(): MapAppearance {
       // localStorage unavailable — persistence is opt-in.
     }
   }
-  return migrated;
+  return normalizeAppearance(migrated as Record<string, unknown>);
 }
 
 /** Merge-write: only the given keys change, the rest of the blob is kept. */

@@ -271,7 +271,7 @@ describe("createCruiseArcsLayer", () => {
       makeStop(2, 2, { id: 2, lat: 42.1, lon: 11.8 }),
     ]);
     const layer = createCruiseArrowsLayer([cruise], new Map(), null, { arrowSizeScale: 2 });
-    expect((layer as { props: { getSize: number } }).props.getSize).toBe(20);
+    expect((layer as unknown as { props: { getSize: number } }).props.getSize).toBe(20);
   });
 
   it("defaults arrow size to the base height when no scale is given", () => {
@@ -280,7 +280,7 @@ describe("createCruiseArcsLayer", () => {
       makeStop(2, 2, { id: 2, lat: 42.1, lon: 11.8 }),
     ]);
     const layer = createCruiseArrowsLayer([cruise]);
-    expect((layer as { props: { getSize: number } }).props.getSize).toBe(10);
+    expect((layer as unknown as { props: { getSize: number } }).props.getSize).toBe(10);
   });
 
   it("returns null when arrowSizeScale is 0 (arrows off)", () => {
