@@ -11,7 +11,7 @@ import { AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { encryptApiKey } from "../../utils/encryption";
 import { immichConnectionSchema, immichTestSchema } from "../../schemas/immich";
-import { getImmichConnection, hasImmichAccess } from "../../services/immich/immichResolver";
+import { getImmichConnection } from "../../services/immich/immichResolver";
 import { testImmichConnection } from "../../services/immich/immichTester";
 import { ImmichError, normalizeImmichBaseUrl } from "../../services/immich/types";
 import logger from "../../utils/logger";
@@ -30,15 +30,14 @@ async function readStatus(userId: string): Promise<Record<string, unknown>> {
     select: { immichBaseUrl: true, immichApiKey: true, immichDefaultMode: true },
   });
   const conn = await getImmichConnection(userId);
-  const access = await hasImmichAccess(userId);
 
   return {
     baseUrl: settings?.immichBaseUrl ?? null,
     hasKey: Boolean(settings?.immichApiKey),
     defaultMode: settings?.immichDefaultMode === "import" ? "import" : "link",
     source: conn?.source ?? null,
-    isShared: access.isShared,
-    hasAccess: access.hasAccess,
+    isShared: conn !== null && conn.source !== "user",
+    hasAccess: conn !== null,
   };
 }
 
