@@ -27,6 +27,7 @@ import AboutSection from "../components/Settings/AboutSection";
 import ImportSection from "../components/Settings/ImportSection";
 import FeaturesSection from "../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../components/Settings/CruisePreferencesSection";
+import ImmichConnectionCard from "../components/Settings/ImmichConnectionCard";
 import PasswordModal from "../components/Settings/PasswordModal";
 
 type TabId = "general" | "flight" | "cruise";
@@ -389,13 +390,16 @@ export default function SettingsPage(): JSX.Element {
               />
             )}
             {activeSection === "apikeys" && (
-              <ApiKeysSection
-                apiKeysStatus={apiKeysStatus}
-                apiKeys={apiKeys}
-                loadingApiKeys={loadingApiKeys}
-                onSetApiKeys={setApiKeys}
-                onSave={saveApiKeys}
-              />
+              <>
+                <ApiKeysSection
+                  apiKeysStatus={apiKeysStatus}
+                  apiKeys={apiKeys}
+                  loadingApiKeys={loadingApiKeys}
+                  onSetApiKeys={setApiKeys}
+                  onSave={saveApiKeys}
+                />
+                <ImmichConnectionCard />
+              </>
             )}
             {activeSection === "devices" && <DevicesSection />}
             {activeSection === "apitokens" && <ApiTokensSection />}
