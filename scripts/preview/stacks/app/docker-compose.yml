@@ -29,9 +29,13 @@ services:
       APP_VERSION: ${IMAGE_TAG}
       CREATE_DEMO_USER: "false"
       SEED_AIRPORTS: "false"
-      USE_LLM_PARSER: "true"
-      OLLAMA_URL: http://ollama:11434
-      OLLAMA_MODEL: gemma3:4b
+      # LLM parsing is disabled on the previews: pve-node1 is a shared,
+      # Ceph/KVM-loaded cluster node, and an Ollama parse measured 0.3 tok/s
+      # there — every call timed out and fell back to the regex templates
+      # anyway (2026-07-09). Templates handle known airlines instantly. If the
+      # previews ever move to dedicated hardware, re-enable this and restore
+      # the shared Ollama stack (scripts/preview/stacks/ollama/).
+      USE_LLM_PARSER: "false"
       FRONTEND_URL: https://${PUBLIC_HOST}
       ALLOW_REGISTRATION: "false"
     ports:
