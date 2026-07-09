@@ -4,7 +4,7 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
-## [2.3.0-rc.2] - 2026-07-09 (Release Candidate)
+## [2.3.0-rc.3] - 2026-07-09 (Release Candidate)
 
 Release candidate for **TravStats 2.3**. Aggregates the entire
 `dev/v2.3` forward line — a redesigned map/globe appearance system,
@@ -60,8 +60,8 @@ more.
 - Cruise stops with an ambiguous name (e.g. "Naples") now resolve to
   the correctly-catalogued port instead of a same-named placeholder in
   another country (#169).
-- The globe's activity time-histogram no longer overlaps the map legend
-  on the "All" tab.
+- The map colour legend now sits in a compact bottom-right table, so the
+  globe's activity time-histogram no longer overlaps it on the "All" tab.
 - Cruise-arc arrows now point in the correct travel direction and have
   a bordered, easier-to-read shape (Discord bug report #160).
 - Overlapping airport/port labels in dense map clusters are
