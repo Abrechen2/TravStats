@@ -279,12 +279,15 @@ export const MARKER_SIZES: readonly MarkerSize[] = ["off", "s", "m", "l"];
 export interface DomainAppearanceState {
   routeColor: [number, number, number] | null;
   onRouteColorChange: (c: [number, number, number] | null) => void;
-  routeWidth: RouteWidth;
-  onRouteWidthChange: (w: RouteWidth) => void;
+  routeWidth: number;
+  onRouteWidthChange: (w: number) => void;
   markerColor: [number, number, number] | null;
   onMarkerColorChange: (c: [number, number, number] | null) => void;
-  markerSize: MarkerSize;
-  onMarkerSizeChange: (s: MarkerSize) => void;
+  markerSize: number;
+  onMarkerSizeChange: (s: number) => void;
+  /** Cruise-only: direction-arrow size multiplier + setter (flat map). */
+  arrowScale?: number;
+  onArrowScaleChange?: (n: number) => void;
 }
 
 export interface AppearanceSectionProps {
@@ -299,8 +302,8 @@ export interface AppearanceSectionProps {
   /** Pill text for the route reset — "Frequenz" (flights) / "Standard" (cruises). */
   routeAutoLabel: string;
   widthLabel: string;
-  routeWidth: RouteWidth;
-  onRouteWidthChange: (w: RouteWidth) => void;
+  routeWidth: number;
+  onRouteWidthChange: (w: number) => void;
   // Marker row
   markerLabel: string;
   markerColor: [number, number, number] | null;
@@ -309,8 +312,12 @@ export interface AppearanceSectionProps {
   /** Pill text for the marker reset ("Auto"). */
   markerAutoLabel: string;
   sizeLabel: string;
-  markerSize: MarkerSize;
-  onMarkerSizeChange: (s: MarkerSize) => void;
+  markerSize: number;
+  onMarkerSizeChange: (s: number) => void;
+  /** Cruise-only arrow slider — rendered only when all three are provided. */
+  arrowLabel?: string;
+  arrowScale?: number;
+  onArrowScaleChange?: (n: number) => void;
 }
 
 /**
@@ -339,6 +346,9 @@ export function AppearanceSection({
   sizeLabel,
   markerSize,
   onMarkerSizeChange,
+  arrowLabel,
+  arrowScale,
+  onArrowScaleChange,
 }: AppearanceSectionProps): JSX.Element {
   const { t } = useTranslation();
   return (
@@ -362,21 +372,15 @@ export function AppearanceSection({
         </div>
       </div>
 
-      {/* Route width preset */}
-      <div className="mt-1.5">
-        <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
-          {widthLabel}
-        </div>
-        <SegControl<RouteWidth>
-          value={routeWidth}
-          onChange={onRouteWidthChange}
-          options={[
-            { value: "thin", label: t("map:globe.panel.widthThin") },
-            { value: "normal", label: t("map:globe.panel.widthNormal") },
-            { value: "thick", label: t("map:globe.panel.widthThick") },
-          ]}
-        />
-      </div>
+      {/* Route width slider */}
+      <Slider
+        label={widthLabel}
+        value={routeWidth}
+        min={0.3}
+        max={2}
+        step={0.1}
+        onChange={onRouteWidthChange}
+      />
 
       {/* Marker colour + Auto reset */}
       <div className="mt-2 flex items-center justify-between gap-2 py-0.5">
@@ -392,22 +396,31 @@ export function AppearanceSection({
         />
       </div>
 
-      {/* Marker size preset (Aus / S / M / L) */}
+      {/* Marker size slider (0 = hidden) */}
       <div className="mt-1">
-        <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
-          {sizeLabel}
-        </div>
-        <SegControl<MarkerSize>
+        <Slider
+          label={sizeLabel}
           value={markerSize}
+          min={0}
+          max={1.6}
+          step={0.1}
           onChange={onMarkerSizeChange}
-          options={[
-            { value: "off", label: t("map:globe.panel.off") },
-            { value: "s", label: "S" },
-            { value: "m", label: "M" },
-            { value: "l", label: "L" },
-          ]}
+          format={(v) => (v <= 0 ? t("map:globe.panel.off") : `${v.toFixed(1)}×`)}
         />
       </div>
+
+      {/* Cruise-only: direction-arrow size slider */}
+      {arrowScale != null && onArrowScaleChange && (
+        <Slider
+          label={arrowLabel ?? ""}
+          value={arrowScale}
+          min={0}
+          max={2.5}
+          step={0.1}
+          onChange={onArrowScaleChange}
+          format={(v) => (v <= 0 ? t("map:globe.panel.off") : `${v.toFixed(1)}×`)}
+        />
+      )}
     </div>
   );
 }

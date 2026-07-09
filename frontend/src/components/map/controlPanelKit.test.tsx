@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
-import { Slider } from "./controlPanelKit";
+import { Slider, AppearanceSection } from "./controlPanelKit";
 
 describe("Slider", () => {
   it("renders a range input with the value and formatted readout", () => {
@@ -41,5 +41,47 @@ describe("Slider", () => {
       />
     );
     expect(screen.getByText("Aus")).toBeTruthy();
+  });
+});
+
+const baseSectionProps = {
+  title: "Kreuzfahrten",
+  routeLabel: "Routen",
+  routeColor: null,
+  routeDefault: [111, 160, 214] as [number, number, number],
+  onRouteColorChange: () => {},
+  routeAutoLabel: "Standard",
+  widthLabel: "Stärke",
+  routeWidth: 1,
+  onRouteWidthChange: () => {},
+  markerLabel: "Häfen",
+  markerColor: null,
+  markerDefault: [111, 160, 214] as [number, number, number],
+  onMarkerColorChange: () => {},
+  markerAutoLabel: "Auto",
+  sizeLabel: "Größe",
+  markerSize: 1,
+  onMarkerSizeChange: () => {},
+};
+
+describe("AppearanceSection arrow slider", () => {
+  it("renders the arrow slider only when arrow props are provided", () => {
+    const { rerender } = render(<AppearanceSection {...baseSectionProps} />);
+    expect(screen.queryByText("Pfeile")).toBeNull();
+
+    rerender(
+      <AppearanceSection
+        {...baseSectionProps}
+        arrowLabel="Pfeile"
+        arrowScale={1}
+        onArrowScaleChange={() => {}}
+      />
+    );
+    expect(screen.getByText("Pfeile")).toBeTruthy();
+  });
+
+  it("renders width + size as sliders (range inputs)", () => {
+    render(<AppearanceSection {...baseSectionProps} />);
+    expect(screen.getAllByRole("slider").length).toBe(2);
   });
 });
