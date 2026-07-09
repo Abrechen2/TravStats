@@ -6,13 +6,7 @@ import { LightingEffect } from "@deck.gl/core";
 import { useTranslation } from "../hooks/useTranslation";
 import { applyMapOverlays } from "./Globe/mapOverlays";
 import { FlatMapControlPanel } from "./map/FlatMapControlPanel";
-import {
-  ROUTE_WIDTH_SCALE,
-  MARKER_SIZE_SCALE,
-  type AppearanceDomain,
-  type RouteWidth,
-  type MarkerSize,
-} from "./map/controlPanelKit";
+import { type AppearanceDomain } from "./map/controlPanelKit";
 import type { LabelsMode } from "./map/labelPriority";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 import { FLAT_BASEMAPS, resolveFlatStyle, type FlatStyleId } from "./map/basemapStyles";
@@ -166,27 +160,30 @@ export function DeckGLMap({
   const [routeColor, setRouteColor] = useState<[number, number, number] | null>(
     () => loadMapAppearance().routeColor ?? null
   );
-  const [flightRouteWidth, setFlightRouteWidth] = useState<RouteWidth>(
-    () => loadMapAppearance().flightRouteWidth ?? "normal"
+  const [flightRouteWidth, setFlightRouteWidth] = useState<number>(
+    () => loadMapAppearance().flightRouteWidth ?? 1
   );
   const [markerColor, setMarkerColor] = useState<[number, number, number] | null>(
     () => loadMapAppearance().airportColor ?? null
   );
-  const [flightMarkerSize, setFlightMarkerSize] = useState<MarkerSize>(
-    () => loadMapAppearance().flightMarkerSize ?? "m"
+  const [flightMarkerSize, setFlightMarkerSize] = useState<number>(
+    () => loadMapAppearance().flightMarkerSize ?? 1
   );
   // Cruise-domain appearance.
   const [cruiseRouteColor, setCruiseRouteColor] = useState<[number, number, number] | null>(
     () => loadMapAppearance().cruiseRouteColor ?? null
   );
-  const [cruiseRouteWidth, setCruiseRouteWidth] = useState<RouteWidth>(
-    () => loadMapAppearance().cruiseRouteWidth ?? "normal"
+  const [cruiseRouteWidth, setCruiseRouteWidth] = useState<number>(
+    () => loadMapAppearance().cruiseRouteWidth ?? 1
   );
   const [portColor, setPortColor] = useState<[number, number, number] | null>(
     () => loadMapAppearance().portColor ?? null
   );
-  const [cruiseMarkerSize, setCruiseMarkerSize] = useState<MarkerSize>(
-    () => loadMapAppearance().cruiseMarkerSize ?? "m"
+  const [cruiseMarkerSize, setCruiseMarkerSize] = useState<number>(
+    () => loadMapAppearance().cruiseMarkerSize ?? 1
+  );
+  const [cruiseArrowScale, setCruiseArrowScale] = useState<number>(
+    () => loadMapAppearance().cruiseArrowScale ?? 1
   );
   const [showTerrain, setShowTerrain] = useState<boolean>(
     () => loadMapAppearance().showTerrain ?? false
@@ -208,6 +205,7 @@ export function DeckGLMap({
       cruiseRouteWidth,
       portColor,
       cruiseMarkerSize,
+      cruiseArrowScale,
       showTerrain,
       showPlaceLabels,
       labelsMode,
@@ -222,6 +220,7 @@ export function DeckGLMap({
     cruiseRouteWidth,
     portColor,
     cruiseMarkerSize,
+    cruiseArrowScale,
     showTerrain,
     showPlaceLabels,
     labelsMode,
@@ -573,8 +572,8 @@ export function DeckGLMap({
             zoom,
             {
               markerColor: markerColor ?? undefined,
-              markerSizeScale: MARKER_SIZE_SCALE[flightMarkerSize],
-              arcWidthScale: ROUTE_WIDTH_SCALE[flightRouteWidth],
+              markerSizeScale: flightMarkerSize,
+              arcWidthScale: flightRouteWidth,
               labelsMode,
             },
             statusTwoTone
@@ -603,7 +602,8 @@ export function DeckGLMap({
     const cruiseArcAppearance = {
       zoom,
       arcColor: cruiseRouteColor ?? undefined,
-      arcWidthScale: ROUTE_WIDTH_SCALE[cruiseRouteWidth],
+      arcWidthScale: cruiseRouteWidth,
+      arrowSizeScale: cruiseArrowScale,
       colorMode: cruiseColorMode,
     };
     const arcs = createCruiseArcsLayer(
@@ -624,7 +624,7 @@ export function DeckGLMap({
     );
     const ports = createCruisePortsLayer(cruises, zoom, {
       portColor: portColor ?? undefined,
-      portSizeScale: MARKER_SIZE_SCALE[cruiseMarkerSize],
+      portSizeScale: cruiseMarkerSize,
       labelsMode,
     });
 
@@ -664,6 +664,7 @@ export function DeckGLMap({
     flightRouteWidth,
     cruiseRouteColor,
     cruiseRouteWidth,
+    cruiseArrowScale,
     labelsMode,
     cruiseColorMode,
     statusTwoTone,
@@ -794,6 +795,8 @@ export function DeckGLMap({
             onMarkerColorChange: setPortColor,
             markerSize: cruiseMarkerSize,
             onMarkerSizeChange: setCruiseMarkerSize,
+            arrowScale: cruiseArrowScale,
+            onArrowScaleChange: setCruiseArrowScale,
           }}
         />
       </div>
