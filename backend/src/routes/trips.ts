@@ -256,6 +256,7 @@ router.get("/trips/:id", authenticate, async (req: AuthRequest, res: Response, n
         stops: { orderBy: [{ orderIdx: "asc" }, { startDate: "asc" }] },
         journalEntries: { orderBy: { date: "asc" } },
         photos: { orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }] },
+        immichAlbums: { orderBy: { sortIdx: "asc" } },
       },
     });
     if (!trip) throw new AppError("Trip not found", 404);
