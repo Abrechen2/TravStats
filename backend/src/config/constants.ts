@@ -107,6 +107,14 @@ export const RATE_LIMITS = {
   // Cheap to build but meant for human bug-report workflows, not scripts.
   DIAGNOSTIC_EXPORT_WINDOW_MS: 60 * 60 * 1000, // 1 hour
   DIAGNOSTIC_EXPORT_MAX: 10, // 10 per hour per user
+
+  // Immich: a single gallery render can request hundreds of tiles, so the
+  // proxy budget is deliberately generous. Imports are the opposite — rare,
+  // heavy, and worth throttling hard.
+  IMMICH_PROXY_WINDOW_MS: 60 * 1000,
+  IMMICH_PROXY_MAX: 600,
+  IMMICH_IMPORT_WINDOW_MS: 15 * 60 * 1000,
+  IMMICH_IMPORT_MAX: 20,
 } as const;
 
 // ========== DATABASE & QUERY LIMITS ==========
