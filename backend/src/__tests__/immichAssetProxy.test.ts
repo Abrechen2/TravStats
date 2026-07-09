@@ -23,6 +23,15 @@ jest.mock("../middleware/rateLimit", () => ({
   immichProxyLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 
+// Captured so the mid-pipe-error test can assert exactly one error was
+// logged (a genuine upstream failure) and not a second one (which would
+// indicate we tried to write a second status/body over an already-flushed
+// response, i.e. an ERR_HTTP_HEADERS_SENT-class bug).
+jest.mock("../utils/logger", () => ({
+  __esModule: true,
+  default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+}));
+
 // The route wires the real `authenticate` per-route (matching every other
 // Immich sub-route). This suite has no signed cookie/bearer token, so bypass
 // it here the same way `immichTripAlbums.test.ts` does. The mocked
@@ -44,6 +53,9 @@ jest.mock("../middleware/auth", () => {
 import { clearImmichAssetCache } from "../services/immich/immichAssetCache";
 import assetProxyRouter from "../routes/immich/assetProxy";
 import { errorHandler } from "../middleware/errorHandler";
+import logger from "../utils/logger";
+
+const mockedLogger = logger as jest.Mocked<typeof logger>;
 
 const ASSET_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_ASSET_ID = "22222222-2222-4222-8222-222222222222";
@@ -98,6 +110,11 @@ describe("asset proxy", () => {
     expect(res.headers.etag).toBe(`"${ASSET_ID}-thumbnail"`);
     expect(res.body.toString()).toBe("image-bytes");
     expect(fetchAssetStream).toHaveBeenCalledWith(ASSET_ID, "thumbnail");
+    // Pins the identity the ownership check actually ran with. Every
+    // downstream mock in this suite ignores its arguments, so without this
+    // assertion the harness would not notice if `authenticate` were removed
+    // from the route (see the "authenticate guard regression" suite below).
+    expect(resolveTrip).toHaveBeenCalledWith("u1", "trip-1");
   });
 
   it("defaults to size=thumbnail and honours an explicit preview", async () => {
@@ -130,6 +147,7 @@ describe("asset proxy", () => {
   it("rejects an unknown size", async () => {
     const res = await request(makeApp()).get(url(ASSET_ID, "huge"));
     expect(res.status).toBe(400);
+    expect(fetchAssetStream).not.toHaveBeenCalled();
   });
 
   it("404s when the caller does not own the trip", async () => {
@@ -159,5 +177,60 @@ describe("asset proxy", () => {
     getImmichConnection.mockResolvedValue(null);
     const res = await request(makeApp()).get(url(ASSET_ID));
     expect(res.status).toBe(409);
+  });
+
+  it("destroys the response without a second header write when the upstream stream errors mid-pipe", async () => {
+    // Pushes one chunk (so headers are flushed to the client, mirroring a
+    // partially-downloaded image), then errors on the next pull instead of
+    // ending cleanly — simulating the upstream connection dropping mid-body.
+    class MidStreamFailure extends Readable {
+      private pushedOnce = false;
+      _read(): void {
+        if (!this.pushedOnce) {
+          this.pushedOnce = true;
+          this.push(Buffer.from("partial-bytes"));
+          return;
+        }
+        this.emit("error", Object.assign(new Error("upstream reset"), { code: "ECONNRESET" }));
+      }
+    }
+
+    fetchAssetStream.mockResolvedValue({
+      stream: new MidStreamFailure(),
+      contentType: "image/webp",
+      contentLength: null,
+    });
+
+    // The client side of this request may see a reset/aborted connection —
+    // that is expected once headers + partial bytes are already on the
+    // wire, so tolerate either a resolved or rejected supertest promise.
+    await request(makeApp()).get(url(ASSET_ID)).catch(() => undefined);
+
+    // Exactly one error log: the genuine upstream stream error. A second
+    // call here would indicate the route tried to write another
+    // status/body after headers were already sent (ERR_HTTP_HEADERS_SENT).
+    expect(mockedLogger.error).toHaveBeenCalledTimes(1);
+    expect(mockedLogger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "immich_proxy_stream_error" }),
+    );
+  });
+});
+
+describe("authenticate guard regression", () => {
+  // Mirrors the equivalent suite in immichTripAlbums.test.ts. Every
+  // downstream dependency in this file is a jest.fn() that resolves
+  // regardless of its arguments, so without an explicit assertion on the
+  // identity `resolveTrip` was called with, this suite would still pass in
+  // full even if `authenticate` were deleted from the route's middleware
+  // chain in assetProxy.ts (req.userId would silently become undefined).
+  //
+  // Manually verified: deleting `authenticate` from the route and re-running
+  // this suite turns this test (and the happy-path assertion above) red;
+  // restoring the file turns the suite green again.
+  it("proves resolveTrip runs with the identity authenticate established, not an unauthenticated one", async () => {
+    const res = await request(makeApp()).get(url(ASSET_ID));
+
+    expect(resolveTrip).toHaveBeenCalledWith("u1", "trip-1");
+    expect(res.status).toBe(200);
   });
 });
