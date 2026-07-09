@@ -1,0 +1,120 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+// vi.hoisted lets these vi.fn()s survive vi.mock factory hoisting and stay
+// reachable from the test bodies below (see ImmichConnectionCard.test.tsx).
+const { listAlbums, estimateImport, linkAlbums } = vi.hoisted(() => ({
+  listAlbums: vi.fn(),
+  estimateImport: vi.fn(),
+  linkAlbums: vi.fn(),
+}));
+vi.mock("../../../lib/api/immich", () => ({
+  immichApi: { listAlbums, estimateImport, linkAlbums },
+  immichFailureKind: (e: unknown) =>
+    (e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? null,
+}));
+
+vi.mock("../../../hooks/useTranslation", () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: {}, ready: true }),
+}));
+
+import ImmichAlbumPicker, { formatBytes } from "../ImmichAlbumPicker";
+
+const ALBUMS = [
+  {
+    id: "a1",
+    albumName: "Rome",
+    assetCount: 12,
+    thumbnailAssetId: "t1",
+    linked: false,
+    linkId: null,
+  },
+  {
+    id: "a2",
+    albumName: "Oslo",
+    assetCount: 4,
+    thumbnailAssetId: null,
+    linked: true,
+    linkId: "l2",
+  },
+];
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  listAlbums.mockResolvedValue({ albums: ALBUMS, defaultMode: "link" });
+  estimateImport.mockResolvedValue({ assetCount: 12, totalBytes: 25_000_000 });
+  linkAlbums.mockResolvedValue({ links: [] });
+});
+
+describe("formatBytes", () => {
+  it("renders human-readable sizes", () => {
+    expect(formatBytes(0)).toBe("0 B");
+    expect(formatBytes(1024)).toBe("1.0 KB");
+    expect(formatBytes(25_000_000)).toBe("23.8 MB");
+    expect(formatBytes(3_221_225_472)).toBe("3.0 GB");
+  });
+});
+
+describe("ImmichAlbumPicker", () => {
+  const renderPicker = () =>
+    render(<ImmichAlbumPicker tripId="trip-1" onClose={vi.fn()} onLinked={vi.fn()} />);
+
+  it("lists albums and disables the ones already linked", async () => {
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+
+    expect(screen.getByRole("checkbox", { name: /Rome/ })).toBeEnabled();
+    expect(screen.getByRole("checkbox", { name: /Oslo/ })).toBeDisabled();
+    expect(screen.getByText("albums.alreadyLinked")).toBeInTheDocument();
+  });
+
+  it("links the selected album in the default mode", async () => {
+    const onLinked = vi.fn();
+    render(<ImmichAlbumPicker tripId="trip-1" onClose={vi.fn()} onLinked={onLinked} />);
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("checkbox", { name: /Rome/ }));
+    await user.click(screen.getByRole("button", { name: /albums.confirm/ }));
+
+    await waitFor(() =>
+      expect(linkAlbums).toHaveBeenCalledWith("trip-1", [{ immichAlbumId: "a1", mode: "link" }])
+    );
+    expect(onLinked).toHaveBeenCalled();
+  });
+
+  it("fetches and shows a storage estimate only when an album is switched to import", async () => {
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("checkbox", { name: /Rome/ }));
+    expect(estimateImport).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "modeImport" }));
+
+    await waitFor(() => expect(estimateImport).toHaveBeenCalledWith("trip-1", "a1"));
+    await waitFor(() => expect(screen.getByText("albums.estimate")).toBeInTheDocument());
+  });
+
+  it("does not link anything when nothing is selected", async () => {
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+
+    expect(screen.getByRole("button", { name: /albums.confirm/ })).toBeDisabled();
+    expect(linkAlbums).not.toHaveBeenCalled();
+  });
+
+  it("shows a degraded panel when Immich is unconfigured", async () => {
+    listAlbums.mockRejectedValue({ response: { data: { error: "notConfigured" } } });
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("errors.notConfigured")).toBeInTheDocument());
+  });
+
+  it("shows an empty state when Immich has no albums", async () => {
+    listAlbums.mockResolvedValue({ albums: [], defaultMode: "link" });
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("albums.empty")).toBeInTheDocument());
+  });
+});
