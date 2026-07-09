@@ -236,6 +236,7 @@ core assumption is void.
 | Parse results mislead (4b vs 12b) | §7 rule: reproduce on CT106 before filing |
 | Instances drift and rot | Accepted; manual cleanup, revisit if painful |
 | pve-node1 is a single point of failure | Accepted; CT133 already has this property |
+| LXC shares pve-node1's kernel: a Docker escape plus an LXC escape puts public pre-release code on a LAN host with Ceph | **Accepted by the owner, 2026-07-09**, after being offered a KVM VM (own kernel, 0 EUR) and a dedicated mini-PC. Rationale: the network path is measured shut (CT134 reaches neither prod, node3, the beta, nor the LAN Ollama), the data is fake, and two independent escapes are required. Revisit if the previews ever hold real data or if a Docker/LXC escape CVE lands. |
 | Mutable `:preview-*` tags make "what is deployed?" ambiguous | Health endpoint reports the version; announce posts the commit |
 | A preview leaks a real user's data | Impossible by construction — no prod dump, demo seed only |
 

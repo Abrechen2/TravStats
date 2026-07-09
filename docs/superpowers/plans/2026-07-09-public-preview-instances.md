@@ -341,11 +341,16 @@ ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
 
 ```bash
 ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 "pct exec 134 -- bash -c '
-  curl -sf --max-time 20 --retry 10 --retry-delay 3 http://127.0.0.1:3010/health && echo && \
+  curl -sf --max-time 180 --retry 20 --retry-all-errors --retry-delay 3 http://127.0.0.1:3010/health && echo && \
   (curl -s --max-time 3 http://127.0.0.1:5432 >/dev/null 2>&1 && echo DB_EXPOSED || echo DB_CLOSED)'"
 ```
 
 Expected: a healthy JSON body, then `DB_CLOSED`.
+
+`curl --max-time` bounds the WHOLE retry sequence, not each attempt. A fresh
+database runs Prisma migrations on first boot, so `/health` can take 30-60 s to
+answer; a short `--max-time` reports a false failure. `--retry-all-errors` is
+required too — without it curl does not retry connection refusals.
 
 - [ ] **Step 6: Commit**
 
@@ -461,7 +466,7 @@ ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=no "root@${NODE1}" \
 
 echo -n "health: "
 ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=no "root@${NODE1}" \
-  "pct exec $CTID -- curl -sf --max-time 30 --retry 10 --retry-delay 3 http://127.0.0.1:$port/health" \
+  "pct exec $CTID -- curl -sf --max-time 180 --retry 20 --retry-all-errors --retry-delay 3 http://127.0.0.1:$port/health" \
   || { echo "UNHEALTHY" >&2; exit 4; }
 echo
 
