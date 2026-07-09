@@ -24,6 +24,12 @@ const PORT_LAYER_IDS = new Set<string>([
   "globe-port-dots",
   "globe-port-labels",
 ]);
+const ARC_LAYER_IDS = new Set<string>([
+  // Flat-map flight-route arcs (routesLayer)
+  "routes-arc",
+  "routes-arc-scheduled",
+  "routes-arc-upcoming",
+]);
 
 interface AirportDatum {
   readonly iata?: string;
@@ -51,6 +57,13 @@ interface PortDatum {
   readonly size?: number;
   /** ISO date of the most recent stop at this port. */
   readonly lastVisit?: string;
+}
+
+interface ArcTooltipDatum {
+  readonly departure?: { iata?: string; name?: string; country?: string | null };
+  readonly arrival?: { iata?: string; name?: string; country?: string | null };
+  readonly count?: number;
+  readonly sourceColor?: readonly [number, number, number, number];
 }
 
 const SURFACE_STYLE: Record<string, string> = {
@@ -115,6 +128,13 @@ export function createMarkerTooltip(
       const heading = datum.name ?? datum.shortLabel ?? datum.iata;
       if (!heading) return null;
       const html = renderPortHtml(datum, heading, t, locale);
+      return { html, style: SURFACE_STYLE };
+    }
+
+    if (ARC_LAYER_IDS.has(layerId)) {
+      const datum = info.object as ArcTooltipDatum | undefined | null;
+      if (!datum || !datum.departure || !datum.arrival) return null;
+      const html = renderArcHtml(datum, t);
       return { html, style: SURFACE_STYLE };
     }
 
@@ -203,4 +223,20 @@ function renderPortHtml(d: PortDatum, heading: string, t: TFn, locale: string): 
     );
   }
   return lines.join("");
+}
+
+function renderArcHtml(d: ArcTooltipDatum, t: TFn): string {
+  const epLine = (ep?: { iata?: string; name?: string; country?: string | null }): string =>
+    `<div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;padding:1px 0;">
+      ${flagImgHtml(ep?.country, 16)}<span>${escapeHtml(ep?.iata ?? "?")}</span>
+      <span style="opacity:0.6;font-weight:500;font-size:11px;">${escapeHtml(ep?.name ?? "")}</span>
+    </div>`;
+  const count = d.count ?? 0;
+  const [r, g, b] = d.sourceColor ?? [241, 245, 249, 255];
+  return `
+    ${epLine(d.departure)}
+    ${epLine(d.arrival)}
+    <div style="color:rgb(${r},${g},${b});font-weight:600;margin-top:4px;">
+      ${escapeHtml(t("map:globe.timesFlown", { count }))}
+    </div>`;
 }
