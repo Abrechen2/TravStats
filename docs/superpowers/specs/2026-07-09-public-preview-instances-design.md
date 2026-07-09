@@ -145,6 +145,15 @@ not return 403. An empty tunnel list never means "no tunnels exist".
 
 ## 7. LLM parser
 
+> **STATUS 2026-07-09 — DISABLED IN PRODUCTION.** The shared Ollama below was
+> built and worked, but on pve-node1 (a shared Ceph/KVM cluster node) a booking
+> parse measured **0.3 tokens/second** — every call exceeded the timeout and
+> fell back to the regex templates anyway, while pegging cores. The Ollama
+> container, model and volume were removed from CT134 and `USE_LLM_PARSER` set
+> to `false` on all three slots. Known airlines still parse instantly via
+> templates. The rest of this section documents the original design; re-enable
+> it only if the previews move to dedicated hardware (see §12 risk row).
+
 The DMZ has no route to the LAN, so the Mac mini's Ollama at
 `192.168.178.155:11434` is unreachable. Rather than punching a hole in exactly
 the isolation that makes public exposure acceptable, CT134 runs its own Ollama
