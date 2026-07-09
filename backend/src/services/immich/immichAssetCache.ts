@@ -21,7 +21,14 @@ interface CacheEntry {
 const entries = new Map<string, CacheEntry>();
 const inFlight = new Map<string, Promise<ImmichAsset[]>>();
 
-const keyOf = (userId: string, albumId: string): string => `${userId}::${albumId}`;
+// Per-key generation counter. Bumped by `invalidateAlbumAssets` so that a
+// load already in flight when an invalidation happens can detect it was
+// superseded and skip writing its (now stale) result into `entries`.
+const generations = new Map<string, number>();
+
+const keyOf = (userId: string, albumId: string): string => JSON.stringify([userId, albumId]);
+
+const generationOf = (key: string): number => generations.get(key) ?? 0;
 
 export async function getCachedAlbumAssets(
   userId: string,
@@ -38,11 +45,20 @@ export async function getCachedAlbumAssets(
   const pending = inFlight.get(key);
   if (pending) return pending;
 
+  const generation = generationOf(key);
+
   // A failed load must not be cached — `finally` clears the in-flight slot so
   // the next caller retries upstream instead of adopting a rejected promise.
   const promise = load()
     .then((assets) => {
-      entries.set(key, { assets, expiresAt: Date.now() + ASSET_CACHE_TTL_MS });
+      // Only write back if no invalidation happened while this load was in
+      // flight. Otherwise we'd resurrect data fetched before the
+      // invalidation, silently serving it stale for up to a full TTL
+      // window — the caller still gets `assets` below, only the cache
+      // write is suppressed.
+      if (generationOf(key) === generation) {
+        entries.set(key, { assets, expiresAt: Date.now() + ASSET_CACHE_TTL_MS });
+      }
       return assets;
     })
     .finally(() => {
@@ -54,11 +70,15 @@ export async function getCachedAlbumAssets(
 }
 
 export function invalidateAlbumAssets(userId: string, albumId: string): void {
-  entries.delete(keyOf(userId, albumId));
+  const key = keyOf(userId, albumId);
+  generations.set(key, generationOf(key) + 1);
+  entries.delete(key);
+  inFlight.delete(key);
 }
 
 /** Test seam. Never called from production code. */
 export function clearImmichAssetCache(): void {
   entries.clear();
   inFlight.clear();
+  generations.clear();
 }
