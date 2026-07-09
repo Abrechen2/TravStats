@@ -195,6 +195,53 @@ export function SegControl<V extends string>({
   );
 }
 
+/** A continuous range slider with a live value readout on the right.
+ *  Replaces the ordinal SegControls for line width + marker/arrow size —
+ *  `format` renders the readout (default "1.4×"; pass a custom one to show
+ *  "Aus" at 0). */
+export function Slider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+  format,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (v: number) => void;
+  format?: (v: number) => string;
+}): JSX.Element {
+  const readout = (format ?? ((v: number) => `${v.toFixed(1)}×`))(value);
+  return (
+    <div className="mt-1.5">
+      <div
+        className="mb-1 flex items-center justify-between text-[11px]"
+        style={{ color: "rgba(241,245,249,0.7)" }}
+      >
+        <span>{label}</span>
+        <span style={{ color: `rgb(${ACCENT})`, fontVariantNumeric: "tabular-nums" }}>
+          {readout}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        className="w-full cursor-pointer"
+        style={{ accentColor: `rgb(${ACCENT})` }}
+      />
+    </div>
+  );
+}
+
 // ── Per-domain appearance section ────────────────────────────────────
 /** The map domains that get their own appearance section. Extend when a
  *  new domain (hotels, …) grows an on-map route/marker representation. */
