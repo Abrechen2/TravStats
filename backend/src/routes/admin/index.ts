@@ -10,6 +10,7 @@ import parserSettingsRouter from './parserSettings';
 import smtpRouter from './smtp';
 import backupSettingsRouter from './backupSettings';
 import instanceSettingsRouter from './instanceSettings';
+import immichAdminRouter from './immich';
 
 const router = Router();
 
@@ -35,5 +36,6 @@ router.use('/', parserSettingsRouter);
 router.use('/smtp', smtpRouter);
 router.use('/', backupSettingsRouter);
 router.use('/', instanceSettingsRouter);
+router.use('/immich', immichAdminRouter);
 
 export default router;
