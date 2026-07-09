@@ -54,6 +54,13 @@ export const assetSizeSchema = z
 
 export const assetIdParamSchema = z.string().uuid();
 
+export const setCoverSchema = z
+  .object({
+    linkId: z.string().uuid(),
+    assetId: z.string().uuid(),
+  })
+  .strict();
+
 export type ImmichConnectionInput = z.infer<typeof immichConnectionSchema>;
 export type ImmichTestInput = z.infer<typeof immichTestSchema>;
 export type LinkAlbumsInput = z.infer<typeof linkAlbumsSchema>;
