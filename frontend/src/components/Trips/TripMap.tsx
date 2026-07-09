@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { createMarkerTooltip } from "../map/markerTooltip";
-import { ArcLayer, PathLayer, ScatterplotLayer } from "@deck.gl/layers";
+import { ArcLayer, PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { Trip } from "../../types";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/cruise";
@@ -318,7 +318,31 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
       highlightColor: [255, 255, 255, 100],
     });
 
-    return [paths, arcs, airports, stops];
+    // Stop (POI / hotel / …) labels. The markers alone were indistinguishable
+    // coloured circles — the title only surfaced on hover — so a name never
+    // showed on the map (#176). Render the title above each stop dot with an
+    // outline so it stays readable over any basemap.
+    const stopLabels = new TextLayer<PointDatum>({
+      id: "trip-stop-labels",
+      data: stopPoints,
+      getPosition: (d) => d.position,
+      getText: (d) => d.label,
+      getColor: [241, 245, 249, 255],
+      getSize: 12,
+      sizeUnits: "pixels",
+      getTextAnchor: "middle",
+      getAlignmentBaseline: "bottom",
+      getPixelOffset: [0, -14],
+      fontFamily: "'Inter', system-ui, sans-serif",
+      fontWeight: 600,
+      outlineWidth: 3,
+      outlineColor: [13, 17, 23, 255],
+      fontSettings: { sdf: true },
+      characterSet: "auto",
+      pickable: false,
+    });
+
+    return [paths, arcs, airports, stops, stopLabels];
   }, [flightArcs, cruisePaths, airportPoints, stopPoints]);
 
   /* ---- bbox fit ---- */
