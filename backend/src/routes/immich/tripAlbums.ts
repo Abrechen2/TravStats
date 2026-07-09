@@ -18,8 +18,14 @@ import { linkAlbumsSchema, unlinkQuerySchema } from "../../schemas/immich";
 import { createImmichClient } from "../../services/immich/immichClient";
 import { getImmichConnection, getImmichDefaultMode } from "../../services/immich/immichResolver";
 import { getCachedAlbumAssets, invalidateAlbumAssets } from "../../services/immich/immichAssetCache";
-import { deleteImportedPhotoFiles, startAlbumImport } from "../../services/immich/immichImport";
+import {
+  deleteImportedPhotoFiles,
+  estimateAlbumImport,
+  getImportJob,
+  startAlbumImport,
+} from "../../services/immich/immichImport";
 import { ImmichAsset, ImmichConnection, ImmichError, ImmichMode } from "../../services/immich/types";
+import { immichImportLimiter } from "../../middleware/rateLimit";
 import logger from "../../utils/logger";
 
 const router = Router();
@@ -313,6 +319,70 @@ router.get(
       });
     } catch (error) {
       sendImmichFailure(res, error, next);
+    }
+  },
+);
+
+/* ─── Import job: estimate, kick, poll ─── */
+
+router.get(
+  "/trips/:id/immich/estimate",
+  authenticate,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      await resolveTrip(userId, req.params.id);
+
+      const albumId = typeof req.query.albumId === "string" ? req.query.albumId : "";
+      if (!albumId) throw new AppError("albumId is required", 400);
+
+      res.json(await estimateAlbumImport(userId, albumId));
+    } catch (error) {
+      sendImmichFailure(res, error, next);
+    }
+  },
+);
+
+router.post(
+  "/trips/:id/immich/albums/:linkId/resync",
+  authenticate,
+  requireWriteScope,
+  immichImportLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const tripId = req.params.id;
+      await resolveTrip(userId, tripId);
+
+      const link = await resolveLink(tripId, req.params.linkId);
+      if (link.mode !== "import") {
+        throw new AppError("Only imported albums can be re-synced", 400);
+      }
+
+      void startAlbumImport(userId, link.id);
+
+      res.status(202).json({
+        job: { status: "running", totalAssets: 0, processedAssets: 0, failedAssets: 0, error: null },
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.get(
+  "/trips/:id/immich/albums/:linkId/import-job",
+  authenticate,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const tripId = req.params.id;
+      await resolveTrip(userId, tripId);
+
+      const link = await resolveLink(tripId, req.params.linkId);
+      res.json({ job: await getImportJob(link.id) });
+    } catch (error) {
+      next(error);
     }
   },
 );
