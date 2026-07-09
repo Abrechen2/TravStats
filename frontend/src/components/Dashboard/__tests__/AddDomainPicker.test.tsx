@@ -2,9 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { AddDomainPicker } from "../AddDomainPicker";
 
-// The other component tests in this folder locally override the global key-passthrough mock
-// of useTranslation to return human-readable strings. Do the same here so label-based
-// assertions work.
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (key: string): string => {
@@ -21,16 +18,12 @@ vi.mock("../../../hooks/useTranslation", () => ({
 
 describe("AddDomainPicker", () => {
   it("renders the button label", () => {
-    render(
-      <AddDomainPicker enabled={{ flight: true, cruise: true, poi: false }} onPick={() => {}} />
-    );
+    render(<AddDomainPicker enabled={{ flight: true, cruise: true, poi: false }} onPick={() => {}} />);
     expect(screen.getByRole("button", { name: /hinzufügen/i })).toBeTruthy();
   });
 
   it("opens the menu on click and lists only enabled domains", () => {
-    render(
-      <AddDomainPicker enabled={{ flight: true, cruise: true, poi: false }} onPick={() => {}} />
-    );
+    render(<AddDomainPicker enabled={{ flight: true, cruise: true, poi: false }} onPick={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: /hinzufügen/i }));
     expect(screen.getByRole("menuitem", { name: /flug/i })).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: /kreuzfahrt/i })).toBeTruthy();
@@ -39,12 +32,25 @@ describe("AddDomainPicker", () => {
 
   it("calls onPick with the selected domain and closes the menu", () => {
     const onPick = vi.fn();
-    render(
-      <AddDomainPicker enabled={{ flight: true, cruise: true, poi: false }} onPick={onPick} />
-    );
+    render(<AddDomainPicker enabled={{ flight: true, cruise: true, poi: false }} onPick={onPick} />);
     fireEvent.click(screen.getByRole("button", { name: /hinzufügen/i }));
     fireEvent.click(screen.getByRole("menuitem", { name: /kreuzfahrt/i }));
     expect(onPick).toHaveBeenCalledWith("cruise");
     expect(screen.queryByRole("menuitem", { name: /flug/i })).toBeNull();
+  });
+
+  it("closes the menu on an outside click without calling onPick", () => {
+    const onPick = vi.fn();
+    render(
+      <div>
+        <AddDomainPicker enabled={{ flight: true, cruise: true, poi: false }} onPick={onPick} />
+        <button type="button">outside</button>
+      </div>
+    );
+    fireEvent.click(screen.getByRole("button", { name: /hinzufügen/i }));
+    expect(screen.getByRole("menuitem", { name: /flug/i })).toBeTruthy();
+    fireEvent.mouseDown(screen.getByRole("button", { name: /outside/i }));
+    expect(screen.queryByRole("menuitem", { name: /flug/i })).toBeNull();
+    expect(onPick).not.toHaveBeenCalled();
   });
 });

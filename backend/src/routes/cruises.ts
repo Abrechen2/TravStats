@@ -301,6 +301,7 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
             arrivalTime: s.arrivalTime ? new Date(s.arrivalTime) : null,
             departureTime: s.departureTime ? new Date(s.departureTime) : null,
             excursionNote: s.excursionNote ?? null,
+            unresolvedPortName: s.unresolvedPortName ?? null,
           })),
         });
       }
@@ -358,6 +359,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
               arrivalTime: s.arrivalTime ? new Date(s.arrivalTime) : null,
               departureTime: s.departureTime ? new Date(s.departureTime) : null,
               excursionNote: s.excursionNote ?? null,
+              unresolvedPortName: s.unresolvedPortName ?? null,
             })),
           });
         }

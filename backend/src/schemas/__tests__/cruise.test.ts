@@ -123,7 +123,62 @@ describe('cruise schemas', () => {
     expect(updateCruiseSchema.safeParse({}).success).toBe(false);
   });
 
+  it('accepts a valid hex color with or without the leading #', () => {
+    const withHash = createCruiseSchema.safeParse({ ...minimalValid, color: '#e88374' });
+    expect(withHash.success).toBe(true);
+    if (withHash.success) expect(withHash.data.color).toBe('#e88374');
+
+    const withoutHash = createCruiseSchema.safeParse({ ...minimalValid, color: 'e88374' });
+    expect(withoutHash.success).toBe(true);
+  });
+
+  it('accepts an explicit null color (clears back to auto-derived)', () => {
+    const r = updateCruiseSchema.safeParse({ color: null });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.color).toBeNull();
+  });
+
+  it('rejects an invalid hex color', () => {
+    expect(createCruiseSchema.safeParse({ ...minimalValid, color: 'not-a-color' }).success).toBe(
+      false,
+    );
+    expect(createCruiseSchema.safeParse({ ...minimalValid, color: '#ff00' }).success).toBe(false);
+  });
+
   it('cruiseQuerySchema accepts line filter', () => {
     expect(cruiseQuerySchema.safeParse({ cruiseLine: 'AIDA' }).success).toBe(true);
+  });
+});
+
+describe('stop 3-state invariant', () => {
+  const withStop = (stop: Record<string, unknown>) =>
+    createCruiseSchema.safeParse({ stops: [{ dayNumber: 1, ...stop }] });
+
+  it('accepts a matched port', () => {
+    expect(withStop({ portId: 5, isAtSea: false }).success).toBe(true);
+  });
+
+  it('accepts a sea day', () => {
+    expect(withStop({ isAtSea: true }).success).toBe(true);
+  });
+
+  it('accepts an unresolved port', () => {
+    expect(withStop({ isAtSea: false, unresolvedPortName: 'Taranto' }).success).toBe(true);
+  });
+
+  it('rejects an empty stop (no port, not at sea, no unresolved name)', () => {
+    expect(withStop({ isAtSea: false }).success).toBe(false);
+  });
+
+  it('rejects portId together with unresolvedPortName', () => {
+    expect(withStop({ portId: 5, isAtSea: false, unresolvedPortName: 'X' }).success).toBe(false);
+  });
+
+  it('rejects a sea day carrying an unresolved name', () => {
+    expect(withStop({ isAtSea: true, unresolvedPortName: 'X' }).success).toBe(false);
+  });
+
+  it('rejects a whitespace-only unresolved name', () => {
+    expect(withStop({ isAtSea: false, unresolvedPortName: '   ' }).success).toBe(false);
   });
 });

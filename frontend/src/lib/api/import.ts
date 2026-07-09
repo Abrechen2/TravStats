@@ -2,10 +2,7 @@ import { api } from "./client";
 import type { PreviewRowInput } from "../importers/types";
 
 export type PreviewFlag =
-  | "duration_mismatch"
-  | "unresolvable_airport"
-  | "malformed_datetime"
-  | "missing_required";
+  "duration_mismatch" | "unresolvable_airport" | "malformed_datetime" | "missing_required";
 
 /**
  * Flags that mean the row CANNOT be imported — the server set depUtc/arrUtc

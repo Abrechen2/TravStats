@@ -80,9 +80,7 @@ export function CruiseAddChooser({ onClose, onSaved }: CruiseAddChooserProps): J
       <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg bg-[var(--bg-surface)]">
         {/* Header */}
         <div className="sticky top-0 flex items-start justify-between gap-4 border-b border-[var(--color-border)] bg-[var(--bg-surface)] px-6 py-4">
-          <h2 className="text-2xl font-bold text-[var(--text-primary)]">
-            {t("cruise:add.title")}
-          </h2>
+          <h2 className="text-2xl font-bold text-[var(--text-primary)]">{t("cruise:add.title")}</h2>
           <button
             type="button"
             onClick={onClose}

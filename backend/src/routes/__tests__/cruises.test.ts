@@ -162,6 +162,29 @@ describe('Cruises API', () => {
       expect(stops[1].date).toBe('2026-08-02T00:00:00.000Z');
     });
 
+    it('persists and returns the optional map color (round-trip)', async () => {
+      const create = await request(app)
+        .post('/api/v1/cruises')
+        .set('Cookie', authCookie)
+        .send({
+          cruiseLine: 'Colored Line',
+          departurePortId: portId,
+          arrivalPortId: portId,
+          startDate: '2026-10-01T12:00:00Z',
+          endDate: '2026-10-08T10:00:00Z',
+          status: 'scheduled',
+          color: '#ff8800',
+        });
+      expect(create.status).toBe(201);
+      expect(create.body.data.color).toBe('#ff8800');
+      // Survives a fresh read, not just echoed from the request body.
+      const get = await request(app)
+        .get(`/api/v1/cruises/${create.body.data.id}`)
+        .set('Cookie', authCookie);
+      expect(get.status).toBe(200);
+      expect(get.body.data.color).toBe('#ff8800');
+    });
+
     it('rejects invalid payload', async () => {
       const res = await request(app).post('/api/v1/cruises').set('Cookie', authCookie).send({ price: -5 });
       expect(res.status).toBe(400);
@@ -224,6 +247,21 @@ describe('Cruises API', () => {
         .send({ notes: 'Great trip' });
       expect(res.status).toBe(200);
       expect(res.body.data.notes).toBe('Great trip');
+    });
+
+    it('sets and clears the map color (color: null empties a set value)', async () => {
+      const c = await prisma.cruise.create({
+        data: { userId, status: 'scheduled', color: '#123456' },
+      });
+      const set = await request(app).get(`/api/v1/cruises/${c.id}`).set('Cookie', authCookie);
+      expect(set.body.data.color).toBe('#123456');
+
+      const cleared = await request(app)
+        .patch(`/api/v1/cruises/${c.id}`)
+        .set('Cookie', authCookie)
+        .send({ color: null });
+      expect(cleared.status).toBe(200);
+      expect(cleared.body.data.color).toBeNull();
     });
 
     it('replaces stops when stops provided', async () => {

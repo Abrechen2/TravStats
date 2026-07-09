@@ -31,10 +31,7 @@ interface RetryOptions {
  * Idempotency check is method-based; we never auto-retry POST/PUT/PATCH/DELETE
  * so a partially-applied write isn't accidentally repeated.
  */
-export function attachGatewayRetry(
-  instance: AxiosInstance,
-  options: RetryOptions = {},
-): void {
+export function attachGatewayRetry(instance: AxiosInstance, options: RetryOptions = {}): void {
   const baseDelayMs = options.baseDelayMs ?? 500;
   const maxRetries = options.maxRetries ?? 3;
 
@@ -64,6 +61,6 @@ export function attachGatewayRetry(
       const delay = baseDelayMs * Math.pow(2, attempt - 1);
       await new Promise((resolve) => setTimeout(resolve, delay));
       return instance.request(config);
-    },
+    }
   );
 }
