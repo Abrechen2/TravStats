@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { immichApi } from "../../lib/api/immich";
+import { useToastStore } from "../../store/toastStore";
 
 export interface LightboxItem {
   id: string;
@@ -31,8 +32,14 @@ export default function PhotoLightbox({
   onCoverChanged,
 }: Props): JSX.Element | null {
   const { t } = useTranslation("immich");
+  const addToast = useToastStore((s) => s.addToast);
   const [index, setIndex] = useState(startIndex);
   const [coverSet, setCoverSet] = useState(false);
+  const [settingCover, setSettingCover] = useState(false);
+  // Tracks which item is on screen *right now*, independent of any closure
+  // captured when an in-flight cover request was kicked off. Read only after
+  // the request settles, so a stale response can't confirm the wrong photo.
+  const currentItemIdRef = useRef<string | null>(null);
 
   const step = useCallback(
     (delta: number) => {
@@ -45,8 +52,14 @@ export default function PhotoLightbox({
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
       if (event.key === "Escape") onClose();
-      if (event.key === "ArrowRight") step(1);
-      if (event.key === "ArrowLeft") step(-1);
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        step(1);
+      }
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        step(-1);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -56,21 +69,38 @@ export default function PhotoLightbox({
   // Guard against the parent shrinking `items` (e.g. a photo delete) while
   // this lightbox is still open — clamp instead of indexing out of bounds.
   const item = items[Math.min(index, items.length - 1)];
+  currentItemIdRef.current = item.id;
 
   const handleSetCover = async (): Promise<void> => {
-    const result =
-      item.source.kind === "immich"
-        ? await immichApi.setImmichCover(tripId, item.source.linkId, item.id)
-        : await immichApi.setPhotoCover(tripId, item.id);
+    const requestedItemId = item.id;
+    setSettingCover(true);
+    try {
+      const result =
+        item.source.kind === "immich"
+          ? await immichApi.setImmichCover(tripId, item.source.linkId, item.id)
+          : await immichApi.setPhotoCover(tripId, item.id);
 
-    setCoverSet(true);
-    onCoverChanged?.(result.coverImageUrl);
+      // Only confirm the cover if the user is still looking at the photo
+      // the request was actually issued for — otherwise navigating away
+      // mid-request would flip the confirmation onto the wrong photo.
+      if (currentItemIdRef.current === requestedItemId) {
+        setCoverSet(true);
+        onCoverChanged?.(result.coverImageUrl);
+      }
+    } catch {
+      addToast("error", t("errors.unreachable"));
+    } finally {
+      setSettingCover(false);
+    }
   };
 
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
     >
       <div className="relative max-h-[85vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
         <img
@@ -107,6 +137,7 @@ export default function PhotoLightbox({
           type="button"
           className="rounded border border-slate-500 px-3 py-1 text-sm"
           onClick={() => void handleSetCover()}
+          disabled={settingCover}
         >
           {coverSet ? t("gallery.coverSet") : t("gallery.setAsCover")}
         </button>
