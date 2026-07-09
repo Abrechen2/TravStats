@@ -1,13 +1,17 @@
 import { useRef, useState } from "react";
+import type { LinkedAlbum } from "../../types/immich";
 import type { TripPhoto } from "../../types";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import PhotoLightbox, { type LightboxItem } from "./PhotoLightbox";
+import ImmichAlbumPicker from "./ImmichAlbumPicker";
+import ImmichAlbumSection from "./ImmichAlbumSection";
 
 interface TripGalleryProps {
   tripId: string;
   photos: TripPhoto[];
+  immichAlbums: LinkedAlbum[];
   onChange: () => void;
 }
 
@@ -15,14 +19,21 @@ const ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
 
 /**
  * Gallery tab content (Phase-1 iteration 7). Multi-image upload, grid
- * preview, click-to-enlarge lightbox, hover delete + caption edit.
+ * preview, click-to-enlarge lightbox, hover delete + caption edit — plus
+ * one section per linked Immich album (Phase-A Immich integration).
  */
-export default function TripGallery({ tripId, photos, onChange }: TripGalleryProps): JSX.Element {
-  const { t } = useTranslation(["trips", "common"]);
+export default function TripGallery({
+  tripId,
+  photos,
+  immichAlbums,
+  onChange,
+}: TripGalleryProps): JSX.Element {
+  const { t } = useTranslation(["trips", "common", "immich"]);
   const addToast = useToastStore((s) => s.addToast);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [lightbox, setLightbox] = useState<{ index: number } | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
 
   const uploadedItems: LightboxItem[] = photos.map((p) => ({
     id: p.id,
@@ -65,54 +76,77 @@ export default function TripGallery({ tripId, photos, onChange }: TripGalleryPro
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <h3 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
-          {t("trips:gallery.title")}{" "}
+          {t("trips:gallery.title")}
+        </h3>
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPT}
+            multiple
+            className="hidden"
+            onChange={(e) => void handleFileSelect(e)}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="px-3 py-1.5 rounded-md text-xs font-medium bg-[var(--accent)] text-[var(--bg-primary)] disabled:opacity-50"
+          >
+            {uploading ? t("common:loading") : t("trips:gallery.uploadButton")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowPicker(true)}
+            className="px-3 py-1.5 rounded-md text-xs font-medium border"
+            style={{ borderColor: "var(--color-border)", color: "var(--text-primary)" }}
+          >
+            {t("immich:albums.link")}
+          </button>
+        </div>
+      </div>
+
+      <section>
+        <h4
+          className="text-sm font-semibold mb-2"
+          style={{ color: "var(--text-secondary, var(--text-primary))" }}
+        >
+          {t("immich:gallery.uploaded")}{" "}
           <span className="text-xs font-normal" style={{ color: "var(--text-muted)" }}>
             · {photos.length}
           </span>
-        </h3>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={ACCEPT}
-          multiple
-          className="hidden"
-          onChange={(e) => void handleFileSelect(e)}
-        />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="px-3 py-1.5 rounded-md text-xs font-medium bg-[var(--accent)] text-[var(--bg-primary)] disabled:opacity-50"
-        >
-          {uploading ? t("common:loading") : t("trips:gallery.uploadButton")}
-        </button>
-      </div>
+        </h4>
 
-      {photos.length === 0 ? (
-        <div
-          className="rounded-xl p-8 text-center text-sm"
-          style={{
-            background: "var(--bg-elevated)",
-            border: "1px dashed var(--color-border)",
-            color: "var(--text-muted)",
-          }}
-        >
-          {t("trips:gallery.empty")}
-        </div>
-      ) : (
-        <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
-          {photos.map((p, i) => (
-            <PhotoTile
-              key={p.id}
-              photo={p}
-              onClick={() => setLightbox({ index: i })}
-              onDelete={() => void handleDelete(p)}
-            />
-          ))}
-        </div>
-      )}
+        {photos.length === 0 ? (
+          <div
+            className="rounded-xl p-8 text-center text-sm"
+            style={{
+              background: "var(--bg-elevated)",
+              border: "1px dashed var(--color-border)",
+              color: "var(--text-muted)",
+            }}
+          >
+            {t("trips:gallery.empty")}
+          </div>
+        ) : (
+          <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
+            {photos.map((p, i) => (
+              <PhotoTile
+                key={p.id}
+                photo={p}
+                onClick={() => setLightbox({ index: i })}
+                onDelete={() => void handleDelete(p)}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {immichAlbums.map((album) => (
+        <ImmichAlbumSection key={album.id} tripId={tripId} album={album} onChanged={onChange} />
+      ))}
 
       {lightbox && (
         <PhotoLightbox
@@ -121,6 +155,14 @@ export default function TripGallery({ tripId, photos, onChange }: TripGalleryPro
           startIndex={lightbox.index}
           onClose={() => setLightbox(null)}
           onCoverChanged={() => onChange()}
+        />
+      )}
+
+      {showPicker && (
+        <ImmichAlbumPicker
+          tripId={tripId}
+          onClose={() => setShowPicker(false)}
+          onLinked={() => onChange()}
         />
       )}
     </div>
