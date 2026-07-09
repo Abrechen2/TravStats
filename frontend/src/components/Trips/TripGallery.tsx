@@ -3,6 +3,7 @@ import type { TripPhoto } from "../../types";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
+import PhotoLightbox, { type LightboxItem } from "./PhotoLightbox";
 
 interface TripGalleryProps {
   tripId: string;
@@ -21,7 +22,14 @@ export default function TripGallery({ tripId, photos, onChange }: TripGalleryPro
   const addToast = useToastStore((s) => s.addToast);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [lightbox, setLightbox] = useState<TripPhoto | null>(null);
+  const [lightbox, setLightbox] = useState<{ index: number } | null>(null);
+
+  const uploadedItems: LightboxItem[] = photos.map((p) => ({
+    id: p.id,
+    previewUrl: p.url,
+    caption: p.caption,
+    source: { kind: "photo" },
+  }));
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const files = Array.from(e.target.files ?? []);
@@ -95,18 +103,26 @@ export default function TripGallery({ tripId, photos, onChange }: TripGalleryPro
         </div>
       ) : (
         <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
-          {photos.map((p) => (
+          {photos.map((p, i) => (
             <PhotoTile
               key={p.id}
               photo={p}
-              onClick={() => setLightbox(p)}
+              onClick={() => setLightbox({ index: i })}
               onDelete={() => void handleDelete(p)}
             />
           ))}
         </div>
       )}
 
-      {lightbox && <Lightbox photo={lightbox} onClose={() => setLightbox(null)} />}
+      {lightbox && (
+        <PhotoLightbox
+          tripId={tripId}
+          items={uploadedItems}
+          startIndex={lightbox.index}
+          onClose={() => setLightbox(null)}
+          onCoverChanged={() => onChange()}
+        />
+      )}
     </div>
   );
 }
@@ -153,51 +169,6 @@ function PhotoTile({ photo, onClick, onDelete }: PhotoTileProps): JSX.Element {
             background: "linear-gradient(transparent, rgba(13,17,23,0.85))",
             color: "#fff",
           }}
-        >
-          {photo.caption}
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface LightboxProps {
-  photo: TripPhoto;
-  onClose: () => void;
-}
-
-function Lightbox({ photo, onClose }: LightboxProps): JSX.Element {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.92)" }}
-      onClick={onClose}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
-      }}
-      role="dialog"
-      aria-modal="true"
-      tabIndex={-1}
-    >
-      <img
-        src={photo.url}
-        alt={photo.caption ?? ""}
-        className="max-w-full max-h-full object-contain rounded-lg"
-        onClick={(e) => e.stopPropagation()}
-      />
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute top-4 right-4 w-10 h-10 rounded-full text-white text-lg"
-        style={{ background: "rgba(255,255,255,0.1)" }}
-        aria-label="Close"
-      >
-        ✕
-      </button>
-      {photo.caption && (
-        <div
-          className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-sm max-w-[80%]"
-          style={{ background: "rgba(13,17,23,0.85)", color: "#fff" }}
         >
           {photo.caption}
         </div>
