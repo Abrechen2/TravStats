@@ -39,9 +39,17 @@ jest.mock("../services/immich/immichResolver", () => ({
 
 const startAlbumImport = jest.fn();
 const deleteImportedPhotoFiles = jest.fn();
+const estimateAlbumImport = jest.fn();
+const getImportJob = jest.fn();
 jest.mock("../services/immich/immichImport", () => ({
   startAlbumImport,
   deleteImportedPhotoFiles,
+  estimateAlbumImport,
+  getImportJob,
+}));
+
+jest.mock("../middleware/rateLimit", () => ({
+  immichImportLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 
 // The route module wires the real `authenticate` per-route (matching every
@@ -310,6 +318,102 @@ describe("GET /trips/:id/immich/albums/:linkId/assets", () => {
       lat: 1,
       lon: 2,
     });
+  });
+});
+
+describe("GET /trips/:id/immich/estimate", () => {
+  it("returns the estimate for the given albumId", async () => {
+    estimateAlbumImport.mockResolvedValue({ assetCount: 42, totalBytes: 123456 });
+
+    const res = await request(makeApp()).get(
+      "/api/v1/trips/trip-1/immich/estimate?albumId=a1",
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ assetCount: 42, totalBytes: 123456 });
+    expect(estimateAlbumImport).toHaveBeenCalledWith("u1", "a1");
+    expect(resolveTrip).toHaveBeenCalledWith("u1", "trip-1");
+  });
+
+  it("400s when albumId is missing", async () => {
+    const res = await request(makeApp()).get("/api/v1/trips/trip-1/immich/estimate");
+
+    expect(res.status).toBe(400);
+    expect(estimateAlbumImport).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /trips/:id/immich/albums/:linkId/resync", () => {
+  it("fires startAlbumImport once for an import-mode album and answers 202", async () => {
+    findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "import" });
+
+    const res = await request(makeApp()).post(
+      "/api/v1/trips/trip-1/immich/albums/link-1/resync",
+    );
+
+    expect(res.status).toBe(202);
+    expect(res.body).toEqual({
+      job: { status: "running", totalAssets: 0, processedAssets: 0, failedAssets: 0, error: null },
+    });
+    expect(startAlbumImport).toHaveBeenCalledTimes(1);
+    expect(startAlbumImport).toHaveBeenCalledWith("u1", "link-1");
+  });
+
+  it("400s for a link-mode album and never fires startAlbumImport", async () => {
+    findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "link" });
+
+    const res = await request(makeApp()).post(
+      "/api/v1/trips/trip-1/immich/albums/link-1/resync",
+    );
+
+    expect(res.status).toBe(400);
+    expect(startAlbumImport).not.toHaveBeenCalled();
+  });
+
+  it("404s for a link belonging to another trip", async () => {
+    findFirstLink.mockResolvedValue(null);
+
+    const res = await request(makeApp()).post(
+      "/api/v1/trips/trip-1/immich/albums/link-x/resync",
+    );
+
+    expect(res.status).toBe(404);
+    expect(startAlbumImport).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /trips/:id/immich/albums/:linkId/import-job", () => {
+  it("returns the job when one exists", async () => {
+    findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "import" });
+    getImportJob.mockResolvedValue({
+      status: "completed",
+      totalAssets: 5,
+      processedAssets: 5,
+      failedAssets: 0,
+      error: null,
+    });
+
+    const res = await request(makeApp()).get(
+      "/api/v1/trips/trip-1/immich/albums/link-1/import-job",
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      job: { status: "completed", totalAssets: 5, processedAssets: 5, failedAssets: 0, error: null },
+    });
+    expect(getImportJob).toHaveBeenCalledWith("link-1");
+  });
+
+  it("returns { job: null } when there is no job row yet", async () => {
+    findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "import" });
+    getImportJob.mockResolvedValue(null);
+
+    const res = await request(makeApp()).get(
+      "/api/v1/trips/trip-1/immich/albums/link-1/import-job",
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ job: null });
   });
 });
 
