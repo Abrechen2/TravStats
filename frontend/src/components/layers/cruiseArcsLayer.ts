@@ -47,6 +47,8 @@ interface CruiseArcBuildOptions {
   arcColor?: [number, number, number];
   /** User multiplier on cruise-arc line width (1 = default). */
   arcWidthScale?: number;
+  /** User multiplier on the directional arrow size (1 = default). 0 hides arrows. */
+  arrowSizeScale?: number;
   /** Color strategy for arcs/arrows when `arcColor` is unset. Defaults to `"status"`. */
   colorMode?: CruiseColorMode;
 }
@@ -207,7 +209,8 @@ export function createCruiseArrowsLayer(
     if (anchor === null) continue;
     arrows.push({ ...anchor, cruiseId: arc.cruiseId, color: arc.color, planned: arc.planned });
   }
-  if (arrows.length === 0) return null;
+  const arrowSizeScale = options.arrowSizeScale ?? 1;
+  if (arrows.length === 0 || arrowSizeScale <= 0) return null;
 
   const hasSelection = selectedCruiseId !== null;
   const BASE_COLOR = options.arcColor ?? CRUISE_BASE_COLOR;
@@ -230,7 +233,7 @@ export function createCruiseArrowsLayer(
     getPosition: (d) => d.position,
     getIcon: iconFor,
     getAngle: (d) => d.angleDeg,
-    getSize: ARROW_DISPLAY_HEIGHT,
+    getSize: ARROW_DISPLAY_HEIGHT * arrowSizeScale,
     sizeUnits: "pixels",
     pickable: false,
     updateTriggers: {

@@ -80,6 +80,9 @@ interface RouteRecord {
   // first-seen flight's geometry — that's fine for a directionless display.
   depCoord: [number, number];
   arrCoord: [number, number];
+  // First-seen departure/arrival identity — surfaced in the hover tooltip.
+  depAirport: AirportProps;
+  arrAirport: AirportProps;
   count: number;
   flightIds: string[];
   hasUpcoming: boolean;
@@ -117,6 +120,8 @@ function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord>
         key,
         depCoord: coords.depCoord,
         arrCoord: coords.arrCoord,
+        depAirport: dep,
+        arrAirport: arr,
         count: 1,
         flightIds: [f.properties.id],
         hasUpcoming: isScheduled,
@@ -232,6 +237,20 @@ function buildArcs(
       hasUpcoming: r.hasUpcoming,
       hasPastFlown: r.hasPastFlown,
       isHistorical: r.allHistorical,
+      departure: {
+        iata: r.depAirport.iata,
+        icao: r.depAirport.icao,
+        name: r.depAirport.name,
+        city: r.depAirport.city,
+        country: r.depAirport.country,
+      },
+      arrival: {
+        iata: r.arrAirport.iata,
+        icao: r.arrAirport.icao,
+        name: r.arrAirport.name,
+        city: r.arrAirport.city,
+        country: r.arrAirport.country,
+      },
     });
   }
   return arcs;
@@ -264,6 +283,9 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
         count: 0,
         name: dep.name ?? airportLabel(dep),
         iata: airportLabel(dep),
+        icao: dep.icao,
+        country: dep.country,
+        city: dep.city,
       });
     }
     if (!airportMap.has(arrKey)) {
@@ -272,6 +294,9 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
         count: 0,
         name: arr.name ?? airportLabel(arr),
         iata: airportLabel(arr),
+        icao: arr.icao,
+        country: arr.country,
+        city: arr.city,
       });
     }
     const depPoint = airportMap.get(depKey)!;

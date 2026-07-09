@@ -67,7 +67,8 @@
       "labelsAll": "Alle",
       "widthThin": "Dünn",
       "widthNormal": "Normal",
-      "widthThick": "Dick"
+      "widthThick": "Dick",
+      "arrows": "Pfeile"
     },
     "timesFlown": "{{count}}x geflogen",
     "flight_one": "Flug",

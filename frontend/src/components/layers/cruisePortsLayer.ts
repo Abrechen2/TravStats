@@ -15,6 +15,10 @@ interface PortDatum {
    * the real name instead.
    */
   shortLabel: string;
+  /** ISO 3166-1 alpha-2 country code — drives the flag in the hover tooltip. */
+  country?: string | null;
+  /** City the port serves — shown in the hover tooltip's place line. */
+  city?: string | null;
   visits: number;
   /** ISO date of the most recent stop at this port (max of
    *  stop.arrivalTime across cruises). Surfaced in the hover tooltip. */
@@ -83,6 +87,8 @@ export function createCruisePortsLayer(
         portId: port.id,
         name: port.name,
         shortLabel: toPortLabel(port.name),
+        country: port.country,
+        city: port.city,
         visits: 1,
         lastVisit: date,
       });
