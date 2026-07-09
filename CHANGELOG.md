@@ -4,6 +4,66 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.3.0-rc.1] - 2026-07-08 (Release Candidate)
+
+First release candidate for **TravStats 2.3**. Aggregates the entire
+`dev/v2.3` forward line — a redesigned map/globe appearance system,
+per-cruise and status-based map coloring, a new statistics scorecard,
+unresolved cruise ports, device pairing for the companion app, and
+more.
+
+### Added
+- **Redesigned map & globe experience** — consolidated appearance
+  control panel shared between the 2D map and globe, mode-aware
+  presets (marker size, route width, basemap parity), readable
+  port/airport labels with priority reveal on zoom, flag-based markers
+  (flagcdn, not emoji), and an activity histogram with playback
+  replacing the old time slider.
+- **Per-cruise and status-based map coloring** — cruises can now use a
+  distinct color per trip or the default two-tone (sailed/planned)
+  status coloring; flights get a warm/cool status split
+  (flown/upcoming) in the "All" view, with intensity scaled by route
+  frequency.
+- **Statistics: KPI scorecard & trend charts** — a new overview
+  scorecard (sparklines, time-range control) and a canonical
+  flights-per-period chart, backed by a new `GET /stats/timeseries`
+  endpoint.
+- **Unresolved cruise ports** — an imported stop that can't be matched
+  to the port catalog is kept as a port call with its original name
+  (🔶 in the timeline) instead of being silently downgraded to a sea
+  day; resolvable later from the stops editor.
+- **Cruise table improvements** — sortable columns, inline
+  duplicate/edit/delete actions, and country-flag chips per cruise.
+- **Device pairing for the companion app** — secure claim-code flow
+  (start/status/claim/unpair) with a live QR on the new Settings →
+  Devices page, plus per-device metadata on API tokens.
+- **Cross-device app settings sync** — `GET/PUT /api/v1/app-settings`
+  persists mobile-app preferences server-side.
+- **Boarding-pass QR from photos** — digital boarding passes can now
+  be decoded from an uploaded image, not just a live scan.
+- **Trip diary entries** — a read-only diary view with Markdown
+  rendering on the journey detail page.
+- **Discord community integration** — a community link in the app
+  header, plus release/beta/RC announcement tooling.
+- A proper 404 page for unknown routes (was a blank page).
+
+### Fixed
+- Cruise-arc arrows now point in the correct travel direction and have
+  a bordered, easier-to-read shape (Discord bug report #160).
+- Overlapping airport/port labels in dense map clusters are
+  decluttered.
+- The stats overlay no longer collides with the map's Add button.
+- Time histogram: proportionate collapsed layout, a properly
+  positioned year axis, confusing speed selector removed.
+- Statistics trend deltas show percent-only and hide cleanly when
+  there's no comparison window; all-time charts trim empty leading
+  buckets.
+- Various cruise-stop edge cases (unresolved-port singular/plural
+  copy, sea-day toggle clearing stale names, import-preview wording).
+- Boarding-pass duplicate detection is now timezone-aware.
+- AI trip-summary generation uses the long parser timeout instead of a
+  10s default.
+
 ## [2.2.2] - 2026-07-04
 
 ### Fixed
