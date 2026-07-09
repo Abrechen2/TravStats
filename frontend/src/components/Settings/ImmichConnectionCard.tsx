@@ -72,6 +72,7 @@ export default function ImmichConnectionCard(): JSX.Element {
     setSaving(true);
     try {
       apply(await immichApi.updateSettings({ apiKey: null }));
+      setApiKey("");
     } finally {
       setSaving(false);
     }
@@ -105,7 +106,6 @@ export default function ImmichConnectionCard(): JSX.Element {
       </label>
       <input
         id="immich-base-url"
-        aria-label="baseUrl"
         className="mb-3 w-full rounded border border-slate-600 bg-slate-900 p-2"
         placeholder={t("baseUrlPlaceholder")}
         value={baseUrl}
@@ -117,7 +117,6 @@ export default function ImmichConnectionCard(): JSX.Element {
       </label>
       <input
         id="immich-api-key"
-        aria-label="apiKey"
         type="password"
         autoComplete="off"
         className="w-full rounded border border-slate-600 bg-slate-900 p-2"
@@ -141,7 +140,6 @@ export default function ImmichConnectionCard(): JSX.Element {
             <input
               type="radio"
               name="immich-default-mode"
-              aria-label={mode === "link" ? "modeLink" : "modeImport"}
               checked={defaultMode === mode}
               onChange={() => setDefaultMode(mode)}
             />

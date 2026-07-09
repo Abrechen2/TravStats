@@ -9,12 +9,21 @@ const { getSettings, updateSettings, testConnection } = vi.hoisted(() => ({
   updateSettings: vi.fn(),
   testConnection: vi.fn(),
 }));
+
+const { mockTranslateFn } = vi.hoisted(() => ({
+  mockTranslateFn: vi.fn((key: string) => key),
+}));
+
 vi.mock("../../../lib/api/immich", () => ({
   immichApi: { getSettings, updateSettings, testConnection },
 }));
 
 vi.mock("../../../hooks/useTranslation", () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: {}, ready: true }),
+  useTranslation: () => ({
+    t: mockTranslateFn,
+    i18n: {},
+    ready: true,
+  }),
 }));
 
 import ImmichConnectionCard from "../ImmichConnectionCard";
@@ -30,6 +39,8 @@ const CONFIGURED = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Reset mockTranslateFn to default behavior (return key as-is).
+  mockTranslateFn.mockImplementation((key: string) => key);
   getSettings.mockResolvedValue(CONFIGURED);
   updateSettings.mockResolvedValue(CONFIGURED);
   testConnection.mockResolvedValue({
@@ -116,5 +127,25 @@ describe("ImmichConnectionCard", () => {
     getSettings.mockResolvedValue({ ...CONFIGURED, source: "global", isShared: true });
     render(<ImmichConnectionCard />);
     await waitFor(() => expect(screen.getByText("shared")).toBeInTheDocument());
+  });
+
+  it("uses translated accessible names from labels, not hardcoded aria-labels", async () => {
+    // This test verifies that accessible names follow the i18n translation,
+    // not hardcoded literals. By mocking t to return distinct strings (T:baseUrl, etc.),
+    // we prove the input's accessible name comes from the localized <label>, not an aria-label.
+    // If aria-labels hardcode raw i18n keys, this test fails because the accessible name
+    // will be the literal "baseUrl" (from aria-label), not "T:baseUrl" (from the label).
+    mockTranslateFn.mockImplementation((key: string) => `T:${key}`);
+
+    render(<ImmichConnectionCard />);
+    await waitFor(() => expect(getSettings).toHaveBeenCalled());
+
+    // Inputs should be accessible by their translated label text.
+    expect(screen.getByLabelText("T:baseUrl")).toBeInTheDocument();
+    expect(screen.getByLabelText("T:apiKey")).toBeInTheDocument();
+
+    // Radios should be accessible by their translated label text.
+    expect(screen.getByRole("radio", { name: "T:modeLink" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "T:modeImport" })).toBeInTheDocument();
   });
 });
