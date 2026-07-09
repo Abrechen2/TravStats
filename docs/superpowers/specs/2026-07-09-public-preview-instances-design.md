@@ -247,12 +247,21 @@ final task of the implementation plan.
 
 | Secret | Where | Action |
 |---|---|---|
-| Cloudflare API token (`cfat_…`) | pasted in chat; now `~/.cloudflare-travstats-token` | revoke, reissue scoped to `travstats.de` + Tunnel:Edit |
+| Cloudflare token #3 (`cfat_igBB…`) — **the active one**, DNS + Tunnel | pasted in chat; `~/.cloudflare-travstats-token` | revoke after provisioning, reissue |
+| Cloudflare token #2 (`cfat_oiZ3…`) — Tunnel only, superseded | pasted in chat | revoke now, unused |
+| Cloudflare token #1 (`cfat_Syo…`) — DNS only, superseded | pasted in chat | revoke now, unused |
 | Cloudflare DDNS `API_KEY` (zone `abrechen2.de`) | plaintext in `/opt/cloudflare-ddns/docker-compose.yml` on CT121 | revoke, reissue as a scoped token, move out of the compose file into an env file with `0600` |
 
-A third string (`cfk_…`) was also pasted; it authenticates but is refused (403)
-on the `travstats.de` zone. Its origin is unknown. If it is a live credential
-for any service, it is compromised and needs rotation too.
+Tokens #1 and #2 are already superseded and can be revoked immediately — they
+grant real access and nothing depends on them.
+
+A further string (`cfk_…`) was also pasted; it authenticates but is refused
+(403) on the `travstats.de` zone. Its origin is unknown. If it is a live
+credential for any service, it is compromised and needs rotation too.
+
+All three `cfat_` tokens carry an IP allowlist pinned to a dynamic WAN address
+(see §6). The reissued token should either widen that allowlist or be treated
+as something that will need re-pinning.
 
 The DDNS key predates this work and is not caused by it, but it is the more
 serious of the two: it sits unencrypted on a running container.
@@ -268,3 +277,8 @@ larger decision than three demo instances and gets its own discussion.
 Separately, `CCProxmox/CLAUDE.md` lists CT101 (`sublarr`) and CT131
 (`sublarr-wiki-public`), neither of which exists in the cluster. Documentation
 drift, out of scope here, worth fixing.
+
+Consistent with that, the Cloudflare account holds a `sublarr-wiki` tunnel
+(`38121002-…`) in state `down` — the tunnel for the container that no longer
+exists. Harmless, but it should be deleted along with the doc fix. The account's
+other tunnels (`sublarr-prod`, `travstats-web`) are `healthy` and in use.
