@@ -15,6 +15,7 @@
  * with 304 without ever touching Immich.
  */
 import { Router, Response, NextFunction } from "express";
+import { pipeline } from "node:stream/promises";
 import { prisma } from "../../db";
 import { authenticate, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
@@ -43,6 +44,24 @@ function sendPlaceholder(res: Response, status: number): void {
   res.setHeader("Content-Type", "image/png");
   res.setHeader("Cache-Control", "no-store");
   res.send(PLACEHOLDER_PNG);
+}
+
+/**
+ * `pipeline()` rejects with `ERR_STREAM_PREMATURE_CLOSE` when the
+ * *destination* (the HTTP response) closes before the source finishes —
+ * exactly what happens when the client aborts the download mid-transfer.
+ * That is routine browser behaviour (navigated away, cancelled a tile
+ * fetch, closed the tab), not an upstream failure, so it must not be
+ * logged as an error. `pipeline` already destroys both streams for us in
+ * this case, closing the connection Immich was streaming over.
+ */
+function isClientAbort(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "ERR_STREAM_PREMATURE_CLOSE"
+  );
 }
 
 router.get(
@@ -96,17 +115,32 @@ router.get(
         res.setHeader("Content-Length", String(upstream.contentLength));
       }
 
-      // A mid-stream upstream abort must not leave the response hanging.
-      upstream.stream.on("error", (error: unknown) => {
+      // `pipeline()` (over a bare `.pipe()`) propagates destruction in both
+      // directions: if the client disconnects mid-download, `res` closes and
+      // `upstream.stream` is destroyed with it, instead of holding the
+      // connection to the user's Immich server open indefinitely (axios does
+      // not itself bound the body transfer once streaming starts — see
+      // `fetchAssetStream`'s doc comment). It also gives one place to
+      // distinguish a routine client abort from a genuine upstream failure.
+      try {
+        await pipeline(upstream.stream, res);
+      } catch (pipeError) {
+        if (isClientAbort(pipeError)) return;
+
         logger.error({
           message: "immich_proxy_stream_error",
-          error,
+          error: pipeError,
           context: { assetId: assetId.data },
         });
-        res.destroy();
-      });
 
-      upstream.stream.pipe(res);
+        // Bytes may already be on the wire — writing a fresh status/body
+        // would throw ERR_HTTP_HEADERS_SENT. Tear the connection down instead.
+        if (res.headersSent) {
+          res.destroy();
+        } else {
+          sendPlaceholder(res, 502);
+        }
+      }
     } catch (error) {
       if (error instanceof ImmichError) {
         logger.warn({ message: "immich_proxy_upstream_failure", context: { kind: error.kind } });
