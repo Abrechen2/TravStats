@@ -28,7 +28,9 @@ export default function CrossDomainHeatmap({ statsMap, visible, year }: Props): 
   // Lookup per-day per-domain. Build once per render.
   const grid = useMemo(() => {
     const out: Record<string, CellData> = {};
-    for (const [key, stats] of Object.entries(statsMap) as Array<[DomainKey, typeof statsMap[DomainKey]]>) {
+    for (const [key, stats] of Object.entries(statsMap) as Array<
+      [DomainKey, (typeof statsMap)[DomainKey]]
+    >) {
       if (!stats || !isWithData(stats)) continue;
       if (visible[key] === false) continue;
       for (const [ymd, value] of Object.entries(stats.dailyActiveDays)) {
@@ -106,7 +108,13 @@ export default function CrossDomainHeatmap({ statsMap, visible, year }: Props): 
           {[0.15, 0.3, 0.5, 0.75, 1].map((o, i) => (
             <div
               key={i}
-              style={{ width: 14, height: 14, borderRadius: 2, background: "var(--accent)", opacity: o }}
+              style={{
+                width: 14,
+                height: 14,
+                borderRadius: 2,
+                background: "var(--accent)",
+                opacity: o,
+              }}
             />
           ))}
         </div>
@@ -137,10 +145,7 @@ function FragmentRow({
 }): JSX.Element {
   return (
     <>
-      <div
-        className="text-xs font-mono self-center"
-        style={{ color: "var(--text-muted)" }}
-      >
+      <div className="text-xs font-mono self-center" style={{ color: "var(--text-muted)" }}>
         {mLabel}
       </div>
       {Array.from({ length: 31 }, (_, dIndex) => {
@@ -185,10 +190,7 @@ function FragmentRow({
                 </strong>
                 {": "}
                 {Object.entries(cell.perDomain)
-                  .map(
-                    ([k, v]) =>
-                      `${t(`common:${DOMAINS[k as DomainKey].i18nKey}`)} ${v}`
-                  )
+                  .map(([k, v]) => `${t(`common:${DOMAINS[k as DomainKey].i18nKey}`)} ${v}`)
                   .join(" · ")}
               </div>
             )}

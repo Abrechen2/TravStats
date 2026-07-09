@@ -53,6 +53,8 @@ const sanitize = (t: ApiToken): SanitizedApiToken => ({
   expiresAt: t.expiresAt?.toISOString() ?? null,
   revokedAt: t.revokedAt?.toISOString() ?? null,
   createdAt: t.createdAt.toISOString(),
+  deviceId: t.deviceId,
+  platform: t.platform,
 });
 
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {

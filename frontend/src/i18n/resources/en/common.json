@@ -38,8 +38,8 @@
   },
   "diagnostic": {
     "reportBug": "Report a bug",
-    "reportBugOpened": "Bundle copied — paste it in the new tab",
-    "reportBugHint": "Opens GitHub with a pre-filled issue template and copies the diagnostic bundle to your clipboard",
+    "reportBugOpened": "Bundle downloaded — drag the .json file into the report in the new tab",
+    "reportBugHint": "Opens GitHub with a pre-filled issue and downloads the diagnostic bundle to attach (it's usually too large to paste)",
     "title": "Diagnostic export for a GitHub issue",
     "description": "Download a scrubbed diagnostic bundle you can attach to a GitHub issue. The bundle contains the latest log entries plus system and version info. All personal data has been removed:",
     "scrubList": {
@@ -179,5 +179,10 @@
     "noNotes": "No release notes available.",
     "dismiss": "Ignore this version",
     "close": "Close"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "message": "This page doesn't exist or has moved.",
+    "back": "Back to dashboard"
   }
 }

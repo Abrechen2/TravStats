@@ -1,15 +1,18 @@
 import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import type { Cruise, Port } from "../../types";
+import { toPortLabel } from "../map/portLabel";
+import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
 
 interface PortDatum {
   position: [number, number];
   portId: number;
   name: string;
   /**
-   * Short label rendered on the marker — UN/LOCODE if available
-   * (5-letter international port code, e.g. "DEHAM"), falling back
-   * to the full port name. Mirrors airport markers showing IATA codes.
+   * Readable label rendered on the marker — the port name, lightly
+   * normalised + truncated via `toPortLabel`. Airports show their IATA
+   * code, but UN/LOCODEs ("ITCVV") mean nothing to users, so ports show
+   * the real name instead.
    */
   shortLabel: string;
   visits: number;
@@ -48,10 +51,24 @@ const PORT_LABEL_VISIBILITY_MIN_ZOOM = 4;
  *
  * Returns `null` when no qualifying ports exist.
  */
+/** Appearance overrides for cruise-port markers (from the flat-map panel). */
+export interface PortsAppearance {
+  /** Port marker fill/ring colour (RGB). Falls back to the built-in blue. */
+  portColor?: [number, number, number];
+  /** Multiplier on the port marker + ring pixel radii (1 = default). */
+  portSizeScale?: number;
+  /** Port-label reveal: off / key ports only (priority by visits, the
+   *  default) / all. Replaces the old hard zoom gate. */
+  labelsMode?: LabelsMode;
+}
+
 export function createCruisePortsLayer(
   cruises: Cruise[],
   zoom: number = PORT_LABEL_VISIBILITY_MIN_ZOOM,
+  appearance: PortsAppearance = {}
 ): Layer[] | null {
+  const { portColor, portSizeScale = 1, labelsMode = "important" } = appearance;
+  const portRgb = portColor ?? PORT_RGB;
   const byPort = new Map<number, PortDatum>();
   const recordVisit = (port: Port, date: string | undefined): void => {
     const existing = byPort.get(port.id);
@@ -65,7 +82,7 @@ export function createCruisePortsLayer(
         position: [port.lon, port.lat],
         portId: port.id,
         name: port.name,
-        shortLabel: port.unlocode ?? port.name,
+        shortLabel: toPortLabel(port.name),
         visits: 1,
         lastVisit: date,
       });
@@ -95,10 +112,10 @@ export function createCruisePortsLayer(
     data,
     getPosition: (d) => d.position,
     getRadius: PORT_RING_RADIUS_M,
-    radiusMinPixels: 7,
-    radiusMaxPixels: 14,
+    radiusMinPixels: 7 * portSizeScale,
+    radiusMaxPixels: 14 * portSizeScale,
     getFillColor: [0, 0, 0, 0],
-    getLineColor: [...PORT_RGB, 80] as [number, number, number, number],
+    getLineColor: [...portRgb, 80] as [number, number, number, number],
     stroked: true,
     filled: false,
     lineWidthMinPixels: 1,
@@ -114,9 +131,9 @@ export function createCruisePortsLayer(
     // sub-pixel meters at low zoom collapse to just the white stroke
     // (visible "clipping"), and at very high zoom the meter radius
     // would balloon to cover the entire port city.
-    radiusMinPixels: 4,
-    radiusMaxPixels: 8,
-    getFillColor: [...PORT_RGB, 220] as [number, number, number, number],
+    radiusMinPixels: 4 * portSizeScale,
+    radiusMaxPixels: 8 * portSizeScale,
+    getFillColor: [...portRgb, 220] as [number, number, number, number],
     getLineColor: [255, 255, 255, 220],
     lineWidthUnits: "pixels",
     getLineWidth: 1,
@@ -124,10 +141,19 @@ export function createCruisePortsLayer(
     pickable: true,
   });
 
-  const labelsVisible = zoom >= PORT_LABEL_VISIBILITY_MIN_ZOOM;
+  // Priority label reveal: the most-visited ports keep their label even
+  // when zoomed out; the rest fill in as the zoom budget grows. Then
+  // decluttered by screen distance so a dense cluster of busy ports doesn't
+  // stack labels on top of each other (#label-overlap) — skipped in "all"
+  // mode, where the user explicitly asked to see every label.
+  const budgeted = pickLabelled(data, (d) => d.visits, labelsMode, zoom);
+  const labelData =
+    labelsMode === "all"
+      ? budgeted
+      : declutterByDistance(budgeted, (d) => d.visits, (d) => d.position, zoom);
   const labelLayer = new TextLayer<PortDatum>({
     id: "cruise-ports-labels",
-    data,
+    data: labelData,
     getPosition: (d) => d.position,
     getText: (d) => d.shortLabel,
     getColor: [241, 245, 249, 235],
@@ -143,7 +169,7 @@ export function createCruisePortsLayer(
     sizeUnits: "pixels",
     pickable: true,
     billboard: true,
-    visible: labelsVisible,
+    visible: labelsMode !== "off",
   });
 
   return [ringLayer, dotLayer, labelLayer];

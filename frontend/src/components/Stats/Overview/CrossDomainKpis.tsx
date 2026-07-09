@@ -77,10 +77,7 @@ export default function CrossDomainKpis({
           <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
             {c.label}
           </h3>
-          <p
-            className="text-3xl font-bold mt-2 font-mono"
-            style={{ color: "var(--text-primary)" }}
-          >
+          <p className="text-3xl font-bold mt-2 font-mono" style={{ color: "var(--text-primary)" }}>
             {typeof c.value === "number" ? c.value.toLocaleString("de-DE") : c.value}
           </p>
           {c.delta && <DeltaBadge d={c.delta} compareYear={compareYear} />}

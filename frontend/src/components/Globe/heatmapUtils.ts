@@ -50,10 +50,7 @@ export const calculateHeatmapThresholds = (counts: number[]): HeatmapThresholds 
   return { q25, q50, q75, max };
 };
 
-export const getHeatmapColor = (
-  count: number,
-  t: HeatmapThresholds
-): [number, number, number] => {
+export const getHeatmapColor = (count: number, t: HeatmapThresholds): [number, number, number] => {
   if (count > t.q75) return HEAT_RGB.q4;
   if (count > t.q50) return HEAT_RGB.q3;
   if (count > t.q25) return HEAT_RGB.q2;

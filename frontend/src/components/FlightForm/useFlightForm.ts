@@ -387,7 +387,9 @@ export function useFlightForm(
   };
 
   // Derive which date-precision shape a historical departure date has.
-  const historicalDateShape = (date: string): "year" | "year_month" | "year_month_day" | "unknown" => {
+  const historicalDateShape = (
+    date: string
+  ): "year" | "year_month" | "year_month_day" | "unknown" => {
     if (/^\d{4}$/.test(date)) return "year";
     if (/^\d{4}-\d{2}$/.test(date)) return "year_month";
     if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return "year_month_day";

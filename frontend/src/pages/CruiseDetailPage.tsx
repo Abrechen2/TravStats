@@ -97,10 +97,16 @@ export default function CruiseDetailPage(): JSX.Element {
     id: entry.key,
     domain: "cruise",
     date: entry.date ?? cruise.startDate ?? new Date().toISOString(),
-    title: entry.isAtSea ? t("stops.at_sea") : (entry.port?.name ?? "—"),
+    title: entry.isAtSea
+      ? t("stops.at_sea")
+      : entry.port?.name ?? (entry.unresolvedPortName ? `🔶 ${entry.unresolvedPortName}` : "—"),
     subtitle: entry.isAtSea
       ? undefined
-      : [entry.port?.city, entry.port?.country].filter(Boolean).join(", ") || undefined,
+      : entry.port
+        ? [entry.port.city, entry.port.country].filter(Boolean).join(", ") || undefined
+        : entry.unresolvedPortName
+          ? t("stops.unresolved")
+          : undefined,
     meta: entry.excursionNote ?? undefined,
   }));
 
@@ -139,9 +145,7 @@ export default function CruiseDetailPage(): JSX.Element {
                 {cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? "—"}
               </p>
               {cruise.routeName && (
-                <p className="text-sm font-medium text-[var(--text-primary)]">
-                  {cruise.routeName}
-                </p>
+                <p className="text-sm font-medium text-[var(--text-primary)]">{cruise.routeName}</p>
               )}
             </div>
           </div>
@@ -150,10 +154,10 @@ export default function CruiseDetailPage(): JSX.Element {
               {fmtDate(cruise.startDate)} – {fmtDate(cruise.endDate)}
             </span>
             <span className="rounded-md border border-[var(--color-border)] bg-[var(--bg-base)] px-2 py-1">
-              {portsCount} {t("field.ports")}
+              {portsCount} {t("field.ports", { count: portsCount })}
             </span>
             <span className="rounded-md border border-[var(--color-border)] bg-[var(--bg-base)] px-2 py-1">
-              {seaDays} {t("field.sea_days")}
+              {seaDays} {t("field.sea_days", { count: seaDays })}
             </span>
             <span
               className="rounded-full px-2 py-1 font-semibold"

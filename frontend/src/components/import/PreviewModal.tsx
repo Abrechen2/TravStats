@@ -1,10 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import {
-  hasHardError,
-  type PreviewFlag,
-  type PreviewRowEnriched,
-} from "../../lib/api/import";
+import { hasHardError, type PreviewFlag, type PreviewRowEnriched } from "../../lib/api/import";
 
 export interface PreviewCommitResult {
   committed: number;

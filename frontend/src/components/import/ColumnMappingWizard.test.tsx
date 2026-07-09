@@ -37,7 +37,7 @@ describe("ColumnMappingWizard", () => {
         csvSamples={FULL_SAMPLES}
         onSubmit={onSubmit}
         onCancel={vi.fn()}
-      />,
+      />
     );
     // All required + optional are exact matches → Continue should be enabled
     const continueBtn = screen.getByRole("button", {
@@ -50,7 +50,7 @@ describe("ColumnMappingWizard", () => {
         date: "date",
         fromIata: "fromIata",
         toIata: "toIata",
-      }),
+      })
     );
   });
 
@@ -67,12 +67,12 @@ describe("ColumnMappingWizard", () => {
         }}
         onSubmit={onSubmit}
         onCancel={vi.fn()}
-      />,
+      />
     );
     fireEvent.click(
       screen.getByRole("button", {
         name: /settings:import\.preview\.wizard\.continue/i,
-      }),
+      })
     );
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -80,7 +80,7 @@ describe("ColumnMappingWizard", () => {
         fromIata: "Origin",
         toIata: "Destination",
         registration: "Tail",
-      }),
+      })
     );
   });
 
@@ -91,14 +91,14 @@ describe("ColumnMappingWizard", () => {
         csvSamples={{ something_else: "foo" }}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
-      />,
+      />
     );
     const continueBtn = screen.getByRole("button", {
       name: /settings:import\.preview\.wizard\.continue/i,
     });
     expect(continueBtn).toBeDisabled();
     expect(
-      screen.getByText(/settings:import\.preview\.wizard\.missingFields/i),
+      screen.getByText(/settings:import\.preview\.wizard\.missingFields/i)
     ).toBeInTheDocument();
   });
 
@@ -109,7 +109,7 @@ describe("ColumnMappingWizard", () => {
         csvSamples={{ date: "2024-06-15", fromIata: "MUC", toIata: "FCO" }}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
-      />,
+      />
     );
     // Re-point fromIata to the same header `toIata` is using → collision
     const fromSelect = screen.getByRole("combobox", {
@@ -117,7 +117,7 @@ describe("ColumnMappingWizard", () => {
     });
     fireEvent.change(fromSelect, { target: { value: "toIata" } });
     expect(
-      screen.getByText(/settings:import\.preview\.wizard\.duplicateMappingHint/i),
+      screen.getByText(/settings:import\.preview\.wizard\.duplicateMappingHint/i)
     ).toBeInTheDocument();
     const continueBtn = screen.getByRole("button", {
       name: /settings:import\.preview\.wizard\.continue/i,
@@ -132,7 +132,7 @@ describe("ColumnMappingWizard", () => {
         csvSamples={{ date: "2024-06-15" }}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
-      />,
+      />
     );
     // Sample value is shown both inline next to the selected dropdown and
     // inside the option label — at least one occurrence is enough.
@@ -143,17 +143,12 @@ describe("ColumnMappingWizard", () => {
   it("calls onCancel when the close button is clicked", () => {
     const onCancel = vi.fn();
     render(
-      <ColumnMappingWizard
-        csvHeaders={[]}
-        csvSamples={{}}
-        onSubmit={vi.fn()}
-        onCancel={onCancel}
-      />,
+      <ColumnMappingWizard csvHeaders={[]} csvSamples={{}} onSubmit={vi.fn()} onCancel={onCancel} />
     );
     fireEvent.click(
       screen.getByRole("button", {
         name: /settings:import\.preview\.wizard\.cancel/i,
-      }),
+      })
     );
     expect(onCancel).toHaveBeenCalled();
   });

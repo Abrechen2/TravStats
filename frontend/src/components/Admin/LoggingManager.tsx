@@ -69,10 +69,7 @@ export default function LoggingManager({
             onClick={onToggleDebug}
             className="px-4 py-2 rounded-lg transition font-medium"
             style={{
-              background:
-                loggingConfig.logLevel === "debug"
-                  ? "var(--warning)"
-                  : "var(--accent)",
+              background: loggingConfig.logLevel === "debug" ? "var(--warning)" : "var(--accent)",
               color: "#0d1117",
             }}
           >

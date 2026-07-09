@@ -223,9 +223,9 @@ function findBestPort(
 
 /**
  * Convert a parsed cruise from the LLM into a CruiseInput shape that the
- * `/api/v1/cruises` POST endpoint accepts. Unmatched ports are turned into
- * stops with `portId=null` + a stub excursionNote so the user sees them and
- * can pick the right port manually in the UI.
+ * `/api/v1/cruises` POST endpoint accepts. Unmatched ports become unresolved
+ * stops (portId=null, isAtSea=false, unresolvedPortName set) so the name is
+ * never lost and the user can pick the catalog port later in the UI.
  */
 export async function resolveCruiseEntities(
   parsed: ParsedCruise,
@@ -298,25 +298,22 @@ function mapStop(
     unmatched.push({ dayNumber: index + 1, portName: stop.portName });
   }
 
-  // Tag unmatched ports in the excursionNote so the user can spot them in
-  // the editor; an unresolved port + isAtSea=false would otherwise fail Zod
-  // validation (the union demands one or the other).
-  const excursion = match
-    ? stop.excursionNote
-    : [stop.excursionNote, stop.portName ? `[unmatched: ${stop.portName}]` : null]
-        .filter(Boolean)
-        .join(" ") || undefined;
-
+  // Unmatched named ports become a first-class unresolved stop: the name is
+  // preserved in its own field, the stop stays a port (not a sea day), and the
+  // user can resolve it to a catalog port later. The excursion note stays clean.
+  const hasName = Boolean(stop.portName);
   return {
     portId: match?.id ?? null,
     dayNumber: index + 1,
     date: stop.date,
-    // Force isAtSea=true when the port could not be resolved to keep the Zod
-    // refinement happy. The user can correct this in the UI by picking a port.
-    isAtSea: !match,
+    // A non-sea stop with neither a matched port nor a name has nothing to
+    // preserve — degrade it to a sea day so it stays Zod-valid (the unresolved
+    // state requires a name).
+    isAtSea: !match && !hasName,
     arrivalTime: stop.arrivalTime,
     departureTime: stop.departureTime,
-    excursionNote: excursion,
+    excursionNote: stop.excursionNote,
+    unresolvedPortName: match ? undefined : (stop.portName ?? undefined),
   };
 }
 

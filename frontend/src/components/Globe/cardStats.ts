@@ -29,7 +29,8 @@ export interface PortCardStats {
 export interface ArcCardStats {
   totalKm: number;
   lastFlightDate: string | null;
-  aircraftTypes: string[];
+  /** Most-frequently-flown aircraft type on this route. */
+  topAircraft: string | null;
   topAirline: string | null;
 }
 
@@ -74,14 +75,9 @@ function maxDate(dates: ReadonlyArray<string | null | undefined>): string | null
 
 // ─── Airport ──────────────────────────────────────────────────────
 
-export function getAirportStats(
-  flights: GeoJSONFeature[],
-  iata: string,
-): AirportCardStats {
+export function getAirportStats(flights: GeoJSONFeature[], iata: string): AirportCardStats {
   const touched = flights.filter(
-    (f) =>
-      f.properties.departureAirport.iata === iata ||
-      f.properties.arrivalAirport.iata === iata,
+    (f) => f.properties.departureAirport.iata === iata || f.properties.arrivalAirport.iata === iata
   );
   const departures = touched.filter((f) => f.properties.departureAirport.iata === iata);
 
@@ -114,12 +110,9 @@ export function getPortStats(cruises: Cruise[], portKey: string): PortCardStats 
   const stops = cruises.flatMap((c) =>
     c.stops
       .filter(
-        (s) =>
-          s.port?.unlocode === portKey ||
-          s.port?.name === portKey ||
-          s.port?.city === portKey,
+        (s) => s.port?.unlocode === portKey || s.port?.name === portKey || s.port?.city === portKey
       )
-      .map((s) => ({ stop: s, cruise: c })),
+      .map((s) => ({ stop: s, cruise: c }))
   );
 
   const country = stops[0]?.stop.port?.country ?? null;
@@ -127,10 +120,10 @@ export function getPortStats(cruises: Cruise[], portKey: string): PortCardStats 
 
   const ships = Array.from(
     new Set(
-      stops.map(({ cruise }) => cruise.ship?.name ?? cruise.shipNameOverride ?? null).filter(
-        (s): s is string => s !== null,
-      ),
-    ),
+      stops
+        .map(({ cruise }) => cruise.ship?.name ?? cruise.shipNameOverride ?? null)
+        .filter((s): s is string => s !== null)
+    )
   );
 
   // Longest port-call: max(departureTime − arrivalTime) for stops with
@@ -160,7 +153,7 @@ export function getPortStats(cruises: Cruise[], portKey: string): PortCardStats 
 
 export function getArcStats(
   flights: GeoJSONFeature[],
-  flightIds: ReadonlyArray<string>,
+  flightIds: ReadonlyArray<string>
 ): ArcCardStats {
   const ids = new Set(flightIds);
   const matched = flights.filter((f) => ids.has(f.properties.id));
@@ -170,9 +163,7 @@ export function getArcStats(
   return {
     totalKm,
     lastFlightDate: maxDate(matched.map((f) => f.properties.departureTime)),
-    aircraftTypes: Array.from(
-      new Set(matched.map((f) => f.properties.aircraft).filter((a): a is string => !!a)),
-    ),
+    topAircraft: modeOf(matched.map((f) => f.properties.aircraft)),
     topAirline: modeOf(matched.map((f) => f.properties.airline)),
   };
 }
