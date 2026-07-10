@@ -82,4 +82,31 @@ describe("applyConsentChange", () => {
     await applyConsentChange("granted");
     expect(usageStatsTick).not.toHaveBeenCalled();
   });
+
+  it("does not block the caller on the immediate ping after granting", async () => {
+    let resolveTick: () => void = () => {};
+    (usageStatsTick as jest.Mock).mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveTick = resolve;
+        }),
+    );
+    // Must resolve even though the tick is still pending.
+    await applyConsentChange("granted");
+    expect(setConsent).toHaveBeenCalledWith("granted");
+    resolveTick();
+  });
+
+  it("swallows a rejected immediate ping without failing the grant", async () => {
+    (usageStatsTick as jest.Mock).mockRejectedValue(new Error("endpoint down"));
+    await expect(applyConsentChange("granted")).resolves.toBeUndefined();
+    expect(setConsent).toHaveBeenCalledWith("granted");
+  });
+
+  it("still persists the denial when reading the install id throws", async () => {
+    (getInstallId as jest.Mock).mockRejectedValue(new Error("db blip"));
+    await expect(applyConsentChange("denied")).resolves.toBeUndefined();
+    expect(setConsent).toHaveBeenCalledWith("denied");
+    expect(sendErasure).not.toHaveBeenCalled();
+  });
 });
