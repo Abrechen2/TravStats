@@ -135,6 +135,7 @@ export interface UserSettings {
   autoUpdate?: AutoUpdateSettings;
   historicalEnrichment?: HistoricalEnrichmentSettings;
   enabledDomains?: DomainKey[];
+  whatsNewSeenVersion?: string;
   [key: string]: unknown;
 }
 
