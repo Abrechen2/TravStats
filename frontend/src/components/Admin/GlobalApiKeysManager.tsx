@@ -83,7 +83,7 @@ export default function GlobalApiKeysManager({
           style={{ background: "var(--bg-elevated)", borderColor: "var(--color-amber)" }}
         >
           <p className="text-sm" style={{ color: "var(--color-amber)" }}>
-            {t("common:loading") || "Loading..."}
+            {t("common:loading.default")}
           </p>
         </div>
       )}

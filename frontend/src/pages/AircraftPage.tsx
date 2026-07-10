@@ -52,7 +52,7 @@ export default function AircraftPage(): JSX.Element {
           >
             ← {t("aircraft:backToStats")}
           </Link>
-          {loading && <p className="text-sm text-gray-500">{t("common:loading")}</p>}
+          {loading && <p className="text-sm text-gray-500">{t("common:loading.default")}</p>}
           {!loading && notFound && (
             <div className="bg-[var(--bg-elevated)] rounded-xl shadow p-6">
               <h1 className="text-2xl font-bold mb-2">{registration}</h1>

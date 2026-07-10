@@ -85,7 +85,7 @@ export default function DetectTripsBanner({ onChange }: Props): JSX.Element | nu
           className="px-3 py-1.5 rounded-md text-xs"
           style={{ color: "var(--text-muted)" }}
         >
-          {t("common:close")}
+          {t("common:buttons.close")}
         </button>
         <button
           type="button"
