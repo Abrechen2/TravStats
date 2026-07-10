@@ -67,7 +67,8 @@
       "labelsAll": "All",
       "widthThin": "Thin",
       "widthNormal": "Normal",
-      "widthThick": "Thick"
+      "widthThick": "Thick",
+      "arrows": "Arrows"
     },
     "timesFlown": "Flown {{count}}x",
     "flight_one": "flight",

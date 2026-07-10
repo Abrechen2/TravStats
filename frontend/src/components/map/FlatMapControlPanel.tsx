@@ -206,6 +206,9 @@ export function FlatMapControlPanel({
               sizeLabel={t("map:globe.panel.size")}
               markerSize={cruiseAppearance.markerSize}
               onMarkerSizeChange={cruiseAppearance.onMarkerSizeChange}
+              arrowLabel={t("map:globe.panel.arrows")}
+              arrowScale={cruiseAppearance.arrowScale}
+              onArrowScaleChange={cruiseAppearance.onArrowScaleChange}
             />
           )}
         </div>
