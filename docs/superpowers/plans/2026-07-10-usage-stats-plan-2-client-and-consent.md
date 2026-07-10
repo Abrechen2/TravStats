@@ -1306,11 +1306,13 @@ export async function applyConsentChange(consent: "granted" | "denied"): Promise
 
   await setConsent("granted");
   if (!baseUrl) return;
-  try {
-    await usageStatsTick();
-  } catch (error) {
+  // Fire-and-forget, deliberately NOT awaited. The immediate ping only makes the
+  // public dashboard notice this install sooner; a stats endpoint that accepts the
+  // connection and never answers would otherwise hang the admin's PUT for the full
+  // 5s timeout. The denial path above DOES await, on purpose — see its comment.
+  void usageStatsTick().catch((error: unknown) => {
     logger.debug({ error }, "usage-stats immediate ping after grant failed");
-  }
+  });
 }
 
 // GET /api/v1/admin/usage-stats
