@@ -110,3 +110,49 @@ describe("applyConsentChange", () => {
     expect(sendErasure).not.toHaveBeenCalled();
   });
 });
+
+describe("PUT /usage-stats handler", () => {
+  it("returns success with installId null when getInstallId fails on response read-back", async () => {
+    // For the granted case, applyConsentChange does NOT call getInstallId.
+    // The only call to getInstallId is in the handler for building the response.
+    // We make that call fail to verify the handler handles it gracefully.
+    (getInstallId as jest.Mock).mockRejectedValue(new Error("transient database error"));
+    (setConsent as jest.Mock).mockResolvedValue(undefined);
+    (usageStatsTick as jest.Mock).mockResolvedValue(undefined);
+
+    // Import the router to extract and test the PUT handler
+    const { default: router } = await import("../../routes/admin/usageStats");
+
+    // Create mock Express request/response objects
+    const req = {
+      body: { consent: "granted" },
+    } as unknown as any;
+
+    const jsonResponse = jest.fn();
+    const res = {
+      json: jsonResponse,
+    } as unknown as any;
+
+    const next = jest.fn();
+
+    // Find and call the PUT handler
+    const putHandler = router.stack.find(
+      (layer: any) => layer.route && layer.route.methods && layer.route.methods.put
+    )?.route?.stack[0]?.handle;
+
+    if (!putHandler) {
+      throw new Error("PUT /usage-stats handler not found");
+    }
+
+    await putHandler(req, res, next);
+
+    // Verify the handler responded successfully despite getInstallId failing on read-back
+    expect(jsonResponse).toHaveBeenCalledWith({
+      consent: "granted",
+      installId: null,
+      endpointConfigured: true,
+    });
+    // Must not call next(error) — that would be a 500
+    expect(next).not.toHaveBeenCalled();
+  });
+});
