@@ -3,7 +3,8 @@
 **Date:** 2026-07-04
 **Source:** Discord `#hotel-poi-domain` brief (alexkuenzel_58740 + abrechen2)
 **Branch:** `dev/hotels` (long-running, off `main`, releases several releases later)
-**Status:** Design — pending user review before implementation planning
+**Status:** Design — reviewed 2026-07-10 (base-currency + FX and the migration
+approach folded in, §7.1 / §3 / §17); ready for Phase-A implementation planning
 
 ## 1. Overview
 
@@ -35,8 +36,8 @@ first-class.
 
 ### Phasing (build order on the branch; released together)
 - **A — Core domain:** models + migration + CRUD + manual entry + chains +
-  memberships + trip-timeline + map pins + achievements + stats + turn the domain
-  on. (The bulk.)
+  memberships + trip-timeline + map pins + achievements + stats + **base currency &
+  historical FX (§7.1)** + turn the domain on. (The bulk.)
 - **B — Booking import:** `lodgingBookingParser` + `lodgingEntityResolver`
   (chain match, **hotel dedup**, geocode) + email/PDF branch + import preview,
   driven by the 7 samples.
@@ -95,6 +96,10 @@ flight airport-local times — do not normalize to UTC),
 from dates on create + auto-flipped, see §8.1), `roomNumber?`, `roomCategory?`,
 `board?` (`none`|`breakfast`|`half`|`full`|`all_inclusive`),
 `pricePerNight Float?`, `currency String? @default("EUR")`, `totalPrice Float?`,
+`totalPriceBase Float?` (totalPrice converted to the user's base currency — **snapshot**,
+computed once at write time from the check-in-day rate; see §7.1), `fxRate Float?`
+(the historical rate used), `fxRateDate DateTime?` (the date the rate is for — the
+check-in day), `fxBaseCurrency String?` (the base currency at conversion time),
 `isAwardStay Boolean @default(false)` (paid with points/miles — for loyalty stats),
 `ratingRoom/ratingBreakfast/ratingService/ratingOverall Float?` (1–5, half ok),
 `roomAmenities String[]`, `bookingReference?`, `membershipId String?→LodgingMembership(SetNull)`,
@@ -117,11 +122,21 @@ Wyndham, NH, Radisson, …).
 **`Trip`** — add `lodgingStays LodgingStay[]` relation (direct FK, like
 `Trip.cruises`). No `TripStop` schema change (already generic).
 
+**`UserSettings`** — add `baseCurrency String? @default("EUR")`: the currency all
+cross-currency spend rollups convert to. Per-user, editable in settings. Original
+amount + per-stay `currency` are always preserved; the base value is derived on top
+(see §7.1).
+
 **`AchievementDefinition.domain`** — extend union to include `'lodging'`.
 
-**Migration caveat:** repo has known schema drift (root CLAUDE.md) that makes
-`prisma migrate dev` bundle unrelated changes; generate/review carefully or
-hand-write additive migrations. Resolved in the Phase-A plan.
+**Migration:** the prod schema drift that once blocked `prisma migrate dev` is
+**already resolved on `main`** (migrations `20260419140000_schema_drift_fix` +
+`20260430120000_post_v2_drift_fix`, guarded in CI by `npm run check:drift`). So the
+lodging migration is generated the normal way — `npx prisma migrate dev --name
+lodging_domain` — and `npm run check:drift` must stay green afterward (schema.prisma ↔
+migrated DB agree). The old "hand-write additive migrations because of drift" caveat
+no longer applies; the outdated gotcha in the worktree's CLAUDE.md disappears on the
+next `git merge main`.
 
 ## 4. Domain registration
 
@@ -159,6 +174,11 @@ hand-write additive migrations. Resolved in the Phase-A plan.
   `invalidateLodgingCache()`.
 - `services/geocoding/nominatim.ts` — OSM Nominatim `address → {lat,lon,country,city}`;
   respects the usage policy (≤1 req/s, descriptive `User-Agent`), result-cached.
+- `services/fx/frankfurter.ts` — historical FX (§7.1): `getRate(from, to, date) →
+  number` against Frankfurter.app (ECB reference rates, keyless, free), result-cached
+  by `(from,to,date)`. Deliberately domain-neutral so cruise/flight spend can reuse it
+  later. `convertToBase(amount, from, base, date) → {baseAmount, rate, rateDate}`;
+  returns `null` on any failure — never throws into a save path.
 - `routes/stats.ts` — `GET /stats/lodging` (nights, stays, spend, avg/night,
   chains, countries, per-year) + cross-domain union in `achievementStats.ts`
   (nights + spend + countries into the shared bag). `utils/lodgingStats.ts`
@@ -208,6 +228,32 @@ hand-write additive migrations. Resolved in the Phase-A plan.
 - The booking confirmation is the **primary** source; geocoding/enrichment only
   fills gaps (coordinates, missing stars/amenities/chain).
 
+### 7.1 Currency & FX (Phase A)
+
+Spend can be in any currency, so cross-currency rollups need a common denominator.
+
+- **Base currency** — `UserSettings.baseCurrency` (default `EUR`), user-editable. Every
+  cross-currency total (spend, avg/night, spend per year/chain/country) converts to it.
+  The per-stay original `currency` + amount are **always kept** — nothing is destroyed.
+- **Historical, snapshot conversion** — on stay create/update, if `currency !=
+  baseCurrency` and a `totalPrice` exists, convert with the **ECB reference rate for the
+  check-in day** via `services/fx/frankfurter.ts`, and store the result as a **snapshot**
+  on the stay: `totalPriceBase`, `fxRate`, `fxRateDate` (= check-in day),
+  `fxBaseCurrency`. The base value therefore reflects "what it cost me then" and does not
+  drift with the daily rate. Same-currency stays set `totalPriceBase = totalPrice`,
+  `fxRate = 1`.
+- **Source** — Frankfurter.app / ECB: keyless, free, supports historical rates by date;
+  results cached. Matches the keyless-by-default stance of OSM geocoding.
+- **Re-conversion** — changing the base currency, or editing a stay's price/currency/
+  check-in date, recomputes that stay's snapshot. A stay whose snapshot is stale relative
+  to the current base (`fxBaseCurrency != baseCurrency`) is treated as unconverted for
+  rollups (falls back to a lazy re-convert or is surfaced for a manual refresh — the
+  Phase-A plan picks the exact trigger).
+- **Error handling** — FX lookup failure never blocks a save: the stay persists with the
+  original amount and **no** base value; rollups either skip it from the base total or
+  show it under its own currency. A later successful conversion backfills the snapshot.
+  (Same "never block the save" rule as geocoding, §11.)
+
 ## 8. Trip timeline integration
 
 A `LodgingStay` with a `tripId` appears in that trip's timeline as two derived
@@ -256,9 +302,10 @@ excluded** (like `status != 'cancelled'` for cruises).
   /month, avg nights/stay, longest stay, #chains, #cities, #countries.
 - **Ratings:** overall avg; avg room/breakfast/service separately; best/worst
   hotel; rating distribution.
-- **Spend:** total **per currency** (no cross-currency sum without conversion —
-  see §17), avg/night, most/least expensive stay, spend per year/chain/country,
-  award-vs-cash nights.
+- **Spend:** headline total in the **base currency** (via each stay's `totalPriceBase`
+  snapshot, §7.1), **plus** a per-currency breakdown of the originals (no information
+  loss); avg/night, most/least expensive stay, spend per year/chain/country,
+  award-vs-cash nights — all in base currency.
 - **Loyalty/chains:** nights per chain (ranking), favorite chain, memberships +
   tier, chain-vs-independent ratio.
 - **Geo:** countries (→ cross-domain "countries visited"), cities,
@@ -343,7 +390,8 @@ Backend: `shared/domains.ts` (rename+enable), `prisma/schema.prisma` + migration
 `schemas/lodging.ts`, `routes/lodging.ts`, `routes/lodgingChains.ts`,
 `routes/lodgingMemberships.ts`, `services/lodgingBookingParser.ts`,
 `services/lodgingEntityResolver.ts`, `services/geocoding/nominatim.ts`,
-`routes/emailParse.ts` + `pdfParse.ts` (branch), `routes/stats.ts`
+`services/fx/frankfurter.ts` + `UserSettings.baseCurrency` (migration + settings
+route/schema), `routes/emailParse.ts` + `pdfParse.ts` (branch), `routes/stats.ts`
 (`/stats/lodging`), `data/achievements.ts` (union) +
 `data/achievementSeeds/partD.ts`, `utils/lodgingStats.ts` +
 `utils/achievementStats.ts` wiring, `seedLodgingChainsFromCSV.ts` +
@@ -371,14 +419,21 @@ Immich feature ships — cross-feature synergy).
 ## 17. Open questions / considerations
 Confirmed: domain `lodging` (generic models + `type`), 1–5 star ratings,
 standalone-or-trip stays, hotel + stay dedup on import, OSM geocoding free
-default, POI/camping deferred, phased A/B/C.
+default, POI/camping deferred, phased A/B/C. **Resolved 2026-07-10 in the
+brainstorming review:**
+- **Currency aggregation → base currency + historical FX, in Phase A.** Per-user
+  `baseCurrency` (default EUR); mixed-currency spend converts via a snapshot at the
+  ECB rate for the check-in day (Frankfurter.app, keyless); per-currency breakdown
+  kept alongside. Full design in §7.1. (Supersedes the earlier "per-currency-only v1".)
+- **Migration → normal `prisma migrate dev`.** The drift that once forced hand-written
+  migrations is already fixed on `main` and CI-guarded (§3).
+- **Rating scale storage:** `Float` (half-stars, e.g. 4.5); UI is a 5-star picker with
+  half steps.
 
-Decide during Phase A:
-- **Currency aggregation:** total spend across mixed currencies (EUR + CHF …).
-  v1 default = **per-currency breakdown** (no silent summing). A base-currency
-  setting with optional FX conversion is a later add.
-- **Nights across a year/month boundary:** a 30.12→02.01 stay must **allocate
-  nights to the correct year/month** in `nights/year` stats (not just count by
+Still decide during Phase-A planning:
+- **Nights across a year/month boundary:** a 30.12→02.01 stay must **allocate nights to
+  the correct year/month** in `nights/year` + `nights/month` stats (not just count by
   check-in year).
-- **Rating scale storage:** `Float` to allow half-stars (4.5); UI is a
-  5-star picker with half steps.
+- **Stale-snapshot trigger:** exact mechanism for recomputing `totalPriceBase` when the
+  base currency changes (lazy re-convert on read vs. an explicit "refresh rates" action)
+  — §7.1.
