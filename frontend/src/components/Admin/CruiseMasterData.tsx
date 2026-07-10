@@ -151,7 +151,7 @@ function ShipsSection(): JSX.Element {
       />
 
       {loading ? (
-        <p className="text-sm text-[var(--text-muted)]">{t("common:loading")} …</p>
+        <p className="text-sm text-[var(--text-muted)]">{t("common:loading.default")}</p>
       ) : ships.length === 0 ? (
         <p className="text-sm text-[var(--text-muted)]">{t("admin:cruiseMasterData.ship.empty")}</p>
       ) : (
@@ -338,7 +338,7 @@ function PortsSection(): JSX.Element {
       />
 
       {loading ? (
-        <p className="text-sm text-[var(--text-muted)]">{t("common:loading")} …</p>
+        <p className="text-sm text-[var(--text-muted)]">{t("common:loading.default")}</p>
       ) : ports.length === 0 ? (
         <p className="text-sm text-[var(--text-muted)]">{t("admin:cruiseMasterData.port.empty")}</p>
       ) : (
