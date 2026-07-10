@@ -6306,7 +6306,7 @@ CI never talks to a real Immich (spec §9). Before this branch is considered don
    - Check the server: the files **are** on the data volume, and appear in a fresh backup.
 6. Re-sync the imported album → no duplicates are created.
 7. Add a photo to that album in Immich → re-sync → only the new photo downloads.
-8. Stop Immich → reload the trip → the link-mode section shows "Immich nicht erreichbar" with a retry, the uploads section still renders.
+8. Stop Immich → reload the trip → the link-mode section shows "Immich ist nicht erreichbar." with a retry, the uploads section still renders.
 9. Unlink the imported album with **Kopien behalten** → photos remain as ordinary uploads.
 10. Unlink an album that provided the cover → the trip card falls back gracefully, no broken image.
 
