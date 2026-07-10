@@ -14,8 +14,15 @@ const { mockTranslateFn } = vi.hoisted(() => ({
   mockTranslateFn: vi.fn((key: string) => key),
 }));
 
+const FAILURE_KINDS = ["notConfigured", "unreachable", "auth", "notFound", "protocol"];
+
 vi.mock("../../../lib/api/immich", () => ({
   immichApi: { getSettings, updateSettings, testConnection },
+  isImmichFailureKind: (v: unknown) => typeof v === "string" && FAILURE_KINDS.includes(v),
+  immichFailureKind: (error: unknown) => {
+    const kind = (error as { response?: { data?: { error?: unknown } } })?.response?.data?.error;
+    return typeof kind === "string" && FAILURE_KINDS.includes(kind) ? kind : null;
+  },
 }));
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -110,17 +117,42 @@ describe("ImmichConnectionCard", () => {
     await waitFor(() => expect(screen.getByText("connected")).toBeInTheDocument());
   });
 
-  it("surfaces the failure message when the test fails", async () => {
-    testConnection.mockResolvedValue({ success: false, message: "Immich rejected the API key" });
+  it("renders the TRANSLATED failure text, never the raw backend prose", async () => {
+    // The backend prose is English ("Immich rejected the API key"); a German
+    // user must see the localized `errors.auth` string instead. We prove the
+    // card resolves the kind through i18n by using a transforming t.
+    mockTranslateFn.mockImplementation((key: string) => `T:${key}`);
+    testConnection.mockResolvedValue({
+      success: false,
+      kind: "auth",
+      message: "Immich rejected the API key",
+    });
     const user = userEvent.setup();
     render(<ImmichConnectionCard />);
     await waitFor(() => expect(getSettings).toHaveBeenCalled());
 
-    await user.click(screen.getByRole("button", { name: "test" }));
+    await user.click(screen.getByRole("button", { name: "T:test" }));
 
-    await waitFor(() =>
-      expect(screen.getByText("Immich rejected the API key")).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByText("T:errors.auth")).toBeInTheDocument());
+    // The raw English backend message must NOT be rendered.
+    expect(screen.queryByText("Immich rejected the API key")).not.toBeInTheDocument();
+  });
+
+  it("falls back to a generic error key when the backend sends an unknown kind", async () => {
+    mockTranslateFn.mockImplementation((key: string) => `T:${key}`);
+    testConnection.mockResolvedValue({
+      success: false,
+      kind: "someFutureKind",
+      message: "raw prose we must not show",
+    });
+    const user = userEvent.setup();
+    render(<ImmichConnectionCard />);
+    await waitFor(() => expect(getSettings).toHaveBeenCalled());
+
+    await user.click(screen.getByRole("button", { name: "T:test" }));
+
+    await waitFor(() => expect(screen.getByText("T:errors.unreachable")).toBeInTheDocument());
+    expect(screen.queryByText("raw prose we must not show")).not.toBeInTheDocument();
   });
 
   it("marks a globally-provided connection as shared", async () => {

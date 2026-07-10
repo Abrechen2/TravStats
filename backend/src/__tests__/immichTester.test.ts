@@ -26,24 +26,27 @@ describe("testImmichConnection", () => {
     });
   });
 
-  it("distinguishes a bad key from an unreachable server", async () => {
+  it("distinguishes a bad key from an unreachable server, carrying the kind", async () => {
     getServerVersion.mockResolvedValue("1.138.2");
     whoami.mockRejectedValue(new ImmichError("auth", "Immich rejected the API key", 401));
     await expect(testImmichConnection("https://immich.lan", "bad")).resolves.toMatchObject({
       success: false,
+      kind: "auth",
       message: "Immich rejected the API key",
     });
 
     getServerVersion.mockRejectedValue(new ImmichError("unreachable", "Immich is unreachable"));
     await expect(testImmichConnection("https://immich.lan", "key")).resolves.toMatchObject({
       success: false,
+      kind: "unreachable",
       message: "Immich is unreachable",
     });
   });
 
-  it("reports an invalid base URL without calling Immich", async () => {
+  it("reports an invalid base URL as a protocol kind without calling Immich", async () => {
     await expect(testImmichConnection("file:///etc/passwd", "key")).resolves.toMatchObject({
       success: false,
+      kind: "protocol",
       message: "Immich URL must use http:// or https://",
     });
     expect(getServerVersion).not.toHaveBeenCalled();
@@ -55,6 +58,7 @@ describe("testImmichConnection", () => {
     );
     await expect(testImmichConnection("https://immich.lan", "key")).resolves.toEqual({
       success: false,
+      kind: "protocol",
       message: "Immich returned an unexpected version payload",
     });
   });

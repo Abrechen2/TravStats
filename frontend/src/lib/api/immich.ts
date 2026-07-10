@@ -19,6 +19,11 @@ const FAILURE_KINDS: readonly ImmichFailureKind[] = [
   "protocol",
 ];
 
+/** Narrow an arbitrary value to one of the fixed Immich failure kinds. */
+export function isImmichFailureKind(value: unknown): value is ImmichFailureKind {
+  return typeof value === "string" && (FAILURE_KINDS as readonly string[]).includes(value);
+}
+
 /**
  * Pull the machine-readable kind out of a failed Immich request so the gallery
  * can render a specific degraded panel instead of a generic error toast.
@@ -27,9 +32,7 @@ export function immichFailureKind(error: unknown): ImmichFailureKind | null {
   if (typeof error !== "object" || error === null) return null;
   const response = (error as { response?: { data?: { error?: unknown } } }).response;
   const kind = response?.data?.error;
-  return typeof kind === "string" && (FAILURE_KINDS as readonly string[]).includes(kind)
-    ? (kind as ImmichFailureKind)
-    : null;
+  return isImmichFailureKind(kind) ? kind : null;
 }
 
 export const immichApi = {
