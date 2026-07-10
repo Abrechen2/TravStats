@@ -11,6 +11,7 @@ const createManyLinks = jest.fn();
 const deleteLink = jest.fn();
 const updateManyPhotos = jest.fn();
 const findManyPhotos = jest.fn();
+const upsertJob = jest.fn();
 jest.mock("../db", () => ({
   prisma: {
     tripImmichAlbum: {
@@ -21,6 +22,7 @@ jest.mock("../db", () => ({
     },
     tripPhoto: { findMany: findManyPhotos, updateMany: updateManyPhotos },
     trip: { findUnique: jest.fn(), update: jest.fn() },
+    immichImportJob: { upsert: upsertJob },
     adminSettings: { findFirst: jest.fn() },
   },
 }));
@@ -42,11 +44,13 @@ const startAlbumImport = jest.fn();
 const deleteImportedPhotoFiles = jest.fn();
 const estimateAlbumImport = jest.fn();
 const getImportJob = jest.fn();
+const isImportInFlight = jest.fn();
 jest.mock("../services/immich/immichImport", () => ({
   startAlbumImport,
   deleteImportedPhotoFiles,
   estimateAlbumImport,
   getImportJob,
+  isImportInFlight,
 }));
 
 jest.mock("../middleware/rateLimit", () => ({
@@ -93,6 +97,8 @@ beforeEach(() => {
   getImmichConnection.mockResolvedValue(CONN);
   getImmichDefaultMode.mockResolvedValue("link");
   findManyLinks.mockResolvedValue([]);
+  isImportInFlight.mockReturnValue(false);
+  upsertJob.mockResolvedValue(undefined);
 });
 
 describe("GET /trips/:id/immich/albums", () => {
@@ -365,7 +371,7 @@ describe("GET /trips/:id/immich/estimate", () => {
 });
 
 describe("POST /trips/:id/immich/albums/:linkId/resync", () => {
-  it("fires startAlbumImport once for an import-mode album and answers 202", async () => {
+  it("resets the stale terminal job row to `pending` before the 202, then fires startAlbumImport", async () => {
     findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "import" });
 
     const res = await request(makeApp()).post(
@@ -373,14 +379,45 @@ describe("POST /trips/:id/immich/albums/:linkId/resync", () => {
     );
 
     expect(res.status).toBe(202);
-    expect(res.body).toEqual({
-      job: { status: "running", totalAssets: 0, processedAssets: 0, failedAssets: 0, error: null },
-    });
+    // The row must be non-terminal by the time the 202 lands, so the
+    // frontend's immediate poll cannot latch onto the previous run's
+    // `completed` and stop polling.
+    expect(upsertJob).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { albumLinkId: "link-1" },
+        update: expect.objectContaining({
+          status: "pending",
+          processedAssets: 0,
+          totalAssets: 0,
+          failedAssets: 0,
+          completedAt: null,
+          error: null,
+        }),
+        create: expect.objectContaining({ albumLinkId: "link-1", status: "pending" }),
+      }),
+    );
+    expect(res.body.job.status).toBe("pending");
     expect(startAlbumImport).toHaveBeenCalledTimes(1);
     expect(startAlbumImport).toHaveBeenCalledWith("u1", "link-1");
   });
 
-  it("400s for a link-mode album and never fires startAlbumImport", async () => {
+  it("does NOT reset the row when an import is already in flight (no clobbering live progress)", async () => {
+    findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "import" });
+    isImportInFlight.mockReturnValue(true);
+
+    const res = await request(makeApp()).post(
+      "/api/v1/trips/trip-1/immich/albums/link-1/resync",
+    );
+
+    expect(res.status).toBe(202);
+    // A running row is already non-terminal and something is advancing it —
+    // resetting it here would strand the UI on `pending` forever, because
+    // startAlbumImport would refuse the in-flight job.
+    expect(upsertJob).not.toHaveBeenCalled();
+    expect(res.body.job.status).toBe("running");
+  });
+
+  it("400s for a link-mode album and never resets or fires startAlbumImport", async () => {
     findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "link" });
 
     const res = await request(makeApp()).post(
@@ -388,6 +425,7 @@ describe("POST /trips/:id/immich/albums/:linkId/resync", () => {
     );
 
     expect(res.status).toBe(400);
+    expect(upsertJob).not.toHaveBeenCalled();
     expect(startAlbumImport).not.toHaveBeenCalled();
   });
 
@@ -399,6 +437,7 @@ describe("POST /trips/:id/immich/albums/:linkId/resync", () => {
     );
 
     expect(res.status).toBe(404);
+    expect(upsertJob).not.toHaveBeenCalled();
     expect(startAlbumImport).not.toHaveBeenCalled();
   });
 });
