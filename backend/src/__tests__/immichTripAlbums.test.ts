@@ -54,7 +54,8 @@ jest.mock("../services/immich/immichImport", () => ({
 }));
 
 jest.mock("../middleware/rateLimit", () => ({
-  immichImportLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),
+  immichImportLimiter: jest.fn((_req: unknown, _res: unknown, next: () => void) => next()),
+  immichProxyLimiter: jest.fn((_req: unknown, _res: unknown, next: () => void) => next()),
 }));
 
 // The route module wires the real `authenticate` per-route (matching every
@@ -80,6 +81,10 @@ jest.mock("../middleware/auth", () => {
 import { clearImmichAssetCache } from "../services/immich/immichAssetCache";
 import tripAlbumsRouter from "../routes/immich/tripAlbums";
 import { errorHandler } from "../middleware/errorHandler";
+
+const { immichProxyLimiter } = jest.requireMock("../middleware/rateLimit") as {
+  immichProxyLimiter: jest.Mock;
+};
 
 function makeApp(): express.Express {
   const app = express();
@@ -115,8 +120,22 @@ describe("GET /trips/:id/immich/albums", () => {
     expect(res.status).toBe(200);
     expect(res.body.defaultMode).toBe("import");
     expect(res.body.albums).toEqual([
-      { id: "a1", albumName: "Rome", assetCount: 3, thumbnailAssetId: "t1", linked: false, linkId: null },
-      { id: "a2", albumName: "Oslo", assetCount: 1, thumbnailAssetId: null, linked: true, linkId: "link-1" },
+      {
+        id: "a1",
+        albumName: "Rome",
+        assetCount: 3,
+        thumbnailAssetId: "t1",
+        linked: false,
+        linkId: null,
+      },
+      {
+        id: "a2",
+        albumName: "Oslo",
+        assetCount: 1,
+        thumbnailAssetId: null,
+        linked: true,
+        linkId: "link-1",
+      },
     ]);
   });
 
@@ -148,9 +167,41 @@ describe("GET /trips/:id/immich/albums", () => {
   });
 });
 
+describe("expensive listing endpoints are rate-limited (M3)", () => {
+  // The album picker and the two asset-listing endpoints each fan out to up to
+  // MAX_PAGES upstream POSTs, so they carry the same limiter as the proxy. If
+  // the limiter were dropped from a route, its `toHaveBeenCalled` assertion
+  // below turns red (mirrors the `authenticate` guard-regression pattern).
+  it("attaches immichProxyLimiter to GET /immich/albums", async () => {
+    listAlbums.mockResolvedValue([]);
+    await request(makeApp()).get("/api/v1/trips/trip-1/immich/albums");
+    expect(immichProxyLimiter).toHaveBeenCalled();
+  });
+
+  it("attaches immichProxyLimiter to GET /immich/estimate", async () => {
+    estimateAlbumImport.mockResolvedValue({ assetCount: 0, totalBytes: 0 });
+    await request(makeApp()).get("/api/v1/trips/trip-1/immich/estimate?albumId=a1");
+    expect(immichProxyLimiter).toHaveBeenCalled();
+  });
+
+  it("attaches immichProxyLimiter to GET /immich/albums/:linkId/assets", async () => {
+    findFirstLink.mockResolvedValue({
+      id: "link-1",
+      tripId: "trip-1",
+      immichAlbumId: "a1",
+      mode: "link",
+    });
+    listAlbumAssets.mockResolvedValue([]);
+    await request(makeApp()).get("/api/v1/trips/trip-1/immich/albums/link-1/assets");
+    expect(immichProxyLimiter).toHaveBeenCalled();
+  });
+});
+
 describe("POST /trips/:id/immich/albums", () => {
   it("creates link rows with cached name/count and skips duplicates", async () => {
-    listAlbums.mockResolvedValue([{ id: "a1", albumName: "Rome", assetCount: 3, thumbnailAssetId: "t1" }]);
+    listAlbums.mockResolvedValue([
+      { id: "a1", albumName: "Rome", assetCount: 3, thumbnailAssetId: "t1" },
+    ]);
     createManyLinks.mockResolvedValue({ count: 1 });
     findManyLinks
       .mockResolvedValueOnce([]) // existing links, before insert
@@ -172,9 +223,7 @@ describe("POST /trips/:id/immich/albums", () => {
       .send({ albums: [{ immichAlbumId: "a1", mode: "link" }] });
 
     expect(res.status).toBe(201);
-    expect(createManyLinks).toHaveBeenCalledWith(
-      expect.objectContaining({ skipDuplicates: true }),
-    );
+    expect(createManyLinks).toHaveBeenCalledWith(expect.objectContaining({ skipDuplicates: true }));
     expect(res.body.links[0]).toMatchObject({ id: "link-1", albumName: "Rome", mode: "link" });
     expect(startAlbumImport).not.toHaveBeenCalled();
   });
@@ -186,8 +235,26 @@ describe("POST /trips/:id/immich/albums", () => {
     ]);
     createManyLinks.mockResolvedValue({ count: 2 });
     findManyLinks.mockResolvedValueOnce([]).mockResolvedValueOnce([
-      { id: "link-1", immichAlbumId: "a1", albumName: "Rome", assetCount: 3, thumbnailAssetId: null, mode: "link", sortIdx: 0, lastSyncedAt: null },
-      { id: "link-2", immichAlbumId: "a2", albumName: "Oslo", assetCount: 1, thumbnailAssetId: null, mode: "import", sortIdx: 1, lastSyncedAt: null },
+      {
+        id: "link-1",
+        immichAlbumId: "a1",
+        albumName: "Rome",
+        assetCount: 3,
+        thumbnailAssetId: null,
+        mode: "link",
+        sortIdx: 0,
+        lastSyncedAt: null,
+      },
+      {
+        id: "link-2",
+        immichAlbumId: "a2",
+        albumName: "Oslo",
+        assetCount: 1,
+        thumbnailAssetId: null,
+        mode: "import",
+        sortIdx: 1,
+        lastSyncedAt: null,
+      },
     ]);
 
     await request(makeApp())
@@ -204,7 +271,9 @@ describe("POST /trips/:id/immich/albums", () => {
   });
 
   it("rejects an album id the user's Immich does not have", async () => {
-    listAlbums.mockResolvedValue([{ id: "a1", albumName: "Rome", assetCount: 3, thumbnailAssetId: null }]);
+    listAlbums.mockResolvedValue([
+      { id: "a1", albumName: "Rome", assetCount: 3, thumbnailAssetId: null },
+    ]);
     const res = await request(makeApp())
       .post("/api/v1/trips/trip-1/immich/albums")
       .send({ albums: [{ immichAlbumId: "not-mine", mode: "link" }] });
@@ -223,7 +292,12 @@ describe("POST /trips/:id/immich/albums", () => {
 
 describe("DELETE /trips/:id/immich/albums/:linkId", () => {
   beforeEach(() => {
-    findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "import" });
+    findFirstLink.mockResolvedValue({
+      id: "link-1",
+      tripId: "trip-1",
+      immichAlbumId: "a1",
+      mode: "import",
+    });
     const { prisma } = jest.requireMock("../db") as {
       prisma: { trip: { findUnique: jest.Mock; update: jest.Mock } };
     };
@@ -256,7 +330,12 @@ describe("DELETE /trips/:id/immich/albums/:linkId", () => {
   });
 
   it("does not touch photos for a link-mode album (there are none)", async () => {
-    findFirstLink.mockResolvedValue({ id: "link-2", tripId: "trip-1", immichAlbumId: "a1", mode: "link" });
+    findFirstLink.mockResolvedValue({
+      id: "link-2",
+      tripId: "trip-1",
+      immichAlbumId: "a1",
+      mode: "link",
+    });
     await request(makeApp()).delete("/api/v1/trips/trip-1/immich/albums/link-2?deleteCopies=true");
 
     expect(deleteImportedPhotoFiles).not.toHaveBeenCalled();
@@ -267,7 +346,31 @@ describe("DELETE /trips/:id/immich/albums/:linkId", () => {
     findFirstLink.mockResolvedValue(null);
     const res = await request(makeApp()).delete("/api/v1/trips/trip-1/immich/albums/link-x");
     expect(res.status).toBe(404);
+    expect(res.body.error).toBe("notFound");
     expect(deleteLink).not.toHaveBeenCalled();
+  });
+
+  it("does NOT clear the trip cover when a DIFFERENT link provided it (negative guard, L5)", async () => {
+    // Unlinking link-1 must leave link-2's cover alone. Safe today only because
+    // TripImmichAlbum.id is a UUID (no id can be a substring of another). A
+    // future slug-based id would silently reintroduce the collision — this test
+    // is the guard that would catch it.
+    findFirstLink.mockResolvedValue({
+      id: "link-1",
+      tripId: "trip-1",
+      immichAlbumId: "a1",
+      mode: "link",
+    });
+    const { prisma } = jest.requireMock("../db") as {
+      prisma: { trip: { findUnique: jest.Mock; update: jest.Mock } };
+    };
+    prisma.trip.findUnique.mockResolvedValue({
+      coverImageUrl: "/api/v1/trips/trip-1/immich/albums/link-2/assets/x/file?size=preview",
+    });
+
+    await request(makeApp()).delete("/api/v1/trips/trip-1/immich/albums/link-1");
+
+    expect(prisma.trip.update).not.toHaveBeenCalled();
   });
 
   it("clears the trip cover when the unlinked album provided it", async () => {
@@ -289,9 +392,23 @@ describe("DELETE /trips/:id/immich/albums/:linkId", () => {
 
 describe("GET /trips/:id/immich/albums/:linkId/assets", () => {
   it("returns proxy URLs for a link-mode album", async () => {
-    findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "link" });
+    findFirstLink.mockResolvedValue({
+      id: "link-1",
+      tripId: "trip-1",
+      immichAlbumId: "a1",
+      mode: "link",
+    });
     listAlbumAssets.mockResolvedValue([
-      { id: "p1", type: "IMAGE", fileCreatedAt: "2026-05-01T00:00:00.000Z", originalFileName: "p1.jpg", mimeType: "image/jpeg", sizeBytes: 1, lat: 1, lon: 2 },
+      {
+        id: "p1",
+        type: "IMAGE",
+        fileCreatedAt: "2026-05-01T00:00:00.000Z",
+        originalFileName: "p1.jpg",
+        mimeType: "image/jpeg",
+        sizeBytes: 1,
+        lat: 1,
+        lon: 2,
+      },
     ]);
 
     const res = await request(makeApp()).get("/api/v1/trips/trip-1/immich/albums/link-1/assets");
@@ -308,9 +425,23 @@ describe("GET /trips/:id/immich/albums/:linkId/assets", () => {
   });
 
   it("skips VIDEO assets (out of scope for Phase A)", async () => {
-    findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "link" });
+    findFirstLink.mockResolvedValue({
+      id: "link-1",
+      tripId: "trip-1",
+      immichAlbumId: "a1",
+      mode: "link",
+    });
     listAlbumAssets.mockResolvedValue([
-      { id: "v1", type: "VIDEO", fileCreatedAt: "2026-05-01T00:00:00.000Z", originalFileName: "v.mp4", mimeType: "video/mp4", sizeBytes: 1, lat: null, lon: null },
+      {
+        id: "v1",
+        type: "VIDEO",
+        fileCreatedAt: "2026-05-01T00:00:00.000Z",
+        originalFileName: "v.mp4",
+        mimeType: "video/mp4",
+        sizeBytes: 1,
+        lat: null,
+        lon: null,
+      },
     ]);
     const res = await request(makeApp()).get("/api/v1/trips/trip-1/immich/albums/link-1/assets");
     expect(res.body.assets).toEqual([]);
@@ -320,7 +451,12 @@ describe("GET /trips/:id/immich/albums/:linkId/assets", () => {
     const { ImmichError } = jest.requireActual<typeof import("../services/immich/types")>(
       "../services/immich/types",
     );
-    findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "link" });
+    findFirstLink.mockResolvedValue({
+      id: "link-1",
+      tripId: "trip-1",
+      immichAlbumId: "a1",
+      mode: "link",
+    });
     listAlbumAssets.mockRejectedValue(new ImmichError("notFound", "gone", 404));
 
     const res = await request(makeApp()).get("/api/v1/trips/trip-1/immich/albums/link-1/assets");
@@ -329,9 +465,20 @@ describe("GET /trips/:id/immich/albums/:linkId/assets", () => {
   });
 
   it("serves an import-mode album from local TripPhoto rows", async () => {
-    findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "import" });
+    findFirstLink.mockResolvedValue({
+      id: "link-1",
+      tripId: "trip-1",
+      immichAlbumId: "a1",
+      mode: "import",
+    });
     findManyPhotos.mockResolvedValue([
-      { id: "photo-1", tripId: "trip-1", takenAt: new Date("2026-05-01T00:00:00.000Z"), lat: 1, lon: 2 },
+      {
+        id: "photo-1",
+        tripId: "trip-1",
+        takenAt: new Date("2026-05-01T00:00:00.000Z"),
+        lat: 1,
+        lon: 2,
+      },
     ]);
 
     const res = await request(makeApp()).get("/api/v1/trips/trip-1/immich/albums/link-1/assets");
@@ -352,9 +499,7 @@ describe("GET /trips/:id/immich/estimate", () => {
   it("returns the estimate for the given albumId", async () => {
     estimateAlbumImport.mockResolvedValue({ assetCount: 42, totalBytes: 123456 });
 
-    const res = await request(makeApp()).get(
-      "/api/v1/trips/trip-1/immich/estimate?albumId=a1",
-    );
+    const res = await request(makeApp()).get("/api/v1/trips/trip-1/immich/estimate?albumId=a1");
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ assetCount: 42, totalBytes: 123456 });
@@ -372,11 +517,14 @@ describe("GET /trips/:id/immich/estimate", () => {
 
 describe("POST /trips/:id/immich/albums/:linkId/resync", () => {
   it("resets the stale terminal job row to `pending` before the 202, then fires startAlbumImport", async () => {
-    findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "import" });
+    findFirstLink.mockResolvedValue({
+      id: "link-1",
+      tripId: "trip-1",
+      immichAlbumId: "a1",
+      mode: "import",
+    });
 
-    const res = await request(makeApp()).post(
-      "/api/v1/trips/trip-1/immich/albums/link-1/resync",
-    );
+    const res = await request(makeApp()).post("/api/v1/trips/trip-1/immich/albums/link-1/resync");
 
     expect(res.status).toBe(202);
     // The row must be non-terminal by the time the 202 lands, so the
@@ -402,12 +550,15 @@ describe("POST /trips/:id/immich/albums/:linkId/resync", () => {
   });
 
   it("does NOT reset the row when an import is already in flight (no clobbering live progress)", async () => {
-    findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "import" });
+    findFirstLink.mockResolvedValue({
+      id: "link-1",
+      tripId: "trip-1",
+      immichAlbumId: "a1",
+      mode: "import",
+    });
     isImportInFlight.mockReturnValue(true);
 
-    const res = await request(makeApp()).post(
-      "/api/v1/trips/trip-1/immich/albums/link-1/resync",
-    );
+    const res = await request(makeApp()).post("/api/v1/trips/trip-1/immich/albums/link-1/resync");
 
     expect(res.status).toBe(202);
     // A running row is already non-terminal and something is advancing it —
@@ -417,12 +568,41 @@ describe("POST /trips/:id/immich/albums/:linkId/resync", () => {
     expect(res.body.job.status).toBe("running");
   });
 
-  it("400s for a link-mode album and never resets or fires startAlbumImport", async () => {
-    findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "link" });
+  it("marks the job failed (not stranded pending) when the connection is gone (M1)", async () => {
+    findFirstLink.mockResolvedValue({
+      id: "link-1",
+      tripId: "trip-1",
+      immichAlbumId: "a1",
+      mode: "import",
+    });
+    getImmichConnection.mockResolvedValue(null);
 
-    const res = await request(makeApp()).post(
-      "/api/v1/trips/trip-1/immich/albums/link-1/resync",
+    const res = await request(makeApp()).post("/api/v1/trips/trip-1/immich/albums/link-1/resync");
+
+    // The import cannot start, so the row must land in a TERMINAL state — never
+    // reset to `pending` and then abandoned by startAlbumImport's no-connection
+    // early return (which would make the frontend poll forever).
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe("notConfigured");
+    expect(upsertJob).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { albumLinkId: "link-1" },
+        update: expect.objectContaining({ status: "failed" }),
+        create: expect.objectContaining({ albumLinkId: "link-1", status: "failed" }),
+      }),
     );
+    expect(startAlbumImport).not.toHaveBeenCalled();
+  });
+
+  it("400s for a link-mode album and never resets or fires startAlbumImport", async () => {
+    findFirstLink.mockResolvedValue({
+      id: "link-1",
+      tripId: "trip-1",
+      immichAlbumId: "a1",
+      mode: "link",
+    });
+
+    const res = await request(makeApp()).post("/api/v1/trips/trip-1/immich/albums/link-1/resync");
 
     expect(res.status).toBe(400);
     expect(upsertJob).not.toHaveBeenCalled();
@@ -432,11 +612,10 @@ describe("POST /trips/:id/immich/albums/:linkId/resync", () => {
   it("404s for a link belonging to another trip", async () => {
     findFirstLink.mockResolvedValue(null);
 
-    const res = await request(makeApp()).post(
-      "/api/v1/trips/trip-1/immich/albums/link-x/resync",
-    );
+    const res = await request(makeApp()).post("/api/v1/trips/trip-1/immich/albums/link-x/resync");
 
     expect(res.status).toBe(404);
+    expect(res.body.error).toBe("notFound");
     expect(upsertJob).not.toHaveBeenCalled();
     expect(startAlbumImport).not.toHaveBeenCalled();
   });
@@ -444,7 +623,12 @@ describe("POST /trips/:id/immich/albums/:linkId/resync", () => {
 
 describe("GET /trips/:id/immich/albums/:linkId/import-job", () => {
   it("returns the job when one exists", async () => {
-    findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "import" });
+    findFirstLink.mockResolvedValue({
+      id: "link-1",
+      tripId: "trip-1",
+      immichAlbumId: "a1",
+      mode: "import",
+    });
     getImportJob.mockResolvedValue({
       status: "completed",
       totalAssets: 5,
@@ -459,13 +643,24 @@ describe("GET /trips/:id/immich/albums/:linkId/import-job", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
-      job: { status: "completed", totalAssets: 5, processedAssets: 5, failedAssets: 0, error: null },
+      job: {
+        status: "completed",
+        totalAssets: 5,
+        processedAssets: 5,
+        failedAssets: 0,
+        error: null,
+      },
     });
     expect(getImportJob).toHaveBeenCalledWith("link-1");
   });
 
   it("returns { job: null } when there is no job row yet", async () => {
-    findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "import" });
+    findFirstLink.mockResolvedValue({
+      id: "link-1",
+      tripId: "trip-1",
+      immichAlbumId: "a1",
+      mode: "import",
+    });
     getImportJob.mockResolvedValue(null);
 
     const res = await request(makeApp()).get(

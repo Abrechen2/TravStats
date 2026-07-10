@@ -72,6 +72,17 @@ export class ImmichError extends Error {
  * upstream URL from this value, so it must be a plain http(s) origin with no
  * credentials, query or fragment. A sub-path is allowed (reverse-proxy
  * installs mount Immich under e.g. `/immich`).
+ *
+ * DELIBERATE NON-RESTRICTION (SSRF egress): there is intentionally NO block on
+ * loopback / link-local / private / ULA hosts here. TravStats is self-hosted and
+ * the operator's Immich instance is on the LAN (often a private RFC1918 or
+ * `.local` address) by design, so a private-IP filter would break the primary
+ * use case. The base URL is operator-supplied (per-user or admin-global), not
+ * attacker-chosen in the single-tenant deployment this targets. An operator who
+ * exposes Immich *configuration* to untrusted users on a multi-tenant instance
+ * MUST restrict egress at the network layer — the request would otherwise be a
+ * blind-SSRF / internal-reconnaissance oracle via the error taxonomy. Reviewed
+ * and accepted 2026-07-10; do not re-flag without changing the threat model.
  */
 export function normalizeImmichBaseUrl(raw: string): string {
   let parsed: URL;

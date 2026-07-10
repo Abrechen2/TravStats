@@ -26,15 +26,16 @@ jest.mock("../db", () => ({
 
 jest.mock("../utils/encryption", () => ({
   encryptApiKey: jest.fn((v: string | null) => (v === null ? null : `enc:${v}`)),
-  decryptApiKey: jest.fn((v: string | null) => (typeof v === "string" ? v.replace(/^enc:/, "") : null)),
+  decryptApiKey: jest.fn((v: string | null) =>
+    typeof v === "string" ? v.replace(/^enc:/, "") : null,
+  ),
 }));
 
 const testImmichConnection = jest.fn();
 jest.mock("../services/immich/immichTester", () => ({ testImmichConnection }));
 
 const getImmichConnection = jest.fn();
-const hasImmichAccess = jest.fn();
-jest.mock("../services/immich/immichResolver", () => ({ getImmichConnection, hasImmichAccess }));
+jest.mock("../services/immich/immichResolver", () => ({ getImmichConnection }));
 
 import immichSettingsRouter from "../routes/settings/immich";
 import immichAdminRouter from "../routes/admin/immich";
@@ -54,7 +55,6 @@ function makeApp(router: express.Router): express.Express {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  hasImmichAccess.mockResolvedValue({ hasAccess: true, isShared: false });
   getImmichConnection.mockResolvedValue({
     baseUrl: "https://immich.lan",
     apiKey: "k",
@@ -87,7 +87,6 @@ describe("GET /settings/immich", () => {
   it("reports an unconfigured user with defaults", async () => {
     userSettingsFindUnique.mockResolvedValue(null);
     getImmichConnection.mockResolvedValue(null);
-    hasImmichAccess.mockResolvedValue({ hasAccess: false, isShared: false });
 
     const res = await request(makeApp(immichSettingsRouter)).get("/immich");
     expect(res.body).toEqual({
@@ -171,10 +170,11 @@ describe("POST /settings/immich/test", () => {
     expect(testImmichConnection).toHaveBeenCalledWith("https://immich.lan", "k");
   });
 
-  it("returns 400 when nothing is configured and nothing was sent", async () => {
+  it("returns 400 + kind=notConfigured when nothing is configured and nothing was sent", async () => {
     getImmichConnection.mockResolvedValue(null);
     const res = await request(makeApp(immichSettingsRouter)).post("/immich/test").send({});
     expect(res.status).toBe(400);
+    expect(res.body.error).toBe("notConfigured");
   });
 });
 
@@ -212,9 +212,7 @@ describe("PUT /admin/immich", () => {
       .mockResolvedValueOnce({ id: 1, globalImmichApiKey: "enc:old-key" })
       .mockResolvedValueOnce({ id: 1, globalImmichApiKey: "enc:brand-new-key" });
 
-    await request(makeApp(immichAdminRouter))
-      .put("/immich")
-      .send({ apiKey: "brand-new-key" });
+    await request(makeApp(immichAdminRouter)).put("/immich").send({ apiKey: "brand-new-key" });
 
     expect(adminSettingsUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -229,9 +227,7 @@ describe("PUT /admin/immich", () => {
       .mockResolvedValueOnce({ id: 1, globalImmichApiKey: "enc:old-key" })
       .mockResolvedValueOnce({ id: 1, globalImmichApiKey: null });
 
-    await request(makeApp(immichAdminRouter))
-      .put("/immich")
-      .send({ apiKey: null });
+    await request(makeApp(immichAdminRouter)).put("/immich").send({ apiKey: null });
 
     expect(adminSettingsUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -254,5 +250,14 @@ describe("PUT /admin/immich", () => {
     expect(call.where).toEqual({ id: 1 });
     expect(call.data).toHaveProperty("globalImmichBaseUrl", "https://immich.lan");
     expect(call.data).not.toHaveProperty("globalImmichApiKey");
+  });
+});
+
+describe("POST /admin/immich/test", () => {
+  it("returns 400 + kind=notConfigured when no global connection exists and nothing was sent", async () => {
+    adminSettingsFindFirst.mockResolvedValue(null);
+    const res = await request(makeApp(immichAdminRouter)).post("/immich/test").send({});
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("notConfigured");
   });
 });

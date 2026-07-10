@@ -92,14 +92,16 @@ function toImmichError(error: unknown, context: string): ImmichError {
   logger.error({
     message: "immich_client_unexpected_error",
     error,
-    context: { context },
+    context: { endpoint: context },
   });
 
   return new ImmichError("protocol", `Unexpected Immich failure (${context})`);
 }
 
 function mapAsset(raw: unknown): ImmichAsset | null {
-  if (!isRecord(raw) || typeof raw.id !== "string") return null;
+  // A non-string OR empty id would build `/assets//original` — drop it, for
+  // symmetry with `listAlbums`'s strict `id.length > 0` filter.
+  if (!isRecord(raw) || typeof raw.id !== "string" || raw.id.length === 0) return null;
   // Immich also has non-photo/video asset kinds (e.g. AUDIO). Coercing an
   // unexpected type into IMAGE would route it into the photo pipeline; drop
   // it instead — the caller already filters out `null`.

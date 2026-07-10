@@ -30,7 +30,9 @@ describe("normalizeImmichBaseUrl", () => {
 
 describe("immichConnectionSchema", () => {
   it("accepts a partial update", () => {
-    expect(immichConnectionSchema.parse({ defaultMode: "import" })).toEqual({ defaultMode: "import" });
+    expect(immichConnectionSchema.parse({ defaultMode: "import" })).toEqual({
+      defaultMode: "import",
+    });
   });
 
   it("rejects an unknown mode", () => {
@@ -45,7 +47,10 @@ describe("immichConnectionSchema", () => {
 describe("linkAlbumsSchema", () => {
   it("accepts a non-empty list of album+mode pairs", () => {
     const parsed = linkAlbumsSchema.parse({
-      albums: [{ immichAlbumId: "a", mode: "link" }, { immichAlbumId: "b", mode: "import" }],
+      albums: [
+        { immichAlbumId: "a", mode: "link" },
+        { immichAlbumId: "b", mode: "import" },
+      ],
     });
     expect(parsed.albums).toHaveLength(2);
   });
@@ -55,7 +60,10 @@ describe("linkAlbumsSchema", () => {
   });
 
   it("rejects more than 50 albums in one request", () => {
-    const albums = Array.from({ length: 51 }, (_, i) => ({ immichAlbumId: `a${i}`, mode: "link" as const }));
+    const albums = Array.from({ length: 51 }, (_, i) => ({
+      immichAlbumId: `a${i}`,
+      mode: "link" as const,
+    }));
     expect(() => linkAlbumsSchema.parse({ albums })).toThrow();
   });
 });
