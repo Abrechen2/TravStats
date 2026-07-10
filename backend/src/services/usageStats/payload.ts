@@ -126,7 +126,7 @@ export async function buildUsagePayload(): Promise<UsagePayload> {
       keys: [...new Set(achievementRows.map((row) => row.achievement.code))],
     },
     features: {
-      llm_parser: Boolean(admin?.ollamaUrl ?? admin?.globalOpenaiApiKey ?? admin?.globalClaudeApiKey),
+      llm_parser: Boolean(admin?.ollamaUrl || admin?.globalOpenaiApiKey || admin?.globalClaudeApiKey),
       backups: Boolean(admin?.backupEnabled),
       webdav_sync: Boolean(admin?.webdavSyncEnabled),
       historical_enrichment: allUserSettings.some((s) => s.historicalEnrichmentEnabled === true),

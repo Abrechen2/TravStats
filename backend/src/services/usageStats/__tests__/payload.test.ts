@@ -99,6 +99,19 @@ describe("buildUsagePayload", () => {
     expect((await buildUsagePayload()).features.llm_parser).toBe(false);
   });
 
+  it("still reports llm_parser when ollamaUrl is an empty string but an LLM key is set", async () => {
+    p.adminSettings.findFirst.mockResolvedValue({
+      id: 3,
+      usageStatsInstallId: "aaaaaaaabbbbccccddddeeeeffff0000",
+      ollamaUrl: "",
+      globalOpenaiApiKey: "enc",
+      globalClaudeApiKey: null,
+      backupEnabled: false,
+      webdavSyncEnabled: false,
+    });
+    expect((await buildUsagePayload()).features.llm_parser).toBe(true);
+  });
+
   it("reports historical_enrichment when ANY user enabled it", async () => {
     expect((await buildUsagePayload()).features.historical_enrichment).toBe(true);
   });
