@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { setupApi } from "../lib/api";
+import { settingsApi, setupApi, versionApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import DomainPickerStep from "../components/Setup/DomainPickerStep";
+import UsageStatsConsentCard from "../components/UsageStatsConsentCard";
 import type { DomainKey } from "../shared/domains";
+import { logger } from "../lib/logger";
 
 export default function SetupPage(): JSX.Element {
   const navigate = useNavigate();
@@ -16,6 +18,9 @@ export default function SetupPage(): JSX.Element {
     confirmPassword: "",
   });
   const [selectedDomains, setSelectedDomains] = useState<DomainKey[]>(["flight"]);
+  const [usageStatsConsent, setUsageStatsConsent] = useState<"granted" | "denied" | undefined>(
+    undefined
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -51,9 +56,23 @@ export default function SetupPage(): JSX.Element {
         password: formData.password,
         frontendUrl,
         enabledDomains: selectedDomains,
+        usageStatsConsent,
       });
 
+      // Stamp BEFORE setAuth: setAuth flips isAuthenticated, which fires the
+      // useWhatsNew effect. If the stamp has not landed by then, the hook reads a
+      // pre-stamp snapshot and greets a brand-new install about a version it never
+      // ran. The JWT cookie is already set by initialize(), so this call is
+      // authenticated. Non-fatal: worst case is one stale modal.
+      try {
+        const { version } = await versionApi.get();
+        await settingsApi.update({ whatsNewSeenVersion: version });
+      } catch (error) {
+        logger.debug("failed to stamp whatsNewSeenVersion during setup", error);
+      }
+
       setAuth(response.user);
+
       setSuccess(true);
       setLoading(false);
 
@@ -172,6 +191,10 @@ export default function SetupPage(): JSX.Element {
 
               <div className="pt-2">
                 <DomainPickerStep value={selectedDomains} onChange={setSelectedDomains} />
+              </div>
+
+              <div className="pt-2">
+                <UsageStatsConsentCard variant="setup" onDecided={setUsageStatsConsent} />
               </div>
 
               <p className="text-xs text-center text-gray-500 dark:text-gray-400 pt-2">

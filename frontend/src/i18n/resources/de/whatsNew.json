@@ -1,0 +1,17 @@
+{
+  "title": "Neu in TravStats {{version}}",
+  "subtitle": "Ein kurzer Überblick über die wichtigsten Änderungen.",
+  "dismiss": "Verstanden",
+  "entries": {
+    "v240": {
+      "stats": {
+        "title": "Anonyme Nutzungsstatistik",
+        "body": "Du kannst TravStats jetzt freiwillig anonyme Nutzungsdaten senden lassen. Standardmäßig ist das aus, und du kannst es jederzeit wieder abschalten."
+      },
+      "whatsNew": {
+        "title": "Dieses Fenster",
+        "body": "Nach jedem Update siehst du hier einmalig, was sich geändert hat."
+      }
+    }
+  }
+}
