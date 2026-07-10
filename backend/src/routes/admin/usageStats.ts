@@ -29,8 +29,18 @@ export async function applyConsentChange(consent: "granted" | "denied"): Promise
   const baseUrl = getStatsBaseUrl();
 
   if (consent === "denied") {
-    const installId = await getInstallId();
+    // The install-id read is deliberately non-fatal: if it throws (transient DB
+    // error), the withdrawal must still be persisted below rather than 500ing.
+    let installId: string | null = null;
+    try {
+      installId = await getInstallId();
+    } catch (error) {
+      logger.debug({ error }, "usage-stats: could not read install id for erasure");
+    }
     if (baseUrl && installId) {
+      // Awaited on purpose: the admin is withdrawing consent and is entitled to
+      // wait for confirmation. A crash between erasure and persisting the denial
+      // must leave the user erased, not merely marked as erased.
       try {
         await sendErasure(installId, baseUrl);
       } catch (error) {
@@ -43,11 +53,12 @@ export async function applyConsentChange(consent: "granted" | "denied"): Promise
 
   await setConsent("granted");
   if (!baseUrl) return;
-  try {
-    await usageStatsTick();
-  } catch (error) {
+  // Fire-and-forget: the immediate ping only makes the public dashboard notice
+  // this install sooner. It must never delay the admin's HTTP response, and the
+  // stats endpoint may accept a connection and then never answer.
+  void usageStatsTick().catch((error: unknown) => {
     logger.debug({ error }, "usage-stats immediate ping after grant failed");
-  }
+  });
 }
 
 // GET /api/v1/admin/usage-stats
