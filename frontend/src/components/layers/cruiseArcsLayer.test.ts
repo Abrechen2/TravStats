@@ -264,4 +264,30 @@ describe("createCruiseArcsLayer", () => {
     const data = (layer as { props: { data: unknown } }).props.data as unknown[];
     expect(data).toHaveLength(1);
   });
+
+  it("scales the arrow size by arrowSizeScale", () => {
+    const cruise = makeCruise([
+      makeStop(1, 1, { id: 1, lat: 41.38, lon: 2.17 }),
+      makeStop(2, 2, { id: 2, lat: 42.1, lon: 11.8 }),
+    ]);
+    const layer = createCruiseArrowsLayer([cruise], new Map(), null, { arrowSizeScale: 2 });
+    expect((layer as unknown as { props: { getSize: number } }).props.getSize).toBe(20);
+  });
+
+  it("defaults arrow size to the base height when no scale is given", () => {
+    const cruise = makeCruise([
+      makeStop(1, 1, { id: 1, lat: 41.38, lon: 2.17 }),
+      makeStop(2, 2, { id: 2, lat: 42.1, lon: 11.8 }),
+    ]);
+    const layer = createCruiseArrowsLayer([cruise]);
+    expect((layer as unknown as { props: { getSize: number } }).props.getSize).toBe(10);
+  });
+
+  it("returns null when arrowSizeScale is 0 (arrows off)", () => {
+    const cruise = makeCruise([
+      makeStop(1, 1, { id: 1, lat: 41.38, lon: 2.17 }),
+      makeStop(2, 2, { id: 2, lat: 42.1, lon: 11.8 }),
+    ]);
+    expect(createCruiseArrowsLayer([cruise], new Map(), null, { arrowSizeScale: 0 })).toBeNull();
+  });
 });
