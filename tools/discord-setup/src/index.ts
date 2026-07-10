@@ -72,7 +72,7 @@ async function main(): Promise<void> {
       const changelog = readRepoChangelog();
       notes = changelog ? extractChangelogEntry(changelog, version) : null;
     }
-    await runAnnounce(client, token, guildId, type as AnnounceType, version, notes);
+    await runAnnounce(client, token, guildId, type as AnnounceType, version, notes, dryRun);
     return; // runAnnounce owns login + destroy
   }
 
