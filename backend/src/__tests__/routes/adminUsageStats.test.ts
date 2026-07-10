@@ -8,10 +8,13 @@ jest.mock("../../services/usageStats", () => ({
   sendErasure: jest.fn(),
 }));
 
+import type { Response, NextFunction } from "express";
 import { usageStatsConsentSchema, applyConsentChange } from "../../routes/admin/usageStats";
+import type { AuthRequest } from "../../middleware/auth";
 import {
   setConsent,
   getInstallId,
+  getOrCreateInstallId,
   getStatsBaseUrl,
   usageStatsTick,
   sendErasure,
@@ -21,6 +24,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   (getStatsBaseUrl as jest.Mock).mockReturnValue("https://stats.test");
   (getInstallId as jest.Mock).mockResolvedValue("abc123");
+  (getOrCreateInstallId as jest.Mock).mockResolvedValue("abc123");
   (usageStatsTick as jest.Mock).mockResolvedValue(undefined);
   (sendErasure as jest.Mock).mockResolvedValue(true);
 });
@@ -112,46 +116,69 @@ describe("applyConsentChange", () => {
 });
 
 describe("PUT /usage-stats handler", () => {
-  it("returns success with installId null when getInstallId fails on response read-back", async () => {
-    // For the granted case, applyConsentChange does NOT call getInstallId.
-    // The only call to getInstallId is in the handler for building the response.
-    // We make that call fail to verify the handler handles it gracefully.
-    (getInstallId as jest.Mock).mockRejectedValue(new Error("transient database error"));
-    (setConsent as jest.Mock).mockResolvedValue(undefined);
-    (usageStatsTick as jest.Mock).mockResolvedValue(undefined);
-
-    // Import the router to extract and test the PUT handler
+  async function callPutHandler(body: {
+    consent: "granted" | "denied";
+  }): Promise<{ json: unknown; next: jest.Mock }> {
     const { default: router } = await import("../../routes/admin/usageStats");
 
-    // Create mock Express request/response objects
-    const req = {
-      body: { consent: "granted" },
-    } as unknown as any;
-
+    const req = { body } as unknown as AuthRequest;
     const jsonResponse = jest.fn();
-    const res = {
-      json: jsonResponse,
-    } as unknown as any;
+    const res = { json: jsonResponse } as unknown as Response;
+    const next: NextFunction = jest.fn();
 
-    const next = jest.fn();
-
-    // Find and call the PUT handler
     const putHandler = router.stack.find(
-      (layer: any) => layer.route && layer.route.methods && layer.route.methods.put
-    )?.route?.stack[0]?.handle;
+      (layer: { route?: { methods?: Record<string, boolean> } }) =>
+        layer.route?.methods?.put
+    )?.route?.stack[0]?.handle as
+      | ((req: AuthRequest, res: Response, next: NextFunction) => Promise<void>)
+      | undefined;
 
     if (!putHandler) {
       throw new Error("PUT /usage-stats handler not found");
     }
 
     await putHandler(req, res, next);
+    return { json: jsonResponse.mock.calls[0]?.[0], next: next as jest.Mock };
+  }
 
-    // Verify the handler responded successfully despite getInstallId failing on read-back
-    expect(jsonResponse).toHaveBeenCalledWith({
-      consent: "granted",
-      installId: null,
-      endpointConfigured: true,
-    });
+  it("mints the install id eagerly on grant, instead of leaving it null", async () => {
+    (getOrCreateInstallId as jest.Mock).mockResolvedValue("fresh-id");
+    (setConsent as jest.Mock).mockResolvedValue(undefined);
+    (usageStatsTick as jest.Mock).mockResolvedValue(undefined);
+
+    const { json, next } = await callPutHandler({ consent: "granted" });
+
+    expect(getOrCreateInstallId).toHaveBeenCalledTimes(1);
+    expect(getInstallId).not.toHaveBeenCalled();
+    expect(json).toEqual({ consent: "granted", installId: "fresh-id", endpointConfigured: true });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("uses getInstallId (never mints) on denial", async () => {
+    // applyConsentChange itself also reads getInstallId once (for the erasure
+    // check), so this asserts "at least once" rather than an exact count.
+    (getInstallId as jest.Mock).mockResolvedValue("abc123");
+    (setConsent as jest.Mock).mockResolvedValue(undefined);
+
+    const { json, next } = await callPutHandler({ consent: "denied" });
+
+    expect(getInstallId).toHaveBeenCalled();
+    expect(getOrCreateInstallId).not.toHaveBeenCalled();
+    expect(json).toEqual({ consent: "denied", installId: "abc123", endpointConfigured: true });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("returns installId null when getOrCreateInstallId fails on response read-back after a grant", async () => {
+    // The consent change itself already persisted via applyConsentChange — only
+    // the response read-back fails here. Must not turn a successful request into
+    // a 500.
+    (getOrCreateInstallId as jest.Mock).mockRejectedValue(new Error("transient database error"));
+    (setConsent as jest.Mock).mockResolvedValue(undefined);
+    (usageStatsTick as jest.Mock).mockResolvedValue(undefined);
+
+    const { json, next } = await callPutHandler({ consent: "granted" });
+
+    expect(json).toEqual({ consent: "granted", installId: null, endpointConfigured: true });
     // Must not call next(error) — that would be a 500
     expect(next).not.toHaveBeenCalled();
   });

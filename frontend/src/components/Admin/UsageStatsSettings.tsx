@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { usageStatsApi, type UsageStatsStatus } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useToastStore } from "../../store/toastStore";
 
 export default function UsageStatsSettings(): JSX.Element {
   const { t } = useTranslation(["usageStats", "common"]);
+  const addToast = useToastStore((s) => s.addToast);
   const [status, setStatus] = useState<UsageStatsStatus | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -26,7 +28,10 @@ export default function UsageStatsSettings(): JSX.Element {
     try {
       setStatus(await usageStatsApi.setConsent(checked ? "granted" : "denied"));
     } catch (error) {
+      // Do NOT optimistically flip the checkbox on failure — leave `status`
+      // untouched so the displayed state stays truthful, and tell the admin.
       logger.debug("failed to change usage-stats consent", error);
+      addToast("error", t("usageStats:consent.saveFailed"));
     } finally {
       setBusy(false);
     }

@@ -5,7 +5,8 @@
     "accept": "Yes, send anonymous data",
     "decline": "No, thanks",
     "whatIsSent": "What exactly is sent?",
-    "revokeHint": "You can turn this off again at any time in the admin area. Turning it off deletes this installation's stored data."
+    "revokeHint": "You can turn this off again at any time in the admin area. Turning it off deletes this installation's stored data.",
+    "saveFailed": "Your choice could not be saved. Please try again."
   },
   "admin": {
     "title": "Anonymous usage statistics",
