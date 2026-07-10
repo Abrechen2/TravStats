@@ -24,6 +24,7 @@ promoted to prod. Prod only ever runs **final** tags — an RC never touches pro
 |---|---|---|---|---|
 | **Local Dev** | dev machine | `8000` / `3000` | dev DB `:5433` (`flights_dev`) | Build, TDD, rehearse migrations |
 | **Beta** | CT106 (pve-node3) | `192.168.178.123:3010`, `trav.abrechen2.de` | `travstats-db-beta` | Forward dev line + external app testers; own persistent data, rolling |
+| **Preview** | CT134 (pve-node1, DMZ) | `beta.travstats.de`, `immich-beta.…`, `poi-beta.…` | own, per slot | Public demo instances for external testers; demo data only, never a prod dump |
 | **RC Server** | CT107 (pve-node3) `ct107-travstats-rc` | `192.168.178.187:3010` | `travstats-db-rc` | **Prod-data mirror** — validate the imminent release before promote; re-cloned each round |
 | **Prod** | CT100 (pve-node3, HA) | `192.168.178.120:3010` | `travstats-db` (`flights`) | Real users; **final tags only**, on promote |
 | **Web** | CT133 | `travstats.de` | — | Marketing/Wiki, `version.ts` kept in lockstep |

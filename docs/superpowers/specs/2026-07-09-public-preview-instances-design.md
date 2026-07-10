@@ -145,6 +145,15 @@ not return 403. An empty tunnel list never means "no tunnels exist".
 
 ## 7. LLM parser
 
+> **STATUS 2026-07-09 — DISABLED IN PRODUCTION.** The shared Ollama below was
+> built and worked, but on pve-node1 (a shared Ceph/KVM cluster node) a booking
+> parse measured **0.3 tokens/second** — every call exceeded the timeout and
+> fell back to the regex templates anyway, while pegging cores. The Ollama
+> container, model and volume were removed from CT134 and `USE_LLM_PARSER` set
+> to `false` on all three slots. Known airlines still parse instantly via
+> templates. The rest of this section documents the original design; re-enable
+> it only if the previews move to dedicated hardware (see §12 risk row).
+
 The DMZ has no route to the LAN, so the Mac mini's Ollama at
 `192.168.178.155:11434` is unreachable. Rather than punching a hole in exactly
 the isolation that makes public exposure acceptable, CT134 runs its own Ollama
@@ -174,6 +183,15 @@ Seeded per instance via `seedDemoUser()`:
 Registration is disabled twice: `ALLOW_REGISTRATION=false` as the bootstrap
 env var, and `allowRegistration=false` in the instance settings, which is what
 `routes/auth.ts` actually consults at runtime.
+
+**Closing registration is not enough — there are two doors.** `/auth/register`
+is one; `/api/v1/setup/initialize` is the other, and it creates an *admin*. It
+is guarded by `adminCount > 0`, not `userCount > 0`, so seeding only non-admin
+users leaves it wide open: any public visitor can POST themselves an admin
+account. The seed therefore MUST create at least one admin per slot so
+`adminCount > 0`. Verified closed: `setup/initialize` returns 400 on all three
+public hosts. (Found the hard way during implementation — a verification probe
+created live admin accounts before the guard was understood.)
 
 Data persists — no scheduled reset. This is a deliberate trade: a tester can
 stay on a bug across days, at the cost of drift and eventual manual cleanup.
@@ -236,6 +254,7 @@ core assumption is void.
 | Parse results mislead (4b vs 12b) | §7 rule: reproduce on CT106 before filing |
 | Instances drift and rot | Accepted; manual cleanup, revisit if painful |
 | pve-node1 is a single point of failure | Accepted; CT133 already has this property |
+| LXC shares pve-node1's kernel: a Docker escape plus an LXC escape puts public pre-release code on a LAN host with Ceph | **Accepted by the owner, 2026-07-09**, after being offered a KVM VM (own kernel, 0 EUR) and a dedicated mini-PC. Rationale: the network path is measured shut (CT134 reaches neither prod, node3, the beta, nor the LAN Ollama), the data is fake, and two independent escapes are required. Revisit if the previews ever hold real data or if a Docker/LXC escape CVE lands. |
 | Mutable `:preview-*` tags make "what is deployed?" ambiguous | Health endpoint reports the version; announce posts the commit |
 | A preview leaks a real user's data | Impossible by construction — no prod dump, demo seed only |
 
