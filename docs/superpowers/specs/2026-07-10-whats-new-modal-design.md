@@ -70,11 +70,18 @@ The modal shows when **all** of these hold:
    frontend never talks to `/health` today and should not start.
 3. That version is not recorded as seen for this user.
 
-**Seen-state storage:** a new nullable column `whatsNewSeenVersion String?` on
-`UserSettings`, written via the existing user-settings update route. Server-side
-rather than `localStorage` so the modal does not re-appear on every new browser
-or device — a modal that reappears is the thing users hate most about this
-pattern.
+**Seen-state storage:** a `whatsNewSeenVersion?: string` key inside the existing
+`UserSettings.data` JSON blob, written through the existing `PUT /api/v1/settings`
+route. Server-side rather than `localStorage` so the modal does not re-appear on
+every new browser or device — a modal that reappears is the thing users hate most
+about this pattern.
+
+**No Prisma migration.** `UserSettings.data` is already a free-form `Json` column
+that the settings route deep-merges and spreads into its response
+(`buildSettingsResponse` in `backend/src/routes/settings/general.ts`), exactly as
+`display.language` is stored today. A dedicated column would buy nothing and would
+force us to generate a migration against a `schema.prisma` with known pre-existing
+drift — a real risk for a cosmetic feature.
 
 Fresh installs: `SetupPage` completes and creates the admin user. The setup flow
 writes `whatsNewSeenVersion` to the current version at account creation, so a
@@ -134,14 +141,13 @@ userSettings ─────────────┘                         
 
 ## 9. Migration
 
-One additive Prisma migration: `user_settings.whats_new_seen_version TEXT NULL`.
-Nullable, no backfill — existing users get the modal once on the next release,
-which is the intended behaviour.
+**None.** The seen-state lives in the existing `UserSettings.data` JSON column
+(§4). The only backend change is widening the Zod schema in
+`backend/src/routes/settings/general.ts` to accept `whatsNewSeenVersion`, and
+adding it to the `SettingsDataJson` type so it survives the merge.
 
-Generated via `npx prisma migrate dev`. **Caveat:** `schema.prisma` carries
-known pre-existing drift vs. the migration history (see the cruise-migrations
-note in `CLAUDE.md`). Inspect the generated SQL and strip anything unrelated to
-this column before committing.
+Existing users have no key, so the modal shows once on the next release — the
+intended behaviour, achieved without touching the schema.
 
 ## 10. Risks
 
