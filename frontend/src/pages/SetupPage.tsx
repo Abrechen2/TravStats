@@ -4,6 +4,7 @@ import { settingsApi, setupApi, versionApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import DomainPickerStep from "../components/Setup/DomainPickerStep";
+import UsageStatsConsentCard from "../components/UsageStatsConsentCard";
 import type { DomainKey } from "../shared/domains";
 import { logger } from "../lib/logger";
 
@@ -17,6 +18,9 @@ export default function SetupPage(): JSX.Element {
     confirmPassword: "",
   });
   const [selectedDomains, setSelectedDomains] = useState<DomainKey[]>(["flight"]);
+  const [usageStatsConsent, setUsageStatsConsent] = useState<"granted" | "denied" | undefined>(
+    undefined
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -52,6 +56,7 @@ export default function SetupPage(): JSX.Element {
         password: formData.password,
         frontendUrl,
         enabledDomains: selectedDomains,
+        usageStatsConsent,
       });
 
       // Stamp BEFORE setAuth: setAuth flips isAuthenticated, which fires the
@@ -186,6 +191,10 @@ export default function SetupPage(): JSX.Element {
 
               <div className="pt-2">
                 <DomainPickerStep value={selectedDomains} onChange={setSelectedDomains} />
+              </div>
+
+              <div className="pt-2">
+                <UsageStatsConsentCard variant="setup" onDecided={setUsageStatsConsent} />
               </div>
 
               <p className="text-xs text-center text-gray-500 dark:text-gray-400 pt-2">

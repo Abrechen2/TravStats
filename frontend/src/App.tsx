@@ -8,12 +8,13 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import Toast from "./components/Toast";
 import AirportSeedingBanner from "./components/AirportSeedingBanner";
 import AirportSeedingModal from "./components/AirportSeedingModal";
-import { setupApi } from "./lib/api";
+import { setupApi, usageStatsApi } from "./lib/api";
 import i18n from "./i18n/config";
 import { useTranslation } from "./hooks/useTranslation";
 import { useEnabledDomains } from "./hooks/useEnabledDomains";
 import { useWhatsNew } from "./hooks/useWhatsNew";
 import WhatsNewModal from "./components/WhatsNewModal";
+import UsageStatsConsentCard from "./components/UsageStatsConsentCard";
 
 // Lazy load pages for code splitting
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -67,6 +68,25 @@ function AppContent() {
   const { entry, shouldShow, dismiss } = useWhatsNew(isAuthenticated);
   const [setupChecked, setSetupChecked] = useState(false);
   const [showSeedingModal, setShowSeedingModal] = useState(false);
+  const [consentPending, setConsentPending] = useState(false);
+
+  // Usage-stats consent is instance-wide: only offer it to admins, and only while
+  // it is still undecided. Fetch failures must never surface the card.
+  useEffect(() => {
+    if (!isAuthenticated || !user?.isAdmin) return;
+    let cancelled = false;
+    void usageStatsApi
+      .get()
+      .then((status) => {
+        if (!cancelled) setConsentPending(status.consent === "unset");
+      })
+      .catch(() => {
+        if (!cancelled) setConsentPending(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, user?.isAdmin]);
 
   // Sync language from settings store to i18n
   useEffect(() => {
@@ -195,7 +215,16 @@ function AppContent() {
         <Toast />
         <AirportSeedingBanner />
         <AirportSeedingModal isOpen={showSeedingModal} onClose={handleCloseSeedingModal} />
-        <WhatsNewModal isOpen={shouldShow} entry={entry} onClose={() => void dismiss()} />
+        <WhatsNewModal
+          isOpen={shouldShow}
+          entry={entry}
+          onClose={() => void dismiss()}
+          extraSlot={
+            consentPending ? (
+              <UsageStatsConsentCard onDecided={() => setConsentPending(false)} />
+            ) : undefined
+          }
+        />
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
