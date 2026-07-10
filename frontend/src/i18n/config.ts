@@ -22,6 +22,7 @@ import enCruise from "./resources/en/cruise.json";
 import enImport from "./resources/en/import.json";
 import enAircraft from "./resources/en/aircraft.json";
 import enSpecialFlights from "./resources/en/specialFlights.json";
+import enWhatsNew from "./resources/en/whatsNew.json";
 
 import deCommon from "./resources/de/common.json";
 import deDashboard from "./resources/de/dashboard.json";
@@ -42,6 +43,7 @@ import deCruise from "./resources/de/cruise.json";
 import deImport from "./resources/de/import.json";
 import deAircraft from "./resources/de/aircraft.json";
 import deSpecialFlights from "./resources/de/specialFlights.json";
+import deWhatsNew from "./resources/de/whatsNew.json";
 
 // Get initial language: stored preference → browser language → fallback "en"
 const getInitialLanguage = (): string => {
@@ -85,6 +87,7 @@ const resources = {
     import: enImport,
     aircraft: enAircraft,
     specialFlights: enSpecialFlights,
+    whatsNew: enWhatsNew,
   },
   de: {
     common: deCommon,
@@ -106,6 +109,7 @@ const resources = {
     import: deImport,
     aircraft: deAircraft,
     specialFlights: deSpecialFlights,
+    whatsNew: deWhatsNew,
   },
 };
 
@@ -136,6 +140,7 @@ i18n.use(initReactI18next).init({
     "import",
     "aircraft",
     "specialFlights",
+    "whatsNew",
   ],
   interpolation: {
     escapeValue: false, // React already escapes values
