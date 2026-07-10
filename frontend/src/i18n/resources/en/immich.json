@@ -13,7 +13,6 @@
   "testing": "Testing…",
   "connected": "Connected · v{{version}}",
   "shared": "Provided by the administrator",
-  "notConfigured": "No Immich connection configured",
   "defaultMode": "Default when linking",
   "modeLink": "Link",
   "modeImport": "Copy",
@@ -36,7 +35,6 @@
     "unlinkDeleteCopies": "Delete copies",
     "resync": "Re-sync",
     "resyncing": "Syncing… {{done}}/{{total}}",
-    "lastSynced": "Last: {{date}}",
     "badgeLink": "live",
     "badgeImport": "copy"
   },

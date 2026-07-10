@@ -34,12 +34,16 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
   // already in flight when the section unmounts (album swapped, tab closed)
   // must not call setState on a component React has already torn down.
   const mountedRef = useRef(true);
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    // Reset on every setup, not just false-on-cleanup: under <StrictMode>
+    // (main.tsx) dev mounts run setup -> cleanup -> setup, so without this the
+    // ref would stay false for the component's whole life and every guarded
+    // continuation below would silently bail (empty grid, no error).
+    mountedRef.current = true;
+    return () => {
       mountedRef.current = false;
-    },
-    []
-  );
+    };
+  }, []);
 
   const load = useCallback(async (): Promise<void> => {
     setFailure(null);
@@ -116,6 +120,10 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
     })();
     return () => {
       cancelled = true;
+      // If this probe started a poller, stop it before the effect re-runs (a
+      // mode change) or the section unmounts — otherwise a leaked interval keeps
+      // ticking. Idempotent and safe when no interval is running.
+      stopPolling();
     };
     // `startPolling` is intentionally omitted: it closes over stable refs and
     // callbacks, and re-running this probe on its identity change would
