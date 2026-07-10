@@ -681,7 +681,10 @@ describe("buildUsagePayload", () => {
       "hostname", "apikey", "api_key", "token", "secret", "email",
     ];
     for (const needle of forbidden) {
-      expect(serialized, `payload leaked ${needle}`).not.toContain(needle);
+      // Jest's expect() takes exactly ONE argument. `expect(actual, message)` is
+      // Vitest syntax; under Jest it throws before the matcher ever runs, so the
+      // scan would pass without ever looking at the payload.
+      expect(serialized.includes(needle)).toBe(false);
     }
   });
 });
@@ -747,20 +750,24 @@ function readLanguage(data: unknown): string | null {
   return typeof language === "string" ? language : null;
 }
 
-/** Most frequent language across users; ties resolve to "en". */
+/**
+ * Most frequent language across users; ties resolve to "en".
+ *
+ * The tie-break must be explicit. A plain `count > bestCount` loop resolves ties
+ * to whichever language the Map happened to insert first — i.e. to whichever user
+ * the database returned first — which is not a tie-break, it is a coin flip.
+ */
 function majorityLocale(languages: readonly string[]): string {
   const counts = new Map<string, number>();
   for (const lang of languages) counts.set(lang, (counts.get(lang) ?? 0) + 1);
 
-  let best = "en";
-  let bestCount = 0;
+  const maxCount = Math.max(0, ...counts.values());
+  if ((counts.get("en") ?? 0) === maxCount) return "en";
+
   for (const [lang, count] of counts) {
-    if (count > bestCount) {
-      best = lang;
-      bestCount = count;
-    }
+    if (count === maxCount) return lang;
   }
-  return best;
+  return "en";
 }
 
 /**
@@ -827,7 +834,9 @@ export async function buildUsagePayload(): Promise<UsagePayload> {
       keys: [...new Set(achievementRows.map((row) => row.achievement.code))],
     },
     features: {
-      llm_parser: Boolean(admin?.ollamaUrl ?? admin?.globalOpenaiApiKey ?? admin?.globalClaudeApiKey),
+      // `||`, not `??`: an ollamaUrl cleared to "" is not nullish, and `??` would
+      // short-circuit on it, masking a configured global OpenAI/Claude key.
+      llm_parser: Boolean(admin?.ollamaUrl || admin?.globalOpenaiApiKey || admin?.globalClaudeApiKey),
       backups: Boolean(admin?.backupEnabled),
       webdav_sync: Boolean(admin?.webdavSyncEnabled),
       historical_enrichment: allUserSettings.some((s) => s.historicalEnrichmentEnabled === true),
