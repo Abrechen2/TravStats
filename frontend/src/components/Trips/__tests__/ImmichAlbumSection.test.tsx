@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { StrictMode } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
@@ -267,6 +268,66 @@ describe("ImmichAlbumSection", () => {
 
       await vi.advanceTimersByTimeAsync(1500 * 3);
       expect(getImportJob.mock.calls.length).toBe(callsBefore); // no polling after unmount
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // (e) StrictMode double-mounts every component in dev (main.tsx wraps the app
+  // in <StrictMode>): setup -> cleanup -> setup. If the mounted-guard ref is only
+  // set false in cleanup and never reset true in setup, the second mount runs
+  // with the ref stuck false and every setState-guarded continuation bails out —
+  // load() resolves but setAssets never fires, so the grid renders EMPTY with no
+  // error. This is exactly the state the pending `npm run dev` smoke test runs in.
+  it("(e) renders photos under StrictMode (double-mount must not silence the section)", async () => {
+    render(
+      <StrictMode>
+        <ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />
+      </StrictMode>
+    );
+
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(2));
+  });
+
+  // (f) The mount-probe effect re-runs when its deps change (album.mode flips on
+  // the same section instance). Its cleanup must stop any interval it started,
+  // otherwise the old poller leaks and keeps ticking forever.
+  it("(f) clears the poll interval when the mount-probe effect re-runs", async () => {
+    vi.useFakeTimers();
+    try {
+      const clearSpy = vi.spyOn(globalThis, "clearInterval");
+      getImportJob.mockResolvedValue({
+        job: {
+          status: "running",
+          totalAssets: 2,
+          processedAssets: 1,
+          failedAssets: 0,
+          error: null,
+        },
+      });
+      const { rerender } = render(
+        <ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />
+      );
+      // Flush mount effects: probe -> startPolling -> the interval is live.
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(1500);
+      expect(getImportJob.mock.calls.length).toBeGreaterThan(1);
+
+      clearSpy.mockClear();
+      // Same section instance, mode flips import -> link: the probe effect re-runs.
+      rerender(
+        <ImmichAlbumSection
+          tripId="trip-1"
+          album={{ ...IMPORT_ALBUM, mode: "link" }}
+          onChanged={vi.fn()}
+        />
+      );
+      await vi.advanceTimersByTimeAsync(0);
+      expect(clearSpy).toHaveBeenCalled(); // cleanup stopped the old interval
+
+      const callsAfter = getImportJob.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(1500 * 3);
+      expect(getImportJob.mock.calls.length).toBe(callsAfter); // interval no longer ticking
     } finally {
       vi.useRealTimers();
     }
