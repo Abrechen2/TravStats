@@ -29,8 +29,8 @@ describe("WhatsNewModal", () => {
 
   it("renders every highlight", () => {
     render(<WhatsNewModal isOpen entry={entry} onClose={vi.fn()} />);
-    expect(screen.getByText("entries.v240.stats.title")).toBeInTheDocument();
-    expect(screen.getByText("entries.v240.whatsNew.body")).toBeInTheDocument();
+    expect(screen.getByText("whatsNew:entries.v240.stats.title")).toBeInTheDocument();
+    expect(screen.getByText("whatsNew:entries.v240.whatsNew.body")).toBeInTheDocument();
   });
 
   it("renders the extraSlot when provided", () => {
