@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { setupApi } from "../lib/api";
+import { settingsApi, setupApi, versionApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import DomainPickerStep from "../components/Setup/DomainPickerStep";
 import type { DomainKey } from "../shared/domains";
+import { logger } from "../lib/logger";
 
 export default function SetupPage(): JSX.Element {
   const navigate = useNavigate();
@@ -54,6 +55,15 @@ export default function SetupPage(): JSX.Element {
       });
 
       setAuth(response.user);
+
+      try {
+        const { version } = await versionApi.get();
+        await settingsApi.update({ whatsNewSeenVersion: version });
+      } catch (error) {
+        // Non-fatal: the worst case is one stale modal on a brand-new install.
+        logger.debug("failed to stamp whatsNewSeenVersion during setup", error);
+      }
+
       setSuccess(true);
       setLoading(false);
 
