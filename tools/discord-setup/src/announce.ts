@@ -90,8 +90,24 @@ export async function runAnnounce(
   type: AnnounceType,
   version: string,
   notes: string | null,
+  dryRun = false,
 ): Promise<void> {
   const channelName = channelForType(type);
+
+  // Bail out before `login()` — a dry run must not open a gateway connection,
+  // let alone reach `channel.send`. Returning here is what makes the flag
+  // honest: `announce --dry-run` used to parse the flag, ignore it, post the
+  // embed for real, and still print "announced …".
+  if (dryRun) {
+    const embed = buildAnnounceEmbed(type, version, notes).toJSON();
+    log("=== DRY RUN — nothing was posted ===");
+    log(`channel: #${channelName}`);
+    log(`title:   ${embed.title ?? "(none)"}`);
+    log("--- description ---");
+    log(embed.description ?? "(none)");
+    return;
+  }
+
   client.once("clientReady", async () => {
     try {
       const guild = await (await client.guilds.fetch(guildId)).fetch();
