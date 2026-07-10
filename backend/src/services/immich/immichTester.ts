@@ -34,14 +34,14 @@ export async function testImmichConnection(
   try {
     normalized = normalizeImmichBaseUrl(baseUrl);
   } catch (error) {
-    // normalizeImmichBaseUrl only ever throws ImmichError("protocol", …) (bad
-    // URL shape / non-http scheme), so a normalize failure IS a protocol/config
-    // problem. The defensive non-ImmichError branch maps to the same `protocol`
-    // kind for consistency — staying inside the fixed 5-kind vocabulary rather
-    // than inventing a new one for a practically-unreachable branch.
+    // normalizeImmichBaseUrl only ever throws ImmichError("invalidUrl", …) (bad
+    // URL shape / non-http scheme) — the user's own typo, NOT a server problem.
+    // The defensive non-ImmichError branch maps to the same `invalidUrl` kind so
+    // a malformed base URL never masquerades as a `protocol` (server-version)
+    // failure and sends the user debugging the wrong thing.
     return {
       success: false,
-      kind: error instanceof ImmichError ? error.kind : "protocol",
+      kind: error instanceof ImmichError ? error.kind : "invalidUrl",
       message: error instanceof ImmichError ? error.message : "Invalid Immich URL",
     };
   }

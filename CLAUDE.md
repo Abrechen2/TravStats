@@ -290,9 +290,12 @@ frontend/src/
   primary use case. Instances that expose Immich configuration to untrusted users
   must restrict it at the deployment layer.
   Every Immich error body uses the fixed kind vocabulary
-  (`notConfigured|unreachable|auth|notFound|protocol`) that the frontend's
-  `immichFailureKind()` parses — prose in `{error: …}` silently degrades to a
-  generic toast.
+  (`notConfigured|unreachable|auth|notFound|protocol|invalidUrl`) that the
+  frontend's `immichFailureKind()` parses — prose in `{error: …}` silently
+  degrades to a generic toast. `invalidUrl` (a rejected/malformed base URL, the
+  user's own typo) is deliberately distinct from `protocol` (Immich answered but
+  the payload/version was unexpected) so a URL typo does not send the user
+  debugging their server version.
 
 ## Code Style
 
