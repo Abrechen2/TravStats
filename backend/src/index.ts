@@ -289,6 +289,8 @@ process.on('SIGINT', async () => {
   stopHistoricalEnrichmentScheduler();
   const { stopReminderScheduler } = await import('./services/reminderScheduler');
   stopReminderScheduler();
+  const { stopUsageStatsScheduler } = await import('./jobs/usageStatsScheduler');
+  stopUsageStatsScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -301,6 +303,8 @@ process.on('SIGTERM', async () => {
   stopHistoricalEnrichmentScheduler();
   const { stopReminderScheduler } = await import('./services/reminderScheduler');
   stopReminderScheduler();
+  const { stopUsageStatsScheduler } = await import('./jobs/usageStatsScheduler');
+  stopUsageStatsScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -493,6 +497,15 @@ if (process.env.NODE_ENV !== 'test') {
           message: error instanceof Error ? error.message : 'Unknown error',
         },
       });
+    }
+
+    // Start usage-stats scheduler (jittered daily ping — no-op unless the
+    // admin has granted consent and TRAVSTATS_STATS_ENDPOINT is configured)
+    try {
+      const { startUsageStatsScheduler } = await import('./jobs/usageStatsScheduler');
+      startUsageStatsScheduler();
+    } catch (error) {
+      logger.error({ error }, 'server_start_usage_stats_scheduler_error');
     }
 
     // Initialize airline template registry
