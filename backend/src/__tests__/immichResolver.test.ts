@@ -17,7 +17,7 @@ jest.mock("../utils/encryption", () => ({
   ),
 }));
 
-import { getImmichConnection, getImmichDefaultMode, hasImmichAccess } from "../services/immich/immichResolver";
+import { getImmichConnection, getImmichDefaultMode } from "../services/immich/immichResolver";
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -129,52 +129,5 @@ describe("getImmichDefaultMode", () => {
 
     findUniqueUserSettings.mockResolvedValue(null);
     await expect(getImmichDefaultMode("u1")).resolves.toBe("link");
-  });
-});
-
-describe("hasImmichAccess", () => {
-  it("returns hasAccess: true, isShared: false when user tier is configured", async () => {
-    findUniqueUserSettings.mockResolvedValue({
-      immichBaseUrl: "https://user.lan/",
-      immichApiKey: "enc:user-key",
-    });
-
-    await expect(hasImmichAccess("u1")).resolves.toEqual({
-      hasAccess: true,
-      isShared: false,
-    });
-  });
-
-  it("returns hasAccess: true, isShared: true when admin-global tier is configured", async () => {
-    findUniqueUserSettings.mockResolvedValue({
-      immichBaseUrl: null,
-      immichApiKey: null,
-    });
-    findFirstAdminSettings.mockResolvedValue({
-      globalImmichBaseUrl: "https://global.lan",
-      globalImmichApiKey: "enc:global-key",
-    });
-
-    await expect(hasImmichAccess("u1")).resolves.toEqual({
-      hasAccess: true,
-      isShared: true,
-    });
-  });
-
-  it("returns hasAccess: true, isShared: true when ENV tier is configured", async () => {
-    process.env.IMMICH_BASE_URL = "https://env.lan/";
-    process.env.IMMICH_API_KEY = "env-key";
-
-    await expect(hasImmichAccess("u1")).resolves.toEqual({
-      hasAccess: true,
-      isShared: true,
-    });
-  });
-
-  it("returns hasAccess: false, isShared: false when nothing is configured", async () => {
-    await expect(hasImmichAccess("u1")).resolves.toEqual({
-      hasAccess: false,
-      isShared: false,
-    });
   });
 });

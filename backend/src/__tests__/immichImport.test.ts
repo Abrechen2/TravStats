@@ -1,8 +1,12 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import { Readable } from "stream";
+import { pipeline } from "stream/promises";
+import { Prisma } from "@prisma/client";
+import { FILE_LIMITS } from "../config/constants";
 
 const jobUpsert = jest.fn();
 const jobUpdate = jest.fn();
+const jobUpdateMany = jest.fn();
 const jobFindUnique = jest.fn();
 const linkFindUnique = jest.fn();
 const linkUpdate = jest.fn();
@@ -12,7 +16,12 @@ const photoAggregate = jest.fn();
 
 jest.mock("../db", () => ({
   prisma: {
-    immichImportJob: { upsert: jobUpsert, update: jobUpdate, findUnique: jobFindUnique },
+    immichImportJob: {
+      upsert: jobUpsert,
+      update: jobUpdate,
+      updateMany: jobUpdateMany,
+      findUnique: jobFindUnique,
+    },
     tripImmichAlbum: { findUnique: linkFindUnique, update: linkUpdate },
     tripPhoto: { findMany: photoFindMany, create: photoCreate, aggregate: photoAggregate },
   },
@@ -56,10 +65,13 @@ jest.mock("../utils/logger", () => ({
 import {
   startAlbumImport,
   estimateAlbumImport,
+  createByteCapStream,
   IMPORT_ALLOWED_MIME_TYPES,
   IMPORT_STALE_AFTER_MS,
   clearImportGuards,
 } from "../services/immich/immichImport";
+
+const unlinkSyncMock = jest.requireMock("fs").unlinkSync as jest.Mock;
 
 const asset = (id: string, over: Record<string, unknown> = {}) => ({
   id,
@@ -77,7 +89,11 @@ beforeEach(() => {
   jest.clearAllMocks();
   clearImportGuards();
   writtenFiles.length = 0;
-  getImmichConnection.mockResolvedValue({ baseUrl: "https://immich.lan", apiKey: "k", source: "user" });
+  getImmichConnection.mockResolvedValue({
+    baseUrl: "https://immich.lan",
+    apiKey: "k",
+    source: "user",
+  });
   linkFindUnique.mockResolvedValue({
     id: "link-1",
     tripId: "trip-1",
@@ -147,13 +163,11 @@ describe("startAlbumImport", () => {
 
   it("counts a per-asset failure, keeps the successes, and still completes", async () => {
     listAlbumAssets.mockResolvedValue([asset("p1"), asset("p2")]);
-    fetchAssetStream
-      .mockRejectedValueOnce(new Error("upstream died"))
-      .mockResolvedValueOnce({
-        stream: Readable.from([Buffer.from("bytes")]),
-        contentType: "image/jpeg",
-        contentLength: 5,
-      });
+    fetchAssetStream.mockRejectedValueOnce(new Error("upstream died")).mockResolvedValueOnce({
+      stream: Readable.from([Buffer.from("bytes")]),
+      contentType: "image/jpeg",
+      contentLength: 5,
+    });
 
     await startAlbumImport("u1", "link-1");
 
@@ -172,6 +186,28 @@ describe("startAlbumImport", () => {
 
     expect(listAlbumAssets).not.toHaveBeenCalled();
     expect(jobUpsert).not.toHaveBeenCalled();
+  });
+
+  it("treats a (tripId, immichAssetId) unique-index clash (P2002) as already-present, not a failure (M5)", async () => {
+    // A sibling import-mode album sharing this asset created the row first —
+    // the download raced it. That is not a failure: the asset IS in the trip.
+    listAlbumAssets.mockResolvedValue([asset("p1"), asset("shared")]);
+    const p2002 = new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+      code: "P2002",
+      clientVersion: "5.22.0",
+      meta: { target: ["trip_id", "immich_asset_id"] },
+    });
+    photoCreate.mockResolvedValueOnce({ id: "photo-1" }).mockRejectedValueOnce(p2002);
+
+    await startAlbumImport("u1", "link-1");
+
+    expect(jobUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "completed", failedAssets: 0 }),
+      }),
+    );
+    // The duplicate bytes we downloaded must be cleaned up (a sibling owns the row).
+    expect(unlinkSyncMock).toHaveBeenCalled();
   });
 
   it("marks the job failed when the album listing itself fails", async () => {
@@ -201,6 +237,66 @@ describe("startAlbumImport", () => {
     getImmichConnection.mockResolvedValue(null);
     await startAlbumImport("u1", "link-1");
     expect(listAlbumAssets).not.toHaveBeenCalled();
+  });
+
+  it("marks a lingering pending/running row failed when the connection is gone (M1 race backstop)", async () => {
+    getImmichConnection.mockResolvedValue(null);
+    await startAlbumImport("u1", "link-1");
+    expect(jobUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { albumLinkId: "link-1", status: { in: ["pending", "running"] } },
+        data: expect.objectContaining({ status: "failed", error: "notConfigured" }),
+      }),
+    );
+  });
+});
+
+describe("startAlbumImport per-asset byte cap (M2)", () => {
+  it("skips an asset Immich already reports as oversized, counts it failed, never downloads it", async () => {
+    listAlbumAssets.mockResolvedValue([
+      asset("big", { sizeBytes: FILE_LIMITS.IMMICH_MAX_ASSET_BYTES + 1 }),
+      asset("ok", { sizeBytes: 1000 }),
+    ]);
+
+    await startAlbumImport("u1", "link-1");
+
+    // The oversized asset must not even be fetched.
+    expect(fetchAssetStream).toHaveBeenCalledTimes(1);
+    expect(fetchAssetStream).toHaveBeenCalledWith("ok", "original");
+    expect(loggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "immich_import_asset_too_large",
+        context: expect.objectContaining({ assetId: "big" }),
+      }),
+    );
+    // Oversized = a per-asset failure, not an aborted run.
+    expect(jobUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "completed", failedAssets: 1, processedAssets: 1 }),
+      }),
+    );
+  });
+});
+
+describe("createByteCapStream", () => {
+  it("passes bytes through under the cap", async () => {
+    const sink = new (jest.requireActual<typeof import("stream")>("stream").PassThrough)();
+    const chunks: Buffer[] = [];
+    sink.on("data", (c: Buffer) => chunks.push(c));
+    await pipeline(Readable.from([Buffer.from("hello")]), createByteCapStream(100), sink);
+    expect(Buffer.concat(chunks).toString()).toBe("hello");
+  });
+
+  it("aborts with a distinguishable error once the cumulative bytes exceed the cap", async () => {
+    const sink = new (jest.requireActual<typeof import("stream")>("stream").PassThrough)();
+    sink.resume();
+    await expect(
+      pipeline(
+        Readable.from([Buffer.from("aaaa"), Buffer.from("bbbb"), Buffer.from("cccc")]),
+        createByteCapStream(6),
+        sink,
+      ),
+    ).rejects.toMatchObject({ code: "IMMICH_ASSET_TOO_LARGE" });
   });
 });
 

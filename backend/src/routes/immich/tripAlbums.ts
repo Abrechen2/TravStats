@@ -26,7 +26,7 @@ import {
   startAlbumImport,
 } from "../../services/immich/immichImport";
 import { ImmichAsset, ImmichConnection, ImmichError, ImmichMode } from "../../services/immich/types";
-import { immichImportLimiter } from "../../middleware/rateLimit";
+import { immichImportLimiter, immichProxyLimiter } from "../../middleware/rateLimit";
 import logger from "../../utils/logger";
 
 const router = Router();
@@ -80,7 +80,11 @@ async function resolveLink(
     where: { id: linkId, tripId },
     select: { id: true, immichAlbumId: true, mode: true },
   });
-  if (!link) throw new AppError("Linked album not found", 404);
+  // The message IS the machine-readable failure kind: `errorHandler`
+  // serialises it as `{ error: "notFound" }`, which the frontend's
+  // `immichFailureKind()` classifies (a domain 404, distinct from an upstream
+  // Immich failure). See the error-taxonomy note in `sendImmichFailure`.
+  if (!link) throw new AppError("notFound", 404);
   return link;
 }
 
@@ -112,6 +116,7 @@ const proxyUrl = (tripId: string, linkId: string, assetId: string, size: string)
 router.get(
   "/trips/:id/immich/albums",
   authenticate,
+  immichProxyLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
@@ -279,6 +284,7 @@ router.delete(
 router.get(
   "/trips/:id/immich/albums/:linkId/assets",
   authenticate,
+  immichProxyLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
@@ -339,6 +345,7 @@ router.get(
 router.get(
   "/trips/:id/immich/estimate",
   authenticate,
+  immichProxyLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
@@ -370,51 +377,65 @@ router.post(
         throw new AppError("Only imported albums can be re-synced", 400);
       }
 
-      // Guard check BEFORE the reset. A link that is already importing owns a
+      // Guard check BEFORE any reset. A link that is already importing owns a
       // `running` row this process is advancing; resetting it to `pending`
       // would clobber live progress AND — since startAlbumImport refuses an
-      // in-flight link — strand the row on `pending` forever. Only when no run
-      // is in flight do we clear the previous run's terminal row, so the
-      // frontend's immediate poll after the 202 sees a live (`pending`) run
-      // instead of the stale `completed`.
-      const alreadyRunning = isImportInFlight(link.id);
-      if (!alreadyRunning) {
-        await prisma.immichImportJob.upsert({
-          where: { albumLinkId: link.id },
-          update: {
-            status: "pending",
-            processedAssets: 0,
-            totalAssets: 0,
-            failedAssets: 0,
-            completedAt: null,
-            error: null,
-            startedAt: null,
-          },
-          create: {
-            albumLinkId: link.id,
-            status: "pending",
-            processedAssets: 0,
-            totalAssets: 0,
-            failedAssets: 0,
-            completedAt: null,
-            error: null,
-            startedAt: null,
-          },
+      // in-flight link — strand the row on `pending` forever. Leave it alone
+      // and report the run in progress.
+      if (isImportInFlight(link.id)) {
+        res.status(202).json({
+          job: { status: "running", totalAssets: 0, processedAssets: 0, failedAssets: 0, error: null },
         });
+        return;
       }
 
-      // startAlbumImport dedupes internally; calling it while in flight is a
-      // harmless no-op that keeps the route branch-free.
+      // Resolve the connection BEFORE touching the row. If it is gone (the user
+      // cleared/broke their Immich creds, then clicked Re-sync), resetting to
+      // `pending` and firing startAlbumImport would strand the row: the
+      // service's no-connection branch early-returns, and the stale-reclaim
+      // only fires on `running`, so nothing ever advances a `pending` row —
+      // the frontend polls forever (M1). Record a terminal failure instead.
+      const conn = await getImmichConnection(userId);
+      if (!conn) {
+        await prisma.immichImportJob.upsert({
+          where: { albumLinkId: link.id },
+          update: { status: "failed", error: "notConfigured", completedAt: new Date(), startedAt: null },
+          create: { albumLinkId: link.id, status: "failed", error: "notConfigured", completedAt: new Date() },
+        });
+        res.status(409).json({ error: "notConfigured", message: "No Immich connection configured" });
+        return;
+      }
+
+      // Connection is good: clear the previous run's terminal row so the
+      // frontend's immediate poll after the 202 sees a live (`pending`) run
+      // instead of the stale `completed`, then fire the import.
+      await prisma.immichImportJob.upsert({
+        where: { albumLinkId: link.id },
+        update: {
+          status: "pending",
+          processedAssets: 0,
+          totalAssets: 0,
+          failedAssets: 0,
+          completedAt: null,
+          error: null,
+          startedAt: null,
+        },
+        create: {
+          albumLinkId: link.id,
+          status: "pending",
+          processedAssets: 0,
+          totalAssets: 0,
+          failedAssets: 0,
+          completedAt: null,
+          error: null,
+          startedAt: null,
+        },
+      });
+
       void startAlbumImport(userId, link.id);
 
       res.status(202).json({
-        job: {
-          status: alreadyRunning ? "running" : "pending",
-          totalAssets: 0,
-          processedAssets: 0,
-          failedAssets: 0,
-          error: null,
-        },
+        job: { status: "pending", totalAssets: 0, processedAssets: 0, failedAssets: 0, error: null },
       });
     } catch (error) {
       next(error);

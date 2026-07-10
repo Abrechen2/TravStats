@@ -83,19 +83,3 @@ export async function getImmichDefaultMode(userId: string): Promise<ImmichMode> 
   });
   return settings?.immichDefaultMode === "import" ? "import" : "link";
 }
-
-/**
- * Whether the user can reach Immich at all, and whether the connection came from
- * somewhere other than their own settings — the settings card shows a "shared"
- * badge when the connection is admin-global or operator-configured via ENV.
- *
- * Note: This deliberately differs from `hasApiKeyAccess` in `apiKeyResolver.ts`,
- * which reports `isShared: false` for its ENV tier. Here, any connection the user
- * did not configure themselves (whether admin-global or ENV) is marked shared.
- */
-export async function hasImmichAccess(
-  userId: string,
-): Promise<{ hasAccess: boolean; isShared: boolean }> {
-  const conn = await getImmichConnection(userId);
-  return { hasAccess: conn !== null, isShared: conn !== null && conn.source !== "user" };
-}

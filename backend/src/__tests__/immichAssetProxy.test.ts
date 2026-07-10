@@ -90,8 +90,17 @@ const asset = (id: string) => ({
 beforeEach(() => {
   jest.clearAllMocks();
   clearImmichAssetCache();
-  getImmichConnection.mockResolvedValue({ baseUrl: "https://immich.lan", apiKey: "k", source: "user" });
-  findFirstLink.mockResolvedValue({ id: "link-1", tripId: "trip-1", immichAlbumId: "a1", mode: "link" });
+  getImmichConnection.mockResolvedValue({
+    baseUrl: "https://immich.lan",
+    apiKey: "k",
+    source: "user",
+  });
+  findFirstLink.mockResolvedValue({
+    id: "link-1",
+    tripId: "trip-1",
+    immichAlbumId: "a1",
+    mode: "link",
+  });
   listAlbumAssets.mockResolvedValue([asset(ASSET_ID)]);
   fetchAssetStream.mockImplementation(async () => ({
     stream: Readable.from([Buffer.from("image-bytes")]),
@@ -135,7 +144,15 @@ describe("asset proxy", () => {
     const res = await request(makeApp()).get(url(OTHER_ASSET_ID));
 
     expect(res.status).toBe(404);
+    expect(res.body.error).toBe("notFound");
     expect(fetchAssetStream).not.toHaveBeenCalled();
+  });
+
+  it("404s with kind=notFound when the linked album row is gone", async () => {
+    findFirstLink.mockResolvedValue(null);
+    const res = await request(makeApp()).get(url(ASSET_ID));
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("notFound");
   });
 
   it("rejects a non-UUID asset id before any upstream call", async () => {
@@ -204,7 +221,9 @@ describe("asset proxy", () => {
     // The client side of this request may see a reset/aborted connection —
     // that is expected once headers + partial bytes are already on the
     // wire, so tolerate either a resolved or rejected supertest promise.
-    await request(makeApp()).get(url(ASSET_ID)).catch(() => undefined);
+    await request(makeApp())
+      .get(url(ASSET_ID))
+      .catch(() => undefined);
 
     // Exactly one error log: the genuine upstream stream error. A second
     // call here would indicate the route tried to write another

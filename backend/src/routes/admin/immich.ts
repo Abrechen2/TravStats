@@ -106,7 +106,8 @@ router.post("/test", async (req: AuthRequest, res: Response, next: NextFunction)
         ? body.apiKey
         : decryptApiKey(admin?.globalImmichApiKey);
 
-    if (!baseUrl || !apiKey) throw new AppError("No global Immich connection configured", 400);
+    // Machine-readable failure kind, consistent with the gallery routes.
+    if (!baseUrl || !apiKey) throw new AppError("notConfigured", 400);
 
     res.json(await testImmichConnection(baseUrl, apiKey));
   } catch (error) {
