@@ -65,7 +65,9 @@ describe("Immich schema", () => {
     // NULL immichAssetId is not constrained — manual uploads stay unlimited.
     await prisma.tripPhoto.create({ data: base });
     await prisma.tripPhoto.create({ data: base });
-    expect(await prisma.tripPhoto.count({ where: { tripId: trip.id, immichAssetId: null } })).toBe(2);
+    expect(await prisma.tripPhoto.count({ where: { tripId: trip.id, immichAssetId: null } })).toBe(
+      2,
+    );
   });
 
   it("stores an import job keyed one-to-one to its album link", async () => {

@@ -54,6 +54,9 @@ export const assetSizeSchema = z
 
 export const assetIdParamSchema = z.string().uuid();
 
+/** `TripPhoto.id` is `@default(uuid())`. */
+export const photoIdParamSchema = z.string().uuid();
+
 export const setCoverSchema = z
   .object({
     linkId: z.string().uuid(),

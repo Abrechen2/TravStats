@@ -12,14 +12,59 @@
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
+import { Transform } from "stream";
 import { pipeline } from "stream/promises";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../db";
+import { FILE_LIMITS } from "../../config/constants";
 import { deleteTripPhotoFile, getTripPhotoDir } from "../../middleware/upload";
 import logger from "../../utils/logger";
 import { createImmichClient } from "./immichClient";
 import { getImmichConnection } from "./immichResolver";
 import { invalidateAlbumAssets } from "./immichAssetCache";
 import { ImmichAsset } from "./types";
+
+/** Marks a stream aborted for exceeding the per-asset byte cap (M2), distinct
+ *  from a genuine upstream/write failure. */
+const ASSET_TOO_LARGE_CODE = "IMMICH_ASSET_TOO_LARGE";
+
+interface AssetTooLargeError extends Error {
+  code: typeof ASSET_TOO_LARGE_CODE;
+  bytes: number;
+}
+
+function isAssetTooLarge(error: unknown): error is AssetTooLargeError {
+  return error instanceof Error && (error as { code?: unknown }).code === ASSET_TOO_LARGE_CODE;
+}
+
+/** A concurrent import of a sibling album sharing this asset already created
+ *  the `(tripId, immichAssetId)` row — the asset is present, not failed (M5). */
+function isDuplicateAsset(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
+
+/**
+ * A passthrough that aborts once cumulative bytes exceed `maxBytes`. Guards the
+ * import when Immich reports no size upfront: `pipeline()` destroys the source
+ * and the write target on abort, and the caller removes the partial file.
+ */
+export function createByteCapStream(maxBytes: number): Transform {
+  let total = 0;
+  return new Transform({
+    transform(chunk: Buffer, _enc, cb): void {
+      total += chunk.length;
+      if (total > maxBytes) {
+        const error: AssetTooLargeError = Object.assign(
+          new Error(`Asset exceeds ${maxBytes} bytes`),
+          { code: ASSET_TOO_LARGE_CODE, bytes: total } as const,
+        );
+        cb(error);
+        return;
+      }
+      cb(null, chunk);
+    },
+  });
+}
 
 /** Mirrors the multer `tripPhotoFilter` allow-list — same bytes, same rules. */
 export const IMPORT_ALLOWED_MIME_TYPES = [
@@ -133,19 +178,55 @@ export async function estimateAlbumImport(
   };
 }
 
-/** Download one asset. Returns false on any per-asset failure. */
+/**
+ * Download one asset. Returns `false` on a per-asset failure (network, oversize,
+ * write error), `true` when the asset is now present in the trip — including the
+ * concurrent-sibling P2002 case, where it is present via another link and must
+ * not inflate `failedAssets`.
+ */
 async function importAsset(
   client: ReturnType<typeof createImmichClient>,
   tripId: string,
   linkId: string,
   asset: ImmichAsset,
 ): Promise<boolean> {
+  // Cheap pre-flight: if Immich already reports the asset as oversized, skip it
+  // before spending bandwidth or disk. Counts as a per-asset failure (M2).
+  if (asset.sizeBytes !== null && asset.sizeBytes > FILE_LIMITS.IMMICH_MAX_ASSET_BYTES) {
+    logger.warn({
+      message: "immich_import_asset_too_large",
+      context: {
+        assetId: asset.id,
+        linkId,
+        sizeBytes: asset.sizeBytes,
+        maxBytes: FILE_LIMITS.IMMICH_MAX_ASSET_BYTES,
+      },
+    });
+    return false;
+  }
+
   const filename = buildFilename(asset.originalFileName);
   const filePath = path.join(getTripPhotoDir(), filename);
 
+  const cleanup = (): void => {
+    // Never leave bytes behind for a row that does not exist.
+    try {
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    } catch (cleanupError) {
+      logger.warn({ message: "immich_import_cleanup_failed", error: cleanupError });
+    }
+  };
+
   try {
     const upstream = await client.fetchAssetStream(asset.id, "original");
-    await pipeline(upstream.stream, fs.createWriteStream(filePath));
+    // The byte cap also guards the case where Immich reported no size (no EXIF
+    // row yet): the stream is aborted the moment it crosses the ceiling and the
+    // partial file is cleaned up below (M2).
+    await pipeline(
+      upstream.stream,
+      createByteCapStream(FILE_LIMITS.IMMICH_MAX_ASSET_BYTES),
+      fs.createWriteStream(filePath),
+    );
 
     await prisma.tripPhoto.create({
       data: {
@@ -162,17 +243,35 @@ async function importAsset(
     });
     return true;
   } catch (error) {
+    if (isAssetTooLarge(error)) {
+      logger.warn({
+        message: "immich_import_asset_too_large",
+        context: {
+          assetId: asset.id,
+          linkId,
+          sizeBytes: error.bytes,
+          maxBytes: FILE_LIMITS.IMMICH_MAX_ASSET_BYTES,
+        },
+      });
+      cleanup();
+      return false;
+    }
+    if (isDuplicateAsset(error)) {
+      // Present in the trip via a sibling album that won the unique index — not
+      // a failure. Drop the duplicate bytes we just downloaded (M5).
+      logger.info({
+        message: "immich_import_asset_already_present",
+        context: { assetId: asset.id, linkId },
+      });
+      cleanup();
+      return true;
+    }
     logger.warn({
       message: "immich_import_asset_failed",
       error,
       context: { assetId: asset.id, linkId },
     });
-    // Never leave bytes behind for a row that does not exist.
-    try {
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    } catch (cleanupError) {
-      logger.warn({ message: "immich_import_cleanup_failed", error: cleanupError });
-    }
+    cleanup();
     return false;
   }
 }
@@ -212,6 +311,15 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
       const conn = await getImmichConnection(userId);
       if (!conn) {
         logger.warn({ message: "immich_import_no_connection", context: { linkId } });
+        // Close the residual race behind the resync route's own pre-check: if a
+        // previous step reset the row to `pending` (or a crash left `running`)
+        // and the connection then vanished, mark it terminally `failed` so the
+        // frontend stops polling instead of hanging forever (M1). A no-op when
+        // no such row exists (the initial-link import path has none yet).
+        await prisma.immichImportJob.updateMany({
+          where: { albumLinkId: linkId, status: { in: ["pending", "running"] } },
+          data: { status: "failed", error: "notConfigured", completedAt: new Date() },
+        });
         return;
       }
 

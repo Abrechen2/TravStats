@@ -67,6 +67,9 @@ describe("getServerVersion", () => {
       expect.objectContaining({
         message: "immich_client_unexpected_error",
         error: original,
+        // The log payload names the failing endpoint under `endpoint`, not the
+        // confusing `context: { context }` doubling.
+        context: { endpoint: "server/version" },
       }),
     );
   });
@@ -227,6 +230,19 @@ describe("listAlbumAssets", () => {
 
     await createImmichClient(CONN).listAlbumAssets("album-1");
     expect(mockedLogger.warn).not.toHaveBeenCalled();
+  });
+
+  it("drops an asset with an empty-string id (would build /assets//original)", async () => {
+    mockedAxios.post.mockResolvedValueOnce({
+      data: {
+        assets: {
+          items: [asset("p1"), { ...asset("p2"), id: "" }],
+          nextPage: null,
+        },
+      },
+    });
+    const assets = await createImmichClient(CONN).listAlbumAssets("album-1");
+    expect(assets.map((a) => a.id)).toEqual(["p1"]);
   });
 
   it("drops an asset with an unexpected type instead of coercing it to IMAGE", async () => {

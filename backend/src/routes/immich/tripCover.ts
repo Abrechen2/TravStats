@@ -14,7 +14,7 @@ import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { resolveTrip } from "../trips";
-import { setCoverSchema } from "../../schemas/immich";
+import { photoIdParamSchema, setCoverSchema } from "../../schemas/immich";
 import { createImmichClient } from "../../services/immich/immichClient";
 import { getImmichConnection } from "../../services/immich/immichResolver";
 import { getCachedAlbumAssets } from "../../services/immich/immichAssetCache";
@@ -43,17 +43,20 @@ router.post(
         where: { id: linkId, tripId },
         select: { id: true, immichAlbumId: true },
       });
-      if (!link) throw new AppError("Linked album not found", 404);
+      // `error` bodies carry the machine-readable failure-kind vocabulary
+      // (`notFound`/`notConfigured`) the frontend's `immichFailureKind()`
+      // classifies — not a prose message it cannot parse.
+      if (!link) throw new AppError("notFound", 404);
 
       const conn = await getImmichConnection(userId);
-      if (!conn) throw new AppError("No Immich connection configured", 409);
+      if (!conn) throw new AppError("notConfigured", 409);
 
       // The asset must belong to this album — same boundary the proxy enforces.
       const assets = await getCachedAlbumAssets(userId, link.immichAlbumId, () =>
         createImmichClient(conn).listAlbumAssets(link.immichAlbumId),
       );
       if (!assets.some((a) => a.id === assetId)) {
-        throw new AppError("Asset not found in this album", 404);
+        throw new AppError("notFound", 404);
       }
 
       const coverImageUrl = immichCoverUrl(tripId, link.id, assetId);
@@ -81,8 +84,13 @@ router.post(
       const tripId = req.params.id;
       await resolveTrip(userId, tripId);
 
+      // Validate at the boundary even though a bad id fails safe via a scoped
+      // Prisma 404 — every route param must be validated (TripPhoto.id is a uuid).
+      const photoId = photoIdParamSchema.safeParse(req.params.photoId);
+      if (!photoId.success) throw new AppError("Invalid photo id", 400);
+
       const photo = await prisma.tripPhoto.findFirst({
-        where: { id: req.params.photoId, tripId },
+        where: { id: photoId.data, tripId },
         select: { id: true },
       });
       if (!photo) throw new AppError("Photo not found", 404);

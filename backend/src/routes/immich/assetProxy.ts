@@ -90,7 +90,9 @@ router.get(
         where: { id: req.params.linkId, tripId },
         select: { immichAlbumId: true },
       });
-      if (!link) throw new AppError("Linked album not found", 404);
+      // `error` body uses the failure-kind vocabulary (`notFound`) so a caller
+      // that reads it classifies a domain 404 correctly.
+      if (!link) throw new AppError("notFound", 404);
 
       const conn = await getImmichConnection(userId);
       if (!conn) {
@@ -103,7 +105,7 @@ router.get(
         client.listAlbumAssets(link.immichAlbumId),
       );
       if (!assets.some((a) => a.id === assetId.data)) {
-        throw new AppError("Asset not found in this album", 404);
+        throw new AppError("notFound", 404);
       }
 
       const upstream = await client.fetchAssetStream(assetId.data, size.data);

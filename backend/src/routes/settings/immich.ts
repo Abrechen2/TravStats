@@ -104,7 +104,8 @@ router.post("/test", async (req: AuthRequest, res: Response, next: NextFunction)
     // An empty body means "test whatever is currently resolved for me".
     if (!baseUrl || !apiKey) {
       const stored = await getImmichConnection(req.userId!);
-      if (!stored) throw new AppError("No Immich connection configured", 400);
+      // Machine-readable failure kind, consistent with the gallery routes.
+      if (!stored) throw new AppError("notConfigured", 400);
       baseUrl = baseUrl ?? stored.baseUrl;
       apiKey = apiKey ?? stored.apiKey;
     }
