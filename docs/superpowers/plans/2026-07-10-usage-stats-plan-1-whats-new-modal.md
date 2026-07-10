@@ -787,18 +787,27 @@ unmounts on navigation):
 
 - [ ] **Step 2: Stamp the version on fresh installs**
 
-In `frontend/src/pages/SetupPage.tsx`, inside `handleSubmit`, immediately after the
-successful `setupApi.initialize(...)` call and `setAuth(response.user)`:
+In `frontend/src/pages/SetupPage.tsx`, inside `handleSubmit`, after the successful
+`setupApi.initialize(...)` call and **before `setAuth(response.user)`**:
 
 ```tsx
-    try {
-      const { version } = await versionApi.get();
-      await settingsApi.update({ whatsNewSeenVersion: version });
-    } catch (error) {
-      // Non-fatal: the worst case is one stale modal on a brand-new install.
-      logger.debug("failed to stamp whatsNewSeenVersion during setup", error);
-    }
+      // Stamp BEFORE setAuth: setAuth flips isAuthenticated, which fires the
+      // useWhatsNew effect. If the stamp has not landed by then, the hook reads a
+      // pre-stamp snapshot and greets a brand-new install about a version it never
+      // ran. The JWT cookie is already set by initialize(), so this call is
+      // authenticated. Non-fatal: worst case is one stale modal.
+      try {
+        const { version } = await versionApi.get();
+        await settingsApi.update({ whatsNewSeenVersion: version });
+      } catch (error) {
+        logger.debug("failed to stamp whatsNewSeenVersion during setup", error);
+      }
 ```
+
+**The ordering is load-bearing.** Stamping after `setAuth` races the hook and loses:
+`setAuth` only writes client-side Zustand state, while the auth cookie arrives with
+the `initialize` response — so the stamp is already authenticated before `setAuth`,
+and running it first is both safe and deterministic.
 
 Add the imports `import { settingsApi, setupApi, versionApi } from "../lib/api";`
 and `import { logger } from "../lib/logger";` (merge with the existing `setupApi`
