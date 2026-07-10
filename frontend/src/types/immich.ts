@@ -13,7 +13,10 @@ export interface ImmichConnectionStatus {
 
 export interface ImmichTestResult {
   success: boolean;
+  /** English, for debugging only — the UI renders `errors.<kind>` instead. */
   message: string;
+  /** Machine-readable failure classification, present only on failure. */
+  kind?: ImmichFailureKind;
   details?: { version?: string; user?: string };
 }
 

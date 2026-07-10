@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { immichApi } from "../../lib/api/immich";
+import { immichApi, immichFailureKind, isImmichFailureKind } from "../../lib/api/immich";
 import type { ImmichConnectionStatus, ImmichMode, ImmichTestResult } from "../../types/immich";
+
+/**
+ * Resolve a failure kind to its localized i18n key. An unknown/absent kind
+ * (e.g. a future backend value) falls back to a generic error string — we never
+ * render the raw English backend prose to the user.
+ */
+function failureKey(kind: unknown): string {
+  return isImmichFailureKind(kind) ? `errors.${kind}` : "errors.unreachable";
+}
 
 /**
  * User-facing Immich connection settings.
@@ -86,8 +95,10 @@ export default function ImmichConnectionCard(): JSX.Element {
       setTestResult(
         await immichApi.testConnection(trimmed === "" ? { baseUrl } : { baseUrl, apiKey: trimmed })
       );
-    } catch {
-      setTestResult({ success: false, message: t("errors.unreachable") });
+    } catch (err) {
+      // A thrown error (network failure, or a 409/400 carrying a kind such as
+      // `notConfigured`) still maps onto the same localized failure vocabulary.
+      setTestResult({ success: false, message: "", kind: immichFailureKind(err) ?? undefined });
     } finally {
       setTesting(false);
     }
@@ -174,7 +185,7 @@ export default function ImmichConnectionCard(): JSX.Element {
         <p className={`mt-2 text-sm ${testResult.success ? "text-emerald-400" : "text-rose-400"}`}>
           {testResult.success
             ? t("connected", { version: testResult.details?.version ?? "?" })
-            : testResult.message}
+            : t(failureKey(testResult.kind))}
         </p>
       )}
       {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
