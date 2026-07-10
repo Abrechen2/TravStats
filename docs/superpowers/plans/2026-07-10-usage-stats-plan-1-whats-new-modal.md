@@ -14,7 +14,7 @@
 - Branch: `dev/usage-stats`. Worktree: `.claude/worktrees/usage-stats`. Never `rebase main`; `merge main` only.
 - **Never touch `backend/VERSION` or `CHANGELOG.md`** — owned by `/deploy` on `main`.
 - `any` is FORBIDDEN. Use `unknown` + type guards. Exception: `.d.ts` files only.
-- Backend logging: `import { logger } from '../utils/logger'`. Never `console.log`.
+- Backend logging: `import logger from '../utils/logger'`. Never `console.log`.
 - Frontend translation: `import { useTranslation } from "../hooks/useTranslation"` — **never** from `react-i18next`.
 - i18n copy: German is primary, English is a mirror. Both updated in the same change, never one side alone.
 - Prettier: `printWidth 100`, `singleQuote: false` (frontend TS/TSX uses double quotes).
