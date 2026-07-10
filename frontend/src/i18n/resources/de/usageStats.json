@@ -1,0 +1,19 @@
+{
+  "consent": {
+    "title": "Anonyme Nutzungsstatistik",
+    "body": "Hilf uns zu verstehen, wie TravStats genutzt wird. Wir senden ausschließlich anonyme Kennzahlen — Version, aktivierte Domains, grobe Größenordnungen. Niemals deine Flüge, Häfen, Namen, IP-Adresse oder API-Schlüssel.",
+    "accept": "Ja, anonyme Daten senden",
+    "decline": "Nein, danke",
+    "whatIsSent": "Was genau wird gesendet?",
+    "revokeHint": "Du kannst das jederzeit im Admin-Bereich wieder abschalten. Beim Abschalten werden die gespeicherten Daten dieser Installation gelöscht."
+  },
+  "admin": {
+    "title": "Anonyme Nutzungsstatistik",
+    "description": "Sendet einmal täglich eine anonyme Kennzahlen-Meldung an stats.travstats.de. Standardmäßig aus.",
+    "enabled": "Aktiviert",
+    "disabled": "Deaktiviert",
+    "installId": "Installations-ID",
+    "installIdHint": "Zufällige Kennung dieser Installation. Nenne sie bei einer Auskunfts- oder Löschanfrage.",
+    "endpointDisabled": "Der Endpunkt ist per Umgebungsvariable deaktiviert. Es wird nichts gesendet."
+  }
+}
