@@ -23,6 +23,39 @@
 - **Telemetry never throws.** Every network path swallows, logs at `debug`, returns.
 - Build gates: `cd backend && npx tsc --noEmit && npm run lint && npm test -- --forceExit`; `cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run`.
 
+## Facts learned while building Plan 1 — these bind this plan
+
+Plan 1 shipped. Its code is on this branch and its final review surfaced things that
+change how the consent card must be written. Do not rediscover these.
+
+- **The modal's `onClose` fires from BOTH the `×` and the dismiss button, and both
+  persist `whatsNewSeenVersion`.** Therefore: **never hang consent persistence off
+  modal close.** The consent card persists the moment the user picks Yes or No.
+  "Modal closed without interacting" means **no consent — stays `unset`, nothing is
+  sent.** That is the GDPR-safe default and it is not negotiable.
+- Once `whatsNewSeenVersion` is stamped for a version, **the modal never returns for
+  that version.** A user who closes it without deciding is never re-asked *there*.
+  That is acceptable **only because** the Admin toggle is always available (Task 8,
+  Step 3). Do not add a second nag surface.
+- **`whatsNewSeenVersion` is version-scoped, not consent-scoped.** Do not overload it
+  to remember the consent decision. Consent lives in `AdminSettings.usageStatsConsent`.
+- The modal deliberately has **no Escape handler and no overlay-click close** — a
+  consent surface must not be dismissable by a stray keypress. Do not "fix" that.
+- **`extraSlot` renders inside the modal's scrollable body** (`max-h-[90vh]`,
+  `overflow-y-auto`), below the highlights, above the pinned footer. A tall consent
+  card scrolls. Keep it short enough that both buttons are reachable without hunting.
+- **The frontend has NO icon library.** `lucide-react` is not a dependency. Use emoji
+  glyphs, as `shared/domains.ts` does. **`--color-accent` and `--text-on-accent` do
+  not exist**; primary buttons use Tailwind `bg-blue-600 text-white hover:bg-blue-700`.
+- **`UserSettings.data` is read-modify-write with last-write-wins**, and Plan 1's
+  `dismiss()` added an automatic login-time writer. This plan writes consent to
+  `AdminSettings` columns, not to that blob — keep it that way and the collision
+  window stays where it was.
+- **`[role="dialog"]` is used by ~10 components** (`FlightPanel` renders one on the
+  dashboard). Any browser test must anchor on a specific `id`, never the bare role.
+- The `AdminSettings` singleton is **the first row** (`findFirst()`), because `id` is
+  an autoincrement `Int`. Never hard-code `id: 1`.
+
 ## File Structure
 
 | File | Responsibility |
@@ -1371,6 +1404,18 @@ size, same prominence, neither pre-selected, neither styled as the primary actio
 Both link to the docs page. No dark patterns; this is a legal requirement, not a
 style preference.
 
+**Persistence rule (from Plan 1's review):** the card persists the decision **the
+moment a button is clicked**, never on modal close. A user who closes the modal
+without clicking has given no consent, and `usageStatsConsent` stays `unset` — which
+sends nothing, forever, until they flip the Admin toggle. Do not add a "remember to
+decide" prompt.
+
+**The equal-weight test compares `className`.** That is necessary but not sufficient:
+if the two buttons carry different inline `style` objects they are still visually
+unequal and the spec is violated while the test passes. Give both buttons the *same*
+`className` **and** the *same* `style`. Do not add a `bg-blue-600` primary treatment
+to the accept button — that is exactly the dark pattern this rule forbids.
+
 - [ ] **Step 1: Write the failing test**
 
 Create `frontend/src/components/__tests__/UsageStatsConsentCard.test.tsx`:
@@ -1407,7 +1452,16 @@ describe("UsageStatsConsentCard", () => {
     render(<UsageStatsConsentCard />);
     const accept = screen.getByRole("button", { name: "usageStats:consent.accept" });
     const decline = screen.getByRole("button", { name: "usageStats:consent.decline" });
+    // Both must match: className alone would let an inline style re-introduce a
+    // visual hierarchy, which is precisely the dark pattern GDPR Art. 7 forbids.
     expect(accept.className).toBe(decline.className);
+    expect(accept.getAttribute("style")).toBe(decline.getAttribute("style"));
+  });
+
+  it("persists nothing when the card is merely unmounted without a choice", () => {
+    const { unmount } = render(<UsageStatsConsentCard />);
+    unmount();
+    expect(mocks.setConsent).not.toHaveBeenCalled();
   });
 
   it("sends granted and reports the decision upward", async () => {
@@ -1650,7 +1704,7 @@ what actually satisfies the spec.
 ```bash
 cd frontend && npx vitest --run src/components/__tests__/UsageStatsConsentCard.test.tsx
 ```
-Expected: PASS, 7 tests.
+Expected: PASS, 9 tests.
 
 - [ ] **Step 7: Commit**
 
@@ -1682,6 +1736,20 @@ git commit -m "feat(usage-stats): add consent card with equal-weight choices and
 In `frontend/src/App.tsx`, extend the `WhatsNewModal` mount from Plan 1 Task 5. The
 card is shown only to admins (consent is instance-wide) and only while consent is
 still `unset`.
+
+> **Read before writing this.** `onClose` on that modal already persists
+> `whatsNewSeenVersion` and fires from both the `×` and the dismiss button. Do **not**
+> touch `onClose` and do **not** infer a consent decision from it. `onDecided` — fired
+> by the card itself when a button is clicked — is the only signal that a decision was
+> made. If the admin closes the modal without clicking either consent button, consent
+> correctly remains `unset`, nothing is ever sent, and the Admin toggle (Step 3)
+> remains the way to decide later. That is the intended behaviour, not a gap to patch.
+
+`App.tsx` will need `useState`/`useEffect` imported if they are not already, plus
+`usageStatsApi` from `"./lib/api"` and the card component. Reuse the existing
+`isAuthenticated` (declared near the top after the Plan 1 restructuring) and read the
+admin flag from the `user` object already destructured from `useAuthStore()` — do not
+add a second auth source.
 
 ```tsx
   const [consentPending, setConsentPending] = useState(false);
