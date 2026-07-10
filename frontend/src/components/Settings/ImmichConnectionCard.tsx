@@ -5,11 +5,12 @@ import type { ImmichConnectionStatus, ImmichMode, ImmichTestResult } from "../..
 
 /**
  * Resolve a failure kind to its localized i18n key. An unknown/absent kind
- * (e.g. a future backend value) falls back to a generic error string — we never
- * render the raw English backend prose to the user.
+ * (e.g. a future backend value, or a validation error carrying no kind) falls
+ * back to a NEUTRAL generic string — never `unreachable`, which would assert a
+ * network claim the app has not established, and never the raw backend prose.
  */
 function failureKey(kind: unknown): string {
-  return isImmichFailureKind(kind) ? `errors.${kind}` : "errors.unreachable";
+  return isImmichFailureKind(kind) ? `errors.${kind}` : "errors.unknown";
 }
 
 /**
@@ -91,10 +92,15 @@ export default function ImmichConnectionCard(): JSX.Element {
     setTesting(true);
     setTestResult(null);
     try {
-      const trimmed = apiKey.trim();
-      setTestResult(
-        await immichApi.testConnection(trimmed === "" ? { baseUrl } : { baseUrl, apiKey: trimmed })
-      );
+      // Omit empty fields entirely rather than sending "": an admin-provided
+      // connection leaves the user's own fields blank, and an empty body means
+      // "test whatever is resolved for me" (user → admin global → ENV).
+      const payload: { baseUrl?: string; apiKey?: string } = {};
+      const trimmedUrl = baseUrl.trim();
+      const trimmedKey = apiKey.trim();
+      if (trimmedUrl !== "") payload.baseUrl = trimmedUrl;
+      if (trimmedKey !== "") payload.apiKey = trimmedKey;
+      setTestResult(await immichApi.testConnection(payload));
     } catch (err) {
       // A thrown error (network failure, or a 409/400 carrying a kind such as
       // `notConfigured`) still maps onto the same localized failure vocabulary.

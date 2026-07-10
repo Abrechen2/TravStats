@@ -49,6 +49,7 @@
   "errors": {
     "notConfigured": "No Immich connection configured.",
     "unreachable": "Immich is unreachable.",
+    "unknown": "Connection test failed.",
     "auth": "Immich rejected the API key.",
     "notFound": "Album not found — was it deleted in Immich?",
     "protocol": "Unexpected response from Immich. Does the server version match?",

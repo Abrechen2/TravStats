@@ -1,7 +1,12 @@
 import { describe, it, expect } from "@jest/globals";
 import { normalizeImmichBaseUrl } from "../services/immich/types";
 import { ImmichError } from "../services/immich/types";
-import { linkAlbumsSchema, immichConnectionSchema, assetSizeSchema } from "../schemas/immich";
+import {
+  linkAlbumsSchema,
+  immichConnectionSchema,
+  immichTestSchema,
+  assetSizeSchema,
+} from "../schemas/immich";
 
 describe("normalizeImmichBaseUrl", () => {
   it("strips trailing slashes and keeps scheme + host + port", () => {
@@ -41,6 +46,33 @@ describe("immichConnectionSchema", () => {
 
   it("accepts an explicit null apiKey (clearing the key)", () => {
     expect(immichConnectionSchema.parse({ apiKey: null })).toEqual({ apiKey: null });
+  });
+});
+
+describe("immichTestSchema", () => {
+  it("accepts an empty body (test whatever is resolved for me)", () => {
+    expect(immichTestSchema.parse({})).toEqual({});
+  });
+
+  it("coerces an empty-string baseUrl to undefined so the route falls back", () => {
+    // The card always SENDS baseUrl; when the user has no own connection it
+    // sends "". That must mean 'use the resolved connection', not a 400.
+    expect(immichTestSchema.parse({ baseUrl: "" })).toEqual({});
+  });
+
+  it("coerces empty-string baseUrl AND apiKey to undefined", () => {
+    expect(immichTestSchema.parse({ baseUrl: "", apiKey: "" })).toEqual({});
+  });
+
+  it("keeps an explicitly supplied pair intact", () => {
+    expect(immichTestSchema.parse({ baseUrl: "https://immich.lan", apiKey: "k" })).toEqual({
+      baseUrl: "https://immich.lan",
+      apiKey: "k",
+    });
+  });
+
+  it("rejects an unknown field (strict)", () => {
+    expect(() => immichTestSchema.parse({ sneaky: "x" })).toThrow();
   });
 });
 
