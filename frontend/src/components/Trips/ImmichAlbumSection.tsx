@@ -90,6 +90,40 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
   // completion/failure.
   useEffect(() => stopPolling, [stopPolling]);
 
+  // Resume live progress if an import is already running when this section
+  // mounts — the user reloaded mid-sync, or landed on the gallery right after
+  // linking an import album. The backend keeps the job row non-terminal only
+  // while a run is genuinely active (the /resync handler resets a stale
+  // terminal row to `pending` before it answers), so a `completed`/`failed`
+  // read here means the previous run really finished and the UI stays idle.
+  // A missing row (first-ever link, no job yet) is treated the same as
+  // terminal: nothing to resume.
+  useEffect(() => {
+    if (album.mode !== "import") return undefined;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { job } = await immichApi.getImportJob(tripId, album.id);
+        if (cancelled || !mountedRef.current || !job) return;
+        if (job.status === "pending" || job.status === "running") {
+          setProgress({ done: job.processedAssets, total: job.totalAssets });
+          startPolling();
+        }
+      } catch {
+        // A failed status probe is non-fatal: the assets still render and the
+        // user can trigger a manual re-sync.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // `startPolling` is intentionally omitted: it closes over stable refs and
+    // callbacks, and re-running this probe on its identity change would
+    // needlessly re-fire getImportJob. The probe is a mount-time concern keyed
+    // only on which album this section renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripId, album.id, album.mode]);
+
   const handleResync = async (): Promise<void> => {
     try {
       await immichApi.resyncAlbum(tripId, album.id);

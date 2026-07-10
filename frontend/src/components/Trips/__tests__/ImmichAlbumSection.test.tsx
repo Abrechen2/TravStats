@@ -109,8 +109,24 @@ describe("ImmichAlbumSection", () => {
     await waitFor(() => expect(unlinkAlbum).toHaveBeenCalledWith("trip-1", "link-2", true));
   });
 
-  it("kicks a re-sync and polls the job until it completes", async () => {
+  // (a) Real re-sync ordering: the prior run left a `completed` job row. On
+  // mount the resume-probe reads that terminal row and stays idle. The click
+  // then starts a FRESH run whose first poll is non-terminal (the backend reset
+  // the row to `pending`/`running` before the 202), so progress must appear and
+  // polling must continue until the NEW run completes. Against the un-fixed
+  // frontend (no mount probe) the re-sync's own first poll latches onto the
+  // stale `completed` and stops instantly — this test is RED there.
+  it("(a) re-syncs an album whose prior run completed and polls the fresh run to completion", async () => {
     getImportJob
+      .mockResolvedValueOnce({
+        job: {
+          status: "completed",
+          totalAssets: 2,
+          processedAssets: 2,
+          failedAssets: 0,
+          error: null,
+        },
+      }) // mount resume-probe: the previous run's terminal row
       .mockResolvedValueOnce({
         job: {
           status: "running",
@@ -119,7 +135,7 @@ describe("ImmichAlbumSection", () => {
           failedAssets: 0,
           error: null,
         },
-      })
+      }) // first poll of the fresh run (row was reset before the 202)
       .mockResolvedValue({
         job: {
           status: "completed",
@@ -128,11 +144,15 @@ describe("ImmichAlbumSection", () => {
           failedAssets: 0,
           error: null,
         },
-      });
+      }); // fresh run finished
 
     const user = userEvent.setup();
     render(<ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />);
     await waitFor(() => expect(getAlbumAssets).toHaveBeenCalled());
+
+    // The mount probe read the prior `completed` and did NOT start a poller.
+    await waitFor(() => expect(getImportJob).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText("albums.resyncing")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "albums.resync" }));
 
@@ -142,5 +162,113 @@ describe("ImmichAlbumSection", () => {
       () => expect(screen.getByRole("button", { name: "albums.resync" })).toBeEnabled(),
       { timeout: 4000 }
     );
+  });
+
+  // (b) Owner-decided: resume polling on mount. An import is already running
+  // (reload mid-sync). No click — the mount probe alone starts the poller,
+  // shows progress, and stops on completion. RED on the un-fixed frontend.
+  it("(b) resumes polling on mount when an import is already running", async () => {
+    getImportJob
+      .mockResolvedValueOnce({
+        job: {
+          status: "running",
+          totalAssets: 2,
+          processedAssets: 1,
+          failedAssets: 0,
+          error: null,
+        },
+      }) // mount probe
+      .mockResolvedValueOnce({
+        job: {
+          status: "running",
+          totalAssets: 2,
+          processedAssets: 1,
+          failedAssets: 0,
+          error: null,
+        },
+      }) // first poll
+      .mockResolvedValue({
+        job: {
+          status: "completed",
+          totalAssets: 2,
+          processedAssets: 2,
+          failedAssets: 0,
+          error: null,
+        },
+      }); // completes
+
+    render(<ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText("albums.resyncing")).toBeInTheDocument());
+    expect(resyncAlbum).not.toHaveBeenCalled();
+    await waitFor(
+      () => expect(screen.getByRole("button", { name: "albums.resync" })).toBeEnabled(),
+      { timeout: 4000 }
+    );
+  });
+
+  // (c) The mount probe must NOT start a poller for a terminal or absent job.
+  it("(c) does not start a poller on mount when the job is terminal or absent", async () => {
+    getImportJob.mockResolvedValue({
+      job: {
+        status: "completed",
+        totalAssets: 2,
+        processedAssets: 2,
+        failedAssets: 0,
+        error: null,
+      },
+    });
+    const { unmount } = render(
+      <ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />
+    );
+    await waitFor(() => expect(getImportJob).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText("albums.resyncing")).not.toBeInTheDocument();
+    // A poller would have fired an immediate second getImportJob; it did not.
+    expect(getImportJob).toHaveBeenCalledTimes(1);
+    unmount();
+
+    // Absent job row: same — idle.
+    vi.clearAllMocks();
+    getAlbumAssets.mockResolvedValue({ assets: ASSETS });
+    getImportJob.mockResolvedValue({ job: null });
+    render(<ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />);
+    await waitFor(() => expect(getImportJob).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText("albums.resyncing")).not.toBeInTheDocument();
+    expect(getImportJob).toHaveBeenCalledTimes(1);
+  });
+
+  // (d) Unmounting mid-sync must clear the poll interval — no leak, no
+  // setState-after-unmount.
+  it("(d) clears the poll interval when unmounted mid-sync", async () => {
+    vi.useFakeTimers();
+    try {
+      const clearSpy = vi.spyOn(globalThis, "clearInterval");
+      getImportJob.mockResolvedValue({
+        job: {
+          status: "running",
+          totalAssets: 2,
+          processedAssets: 1,
+          failedAssets: 0,
+          error: null,
+        },
+      });
+      const { unmount } = render(
+        <ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />
+      );
+      // Flush mount effects: getAlbumAssets + probe -> startPolling -> immediate poll.
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(1500); // one interval tick
+      const callsBefore = getImportJob.mock.calls.length;
+      expect(callsBefore).toBeGreaterThan(1); // probe + poll => interval is live
+
+      clearSpy.mockClear();
+      unmount();
+      expect(clearSpy).toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1500 * 3);
+      expect(getImportJob.mock.calls.length).toBe(callsBefore); // no polling after unmount
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

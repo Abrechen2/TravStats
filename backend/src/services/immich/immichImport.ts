@@ -58,6 +58,19 @@ export function clearImportGuards(): void {
   inFlightImports.clear();
 }
 
+/**
+ * Whether an import run currently holds the in-flight guard for this link.
+ *
+ * The `/resync` route consults this BEFORE it resets a stale terminal job row
+ * to `pending`: a link that is genuinely importing already owns a `running`
+ * row that this process is advancing, so resetting it would both clobber live
+ * progress and — because `startAlbumImport` refuses an in-flight link — strand
+ * the row on `pending` forever. When this returns `true`, leave the row alone.
+ */
+export function isImportInFlight(linkId: string): boolean {
+  return inFlightImports.has(linkId);
+}
+
 export interface ImportJobDto {
   status: "pending" | "running" | "completed" | "failed";
   totalAssets: number;
