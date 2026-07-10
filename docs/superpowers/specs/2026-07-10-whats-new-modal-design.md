@@ -63,8 +63,11 @@ Adding a `WhatsNewEntry` becomes part of the release routine, documented in
 The modal shows when **all** of these hold:
 
 1. The user is authenticated (never on the login or setup screen).
-2. A `WhatsNewEntry` exists whose `version` equals the running backend version
-   (`GET /api/v1/health` already returns it; no new endpoint needed).
+2. A `WhatsNewEntry` exists whose `version` equals the running backend version.
+   Obtained via the **existing** `versionApi.get()` (`GET /api/v1/version`, defined
+   in `frontend/src/lib/api/version.ts`), whose `version` field is already
+   prerelease-stripped by `appVersion`. No new endpoint, no `/health` call — the
+   frontend never talks to `/health` today and should not start.
 3. That version is not recorded as seen for this user.
 
 **Seen-state storage:** a new nullable column `whatsNewSeenVersion String?` on
@@ -98,9 +101,9 @@ component driven by props.
 ## 6. Data flow
 
 ```
-health.version ─┐
-                ├─> useWhatsNew() ─> { entry, shouldShow, dismiss }
-userSettings ───┘                            │
+versionApi.get().version ─┐
+                          ├─> useWhatsNew() ─> { entry, shouldShow, dismiss }
+userSettings ─────────────┘                            │
   .whatsNewSeenVersion                       v
                                     <WhatsNewModal extraSlot={…} />
                                              │ dismiss()
@@ -110,8 +113,8 @@ userSettings ───┘                            │
 
 ## 7. Error handling
 
-- Health endpoint unreachable → no version → modal never shows. Silent; the modal
-  is not important enough to surface an error.
+- `/version` unreachable → no version → modal never shows. Silent; the modal is not
+  important enough to surface an error.
 - `dismiss()` PATCH fails → keep the modal closed for this session (local state)
   and log via the frontend logger. It will re-appear on the next session; that is
   the correct failure direction (annoying but not data-losing), and it must not
