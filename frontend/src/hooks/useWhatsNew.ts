@@ -32,14 +32,12 @@ export function useWhatsNew(isAuthenticated: boolean): UseWhatsNewResult {
 
     const check = async (): Promise<void> => {
       try {
-        const [{ version }, settings] = await Promise.all([
-          versionApi.get(),
-          settingsApi.get(),
-        ]);
+        const [{ version }, settings] = await Promise.all([versionApi.get(), settingsApi.get()]);
         if (cancelled) return;
 
         const match = findEntryForVersion(version);
         if (!match || settings.whatsNewSeenVersion === version) {
+          setEntry(null);
           setShouldShow(false);
           return;
         }

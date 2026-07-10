@@ -54,15 +54,19 @@ export default function SetupPage(): JSX.Element {
         enabledDomains: selectedDomains,
       });
 
-      setAuth(response.user);
-
+      // Stamp BEFORE setAuth: setAuth flips isAuthenticated, which fires the
+      // useWhatsNew effect. If the stamp has not landed by then, the hook reads a
+      // pre-stamp snapshot and greets a brand-new install about a version it never
+      // ran. The JWT cookie is already set by initialize(), so this call is
+      // authenticated. Non-fatal: worst case is one stale modal.
       try {
         const { version } = await versionApi.get();
         await settingsApi.update({ whatsNewSeenVersion: version });
       } catch (error) {
-        // Non-fatal: the worst case is one stale modal on a brand-new install.
         logger.debug("failed to stamp whatsNewSeenVersion during setup", error);
       }
+
+      setAuth(response.user);
 
       setSuccess(true);
       setLoading(false);

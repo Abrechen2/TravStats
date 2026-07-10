@@ -25,12 +25,19 @@ export default function WhatsNewModal({
       <div
         className="rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col"
         style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="whats-new-title"
       >
         <div
           className="px-6 py-4 border-b flex items-center justify-between"
           style={{ borderColor: "var(--color-border)" }}
         >
-          <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+          <h2
+            id="whats-new-title"
+            className="text-lg font-semibold"
+            style={{ color: "var(--text-primary)" }}
+          >
             {t("whatsNew:title", { version: entry.version })}
           </h2>
           <button
