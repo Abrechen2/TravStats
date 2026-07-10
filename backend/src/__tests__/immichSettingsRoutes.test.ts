@@ -170,11 +170,54 @@ describe("POST /settings/immich/test", () => {
     expect(testImmichConnection).toHaveBeenCalledWith("https://immich.lan", "k");
   });
 
+  it("falls back when the card sends an empty-string baseUrl (admin-provided connection)", async () => {
+    // The real UI always sends baseUrl; with an admin-global connection the
+    // user's own field is "". That must resolve the shared connection, NOT 400.
+    testImmichConnection.mockResolvedValue({ success: true, message: "Connected to Immich" });
+
+    const res = await request(makeApp(immichSettingsRouter))
+      .post("/immich/test")
+      .send({ baseUrl: "" });
+
+    expect(res.status).toBe(200);
+    expect(testImmichConnection).toHaveBeenCalledWith("https://immich.lan", "k");
+  });
+
+  it("falls back when both baseUrl and apiKey are empty strings", async () => {
+    testImmichConnection.mockResolvedValue({ success: true, message: "Connected to Immich" });
+
+    const res = await request(makeApp(immichSettingsRouter))
+      .post("/immich/test")
+      .send({ baseUrl: "", apiKey: "" });
+
+    expect(res.status).toBe(200);
+    expect(testImmichConnection).toHaveBeenCalledWith("https://immich.lan", "k");
+  });
+
   it("returns 400 + kind=notConfigured when nothing is configured and nothing was sent", async () => {
     getImmichConnection.mockResolvedValue(null);
     const res = await request(makeApp(immichSettingsRouter)).post("/immich/test").send({});
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("notConfigured");
+  });
+
+  it("returns 400 + kind=notConfigured on empty strings when nothing is resolved", async () => {
+    getImmichConnection.mockResolvedValue(null);
+    const res = await request(makeApp(immichSettingsRouter))
+      .post("/immich/test")
+      .send({ baseUrl: "", apiKey: "" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("notConfigured");
+  });
+
+  it("uses an explicitly supplied pair over the stored connection", async () => {
+    testImmichConnection.mockResolvedValue({ success: true, message: "Connected to Immich" });
+
+    await request(makeApp(immichSettingsRouter))
+      .post("/immich/test")
+      .send({ baseUrl: "https://new.lan", apiKey: "new-key" });
+
+    expect(testImmichConnection).toHaveBeenCalledWith("https://new.lan", "new-key");
   });
 });
 
@@ -259,5 +302,21 @@ describe("POST /admin/immich/test", () => {
     const res = await request(makeApp(immichAdminRouter)).post("/immich/test").send({});
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("notConfigured");
+  });
+
+  it("falls back to the stored global connection on empty-string fields", async () => {
+    adminSettingsFindFirst.mockResolvedValue({
+      id: 1,
+      globalImmichBaseUrl: "https://global.lan",
+      globalImmichApiKey: "enc:global-key",
+    });
+    testImmichConnection.mockResolvedValue({ success: true, message: "Connected to Immich" });
+
+    const res = await request(makeApp(immichAdminRouter))
+      .post("/immich/test")
+      .send({ baseUrl: "", apiKey: "" });
+
+    expect(res.status).toBe(200);
+    expect(testImmichConnection).toHaveBeenCalledWith("https://global.lan", "global-key");
   });
 });
