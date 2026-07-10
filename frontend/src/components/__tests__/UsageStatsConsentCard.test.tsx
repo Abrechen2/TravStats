@@ -2,13 +2,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-const mocks = vi.hoisted(() => ({ setConsent: vi.fn() }));
+const mocks = vi.hoisted(() => ({ setConsent: vi.fn(), addToast: vi.fn() }));
 
 vi.mock("../../lib/api", () => ({
   usageStatsApi: { setConsent: mocks.setConsent, get: vi.fn() },
 }));
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
+}));
+vi.mock("../../store/toastStore", () => ({
+  useToastStore: (selector: (state: { addToast: typeof mocks.addToast }) => unknown) =>
+    selector({ addToast: mocks.addToast }),
 }));
 
 import UsageStatsConsentCard from "../UsageStatsConsentCard";
@@ -61,12 +65,17 @@ describe("UsageStatsConsentCard", () => {
     expect(link).toHaveAttribute("href", "https://travstats.de/docs/usage-statistics");
   });
 
-  it("still reports the decision when the request fails", async () => {
+  it("does NOT report the decision when the request fails — the card stays mounted to retry", async () => {
     mocks.setConsent.mockRejectedValue(new Error("offline"));
     const onDecided = vi.fn();
     render(<UsageStatsConsentCard onDecided={onDecided} />);
     await userEvent.click(screen.getByRole("button", { name: "usageStats:consent.decline" }));
-    expect(onDecided).toHaveBeenCalledWith("denied");
+    expect(onDecided).not.toHaveBeenCalled();
+    expect(mocks.addToast).toHaveBeenCalledWith("error", "usageStats:consent.saveFailed");
+    // Buttons remain — the admin can retry instead of the choice silently vanishing.
+    expect(
+      screen.getByRole("button", { name: "usageStats:consent.decline" })
+    ).toBeInTheDocument();
   });
 
   it("in setup variant it defers the API call to the parent", async () => {

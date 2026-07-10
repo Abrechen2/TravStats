@@ -2,6 +2,7 @@ import { useState } from "react";
 import { usageStatsApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
+import { useToastStore } from "../store/toastStore";
 
 const DOCS_URL = "https://travstats.de/docs/usage-statistics";
 
@@ -24,6 +25,7 @@ export default function UsageStatsConsentCard({
   variant = "modal",
 }: UsageStatsConsentCardProps): JSX.Element {
   const { t } = useTranslation(["usageStats"]);
+  const addToast = useToastStore((s) => s.addToast);
   const [busy, setBusy] = useState(false);
 
   const buttonClass = "flex-1 px-4 py-2 rounded-md text-sm font-medium border";
@@ -34,9 +36,14 @@ export default function UsageStatsConsentCard({
       try {
         await usageStatsApi.setConsent(consent);
       } catch (error) {
-        // The user's choice is recorded upward regardless: never trap someone
-        // in a consent dialog because the network is down.
+        // Do NOT report the decision upward on failure: the server never
+        // recorded it, so telling the parent it was decided would dismiss
+        // this card (inside the What's-New modal) as if consent was set.
+        // Leave the card mounted so the admin can retry.
         logger.debug("usage-stats consent request failed", error);
+        addToast("error", t("usageStats:consent.saveFailed"));
+        setBusy(false);
+        return;
       }
     }
     setBusy(false);
