@@ -9,7 +9,7 @@
  */
 
 export interface WhatsNewItem {
-  /** lucide-react icon name */
+  /** A single emoji glyph, rendered as text. Same convention as `shared/domains.ts`. */
   icon: string;
   /** dotted key inside the `whatsNew` i18n namespace */
   titleKey: string;
@@ -28,12 +28,12 @@ export const WHATS_NEW_ENTRIES: WhatsNewEntry[] = [
     version: "2.4.0",
     highlights: [
       {
-        icon: "BarChart3",
+        icon: "📊",
         titleKey: "entries.v240.stats.title",
         bodyKey: "entries.v240.stats.body",
       },
       {
-        icon: "Sparkles",
+        icon: "✨",
         titleKey: "entries.v240.whatsNew.title",
         bodyKey: "entries.v240.whatsNew.body",
       },
