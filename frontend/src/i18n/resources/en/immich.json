@@ -52,6 +52,7 @@
     "auth": "Immich rejected the API key.",
     "notFound": "Album not found — was it deleted in Immich?",
     "protocol": "Unexpected response from Immich. Does the server version match?",
+    "invalidUrl": "The server URL is not valid.",
     "retry": "Try again"
   }
 }

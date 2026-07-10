@@ -50,8 +50,19 @@ export interface ImmichAsset {
  * Why an Immich call failed. The route layer maps these onto HTTP status codes
  * and the UI maps them onto distinct messages ("bad URL" vs "bad key" vs
  * "unexpected response"), which is the whole point of separating them.
+ *
+ * `invalidUrl` is the user's own typo (a malformed / non-http base URL, caught
+ * before any request leaves the process); `protocol` means Immich actually
+ * answered but the payload/version was not what we expect. Conflating the two
+ * misleads a user who fat-fingered their URL into debugging their Immich
+ * version, so they stay separate kinds.
  */
-export type ImmichErrorKind = "unreachable" | "auth" | "notFound" | "protocol";
+export type ImmichErrorKind =
+  | "unreachable"
+  | "auth"
+  | "notFound"
+  | "protocol"
+  | "invalidUrl";
 
 export class ImmichError extends Error {
   public readonly kind: ImmichErrorKind;
@@ -89,11 +100,11 @@ export function normalizeImmichBaseUrl(raw: string): string {
   try {
     parsed = new URL(raw.trim());
   } catch {
-    throw new ImmichError("protocol", "Immich URL is not a valid URL");
+    throw new ImmichError("invalidUrl", "Immich URL is not a valid URL");
   }
 
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new ImmichError("protocol", "Immich URL must use http:// or https://");
+    throw new ImmichError("invalidUrl", "Immich URL must use http:// or https://");
   }
 
   const path = parsed.pathname.replace(/\/+$/, "");

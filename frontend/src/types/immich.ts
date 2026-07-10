@@ -64,6 +64,9 @@ export interface ImportEstimate {
 
 /**
  * Why an Immich-backed request failed. `notConfigured` comes back as 409 from
- * our own API; the rest are upstream kinds surfaced as 502.
+ * our own API; `invalidUrl` is a rejected base URL (the user's typo); the rest
+ * are upstream kinds surfaced as 502. `invalidUrl` and `protocol` are kept
+ * distinct so a malformed URL is not misreported as a server-version mismatch.
  */
-export type ImmichFailureKind = "notConfigured" | "unreachable" | "auth" | "notFound" | "protocol";
+export type ImmichFailureKind =
+  "notConfigured" | "unreachable" | "auth" | "notFound" | "protocol" | "invalidUrl";

@@ -43,11 +43,20 @@ describe("testImmichConnection", () => {
     });
   });
 
-  it("reports an invalid base URL as a protocol kind without calling Immich", async () => {
+  it("reports a non-http base URL as an invalidUrl kind without calling Immich", async () => {
     await expect(testImmichConnection("file:///etc/passwd", "key")).resolves.toMatchObject({
       success: false,
-      kind: "protocol",
+      kind: "invalidUrl",
       message: "Immich URL must use http:// or https://",
+    });
+    expect(getServerVersion).not.toHaveBeenCalled();
+  });
+
+  it("reports a malformed base URL as an invalidUrl kind without calling Immich", async () => {
+    await expect(testImmichConnection("not-a-url", "key")).resolves.toMatchObject({
+      success: false,
+      kind: "invalidUrl",
+      message: "Immich URL is not a valid URL",
     });
     expect(getServerVersion).not.toHaveBeenCalled();
   });
