@@ -165,7 +165,7 @@ export default function DetectReviewModal({
             onClick={onClose}
             className="w-9 h-9 rounded-lg flex items-center justify-center"
             style={{ color: "var(--text-muted)" }}
-            aria-label={t("common:close")}
+            aria-label={t("common:accessibility.close")}
           >
             ✕
           </button>
@@ -308,7 +308,7 @@ export default function DetectReviewModal({
             className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--accent)] text-[var(--bg-primary)] disabled:opacity-50"
           >
             {committing
-              ? t("common:loading")
+              ? t("common:loading.default")
               : `✓ ${t("trips:detectReview.commit", {
                   count: selectedCount,
                   defaultValue: "{{count}} Reisen erstellen",
