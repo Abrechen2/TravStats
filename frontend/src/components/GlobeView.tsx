@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
@@ -24,10 +24,25 @@ import {
   getQuartile,
   type Quartile,
 } from "./Globe/heatmapUtils";
-import { buildGlobeLayers } from "./Globe/buildGlobeLayers";
+import { buildGlobeLayers, DEFAULT_AIRPORT_COLOR, DEFAULT_PORT_COLOR } from "./Globe/buildGlobeLayers";
+import { type AppearanceDomain } from "./map/controlPanelKit";
+import type { LabelsMode } from "./map/labelPriority";
+import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
+
+// Base marker radius (px) a size preset scales. off → 0 (hidden).
+const GLOBE_MARKER_BASE_PX = 5;
+import { nightCells as computeNightCells } from "./Globe/sunPosition";
 import { HoverTooltip, type HoverTooltipApi } from "./Globe/HoverTooltip";
 import { PinnedCard } from "./Globe/PinnedCard";
 import { PinnedCardBoundary } from "./Globe/PinnedCardBoundary";
+import { GlobeLabelsOverlay } from "./Globe/GlobeLabelsOverlay";
+import { toPortLabel } from "./map/portLabel";
+import { applyMapOverlays } from "./Globe/mapOverlays";
+import {
+  GlobeControlPanel,
+  type StyleId,
+  type LiteMode,
+} from "./Globe/GlobeControlPanel";
 import type {
   ArcDatum,
   CruisePathDatum,
@@ -38,20 +53,24 @@ import type { StyleSpecification } from "maplibre-gl";
 import type { GeoJSONFeature } from "../types";
 import type { Cruise } from "../types/cruise";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
+import { resolveCruiseArcColor, type CruiseColorMode } from "../lib/cruiseColor";
 import { logger } from "../lib/logger";
 import { escapeHtml } from "../lib/escapeHtml";
+import { flagImgHtml, countryName } from "../lib/countryFlag";
 import { useTranslation } from "../hooks/useTranslation";
 import { useTimeSliderStore } from "../store/timeSliderStore";
-import { GlobeTimeSlider } from "./Globe/GlobeTimeSlider";
+import { GlobeTimeHistogram } from "./Globe/GlobeTimeHistogram";
 import {
   computeCruiseLegDates,
   computeTimeRange,
+  computeMonthlyBuckets,
   flightVisibleFilter,
   flightVisibleLive,
   legProgress,
   legVisibleFilter,
   truncatePolyline,
   type CruiseLegDates,
+  type MonthBucket,
 } from "./Globe/timeSliderUtils";
 
 /**
@@ -79,17 +98,31 @@ interface GlobeViewProps {
   onCruiseOpen?: (cruiseId: string) => void;
   /** When set, every flight arc renders in this RGB instead of the
       heatmap palette. Same prop semantics as `MapContainer3D.flightRouteColor`
-      on the flat map. */
+      on the flat map. Superseded by `statusTwoTone` when that's set. */
   flightRouteColor?: [number, number, number];
+  /** Split flight arcs into a two-tone gradient by status (scheduled vs.
+      past/historical) instead of a single flightRouteColor fill or the
+      count heatmap. Same prop semantics as `MapContainer3D.statusTwoTone`
+      on the flat map. */
+  statusTwoTone?: boolean;
+  /** Color strategy for cruise paths: shared two-tone by status, or a
+      distinct hue per cruise. Same prop semantics as
+      `MapContainer3D.cruiseColorMode` on the flat map. Defaults to
+      `"status"`. */
+  cruiseColorMode?: CruiseColorMode;
   minRouteCount?: number;
+  /** Which domain appearance sections the control panel exposes. Globe
+      currently only mounts on the Alle tab, so this defaults to both. */
+  appearanceDomains?: readonly AppearanceDomain[];
 }
 
 // ────────────────────────────────────────────────────────────────────
 // Style options — six tokenless basemaps, modelled after geojson.io.
 // CARTO + OpenFreeMap + ESRI World Imagery + OSM Standard. None of
 // them require an API key.
+// `StyleId` / `LiteMode` are defined in and imported from GlobeControlPanel
+// so the panel and this component share one source of truth.
 // ────────────────────────────────────────────────────────────────────
-type StyleId = "standard" | "light" | "dark" | "voyager" | "satellite" | "osm";
 
 interface SkyConfig {
   "sky-color": string;
@@ -113,9 +146,9 @@ const SKY_LIGHT: SkyConfig = {
   "horizon-color": "#a8c0d6",
   "fog-color": "#e2e8f0",
   "fog-ground-blend": 0.5,
-  "horizon-fog-blend": 0.6,
+  "horizon-fog-blend": 0,
   "sky-horizon-blend": 0.7,
-  "atmosphere-blend": 1.0,
+  "atmosphere-blend": 0,
 };
 
 const SKY_DARK: SkyConfig = {
@@ -123,9 +156,9 @@ const SKY_DARK: SkyConfig = {
   "horizon-color": "#3b3f5e",
   "fog-color": "#1f2937",
   "fog-ground-blend": 0.5,
-  "horizon-fog-blend": 0.6,
+  "horizon-fog-blend": 0,
   "sky-horizon-blend": 0.7,
-  "atmosphere-blend": 1.0,
+  "atmosphere-blend": 0,
 };
 
 const SKY_VOYAGER: SkyConfig = {
@@ -133,9 +166,9 @@ const SKY_VOYAGER: SkyConfig = {
   "horizon-color": "#7aa3c8",
   "fog-color": "#cfe0ee",
   "fog-ground-blend": 0.5,
-  "horizon-fog-blend": 0.6,
+  "horizon-fog-blend": 0,
   "sky-horizon-blend": 0.7,
-  "atmosphere-blend": 1.0,
+  "atmosphere-blend": 0,
 };
 
 const SKY_SATELLITE: SkyConfig = {
@@ -143,9 +176,9 @@ const SKY_SATELLITE: SkyConfig = {
   "horizon-color": "#3a4a6e",
   "fog-color": "#0b1a2a",
   "fog-ground-blend": 0.4,
-  "horizon-fog-blend": 0.55,
+  "horizon-fog-blend": 0,
   "sky-horizon-blend": 0.7,
-  "atmosphere-blend": 1.0,
+  "atmosphere-blend": 0,
 };
 
 const buildRasterStyle = (
@@ -290,18 +323,123 @@ export default function GlobeView({
   onFlightOpen,
   onCruiseOpen,
   flightRouteColor,
+  statusTwoTone,
+  cruiseColorMode = "status",
   minRouteCount = 1,
+  appearanceDomains = ["flight", "cruise"],
 }: GlobeViewProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
   const mapRef = useRef<MapRef>(null);
 
   const [styleId, setStyleId] = useState<StyleId>(() => {
-    if (typeof window === "undefined") return "dark";
-    const stored = window.sessionStorage.getItem("globeStyleId");
-    return STYLE_OPTIONS.some((s) => s.id === stored) ? (stored as StyleId) : "dark";
+    const stored = loadMapAppearance().styleId;
+    return stored && STYLE_OPTIONS.some((s) => s.id === stored) ? (stored as StyleId) : "dark";
   });
   const [autoRotate, setAutoRotate] = useState(false);
+  // Day/night terminator overlay. `nightTick` recomputes the night grid on a
+  // slow interval so the shade drifts with real time (60 s is far finer than
+  // the terminator visibly moves at globe zoom).
+  const [showNight, setShowNight] = useState(true);
+  // Marker-label reveal: off / key markers only (greedy screen-space
+  // collision, the default) / all (ignore overlap). Persisted.
+  const [labelsMode, setLabelsMode] = useState<LabelsMode>(
+    () => loadMapAppearance().labelsMode ?? "important"
+  );
+  // Map-appearance customisation (the panel's "Anpassung" section) plus
+  // the style-level overlays, all persisted to localStorage so a user's
+  // look survives reloads. `routeColor === null` keeps the per-route
+  // frequency heatmap; a value overrides every arc with one solid tint.
+  // The prop `flightRouteColor` (set by some parent tabs) seeds the
+  // initial route colour when nothing is stored yet.
+  // Flight-domain appearance. `routeColor === null` keeps the per-route
+  // frequency heatmap; a value overrides every arc with one solid tint.
+  const [routeColor, setRouteColor] = useState<[number, number, number] | null>(
+    () => loadMapAppearance().routeColor ?? flightRouteColor ?? null
+  );
+  const [flightRouteWidth, setFlightRouteWidth] = useState<number>(
+    () => loadMapAppearance().flightRouteWidth ?? 1
+  );
+  // Marker colours are nullable: null = brand default (the "Auto" pill).
+  const [airportColor, setAirportColor] = useState<[number, number, number] | null>(
+    () => loadMapAppearance().airportColor ?? null
+  );
+  const [flightMarkerSize, setFlightMarkerSize] = useState<number>(
+    () => loadMapAppearance().flightMarkerSize ?? 1
+  );
+  // Cruise-domain appearance. `cruiseRouteColor === null` keeps the brand
+  // cruise blue; a value overrides it.
+  const [cruiseRouteColor, setCruiseRouteColor] = useState<[number, number, number] | null>(
+    () => loadMapAppearance().cruiseRouteColor ?? null
+  );
+  const [cruiseRouteWidth, setCruiseRouteWidth] = useState<number>(
+    () => loadMapAppearance().cruiseRouteWidth ?? 1
+  );
+  const [portColor, setPortColor] = useState<[number, number, number] | null>(
+    () => loadMapAppearance().portColor ?? null
+  );
+  const [cruiseMarkerSize, setCruiseMarkerSize] = useState<number>(
+    () => loadMapAppearance().cruiseMarkerSize ?? 1
+  );
+  // Style-level overlays (relief hillshade + basemap place names).
+  const [showTerrain, setShowTerrain] = useState<boolean>(
+    () => loadMapAppearance().showTerrain ?? false
+  );
+  const [showPlaceLabels, setShowPlaceLabels] = useState<boolean>(
+    () => loadMapAppearance().showPlaceLabels ?? true
+  );
+
+  // Persist every appearance / overlay choice as one blob.
+  useEffect(() => {
+    saveMapAppearance({
+      styleId,
+      routeColor,
+      flightRouteWidth,
+      airportColor,
+      flightMarkerSize,
+      cruiseRouteColor,
+      cruiseRouteWidth,
+      portColor,
+      cruiseMarkerSize,
+      showTerrain,
+      showPlaceLabels,
+      labelsMode,
+    });
+  }, [
+    styleId,
+    routeColor,
+    flightRouteWidth,
+    airportColor,
+    flightMarkerSize,
+    cruiseRouteColor,
+    cruiseRouteWidth,
+    portColor,
+    cruiseMarkerSize,
+    showTerrain,
+    showPlaceLabels,
+    labelsMode,
+  ]);
+
+  // Mirror the overlay toggles into refs so the `style.load` re-apply
+  // handler (which is created once) always reads the current values.
+  const showTerrainRef = useRef(showTerrain);
+  const showPlaceLabelsRef = useRef(showPlaceLabels);
+  useEffect(() => {
+    showTerrainRef.current = showTerrain;
+  }, [showTerrain]);
+  useEffect(() => {
+    showPlaceLabelsRef.current = showPlaceLabels;
+  }, [showPlaceLabels]);
+
+  const [nightTick, setNightTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNightTick(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const nightCellsData = useMemo(
+    () => (showNight ? computeNightCells(new Date(nightTick)) : []),
+    [showNight, nightTick],
+  );
   // Tooltip lives in a leaf component (HoverTooltip) so onHover updates at
   // 60–120 Hz don't re-render the whole GlobeView tree. Imperative API only.
   const tooltipRef = useRef<HoverTooltipApi | null>(null);
@@ -321,9 +459,7 @@ export default function GlobeView({
   // only need to scale them down enough that the bow doesn't dominate
   // the screen at street level.
   const altitudeFactor =
-    Math.round(
-      Math.max(0.25, Math.min(1, 1 - 0.18 * Math.max(0, mapZoom - 1))) * 20
-    ) / 20;
+    Math.round(Math.max(0.25, Math.min(1, 1 - 0.18 * Math.max(0, mapZoom - 1))) * 20) / 20;
 
   // EarthOcclusionExtension props are static — the extension reads the
   // live camera (lng / lat / zoom) from `viewport` inside its draw()
@@ -342,7 +478,6 @@ export default function GlobeView({
   // halves column disk resolution, and disables auto-highlight on
   // pickable layers. Tri-state: "auto" lets the dataset thresholds
   // decide; "on" / "off" override forever (within a session).
-  type LiteMode = "auto" | "on" | "off";
   const [liteMode, setLiteMode] = useState<LiteMode>(() => {
     if (typeof window === "undefined") return "auto";
     const stored = window.sessionStorage.getItem("globeLiteMode");
@@ -363,8 +498,7 @@ export default function GlobeView({
     if (liteMode === "on") return true;
     if (liteMode === "off") return false;
     return (
-      flights.length >= LITE_AUTO_ARC_THRESHOLD ||
-      cruises.length >= LITE_AUTO_CRUISE_THRESHOLD
+      flights.length >= LITE_AUTO_ARC_THRESHOLD || cruises.length >= LITE_AUTO_CRUISE_THRESHOLD
     );
   }, [liteMode, flights.length, cruises.length]);
   // First-run coachmark: shown on the first ever globe visit, dismissed
@@ -440,6 +574,12 @@ export default function GlobeView({
     if (range) setSliderRange(range.min, range.max);
   }, [flights, cruises, setSliderRange]);
 
+  // Monthly activity buckets for the time histogram (flights + cruises).
+  const monthBuckets = useMemo<MonthBucket[]>(() => {
+    const range = computeTimeRange(flights, cruises);
+    return range ? computeMonthlyBuckets(flights, cruises, range.min, range.max) : [];
+  }, [flights, cruises]);
+
   // Per-leg date metadata for every cruise. Computed once per cruises
   // identity. Keyed by cruiseId so the live-mode partial-draw can pair
   // a leg's geometry with its (start, end) dates in O(1).
@@ -471,14 +611,9 @@ export default function GlobeView({
     currentStyleRef.current = currentStyle;
   }, [currentStyle]);
 
-  const onStyleChange = useCallback((next: StyleId) => {
-    setStyleId(next);
-    try {
-      window.sessionStorage.setItem("globeStyleId", next);
-    } catch {
-      // sessionStorage may be unavailable in private mode — opt-in only
-    }
-  }, []);
+  // Basemap choice persists via the shared appearance blob (save effect
+  // below), so it carries across the 2D ↔ 3D switch.
+  const onStyleChange = useCallback((next: StyleId) => setStyleId(next), []);
 
   // Apply globe projection + sky on initial load. Driven by
   // react-map-gl's onLoad — the only event that fires after the map ref
@@ -549,12 +684,28 @@ export default function GlobeView({
       } catch (err) {
         logger.warn("GlobeView: setSky failed", err);
       }
+      // A style swap wipes the hillshade source/layer and resets symbol
+      // visibility — re-apply both from the latest toggle values.
+      applyMapOverlays(map, {
+        showTerrain: showTerrainRef.current,
+        showPlaceLabels: showPlaceLabelsRef.current,
+      });
     };
     map.on("style.load", reapply);
     return () => {
       map.off("style.load", reapply);
     };
   }, [mapReady]);
+
+  // Apply the style-level overlays on initial ready and whenever a
+  // toggle flips (basemap swaps are handled by the `style.load` reapply
+  // above). Idempotent, so the overlap with initial load is harmless.
+  useEffect(() => {
+    if (!mapReady) return;
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    applyMapOverlays(map, { showTerrain, showPlaceLabels });
+  }, [mapReady, showTerrain, showPlaceLabels]);
 
   // Auto-rotation loop. Drives `map.jumpTo` ~60 fps with a constant
   // angular velocity (4 deg/s = one revolution / 90 s).
@@ -612,6 +763,13 @@ export default function GlobeView({
       departure: { iata?: string; name?: string };
       arrival: { iata?: string; name?: string };
       weak: boolean;
+      // Route carries at least one scheduled flight / at least one
+      // flight that's actually been flown (i.e. status !== 'scheduled').
+      // Mirrors routesLayer.ts's RouteRecord — combined, these two flags
+      // simplify to a "past" vs. "scheduled" two-tone bucket: a route is
+      // "scheduled" only when EVERY flight on it is still scheduled.
+      hasUpcoming: boolean;
+      hasPastFlown: boolean;
     }
     const routes = new Map<string, RouteAcc>();
     for (const flight of filteredFlights) {
@@ -634,12 +792,15 @@ export default function GlobeView({
       // falls back to a coord-rounded sentinel. This may collapse
       // multiple flights that were similar-but-not-identical routes.
       const flightWeak = !dep?.iata || !arr?.iata;
+      const isScheduled = flight.properties?.status === "scheduled";
       const key = createRouteKey(depKey, arrKey);
       const existing = routes.get(key);
       if (existing) {
         existing.count++;
         existing.flightIds.push(flight.properties.id);
         if (flightWeak) existing.weak = true;
+        if (isScheduled) existing.hasUpcoming = true;
+        if (!isScheduled) existing.hasPastFlown = true;
       } else {
         routes.set(key, {
           count: 1,
@@ -649,6 +810,8 @@ export default function GlobeView({
           departure: dep ?? {},
           arrival: arr ?? {},
           weak: flightWeak,
+          hasUpcoming: isScheduled,
+          hasPastFlown: !isScheduled,
         });
       }
     }
@@ -665,6 +828,10 @@ export default function GlobeView({
       // appears visually, but without the polar-ring artifact a high-
       // altitude arc would produce.
       const quartile = getQuartile(r.count, thresholds);
+      // Pure-scheduled (never flown) → "scheduled"; everything else
+      // (historical-only, mixed, regular past-only) collapses to "past" —
+      // mirrors routesLayer.ts's statusTwoTone collapsing rule exactly.
+      const status: ArcDatum["status"] = r.hasUpcoming && !r.hasPastFlown ? "scheduled" : "past";
       if (distanceKm >= ANTIPODAL_DISTANCE_KM) {
         antipodals.push({
           from: r.from,
@@ -677,6 +844,7 @@ export default function GlobeView({
           color: getHeatmapColor(r.count, thresholds),
           quartile,
           weak: r.weak,
+          status,
         });
         continue;
       }
@@ -692,6 +860,7 @@ export default function GlobeView({
         color: getHeatmapColor(r.count, thresholds),
         quartile,
         weak: r.weak,
+        status,
       });
     }
     return { arcsData: arcs, antipodalArcs: antipodals, heatmapThresholds: thresholds };
@@ -699,10 +868,7 @@ export default function GlobeView({
 
   const airportPoints = useMemo<PointDatum[]>(() => {
     const seen = new Map<string, PointDatum>();
-    const bumpLastVisit = (
-      cur: PointDatum,
-      candidate: string | undefined,
-    ): string | undefined => {
+    const bumpLastVisit = (cur: PointDatum, candidate: string | undefined): string | undefined => {
       if (!candidate) return cur.lastVisit;
       if (!cur.lastVisit || candidate > cur.lastVisit) return candidate;
       return cur.lastVisit;
@@ -730,6 +896,9 @@ export default function GlobeView({
             size: 1,
             iata: dep.iata,
             name: dep.name ?? dep.iata,
+            icao: dep.icao,
+            city: dep.city ?? undefined,
+            country: dep.country ?? undefined,
             lastVisit: departureTime,
           });
         }
@@ -749,6 +918,9 @@ export default function GlobeView({
             size: 1,
             iata: arr.iata,
             name: arr.name ?? arr.iata,
+            icao: arr.icao,
+            city: arr.city ?? undefined,
+            country: arr.country ?? undefined,
             lastVisit: departureTime,
           });
         }
@@ -814,9 +986,7 @@ export default function GlobeView({
           Math.sin(aLat),
         ];
         const dotProd =
-          camDir[0] * anchorDir[0] +
-          camDir[1] * anchorDir[1] +
-          camDir[2] * anchorDir[2];
+          camDir[0] * anchorDir[0] + camDir[1] * anchorDir[1] + camDir[2] * anchorDir[2];
         // cameraDistanceFromZoom heuristic, mirrored from the shader
         const dist = 1 + 1.5 * Math.pow(2, -Math.max(0, zoom) * 0.7);
         const cosHorizon = 1.0 / Math.max(1.001, dist);
@@ -867,6 +1037,12 @@ export default function GlobeView({
       if (!fc) continue;
       const label = cruise.ship?.name ?? cruise.shipNameOverride ?? cruise.cruiseLine ?? "Cruise";
       const legDates = cruiseLegDatesByCruise.get(cruise.id) ?? [];
+      // Resolved once per cruise — same helper the flat map's
+      // cruiseArcsLayer.ts uses, so both renderers agree pixel-for-pixel
+      // on "status" two-tone (blue/cyan) vs. "perCruise" hues. A user
+      // color override (Anpassung panel) wins over the colorMode palette,
+      // matching the flat map's `options.arcColor ?? resolveCruiseArcColor(...)`.
+      const color = cruiseRouteColor ?? resolveCruiseArcColor(cruise, cruiseColorMode);
       // Index legs by "from:to" so we can pair geometry to date in O(1).
       const dateByPair = new Map<string, CruiseLegDates>();
       for (const ld of legDates) dateByPair.set(`${ld.fromPortId}:${ld.toPortId}`, ld);
@@ -890,7 +1066,13 @@ export default function GlobeView({
               const partialSwapped = truncatePolyline(swapped, p);
               if (partialSwapped.length < 2) continue;
               const partial = partialSwapped.map(([lat, lng]) => [lng, lat] as [number, number]);
-              out.push({ path: partial, cruiseId: cruise.id, cruiseLabel: label });
+              out.push({
+                path: partial,
+                cruiseId: cruise.id,
+                cruiseLabel: label,
+                status: cruise.status,
+                color,
+              });
               continue;
             }
             // p >= 1: full leg falls through to push-full below
@@ -904,7 +1086,7 @@ export default function GlobeView({
           if (ld && !legVisibleFilter(ld, sliderFilterStart, sliderFilterEnd)) continue;
         }
 
-        out.push({ path, cruiseId: cruise.id, cruiseLabel: label });
+        out.push({ path, cruiseId: cruise.id, cruiseLabel: label, status: cruise.status, color });
       }
     }
     return out;
@@ -912,6 +1094,8 @@ export default function GlobeView({
     cruises,
     cruiseGeometry,
     cruiseLegDatesByCruise,
+    cruiseColorMode,
+    cruiseRouteColor,
     sliderMode,
     sliderCurrent,
     sliderFilterStart,
@@ -953,9 +1137,7 @@ export default function GlobeView({
         const cur = seen.get(port.id);
         if (cur) {
           const nextLast =
-            visitIso && (!cur.lastVisit || visitIso > cur.lastVisit)
-              ? visitIso
-              : cur.lastVisit;
+            visitIso && (!cur.lastVisit || visitIso > cur.lastVisit) ? visitIso : cur.lastVisit;
           seen.set(port.id, { ...cur, size: cur.size + 1, lastVisit: nextLast });
         } else {
           seen.set(port.id, {
@@ -963,6 +1145,12 @@ export default function GlobeView({
             size: 1,
             iata: port.unlocode ?? port.name,
             name: port.name,
+            city: port.city ?? undefined,
+            // On-map pill shows the readable port name, not the raw
+            // UN/LOCODE (the tooltip still surfaces the code via `iata`).
+            label: toPortLabel(port.name),
+            // Flag from the LOCODE country prefix (only when it's a real code).
+            country: port.unlocode ? port.unlocode.slice(0, 2) : undefined,
             lastVisit: visitIso,
           });
         }
@@ -1021,6 +1209,7 @@ export default function GlobeView({
       departure: latest.properties.departureAirport ?? {},
       arrival: latest.properties.arrivalAirport ?? {},
       weak: false,
+      status: latest.properties?.status === "scheduled" ? "scheduled" : "past",
     };
   }, [sliderMode, filteredFlights, lite, altitudeFactor]);
 
@@ -1088,14 +1277,15 @@ export default function GlobeView({
     (info: PickingInfo<ArcDatum>): void => {
       if (info.object && info.x != null && info.y != null) {
         const d = info.object;
+        const epLine = (ep: { iata?: string; name?: string; country?: string | null }): string =>
+          `<div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;padding:1px 0;">
+            ${flagImgHtml(ep.country, 18)}<span>${escapeHtml(ep.iata ?? "UNK")}</span>
+            <span style="opacity:0.6;font-weight:500;font-size:11px;">${escapeHtml(ep.name ?? "")}</span>
+          </div>`;
         const html = `
-          <div style="font-weight:600;margin-bottom:2px;">
-            ${escapeHtml(d.departure.iata ?? "UNK")} ↔ ${escapeHtml(d.arrival.iata ?? "UNK")}
-          </div>
-          <div style="font-size:11px;opacity:0.85;margin-bottom:4px;">
-            ${escapeHtml(d.departure.name ?? "Unknown")} ↔ ${escapeHtml(d.arrival.name ?? "Unknown")}
-          </div>
-          <div style="color:rgb(${d.color[0]},${d.color[1]},${d.color[2]});font-weight:600;">
+          ${epLine(d.departure)}
+          ${epLine(d.arrival)}
+          <div style="color:rgb(${d.color[0]},${d.color[1]},${d.color[2]});font-weight:600;margin-top:4px;">
             ${escapeHtml(t("map:globe.timesFlown", { count: d.count }))}
           </div>`;
         tooltipRef.current?.show({ html, x: info.x, y: info.y });
@@ -1115,10 +1305,18 @@ export default function GlobeView({
               ${escapeHtml(t("map:tooltip.lastVisit"))}: ${escapeHtml(formatTooltipDate(d.lastVisit, locale))}
             </div>`
           : "";
+        const icaoPill = d.icao
+          ? `<span style="font-size:10px;font-family:monospace;color:rgba(241,245,249,0.5);background:rgba(255,255,255,0.06);border-radius:4px;padding:1px 5px;">${escapeHtml(d.icao)}</span>`
+          : "";
+        const place = [d.city, countryName(d.country, locale)].filter(Boolean).join(", ");
+        const placeLine = place
+          ? `<div style="opacity:0.62;font-size:10.5px;margin-top:2px;">${escapeHtml(place)}</div>`
+          : "";
         const html = `
-          <div style="font-weight:600;">${escapeHtml(d.iata)}</div>
-          <div style="opacity:0.85;font-size:11px;">${escapeHtml(d.name)}</div>
-          <div style="color:#fbbf24;margin-top:2px;">
+          <div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;">${flagImgHtml(d.country, 19)}<span>${escapeHtml(d.iata)}</span>${icaoPill}</div>
+          <div style="opacity:0.88;font-size:11.5px;margin-top:3px;">${escapeHtml(d.name)}</div>
+          ${placeLine}
+          <div style="color:#fbbf24;margin-top:4px;">
             ${d.size} ${escapeHtml(t("map:globe.flight", { count: d.size }))}
           </div>
           ${lastVisitLine}`;
@@ -1139,9 +1337,18 @@ export default function GlobeView({
               ${escapeHtml(t("map:tooltip.lastCall"))}: ${escapeHtml(formatTooltipDate(d.lastVisit, locale))}
             </div>`
           : "";
+        const place = [d.city, countryName(d.country, locale)].filter(Boolean).join(", ");
+        const placeLine = place
+          ? `<div style="opacity:0.62;font-size:10.5px;margin-top:2px;">${escapeHtml(place)}</div>`
+          : "";
+        const codeLine =
+          d.iata !== d.name
+            ? `<div style="opacity:0.55;font-size:10px;font-family:monospace;margin-top:2px;">${escapeHtml(d.iata)}</div>`
+            : "";
         const html = `
-          <div style="font-weight:600;">⚓ ${escapeHtml(d.name)}</div>
-          ${d.iata !== d.name ? `<div style="opacity:0.85;font-size:11px;">${escapeHtml(d.iata)}</div>` : ""}
+          <div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;">${d.country ? flagImgHtml(d.country, 19) : "⚓"}<span>${escapeHtml(d.name)}</span></div>
+          ${placeLine}
+          ${codeLine}
           ${lastCallLine}`;
         tooltipRef.current?.show({ html, x: info.x, y: info.y });
       } else {
@@ -1179,7 +1386,16 @@ export default function GlobeView({
         onCruisePathHover,
         flyToArc,
         setPinned,
-        flightRouteColor,
+        flightRouteColor: routeColor ?? undefined,
+        statusTwoTone,
+        arcWidthScale: flightRouteWidth,
+        cruiseArcWidthScale: cruiseRouteWidth,
+        airportColor: airportColor ?? DEFAULT_AIRPORT_COLOR,
+        portColor: portColor ?? DEFAULT_PORT_COLOR,
+        airportRadius: GLOBE_MARKER_BASE_PX * flightMarkerSize,
+        portRadius: GLOBE_MARKER_BASE_PX * cruiseMarkerSize,
+        nightCells: nightCellsData,
+        showNight,
       }),
     [
       arcsData,
@@ -1197,7 +1413,16 @@ export default function GlobeView({
       onPortHover,
       occlusionExt,
       occlusionProps,
-      flightRouteColor,
+      routeColor,
+      statusTwoTone,
+      flightRouteWidth,
+      cruiseRouteWidth,
+      airportColor,
+      portColor,
+      flightMarkerSize,
+      cruiseMarkerSize,
+      nightCellsData,
+      showNight,
     ]
   );
 
@@ -1253,24 +1478,28 @@ export default function GlobeView({
       {/* Top-right stats overlay — driven by the same slider-filtered
           data as the globe layers, so numbers tick in real time as the
           user scrubs. Lives top-right because the top-left is owned by
-          the dashboard's Aktivität sidebar (would otherwise overlap). */}
+          the dashboard's Aktivität sidebar (would otherwise overlap).
+          Offset down (top-16, not top-4) to clear DashboardLayout's
+          "+ hinzufügen" button, which lives in the same corner and is
+          always present regardless of map mode. */}
       {(liveStats.flights > 0 || liveStats.cruises > 0) && (
-        <div
-          className="absolute top-4 right-4 z-10"
-          style={{ pointerEvents: "auto" }}
-        >
+        <div className="absolute top-16 right-4 z-10" style={{ pointerEvents: "auto" }}>
           <div
-            className="rounded-md p-3 text-xs"
+            className="rounded-xl p-3 text-xs"
             style={{
-              background: "rgba(13, 17, 23, 0.78)",
-              backdropFilter: "blur(12px)",
-              border: "1px solid rgba(255,255,255,0.18)",
+              background: "rgba(13, 17, 23, 0.85)",
+              backdropFilter: "blur(14px)",
+              border: "1px solid rgba(255,255,255,0.12)",
               color: "rgba(241,245,249,0.95)",
               fontFamily: "'Inter', sans-serif",
-              minWidth: 160,
+              minWidth: 168,
+              boxShadow: "0 8px 28px rgba(0,0,0,0.45)",
             }}
           >
-            <div className="mb-1.5 text-[11px] font-semibold opacity-90">
+            <div
+              className="mb-1.5 text-[10px] font-semibold uppercase"
+              style={{ letterSpacing: "0.08em", color: "rgba(241,245,249,0.45)" }}
+            >
               {t("map:globe.stats.title")}
             </div>
             <div className="space-y-0.5 text-[11px]">
@@ -1307,7 +1536,8 @@ export default function GlobeView({
                 </div>
               )}
               {liveStats.topAirport && (
-                <div className="mt-1.5 border-t pt-1 text-[10px] opacity-80"
+                <div
+                  className="mt-1.5 border-t pt-1 text-[10px] opacity-80"
                   style={{ borderColor: "rgba(255,255,255,0.12)" }}
                 >
                   <span className="opacity-75">{t("map:globe.stats.top")}:</span>{" "}
@@ -1322,191 +1552,70 @@ export default function GlobeView({
         </div>
       )}
 
-      {/* Bottom-left stack: auto-rotate toggle + heatmap legend */}
-      <div
-        className="absolute bottom-4 left-4 z-10 flex flex-col items-start gap-2"
-        style={{ pointerEvents: "auto" }}
-      >
-        <div
-          className="rounded-md p-3 text-xs"
-          style={{
-            background: "rgba(13, 17, 23, 0.78)",
-            backdropFilter: "blur(12px)",
-            border: "1px solid rgba(255,255,255,0.18)",
-            color: "rgba(241,245,249,0.95)",
-            fontFamily: "'Inter', sans-serif",
+      {/* Consolidated map controls — layers, basemap, frequency filter,
+          performance + recenter in one collapsible panel (own design). */}
+      <div className="absolute bottom-4 left-4 z-10" style={{ pointerEvents: "auto" }}>
+        <GlobeControlPanel
+          autoRotate={autoRotate}
+          onAutoRotateChange={setAutoRotate}
+          showNight={showNight}
+          onShowNightChange={setShowNight}
+          labelsMode={labelsMode}
+          onLabelsModeChange={setLabelsMode}
+          showTerrain={showTerrain}
+          onShowTerrainChange={setShowTerrain}
+          showPlaceLabels={showPlaceLabels}
+          onShowPlaceLabelsChange={setShowPlaceLabels}
+          styleOptions={STYLE_OPTIONS}
+          styleId={styleId}
+          onStyleChange={onStyleChange}
+          liteMode={liteMode}
+          lite={lite}
+          onLiteModeChange={onLiteModeChange}
+          onRecenter={onRecenter}
+          legendRanges={legendRanges}
+          activeQuartile={activeQuartile}
+          onQuartileChange={setActiveQuartile}
+          hasArcs={arcsData.length > 0}
+          antipodalCount={antipodalArcs.length}
+          hasWeakArcs={arcsData.some((a) => a.weak)}
+          appearanceDomains={appearanceDomains}
+          flightAppearance={{
+            routeColor,
+            onRouteColorChange: setRouteColor,
+            routeWidth: flightRouteWidth,
+            onRouteWidthChange: setFlightRouteWidth,
+            markerColor: airportColor,
+            onMarkerColorChange: setAirportColor,
+            markerSize: flightMarkerSize,
+            onMarkerSizeChange: setFlightMarkerSize,
           }}
-        >
-          <label className="flex cursor-pointer select-none items-center gap-2">
-            <input
-              type="checkbox"
-              checked={autoRotate}
-              onChange={(e) => setAutoRotate(e.target.checked)}
-              className="cursor-pointer"
-            />
-            <span className="text-xs font-medium">🌍 {t("map:globe.autoRotation")}</span>
-          </label>
-          <button
-            type="button"
-            onClick={onRecenter}
-            className="mt-2 flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs transition-colors"
-            style={{
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.18)",
-              color: "rgba(241,245,249,0.95)",
-            }}
-            title={t("map:globe.recenterHint")}
-          >
-            <span aria-hidden>🧭</span>
-            <span className="font-medium">{t("map:globe.recenter")}</span>
-          </button>
-          <div
-            className="mt-1.5 flex items-center justify-between gap-2"
-            title={t("map:globe.performanceHint")}
-          >
-            <span className="text-xs font-medium">⚡ {t("map:globe.performance")}</span>
-            <select
-              value={liteMode}
-              onChange={(e) => onLiteModeChange(e.target.value as LiteMode)}
-              className="cursor-pointer rounded px-1.5 py-0.5 text-[11px]"
-              style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.18)",
-                color: "rgba(241,245,249,0.95)",
-              }}
-            >
-              <option value="auto">
-                {t("map:globe.performanceAuto")} ({lite ? t("map:globe.performanceOn") : t("map:globe.performanceOff")})
-              </option>
-              <option value="on">{t("map:globe.performanceOn")}</option>
-              <option value="off">{t("map:globe.performanceOff")}</option>
-            </select>
-          </div>
-        </div>
-
-        {arcsData.length > 0 && (
-          <div
-            className="rounded-md p-3 text-xs"
-            style={{
-              background: "rgba(13, 17, 23, 0.78)",
-              backdropFilter: "blur(12px)",
-              border: "1px solid rgba(255,255,255,0.18)",
-              color: "rgba(241,245,249,0.95)",
-              fontFamily: "'Inter', sans-serif",
-            }}
-          >
-            <div className="mb-1.5 text-[11px] font-semibold opacity-90">
-              {t("map:globe.routeFrequency")}
-            </div>
-            <div className="space-y-1">
-              {legendRanges.map(({ q, color, label }) => {
-                const active = activeQuartile === q;
-                return (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setActiveQuartile(active ? null : q)}
-                    className="flex w-full cursor-pointer items-center gap-2 rounded px-1.5 py-0.5 transition-colors"
-                    style={{
-                      background: active ? "rgba(255,255,255,0.10)" : "transparent",
-                      opacity: activeQuartile === null || active ? 1 : 0.55,
-                    }}
-                    title={t("map:globe.quartileFilterHint")}
-                  >
-                    <div className="h-0.5 w-7" style={{ backgroundColor: color }} />
-                    <span className="text-[11px]">{label}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {activeQuartile !== null && (
-              <button
-                type="button"
-                onClick={() => setActiveQuartile(null)}
-                className="mt-1.5 cursor-pointer text-[10px] underline opacity-70 hover:opacity-100"
-              >
-                {t("map:globe.quartileFilterClear")}
-              </button>
-            )}
-            {antipodalArcs.length > 0 && (
-              <div
-                className="mt-2 border-t pt-1.5 text-[10px] opacity-70"
-                style={{ borderColor: "rgba(255,255,255,0.12)" }}
-              >
-                {t("map:globe.antipodalSimplified", { count: antipodalArcs.length })}
-              </div>
-            )}
-            {arcsData.some((a) => a.weak) && (
-              <div
-                className="mt-2 flex items-center gap-2 border-t pt-1.5 text-[10px] opacity-75"
-                style={{ borderColor: "rgba(255,255,255,0.12)" }}
-                title={t("map:globe.weakHint")}
-              >
-                <svg width="28" height="2" viewBox="0 0 28 2" aria-hidden>
-                  <line
-                    x1="0"
-                    y1="1"
-                    x2="28"
-                    y2="1"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeDasharray="4 3"
-                  />
-                </svg>
-                <span>{t("map:globe.weak")}</span>
-              </div>
-            )}
-          </div>
-        )}
+          cruiseAppearance={{
+            routeColor: cruiseRouteColor,
+            onRouteColorChange: setCruiseRouteColor,
+            routeWidth: cruiseRouteWidth,
+            onRouteWidthChange: setCruiseRouteWidth,
+            markerColor: portColor,
+            onMarkerColorChange: setPortColor,
+            markerSize: cruiseMarkerSize,
+            onMarkerSizeChange: setCruiseMarkerSize,
+          }}
+        />
       </div>
 
-      {/* Top-center: time slider. Lives in its own opaque bar so
-          mode toggles (Off / Live / Filter) read clearly against any
-          basemap. Style picker stays bottom-center below. */}
+      {/* Top-center: activity histogram — filter (brush) + playback (▶) in
+          one strip, replacing the old three-mode slider. Sits at the top
+          centre: the dashboard's colour legend now lives in a bottom-right
+          table (AllTab), so the top band is clear. */}
       <div
         className="absolute top-3 left-1/2 z-10 -translate-x-1/2"
         style={{ pointerEvents: "auto" }}
       >
-        <GlobeTimeSlider
+        <GlobeTimeHistogram
+          buckets={monthBuckets}
           visibleFlights={filteredFlights.length}
           visibleCruises={new Set(cruisePaths.map((p) => p.cruiseId)).size}
         />
-      </div>
-
-      {/* Bottom-center: basemap style picker, flush with the screen edge. */}
-      <div
-        className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2"
-        style={{ pointerEvents: "auto" }}
-      >
-        <div
-          className="flex gap-1 rounded-md p-1"
-          style={{
-            background: "rgba(13, 17, 23, 0.78)",
-            backdropFilter: "blur(12px)",
-            border: "1px solid rgba(255,255,255,0.18)",
-            fontFamily: "'Inter', sans-serif",
-          }}
-        >
-          {STYLE_OPTIONS.map((opt) => {
-            const active = opt.id === styleId;
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => onStyleChange(opt.id)}
-                className="rounded px-3 py-1 text-xs font-medium transition-colors"
-                style={{
-                  background: active ? "rgba(120, 200, 255, 0.18)" : "transparent",
-                  color: active ? "#bae6fd" : "rgba(241,245,249,0.78)",
-                  border: active ? "1px solid rgba(120, 200, 255, 0.55)" : "1px solid transparent",
-                  cursor: "pointer",
-                }}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       {/* First-run coachmark — semi-modal centered hint, dismissible
@@ -1531,9 +1640,7 @@ export default function GlobeView({
               boxShadow: "0 12px 36px rgba(0,0,0,0.6)",
             }}
           >
-            <div className="mb-2 text-base font-semibold">
-              {t("map:globe.coachmark.title")}
-            </div>
+            <div className="mb-2 text-base font-semibold">{t("map:globe.coachmark.title")}</div>
             <ul className="mb-4 space-y-1.5 text-[12px] opacity-90">
               <li>🖱️ {t("map:globe.coachmark.pan")}</li>
               <li>🔍 {t("map:globe.coachmark.zoom")}</li>
@@ -1556,12 +1663,48 @@ export default function GlobeView({
         </div>
       )}
 
+      {/* IATA / port labels — HTML overlay (deck.gl billboard text does
+          not render under the globe projection; see GlobeLabelsOverlay). */}
+      <GlobeLabelsOverlay
+        mapRef={mapRef}
+        mapReady={mapReady}
+        airports={airportPoints}
+        ports={portPoints}
+        mode={labelsMode}
+      />
+
       {/* Pinned detail card — custom React overlay positioned via
           map.project() on every render frame. Replaces the MapLibre
           Popup primitive that was crashing the WebGL canvas in this
           stack (interleaved deck.gl 9 + globe projection). Visibility
           flag from the JS-side dot-product check fades the card when
           the anchor rotates to the back of the globe. */}
+      {/* Pulse ring on the selected marker (airports + ports). Drawn under
+          the pinned card, non-interactive; reduced-motion shows a static
+          ring. Colour follows the domain. */}
+      {pinned &&
+        (pinned.kind === "airport" || pinned.kind === "port") &&
+        popupScreenPos &&
+        popupScreenPos.visible && (
+          <div
+            className="pointer-events-none absolute z-20"
+            style={{ left: popupScreenPos.x, top: popupScreenPos.y }}
+          >
+            {[0, 0.6].map((delay) => (
+              <span
+                key={delay}
+                className="map-pulse-ring"
+                style={
+                  {
+                    "--pulse-color": pinned.kind === "port" ? "#6fa0d6" : "#f0a947",
+                    animationDelay: `${delay}s`,
+                  } as CSSProperties
+                }
+              />
+            ))}
+          </div>
+        )}
+
       {pinned && popupScreenPos && popupScreenPos.visible && (
         <div
           className="absolute z-30 pointer-events-auto"
@@ -1587,7 +1730,6 @@ export default function GlobeView({
       {/* Hover tooltip — leaf component with imperative show/hide so onHover
           updates at 60–120 Hz don't re-render the parent GlobeView tree. */}
       <HoverTooltip ref={tooltipRef} />
-
     </div>
   );
 }

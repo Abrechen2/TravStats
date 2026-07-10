@@ -164,8 +164,7 @@ export const greatCircleWaypoints = (
   return out;
 };
 
-export const createRouteKey = (a: string, b: string): string =>
-  a < b ? `${a}-${b}` : `${b}-${a}`;
+export const createRouteKey = (a: string, b: string): string => (a < b ? `${a}-${b}` : `${b}-${a}`);
 
 /**
  * Build a stable per-endpoint identity string. Prefers IATA, falls back
@@ -175,8 +174,5 @@ export const createRouteKey = (a: string, b: string): string =>
  * arbitrary endpoints happened to land first — exactly the bug Codex
  * spotted in this file.
  */
-export const endpointIdentity = (
-  iata: string | undefined,
-  lng: number,
-  lat: number
-): string => iata ?? `@${lng.toFixed(1)},${lat.toFixed(1)}`;
+export const endpointIdentity = (iata: string | undefined, lng: number, lat: number): string =>
+  iata ?? `@${lng.toFixed(1)},${lat.toFixed(1)}`;

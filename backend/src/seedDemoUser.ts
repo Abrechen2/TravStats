@@ -662,40 +662,92 @@ export async function seedDemoUser(options: SeedDemoOptions = {}) {
         console.log(`   Found ${existingFlights} existing flights`);
         console.log('');
       } else {
-        console.log('✈️  Creating 120 sample flights...');
+        console.log('✈️  Creating sample flights...');
       }
     }
 
-    // Generate 120 flights over 4 years (2020-2024)
-    const flights = [];
-    const startDate = new Date('2020-01-01');
-    const endDate = new Date('2024-12-31');
+    // Build the flight plan with a real frequency spread so the route-
+    // frequency heatmap shows a gradient (heavy commuter routes → hot,
+    // one-off long-hauls → cold) instead of a flat 2-3 per route. A handful
+    // of upcoming (scheduled) flights exercise the two-tone status colors.
+    const now = new Date();
+    const startDate = new Date('2021-01-01');
+    const pastEnd = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000);
 
-    for (let i = 0; i < 120; i++) {
-      const route = flightRoutes[i % flightRoutes.length];
-      const airline = airlines.find(a => a.name === route.airline) || airlines[0];
+    // How many times each dep-arr route was flown (the heatmap's spread).
+    const routeFreq: Record<string, number> = {
+      'MUC-VIE': 9, 'MUC-ZRH': 8, 'MUC-FRA': 8, 'MUC-LHR': 7, 'MUC-CDG': 6,
+      'MUC-AMS': 5, 'MUC-PRG': 5, 'MUC-BCN': 5, 'BCN-MUC': 4, 'MUC-FCO': 4,
+      'MUC-CPH': 4, 'MUC-MAD': 3, 'MUC-WAW': 3, 'MUC-BUD': 3, 'FRA-MUC': 3,
+      'MUC-ARN': 2, 'MUC-OSL': 2, 'MUC-ATH': 2, 'MUC-IST': 2, 'MUC-LIS': 2,
+      'MUC-JFK': 2, 'JFK-MUC': 2, 'MUC-DXB': 2, 'DXB-MUC': 2, 'MUC-HND': 2,
+      'HND-MUC': 2, 'FRA-JFK': 2, 'MUC-ORD': 1, 'MUC-YYZ': 1, 'MUC-SIN': 1,
+      'MUC-BKK': 1, 'MUC-HKG': 1, 'FRA-LAX': 1, 'FRA-SFO': 1, 'LAX-FRA': 1,
+      'CPH-ARN': 1, 'ARN-OSL': 1, 'OSL-MUC': 1, 'SIN-MUC': 1, 'DXB-SIN': 1,
+      'SYD-DXB': 1,
+    };
 
-      // Random date between start and end
-      const randomTime = startDate.getTime() + Math.random() * (endDate.getTime() - startDate.getTime());
-      const departureTime = new Date(randomTime);
-      departureTime.setHours(Math.floor(Math.random() * 20) + 4); // 4-24 Uhr
-      departureTime.setMinutes(Math.floor(Math.random() * 60));
+    // Upcoming (scheduled) flights — future dates, so the two-tone status
+    // coloring (past vs upcoming) has something to show.
+    const upcomingRoutes: Array<{
+      dep: string; arr: string; airline: string; flightNum: string; duration: number; daysAhead: number;
+    }> = [
+      { dep: 'MUC', arr: 'VIE', airline: 'Lufthansa', flightNum: '2280', duration: 0.8, daysAhead: 12 },
+      { dep: 'MUC', arr: 'LHR', airline: 'Lufthansa', flightNum: '2470', duration: 2, daysAhead: 21 },
+      { dep: 'MUC', arr: 'JFK', airline: 'Lufthansa', flightNum: '410', duration: 9.5, daysAhead: 34 },
+      { dep: 'JFK', arr: 'MUC', airline: 'Lufthansa', flightNum: '411', duration: 8, daysAhead: 41 },
+      { dep: 'MUC', arr: 'BCN', airline: 'Lufthansa', flightNum: '1810', duration: 2, daysAhead: 62 },
+      { dep: 'BCN', arr: 'MUC', airline: 'Lufthansa', flightNum: '1811', duration: 2, daysAhead: 64 },
+      { dep: 'MUC', arr: 'DXB', airline: 'Emirates', flightNum: '050', duration: 6, daysAhead: 95 },
+      { dep: 'MUC', arr: 'CPH', airline: 'Lufthansa', flightNum: '2462', duration: 1.5, daysAhead: 120 },
+    ];
+
+    type PlanItem = {
+      dep: string; arr: string; airline: string; flightNum: string;
+      duration: number; status: 'flown' | 'scheduled'; daysAhead?: number;
+    };
+    const plan: PlanItem[] = [];
+    for (const [key, freq] of Object.entries(routeFreq)) {
+      const [dep, arr] = key.split('-');
+      const route = flightRoutes.find(r => r.dep === dep && r.arr === arr);
+      if (!route) continue;
+      for (let n = 0; n < freq; n++) {
+        plan.push({
+          dep: route.dep, arr: route.arr, airline: route.airline,
+          flightNum: route.flightNum, duration: route.duration, status: 'flown',
+        });
+      }
+    }
+    for (const u of upcomingRoutes) {
+      plan.push({ ...u, status: 'scheduled' });
+    }
+
+    const flights = plan.map((item) => {
+      const airline = airlines.find(a => a.name === item.airline) || airlines[0];
+
+      let departureTime: Date;
+      if (item.status === 'scheduled' && item.daysAhead != null) {
+        departureTime = new Date(now.getTime() + item.daysAhead * 24 * 60 * 60 * 1000);
+      } else {
+        departureTime = new Date(startDate.getTime() + Math.random() * (pastEnd.getTime() - startDate.getTime()));
+      }
+      departureTime.setHours(Math.floor(Math.random() * 20) + 4, Math.floor(Math.random() * 60), 0, 0);
 
       const arrivalTime = new Date(departureTime);
-      arrivalTime.setHours(arrivalTime.getHours() + Math.floor(route.duration));
-      arrivalTime.setMinutes(arrivalTime.getMinutes() + Math.floor((route.duration % 1) * 60));
+      arrivalTime.setHours(arrivalTime.getHours() + Math.floor(item.duration));
+      arrivalTime.setMinutes(arrivalTime.getMinutes() + Math.floor((item.duration % 1) * 60));
 
-      const depAirport = airports.find(a => a.iata === route.dep)!;
-      const arrAirport = airports.find(a => a.iata === route.arr)!;
+      const depAirport = airports.find(a => a.iata === item.dep)!;
+      const arrAirport = airports.find(a => a.iata === item.arr)!;
 
       const seatClass = classes[Math.floor(Math.random() * classes.length)];
       const category = categories[Math.floor(Math.random() * categories.length)];
       const aircraft = airline.aircraft[Math.floor(Math.random() * airline.aircraft.length)];
 
-      flights.push({
+      return {
         userId: demoUser.id,
         airline: airline.name,
-        flightNumber: airline.prefix + route.flightNum,
+        flightNumber: airline.prefix + item.flightNum,
         aircraft,
         depIcao: depAirport.icao,
         depIata: depAirport.iata,
@@ -709,14 +761,14 @@ export async function seedDemoUser(options: SeedDemoOptions = {}) {
         arrLon: arrAirport.lon,
         departureTime,
         arrivalTime,
-        status: 'flown',
+        status: item.status,
         seatClass,
         category,
         seatNumber: `${Math.floor(Math.random() * 40) + 1}${String.fromCharCode(65 + Math.floor(Math.random() * 6))}`,
         gate: `${String.fromCharCode(65 + Math.floor(Math.random() * 10))}${Math.floor(Math.random() * 30) + 1}`,
         terminal: Math.floor(Math.random() * 3) + 1 + '',
-      });
-    }
+      };
+    });
 
     // Sort by date
     flights.sort((a, b) => a.departureTime.getTime() - b.departureTime.getTime());
@@ -736,7 +788,8 @@ export async function seedDemoUser(options: SeedDemoOptions = {}) {
         console.log(`   Created flights ${i + 1}-${Math.min(i + batchSize, flights.length)} of ${flights.length}`);
       }
       console.log('');
-      console.log(`✅ Created ${flights.length} flights from 2020-2024`);
+      const upcomingCount = flights.filter(f => f.status === 'scheduled').length;
+      console.log(`✅ Created ${flights.length} flights (${upcomingCount} upcoming) across a weighted route mix`);
     }
 
     // Create parser feedback events

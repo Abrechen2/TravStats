@@ -227,10 +227,31 @@ describe("createCruiseArcsLayer", () => {
     // Anchor sits past the source longitude on the destination side.
     expect(data[0].position[0]).toBeGreaterThan(2.17);
     expect(data[0].cruiseId).toBe(cruise.id);
-    // East-and-slightly-north heading → angle within (-90°, 90°) under
-    // the screen-space rotation we apply.
-    expect(data[0].angleDeg).toBeGreaterThan(-90);
+    // East-and-slightly-north heading (dx>0, dy>0 in raw lon/lat deltas) →
+    // a first-quadrant angle under deck.gl's icon/text rotation convention
+    // (angle 0 = east, positive = counterclockwise, verified against
+    // icon-layer-vertex.glsl.js — see pickArrowAnchor's comment). A prior
+    // version of this code negated dy, which mirrored every arrow
+    // vertically (fourth-quadrant angle here instead) — #160.
+    expect(data[0].angleDeg).toBeGreaterThan(0);
     expect(data[0].angleDeg).toBeLessThan(90);
+  });
+
+  it("renders the arrow as a white-bordered icon, not a bare glyph (#160)", () => {
+    const cruise = makeCruise([
+      makeStop(1, 1, { id: 1, lat: 41.38, lon: 2.17 }),
+      makeStop(2, 2, { id: 2, lat: 42.1, lon: 11.8 }),
+    ]);
+    const layer = createCruiseArrowsLayer([cruise]) as unknown as {
+      props: {
+        data: unknown[];
+        getIcon: (d: unknown) => { url: string; width: number; height: number };
+      };
+    };
+    const icon = layer.props.getIcon(layer.props.data[0]);
+    expect(icon.url).toContain("data:image/svg+xml");
+    const svg = decodeURIComponent(icon.url.split(",")[1]);
+    expect(svg).toContain('stroke="white"');
   });
 
   it("skips at-sea stops + stops without a resolved port when pairing", () => {
@@ -242,5 +263,31 @@ describe("createCruiseArcsLayer", () => {
     const layer = createCruiseArcsLayer([cruise]);
     const data = (layer as { props: { data: unknown } }).props.data as unknown[];
     expect(data).toHaveLength(1);
+  });
+
+  it("scales the arrow size by arrowSizeScale", () => {
+    const cruise = makeCruise([
+      makeStop(1, 1, { id: 1, lat: 41.38, lon: 2.17 }),
+      makeStop(2, 2, { id: 2, lat: 42.1, lon: 11.8 }),
+    ]);
+    const layer = createCruiseArrowsLayer([cruise], new Map(), null, { arrowSizeScale: 2 });
+    expect((layer as unknown as { props: { getSize: number } }).props.getSize).toBe(20);
+  });
+
+  it("defaults arrow size to the base height when no scale is given", () => {
+    const cruise = makeCruise([
+      makeStop(1, 1, { id: 1, lat: 41.38, lon: 2.17 }),
+      makeStop(2, 2, { id: 2, lat: 42.1, lon: 11.8 }),
+    ]);
+    const layer = createCruiseArrowsLayer([cruise]);
+    expect((layer as unknown as { props: { getSize: number } }).props.getSize).toBe(10);
+  });
+
+  it("returns null when arrowSizeScale is 0 (arrows off)", () => {
+    const cruise = makeCruise([
+      makeStop(1, 1, { id: 1, lat: 41.38, lon: 2.17 }),
+      makeStop(2, 2, { id: 2, lat: 42.1, lon: 11.8 }),
+    ]);
+    expect(createCruiseArrowsLayer([cruise], new Map(), null, { arrowSizeScale: 0 })).toBeNull();
   });
 });

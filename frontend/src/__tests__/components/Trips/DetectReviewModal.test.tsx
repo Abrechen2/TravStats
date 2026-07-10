@@ -47,8 +47,20 @@ function makeProposal(overrides: Partial<ProposedTrip> = {}): ProposedTrip {
     span: { from: "2024-01-01", to: "2024-01-10" },
     suggestedName: "FRA → JFK",
     legs: [
-      { date: "2024-01-01", flightNumber: "LH400", depIata: "FRA", arrIata: "JFK", status: "flown" },
-      { date: "2024-01-10", flightNumber: null, depIata: "JFK", arrIata: "FRA", status: "scheduled" },
+      {
+        date: "2024-01-01",
+        flightNumber: "LH400",
+        depIata: "FRA",
+        arrIata: "JFK",
+        status: "flown",
+      },
+      {
+        date: "2024-01-10",
+        flightNumber: null,
+        depIata: "JFK",
+        arrIata: "FRA",
+        status: "scheduled",
+      },
     ],
     ...overrides,
   };
@@ -75,9 +87,10 @@ describe("DetectReviewModal", () => {
     expect(screen.getByText("FRA → JFK")).toBeInTheDocument();
     expect(screen.getByText("JFK → FRA")).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /hide flights/i })
-    ).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: /hide flights/i })).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    );
   });
 
   it("does not render an expander when the proposal has no legs", () => {
@@ -106,18 +119,37 @@ describe("DetectReviewModal", () => {
     expect(checkbox).toHaveAttribute("aria-checked", "false");
     // Still collapsed — no legs rendered.
     expect(screen.queryByText("LH400")).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /show flights/i })
-    ).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: /show flights/i })).toHaveAttribute(
+      "aria-expanded",
+      "false"
+    );
   });
 
   it("supports multiple cards expanded at once", async () => {
-    const a = makeProposal({ flightIds: ["a1", "a2"], legs: [
-      { date: "2024-02-01", flightNumber: "BA111", depIata: "LHR", arrIata: "CDG", status: "flown" },
-    ] });
-    const b = makeProposal({ flightIds: ["b1", "b2"], legs: [
-      { date: "2024-03-01", flightNumber: "AF222", depIata: "CDG", arrIata: "LHR", status: "cancelled" },
-    ] });
+    const a = makeProposal({
+      flightIds: ["a1", "a2"],
+      legs: [
+        {
+          date: "2024-02-01",
+          flightNumber: "BA111",
+          depIata: "LHR",
+          arrIata: "CDG",
+          status: "flown",
+        },
+      ],
+    });
+    const b = makeProposal({
+      flightIds: ["b1", "b2"],
+      legs: [
+        {
+          date: "2024-03-01",
+          flightNumber: "AF222",
+          depIata: "CDG",
+          arrIata: "LHR",
+          status: "cancelled",
+        },
+      ],
+    });
     renderModal([a, b]);
 
     const expanders = screen.getAllByRole("button", { name: /show flights/i });

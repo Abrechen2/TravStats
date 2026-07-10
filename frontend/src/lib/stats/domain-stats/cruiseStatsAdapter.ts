@@ -84,9 +84,7 @@ export function adaptCruise(input: CruiseAdapterInput): DomainStats {
 
   // Top-Reedereien — the response only carries the line names list, not
   // counts. Render each with value: 1 so the UI shows them as chips.
-  const topItems = stats.cruiseLines
-    .slice(0, 5)
-    .map((label) => ({ label, value: 1 }));
+  const topItems = stats.cruiseLines.slice(0, 5).map((label) => ({ label, value: 1 }));
 
   const badges = FLAG_BADGES.filter((b) => stats[b.key]).map(({ label, emoji }) => ({
     label,

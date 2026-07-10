@@ -1,6 +1,7 @@
 import { calculateDistance, calculateFlightDuration } from "../lib/geo";
 import { useLocale } from "../hooks/useLocale";
 import { formatDuration } from "../lib/formatters";
+import { FlagImg } from "../lib/countryFlag";
 import { TooltipContainer } from "./TooltipContainer";
 import type { Flight } from "../types";
 
@@ -10,6 +11,11 @@ interface MapTooltipProps {
   screenY: number;
   onEdit: (flight: Flight) => void;
   onClose: () => void;
+  /** ISO country codes of the departure / arrival airports, from the
+   *  enriched /geo feature — drive the endpoint flags. Optional so the
+   *  tooltip still works when they weren't resolved. */
+  depCountry?: string | null;
+  arrCountry?: string | null;
 }
 
 export function MapTooltip({
@@ -18,6 +24,8 @@ export function MapTooltip({
   screenY,
   onEdit,
   onClose,
+  depCountry,
+  arrCountry,
 }: MapTooltipProps): JSX.Element {
   const locale = useLocale();
 
@@ -56,8 +64,12 @@ export function MapTooltip({
 
   return (
     <TooltipContainer screenX={screenX} screenY={screenY} minWidth="220px">
-      <div className="font-mono font-bold text-sm" style={{ color: "var(--accent)" }}>
-        {flight.depIata ?? flight.depIcao ?? "?"} → {flight.arrIata ?? flight.arrIcao ?? "?"}
+      <div className="flex items-center gap-1.5 font-mono font-bold text-sm" style={{ color: "var(--accent)" }}>
+        <FlagImg country={depCountry} height={14} />
+        <span>{flight.depIata ?? flight.depIcao ?? "?"}</span>
+        <span className="opacity-60">→</span>
+        <FlagImg country={arrCountry} height={14} />
+        <span>{flight.arrIata ?? flight.arrIcao ?? "?"}</span>
       </div>
       {metaParts.length > 0 && (
         <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>

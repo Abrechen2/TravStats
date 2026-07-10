@@ -103,6 +103,51 @@
 }
 
 @layer components {
+  /* Hide the scrollbar while keeping the element scrollable (used by the
+     map control panel so its scroll area reads as a clean surface). */
+  .scrollbar-none {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* legacy Edge/IE */
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none; /* Chrome / Safari / WebKit */
+  }
+
+  /* Pulsing ring drawn over the selected globe marker. Centred on its
+     container's origin (positioned at the marker's screen point). */
+  @keyframes map-pulse {
+    0% {
+      transform: translate(-50%, -50%) scale(0.35);
+      opacity: 0.7;
+    }
+    70% {
+      opacity: 0.12;
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(2.6);
+      opacity: 0;
+    }
+  }
+  .map-pulse-ring {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 9999px;
+    border: 2px solid var(--pulse-color, #f0a947);
+    pointer-events: none;
+    will-change: transform, opacity;
+    animation: map-pulse 1.8s cubic-bezier(0, 0.55, 0.45, 1) infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .map-pulse-ring {
+      animation: none;
+      opacity: 0.3;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+
   /* ─── Buttons ──────────────────────────────────────────── */
   .btn {
     @apply px-4 py-2 rounded-lg font-medium transition-all duration-200
@@ -376,4 +421,106 @@
   .update-badge-blink {
     animation: none;
   }
+}
+
+/* Rendered Markdown inside trip journal entries (JournalViewModal, #158).
+   Scoped so it never leaks into the rest of the app. Colors come from theme
+   tokens so it works in both light and dark. */
+.trip-markdown {
+  color: var(--text-primary);
+  line-height: 1.6;
+  word-break: break-word;
+}
+.trip-markdown > :first-child {
+  margin-top: 0;
+}
+.trip-markdown > :last-child {
+  margin-bottom: 0;
+}
+.trip-markdown p {
+  margin: 0.6em 0;
+}
+.trip-markdown h1,
+.trip-markdown h2,
+.trip-markdown h3,
+.trip-markdown h4 {
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.1em 0 0.5em;
+}
+.trip-markdown h1 {
+  font-size: 1.4em;
+}
+.trip-markdown h2 {
+  font-size: 1.25em;
+}
+.trip-markdown h3 {
+  font-size: 1.1em;
+}
+.trip-markdown ul,
+.trip-markdown ol {
+  margin: 0.6em 0;
+  padding-left: 1.4em;
+}
+.trip-markdown ul {
+  list-style: disc;
+}
+.trip-markdown ol {
+  list-style: decimal;
+}
+.trip-markdown li {
+  margin: 0.25em 0;
+}
+.trip-markdown a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.trip-markdown code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  background: var(--bg-base);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+.trip-markdown pre {
+  background: var(--bg-base);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.8em 1em;
+  overflow-x: auto;
+  margin: 0.8em 0;
+}
+.trip-markdown pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+.trip-markdown blockquote {
+  margin: 0.8em 0;
+  padding-left: 1em;
+  border-left: 3px solid var(--color-border);
+  color: var(--text-muted);
+}
+.trip-markdown hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 1.2em 0;
+}
+.trip-markdown img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+.trip-markdown table {
+  border-collapse: collapse;
+  margin: 0.8em 0;
+  display: block;
+  overflow-x: auto;
+}
+.trip-markdown th,
+.trip-markdown td {
+  border: 1px solid var(--color-border);
+  padding: 0.4em 0.6em;
+  text-align: left;
 }

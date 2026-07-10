@@ -11,15 +11,23 @@ import type { Cruise, CruiseStop, Port } from "../../types";
  * Every consumer goes through these helpers now.
  */
 
-/** Unique ports across departure / arrival / port-call stops. */
+/** Unique ports across departure / arrival / port-call stops, including
+ *  unresolved (coordinate-less) ports counted by distinct trimmed name. A
+ *  matched port and an unresolved same-named port are counted separately. */
 export function countUniquePorts(cruise: Cruise): number {
   const portIds = new Set<number>();
   if (cruise.departurePort?.id != null) portIds.add(cruise.departurePort.id);
   if (cruise.arrivalPort?.id != null) portIds.add(cruise.arrivalPort.id);
+  const unresolvedNames = new Set<string>();
   for (const stop of cruise.stops) {
-    if (!stop.isAtSea && stop.port?.id != null) portIds.add(stop.port.id);
+    if (stop.isAtSea) continue;
+    if (stop.port?.id != null) {
+      portIds.add(stop.port.id);
+    } else if (stop.unresolvedPortName) {
+      unresolvedNames.add(stop.unresolvedPortName.trim().toLowerCase());
+    }
   }
-  return portIds.size;
+  return portIds.size + unresolvedNames.size;
 }
 
 /**
@@ -50,6 +58,8 @@ export interface EffectiveTimelineEntry {
   /** Resolved port — null for sea days. */
   port: Port | null;
   isAtSea: boolean;
+  /** Unresolved port name when this entry is an unresolved stop, else null. */
+  unresolvedPortName: string | null;
   /** Best-known date for the entry (ISO string) or null. */
   date: string | null;
   excursionNote: string | null;
@@ -66,6 +76,7 @@ export function buildEffectiveTimeline(cruise: Cruise): EffectiveTimelineEntry[]
     stop,
     port: stop.port ?? null,
     isAtSea: stop.isAtSea,
+    unresolvedPortName: stop.unresolvedPortName ?? null,
     // Prefer the explicit per-stop date; fall back to the arrival timestamp for
     // older stops imported before the date field existed.
     date: stop.date ?? stop.arrivalTime ?? null,
@@ -81,6 +92,7 @@ export function buildEffectiveTimeline(cruise: Cruise): EffectiveTimelineEntry[]
       stop: null,
       port: cruise.departurePort,
       isAtSea: false,
+      unresolvedPortName: null,
       date: cruise.startDate,
       excursionNote: null,
     });
@@ -91,6 +103,7 @@ export function buildEffectiveTimeline(cruise: Cruise): EffectiveTimelineEntry[]
       stop: null,
       port: cruise.arrivalPort,
       isAtSea: false,
+      unresolvedPortName: null,
       date: cruise.endDate,
       excursionNote: null,
     });

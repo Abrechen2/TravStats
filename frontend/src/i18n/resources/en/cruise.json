@@ -5,6 +5,8 @@
     "new": "Add cruise",
     "empty": "No cruises yet",
     "loading": "Loading cruises …",
+    "sortBy": "Sort by {{col}}",
+    "duplicate": "Duplicate",
     "columns": {
       "ship": "Ship",
       "line": "Line",
@@ -12,7 +14,13 @@
       "ports": "Ports",
       "status": "Status",
       "cabin": "Cabin",
-      "price": "Price"
+      "price": "Price",
+      "actions": "Actions"
+    },
+    "delete": {
+      "confirm": "Delete cruise \"{{ship}}\"?",
+      "done": "Cruise deleted",
+      "error": "Failed to delete cruise"
     }
   },
   "detail": {
@@ -22,6 +30,7 @@
     "route": "Route",
     "cabin": "Cabin",
     "costs": "Costs",
+    "mapColor": "Map color",
     "meta": "Notes & tags",
     "edit": "Edit",
     "delete": "Delete",
@@ -45,7 +54,11 @@
     "departPort": "Departure port",
     "arrivePort": "Arrival port",
     "sea_days": "Sea days",
+    "sea_days_one": "Sea day",
+    "sea_days_other": "Sea days",
     "ports": "Ports",
+    "ports_one": "Port",
+    "ports_other": "Ports",
     "distance_nm": "Nautical miles",
     "bookingReference": "Booking reference",
     "price": "Price",
@@ -66,7 +79,9 @@
     "flightDate": "Date",
     "flightClass": "Class",
     "departPortAirport": "From airport",
-    "arrivePortAirport": "To airport"
+    "arrivePortAirport": "To airport",
+    "color": "Color",
+    "colorAuto": "Automatic (derived from cruise ID)"
   },
   "seatClass": {
     "economy": "Economy",
@@ -95,7 +110,9 @@
     "excursion": "Excursion",
     "moveUp": "Move up",
     "moveDown": "Move down",
-    "remove": "Remove stop"
+    "remove": "Remove stop",
+    "unresolved": "Unresolved port",
+    "unresolvedHint": "Pick a port from the catalog to resolve this stop."
   },
   "picker": {
     "ship_placeholder": "Search ship …",
@@ -173,8 +190,7 @@
     "shipUnmatched": "Ship not in DB",
     "shipUnmatchedHint": "Stored as free text. You can link the ship in the editor.",
     "stopsLabel": "Stops",
-    "stopsValue": "{{ports}} ports, {{seaDays}} sea days",
     "unmatchedTitle": "Unmatched ports",
-    "unmatchedHint": "These ports weren't found in the database and were marked as sea days for now. Pick the matching port below, or fix them later in the editor."
+    "unmatchedHint": "These ports weren't found in the catalog and were marked as unresolved — they stay ports (not sea days). Pick the matching port below, or resolve them later in the editor."
   }
 }

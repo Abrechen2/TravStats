@@ -71,8 +71,7 @@ export default function TemplateReviewCard({
             Status:{" "}
             <span
               style={{
-                color:
-                  template.status === "active" ? "var(--success)" : "var(--warning)",
+                color: template.status === "active" ? "var(--success)" : "var(--warning)",
               }}
             >
               {template.status}

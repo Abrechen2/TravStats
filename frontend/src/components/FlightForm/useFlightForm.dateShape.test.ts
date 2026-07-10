@@ -29,9 +29,7 @@ function buildLocalString(date: string, time: string): string {
   return `${date}T${time}`;
 }
 
-function historicalDateShape(
-  date: string
-): "year" | "year_month" | "year_month_day" | "unknown" {
+function historicalDateShape(date: string): "year" | "year_month" | "year_month_day" | "unknown" {
   if (/^\d{4}$/.test(date)) return "year";
   if (/^\d{4}-\d{2}$/.test(date)) return "year_month";
   if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return "year_month_day";

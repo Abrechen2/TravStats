@@ -4,6 +4,12 @@ import { MapboxOverlay } from "@deck.gl/mapbox";
 import { createMarkerTooltip } from "./map/markerTooltip";
 import { LightingEffect } from "@deck.gl/core";
 import { useTranslation } from "../hooks/useTranslation";
+import { applyMapOverlays } from "./Globe/mapOverlays";
+import { FlatMapControlPanel } from "./map/FlatMapControlPanel";
+import { type AppearanceDomain } from "./map/controlPanelKit";
+import type { LabelsMode } from "./map/labelPriority";
+import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
+import { FLAT_BASEMAPS, resolveFlatStyle, type FlatStyleId } from "./map/basemapStyles";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { MapMode } from "./MapContainer3D";
@@ -17,6 +23,7 @@ import {
   createCruiseArcsLayer,
   createCruiseArrowsLayer,
   type CruiseGeometryMap,
+  type CruiseColorMode,
 } from "./layers/cruiseArcsLayer";
 import { createCruisePortsLayer } from "./layers/cruisePortsLayer";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
@@ -38,8 +45,10 @@ import {
   NATIVE_AIRPORT_CIRCLE_ID,
 } from "./NativeRoutesLayer";
 
-// Delay before showing the flight tooltip — lets the flyTo animation settle first
-const TOOLTIP_DELAY_MS = 1800;
+// Small delay before the click tooltip appears — just enough for the flyTo
+// to start so the card doesn't flash at the old anchor, then it rides the
+// reprojection as the camera moves. Was 1800 ms, which read as sluggish.
+const TOOLTIP_DELAY_MS = 220;
 
 /** Check once whether WebGL2 is available (deck.gl requires it). */
 function hasWebGL2(): boolean {
@@ -61,8 +70,6 @@ const INITIAL_VIEW_STATE: MapViewState = {
   pitch: 0,
   bearing: 0,
 };
-
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 interface DeckOverlayProps {
   layers: Layer[];
@@ -102,6 +109,15 @@ interface DeckGLMapProps {
   /** Override count-based heatmap palette for flight routes — see
    *  MapContainer3D.flightRouteColor for the motivation. */
   flightRouteColor?: [number, number, number];
+  /** Which domain appearance sections the control panel exposes. */
+  appearanceDomains?: readonly AppearanceDomain[];
+  /** Split flight arcs into a two-tone gradient by status (scheduled vs.
+   *  historical) instead of a single flightRouteColor fill — see
+   *  buildRouteData in layers/routesLayer.ts. */
+  statusTwoTone?: boolean;
+  /** Color strategy for cruise arcs/arrows: shared two-tone by status, or
+   *  a distinct hue per cruise. Defaults to `"status"`. */
+  cruiseColorMode?: CruiseColorMode;
 }
 
 export function DeckGLMap({
@@ -116,6 +132,9 @@ export function DeckGLMap({
   cruises = [],
   extraLayers,
   flightRouteColor,
+  appearanceDomains = ["flight", "cruise"],
+  statusTwoTone,
+  cruiseColorMode = "status",
 }: DeckGLMapProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
@@ -130,6 +149,116 @@ export function DeckGLMap({
   const mapRef = useRef<MapRef>(null);
 
   const [mapLoaded, setMapLoaded] = useState(false);
+  // Flat-map appearance customisation (mirrors the globe's "Anpassung"
+  // panel) + style-level overlays, persisted so the look survives reloads.
+  // `routeColor === null` keeps the frequency palette; a value tints every
+  // arc. `markerColor === null` keeps the theme airport-dot colour.
+  const [styleId, setStyleId] = useState<FlatStyleId>(
+    () => loadMapAppearance().styleId ?? "dark"
+  );
+  // Flight-domain appearance.
+  const [routeColor, setRouteColor] = useState<[number, number, number] | null>(
+    () => loadMapAppearance().routeColor ?? null
+  );
+  const [flightRouteWidth, setFlightRouteWidth] = useState<number>(
+    () => loadMapAppearance().flightRouteWidth ?? 1
+  );
+  const [markerColor, setMarkerColor] = useState<[number, number, number] | null>(
+    () => loadMapAppearance().airportColor ?? null
+  );
+  const [flightMarkerSize, setFlightMarkerSize] = useState<number>(
+    () => loadMapAppearance().flightMarkerSize ?? 1
+  );
+  // Cruise-domain appearance.
+  const [cruiseRouteColor, setCruiseRouteColor] = useState<[number, number, number] | null>(
+    () => loadMapAppearance().cruiseRouteColor ?? null
+  );
+  const [cruiseRouteWidth, setCruiseRouteWidth] = useState<number>(
+    () => loadMapAppearance().cruiseRouteWidth ?? 1
+  );
+  const [portColor, setPortColor] = useState<[number, number, number] | null>(
+    () => loadMapAppearance().portColor ?? null
+  );
+  const [cruiseMarkerSize, setCruiseMarkerSize] = useState<number>(
+    () => loadMapAppearance().cruiseMarkerSize ?? 1
+  );
+  const [cruiseArrowScale, setCruiseArrowScale] = useState<number>(
+    () => loadMapAppearance().cruiseArrowScale ?? 1
+  );
+  const [showTerrain, setShowTerrain] = useState<boolean>(
+    () => loadMapAppearance().showTerrain ?? false
+  );
+  const [showPlaceLabels, setShowPlaceLabels] = useState<boolean>(
+    () => loadMapAppearance().showPlaceLabels ?? true
+  );
+  const [labelsMode, setLabelsMode] = useState<LabelsMode>(
+    () => loadMapAppearance().labelsMode ?? "important"
+  );
+  useEffect(() => {
+    saveMapAppearance({
+      styleId,
+      routeColor,
+      flightRouteWidth,
+      airportColor: markerColor,
+      flightMarkerSize,
+      cruiseRouteColor,
+      cruiseRouteWidth,
+      portColor,
+      cruiseMarkerSize,
+      cruiseArrowScale,
+      showTerrain,
+      showPlaceLabels,
+      labelsMode,
+    });
+  }, [
+    styleId,
+    routeColor,
+    flightRouteWidth,
+    markerColor,
+    flightMarkerSize,
+    cruiseRouteColor,
+    cruiseRouteWidth,
+    portColor,
+    cruiseMarkerSize,
+    cruiseArrowScale,
+    showTerrain,
+    showPlaceLabels,
+    labelsMode,
+  ]);
+  // Apply the style-level overlays (relief hillshade + basemap place
+  // names) once the map is loaded and whenever a toggle flips. Same
+  // generic MapLibre helper the globe uses.
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !mapLoaded) return;
+    applyMapOverlays(map, { showTerrain, showPlaceLabels });
+  }, [mapLoaded, showTerrain, showPlaceLabels]);
+  // Mirror the toggles into refs so the once-mounted style.load handler
+  // below reads current values after a basemap swap wipes the overlays.
+  const showTerrainRef = useRef(showTerrain);
+  const showPlaceLabelsRef = useRef(showPlaceLabels);
+  useEffect(() => {
+    showTerrainRef.current = showTerrain;
+  }, [showTerrain]);
+  useEffect(() => {
+    showPlaceLabelsRef.current = showPlaceLabels;
+  }, [showPlaceLabels]);
+  // A basemap swap (styleId change) reloads the MapLibre style, wiping the
+  // hillshade source/layer and resetting symbol visibility — re-apply on
+  // every style.load from the latest toggle values.
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !mapLoaded) return;
+    const reapply = (): void =>
+      applyMapOverlays(map, {
+        showTerrain: showTerrainRef.current,
+        showPlaceLabels: showPlaceLabelsRef.current,
+      });
+    map.on("style.load", reapply);
+    return () => {
+      map.off("style.load", reapply);
+    };
+  }, [mapLoaded]);
   // Zoom is read from MapGL viewState on every move so layers can hide
   // labels / decimate symbols at low zoom. Updated via the move handler
   // to avoid an extra render path.
@@ -402,8 +531,15 @@ export function DeckGLMap({
   // flights into routes. Deps are deliberately limited to fields that
   // actually affect arc/point geometry + base color.
   const routeData = useMemo(
-    () => buildRouteData(flights, minRouteCount, themeColors, flightRouteColor),
-    [flights, minRouteCount, themeColors, flightRouteColor]
+    () =>
+      buildRouteData(
+        flights,
+        minRouteCount,
+        themeColors,
+        routeColor ?? flightRouteColor,
+        statusTwoTone
+      ),
+    [flights, minRouteCount, themeColors, routeColor, flightRouteColor, statusTwoTone]
   );
 
   // Standalone layer set for Sonder-Flüge — rendered on top of the
@@ -433,7 +569,14 @@ export function DeckGLMap({
             0.3,
             selectedIds,
             handleAirportClick,
-            zoom
+            zoom,
+            {
+              markerColor: markerColor ?? undefined,
+              markerSizeScale: flightMarkerSize,
+              arcWidthScale: flightRouteWidth,
+              labelsMode,
+            },
+            statusTwoTone
           ),
           ...specialFlightLayers,
         ];
@@ -456,6 +599,13 @@ export function DeckGLMap({
     // /cruises/:id/geometry into smooth curves; until the fetch resolves
     // for a given cruise, each leg falls back to a 2-vertex direct chord.
     const geometryMap: CruiseGeometryMap = cruiseGeometry;
+    const cruiseArcAppearance = {
+      zoom,
+      arcColor: cruiseRouteColor ?? undefined,
+      arcWidthScale: cruiseRouteWidth,
+      arrowSizeScale: cruiseArrowScale,
+      colorMode: cruiseColorMode,
+    };
     const arcs = createCruiseArcsLayer(
       cruises,
       geometryMap,
@@ -464,10 +614,19 @@ export function DeckGLMap({
         const cruise = cruises.find((c) => c.id === cruiseId);
         if (cruise) setCruiseSelection(cruise);
       },
-      { zoom }
+      cruiseArcAppearance
     );
-    const arrows = createCruiseArrowsLayer(cruises, geometryMap, selectedCruiseId, { zoom });
-    const ports = createCruisePortsLayer(cruises, zoom);
+    const arrows = createCruiseArrowsLayer(
+      cruises,
+      geometryMap,
+      selectedCruiseId,
+      cruiseArcAppearance
+    );
+    const ports = createCruisePortsLayer(cruises, zoom, {
+      portColor: portColor ?? undefined,
+      portSizeScale: cruiseMarkerSize,
+      labelsMode,
+    });
 
     // Split cruise visuals into a "below" group (arcs/arrows render
     // beneath flight arcs and airport markers) and an "above" group
@@ -480,12 +639,7 @@ export function DeckGLMap({
     ];
     const cruisePortsAbove: Layer[] = ports ?? [];
 
-    return [
-      ...cruisePathsBelow,
-      ...base,
-      ...cruisePortsAbove,
-      ...(extraLayers ?? []),
-    ];
+    return [...cruisePathsBelow, ...base, ...cruisePortsAbove, ...(extraLayers ?? [])];
   }, [
     visMode,
     flights,
@@ -503,11 +657,30 @@ export function DeckGLMap({
     extraLayers,
     zoom,
     specialFlightLayers,
+    markerColor,
+    portColor,
+    flightMarkerSize,
+    cruiseMarkerSize,
+    flightRouteWidth,
+    cruiseRouteColor,
+    cruiseRouteWidth,
+    cruiseArrowScale,
+    labelsMode,
+    cruiseColorMode,
+    statusTwoTone,
   ]);
 
   // No 3D modes remain — lighting effect is unused but kept as empty array for
   // the DeckGLOverlay API.
   const effects: LightingEffect[] = [];
+
+  // Enriched /geo feature for the currently selected flight — its dep/arr
+  // country codes feed the flags in the click tooltip (the structured Flight
+  // doesn't carry a country).
+  const selectedGeo = useMemo(() => {
+    const id = selectedFlights[0]?.id;
+    return id ? flights.find((f) => f.properties.id === id) : undefined;
+  }, [selectedFlights, flights]);
 
   const handleTimeChange = useCallback((value: number | ((prev: number) => number)): void => {
     setCurrentTime((prev) => (typeof value === "function" ? value(prev) : value));
@@ -563,7 +736,7 @@ export function DeckGLMap({
         ref={mapRef}
         reuseMaps
         initialViewState={INITIAL_VIEW_STATE}
-        mapStyle={DARK_MAP_STYLE}
+        mapStyle={resolveFlatStyle(styleId)}
         style={{ position: "absolute", inset: "0" }}
         onLoad={() => setMapLoaded(true)}
         onMove={handleMapMove}
@@ -586,6 +759,47 @@ export function DeckGLMap({
           />
         )}
       </MapGL>
+
+      {/* Consolidated map control panel — same design + kit as the globe.
+          Layers (place names / relief) + appearance (route + airport
+          marker colour / width / size), so the port/airport look is
+          adjustable from the individual tab views too. */}
+      <div className="absolute bottom-4 left-4 z-20" style={{ pointerEvents: "auto" }}>
+        <FlatMapControlPanel
+          showPlaceLabels={showPlaceLabels}
+          onShowPlaceLabelsChange={setShowPlaceLabels}
+          showTerrain={showTerrain}
+          onShowTerrainChange={setShowTerrain}
+          labelsMode={labelsMode}
+          onLabelsModeChange={setLabelsMode}
+          styleOptions={FLAT_BASEMAPS}
+          styleId={styleId}
+          onStyleChange={(id) => setStyleId(id as FlatStyleId)}
+          appearanceDomains={appearanceDomains}
+          flightAppearance={{
+            routeColor,
+            onRouteColorChange: setRouteColor,
+            routeWidth: flightRouteWidth,
+            onRouteWidthChange: setFlightRouteWidth,
+            markerColor,
+            onMarkerColorChange: setMarkerColor,
+            markerSize: flightMarkerSize,
+            onMarkerSizeChange: setFlightMarkerSize,
+          }}
+          cruiseAppearance={{
+            routeColor: cruiseRouteColor,
+            onRouteColorChange: setCruiseRouteColor,
+            routeWidth: cruiseRouteWidth,
+            onRouteWidthChange: setCruiseRouteWidth,
+            markerColor: portColor,
+            onMarkerColorChange: setPortColor,
+            markerSize: cruiseMarkerSize,
+            onMarkerSizeChange: setCruiseMarkerSize,
+            arrowScale: cruiseArrowScale,
+            onArrowScaleChange: setCruiseArrowScale,
+          }}
+        />
+      </div>
 
       {/* Subtle grid overlay — glassmorphism only */}
       {mapTheme === "glassmorphism" && (
@@ -651,6 +865,8 @@ export function DeckGLMap({
             flight={selectedFlights[0]}
             screenX={tooltipPos.x}
             screenY={tooltipPos.y}
+            depCountry={selectedGeo?.properties.departureAirport.country}
+            arrCountry={selectedGeo?.properties.arrivalAirport.country}
             onEdit={(flight) => {
               clearSelection();
               onEdit?.(flight);

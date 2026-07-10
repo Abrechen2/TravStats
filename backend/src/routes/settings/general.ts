@@ -90,7 +90,10 @@ const settingsSchema = z.object({
     .optional(),
   boardingPassParserStrategy: z.enum(['parser-only', 'parser-with-api', 'api-only']).nullable().optional(),
   enabledDomains: z.array(z.enum(DOMAIN_KEYS as unknown as [DomainKey, ...DomainKey[]])).optional(),
+  whatsNewSeenVersion: z.string().max(32).optional(),
 }).partial();
+
+export const settingsUpdateSchema = settingsSchema;
 
 /** Build a SettingsResponse from a Prisma userSettings record */
 function buildSettingsResponse(record: {

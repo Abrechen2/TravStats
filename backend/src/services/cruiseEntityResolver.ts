@@ -132,6 +132,10 @@ interface PortCandidate {
   name: string;
   city: string | null;
   country: string | null;
+  /** Sea region ("mediterranean", …). A fully-catalogued port carries one;
+   *  bare placeholder collisions (e.g. "Naples, Maine") don't — used as a
+   *  last-resort tiebreak on same-name candidates (#169). */
+  region: string | null;
 }
 
 async function loadShipCandidates(): Promise<ShipCandidate[]> {
@@ -172,7 +176,7 @@ async function resolveShip(
 async function loadPortCandidates(): Promise<PortCandidate[]> {
   if (cachedPorts) return cachedPorts;
   cachedPorts = await prisma.port.findMany({
-    select: { id: true, name: true, city: true, country: true },
+    select: { id: true, name: true, city: true, country: true, region: true },
   });
   return cachedPorts;
 }
@@ -215,6 +219,14 @@ function findBestPort(
     if (country && port.country && similarity(country, port.country) >= 60) {
       score += 5;
     }
+    // Bare-name collision tiebreak (#169): the catalog has two "Naples"
+    // (Napoli/Italy with a region, Naples/Maine/USA without). With no country
+    // hint both score identically on the name, and DB order decided the winner
+    // — landing on the US placeholder. Prefer the region-bearing (fully
+    // catalogued) port. Kept at +2, below the smallest name-tier gap (5), so
+    // it only breaks otherwise-equal ties and never lifts a weaker name match
+    // over a stronger one or across the 60 acceptance threshold.
+    if (port.region) score += 2;
     if (score > best.score) best = { score, port };
   }
 
@@ -223,9 +235,9 @@ function findBestPort(
 
 /**
  * Convert a parsed cruise from the LLM into a CruiseInput shape that the
- * `/api/v1/cruises` POST endpoint accepts. Unmatched ports are turned into
- * stops with `portId=null` + a stub excursionNote so the user sees them and
- * can pick the right port manually in the UI.
+ * `/api/v1/cruises` POST endpoint accepts. Unmatched ports become unresolved
+ * stops (portId=null, isAtSea=false, unresolvedPortName set) so the name is
+ * never lost and the user can pick the catalog port later in the UI.
  */
 export async function resolveCruiseEntities(
   parsed: ParsedCruise,
@@ -298,25 +310,22 @@ function mapStop(
     unmatched.push({ dayNumber: index + 1, portName: stop.portName });
   }
 
-  // Tag unmatched ports in the excursionNote so the user can spot them in
-  // the editor; an unresolved port + isAtSea=false would otherwise fail Zod
-  // validation (the union demands one or the other).
-  const excursion = match
-    ? stop.excursionNote
-    : [stop.excursionNote, stop.portName ? `[unmatched: ${stop.portName}]` : null]
-        .filter(Boolean)
-        .join(" ") || undefined;
-
+  // Unmatched named ports become a first-class unresolved stop: the name is
+  // preserved in its own field, the stop stays a port (not a sea day), and the
+  // user can resolve it to a catalog port later. The excursion note stays clean.
+  const hasName = Boolean(stop.portName);
   return {
     portId: match?.id ?? null,
     dayNumber: index + 1,
     date: stop.date,
-    // Force isAtSea=true when the port could not be resolved to keep the Zod
-    // refinement happy. The user can correct this in the UI by picking a port.
-    isAtSea: !match,
+    // A non-sea stop with neither a matched port nor a name has nothing to
+    // preserve — degrade it to a sea day so it stays Zod-valid (the unresolved
+    // state requires a name).
+    isAtSea: !match && !hasName,
     arrivalTime: stop.arrivalTime,
     departureTime: stop.departureTime,
-    excursionNote: excursion,
+    excursionNote: stop.excursionNote,
+    unresolvedPortName: match ? undefined : (stop.portName ?? undefined),
   };
 }
 

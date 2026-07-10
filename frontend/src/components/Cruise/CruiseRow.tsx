@@ -6,6 +6,7 @@ import { countUniquePorts } from "./cruisePorts";
 interface Props {
   cruise: Cruise;
   onOpen: () => void;
+  actions?: JSX.Element;
 }
 
 const fmtDate = (iso: string | null): string => {
@@ -13,7 +14,7 @@ const fmtDate = (iso: string | null): string => {
   return new Date(iso).toISOString().slice(0, 10);
 };
 
-export function CruiseRow({ cruise, onOpen }: Props): JSX.Element {
+export function CruiseRow({ cruise, onOpen, actions }: Props): JSX.Element {
   const { t } = useTranslation("cruise");
   const portsCount = countUniquePorts(cruise);
   const displayLine = cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? "—";
@@ -40,6 +41,9 @@ export function CruiseRow({ cruise, onOpen }: Props): JSX.Element {
       </td>
       <td className="px-3 py-2 text-sm text-[var(--text-muted)]">{cruise.cabinNumber ?? "—"}</td>
       <td className="px-3 py-2 text-right text-sm text-[var(--text-muted)]">{price}</td>
+      <td className="px-3 py-2 text-right text-sm" onClick={(e) => e.stopPropagation()}>
+        {actions}
+      </td>
     </tr>
   );
 }

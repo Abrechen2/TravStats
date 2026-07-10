@@ -26,6 +26,7 @@ function cruise(id: string, portIds: number[]): Cruise {
       arrivalTime: null,
       departureTime: null,
       excursionNote: null,
+      unresolvedPortName: null,
     })),
   } as unknown as Cruise;
 }
@@ -53,6 +54,7 @@ describe("computePortFrequency", () => {
       arrivalTime: null,
       departureTime: null,
       excursionNote: null,
+      unresolvedPortName: null,
     });
     const freq = computePortFrequency([c]);
     expect(freq.length).toBe(1);
@@ -76,6 +78,7 @@ describe("computePortFrequency", () => {
       arrivalTime: null,
       departureTime: null,
       excursionNote: null,
+      unresolvedPortName: null,
     });
     expect(computePortFrequency([c])).toEqual([]);
   });

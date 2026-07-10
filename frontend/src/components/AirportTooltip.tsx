@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { GeoJSONFeature } from "../types";
 import { useLocale } from "../hooks/useLocale";
 import { useTranslation } from "../hooks/useTranslation";
+import { FlagImg, countryName } from "../lib/countryFlag";
 import { TooltipContainer } from "./TooltipContainer";
 
 interface AirportTooltipProps {
@@ -32,6 +33,8 @@ export function AirportTooltip({
   const stats = useMemo(() => {
     let name: string | null = null;
     let icao: string | null = null;
+    let country: string | null = null;
+    let city: string | null = null;
     let departures = 0;
     let arrivals = 0;
     let totalKm = 0;
@@ -49,6 +52,8 @@ export function AirportTooltip({
         departures++;
         if (!name && dep.name) name = dep.name;
         if (!icao && dep.icao) icao = dep.icao;
+        if (!country && dep.country) country = dep.country;
+        if (!city && dep.city) city = dep.city;
         if (arr.iata) {
           routeCounts.set(arr.iata, (routeCounts.get(arr.iata) ?? 0) + 1);
         }
@@ -57,6 +62,8 @@ export function AirportTooltip({
         arrivals++;
         if (!name && arr.name) name = arr.name;
         if (!icao && arr.icao) icao = arr.icao;
+        if (!country && arr.country) country = arr.country;
+        if (!city && arr.city) city = arr.city;
         if (dep.iata) {
           routeCounts.set(dep.iata, (routeCounts.get(dep.iata) ?? 0) + 1);
         }
@@ -73,6 +80,8 @@ export function AirportTooltip({
     return {
       name,
       icao,
+      country,
+      city,
       departures,
       arrivals,
       totalKm,
@@ -91,9 +100,10 @@ export function AirportTooltip({
       minWidth="220px"
       maxWidth="300px"
     >
-      {/* IATA + ICAO + name */}
-      <div className="flex items-baseline gap-2 mb-1">
-        <span className="font-mono font-bold text-base" style={{ color: "rgb(240,169,71)" }}>
+      {/* Flag + IATA + ICAO */}
+      <div className="flex items-center gap-2 mb-1">
+        <FlagImg country={stats.country} height={18} />
+        <span className="font-mono font-bold text-lg" style={{ color: "rgb(240,169,71)" }}>
           {iata}
         </span>
         {stats.icao && (
@@ -104,12 +114,18 @@ export function AirportTooltip({
             {stats.icao}
           </span>
         )}
-        {stats.name && (
-          <span className="text-xs truncate" style={{ color: "var(--text-muted)" }}>
-            {stats.name}
-          </span>
-        )}
       </div>
+      {/* Name + City, Country */}
+      {stats.name && (
+        <div className="text-xs font-medium" style={{ color: "var(--text-primary)" }}>
+          {stats.name}
+        </div>
+      )}
+      {(stats.city || stats.country) && (
+        <div className="text-xs mb-2" style={{ color: "var(--text-muted)" }}>
+          {[stats.city, countryName(stats.country, locale)].filter(Boolean).join(", ")}
+        </div>
+      )}
 
       {/* Total flights */}
       <div className="text-xs mb-2" style={{ color: "var(--text-primary)" }}>

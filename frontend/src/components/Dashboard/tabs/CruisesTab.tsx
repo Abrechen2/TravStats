@@ -151,14 +151,12 @@ export function CruisesTab(): JSX.Element {
     <div style={{ position: "absolute", inset: 0 }}>
       <MapContainer3D
         flights={[]}
-        visMode="routes"
-        onVisModeChange={() => {
-          /* cruise tab manages its own mode via useDashboardRoute */
-        }}
+        visMode={mode === "globe" ? "globe" : "routes"}
         extraLayers={extraLayers}
         showInternalCruises={showInternalCruises}
-        hideVisModeSelector
         cruisesOverride={visibleCruises}
+        appearanceDomains={["cruise"]}
+        cruiseColorMode="perCruise"
       />
       <button
         type="button"
@@ -166,7 +164,9 @@ export function CruisesTab(): JSX.Element {
         style={{
           position: "absolute",
           top: 12,
-          left: 12,
+          // Shift out of the way when the list panel (320px) is open so it
+          // doesn't overlap — matches the Alle tab's toggle behaviour.
+          left: sidebarOpen ? 340 : 12,
           zIndex: 30,
           padding: "6px 12px",
           borderRadius: 10,

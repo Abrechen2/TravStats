@@ -52,7 +52,7 @@ export function GenericCsvImportTile(): JSX.Element {
         setError(err instanceof Error ? err.message : String(err));
       }
     },
-    [csvText],
+    [csvText]
   );
 
   return (
@@ -89,7 +89,7 @@ export function GenericCsvImportTile(): JSX.Element {
             const result = await commitPreviewRows(rows, "imported_generic_csv");
             if (result.failures.length > 0) {
               setError(
-                `Imported ${result.committed} of ${rows.length}. ${result.failures.length} chunk(s) failed: ${result.failures.map((f) => `chunk ${f.chunkIndex}: ${f.error}`).join("; ")}`,
+                `Imported ${result.committed} of ${rows.length}. ${result.failures.length} chunk(s) failed: ${result.failures.map((f) => `chunk ${f.chunkIndex}: ${f.error}`).join("; ")}`
               );
             }
             return {

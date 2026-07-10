@@ -62,8 +62,7 @@ export default function DetectTripsBanner({ onChange }: Props): JSX.Element | nu
         className="rounded-xl border p-3.5 flex items-center gap-3 mb-5"
         style={{
           borderColor: "var(--accent)",
-          background:
-            "linear-gradient(90deg, rgba(240,169,71,0.08), rgba(240,169,71,0.02))",
+          background: "linear-gradient(90deg, rgba(240,169,71,0.08), rgba(240,169,71,0.02))",
         }}
       >
         <div
@@ -86,7 +85,7 @@ export default function DetectTripsBanner({ onChange }: Props): JSX.Element | nu
           className="px-3 py-1.5 rounded-md text-xs"
           style={{ color: "var(--text-muted)" }}
         >
-          {t("common:close")}
+          {t("common:buttons.close")}
         </button>
         <button
           type="button"

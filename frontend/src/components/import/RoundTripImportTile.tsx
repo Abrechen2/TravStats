@@ -1,11 +1,7 @@
 import { useState, useCallback } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { parseCsv } from "../../lib/csvParser";
-import {
-  parseXlsxToRows,
-  jsonToFlightRow,
-  type FlightRow,
-} from "../../lib/xlsxRoundTrip";
+import { parseXlsxToRows, jsonToFlightRow, type FlightRow } from "../../lib/xlsxRoundTrip";
 import { api } from "../../lib/api/client";
 import { airportsApi } from "../../lib/api/airports";
 import { logger } from "../../lib/logger";
@@ -262,7 +258,7 @@ export function RoundTripImportTile(): JSX.Element {
       statusBlock={
         busy ? (
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {t("common:loading")}
+            {t("common:loading.default")}
           </p>
         ) : stats ? (
           <p

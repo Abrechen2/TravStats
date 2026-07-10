@@ -83,10 +83,7 @@ export default function DetectReviewModal({
   const allSelected = selectedCount === state.length && state.length > 0;
   const totalFlights = useMemo(
     () =>
-      proposals.reduce(
-        (sum, p, idx) => sum + (state[idx]?.selected ? p.flightIds.length : 0),
-        0
-      ),
+      proposals.reduce((sum, p, idx) => sum + (state[idx]?.selected ? p.flightIds.length : 0), 0),
     [proposals, state]
   );
 
@@ -168,7 +165,7 @@ export default function DetectReviewModal({
             onClick={onClose}
             className="w-9 h-9 rounded-lg flex items-center justify-center"
             style={{ color: "var(--text-muted)" }}
-            aria-label={t("common:close")}
+            aria-label={t("common:accessibility.close")}
           >
             ✕
           </button>
@@ -178,7 +175,11 @@ export default function DetectReviewModal({
           className="px-5 py-3 flex items-center gap-3"
           style={{ borderBottom: "1px solid var(--color-border)" }}
         >
-          <Toggle checked={allSelected} onClick={toggleAll} indeterminate={!allSelected && selectedCount > 0} />
+          <Toggle
+            checked={allSelected}
+            onClick={toggleAll}
+            indeterminate={!allSelected && selectedCount > 0}
+          />
           <strong className="text-sm">
             {t("trips:detectReview.selectAll", { defaultValue: "Alle auswählen" })}
           </strong>
@@ -259,7 +260,9 @@ export default function DetectReviewModal({
                       aria-controls={panelId}
                       aria-label={
                         isOpen
-                          ? t("trips:detectReview.collapseLegs", { defaultValue: "Flüge ausblenden" })
+                          ? t("trips:detectReview.collapseLegs", {
+                              defaultValue: "Flüge ausblenden",
+                            })
                           : t("trips:detectReview.expandLegs", { defaultValue: "Flüge anzeigen" })
                       }
                     >
@@ -305,7 +308,7 @@ export default function DetectReviewModal({
             className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--accent)] text-[var(--bg-primary)] disabled:opacity-50"
           >
             {committing
-              ? t("common:loading")
+              ? t("common:loading.default")
               : `✓ ${t("trips:detectReview.commit", {
                   count: selectedCount,
                   defaultValue: "{{count}} Reisen erstellen",
