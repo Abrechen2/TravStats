@@ -6,6 +6,7 @@ import {
   getConsent,
   setConsent,
   getInstallId,
+  getOrCreateInstallId,
   getStatsBaseUrl,
   usageStatsTick,
   sendErasure,
@@ -85,7 +86,13 @@ router.put("/usage-stats", async (req: AuthRequest, res: Response, next: NextFun
     // successful request — in particular a successful erasure — into a 500.
     let installId: string | null = null;
     try {
-      installId = await getInstallId();
+      // On grant, mint the id eagerly rather than relying on the fire-and-forget
+      // ping in applyConsentChange (which may not have committed yet, or may
+      // never run at all when the stats endpoint is disabled) — the admin who
+      // just opted in should see the id immediately, since the privacy docs
+      // tell them to quote it in a data-subject request. On denial, never mint
+      // one for someone who just withdrew.
+      installId = consent === "granted" ? await getOrCreateInstallId() : await getInstallId();
     } catch (error) {
       logger.debug({ error }, "usage-stats: could not read install id for the response");
     }
