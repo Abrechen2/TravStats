@@ -70,9 +70,7 @@ export function aggregate(
   };
 }
 
-export function isWithData(
-  stats: DomainStats
-): stats is Extract<DomainStats, { hasData: true }> {
+export function isWithData(stats: DomainStats): stats is Extract<DomainStats, { hasData: true }> {
   return stats.hasData === true;
 }
 

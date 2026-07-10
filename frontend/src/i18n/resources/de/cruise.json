@@ -5,6 +5,8 @@
     "new": "Kreuzfahrt hinzufügen",
     "empty": "Noch keine Kreuzfahrten erfasst",
     "loading": "Kreuzfahrten werden geladen …",
+    "sortBy": "Nach {{col}} sortieren",
+    "duplicate": "Duplizieren",
     "columns": {
       "ship": "Schiff",
       "line": "Reederei",
@@ -12,7 +14,13 @@
       "ports": "Häfen",
       "status": "Status",
       "cabin": "Kabine",
-      "price": "Preis"
+      "price": "Preis",
+      "actions": "Aktionen"
+    },
+    "delete": {
+      "confirm": "Kreuzfahrt „{{ship}}“ wirklich löschen?",
+      "done": "Kreuzfahrt gelöscht",
+      "error": "Löschen fehlgeschlagen"
     }
   },
   "detail": {
@@ -22,6 +30,7 @@
     "route": "Route",
     "cabin": "Kabine",
     "costs": "Kosten",
+    "mapColor": "Kartenfarbe",
     "meta": "Notizen & Tags",
     "edit": "Bearbeiten",
     "delete": "Löschen",
@@ -45,7 +54,11 @@
     "departPort": "Abfahrtshafen",
     "arrivePort": "Ankunftshafen",
     "sea_days": "Seetage",
+    "sea_days_one": "Seetag",
+    "sea_days_other": "Seetage",
     "ports": "Häfen",
+    "ports_one": "Hafen",
+    "ports_other": "Häfen",
     "distance_nm": "Seemeilen",
     "bookingReference": "Buchungsnummer",
     "price": "Preis",
@@ -66,7 +79,9 @@
     "flightDate": "Datum",
     "flightClass": "Klasse",
     "departPortAirport": "Abflughafen",
-    "arrivePortAirport": "Zielflughafen"
+    "arrivePortAirport": "Zielflughafen",
+    "color": "Farbe",
+    "colorAuto": "Automatisch (aus Kreuzfahrt-ID abgeleitet)"
   },
   "seatClass": {
     "economy": "Economy",
@@ -95,7 +110,9 @@
     "excursion": "Landausflug",
     "moveUp": "Nach oben verschieben",
     "moveDown": "Nach unten verschieben",
-    "remove": "Stopp entfernen"
+    "remove": "Stopp entfernen",
+    "unresolved": "Nicht aufgelöster Hafen",
+    "unresolvedHint": "Wähle einen Hafen aus dem Katalog, um diesen Stopp aufzulösen."
   },
   "picker": {
     "ship_placeholder": "Schiff suchen …",
@@ -173,8 +190,7 @@
     "shipUnmatched": "Schiff nicht in DB",
     "shipUnmatchedHint": "Wird als freier Text gespeichert. Du kannst das Schiff im Editor verknüpfen.",
     "stopsLabel": "Stopps",
-    "stopsValue": "{{ports}} Häfen, {{seaDays}} Seetage",
     "unmatchedTitle": "Häfen ohne Treffer",
-    "unmatchedHint": "Diese Häfen wurden in der Datenbank nicht gefunden und vorerst als Seetage markiert. Wähle unten den passenden Hafen, oder korrigiere sie später im Editor."
+    "unmatchedHint": "Diese Häfen wurden im Katalog nicht gefunden und als „nicht aufgelöst\" markiert – sie bleiben Häfen (keine Seetage). Wähle unten den passenden Hafen, oder löse sie später im Editor auf."
   }
 }

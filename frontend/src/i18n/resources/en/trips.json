@@ -181,6 +181,12 @@
     "save": "Save",
     "cancel": "Cancel"
   },
+  "journalView": {
+    "view": "View",
+    "close": "Close",
+    "edit": "Edit",
+    "untitled": "Journal entry"
+  },
   "stopModal": {
     "createTitle": "Add stop / place",
     "editTitle": "Edit stop",

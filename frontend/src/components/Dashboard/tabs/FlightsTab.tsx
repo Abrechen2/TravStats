@@ -28,20 +28,8 @@ const FLIGHT_MODE_TO_MAP_MODE: Record<FlightMode, MapMode> = {
   heatmap: "heatmap",
   "stats-map": "routes",
   trips: "trips",
+  globe: "globe",
 };
-
-// Reverse-maps MapMode back to the closest FlightMode so the VisModeSelector
-// inside MapContainer3D can keep the URL in sync when the user changes mode
-// from within the map controls.
-const MAP_MODE_TO_FLIGHT_MODE: Partial<Record<MapMode, FlightMode>> = {
-  routes: "routes",
-  heatmap: "heatmap",
-  trips: "trips",
-};
-
-// Subset of MapMode values offered by the in-map FAB on the Flüge tab.
-// Globe is cross-domain — only exposed on the Alle tab.
-const FLIGHT_TAB_MAP_MODES: readonly MapMode[] = ["routes", "heatmap", "trips"];
 
 // Convert nullable DB columns to undefined so Zod .optional() accepts them
 // when re-creating a flight (duplicate). See project memory note on
@@ -52,7 +40,7 @@ function nullToUndef<T>(v: T | null | undefined): T | undefined {
 
 export function FlightsTab(): JSX.Element {
   const { t } = useTranslation(["dashboard", "common", "flights"]);
-  const { mode, setMode } = useDashboardRoute();
+  const { mode } = useDashboardRoute();
   const { isEnabled } = useEnabledDomains();
   const flightEnabled = isEnabled("flight");
   const [flights, setFlights] = useState<GeoJSONFeature[]>([]);
@@ -224,16 +212,6 @@ export function FlightsTab(): JSX.Element {
   const flightMode = (mode in FLIGHT_MODE_TO_MAP_MODE ? mode : "routes") as FlightMode;
   const visMode = FLIGHT_MODE_TO_MAP_MODE[flightMode];
 
-  const handleVisModeChange = useCallback(
-    (next: MapMode): void => {
-      const mapped = MAP_MODE_TO_FLIGHT_MODE[next];
-      if (mapped !== undefined) {
-        setMode(mapped);
-      }
-    },
-    [setMode]
-  );
-
   // Apply the global year filter to the flight set. Domain visibility
   // is intentionally NOT applied here — this tab is dedicated to
   // flights, the user already opened it, so hiding everything when the
@@ -270,21 +248,15 @@ export function FlightsTab(): JSX.Element {
       <MapContainer3D
         flights={flightMode === "stats-map" ? [] : visibleFlights}
         visMode={visMode}
-        onVisModeChange={handleVisModeChange}
         extraLayers={statsMapLayers}
         showInternalCruises={false}
+        appearanceDomains={["flight"]}
         onFlightClick={handleFlightClick}
         onRouteClick={handleRouteClick}
         onFlightOpen={(flightId) => {
           const f = lookup(flightId);
           if (f) setEditingFlight(f);
         }}
-        availableModes={FLIGHT_TAB_MAP_MODES}
-        // stats-map is a synthetic mode that renders the map in "routes"
-        // visMode via extraLayers. Hiding the in-map FAB there avoids it
-        // showing "Routes" as active (contradicting the toolbar dropdown)
-        // and silently dropping the user out of stats-map on click.
-        hideVisModeSelector={flightMode === "stats-map"}
         hideInfoPill
       />
       <button
@@ -293,7 +265,9 @@ export function FlightsTab(): JSX.Element {
         style={{
           position: "absolute",
           top: 12,
-          left: 12,
+          // Shift out of the way when the list panel (320px) is open so it
+          // doesn't overlap — matches the Alle tab's toggle behaviour.
+          left: sidebarOpen ? 340 : 12,
           zIndex: 30,
           padding: "6px 12px",
           borderRadius: 10,

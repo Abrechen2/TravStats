@@ -59,37 +59,12 @@ const ALIASES: Record<FieldKey, string[]> = {
     "dest",
     "nach",
   ],
-  depTimeLocal: [
-    "deptimelocal",
-    "deptime",
-    "departuretime",
-    "dptlocal",
-    "dpt",
-    "abflugzeit",
-  ],
-  arrTimeLocal: [
-    "arrtimelocal",
-    "arrtime",
-    "arrivaltime",
-    "arrlocal",
-    "ankunftszeit",
-  ],
-  flightNumber: [
-    "flightnumber",
-    "flightno",
-    "flight",
-    "flightid",
-    "flugnummer",
-  ],
+  depTimeLocal: ["deptimelocal", "deptime", "departuretime", "dptlocal", "dpt", "abflugzeit"],
+  arrTimeLocal: ["arrtimelocal", "arrtime", "arrivaltime", "arrlocal", "ankunftszeit"],
+  flightNumber: ["flightnumber", "flightno", "flight", "flightid", "flugnummer"],
   airline: ["airline", "carrier", "fluggesellschaft"],
   aircraft: ["aircraft", "ac", "plane", "type", "flugzeug", "flugzeugtyp"],
-  registration: [
-    "registration",
-    "reg",
-    "tail",
-    "tailnumber",
-    "kennzeichen",
-  ],
+  registration: ["registration", "reg", "tail", "tailnumber", "kennzeichen"],
   seatNumber: ["seatnumber", "seat", "seatno", "sitzplatz", "sitzplatznummer"],
   notes: ["notes", "note", "remarks", "remark", "comment", "comments", "notiz", "notizen"],
 };
@@ -106,9 +81,7 @@ function autoMap(headers: string[]): { mapping: GenericMapping; auto: Set<FieldK
   const allFields = [...REQUIRED_FIELDS, ...OPTIONAL_FIELDS];
   for (const field of allFields) {
     const aliases = ALIASES[field].map(normalize);
-    const match = normalizedHeaders.find(
-      (h) => aliases.includes(h.norm) && !used.has(h.raw),
-    );
+    const match = normalizedHeaders.find((h) => aliases.includes(h.norm) && !used.has(h.raw));
     if (match) {
       mapping[field] = match.raw;
       used.add(match.raw);
@@ -148,7 +121,9 @@ export function ColumnMappingWizard({
   // Detect collisions: same csv header mapped to two TravStats fields
   const collisions = useMemo(() => {
     const seen = new Map<string, FieldKey[]>();
-    for (const [field, header] of Object.entries(mapping) as Array<[FieldKey, string | undefined]>) {
+    for (const [field, header] of Object.entries(mapping) as Array<
+      [FieldKey, string | undefined]
+    >) {
       if (!header) continue;
       const list = seen.get(header) ?? [];
       list.push(field);
@@ -327,10 +302,7 @@ function FieldSection({
                     : "transparent",
               }}
             >
-              <div
-                className="flex items-center text-sm"
-                style={{ color: "var(--text-primary)" }}
-              >
+              <div className="flex items-center text-sm" style={{ color: "var(--text-primary)" }}>
                 <span>{t(`settings:import.preview.wizard.fields.${field}`)}</span>
                 {required && (
                   <span
@@ -367,9 +339,7 @@ function FieldSection({
                   }}
                   aria-label={t(`settings:import.preview.wizard.fields.${field}`)}
                 >
-                  <option value="">
-                    {t("settings:import.preview.wizard.skip")}
-                  </option>
+                  <option value="">{t("settings:import.preview.wizard.skip")}</option>
                   {csvHeaders.map((h) => {
                     const sampleForOption = csvSamples[h];
                     const label = sampleForOption
@@ -383,18 +353,12 @@ function FieldSection({
                   })}
                 </select>
                 {sample && (
-                  <p
-                    className="mt-1 truncate text-xs"
-                    style={{ color: "var(--text-muted)" }}
-                  >
+                  <p className="mt-1 truncate text-xs" style={{ color: "var(--text-muted)" }}>
                     {t("settings:import.preview.wizard.samplePrefix")}: {sample}
                   </p>
                 )}
                 {collides && (
-                  <p
-                    className="mt-1 text-xs"
-                    style={{ color: "rgb(252, 165, 165)" }}
-                  >
+                  <p className="mt-1 text-xs" style={{ color: "rgb(252, 165, 165)" }}>
                     {t("settings:import.preview.wizard.duplicateMapping")}
                   </p>
                 )}

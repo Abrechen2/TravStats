@@ -5,6 +5,12 @@ import { calcQuantiles, getHeatmapColor } from "./layerTypes";
 import type { ArcDatum, PointDatum } from "./layerTypes";
 import type { MapLayerColors } from "../../types/mapTheme";
 import { UpcomingArcLayer } from "./UpcomingArcLayer";
+import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
+import {
+  FLIGHT_STATUS_PAST_COLOR,
+  FLIGHT_STATUS_SCHEDULED_COLOR,
+  FLIGHT_STATUS_UPCOMING_COLOR,
+} from "../../lib/statusColors";
 
 function routeKey(a: string, b: string): string {
   return [a, b].sort().join("-");
@@ -34,9 +40,7 @@ type AirportProps = GeoJSONFeature["properties"]["departureAirport"];
 // coordinates (depLat/depLon are non-nullable, so the flight saves) but a
 // null IATA (depIata is nullable), so they vanished from the map entirely.
 function airportId(airport: AirportProps, coord: [number, number]): string {
-  return (
-    airport.iata || airport.icao || `@${coord[0].toFixed(3)},${coord[1].toFixed(3)}`
-  );
+  return airport.iata || airport.icao || `@${coord[0].toFixed(3)},${coord[1].toFixed(3)}`;
 }
 
 // Human-readable airport label for the map marker / aggregation map. Falls
@@ -53,13 +57,21 @@ const HISTORICAL_ALPHA = 140;
 
 // Sky-blue for pure-scheduled (never-flown) routes. Matches EDGE_COLOR_GLSL
 // in UpcomingArcLayer: 0.3137 * 255 ≈ 80, 0.7843 * 255 ≈ 200, 1.0 * 255 = 255.
-export const SCHEDULED_BLUE: [number, number, number] = [80, 200, 255];
+// Sourced from statusColors.ts so the globe agrees pixel-for-pixel.
+export const SCHEDULED_BLUE: [number, number, number] = FLIGHT_STATUS_SCHEDULED_COLOR;
 // Two-tier red for mixed-route (flown + scheduled) cores. Below median
 // frequency: lighter red (Tailwind red-400). At/above median: deeper red
 // (Tailwind red-600). The blue tips of UpcomingArcLayer fade these in.
 export const MIXED_RED_LOW: [number, number, number] = [248, 113, 113];
 export const MIXED_RED_HIGH: [number, number, number] = [220, 38, 38];
 
+// Two-tone "Alle" view: past family (historical + mixed core + regular
+// past-only) collapses to the flight domain orange, sourced directly from
+// statusColors.ts (the single source of truth shared with the globe);
+// upcoming collapses to FLIGHT_STATUS_UPCOMING_COLOR (coral) instead of
+// SCHEDULED_BLUE, + coral UpcomingArcLayer tips on mixed routes. The single
+// flight-domain view (statusTwoTone unset) is unaffected — it keeps
+// SCHEDULED_BLUE + the default blue tips.
 
 interface RouteRecord {
   key: string;
@@ -68,6 +80,9 @@ interface RouteRecord {
   // first-seen flight's geometry — that's fine for a directionless display.
   depCoord: [number, number];
   arrCoord: [number, number];
+  // First-seen departure/arrival identity — surfaced in the hover tooltip.
+  depAirport: AirportProps;
+  arrAirport: AirportProps;
   count: number;
   flightIds: string[];
   hasUpcoming: boolean;
@@ -90,10 +105,7 @@ function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord>
     if (!coords) continue;
     // Identify each airport by IATA → ICAO → coordinate key so ICAO-only /
     // code-less airfields still aggregate instead of being dropped (#120).
-    const key = routeKey(
-      airportId(dep, coords.depCoord),
-      airportId(arr, coords.arrCoord)
-    );
+    const key = routeKey(airportId(dep, coords.depCoord), airportId(arr, coords.arrCoord));
     const isScheduled = f.properties.status === "scheduled";
     const isHistorical = f.properties.status === "historical";
     const existing = records.get(key);
@@ -108,6 +120,8 @@ function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord>
         key,
         depCoord: coords.depCoord,
         arrCoord: coords.arrCoord,
+        depAirport: dep,
+        arrAirport: arr,
         count: 1,
         flightIds: [f.properties.id],
         hasUpcoming: isScheduled,
@@ -131,7 +145,23 @@ function buildArcs(
    * fall back to grey, since "this is older legacy data" is a
    * cross-domain semantic the override shouldn't suppress.
    */
-  paletteOverride?: [number, number, number]
+  paletteOverride?: [number, number, number],
+  /**
+   * When true, collapses the past-family coloring (allHistorical + mixed
+   * core + regular past-only) into a single flight-domain orange
+   * (FLIGHT_STATUS_PAST_COLOR, imported from statusColors.ts) instead of the
+   * default grey / two-tier red / heatmap. Used by the "Alle" (all-domains)
+   * view so flight routes read consistently orange regardless of history
+   * status; upcoming legs render coral (FLIGHT_STATUS_UPCOMING_COLOR) +
+   * coral UpcomingArcLayer tips instead of the single-view's sky-blue.
+   * This branch self-gates on `statusTwoTone` alone — it does not
+   * depend on `paletteOverride` being passed, so callers that set
+   * `statusTwoTone` without a matching `paletteOverride` still get the
+   * correct orange instead of silently falling back to the heatmap.
+   * Defaults to false/undefined so the single-flight-domain view is
+   * visually unchanged.
+   */
+  statusTwoTone?: boolean
 ): ArcDatum[] {
   const counts = [...records.values()].map((r) => r.count);
   const { q25, q50, q75 } = calcQuantiles(counts.length > 0 ? counts : [0]);
@@ -142,10 +172,12 @@ function buildArcs(
 
     // Four-way category resolution. Priority:
     //   1. allHistorical — dim grey, lowest precedence.
-    //   2. pure-scheduled (hasUpcoming && !hasPastFlown) — solid sky-blue,
-    //      rendered through plain ArcLayer (no shader inject).
-    //   3. mixed (hasUpcoming && hasPastFlown) — hardcoded 2-tier red core,
-    //      rendered through UpcomingArcLayer which fades blue at both ends.
+    //   2. pure-scheduled (hasUpcoming && !hasPastFlown) — solid sky-blue
+    //      (coral in two-tone), rendered through plain ArcLayer (no shader
+    //      inject).
+    //   3. mixed (hasUpcoming && hasPastFlown) — hardcoded 2-tier red core
+    //      (orange in two-tone), rendered through UpcomingArcLayer which
+    //      fades blue (coral in two-tone) at both ends.
     //   4. regular past-only — frequency-driven heatmap, or paletteOverride
     //      when the caller wants to force a domain-specific palette (e.g.
     //      cruise routes use a different palette than flight heatmaps).
@@ -153,23 +185,37 @@ function buildArcs(
     let alpha: number;
 
     if (r.allHistorical) {
-      color = HISTORICAL_COLOR;
-      alpha = HISTORICAL_ALPHA;
+      color = statusTwoTone ? FLIGHT_STATUS_PAST_COLOR : HISTORICAL_COLOR;
+      alpha = statusTwoTone ? Math.min(160 + r.count * 14, 230) : HISTORICAL_ALPHA;
     } else if (r.hasUpcoming && !r.hasPastFlown) {
       // Pure-scheduled — never-flown route with an upcoming flight. Solid
-      // sky-blue across the whole arc, no shader gradient.
-      color = SCHEDULED_BLUE;
+      // across the whole arc, no shader gradient. Two-tone ("Alle") mode
+      // renders coral (warm, pairs with the orange past-color and stays
+      // distinct from the cool cruise blues/cyans); the single flight-domain
+      // view keeps the original sky-blue unchanged.
+      color = statusTwoTone ? FLIGHT_STATUS_UPCOMING_COLOR : SCHEDULED_BLUE;
       alpha = Math.min(140 + r.count * 14, 230);
     } else if (r.hasUpcoming && r.hasPastFlown) {
-      // Mixed — hardcoded 2-tier red core; UpcomingArcLayer fades blue at
-      // both ends. Below median frequency: red-400. At/above median:
-      // red-600.
-      color = r.count <= q50 ? MIXED_RED_LOW : MIXED_RED_HIGH;
+      // Mixed — in two-tone mode, the core collapses to the flight orange
+      // (UpcomingArcLayer's blue tips over it read as "past + upcoming").
+      // Otherwise: hardcoded 2-tier red core. Below median frequency:
+      // red-400. At/above median: red-600.
+      color = statusTwoTone
+        ? FLIGHT_STATUS_PAST_COLOR
+        : r.count <= q50
+          ? MIXED_RED_LOW
+          : MIXED_RED_HIGH;
       alpha = Math.min(100 + r.count * 14, 230);
     } else {
-      // Regular past-only — frequency-driven heatmap, or domain-scoped
-      // palette when the caller passes paletteOverride.
-      color = paletteOverride ?? getHeatmapColor(r.count, q25, q50, q75, themeColors);
+      // Regular past-only — in two-tone mode, self-gates to the same
+      // flight-domain orange as the other two branches above (do NOT rely
+      // on paletteOverride to carry the two-tone color — a caller that
+      // passes statusTwoTone without a matching paletteOverride must still
+      // land on orange, not silently fall through to the heatmap).
+      // Otherwise: domain-scoped palette override, or frequency heatmap.
+      color = statusTwoTone
+        ? FLIGHT_STATUS_PAST_COLOR
+        : (paletteOverride ?? getHeatmapColor(r.count, q25, q50, q75, themeColors));
       // Visibility floor: a single-flown route (count 1) must still read
       // clearly on its own — a lone long-haul (e.g. a one-off Hawaii trip)
       // sitting in an otherwise empty ocean was nearly invisible at the old
@@ -191,6 +237,20 @@ function buildArcs(
       hasUpcoming: r.hasUpcoming,
       hasPastFlown: r.hasPastFlown,
       isHistorical: r.allHistorical,
+      departure: {
+        iata: r.depAirport.iata,
+        icao: r.depAirport.icao,
+        name: r.depAirport.name,
+        city: r.depAirport.city,
+        country: r.depAirport.country,
+      },
+      arrival: {
+        iata: r.arrAirport.iata,
+        icao: r.arrAirport.icao,
+        name: r.arrAirport.name,
+        city: r.arrAirport.city,
+        country: r.arrAirport.country,
+      },
     });
   }
   return arcs;
@@ -200,7 +260,7 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
   const airportMap = new Map<string, PointDatum>();
   const bumpLastVisit = (
     cur: string | undefined,
-    candidate: string | undefined,
+    candidate: string | undefined
   ): string | undefined => {
     if (!candidate) return cur;
     if (!cur || candidate > cur) return candidate;
@@ -223,6 +283,9 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
         count: 0,
         name: dep.name ?? airportLabel(dep),
         iata: airportLabel(dep),
+        icao: dep.icao,
+        country: dep.country,
+        city: dep.city,
       });
     }
     if (!airportMap.has(arrKey)) {
@@ -231,6 +294,9 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
         count: 0,
         name: arr.name ?? airportLabel(arr),
         iata: airportLabel(arr),
+        icao: arr.icao,
+        country: arr.country,
+        city: arr.city,
       });
     }
     const depPoint = airportMap.get(depKey)!;
@@ -258,7 +324,8 @@ export function buildRouteData(
   flights: GeoJSONFeature[],
   minRouteCount: number,
   themeColors?: MapLayerColors,
-  paletteOverride?: [number, number, number]
+  paletteOverride?: [number, number, number],
+  statusTwoTone?: boolean
 ): RouteData {
   // Single arc per canonical airport pair (FRA-MUC === MUC-FRA), regardless
   // of whether the route carries past, scheduled, or mixed flights. Frequency
@@ -268,7 +335,7 @@ export function buildRouteData(
   // with the heatmap.
   const records = aggregateAllRoutes(flights);
   return {
-    arcs: buildArcs(records, minRouteCount, themeColors, paletteOverride),
+    arcs: buildArcs(records, minRouteCount, themeColors, paletteOverride, statusTwoTone),
     points: buildAirportPoints(flights),
   };
 }
@@ -278,13 +345,6 @@ const HIGHLIGHT_COLOR: [number, number, number, number] = [245, 158, 11, 255];
 // How many alpha units to keep for dimmed routes (out of 255)
 const DIM_ALPHA = 18;
 
-/**
- * Below this zoom, IATA labels are hidden — at low zoom levels (world view)
- * dozens of three-letter codes overlap into illegible noise. The marker
- * dots stay visible, so users still see where airports are. Above this
- * threshold there's enough screen space for the labels to read cleanly.
- */
-const LABEL_VISIBILITY_MIN_ZOOM = 4;
 
 /**
  * Build the deck.gl layer instances for routes mode from already-computed
@@ -294,6 +354,20 @@ const LABEL_VISIBILITY_MIN_ZOOM = 4;
  * re-trigger the expensive data build — only the layer construction below,
  * which is cheap.
  */
+/** User appearance overrides for the flat routes map (mirrors the globe's
+ *  "Anpassung" panel). All optional — omitted fields keep the defaults. */
+export interface RoutesAppearance {
+  /** Airport marker fill colour (RGB). Falls back to the theme colour. */
+  markerColor?: [number, number, number];
+  /** Multiplier on the airport marker + ring radii (1 = default). */
+  markerSizeScale?: number;
+  /** Multiplier on flight-arc width (1 = default). */
+  arcWidthScale?: number;
+  /** Marker-label reveal: off / key markers only (priority by frequency,
+   *  the default) / all. Replaces the old hard zoom gate. */
+  labelsMode?: LabelsMode;
+}
+
 export function createRoutesLayers(
   routeData: RouteData,
   onFlightClick?: (flightId: string | string[]) => void,
@@ -301,16 +375,40 @@ export function createRoutesLayers(
   arcHeight: number = 1,
   selectedIds: string[] = [],
   onAirportClick?: (iata: string, lon: number, lat: number) => void,
-  zoom: number = 5
+  zoom: number = 5,
+  appearance: RoutesAppearance = {},
+  /**
+   * Mirrors `buildRouteData`'s `statusTwoTone` flag so the mixed-route
+   * `UpcomingArcLayer` tips match the two-tone "Alle" view's coral
+   * pure-scheduled color instead of the single-view's default sky-blue.
+   * Defaults to false/undefined so the single-flight-domain view's tips
+   * are visually unchanged.
+   */
+  statusTwoTone?: boolean
 ): Layer[] {
   const { arcs, points } = routeData;
-  const dotRgb = themeColors?.airportDot ?? ([240, 169, 71] as [number, number, number]);
+  const { markerColor, markerSizeScale = 1, arcWidthScale = 1, labelsMode = "important" } = appearance;
+  const dotRgb =
+    markerColor ?? themeColors?.airportDot ?? ([240, 169, 71] as [number, number, number]);
 
   const selectedSet = new Set(selectedIds);
   const hasSelection = selectedIds.length > 0;
   // Airport opacity: dim when a route is highlighted so pulse rings stand out
   const airportOpacity = hasSelection ? 0.15 : 1;
-  const labelsVisible = zoom >= LABEL_VISIBILITY_MIN_ZOOM;
+  // Priority label reveal: the busiest airports keep their label even when
+  // zoomed out; smaller ones fill in as the zoom budget grows.
+  // pickLabelled's zoom budget only caps the *count* shown — it has no idea
+  // where two labels land on screen, so a cluster of busy airports close
+  // together (e.g. MUC/FRA/VIE/ZRH/CDG) can all be "in budget" and still
+  // stack on top of each other. declutterByDistance adds real screen-space
+  // spacing on top of that budget, favouring the busier airport when two
+  // are too close (#label-overlap). Skipped in "all" mode — the user
+  // explicitly asked to see every label, overlap included.
+  const budgeted = pickLabelled(points, (p) => p.count, labelsMode, zoom);
+  const labelPoints =
+    labelsMode === "all"
+      ? budgeted
+      : declutterByDistance(budgeted, (p) => p.count, (p) => p.position, zoom);
 
   // Three arc datasets:
   //   - regular: no upcoming flight — heatmap colour through plain ArcLayer.
@@ -346,18 +444,20 @@ export function createRoutesLayers(
       // ones. Cap at 4 px (was 7) — multiplier dropped from 1.3 to 1.0 so
       // 1 flight = 1 px, 16 flights = max 4 px (smooth ramp across realistic
       // counts).
-      if (d.isHistorical) return 1.2;
-      const base = Math.min(Math.sqrt(d.count) * 1.0, 4);
+      if (d.isHistorical) return 1.2 * arcWidthScale;
+      const base = Math.min(Math.sqrt(d.count) * 1.0, 4) * arcWidthScale;
       if (!hasSelection) return base;
       // Selected fallback floor matches the new max so a selected mixed
       // route doesn't pop bigger than the unselected cap.
-      return d.flightIds.some((id) => selectedSet.has(id)) ? Math.max(base * 2, 4) : base;
+      return d.flightIds.some((id) => selectedSet.has(id))
+        ? Math.max(base * 2, 4 * arcWidthScale)
+        : base;
     },
     getHeight: arcHeight,
     // Visibility floor: 2 px minimum so a single far-flung route (e.g. a
     // one-off transpacific leg) stays clearly visible at world zoom instead
     // of thinning to a barely-perceptible 1 px hairline.
-    widthMinPixels: 2,
+    widthMinPixels: 2 * arcWidthScale,
     pickable: !!onFlightClick,
     onClick: onFlightClick
       ? ({ object }: { object?: ArcDatum }) => {
@@ -386,13 +486,17 @@ export function createRoutesLayers(
     ...sharedArcProps,
   });
 
-  // Mixed routes — already flown AND carry an upcoming flight. Red core
-  // (data layer), blue tips (UpcomingArcLayer fragment shader). Layer id
-  // kept as `routes-arc-upcoming` for layer-state continuity (selection
-  // state, picking buffers).
+  // Mixed routes — already flown AND carry an upcoming flight. Red/orange
+  // core (data layer), blue/coral tips (UpcomingArcLayer fragment shader).
+  // Layer id kept as `routes-arc-upcoming` for layer-state continuity
+  // (selection state, picking buffers). Two-tone mode passes coral as the
+  // tip color to match the pure-scheduled arcs' FLIGHT_STATUS_UPCOMING_COLOR;
+  // otherwise `edgeColor` is omitted and UpcomingArcLayer falls back to its
+  // default sky-blue, keeping the single flight-domain view unchanged.
   const upcomingArcLayer = new UpcomingArcLayer<ArcDatum>({
     id: "routes-arc-upcoming",
     data: mixedArcs,
+    ...(statusTwoTone ? { edgeColor: FLIGHT_STATUS_UPCOMING_COLOR } : {}),
     ...sharedArcProps,
   });
 
@@ -401,7 +505,8 @@ export function createRoutesLayers(
     id: "routes-ring-inner",
     data: points,
     getPosition: (d) => d.position,
-    getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1000,
+    getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1000 * markerSizeScale,
+    updateTriggers: { getRadius: [markerSizeScale], getLineColor: [dotRgb] },
     getFillColor: [0, 0, 0, 0],
     getLineColor: [...dotRgb, 180] as [number, number, number, number],
     stroked: true,
@@ -416,7 +521,8 @@ export function createRoutesLayers(
     id: "routes-ring-outer",
     data: points,
     getPosition: (d) => d.position,
-    getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1800,
+    getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1800 * markerSizeScale,
+    updateTriggers: { getRadius: [markerSizeScale], getLineColor: [dotRgb] },
     getFillColor: [0, 0, 0, 0],
     getLineColor: [...dotRgb, 60] as [number, number, number, number],
     stroked: true,
@@ -431,7 +537,8 @@ export function createRoutesLayers(
     id: "routes-dot",
     data: points,
     getPosition: (d) => d.position,
-    getRadius: () => 2200,
+    getRadius: () => 2200 * markerSizeScale,
+    updateTriggers: { getRadius: [markerSizeScale], getFillColor: [dotRgb] },
     getFillColor: [...dotRgb, 220] as [number, number, number, number],
     stroked: false,
     opacity: airportOpacity,
@@ -445,10 +552,11 @@ export function createRoutesLayers(
 
   // IATA code labels — appear above each marker. Hidden at low zoom levels
   // where overlapping codes become illegible; the marker dots remain visible
-  // so users still see airport locations.
+  // so users still see airport locations. `labelPoints` above is already
+  // decluttered by screen distance (#label-overlap), not just count-budgeted.
   const labelLayer = new TextLayer<PointDatum>({
     id: "routes-labels",
-    data: points,
+    data: labelPoints,
     getPosition: (d) => d.position,
     getText: (d) => d.iata,
     getSize: 12,
@@ -465,7 +573,7 @@ export function createRoutesLayers(
     billboard: true,
     characterSet: "auto",
     opacity: airportOpacity,
-    visible: labelsVisible,
+    visible: labelsMode !== "off",
     pickable: !!onAirportClick,
     onClick: onAirportClick
       ? ({ object }) => {

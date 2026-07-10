@@ -48,6 +48,7 @@ model User {
   bookings             Booking[]
   cruises              Cruise[]
   apiTokens            ApiToken[]
+  pairingCodes         PairingCode[]
 
   @@map("users")
 }
@@ -81,8 +82,39 @@ model ApiToken {
   revokedAt   DateTime? @map("revoked_at")
   createdAt   DateTime  @default(now()) @map("created_at")
 
+  // Device-pairing metadata. Populated when a token is minted via the
+  // mobile pairing flow (POST /api/v1/pairing/claim). `deviceId` lets the
+  // claim path revoke a prior token for the same physical device so a
+  // re-pair doesn't leave orphaned credentials behind.
+  deviceId    String?   @map("device_id")
+  platform    String?
+  appVersion  String?   @map("app_version")
+
   @@index([userId])
+  @@index([userId, deviceId])
   @@map("api_tokens")
+}
+
+/// One-time pairing codes for the mobile device-pairing flow.
+///
+/// A browser session calls POST /api/v1/pairing/start, which creates a
+/// short-lived code (10 min). Only its SHA-256 (`codeHash`) is persisted —
+/// the plaintext is shown to the user as a QR / typed code and never stored.
+/// The mobile app posts the plaintext to POST /api/v1/pairing/claim, which
+/// atomically consumes the row (sets `consumedAt`) and mints a device PAT.
+/// `consumedAt` guards against double-claims: a conditional update on
+/// `consumedAt = null` means only one concurrent claim can win.
+model PairingCode {
+  id         String    @id @default(uuid())
+  codeHash   String    @unique @map("code_hash")
+  userId     String    @map("user_id")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("pairing_codes")
 }
 
 model Airport {
@@ -326,6 +358,12 @@ model UserSettings {
   historicalEnrichmentMinConfidence Int     @default(60) @map("historical_enrichment_min_confidence")
   historicalEnrichmentMaxPerDay     Int     @default(50) @map("historical_enrichment_max_per_day")
 
+  // Mobile app preferences backup/sync blob (units, formats, …). Opaque
+  // JSON owned by the mobile client; the server only stores + serves it.
+  // PAT / device identity are NOT stored here.
+  appPrefs          Json?     @map("app_prefs")
+  appPrefsUpdatedAt DateTime? @map("app_prefs_updated_at")
+
   updatedAt DateTime @updatedAt @map("updated_at")
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -417,6 +455,14 @@ model AdminSettings {
   allowRegistration Boolean @default(false) @map("allow_registration")
   frontendUrl       String? @map("frontend_url")
 
+  // Public base URL the mobile app should talk to after pairing (e.g.
+  // https://travstats.example.com). Surfaced by the device-pairing flow so a
+  // freshly paired phone knows the externally reachable origin instead of the
+  // LAN address the browser happened to be on. `lanUrl` is an optional
+  // secondary hint for on-network clients.
+  publicUrl         String? @map("public_url")
+  lanUrl            String? @map("lan_url")
+
   // Off-site backup sync via WebDAV — supersedes WEBDAV_* ENV variables.
   // webdavPasswordEncrypted is AES-GCM via encryptApiKey() — never stored plain.
   webdavSyncEnabled       Boolean @default(false) @map("webdav_sync_enabled")
@@ -446,6 +492,13 @@ model AdminSettings {
 
   // Log retention in days (auto-delete older logs)
   logRetentionDays Int @default(7) @map("log_retention_days")
+
+  // === ANONYMOUS USAGE STATISTICS (opt-in) ===
+  // Consent is instance-wide and admin-only. 'unset' | 'granted' | 'denied'.
+  // Only 'granted' ever sends. The install id is a purely random uuid4 — never
+  // derived from IP, hostname, MAC, or paths.
+  usageStatsConsent   String  @default("unset") @map("usage_stats_consent")
+  usageStatsInstallId String? @map("usage_stats_install_id")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -767,6 +820,11 @@ model Cruise {
   parserTemplate   String?   @map("parser_template")
   parserConfidence Int?      @map("parser_confidence")
   dataSource       String?   @map("data_source")
+  // Optional user-selectable map color (hex, e.g. "#e88374"). Nullable —
+  // null means "auto-derive from cruise id" (see resolveCruiseColor on the
+  // frontend). Unlike Trip.color, there is no default so existing rows stay
+  // null and keep their derived color.
+  color            String?   @map("color")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
@@ -825,6 +883,9 @@ model CruiseStop {
   arrivalTime   DateTime? @map("arrival_time")
   departureTime DateTime? @map("departure_time")
   excursionNote String?   @map("excursion_note")
+  // Third stop state: a port whose name could not be matched to the catalog on
+  // import. portId=null AND isAtSea=false AND this set => unresolved port.
+  unresolvedPortName String? @map("unresolved_port_name")
 
   cruise Cruise @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
   port   Port?  @relation(fields: [portId], references: [id], onDelete: SetNull)
