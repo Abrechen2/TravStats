@@ -112,16 +112,49 @@ new install without waiting up to 24 h.
   "achievements": { "unlocked_total": 87, "keys": ["globetrotter", "night_owl"] },
   "features": {
     "llm_parser": true,
-    "immich": false,
-    "live_tracking": true,
     "backups": true,
-    "historical_enrichment": false
+    "webdav_sync": false,
+    "historical_enrichment": false,
+    "live_tracking": true
   },
   "flight_api_providers": ["airlabs", "opensky"],
   "locale": "de | en",
   "reported_at": "<ISO 8601 UTC>"
 }
 ```
+
+### Where every field actually comes from
+
+The brainstorm assumed a config surface that does not exist. Verified against
+`backend/prisma/schema.prisma` and the settings routes, each field resolves as:
+
+| Field | Source |
+|---|---|
+| `version` | `appVersion` from `backend/src/utils/version.ts` (prerelease suffix stripped) |
+| `arch` | `process.arch` → `x64` → `amd64`, `arm64` → `arm64` |
+| `enabled_domains` | **Union** of `UserSettings.enabledDomains` across all users. It is a per-user column, not an instance setting. |
+| `users_bucket` | `prisma.user.count()` |
+| `flights_bucket` | `prisma.flight.count()` |
+| `cruises_bucket` | `prisma.cruise.count()` |
+| `distance_km.flight` | `SUM(Flight.routeDistance)` — nullable, so NULLs are skipped |
+| `distance_km.cruise` | `SUM(CruiseLeg.distanceKm)` — non-null |
+| `achievements.unlocked_total` | `prisma.userAchievement.count()` |
+| `achievements.keys` | distinct `Achievement.code` joined via `UserAchievement` |
+| `features.llm_parser` | derived: `AdminSettings.ollamaUrl` set **or** `globalOpenaiApiKey` set **or** `globalClaudeApiKey` set |
+| `features.backups` | `AdminSettings.backupEnabled` |
+| `features.webdav_sync` | `AdminSettings.webdavSyncEnabled` |
+| `features.historical_enrichment` | **any** user with `UserSettings.historicalEnrichmentEnabled = true` (per-user column) |
+| `features.live_tracking` | **any** flight with `Flight.hasLiveTracking = true`. There is no global toggle. |
+| `flight_api_providers` | which `AdminSettings.global*ApiKey` columns are non-null. Names only, never values. |
+| `locale` | most frequent `UserSettings.data.display.language` across users (it lives inside the `data` JSON blob, not a column); ties resolve to `en` |
+
+**Corrections against the brainstorm.** `features.immich` was **dropped**: there is
+no Immich integration anywhere in `backend/` or `frontend/` — it lives unmerged on
+`dev/immich-albums`. Shipping a telemetry field for a feature that does not exist
+would report `false` for every install forever. `features.live_tracking` was
+redefined, because it is a per-flight boolean rather than a setting.
+`enabled_domains`, `historical_enrichment`, and `locale` were all assumed to be
+instance-level and are in fact per-user, so each becomes an aggregate.
 
 Notes on specific fields:
 
