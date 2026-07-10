@@ -258,7 +258,7 @@ export function RoundTripImportTile(): JSX.Element {
       statusBlock={
         busy ? (
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {t("common:loading")}
+            {t("common:loading.default")}
           </p>
         ) : stats ? (
           <p
