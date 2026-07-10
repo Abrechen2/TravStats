@@ -14,7 +14,14 @@ const { mockTranslateFn } = vi.hoisted(() => ({
   mockTranslateFn: vi.fn((key: string) => key),
 }));
 
-const FAILURE_KINDS = ["notConfigured", "unreachable", "auth", "notFound", "protocol"];
+const FAILURE_KINDS = [
+  "notConfigured",
+  "unreachable",
+  "auth",
+  "notFound",
+  "protocol",
+  "invalidUrl",
+];
 
 vi.mock("../../../lib/api/immich", () => ({
   immichApi: { getSettings, updateSettings, testConnection },
@@ -136,6 +143,26 @@ describe("ImmichConnectionCard", () => {
     await waitFor(() => expect(screen.getByText("T:errors.auth")).toBeInTheDocument());
     // The raw English backend message must NOT be rendered.
     expect(screen.queryByText("Immich rejected the API key")).not.toBeInTheDocument();
+  });
+
+  it("renders the invalidUrl failure text when the user mistyped their own URL", async () => {
+    // A malformed base URL is the user's typo, not a server-version mismatch:
+    // it must resolve to `errors.invalidUrl`, never the misleading `errors.protocol`.
+    mockTranslateFn.mockImplementation((key: string) => `T:${key}`);
+    testConnection.mockResolvedValue({
+      success: false,
+      kind: "invalidUrl",
+      message: "Immich URL is not a valid URL",
+    });
+    const user = userEvent.setup();
+    render(<ImmichConnectionCard />);
+    await waitFor(() => expect(getSettings).toHaveBeenCalled());
+
+    await user.click(screen.getByRole("button", { name: "T:test" }));
+
+    await waitFor(() => expect(screen.getByText("T:errors.invalidUrl")).toBeInTheDocument());
+    expect(screen.queryByText("T:errors.protocol")).not.toBeInTheDocument();
+    expect(screen.queryByText("Immich URL is not a valid URL")).not.toBeInTheDocument();
   });
 
   it("falls back to a generic error key when the backend sends an unknown kind", async () => {

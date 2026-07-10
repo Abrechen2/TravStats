@@ -103,6 +103,12 @@ describe("immichFailureKind", () => {
     expect(immichFailureKind({ response: { status: 502, data: { error: "auth" } } })).toBe("auth");
   });
 
+  it("extracts the invalidUrl kind from a 400 bad-URL failure", () => {
+    expect(immichFailureKind({ response: { status: 400, data: { error: "invalidUrl" } } })).toBe(
+      "invalidUrl"
+    );
+  });
+
   it("returns null for an unrelated error", () => {
     expect(immichFailureKind(new Error("boom"))).toBeNull();
     expect(immichFailureKind({ response: { status: 500, data: {} } })).toBeNull();

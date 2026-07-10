@@ -52,6 +52,7 @@
     "auth": "Immich hat den API-Schlüssel abgelehnt.",
     "notFound": "Album nicht gefunden — wurde es in Immich gelöscht?",
     "protocol": "Unerwartete Antwort von Immich. Passt die Server-Version?",
+    "invalidUrl": "Die Server-URL ist ungültig.",
     "retry": "Erneut versuchen"
   }
 }
