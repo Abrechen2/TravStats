@@ -182,8 +182,10 @@ frontend/src/
   any other). If a port is busy, ask the user to handle it.
 - **`any` is FORBIDDEN** — always use `unknown` + type guards. The only
   exception is `.d.ts` files.
-- **Pino logger** — no `console.log`. Import:
-  `import { logger } from '../utils/logger'`.
+- **Pino logger** — no `console.log`. `utils/logger.ts` exports the logger as a
+  **default** export, so import it as
+  `import logger from '../utils/logger'` (there is no named `logger` export;
+  the named exports are the category loggers like `httpLogger`, `parserLogger`).
 - **Prisma JSON fields** — cast via
   `as unknown as Prisma.InputJsonValue`, never directly from
   `Record<string, unknown>`.
@@ -271,6 +273,26 @@ frontend/src/
   `parsed.domain === 'cruise'` and call `parseCruiseBookingText` →
   `resolveCruiseEntities`). Sample booking emails for regression
   tests live under `test-samples/Kreuzfahrt-emails/`.
+- **Immich albums** — a trip links Immich albums in one of two modes.
+  **Link mode** stores zero bytes: images stream through an ownership- and
+  membership-checked proxy (`routes/immich/assetProxy.ts`) with browser ETag
+  caching. **Import mode** downloads originals into `getTripPhotoDir()` as
+  ordinary `TripPhoto` rows, idempotent via the `(tripId, immichAssetId)` unique
+  index. Three things that look wrong but are deliberate:
+  (1) `POST /resync` checks `isImportInFlight(linkId)` and resolves the
+  connection **before** resetting the job row to `pending` — reversing that order
+  clobbers a live `running` job and then strands it forever, because
+  `startAlbumImport` refuses an in-flight link.
+  (2) An ENV-provided connection counts as **shared** (`isShared = source !== "user"`),
+  deliberately diverging from `apiKeyResolver.hasApiKeyAccess`.
+  (3) `normalizeImmichBaseUrl` has **no egress restriction** on purpose — a
+  self-hosted Immich lives on the LAN, so a private-IP block would break the
+  primary use case. Instances that expose Immich configuration to untrusted users
+  must restrict it at the deployment layer.
+  Every Immich error body uses the fixed kind vocabulary
+  (`notConfigured|unreachable|auth|notFound|protocol`) that the frontend's
+  `immichFailureKind()` parses — prose in `{error: …}` silently degrades to a
+  generic toast.
 
 ## Code Style
 

@@ -170,6 +170,22 @@ describe("resolveCruiseEntities", () => {
     expect(result.input.stops?.[0].portId).toBe(21);
   });
 
+  it("prefers the catalogued (region-bearing) port on a bare name collision with no country hint (#169)", async () => {
+    // Two "Naples": Napoli/Italy (region set) and Naples/Maine/USA (region null).
+    // The US placeholder is returned FIRST, so before the region tiebreak it
+    // won purely by DB order. With no country hint on the stop, the geographic
+    // truth has to come from the region-bearing catalog entry.
+    portFindMany.mockResolvedValueOnce([
+      { id: 11712, name: "Naples", city: "Naples", country: "United States of America", region: null },
+      { id: 49, name: "Naples", city: "Naples", country: "Italy", region: "mediterranean" },
+    ]);
+    const cruise = baseParsedCruise({
+      stops: [{ dayNumber: 1, isAtSea: false, portName: "Naples" }],
+    });
+    const result = await resolveCruiseEntities(cruise);
+    expect(result.input.stops?.[0].portId).toBe(49);
+  });
+
   it("passes per-stop dates through for both port calls and sea days (#132)", async () => {
     const cruise = baseParsedCruise({
       stops: [

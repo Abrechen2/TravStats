@@ -19,6 +19,10 @@ export interface ArcDatum {
   //   - mixed (upcoming + past-flown): blue-tipped, hardcoded red core
   hasPastFlown?: boolean;
   isHistorical?: boolean;
+  /** First-seen departure/arrival identity for this canonical route —
+   *  drives the flag/ICAO/name shown in the hover tooltip. */
+  departure: { iata?: string; icao?: string; name?: string; city?: string | null; country?: string | null };
+  arrival: { iata?: string; icao?: string; name?: string; city?: string | null; country?: string | null };
 }
 
 export interface PointDatum {
@@ -26,6 +30,12 @@ export interface PointDatum {
   count: number;
   name: string;
   iata: string;
+  /** ICAO code, when known — drives the ICAO pill in the hover tooltip. */
+  icao?: string;
+  /** ISO 3166-1 alpha-2 country code — drives the flag in the hover tooltip. */
+  country?: string | null;
+  /** City the airport serves — shown in the hover tooltip's place line. */
+  city?: string | null;
   /** ISO date of the most recent flight touching this airport.
    *  Surfaced in the hover tooltip alongside the visit count. */
   lastVisit?: string;
