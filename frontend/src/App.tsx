@@ -12,6 +12,8 @@ import { setupApi } from "./lib/api";
 import i18n from "./i18n/config";
 import { useTranslation } from "./hooks/useTranslation";
 import { useEnabledDomains } from "./hooks/useEnabledDomains";
+import { useWhatsNew } from "./hooks/useWhatsNew";
+import WhatsNewModal from "./components/WhatsNewModal";
 
 // Lazy load pages for code splitting
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -55,12 +57,14 @@ function LoadingFallback(): JSX.Element {
 
 function AppContent() {
   const { user, _hasHydrated } = useAuthStore();
+  const isAuthenticated = !!user;
   const loadRemoteSettings = useSettingsStore((s) => s.loadRemoteSettings);
   const language = useSettingsStore((s) => s.display.language);
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation("common");
   const { isEnabled } = useEnabledDomains();
+  const { entry, shouldShow, dismiss } = useWhatsNew(isAuthenticated);
   const [setupChecked, setSetupChecked] = useState(false);
   const [showSeedingModal, setShowSeedingModal] = useState(false);
 
@@ -154,8 +158,6 @@ function AppContent() {
     );
   }
 
-  const isAuthenticated = !!user;
-
   return (
     <MotionConfig reducedMotion="user">
       <ErrorBoundary
@@ -193,6 +195,7 @@ function AppContent() {
         <Toast />
         <AirportSeedingBanner />
         <AirportSeedingModal isOpen={showSeedingModal} onClose={handleCloseSeedingModal} />
+        <WhatsNewModal isOpen={shouldShow} entry={entry} onClose={() => void dismiss()} />
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
