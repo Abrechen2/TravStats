@@ -56,10 +56,10 @@ export default function WhatsNewModal({
                 </span>
                 <span>
                   <span className="font-medium block" style={{ color: "var(--text-primary)" }}>
-                    {t(item.titleKey)}
+                    {t(`whatsNew:${item.titleKey}`)}
                   </span>
                   <span className="text-sm block" style={{ color: "var(--text-muted)" }}>
-                    {t(item.bodyKey)}
+                    {t(`whatsNew:${item.bodyKey}`)}
                   </span>
                 </span>
               </li>
