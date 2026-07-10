@@ -3,7 +3,7 @@
 **Date:** 2026-07-10
 **Status:** Approved (brainstorming), pending implementation plan
 **Branch:** `dev/usage-stats` (off `main`, merged **after** 2.3.0 is promoted)
-**Target version:** 2.3.1 — see §11, this needs a manual bump override
+**Target version:** 2.4.0 (minor — new feature, matches the `/deploy` bump rule)
 **Repos touched:** `TravStats` (client + consent UI), `TravStatsWeb` (public
 dashboard + privacy docs), new `travstats-stats` micro-service
 **Depends on:** `2026-07-10-whats-new-modal-design.md` (Phase 0 — hosts the
@@ -102,7 +102,7 @@ new install without waiting up to 24 h.
 ```json
 {
   "install_id": "<random uuid4 hex>",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "arch": "amd64 | arm64",
   "enabled_domains": ["flight", "cruise"],
   "users_bucket": "1 | 2-5 | 6-20 | 20+",
@@ -284,12 +284,10 @@ right shape here.
 - Admin toggle round-trips and triggers the DELETE on withdrawal.
 - Both DE and EN i18n keys resolve.
 
-## 11. Version and sequencing — read before deploying
+## 11. Version and sequencing
 
-**Target is 2.3.1, by explicit decision.** This is a `feat:`, and the project rule
-maps `feat:` → minor, so `/deploy` will auto-determine **2.4.0**. The bump must be
-**manually overridden** at deploy time. Left alone, the skill will quietly do the
-wrong thing.
+**Target is 2.4.0.** This is a `feat:`, and the project rule maps `feat:` → minor,
+so `/deploy` auto-determines 2.4.0 with no override needed.
 
 **Sequencing.** `2.3.0-rc.3` is still awaiting promotion on the RC server (CT107).
 `dev/usage-stats` branches from `main` and merges only **after** 2.3.0 is final.
