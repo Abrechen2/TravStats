@@ -12,18 +12,10 @@ body:
       required: true
 
   - type: textarea
-    id: problem
+    id: problem_and_solution
     attributes:
-      label: What problem does this feature solve?
-      description: Focus on the user need, not the implementation.
-    validations:
-      required: true
-
-  - type: textarea
-    id: proposal
-    attributes:
-      label: What do you propose?
-      description: How would you like it to work?
+      label: What's the problem and how can it be solved?
+      description: Describe the user need and how you'd like it to work.
     validations:
       required: true
 
