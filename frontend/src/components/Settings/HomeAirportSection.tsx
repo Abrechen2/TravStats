@@ -101,7 +101,7 @@ export default function HomeAirportSection(): JSX.Element {
       />
 
       {loading ? (
-        <p className="text-sm text-[var(--text-muted)]">{t("common:loading")}</p>
+        <p className="text-sm text-[var(--text-muted)]">{t("common:loading.default")}</p>
       ) : (
         <>
           {/* Current home airport */}
