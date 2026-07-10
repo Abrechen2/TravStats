@@ -493,6 +493,13 @@ model AdminSettings {
   // Log retention in days (auto-delete older logs)
   logRetentionDays Int @default(7) @map("log_retention_days")
 
+  // === ANONYMOUS USAGE STATISTICS (opt-in) ===
+  // Consent is instance-wide and admin-only. 'unset' | 'granted' | 'denied'.
+  // Only 'granted' ever sends. The install id is a purely random uuid4 — never
+  // derived from IP, hostname, MAC, or paths.
+  usageStatsConsent   String  @default("unset") @map("usage_stats_consent")
+  usageStatsInstallId String? @map("usage_stats_install_id")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
