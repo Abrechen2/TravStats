@@ -62,7 +62,7 @@ describe("UsageStatsConsentCard", () => {
   it("links to the transparency docs page", () => {
     render(<UsageStatsConsentCard />);
     const link = screen.getByRole("link", { name: "usageStats:consent.whatIsSent" });
-    expect(link).toHaveAttribute("href", "https://travstats.de/docs/usage-statistics");
+    expect(link).toHaveAttribute("href", "https://travstats.de/docs/usage-statistics/");
   });
 
   it("does NOT report the decision when the request fails — the card stays mounted to retry", async () => {

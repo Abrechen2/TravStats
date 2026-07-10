@@ -4,7 +4,7 @@ import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
 import { useToastStore } from "../store/toastStore";
 
-const DOCS_URL = "https://travstats.de/docs/usage-statistics";
+const DOCS_URL = "https://travstats.de/docs/usage-statistics/";
 
 interface UsageStatsConsentCardProps {
   onDecided?: (consent: "granted" | "denied") => void;
