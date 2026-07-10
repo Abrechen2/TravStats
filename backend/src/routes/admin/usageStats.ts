@@ -80,7 +80,16 @@ router.put("/usage-stats", async (req: AuthRequest, res: Response, next: NextFun
   try {
     const { consent } = usageStatsConsentSchema.parse(req.body);
     await applyConsentChange(consent);
-    const installId = await getInstallId();
+
+    // The consent change is already persisted. A failed read-back must not turn a
+    // successful request — in particular a successful erasure — into a 500.
+    let installId: string | null = null;
+    try {
+      installId = await getInstallId();
+    } catch (error) {
+      logger.debug({ error }, "usage-stats: could not read install id for the response");
+    }
+
     res.json({ consent, installId, endpointConfigured: getStatsBaseUrl() !== "" });
   } catch (error) {
     next(error);
