@@ -165,7 +165,9 @@ describe("ImmichConnectionCard", () => {
     expect(screen.queryByText("Immich URL is not a valid URL")).not.toBeInTheDocument();
   });
 
-  it("falls back to a generic error key when the backend sends an unknown kind", async () => {
+  it("falls back to a neutral generic error key when the backend sends no/unknown kind", async () => {
+    // An unknown or missing kind must NOT assert "unreachable" — the app has not
+    // established that Immich is unreachable. Render a neutral errors.unknown.
     mockTranslateFn.mockImplementation((key: string) => `T:${key}`);
     testConnection.mockResolvedValue({
       success: false,
@@ -178,8 +180,33 @@ describe("ImmichConnectionCard", () => {
 
     await user.click(screen.getByRole("button", { name: "T:test" }));
 
-    await waitFor(() => expect(screen.getByText("T:errors.unreachable")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("T:errors.unknown")).toBeInTheDocument());
+    expect(screen.queryByText("T:errors.unreachable")).not.toBeInTheDocument();
     expect(screen.queryByText("raw prose we must not show")).not.toBeInTheDocument();
+  });
+
+  it("omits an empty baseUrl from the test payload (admin-provided connection)", async () => {
+    // With an admin-global connection the user's own fields are empty. handleTest
+    // must NOT send baseUrl:"" — that would trip validation server-side. It must
+    // omit the field so the backend tests the resolved connection.
+    getSettings.mockResolvedValue({
+      baseUrl: null,
+      hasKey: false,
+      defaultMode: "link" as const,
+      source: "global" as const,
+      isShared: true,
+      hasAccess: true,
+    });
+    const user = userEvent.setup();
+    render(<ImmichConnectionCard />);
+    await waitFor(() => expect(getSettings).toHaveBeenCalled());
+
+    await user.click(screen.getByRole("button", { name: "test" }));
+
+    await waitFor(() => expect(testConnection).toHaveBeenCalled());
+    const body = testConnection.mock.calls[0][0];
+    expect(body).not.toHaveProperty("baseUrl");
+    expect(body).not.toHaveProperty("apiKey");
   });
 
   it("marks a globally-provided connection as shared", async () => {
