@@ -76,8 +76,7 @@ export default function FlightLookupStep({
       <div
         className="rounded-xl p-6 mb-6 transition-all duration-300 hover:scale-[1.02]"
         style={{
-          background:
-            "linear-gradient(to right, var(--accent-soft), rgba(240, 169, 71, 0.04))",
+          background: "linear-gradient(to right, var(--accent-soft), rgba(240, 169, 71, 0.04))",
           border: "2px solid var(--accent)",
           boxShadow: "0 8px 24px rgba(240, 169, 71, 0.18)",
         }}
@@ -137,8 +136,7 @@ export default function FlightLookupStep({
       <div
         className="rounded-lg p-4"
         style={{
-          background:
-            "linear-gradient(to right, var(--bg-elevated), var(--bg-muted))",
+          background: "linear-gradient(to right, var(--bg-elevated), var(--bg-muted))",
           border: "1px solid var(--color-border)",
         }}
       >
@@ -165,8 +163,7 @@ export default function FlightLookupStep({
         <div
           className="rounded-lg p-4"
           style={{
-            background:
-              "linear-gradient(to right, var(--bg-elevated), var(--bg-muted))",
+            background: "linear-gradient(to right, var(--bg-elevated), var(--bg-muted))",
             border: "1px solid var(--accent)",
           }}
         >

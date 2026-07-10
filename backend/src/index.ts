@@ -15,6 +15,7 @@ import analyticsRoutes from './routes/analytics';
 import uploadsRoutes from './routes/uploads';
 import emailParseRoutes from './routes/emailParse';
 import boardingpassParseRoutes from './routes/boardingpassParse';
+import boardingpassMatchRoutes from './routes/boardingpassMatch';
 import pdfParseRoutes from './routes/pdfParse';
 import diagnosticExportRoutes from './routes/diagnosticExport';
 import diagnosticsRoutes from './routes/diagnostics';
@@ -33,6 +34,8 @@ import shipsRoutes from './routes/ships';
 import cruisesRouter from './routes/cruises';
 import openapiRoutes from './routes/openapi';
 import importRoutes from './routes/import';
+import pairingRoutes from './routes/pairing';
+import appSettingsRoutes from './routes/appSettings';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { prisma } from './db';
@@ -168,7 +171,7 @@ app.use(requestLoggerMiddleware);
 // HEALTHCHECK and the nginx upstream probe) and `/api/v1/health` (versioned,
 // matches the public-API URL convention documented for external callers).
 const healthHandler = (_req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: appVersion });
 };
 app.get('/health', healthHandler);
 app.get('/api/v1/health', healthHandler);
@@ -229,6 +232,7 @@ app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/uploads', uploadsRoutes);
 app.use('/api/v1', emailParseRoutes);
 app.use('/api/v1', boardingpassParseRoutes);
+app.use('/api/v1/boardingpass', boardingpassMatchRoutes);
 app.use('/api/v1', pdfParseRoutes);
 app.use('/api/v1', diagnosticExportRoutes);
 app.use('/api/v1', diagnosticsRoutes);
@@ -243,6 +247,8 @@ app.use('/api/v1/ports', portsRoutes);
 app.use('/api/v1/ships', shipsRoutes);
 app.use('/api/v1/cruises', cruisesRouter);
 app.use('/api/v1/import', importRoutes);
+app.use('/api/v1/pairing', pairingRoutes);
+app.use('/api/v1/app-settings', appSettingsRoutes);
 
 // 404 handler for unmatched routes (must be before errorHandler)
 app.use(notFoundHandler);
@@ -283,6 +289,8 @@ process.on('SIGINT', async () => {
   stopHistoricalEnrichmentScheduler();
   const { stopReminderScheduler } = await import('./services/reminderScheduler');
   stopReminderScheduler();
+  const { stopUsageStatsScheduler } = await import('./jobs/usageStatsScheduler');
+  stopUsageStatsScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -295,6 +303,8 @@ process.on('SIGTERM', async () => {
   stopHistoricalEnrichmentScheduler();
   const { stopReminderScheduler } = await import('./services/reminderScheduler');
   stopReminderScheduler();
+  const { stopUsageStatsScheduler } = await import('./jobs/usageStatsScheduler');
+  stopUsageStatsScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -487,6 +497,15 @@ if (process.env.NODE_ENV !== 'test') {
           message: error instanceof Error ? error.message : 'Unknown error',
         },
       });
+    }
+
+    // Start usage-stats scheduler (jittered daily ping — no-op unless the
+    // admin has granted consent and TRAVSTATS_STATS_ENDPOINT is configured)
+    try {
+      const { startUsageStatsScheduler } = await import('./jobs/usageStatsScheduler');
+      startUsageStatsScheduler();
+    } catch (error) {
+      logger.error({ error }, 'server_start_usage_stats_scheduler_error');
     }
 
     // Initialize airline template registry

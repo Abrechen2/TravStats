@@ -1,20 +1,33 @@
-import { PathLayer, TextLayer } from "@deck.gl/layers";
+import { IconLayer, PathLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import type { Cruise } from "../../types";
+import type { CruiseStatus } from "../../types/cruise";
 import type { CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 import { effectivePortSequence } from "../Cruise/cruisePorts";
 import { catmullRomSpline } from "./catmullRom";
+import { resolveCruiseArcColor, type CruiseColorMode, type Rgb } from "../../lib/cruiseColor";
+
+/** How cruise arcs/arrows are tinted: shared two-tone by status, or a
+ *  distinct hue per cruise (#150). Re-exported from the shared color lib
+ *  so existing `import { type CruiseColorMode } from "./layers/cruiseArcsLayer"`
+ *  call sites (MapContainer3D, DeckGLMap) keep working unchanged. */
+export type { CruiseColorMode };
 
 interface ArcDatum {
   path: [number, number][];
   cruiseId: string;
   cruiseLine: string | null;
+  status: CruiseStatus;
+  color: Rgb;
+  planned: boolean;
 }
 
 interface ArrowDatum {
   position: [number, number];
   angleDeg: number;
   cruiseId: string;
+  color: Rgb;
+  planned: boolean;
 }
 
 interface CruiseArcBuildOptions {
@@ -24,7 +37,27 @@ interface CruiseArcBuildOptions {
    * more exact as the user zooms in.
    */
   zoom?: number;
+  /**
+   * Base cruise-route colour (RGB) override, from the map control panel's
+   * Kreuzfahrten appearance section. When set, it takes precedence over
+   * `colorMode`'s status/per-cruise palette for every arc/arrow. Falls
+   * back to the brand cruise blue when neither this nor `colorMode`
+   * resolves a color.
+   */
+  arcColor?: [number, number, number];
+  /** User multiplier on cruise-arc line width (1 = default). */
+  arcWidthScale?: number;
+  /** User multiplier on the directional arrow size (1 = default). 0 hides arrows. */
+  arrowSizeScale?: number;
+  /** Color strategy for arcs/arrows when `arcColor` is unset. Defaults to `"status"`. */
+  colorMode?: CruiseColorMode;
 }
+
+// Brand cruise blue (BRAND.md §3, --domain-cruise). Shared default with
+// the globe cruise paths + port markers so ship routes read the same
+// everywhere. The selected-cruise highlight stays amber.
+const CRUISE_BASE_COLOR: [number, number, number] = [111, 160, 214];
+const CRUISE_HIGHLIGHT_COLOR: [number, number, number] = [253, 224, 71];
 
 interface LegGeometry {
   coordinates: [number, number][];
@@ -66,6 +99,7 @@ export function buildCruiseArcs(
   geometryByCruise: CruiseGeometryMap = new Map(),
   options: CruiseArcBuildOptions = {}
 ): ArcDatum[] {
+  const mode = options.colorMode ?? "status";
   const arcs: ArcDatum[] = [];
   for (const cruise of cruises) {
     // Effective sequence includes departure/arrival ports so minimal
@@ -74,6 +108,10 @@ export function buildCruiseArcs(
 
     const geometry = geometryByCruise.get(cruise.id);
     const waypointsByPair = buildWaypointIndex(geometry);
+    // An explicit user color override (map control panel) wins over the
+    // colorMode-driven status/per-cruise palette for every arc.
+    const color = options.arcColor ?? resolveCruiseArcColor(cruise, mode);
+    const planned = cruise.status === "scheduled";
 
     for (let i = 0; i < ports.length - 1; i++) {
       const a = ports[i];
@@ -90,6 +128,9 @@ export function buildCruiseArcs(
         path: buildRenderableRoutePath(routeGeometry, options),
         cruiseId: cruise.id,
         cruiseLine: cruise.cruiseLine,
+        status: cruise.status,
+        color,
+        planned,
       });
     }
   }
@@ -112,22 +153,25 @@ export function createCruiseArcsLayer(
   if (arcs.length === 0) return null;
 
   const hasSelection = selectedCruiseId !== null;
-  const BASE_COLOR: [number, number, number] = [56, 189, 248];
-  const HIGHLIGHT_COLOR: [number, number, number] = [253, 224, 71];
+  const BASE_COLOR = options.arcColor ?? CRUISE_BASE_COLOR;
+  const HIGHLIGHT_COLOR = CRUISE_HIGHLIGHT_COLOR;
+  const widthScale = options.arcWidthScale ?? 1;
   const DIM_ALPHA = 90;
   const FULL_ALPHA = 220;
+  const PLANNED_ALPHA = 150;
 
   return new PathLayer<ArcDatum>({
     id: "cruise-arcs",
     data: arcs,
     getPath: (d) => d.path,
     getColor: (d) => {
-      if (!hasSelection) return [...BASE_COLOR, FULL_ALPHA];
-      if (d.cruiseId === selectedCruiseId) return [...HIGHLIGHT_COLOR, FULL_ALPHA];
-      return [...BASE_COLOR, DIM_ALPHA];
+      if (hasSelection && d.cruiseId === selectedCruiseId) return [...HIGHLIGHT_COLOR, FULL_ALPHA];
+      const base = d.planned ? PLANNED_ALPHA : FULL_ALPHA;
+      return [...d.color, hasSelection ? DIM_ALPHA : base];
     },
-    getWidth: (d) => (d.cruiseId === selectedCruiseId ? 3 : 2),
+    getWidth: (d) => (d.cruiseId === selectedCruiseId ? 3 * widthScale : 2 * widthScale),
     widthUnits: "pixels",
+    widthMinPixels: 1,
     capRounded: true,
     jointRounded: true,
     pickable: true,
@@ -137,8 +181,8 @@ export function createCruiseArcsLayer(
         }
       : undefined,
     updateTriggers: {
-      getColor: selectedCruiseId,
-      getWidth: selectedCruiseId,
+      getColor: [selectedCruiseId, BASE_COLOR],
+      getWidth: [selectedCruiseId, widthScale],
     },
   });
 }
@@ -163,42 +207,73 @@ export function createCruiseArrowsLayer(
   for (const arc of arcs) {
     const anchor = pickArrowAnchor(arc.path);
     if (anchor === null) continue;
-    arrows.push({ ...anchor, cruiseId: arc.cruiseId });
+    arrows.push({ ...anchor, cruiseId: arc.cruiseId, color: arc.color, planned: arc.planned });
   }
-  if (arrows.length === 0) return null;
+  const arrowSizeScale = options.arrowSizeScale ?? 1;
+  if (arrows.length === 0 || arrowSizeScale <= 0) return null;
 
   const hasSelection = selectedCruiseId !== null;
-  const BASE_COLOR: [number, number, number] = [56, 189, 248];
-  const HIGHLIGHT_COLOR: [number, number, number] = [253, 224, 71];
+  const BASE_COLOR = options.arcColor ?? CRUISE_BASE_COLOR;
+  const HIGHLIGHT_COLOR = CRUISE_HIGHLIGHT_COLOR;
   const DIM_ALPHA = 90;
   const FULL_ALPHA = 230;
+  const PLANNED_ALPHA = 150;
 
-  return new TextLayer<ArrowDatum>({
+  const iconFor = (d: ArrowDatum): { url: string; width: number; height: number } => {
+    if (hasSelection && d.cruiseId === selectedCruiseId) {
+      return arrowIcon(rgba(HIGHLIGHT_COLOR, FULL_ALPHA));
+    }
+    const alpha = hasSelection ? DIM_ALPHA : d.planned ? PLANNED_ALPHA : FULL_ALPHA;
+    return arrowIcon(rgba(d.color, alpha));
+  };
+
+  return new IconLayer<ArrowDatum>({
     id: "cruise-arc-arrows",
     data: arrows,
-    // The default deck.gl font atlas only covers ASCII; the arrow
-    // glyph (U+25B6) must be opted in via characterSet, otherwise
-    // every label silently fails to render with "Missing character"
-    // warnings.
-    characterSet: ["▶"],
     getPosition: (d) => d.position,
-    getText: () => "▶",
+    getIcon: iconFor,
     getAngle: (d) => d.angleDeg,
-    getColor: (d) => {
-      if (!hasSelection) return [...BASE_COLOR, FULL_ALPHA];
-      if (d.cruiseId === selectedCruiseId) return [...HIGHLIGHT_COLOR, FULL_ALPHA];
-      return [...BASE_COLOR, DIM_ALPHA];
-    },
-    getSize: 16,
+    getSize: ARROW_DISPLAY_HEIGHT * arrowSizeScale,
     sizeUnits: "pixels",
-    fontFamily: "sans-serif",
-    fontWeight: "bold",
-    background: false,
     pickable: false,
     updateTriggers: {
-      getColor: selectedCruiseId,
+      getIcon: [selectedCruiseId, BASE_COLOR],
     },
   });
+}
+
+// Elongated chevron (nose at the right edge, angle 0 = pointing east) with a
+// thin white border so the arrow reads clearly against both the route line
+// and the basemap (#160 — Discord bug report "Pfeil auf Kreuzfahrt Routen
+// ungenau"). The border is baked into the icon itself (SVG stroke) rather
+// than tinted via IconLayer's getColor, since getColor multiplies the whole
+// icon uniformly and would tint the border away from white too.
+const ARROW_ICON_WIDTH = 22;
+const ARROW_ICON_HEIGHT = 16;
+// Rendered screen height in pixels — deliberately smaller than the icon's
+// native size above so the border stroke stays crisp at typical map zooms.
+const ARROW_DISPLAY_HEIGHT = 10;
+const arrowIconCache = new Map<string, { url: string; width: number; height: number }>();
+
+function rgba([r, g, b]: Rgb, alpha: number): string {
+  return `rgba(${r},${g},${b},${(alpha / 255).toFixed(3)})`;
+}
+
+function arrowIcon(fill: string): { url: string; width: number; height: number } {
+  const cached = arrowIconCache.get(fill);
+  if (cached) return cached;
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${ARROW_ICON_WIDTH}" height="${ARROW_ICON_HEIGHT}" ` +
+    `viewBox="0 0 ${ARROW_ICON_WIDTH} ${ARROW_ICON_HEIGHT}">` +
+    `<path d="M 21 8 L 2 1.5 L 8.5 8 L 2 14.5 Z" fill="${fill}" stroke="white" stroke-width="1.25" stroke-linejoin="round"/>` +
+    `</svg>`;
+  const icon = {
+    url: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,
+    width: ARROW_ICON_WIDTH,
+    height: ARROW_ICON_HEIGHT,
+  };
+  arrowIconCache.set(fill, icon);
+  return icon;
 }
 
 /**
@@ -218,12 +293,16 @@ function pickArrowAnchor(
   const [x0, y0] = path[tailIdx];
   const [x1, y1] = path[headIdx];
   const dx = x1 - x0;
-  // TextLayer rotates clockwise in screen space; geographic latitude
-  // increases northward (screen y is inverted), so we negate dy to
-  // get a screen-space heading that matches the visible segment.
+  // deck.gl's icon/text rotation shader rotates the local (pre-flip) offset
+  // and only afterwards negates its y-component, which nets out to a
+  // standard y-up getAngle convention (angle 0 = pointing +x/east, positive
+  // = counterclockwise on screen — verified against icon-layer-vertex.glsl.js).
+  // Geographic latitude already increases "up" the same way, so the raw
+  // lat delta is used directly with no extra sign flip (#160 — a previous
+  // version negated dy here, which mirrored every arrow vertically).
   const dy = y1 - y0;
   if (dx === 0 && dy === 0) return null;
-  const angleDeg = (Math.atan2(-dy, dx) * 180) / Math.PI;
+  const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
   return { position: [x1, y1], angleDeg };
 }
 

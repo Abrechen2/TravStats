@@ -312,3 +312,34 @@ describe('calculateCruiseStats', () => {
     expect(s.longestLegKm).toBeCloseTo(800.25, 1);
   });
 });
+
+describe('unresolved stops count as port calls', () => {
+  it('adds an unresolved stop to totalPortCalls but not to unique ports', () => {
+    const cruises: CruiseData[] = [
+      {
+        id: 'c1',
+        shipId: null,
+        cruiseLine: null,
+        cabinType: null,
+        deck: null,
+        startDate: null,
+        endDate: null,
+        stops: [
+          { portId: 1, port: port(1, 'baltic', 'Germany', 'DEKEL'), dayNumber: 1, isAtSea: false },
+          { portId: null, port: null, dayNumber: 2, isAtSea: true },
+          {
+            portId: null,
+            port: null,
+            dayNumber: 3,
+            isAtSea: false,
+            unresolvedPortName: 'Taranto',
+          },
+        ],
+      },
+    ];
+    const s = calculateCruiseStats(cruises);
+    expect(s.totalPortCalls).toBe(2); // Kiel + Taranto
+    expect(s.cruisePortsUnique).toBe(1); // only the matched Kiel
+    expect(s.seaDays).toBe(1);
+  });
+});

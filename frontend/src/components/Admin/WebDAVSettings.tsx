@@ -105,7 +105,7 @@ export default function WebDAVSettings(): JSX.Element {
   };
 
   if (!loaded) {
-    return <div className="p-6 text-sm text-muted">{t("common:loading")}</div>;
+    return <div className="p-6 text-sm text-muted">{t("common:loading.default")}</div>;
   }
 
   return (

@@ -112,6 +112,57 @@ export const computeTimeRange = (
   return { min: new Date(min), max: new Date(max) };
 };
 
+/* ---------------------- Activity histogram ---------------------- */
+
+export interface MonthBucket {
+  /** First instant of the month (UTC). */
+  start: Date;
+  flights: number;
+  cruises: number;
+}
+
+/**
+ * Monthly activity counts for the time histogram — one bucket per month
+ * from rangeMin's month through rangeMax's month (inclusive). Flights are
+ * counted by departureTime, cruises by startDate. Pure; buckets are
+ * contiguous so the histogram's x-axis maps linearly to time.
+ */
+export const computeMonthlyBuckets = (
+  flights: GeoJSONFeature[],
+  cruises: Cruise[],
+  rangeMin: Date,
+  rangeMax: Date
+): MonthBucket[] => {
+  const key = (d: Date): string => `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
+  const fCount = new Map<string, number>();
+  const cCount = new Map<string, number>();
+  for (const f of flights) {
+    const d = safeDate(f.properties.departureTime);
+    if (d) fCount.set(key(d), (fCount.get(key(d)) ?? 0) + 1);
+  }
+  for (const c of cruises) {
+    const d = safeDate(c.startDate);
+    if (d) cCount.set(key(d), (cCount.get(key(d)) ?? 0) + 1);
+  }
+
+  const buckets: MonthBucket[] = [];
+  const cur = new Date(Date.UTC(rangeMin.getUTCFullYear(), rangeMin.getUTCMonth(), 1));
+  const end = new Date(Date.UTC(rangeMax.getUTCFullYear(), rangeMax.getUTCMonth(), 1));
+  // Guard against a pathological range producing thousands of buckets.
+  let guard = 0;
+  while (cur.getTime() <= end.getTime() && guard < 1200) {
+    const k = key(cur);
+    buckets.push({
+      start: new Date(cur),
+      flights: fCount.get(k) ?? 0,
+      cruises: cCount.get(k) ?? 0,
+    });
+    cur.setUTCMonth(cur.getUTCMonth() + 1);
+    guard++;
+  }
+  return buckets;
+};
+
 /* ---------------------- Live-mode visibility ---------------------- */
 
 /** A flown flight is visible from departureTime forward — a "I've

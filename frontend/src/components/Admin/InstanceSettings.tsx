@@ -9,6 +9,8 @@ interface Settings {
   maxUsers: number;
   allowRegistration: boolean;
   frontendUrl: string | null;
+  publicUrl: string | null;
+  lanUrl: string | null;
 }
 
 export default function InstanceSettings(): JSX.Element {
@@ -22,6 +24,8 @@ export default function InstanceSettings(): JSX.Element {
     maxUsers: 10,
     allowRegistration: false,
     frontendUrl: "",
+    publicUrl: "",
+    lanUrl: "",
   });
 
   useEffect(() => {
@@ -35,6 +39,8 @@ export default function InstanceSettings(): JSX.Element {
           maxUsers: settings.maxUsers,
           allowRegistration: settings.allowRegistration,
           frontendUrl: settings.frontendUrl ?? "",
+          publicUrl: settings.publicUrl ?? "",
+          lanUrl: settings.lanUrl ?? "",
         });
         setLoaded(true);
       })
@@ -56,12 +62,16 @@ export default function InstanceSettings(): JSX.Element {
         maxUsers: form.maxUsers,
         allowRegistration: form.allowRegistration,
         frontendUrl: (form.frontendUrl ?? "").trim(),
+        publicUrl: (form.publicUrl ?? "").trim(),
+        lanUrl: (form.lanUrl ?? "").trim(),
       });
       setForm({
         instanceName: settings.instanceName,
         maxUsers: settings.maxUsers,
         allowRegistration: settings.allowRegistration,
         frontendUrl: settings.frontendUrl ?? "",
+        publicUrl: settings.publicUrl ?? "",
+        lanUrl: settings.lanUrl ?? "",
       });
       addToast("success", t("admin:instance.saved"));
     } catch (err) {
@@ -73,7 +83,7 @@ export default function InstanceSettings(): JSX.Element {
   };
 
   if (!loaded) {
-    return <div className="p-6 text-sm text-muted">{t("common:loading")}</div>;
+    return <div className="p-6 text-sm text-muted">{t("common:loading.default")}</div>;
   }
 
   return (
@@ -115,6 +125,40 @@ export default function InstanceSettings(): JSX.Element {
         />
         <p className="mt-1 text-xs text-[var(--text-muted)]">
           {t("admin:instance.fields.frontendUrl.help")}
+        </p>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+          {t("admin:instance.fields.publicUrl.label")}
+        </label>
+        <input
+          type="url"
+          maxLength={500}
+          value={form.publicUrl ?? ""}
+          onChange={(e) => setForm({ ...form, publicUrl: e.target.value })}
+          placeholder="https://trav.example.de"
+          className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm"
+        />
+        <p className="mt-1 text-xs text-[var(--text-muted)]">
+          {t("admin:instance.fields.publicUrl.help")}
+        </p>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+          {t("admin:instance.fields.lanUrl.label")}
+        </label>
+        <input
+          type="url"
+          maxLength={500}
+          value={form.lanUrl ?? ""}
+          onChange={(e) => setForm({ ...form, lanUrl: e.target.value })}
+          placeholder="http://192.168.1.10:3010"
+          className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm"
+        />
+        <p className="mt-1 text-xs text-[var(--text-muted)]">
+          {t("admin:instance.fields.lanUrl.help")}
         </p>
       </div>
 

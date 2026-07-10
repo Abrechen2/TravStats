@@ -8,6 +8,7 @@ jest.mock("../../db", () => ({
 import { resolveCruiseEntities, invalidateCruiseEntityCache } from "../cruiseEntityResolver";
 import type { ParsedCruise } from "../cruiseBookingParser";
 import { prisma } from "../../db";
+import { createCruiseSchema } from "../../schemas/cruise";
 
 const shipFindMany = prisma.ship.findMany as jest.Mock;
 const portFindMany = prisma.port.findMany as jest.Mock;
@@ -91,7 +92,7 @@ describe("resolveCruiseEntities", () => {
     expect(result.unmatchedPorts).toHaveLength(0);
   });
 
-  it("flags unmatched ports and forces isAtSea=true to satisfy the Zod refinement", async () => {
+  it("maps an unmatched named port to an unresolved stop (no sea-day downgrade)", async () => {
     const cruise = baseParsedCruise({
       stops: [{ dayNumber: 1, isAtSea: false, portName: "Atlantis" }],
     });
@@ -99,8 +100,35 @@ describe("resolveCruiseEntities", () => {
     expect(result.unmatchedPorts).toEqual([{ dayNumber: 1, portName: "Atlantis" }]);
     const [stop] = result.input.stops!;
     expect(stop.portId).toBeNull();
+    expect(stop.isAtSea).toBe(false);
+    expect(stop.unresolvedPortName).toBe("Atlantis");
+    // The name lives in its own field now — the excursion note is not tagged.
+    expect(stop.excursionNote ?? "").not.toContain("[unmatched:");
+  });
+
+  it("degrades a non-sea stop with neither a match nor a name to a sea day (nameless LLM artifact)", async () => {
+    const cruise = baseParsedCruise({
+      stops: [{ dayNumber: 1, isAtSea: false }],
+    });
+    const result = await resolveCruiseEntities(cruise);
+    const [stop] = result.input.stops!;
     expect(stop.isAtSea).toBe(true);
-    expect(stop.excursionNote).toContain("Atlantis");
+    expect(stop.portId).toBeNull();
+    expect(stop.unresolvedPortName).toBeUndefined();
+    expect(result.unmatchedPorts).toHaveLength(0);
+    // Locks the resolver <-> Zod contract: the resolver must never produce a
+    // stop shape the createCruiseSchema 3-state invariant would reject.
+    expect(createCruiseSchema.safeParse(result.input).success).toBe(true);
+  });
+
+  it("keeps a real excursion note clean on an unresolved stop", async () => {
+    const cruise = baseParsedCruise({
+      stops: [{ dayNumber: 1, isAtSea: false, portName: "Atlantis", excursionNote: "City tour" }],
+    });
+    const result = await resolveCruiseEntities(cruise);
+    const [stop] = result.input.stops!;
+    expect(stop.unresolvedPortName).toBe("Atlantis");
+    expect(stop.excursionNote).toBe("City tour");
   });
 
   it("matches German exonyms and local endonyms to the English catalog port", async () => {
@@ -140,6 +168,22 @@ describe("resolveCruiseEntities", () => {
     });
     const result = await resolveCruiseEntities(cruise);
     expect(result.input.stops?.[0].portId).toBe(21);
+  });
+
+  it("prefers the catalogued (region-bearing) port on a bare name collision with no country hint (#169)", async () => {
+    // Two "Naples": Napoli/Italy (region set) and Naples/Maine/USA (region null).
+    // The US placeholder is returned FIRST, so before the region tiebreak it
+    // won purely by DB order. With no country hint on the stop, the geographic
+    // truth has to come from the region-bearing catalog entry.
+    portFindMany.mockResolvedValueOnce([
+      { id: 11712, name: "Naples", city: "Naples", country: "United States of America", region: null },
+      { id: 49, name: "Naples", city: "Naples", country: "Italy", region: "mediterranean" },
+    ]);
+    const cruise = baseParsedCruise({
+      stops: [{ dayNumber: 1, isAtSea: false, portName: "Naples" }],
+    });
+    const result = await resolveCruiseEntities(cruise);
+    expect(result.input.stops?.[0].portId).toBe(49);
   });
 
   it("passes per-stop dates through for both port calls and sea days (#132)", async () => {

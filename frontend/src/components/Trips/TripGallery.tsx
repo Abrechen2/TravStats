@@ -32,7 +32,10 @@ export default function TripGallery({ tripId, photos, onChange }: TripGalleryPro
       await tripsApi.uploadPhotos(tripId, files);
       addToast(
         "success",
-        t("trips:gallery.uploaded", { count: files.length, defaultValue: "{{count}} Foto hochgeladen" }),
+        t("trips:gallery.uploaded", {
+          count: files.length,
+          defaultValue: "{{count}} Foto hochgeladen",
+        })
       );
       onChange();
     } catch {
@@ -75,7 +78,7 @@ export default function TripGallery({ tripId, photos, onChange }: TripGalleryPro
           disabled={uploading}
           className="px-3 py-1.5 rounded-md text-xs font-medium bg-[var(--accent)] text-[var(--bg-primary)] disabled:opacity-50"
         >
-          {uploading ? t("common:loading") : t("trips:gallery.uploadButton")}
+          {uploading ? t("common:loading.default") : t("trips:gallery.uploadButton")}
         </button>
       </div>
 

@@ -1,9 +1,10 @@
 import React, { lazy, Suspense, useState, useMemo, useEffect } from "react";
 import { DeckGLMap } from "./DeckGLMap";
+import type { CruiseColorMode } from "./layers/cruiseArcsLayer";
 import { GlobeLoader } from "./GlobeLoader";
-import { VisModeSelector } from "./VisModeSelector";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { Layer } from "@deck.gl/core";
+import type { AppearanceDomain } from "./map/controlPanelKit";
 
 /**
  * The narrow set of map-rendering modes that MapContainer3D actually implements.
@@ -35,7 +36,6 @@ interface MapContainer3DProps {
       clicked — should navigate to the cruise detail page. */
   onCruiseOpen?: (cruiseId: string) => void;
   visMode: MapMode;
-  onVisModeChange: (mode: MapMode) => void;
   minRouteCount?: number;
   filterSlot?: React.ReactNode;
   onResetTrip?: () => void;
@@ -56,17 +56,18 @@ interface MapContainer3DProps {
    */
   flightRouteColor?: [number, number, number];
   /**
-   * Restrict which vis modes appear in the in-map FAB selector. Defaults
-   * to all 4 (existing behaviour). Per-domain tabs pass a subset that
-   * excludes cross-domain-only modes like `globe`.
+   * Split flight arcs into a two-tone gradient by status (scheduled vs.
+   * historical) instead of a single flightRouteColor fill. Passed straight
+   * through to DeckGLMap's buildRouteData call; undefined on tabs that keep
+   * the default single-color/heatmap behaviour.
    */
-  availableModes?: readonly MapMode[];
+  statusTwoTone?: boolean;
   /**
-   * Hide the in-map mode FAB entirely. Used by tabs that own mode
-   * switching outside the map (e.g. CruisesTab uses the dashboard-level
-   * mode dropdown only — its modes don't map 1:1 to MapMode).
+   * Color strategy for cruise arcs/arrows: shared two-tone by status, or
+   * a distinct hue per cruise. Passed straight through to DeckGLMap.
+   * Defaults to `"status"`.
    */
-  hideVisModeSelector?: boolean;
+  cruiseColorMode?: CruiseColorMode;
   /**
    * Hide the top-left "<count> Flüge · <count> Routen" info pill.
    * Used by tabs that render their own overlay at top-left (e.g.
@@ -83,6 +84,13 @@ interface MapContainer3DProps {
    * variant.
    */
   cruisesOverride?: readonly Cruise[];
+  /**
+   * Which domain appearance sections the map control panel exposes. The
+   * Alle tab passes both; single-domain tabs pass just their own domain
+   * so the panel only surfaces the relevant route/marker controls.
+   * Defaults to both for callers that don't specify.
+   */
+  appearanceDomains?: readonly AppearanceDomain[];
 }
 
 export default function MapContainer3D({
@@ -94,17 +102,17 @@ export default function MapContainer3D({
   onFlightOpen,
   onCruiseOpen,
   visMode,
-  onVisModeChange,
   minRouteCount = 1,
   filterSlot,
   onResetTrip,
   extraLayers,
   showInternalCruises = true,
   flightRouteColor,
-  availableModes,
-  hideVisModeSelector = false,
+  statusTwoTone,
+  cruiseColorMode,
   hideInfoPill = false,
   cruisesOverride,
+  appearanceDomains = ["flight", "cruise"],
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
   const mapTheme = useThemeStore((s) => s.mapTheme);
@@ -116,7 +124,6 @@ export default function MapContainer3D({
   // isEnabled() helper (the sanctioned gating API) so the boolean still stays
   // stable in the effect dep array below (see the beta.28 ref-stability fix).
   const cruiseEnabled = isEnabled("cruise");
-  const [fabOpen, setFabOpen] = useState(false);
   const [internalCruises, setInternalCruises] = useState<Cruise[]>([]);
 
   // Fetch cruises as supplemental map overlay. User hides by disabling
@@ -196,7 +203,10 @@ export default function MapContainer3D({
               onFlightOpen={onFlightOpen ?? onFlightClick}
               onCruiseOpen={onCruiseOpen}
               flightRouteColor={flightRouteColor}
+              statusTwoTone={statusTwoTone}
+              cruiseColorMode={cruiseColorMode}
               minRouteCount={minRouteCount}
+              appearanceDomains={appearanceDomains}
             />
           </Suspense>
         ) : (
@@ -212,18 +222,12 @@ export default function MapContainer3D({
             onResetTrip={onResetTrip}
             extraLayers={extraLayers}
             flightRouteColor={flightRouteColor}
+            appearanceDomains={appearanceDomains}
+            statusTwoTone={statusTwoTone}
+            cruiseColorMode={cruiseColorMode}
           />
         )}
       </div>
-
-      {/* Backdrop — dims map when FAB is open, click to close */}
-      {fabOpen && (
-        <div
-          className="absolute inset-0 z-10"
-          style={{ background: "rgba(10, 8, 30, 0.45)", backdropFilter: "blur(1px)" }}
-          onClick={() => setFabOpen(false)}
-        />
-      )}
 
       {/* Special-flight legend — routes mode only, only when we have
           at least one special flight to explain. Sits as an overlay,
@@ -261,19 +265,14 @@ export default function MapContainer3D({
         </div>
       )}
 
-      {/* Bottom-right stack: mode FAB (top) + filter FAB (bottom) */}
-      <div className="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2">
-        {!hideVisModeSelector && (
-          <VisModeSelector
-            current={visMode}
-            onChange={onVisModeChange}
-            isOpen={fabOpen}
-            onOpenChange={setFabOpen}
-            availableModes={availableModes}
-          />
-        )}
-        {filterSlot}
-      </div>
+      {/* Bottom-right: filter FAB only. The in-map mode FAB was removed —
+          mode switching lives solely in the top "Modus" dropdown (the FAB
+          duplicated it). */}
+      {filterSlot && (
+        <div className="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2">
+          {filterSlot}
+        </div>
+      )}
     </div>
   );
 }
