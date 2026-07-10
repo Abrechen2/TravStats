@@ -15,7 +15,7 @@
 - Branch `dev/usage-stats`, worktree `.claude/worktrees/usage-stats`. Never `rebase main`.
 - **Never touch `backend/VERSION` or `CHANGELOG.md`.**
 - `any` is FORBIDDEN — `unknown` + type guards.
-- `import { logger } from '../utils/logger'`. Never `console.log`.
+- `import logger from '../utils/logger'`. Never `console.log`.
 - Prisma JSON fields: cast via `as unknown as Prisma.InputJsonValue`.
 - Frontend: `useTranslation` from `"../hooks/useTranslation"`, never `react-i18next`.
 - i18n: DE primary + EN mirror, always in the same change.
@@ -983,7 +983,7 @@ Expected: FAIL — "Cannot find module '../transport'".
 `axios` dependency needed here.
 
 ```typescript
-import { logger } from "../../utils/logger";
+import logger from "../../utils/logger";
 import { getConsent, getStatsBaseUrl } from "./consent";
 import { buildUsagePayload, type UsagePayload } from "./payload";
 
@@ -1070,7 +1070,7 @@ export * from "./transport";
 
 ```typescript
 import cron from "node-cron";
-import { logger } from "../utils/logger";
+import logger from "../../utils/logger";
 import { usageStatsTick } from "../services/usageStats";
 
 let scheduledJob: cron.ScheduledTask | null = null;
@@ -1268,7 +1268,7 @@ Expected: FAIL — "Cannot find module '../../routes/admin/usageStats'".
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { AuthRequest } from "../../middleware/auth";
-import { logger } from "../../utils/logger";
+import logger from "../../utils/logger";
 import {
   getConsent, setConsent, getInstallId, getStatsBaseUrl, usageStatsTick, sendErasure,
   type ConsentState,
