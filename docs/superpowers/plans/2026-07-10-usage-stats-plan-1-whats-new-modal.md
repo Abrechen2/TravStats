@@ -578,8 +578,8 @@ vi.mock("../../hooks/useTranslation", () => ({
 const entry: WhatsNewEntry = {
   version: "2.4.0",
   highlights: [
-    { icon: "BarChart3", titleKey: "entries.v240.stats.title", bodyKey: "entries.v240.stats.body" },
-    { icon: "Sparkles", titleKey: "entries.v240.whatsNew.title", bodyKey: "entries.v240.whatsNew.body" },
+    { icon: "📊", titleKey: "entries.v240.stats.title", bodyKey: "entries.v240.stats.body" },
+    { icon: "✨", titleKey: "entries.v240.whatsNew.title", bodyKey: "entries.v240.whatsNew.body" },
   ],
 };
 
@@ -632,9 +632,14 @@ Expected: FAIL — "Failed to resolve import ../WhatsNewModal".
 `frontend/src/components/DiagnosticExportModal.tsx` (house style: CSS custom
 properties, not Tailwind colour classes).
 
+> **Icons are emoji glyphs, not a library.** The frontend has no icon package —
+> `shared/domains.ts` uses glyphs (`"✈"`, `"🚢"`) and other components hand-roll
+> inline SVG. `WhatsNewItem.icon` holds the glyph itself and is rendered as text.
+> **Do not import `lucide-react`**; it is not a dependency, and adding one for two
+> icons would leave the project with a third icon idiom.
+
 ```tsx
 import type { ReactNode } from "react";
-import * as LucideIcons from "lucide-react";
 import { useTranslation } from "../hooks/useTranslation";
 import type { WhatsNewEntry } from "../content/whatsNew";
 
@@ -644,13 +649,6 @@ interface WhatsNewModalProps {
   onClose: () => void;
   /** Rendered below the highlights. The usage-stats consent card passes through here. */
   extraSlot?: ReactNode;
-}
-
-/** Resolve a lucide icon by name, falling back to a neutral dot. */
-function Icon({ name }: { name: string }): JSX.Element {
-  const icons = LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number }>>;
-  const Cmp = icons[name] ?? icons.Circle;
-  return <Cmp size={20} />;
 }
 
 export default function WhatsNewModal({
@@ -694,8 +692,8 @@ export default function WhatsNewModal({
           <ul className="flex flex-col gap-4">
             {entry.highlights.map((item) => (
               <li key={item.titleKey} className="flex gap-3">
-                <span className="mt-0.5" style={{ color: "var(--text-muted)" }} aria-hidden="true">
-                  <Icon name={item.icon} />
+                <span className="mt-0.5 text-xl leading-none" aria-hidden="true">
+                  {item.icon}
                 </span>
                 <span>
                   <span className="font-medium block" style={{ color: "var(--text-primary)" }}>
