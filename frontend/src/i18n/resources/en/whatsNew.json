@@ -1,0 +1,17 @@
+{
+  "title": "New in TravStats {{version}}",
+  "subtitle": "A short overview of the most important changes.",
+  "dismiss": "Got it",
+  "entries": {
+    "v240": {
+      "stats": {
+        "title": "Anonymous usage statistics",
+        "body": "TravStats can now optionally send anonymous usage data. It is off by default, and you can turn it back off at any time."
+      },
+      "whatsNew": {
+        "title": "This dialog",
+        "body": "After every update you will see a one-time summary of what changed."
+      }
+    }
+  }
+}
