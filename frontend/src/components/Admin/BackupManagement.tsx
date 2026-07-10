@@ -185,16 +185,20 @@ export default function BackupManagement(): JSX.Element {
   });
   const [savingSettings, setSavingSettings] = useState(false);
 
-  const loadBackups = async () => {
+  // showLoading is only set on the initial mount. The 5s poll and the
+  // post-action refreshes (create/restore/delete) refresh silently — a
+  // full-page loading flip on every poll blanks the table and resets the
+  // scroll position (bug #180).
+  const loadBackups = async ({ showLoading = false }: { showLoading?: boolean } = {}) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const data = await backupApi.list();
       setBackups(data.backups);
     } catch (error) {
       logger.error("Failed to load backups:", error);
       addToast("error", t("admin:backup.toasts.loadFailed"));
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -208,12 +212,12 @@ export default function BackupManagement(): JSX.Element {
   };
 
   useEffect(() => {
-    loadBackups();
+    loadBackups({ showLoading: true });
     loadStatus();
     const interval = setInterval(() => {
       loadBackups();
       loadStatus();
-    }, 5000); // Refresh every 5 seconds
+    }, 5000); // Refresh every 5 seconds (silent — no full-page loading flip)
     return () => clearInterval(interval);
   }, []);
 
