@@ -43,6 +43,7 @@ export interface SettingsDataJson {
     fromDate: string; // YYYY-MM-DD
     toDate: string | null; // YYYY-MM-DD, null = currently active
   }>;
+  whatsNewSeenVersion?: string;
   [key: string]: unknown;
 }
 
