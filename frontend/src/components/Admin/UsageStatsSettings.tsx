@@ -33,7 +33,7 @@ export default function UsageStatsSettings(): JSX.Element {
   };
 
   if (!status) {
-    return <p style={{ color: "var(--text-muted)" }}>{t("common:loading")}</p>;
+    return <p style={{ color: "var(--text-muted)" }}>{t("common:loading.title")}</p>;
   }
 
   return (
