@@ -4,7 +4,7 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
-## [2.3.0-rc.4] - 2026-07-10 (Release Candidate)
+## [2.3.0-rc.5] - 2026-07-10 (Release Candidate)
 
 Release candidate for **TravStats 2.3**. Aggregates the entire
 `dev/v2.3` forward line — a redesigned map/globe appearance system,
@@ -70,6 +70,10 @@ adds opt-in anonymous usage statistics with a What's-New dialog.
 - A proper 404 page for unknown routes (was a blank page).
 
 ### Fixed
+- **Admin backup page no longer scroll-jumps** — the backup screen's
+  5-second status poll was flipping the full-page loading state on every
+  tick, blanking the table and snapping the scroll position back to the
+  top every few seconds; the poll now refreshes the list silently (#180).
 - **Loading labels showed a raw translation key** — several admin and app
   loading states displayed the literal text `common:loading` instead of
   "Loading…", and two "close" controls (including a screen-reader label) were
