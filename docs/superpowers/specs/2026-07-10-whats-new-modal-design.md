@@ -38,7 +38,7 @@ Highlights live in a typed, hand-authored frontend module
 
 ```ts
 export interface WhatsNewEntry {
-  version: string;              // exact match against backend VERSION, e.g. "2.3.1"
+  version: string;              // exact match against backend VERSION, e.g. "2.4.0"
   highlights: WhatsNewItem[];   // 2-5 items; more than 5 is a changelog, not a modal
 }
 
