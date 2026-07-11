@@ -24,4 +24,14 @@ describe("normalizeSectionId", () => {
     expect(normalizeSectionId(null)).toBeNull();
     expect(normalizeSectionId("")).toBe("");
   });
+
+  it("does not resolve Object.prototype members through the alias lookup", () => {
+    // SECTION_ALIASES is a plain object literal — a naive `SECTION_ALIASES[raw]`
+    // lookup resolves "constructor"/"toString"/etc. through Object.prototype and
+    // returns a FUNCTION, violating the `string | null` return type. A URL like
+    // `?section=constructor` reaches this function directly.
+    expect(normalizeSectionId("constructor")).toBe("constructor");
+    expect(normalizeSectionId("toString")).toBe("toString");
+    expect(normalizeSectionId("hasOwnProperty")).toBe("hasOwnProperty");
+  });
 });
