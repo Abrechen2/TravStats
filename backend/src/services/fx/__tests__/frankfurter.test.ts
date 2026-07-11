@@ -45,4 +45,11 @@ describe("frankfurter FX", () => {
     expect(out?.rate).toBeCloseTo(1.0106, 4);
     expect(out?.rateDate).toBe("2024-05-21");
   });
+
+  it("returns null (never throws) for an invalid date, with no network call", async () => {
+    global.fetch = jest.fn() as unknown as typeof fetch;
+    const out = await convertToBase(100, "CHF", "EUR", new Date("not-a-date"));
+    expect(out).toBeNull();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
 });
