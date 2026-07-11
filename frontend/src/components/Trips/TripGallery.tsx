@@ -95,7 +95,7 @@ export default function TripGallery({
             disabled={uploading}
             className="px-3 py-1.5 rounded-md text-xs font-medium bg-[var(--accent)] text-[var(--bg-primary)] disabled:opacity-50"
           >
-            {uploading ? t("common:loading") : t("trips:gallery.uploadButton")}
+            {uploading ? t("common:loading.default") : t("trips:gallery.uploadButton")}
           </button>
           <button
             type="button"

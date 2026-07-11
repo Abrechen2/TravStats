@@ -108,7 +108,7 @@ export default function TripDetailPage(): JSX.Element {
       >
         <NavigationBar />
         <div className="flex items-center justify-center py-20">
-          {t("common:loading", { defaultValue: "Lädt …" })}
+          {t("common:loading.default")}
         </div>
       </div>
     );
