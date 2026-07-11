@@ -4,6 +4,7 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import * as fx from "../../services/fx/frankfurter";
+import * as geo from "../../services/geo/nominatim";
 
 describe("Lodging API", () => {
   let authCookie: string;
@@ -274,6 +275,90 @@ describe("Lodging API", () => {
         .send({ checkOut: "2024-10-14T00:00:00.000Z" });
       expect(res.status).toBe(200);
       expect(res.body.data.checkOut).toBe("2024-10-14T00:00:00.000Z");
+    });
+  });
+
+  describe("POST/PATCH /api/v1/lodging — geocode on save (Task 5b)", () => {
+    it("geocodes an address-only lodging on create", async () => {
+      jest.spyOn(geo, "resolveCoordinates").mockResolvedValue({ lat: 47.3769, lon: 8.5417 });
+      const res = await request(app)
+        .post("/api/v1/lodging")
+        .set("Cookie", authCookie)
+        .send({ name: "Hotel Zürich", city: "Zürich" });
+      expect(res.status).toBe(201);
+      expect(res.body.data.lat).toBeCloseTo(47.3769, 4);
+      expect(res.body.data.lon).toBeCloseTo(8.5417, 4);
+    });
+
+    it("still saves the lodging when geocoding fails", async () => {
+      jest.spyOn(geo, "resolveCoordinates").mockResolvedValue(null);
+      const res = await request(app)
+        .post("/api/v1/lodging")
+        .set("Cookie", authCookie)
+        .send({ name: "Hotel Nowhere", city: "Nowhere" });
+      expect(res.status).toBe(201);
+      expect(res.body.data.lat).toBeNull();
+      expect(res.body.data.lon).toBeNull();
+    });
+
+    it("keeps explicit coordinates and does not geocode over them", async () => {
+      const spy = jest.spyOn(geo, "resolveCoordinates");
+      const res = await request(app)
+        .post("/api/v1/lodging")
+        .set("Cookie", authCookie)
+        .send({ name: "Pinned", city: "Berlin", lat: 1.5, lon: 2.5 });
+      expect(res.status).toBe(201);
+      expect(res.body.data.lat).toBe(1.5);
+      expect(res.body.data.lon).toBe(2.5);
+      // resolveCoordinates was called (route always calls it) but its own
+      // short-circuit for explicit coords means it resolved to null — the
+      // route must not overwrite the caller's coords with that null.
+      await expect(spy.mock.results[0].value).resolves.toBeNull();
+    });
+
+    it("does not geocode on a PATCH that does not touch the address", async () => {
+      const created = await prisma.lodging.create({
+        data: { userId, name: "Geocode Untouched Inn", city: "Munich", country: "DE", lat: 48.1, lon: 11.5 },
+      });
+      const spy = jest.spyOn(geo, "resolveCoordinates");
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${created.id}`)
+        .set("Cookie", authCookie)
+        .send({ notes: "Nice place" });
+      expect(res.status).toBe(200);
+      expect(res.body.data.lat).toBe(48.1);
+      expect(res.body.data.lon).toBe(11.5);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it("re-geocodes on PATCH when the address changes", async () => {
+      const created = await prisma.lodging.create({
+        data: { userId, name: "Geocode Update Inn", city: "Munich", country: "DE", lat: 48.1, lon: 11.5 },
+      });
+      jest.spyOn(geo, "resolveCoordinates").mockResolvedValue({ lat: 52.52, lon: 13.405 });
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${created.id}`)
+        .set("Cookie", authCookie)
+        .send({ city: "Berlin" });
+      expect(res.status).toBe(200);
+      expect(res.body.data.lat).toBeCloseTo(52.52, 4);
+      expect(res.body.data.lon).toBeCloseTo(13.405, 4);
+    });
+
+    it("a failed geocode on PATCH does not wipe existing coordinates", async () => {
+      const created = await prisma.lodging.create({
+        data: { userId, name: "Geocode Fail Inn", city: "Munich", country: "DE", lat: 48.1, lon: 11.5 },
+      });
+      jest.spyOn(geo, "resolveCoordinates").mockResolvedValue(null);
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${created.id}`)
+        .set("Cookie", authCookie)
+        .send({ city: "Nowhereville" });
+      expect(res.status).toBe(200);
+      // resolveCoordinates returned null ("leave untouched"), so the
+      // PREVIOUSLY GOOD coordinates must survive — never nulled out.
+      expect(res.body.data.lat).toBe(48.1);
+      expect(res.body.data.lon).toBe(11.5);
     });
   });
 
