@@ -71,6 +71,6 @@
     "saved": "Instance-wide Immich connection saved.",
     "cleared": "Instance-wide Immich connection removed.",
     "saveFailed": "Could not save.",
-    "loadFailed": "Could not load the stored connection. To prevent data loss, the form is only shown after a successful load."
+    "loadFailed": "Could not load the Immich settings. They can only be edited once they have loaded."
   }
 }
