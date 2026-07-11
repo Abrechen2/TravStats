@@ -103,7 +103,7 @@ describe("lodging domain registration", () => {
     expect(DOMAIN_KEYS).not.toContain("hotel");
     expect(DOMAINS.lodging.available).toBe(true);
     expect(DOMAINS.lodging.routePrefix).toBe("/lodging");
-    expect(AVAILABLE_DOMAINS.map((d) => d.key)).toContain("lodging");
+    expect(AVAILABLE_DOMAINS).toContain("lodging"); // AVAILABLE_DOMAINS is DomainKey[], not descriptors
   });
 });
 ```
