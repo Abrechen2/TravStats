@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { buildAnnounceEmbed, channelForType } from "../src/announce.js";
+import { describe, it, expect, vi } from "vitest";
+import type { Client } from "discord.js";
+import { buildAnnounceEmbed, channelForType, runAnnounce } from "../src/announce.js";
 
 describe("channelForType", () => {
   it("routes beta → beta-channel, rc → release-candidate, release → announcements", () => {
@@ -44,5 +45,30 @@ describe("buildAnnounceEmbed", () => {
     const data = buildAnnounceEmbed("release", "2.3.0", long).toJSON();
     expect((data.description ?? "").length).toBeLessThan(4096);
     expect(data.description).toContain("…");
+  });
+});
+
+describe("runAnnounce --dry-run", () => {
+  it("never logs in and never posts when dryRun is true", async () => {
+    // A stub client: if runAnnounce honours dryRun it must touch neither
+    // `login` nor `once` (the latter is where the send lives).
+    const login = vi.fn();
+    const once = vi.fn();
+    const client = { login, once, destroy: vi.fn() } as unknown as Client;
+
+    await runAnnounce(client, "token", "guild", "beta", "2.3.0-beta.9", "- notes", true);
+
+    expect(login).not.toHaveBeenCalled();
+    expect(once).not.toHaveBeenCalled();
+  });
+
+  it("logs in when dryRun is false", async () => {
+    const login = vi.fn();
+    const once = vi.fn();
+    const client = { login, once, destroy: vi.fn() } as unknown as Client;
+
+    await runAnnounce(client, "token", "guild", "beta", "2.3.0-beta.9", "- notes", false);
+
+    expect(login).toHaveBeenCalledWith("token");
   });
 });
