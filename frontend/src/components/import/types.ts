@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type ImportDomain = "flight" | "cruise";
+export type ImportDomain = "flight" | "cruise" | "lodging";
 
 /**
  * Adapter contract: each domain provides one of these to plug into
