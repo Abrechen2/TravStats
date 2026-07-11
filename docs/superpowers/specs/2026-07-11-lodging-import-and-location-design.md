@@ -53,8 +53,21 @@ Three additions. No data migration needed beyond the new columns.
 
 ## 3. The two import paths
 
-Both end in **the same preview and the same commit**. The parser is just another
-producer of import candidates, not a second system.
+Both end in **the same preview and the same commit** — meaning the *lodging* preview
+and the *lodging* commit. The parser is just another producer of import candidates,
+not a second system.
+
+> **Correction after reading the code (2026-07-11).** Two assumptions in an earlier
+> draft of this spec were wrong, and the plan reflects the corrected reality:
+> - **`services/importPreview.ts` / `routes/import.ts` cannot be reused.** Their row
+>   type *requires* `fromIata`/`toIata` and the body is airport-timezone math and
+>   flight-number dedup. Lodging gets its own preview/commit path. Nothing is shared
+>   with the flight import at the service layer.
+> - **`ColumnMappingWizard` is not domain-agnostic**, despite the adapter comment that
+>   says future domains can plug in. It hard-codes the flight mapping shape, the flight
+>   alias table and flight-specific i18n keys. It must be made generic first — which is
+>   a change to **shipped, working flight-import code**, not a pure addition. That task
+>   carries real blast radius and must keep the flight import green.
 
 ```
 CSV ──► column mapping (LLM-suggested) ─┐
