@@ -49,6 +49,9 @@ model User {
   cruises              Cruise[]
   apiTokens            ApiToken[]
   pairingCodes         PairingCode[]
+  lodgings             Lodging[]
+  lodgingStays         LodgingStay[]
+  lodgingMemberships   LodgingMembership[]
 
   @@map("users")
 }
@@ -363,6 +366,9 @@ model UserSettings {
   // PAT / device identity are NOT stored here.
   appPrefs          Json?     @map("app_prefs")
   appPrefsUpdatedAt DateTime? @map("app_prefs_updated_at")
+
+  // Base currency for lodging FX snapshots (§7.1) and cross-domain totals.
+  baseCurrency String? @default("EUR") @map("base_currency")
 
   updatedAt DateTime @updatedAt @map("updated_at")
   createdAt DateTime @default(now()) @map("created_at")
@@ -704,6 +710,7 @@ model Trip {
   stops          TripStop[]
   journalEntries TripJournalEntry[]
   photos         TripPhoto[]
+  lodgingStays   LodgingStay[]
 
   @@index([userId])
   @@index([userId, status])
@@ -783,10 +790,11 @@ model Booking {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trip    Trip?    @relation(fields: [tripId], references: [id], onDelete: SetNull)
-  flights Flight[]
-  cruises Cruise[]
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip         Trip?         @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  flights      Flight[]
+  cruises      Cruise[]
+  lodgingStays LodgingStay[]
 
   @@index([userId])
   @@index([userId, createdAt])
@@ -935,4 +943,115 @@ model Port {
   @@index([city])
   @@index([region])
   @@map("ports")
+}
+
+model Lodging {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  type          String   @default("hotel") // hotel | campsite
+  name          String
+  chainId       Int?     @map("chain_id")
+  address       String?
+  city          String?
+  country       String?
+  lat           Float?
+  lon           Float?
+  stars         Int?     // official 1–5
+  amenities     String[] @default([])
+  notes         String?
+  dataSource    String?  @map("data_source") // parser | manual | enriched
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chain LodgingChain? @relation(fields: [chainId], references: [id], onDelete: SetNull)
+  stays LodgingStay[]
+
+  @@index([userId])
+  @@index([userId, type])
+  @@map("lodgings")
+}
+
+model LodgingStay {
+  id               String    @id @default(uuid())
+  lodgingId        String    @map("lodging_id")
+  userId           String    @map("user_id")
+  tripId           String?   @map("trip_id")
+  bookingId        String?   @map("booking_id")
+  checkIn          DateTime  @map("check_in")  // hotel-local, do not normalize to UTC
+  checkOut         DateTime  @map("check_out")
+  status           String    @default("completed") // scheduled | completed | cancelled
+  roomNumber       String?   @map("room_number")
+  roomCategory     String?   @map("room_category")
+  board            String?   // none | breakfast | half | full | all_inclusive
+  pricePerNight    Float?    @map("price_per_night")
+  currency         String?   @default("EUR")
+  totalPrice       Float?    @map("total_price")
+  totalPriceBase   Float?    @map("total_price_base")   // FX snapshot (§7.1)
+  fxRate           Float?    @map("fx_rate")
+  fxRateDate       DateTime? @map("fx_rate_date")
+  fxBaseCurrency   String?   @map("fx_base_currency")
+  isAwardStay      Boolean   @default(false) @map("is_award_stay")
+  ratingRoom       Float?    @map("rating_room")
+  ratingBreakfast  Float?    @map("rating_breakfast")
+  ratingService    Float?    @map("rating_service")
+  ratingOverall    Float?    @map("rating_overall")
+  roomAmenities    String[]  @default([]) @map("room_amenities")
+  bookingReference String?   @map("booking_reference")
+  membershipId     String?   @map("membership_id")
+  receiptUrl       String?   @map("receipt_url")
+  companions       String[]  @default([])
+  notes            String?
+  parserTemplate   String?   @map("parser_template")
+  parserConfidence Int?      @map("parser_confidence")
+  dataSource       String?   @map("data_source")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  lodging    Lodging            @relation(fields: [lodgingId], references: [id], onDelete: Cascade)
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip       Trip?              @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking    Booking?           @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  membership LodgingMembership? @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([lodgingId])
+  @@index([userId, checkIn])
+  @@index([status])
+  @@index([tripId])
+  @@index([bookingId])
+  @@map("lodging_stays")
+}
+
+model LodgingChain {
+  id             Int      @id @default(autoincrement())
+  name           String
+  brandColor     String?  @map("brand_color")
+  loyaltyProgram String?  @map("loyalty_program")
+  isUserAdded    Boolean  @default(false) @map("is_user_added")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  lodgings    Lodging[]
+  memberships LodgingMembership[]
+
+  @@index([name])
+  @@map("lodging_chains")
+}
+
+model LodgingMembership {
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  programName      String   @map("program_name")
+  chainId          Int?     @map("chain_id")
+  membershipNumber String?  @map("membership_number")
+  tier             String?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chain LodgingChain? @relation(fields: [chainId], references: [id], onDelete: SetNull)
+  stays LodgingStay[]
+
+  @@index([userId])
+  @@map("lodging_memberships")
 }
