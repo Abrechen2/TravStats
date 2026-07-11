@@ -189,16 +189,24 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
     const where = buildLodgingWhere(parsed.data, userId);
+    // `nights`, `rating` and `spend` are derived from each lodging's stays,
+    // not plain columns, so they cannot be pushed into a Prisma `orderBy`.
+    // To keep every sort key consistent (and correct under pagination) we
+    // fetch the full filtered set for this user, compute the aggregates,
+    // sort in memory, and ONLY THEN slice offset/limit — sort-then-paginate,
+    // never the other way around (a "sort the already-fetched page" bug
+    // silently reorders a truncated slice instead of the true global order).
     const lodgings = await prisma.lodging.findMany({
       where,
       include: LODGING_INCLUDE,
       orderBy: { createdAt: "desc" },
-      take: parsed.data.limit ?? 200,
-      skip: parsed.data.offset ?? 0,
     });
 
     const rows: LodgingListItem[] = lodgings.map((l) => ({ ...l, ...computeAggregates(l.stays) }));
-    res.json({ success: true, data: sortLodgings(rows, parsed.data.sort) });
+    const sorted = sortLodgings(rows, parsed.data.sort);
+    const offset = parsed.data.offset ?? 0;
+    const limit = parsed.data.limit ?? 200;
+    res.json({ success: true, data: sorted.slice(offset, offset + limit) });
   } catch (err) {
     next(err);
   }
@@ -224,8 +232,10 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     const parsed = createLodgingSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
+    // dataSource is provenance metadata, never client-set (finding 1) —
+    // a lodging created through this endpoint was hand-entered by the user.
     const lodging = await prisma.lodging.create({
-      data: { ...parsed.data, userId },
+      data: { ...parsed.data, userId, dataSource: "manual" },
       include: LODGING_INCLUDE,
     });
     logger.info({ operation: "lodging_create", lodgingId: lodging.id, userId });
@@ -310,6 +320,18 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
     const parsed = updateStaySchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
     const input = parsed.data;
+
+    // The schema-level date-order refine only fires when BOTH checkIn and
+    // checkOut are present in the SAME body. A partial PATCH that only sends
+    // one of the two dates must still be validated against the resulting
+    // MERGED (effective) stay — otherwise e.g. a checkIn-only update can push
+    // the stay past its existing checkOut and silently store an inverted
+    // date range (finding 3).
+    const effectiveCheckIn = input.checkIn ? new Date(input.checkIn) : stay.checkIn;
+    const effectiveCheckOut = input.checkOut ? new Date(input.checkOut) : stay.checkOut;
+    if (effectiveCheckOut.getTime() < effectiveCheckIn.getTime()) {
+      throw new AppError("checkOut must not precede checkIn", 400);
+    }
 
     // Only re-run the FX snapshot when a field that feeds the conversion
     // actually changed — an unrelated edit (e.g. notes) must not touch a
