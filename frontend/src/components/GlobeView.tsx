@@ -24,10 +24,15 @@ import {
   getQuartile,
   type Quartile,
 } from "./Globe/heatmapUtils";
-import { buildGlobeLayers, DEFAULT_AIRPORT_COLOR, DEFAULT_PORT_COLOR } from "./Globe/buildGlobeLayers";
+import {
+  buildGlobeLayers,
+  DEFAULT_AIRPORT_COLOR,
+  DEFAULT_PORT_COLOR,
+} from "./Globe/buildGlobeLayers";
 import { type AppearanceDomain } from "./map/controlPanelKit";
 import type { LabelsMode } from "./map/labelPriority";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
+import { useFlightColorStore } from "../store/flightColorStore";
 
 // Base marker radius (px) a size preset scales. off → 0 (hidden).
 const GLOBE_MARKER_BASE_PX = 5;
@@ -38,22 +43,14 @@ import { PinnedCardBoundary } from "./Globe/PinnedCardBoundary";
 import { GlobeLabelsOverlay } from "./Globe/GlobeLabelsOverlay";
 import { toPortLabel } from "./map/portLabel";
 import { applyMapOverlays } from "./Globe/mapOverlays";
-import {
-  GlobeControlPanel,
-  type StyleId,
-  type LiteMode,
-} from "./Globe/GlobeControlPanel";
-import type {
-  ArcDatum,
-  CruisePathDatum,
-  GlobePinned,
-  PointDatum,
-} from "./Globe/globeLayerTypes";
+import { GlobeControlPanel, type StyleId, type LiteMode } from "./Globe/GlobeControlPanel";
+import type { ArcDatum, CruisePathDatum, GlobePinned, PointDatum } from "./Globe/globeLayerTypes";
 import type { StyleSpecification } from "maplibre-gl";
 import type { GeoJSONFeature } from "../types";
 import type { Cruise } from "../types/cruise";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
-import { resolveCruiseArcColor, type CruiseColorMode } from "../lib/cruiseColor";
+import { resolveCruiseArcColor } from "../lib/cruiseColor";
+import { useCruiseColorStore } from "../store/cruiseColorStore";
 import { logger } from "../lib/logger";
 import { escapeHtml } from "../lib/escapeHtml";
 import { flagImgHtml, countryName } from "../lib/countryFlag";
@@ -96,20 +93,6 @@ interface GlobeViewProps {
   /** Fired by the pinned-card "Open cruise" CTA — should navigate to
       the cruise detail page. */
   onCruiseOpen?: (cruiseId: string) => void;
-  /** When set, every flight arc renders in this RGB instead of the
-      heatmap palette. Same prop semantics as `MapContainer3D.flightRouteColor`
-      on the flat map. Superseded by `statusTwoTone` when that's set. */
-  flightRouteColor?: [number, number, number];
-  /** Split flight arcs into a two-tone gradient by status (scheduled vs.
-      past/historical) instead of a single flightRouteColor fill or the
-      count heatmap. Same prop semantics as `MapContainer3D.statusTwoTone`
-      on the flat map. */
-  statusTwoTone?: boolean;
-  /** Color strategy for cruise paths: shared two-tone by status, or a
-      distinct hue per cruise. Same prop semantics as
-      `MapContainer3D.cruiseColorMode` on the flat map. Defaults to
-      `"status"`. */
-  cruiseColorMode?: CruiseColorMode;
   minRouteCount?: number;
   /** Which domain appearance sections the control panel exposes. Globe
       currently only mounts on the Alle tab, so this defaults to both. */
@@ -322,9 +305,6 @@ export default function GlobeView({
   cruises = [],
   onFlightOpen,
   onCruiseOpen,
-  flightRouteColor,
-  statusTwoTone,
-  cruiseColorMode = "status",
   minRouteCount = 1,
   appearanceDomains = ["flight", "cruise"],
 }: GlobeViewProps): JSX.Element {
@@ -348,15 +328,15 @@ export default function GlobeView({
   );
   // Map-appearance customisation (the panel's "Anpassung" section) plus
   // the style-level overlays, all persisted to localStorage so a user's
-  // look survives reloads. `routeColor === null` keeps the per-route
-  // frequency heatmap; a value overrides every arc with one solid tint.
-  // The prop `flightRouteColor` (set by some parent tabs) seeds the
-  // initial route colour when nothing is stored yet.
-  // Flight-domain appearance. `routeColor === null` keeps the per-route
-  // frequency heatmap; a value overrides every arc with one solid tint.
-  const [routeColor, setRouteColor] = useState<[number, number, number] | null>(
-    () => loadMapAppearance().routeColor ?? flightRouteColor ?? null
-  );
+  // look survives reloads.
+  //
+  // Flight-domain route COLOUR is NOT local state: it lives in the shared
+  // flight-colour store (mode + colours), which the flat map, both control
+  // panels and the dashboard legend read too — so the globe can never show a
+  // different colour than the 2D map for the same route.
+  const flightColorConfig = useFlightColorStore((s) => s.config);
+  const setFlightColorMode = useFlightColorStore((s) => s.setMode);
+  const setFlightColor = useFlightColorStore((s) => s.setColor);
   const [flightRouteWidth, setFlightRouteWidth] = useState<number>(
     () => loadMapAppearance().flightRouteWidth ?? 1
   );
@@ -367,11 +347,13 @@ export default function GlobeView({
   const [flightMarkerSize, setFlightMarkerSize] = useState<number>(
     () => loadMapAppearance().flightMarkerSize ?? 1
   );
-  // Cruise-domain appearance. `cruiseRouteColor === null` keeps the brand
-  // cruise blue; a value overrides it.
-  const [cruiseRouteColor, setCruiseRouteColor] = useState<[number, number, number] | null>(
-    () => loadMapAppearance().cruiseRouteColor ?? null
-  );
+  // Cruise-domain appearance. Route COLOUR is NOT local state either: it lives
+  // in the shared cruise-colour store (mode + colours), so the globe, the flat
+  // map, both panels and the dashboard legend cannot disagree about what a
+  // cruise route looks like.
+  const cruiseColorConfig = useCruiseColorStore((s) => s.config);
+  const setCruiseColorMode = useCruiseColorStore((s) => s.setMode);
+  const setCruiseColor = useCruiseColorStore((s) => s.setColor);
   const [cruiseRouteWidth, setCruiseRouteWidth] = useState<number>(
     () => loadMapAppearance().cruiseRouteWidth ?? 1
   );
@@ -393,11 +375,9 @@ export default function GlobeView({
   useEffect(() => {
     saveMapAppearance({
       styleId,
-      routeColor,
       flightRouteWidth,
       airportColor,
       flightMarkerSize,
-      cruiseRouteColor,
       cruiseRouteWidth,
       portColor,
       cruiseMarkerSize,
@@ -407,11 +387,9 @@ export default function GlobeView({
     });
   }, [
     styleId,
-    routeColor,
     flightRouteWidth,
     airportColor,
     flightMarkerSize,
-    cruiseRouteColor,
     cruiseRouteWidth,
     portColor,
     cruiseMarkerSize,
@@ -438,7 +416,7 @@ export default function GlobeView({
   }, []);
   const nightCellsData = useMemo(
     () => (showNight ? computeNightCells(new Date(nightTick)) : []),
-    [showNight, nightTick],
+    [showNight, nightTick]
   );
   // Tooltip lives in a leaf component (HoverTooltip) so onHover updates at
   // 60–120 Hz don't re-render the whole GlobeView tree. Imperative API only.
@@ -830,7 +808,7 @@ export default function GlobeView({
       const quartile = getQuartile(r.count, thresholds);
       // Pure-scheduled (never flown) → "scheduled"; everything else
       // (historical-only, mixed, regular past-only) collapses to "past" —
-      // mirrors routesLayer.ts's statusTwoTone collapsing rule exactly.
+      // mirrors routesLayer.ts's pureScheduled collapsing rule exactly.
       const status: ArcDatum["status"] = r.hasUpcoming && !r.hasPastFlown ? "scheduled" : "past";
       if (distanceKm >= ANTIPODAL_DISTANCE_KM) {
         antipodals.push({
@@ -1038,11 +1016,10 @@ export default function GlobeView({
       const label = cruise.ship?.name ?? cruise.shipNameOverride ?? cruise.cruiseLine ?? "Cruise";
       const legDates = cruiseLegDatesByCruise.get(cruise.id) ?? [];
       // Resolved once per cruise — same helper the flat map's
-      // cruiseArcsLayer.ts uses, so both renderers agree pixel-for-pixel
-      // on "status" two-tone (blue/cyan) vs. "perCruise" hues. A user
-      // color override (Anpassung panel) wins over the colorMode palette,
-      // matching the flat map's `options.arcColor ?? resolveCruiseArcColor(...)`.
-      const color = cruiseRouteColor ?? resolveCruiseArcColor(cruise, cruiseColorMode);
+      // cruiseArcsLayer.ts uses, so both renderers agree pixel-for-pixel on
+      // every mode. There is no override path: the user's config is the only
+      // input (the old `cruiseRouteColor ?? …` override IS the "solid" mode now).
+      const color = resolveCruiseArcColor(cruise, cruiseColorConfig);
       // Index legs by "from:to" so we can pair geometry to date in O(1).
       const dateByPair = new Map<string, CruiseLegDates>();
       for (const ld of legDates) dateByPair.set(`${ld.fromPortId}:${ld.toPortId}`, ld);
@@ -1094,8 +1071,7 @@ export default function GlobeView({
     cruises,
     cruiseGeometry,
     cruiseLegDatesByCruise,
-    cruiseColorMode,
-    cruiseRouteColor,
+    cruiseColorConfig,
     sliderMode,
     sliderCurrent,
     sliderFilterStart,
@@ -1386,8 +1362,7 @@ export default function GlobeView({
         onCruisePathHover,
         flyToArc,
         setPinned,
-        flightRouteColor: routeColor ?? undefined,
-        statusTwoTone,
+        flightColorConfig,
         arcWidthScale: flightRouteWidth,
         cruiseArcWidthScale: cruiseRouteWidth,
         airportColor: airportColor ?? DEFAULT_AIRPORT_COLOR,
@@ -1413,8 +1388,7 @@ export default function GlobeView({
       onPortHover,
       occlusionExt,
       occlusionProps,
-      routeColor,
-      statusTwoTone,
+      flightColorConfig,
       flightRouteWidth,
       cruiseRouteWidth,
       airportColor,
@@ -1581,8 +1555,9 @@ export default function GlobeView({
           hasWeakArcs={arcsData.some((a) => a.weak)}
           appearanceDomains={appearanceDomains}
           flightAppearance={{
-            routeColor,
-            onRouteColorChange: setRouteColor,
+            colorConfig: flightColorConfig,
+            onColorModeChange: setFlightColorMode,
+            onColorChange: setFlightColor,
             routeWidth: flightRouteWidth,
             onRouteWidthChange: setFlightRouteWidth,
             markerColor: airportColor,
@@ -1591,8 +1566,9 @@ export default function GlobeView({
             onMarkerSizeChange: setFlightMarkerSize,
           }}
           cruiseAppearance={{
-            routeColor: cruiseRouteColor,
-            onRouteColorChange: setCruiseRouteColor,
+            colorConfig: cruiseColorConfig,
+            onColorModeChange: setCruiseColorMode,
+            onColorChange: setCruiseColor,
             routeWidth: cruiseRouteWidth,
             onRouteWidthChange: setCruiseRouteWidth,
             markerColor: portColor,

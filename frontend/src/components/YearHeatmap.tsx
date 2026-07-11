@@ -220,9 +220,9 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
           <div className="space-y-1">
             {hoveredCell.flights.map((flight) => (
               <div key={flight.id} className="text-xs text-[var(--text-primary)]">
-                {resolveAirlineDisplay(flight.airline, flight.flightNumber) || flight.airline}{" "}
-                {flight.flightNumber}: {flight.depIata || flight.depIcao}{" "}
-                {t("common:labels.routeSeparator")} {flight.arrIata || flight.arrIcao}
+                {resolveAirlineDisplay(flight) || flight.airline} {flight.flightNumber}:{" "}
+                {flight.depIata || flight.depIcao} {t("common:labels.routeSeparator")}{" "}
+                {flight.arrIata || flight.arrIcao}
               </div>
             ))}
           </div>

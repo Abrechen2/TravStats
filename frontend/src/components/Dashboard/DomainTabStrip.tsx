@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import type { DashboardTab } from "../../types/dashboard";
 import { DASHBOARD_TABS } from "../../types/dashboard";
 
@@ -24,6 +25,13 @@ export function DomainTabStrip({
   onSelect,
 }: DomainTabStripProps): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
+  const { isFeatureVisible } = useBetaFeatures();
+
+  // The POI tab is a stub (an emoji and "nothing here yet") — don't advertise
+  // it unless the instance is flagged beta. See config/betaFeatures.ts.
+  const visibleTabs = DASHBOARD_TABS.filter(
+    (tab) => tab !== "poi" || isFeatureVisible("poiDashboardTab")
+  );
 
   return (
     <div
@@ -40,7 +48,7 @@ export function DomainTabStrip({
         whiteSpace: "nowrap",
       }}
     >
-      {DASHBOARD_TABS.map((tab) => {
+      {visibleTabs.map((tab) => {
         const isActive = tab === active;
         const isDisabled = tab !== "all" && !enabled[tab];
         const count = tab === "all" ? null : counts[tab];

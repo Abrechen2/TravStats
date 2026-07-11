@@ -338,6 +338,10 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
       outlineWidth: 3,
       outlineColor: [13, 17, 23, 255],
       fontSettings: { sdf: true },
+      // Stop labels are user-entered POI/hotel/port names and can contain
+      // umlauts/accents (e.g. "Travemünde"). deck.gl's default
+      // `characterSet` is ASCII-only (32-127) and silently drops anything
+      // outside it from the font atlas (#185) — do not remove "auto".
       characterSet: "auto",
       pickable: false,
     });

@@ -53,7 +53,6 @@
       "basemap": "Basiskarte",
       "appearance": "Anpassung",
       "routes": "Routen",
-      "frequency": "Frequenz",
       "width": "Stärke",
       "airports": "Flughäfen",
       "ports": "Häfen",
@@ -68,7 +67,52 @@
       "widthThin": "Dünn",
       "widthNormal": "Normal",
       "widthThick": "Dick",
-      "arrows": "Pfeile"
+      "arrows": "Pfeile",
+      "routeShape": {
+        "label": "Darstellung",
+        "arc": {
+          "label": "Bogen",
+          "hint": "3D-Bögen über der Karte — schön aus der Ferne."
+        },
+        "flat": {
+          "label": "Flach",
+          "hint": "Flach auf der Karte wie Kreuzfahrt-Routen — auch beim Hineinzoomen lesbar."
+        }
+      },
+      "colorMode": {
+        "label": "Färbung",
+        "status": {
+          "label": "Status",
+          "hint": "Zwei Farben: geflogen und geplant."
+        },
+        "frequency": {
+          "label": "Frequenz",
+          "hint": "Eine Basisfarbe — je öfter geflogen, desto kräftiger."
+        },
+        "solid": {
+          "label": "Einfarbig",
+          "hint": "Eine Farbe für alle Routen."
+        },
+        "swatchFlown": "geflogen",
+        "swatchPlanned": "geplant"
+      },
+      "cruiseColorMode": {
+        "label": "Färbung",
+        "status": {
+          "label": "Status",
+          "hint": "Zwei Farben: gefahren und geplant."
+        },
+        "perCruise": {
+          "label": "Pro Reise",
+          "hint": "Jede Reise bekommt eine eigene Farbe. In der Ansicht „Alle“ teilen sich diese Farben die Karte mit den Flugfarben und können mit ihnen konkurrieren."
+        },
+        "solid": {
+          "label": "Einfarbig",
+          "hint": "Eine Farbe für alle Kreuzfahrt-Routen."
+        },
+        "swatchSailed": "gefahren",
+        "swatchPlanned": "geplant"
+      }
     },
     "timesFlown": "{{count}}x geflogen",
     "flight_one": "Flug",

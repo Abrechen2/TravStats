@@ -467,8 +467,7 @@ export default function FlightsTablePage(): JSX.Element {
                           >
                             <td className="px-4 py-3" style={{ color: "var(--text-primary)" }}>
                               <div className="font-medium">
-                                {resolveAirlineDisplay(flight.airline, flight.flightNumber) ||
-                                  t("common:labels.notAvailable")}
+                                {resolveAirlineDisplay(flight) || t("common:labels.notAvailable")}
                               </div>
                               {flight.specialType && (
                                 <div className="mt-1">
