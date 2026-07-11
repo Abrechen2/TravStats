@@ -10,7 +10,7 @@ vi.mock("../client", () => ({
 }));
 
 import { api } from "../client";
-import { immichApi, immichFailureKind } from "../immich";
+import { failureKey, immichApi, immichFailureKind } from "../immich";
 
 const mockGet = vi.mocked(api.get);
 const mockPost = vi.mocked(api.post);
@@ -112,5 +112,22 @@ describe("immichFailureKind", () => {
   it("returns null for an unrelated error", () => {
     expect(immichFailureKind(new Error("boom"))).toBeNull();
     expect(immichFailureKind({ response: { status: 500, data: {} } })).toBeNull();
+  });
+});
+
+describe("failureKey", () => {
+  it("maps every known kind to its errors.* key", () => {
+    expect(failureKey("auth")).toBe("errors.auth");
+    expect(failureKey("notConfigured")).toBe("errors.notConfigured");
+    expect(failureKey("invalidUrl")).toBe("errors.invalidUrl");
+  });
+
+  it("falls back to errors.unknown for anything else", () => {
+    // Never assert a network claim (`unreachable`) the app has not established,
+    // and never leak raw backend prose into the UI.
+    expect(failureKey("somethingNewFromTheBackend")).toBe("errors.unknown");
+    expect(failureKey(undefined)).toBe("errors.unknown");
+    expect(failureKey(null)).toBe("errors.unknown");
+    expect(failureKey(42)).toBe("errors.unknown");
   });
 });
