@@ -1,15 +1,107 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { parseCsv } from "../../lib/csvParser";
 import { parseGenericCsv, type GenericMapping } from "../../lib/importers/genericCsv";
 import { postImportPreview, type PreviewResponse } from "../../lib/api/import";
-import { ColumnMappingWizard } from "./ColumnMappingWizard";
+import { ColumnMappingWizard, type MappingFieldSpec } from "./ColumnMappingWizard";
 import { PreviewModal } from "./PreviewModal";
 import { commitPreviewRows } from "./commitPreview";
 import { ImportTileShell, ImportFilePicker, ImportErrorBlock } from "./ImportTileShell";
 
+type FlightField = keyof GenericMapping;
+
+/** The flight field spec — identical aliases and required/optional split as before. */
+function useFlightMappingFields(): MappingFieldSpec<FlightField>[] {
+  const { t } = useTranslation("settings");
+  return useMemo(
+    () => [
+      {
+        key: "date",
+        required: true,
+        aliases: ["date", "flightdate", "datum", "depdate", "departuredate"],
+        label: t("settings:import.preview.wizard.fields.date"),
+      },
+      {
+        key: "fromIata",
+        required: true,
+        aliases: [
+          "fromiata",
+          "from",
+          "origin",
+          "originiata",
+          "departure",
+          "dep",
+          "depiata",
+          "departureiata",
+          "von",
+        ],
+        label: t("settings:import.preview.wizard.fields.fromIata"),
+      },
+      {
+        key: "toIata",
+        required: true,
+        aliases: [
+          "toiata",
+          "to",
+          "destination",
+          "destinationiata",
+          "arrival",
+          "arr",
+          "arriata",
+          "arrivaliata",
+          "dest",
+          "nach",
+        ],
+        label: t("settings:import.preview.wizard.fields.toIata"),
+      },
+      {
+        key: "depTimeLocal",
+        aliases: ["deptimelocal", "deptime", "departuretime", "dptlocal", "dpt", "abflugzeit"],
+        label: t("settings:import.preview.wizard.fields.depTimeLocal"),
+      },
+      {
+        key: "arrTimeLocal",
+        aliases: ["arrtimelocal", "arrtime", "arrivaltime", "arrlocal", "ankunftszeit"],
+        label: t("settings:import.preview.wizard.fields.arrTimeLocal"),
+      },
+      {
+        key: "flightNumber",
+        aliases: ["flightnumber", "flightno", "flight", "flightid", "flugnummer"],
+        label: t("settings:import.preview.wizard.fields.flightNumber"),
+      },
+      {
+        key: "airline",
+        aliases: ["airline", "carrier", "fluggesellschaft"],
+        label: t("settings:import.preview.wizard.fields.airline"),
+      },
+      {
+        key: "aircraft",
+        aliases: ["aircraft", "ac", "plane", "type", "flugzeug", "flugzeugtyp"],
+        label: t("settings:import.preview.wizard.fields.aircraft"),
+      },
+      {
+        key: "registration",
+        aliases: ["registration", "reg", "tail", "tailnumber", "kennzeichen"],
+        label: t("settings:import.preview.wizard.fields.registration"),
+      },
+      {
+        key: "seatNumber",
+        aliases: ["seatnumber", "seat", "seatno", "sitzplatz", "sitzplatznummer"],
+        label: t("settings:import.preview.wizard.fields.seatNumber"),
+      },
+      {
+        key: "notes",
+        aliases: ["notes", "note", "remarks", "remark", "comment", "comments", "notiz", "notizen"],
+        label: t("settings:import.preview.wizard.fields.notes"),
+      },
+    ],
+    [t]
+  );
+}
+
 export function GenericCsvImportTile(): JSX.Element {
   const { t } = useTranslation();
+  const flightFields = useFlightMappingFields();
   const [csvText, setCsvText] = useState<string | null>(null);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [csvSamples, setCsvSamples] = useState<Record<string, string>>({});
@@ -70,9 +162,10 @@ export function GenericCsvImportTile(): JSX.Element {
     >
       {csvText && !preview && (
         <ColumnMappingWizard
+          fields={flightFields}
           csvHeaders={csvHeaders}
           csvSamples={csvSamples}
-          onSubmit={(mapping) => void handleMappingSubmit(mapping)}
+          onSubmit={(mapping) => void handleMappingSubmit(mapping as GenericMapping)}
           onCancel={() => {
             setCsvText(null);
             setCsvHeaders([]);
