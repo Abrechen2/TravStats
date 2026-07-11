@@ -68,6 +68,21 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     const parsed = createChainSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
+    // Case-insensitive pre-check: `name`'s @unique constraint is a Postgres
+    // unique index, which is case-sensitive, so "hilton" would never collide
+    // with "Hilton" at the DB level and would otherwise sail straight into
+    // `create` below. Catch that here so the client experience (200 + the
+    // existing row) is identical for a case-variant collision as for an
+    // exact one. NOT race-safe by itself — see the P2002 catch below for why
+    // it's kept as a backstop, and the residual gap that remains.
+    const caseInsensitiveMatch = await prisma.lodgingChain.findFirst({
+      where: { name: { equals: parsed.data.name, mode: "insensitive" } },
+    });
+    if (caseInsensitiveMatch) {
+      res.status(200).json({ success: true, data: caseInsensitiveMatch });
+      return;
+    }
+
     try {
       // isUserAdded is set here, server-side, unconditionally — never from
       // the (already-stripped) parsed input.
@@ -83,10 +98,18 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
       // already has the chain they're typing. Decision: treat this as an
       // idempotent "get or add" rather than a hard error — hand back the
       // EXISTING chain with 200, instead of a raw Prisma unique-constraint
-      // 500 or an opaque 409 the client would have to special-case. The
-      // lookup is case-insensitive so "marriott" and "Marriott" resolve to
-      // the same catalog row even though the DB column itself is a
-      // case-sensitive unique index.
+      // 500 or an opaque 409 the client would have to special-case. This is
+      // the race-safe backstop for the pre-check above: two concurrent
+      // requests for the exact same name can both miss the pre-check and
+      // race into `create`, but only one wins and the other lands here.
+      //
+      // Residual gap: this does NOT cover two concurrent requests that
+      // differ only in case (e.g. "hilton" and "Hilton" at the same
+      // instant) — Postgres's unique index is case-sensitive, so both
+      // creates can succeed and neither throws P2002. Closing that fully
+      // needs a case-insensitive unique constraint (a `citext` column or a
+      // functional `LOWER(name)` index), a schema change deliberately
+      // deferred for now.
       const existing = await prisma.lodgingChain.findFirst({
         where: { name: { equals: parsed.data.name, mode: "insensitive" } },
       });
