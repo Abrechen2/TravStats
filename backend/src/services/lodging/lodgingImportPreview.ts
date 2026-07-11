@@ -72,7 +72,7 @@ interface Indexes {
  *    map pin. Geocoding happens in the background afterwards, not on commit.
  */
 function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
-  const flags: LodgingImportFlag[] = [];
+  let flags: LodgingImportFlag[] = [];
   let dedupeHint: LodgingDedupeHint = "none";
   let matchedLodgingId: string | null = null;
   let matchedStayId: string | null = null;
@@ -80,7 +80,7 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
   const lodging = candidate.lodging;
   const joinName = candidate.lodgingName ?? lodging?.name ?? null;
 
-  if (!lodging && !joinName) flags.push("missing_name");
+  if (!lodging && !joinName) flags = [...flags, "missing_name"];
 
   if (lodging?.externalRef) {
     const hit = idx.byExternalRef.get(lodging.externalRef);
@@ -98,7 +98,7 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
       matchedLodgingId = hits[0].id;
     } else if (hits.length > 1) {
       dedupeHint = "lodging_name_city";
-      flags.push("ambiguous_lodging_name");
+      flags = [...flags, "ambiguous_lodging_name"];
     }
   }
 
@@ -107,31 +107,33 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     if (hits.length === 1) {
       matchedLodgingId = hits[0].id;
     } else if (hits.length > 1) {
-      flags.push("ambiguous_lodging_name");
+      flags = [...flags, "ambiguous_lodging_name"];
     } else if (!idx.payloadNames.has(normalizeLodgingName(joinName))) {
       // Neither in the DB nor created by an earlier row of this same import.
-      flags.push("unresolvable_lodging_name");
+      flags = [...flags, "unresolvable_lodging_name"];
     }
   }
 
   if (lodging && (lodging.lat == null || lodging.lon == null)) {
-    flags.push("missing_coordinates");
+    flags = [...flags, "missing_coordinates"];
   }
 
   const stay = candidate.stay;
   if (stay) {
     if (!ISO_DAY_RE.test(stay.checkIn) || !ISO_DAY_RE.test(stay.checkOut)) {
-      flags.push("malformed_date");
+      flags = [...flags, "malformed_date"];
     } else if (Date.parse(stay.checkOut) < Date.parse(stay.checkIn)) {
-      flags.push("invalid_date_range");
+      flags = [...flags, "invalid_date_range"];
     }
 
     if (stay.externalRef) {
       const hit = idx.staysByExternalRef.get(stay.externalRef);
       if (hit) {
+        // A proven exact stay-ref hit outranks any earlier heuristic guess
+        // (name+city or stays-only by-name join) — it always wins.
         dedupeHint = "stay_exact_ref";
         matchedStayId = hit.id;
-        matchedLodgingId = matchedLodgingId ?? hit.lodgingId;
+        matchedLodgingId = hit.lodgingId;
       }
     }
 
