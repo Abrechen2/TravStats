@@ -1,0 +1,153 @@
+{
+  "nav": { "link": "Lodging" },
+  "list": {
+    "title": "Lodging",
+    "loading": "Loading lodgings …",
+    "loadError": "Could not load lodgings",
+    "empty": "No lodgings recorded yet",
+    "columns": {
+      "name": "Name",
+      "chain": "Chain",
+      "location": "Location",
+      "stays": "Stays",
+      "nights": "Nights",
+      "rating": "Rating",
+      "spend": "Spend"
+    }
+  },
+  "filter": {
+    "searchPlaceholder": "Search by name or location …",
+    "type": "Type",
+    "allTypes": "All types",
+    "year": "Year",
+    "allYears": "All years",
+    "country": "Country",
+    "allCountries": "All countries",
+    "sort": "Sort",
+    "sortOptions": {
+      "name": "Name",
+      "nights": "Nights",
+      "rating": "Rating",
+      "spend": "Spend"
+    },
+    "showing": "{{count}} shown"
+  },
+  "add": {
+    "title": "Add hotel"
+  },
+  "detail": {
+    "loading": "Loading lodging …",
+    "notFound": "Lodging not found",
+    "avgRating": "Avg. rating",
+    "stays": "Stays",
+    "staysEmpty": "No stays recorded yet",
+    "spend": "Spend",
+    "spendBase": "In base currency",
+    "spendPerNight": "Per night",
+    "noLocation": "No location on file",
+    "deleteConfirmTitle": "Delete lodging?",
+    "deleteConfirmMessage": "This lodging and its {{count}} stay(s) will be permanently deleted. This action cannot be undone.",
+    "deleteSuccess": "Lodging deleted",
+    "deleteError": "Could not delete lodging"
+  },
+  "field": {
+    "name": "Name",
+    "type": "Type",
+    "stars": "Stars",
+    "address": "Address",
+    "city": "City",
+    "country": "Country",
+    "amenities": "Amenities",
+    "amenitiesPlaceholder": "e.g. Wi-Fi, pool, parking (comma-separated)",
+    "notes": "Notes",
+    "independent": "Independent",
+    "staysCount": "stays",
+    "staysCount_one": "stay",
+    "staysCount_other": "stays",
+    "nightsCount": "nights",
+    "nightsCount_one": "night",
+    "nightsCount_other": "nights",
+    "room": "Room",
+    "board": "Board",
+    "awardStay": "Award stay",
+    "ratingRoom": "Room",
+    "ratingBreakfast": "Breakfast",
+    "ratingService": "Service",
+    "ratingOverall": "Overall",
+    "bookingReference": "Booking reference",
+    "chain": "Chain",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "status": "Status",
+    "roomCategory": "Room category",
+    "currency": "Currency",
+    "totalPrice": "Total price",
+    "pricePerNight": "Price per night",
+    "roomAmenities": "Room amenities",
+    "roomAmenitiesPlaceholder": "e.g. sea view, balcony (comma-separated)",
+    "membership": "Loyalty program",
+    "noMembership": "No loyalty program",
+    "trip": "Trip",
+    "noTrip": "Not linked to a trip",
+    "companions": "Companions",
+    "programName": "Program name",
+    "membershipNumber": "Membership number",
+    "tier": "Tier"
+  },
+  "type": {
+    "hotel": "Hotel",
+    "campsite": "Campsite"
+  },
+  "board": {
+    "none": "No board",
+    "breakfast": "Breakfast",
+    "half": "Half board",
+    "full": "Full board",
+    "all_inclusive": "All-inclusive"
+  },
+  "stayStatus": {
+    "scheduled": "Scheduled",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "form": {
+    "createTitle": "New lodging",
+    "editTitle": "Edit lodging",
+    "saveError": "Could not save lodging"
+  },
+  "fx": {
+    "source": "ECB",
+    "tooltip": "Converted at the ECB reference rate for the check-in day"
+  },
+  "chainPicker": {
+    "placeholder": "Search chain …",
+    "addMissing": "Add “{{name}}” as a new chain",
+    "confirmAdd": "Really add “{{name}}” as a new chain?",
+    "matchedExisting": "Already exists — matched to “{{name}}”",
+    "addError": "Could not create chain"
+  },
+  "stayEditor": {
+    "addStay": "Add stay",
+    "createTitle": "New stay",
+    "editTitle": "Edit stay",
+    "datesSection": "Dates",
+    "datesRequired": "Please provide check-in and check-out dates",
+    "ratingsSection": "Ratings",
+    "priceSection": "Price",
+    "amenitiesSection": "Amenities & notes",
+    "loyaltySection": "Loyalty program",
+    "manageMemberships": "Manage loyalty programs",
+    "receiptSection": "Receipt",
+    "notesSection": "Notes",
+    "saveError": "Could not save stay"
+  },
+  "membership": {
+    "title": "Loyalty programs",
+    "add": "Add program",
+    "empty": "No loyalty programs added yet",
+    "loadError": "Could not load loyalty programs",
+    "saveError": "Could not save loyalty program",
+    "duplicateError": "This program is already on file for this chain",
+    "deleteError": "Could not delete loyalty program"
+  }
+}
