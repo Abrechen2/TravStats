@@ -1,5 +1,7 @@
 {
-  "nav": { "link": "Lodging" },
+  "nav": {
+    "link": "Lodging"
+  },
   "list": {
     "title": "Lodging",
     "loading": "Loading lodgings …",
@@ -62,12 +64,12 @@
     "amenitiesPlaceholder": "e.g. Wi-Fi, pool, parking (comma-separated)",
     "notes": "Notes",
     "independent": "Independent",
-    "staysCount": "stays",
-    "staysCount_one": "stay",
-    "staysCount_other": "stays",
-    "nightsCount": "nights",
-    "nightsCount_one": "night",
-    "nightsCount_other": "nights",
+    "staysCount": "{{count}} stays",
+    "staysCount_one": "{{count}} stay",
+    "staysCount_other": "{{count}} stays",
+    "nightsCount": "{{count}} nights",
+    "nightsCount_one": "{{count}} night",
+    "nightsCount_other": "{{count}} nights",
     "room": "Room",
     "board": "Board",
     "awardStay": "Award stay",

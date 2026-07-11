@@ -1,5 +1,7 @@
 {
-  "nav": { "link": "Unterkünfte" },
+  "nav": {
+    "link": "Unterkünfte"
+  },
   "list": {
     "title": "Unterkünfte",
     "loading": "Unterkünfte werden geladen …",
@@ -62,12 +64,12 @@
     "amenitiesPlaceholder": "z. B. WLAN, Pool, Parkplatz (kommagetrennt)",
     "notes": "Notizen",
     "independent": "Unabhängig",
-    "staysCount": "Aufenthalte",
-    "staysCount_one": "Aufenthalt",
-    "staysCount_other": "Aufenthalte",
-    "nightsCount": "Übernachtungen",
-    "nightsCount_one": "Übernachtung",
-    "nightsCount_other": "Übernachtungen",
+    "staysCount": "{{count}} Aufenthalte",
+    "staysCount_one": "{{count}} Aufenthalt",
+    "staysCount_other": "{{count}} Aufenthalte",
+    "nightsCount": "{{count}} Übernachtungen",
+    "nightsCount_one": "{{count}} Übernachtung",
+    "nightsCount_other": "{{count}} Übernachtungen",
     "room": "Zimmer",
     "board": "Verpflegung",
     "awardStay": "Prämienübernachtung",
