@@ -3,6 +3,7 @@ import type {
   Lodging,
   LodgingStay,
   LodgingChain,
+  LodgingChainDetail,
   LodgingMembership,
   LodgingInput,
   StayInput,
@@ -78,6 +79,11 @@ export const listChains = async (search?: string): Promise<LodgingChain[]> => {
 
 export const createChain = async (input: ChainInput): Promise<LodgingChain> => {
   const { data } = await api.post<Envelope<LodgingChain>>("/lodging-chains", input);
+  return data.data;
+};
+
+export const getChainDetail = async (id: number): Promise<LodgingChainDetail> => {
+  const { data } = await api.get<Envelope<LodgingChainDetail>>(`/lodging-chains/${id}`);
   return data.data;
 };
 

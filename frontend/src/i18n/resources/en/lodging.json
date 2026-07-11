@@ -152,7 +152,23 @@
     "empty": "No loyalty programs added yet",
     "loadError": "Could not load loyalty programs",
     "saveError": "Could not save loyalty program",
-    "duplicateError": "This program is already on file for this chain",
+    "duplicateError": "This program is already on file",
     "deleteError": "Could not delete loyalty program"
+  },
+  "chainDetail": {
+    "loading": "Loading chain …",
+    "notFound": "Chain not found",
+    "noLoyaltyProgram": "No loyalty program on file",
+    "sharedWith": "\"{{program}}\" — shared with {{chains}}",
+    "hotelsTitle": "Your hotels in this chain",
+    "hotelsEmpty": "No hotels of this chain recorded yet.",
+    "noMembershipYet": "No loyalty membership recorded for this program yet.",
+    "stats": {
+      "hotels": "Hotels",
+      "stays": "Stays",
+      "nights": "Nights",
+      "spend": "Spend",
+      "rating": "Avg. rating"
+    }
   }
 }

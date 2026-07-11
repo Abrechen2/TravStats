@@ -7,6 +7,7 @@ import { LodgingMiniMap } from "../components/lodging/LodgingMiniMap";
 import { LodgingStayCard } from "../components/lodging/LodgingStayCard";
 import { StarRating } from "../components/lodging/StarRating";
 import { StayEditor } from "../components/lodging/StayEditor";
+import { ChainNameLink } from "../components/lodging/ChainNameLink";
 import { useTranslation } from "../hooks/useTranslation";
 import { deleteLodging, getLodging, listMemberships } from "../lib/api/lodging";
 import { tripsApi } from "../lib/api";
@@ -177,7 +178,11 @@ export default function LodgingDetailPage(): JSX.Element {
             <div>
               <h1 className="text-xl font-semibold text-[var(--text-primary)]">{lodging.name}</h1>
               <p className="text-sm text-[var(--text-muted)]">
-                {lodging.chain?.name ?? t("lodging:field.independent")}
+                {lodging.chain ? (
+                  <ChainNameLink chainId={lodging.chain.id} name={lodging.chain.name} />
+                ) : (
+                  t("lodging:field.independent")
+                )}
                 {lodging.stars !== null ? ` · ${"★".repeat(lodging.stars)} ${lodging.stars}` : ""}
               </p>
               {addressLine.length > 0 && (

@@ -16,9 +16,13 @@ describe("Lodging Chains API", () => {
     });
     userId = u.id;
     authCookie = `auth_token=${generateToken(u.id)}`;
+    await prisma.userSettings.create({ data: { userId, data: {}, baseCurrency: "EUR" } });
   });
 
   afterAll(async () => {
+    await prisma.lodgingStay.deleteMany({ where: { userId } });
+    await prisma.lodging.deleteMany({ where: { userId } });
+    await prisma.userSettings.deleteMany({ where: { userId } });
     if (createdChainIds.length > 0) {
       await prisma.lodgingChain.deleteMany({ where: { id: { in: createdChainIds } } });
     }
@@ -165,6 +169,123 @@ describe("Lodging Chains API", () => {
 
       const countAfter = await prisma.lodgingChain.count();
       expect(countAfter).toBe(countBefore);
+    });
+  });
+
+  describe("GET /api/v1/lodging-chains/:id", () => {
+    it("requires authentication", async () => {
+      const chain = await prisma.lodgingChain.create({ data: { name: "Auth Test Chain" } });
+      createdChainIds.push(chain.id);
+      const res = await request(app).get(`/api/v1/lodging-chains/${chain.id}`);
+      expect(res.status).toBe(401);
+    });
+
+    it("404s for a chain id that doesn't exist", async () => {
+      const res = await request(app)
+        .get("/api/v1/lodging-chains/999999999")
+        .set("Cookie", authCookie);
+      expect(res.status).toBe(404);
+    });
+
+    it("400s for a non-numeric id", async () => {
+      const res = await request(app)
+        .get("/api/v1/lodging-chains/not-a-number")
+        .set("Cookie", authCookie);
+      expect(res.status).toBe(400);
+    });
+
+    it("returns the chain, the caller's hotels in it (with aggregates), stats, membership and sibling chains", async () => {
+      const chain = await prisma.lodgingChain.create({
+        data: { name: "Sheraton Detail Test", loyaltyProgram: "Marriott Bonvoy Detail Test" },
+      });
+      createdChainIds.push(chain.id);
+      const sibling = await prisma.lodgingChain.create({
+        data: { name: "Westin Detail Test", loyaltyProgram: "Marriott Bonvoy Detail Test" },
+      });
+      createdChainIds.push(sibling.id);
+      // A chain sharing no program with anything — must never show up as a sibling.
+      const unrelated = await prisma.lodgingChain.create({ data: { name: "Unrelated Detail Test" } });
+      createdChainIds.push(unrelated.id);
+
+      const lodging = await prisma.lodging.create({
+        data: { userId, name: "Sheraton Zürich Detail Test", chainId: chain.id },
+      });
+      await prisma.lodgingStay.create({
+        data: {
+          lodgingId: lodging.id,
+          userId,
+          checkIn: new Date("2024-05-13T15:00:00.000Z"),
+          checkOut: new Date("2024-05-15T11:00:00.000Z"),
+          ratingOverall: 4,
+        },
+      });
+      const membership = await prisma.lodgingMembership.create({
+        data: { userId, programName: "Marriott Bonvoy Detail Test", tier: "Gold" },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/lodging-chains/${chain.id}`)
+        .set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data.chain.id).toBe(chain.id);
+      expect(res.body.data.lodgings).toHaveLength(1);
+      expect(res.body.data.lodgings[0].nights).toBe(2);
+      expect(res.body.data.lodgings[0].overallRating).toBe(4);
+      expect(res.body.data.stats).toEqual({
+        hotelCount: 1,
+        stayCount: 1,
+        nights: 2,
+        totalSpendBase: 0,
+        avgRating: 4,
+      });
+      expect(res.body.data.membership.id).toBe(membership.id);
+      expect(res.body.data.membership.programName).toBe("Marriott Bonvoy Detail Test");
+      expect(res.body.data.siblingChains).toHaveLength(1);
+      expect(res.body.data.siblingChains[0].id).toBe(sibling.id);
+
+      await prisma.lodgingMembership.deleteMany({ where: { id: membership.id } });
+    });
+
+    it("returns null membership and an empty hotel list for a chain the caller has no data for", async () => {
+      const chain = await prisma.lodgingChain.create({
+        data: { name: "No Membership Chain Detail Test" },
+      });
+      createdChainIds.push(chain.id);
+
+      const res = await request(app)
+        .get(`/api/v1/lodging-chains/${chain.id}`)
+        .set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data.lodgings).toEqual([]);
+      expect(res.body.data.stats).toEqual({
+        hotelCount: 0,
+        stayCount: 0,
+        nights: 0,
+        totalSpendBase: 0,
+        avgRating: null,
+      });
+      expect(res.body.data.membership).toBeNull();
+      expect(res.body.data.siblingChains).toEqual([]);
+    });
+
+    it("never returns another user's hotels for this chain", async () => {
+      const chain = await prisma.lodgingChain.create({ data: { name: "Isolation Test Chain" } });
+      createdChainIds.push(chain.id);
+      const other = await prisma.user.create({
+        data: { username: "lodgingchaintest-other", passwordHash: await hashPassword("password123") },
+      });
+      await prisma.lodging.create({
+        data: { userId: other.id, name: "Someone Else's Hotel", chainId: chain.id },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/lodging-chains/${chain.id}`)
+        .set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data.lodgings).toEqual([]);
+
+      await prisma.lodging.deleteMany({ where: { userId: other.id } });
+      await prisma.user.deleteMany({ where: { id: other.id } });
     });
   });
 });
