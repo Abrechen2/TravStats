@@ -23,10 +23,10 @@ export default function LodgingDetailPage(): JSX.Element {
   const navigate = useNavigate();
   const { t } = useTranslation(["lodging", "common"]);
   const addToast = useToastStore((s) => s.addToast);
-  // No dedicated `baseCurrency` wired to the frontend yet (Task 19 adds the
-  // settings-page currency picker) — `units.currency` is the same
-  // aggregate-spend-formatting proxy already used by LodgingStatStrip.tsx.
-  const baseCurrency = useSettingsStore((s) => s.units.currency);
+  // `totalSpendBase` is computed by the backend in the user's actual base
+  // currency (`UserSettings.baseCurrency`) — NOT `units.currency`, which is an
+  // independent display preference used elsewhere for flight-cost figures.
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
 
   const [lodging, setLodging] = useState<Lodging | null>(null);
   const [loading, setLoading] = useState<boolean>(true);

@@ -27,8 +27,12 @@ vi.mock("../../../../hooks/useDashboardRoute", () => ({
 }));
 
 vi.mock("../../../MapContainer3D", () => ({
-  default: (props: { lodgingsOverride?: Lodging[] }) => (
-    <div data-testid="map-stub" data-lodging-count={props.lodgingsOverride?.length ?? 0} />
+  default: (props: { lodgingsOverride?: Lodging[]; appearanceDomains?: readonly string[] }) => (
+    <div
+      data-testid="map-stub"
+      data-lodging-count={props.lodgingsOverride?.length ?? 0}
+      data-appearance-domains={JSON.stringify(props.appearanceDomains ?? null)}
+    />
   ),
 }));
 
@@ -146,6 +150,24 @@ describe("LodgingTab", () => {
     });
     expect(screen.getByText("11")).toBeInTheDocument();
     expect(screen.getByTestId("map-stub").getAttribute("data-lodging-count")).toBe("1");
+  });
+
+  it("passes an empty appearanceDomains to MapContainer3D — no flight/cruise appearance controls on the Hotels tab", async () => {
+    const lodging = makeLodging();
+    listLodgingsMock.mockResolvedValue([lodging]);
+    getLodgingStatsMock.mockResolvedValue({
+      ...zeroStats,
+      lodgingsCount: 1,
+      staysCount: 1,
+      totalNights: 11,
+    });
+
+    render(<LodgingTab />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("map-stub").getAttribute("data-appearance-domains")).toBe("[]");
   });
 
   it("shows an empty state with zero lodgings — no crash, no NaN", async () => {

@@ -120,6 +120,15 @@ export interface SettingsState {
   cruise: CruiseSettings;
   apiKeys: ApiKeysStatus | null;
   enabledDomains: DomainKey[];
+  /**
+   * The user's actual base currency (`UserSettings.baseCurrency`, ECB rate
+   * applied per stay's check-in day) — used by the backend to compute
+   * `spendBaseTotal` / `totalSpendBase` figures in the lodging domain. This is
+   * NOT `units.currency` (a separate, user-configurable *display* preference
+   * for flight-cost figures elsewhere) — the two are independent and must
+   * not be conflated when labeling a base-currency figure.
+   */
+  baseCurrency: string;
   setProfile: SettingsUpdater<ProfileSettings>;
   setDisplay: SettingsUpdater<DisplaySettings>;
   setUnits: SettingsUpdater<UnitsSettings>;
@@ -219,6 +228,7 @@ const defaultSettings: Omit<
   },
   apiKeys: null,
   enabledDomains: ["flight"],
+  baseCurrency: "EUR",
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -350,6 +360,11 @@ export const useSettingsStore = create<SettingsState>()(
                   (DOMAIN_KEYS as readonly string[]).includes(k as string)
                 );
                 newState.enabledDomains = filtered;
+              }
+              // baseCurrency is a plain top-level field (like enabledDomains),
+              // not part of any of the settings-group objects merged above.
+              if (typeof remote.baseCurrency === "string" && remote.baseCurrency.length > 0) {
+                newState.baseCurrency = remote.baseCurrency;
               }
               return newState;
             });

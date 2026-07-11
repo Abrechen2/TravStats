@@ -23,12 +23,13 @@ const CELL_STYLE: CSSProperties = {
  */
 export function LodgingStatStrip({ stats }: LodgingStatStripProps): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
-  // There is no dedicated `baseCurrency` field wired to the frontend yet
-  // (that lands with the settings-page currency picker) — `units.currency`
-  // is the same "format an aggregate spend total" proxy already used by
-  // Stats.tsx/StatsBusinessSection for flight costs, so it's reused here
-  // rather than inventing a second convention.
-  const currency = useSettingsStore((s) => s.units.currency);
+  // `spendBaseTotal` is computed by the backend in the user's actual base
+  // currency (`UserSettings.baseCurrency`, ECB rate applied per stay's
+  // check-in day) — NOT `units.currency`, which is an independent display
+  // preference used elsewhere for flight-cost figures. Labeling this figure
+  // with `units.currency` would show the correctly-computed number under the
+  // wrong currency symbol whenever a user has changed that preference.
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const ratingLabel =
     stats.avgRatingOverall !== null
       ? `★ ${stats.avgRatingOverall.toFixed(1)}`
@@ -57,7 +58,7 @@ export function LodgingStatStrip({ stats }: LodgingStatStripProps): JSX.Element 
     },
     {
       key: "spend",
-      value: formatCurrency(stats.spendBaseTotal, currency),
+      value: formatCurrency(stats.spendBaseTotal, baseCurrency),
       label: t("dashboard:lodgingTab.stats.spend"),
     },
     { key: "rating", value: ratingLabel, label: t("dashboard:lodgingTab.stats.rating") },
