@@ -138,3 +138,7 @@ brand-smoke-shots/
 # Playwright test artifacts (never commit)
 /playwright-report/
 /test-results/
+
+# Private memory archive + backups (owner-local, never committed)
+memory-archive/
+memory-backup-*.tar.gz
