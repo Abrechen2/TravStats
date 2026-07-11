@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
+import { resolve as resolvePath } from "node:path";
 import { describe, it, expect } from "vitest";
-import { WHATS_NEW_ENTRIES, findEntryForVersion } from "../whatsNew";
+import { WHATS_NEW_ENTRIES, compareVersions, findEntryForVersion } from "../whatsNew";
 import de from "../../i18n/resources/de/whatsNew.json";
 import en from "../../i18n/resources/en/whatsNew.json";
 
@@ -10,13 +12,54 @@ function resolve(bundle: Record<string, unknown>, dottedKey: string): unknown {
   }, bundle);
 }
 
+// vitest runs with cwd = frontend/, so backend/VERSION is one level up.
+const SHIPPING_VERSION = readFileSync(
+  resolvePath(process.cwd(), "..", "backend", "VERSION"),
+  "utf8"
+).trim();
+
 describe("whatsNew content", () => {
-  it("finds an entry by exact version", () => {
-    expect(findEntryForVersion("2.4.0")?.version).toBe("2.4.0");
+  /**
+   * The regression that shipped in 2.3.0: the only entry was keyed "2.4.0"
+   * because the feature was *planned* for 2.4.0, then shipped in 2.3.0. The
+   * modal could never fire — and neither could the usage-stats consent card,
+   * which renders inside it. The old tests missed it because they asserted the
+   * same wrong constant back at themselves.
+   *
+   * An entry pointing at an unreleased version is always a bug: nobody is
+   * running that version yet, so it is dead content.
+   */
+  it("has no entry targeting a version newer than backend/VERSION", () => {
+    for (const entry of WHATS_NEW_ENTRIES) {
+      expect(
+        compareVersions(entry.version, SHIPPING_VERSION),
+        `entry "${entry.version}" targets a version newer than the shipping ${SHIPPING_VERSION} — it can never be shown`
+      ).toBeLessThanOrEqual(0);
+    }
   });
 
-  it("returns undefined for an unknown version", () => {
-    expect(findEntryForVersion("9.9.9")).toBeUndefined();
+  it("matches an entry on the exact version it targets", () => {
+    expect(findEntryForVersion("2.3.0")?.version).toBe("2.3.0");
+  });
+
+  it("still matches on a later patch than the entry targets", () => {
+    expect(findEntryForVersion("2.3.7")?.version).toBe("2.3.0");
+    expect(findEntryForVersion("9.9.9")?.version).toBe("2.3.0");
+  });
+
+  it("does not match an entry from the future", () => {
+    expect(findEntryForVersion("2.2.2")).toBeUndefined();
+  });
+
+  it("picks the newest non-future entry when several qualify", () => {
+    const sorted = [...WHATS_NEW_ENTRIES].sort((a, b) => compareVersions(b.version, a.version));
+    expect(findEntryForVersion("999.0.0")?.version).toBe(sorted[0].version);
+  });
+
+  it("compares versions numerically, not lexically", () => {
+    expect(compareVersions("2.10.0", "2.9.0")).toBeGreaterThan(0);
+    expect(compareVersions("2.3.0", "2.3.0-rc.5")).toBe(0);
+    expect(compareVersions("2.3.0", "2.3.1")).toBeLessThan(0);
   });
 
   it("caps highlights at five per entry", () => {
