@@ -57,7 +57,13 @@ export interface RevertResult {
  * the array form) because "which lodgings still have stays" must be queried
  * AFTER this batch's stays are deleted but BEFORE anything commits — the
  * array form can't branch on an intermediate result, and running that query
- * outside the transaction would race a concurrent write.
+ * outside the transaction would race a concurrent write. Runs at
+ * `Serializable` isolation (not the Postgres default READ COMMITTED) to
+ * close that same TOCTOU window against a concurrent
+ * `POST /lodgings/:id/stays`: without it, a stay attached to a batch-created
+ * lodging between the stays count and the delete would still be visible as
+ * "zero stays remaining" here and get cascade-deleted once this transaction
+ * commits — exactly the data loss this function exists to prevent.
  *
  * Ownership check: `batchId` is client-supplied. `LodgingImportBatch` has its
  * own `userId` column with no compound FK to the caller — a plain existence
@@ -72,37 +78,40 @@ export async function revertLodgingImportBatch(
   userId: string,
   batchId: string,
 ): Promise<RevertResult> {
-  const result = await prisma.$transaction(async (tx) => {
-    const batch = await tx.lodgingImportBatch.findFirst({ where: { id: batchId, userId } });
-    if (!batch) throw new AppError("Import batch not found", 404);
+  const result = await prisma.$transaction(
+    async (tx) => {
+      const batch = await tx.lodgingImportBatch.findFirst({ where: { id: batchId, userId } });
+      if (!batch) throw new AppError("Import batch not found", 404);
 
-    const stays = await tx.lodgingStay.deleteMany({ where: { userId, batchId } });
+      const stays = await tx.lodgingStay.deleteMany({ where: { userId, batchId } });
 
-    const batchLodgings = await tx.lodging.findMany({
-      where: { userId, batchId },
-      select: { id: true, _count: { select: { stays: true } } },
-    });
-    const emptyIds = batchLodgings.filter((l) => l._count.stays === 0).map((l) => l.id);
-    const occupiedIds = batchLodgings.filter((l) => l._count.stays > 0).map((l) => l.id);
+      const batchLodgings = await tx.lodging.findMany({
+        where: { userId, batchId },
+        select: { id: true, _count: { select: { stays: true } } },
+      });
+      const emptyIds = batchLodgings.filter((l) => l._count.stays === 0).map((l) => l.id);
+      const occupiedIds = batchLodgings.filter((l) => l._count.stays > 0).map((l) => l.id);
 
-    const lodgings = emptyIds.length
-      ? await tx.lodging.deleteMany({ where: { id: { in: emptyIds } } })
-      : { count: 0 };
-    const detached = occupiedIds.length
-      ? await tx.lodging.updateMany({
-          where: { id: { in: occupiedIds } },
-          data: { batchId: null },
-        })
-      : { count: 0 };
+      const lodgings = emptyIds.length
+        ? await tx.lodging.deleteMany({ where: { id: { in: emptyIds } } })
+        : { count: 0 };
+      const detached = occupiedIds.length
+        ? await tx.lodging.updateMany({
+            where: { id: { in: occupiedIds } },
+            data: { batchId: null },
+          })
+        : { count: 0 };
 
-    await tx.lodgingImportBatch.delete({ where: { id: batchId } });
+      await tx.lodgingImportBatch.delete({ where: { id: batchId } });
 
-    return {
-      deletedStays: stays.count,
-      deletedLodgings: lodgings.count,
-      detachedLodgings: detached.count,
-    };
-  });
+      return {
+        deletedStays: stays.count,
+        deletedLodgings: lodgings.count,
+        detachedLodgings: detached.count,
+      };
+    },
+    { isolationLevel: "Serializable" },
+  );
 
   logger.info(
     {
