@@ -25,6 +25,7 @@ import SmtpManager from "../components/Admin/SmtpManager";
 import CruiseMasterData from "../components/Admin/CruiseMasterData";
 import { useTranslation } from "../hooks/useTranslation";
 import { copyToClipboard } from "../lib/clipboard";
+import { normalizeSectionId } from "../lib/sectionAliases";
 
 import type { SystemInfoData, AdminUser } from "../components/Admin/SystemInfo";
 import type { Invitation } from "../components/Admin/InvitationManagement";
@@ -54,7 +55,7 @@ type ActiveSection =
   | "parsers"
   | "logging"
   | "backups"
-  | "apiKeys"
+  | "externalServices"
   | "smtp"
   | "cruiseMasterData";
 
@@ -71,7 +72,7 @@ const TAB_FOR_SECTION: Record<ActiveSection, TabId> = {
   instance: "general",
   users: "general",
   invitations: "general",
-  apiKeys: "general",
+  externalServices: "general",
   logging: "general",
   backups: "general",
   smtp: "general",
@@ -123,7 +124,9 @@ export default function AdminPage(): JSX.Element {
       : null
   );
 
-  const initialSectionParam = searchParams.get("section") as ActiveSection | null;
+  const initialSectionParam = normalizeSectionId(
+    searchParams.get("section")
+  ) as ActiveSection | null;
   const [activeSection, setActiveSection] = useState<ActiveSection>(
     initialSectionParam && TAB_FOR_SECTION[initialSectionParam] === activeTab
       ? initialSectionParam
@@ -159,7 +162,7 @@ export default function AdminPage(): JSX.Element {
   useEffect(() => {
     if (activeSection === "logging") {
       loadLoggingData();
-    } else if (activeSection === "apiKeys") {
+    } else if (activeSection === "externalServices") {
       if (!globalApiKeys) {
         loadGlobalApiKeys();
       }
@@ -496,7 +499,7 @@ export default function AdminPage(): JSX.Element {
     { id: "instance", label: t("admin:tabs.instance") },
     { id: "users", label: t("admin:tabs.users"), badge: users.length },
     { id: "invitations", label: t("admin:tabs.invitations") },
-    { id: "apiKeys", label: t("admin:tabs.apiKeys") },
+    { id: "externalServices", label: t("admin:tabs.externalServices") },
     { id: "parsers", label: t("admin:tabs.parsers") },
     { id: "logging", label: t("admin:tabs.logging") },
     { id: "backups", label: t("admin:tabs.backups") },
@@ -726,7 +729,7 @@ export default function AdminPage(): JSX.Element {
             </>
           )}
 
-          {activeSection === "apiKeys" && (
+          {activeSection === "externalServices" && (
             <GlobalApiKeysManager
               globalApiKeys={globalApiKeys}
               parserSettings={
