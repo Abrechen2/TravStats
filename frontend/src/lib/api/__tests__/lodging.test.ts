@@ -15,6 +15,7 @@ import {
   updateMembership,
   deleteMembership,
   getLodgingStats,
+  getFxPreview,
 } from "../lodging";
 import { api } from "../client";
 
@@ -146,6 +147,27 @@ describe("lodging API client — memberships", () => {
     vi.mocked(api.delete).mockResolvedValue({});
     await deleteMembership("m1");
     expect(api.delete).toHaveBeenCalledWith("/lodging-memberships/m1");
+  });
+});
+
+describe("lodging API client — fx preview", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("getFxPreview() GETs /lodging/fx-preview with amount/from/date and unwraps the envelope", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: { success: true, data: { baseAmount: 391.23, rate: 0.9315, rateDate: "2026-07-11", baseCurrency: "EUR" } },
+    });
+    const result = await getFxPreview(420, "CHF", "2026-07-11");
+    expect(api.get).toHaveBeenCalledWith("/lodging/fx-preview", {
+      params: { amount: 420, from: "CHF", date: "2026-07-11" },
+    });
+    expect(result).toEqual({ baseAmount: 391.23, rate: 0.9315, rateDate: "2026-07-11", baseCurrency: "EUR" });
+  });
+
+  it("getFxPreview() passes through a null preview (ECB lookup failed)", async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { success: true, data: null } });
+    const result = await getFxPreview(420, "CHF", "2026-07-11");
+    expect(result).toBeNull();
   });
 });
 

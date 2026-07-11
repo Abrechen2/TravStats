@@ -153,6 +153,7 @@ export interface StayInput {
   roomAmenities?: string[];
   bookingReference?: string;
   membershipId?: string | null;
+  receiptUrl?: string;
   companions?: string[];
   notes?: string;
 }
@@ -168,6 +169,22 @@ export interface MembershipInput {
   programName?: string;
   membershipNumber?: string;
   tier?: string;
+}
+
+/**
+ * Shape of `GET /api/v1/lodging/fx-preview` (routes/lodging.ts). A live,
+ * read-only rate lookup used ONLY to render the stay editor's FX readout —
+ * `null` whenever the ECB lookup fails, matching the same "no partial
+ * conversion" contract as the persisted stay's FX snapshot fields. The
+ * AUTHORITATIVE snapshot is still computed server-side at save time
+ * (`applyFxSnapshot` in routes/lodging.ts) and stored on the stay itself;
+ * this preview never feeds back into that write.
+ */
+export interface FxPreview {
+  baseAmount: number;
+  rate: number;
+  rateDate: string;
+  baseCurrency: string;
 }
 
 export interface LodgingListQuery {

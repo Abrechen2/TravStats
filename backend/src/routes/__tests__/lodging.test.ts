@@ -157,6 +157,53 @@ describe("Lodging API", () => {
     });
   });
 
+  describe("GET /api/v1/lodging/fx-preview — live rate preview (never the authoritative snapshot)", () => {
+    it("returns a conversion preview for a differing currency", async () => {
+      jest
+        .spyOn(fx, "convertToBase")
+        .mockResolvedValue({ baseAmount: 391.23, rate: 0.9315, rateDate: "2026-07-11" });
+      const res = await request(app)
+        .get("/api/v1/lodging/fx-preview")
+        .query({ amount: 420, from: "CHF", date: "2026-07-11" })
+        .set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({ baseAmount: 391.23, rate: 0.9315, rateDate: "2026-07-11", baseCurrency: "EUR" });
+    });
+
+    it("returns null data (never a broken partial) when the ECB lookup fails", async () => {
+      jest.spyOn(fx, "convertToBase").mockResolvedValue(null);
+      const res = await request(app)
+        .get("/api/v1/lodging/fx-preview")
+        .query({ amount: 420, from: "CHF", date: "2026-07-11" })
+        .set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data).toBeNull();
+    });
+
+    it("never matches the /:id route — 'fx-preview' is not treated as a lodging id", async () => {
+      const res = await request(app)
+        .get("/api/v1/lodging/fx-preview")
+        .query({ amount: 100, from: "USD", date: "2026-01-01" })
+        .set("Cookie", authCookie);
+      expect(res.status).not.toBe(404);
+    });
+
+    it("rejects an unknown currency code", async () => {
+      const res = await request(app)
+        .get("/api/v1/lodging/fx-preview")
+        .query({ amount: 100, from: "XXX", date: "2026-01-01" })
+        .set("Cookie", authCookie);
+      expect(res.status).toBe(400);
+    });
+
+    it("requires authentication", async () => {
+      const res = await request(app)
+        .get("/api/v1/lodging/fx-preview")
+        .query({ amount: 100, from: "USD", date: "2026-01-01" });
+      expect(res.status).toBe(401);
+    });
+  });
+
   describe("PATCH /api/v1/lodging/:id/stays/:stayId — selective FX re-snapshot", () => {
     let stayId: string;
 
