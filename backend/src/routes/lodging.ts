@@ -1,5 +1,6 @@
 import { Router, Response, NextFunction } from "express";
 import { Prisma } from "@prisma/client";
+import { z } from "zod";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
@@ -13,6 +14,7 @@ import {
   createStaySchema,
   updateStaySchema,
   lodgingQuerySchema,
+  CURRENCIES,
   type LodgingQueryInput,
 } from "../schemas/lodging";
 import logger from "../utils/logger";
@@ -173,6 +175,18 @@ async function getBaseCurrency(userId: string): Promise<string> {
   return settings?.baseCurrency ?? "EUR";
 }
 
+// Query shape for GET /fx-preview — a live, read-only rate lookup for the
+// stay editor's FX readout. Kept local to this file (like lodgingChains.ts's
+// chainQuerySchema) since nothing else needs it.
+const fxPreviewQuerySchema = z.object({
+  amount: z.coerce.number().min(0),
+  from: z.enum(CURRENCIES),
+  // Calendar day only (YYYY-MM-DD) — the same granularity applyFxSnapshot
+  // snapshots on save. No time-of-day component to avoid the local-timezone
+  // reinterpretation trap that motivated isoDateTimeRequired in schemas/lodging.ts.
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
+});
+
 function recheckAchievements(userId: string): void {
   checkAndUpdateAchievements(userId).catch((error) => {
     logger.error({
@@ -209,6 +223,38 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     const offset = parsed.data.offset ?? 0;
     const limit = parsed.data.limit ?? 200;
     res.json({ success: true, data: sorted.slice(offset, offset + limit) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Read-only preview for the stay editor's live FX readout — NEVER the
+// authoritative snapshot (that stays exactly `applyFxSnapshot`, computed at
+// stay create/update time and persisted on the stay row). This is a
+// same-origin proxy onto the same `fx.convertToBase` helper so the frontend
+// can show a rate preview without the app's CSP (`connect-src 'self'` in
+// index.ts) blocking a direct browser call to the external Frankfurter API.
+// Must be registered BEFORE `/:id` below — otherwise Express would match
+// "fx-preview" as an `:id` path param instead of this literal route.
+router.get("/fx-preview", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const parsed = fxPreviewQuerySchema.safeParse(req.query);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+
+    const baseCurrency = await getBaseCurrency(userId);
+    const conv = await fx.convertToBase(
+      parsed.data.amount,
+      parsed.data.from,
+      baseCurrency,
+      new Date(`${parsed.data.date}T00:00:00.000Z`),
+    );
+    res.json({
+      success: true,
+      // null when the ECB lookup fails — the frontend must render nothing
+      // rather than guess, same contract as the persisted FX snapshot fields.
+      data: conv ? { ...conv, baseCurrency } : null,
+    });
   } catch (err) {
     next(err);
   }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { receiptUrlValidator } from "./receiptUrl";
 
 export const LODGING_TYPES = ["hotel", "campsite"] as const;
 export const BOARD_TYPES = [
@@ -67,6 +68,7 @@ const baseStaySchema = z.object({
   roomAmenities: z.array(z.string().max(60)).max(50).optional(),
   bookingReference: z.string().max(40).optional(),
   membershipId: z.string().uuid().nullable().optional(),
+  receiptUrl: receiptUrlValidator,
   companions: z.array(z.string().max(100)).max(50).optional(),
   notes: z
     .string()

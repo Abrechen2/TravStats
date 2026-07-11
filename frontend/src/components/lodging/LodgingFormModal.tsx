@@ -2,8 +2,9 @@ import { useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { createLodging, updateLodging } from "../../lib/api/lodging";
-import type { Lodging, LodgingInput, LodgingType } from "../../types/lodging";
+import type { Lodging, LodgingChain, LodgingInput, LodgingType } from "../../types/lodging";
 import { logger } from "../../lib/logger";
+import { ChainPicker } from "./ChainPicker";
 
 const LODGING_TYPES: LodgingType[] = ["hotel", "campsite"];
 
@@ -16,13 +17,14 @@ interface LodgingFormModalProps {
 
 /**
  * Create/edit form for the `Lodging` place itself (name, type, address,
- * stars, amenities, notes). Chain assignment is deliberately NOT here yet —
- * `ChainPicker` (Task 18) owns that; a lodging can exist independently
- * ("— unabhängig" in the mockup) until then.
+ * stars, amenities, notes, chain). A lodging can exist independently of any
+ * chain ("— unabhängig" in the mockup) — clearing the `ChainPicker` sends
+ * `chainId: null`.
  */
 export function LodgingFormModal({ mode, lodging, onClose, onSaved }: LodgingFormModalProps): JSX.Element {
   const { t } = useTranslation(["lodging", "common"]);
   const [type, setType] = useState<LodgingType>(lodging?.type ?? "hotel");
+  const [chain, setChain] = useState<LodgingChain | null>(lodging?.chain ?? null);
   const [name, setName] = useState<string>(lodging?.name ?? "");
   const [address, setAddress] = useState<string>(lodging?.address ?? "");
   const [city, setCity] = useState<string>(lodging?.city ?? "");
@@ -45,6 +47,7 @@ export function LodgingFormModal({ mode, lodging, onClose, onSaved }: LodgingFor
       const input: LodgingInput = {
         type,
         name: name.trim(),
+        chainId: chain?.id ?? null,
         address: address.trim() || undefined,
         city: city.trim() || undefined,
         country: country.trim() || undefined,
@@ -107,6 +110,10 @@ export function LodgingFormModal({ mode, lodging, onClose, onSaved }: LodgingFor
                 </option>
               ))}
             </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)] sm:col-span-2">
+            {t("lodging:field.chain")}
+            <ChainPicker value={chain} onChange={setChain} />
           </label>
           <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)]">
             {t("lodging:field.stars")}

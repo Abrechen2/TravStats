@@ -6,6 +6,7 @@ import type { LodgingStay } from "../../types/lodging";
 
 interface LodgingStayCardProps {
   stay: LodgingStay;
+  onEdit?: (stay: LodgingStay) => void;
 }
 
 /** "★ 4.0" for a rating value, "—" when unrated. Half-steps render as-is (e.g. 4.5). */
@@ -23,7 +24,7 @@ function ratingText(value: number | null): string {
  * this card must render the plain original price alone in that case —
  * never a partial/`null`/`NaN` conversion line (see `formatStayPriceDisplay`).
  */
-export function LodgingStayCard({ stay }: LodgingStayCardProps): JSX.Element {
+export function LodgingStayCard({ stay, onEdit }: LodgingStayCardProps): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "common"]);
   const nights = nightsBetween(stay.checkIn, stay.checkOut);
   const { original, fxReadout } = formatStayPriceDisplay(
@@ -61,6 +62,16 @@ export function LodgingStayCard({ stay }: LodgingStayCardProps): JSX.Element {
         <span className="ml-auto text-sm font-semibold" style={{ color: "var(--star)" }}>
           {ratingText(stay.ratingOverall)}
         </span>
+        {onEdit && (
+          <button
+            type="button"
+            data-testid={`stay-edit-${stay.id}`}
+            onClick={() => onEdit(stay)}
+            className="text-xs text-[var(--accent)] hover:underline"
+          >
+            {t("common:buttons.edit")}
+          </button>
+        )}
       </div>
 
       <div className="mt-2 flex flex-wrap gap-4 text-xs text-[var(--text-muted)]">

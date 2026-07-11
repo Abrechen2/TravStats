@@ -10,6 +10,7 @@ import type {
   MembershipInput,
   LodgingListQuery,
   LodgingStats,
+  FxPreview,
 } from "../../types/lodging";
 
 interface Envelope<T> {
@@ -105,6 +106,19 @@ export const updateMembership = async (
 
 export const deleteMembership = async (id: string): Promise<void> => {
   await api.delete(`/lodging-memberships/${id}`);
+};
+
+// ---- FX preview (stay editor readout only — never the save-time snapshot) ----
+
+export const getFxPreview = async (
+  amount: number,
+  from: string,
+  date: string,
+): Promise<FxPreview | null> => {
+  const { data } = await api.get<Envelope<FxPreview | null>>("/lodging/fx-preview", {
+    params: { amount, from, date },
+  });
+  return data.data;
 };
 
 // ---- Stats ----

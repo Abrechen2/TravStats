@@ -1,50 +1,5 @@
 import { z } from 'zod';
-
-// Whitelist of allowed receipt URL domains (common cloud storage and document services)
-const ALLOWED_RECEIPT_DOMAINS = [
-  'dropbox.com',
-  'drive.google.com',
-  'docs.google.com',
-  'onedrive.live.com',
-  '1drv.ms',
-  'box.com',
-  'icloud.com',
-  's3.amazonaws.com',
-  'cloudinary.com',
-  'imgur.com',
-  // Add your own domain here if you host receipts
-];
-
-/**
- * Custom receipt URL validator
- * Ensures the URL is from a trusted domain or is a local upload
- */
-const receiptUrlValidator = z
-  .string()
-  .refine(
-    (url) => {
-      // Allow local uploads (starts with /api/v1/uploads/)
-      if (url.startsWith('/api/v1/uploads/')) {
-        return true;
-      }
-
-      // For external URLs, validate domain
-      try {
-        const parsedUrl = new URL(url);
-        const hostname = parsedUrl.hostname.toLowerCase();
-        // Check if hostname ends with any allowed domain
-        return ALLOWED_RECEIPT_DOMAINS.some(
-          (domain) => hostname === domain || hostname.endsWith(`.${domain}`)
-        );
-      } catch {
-        return false;
-      }
-    },
-    {
-      message: `Receipt URL must be a local upload (/api/v1/uploads/) or from a trusted domain: ${ALLOWED_RECEIPT_DOMAINS.join(', ')}`,
-    }
-  )
-  .optional();
+import { receiptUrlValidator } from './receiptUrl';
 
 export const airportSchema = z.object({
   icao: z.string().nullable().optional(),
