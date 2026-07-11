@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
-import { Slider, AppearanceSection } from "./controlPanelKit";
+import { Slider, AppearanceSection, FlightAppearanceSection } from "./controlPanelKit";
+import { DEFAULT_FLIGHT_COLOR_CONFIG, FLIGHT_COLOR_MODES } from "../../lib/flightColor";
 
 describe("Slider", () => {
   it("renders a range input with the value and formatted readout", () => {
@@ -83,5 +84,75 @@ describe("AppearanceSection arrow slider", () => {
   it("renders width + size as sliders (range inputs)", () => {
     render(<AppearanceSection {...baseSectionProps} />);
     expect(screen.getAllByRole("slider").length).toBe(2);
+  });
+});
+
+// The flight section is rendered by BOTH control panels (globe + flat map)
+// from this one component, so they cannot drift on which controls exist.
+const flightSectionProps = {
+  title: "Flüge",
+  colorConfig: DEFAULT_FLIGHT_COLOR_CONFIG,
+  onColorModeChange: () => {},
+  onColorChange: () => {},
+  routeWidth: 1,
+  onRouteWidthChange: () => {},
+  markerColor: null,
+  onMarkerColorChange: () => {},
+  markerSize: 1,
+  onMarkerSizeChange: () => {},
+  markerDefault: [240, 169, 71] as [number, number, number],
+  markerLabel: "Flughäfen",
+  markerAutoLabel: "Auto",
+  widthLabel: "Stärke",
+  sizeLabel: "Größe",
+};
+
+describe("FlightAppearanceSection", () => {
+  it("offers every flight colour mode as an explicit choice", () => {
+    render(<FlightAppearanceSection {...flightSectionProps} />);
+    // i18n is not initialised in this unit test, so t() echoes the key —
+    // asserting on the key still proves each mode has its own control.
+    for (const mode of FLIGHT_COLOR_MODES) {
+      expect(screen.getByText(`map:globe.panel.colorMode.${mode}.label`)).toBeTruthy();
+    }
+  });
+
+  it("emits the picked mode", () => {
+    const onColorModeChange = vi.fn();
+    render(
+      <FlightAppearanceSection {...flightSectionProps} onColorModeChange={onColorModeChange} />
+    );
+    fireEvent.click(screen.getByText("map:globe.panel.colorMode.solid.label"));
+    expect(onColorModeChange).toHaveBeenCalledWith("solid");
+  });
+
+  it("shows TWO colour rows in status mode (flown + planned) and one otherwise", () => {
+    const { rerender } = render(<FlightAppearanceSection {...flightSectionProps} />);
+    expect(screen.getByText("map:globe.panel.colorMode.swatchFlown")).toBeTruthy();
+    expect(screen.getByText("map:globe.panel.colorMode.swatchPlanned")).toBeTruthy();
+
+    rerender(
+      <FlightAppearanceSection
+        {...flightSectionProps}
+        colorConfig={{ ...DEFAULT_FLIGHT_COLOR_CONFIG, mode: "solid" }}
+      />
+    );
+    expect(screen.queryByText("map:globe.panel.colorMode.swatchFlown")).toBeNull();
+    expect(screen.getByText("map:globe.panel.routes")).toBeTruthy();
+  });
+
+  it("emits the slot that the active mode actually uses", () => {
+    const onColorChange = vi.fn();
+    render(
+      <FlightAppearanceSection
+        {...flightSectionProps}
+        colorConfig={{ ...DEFAULT_FLIGHT_COLOR_CONFIG, mode: "frequency" }}
+        onColorChange={onColorChange}
+      />
+    );
+    // Sky-blue [80,200,255] — the retired scheduled default — is still on the
+    // palette, so anyone who preferred it can pick it back.
+    fireEvent.click(screen.getByLabelText("rgb(80,200,255)"));
+    expect(onColorChange).toHaveBeenCalledWith("frequency", [80, 200, 255]);
   });
 });

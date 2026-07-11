@@ -53,7 +53,6 @@
       "basemap": "Basiskarte",
       "appearance": "Anpassung",
       "routes": "Routen",
-      "frequency": "Frequenz",
       "width": "Stärke",
       "airports": "Flughäfen",
       "ports": "Häfen",
@@ -68,7 +67,24 @@
       "widthThin": "Dünn",
       "widthNormal": "Normal",
       "widthThick": "Dick",
-      "arrows": "Pfeile"
+      "arrows": "Pfeile",
+      "colorMode": {
+        "label": "Färbung",
+        "status": {
+          "label": "Status",
+          "hint": "Zwei Farben: geflogen und geplant."
+        },
+        "frequency": {
+          "label": "Frequenz",
+          "hint": "Eine Basisfarbe — je öfter geflogen, desto kräftiger."
+        },
+        "solid": {
+          "label": "Einfarbig",
+          "hint": "Eine Farbe für alle Routen."
+        },
+        "swatchFlown": "geflogen",
+        "swatchPlanned": "geplant"
+      }
     },
     "timesFlown": "{{count}}x geflogen",
     "flight_one": "Flug",

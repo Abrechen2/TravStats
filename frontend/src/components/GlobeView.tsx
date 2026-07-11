@@ -28,6 +28,7 @@ import { buildGlobeLayers, DEFAULT_AIRPORT_COLOR, DEFAULT_PORT_COLOR } from "./G
 import { type AppearanceDomain } from "./map/controlPanelKit";
 import type { LabelsMode } from "./map/labelPriority";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
+import { useFlightColorStore } from "../store/flightColorStore";
 
 // Base marker radius (px) a size preset scales. off → 0 (hidden).
 const GLOBE_MARKER_BASE_PX = 5;
@@ -96,15 +97,6 @@ interface GlobeViewProps {
   /** Fired by the pinned-card "Open cruise" CTA — should navigate to
       the cruise detail page. */
   onCruiseOpen?: (cruiseId: string) => void;
-  /** When set, every flight arc renders in this RGB instead of the
-      heatmap palette. Same prop semantics as `MapContainer3D.flightRouteColor`
-      on the flat map. Superseded by `statusTwoTone` when that's set. */
-  flightRouteColor?: [number, number, number];
-  /** Split flight arcs into a two-tone gradient by status (scheduled vs.
-      past/historical) instead of a single flightRouteColor fill or the
-      count heatmap. Same prop semantics as `MapContainer3D.statusTwoTone`
-      on the flat map. */
-  statusTwoTone?: boolean;
   /** Color strategy for cruise paths: shared two-tone by status, or a
       distinct hue per cruise. Same prop semantics as
       `MapContainer3D.cruiseColorMode` on the flat map. Defaults to
@@ -322,8 +314,6 @@ export default function GlobeView({
   cruises = [],
   onFlightOpen,
   onCruiseOpen,
-  flightRouteColor,
-  statusTwoTone,
   cruiseColorMode = "status",
   minRouteCount = 1,
   appearanceDomains = ["flight", "cruise"],
@@ -348,15 +338,15 @@ export default function GlobeView({
   );
   // Map-appearance customisation (the panel's "Anpassung" section) plus
   // the style-level overlays, all persisted to localStorage so a user's
-  // look survives reloads. `routeColor === null` keeps the per-route
-  // frequency heatmap; a value overrides every arc with one solid tint.
-  // The prop `flightRouteColor` (set by some parent tabs) seeds the
-  // initial route colour when nothing is stored yet.
-  // Flight-domain appearance. `routeColor === null` keeps the per-route
-  // frequency heatmap; a value overrides every arc with one solid tint.
-  const [routeColor, setRouteColor] = useState<[number, number, number] | null>(
-    () => loadMapAppearance().routeColor ?? flightRouteColor ?? null
-  );
+  // look survives reloads.
+  //
+  // Flight-domain route COLOUR is NOT local state: it lives in the shared
+  // flight-colour store (mode + colours), which the flat map, both control
+  // panels and the dashboard legend read too — so the globe can never show a
+  // different colour than the 2D map for the same route.
+  const flightColorConfig = useFlightColorStore((s) => s.config);
+  const setFlightColorMode = useFlightColorStore((s) => s.setMode);
+  const setFlightColor = useFlightColorStore((s) => s.setColor);
   const [flightRouteWidth, setFlightRouteWidth] = useState<number>(
     () => loadMapAppearance().flightRouteWidth ?? 1
   );
@@ -393,7 +383,6 @@ export default function GlobeView({
   useEffect(() => {
     saveMapAppearance({
       styleId,
-      routeColor,
       flightRouteWidth,
       airportColor,
       flightMarkerSize,
@@ -407,7 +396,6 @@ export default function GlobeView({
     });
   }, [
     styleId,
-    routeColor,
     flightRouteWidth,
     airportColor,
     flightMarkerSize,
@@ -830,7 +818,7 @@ export default function GlobeView({
       const quartile = getQuartile(r.count, thresholds);
       // Pure-scheduled (never flown) → "scheduled"; everything else
       // (historical-only, mixed, regular past-only) collapses to "past" —
-      // mirrors routesLayer.ts's statusTwoTone collapsing rule exactly.
+      // mirrors routesLayer.ts's pureScheduled collapsing rule exactly.
       const status: ArcDatum["status"] = r.hasUpcoming && !r.hasPastFlown ? "scheduled" : "past";
       if (distanceKm >= ANTIPODAL_DISTANCE_KM) {
         antipodals.push({
@@ -1386,8 +1374,7 @@ export default function GlobeView({
         onCruisePathHover,
         flyToArc,
         setPinned,
-        flightRouteColor: routeColor ?? undefined,
-        statusTwoTone,
+        flightColorConfig,
         arcWidthScale: flightRouteWidth,
         cruiseArcWidthScale: cruiseRouteWidth,
         airportColor: airportColor ?? DEFAULT_AIRPORT_COLOR,
@@ -1413,8 +1400,7 @@ export default function GlobeView({
       onPortHover,
       occlusionExt,
       occlusionProps,
-      routeColor,
-      statusTwoTone,
+      flightColorConfig,
       flightRouteWidth,
       cruiseRouteWidth,
       airportColor,
@@ -1581,8 +1567,9 @@ export default function GlobeView({
           hasWeakArcs={arcsData.some((a) => a.weak)}
           appearanceDomains={appearanceDomains}
           flightAppearance={{
-            routeColor,
-            onRouteColorChange: setRouteColor,
+            colorConfig: flightColorConfig,
+            onColorModeChange: setFlightColorMode,
+            onColorChange: setFlightColor,
             routeWidth: flightRouteWidth,
             onRouteWidthChange: setFlightRouteWidth,
             markerColor: airportColor,

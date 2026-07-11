@@ -10,6 +10,12 @@
 // night, performance mode) stays out of here — those live per map.
 
 import type { LabelsMode } from "./labelPriority";
+import {
+  flightColorFromStored,
+  type FlightColorConfig,
+  type FlightColorMode,
+  type FlightColors,
+} from "../../lib/flightColor";
 
 /** The 6 tokenless basemaps — same id set on the globe and the flat map. */
 export type BasemapId = "standard" | "light" | "dark" | "voyager" | "satellite" | "osm";
@@ -17,6 +23,16 @@ export type BasemapId = "standard" | "light" | "dark" | "voyager" | "satellite" 
 export interface MapAppearance {
   styleId?: BasemapId;
   // Flight domain
+  /** How flight routes are coloured + the user's colour per slot. Owned by
+   *  `store/flightColorStore.ts`; both maps and the dashboard legend read it
+   *  from there so they can never disagree. */
+  flightColorMode?: FlightColorMode;
+  flightColors?: FlightColors;
+  /**
+   * @deprecated Pre-mode single colour override (null = frequency heatmap).
+   * Still READ once, to migrate an existing user forward into
+   * `flightColorMode` (see `flightColorFromStored`); never written again.
+   */
   routeColor?: [number, number, number] | null;
   flightRouteWidth?: number;
   airportColor?: [number, number, number] | null;
@@ -124,6 +140,17 @@ export function loadMapAppearance(): MapAppearance {
     }
   }
   return normalizeAppearance(migrated as Record<string, unknown>);
+}
+
+/**
+ * The flight colour config for the persisted blob, migrating the legacy
+ * `routeColor` field on first read:
+ *   - `routeColor: null`   → "frequency" with the default base colour
+ *   - `routeColor: <rgb>`  → "solid" with that colour
+ *   - nothing stored       → "status" with the default (orange / coral) pair
+ */
+export function loadFlightColorConfig(): FlightColorConfig {
+  return flightColorFromStored(loadMapAppearance() as unknown as Record<string, unknown>);
 }
 
 /** Merge-write: only the given keys change, the rest of the blob is kept. */
