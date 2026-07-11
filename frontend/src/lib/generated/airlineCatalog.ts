@@ -1,20 +1,21 @@
 /**
- * Comprehensive airline list for autocomplete suggestions.
- * ~150 airlines covering major, medium, and notable regional carriers.
- * Format: { iata: IATA code, name: display name }
+ * AUTO-GENERATED — DO NOT EDIT BY HAND.
  *
- * This is the single source of truth — used by the suggestions API
- * and by the flight lookup service (via AIRLINE_IATA_MAP export).
+ * Mirrors backend/src/data/airlines.ts (the single source of truth for the
+ * airline catalogue). Regenerate with:
+ *
+ *   cd backend && npx tsx scripts/generate-airline-catalog.ts
+ *
+ * See backend/scripts/generate-airline-catalog.ts for details.
  */
 
-export interface Airline {
+export interface AirlineCatalogEntry {
   iata: string;
   icao?: string;
   name: string;
 }
 
-export const AIRLINES: Airline[] = [
-  // ── Germany / Austria / Switzerland ─────────────────────────────────
+export const AIRLINE_CATALOG: AirlineCatalogEntry[] = [
   { iata: "LH", icao: "DLH", name: "Lufthansa" },
   { iata: "EW", icao: "EWG", name: "Eurowings" },
   { iata: "4Y", icao: "OCN", name: "Eurowings Discover" },
@@ -28,8 +29,6 @@ export const AIRLINES: Airline[] = [
   { iata: "LG", icao: "LGL", name: "Luxair" },
   { iata: "WK", icao: "EDW", name: "Edelweiss Air" },
   { iata: "HG", icao: "NLY", name: "Niki / Lauda" },
-
-  // ── UK / Ireland ────────────────────────────────────────────────────
   { iata: "BA", icao: "BAW", name: "British Airways" },
   { iata: "U2", icao: "EZY", name: "easyJet" },
   { iata: "FR", icao: "RYR", name: "Ryanair" },
@@ -39,8 +38,6 @@ export const AIRLINES: Airline[] = [
   { iata: "BY", icao: "TOM", name: "TUI Airways" },
   { iata: "VS", icao: "VIR", name: "Virgin Atlantic" },
   { iata: "T7", icao: "TUI", name: "TUI fly Belgium" },
-
-  // ── France / Benelux ───────────────────────────────────────────────
   { iata: "AF", icao: "AFR", name: "Air France" },
   { iata: "KL", icao: "KLM", name: "KLM" },
   { iata: "SN", icao: "BEL", name: "Brussels Airlines" },
@@ -48,23 +45,17 @@ export const AIRLINES: Airline[] = [
   { iata: "HV", icao: "TRA", name: "Transavia" },
   { iata: "BJ", icao: "LBT", name: "Nouvelair" },
   { iata: "SS", icao: "CRL", name: "Corsair" },
-
-  // ── Iberian Peninsula ──────────────────────────────────────────────
   { iata: "IB", icao: "IBE", name: "Iberia" },
   { iata: "I2", icao: "IBS", name: "Iberia Express" },
   { iata: "VY", icao: "VLG", name: "Vueling" },
   { iata: "UX", icao: "AEA", name: "Air Europa" },
   { iata: "TP", icao: "TAP", name: "TAP Air Portugal" },
   { iata: "V7", icao: "VOE", name: "Volotea" },
-
-  // ── Italy / Malta / Greece ─────────────────────────────────────────
   { iata: "AZ", icao: "ITY", name: "ITA Airways" },
   { iata: "NO", icao: "NOS", name: "Neos" },
   { iata: "KM", icao: "AMC", name: "Air Malta" },
   { iata: "A3", icao: "AEE", name: "Aegean Airlines" },
   { iata: "OA", icao: "OAL", name: "Olympic Air" },
-
-  // ── Scandinavia / Baltics ──────────────────────────────────────────
   { iata: "SK", icao: "SAS", name: "SAS" },
   { iata: "AY", icao: "FIN", name: "Finnair" },
   { iata: "DY", icao: "NAX", name: "Norwegian" },
@@ -73,8 +64,6 @@ export const AIRLINES: Airline[] = [
   { iata: "FI", icao: "ICE", name: "Icelandair" },
   { iata: "WW", icao: "WOW", name: "WOW air" },
   { iata: "RC", icao: "FLI", name: "Atlantic Airways" },
-
-  // ── Eastern Europe ─────────────────────────────────────────────────
   { iata: "W6", icao: "WZZ", name: "Wizz Air" },
   { iata: "OK", icao: "CSA", name: "Czech Airlines" },
   { iata: "LO", icao: "LOT", name: "LOT Polish Airlines" },
@@ -85,13 +74,9 @@ export const AIRLINES: Airline[] = [
   { iata: "FB", icao: "LZB", name: "Bulgaria Air" },
   { iata: "PS", icao: "AUI", name: "Ukraine International Airlines" },
   { iata: "BV", icao: "BPA", name: "Blue Panorama" },
-
-  // ── Turkey ─────────────────────────────────────────────────────────
   { iata: "TK", icao: "THY", name: "Turkish Airlines" },
   { iata: "PC", icao: "PGT", name: "Pegasus Airlines" },
   { iata: "XQ", icao: "SXS", name: "SunExpress" },
-
-  // ── Middle East ────────────────────────────────────────────────────
   { iata: "EK", icao: "UAE", name: "Emirates" },
   { iata: "QR", icao: "QTR", name: "Qatar Airways" },
   { iata: "EY", icao: "ETD", name: "Etihad Airways" },
@@ -103,8 +88,6 @@ export const AIRLINES: Airline[] = [
   { iata: "ME", icao: "MEA", name: "Middle East Airlines" },
   { iata: "KU", icao: "KAC", name: "Kuwait Airways" },
   { iata: "IX", icao: "AXB", name: "Air India Express" },
-
-  // ── Asia / Pacific ─────────────────────────────────────────────────
   { iata: "SQ", icao: "SIA", name: "Singapore Airlines" },
   { iata: "TR", icao: "TGW", name: "Scoot" },
   { iata: "CX", icao: "CPA", name: "Cathay Pacific" },
@@ -136,15 +119,11 @@ export const AIRLINES: Airline[] = [
   { iata: "PR", icao: "PAL", name: "Philippine Airlines" },
   { iata: "5J", icao: "CEB", name: "Cebu Pacific" },
   { iata: "PK", icao: "PIA", name: "Pakistan International" },
-
-  // ── Oceania ────────────────────────────────────────────────────────
   { iata: "QF", icao: "QFA", name: "Qantas" },
   { iata: "JQ", icao: "JST", name: "Jetstar Airways" },
   { iata: "VA", icao: "VOZ", name: "Virgin Australia" },
   { iata: "NZ", icao: "ANZ", name: "Air New Zealand" },
   { iata: "FJ", icao: "FJI", name: "Fiji Airways" },
-
-  // ── North America ──────────────────────────────────────────────────
   { iata: "UA", icao: "UAL", name: "United Airlines" },
   { iata: "AA", icao: "AAL", name: "American Airlines" },
   { iata: "DL", icao: "DAL", name: "Delta Air Lines" },
@@ -159,8 +138,6 @@ export const AIRLINES: Airline[] = [
   { iata: "PD", icao: "POE", name: "Porter Airlines" },
   { iata: "Y4", icao: "VOI", name: "Volaris" },
   { iata: "AM", icao: "AMX", name: "Aeromexico" },
-
-  // ── Latin America ──────────────────────────────────────────────────
   { iata: "LA", icao: "LAN", name: "LATAM Airlines" },
   { iata: "G3", icao: "GLO", name: "Gol" },
   { iata: "AD", icao: "AZU", name: "Azul" },
@@ -169,8 +146,6 @@ export const AIRLINES: Airline[] = [
   { iata: "AV", icao: "AVA", name: "Avianca" },
   { iata: "H2", icao: "SKU", name: "SKY Airline" },
   { iata: "JA", icao: "JAT", name: "JetSMART" },
-
-  // ── Africa ─────────────────────────────────────────────────────────
   { iata: "ET", icao: "ETH", name: "Ethiopian Airlines" },
   { iata: "KQ", icao: "KQA", name: "Kenya Airways" },
   { iata: "SA", icao: "SAA", name: "South African Airways" },
@@ -179,8 +154,6 @@ export const AIRLINES: Airline[] = [
   { iata: "TU", icao: "TAR", name: "Tunisair" },
   { iata: "WB", icao: "RWD", name: "RwandAir" },
   { iata: "MK", icao: "MAU", name: "Air Mauritius" },
-
-  // ── Rail / Bus / Ferry (for codeshare / intermodal) ────────────────
   { iata: "DB", name: "Deutsche Bahn" },
   { iata: "FLX", name: "FlixTrain" },
   { iata: "FLB", name: "Flixbus" },
@@ -190,20 +163,3 @@ export const AIRLINES: Airline[] = [
   { iata: "TGV", name: "TGV (SNCF)" },
   { iata: "ICE", name: "ICE (DB)" },
 ];
-
-/**
- * Build a Record<string, string> from IATA code to airline name.
- * Used by flightLookup.ts for reverse lookups.
- */
-export const AIRLINE_IATA_MAP: Record<string, string> = Object.fromEntries(
-  AIRLINES.map(a => [a.iata, a.name])
-);
-
-/**
- * Build a Record<string, string> from ICAO code to airline name. Not every
- * entry carries an ICAO code (the rail/bus/ferry intermodal rows don't have
- * one), so those are skipped.
- */
-export const AIRLINE_ICAO_MAP: Record<string, string> = Object.fromEntries(
-  AIRLINES.filter(a => a.icao).map(a => [a.icao as string, a.name])
-);
