@@ -1,0 +1,362 @@
+import { Router, Response, NextFunction } from "express";
+import { Prisma } from "@prisma/client";
+import { prisma } from "../db";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
+import { AppError } from "../middleware/errorHandler";
+import * as fx from "../services/fx/frankfurter";
+import { checkAndUpdateAchievements } from "../utils/achievements";
+import {
+  createLodgingSchema,
+  updateLodgingSchema,
+  createStaySchema,
+  updateStaySchema,
+  lodgingQuerySchema,
+  type LodgingQueryInput,
+} from "../schemas/lodging";
+import logger from "../utils/logger";
+
+const router = Router();
+router.use(authenticate);
+// Method-aware: GET passes through, so read-only PATs keep read access but
+// cannot POST/PATCH/DELETE — consistent with routes/cruises.ts.
+router.use(requireWriteScope);
+
+const requireUser = (req: AuthRequest): string => {
+  if (!req.userId) throw new AppError("Not authenticated", 401);
+  return req.userId;
+};
+
+const LODGING_INCLUDE = { stays: true, chain: true } satisfies Prisma.LodgingInclude;
+type LodgingListRow = Prisma.LodgingGetPayload<{ include: typeof LODGING_INCLUDE }>;
+
+interface FxSnapshotFields {
+  totalPriceBase: number | null;
+  fxRate: number | null;
+  fxRateDate: Date | null;
+  fxBaseCurrency: string | null;
+}
+
+const CLEARED_FX: FxSnapshotFields = {
+  totalPriceBase: null,
+  fxRate: null,
+  fxRateDate: null,
+  fxBaseCurrency: null,
+};
+
+interface RatedStay {
+  ratingOverall: number | null;
+}
+
+/** Average of a lodging's stays' ratingOverall (nulls ignored). null when none rated. */
+function deriveOverallRating(stays: RatedStay[]): number | null {
+  const rated = stays.map((s) => s.ratingOverall).filter((v): v is number => v !== null);
+  if (rated.length === 0) return null;
+  return Math.round((rated.reduce((sum, v) => sum + v, 0) / rated.length) * 10) / 10;
+}
+
+function nightsBetween(checkIn: Date, checkOut: Date): number {
+  const ms = checkOut.getTime() - checkIn.getTime();
+  return Math.max(0, Math.round(ms / (24 * 60 * 60 * 1000)));
+}
+
+interface AggregateStay extends RatedStay {
+  checkIn: Date;
+  checkOut: Date;
+  totalPriceBase: number | null;
+}
+
+interface LodgingAggregates {
+  overallRating: number | null;
+  stayCount: number;
+  nights: number;
+  totalSpendBase: number;
+}
+
+function computeAggregates(stays: AggregateStay[]): LodgingAggregates {
+  return {
+    overallRating: deriveOverallRating(stays),
+    stayCount: stays.length,
+    nights: stays.reduce((sum, s) => sum + nightsBetween(s.checkIn, s.checkOut), 0),
+    totalSpendBase: stays.reduce((sum, s) => sum + (s.totalPriceBase ?? 0), 0),
+  };
+}
+
+type LodgingListItem = LodgingListRow & LodgingAggregates;
+
+function sortLodgings(
+  items: LodgingListItem[],
+  sort: LodgingQueryInput["sort"],
+): LodgingListItem[] {
+  switch (sort) {
+    case "name":
+      return [...items].sort((a, b) => a.name.localeCompare(b.name));
+    case "nights":
+      return [...items].sort((a, b) => b.nights - a.nights);
+    case "rating":
+      return [...items].sort((a, b) => (b.overallRating ?? -1) - (a.overallRating ?? -1));
+    case "spend":
+      return [...items].sort((a, b) => b.totalSpendBase - a.totalSpendBase);
+    case "checkIn": {
+      const latestCheckIn = (l: LodgingListItem) =>
+        l.stays.reduce((max, s) => Math.max(max, s.checkIn.getTime()), 0);
+      return [...items].sort((a, b) => latestCheckIn(b) - latestCheckIn(a));
+    }
+    default:
+      return items; // already ordered by createdAt desc from the DB query
+  }
+}
+
+function buildLodgingWhere(q: LodgingQueryInput, userId: string): Prisma.LodgingWhereInput {
+  const where: Prisma.LodgingWhereInput = { userId };
+  if (q.type) where.type = q.type;
+  if (q.chainId) where.chainId = q.chainId;
+  if (q.country) where.country = q.country;
+
+  const stayFilter: Prisma.LodgingStayWhereInput = {};
+  if (q.tripId) stayFilter.tripId = q.tripId;
+  if (q.year) {
+    stayFilter.checkIn = {
+      gte: new Date(`${q.year}-01-01T00:00:00.000Z`),
+      lt: new Date(`${q.year + 1}-01-01T00:00:00.000Z`),
+    };
+  }
+  if (Object.keys(stayFilter).length > 0) where.stays = { some: stayFilter };
+
+  return where;
+}
+
+/**
+ * Snapshot the FX conversion for a stay write (spec §7.1). A stay is billed
+ * in the hotel's local currency, but the user wants cross-stay totals in one
+ * base currency — every write snapshots the ECB rate for the check-in day.
+ *
+ * `input.checkIn` is always a full ISO-8601 UTC instant by the time it
+ * reaches here: on create it's the Zod-validated string from
+ * `schemas/lodging.ts` (`isoDateTimeRequired` normalizes any partial input to
+ * `.toISOString()`); on a selective-refresh update it's a Prisma `DateTime`
+ * read back from the DB, which is likewise stored as a real UTC instant.
+ * `new Date(input.checkIn)` therefore reproduces that exact instant without
+ * any local-timezone reinterpretation, so `convertToBase`'s internal
+ * `date.toISOString().slice(0, 10)` reads the intended check-in calendar day
+ * — never shifted by ±1 day the way it would be if we built the Date from a
+ * bare "YYYY-MM-DD" string via local-midnight parsing.
+ *
+ * Never throws — a failed FX lookup clears the snapshot instead of failing
+ * the request, so the user always keeps their stay record.
+ */
+export async function applyFxSnapshot(
+  input: { totalPrice?: number | null; currency?: string | null; checkIn: string | Date },
+  baseCurrency: string,
+): Promise<FxSnapshotFields> {
+  if (input.totalPrice == null) return CLEARED_FX;
+  const currency = input.currency ?? "EUR";
+  const checkInDate = new Date(input.checkIn);
+  const conv = await fx.convertToBase(input.totalPrice, currency, baseCurrency, checkInDate);
+  if (conv === null) return CLEARED_FX;
+  return {
+    totalPriceBase: conv.baseAmount,
+    fxRate: conv.rate,
+    fxRateDate: new Date(conv.rateDate),
+    fxBaseCurrency: baseCurrency,
+  };
+}
+
+async function getBaseCurrency(userId: string): Promise<string> {
+  const settings = await prisma.userSettings.findUnique({
+    where: { userId },
+    select: { baseCurrency: true },
+  });
+  // The column is NOT NULL with a DB default of 'EUR' once a settings row
+  // exists; the fallback only covers a user with no UserSettings row at all.
+  return settings?.baseCurrency ?? "EUR";
+}
+
+function recheckAchievements(userId: string): void {
+  checkAndUpdateAchievements(userId).catch((error) => {
+    logger.error({
+      operation: "lodging_achievement_check_failed",
+      error: error instanceof Error ? error.message : error,
+    });
+  });
+}
+
+// ---- Lodging CRUD ----
+
+router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const parsed = lodgingQuerySchema.safeParse(req.query);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+
+    const where = buildLodgingWhere(parsed.data, userId);
+    const lodgings = await prisma.lodging.findMany({
+      where,
+      include: LODGING_INCLUDE,
+      orderBy: { createdAt: "desc" },
+      take: parsed.data.limit ?? 200,
+      skip: parsed.data.offset ?? 0,
+    });
+
+    const rows: LodgingListItem[] = lodgings.map((l) => ({ ...l, ...computeAggregates(l.stays) }));
+    res.json({ success: true, data: sortLodgings(rows, parsed.data.sort) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const lodging = await prisma.lodging.findFirst({
+      where: { id: req.params.id, userId },
+      include: { chain: true, stays: { orderBy: { checkIn: "desc" } } },
+    });
+    if (!lodging) throw new AppError("Lodging not found", 404);
+    res.json({ success: true, data: { ...lodging, ...computeAggregates(lodging.stays) } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const parsed = createLodgingSchema.safeParse(req.body);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+
+    const lodging = await prisma.lodging.create({
+      data: { ...parsed.data, userId },
+      include: LODGING_INCLUDE,
+    });
+    logger.info({ operation: "lodging_create", lodgingId: lodging.id, userId });
+    res.status(201).json({ success: true, data: { ...lodging, ...computeAggregates(lodging.stays) } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const existing = await prisma.lodging.findFirst({ where: { id: req.params.id, userId } });
+    if (!existing) throw new AppError("Lodging not found", 404);
+
+    const parsed = updateLodgingSchema.safeParse(req.body);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+
+    const lodging = await prisma.lodging.update({
+      where: { id: existing.id },
+      data: parsed.data,
+      include: LODGING_INCLUDE,
+    });
+    res.json({ success: true, data: { ...lodging, ...computeAggregates(lodging.stays) } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const existing = await prisma.lodging.findFirst({ where: { id: req.params.id, userId } });
+    if (!existing) throw new AppError("Lodging not found", 404);
+    // LodgingStay.lodgingId is onDelete: Cascade (schema.prisma) — the DB
+    // removes dependent stays itself, no manual cleanup needed here.
+    await prisma.lodging.delete({ where: { id: existing.id } });
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---- Stay CRUD (nested under a lodging) ----
+
+router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const lodging = await prisma.lodging.findFirst({ where: { id: req.params.id, userId } });
+    if (!lodging) throw new AppError("Lodging not found", 404);
+
+    const parsed = createStaySchema.safeParse(req.body);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    const input = parsed.data;
+
+    const baseCurrency = await getBaseCurrency(userId);
+    const fxFields = await applyFxSnapshot(input, baseCurrency);
+
+    const stay = await prisma.lodgingStay.create({
+      data: { ...input, ...fxFields, lodgingId: lodging.id, userId },
+    });
+
+    recheckAchievements(userId);
+    logger.info({ operation: "lodging_stay_create", stayId: stay.id, lodgingId: lodging.id, userId });
+    res.status(201).json({ success: true, data: stay });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const lodging = await prisma.lodging.findFirst({ where: { id: req.params.id, userId } });
+    if (!lodging) throw new AppError("Lodging not found", 404);
+
+    const stay = await prisma.lodgingStay.findFirst({
+      where: { id: req.params.stayId, lodgingId: lodging.id, userId },
+    });
+    if (!stay) throw new AppError("Stay not found", 404);
+
+    const parsed = updateStaySchema.safeParse(req.body);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    const input = parsed.data;
+
+    // Only re-run the FX snapshot when a field that feeds the conversion
+    // actually changed — an unrelated edit (e.g. notes) must not touch a
+    // previously-good snapshot, and must never fail the request either way.
+    const fxInputsChanged =
+      "totalPrice" in input || "currency" in input || "checkIn" in input;
+    let fxFields: Partial<FxSnapshotFields> = {};
+    if (fxInputsChanged) {
+      const baseCurrency = await getBaseCurrency(userId);
+      fxFields = await applyFxSnapshot(
+        {
+          totalPrice: input.totalPrice ?? stay.totalPrice,
+          currency: input.currency ?? stay.currency,
+          checkIn: input.checkIn ?? stay.checkIn,
+        },
+        baseCurrency,
+      );
+    }
+
+    const updated = await prisma.lodgingStay.update({
+      where: { id: stay.id },
+      data: { ...input, ...fxFields },
+    });
+
+    recheckAchievements(userId);
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const lodging = await prisma.lodging.findFirst({ where: { id: req.params.id, userId } });
+    if (!lodging) throw new AppError("Lodging not found", 404);
+
+    const stay = await prisma.lodgingStay.findFirst({
+      where: { id: req.params.stayId, lodgingId: lodging.id, userId },
+    });
+    if (!stay) throw new AppError("Stay not found", 404);
+
+    await prisma.lodgingStay.delete({ where: { id: stay.id } });
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+export default router;
