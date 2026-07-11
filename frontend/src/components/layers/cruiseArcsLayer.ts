@@ -183,13 +183,16 @@ export function createCruiseArcsLayer(
 }
 
 /**
- * Build a directional arrow TextLayer per cruise leg. Arrows are
- * placed near (but not on top of) the destination port and rotated
- * to align with the local segment direction so the user can read
- * the cruise's flow at a glance.
+ * Build a directional arrow IconLayer for cruise legs. Arrows are placed
+ * by real-world arc length along each leg — never near either port
+ * marker (see `pickArrowAnchors`) — and rotated to align with the local
+ * segment direction at their anchor so the user can read the cruise's
+ * flow at a glance. Short legs get one arrow at the midpoint, long legs
+ * get several evenly spaced, and legs below the minimum length get none.
  *
- * Returns `null` when no arrows can be drawn (no qualifying legs)
- * so callers can omit the layer rather than mounting a no-op.
+ * Returns `null` when no arrows can be drawn (no qualifying legs, or all
+ * legs too short) so callers can omit the layer rather than mounting a
+ * no-op.
  */
 export function createCruiseArrowsLayer(
   cruises: Cruise[],
@@ -200,9 +203,9 @@ export function createCruiseArrowsLayer(
   const arcs = buildCruiseArcs(cruises, geometryByCruise, options);
   const arrows: ArrowDatum[] = [];
   for (const arc of arcs) {
-    const anchor = pickArrowAnchor(arc.path);
-    if (anchor === null) continue;
-    arrows.push({ ...anchor, cruiseId: arc.cruiseId, color: arc.color, planned: arc.planned });
+    for (const anchor of pickArrowAnchors(arc.path)) {
+      arrows.push({ ...anchor, cruiseId: arc.cruiseId, color: arc.color, planned: arc.planned });
+    }
   }
   const arrowSizeScale = options.arrowSizeScale ?? 1;
   if (arrows.length === 0 || arrowSizeScale <= 0) return null;
@@ -271,22 +274,111 @@ function arrowIcon(fill: string): { url: string; width: number; height: number }
   return icon;
 }
 
+// Earth's mean radius in km — used to convert the path's lon/lat vertices
+// into a real-world leg length for arrow placement (see pickArrowAnchors).
+const EARTH_RADIUS_KM = 6371;
+
+// Legs shorter than this get no arrow at all. Below this length, any
+// anchor position still visually overlaps the port markers regardless of
+// where on the leg it sits — river-cruise hops and adjacent-berth
+// repositioning legs land here; better to draw nothing than noise on top
+// of a port icon.
+const MIN_ARROW_LEG_LENGTH_KM = 30;
+
+// Target spacing between arrows on long legs. Most cruise legs
+// (Mediterranean/Baltic/Caribbean hops) are roughly 300-1000 km and are
+// meant to get exactly one arrow (the n=1 case below always anchors at
+// the midpoint); this interval is deliberately well above that range so
+// ordinary legs never pick up a second arrow. Only genuine long crossings
+// (transatlantic/repositioning, north of ~2000 km) start to.
+const ARROW_LEG_INTERVAL_KM = 1500;
+
+// Hard cap so an extreme leg (world-cruise repositioning, multi-day ocean
+// crossings) doesn't spam the route with arrows.
+const MAX_ARROWS_PER_LEG = 5;
+
+/** Great-circle distance between two [lon, lat] points, in kilometers. */
+function haversineKm(a: readonly [number, number], b: readonly [number, number]): number {
+  const [lon1, lat1] = a;
+  const [lon2, lat2] = b;
+  const lat1Rad = (lat1 * Math.PI) / 180;
+  const lat2Rad = (lat2 * Math.PI) / 180;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLon = Math.sin(dLon / 2);
+  const h = sinDLat * sinDLat + Math.cos(lat1Rad) * Math.cos(lat2Rad) * sinDLon * sinDLon;
+  return 2 * EARTH_RADIUS_KM * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
 /**
- * Pick a position + screen-space angle for the directional arrow on
- * a splined leg path. The anchor sits at ~88 % along the spline so
- * the arrow visibly leads into the destination port without overlapping
- * the port marker. Returns `null` when the path is degenerate (less
- * than two distinct points) — the caller skips that leg's arrow.
+ * Pick position(s) + screen-space angle(s) for directional arrow(s) along
+ * a splined leg path, spaced by real-world (great-circle) arc length
+ * rather than vertex index.
+ *
+ * Why arc length and not index: the path is a densified Catmull-Rom
+ * spline, so its vertices are NOT evenly spaced — the spline places more
+ * vertices where the route curves, which for harbour approaches is right
+ * next to the port. The previous version anchored at
+ * `path[floor(path.length * 0.88)]`, which both (a) deliberately targeted
+ * a point right before the destination port and (b) compounded that by
+ * indexing into the vertex-dense region near it, landing the arrow
+ * visually inside the port marker on most cruise legs (reported 2.3.1:
+ * "the cruise arrows all seem to sit IN the port"). Interpolating by
+ * cumulative haversine distance fixes both: the anchor sits at an exact
+ * fraction of the leg's real length, independent of vertex density.
+ *
+ * The arrow count scales with leg length (ARROW_LEG_INTERVAL_KM /
+ * MAX_ARROWS_PER_LEG); for `n` arrows they're placed at fractions
+ * `(i+1)/(n+1)` of the leg. This structurally guarantees a margin of
+ * `length/(n+1)` from both endpoints and between adjacent arrows, and for
+ * n=1 places the single arrow exactly at the midpoint — the point
+ * furthest from both ports. Returns `[]` when the leg is shorter than
+ * MIN_ARROW_LEG_LENGTH_KM or the path is degenerate.
  */
-function pickArrowAnchor(
+function pickArrowAnchors(
   path: ReadonlyArray<[number, number]>
+): Array<{ position: [number, number]; angleDeg: number }> {
+  if (path.length < 2) return [];
+
+  const cumulative: number[] = [0];
+  for (let i = 1; i < path.length; i++) {
+    cumulative.push(cumulative[i - 1] + haversineKm(path[i - 1], path[i]));
+  }
+  const totalLength = cumulative[cumulative.length - 1];
+  if (totalLength < MIN_ARROW_LEG_LENGTH_KM) return [];
+
+  const arrowCount = Math.min(
+    MAX_ARROWS_PER_LEG,
+    Math.max(1, Math.round(totalLength / ARROW_LEG_INTERVAL_KM))
+  );
+
+  const anchors: Array<{ position: [number, number]; angleDeg: number }> = [];
+  for (let i = 0; i < arrowCount; i++) {
+    const targetDist = (totalLength * (i + 1)) / (arrowCount + 1);
+    const anchor = interpolateAlongPath(path, cumulative, targetDist);
+    if (anchor !== null) anchors.push(anchor);
+  }
+  return anchors;
+}
+
+/**
+ * Interpolate a position + local heading at `targetDist` along `path`,
+ * using `cumulative` (running haversine distance per vertex, same length
+ * as `path`, `cumulative[0] === 0`). The heading comes from the segment
+ * the anchor falls on, so a curved route's arrow points along the curve
+ * at that point, not the leg's overall endpoint-to-endpoint direction.
+ */
+function interpolateAlongPath(
+  path: ReadonlyArray<[number, number]>,
+  cumulative: readonly number[],
+  targetDist: number
 ): { position: [number, number]; angleDeg: number } | null {
-  if (path.length < 2) return null;
-  const headIdx = Math.max(1, Math.floor(path.length * 0.88));
-  const tailIdx = Math.max(0, headIdx - 1);
-  if (headIdx === tailIdx) return null;
-  const [x0, y0] = path[tailIdx];
-  const [x1, y1] = path[headIdx];
+  let segStart = 0;
+  while (segStart < cumulative.length - 2 && cumulative[segStart + 1] < targetDist) segStart++;
+
+  const [x0, y0] = path[segStart];
+  const [x1, y1] = path[segStart + 1];
   const dx = x1 - x0;
   // deck.gl's icon/text rotation shader rotates the local (pre-flip) offset
   // and only afterwards negates its y-component, which nets out to a
@@ -297,8 +389,12 @@ function pickArrowAnchor(
   // version negated dy here, which mirrored every arrow vertically).
   const dy = y1 - y0;
   if (dx === 0 && dy === 0) return null;
+
+  const segLength = cumulative[segStart + 1] - cumulative[segStart];
+  const t = segLength > 0 ? (targetDist - cumulative[segStart]) / segLength : 0;
+  const position: [number, number] = [x0 + dx * t, y0 + dy * t];
   const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
-  return { position: [x1, y1], angleDeg };
+  return { position, angleDeg };
 }
 
 function pairKey(fromPortId: number, toPortId: number): string {
