@@ -10,6 +10,19 @@
 // night, performance mode) stays out of here — those live per map.
 
 import type { LabelsMode } from "./labelPriority";
+import {
+  cruiseColorFromStored,
+  type CruiseColorConfig,
+  type CruiseColorMode,
+  type CruiseColors,
+} from "../../lib/cruiseColor";
+import {
+  flightColorFromStored,
+  type FlightColorConfig,
+  type FlightColorMode,
+  type FlightColors,
+} from "../../lib/flightColor";
+import { flightRouteShapeFromStored, type FlightRouteShape } from "../../lib/flightRouteShape";
 
 /** The 6 tokenless basemaps — same id set on the globe and the flat map. */
 export type BasemapId = "standard" | "light" | "dark" | "voyager" | "satellite" | "osm";
@@ -17,11 +30,35 @@ export type BasemapId = "standard" | "light" | "dark" | "voyager" | "satellite" 
 export interface MapAppearance {
   styleId?: BasemapId;
   // Flight domain
+  /** How flight routes are coloured + the user's colour per slot. Owned by
+   *  `store/flightColorStore.ts`; both maps and the dashboard legend read it
+   *  from there so they can never disagree. */
+  flightColorMode?: FlightColorMode;
+  flightColors?: FlightColors;
+  /**
+   * @deprecated Pre-mode single colour override (null = frequency heatmap).
+   * Still READ once, to migrate an existing user forward into
+   * `flightColorMode` (see `flightColorFromStored`); never written again.
+   */
   routeColor?: [number, number, number] | null;
+  /** How flight routes are DRAWN on the flat map (#183): 3D arcs (default) or
+   *  flat on the map surface like cruise routes. Flat-map-only — the globe
+   *  ignores it, so it is deliberately absent from the globe control panel. */
+  flightRouteShape?: FlightRouteShape;
   flightRouteWidth?: number;
   airportColor?: [number, number, number] | null;
   flightMarkerSize?: number;
   // Cruise domain
+  /** How cruise routes are coloured + the user's colour per slot. Owned by
+   *  `store/cruiseColorStore.ts`; both maps and the dashboard legend read it
+   *  from there so they can never disagree. */
+  cruiseColorMode?: CruiseColorMode;
+  cruiseColors?: CruiseColors;
+  /**
+   * @deprecated Pre-mode single colour override (null = the tab decided the
+   * mode). Still READ once, to migrate an existing user forward into
+   * `cruiseColorMode` (see `cruiseColorFromStored`); never written again.
+   */
   cruiseRouteColor?: [number, number, number] | null;
   cruiseRouteWidth?: number;
   portColor?: [number, number, number] | null;
@@ -124,6 +161,42 @@ export function loadMapAppearance(): MapAppearance {
     }
   }
   return normalizeAppearance(migrated as Record<string, unknown>);
+}
+
+/**
+ * The flight colour config for the persisted blob, migrating the legacy
+ * `routeColor` field on first read:
+ *   - `routeColor: null`   → "status" with the default (orange / coral) pair
+ *     (NOT "frequency" — `null` was written on every mount, so it can't be
+ *     read as a deliberate pick; see the migration comment in
+ *     `lib/flightColor.ts` for the full trade-off)
+ *   - `routeColor: <rgb>`  → "solid" with that colour
+ *   - nothing stored       → "status" with the default (orange / coral) pair
+ */
+export function loadFlightColorConfig(): FlightColorConfig {
+  return flightColorFromStored(loadMapAppearance() as unknown as Record<string, unknown>);
+}
+
+/**
+ * The cruise colour config from the persisted blob, migrating the legacy
+ * `cruiseRouteColor` field on first read:
+ *   - `cruiseRouteColor: <rgb>`  → "solid" with that colour (a deliberate pick)
+ *   - `cruiseRouteColor: null`   → "status" with the default (blue / cyan) pair
+ *   - nothing stored             → "status" with the default pair
+ * See the migration comment in `lib/cruiseColor.ts` for the trade-off (the
+ * Kreuzfahrten tab's implicit per-cruise colouring is not preserved).
+ */
+export function loadCruiseColorConfig(): CruiseColorConfig {
+  return cruiseColorFromStored(loadMapAppearance() as unknown as Record<string, unknown>);
+}
+
+/**
+ * The flat map's flight-route SHAPE from the persisted blob (#183). Defaults to
+ * `"arc"` — today's 3D arcs — for every user who has never touched the setting,
+ * and for any unrecognised stored value.
+ */
+export function loadFlightRouteShape(): FlightRouteShape {
+  return flightRouteShapeFromStored(loadMapAppearance() as unknown as Record<string, unknown>);
 }
 
 /** Merge-write: only the given keys change, the rest of the blob is kept. */

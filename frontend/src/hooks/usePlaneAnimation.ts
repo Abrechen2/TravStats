@@ -73,6 +73,11 @@ export function usePlaneAnimation(selectedFlights: Flight[]): Layer[] {
         getAngle: 0,
         fontFamily: "Arial, sans-serif",
         billboard: true,
+        // The airplane glyph (U+2708) sits well outside deck.gl's default
+        // ASCII-only characterSet (32-127), so without this the marker's
+        // font atlas has no glyph for it and nothing renders (same root
+        // cause as #185 — non-ASCII text dropped from the atlas).
+        characterSet: "auto",
       }),
     ];
   }, [planePositions]);
