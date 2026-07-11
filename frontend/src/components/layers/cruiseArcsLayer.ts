@@ -19,6 +19,11 @@ interface ArcDatum {
   status: CruiseStatus;
   color: Rgb;
   planned: boolean;
+  // Port ids of the leg's endpoints — lets the arrow layer detect when the
+  // same water is sailed in both directions (out-and-back) and de-overlap
+  // the opposing arrows (see pickArrowAnchors).
+  fromPortId: number;
+  toPortId: number;
 }
 
 interface ArrowDatum {
@@ -126,6 +131,8 @@ export function buildCruiseArcs(
         status: cruise.status,
         color,
         planned,
+        fromPortId: a.id,
+        toPortId: b.id,
       });
     }
   }
@@ -201,9 +208,17 @@ export function createCruiseArrowsLayer(
   options: CruiseArcBuildOptions = {}
 ): Layer | null {
   const arcs = buildCruiseArcs(cruises, geometryByCruise, options);
+  // Out-and-back detection: when the SAME port pair is sailed in both
+  // directions (one cruise's return leg, or two cruises passing each other),
+  // both legs share one path and their midpoint arrows would stack into an
+  // unreadable "X" (reported on 2.4.0-rc.1). Legs whose opposite direction
+  // is also on the map get their anchors shifted toward their own journey's
+  // first half, which mirrors into two arrows flanking the midpoint.
+  const orderedPairKeys = new Set(arcs.map((arc) => pairKey(arc.fromPortId, arc.toPortId)));
   const arrows: ArrowDatum[] = [];
   for (const arc of arcs) {
-    for (const anchor of pickArrowAnchors(arc.path)) {
+    const hasOpposingTwin = orderedPairKeys.has(pairKey(arc.toPortId, arc.fromPortId));
+    for (const anchor of pickArrowAnchors(arc.path, hasOpposingTwin)) {
       arrows.push({ ...anchor, cruiseId: arc.cruiseId, color: arc.color, planned: arc.planned });
     }
   }
@@ -251,6 +266,15 @@ const ARROW_ICON_HEIGHT = 16;
 // Rendered screen height in pixels — deliberately smaller than the icon's
 // native size above so the border stroke stays crisp at typical map zooms.
 const ARROW_DISPLAY_HEIGHT = 10;
+// The browser rasterises the SVG data-URL at the SVG's declared
+// width/height, and deck.gl packs THAT bitmap into its icon atlas — so a
+// 22×16 icon shown at 2.5× slider scale on a HiDPI display upsamples a
+// 16-px bitmap to ~75 device pixels (reported on 2.4.0-rc.1: "Pfeile
+// werden unscharf beim Skalieren"). Rasterising at 6× (132×96) keeps the
+// atlas above every reachable on-screen size: 10 px base × 2.5 max slider
+// × 3 devicePixelRatio = 75 ≤ 96. The geometry lives in the viewBox, so
+// path and border scale losslessly.
+const ARROW_RASTER_SCALE = 6;
 const arrowIconCache = new Map<string, { url: string; width: number; height: number }>();
 
 function rgba([r, g, b]: Rgb, alpha: number): string {
@@ -260,15 +284,17 @@ function rgba([r, g, b]: Rgb, alpha: number): string {
 function arrowIcon(fill: string): { url: string; width: number; height: number } {
   const cached = arrowIconCache.get(fill);
   if (cached) return cached;
+  const width = ARROW_ICON_WIDTH * ARROW_RASTER_SCALE;
+  const height = ARROW_ICON_HEIGHT * ARROW_RASTER_SCALE;
   const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${ARROW_ICON_WIDTH}" height="${ARROW_ICON_HEIGHT}" ` +
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" ` +
     `viewBox="0 0 ${ARROW_ICON_WIDTH} ${ARROW_ICON_HEIGHT}">` +
     `<path d="M 21 8 L 2 1.5 L 8.5 8 L 2 14.5 Z" fill="${fill}" stroke="white" stroke-width="1.25" stroke-linejoin="round"/>` +
     `</svg>`;
   const icon = {
     url: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,
-    width: ARROW_ICON_WIDTH,
-    height: ARROW_ICON_HEIGHT,
+    width,
+    height,
   };
   arrowIconCache.set(fill, icon);
   return icon;
@@ -335,9 +361,18 @@ function haversineKm(a: readonly [number, number], b: readonly [number, number])
  * n=1 places the single arrow exactly at the midpoint — the point
  * furthest from both ports. Returns `[]` when the leg is shorter than
  * MIN_ARROW_LEG_LENGTH_KM or the path is degenerate.
+ *
+ * `shiftTowardStart` is set when the leg's opposite direction is also on
+ * the map (out-and-back): every fraction moves a quarter-spacing toward
+ * the leg's own start. Because the opposing leg runs the same water the
+ * other way, the identical own-fraction shift lands on the OTHER side of
+ * the shared midpoint — the two arrows flank it (n=1: 37.5% / 62.5% of
+ * the path) instead of stacking into an "X", and each arrow still sits in
+ * the first half of its own journey, well clear of both ports.
  */
 function pickArrowAnchors(
-  path: ReadonlyArray<[number, number]>
+  path: ReadonlyArray<[number, number]>,
+  shiftTowardStart = false
 ): Array<{ position: [number, number]; angleDeg: number }> {
   if (path.length < 2) return [];
 
@@ -353,9 +388,11 @@ function pickArrowAnchors(
     Math.max(1, Math.round(totalLength / ARROW_LEG_INTERVAL_KM))
   );
 
+  const spacing = 1 / (arrowCount + 1);
+  const fractionShift = shiftTowardStart ? -spacing / 4 : 0;
   const anchors: Array<{ position: [number, number]; angleDeg: number }> = [];
   for (let i = 0; i < arrowCount; i++) {
-    const targetDist = (totalLength * (i + 1)) / (arrowCount + 1);
+    const targetDist = totalLength * (spacing * (i + 1) + fractionShift);
     const anchor = interpolateAlongPath(path, cumulative, targetDist);
     if (anchor !== null) anchors.push(anchor);
   }
