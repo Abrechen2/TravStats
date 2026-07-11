@@ -125,4 +125,62 @@ describe("OverviewTab — compare persistence (issue #188)", () => {
     expect(checkbox.checked).toBe(false);
     expect(useStatsCompareStore.getState().compareYear).toBeNull();
   });
+
+  it("does not wipe a persisted preference while stats are still loading (regression)", () => {
+    // Simulate a returning user: a prior session persisted "compare with
+    // 2021" to localStorage. On mount, useDomainStats has not resolved
+    // yet — `loading: true`, `stats: {}` — so `years` is still `[]`.
+    useStatsCompareStore.getState().setCompare(true, 2021);
+    vi.mocked(useDomainStats).mockReturnValue({
+      stats: {},
+      errors: {},
+      loading: true,
+    } satisfies UseDomainStatsResult);
+
+    const { rerender } = render(<OverviewTab flights={[]} achievements={null} />);
+
+    // Still loading: the stale-year-resolution effect must not have run
+    // at all — the persisted preference must be byte-for-byte unchanged.
+    expect(useStatsCompareStore.getState().compareEnabled).toBe(true);
+    expect(useStatsCompareStore.getState().compareYear).toBe(2021);
+
+    // Data now arrives; 2021 is genuinely among the available years.
+    mockDomainStats(flightStats({ 2021: 2, 2022: 3, 2023: 4, 2024: 6 }));
+    rerender(<OverviewTab flights={[]} achievements={null} />);
+
+    expect(useStatsCompareStore.getState().compareEnabled).toBe(true);
+    expect(useStatsCompareStore.getState().compareYear).toBe(2021);
+    const checkbox = screen.getByRole("checkbox") as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+  });
+
+  it("still falls back to the nearest available year once data has genuinely loaded", () => {
+    // The persisted year (2021) is real, but is not part of THIS data
+    // set (already loaded, not a loading artifact) — the existing
+    // stale-year fallback must still kick in and pick the nearest year.
+    useStatsCompareStore.getState().setCompare(true, 2021);
+    mockDomainStats(flightStats({ 2023: 4, 2024: 6 }));
+
+    render(<OverviewTab flights={[]} achievements={null} />);
+
+    expect(useStatsCompareStore.getState().compareYear).toBe(2023);
+    expect(useStatsCompareStore.getState().compareEnabled).toBe(true);
+    const checkbox = screen.getByRole("checkbox") as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+  });
+
+  it("disables comparison once loaded when only a single year of data truly exists", () => {
+    // Loaded (not a loading artifact) with exactly one year — there is
+    // nothing to compare against, so comparison must switch itself off
+    // rather than keep a stale "enabled" flag with no fallback year.
+    useStatsCompareStore.getState().setCompare(true, 2021);
+    mockDomainStats(flightStats({ 2024: 6 }));
+
+    render(<OverviewTab flights={[]} achievements={null} />);
+
+    expect(useStatsCompareStore.getState().compareEnabled).toBe(false);
+    expect(useStatsCompareStore.getState().compareYear).toBeNull();
+    const checkbox = screen.getByRole("checkbox") as HTMLInputElement;
+    expect(checkbox.checked).toBe(false);
+  });
 });
