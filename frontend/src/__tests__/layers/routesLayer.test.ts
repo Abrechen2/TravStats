@@ -372,6 +372,18 @@ describe("createRoutesLayers", () => {
     expect(ids).not.toContain("routes-upcoming-casing");
   });
 
+  it("builds the airport label layer with a non-ASCII-safe characterSet (#185)", () => {
+    // deck.gl's default TextLayer characterSet only covers ASCII 32-127, so
+    // any label outside that range (umlauts, accents) is silently dropped
+    // from the font atlas and never renders. This test fails if that prop
+    // is ever removed/reverted from routes-labels.
+    const layers = createRoutesLayers(buildRouteData([mockFlight], 1));
+    const labelLayer = layers.find((l) => l.id === "routes-labels");
+    expect(labelLayer).toBeDefined();
+    const props = (labelLayer as unknown as { props: { characterSet?: unknown } }).props;
+    expect(props.characterSet).toBe("auto");
+  });
+
   it("partitions arcs: regular → routes-arc, pure-scheduled → routes-arc-scheduled, mixed → routes-arc-upcoming", () => {
     const flown: GeoJSONFeature = {
       ...mockFlight,

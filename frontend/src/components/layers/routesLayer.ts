@@ -345,7 +345,6 @@ const HIGHLIGHT_COLOR: [number, number, number, number] = [245, 158, 11, 255];
 // How many alpha units to keep for dimmed routes (out of 255)
 const DIM_ALPHA = 18;
 
-
 /**
  * Build the deck.gl layer instances for routes mode from already-computed
  * arc + point + upcoming-marker data. Caller is expected to memoize
@@ -387,7 +386,12 @@ export function createRoutesLayers(
   statusTwoTone?: boolean
 ): Layer[] {
   const { arcs, points } = routeData;
-  const { markerColor, markerSizeScale = 1, arcWidthScale = 1, labelsMode = "important" } = appearance;
+  const {
+    markerColor,
+    markerSizeScale = 1,
+    arcWidthScale = 1,
+    labelsMode = "important",
+  } = appearance;
   const dotRgb =
     markerColor ?? themeColors?.airportDot ?? ([240, 169, 71] as [number, number, number]);
 
@@ -408,7 +412,12 @@ export function createRoutesLayers(
   const labelPoints =
     labelsMode === "all"
       ? budgeted
-      : declutterByDistance(budgeted, (p) => p.count, (p) => p.position, zoom);
+      : declutterByDistance(
+          budgeted,
+          (p) => p.count,
+          (p) => p.position,
+          zoom
+        );
 
   // Three arc datasets:
   //   - regular: no upcoming flight — heatmap colour through plain ArcLayer.
@@ -571,6 +580,11 @@ export function createRoutesLayers(
     outlineWidth: 2,
     outlineColor: [0, 0, 0, 120],
     billboard: true,
+    // IATA codes are ASCII-only today, but deck.gl's default `characterSet`
+    // (32-127) silently drops any glyph outside it from the font atlas
+    // (#185 — this bit German port names elsewhere). Keeping "auto" here
+    // too so this layer stays correct if it ever renders airport city
+    // names or anything else non-ASCII — do not remove.
     characterSet: "auto",
     opacity: airportOpacity,
     visible: labelsMode !== "off",
