@@ -1,0 +1,125 @@
+import { z } from "zod";
+
+export const LODGING_TYPES = ["hotel", "campsite"] as const;
+export const BOARD_TYPES = [
+  "none",
+  "breakfast",
+  "half",
+  "full",
+  "all_inclusive",
+] as const;
+export const STAY_STATUSES = ["scheduled", "completed", "cancelled"] as const;
+export const CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
+
+const emptyToUndefined = z
+  .string()
+  .optional()
+  .transform((v) => (v === "" ? undefined : v));
+
+// Accept partial datetimes and coerce them to full ISO 8601, mirroring schemas/cruise.ts.
+const isoDateTimeRequired = z.preprocess((v) => {
+  if (typeof v !== "string" || v === "") return v;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? v : d.toISOString();
+}, z.string().datetime());
+
+const rating = z.number().min(1).max(5).optional();
+
+const baseLodgingSchema = z.object({
+  type: z.enum(LODGING_TYPES).default("hotel"),
+  name: z.string().trim().min(1).max(200),
+  chainId: z.number().int().positive().nullable().optional(),
+  address: z.string().max(300).optional(),
+  city: z.string().max(120).optional(),
+  country: z.string().max(120).optional(),
+  lat: z.number().min(-90).max(90).nullable().optional(),
+  lon: z.number().min(-180).max(180).nullable().optional(),
+  stars: z.number().int().min(1).max(5).nullable().optional(),
+  amenities: z.array(z.string().max(60)).max(50).optional(),
+  notes: z
+    .string()
+    .transform((v) => v.replace(/<[^>]*>/g, ""))
+    .optional(),
+  dataSource: emptyToUndefined,
+});
+
+export const createLodgingSchema = baseLodgingSchema;
+export const updateLodgingSchema = baseLodgingSchema
+  .partial()
+  .refine((d) => Object.keys(d).length > 0, {
+    message: "At least one field must be provided for update",
+  });
+
+const baseStaySchema = z.object({
+  checkIn: isoDateTimeRequired,
+  checkOut: isoDateTimeRequired,
+  status: z.enum(STAY_STATUSES).default("completed"),
+  tripId: z.string().uuid().nullable().optional(),
+  bookingId: z.string().uuid().nullable().optional(),
+  roomNumber: z.string().max(20).optional(),
+  roomCategory: z.string().max(120).optional(),
+  board: z.enum(BOARD_TYPES).optional(),
+  pricePerNight: z.number().min(0).optional(),
+  // Optional here even though the DB column is NOT NULL DEFAULT 'EUR' — omitting it
+  // lets the client fall back to the column default rather than forcing every caller
+  // to send a currency.
+  currency: z.enum(CURRENCIES).optional(),
+  totalPrice: z.number().min(0).optional(),
+  isAwardStay: z.boolean().optional(),
+  ratingRoom: rating,
+  ratingBreakfast: rating,
+  ratingService: rating,
+  ratingOverall: rating,
+  roomAmenities: z.array(z.string().max(60)).max(50).optional(),
+  bookingReference: z.string().max(40).optional(),
+  membershipId: z.string().uuid().nullable().optional(),
+  companions: z.array(z.string().max(100)).max(50).optional(),
+  notes: z
+    .string()
+    .transform((v) => v.replace(/<[^>]*>/g, ""))
+    .optional(),
+});
+
+export const createStaySchema = baseStaySchema.refine(
+  (d) => new Date(d.checkOut).getTime() >= new Date(d.checkIn).getTime(),
+  { message: "checkOut must not precede checkIn", path: ["checkOut"] },
+);
+export const updateStaySchema = baseStaySchema.partial().refine(
+  (d) => {
+    if (!d.checkIn || !d.checkOut) return true;
+    return new Date(d.checkOut).getTime() >= new Date(d.checkIn).getTime();
+  },
+  { message: "checkOut must not precede checkIn", path: ["checkOut"] },
+);
+
+export const lodgingQuerySchema = z.object({
+  type: z.enum(LODGING_TYPES).optional(),
+  chainId: z.coerce.number().int().positive().optional(),
+  tripId: z.string().uuid().optional(),
+  year: z.coerce.number().int().min(1900).max(2200).optional(),
+  country: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+  sort: z.enum(["nights", "rating", "spend", "name", "checkIn"]).optional(),
+});
+
+// Memberships are program-based, NOT chain-based (Task 2b schema hardening): several
+// chains share one loyalty program (Sheraton/Westin/Ritz-Carlton -> Marriott Bonvoy),
+// so a membership must not be pinned to a single chainId. There is intentionally no
+// chainId field here — see backend/prisma/schema.prisma `LodgingMembership`.
+const baseMembershipSchema = z.object({
+  programName: z.string().trim().min(1).max(120),
+  membershipNumber: z.string().max(60).optional(),
+  tier: z.string().max(40).optional(),
+});
+export const createMembershipSchema = baseMembershipSchema;
+export const updateMembershipSchema = baseMembershipSchema
+  .partial()
+  .refine((d) => Object.keys(d).length > 0, {
+    message: "At least one field must be provided for update",
+  });
+
+export type LodgingInput = z.infer<typeof baseLodgingSchema>;
+export type StayInput = z.infer<typeof baseStaySchema>;
+export type LodgingQueryInput = z.infer<typeof lodgingQuerySchema>;
+export type MembershipInput = z.infer<typeof baseMembershipSchema>;
