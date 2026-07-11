@@ -11,6 +11,7 @@ import {
   FLIGHT_STATUS_SCHEDULED_COLOR,
   FLIGHT_STATUS_UPCOMING_COLOR,
 } from "../../lib/statusColors";
+import { markerDotRadiusProps } from "./markerDotStyle";
 
 function routeKey(a: string, b: string): string {
   return [a, b].sort().join("-");
@@ -541,13 +542,20 @@ export function createRoutesLayers(
     pickable: false,
   });
 
-  // Inner dot — solid center marker
+  // Inner dot — solid center marker. Sizing mirrors the cruise-port dot
+  // (`cruise-ports` in cruisePortsLayer.ts) via the shared markerDotStyle
+  // module — fixed metre radius + slider-scaled pixel clamps, so the two
+  // markers render at the same size for the same size-slider value (#187).
   const dotLayer = new ScatterplotLayer<PointDatum>({
     id: "routes-dot",
     data: points,
     getPosition: (d) => d.position,
-    getRadius: () => 2200 * markerSizeScale,
-    updateTriggers: { getRadius: [markerSizeScale], getFillColor: [dotRgb] },
+    ...markerDotRadiusProps(markerSizeScale),
+    // getRadius is now a plain constant (MARKER_DOT_RADIUS_M), not an
+    // accessor function of markerSizeScale — no updateTriggers entry
+    // needed for it; radiusMinPixels/radiusMaxPixels are plain props and
+    // deck.gl diffs those automatically.
+    updateTriggers: { getFillColor: [dotRgb] },
     getFillColor: [...dotRgb, 220] as [number, number, number, number],
     stroked: false,
     opacity: airportOpacity,
