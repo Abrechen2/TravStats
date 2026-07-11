@@ -151,6 +151,9 @@ export interface UserStats {
   cruiseCarnivalBrandsCovered: number; // how many Carnival brands out of the set
   // Lodging stats (V1 multi-domain)
   lodgingsCount: number;
+  /** Number of individual stays (bookings), as distinct from `lodgingsCount`
+   * (distinct lodgings) — a user can have many stays at the same hotel. */
+  lodgingStaysCount: number;
   lodgingNights: number;
   lodgingChainsUnique: number;
   lodgingCountries: Set<string>;
@@ -281,6 +284,7 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     cruiseCarnivalBrandsCovered: 0,
     // Lodging stats — filled in by caller via spread after calculateLodgingStats
     lodgingsCount: 0,
+    lodgingStaysCount: 0,
     lodgingNights: 0,
     lodgingChainsUnique: 0,
     lodgingCountries: new Set(),

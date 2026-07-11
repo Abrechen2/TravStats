@@ -8,6 +8,11 @@ import {
 } from './achievementStats';
 import { checkAchievement } from './achievementChecks';
 import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from './cruiseStats';
+import {
+  calculateLodgingStats,
+  type LodgingStayData as LodgingStatsInput,
+} from './lodgingStats';
+import { computeFlyAndStayFlags, unionCountries, type TripDomainCounts } from './achievementStats';
 
 type UserAchievementWithRelation = UserAchievement & { achievement: Achievement };
 
@@ -45,7 +50,10 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
 
     // Get user's flights (flown+historical for geo/distance stats, all for planner/survivor)
     // + cruises (all statuses except cancelled; include stops+ports and trip for Fly & Sail)
-    const [flights, allFlights, cruises] = await Promise.all([
+    // + lodging stays (all statuses — calculateLodgingStats filters cancelled itself)
+    // + per-trip domain counts (flights/cruises/lodgingStays) for the
+    //   cross-domain Fly & Stay / Grand Tour flags.
+    const [flights, allFlights, cruises, lodgingStays, trips] = await Promise.all([
       prisma.flight.findMany({
         where: { userId, status: { in: ['flown', 'historical'] } },
         orderBy: { departureTime: 'asc' },
@@ -61,6 +69,16 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
           trip: { include: { flights: true, cruises: true } },
           departurePort: true,
           arrivalPort: true,
+        },
+      }),
+      prisma.lodgingStay.findMany({
+        where: { userId },
+        include: { lodging: true },
+      }),
+      prisma.trip.findMany({
+        where: { userId },
+        select: {
+          _count: { select: { flights: true, cruises: true, lodgingStays: true } },
         },
       }),
     ]);
@@ -181,6 +199,33 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
 
     const cruiseStats = calculateCruiseStats(cruiseStatsInput, userBirthday);
 
+    // Lodging stats (multi-domain V1) — computed separately from flight/cruise stats.
+    const lodgingStatsInput: LodgingStatsInput[] = lodgingStays.map((s) => ({
+      lodgingId: s.lodgingId,
+      type: s.lodging.type,
+      country: s.lodging.country,
+      city: s.lodging.city,
+      chainId: s.lodging.chainId,
+      checkIn: s.checkIn,
+      checkOut: s.checkOut,
+      status: s.status,
+      totalPriceBase: s.totalPriceBase,
+      currency: s.currency,
+      totalPrice: s.totalPrice,
+      isAwardStay: s.isAwardStay,
+      ratingOverall: s.ratingOverall,
+    }));
+    const lodgingStats = calculateLodgingStats(lodgingStatsInput);
+
+    // Fly & Stay / Grand Tour — derived per-trip so a flight in one trip and
+    // a stay in an unrelated trip never counts (see computeFlyAndStayFlags).
+    const tripDomainCounts: TripDomainCounts[] = trips.map((t) => ({
+      flightCount: t._count.flights,
+      cruiseCount: t._count.cruises,
+      lodgingStayCount: t._count.lodgingStays,
+    }));
+    const { flyAndStay, grandTour } = computeFlyAndStayFlags(tripDomainCounts);
+
     // Fly & Sail — at least one trip contains BOTH a flight and a cruise
     const flyAndSail = cruises.some(
       (c) => c.trip && c.trip.flights.length > 0 && c.trip.cruises.length > 0,
@@ -200,7 +245,7 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       flightDates.some((fd) => Math.abs(fd.getTime() - cd.getTime()) <= SEVEN_DAYS_MS),
     );
 
-    // Union flight + cruise countries into the shared countries Set.
+    // Union flight + cruise + lodging countries into the shared countries Set.
     // Same for continents — map each cruise port to its continent via getContinent().
     const combinedCountries = new Set<string>(stats.countries);
     const combinedContinents = new Set<string>(stats.continents);
@@ -213,6 +258,7 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
         }
       }
     }
+    const finalCountries = unionCountries(combinedCountries, lodgingStats.countries);
 
     const augmentedStats = {
       ...stats,
@@ -223,8 +269,8 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       scheduledMaxAdvanceDays,
       birthdayFlights,
       scheduled30d,
-      // Countries + continents now include cruise ports for shared achievements
-      countries: combinedCountries,
+      // Countries + continents now include cruise ports + lodging stays for shared achievements
+      countries: finalCountries,
       continents: combinedContinents,
       // Cruise stats
       cruisesCount: cruiseStats.cruisesCount,
@@ -251,6 +297,20 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       hasFlyAndSailTrip: flyAndSail,
       hasFlyAndSail7d: flyAndSail7d,
       cruiseCarnivalBrandsCovered: 0, // computed inside the checker
+      // Lodging stats
+      lodgingsCount: lodgingStats.lodgingsCount,
+      lodgingStaysCount: lodgingStats.staysCount,
+      lodgingNights: lodgingStats.totalNights,
+      lodgingChainsUnique: lodgingStats.chainsUnique,
+      lodgingCountries: lodgingStats.countries,
+      lodgingSpendBase: lodgingStats.spendBaseTotal,
+      lodgingAwardNights: lodgingStats.awardNights,
+      lodgingChainLoyaltyMax: lodgingStats.chainLoyaltyMax,
+      lodgingSameHotelRepeatMax: lodgingStats.sameHotelRepeatMax,
+      lodgingLongestStayNights: lodgingStats.longestStayNights,
+      // Cross-domain (lodging)
+      flyAndStay,
+      grandTour,
     };
 
     // Prepare all updates/creates to execute in a single transaction

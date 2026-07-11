@@ -17,7 +17,7 @@ describe('achievement seed domains', () => {
   });
 
   it('no achievement uses a non-allowed domain value', () => {
-    const allowed = new Set(['flight', 'cruise', 'shared']);
+    const allowed = new Set(['flight', 'cruise', 'lodging', 'shared']);
     for (const a of achievements) {
       expect(allowed.has(a.domain)).toBe(true);
     }
