@@ -4,15 +4,28 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
-## [2.3.0-rc.3] - 2026-07-09 (Release Candidate)
+## [2.3.0] - 2026-07-11
 
-Release candidate for **TravStats 2.3**. Aggregates the entire
-`dev/v2.3` forward line — a redesigned map/globe appearance system,
-per-cruise and status-based map coloring, a new statistics scorecard,
-unresolved cruise ports, device pairing for the companion app, and
-more.
+**TravStats 2.3.** Aggregates the entire `dev/v2.3` forward line — a
+redesigned map/globe appearance system, per-cruise and status-based map
+coloring, a new statistics scorecard, unresolved cruise ports, device
+pairing for the companion app — and adds opt-in anonymous usage
+statistics with a What's-New dialog.
 
 ### Added
+- **Anonymous usage statistics (opt-in)** — TravStats can now optionally
+  report a small, anonymous usage summary to a public dashboard at
+  `travstats.de/stats`, so the community's reach is visible. **Off by
+  default** and admin-controlled: a consent choice appears during first-boot
+  setup and in the What's-New dialog, with a permanent toggle under
+  Admin → Instance. The payload is coarse and anonymous — version, enabled
+  domains, rounded distance totals, feature usage — and **never** IP
+  addresses, names, travel details, or API keys. Withdrawing consent asks
+  the server to erase this installation's record. Self-hosters can disable
+  all sending with a single environment variable. Full transparency page at
+  `travstats.de/docs/usage-statistics`.
+- **What's-New dialog** — after an update, a one-time dialog summarises what
+  changed in the new version.
 - **Continuous map sliders** — line width and marker size are now
   stepless sliders with a live value (replacing the fixed Thin/Normal/
   Thick and Off/S/M/L presets), on both the 2D map and the globe, plus a
@@ -57,6 +70,14 @@ more.
 - A proper 404 page for unknown routes (was a blank page).
 
 ### Fixed
+- **Admin backup page no longer scroll-jumps** — the backup screen's
+  5-second status poll was flipping the full-page loading state on every
+  tick, blanking the table and snapping the scroll position back to the
+  top every few seconds; the poll now refreshes the list silently (#180).
+- **Loading labels showed a raw translation key** — several admin and app
+  loading states displayed the literal text `common:loading` instead of
+  "Loading…", and two "close" controls (including a screen-reader label) were
+  likewise unresolved. All now show the correct text, guarded by a test.
 - Cruise stops with an ambiguous name (e.g. "Naples") now resolve to
   the correctly-catalogued port instead of a same-named placeholder in
   another country (#169).
