@@ -30,6 +30,8 @@ vi.mock("../../../lib/api/immich", () => ({
     const kind = (error as { response?: { data?: { error?: unknown } } })?.response?.data?.error;
     return typeof kind === "string" && FAILURE_KINDS.includes(kind) ? kind : null;
   },
+  failureKey: (kind: unknown) =>
+    typeof kind === "string" && FAILURE_KINDS.includes(kind) ? `errors.${kind}` : "errors.unknown",
 }));
 
 vi.mock("../../../hooks/useTranslation", () => ({

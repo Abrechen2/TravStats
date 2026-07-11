@@ -36,6 +36,21 @@ export function immichFailureKind(error: unknown): ImmichFailureKind | null {
   return isImmichFailureKind(kind) ? kind : null;
 }
 
+/**
+ * Resolve a failure kind to its localized i18n key inside the `immich`
+ * namespace. An unknown or absent kind (a future backend value, or a
+ * validation error carrying no kind) falls back to a NEUTRAL generic string —
+ * never `unreachable`, which would assert a network claim the app has not
+ * established, and never the raw backend prose.
+ *
+ * Lives here rather than in a card because both the user card and the admin
+ * card render the same vocabulary; a seventh kind must not be handled in one
+ * and forgotten in the other.
+ */
+export function failureKey(kind: unknown): string {
+  return isImmichFailureKind(kind) ? `errors.${kind}` : "errors.unknown";
+}
+
 export const immichApi = {
   async getSettings(): Promise<ImmichConnectionStatus> {
     const { data } = await api.get("/settings/immich");
