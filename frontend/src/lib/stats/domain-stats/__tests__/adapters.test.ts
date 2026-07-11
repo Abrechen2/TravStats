@@ -169,8 +169,8 @@ describe("adaptCruise", () => {
 });
 
 describe("stub adapters", () => {
-  it("hotel returns hasData=false", () => {
-    expect(adaptHotel()).toEqual({ domain: "hotel", hasData: false });
+  it("lodging returns hasData=false", () => {
+    expect(adaptHotel()).toEqual({ domain: "lodging", hasData: false });
   });
   it("poi returns hasData=false", () => {
     expect(adaptPoi()).toEqual({ domain: "poi", hasData: false });

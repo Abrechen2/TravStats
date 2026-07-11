@@ -2,10 +2,10 @@
 //
 // Each domain runs in its own try/catch so a single 500 (e.g. cruise
 // endpoint down) doesn't blank the entire overview — the failing
-// domain's slot stays empty, the rest renders. Hotel + POI are handled
-// by stub adapters today; promoting them to real domains only requires
-// flipping `available=true` in shared/domains.ts and replacing the stub
-// with a real adapter call here.
+// domain's slot stays empty, the rest renders. Lodging + POI are
+// handled by stub adapters today; promoting them to real domains only
+// requires flipping `available=true` in shared/domains.ts and replacing
+// the stub with a real adapter call here.
 import { useEffect, useState } from "react";
 import type { Flight } from "../../../types";
 import { statsApi } from "../../api";
@@ -86,7 +86,7 @@ async function loadDomain(domain: DomainKey, flights: Flight[]): Promise<DomainS
       ]);
       return adaptCruise({ stats: cruiseStats, cruises });
     }
-    case "hotel":
+    case "lodging":
       return adaptHotel();
     case "poi":
       return adaptPoi();
