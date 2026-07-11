@@ -42,7 +42,6 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     icon: '🏨',
     color: '#d4778f',
     routePrefix: '/lodging',
-    // parserSupported stays false until Phase B adds the lodging parser.
   },
   poi: {
     key: 'poi',
@@ -65,7 +64,7 @@ export const AVAILABLE_DOMAINS: DomainKey[] = DOMAIN_KEYS.filter(
  * as the runtime allow-list for the `domain` field on every parse
  * endpoint — adding lodging parsing means adding `'lodging'` here once.
  */
-export const PARSER_SUPPORTED_DOMAINS = ['flight', 'cruise'] as const satisfies readonly DomainKey[];
+export const PARSER_SUPPORTED_DOMAINS = ['flight', 'cruise', 'lodging'] as const satisfies readonly DomainKey[];
 export type ParserSupportedDomain = (typeof PARSER_SUPPORTED_DOMAINS)[number];
 
 export function isValidDomain(value: string): value is DomainKey {
