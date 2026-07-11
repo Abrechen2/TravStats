@@ -6,7 +6,8 @@
   "tabs": {
     "general": "Allgemein",
     "flight": "Flug",
-    "cruise": "Kreuzfahrt"
+    "cruise": "Kreuzfahrt",
+    "lodging": "Unterkünfte"
   },
   "errors": {
     "saveFailed": "Einstellungen konnten nicht gespeichert werden"
@@ -21,6 +22,12 @@
     "defaultCabinNone": "– keine Vorauswahl –",
     "showArcs": "Kreuzfahrt-Routen auf der Karte anzeigen",
     "showArcsHint": "Bezier-Linien zwischen Start- und Zielhafen im Dashboard-Map."
+  },
+  "lodgingPreferences": {
+    "title": "Unterkunfts-Präferenzen",
+    "description": "Basiswährung für Übernachtungs-Statistiken und Ausgabensummen.",
+    "baseCurrency": "Basiswährung",
+    "baseCurrencyHint": "Alle Übernachtungen werden zum EZB-Kurs des jeweiligen Check-in-Tages in diese Währung umgerechnet. Bereits gespeicherte Aufenthalte behalten ihren ursprünglichen Umrechnungskurs — eine Änderung wirkt sich nur auf künftige Berechnungen aus."
   },
   "about": {
     "buildLabel": "Build",

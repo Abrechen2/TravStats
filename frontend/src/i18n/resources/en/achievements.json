@@ -38,6 +38,7 @@
     "allDomains": "All",
     "domainFlight": "Flight",
     "domainCruise": "Cruise",
+    "domainLodging": "Lodging",
     "domainShared": "Shared",
     "showUnlockedOnly": "Show unlocked only"
   },

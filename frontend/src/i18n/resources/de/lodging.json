@@ -1,0 +1,153 @@
+{
+  "nav": { "link": "Unterkünfte" },
+  "list": {
+    "title": "Unterkünfte",
+    "loading": "Unterkünfte werden geladen …",
+    "loadError": "Unterkünfte konnten nicht geladen werden",
+    "empty": "Noch keine Unterkünfte erfasst",
+    "columns": {
+      "name": "Name",
+      "chain": "Kette",
+      "location": "Ort",
+      "stays": "Aufenthalte",
+      "nights": "Übernachtungen",
+      "rating": "Bewertung",
+      "spend": "Ausgaben"
+    }
+  },
+  "filter": {
+    "searchPlaceholder": "Suche nach Name oder Ort …",
+    "type": "Typ",
+    "allTypes": "Alle Typen",
+    "year": "Jahr",
+    "allYears": "Alle Jahre",
+    "country": "Land",
+    "allCountries": "Alle Länder",
+    "sort": "Sortierung",
+    "sortOptions": {
+      "name": "Name",
+      "nights": "Übernachtungen",
+      "rating": "Bewertung",
+      "spend": "Ausgaben"
+    },
+    "showing": "{{count}} angezeigt"
+  },
+  "add": {
+    "title": "Hotel hinzufügen"
+  },
+  "detail": {
+    "loading": "Unterkunft wird geladen …",
+    "notFound": "Unterkunft nicht gefunden",
+    "avgRating": "Ø Bewertung",
+    "stays": "Aufenthalte",
+    "staysEmpty": "Noch keine Aufenthalte erfasst",
+    "spend": "Ausgaben",
+    "spendBase": "In Basiswährung",
+    "spendPerNight": "Pro Übernachtung",
+    "noLocation": "Kein Standort hinterlegt",
+    "deleteConfirmTitle": "Unterkunft löschen?",
+    "deleteConfirmMessage": "Diese Unterkunft mit {{count}} Aufenthalt(en) wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteSuccess": "Unterkunft gelöscht",
+    "deleteError": "Unterkunft konnte nicht gelöscht werden"
+  },
+  "field": {
+    "name": "Name",
+    "type": "Typ",
+    "stars": "Sterne",
+    "address": "Adresse",
+    "city": "Stadt",
+    "country": "Land",
+    "amenities": "Ausstattung",
+    "amenitiesPlaceholder": "z. B. WLAN, Pool, Parkplatz (kommagetrennt)",
+    "notes": "Notizen",
+    "independent": "Unabhängig",
+    "staysCount": "Aufenthalte",
+    "staysCount_one": "Aufenthalt",
+    "staysCount_other": "Aufenthalte",
+    "nightsCount": "Übernachtungen",
+    "nightsCount_one": "Übernachtung",
+    "nightsCount_other": "Übernachtungen",
+    "room": "Zimmer",
+    "board": "Verpflegung",
+    "awardStay": "Prämienübernachtung",
+    "ratingRoom": "Zimmer",
+    "ratingBreakfast": "Frühstück",
+    "ratingService": "Service",
+    "ratingOverall": "Gesamt",
+    "bookingReference": "Buchungsnummer",
+    "chain": "Kette",
+    "checkIn": "Anreise",
+    "checkOut": "Abreise",
+    "status": "Status",
+    "roomCategory": "Zimmerkategorie",
+    "currency": "Währung",
+    "totalPrice": "Gesamtpreis",
+    "pricePerNight": "Preis pro Nacht",
+    "roomAmenities": "Zimmerausstattung",
+    "roomAmenitiesPlaceholder": "z. B. Meerblick, Balkon (kommagetrennt)",
+    "membership": "Bonusprogramm",
+    "noMembership": "Kein Bonusprogramm",
+    "trip": "Reise",
+    "noTrip": "Keiner Reise zugeordnet",
+    "companions": "Mitreisende",
+    "programName": "Programmname",
+    "membershipNumber": "Mitgliedsnummer",
+    "tier": "Status-Stufe"
+  },
+  "type": {
+    "hotel": "Hotel",
+    "campsite": "Campingplatz"
+  },
+  "board": {
+    "none": "Ohne Verpflegung",
+    "breakfast": "Frühstück",
+    "half": "Halbpension",
+    "full": "Vollpension",
+    "all_inclusive": "All-inclusive"
+  },
+  "stayStatus": {
+    "scheduled": "Geplant",
+    "completed": "Abgeschlossen",
+    "cancelled": "Storniert"
+  },
+  "form": {
+    "createTitle": "Neue Unterkunft",
+    "editTitle": "Unterkunft bearbeiten",
+    "saveError": "Unterkunft konnte nicht gespeichert werden"
+  },
+  "fx": {
+    "source": "EZB",
+    "tooltip": "Umgerechnet zum EZB-Referenzkurs des Check-in-Tages"
+  },
+  "chainPicker": {
+    "placeholder": "Kette suchen …",
+    "addMissing": "„{{name}}“ als neue Kette anlegen",
+    "confirmAdd": "„{{name}}“ wirklich als neue Kette anlegen?",
+    "matchedExisting": "Bereits vorhanden — „{{name}}“ zugeordnet",
+    "addError": "Kette konnte nicht angelegt werden"
+  },
+  "stayEditor": {
+    "addStay": "Aufenthalt hinzufügen",
+    "createTitle": "Neuer Aufenthalt",
+    "editTitle": "Aufenthalt bearbeiten",
+    "datesSection": "Termine",
+    "datesRequired": "Bitte An- und Abreisedatum angeben",
+    "ratingsSection": "Bewertungen",
+    "priceSection": "Preis",
+    "amenitiesSection": "Ausstattung & Notizen",
+    "loyaltySection": "Bonusprogramm",
+    "manageMemberships": "Bonusprogramme verwalten",
+    "receiptSection": "Beleg",
+    "notesSection": "Notizen",
+    "saveError": "Aufenthalt konnte nicht gespeichert werden"
+  },
+  "membership": {
+    "title": "Bonusprogramme",
+    "add": "Programm hinzufügen",
+    "empty": "Noch keine Bonusprogramme hinterlegt",
+    "loadError": "Bonusprogramme konnten nicht geladen werden",
+    "saveError": "Bonusprogramm konnte nicht gespeichert werden",
+    "duplicateError": "Dieses Programm ist für diese Kette bereits hinterlegt",
+    "deleteError": "Bonusprogramm konnte nicht gelöscht werden"
+  }
+}

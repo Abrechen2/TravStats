@@ -6,7 +6,8 @@
   "tabs": {
     "general": "General",
     "flight": "Flight",
-    "cruise": "Cruise"
+    "cruise": "Cruise",
+    "lodging": "Lodging"
   },
   "errors": {
     "saveFailed": "Failed to save settings"
@@ -21,6 +22,12 @@
     "defaultCabinNone": "– no preset –",
     "showArcs": "Show cruise routes on the map",
     "showArcsHint": "Bezier lines between departure and arrival ports in the dashboard map."
+  },
+  "lodgingPreferences": {
+    "title": "Lodging preferences",
+    "description": "Base currency for lodging stats and spend totals.",
+    "baseCurrency": "Base currency",
+    "baseCurrencyHint": "Every stay is converted into this currency at the ECB rate for its check-in day. Already-saved stays keep their original conversion rate — a change only affects future calculations."
   },
   "about": {
     "buildLabel": "Build",
