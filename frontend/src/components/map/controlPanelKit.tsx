@@ -17,6 +17,7 @@ import {
   type FlightColorMode,
   type FlightColorSlot,
 } from "../../lib/flightColor";
+import { FLIGHT_ROUTE_SHAPES, type FlightRouteShape } from "../../lib/flightRouteShape";
 
 // ── Design tokens ────────────────────────────────────────────────────
 export const ACCENT = "240,169,71"; // amber — the app's primary action colour
@@ -468,6 +469,15 @@ export interface FlightAppearanceState {
   colorConfig: FlightColorConfig;
   onColorModeChange: (mode: FlightColorMode) => void;
   onColorChange: (slot: FlightColorSlot, color: Rgb) => void;
+  /**
+   * Route SHAPE — 3D arcs or flat on the map surface (#183). FLAT-MAP ONLY:
+   * the globe panel passes neither of these, and the shape picker is then not
+   * rendered at all. That is deliberate — on a globe the arc is the whole
+   * point, and a control that silently does nothing there would be worse than
+   * no control. Both must be provided together for the picker to appear.
+   */
+  routeShape?: FlightRouteShape;
+  onRouteShapeChange?: (shape: FlightRouteShape) => void;
   routeWidth: number;
   onRouteWidthChange: (w: number) => void;
   markerColor: Rgb | null;
@@ -499,6 +509,8 @@ export function FlightAppearanceSection({
   colorConfig,
   onColorModeChange,
   onColorChange,
+  routeShape,
+  onRouteShapeChange,
   routeWidth,
   onRouteWidthChange,
   markerColor,
@@ -519,9 +531,36 @@ export function FlightAppearanceSection({
     label: t(`map:globe.panel.colorMode.${m}.label`),
   }));
 
+  const shapeOptions = FLIGHT_ROUTE_SHAPES.map((s) => ({
+    value: s,
+    label: t(`map:globe.panel.routeShape.${s}.label`),
+  }));
+
   return (
     <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
       <SectionLabel>{title}</SectionLabel>
+
+      {/* Route shape — 3D arcs or flat on the map surface (#183). Only the flat
+          map wires this; on the globe the props are absent and the picker is
+          simply not there. */}
+      {routeShape && onRouteShapeChange && (
+        <>
+          <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
+            {t("map:globe.panel.routeShape.label")}
+          </div>
+          <SegControl<FlightRouteShape>
+            value={routeShape}
+            onChange={onRouteShapeChange}
+            options={shapeOptions}
+          />
+          <div
+            className="mb-2 mt-1 text-[10px] leading-snug"
+            style={{ color: "rgba(241,245,249,0.45)" }}
+          >
+            {t(`map:globe.panel.routeShape.${routeShape}.hint`)}
+          </div>
+        </>
+      )}
 
       {/* Colour mode — the explicit choice that replaces the old
           "Frequenz" pill + hidden status override. */}

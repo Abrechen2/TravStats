@@ -13,6 +13,8 @@ import {
   resolveFlightTipColor,
   type FlightColorConfig,
 } from "../../lib/flightColor";
+import { DEFAULT_FLIGHT_ROUTE_SHAPE, type FlightRouteShape } from "../../lib/flightRouteShape";
+import { buildFlatRoutes, createFlatRoutesLayer } from "./flatRoutesLayer";
 import { markerDotRadiusProps } from "./markerDotStyle";
 
 function routeKey(a: string, b: string): string {
@@ -293,6 +295,10 @@ export interface RoutesAppearance {
   /** Marker-label reveal: off / key markers only (priority by frequency,
    *  the default) / all. Replaces the old hard zoom gate. */
   labelsMode?: LabelsMode;
+  /** How flight routes are drawn (#183): the 3D arcs (default, unchanged) or
+   *  flat on the map surface like cruise routes. Flat-map-only — the globe
+   *  never reads this. See `lib/flightRouteShape.ts`. */
+  routeShape?: FlightRouteShape;
 }
 
 export function createRoutesLayers(
@@ -318,6 +324,7 @@ export function createRoutesLayers(
     markerSizeScale = 1,
     arcWidthScale = 1,
     labelsMode = "important",
+    routeShape = DEFAULT_FLIGHT_ROUTE_SHAPE,
   } = appearance;
   const dotRgb =
     markerColor ?? themeColors?.airportDot ?? ([240, 169, 71] as [number, number, number]);
@@ -345,6 +352,19 @@ export function createRoutesLayers(
           (p) => p.position,
           zoom
         );
+
+  // Route line width — shared by BOTH shapes so a route is exactly as thick
+  // whether it's drawn as an arc or as a flat path. Width follows frequency for
+  // live routes; historical-only routes stay visually muted regardless of count
+  // so they don't drown out active ones. Cap at 4 px: 1 flight = 1 px, 16
+  // flights = max 4 px (smooth ramp across realistic counts).
+  const routeWidthPx = (count: number, isHistorical: boolean, selected: boolean): number => {
+    if (isHistorical) return 1.2 * arcWidthScale;
+    const base = Math.min(Math.sqrt(count) * 1.0, 4) * arcWidthScale;
+    // Selected fallback floor matches the unselected cap so a selected mixed
+    // route doesn't pop bigger than it.
+    return selected ? Math.max(base * 2, 4 * arcWidthScale) : base;
+  };
 
   // Three arc datasets:
   //   - regular: no upcoming flight — heatmap colour through plain ArcLayer.
@@ -374,21 +394,12 @@ export function createRoutesLayers(
       if (isSelected) return HIGHLIGHT_COLOR;
       return [d.targetColor[0], d.targetColor[1], d.targetColor[2], DIM_ALPHA];
     },
-    getWidth: (d: ArcDatum) => {
-      // Width follows frequency for live routes; historical-only routes stay
-      // visually muted regardless of count so they don't drown out active
-      // ones. Cap at 4 px (was 7) — multiplier dropped from 1.3 to 1.0 so
-      // 1 flight = 1 px, 16 flights = max 4 px (smooth ramp across realistic
-      // counts).
-      if (d.isHistorical) return 1.2 * arcWidthScale;
-      const base = Math.min(Math.sqrt(d.count) * 1.0, 4) * arcWidthScale;
-      if (!hasSelection) return base;
-      // Selected fallback floor matches the new max so a selected mixed
-      // route doesn't pop bigger than the unselected cap.
-      return d.flightIds.some((id) => selectedSet.has(id))
-        ? Math.max(base * 2, 4 * arcWidthScale)
-        : base;
-    },
+    getWidth: (d: ArcDatum) =>
+      routeWidthPx(
+        d.count,
+        !!d.isHistorical,
+        hasSelection && d.flightIds.some((id) => selectedSet.has(id))
+      ),
     getHeight: arcHeight,
     // Visibility floor: 2 px minimum so a single far-flung route (e.g. a
     // one-off transpacific leg) stays clearly visible at world zoom instead
@@ -408,32 +419,51 @@ export function createRoutesLayers(
     },
   };
 
-  const arcLayer = new ArcLayer<ArcDatum>({
-    id: "routes-arc",
-    data: regularArcs,
-    ...sharedArcProps,
-  });
-
-  // Pure-scheduled routes — never flown, only an upcoming flight on this
-  // pair. Solid planned colour, no shader gradient.
-  const scheduledArcLayer = new ArcLayer<ArcDatum>({
-    id: "routes-arc-scheduled",
-    data: pureScheduledArcs,
-    ...sharedArcProps,
-  });
-
-  // Mixed routes — already flown AND carry an upcoming flight. Flown colour in
-  // the core (resolved into the data), planned colour faded in at both tips by
-  // UpcomingArcLayer's fragment shader. The tip colour is resolved from the
-  // SAME config as the arc bodies, so it follows the user's mode + colours
-  // instead of the old hardcoded sky-blue. Layer id kept as
-  // `routes-arc-upcoming` for layer-state continuity (selection, picking).
-  const upcomingArcLayer = new UpcomingArcLayer<ArcDatum>({
-    id: "routes-arc-upcoming",
-    data: mixedArcs,
-    edgeColor: resolveFlightTipColor(colorConfig),
-    ...sharedArcProps,
-  });
+  // The route geometry — the user's choice (#183). "arc" is the default and is
+  // byte-for-byte the layer stack that shipped before the setting existed.
+  //
+  // "flat" replaces all THREE arc layers with a single PathLayer of great-circle
+  // surface paths (see flatRoutesLayer.ts): the arcs' three-way split exists
+  // only because a mixed route needs a custom ArcLayer subclass; a PathLayer
+  // encodes the same distinction in its data (a mixed route is split into
+  // planned tip / flown core / planned tip), so one layer suffices.
+  const routeLayers: Layer[] =
+    routeShape === "flat"
+      ? [
+          createFlatRoutesLayer(buildFlatRoutes(arcs, colorConfig), routeWidthPx, {
+            widthScale: arcWidthScale,
+            selectedIds,
+            highlightColor: HIGHLIGHT_COLOR,
+            dimAlpha: DIM_ALPHA,
+            onFlightClick,
+          }),
+        ]
+      : [
+          new ArcLayer<ArcDatum>({
+            id: "routes-arc",
+            data: regularArcs,
+            ...sharedArcProps,
+          }),
+          // Pure-scheduled routes — never flown, only an upcoming flight on this
+          // pair. Solid planned colour, no shader gradient.
+          new ArcLayer<ArcDatum>({
+            id: "routes-arc-scheduled",
+            data: pureScheduledArcs,
+            ...sharedArcProps,
+          }),
+          // Mixed routes — already flown AND carry an upcoming flight. Flown
+          // colour in the core (resolved into the data), planned colour faded in
+          // at both tips by UpcomingArcLayer's fragment shader. The tip colour is
+          // resolved from the SAME config as the arc bodies, so it follows the
+          // user's mode + colours. Layer id kept as `routes-arc-upcoming` for
+          // layer-state continuity (selection, picking).
+          new UpcomingArcLayer<ArcDatum>({
+            id: "routes-arc-upcoming",
+            data: mixedArcs,
+            edgeColor: resolveFlightTipColor(colorConfig),
+            ...sharedArcProps,
+          }),
+        ];
 
   // Inner ring — close to the airport dot
   const ringInnerLayer = new ScatterplotLayer<PointDatum>({
@@ -530,16 +560,7 @@ export function createRoutesLayers(
     parameters: { depthCompare: "always" as const },
   });
 
-  // Render order: regular arcs first, then pure-scheduled (sky-blue solids),
-  // then mixed (gradient on top in case of stacked picking), then airport
-  // visuals.
-  return [
-    arcLayer,
-    scheduledArcLayer,
-    upcomingArcLayer,
-    ringInnerLayer,
-    ringOuterLayer,
-    dotLayer,
-    labelLayer,
-  ];
+  // Render order: routes first (arcs or the flat path), then the airport
+  // visuals on top of them.
+  return [...routeLayers, ringInnerLayer, ringOuterLayer, dotLayer, labelLayer];
 }

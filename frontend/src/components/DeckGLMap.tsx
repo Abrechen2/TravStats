@@ -8,7 +8,8 @@ import { applyMapOverlays } from "./Globe/mapOverlays";
 import { FlatMapControlPanel } from "./map/FlatMapControlPanel";
 import { type AppearanceDomain } from "./map/controlPanelKit";
 import type { LabelsMode } from "./map/labelPriority";
-import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
+import { loadFlightRouteShape, loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
+import type { FlightRouteShape } from "../lib/flightRouteShape";
 import { useFlightColorStore } from "../store/flightColorStore";
 import { FLAT_BASEMAPS, resolveFlatStyle, type FlatStyleId } from "./map/basemapStyles";
 import type { Layer, MapViewState } from "@deck.gl/core";
@@ -151,7 +152,15 @@ export function DeckGLMap({
     () => loadMapAppearance().styleId ?? "dark"
   );
   // Flight-domain appearance. The route COLOUR lives in the flight-colour
-  // store above (mode + colours); only width / marker settings are local.
+  // store above (mode + colours); only shape / width / marker settings are local.
+  //
+  // The SHAPE (#183) is flat-map-only, which is why it lives here as plain
+  // component state next to the width slider rather than in a shared store like
+  // the colour config: the globe never reads it, and the flat map is the only
+  // renderer that has to know.
+  const [flightRouteShape, setFlightRouteShape] = useState<FlightRouteShape>(() =>
+    loadFlightRouteShape()
+  );
   const [flightRouteWidth, setFlightRouteWidth] = useState<number>(
     () => loadMapAppearance().flightRouteWidth ?? 1
   );
@@ -189,6 +198,7 @@ export function DeckGLMap({
   useEffect(() => {
     saveMapAppearance({
       styleId,
+      flightRouteShape,
       flightRouteWidth,
       airportColor: markerColor,
       flightMarkerSize,
@@ -203,6 +213,7 @@ export function DeckGLMap({
     });
   }, [
     styleId,
+    flightRouteShape,
     flightRouteWidth,
     markerColor,
     flightMarkerSize,
@@ -558,6 +569,7 @@ export function DeckGLMap({
               markerSizeScale: flightMarkerSize,
               arcWidthScale: flightRouteWidth,
               labelsMode,
+              routeShape: flightRouteShape,
             },
             flightColorConfig
           ),
@@ -644,6 +656,7 @@ export function DeckGLMap({
     portColor,
     flightMarkerSize,
     cruiseMarkerSize,
+    flightRouteShape,
     flightRouteWidth,
     cruiseRouteColor,
     cruiseRouteWidth,
@@ -763,6 +776,10 @@ export function DeckGLMap({
             colorConfig: flightColorConfig,
             onColorModeChange: setFlightColorMode,
             onColorChange: setFlightColor,
+            // Flat-map-only (#183) — the globe panel passes neither, so the
+            // shape picker never shows up there.
+            routeShape: flightRouteShape,
+            onRouteShapeChange: setFlightRouteShape,
             routeWidth: flightRouteWidth,
             onRouteWidthChange: setFlightRouteWidth,
             markerColor,

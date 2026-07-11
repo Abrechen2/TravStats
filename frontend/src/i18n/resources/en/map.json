@@ -68,6 +68,17 @@
       "widthNormal": "Normal",
       "widthThick": "Thick",
       "arrows": "Arrows",
+      "routeShape": {
+        "label": "Shape",
+        "arc": {
+          "label": "Arc",
+          "hint": "3D arcs above the map — great from a distance."
+        },
+        "flat": {
+          "label": "Flat",
+          "hint": "Flat on the map like cruise routes — stays readable when zoomed in."
+        }
+      },
       "colorMode": {
         "label": "Colouring",
         "status": {

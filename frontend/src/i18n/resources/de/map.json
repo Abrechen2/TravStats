@@ -68,6 +68,17 @@
       "widthNormal": "Normal",
       "widthThick": "Dick",
       "arrows": "Pfeile",
+      "routeShape": {
+        "label": "Darstellung",
+        "arc": {
+          "label": "Bogen",
+          "hint": "3D-Bögen über der Karte — schön aus der Ferne."
+        },
+        "flat": {
+          "label": "Flach",
+          "hint": "Flach auf der Karte wie Kreuzfahrt-Routen — auch beim Hineinzoomen lesbar."
+        }
+      },
       "colorMode": {
         "label": "Färbung",
         "status": {

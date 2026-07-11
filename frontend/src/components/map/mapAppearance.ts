@@ -16,6 +16,7 @@ import {
   type FlightColorMode,
   type FlightColors,
 } from "../../lib/flightColor";
+import { flightRouteShapeFromStored, type FlightRouteShape } from "../../lib/flightRouteShape";
 
 /** The 6 tokenless basemaps — same id set on the globe and the flat map. */
 export type BasemapId = "standard" | "light" | "dark" | "voyager" | "satellite" | "osm";
@@ -34,6 +35,10 @@ export interface MapAppearance {
    * `flightColorMode` (see `flightColorFromStored`); never written again.
    */
   routeColor?: [number, number, number] | null;
+  /** How flight routes are DRAWN on the flat map (#183): 3D arcs (default) or
+   *  flat on the map surface like cruise routes. Flat-map-only — the globe
+   *  ignores it, so it is deliberately absent from the globe control panel. */
+  flightRouteShape?: FlightRouteShape;
   flightRouteWidth?: number;
   airportColor?: [number, number, number] | null;
   flightMarkerSize?: number;
@@ -154,6 +159,15 @@ export function loadMapAppearance(): MapAppearance {
  */
 export function loadFlightColorConfig(): FlightColorConfig {
   return flightColorFromStored(loadMapAppearance() as unknown as Record<string, unknown>);
+}
+
+/**
+ * The flat map's flight-route SHAPE from the persisted blob (#183). Defaults to
+ * `"arc"` — today's 3D arcs — for every user who has never touched the setting,
+ * and for any unrecognised stored value.
+ */
+export function loadFlightRouteShape(): FlightRouteShape {
+  return flightRouteShapeFromStored(loadMapAppearance() as unknown as Record<string, unknown>);
 }
 
 /** Merge-write: only the given keys change, the rest of the blob is kept. */
