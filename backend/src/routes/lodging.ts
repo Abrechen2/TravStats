@@ -52,6 +52,28 @@ interface RatedStay {
   ratingOverall: number | null;
 }
 
+interface AggregateStayFx {
+  totalPriceBase: number | null;
+  fxBaseCurrency: string | null;
+}
+
+/**
+ * Sums `totalPriceBase` grouped by the currency it was snapshotted into
+ * (`fxBaseCurrency`) — never across currencies. A stay snapshotted before
+ * the user switched their base currency keeps its OLD `fxBaseCurrency` key
+ * here forever (the snapshot itself never gets recalculated), so summing
+ * everything under the CURRENT base currency's label would silently add
+ * amounts that were never actually converted into it (finding 2).
+ */
+function sumSpendBaseByCurrency<T extends AggregateStayFx>(stays: T[]): Record<string, number> {
+  const byCurrency: Record<string, number> = {};
+  for (const s of stays) {
+    if (s.totalPriceBase === null || s.fxBaseCurrency === null) continue;
+    byCurrency[s.fxBaseCurrency] = (byCurrency[s.fxBaseCurrency] ?? 0) + s.totalPriceBase;
+  }
+  return byCurrency;
+}
+
 /** Average of a lodging's stays' ratingOverall (nulls ignored). null when none rated. */
 function deriveOverallRating(stays: RatedStay[]): number | null {
   const rated = stays.map((s) => s.ratingOverall).filter((v): v is number => v !== null);
@@ -64,25 +86,29 @@ function nightsBetween(checkIn: Date, checkOut: Date): number {
   return Math.max(0, Math.round(ms / (24 * 60 * 60 * 1000)));
 }
 
-interface AggregateStay extends RatedStay {
+interface AggregateStay extends RatedStay, AggregateStayFx {
   checkIn: Date;
   checkOut: Date;
-  totalPriceBase: number | null;
 }
 
 interface LodgingAggregates {
   overallRating: number | null;
   stayCount: number;
   nights: number;
+  /** Sum of totalPriceBase for stays whose FX snapshot matches `currentBaseCurrency` — see sumSpendBaseByCurrency. */
   totalSpendBase: number;
+  /** Full per-fxBaseCurrency breakdown (finding 2) — lets the UI show spend snapshotted under a currency the user has since moved away from, instead of silently folding it into totalSpendBase. */
+  totalSpendBaseByCurrency: Record<string, number>;
 }
 
-function computeAggregates(stays: AggregateStay[]): LodgingAggregates {
+function computeAggregates(stays: AggregateStay[], currentBaseCurrency: string): LodgingAggregates {
+  const totalSpendBaseByCurrency = sumSpendBaseByCurrency(stays);
   return {
     overallRating: deriveOverallRating(stays),
     stayCount: stays.length,
     nights: stays.reduce((sum, s) => sum + nightsBetween(s.checkIn, s.checkOut), 0),
-    totalSpendBase: stays.reduce((sum, s) => sum + (s.totalPriceBase ?? 0), 0),
+    totalSpendBase: totalSpendBaseByCurrency[currentBaseCurrency] ?? 0,
+    totalSpendBaseByCurrency,
   };
 }
 
@@ -148,22 +174,51 @@ function buildLodgingWhere(q: LodgingQueryInput, userId: string): Prisma.Lodging
  *
  * Never throws — a failed FX lookup clears the snapshot instead of failing
  * the request, so the user always keeps their stay record.
+ *
+ * Returns a discriminated result rather than collapsing every non-value
+ * outcome into the same all-null `FxSnapshotFields` object (finding 1): a
+ * caller that already has an EXISTING snapshot on file (a PATCH) needs to
+ * tell "the price was explicitly removed — clear it" apart from "the ECB
+ * lookup merely failed for this attempt" for logging/observability, even
+ * though both still resolve to a null snapshot once the inputs themselves
+ * have genuinely changed (see `resolveFxFields` at each call site).
  */
+export type FxSnapshotOutcome =
+  | { status: "priceRemoved" }
+  | { status: "lookupFailed" }
+  | { status: "snapshotted"; fields: FxSnapshotFields };
+
 export async function applyFxSnapshot(
   input: { totalPrice?: number | null; currency?: string | null; checkIn: string | Date },
   baseCurrency: string,
-): Promise<FxSnapshotFields> {
-  if (input.totalPrice == null) return CLEARED_FX;
+): Promise<FxSnapshotOutcome> {
+  if (input.totalPrice == null) return { status: "priceRemoved" };
   const currency = input.currency ?? "EUR";
   const checkInDate = new Date(input.checkIn);
   const conv = await fx.convertToBase(input.totalPrice, currency, baseCurrency, checkInDate);
-  if (conv === null) return CLEARED_FX;
+  if (conv === null) return { status: "lookupFailed" };
   return {
-    totalPriceBase: conv.baseAmount,
-    fxRate: conv.rate,
-    fxRateDate: new Date(conv.rateDate),
-    fxBaseCurrency: baseCurrency,
+    status: "snapshotted",
+    fields: {
+      totalPriceBase: conv.baseAmount,
+      fxRate: conv.rate,
+      fxRateDate: new Date(conv.rateDate),
+      fxBaseCurrency: baseCurrency,
+    },
   };
+}
+
+/**
+ * Resolves an `FxSnapshotOutcome` to the fields a write should apply.
+ * `priceRemoved`/`lookupFailed` both collapse to `CLEARED_FX` here because
+ * both call sites only ever invoke `applyFxSnapshot` once the FX-relevant
+ * inputs have ALREADY been confirmed to differ from what's stored (see
+ * `fxInputsChanged` in the PATCH handler) — at that point a stale snapshot
+ * would misrepresent the NEW price/currency/date, so null is the only
+ * honest value, matching a genuine price removal.
+ */
+function resolveFxFields(outcome: FxSnapshotOutcome): FxSnapshotFields {
+  return outcome.status === "snapshotted" ? outcome.fields : CLEARED_FX;
 }
 
 async function getBaseCurrency(userId: string): Promise<string> {
@@ -219,7 +274,13 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       orderBy: { createdAt: "desc" },
     });
 
-    const rows: LodgingListItem[] = lodgings.map((l) => ({ ...l, ...computeAggregates(l.stays) }));
+    // Fetched ONCE for the whole list — every lodging's totalSpendBase is
+    // filtered against the SAME current base currency (finding 2).
+    const baseCurrency = await getBaseCurrency(userId);
+    const rows: LodgingListItem[] = lodgings.map((l) => ({
+      ...l,
+      ...computeAggregates(l.stays, baseCurrency),
+    }));
     const sorted = sortLodgings(rows, parsed.data.sort);
     const offset = parsed.data.offset ?? 0;
     const limit = parsed.data.limit ?? 200;
@@ -269,7 +330,8 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
       include: { chain: true, stays: { orderBy: { checkIn: "desc" } } },
     });
     if (!lodging) throw new AppError("Lodging not found", 404);
-    res.json({ success: true, data: { ...lodging, ...computeAggregates(lodging.stays) } });
+    const baseCurrency = await getBaseCurrency(userId);
+    res.json({ success: true, data: { ...lodging, ...computeAggregates(lodging.stays, baseCurrency) } });
   } catch (err) {
     next(err);
   }
@@ -293,7 +355,10 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
       include: LODGING_INCLUDE,
     });
     logger.info({ operation: "lodging_create", lodgingId: lodging.id, userId });
-    res.status(201).json({ success: true, data: { ...lodging, ...computeAggregates(lodging.stays) } });
+    const baseCurrency = await getBaseCurrency(userId);
+    res
+      .status(201)
+      .json({ success: true, data: { ...lodging, ...computeAggregates(lodging.stays, baseCurrency) } });
   } catch (err) {
     next(err);
   }
@@ -319,7 +384,8 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       data: { ...input, ...(coords ?? {}) },
       include: LODGING_INCLUDE,
     });
-    res.json({ success: true, data: { ...lodging, ...computeAggregates(lodging.stays) } });
+    const baseCurrency = await getBaseCurrency(userId);
+    res.json({ success: true, data: { ...lodging, ...computeAggregates(lodging.stays, baseCurrency) } });
   } catch (err) {
     next(err);
   }
@@ -352,7 +418,11 @@ router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunc
     const input = parsed.data;
 
     const baseCurrency = await getBaseCurrency(userId);
-    const fxFields = await applyFxSnapshot(input, baseCurrency);
+    const fxOutcome = await applyFxSnapshot(input, baseCurrency);
+    if (fxOutcome.status === "lookupFailed") {
+      logger.warn({ operation: "lodging_fx_lookup_failed", lodgingId: lodging.id, userId });
+    }
+    const fxFields = resolveFxFields(fxOutcome);
 
     const stay = await prisma.lodgingStay.create({
       data: { ...input, ...fxFields, lodgingId: lodging.id, userId },
@@ -394,21 +464,43 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
     }
 
     // Only re-run the FX snapshot when a field that feeds the conversion
-    // actually changed — an unrelated edit (e.g. notes) must not touch a
-    // previously-good snapshot, and must never fail the request either way.
+    // ACTUALLY CHANGED VALUE — an unrelated edit (e.g. notes) must not touch
+    // a previously-good snapshot, and must never fail the request either way.
+    //
+    // This MUST be a value comparison, not a key-presence check ("totalPrice"
+    // in input): the real StayEditor UI always sends checkIn/checkOut/
+    // status/currency/board/isAwardStay unconditionally, re-sending the
+    // stay's EXISTING totalPrice/currency/checkIn on every edit (e.g. a
+    // notes-only edit). A key-presence check would treat every such edit as
+    // "FX inputs changed" and — if the ECB lookup happens to be down at that
+    // moment — silently clear a perfectly good historical snapshot (finding
+    // 1, CRITICAL). Comparing against the CURRENT stored values means a
+    // resend of the same value is correctly seen as "nothing changed".
     const fxInputsChanged =
-      "totalPrice" in input || "currency" in input || "checkIn" in input;
+      (input.totalPrice !== undefined && input.totalPrice !== stay.totalPrice) ||
+      (input.currency !== undefined && input.currency !== stay.currency) ||
+      (input.checkIn !== undefined && new Date(input.checkIn).getTime() !== stay.checkIn.getTime());
     let fxFields: Partial<FxSnapshotFields> = {};
     if (fxInputsChanged) {
       const baseCurrency = await getBaseCurrency(userId);
-      fxFields = await applyFxSnapshot(
+      // `input.totalPrice` can now be an explicit `null` (finding 4 — the
+      // user cleared the price). `??` would treat that null the same as
+      // "not sent" and silently fall back to the OLD stay.totalPrice,
+      // defeating the clear — only an omitted key (undefined) should fall
+      // back to the existing value.
+      const effectiveTotalPrice = input.totalPrice !== undefined ? input.totalPrice : stay.totalPrice;
+      const fxOutcome = await applyFxSnapshot(
         {
-          totalPrice: input.totalPrice ?? stay.totalPrice,
+          totalPrice: effectiveTotalPrice,
           currency: input.currency ?? stay.currency,
           checkIn: input.checkIn ?? stay.checkIn,
         },
         baseCurrency,
       );
+      if (fxOutcome.status === "lookupFailed") {
+        logger.warn({ operation: "lodging_fx_lookup_failed", stayId: stay.id, userId });
+      }
+      fxFields = resolveFxFields(fxOutcome);
     }
 
     const updated = await prisma.lodgingStay.update({

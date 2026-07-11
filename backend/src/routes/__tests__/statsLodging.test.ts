@@ -57,6 +57,10 @@ describe("GET /api/v1/stats/lodging", () => {
         totalPrice: 420,
         currency: "CHF",
         totalPriceBase: 424.45,
+        // A real stay always carries the base currency it was snapshotted
+        // into (routes/lodging.ts applyFxSnapshot) — this test seeds the DB
+        // row directly, so it must set it explicitly to match reality.
+        fxBaseCurrency: "EUR",
       },
     });
 
@@ -85,6 +89,7 @@ describe("GET /api/v1/stats/lodging", () => {
         totalPrice: 900,
         currency: "EUR",
         totalPriceBase: 900,
+        fxBaseCurrency: "EUR",
       },
     });
 
@@ -180,5 +185,77 @@ describe("GET /api/v1/stats/lodging", () => {
         expect(Number.isNaN(value)).toBe(false);
       }
     }
+  });
+
+  describe("spendBaseTotal never mixes currencies after a base-currency switch (finding 2)", () => {
+    let mixedUserId: string;
+    let mixedAuthCookie: string;
+
+    beforeAll(async () => {
+      await prisma.lodgingStay.deleteMany({
+        where: { user: { username: "statslodgingmixed" } },
+      });
+      await prisma.lodging.deleteMany({ where: { user: { username: "statslodgingmixed" } } });
+      await prisma.user.deleteMany({ where: { username: "statslodgingmixed" } });
+
+      const u = await prisma.user.create({
+        data: { username: "statslodgingmixed", passwordHash: await hashPassword("password123") },
+      });
+      mixedUserId = u.id;
+      mixedAuthCookie = `auth_token=${generateToken(u.id)}`;
+      // This user's CURRENT base currency is CHF.
+      await prisma.userSettings.create({
+        data: { userId: mixedUserId, data: {}, baseCurrency: "CHF" },
+      });
+
+      const lodging = await prisma.lodging.create({
+        data: { userId: mixedUserId, name: "Mixed Currency Hotel" },
+      });
+      await prisma.lodgingStay.createMany({
+        data: [
+          {
+            lodgingId: lodging.id,
+            userId: mixedUserId,
+            checkIn: new Date("2023-01-01T00:00:00.000Z"),
+            checkOut: new Date("2023-01-02T00:00:00.000Z"),
+            // Snapshotted back when the user's base currency was still EUR.
+            totalPrice: 100,
+            currency: "EUR",
+            totalPriceBase: 100,
+            fxBaseCurrency: "EUR",
+          },
+          {
+            lodgingId: lodging.id,
+            userId: mixedUserId,
+            checkIn: new Date("2024-06-01T00:00:00.000Z"),
+            checkOut: new Date("2024-06-02T00:00:00.000Z"),
+            // Snapshotted after the switch to CHF.
+            totalPrice: 300,
+            currency: "CHF",
+            totalPriceBase: 300,
+            fxBaseCurrency: "CHF",
+          },
+        ],
+      });
+    });
+
+    afterAll(async () => {
+      await prisma.lodgingStay.deleteMany({ where: { userId: mixedUserId } });
+      await prisma.lodging.deleteMany({ where: { userId: mixedUserId } });
+      await prisma.userSettings.deleteMany({ where: { userId: mixedUserId } });
+      await prisma.user.deleteMany({ where: { id: mixedUserId } });
+    });
+
+    it("sums spendBaseTotal only for the CURRENT base currency and exposes the rest via spendBaseByCurrency", async () => {
+      const res = await request(app)
+        .get("/api/v1/stats/lodging")
+        .set("Cookie", mixedAuthCookie);
+
+      expect(res.status).toBe(200);
+      // Only the CHF-snapshotted stay counts toward the current-base total —
+      // adding the stale EUR snapshot in would give the wrong "400 CHF".
+      expect(res.body.data.spendBaseTotal).toBe(300);
+      expect(res.body.data.spendBaseByCurrency).toEqual({ EUR: 100, CHF: 300 });
+    });
   });
 });

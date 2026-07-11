@@ -147,27 +147,32 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
         checkIn: fromDateInput(checkIn),
         checkOut: fromDateInput(checkOut),
         status,
-        roomNumber: roomNumber.trim() || undefined,
-        roomCategory: roomCategory.trim() || undefined,
+        // `null` (not `undefined`) for every clearable field below — an
+        // omitted key means "leave it alone" to the backend PATCH handler,
+        // while an explicit `null` means "delete this value" (finding 4).
+        // `undefined` would be dropped by JSON.stringify and read back as
+        // "unchanged", so a user could never clear a field once set.
+        roomNumber: roomNumber.trim() || null,
+        roomCategory: roomCategory.trim() || null,
         board,
-        pricePerNight: pricePerNight.trim() ? Number.parseFloat(pricePerNight) : undefined,
+        pricePerNight: pricePerNight.trim() ? Number.parseFloat(pricePerNight) : null,
         currency,
-        totalPrice: totalPrice.trim() ? Number.parseFloat(totalPrice) : undefined,
+        totalPrice: totalPrice.trim() ? Number.parseFloat(totalPrice) : null,
         // MUST reach the payload unconditionally (including `false`, to let
         // an edit turn an award stay back off) — without this, the four
         // POINTS_PRO_* achievements (Task 11) are permanently unreachable.
         isAwardStay,
-        ratingRoom: ratingRoom ?? undefined,
-        ratingBreakfast: ratingBreakfast ?? undefined,
-        ratingService: ratingService ?? undefined,
-        ratingOverall: ratingOverall ?? undefined,
+        ratingRoom,
+        ratingBreakfast,
+        ratingService,
+        ratingOverall,
         roomAmenities,
-        bookingReference: bookingReference.trim() || undefined,
+        bookingReference: bookingReference.trim() || null,
         membershipId: membershipId || null,
-        receiptUrl: receiptUrl ?? undefined,
+        receiptUrl,
         tripId: tripId || null,
         companions: splitCsv(companionsInput),
-        notes: notes.trim() || undefined,
+        notes: notes.trim() || null,
       };
       let saved: LodgingStay;
       if (mode === "create") {

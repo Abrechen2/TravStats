@@ -188,6 +188,43 @@ describe("StayEditor", () => {
     expect(payload.isAwardStay).toBe(false);
   });
 
+  // Finding 4: an emptied field must send an explicit `null`, not `undefined`
+  // (which JSON.stringify drops, reading back on the backend as "unchanged").
+  it("sends null (not undefined) for a cleared roomNumber/totalPrice/notes on edit", async () => {
+    vi.mocked(updateStay).mockResolvedValue({ ...baseStay });
+    const filledStay: LodgingStay = {
+      ...baseStay,
+      roomNumber: "204",
+      totalPrice: 150,
+      notes: "Old notes",
+    };
+
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        stay={filledStay}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("lodging:field.room"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("lodging:field.totalPrice"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("lodging:field.notes"), { target: { value: "" } });
+
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    await waitFor(() => expect(updateStay).toHaveBeenCalled());
+    const [, , payload] = vi.mocked(updateStay).mock.calls[0];
+    expect(payload.roomNumber).toBeNull();
+    expect(payload.totalPrice).toBeNull();
+    expect(payload.notes).toBeNull();
+    expect(payload.roomNumber).not.toBeUndefined();
+    expect(payload.totalPrice).not.toBeUndefined();
+    expect(payload.notes).not.toBeUndefined();
+  });
+
   it("shows a save error and does not call onSaved when checkIn/checkOut are missing", async () => {
     const onSaved = vi.fn();
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={onSaved} />);

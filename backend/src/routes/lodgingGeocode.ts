@@ -41,8 +41,13 @@ export async function resolveUpdatedCoordinates(
   return geo.resolveCoordinates({
     lat: input.lat ?? null,
     lon: input.lon ?? null,
-    address: input.address ?? existing.address,
-    city: input.city ?? existing.city,
-    country: input.country ?? existing.country,
+    // `??` would treat an explicit `null` (the user clearing the field) the
+    // same as "not sent", silently falling back to the STALE existing value
+    // — exactly the bug finding 4 flags for the stay/lodging PATCH handlers.
+    // Only an omitted key (undefined) should fall back; an explicit null
+    // must reach the geocoder as-is.
+    address: input.address !== undefined ? input.address : existing.address,
+    city: input.city !== undefined ? input.city : existing.city,
+    country: input.country !== undefined ? input.country : existing.country,
   });
 }

@@ -281,6 +281,14 @@ export default function LodgingListPage(): JSX.Element {
                     </td>
                     <td className="px-3 py-2 text-right">
                       {formatCurrency(l.totalSpendBase, baseCurrency)}
+                      {hasOtherBaseCurrencySpend(l.totalSpendBaseByCurrency, baseCurrency) && (
+                        <span
+                          className="ml-1 align-super text-[10px] text-[var(--text-muted)]"
+                          title={t("lodging:list.otherCurrencyHint")}
+                        >
+                          *
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -303,4 +311,18 @@ export default function LodgingListPage(): JSX.Element {
       </div>
     </div>
   );
+}
+
+/**
+ * True when this lodging has spend snapshotted under a base currency OTHER
+ * than the user's current one — i.e. `totalSpendBase` (which only counts the
+ * current-base slice) is not the whole picture. Used to render a small,
+ * honest "*" hint rather than silently folding those older amounts in
+ * (finding 2).
+ */
+function hasOtherBaseCurrencySpend(
+  byCurrency: Record<string, number>,
+  currentBaseCurrency: string,
+): boolean {
+  return Object.keys(byCurrency).some((currency) => currency !== currentBaseCurrency);
 }

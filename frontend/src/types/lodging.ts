@@ -109,8 +109,16 @@ export interface Lodging {
   overallRating: number | null;
   stayCount: number;
   nights: number;
-  /** Sum of totalPriceBase across stays (already converted to the user's base currency). */
+  /**
+   * Sum of totalPriceBase across this lodging's stays, but ONLY for the
+   * ones whose FX snapshot matches the user's CURRENT base currency — a
+   * stay snapshotted before a base-currency switch keeps its OLD currency
+   * key in `totalSpendBaseByCurrency` forever and is never silently folded
+   * into this total.
+   */
   totalSpendBase: number;
+  /** Every totalPriceBase amount for this lodging, grouped by the currency it was snapshotted into. */
+  totalSpendBaseByCurrency: Record<string, number>;
 }
 
 // ---- Input shapes ----
@@ -123,14 +131,14 @@ export interface LodgingInput {
   type?: LodgingType;
   name?: string;
   chainId?: number | null;
-  address?: string;
-  city?: string;
-  country?: string;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
   lat?: number | null;
   lon?: number | null;
   stars?: number | null;
   amenities?: string[];
-  notes?: string;
+  notes?: string | null;
 }
 
 export interface StayInput {
@@ -139,23 +147,23 @@ export interface StayInput {
   status?: StayStatus;
   tripId?: string | null;
   bookingId?: string | null;
-  roomNumber?: string;
-  roomCategory?: string;
+  roomNumber?: string | null;
+  roomCategory?: string | null;
   board?: BoardType;
-  pricePerNight?: number;
+  pricePerNight?: number | null;
   currency?: LodgingCurrency;
-  totalPrice?: number;
+  totalPrice?: number | null;
   isAwardStay?: boolean;
-  ratingRoom?: number;
-  ratingBreakfast?: number;
-  ratingService?: number;
-  ratingOverall?: number;
+  ratingRoom?: number | null;
+  ratingBreakfast?: number | null;
+  ratingService?: number | null;
+  ratingOverall?: number | null;
   roomAmenities?: string[];
-  bookingReference?: string;
+  bookingReference?: string | null;
   membershipId?: string | null;
-  receiptUrl?: string;
+  receiptUrl?: string | null;
   companions?: string[];
-  notes?: string;
+  notes?: string | null;
 }
 
 /** Chain creation only — there is no update-chain endpoint. `name` is the one required field. */
@@ -218,10 +226,15 @@ export interface LodgingStats {
   citiesUnique: number;
   countries: string[];
   countriesCount: number;
-  /** Sum of totalPriceBase (already converted to the user's base currency). */
+  /**
+   * Sum of totalPriceBase, but ONLY for stays whose FX snapshot matches the
+   * user's CURRENT base currency — see `spendBaseByCurrency` for the rest.
+   */
   spendBaseTotal: number;
   /** Original amounts grouped by their original currency — not a conversion. */
   spendByCurrency: Record<string, number>;
+  /** Every totalPriceBase amount grouped by the currency it was snapshotted into — includes the current-base slice that also makes up spendBaseTotal. */
+  spendBaseByCurrency: Record<string, number>;
   awardNights: number;
   hotelNights: number;
   campsiteNights: number;
