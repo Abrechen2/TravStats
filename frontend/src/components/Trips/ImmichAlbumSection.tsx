@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { immichApi, immichFailureKind } from "../../lib/api/immich";
+import { failureKey, immichApi, immichFailureKind } from "../../lib/api/immich";
 import { useToastStore } from "../../store/toastStore";
-import type { ImmichFailureKind, ImmichGalleryAsset, LinkedAlbum } from "../../types/immich";
+import type { ImmichGalleryAsset, LinkedAlbum } from "../../types/immich";
 import PhotoLightbox, { type LightboxItem } from "./PhotoLightbox";
 
 const JOB_POLL_MS = 1500;
@@ -24,7 +24,10 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
   const addToast = useToastStore((s) => s.addToast);
 
   const [assets, setAssets] = useState<ImmichGalleryAsset[]>([]);
-  const [failure, setFailure] = useState<ImmichFailureKind | null>(null);
+  // Resolved i18n key (e.g. "errors.auth"), not the bare failure kind — so an
+  // unrecognised kind resolves to "errors.unknown" via failureKey() at the
+  // point of capture rather than being force-fit into "unreachable" here.
+  const [failure, setFailure] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [confirmingUnlink, setConfirmingUnlink] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -53,7 +56,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
       setAssets(data.assets);
     } catch (error) {
       if (!mountedRef.current) return;
-      setFailure(immichFailureKind(error) ?? "unreachable");
+      setFailure(failureKey(immichFailureKind(error)));
     }
   }, [tripId, album.id]);
 
@@ -138,8 +141,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
       if (!mountedRef.current) return;
       startPolling();
     } catch (error) {
-      if (mountedRef.current)
-        addToast("error", t(`errors.${immichFailureKind(error) ?? "unreachable"}`));
+      if (mountedRef.current) addToast("error", t(failureKey(immichFailureKind(error))));
     }
   };
 
@@ -150,8 +152,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
       setConfirmingUnlink(false);
       onChanged();
     } catch (error) {
-      if (mountedRef.current)
-        addToast("error", t(`errors.${immichFailureKind(error) ?? "unreachable"}`));
+      if (mountedRef.current) addToast("error", t(failureKey(immichFailureKind(error))));
     }
   };
 
@@ -215,8 +216,8 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
 
       {failure ? (
         <div className="rounded border border-slate-700 bg-slate-900/60 p-4 text-sm">
-          <p className="text-rose-400">{t(`errors.${failure}`)}</p>
-          {failure !== "notFound" && (
+          <p className="text-rose-400">{t(failure)}</p>
+          {failure !== "errors.notFound" && (
             <button type="button" className="mt-2 underline" onClick={() => void load()}>
               {t("errors.retry")}
             </button>

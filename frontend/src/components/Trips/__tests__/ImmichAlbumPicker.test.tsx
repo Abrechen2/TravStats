@@ -9,10 +9,22 @@ const { listAlbums, estimateImport, linkAlbums } = vi.hoisted(() => ({
   estimateImport: vi.fn(),
   linkAlbums: vi.fn(),
 }));
+const KNOWN_FAILURE_KINDS = [
+  "notConfigured",
+  "unreachable",
+  "auth",
+  "notFound",
+  "protocol",
+  "invalidUrl",
+];
 vi.mock("../../../lib/api/immich", () => ({
   immichApi: { listAlbums, estimateImport, linkAlbums },
   immichFailureKind: (e: unknown) =>
     (e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? null,
+  failureKey: (kind: unknown) =>
+    typeof kind === "string" && KNOWN_FAILURE_KINDS.includes(kind)
+      ? `errors.${kind}`
+      : "errors.unknown",
 }));
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -162,6 +174,16 @@ describe("ImmichAlbumPicker", () => {
     listAlbums.mockRejectedValue({ response: { data: { error: "notConfigured" } } });
     renderPicker();
     await waitFor(() => expect(screen.getByText("errors.notConfigured")).toBeInTheDocument());
+  });
+
+  // An unrecognised backend failure kind must degrade to the neutral
+  // "errors.unknown" panel — never "errors.unreachable", which would falsely
+  // assert a network failure that was never established.
+  it("renders errors.unknown (not errors.unreachable) for an unrecognised failure kind", async () => {
+    listAlbums.mockRejectedValue({ response: { data: { error: "brand-new-kind" } } });
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("errors.unknown")).toBeInTheDocument());
+    expect(screen.queryByText("errors.unreachable")).not.toBeInTheDocument();
   });
 
   it("shows an empty state when Immich has no albums", async () => {

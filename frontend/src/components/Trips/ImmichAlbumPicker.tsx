@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { immichApi, immichFailureKind } from "../../lib/api/immich";
-import type { ImmichAlbumSummary, ImmichFailureKind, ImmichMode } from "../../types/immich";
+import { failureKey, immichApi, immichFailureKind } from "../../lib/api/immich";
+import type { ImmichAlbumSummary, ImmichMode } from "../../types/immich";
 
 const UNITS = ["B", "KB", "MB", "GB", "TB"] as const;
 
@@ -34,7 +34,10 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
   const [albums, setAlbums] = useState<ImmichAlbumSummary[]>([]);
   const [defaultMode, setDefaultMode] = useState<ImmichMode>("link");
   const [selected, setSelected] = useState<Record<string, Selection>>({});
-  const [failure, setFailure] = useState<ImmichFailureKind | null>(null);
+  // Resolved i18n key (e.g. "errors.auth"), not the bare failure kind — so an
+  // unrecognised kind resolves to "errors.unknown" via failureKey() at the
+  // point of capture rather than being force-fit into "unreachable" here.
+  const [failure, setFailure] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [linking, setLinking] = useState(false);
 
@@ -47,7 +50,7 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
         setAlbums(data.albums);
         setDefaultMode(data.defaultMode);
       } catch (error) {
-        if (!cancelled) setFailure(immichFailureKind(error) ?? "unreachable");
+        if (!cancelled) setFailure(failureKey(immichFailureKind(error)));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -110,7 +113,7 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
       onLinked();
       onClose();
     } catch (error) {
-      setFailure(immichFailureKind(error) ?? "unreachable");
+      setFailure(failureKey(immichFailureKind(error)));
     } finally {
       setLinking(false);
     }
@@ -123,7 +126,7 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
       <div className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-lg bg-slate-900 p-4">
         <h2 className="mb-3 text-lg font-semibold">{t("albums.pickerTitle")}</h2>
 
-        {failure && <p className="text-sm text-rose-400">{t(`errors.${failure}`)}</p>}
+        {failure && <p className="text-sm text-rose-400">{t(failure)}</p>}
         {!loading && !failure && albums.length === 0 && (
           <p className="text-sm text-slate-400">{t("albums.empty")}</p>
         )}
