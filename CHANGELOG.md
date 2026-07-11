@@ -26,6 +26,8 @@ switch that keeps unfinished features out of sight until they are ready.
   default and can be revealed instance-wide by an administrator. On a fresh
   install this hides the POI dashboard tab, the Devices settings page and the
   trip AI summary.
+- **The profile picture can be removed.** A Remove button next to the file
+  picker deletes the stored picture; the initial-letter avatar returns.
 
 ### Fixed
 - **Cruise port names with non-English characters render correctly** (#185).
@@ -45,6 +47,21 @@ switch that keeps unfinished features out of sight until they are ready.
   Antarctica (which made Svalbard flights unlock an Antarctica badge) and
   Australia as Asia. Badges that no longer qualify are now revoked instead of
   staying unlocked forever.
+- **Direction arrows on out-and-back cruise routes no longer stack into an "X".**
+  When the same water is sailed in both directions (there and back on one
+  route), the two midpoint arrows landed on exactly the same spot. They now
+  flank the midpoint, each pointing in its own direction of travel. Arrows also
+  render sharp at every size — they were rasterised at their native size and
+  went blurry when scaled up on high-DPI screens.
+- **The admin instance-settings form no longer resets while you type** (#190).
+  Every keystroke re-triggered the form's initial load, which overwrote the
+  input with the server's values — editing the public URL was impossible. The
+  underlying cause (an unstable translation-function identity re-firing
+  effects on every render) is fixed app-wide.
+- **Uploading a profile picture no longer ends in "Not found".** The web
+  server's static-asset cache rule intercepted API URLs ending in an image
+  extension, so the freshly uploaded picture 404'd before the request ever
+  reached the backend. Image receipts were affected by the same rule.
 
 ### Changed — please read before updating
 - **Flight colouring:** existing settings migrate to **Status** mode. The
