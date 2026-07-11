@@ -120,6 +120,14 @@ export interface SettingsState {
   cruise: CruiseSettings;
   apiKeys: ApiKeysStatus | null;
   enabledDomains: DomainKey[];
+  /**
+   * Instance-level beta gate, mirrored read-only from `GET /settings`.
+   * `null` = not loaded yet → consumers must treat it as OFF (see
+   * `hooks/useBetaFeatures.ts`). There is deliberately no setter and it is
+   * never persisted or sent back: only an admin can change it, through
+   * `PUT /admin/instance-settings`.
+   */
+  betaFeaturesEnabled: boolean | null;
   setProfile: SettingsUpdater<ProfileSettings>;
   setDisplay: SettingsUpdater<DisplaySettings>;
   setUnits: SettingsUpdater<UnitsSettings>;
@@ -219,6 +227,7 @@ const defaultSettings: Omit<
   },
   apiKeys: null,
   enabledDomains: ["flight"],
+  betaFeaturesEnabled: null,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -351,6 +360,13 @@ export const useSettingsStore = create<SettingsState>()(
                 );
                 newState.enabledDomains = filtered;
               }
+              // Instance-level, read-only. Anything that isn't an explicit
+              // `true`/`false` (missing field, older backend) stays `null` =
+              // gate closed.
+              newState.betaFeaturesEnabled =
+                typeof remote.betaFeaturesEnabled === "boolean"
+                  ? remote.betaFeaturesEnabled
+                  : null;
               return newState;
             });
           }
@@ -412,11 +428,20 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "settings-storage",
+      // The beta gate is instance state, not user state: never persist it.
+      // A cached `true` in localStorage would let a hidden feature flash into
+      // view on production before the first /settings response lands.
+      partialize: (state) => {
+        const { betaFeaturesEnabled: _beta, ...rest } = state;
+        return rest as unknown as Record<string, unknown>;
+      },
       // Strip removed fields from persisted state so stale localStorage doesn't crash the app
       migrate: (persisted: unknown) => {
         const s = { ...(persisted as Record<string, unknown>) };
         delete s["privacy"];
         delete s["backup"];
+        // Drop any value written before `partialize` existed.
+        delete s["betaFeaturesEnabled"];
         return s;
       },
     }
