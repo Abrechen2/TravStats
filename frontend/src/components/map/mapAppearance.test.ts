@@ -45,11 +45,12 @@ describe("loadFlightColorConfig — migrating an existing user's localStorage", 
     window.localStorage.clear();
   });
 
-  it("an existing user on the frequency palette (routeColor: null) lands in frequency mode", () => {
+  it("an existing user with routeColor: null lands in status mode (it was written on every mount, never a deliberate pick)", () => {
     window.localStorage.setItem(KEY, JSON.stringify({ styleId: "dark", routeColor: null }));
     const cfg = loadFlightColorConfig();
-    expect(cfg.mode).toBe("frequency");
-    expect(cfg.colors.frequency).toEqual(DEFAULT_FLIGHT_COLORS.frequency);
+    expect(cfg.mode).toBe("status");
+    expect(cfg.colors.past).toEqual(DEFAULT_FLIGHT_COLORS.past);
+    expect(cfg.colors.upcoming).toEqual(DEFAULT_FLIGHT_COLORS.upcoming);
   });
 
   it("an existing user with a picked colour lands in solid mode with that colour", () => {

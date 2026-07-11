@@ -224,10 +224,25 @@ export function rgbCss(c: Rgb): string {
 
 // ── localStorage migration ───────────────────────────────────────────────
 // Pre-mode blobs carried a single `routeColor` field:
-//   null      → the frequency heatmap was active
-//   <rgb>     → a single solid tint was active
+//   null      → no colour was ever picked (DeckGLMap wrote this on EVERY
+//               mount, so it says nothing about intent — see below)
+//   <rgb>     → the user deliberately picked a single solid tint
 //   (absent)  → the user never touched it
-// Map each forward so nobody's map changes under them without reason.
+//
+// `null` maps to "status", NOT "frequency", even though `null` used to mean
+// "the frequency heatmap is active". Reason: `routeColor: null` was written
+// unconditionally on every DeckGLMap mount, so virtually every existing user
+// has it — the "key absent" branch below was effectively dead. And the view
+// those users actually see today, the multi-domain "Alle" dashboard, never
+// looked at `routeColor` in the first place: a hard `statusTwoTone` override
+// forced flown routes orange / planned routes coral regardless of what was
+// stored. Migrating `null` to "status" keeps that view looking the same.
+// The trade-off: the flight-only view DID honour the frequency palette for
+// `routeColor: null`, and those users will see status colours instead after
+// this migration. That's the lesser evil — nobody ever *chose* the frequency
+// ramp there, it was just the default, and "Alle" is where most users land.
+// There is no migration that preserves both views' current look, because the
+// two views rendered the same stored state differently.
 
 function isRgb(v: unknown): v is Rgb {
   return (
@@ -267,7 +282,7 @@ export function flightColorFromStored(raw: Record<string, unknown>): FlightColor
     return { mode: "solid", colors: { ...DEFAULT_FLIGHT_COLORS, solid: raw.routeColor } };
   }
   if ("routeColor" in raw && raw.routeColor === null) {
-    return { mode: "frequency", colors: DEFAULT_FLIGHT_COLORS };
+    return { mode: "status", colors: DEFAULT_FLIGHT_COLORS };
   }
   return DEFAULT_FLIGHT_COLOR_CONFIG;
 }
