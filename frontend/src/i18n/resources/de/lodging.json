@@ -184,6 +184,7 @@
       "commit": "Übernehmen",
       "commitError": "Import konnte nicht übernommen werden"
     },
+    "matchedLodgingHint": "Diese Zeile wird mit einem vorhandenen Hotel verknüpft — Name und Ort können hier nicht geändert werden.",
     "fields": {
       "name": "Name",
       "city": "Ort",

@@ -44,20 +44,43 @@ function toEditableRow(row: LodgingImportPreviewRow): EditableRow {
 }
 
 /**
- * Every row's lodging/stay fields are editable regardless of which of the
- * "3 real shapes" (spec: types/lodgingImport.ts) the candidate started as —
- * e.g. a stays-only row whose free-text name failed to match (`needs_input`,
- * `unresolvable_lodging_name`) can be turned into a brand-new lodging by
- * filling in its city, which the commit service (`lodgingImportCommit.ts`)
- * happily accepts: it only reads `row.lodging` when `matchedLodgingId` is
- * still unset. These two helpers lazily create the missing half on first
- * edit instead of leaving the field disabled.
+ * An UNMATCHED row's lodging/stay fields are editable regardless of which of
+ * the "3 real shapes" (spec: types/lodgingImport.ts) the candidate started
+ * as — e.g. a stays-only row whose free-text name failed to match
+ * (`needs_input`, `unresolvable_lodging_name`) can be turned into a
+ * brand-new lodging by filling in its city, which the commit service
+ * (`lodgingImportCommit.ts`) happily accepts: it only reads `row.lodging`
+ * when `matchedLodgingId` is still unset. These two helpers lazily create
+ * the missing half on first edit instead of leaving the field disabled.
+ *
+ * A MATCHED row (`matchedLodgingId` already set) is the opposite case: the
+ * commit service never reads `row.lodging` for it (it attaches a stay to the
+ * existing lodging instead), so `PreviewRowLine` renders its name/city as
+ * read-only rather than let the user edit a value that would be silently
+ * discarded on commit.
  */
 function ensureLodging(row: EditableRow, name: string): NonNullable<EditableRow["lodging"]> {
   return row.lodging ?? { name };
 }
 function ensureStay(row: EditableRow): NonNullable<EditableRow["stay"]> {
   return row.stay ?? { checkIn: "", checkOut: "" };
+}
+
+/**
+ * Parses the raw string from the total-price `<input type="number">` into a
+ * finite number or `null`. `??`/a plain falsy check does not catch `NaN`
+ * (`NaN ?? 0` is still `NaN`) — without `Number.isFinite`, a malformed entry
+ * would silently store `NaN` and echo "NaN" back into this controlled
+ * input. Exported standalone (rather than inlined in the `onChange`) so it
+ * can be unit-tested directly: jsdom (and real browsers) sanitize an
+ * invalid `type="number"` DOM value to `""` before a change event ever
+ * fires, so a DOM-level test cannot actually drive a non-numeric string
+ * through `e.target.value`.
+ */
+export function parseTotalPriceInput(raw: string): number | null {
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
 }
 
 /**
@@ -97,11 +120,15 @@ export function LodgingImportPreviewModal({
   const canCommit = counts.needsInput === 0 && !saving;
 
   const handleCommit = useCallback(async (): Promise<void> => {
-    // `saving` is flipped synchronously before the first await, and the
-    // commit button is disabled while `saving` is true — a double-click
-    // can queue at most one extra synchronous click before React re-renders
-    // with `disabled`, and that second click is a no-op because `canCommit`
-    // is re-evaluated from the same `saving` flag.
+    // The real double-commit guard is the native `disabled` attribute on the
+    // commit button below: `setSaving(true)` re-renders synchronously, so
+    // `disabled` is already true before the browser can dispatch a second
+    // click, and a disabled button never fires `click` at all. `canCommit`
+    // here is just this closure's snapshot from render time (captured via
+    // the `useCallback` dependency array below) — it is NOT re-evaluated on
+    // a second click. The check below is a defensive fallback for the case
+    // where `handleCommit` is invoked some other way that bypasses the DOM
+    // `disabled` state (e.g. a directly dispatched click).
     if (!canCommit) return;
     setSaving(true);
     setError(null);
@@ -117,8 +144,11 @@ export function LodgingImportPreviewModal({
         }));
       await onCommit(payload);
     } catch (err) {
+      // Log the real error for diagnostics, but never surface the raw
+      // thrown message to the user — it may be untranslated/English and can
+      // leak internal detail. Always show the fixed, translated string.
       logger.error("LodgingImportPreviewModal: commit failed", err);
-      setError(err instanceof Error ? err.message : t("lodging:import.preview.commitError"));
+      setError(t("lodging:import.preview.commitError"));
     } finally {
       setSaving(false);
     }
@@ -218,6 +248,15 @@ function PreviewRowLine({ row, onChange, t }: PreviewRowLineProps): JSX.Element 
   // the dedupe hint whenever a match exists, independent of the chosen
   // action, so the user is never told a hotel will be added when it won't.
   const showDedupeHint = row.dedupeHint !== "none";
+  // A matched row attaches its stay to the EXISTING lodging on commit — the
+  // commit service never reads `row.lodging` for it (lodgingImportCommit.ts:
+  // `if (!lodgingId && row.lodging)`). Editing name/city here would look
+  // saved but be silently discarded, so these two fields render read-only
+  // instead of as editable inputs. Note `matchedLodgingId` can be set with
+  // `dedupeHint === "none"` (the stays-only by-name join never sets a
+  // dedupe hint), so this must be its own check, not derived from
+  // `showDedupeHint`.
+  const isMatched = row.matchedLodgingId !== null;
 
   return (
     <tr
@@ -228,32 +267,59 @@ function PreviewRowLine({ row, onChange, t }: PreviewRowLineProps): JSX.Element 
       }
     >
       <td className="p-2">
-        <input
-          data-testid={`lodging-import-name-${sourceRowIndex}`}
-          value={name}
-          onChange={(e): void =>
-            onChange(sourceRowIndex, {
-              // Immutable: a NEW lodging object, never a mutation of the prop.
-              lodging: row.lodging ? { ...row.lodging, name: e.target.value } : null,
-              lodgingName: e.target.value,
-            })
-          }
-          aria-label={t("lodging:import.fields.name")}
-          className={INPUT}
-        />
+        {isMatched ? (
+          <div>
+            <div
+              data-testid={`lodging-import-name-${sourceRowIndex}`}
+              aria-label={t("lodging:import.fields.name")}
+              title={t("lodging:import.matchedLodgingHint")}
+              className={`${INPUT} cursor-not-allowed truncate text-[var(--text-muted)]`}
+            >
+              {name}
+            </div>
+            <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+              {t("lodging:import.matchedLodgingHint")}
+            </p>
+          </div>
+        ) : (
+          <input
+            data-testid={`lodging-import-name-${sourceRowIndex}`}
+            value={name}
+            onChange={(e): void =>
+              onChange(sourceRowIndex, {
+                // Immutable: a NEW lodging object, never a mutation of the prop.
+                lodging: row.lodging ? { ...row.lodging, name: e.target.value } : null,
+                lodgingName: e.target.value,
+              })
+            }
+            aria-label={t("lodging:import.fields.name")}
+            className={INPUT}
+          />
+        )}
       </td>
       <td className="p-2">
-        <input
-          data-testid={`lodging-import-city-${sourceRowIndex}`}
-          value={row.lodging?.city ?? ""}
-          onChange={(e): void =>
-            onChange(sourceRowIndex, {
-              lodging: { ...ensureLodging(row, name), city: e.target.value },
-            })
-          }
-          aria-label={t("lodging:import.fields.city")}
-          className={INPUT}
-        />
+        {isMatched ? (
+          <div
+            data-testid={`lodging-import-city-${sourceRowIndex}`}
+            aria-label={t("lodging:import.fields.city")}
+            title={t("lodging:import.matchedLodgingHint")}
+            className={`${INPUT} cursor-not-allowed truncate text-[var(--text-muted)]`}
+          >
+            {row.lodging?.city ?? ""}
+          </div>
+        ) : (
+          <input
+            data-testid={`lodging-import-city-${sourceRowIndex}`}
+            value={row.lodging?.city ?? ""}
+            onChange={(e): void =>
+              onChange(sourceRowIndex, {
+                lodging: { ...ensureLodging(row, name), city: e.target.value },
+              })
+            }
+            aria-label={t("lodging:import.fields.city")}
+            className={INPUT}
+          />
+        )}
       </td>
       <td className="p-2">
         <input
@@ -292,10 +358,7 @@ function PreviewRowLine({ row, onChange, t }: PreviewRowLineProps): JSX.Element 
           value={row.stay?.totalPrice ?? ""}
           onChange={(e): void =>
             onChange(sourceRowIndex, {
-              stay: {
-                ...ensureStay(row),
-                totalPrice: e.target.value ? Number(e.target.value) : null,
-              },
+              stay: { ...ensureStay(row), totalPrice: parseTotalPriceInput(e.target.value) },
             })
           }
           aria-label={t("lodging:import.fields.totalPrice")}

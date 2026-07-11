@@ -191,6 +191,34 @@ describe("buildLodgingCandidates", () => {
     expect(result.candidates[0].lodging?.name).toBe("Real Hotel");
     expect(result.rowErrors).toHaveLength(1);
   });
+
+  it("emits globally unique sourceRowIndex values across a file, even with dropped rows", () => {
+    // sourceRowIndex is what the preview modal's updateRow (Task 15) keys
+    // edits by — if two candidates ever shared an index, one user edit
+    // would patch two rows. buildLodgingCandidates derives sourceRowIndex
+    // directly from Array.forEach's native index over the full `records`
+    // array (never a second counter it could desync from), so this holds
+    // even when earlier rows are dropped (empty name / bad dates) and the
+    // candidates array is shorter than `records`.
+    const csv = [
+      "Name,Ort",
+      ",Berlin", // dropped: empty name
+      "Hotel A,Berlin",
+      "Hotel B,Hamburg",
+      "Hotel C,Munich",
+    ].join("\n");
+    const mapping: LodgingCsvMapping = { name: "Name", city: "Ort" };
+
+    const result = buildLodgingCandidates(parseCsv(csv), mapping);
+
+    expect(result.rowErrors).toHaveLength(1); // the dropped row
+    expect(result.candidates).toHaveLength(3);
+    const indexes = result.candidates.map((c) => c.sourceRowIndex);
+    expect(new Set(indexes).size).toBe(indexes.length);
+    // Not renumbered post-drop — still the original 1/2/3 positions in the
+    // source file, so a sourceRowIndex always points back at the right row.
+    expect(indexes).toEqual([1, 2, 3]);
+  });
 });
 
 describe("buildLodgingCandidates: garbage coordinates never fabricate 0,0", () => {
