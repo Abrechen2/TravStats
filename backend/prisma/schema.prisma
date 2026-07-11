@@ -52,6 +52,7 @@ model User {
   lodgings             Lodging[]
   lodgingStays         LodgingStay[]
   lodgingMemberships   LodgingMembership[]
+  lodgingImportBatches LodgingImportBatch[]
 
   @@map("users")
 }
@@ -960,16 +961,21 @@ model Lodging {
   amenities     String[] @default([])
   notes         String?
   dataSource    String?  @map("data_source") // parser | manual | enriched
+  externalRef   String?  @map("external_ref") // e.g. "google:ChIJd8BlQ2Bo5kcRAFTLmuLK8bA"
+  batchId       String?  @map("batch_id")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chain LodgingChain? @relation(fields: [chainId], references: [id], onDelete: SetNull)
+  user  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chain LodgingChain?       @relation(fields: [chainId], references: [id], onDelete: SetNull)
+  batch LodgingImportBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
   stays LodgingStay[]
 
+  @@unique([userId, externalRef])
   @@index([userId])
   @@index([userId, type])
   @@index([chainId])
+  @@index([batchId])
   @@map("lodgings")
 }
 
@@ -1006,21 +1012,26 @@ model LodgingStay {
   parserTemplate   String?   @map("parser_template")
   parserConfidence Int?      @map("parser_confidence")
   dataSource       String?   @map("data_source")
+  externalRef      String?   @map("external_ref") // e.g. "booking:5087376273"
+  batchId          String?   @map("batch_id")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  lodging    Lodging            @relation(fields: [lodgingId], references: [id], onDelete: Cascade)
-  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trip       Trip?              @relation(fields: [tripId], references: [id], onDelete: SetNull)
-  booking    Booking?           @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  membership LodgingMembership? @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  lodging    Lodging             @relation(fields: [lodgingId], references: [id], onDelete: Cascade)
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip       Trip?               @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking    Booking?            @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  membership LodgingMembership?  @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  batch      LodgingImportBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
 
+  @@unique([userId, externalRef])
   @@index([lodgingId])
   @@index([userId, checkIn])
   @@index([status])
   @@index([tripId])
   @@index([bookingId])
   @@index([membershipId])
+  @@index([batchId])
   @@map("lodging_stays")
 }
 
@@ -1052,4 +1063,21 @@ model LodgingMembership {
   @@unique([userId, programName])
   @@index([userId])
   @@map("lodging_memberships")
+}
+
+/// One import run (CSV file, e-mail or PDF). Every row it created carries its
+/// id, so a 232-row import that turns out wrong is revertible as a unit.
+model LodgingImportBatch {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  source    String // csv | email | pdf
+  fileName  String?  @map("file_name")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lodgings Lodging[]
+  stays    LodgingStay[]
+
+  @@index([userId])
+  @@map("lodging_import_batches")
 }
