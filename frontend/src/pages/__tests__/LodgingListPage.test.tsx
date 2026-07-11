@@ -22,8 +22,7 @@ const defaultStats: LodgingStats = {
   spendByCurrency: { EUR: 883 },
   spendBaseByCurrency: { EUR: 883 },
   awardNights: 0,
-  hotelNights: 2,
-  campsiteNights: 0,
+  nightsByType: { hotel: 2 },
   avgRatingOverall: null,
   chainLoyaltyMax: 0,
   sameHotelRepeatMax: 1,
@@ -191,6 +190,18 @@ describe("LodgingListPage", () => {
     });
     const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
     expect(row?.querySelector('[title="lodging:list.otherCurrencyHint"]')).not.toBeInTheDocument();
+  });
+
+  it("offers all five lodging types (plus 'all') in the type filter", async () => {
+    listLodgingsMock.mockResolvedValue([]);
+
+    renderListPage();
+
+    const select = (await screen.findByLabelText(
+      "lodging:filter.type"
+    )) as HTMLSelectElement;
+    const values = Array.from(select.options).map((o) => o.value);
+    expect(values).toEqual(["all", "hotel", "campsite", "guesthouse", "apartment", "hostel"]);
   });
 
   it("passes the active type/year/country filters and sort as query params to listLodgings", async () => {

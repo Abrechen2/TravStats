@@ -8,7 +8,7 @@
 //
 // Dates cross the wire as ISO strings, never `Date` objects.
 
-export type LodgingType = "hotel" | "campsite";
+export type LodgingType = "hotel" | "campsite" | "guesthouse" | "apartment" | "hostel";
 export type BoardType = "none" | "breakfast" | "half" | "full" | "all_inclusive";
 export type StayStatus = "scheduled" | "completed" | "cancelled";
 export type LodgingCurrency = "EUR" | "USD" | "GBP" | "CHF";
@@ -261,8 +261,8 @@ export interface LodgingStats {
   /** Every totalPriceBase amount grouped by the currency it was snapshotted into — includes the current-base slice that also makes up spendBaseTotal. */
   spendBaseByCurrency: Record<string, number>;
   awardNights: number;
-  hotelNights: number;
-  campsiteNights: number;
+  /** Nights broken down by lodging type (hotel/campsite/guesthouse/apartment/hostel/…). A type with zero nights has no key at all. */
+  nightsByType: Record<string, number>;
   avgRatingOverall: number | null;
   chainLoyaltyMax: number;
   sameHotelRepeatMax: number;

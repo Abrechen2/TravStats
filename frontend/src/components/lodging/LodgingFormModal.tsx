@@ -6,7 +6,7 @@ import type { Lodging, LodgingChain, LodgingInput, LodgingType } from "../../typ
 import { logger } from "../../lib/logger";
 import { ChainPicker } from "./ChainPicker";
 
-const LODGING_TYPES: LodgingType[] = ["hotel", "campsite"];
+const LODGING_TYPES: LodgingType[] = ["hotel", "campsite", "guesthouse", "apartment", "hostel"];
 
 interface LodgingFormModalProps {
   mode: "create" | "edit";

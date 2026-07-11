@@ -16,6 +16,7 @@ import {
   averageRatingsByCategory,
   formatRatingText,
   hasAnyPrice,
+  lodgingTypeIcon,
   singleOriginalCurrencySpend,
 } from "../lib/lodgingFormat";
 import { logger } from "../lib/logger";
@@ -144,7 +145,7 @@ export default function LodgingDetailPage(): JSX.Element {
     );
   }
 
-  const typeIcon = lodging.type === "campsite" ? "⛺" : "🏨";
+  const typeIcon = lodgingTypeIcon(lodging.type);
   const addressLine = [lodging.address, lodging.city, lodging.country].filter(Boolean).join(", ");
   const priced = hasAnyPrice(lodging.stays);
   const avgPerNight = lodging.nights > 0 ? lodging.totalSpendBase / lodging.nights : null;

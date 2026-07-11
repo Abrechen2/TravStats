@@ -9,7 +9,7 @@ import { ChainNameLink } from "../components/lodging/ChainNameLink";
 import { useTranslation } from "../hooks/useTranslation";
 import { getLodgingStats, listLodgings } from "../lib/api/lodging";
 import { formatCurrency } from "../lib/units";
-import { hasAnyPrice, singleOriginalCurrencySpend } from "../lib/lodgingFormat";
+import { hasAnyPrice, lodgingTypeIcon, singleOriginalCurrencySpend } from "../lib/lodgingFormat";
 import { FlagImg, resolveCountryCode } from "../lib/countryFlag";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
@@ -20,7 +20,7 @@ type YearFilter = number | "all";
 type CountryFilter = string | "all";
 type SortKey = NonNullable<LodgingListQuery["sort"]>;
 
-const TYPES: LodgingType[] = ["hotel", "campsite"];
+const TYPES: LodgingType[] = ["hotel", "campsite", "guesthouse", "apartment", "hostel"];
 const SORT_KEYS: SortKey[] = ["name", "nights", "rating", "spend"];
 
 export default function LodgingListPage(): JSX.Element {
@@ -277,7 +277,7 @@ export default function LodgingListPage(): JSX.Element {
                   >
                     <td className="px-3 py-2">
                       <span aria-hidden className="mr-2">
-                        {l.type === "campsite" ? "⛺" : "🏨"}
+                        {lodgingTypeIcon(l.type)}
                       </span>
                       <span className="font-medium text-[var(--text-primary)]">{l.name}</span>
                     </td>

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { receiptUrlValidator } from "./receiptUrl";
 
-export const LODGING_TYPES = ["hotel", "campsite"] as const;
+export const LODGING_TYPES = ["hotel", "campsite", "guesthouse", "apartment", "hostel"] as const;
 export const BOARD_TYPES = [
   "none",
   "breakfast",

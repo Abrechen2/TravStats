@@ -55,8 +55,16 @@ export interface LodgingStats {
   /** Every totalPriceBase amount grouped by the currency it was snapshotted into — the full picture behind spendBaseTotal's single current-base slice. */
   spendBaseByCurrency: Record<string, number>;
   awardNights: number;
-  hotelNights: number;
-  campsiteNights: number;
+  /**
+   * Nights broken down by `Lodging.type` (hotel/campsite/guesthouse/apartment/
+   * hostel/…). A plain `Record` rather than named `hotelNights`/`campsiteNights`
+   * fields — the vocabulary grows over time (see `LODGING_TYPES` in
+   * schemas/lodging.ts) and a fixed field per type would need a matching edit
+   * here every time. Keys are whatever `LodgingStayData.type` values are
+   * actually present in the input; a type with zero nights has no key at all
+   * (never a `0` entry).
+   */
+  nightsByType: Record<string, number>;
   avgRatingOverall: number | null;
   chainLoyaltyMax: number;
   sameHotelRepeatMax: number;
@@ -95,14 +103,13 @@ export function calculateLodgingStats(
   const nightsByMonth: Record<string, number> = {};
   const spendByCurrency: Record<string, number> = {};
   const spendBaseByCurrency: Record<string, number> = {};
+  const nightsByType: Record<string, number> = {};
   const lodgingCounts = new Map<string, number>();
   const chainCounts = new Map<number, number>();
 
   let totalNights = 0;
   let longestStayNights = 0;
   let awardNights = 0;
-  let hotelNights = 0;
-  let campsiteNights = 0;
   let ratingSum = 0;
   let ratingCount = 0;
 
@@ -145,8 +152,9 @@ export function calculateLodgingStats(
     if (stayNights > longestStayNights) longestStayNights = stayNights;
 
     if (stay.isAwardStay) awardNights += stayNights;
-    if (stay.type === "hotel") hotelNights += stayNights;
-    if (stay.type === "campsite") campsiteNights += stayNights;
+    if (stayNights > 0) {
+      nightsByType[stay.type] = (nightsByType[stay.type] ?? 0) + stayNights;
+    }
   }
 
   let chainLoyaltyMax = 0;
@@ -189,8 +197,7 @@ export function calculateLodgingStats(
     spendByCurrency,
     spendBaseByCurrency,
     awardNights,
-    hotelNights,
-    campsiteNights,
+    nightsByType,
     avgRatingOverall:
       ratingCount > 0 ? Math.round((ratingSum / ratingCount) * 10) / 10 : null,
     chainLoyaltyMax,
