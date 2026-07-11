@@ -1,17 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { immichApi, immichFailureKind, isImmichFailureKind } from "../../lib/api/immich";
+import { failureKey, immichApi, immichFailureKind } from "../../lib/api/immich";
 import type { ImmichConnectionStatus, ImmichMode, ImmichTestResult } from "../../types/immich";
-
-/**
- * Resolve a failure kind to its localized i18n key. An unknown/absent kind
- * (e.g. a future backend value, or a validation error carrying no kind) falls
- * back to a NEUTRAL generic string — never `unreachable`, which would assert a
- * network claim the app has not established, and never the raw backend prose.
- */
-function failureKey(kind: unknown): string {
-  return isImmichFailureKind(kind) ? `errors.${kind}` : "errors.unknown";
-}
 
 /**
  * User-facing Immich connection settings.
