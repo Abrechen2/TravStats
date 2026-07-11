@@ -8,6 +8,15 @@
 // with different labels + ranges.
 
 import { useTranslation } from "../../hooks/useTranslation";
+import type { Rgb } from "../../lib/cruiseColor";
+import {
+  FLIGHT_COLOR_MODES,
+  FLIGHT_COLOR_PRESETS,
+  rgbCss,
+  type FlightColorConfig,
+  type FlightColorMode,
+  type FlightColorSlot,
+} from "../../lib/flightColor";
 
 // ── Design tokens ────────────────────────────────────────────────────
 export const ACCENT = "240,169,71"; // amber — the app's primary action colour
@@ -400,6 +409,201 @@ export function AppearanceSection({
           format={(v) => (v <= 0 ? t("map:globe.panel.off") : `${v.toFixed(1)}×`)}
         />
       )}
+    </div>
+  );
+}
+
+// ── Flight appearance section ────────────────────────────────────────
+// Flights get their own section (cruises keep the generic one above) because
+// their colouring is an explicit MODE — status / frequency / solid — not a
+// single colour plus an "auto" pill. The old pill was the reported "what does
+// 'Frequenz' even do?" control: it looked like a reset button because it
+// silently swapped between two invisible colouring systems.
+
+/** Quick-pick swatch row + the free colour input for one colour slot. */
+function ColorRow({
+  caption,
+  value,
+  onChange,
+}: {
+  caption: string;
+  value: Rgb;
+  onChange: (c: Rgb) => void;
+}): JSX.Element {
+  return (
+    <div className="mt-1 flex items-center justify-between gap-2">
+      <span className="text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
+        {caption}
+      </span>
+      <span className="flex items-center gap-1">
+        {FLIGHT_COLOR_PRESETS.map((preset) => {
+          const active =
+            preset[0] === value[0] && preset[1] === value[1] && preset[2] === value[2];
+          return (
+            <button
+              key={rgbCss(preset)}
+              type="button"
+              aria-label={rgbCss(preset)}
+              onClick={() => onChange([preset[0], preset[1], preset[2]])}
+              className="h-3 w-3 shrink-0 cursor-pointer rounded-full transition-transform"
+              style={{
+                background: rgbCss(preset),
+                border: active
+                  ? "1.5px solid rgba(255,255,255,0.95)"
+                  : "1px solid rgba(255,255,255,0.2)",
+                transform: active ? "scale(1.15)" : "none",
+              }}
+            />
+          );
+        })}
+        <ColorField label="" value={value} onChange={onChange} />
+      </span>
+    </div>
+  );
+}
+
+/** Flight-domain appearance state, shared verbatim by both panels. */
+export interface FlightAppearanceState {
+  /** Mode + the four colour slots — read straight from `useFlightColorStore`. */
+  colorConfig: FlightColorConfig;
+  onColorModeChange: (mode: FlightColorMode) => void;
+  onColorChange: (slot: FlightColorSlot, color: Rgb) => void;
+  routeWidth: number;
+  onRouteWidthChange: (w: number) => void;
+  markerColor: Rgb | null;
+  onMarkerColorChange: (c: Rgb | null) => void;
+  markerSize: number;
+  onMarkerSizeChange: (s: number) => void;
+}
+
+export interface FlightAppearanceSectionProps extends FlightAppearanceState {
+  /** Uppercase section header ("Flüge"). */
+  title: string;
+  /** Airport-marker swatch label + its "Auto" reset pill text. */
+  markerLabel: string;
+  markerAutoLabel: string;
+  markerDefault: Rgb;
+  widthLabel: string;
+  sizeLabel: string;
+}
+
+/**
+ * The flight domain's appearance controls: colour MODE + the colours that
+ * mode actually uses, then route width and airport-marker colour/size.
+ *
+ * Rendered identically by the globe panel and the flat-map panel — the two
+ * must never drift, which is why this lives in the shared kit.
+ */
+export function FlightAppearanceSection({
+  title,
+  colorConfig,
+  onColorModeChange,
+  onColorChange,
+  routeWidth,
+  onRouteWidthChange,
+  markerColor,
+  onMarkerColorChange,
+  markerSize,
+  onMarkerSizeChange,
+  markerDefault,
+  markerLabel,
+  markerAutoLabel,
+  widthLabel,
+  sizeLabel,
+}: FlightAppearanceSectionProps): JSX.Element {
+  const { t } = useTranslation();
+  const { mode, colors } = colorConfig;
+
+  const modeOptions = FLIGHT_COLOR_MODES.map((m) => ({
+    value: m,
+    label: t(`map:globe.panel.colorMode.${m}.label`),
+  }));
+
+  return (
+    <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
+      <SectionLabel>{title}</SectionLabel>
+
+      {/* Colour mode — the explicit choice that replaces the old
+          "Frequenz" pill + hidden status override. */}
+      <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
+        {t("map:globe.panel.colorMode.label")}
+      </div>
+      <SegControl<FlightColorMode>
+        value={mode}
+        onChange={onColorModeChange}
+        options={modeOptions}
+      />
+      <div className="mt-1 text-[10px] leading-snug" style={{ color: "rgba(241,245,249,0.45)" }}>
+        {t(`map:globe.panel.colorMode.${mode}.hint`)}
+      </div>
+
+      {/* The colours the ACTIVE mode uses — nothing else, so the panel can
+          never show a control that has no effect on the map. */}
+      {mode === "status" && (
+        <>
+          <ColorRow
+            caption={t("map:globe.panel.colorMode.swatchFlown")}
+            value={colors.past}
+            onChange={(c) => onColorChange("past", c)}
+          />
+          <ColorRow
+            caption={t("map:globe.panel.colorMode.swatchPlanned")}
+            value={colors.upcoming}
+            onChange={(c) => onColorChange("upcoming", c)}
+          />
+        </>
+      )}
+      {mode === "frequency" && (
+        <ColorRow
+          caption={t("map:globe.panel.routes")}
+          value={colors.frequency}
+          onChange={(c) => onColorChange("frequency", c)}
+        />
+      )}
+      {mode === "solid" && (
+        <ColorRow
+          caption={t("map:globe.panel.routes")}
+          value={colors.solid}
+          onChange={(c) => onColorChange("solid", c)}
+        />
+      )}
+
+      {/* Route width slider */}
+      <Slider
+        label={widthLabel}
+        value={routeWidth}
+        min={0.3}
+        max={2}
+        step={0.1}
+        onChange={onRouteWidthChange}
+      />
+
+      {/* Airport-marker colour + Auto reset */}
+      <div className="mt-2 flex items-center justify-between gap-2 py-0.5">
+        <ColorField
+          label={markerLabel}
+          value={markerColor ?? markerDefault}
+          onChange={onMarkerColorChange}
+        />
+        <AutoPill
+          active={markerColor === null}
+          label={markerAutoLabel}
+          onClick={() => onMarkerColorChange(null)}
+        />
+      </div>
+
+      {/* Airport-marker size slider (0 = hidden) */}
+      <div className="mt-1">
+        <Slider
+          label={sizeLabel}
+          value={markerSize}
+          min={0}
+          max={1.6}
+          step={0.1}
+          onChange={onMarkerSizeChange}
+          format={(v) => (v <= 0 ? t("map:globe.panel.off") : `${v.toFixed(1)}×`)}
+        />
+      </div>
     </div>
   );
 }

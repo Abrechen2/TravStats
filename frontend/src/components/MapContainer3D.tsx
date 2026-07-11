@@ -49,20 +49,6 @@ interface MapContainer3DProps {
    */
   showInternalCruises?: boolean;
   /**
-   * Override the count-based heatmap palette for flight route arcs with
-   * a single monochrome color. Set on the Alle-tab so flights read as
-   * "pink / domain-flight" against sky-blue cruises; other tabs leave
-   * it undefined to keep the count-encoded heatmap behaviour.
-   */
-  flightRouteColor?: [number, number, number];
-  /**
-   * Split flight arcs into a two-tone gradient by status (scheduled vs.
-   * historical) instead of a single flightRouteColor fill. Passed straight
-   * through to DeckGLMap's buildRouteData call; undefined on tabs that keep
-   * the default single-color/heatmap behaviour.
-   */
-  statusTwoTone?: boolean;
-  /**
    * Color strategy for cruise arcs/arrows: shared two-tone by status, or
    * a distinct hue per cruise. Passed straight through to DeckGLMap.
    * Defaults to `"status"`.
@@ -107,8 +93,6 @@ export default function MapContainer3D({
   onResetTrip,
   extraLayers,
   showInternalCruises = true,
-  flightRouteColor,
-  statusTwoTone,
   cruiseColorMode,
   hideInfoPill = false,
   cruisesOverride,
@@ -202,8 +186,6 @@ export default function MapContainer3D({
               cruises={cruises}
               onFlightOpen={onFlightOpen ?? onFlightClick}
               onCruiseOpen={onCruiseOpen}
-              flightRouteColor={flightRouteColor}
-              statusTwoTone={statusTwoTone}
               cruiseColorMode={cruiseColorMode}
               minRouteCount={minRouteCount}
               appearanceDomains={appearanceDomains}
@@ -221,9 +203,7 @@ export default function MapContainer3D({
             minRouteCount={minRouteCount}
             onResetTrip={onResetTrip}
             extraLayers={extraLayers}
-            flightRouteColor={flightRouteColor}
             appearanceDomains={appearanceDomains}
-            statusTwoTone={statusTwoTone}
             cruiseColorMode={cruiseColorMode}
           />
         )}
