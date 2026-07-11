@@ -20,14 +20,19 @@
 
 import { promises as fs } from 'fs';
 import path from 'path';
-import { AIRLINES } from '../src/data/airlines';
+import { AIRLINES, type Airline } from '../src/data/airlines';
 
 const OUTPUT_PATH = path.join(
   __dirname,
   '../../frontend/src/lib/generated/airlineCatalog.ts',
 );
 
-async function main(): Promise<void> {
+/**
+ * Pure function that generates the airline catalogue contents.
+ * This is exported for testing purposes — ensures the test uses the
+ * exact same logic as the CLI script.
+ */
+export function generateAirlineCatalogContents(airlines: Airline[]): string {
   const header = `/**
  * AUTO-GENERATED — DO NOT EDIT BY HAND.
  *
@@ -48,14 +53,18 @@ export interface AirlineCatalogEntry {
 export const AIRLINE_CATALOG: AirlineCatalogEntry[] = [
 `;
 
-  const rows = AIRLINES.map((a) => {
+  const rows = airlines.map((a) => {
     const icaoPart = a.icao ? ` icao: ${JSON.stringify(a.icao)},` : '';
     return `  { iata: ${JSON.stringify(a.iata)},${icaoPart} name: ${JSON.stringify(a.name)} },`;
   });
 
   const footer = `];\n`;
 
-  const contents = header + rows.join('\n') + '\n' + footer;
+  return header + rows.join('\n') + '\n' + footer;
+}
+
+async function main(): Promise<void> {
+  const contents = generateAirlineCatalogContents(AIRLINES);
 
   await fs.mkdir(path.dirname(OUTPUT_PATH), { recursive: true });
   await fs.writeFile(OUTPUT_PATH, contents, 'utf-8');
