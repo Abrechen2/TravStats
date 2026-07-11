@@ -34,6 +34,10 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
   const [albums, setAlbums] = useState<ImmichAlbumSummary[]>([]);
   const [defaultMode, setDefaultMode] = useState<ImmichMode>("link");
   const [selected, setSelected] = useState<Record<string, Selection>>({});
+  // Client-side filter only — "selected" stays keyed by album id regardless
+  // of what's currently visible, so narrowing the list never drops a
+  // selection the user made before changing the query.
+  const [query, setQuery] = useState("");
   // Resolved i18n key (e.g. "errors.auth"), not the bare failure kind — so an
   // unrecognised kind resolves to "errors.unknown" via failureKey() at the
   // point of capture rather than being force-fit into "unreachable" here.
@@ -121,6 +125,13 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
 
   const count = Object.keys(selected).length;
 
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredAlbums =
+    normalizedQuery === ""
+      ? albums
+      : albums.filter((album) => album.albumName.toLowerCase().includes(normalizedQuery));
+  const hasNoMatches = albums.length > 0 && normalizedQuery !== "" && filteredAlbums.length === 0;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
       <div className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-lg bg-slate-900 p-4">
@@ -131,8 +142,21 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
           <p className="text-sm text-slate-400">{t("albums.empty")}</p>
         )}
 
+        {!loading && !failure && albums.length > 0 && (
+          <input
+            type="text"
+            aria-label={t("albums.searchLabel")}
+            placeholder={t("albums.searchPlaceholder")}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="mb-3 w-full rounded border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm"
+          />
+        )}
+
+        {hasNoMatches && <p className="text-sm text-slate-400">{t("albums.noMatches")}</p>}
+
         <ul className="space-y-2">
-          {albums.map((album) => {
+          {filteredAlbums.map((album) => {
             const selection = selected[album.id];
             return (
               <li key={album.id} className="rounded border border-slate-700 p-2">

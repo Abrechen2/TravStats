@@ -50,6 +50,14 @@ const ALBUMS = [
     linked: true,
     linkId: "l2",
   },
+  {
+    id: "a3",
+    albumName: "Paris",
+    assetCount: 8,
+    thumbnailAssetId: null,
+    linked: false,
+    linkId: null,
+  },
 ];
 
 beforeEach(() => {
@@ -190,5 +198,85 @@ describe("ImmichAlbumPicker", () => {
     listAlbums.mockResolvedValue({ albums: [], defaultMode: "link" });
     renderPicker();
     await waitFor(() => expect(screen.getByText("albums.empty")).toBeInTheDocument());
+  });
+
+  it("filters the album list by name as the user types", async () => {
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+
+    await user.type(screen.getByRole("textbox", { name: "albums.searchLabel" }), "Ro");
+
+    expect(screen.getByText("Rome")).toBeInTheDocument();
+    expect(screen.queryByText("Oslo")).not.toBeInTheDocument();
+    expect(screen.queryByText("Paris")).not.toBeInTheDocument();
+  });
+
+  it("matches album names case-insensitively", async () => {
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+
+    await user.type(screen.getByRole("textbox", { name: "albums.searchLabel" }), "rOME");
+
+    expect(screen.getByText("Rome")).toBeInTheDocument();
+    expect(screen.queryByText("Oslo")).not.toBeInTheDocument();
+  });
+
+  it("keeps a selection alive after the matching album is filtered out of view", async () => {
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+    const search = screen.getByRole("textbox", { name: "albums.searchLabel" });
+
+    // Search "Rome", select it, then search "Paris" and select that too — Rome
+    // is no longer rendered but must still be part of the confirm payload.
+    await user.type(search, "Rome");
+    await user.click(screen.getByRole("checkbox", { name: /Rome/ }));
+
+    await user.clear(search);
+    await user.type(search, "Paris");
+    expect(screen.queryByText("Rome")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: /Paris/ }));
+
+    await user.clear(search);
+    await user.click(screen.getByRole("button", { name: /albums.confirm/ }));
+
+    await waitFor(() => expect(linkAlbums).toHaveBeenCalledTimes(1));
+    const [, payload] = linkAlbums.mock.calls[0] as [string, { immichAlbumId: string }[]];
+    expect(payload).toHaveLength(2);
+    expect(payload).toEqual(
+      expect.arrayContaining([
+        { immichAlbumId: "a1", mode: "link" },
+        { immichAlbumId: "a3", mode: "link" },
+      ])
+    );
+  });
+
+  it("shows a distinct no-matches message instead of the no-albums empty state", async () => {
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+
+    await user.type(screen.getByRole("textbox", { name: "albums.searchLabel" }), "zzz-no-match");
+
+    expect(screen.getByText("albums.noMatches")).toBeInTheDocument();
+    expect(screen.queryByText("albums.empty")).not.toBeInTheDocument();
+  });
+
+  it("restores the full album list once the query is cleared", async () => {
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+    const search = screen.getByRole("textbox", { name: "albums.searchLabel" });
+
+    await user.type(search, "Rome");
+    expect(screen.queryByText("Oslo")).not.toBeInTheDocument();
+
+    await user.clear(search);
+
+    expect(screen.getByText("Rome")).toBeInTheDocument();
+    expect(screen.getByText("Oslo")).toBeInTheDocument();
+    expect(screen.getByText("Paris")).toBeInTheDocument();
   });
 });
