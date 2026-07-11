@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
-import { applyFxSnapshot, getBaseCurrency } from "../../routes/lodging";
+import { applyFxSnapshot, getBaseCurrency, resolveFxFields } from "../../routes/lodging";
 import type {
   CommitRowInput,
   LodgingCandidateFields,
@@ -99,17 +99,19 @@ async function createStay(
   const checkIn = toDate(fields.checkIn);
   const currency = fields.currency ?? "EUR";
 
-  // A stay with no price simply has no FX snapshot. A common real import
-  // (stays joined by hotel name, no price column at all) is correct data,
-  // not an error.
-  const fxOutcome =
-    fields.totalPrice != null
-      ? await applyFxSnapshot({ totalPrice: fields.totalPrice, currency, checkIn }, baseCurrency)
-      : null;
-  const fx =
-    fxOutcome?.status === "snapshotted"
-      ? fxOutcome.fields
-      : { totalPriceBase: null, fxRate: null, fxRateDate: null, fxBaseCurrency: null };
+  // A stay with no price simply has no FX snapshot — `applyFxSnapshot` treats
+  // a null price as `status: "priceRemoved"` (short-circuits before any
+  // network call), and `resolveFxFields` collapses that to an all-null
+  // snapshot. A common real import (stays joined by hotel name, no price
+  // column at all) is correct data this way, not an error. Reusing
+  // `resolveFxFields` (routes/lodging.ts) instead of re-implementing its
+  // fallback here keeps this in lockstep if `FxSnapshotFields` ever grows a
+  // field.
+  const fxOutcome = await applyFxSnapshot(
+    { totalPrice: fields.totalPrice, currency, checkIn },
+    baseCurrency,
+  );
+  const fx = resolveFxFields(fxOutcome);
 
   await prisma.lodgingStay.create({
     data: {
@@ -174,6 +176,24 @@ export async function commitLodgingImport(
       // new stay against an ALREADY-matched lodging (`matchedLodgingId` set,
       // `lodging` null). Branch on `matchedLodgingId`, never on `action`.
       let lodgingId = row.matchedLodgingId ?? null;
+
+      // IDOR guard: `matchedLodgingId` is client-supplied (it comes back from
+      // the preview step the client controls) and `Lodging`/`LodgingStay`
+      // carry independent `userId` columns with no compound FK — a plain
+      // Prisma FK check only proves the row EXISTS, not that it belongs to
+      // this user. Verify ownership before it's used for anything. A row
+      // that fails this check must NOT fall through to creating a fresh
+      // lodging (that would silently duplicate a hotel the row never asked
+      // for) — it belongs in `failed`, same as any other per-row failure.
+      if (lodgingId) {
+        const owned = await prisma.lodging.findFirst({
+          where: { id: lodgingId, userId },
+          select: { id: true },
+        });
+        if (!owned) {
+          throw new Error("matchedLodgingId does not belong to this user");
+        }
+      }
 
       if (!lodgingId && row.lodging) {
         const nameKey = normalizeLodgingName(row.lodging.name);
