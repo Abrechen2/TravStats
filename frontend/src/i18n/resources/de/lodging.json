@@ -173,5 +173,44 @@
       "spend": "Ausgaben",
       "rating": "Ø Bewertung"
     }
+  },
+  "import": {
+    "preview": {
+      "title": "Vorschau ({{count}} Zeile(n))",
+      "newLabel": "neu",
+      "presentLabel": "bereits vorhanden",
+      "needsInputLabel": "brauchen dich",
+      "needsInputHint": "Bitte prüfe und entscheide diese Zeilen, bevor du übernimmst.",
+      "commit": "Übernehmen",
+      "commitError": "Import konnte nicht übernommen werden"
+    },
+    "fields": {
+      "name": "Name",
+      "city": "Ort",
+      "checkIn": "Anreise",
+      "checkOut": "Abreise",
+      "totalPrice": "Preis",
+      "hints": "Hinweise",
+      "action": "Aktion"
+    },
+    "actions": {
+      "choose": "— auswählen —",
+      "create": "Anlegen",
+      "skip": "Überspringen"
+    },
+    "flags": {
+      "missing_name": "Name fehlt",
+      "unresolvable_lodging_name": "Hotelname nicht zuordenbar",
+      "ambiguous_lodging_name": "Hotelname mehrdeutig",
+      "malformed_date": "Datum ungültig",
+      "invalid_date_range": "Zeitraum ungültig",
+      "missing_coordinates": "Keine Koordinaten"
+    },
+    "dedupeHints": {
+      "lodging_exact_ref": "Bereits importiert (gleiche Referenz)",
+      "lodging_name_city": "Passendes Hotel gefunden (Name + Ort)",
+      "stay_exact_ref": "Aufenthalt bereits vorhanden (gleiche Referenz)",
+      "stay_same_dates": "Aufenthalt bereits vorhanden (gleiche Daten)"
+    }
   }
 }

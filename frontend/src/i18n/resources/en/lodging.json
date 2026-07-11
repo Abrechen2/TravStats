@@ -173,5 +173,44 @@
       "spend": "Spend",
       "rating": "Avg. rating"
     }
+  },
+  "import": {
+    "preview": {
+      "title": "Preview ({{count}} row(s))",
+      "newLabel": "new",
+      "presentLabel": "already present",
+      "needsInputLabel": "need you",
+      "needsInputHint": "Please review and decide these rows before committing.",
+      "commit": "Commit",
+      "commitError": "Could not commit the import"
+    },
+    "fields": {
+      "name": "Name",
+      "city": "City",
+      "checkIn": "Check-in",
+      "checkOut": "Check-out",
+      "totalPrice": "Price",
+      "hints": "Hints",
+      "action": "Action"
+    },
+    "actions": {
+      "choose": "— choose —",
+      "create": "Create",
+      "skip": "Skip"
+    },
+    "flags": {
+      "missing_name": "Missing name",
+      "unresolvable_lodging_name": "Hotel name could not be matched",
+      "ambiguous_lodging_name": "Hotel name is ambiguous",
+      "malformed_date": "Malformed date",
+      "invalid_date_range": "Invalid date range",
+      "missing_coordinates": "Missing coordinates"
+    },
+    "dedupeHints": {
+      "lodging_exact_ref": "Already imported (exact reference match)",
+      "lodging_name_city": "Matching hotel found (name + city)",
+      "stay_exact_ref": "Stay already on file (exact reference match)",
+      "stay_same_dates": "Stay already on file (same dates)"
+    }
   }
 }
