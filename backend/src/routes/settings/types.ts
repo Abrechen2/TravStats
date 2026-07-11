@@ -66,6 +66,7 @@ export interface SettingsResponse extends SettingsDataJson {
   boardingPassParserStrategy: string | null;
   historicalEnrichment: HistoricalEnrichmentResponseSettings;
   enabledDomains: string[];
+  baseCurrency: string;
 }
 
 export interface UserSettingsUpdateData {
@@ -80,6 +81,7 @@ export interface UserSettingsUpdateData {
   historicalEnrichmentMaxPerDay?: number;
   boardingPassParserStrategy?: string | null;
   enabledDomains?: string[];
+  baseCurrency?: string;
 }
 
 export interface ParserSettingsUpdateData {
