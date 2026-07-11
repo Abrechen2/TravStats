@@ -48,6 +48,7 @@ import { appVersion, buildVersion } from './utils/version';
 import { templateRegistry } from './services/parsers/templates/registry';
 import { seedPortsFromCSV } from './seedPortsFromCSV';
 import { seedShipsFromCSV } from './seedShipsFromCSV';
+import { seedLodgingChainsFromCSV } from './seedLodgingChainsFromCSV';
 
 // Load environment variables
 dotenv.config();
@@ -358,6 +359,20 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({
         operation: 'server_start_seed_ships_error',
         message: 'Failed to seed ships from CSV',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+
+    // Seed the lodging chain catalog — idempotent, preserves isUserAdded rows.
+    try {
+      await seedLodgingChainsFromCSV();
+      logger.info({ operation: 'server_start_seed_lodging_chains', message: 'Lodging chains seeded' });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_seed_lodging_chains_error',
+        message: 'Failed to seed lodging chains from CSV',
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
         },
