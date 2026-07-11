@@ -1,8 +1,10 @@
 import {
+  batchIdParamsSchema,
   lodgingImportCandidateSchema,
   lodgingImportCommitRequestSchema,
   lodgingImportPreviewRequestSchema,
   MAX_LODGING_IMPORT_ROWS,
+  suggestMappingRequestSchema,
 } from "../schemas/lodgingImport";
 
 describe("lodgingImport schemas", () => {
@@ -90,5 +92,57 @@ describe("lodgingImport schemas", () => {
       rows: [{ sourceRowIndex: 0, action: "needs_input", lodging: { name: "X" }, stay: null }],
     });
     expect(result.success).toBe(false);
+  });
+
+  // ---- Finding 3: DELETE /batches/:id was the only client-supplied value ----
+  // ---- that never touched Zod                                            ----
+
+  describe("batchIdParamsSchema", () => {
+    it("accepts a well-formed uuid", () => {
+      const result = batchIdParamsSchema.safeParse({ id: "00000000-0000-0000-0000-000000000000" });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects a non-uuid id before any DB work would run", () => {
+      const result = batchIdParamsSchema.safeParse({ id: "../../etc/passwd" });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects a missing id", () => {
+      const result = batchIdParamsSchema.safeParse({});
+      expect(result.success).toBe(false);
+    });
+  });
+
+  // ---- Finding 4: sampleRows had an unbounded key count per record ----
+
+  describe("suggestMappingRequestSchema", () => {
+    it("accepts a normal set of headers and sample rows", () => {
+      const result = suggestMappingRequestSchema.safeParse({
+        headers: ["Hotel", "Anreise", "Abreise"],
+        sampleRows: [{ Hotel: "NH", Anreise: "2026-03-30", Abreise: "2026-03-31" }],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects a sample row with more than 80 keys — an unbounded key count would be JSON.stringify'd straight into the LLM prompt", () => {
+      const hugeRow: Record<string, string> = {};
+      for (let i = 0; i < 81; i++) hugeRow[`col${i}`] = "x";
+      const result = suggestMappingRequestSchema.safeParse({
+        headers: ["Hotel"],
+        sampleRows: [hugeRow],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("accepts exactly 80 keys in a sample row (the boundary)", () => {
+      const row: Record<string, string> = {};
+      for (let i = 0; i < 80; i++) row[`col${i}`] = "x";
+      const result = suggestMappingRequestSchema.safeParse({
+        headers: ["Hotel"],
+        sampleRows: [row],
+      });
+      expect(result.success).toBe(true);
+    });
   });
 });
