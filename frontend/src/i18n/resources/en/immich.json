@@ -55,5 +55,21 @@
     "protocol": "Unexpected response from Immich. Does the server version match?",
     "invalidUrl": "The server URL is not valid.",
     "retry": "Try again"
+  },
+  "admin": {
+    "title": "Immich (instance-wide)",
+    "subtitle": "One Immich instance for every user. Anyone who configures their own overrides it.",
+    "baseUrl": "Base URL",
+    "baseUrlPlaceholder": "https://immich.example.com",
+    "apiKey": "API key",
+    "apiKeyPlaceholder": "Immich API key",
+    "apiKeyHint": "The stored key is only ever shown masked. Leave it untouched to keep it.",
+    "test": "Test connection",
+    "testing": "Testing …",
+    "save": "Save",
+    "saving": "Saving …",
+    "saved": "Instance-wide Immich connection saved.",
+    "cleared": "Instance-wide Immich connection removed.",
+    "saveFailed": "Could not save."
   }
 }
