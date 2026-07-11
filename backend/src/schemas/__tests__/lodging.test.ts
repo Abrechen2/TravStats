@@ -67,4 +67,22 @@ describe("lodging schemas", () => {
     const r = updateStaySchema.safeParse({ notes: "Lovely stay" });
     expect(r.success).toBe(true);
   });
+
+  it("accepts a local-upload receiptUrl", () => {
+    const r = createStaySchema.safeParse({
+      checkIn: "2024-05-14T15:00:00.000Z",
+      checkOut: "2024-05-16T11:00:00.000Z",
+      receiptUrl: "/api/v1/uploads/receipts/abc123.pdf",
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("rejects a receiptUrl on an untrusted external domain", () => {
+    const r = createStaySchema.safeParse({
+      checkIn: "2024-05-14T15:00:00.000Z",
+      checkOut: "2024-05-16T11:00:00.000Z",
+      receiptUrl: "https://evil.example.com/steal.pdf",
+    });
+    expect(r.success).toBe(false);
+  });
 });

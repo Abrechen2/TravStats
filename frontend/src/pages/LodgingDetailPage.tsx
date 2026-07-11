@@ -5,13 +5,14 @@ import NavigationBar from "../components/NavigationBar";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import { LodgingMiniMap } from "../components/lodging/LodgingMiniMap";
 import { LodgingStayCard } from "../components/lodging/LodgingStayCard";
+import { StayEditor } from "../components/lodging/StayEditor";
 import { useTranslation } from "../hooks/useTranslation";
 import { deleteLodging, getLodging } from "../lib/api/lodging";
 import { formatCurrency } from "../lib/units";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
-import type { Lodging } from "../types/lodging";
+import type { Lodging, LodgingStay } from "../types/lodging";
 
 /** "★ 4.3" for a rating, "—" when there is nothing to average yet (no rated stays). */
 function overallRatingText(value: number | null): string {
@@ -34,6 +35,8 @@ export default function LodgingDetailPage(): JSX.Element {
   const [editing, setEditing] = useState<boolean>(false);
   const [confirmingDelete, setConfirmingDelete] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
+  // "new" = create mode, a LodgingStay = edit mode for that stay, null = closed.
+  const [editingStay, setEditingStay] = useState<LodgingStay | "new" | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -180,13 +183,23 @@ export default function LodgingDetailPage(): JSX.Element {
         {/* Two-column body */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
           <div className="md:col-span-3">
-            <h2 className="mb-2 text-sm font-semibold text-[var(--text-muted)]">
-              {t("lodging:detail.stays")}
-            </h2>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[var(--text-muted)]">
+                {t("lodging:detail.stays")}
+              </h2>
+              <button
+                type="button"
+                data-testid="lodging-add-stay-button"
+                onClick={() => setEditingStay("new")}
+                className="rounded-md bg-[var(--accent)] px-3 py-1 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)]"
+              >
+                {t("lodging:stayEditor.addStay")}
+              </button>
+            </div>
             {lodging.stays.length > 0 ? (
               <div className="flex flex-col gap-2">
                 {lodging.stays.map((stay) => (
-                  <LodgingStayCard key={stay.id} stay={stay} />
+                  <LodgingStayCard key={stay.id} stay={stay} onEdit={setEditingStay} />
                 ))}
               </div>
             ) : (
@@ -234,6 +247,38 @@ export default function LodgingDetailPage(): JSX.Element {
             onSaved={(updated) => {
               setLodging(updated);
               setEditing(false);
+            }}
+          />
+        )}
+
+        {editingStay !== null && (
+          <StayEditor
+            mode={editingStay === "new" ? "create" : "edit"}
+            lodgingId={lodging.id}
+            stay={editingStay === "new" ? null : editingStay}
+            onClose={() => setEditingStay(null)}
+            onSaved={async (savedStay) => {
+              setEditingStay(null);
+              // A stay write doesn't return the parent lodging's recomputed
+              // aggregates (nights/stayCount/overallRating/totalSpendBase) —
+              // those are only ever attached server-side via
+              // `computeAggregates` on a lodging fetch, so a full reload is
+              // the only way to keep this page's header stats correct.
+              try {
+                const fresh = await getLodging(lodging.id);
+                setLodging(fresh);
+              } catch (err: unknown) {
+                logger.error("LodgingDetailPage: reload after stay save failed", err);
+                // Fall back to a client-side merge so the new/edited stay is
+                // still visible even if the reload itself failed.
+                setLodging((prev) => {
+                  if (!prev) return prev;
+                  const stays = prev.stays.some((s) => s.id === savedStay.id)
+                    ? prev.stays.map((s) => (s.id === savedStay.id ? savedStay : s))
+                    : [...prev.stays, savedStay];
+                  return { ...prev, stays };
+                });
+              }
             }}
           />
         )}
