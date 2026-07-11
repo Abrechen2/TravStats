@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Flight } from "../types";
 import { useTranslation } from "../hooks/useTranslation";
-import { resolveAirlineDisplay } from "../lib/airlineUtils";
+import { resolveAirlineDisplay, resolveAirlineIata } from "../lib/airlineUtils";
 import AirlineLogo from "./AirlineLogo";
 import SpecialTypeBadge from "./specialFlights/SpecialTypeBadge";
 import type { SpecialType } from "./specialFlights/specialTypeMeta";
@@ -230,16 +230,14 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <AirlineLogo
-                      iata={flight.airline?.length === 2 ? flight.airline : undefined}
+                      iata={resolveAirlineIata(flight)}
                       flightNumber={flight.flightNumber}
                       size={24}
                     />
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium text-[var(--text-primary)]">
-                          {resolveAirlineDisplay(flight.airline, flight.flightNumber) ||
-                            flight.airline}{" "}
-                          {flight.flightNumber}
+                          {resolveAirlineDisplay(flight) || flight.airline} {flight.flightNumber}
                         </p>
                         {flight.specialType && (
                           <SpecialTypeBadge type={flight.specialType as SpecialType} />
