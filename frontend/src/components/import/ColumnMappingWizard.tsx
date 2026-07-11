@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 
 export interface MappingFieldSpec<F extends string> {
@@ -33,8 +33,13 @@ function normalize(s: string): string {
  * Header-name heuristic. This is the SAFETY NET the whole CSV path leans on:
  * the LLM suggestion is advisory, so if it is slow, unreachable or wrong, this
  * still gives the user a sane starting mapping (spec §3.1 / §5).
- * The first match wins; a header already taken by an earlier field is not
- * re-used, so two fields can never collide by accident.
+ * The first match wins; a header already taken by an earlier field in THIS
+ * heuristic pass is never re-used, so the heuristic alone can never collide.
+ * The MERGED result (heuristic + a suggested `initialMapping`) can still
+ * collide, though: a suggestion is not deduped against a header the heuristic
+ * already claimed for another field. When that happens both fields are
+ * flagged red and submit is blocked (see the `collisions` check below) — a
+ * UX nuisance the user resolves by hand, not silent data loss.
  */
 export function autoMapHeaders<F extends string>(
   fields: MappingFieldSpec<F>[],
@@ -64,6 +69,20 @@ export function ColumnMappingWizard<F extends string>({
 }: ColumnMappingWizardProps<F>): JSX.Element {
   const { t } = useTranslation("settings");
 
+  // Content-based signatures, not object/array identities. `fields` gets a
+  // fresh array identity on every parent re-render (the caller's `t` from the
+  // project's `useTranslation` wrapper is a new function identity every
+  // render, and `useFlightMappingFields` memoizes on `[t]`), and a plain
+  // `useMemo([fields, csvHeaders, initialMapping])` below would treat that as
+  // "the CSV/suggestion changed" and wipe the user's in-progress selections
+  // on any unrelated re-render (e.g. a 30s admin poll, a language switch).
+  // Keying on these value-equal strings instead means the memo (and the
+  // effect that consumes it) only actually reruns when the CSV headers, the
+  // field spec, or the suggested mapping truly change.
+  const fieldsSignature = JSON.stringify(fields.map((f) => [f.key, f.required ?? false, f.aliases]));
+  const headerSignature = JSON.stringify(csvHeaders);
+  const initialMappingSignature = JSON.stringify(initialMapping ?? {});
+
   const initial = useMemo(() => {
     const heuristic = autoMapHeaders(fields, csvHeaders);
     // The LLM's suggestion wins per field where it has one; the heuristic fills
@@ -74,18 +93,64 @@ export function ColumnMappingWizard<F extends string>({
       if (csvHeaders.includes(header)) merged[key] = header;
     }
     return merged;
-  }, [fields, csvHeaders, initialMapping]);
+  }, [fieldsSignature, headerSignature, initialMappingSignature]);
 
   const [mapping, setMapping] = useState<Partial<Record<F, string>>>(initial);
   const [autoFilled, setAutoFilled] = useState<Set<F>>(() => new Set(Object.keys(initial) as F[]));
+  // Fields the user has explicitly touched (picked a header, or explicitly
+  // skipped). A ref, not state: it must never trigger a re-render by itself,
+  // only gate what the resync effect below is allowed to overwrite.
+  const manuallySetRef = useRef<Set<F>>(new Set());
+  const prevHeaderSignatureRef = useRef(headerSignature);
 
   useEffect(() => {
-    setMapping(initial);
-    setAutoFilled(new Set(Object.keys(initial) as F[]));
-  }, [initial]);
+    const isNewCsv = prevHeaderSignatureRef.current !== headerSignature;
+    prevHeaderSignatureRef.current = headerSignature;
+
+    if (isNewCsv) {
+      // A genuinely different CSV was loaded into this same wizard instance
+      // (the user picked another file before submitting) — any selection tied
+      // to the old file's headers is meaningless now, so start over.
+      setMapping(initial);
+      setAutoFilled(new Set(Object.keys(initial) as F[]));
+      manuallySetRef.current = new Set();
+      return;
+    }
+
+    // Same CSV: this only fires when the suggested mapping changed, e.g. a
+    // late-arriving LLM suggestion landing after the heuristic already
+    // rendered. Fill in fields the user has not touched yet; never clobber a
+    // field they already picked (or explicitly skipped).
+    const touched = manuallySetRef.current;
+    setMapping((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const key of Object.keys(initial) as F[]) {
+        if (!touched.has(key) && prev[key] !== initial[key]) {
+          next[key] = initial[key];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+    setAutoFilled((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const key of Object.keys(initial) as F[]) {
+        if (!touched.has(key) && !next.has(key)) {
+          next.add(key);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [initial, headerSignature]);
 
   const setField = (field: F, value: string | undefined): void => {
     setMapping((prev) => ({ ...prev, [field]: value || undefined }));
+    if (!manuallySetRef.current.has(field)) {
+      manuallySetRef.current = new Set(manuallySetRef.current).add(field);
+    }
     setAutoFilled((prev) => {
       if (!prev.has(field)) return prev;
       const next = new Set(prev);
