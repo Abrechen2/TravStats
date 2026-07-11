@@ -71,6 +71,6 @@
     "saved": "Instanzweite Immich-Verbindung gespeichert.",
     "cleared": "Instanzweite Immich-Verbindung entfernt.",
     "saveFailed": "Speichern fehlgeschlagen.",
-    "loadFailed": "Die gespeicherte Verbindung konnte nicht geladen werden. Zum Schutz vor Datenverlust wird das Formular erst nach einem erfolgreichen Laden angezeigt."
+    "loadFailed": "Die Immich-Einstellungen konnten nicht geladen werden. Sie lassen sich erst bearbeiten, wenn sie geladen sind."
   }
 }
