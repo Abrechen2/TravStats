@@ -1,17 +1,12 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatDateInTimezone } from "../../lib/dateUtils";
-import { formatStayPriceDisplay, nightsBetween } from "../../lib/lodgingFormat";
+import { formatRatingText, formatStayPriceDisplay, nightsBetween } from "../../lib/lodgingFormat";
 import type { LodgingStay } from "../../types/lodging";
 
 interface LodgingStayCardProps {
   stay: LodgingStay;
   onEdit?: (stay: LodgingStay) => void;
-}
-
-/** "★ 4.0" for a rating value, "—" when unrated. Half-steps render as-is (e.g. 4.5). */
-function ratingText(value: number | null): string {
-  return value !== null ? `★ ${value}` : "—";
 }
 
 /**
@@ -60,7 +55,7 @@ export function LodgingStayCard({ stay, onEdit }: LodgingStayCardProps): JSX.Ele
           </span>
         )}
         <span className="ml-auto text-sm font-semibold" style={{ color: "var(--star)" }}>
-          {ratingText(stay.ratingOverall)}
+          {formatRatingText(stay.ratingOverall)}
         </span>
         {onEdit && (
           <button
@@ -83,15 +78,15 @@ export function LodgingStayCard({ stay, onEdit }: LodgingStayCardProps): JSX.Ele
         )}
         <span>
           {t("lodging:field.ratingBreakfast")}:{" "}
-          <b className="text-[var(--text-primary)]">{ratingText(stay.ratingBreakfast)}</b>
+          <b className="text-[var(--text-primary)]">{formatRatingText(stay.ratingBreakfast)}</b>
         </span>
         <span>
           {t("lodging:field.ratingService")}:{" "}
-          <b className="text-[var(--text-primary)]">{ratingText(stay.ratingService)}</b>
+          <b className="text-[var(--text-primary)]">{formatRatingText(stay.ratingService)}</b>
         </span>
         <span>
           {t("lodging:field.ratingRoom")}:{" "}
-          <b className="text-[var(--text-primary)]">{ratingText(stay.ratingRoom)}</b>
+          <b className="text-[var(--text-primary)]">{formatRatingText(stay.ratingRoom)}</b>
         </span>
       </div>
 

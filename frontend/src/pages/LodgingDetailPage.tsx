@@ -9,15 +9,11 @@ import { StayEditor } from "../components/lodging/StayEditor";
 import { useTranslation } from "../hooks/useTranslation";
 import { deleteLodging, getLodging } from "../lib/api/lodging";
 import { formatCurrency } from "../lib/units";
+import { formatRatingText } from "../lib/lodgingFormat";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
 import type { Lodging, LodgingStay } from "../types/lodging";
-
-/** "★ 4.3" for a rating, "—" when there is nothing to average yet (no rated stays). */
-function overallRatingText(value: number | null): string {
-  return value !== null ? `★ ${value}` : "—";
-}
 
 export default function LodgingDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -143,7 +139,7 @@ export default function LodgingDetailPage(): JSX.Element {
                 <p className="text-sm font-medium text-[var(--text-primary)]">{addressLine}</p>
               )}
               <p className="text-xs text-[var(--text-muted)]">
-                {t("lodging:detail.avgRating")} <b>{overallRatingText(lodging.overallRating)}</b> ·{" "}
+                {t("lodging:detail.avgRating")} <b>{formatRatingText(lodging.overallRating)}</b> ·{" "}
                 {t("lodging:field.staysCount", { count: lodging.stayCount })}
               </p>
             </div>
@@ -233,7 +229,7 @@ export default function LodgingDetailPage(): JSX.Element {
                 {t("lodging:detail.avgRating")}
               </h3>
               <p className="mt-2 text-sm" style={{ color: "var(--star)" }}>
-                {overallRatingText(lodging.overallRating)}
+                {formatRatingText(lodging.overallRating)}
               </p>
             </div>
           </aside>

@@ -1,5 +1,6 @@
 import { ScatterplotLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
+import { DOMAINS } from "../../shared/domains";
 import type { Lodging } from "../../types/lodging";
 
 interface LodgingPinDatum {
@@ -9,12 +10,20 @@ interface LodgingPinDatum {
   type: Lodging["type"];
 }
 
-// Brand lodging rose (BRAND.md §3, --domain-lodging / shared/domains.ts
-// DOMAINS.lodging.color = "#d4778f"). There's no CSS custom property for
-// this domain yet (unlike --domain-flight/--domain-cruise) — this is the
-// first lodging map layer, so the hex is inlined here the same way
-// CRUISE_BASE_COLOR was before a `--domain-cruise` var existed.
-const LODGING_RGB: [number, number, number] = [212, 119, 143];
+/** "#rrggbb" → [r, g, b]. Returns a mid-gray fallback for a malformed hex (defensive only — `DOMAINS` colors are hand-authored constants). */
+function hexToRgb(hex: string): [number, number, number] {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
+  if (!m) return [128, 128, 128];
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+// Brand lodging rose (BRAND.md §3), derived from the single source of truth
+// `DOMAINS.lodging.color` (shared/domains.ts) rather than a second inlined
+// hex — there's no CSS custom property for this domain yet (unlike
+// --domain-flight/--domain-cruise), so this map layer needs the RGB tuple
+// deck.gl expects.
+const LODGING_RGB: [number, number, number] = hexToRgb(DOMAINS.lodging.color);
 
 const PIN_RADIUS_M = 2200;
 

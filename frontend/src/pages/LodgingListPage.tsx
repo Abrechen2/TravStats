@@ -6,6 +6,7 @@ import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import { useTranslation } from "../hooks/useTranslation";
 import { listLodgings } from "../lib/api/lodging";
 import { formatCurrency } from "../lib/units";
+import { formatRatingText } from "../lib/lodgingFormat";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
 import type { Lodging, LodgingListQuery, LodgingType } from "../types/lodging";
@@ -17,11 +18,6 @@ type SortKey = NonNullable<LodgingListQuery["sort"]>;
 
 const TYPES: LodgingType[] = ["hotel", "campsite"];
 const SORT_KEYS: SortKey[] = ["name", "nights", "rating", "spend"];
-
-/** "★ 4.3" for a rating, "—" when unrated. */
-function ratingText(value: number | null): string {
-  return value !== null ? `★ ${value}` : "—";
-}
 
 export default function LodgingListPage(): JSX.Element {
   const { t } = useTranslation(["lodging", "common"]);
@@ -81,7 +77,9 @@ export default function LodgingListPage(): JSX.Element {
   const reloadAll = useCallback(async (): Promise<void> => {
     await Promise.all([
       reload(),
-      listLodgings({}).then(setBaseline).catch(() => undefined),
+      listLodgings({})
+        .then(setBaseline)
+        .catch((err: unknown) => logger.error("LodgingListPage: baseline reload failed", err)),
     ]);
   }, [reload]);
 
@@ -279,7 +277,7 @@ export default function LodgingListPage(): JSX.Element {
                     <td className="px-3 py-2 text-right">{l.stayCount}</td>
                     <td className="px-3 py-2 text-right">{l.nights}</td>
                     <td className="px-3 py-2" style={{ color: "var(--star)" }}>
-                      {ratingText(l.overallRating)}
+                      {formatRatingText(l.overallRating)}
                     </td>
                     <td className="px-3 py-2 text-right">
                       {formatCurrency(l.totalSpendBase, baseCurrency)}
