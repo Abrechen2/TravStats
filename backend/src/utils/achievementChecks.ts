@@ -444,6 +444,62 @@ export function checkAchievement(
       isUnlocked = progress >= achievement.requirement;
       break;
 
+    // --- Lodging cases ---
+    case 'lodgings_count':
+      progress = stats.lodgingsCount;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_stays_count':
+      progress = stats.lodgingStaysCount;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_nights':
+      progress = stats.lodgingNights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_chains_unique':
+      progress = stats.lodgingChainsUnique;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_countries':
+      progress = stats.lodgingCountries.size;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_chain_loyalty':
+      progress = stats.lodgingChainLoyaltyMax;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_award_nights':
+      progress = stats.lodgingAwardNights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_same_hotel_repeat':
+      progress = stats.lodgingSameHotelRepeatMax;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_longest_stay':
+      progress = stats.lodgingLongestStayNights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'fly_and_stay':
+      progress = stats.flyAndStay ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'grand_tour':
+      progress = stats.grandTour ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
     default:
       progress = 0;
       isUnlocked = false;
