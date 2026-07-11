@@ -219,6 +219,62 @@ describe("Lodging API", () => {
         .send({ notes: "x" });
       expect(res.status).toBe(404);
     });
+
+    it("rejects an empty PATCH body — no silent no-op (finding 4)", async () => {
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${lodgingId}/stays/${stayId}`)
+        .set("Cookie", authCookie)
+        .send({});
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe("PATCH /api/v1/lodging/:id/stays/:stayId — merged effective date validation (finding 3)", () => {
+    let dateLodgingId: string;
+    let dateStayId: string;
+
+    beforeAll(async () => {
+      const l = await prisma.lodging.create({ data: { userId, name: "Date Order Test Hotel" } });
+      dateLodgingId = l.id;
+      const stay = await prisma.lodgingStay.create({
+        data: {
+          lodgingId: l.id,
+          userId,
+          checkIn: new Date("2024-10-10T15:00:00.000Z"),
+          checkOut: new Date("2024-10-12T11:00:00.000Z"),
+        },
+      });
+      dateStayId = stay.id;
+    });
+
+    it("rejects a checkIn-only PATCH landing after the existing checkOut (row unchanged)", async () => {
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${dateLodgingId}/stays/${dateStayId}`)
+        .set("Cookie", authCookie)
+        .send({ checkIn: "2024-10-13T00:00:00.000Z" });
+      expect(res.status).toBe(400);
+      const stay = await prisma.lodgingStay.findUnique({ where: { id: dateStayId } });
+      expect(stay?.checkIn.toISOString()).toBe("2024-10-10T15:00:00.000Z");
+    });
+
+    it("rejects a checkOut-only PATCH landing before the existing checkIn (row unchanged)", async () => {
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${dateLodgingId}/stays/${dateStayId}`)
+        .set("Cookie", authCookie)
+        .send({ checkOut: "2024-10-09T00:00:00.000Z" });
+      expect(res.status).toBe(400);
+      const stay = await prisma.lodgingStay.findUnique({ where: { id: dateStayId } });
+      expect(stay?.checkOut.toISOString()).toBe("2024-10-12T11:00:00.000Z");
+    });
+
+    it("accepts a legitimate single-date PATCH that keeps the order valid", async () => {
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${dateLodgingId}/stays/${dateStayId}`)
+        .set("Cookie", authCookie)
+        .send({ checkOut: "2024-10-14T00:00:00.000Z" });
+      expect(res.status).toBe(200);
+      expect(res.body.data.checkOut).toBe("2024-10-14T00:00:00.000Z");
+    });
   });
 
   describe("Lodging CRUD", () => {
@@ -230,6 +286,34 @@ describe("Lodging API", () => {
       expect(res.status).toBe(201);
       expect(res.body.data.userId).toBe(userId);
       expect(res.body.data.overallRating).toBeNull();
+    });
+
+    it("sets dataSource='manual' server-side and ignores a client-forged value (finding 1)", async () => {
+      const res = await request(app)
+        .post("/api/v1/lodging")
+        .set("Cookie", authCookie)
+        .send({ name: "Forged Source Inn", dataSource: "parser" });
+      expect(res.status).toBe(201);
+      expect(res.body.data.dataSource).toBe("manual");
+    });
+
+    it("does not allow PATCH to change dataSource (finding 1)", async () => {
+      const create = await request(app)
+        .post("/api/v1/lodging")
+        .set("Cookie", authCookie)
+        .send({ name: "Immutable Source Inn" });
+      expect(create.body.data.dataSource).toBe("manual");
+
+      // dataSource is not a field on updateLodgingSchema at all, so it is
+      // stripped before validation; a real field (`name`) rides along so the
+      // "at least one field" guard doesn't reject the request outright.
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${create.body.data.id}`)
+        .set("Cookie", authCookie)
+        .send({ name: "Renamed Inn", dataSource: "enriched" });
+      expect(res.status).toBe(200);
+      expect(res.body.data.name).toBe("Renamed Inn");
+      expect(res.body.data.dataSource).toBe("manual");
     });
 
     it("rejects an invalid payload (missing name)", async () => {
@@ -309,6 +393,50 @@ describe("Lodging API", () => {
     it("requires authentication", async () => {
       const res = await request(app).get("/api/v1/lodging");
       expect(res.status).toBe(401);
+    });
+  });
+
+  describe("GET /api/v1/lodging — sort applies to the full result set, then paginates (finding 2)", () => {
+    const countryTag = "SortRegressionTest";
+    // Creation order (and thus DB createdAt-desc order) is deliberately
+    // SCRAMBLED relative to nights, so a "sort the already-truncated page"
+    // bug produces a different page-2 than a correct "sort then paginate".
+    // Created in this order: 3,1,5,2,4 nights -> createdAt desc = [4,2,5,1,3].
+    const nightsInCreationOrder = [3, 1, 5, 2, 4];
+    let idsInCreationOrder: string[];
+
+    beforeAll(async () => {
+      idsInCreationOrder = [];
+      for (const n of nightsInCreationOrder) {
+        const l = await prisma.lodging.create({
+          data: { userId, name: `SortHotel ${n}`, country: countryTag },
+        });
+        await prisma.lodgingStay.create({
+          data: {
+            lodgingId: l.id,
+            userId,
+            checkIn: new Date("2024-01-01T00:00:00.000Z"),
+            checkOut: new Date(new Date("2024-01-01T00:00:00.000Z").getTime() + n * 86400000),
+          },
+        });
+        idsInCreationOrder.push(l.id);
+      }
+    });
+
+    it("returns the globally-correct page 2 sorted by nights, not a re-sort of the truncated page", async () => {
+      // Correct answer: sort ALL 5 rows by nights desc (5,4,3,2,1), then
+      // slice offset=2/limit=2 -> the two middle-nights rows (3 and 2).
+      const idByNights = new Map(
+        nightsInCreationOrder.map((n, i) => [n, idsInCreationOrder[i]]),
+      );
+      const expectedGlobalOrder = [5, 4, 3, 2, 1].map((n) => idByNights.get(n));
+      const res = await request(app)
+        .get(`/api/v1/lodging?country=${countryTag}&sort=nights&limit=2&offset=2`)
+        .set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data.map((l: { id: string }) => l.id)).toEqual(
+        expectedGlobalOrder.slice(2, 4),
+      );
     });
   });
 
