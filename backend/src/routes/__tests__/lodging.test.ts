@@ -822,6 +822,36 @@ describe("Lodging API", () => {
     });
   });
 
+  describe("GET /api/v1/lodging — pagination metadata (finding: silent truncation)", () => {
+    const countryTag = "PaginationMetaTest";
+
+    beforeAll(async () => {
+      for (let i = 0; i < 3; i++) {
+        await prisma.lodging.create({
+          data: { userId, name: `PageMetaHotel ${i}`, country: countryTag },
+        });
+      }
+    });
+
+    it("reports meta.total for the full filtered set even when limit truncates data", async () => {
+      const res = await request(app)
+        .get(`/api/v1/lodging?country=${countryTag}&limit=2`)
+        .set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(2);
+      expect(res.body.meta).toEqual({ total: 3, limit: 2, offset: 0 });
+    });
+
+    it("lets a client walk to the next page via offset", async () => {
+      const res = await request(app)
+        .get(`/api/v1/lodging?country=${countryTag}&limit=2&offset=2`)
+        .set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(1);
+      expect(res.body.meta).toEqual({ total: 3, limit: 2, offset: 2 });
+    });
+  });
+
   describe("Ownership isolation (no cross-user data leak)", () => {
     it("404s reading another user's lodging", async () => {
       const foreign = await prisma.lodging.create({ data: { userId: otherUserId, name: "Foreign Hotel" } });

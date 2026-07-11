@@ -141,14 +141,17 @@ export async function cleanupOldReceipts(prisma: PrismaClient): Promise<number> 
       continue;
     }
 
-    // Check if file is referenced in database
+    // Check if file is referenced in the database — via a flight OR a
+    // lodging stay (a lodging-only receipt must not be treated as orphaned
+    // just because no flight references it; same gap fixed in routes/uploads.ts).
     const receiptUrl = `/api/v1/uploads/receipts/${file}`;
-    const referencedFlight = await prisma.flight.findFirst({
-      where: { receiptUrl },
-    });
+    const [referencedFlight, referencedStay] = await Promise.all([
+      prisma.flight.findFirst({ where: { receiptUrl } }),
+      prisma.lodgingStay.findFirst({ where: { receiptUrl } }),
+    ]);
 
     // Delete if not referenced
-    if (!referencedFlight) {
+    if (!referencedFlight && !referencedStay) {
       try {
         fs.unlinkSync(filePath);
         deletedCount++;

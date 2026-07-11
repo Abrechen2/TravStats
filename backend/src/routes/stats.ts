@@ -12,7 +12,7 @@ import {
   calculateAirportStats,
 } from '../utils/statsCalculator';
 import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from '../utils/cruiseStats';
-import { calculateLodgingStats, type LodgingStayData } from '../utils/lodgingStats';
+import { calculateLodgingStats, type LodgingStayData, type LodgingRecord } from '../utils/lodgingStats';
 import { normalizeHistory } from '../utils/homeAirport';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
@@ -1224,19 +1224,31 @@ router.get(
         return;
       }
 
-      const stays = await prisma.lodgingStay.findMany({
-        where: { userId },
-        include: { lodging: true },
-      });
-
-      // Current base currency — spendBaseTotal is filtered against it so a
-      // stay snapshotted under an OLDER base currency never gets silently
-      // added under the current one's label (finding 2).
-      const settings = await prisma.userSettings.findUnique({
-        where: { userId },
-        select: { baseCurrency: true },
-      });
+      const [stays, lodgings, settings] = await Promise.all([
+        prisma.lodgingStay.findMany({
+          where: { userId },
+          include: { lodging: true },
+        }),
+        // Every lodging the user HAS, including ones with no stay yet — a
+        // hotel added but never checked into must still count toward
+        // lodgingsCount/chainsUnique (owner decision, finding 1).
+        prisma.lodging.findMany({ where: { userId } }),
+        // Current base currency — spendBaseTotal is filtered against it so a
+        // stay snapshotted under an OLDER base currency never gets silently
+        // added under the current one's label (finding 2).
+        prisma.userSettings.findUnique({
+          where: { userId },
+          select: { baseCurrency: true },
+        }),
+      ]);
       const baseCurrency = settings?.baseCurrency ?? 'EUR';
+      const lodgingRecords: LodgingRecord[] = lodgings.map((l) => ({
+        id: l.id,
+        chainId: l.chainId,
+        type: l.type,
+        country: l.country,
+        city: l.city,
+      }));
 
       const stayData: LodgingStayData[] = stays.map((s) => ({
         lodgingId: s.lodgingId,
@@ -1260,14 +1272,14 @@ router.get(
       // tab — fall back to an empty stats object and log the cause.
       let stats: ReturnType<typeof calculateLodgingStats>;
       try {
-        stats = calculateLodgingStats(stayData, baseCurrency);
+        stats = calculateLodgingStats(stayData, baseCurrency, lodgingRecords);
       } catch (calcError) {
         logger.error({
           operation: 'lodging_stats_calculation_failed',
           userId,
           error: calcError instanceof Error ? calcError.message : calcError,
         });
-        stats = calculateLodgingStats([], baseCurrency);
+        stats = calculateLodgingStats([], baseCurrency, lodgingRecords);
       }
 
       res.json({

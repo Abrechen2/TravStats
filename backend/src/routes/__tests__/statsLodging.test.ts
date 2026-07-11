@@ -187,6 +187,73 @@ describe("GET /api/v1/stats/lodging", () => {
     }
   });
 
+  describe("a hotel with zero stays is counted (owner decision, finding 1)", () => {
+    let noStayUserId: string;
+    let noStayAuthCookie: string;
+
+    beforeAll(async () => {
+      await prisma.lodgingStay.deleteMany({ where: { user: { username: "statslodgingnostay" } } });
+      await prisma.lodging.deleteMany({ where: { user: { username: "statslodgingnostay" } } });
+      await prisma.user.deleteMany({ where: { username: "statslodgingnostay" } });
+
+      const u = await prisma.user.create({
+        data: { username: "statslodgingnostay", passwordHash: await hashPassword("password123") },
+      });
+      noStayUserId = u.id;
+      noStayAuthCookie = `auth_token=${generateToken(u.id)}`;
+
+      // "NH Hotels" is a seeded real chain — reuse it instead of colliding
+      // with the unique `name` constraint.
+      const chain = await prisma.lodgingChain.upsert({
+        where: { name: "NH Hotels" },
+        update: {},
+        create: { name: "NH Hotels" },
+      });
+
+      // Hotel #1 has a real completed stay.
+      const hotelWithStay = await prisma.lodging.create({
+        data: { userId: noStayUserId, name: "Stayed-In Hotel", country: "Germany" },
+      });
+      await prisma.lodgingStay.create({
+        data: {
+          lodgingId: hotelWithStay.id,
+          userId: noStayUserId,
+          checkIn: new Date("2024-05-01T00:00:00.000Z"),
+          checkOut: new Date("2024-05-03T00:00:00.000Z"),
+          status: "completed",
+        },
+      });
+
+      // Hotel #2 was just added — assigned to a chain, but never checked into.
+      await prisma.lodging.create({
+        data: {
+          userId: noStayUserId,
+          name: "Freshly Added Hotel",
+          country: "Austria",
+          chainId: chain.id,
+        },
+      });
+    });
+
+    afterAll(async () => {
+      await prisma.lodgingStay.deleteMany({ where: { userId: noStayUserId } });
+      await prisma.lodging.deleteMany({ where: { userId: noStayUserId } });
+      await prisma.user.deleteMany({ where: { id: noStayUserId } });
+    });
+
+    it("counts both hotels and both their countries even though one has no stay", async () => {
+      const res = await request(app)
+        .get("/api/v1/stats/lodging")
+        .set("Cookie", noStayAuthCookie);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.lodgingsCount).toBe(2);
+      expect(res.body.data.chainsUnique).toBe(1);
+      expect(res.body.data.staysCount).toBe(1);
+      expect(res.body.data.countries.sort()).toEqual(["Austria", "Germany"]);
+    });
+  });
+
   describe("spendBaseTotal never mixes currencies after a base-currency switch (finding 2)", () => {
     let mixedUserId: string;
     let mixedAuthCookie: string;
