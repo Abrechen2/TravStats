@@ -37,6 +37,12 @@ export function LodgingCurrencyBreakdown({ stats }: LodgingCurrencyBreakdownProp
   const { t } = useTranslation(["dashboard"]);
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const entries = Object.entries(stats.spendByCurrency).sort(([a], [b]) => a.localeCompare(b));
+  // Amounts snapshotted under a base currency the user has since moved away
+  // from — `spendBaseTotal` above only covers the CURRENT base currency, so
+  // these must be shown separately rather than silently omitted (finding 2).
+  const otherBaseEntries = Object.entries(stats.spendBaseByCurrency)
+    .filter(([currency]) => currency !== baseCurrency)
+    .sort(([a], [b]) => a.localeCompare(b));
 
   return (
     <div style={CARD_STYLE} data-testid="lodging-currency-breakdown">
@@ -72,6 +78,25 @@ export function LodgingCurrencyBreakdown({ stats }: LodgingCurrencyBreakdownProp
             </li>
           ))}
         </ul>
+      )}
+
+      {otherBaseEntries.length > 0 && (
+        <div
+          data-testid="lodging-currency-breakdown-other-base"
+          style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--color-border)" }}
+        >
+          <div style={{ color: "var(--text-muted)", marginBottom: 4 }}>
+            {t("dashboard:lodgingTab.currencyBreakdown.otherBaseLabel")}
+          </div>
+          <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+            {otherBaseEntries.map(([currency, amount]) => (
+              <li key={currency} style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "var(--text-muted)" }}>{currency}</span>
+                <span>{formatCurrency(amount, currency)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <p style={{ marginTop: 6, marginBottom: 0, fontSize: 10, color: "var(--text-muted)" }}>

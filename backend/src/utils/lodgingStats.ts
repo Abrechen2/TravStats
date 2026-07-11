@@ -8,6 +8,8 @@ export interface LodgingStayData {
   checkOut: Date;
   status: string;
   totalPriceBase: number | null;
+  /** The base currency this stay's `totalPriceBase` was snapshotted into — NOT necessarily the user's CURRENT base currency (see spendBaseByCurrency). */
+  fxBaseCurrency: string | null;
   currency: string | null;
   totalPrice: number | null;
   isAwardStay: boolean;
@@ -27,10 +29,18 @@ export interface LodgingStats {
   citiesUnique: number;
   countries: Set<string>;
   countriesCount: number;
-  /** Sum of totalPriceBase (already converted to the user's base currency). */
+  /**
+   * Sum of totalPriceBase, but ONLY for stays whose `fxBaseCurrency` matches
+   * the CURRENT base currency passed into `calculateLodgingStats` — a stay
+   * snapshotted before the user switched their base currency keeps its OLD
+   * fxBaseCurrency forever (the snapshot is never recalculated), so it must
+   * never be silently added under the new currency's label (finding 2).
+   */
   spendBaseTotal: number;
   /** Original amounts grouped by their original currency — not a conversion. */
   spendByCurrency: Record<string, number>;
+  /** Every totalPriceBase amount grouped by the currency it was snapshotted into — the full picture behind spendBaseTotal's single current-base slice. */
+  spendBaseByCurrency: Record<string, number>;
   awardNights: number;
   hotelNights: number;
   campsiteNights: number;
@@ -49,7 +59,10 @@ export interface LodgingStats {
  * shifts and DST boundaries (no local-time arithmetic ever divides a day
  * into fractional hours that could round into the wrong bucket).
  */
-export function calculateLodgingStats(stays: LodgingStayData[]): LodgingStats {
+export function calculateLodgingStats(
+  stays: LodgingStayData[],
+  currentBaseCurrency = "EUR",
+): LodgingStats {
   const activeStays = stays.filter((s) => s.status !== "cancelled");
 
   const lodgingIds = new Set<string>();
@@ -59,12 +72,12 @@ export function calculateLodgingStats(stays: LodgingStayData[]): LodgingStats {
   const nightsByYear: Record<string, number> = {};
   const nightsByMonth: Record<string, number> = {};
   const spendByCurrency: Record<string, number> = {};
+  const spendBaseByCurrency: Record<string, number> = {};
   const lodgingCounts = new Map<string, number>();
   const chainCounts = new Map<number, number>();
 
   let totalNights = 0;
   let longestStayNights = 0;
-  let spendBaseTotal = 0;
   let awardNights = 0;
   let hotelNights = 0;
   let campsiteNights = 0;
@@ -90,8 +103,9 @@ export function calculateLodgingStats(stays: LodgingStayData[]): LodgingStats {
       spendByCurrency[stay.currency] =
         (spendByCurrency[stay.currency] ?? 0) + amount;
     }
-    if (stay.totalPriceBase !== null) {
-      spendBaseTotal += stay.totalPriceBase;
+    if (stay.totalPriceBase !== null && stay.fxBaseCurrency !== null) {
+      spendBaseByCurrency[stay.fxBaseCurrency] =
+        (spendBaseByCurrency[stay.fxBaseCurrency] ?? 0) + stay.totalPriceBase;
     }
 
     if (stay.ratingOverall !== null) {
@@ -133,8 +147,9 @@ export function calculateLodgingStats(stays: LodgingStayData[]): LodgingStats {
     citiesUnique: cities.size,
     countries,
     countriesCount: countries.size,
-    spendBaseTotal,
+    spendBaseTotal: spendBaseByCurrency[currentBaseCurrency] ?? 0,
     spendByCurrency,
+    spendBaseByCurrency,
     awardNights,
     hotelNights,
     campsiteNights,

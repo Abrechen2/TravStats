@@ -10,6 +10,10 @@ const stay = (o: Partial<LodgingStayData>): LodgingStayData => ({
   checkOut: new Date("2024-05-16T00:00:00Z"),
   status: "completed",
   totalPriceBase: 190,
+  // Every fixture snapshots into EUR by default so pre-existing tests that
+  // don't pass a `currentBaseCurrency` (defaulting to "EUR") keep matching
+  // their original spendBaseTotal expectations.
+  fxBaseCurrency: "EUR",
   currency: "EUR",
   totalPrice: 190,
   isAwardStay: false,
@@ -68,6 +72,7 @@ describe("calculateLodgingStats", () => {
     expect(s.countriesCount).toBe(0);
     expect(s.spendBaseTotal).toBe(0);
     expect(s.spendByCurrency).toEqual({});
+    expect(s.spendBaseByCurrency).toEqual({});
     expect(s.awardNights).toBe(0);
     expect(s.hotelNights).toBe(0);
     expect(s.campsiteNights).toBe(0);
@@ -89,6 +94,31 @@ describe("calculateLodgingStats", () => {
     expect(s.spendByCurrency).toEqual({ JPY: 15000, EUR: 200 });
     expect(s.spendBaseTotal).toBe(200);
     expect(Number.isNaN(s.spendBaseTotal)).toBe(false);
+  });
+
+  it("never mixes totalPriceBase amounts snapshotted into different base currencies (finding 2)", () => {
+    // Stay 1 was snapshotted while the user's base currency was EUR; stay 2
+    // was snapshotted AFTER the user switched their base currency to CHF.
+    // The old EUR snapshot is a permanent historical record — it must never
+    // be silently added into a "CHF" total just because CHF is now current.
+    const s = calculateLodgingStats(
+      [
+        stay({ lodgingId: "l1", fxBaseCurrency: "EUR", totalPriceBase: 190 }),
+        stay({ lodgingId: "l2", fxBaseCurrency: "CHF", totalPriceBase: 424 }),
+      ],
+      "CHF",
+    );
+    expect(s.spendBaseTotal).toBe(424); // ONLY the CHF-snapshotted stay
+    expect(s.spendBaseByCurrency).toEqual({ EUR: 190, CHF: 424 });
+  });
+
+  it("defaults currentBaseCurrency to EUR when the caller omits it", () => {
+    const s = calculateLodgingStats([
+      stay({ lodgingId: "l1", fxBaseCurrency: "EUR", totalPriceBase: 100 }),
+      stay({ lodgingId: "l2", fxBaseCurrency: "CHF", totalPriceBase: 500 }),
+    ]);
+    expect(s.spendBaseTotal).toBe(100);
+    expect(s.spendBaseByCurrency).toEqual({ EUR: 100, CHF: 500 });
   });
 
   it("counts a same-day check-in/check-out as 0 nights", () => {

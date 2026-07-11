@@ -23,6 +23,7 @@ const stats: LodgingStats = {
   countriesCount: 1,
   spendBaseTotal: 1234,
   spendByCurrency: {},
+  spendBaseByCurrency: { EUR: 1234 },
   awardNights: 0,
   hotelNights: 11,
   campsiteNights: 0,

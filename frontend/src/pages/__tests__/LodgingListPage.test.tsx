@@ -90,6 +90,7 @@ function makeLodging(overrides: Partial<Lodging> = {}): Lodging {
     stayCount: 1,
     nights: 2,
     totalSpendBase: 883,
+    totalSpendBaseByCurrency: { EUR: 883 },
     ...overrides,
   };
 }
@@ -131,6 +132,37 @@ describe("LodgingListPage", () => {
     const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
     expect(row?.textContent).toMatch(/CHF/);
     expect(row?.textContent).not.toMatch(/\$883/);
+  });
+
+  it("shows an honest hint when a lodging has spend snapshotted under an older base currency (finding 2)", async () => {
+    listLodgingsMock.mockResolvedValue([
+      makeLodging({
+        totalSpendBase: 100, // only the CHF (current base) slice
+        totalSpendBaseByCurrency: { EUR: 200, CHF: 100 },
+      }),
+    ]);
+
+    renderListPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
+    });
+    const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
+    expect(row?.querySelector('[title="lodging:list.otherCurrencyHint"]')).toBeInTheDocument();
+  });
+
+  it("shows no hint when all of a lodging's spend is in the current base currency", async () => {
+    listLodgingsMock.mockResolvedValue([
+      makeLodging({ totalSpendBase: 883, totalSpendBaseByCurrency: { EUR: 883 } }),
+    ]);
+
+    renderListPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
+    });
+    const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
+    expect(row?.querySelector('[title="lodging:list.otherCurrencyHint"]')).not.toBeInTheDocument();
   });
 
   it("passes the active type/year/country filters and sort as query params to listLodgings", async () => {

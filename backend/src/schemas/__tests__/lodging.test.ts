@@ -1,5 +1,6 @@
 import {
   createLodgingSchema,
+  updateLodgingSchema,
   createStaySchema,
   updateStaySchema,
   lodgingQuerySchema,
@@ -84,5 +85,47 @@ describe("lodging schemas", () => {
       receiptUrl: "https://evil.example.com/steal.pdf",
     });
     expect(r.success).toBe(false);
+  });
+
+  describe("nullable clearable fields (finding 4)", () => {
+    it("accepts explicit null for every previously-unclearable lodging field", () => {
+      const r = updateLodgingSchema.safeParse({
+        address: null,
+        city: null,
+        country: null,
+        notes: null,
+      });
+      expect(r.success).toBe(true);
+      if (r.success) {
+        expect(r.data.address).toBeNull();
+        expect(r.data.city).toBeNull();
+        expect(r.data.country).toBeNull();
+        expect(r.data.notes).toBeNull();
+      }
+    });
+
+    it("accepts explicit null for every previously-unclearable stay field", () => {
+      const r = updateStaySchema.safeParse({
+        roomNumber: null,
+        roomCategory: null,
+        pricePerNight: null,
+        totalPrice: null,
+        bookingReference: null,
+        receiptUrl: null,
+        ratingRoom: null,
+        ratingBreakfast: null,
+        ratingService: null,
+        ratingOverall: null,
+        notes: null,
+      });
+      expect(r.success).toBe(true);
+      if (r.success) {
+        expect(r.data.roomNumber).toBeNull();
+        expect(r.data.totalPrice).toBeNull();
+        expect(r.data.receiptUrl).toBeNull();
+        expect(r.data.ratingOverall).toBeNull();
+        expect(r.data.notes).toBeNull();
+      }
+    });
   });
 });

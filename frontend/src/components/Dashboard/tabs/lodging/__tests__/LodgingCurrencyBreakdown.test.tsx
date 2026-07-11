@@ -23,6 +23,7 @@ const baseStats: LodgingStats = {
   countriesCount: 1,
   spendBaseTotal: 0,
   spendByCurrency: {},
+  spendBaseByCurrency: {},
   awardNights: 0,
   hotelNights: 11,
   campsiteNights: 0,
@@ -92,5 +93,38 @@ describe("LodgingCurrencyBreakdown", () => {
 
     expect(screen.getByText(/CHF/)).toBeInTheDocument();
     expect(screen.queryByText(/\$1,234/)).not.toBeInTheDocument();
+  });
+
+  // Finding 2: spendBaseTotal only covers the CURRENT base currency — a
+  // stay snapshotted under an OLDER base currency must still be visible
+  // somewhere, honestly labeled, rather than silently dropped.
+  it("shows an older base-currency amount separately when the user has switched base currency", () => {
+    useSettingsStore.setState({ baseCurrency: "CHF" });
+    const stats: LodgingStats = {
+      ...baseStats,
+      spendBaseTotal: 300, // only the CHF-snapshotted stay
+      spendBaseByCurrency: { EUR: 190, CHF: 300 },
+    };
+
+    render(<LodgingCurrencyBreakdown stats={stats} />);
+
+    const otherBaseSection = screen.getByTestId("lodging-currency-breakdown-other-base");
+    expect(otherBaseSection.textContent).toMatch(/EUR/);
+    expect(otherBaseSection.textContent).toMatch(/190/);
+    // The CURRENT base currency (CHF) must not appear again in the "other" section.
+    expect(otherBaseSection.textContent).not.toMatch(/CHF/);
+  });
+
+  it("renders no 'other base currency' section when every snapshot matches the current base", () => {
+    useSettingsStore.setState({ baseCurrency: "EUR" });
+    const stats: LodgingStats = {
+      ...baseStats,
+      spendBaseTotal: 190,
+      spendBaseByCurrency: { EUR: 190 },
+    };
+
+    render(<LodgingCurrencyBreakdown stats={stats} />);
+
+    expect(screen.queryByTestId("lodging-currency-breakdown-other-base")).not.toBeInTheDocument();
   });
 });

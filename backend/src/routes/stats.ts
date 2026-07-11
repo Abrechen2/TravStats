@@ -1229,6 +1229,15 @@ router.get(
         include: { lodging: true },
       });
 
+      // Current base currency — spendBaseTotal is filtered against it so a
+      // stay snapshotted under an OLDER base currency never gets silently
+      // added under the current one's label (finding 2).
+      const settings = await prisma.userSettings.findUnique({
+        where: { userId },
+        select: { baseCurrency: true },
+      });
+      const baseCurrency = settings?.baseCurrency ?? 'EUR';
+
       const stayData: LodgingStayData[] = stays.map((s) => ({
         lodgingId: s.lodgingId,
         type: s.lodging.type,
@@ -1239,6 +1248,7 @@ router.get(
         checkOut: s.checkOut,
         status: s.status,
         totalPriceBase: s.totalPriceBase,
+        fxBaseCurrency: s.fxBaseCurrency,
         currency: s.currency,
         totalPrice: s.totalPrice,
         isAwardStay: s.isAwardStay,
@@ -1250,14 +1260,14 @@ router.get(
       // tab — fall back to an empty stats object and log the cause.
       let stats: ReturnType<typeof calculateLodgingStats>;
       try {
-        stats = calculateLodgingStats(stayData);
+        stats = calculateLodgingStats(stayData, baseCurrency);
       } catch (calcError) {
         logger.error({
           operation: 'lodging_stats_calculation_failed',
           userId,
           error: calcError instanceof Error ? calcError.message : calcError,
         });
-        stats = calculateLodgingStats([]);
+        stats = calculateLodgingStats([], baseCurrency);
       }
 
       res.json({

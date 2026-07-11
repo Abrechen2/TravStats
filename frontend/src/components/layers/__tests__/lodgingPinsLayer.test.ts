@@ -26,6 +26,7 @@ function makeLodging(overrides: Partial<Lodging> = {}): Lodging {
     stayCount: 0,
     nights: 0,
     totalSpendBase: 0,
+    totalSpendBaseByCurrency: {},
     ...overrides,
   };
 }

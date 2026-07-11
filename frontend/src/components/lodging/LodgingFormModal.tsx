@@ -48,15 +48,18 @@ export function LodgingFormModal({ mode, lodging, onClose, onSaved }: LodgingFor
         type,
         name: name.trim(),
         chainId: chain?.id ?? null,
-        address: address.trim() || undefined,
-        city: city.trim() || undefined,
-        country: country.trim() || undefined,
+        // `null` (not `undefined`) so an emptied field actually clears the
+        // stored value instead of being dropped by JSON.stringify and read
+        // back as "unchanged" (finding 4).
+        address: address.trim() || null,
+        city: city.trim() || null,
+        country: country.trim() || null,
         stars: stars.trim() ? Number.parseInt(stars, 10) : null,
         amenities: amenitiesInput
           .split(",")
           .map((a) => a.trim())
           .filter((a) => a.length > 0),
-        notes: notes.trim() || undefined,
+        notes: notes.trim() || null,
       };
       let saved: Lodging;
       if (mode === "create") {

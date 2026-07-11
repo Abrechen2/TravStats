@@ -13,7 +13,8 @@
       "nights": "Nights",
       "rating": "Rating",
       "spend": "Spend"
-    }
+    },
+    "otherCurrencyHint": "Includes further amounts in an older base currency, not counted here."
   },
   "filter": {
     "searchPlaceholder": "Search by name or location …",
