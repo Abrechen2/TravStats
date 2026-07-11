@@ -35,8 +35,12 @@ export function useWhatsNew(isAuthenticated: boolean): UseWhatsNewResult {
         const [{ version }, settings] = await Promise.all([versionApi.get(), settingsApi.get()]);
         if (cancelled) return;
 
+        // Compare "seen" against the ENTRY's version, not the running version.
+        // findEntryForVersion matches with <=, so on 2.3.1 the running version
+        // and the entry's ("2.3.0") differ — comparing against the former would
+        // never register the dismissal and the modal would reappear forever.
         const match = findEntryForVersion(version);
-        if (!match || settings.whatsNewSeenVersion === version) {
+        if (!match || settings.whatsNewSeenVersion === match.version) {
           setEntry(null);
           setShouldShow(false);
           return;
