@@ -11,10 +11,22 @@ const { getAlbumAssets, unlinkAlbum, resyncAlbum, getImportJob } = vi.hoisted(()
   resyncAlbum: vi.fn(),
   getImportJob: vi.fn(),
 }));
+const KNOWN_FAILURE_KINDS = [
+  "notConfigured",
+  "unreachable",
+  "auth",
+  "notFound",
+  "protocol",
+  "invalidUrl",
+];
 vi.mock("../../../lib/api/immich", () => ({
   immichApi: { getAlbumAssets, unlinkAlbum, resyncAlbum, getImportJob },
   immichFailureKind: (e: unknown) =>
     (e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? null,
+  failureKey: (kind: unknown) =>
+    typeof kind === "string" && KNOWN_FAILURE_KINDS.includes(kind)
+      ? `errors.${kind}`
+      : "errors.unknown",
 }));
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -76,6 +88,18 @@ describe("ImmichAlbumSection", () => {
     await waitFor(() => expect(screen.getByText("errors.unreachable")).toBeInTheDocument());
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "errors.retry" })).toBeInTheDocument();
+  });
+
+  // An unrecognised backend failure kind (a future value the frontend has
+  // never seen, e.g. a validation-schema addition on the backend) must
+  // degrade to the neutral "errors.unknown" panel — never "errors.unreachable",
+  // which would falsely assert a network failure that was never established.
+  it("renders errors.unknown (not errors.unreachable) for an unrecognised failure kind", async () => {
+    getAlbumAssets.mockRejectedValue({ response: { data: { error: "brand-new-kind" } } });
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText("errors.unknown")).toBeInTheDocument());
+    expect(screen.queryByText("errors.unreachable")).not.toBeInTheDocument();
   });
 
   it("offers unlink for a deleted album", async () => {
