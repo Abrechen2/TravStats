@@ -114,6 +114,25 @@ export const fxPreviewLimiter = rateLimit({
 });
 
 /**
+ * Per-user/IP limit for the lodging import endpoints (preview/commit/list/
+ * revert/suggest-mapping). `/suggest-mapping` calls an LLM; `/preview` and
+ * `/commit` do real DB scans (up to `MAX_LODGING_IMPORT_ROWS` rows); `/commit`
+ * also kicks off a background Nominatim geocode backfill — whose usage policy
+ * would get the instance's IP banned if abused. Mirrors `fxPreviewLimiter` /
+ * `portGeocodeLimiter`'s shape (per-caller keying + PAT-aware multiplier),
+ * with a 15-minute window since a real import run is a batch operation, not a
+ * typeahead.
+ */
+export const lodgingImportLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: patAwareMax(60),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many import requests, please try again later' },
+  keyGenerator: userOrIpKey,
+});
+
+/**
  * Rate limiter for flight creation
  * Allows 20 flight creations per hour per IP
  */
