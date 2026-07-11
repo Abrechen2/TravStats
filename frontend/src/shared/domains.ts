@@ -43,7 +43,6 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     icon: "🏨",
     color: "#d4778f",
     routePrefix: "/lodging",
-    // parserSupported stays false until Phase B adds the lodging parser.
   },
   poi: {
     key: "poi",
