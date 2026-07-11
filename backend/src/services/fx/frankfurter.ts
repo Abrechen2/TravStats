@@ -49,6 +49,10 @@ export async function convertToBase(
   base: string,
   date: Date,
 ): Promise<FxConversion | null> {
+  if (Number.isNaN(date.getTime())) {
+    logger.warn({ from, base, date: String(date) }, "FX conversion rejected: invalid date");
+    return null;
+  }
   const rateDate = toIsoDate(date);
   if (from === base) return { baseAmount: amount, rate: 1, rateDate };
   const rate = await getRate(from, base, rateDate);
