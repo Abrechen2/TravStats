@@ -5,6 +5,7 @@ import { useDashboardRoute } from "../hooks/useDashboardRoute";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { flightsApi } from "../lib/api/flights";
 import { cruiseApi } from "../lib/api/cruise";
+import { getLodgingStats } from "../lib/api/lodging";
 import { logger } from "../lib/logger";
 import { prefetchGlobeTextures } from "../lib/prefetchGlobeTextures";
 import { useTranslation } from "../hooks/useTranslation";
@@ -13,6 +14,7 @@ import { AllTab } from "../components/Dashboard/tabs/AllTab";
 import { FlightsTab } from "../components/Dashboard/tabs/FlightsTab";
 import { CruisesTab } from "../components/Dashboard/tabs/CruisesTab";
 import { PoiTab } from "../components/Dashboard/tabs/PoiTab";
+import { LodgingTab } from "../components/Dashboard/tabs/LodgingTab";
 
 const IMPORT_MOVED_FLAG = "tsv1_5_import_moved_seen";
 
@@ -56,15 +58,22 @@ export default function DashboardPage(): JSX.Element {
       try {
         const flightsPromise = flightsApi.getAll({ limit: 1, offset: 0 });
         const cruisesPromise = isEnabled("cruise") ? cruiseApi.list({}) : Promise.resolve([]);
-        const [flights, cruises] = await Promise.all([flightsPromise, cruisesPromise]);
+        // getLodgingStats().lodgingsCount is the exact count — cheaper than
+        // fetching the full lodging list just to read its length.
+        const lodgingPromise = isEnabled("lodging")
+          ? getLodgingStats()
+          : Promise.resolve(null);
+        const [flights, cruises, lodgingStats] = await Promise.all([
+          flightsPromise,
+          cruisesPromise,
+          lodgingPromise,
+        ]);
         if (cancelled) return;
         setCounts({
           flight: flights.total,
           cruise: cruises.length,
           poi: 0,
-          // Lodging count is wired once the frontend lodging API client lands
-          // (Task 14+); the tab strip badge stays at 0 until then.
-          lodging: 0,
+          lodging: lodgingStats?.lodgingsCount ?? 0,
         });
       } catch (err) {
         logger.error("Failed to load dashboard counts:", err);
@@ -82,6 +91,7 @@ export default function DashboardPage(): JSX.Element {
       {tab === "flight" && <FlightsTab key={refreshToken} />}
       {tab === "cruise" && <CruisesTab key={refreshToken} />}
       {tab === "poi" && <PoiTab key={refreshToken} />}
+      {tab === "lodging" && <LodgingTab key={refreshToken} />}
     </DashboardLayout>
   );
 }
