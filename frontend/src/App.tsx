@@ -23,6 +23,8 @@ const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const FlightsTablePage = lazy(() => import("./pages/FlightsTablePage"));
 const CruisesPage = lazy(() => import("./pages/CruisesPage"));
 const CruiseDetailPage = lazy(() => import("./pages/CruiseDetailPage"));
+const LodgingListPage = lazy(() => import("./pages/LodgingListPage"));
+const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
 const TripDetailPage = lazy(() => import("./pages/TripDetailPage"));
 const AchievementsPage = lazy(() => import("./pages/AchievementsPage"));
@@ -276,6 +278,26 @@ function AppContent() {
                 element={
                   isAuthenticated && isEnabled("cruise") ? (
                     <CruiseDetailPage />
+                  ) : (
+                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                  )
+                }
+              />
+              <Route
+                path="/lodging"
+                element={
+                  isAuthenticated && isEnabled("lodging") ? (
+                    <LodgingListPage />
+                  ) : (
+                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                  )
+                }
+              />
+              <Route
+                path="/lodging/:id"
+                element={
+                  isAuthenticated && isEnabled("lodging") ? (
+                    <LodgingDetailPage />
                   ) : (
                     <Navigate to={isAuthenticated ? "/" : "/login"} />
                   )
