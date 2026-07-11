@@ -16,6 +16,19 @@ export interface LodgingStayData {
   ratingOverall: number | null;
 }
 
+/**
+ * Minimal shape of a `Lodging` row needed to count hotels the user HAS
+ * (including ones with no stay yet) — passed optionally to
+ * `calculateLodgingStats` alongside the stays.
+ */
+export interface LodgingRecord {
+  id: string;
+  chainId: number | null;
+  type: string;
+  country: string | null;
+  city: string | null;
+}
+
 export interface LodgingStats {
   lodgingsCount: number;
   staysCount: number;
@@ -58,10 +71,19 @@ export interface LodgingStats {
  * so stepping via `Date.UTC(...)` day-by-day is immune to local-timezone
  * shifts and DST boundaries (no local-time arithmetic ever divides a day
  * into fractional hours that could round into the wrong bucket).
+ *
+ * `lodgings` is optional and, when supplied, changes the semantics of
+ * `lodgingsCount` and `chainsUnique`: instead of being derived only from
+ * stays seen (a hotel with zero stays would otherwise be invisible), they
+ * count every lodging the user HAS. Its cities/countries are folded into
+ * the shared city/country sets too — a hotel added in a new country counts
+ * as that country even before the user has stayed there. Callers that omit
+ * `lodgings` keep today's stay-derived behaviour (back-compat).
  */
 export function calculateLodgingStats(
   stays: LodgingStayData[],
   currentBaseCurrency = "EUR",
+  lodgings?: LodgingRecord[],
 ): LodgingStats {
   const activeStays = stays.filter((s) => s.status !== "cancelled");
 
@@ -136,14 +158,30 @@ export function calculateLodgingStats(
     if (count > sameHotelRepeatMax) sameHotelRepeatMax = count;
   }
 
+  // When the caller supplies the user's full lodgings list, lodgingsCount/
+  // chainsUnique count hotels the user HAS (including ones with no stay
+  // yet), and their cities/countries fold into the shared sets too.
+  let lodgingsCount = lodgingIds.size;
+  let chainsUnique = chainIds.size;
+  if (lodgings) {
+    const lodgingChainIds = new Set<number>();
+    for (const l of lodgings) {
+      if (l.chainId !== null) lodgingChainIds.add(l.chainId);
+      if (l.city) cities.add(l.city);
+      if (l.country) countries.add(l.country);
+    }
+    lodgingsCount = lodgings.length;
+    chainsUnique = lodgingChainIds.size;
+  }
+
   return {
-    lodgingsCount: lodgingIds.size,
+    lodgingsCount,
     staysCount: activeStays.length,
     totalNights,
     nightsByYear,
     nightsByMonth,
     longestStayNights,
-    chainsUnique: chainIds.size,
+    chainsUnique,
     citiesUnique: cities.size,
     countries,
     countriesCount: countries.size,

@@ -12,6 +12,25 @@ import logger from '../utils/logger';
 const router = Router();
 
 /**
+ * Checks whether `receiptUrl` belongs to the caller through ANY domain that
+ * can own a receipt. Currently that's a flight or a lodging stay — cruises
+ * carry no `receiptUrl` field (schemas/cruise.ts has no receipt input), so
+ * they are intentionally not checked here. Ownership stays strict: the
+ * underlying record must have `userId` equal to the caller's id; this never
+ * widens to "any authenticated user".
+ */
+async function findReceiptOwner(
+  userId: string,
+  receiptUrl: string,
+): Promise<{ flightId: string | null; lodgingStayId: string | null }> {
+  const [flight, stay] = await Promise.all([
+    prisma.flight.findFirst({ where: { userId, receiptUrl }, select: { id: true } }),
+    prisma.lodgingStay.findFirst({ where: { userId, receiptUrl }, select: { id: true } }),
+  ]);
+  return { flightId: flight?.id ?? null, lodgingStayId: stay?.id ?? null };
+}
+
+/**
  * POST /api/v1/uploads/receipt
  * Upload a receipt file
  */
@@ -97,12 +116,11 @@ router.get('/receipts/:filename', authenticate, async (req: AuthRequest, res: Re
 
     const receiptUrl = `/api/v1/uploads/receipts/${sanitized}`;
 
-    // Ensure the requesting user owns a flight referencing this receipt
-    const flight = await prisma.flight.findFirst({
-      where: { userId, receiptUrl },
-    });
-
-    if (!flight) {
+    // Ensure the requesting user owns a flight OR a lodging stay
+    // referencing this receipt (finding: lodging receipts 403/404'd because
+    // only flights were ever checked).
+    const owner = await findReceiptOwner(userId, receiptUrl);
+    if (!owner.flightId && !owner.lodgingStayId) {
       throw new AppError('File not found or access denied', 404);
     }
 
@@ -129,28 +147,32 @@ router.delete(
       // Sanitize filename
       const sanitized = path.basename(filename);
 
-      // Verify that the file belongs to the user (check if any of their flights reference it)
+      // Verify that the file belongs to the user through a flight OR a
+      // lodging stay (finding: lodging receipts could never be deleted
+      // because only flights were ever checked).
       const receiptUrl = `/api/v1/uploads/receipts/${sanitized}`;
 
-      const flight = await prisma.flight.findFirst({
-        where: {
-          userId,
-          receiptUrl,
-        },
-      });
-
-      if (!flight) {
+      const owner = await findReceiptOwner(userId, receiptUrl);
+      if (!owner.flightId && !owner.lodgingStayId) {
         throw new AppError('File not found or access denied', 404);
       }
 
       // Delete file
       deleteReceiptFile(sanitized);
 
-      // Remove receipt URL from flight
-      await prisma.flight.update({
-        where: { id: flight.id },
-        data: { receiptUrl: null },
-      });
+      // Clear the receipt reference on whichever domain record owned it.
+      if (owner.flightId) {
+        await prisma.flight.update({
+          where: { id: owner.flightId },
+          data: { receiptUrl: null },
+        });
+      }
+      if (owner.lodgingStayId) {
+        await prisma.lodgingStay.update({
+          where: { id: owner.lodgingStayId },
+          data: { receiptUrl: null },
+        });
+      }
 
       res.json({ success: true, message: 'Receipt deleted successfully' });
     } catch (error) {
