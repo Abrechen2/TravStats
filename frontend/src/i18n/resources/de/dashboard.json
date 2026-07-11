@@ -195,6 +195,8 @@
     "flightUpcoming": "Flüge (geplant)",
     "cruisePast": "Kreuzfahrten (gefahren)",
     "cruisePlanned": "Kreuzfahrten (geplant)",
+    "cruisePerCruise": "Kreuzfahrten (eine Farbe pro Reise)",
+    "cruiseSolid": "Kreuzfahrten",
     "flightFrequency": "Flüge (Häufigkeit)",
     "flightSolid": "Flüge"
   }

@@ -8,12 +8,10 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { cruiseApi } from "../../../lib/api/cruise";
 import { flightsApi } from "../../../lib/api/flights";
 import { tripsApi } from "../../../lib/api/trips";
-import {
-  buildFlightLegend,
-  rgbCss,
-  type FlightLegendRow,
-} from "../../../lib/flightColor";
+import { buildCruiseLegend, type CruiseLegendRow } from "../../../lib/cruiseColor";
+import { buildFlightLegend, rgbCss, type FlightLegendRow } from "../../../lib/flightColor";
 import { logger } from "../../../lib/logger";
+import { useCruiseColorStore } from "../../../store/cruiseColorStore";
 import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
 import { useFlightColorStore } from "../../../store/flightColorStore";
 import {
@@ -42,6 +40,16 @@ const FLIGHT_LEGEND_LABEL_KEY: Record<FlightLegendRow["slot"], string> = {
   solid: "dashboard:legend.flightSolid",
 };
 
+// Same contract on the cruise side (#reported-2.3.1): the legend used to
+// hardcode rgb(74,144,217) / rgb(34,211,238) as string literals, so it kept
+// claiming blue/cyan while the user's colours were already on the map.
+const CRUISE_LEGEND_LABEL_KEY: Record<CruiseLegendRow["slot"], string> = {
+  past: "dashboard:legend.cruisePast",
+  planned: "dashboard:legend.cruisePlanned",
+  perCruise: "dashboard:legend.cruisePerCruise",
+  solid: "dashboard:legend.cruiseSolid",
+};
+
 // Maps the dashboard-level AllMode to what MapContainer3D's visMode prop expects.
 // "journey" uses extraLayers with showInternalCruises=false so it has full
 // control over which trip is rendered.
@@ -63,6 +71,7 @@ export function AllTab(): JSX.Element {
   // cannot drift from the map because it is not a copy of the state — it is
   // the state, run through the same colour resolver.
   const flightColorConfig = useFlightColorStore((s) => s.config);
+  const cruiseColorConfig = useCruiseColorStore((s) => s.config);
   const [flights, setFlights] = useState<GeoJSONFeature[]>([]);
   const [cruises, setCruises] = useState<Cruise[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -252,8 +261,8 @@ export function AllTab(): JSX.Element {
   // (or first-available) cross-domain trip.
   const journeyLayers = useMemo<Layer[]>(() => {
     if (allMode !== "journey") return [];
-    return buildJourneyLayers(visibleFlights, visibleCruises, effectiveTripId);
-  }, [allMode, visibleFlights, visibleCruises, effectiveTripId]);
+    return buildJourneyLayers(visibleFlights, visibleCruises, effectiveTripId, cruiseColorConfig);
+  }, [allMode, visibleFlights, visibleCruises, effectiveTripId, cruiseColorConfig]);
 
   // The ☰ Aktivität toggle stays top-left (it opens the activity sidebar).
   // Shifts right when the sidebar is open so it clears the panel.
@@ -283,12 +292,7 @@ export function AllTab(): JSX.Element {
   // One colour-key row: a short line swatch (or, for a frequency ramp, a
   // slightly taller/wider gradient bar) + its label. `background` takes any
   // CSS colour OR gradient, so both row kinds share one renderer.
-  const legendRow = (
-    background: string,
-    label: string,
-    key: string,
-    ramp = false
-  ): JSX.Element => (
+  const legendRow = (background: string, label: string, key: string, ramp = false): JSX.Element => (
     <span key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <span
         aria-hidden
@@ -316,6 +320,22 @@ export function AllTab(): JSX.Element {
     return legendRow(rgbCss(row.color), label, `flight-${row.slot}`);
   });
 
+  // Cruise rows, same contract: DERIVED from the active cruise colour config,
+  // never hardcoded. "perCruise" has no single colour, so it renders one honest
+  // multi-hue swatch (hard colour stops, not a blend) with a "one colour per
+  // cruise" label — enumerating every cruise would be a second sidebar.
+  const cruiseLegendRows = buildCruiseLegend(cruiseColorConfig).map((row) => {
+    const label = t(CRUISE_LEGEND_LABEL_KEY[row.slot]);
+    if (row.kind === "multi") {
+      const step = 100 / row.stops.length;
+      const segments = row.stops
+        .map((c, i) => `${rgbCss(c)} ${i * step}% ${(i + 1) * step}%`)
+        .join(", ");
+      return legendRow(`linear-gradient(90deg, ${segments})`, label, `cruise-${row.slot}`, true);
+    }
+    return legendRow(rgbCss(row.color), label, `cruise-${row.slot}`);
+  });
+
   // Colour key as a compact table pinned bottom-right — out of the top band
   // so it never collides with the globe's time histogram or the top-left
   // controls. Renders only the visible domains' rows.
@@ -339,12 +359,7 @@ export function AllTab(): JSX.Element {
       }}
     >
       {flightsVisible && flightLegendRows}
-      {cruisesVisible && (
-        <>
-          {legendRow("rgb(74,144,217)", t("dashboard:legend.cruisePast"), "cruise-past")}
-          {legendRow("rgb(34,211,238)", t("dashboard:legend.cruisePlanned"), "cruise-planned")}
-        </>
-      )}
+      {cruisesVisible && cruiseLegendRows}
     </div>
   );
 
@@ -451,7 +466,6 @@ export function AllTab(): JSX.Element {
       <MapContainer3D
         flights={visibleFlights}
         visMode={visMode}
-        cruiseColorMode="status"
         onFlightClick={handleFlightClick}
         onRouteClick={handleRouteClick}
         onFlightOpen={handlePanelFlightDetails}

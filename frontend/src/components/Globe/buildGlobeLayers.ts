@@ -28,13 +28,11 @@ import {
   type FlightColorConfig,
 } from "../../lib/flightColor";
 
-// Default cruise-route colour — the canonical cruise-domain blue
-// (BRAND.md §3, --domain-cruise = rgb(111,160,214)). Matches the port
-// marker default + the flat-map cruise arcs so ship routes read the same
-// on the globe and the 2D map. Used as the "Standard" swatch default in
-// the appearance panels; the actual per-leg render color is resolved in
-// GlobeView's `cruisePaths` builder (user override, else `colorMode`).
-export const DEFAULT_CRUISE_ROUTE_COLOR: [number, number, number] = [111, 160, 214];
+// NOTE: there is no `DEFAULT_CRUISE_ROUTE_COLOR` any more. It existed to seed
+// the "Standard" pill of the old single-colour cruise picker; cruise routes are
+// now coloured by an explicit mode whose defaults live in `lib/cruiseColor.ts`
+// (`DEFAULT_CRUISE_COLORS`). The brand blue survives as a palette preset there.
+//
 // Alpha applied to a cruise path. Planned (scheduled) cruises render
 // dimmer than past ones — matching the flat map's `cruiseArcsLayer`
 // PLANNED_ALPHA so the two renderers agree on how "not yet sailed" reads.

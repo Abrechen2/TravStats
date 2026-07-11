@@ -2,13 +2,20 @@
 //
 // Extracted from GlobeControlPanel so BOTH panels render from one source
 // of truth — same tokens, same switch, same colour field, and (crucially)
-// the same per-domain `AppearanceSection`. That guarantee is what keeps
-// the "Anpassung" controls identical across every dashboard mode: the
-// Flüge section and the Kreuzfahrten section are the exact same component
-// with different labels + ranges.
+// the same per-domain appearance sections. That guarantee is what keeps the
+// "Anpassung" controls identical across every dashboard mode: the globe panel
+// and the flat-map panel render the very same `FlightAppearanceSection` /
+// `CruiseAppearanceSection`, so the two can never drift apart.
 
 import { useTranslation } from "../../hooks/useTranslation";
-import type { Rgb } from "../../lib/cruiseColor";
+import {
+  CRUISE_COLOR_MODES,
+  CRUISE_COLOR_PRESETS,
+  type CruiseColorConfig,
+  type CruiseColorMode,
+  type CruiseColorSlot,
+  type Rgb,
+} from "../../lib/cruiseColor";
 import {
   FLIGHT_COLOR_MODES,
   FLIGHT_COLOR_PRESETS,
@@ -189,7 +196,9 @@ export function SegControl<V extends string>({
             style={{
               background: active ? `rgba(${ACCENT},0.16)` : "rgba(255,255,255,0.04)",
               color: active ? `rgb(${ACCENT})` : "rgba(241,245,249,0.72)",
-              border: active ? `1px solid rgba(${ACCENT},0.55)` : "1px solid rgba(255,255,255,0.06)",
+              border: active
+                ? `1px solid rgba(${ACCENT},0.55)`
+                : "1px solid rgba(255,255,255,0.06)",
             }}
           >
             {opt.icon && (
@@ -258,177 +267,23 @@ export function Slider({
  *  new domain (hotels, …) grows an on-map route/marker representation. */
 export type AppearanceDomain = "flight" | "cruise";
 
-/**
- * One domain's appearance state + setters, shared verbatim by the globe
- * and the flat-map panel so both surface the identical control set. On
- * the globe `markerSize` is a pixel radius; on the flat map it's a size
- * multiplier — the section only slides a number, the units are the
- * panel's business.
- */
-export interface DomainAppearanceState {
-  routeColor: [number, number, number] | null;
-  onRouteColorChange: (c: [number, number, number] | null) => void;
-  routeWidth: number;
-  onRouteWidthChange: (w: number) => void;
-  markerColor: [number, number, number] | null;
-  onMarkerColorChange: (c: [number, number, number] | null) => void;
-  markerSize: number;
-  onMarkerSizeChange: (s: number) => void;
-  /** Cruise-only: direction-arrow size multiplier + setter (flat map). */
-  arrowScale?: number;
-  onArrowScaleChange?: (n: number) => void;
-}
-
-export interface AppearanceSectionProps {
-  /** Uppercase section header — the domain name ("Flüge" / "Kreuzfahrten"). */
-  title: string;
-  // Route row
-  routeLabel: string;
-  routeColor: [number, number, number] | null;
-  /** Swatch shown when routeColor is null (the "auto" default tint). */
-  routeDefault: [number, number, number];
-  onRouteColorChange: (c: [number, number, number] | null) => void;
-  /** Pill text for the route reset — "Frequenz" (flights) / "Standard" (cruises). */
-  routeAutoLabel: string;
-  widthLabel: string;
-  routeWidth: number;
-  onRouteWidthChange: (w: number) => void;
-  // Marker row
-  markerLabel: string;
-  markerColor: [number, number, number] | null;
-  markerDefault: [number, number, number];
-  onMarkerColorChange: (c: [number, number, number] | null) => void;
-  /** Pill text for the marker reset ("Auto"). */
-  markerAutoLabel: string;
-  sizeLabel: string;
-  markerSize: number;
-  onMarkerSizeChange: (s: number) => void;
-  /** Cruise-only arrow slider — rendered only when all three are provided. */
-  arrowLabel?: string;
-  arrowScale?: number;
-  onArrowScaleChange?: (n: number) => void;
-}
-
-/**
- * One domain's slice of the appearance controls: route colour + width preset
- * and marker colour + size preset. Rendered identically for every domain so
- * a user sees the same layout whether they're tuning flights or cruises.
- * Null colour = "auto" (frequency heatmap for flight routes, brand default
- * otherwise); the pill toggles back to null. Marker size "Aus" hides the
- * domain's markers.
- */
-export function AppearanceSection({
-  title,
-  routeLabel,
-  routeColor,
-  routeDefault,
-  onRouteColorChange,
-  routeAutoLabel,
-  widthLabel,
-  routeWidth,
-  onRouteWidthChange,
-  markerLabel,
-  markerColor,
-  markerDefault,
-  onMarkerColorChange,
-  markerAutoLabel,
-  sizeLabel,
-  markerSize,
-  onMarkerSizeChange,
-  arrowLabel,
-  arrowScale,
-  onArrowScaleChange,
-}: AppearanceSectionProps): JSX.Element {
-  const { t } = useTranslation();
-  return (
-    <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
-      <SectionLabel>{title}</SectionLabel>
-
-      {/* Route colour: "auto" (frequency / brand tint) or a solid custom colour. */}
-      <div className="flex items-center justify-between gap-2 py-0.5">
-        <span className="text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
-          {routeLabel}
-        </span>
-        <div className="flex items-center gap-1.5">
-          <AutoPill
-            active={routeColor === null}
-            label={routeAutoLabel}
-            // Toggle: on → frequency/auto (null); off → the solid default
-            // colour, so the button switches both ways.
-            onClick={() => onRouteColorChange(routeColor === null ? routeDefault : null)}
-          />
-          <ColorField label="" value={routeColor ?? routeDefault} onChange={onRouteColorChange} />
-        </div>
-      </div>
-
-      {/* Route width slider */}
-      <Slider
-        label={widthLabel}
-        value={routeWidth}
-        min={0.3}
-        max={2}
-        step={0.1}
-        onChange={onRouteWidthChange}
-      />
-
-      {/* Marker colour + Auto reset */}
-      <div className="mt-2 flex items-center justify-between gap-2 py-0.5">
-        <ColorField
-          label={markerLabel}
-          value={markerColor ?? markerDefault}
-          onChange={onMarkerColorChange}
-        />
-        <AutoPill
-          active={markerColor === null}
-          label={markerAutoLabel}
-          onClick={() => onMarkerColorChange(null)}
-        />
-      </div>
-
-      {/* Marker size slider (0 = hidden) */}
-      <div className="mt-1">
-        <Slider
-          label={sizeLabel}
-          value={markerSize}
-          min={0}
-          max={1.6}
-          step={0.1}
-          onChange={onMarkerSizeChange}
-          format={(v) => (v <= 0 ? t("map:globe.panel.off") : `${v.toFixed(1)}×`)}
-        />
-      </div>
-
-      {/* Cruise-only: direction-arrow size slider */}
-      {arrowScale != null && onArrowScaleChange && (
-        <Slider
-          label={arrowLabel ?? ""}
-          value={arrowScale}
-          min={0}
-          max={2.5}
-          step={0.1}
-          onChange={onArrowScaleChange}
-          format={(v) => (v <= 0 ? t("map:globe.panel.off") : `${v.toFixed(1)}×`)}
-        />
-      )}
-    </div>
-  );
-}
-
-// ── Flight appearance section ────────────────────────────────────────
-// Flights get their own section (cruises keep the generic one above) because
-// their colouring is an explicit MODE — status / frequency / solid — not a
-// single colour plus an "auto" pill. The old pill was the reported "what does
+// ── Colour-mode sections ─────────────────────────────────────────────
+// Both domains colour their routes by an explicit MODE — not by a single
+// colour plus an "auto" pill. The old pill was the reported "what does
 // 'Frequenz' even do?" control: it looked like a reset button because it
-// silently swapped between two invisible colouring systems.
+// silently swapped between two invisible colouring systems. Cruises had it
+// worse — their mode was not a control at all, it was hardcoded per tab.
 
 /** Quick-pick swatch row + the free colour input for one colour slot. */
 function ColorRow({
   caption,
   value,
+  presets,
   onChange,
 }: {
   caption: string;
   value: Rgb;
+  presets: readonly Rgb[];
   onChange: (c: Rgb) => void;
 }): JSX.Element {
   return (
@@ -437,9 +292,8 @@ function ColorRow({
         {caption}
       </span>
       <span className="flex items-center gap-1">
-        {FLIGHT_COLOR_PRESETS.map((preset) => {
-          const active =
-            preset[0] === value[0] && preset[1] === value[1] && preset[2] === value[2];
+        {presets.map((preset) => {
+          const active = preset[0] === value[0] && preset[1] === value[1] && preset[2] === value[2];
           return (
             <button
               key={rgbCss(preset)}
@@ -583,11 +437,13 @@ export function FlightAppearanceSection({
           <ColorRow
             caption={t("map:globe.panel.colorMode.swatchFlown")}
             value={colors.past}
+            presets={FLIGHT_COLOR_PRESETS}
             onChange={(c) => onColorChange("past", c)}
           />
           <ColorRow
             caption={t("map:globe.panel.colorMode.swatchPlanned")}
             value={colors.upcoming}
+            presets={FLIGHT_COLOR_PRESETS}
             onChange={(c) => onColorChange("upcoming", c)}
           />
         </>
@@ -596,6 +452,7 @@ export function FlightAppearanceSection({
         <ColorRow
           caption={t("map:globe.panel.routes")}
           value={colors.frequency}
+          presets={FLIGHT_COLOR_PRESETS}
           onChange={(c) => onColorChange("frequency", c)}
         />
       )}
@@ -603,6 +460,7 @@ export function FlightAppearanceSection({
         <ColorRow
           caption={t("map:globe.panel.routes")}
           value={colors.solid}
+          presets={FLIGHT_COLOR_PRESETS}
           onChange={(c) => onColorChange("solid", c)}
         />
       )}
@@ -643,6 +501,177 @@ export function FlightAppearanceSection({
           format={(v) => (v <= 0 ? t("map:globe.panel.off") : `${v.toFixed(1)}×`)}
         />
       </div>
+    </div>
+  );
+}
+
+// ── Cruise appearance section ────────────────────────────────────────
+// The cruise mirror of the flight section: colour MODE first, then only the
+// colours that mode actually uses, then width / port marker / arrows. Replaces
+// the old generic "one colour + a Standard pill" section, which could not
+// express the three things cruises are actually coloured by.
+
+/** Cruise-domain appearance state, shared verbatim by both panels. */
+export interface CruiseAppearanceState {
+  /** Mode + the three colour slots — read straight from `useCruiseColorStore`. */
+  colorConfig: CruiseColorConfig;
+  onColorModeChange: (mode: CruiseColorMode) => void;
+  onColorChange: (slot: CruiseColorSlot, color: Rgb) => void;
+  routeWidth: number;
+  onRouteWidthChange: (w: number) => void;
+  markerColor: Rgb | null;
+  onMarkerColorChange: (c: Rgb | null) => void;
+  markerSize: number;
+  onMarkerSizeChange: (s: number) => void;
+  /** Direction-arrow size multiplier. Flat map only — the globe passes neither,
+   *  and the slider is then not rendered. Both must be provided together. */
+  arrowScale?: number;
+  onArrowScaleChange?: (n: number) => void;
+}
+
+export interface CruiseAppearanceSectionProps extends CruiseAppearanceState {
+  /** Uppercase section header ("Kreuzfahrten"). */
+  title: string;
+  /** Port-marker swatch label + its "Auto" reset pill text. */
+  markerLabel: string;
+  markerAutoLabel: string;
+  markerDefault: Rgb;
+  widthLabel: string;
+  sizeLabel: string;
+  arrowLabel?: string;
+}
+
+/**
+ * The cruise domain's appearance controls: colour MODE ("status" / "perCruise"
+ * / "solid") + the colours that mode uses, then route width, port-marker
+ * colour/size and the direction-arrow slider.
+ *
+ * Rendered identically by the globe panel and the flat-map panel — the two must
+ * never drift, which is why this lives in the shared kit.
+ */
+export function CruiseAppearanceSection({
+  title,
+  colorConfig,
+  onColorModeChange,
+  onColorChange,
+  routeWidth,
+  onRouteWidthChange,
+  markerColor,
+  onMarkerColorChange,
+  markerSize,
+  onMarkerSizeChange,
+  markerDefault,
+  markerLabel,
+  markerAutoLabel,
+  widthLabel,
+  sizeLabel,
+  arrowLabel,
+  arrowScale,
+  onArrowScaleChange,
+}: CruiseAppearanceSectionProps): JSX.Element {
+  const { t } = useTranslation();
+  const { mode, colors } = colorConfig;
+
+  const modeOptions = CRUISE_COLOR_MODES.map((m) => ({
+    value: m,
+    label: t(`map:globe.panel.cruiseColorMode.${m}.label`),
+  }));
+
+  return (
+    <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
+      <SectionLabel>{title}</SectionLabel>
+
+      {/* Colour mode — the explicit choice that replaces the per-tab hardcoded
+          mode + the silent single-colour override. */}
+      <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
+        {t("map:globe.panel.cruiseColorMode.label")}
+      </div>
+      <SegControl<CruiseColorMode>
+        value={mode}
+        onChange={onColorModeChange}
+        options={modeOptions}
+      />
+      <div className="mt-1 text-[10px] leading-snug" style={{ color: "rgba(241,245,249,0.45)" }}>
+        {t(`map:globe.panel.cruiseColorMode.${mode}.hint`)}
+      </div>
+
+      {/* The colours the ACTIVE mode uses — nothing else, so the panel can
+          never show a control that has no effect on the map. "perCruise" has
+          no colour field at all: the colours come from the cruises. */}
+      {mode === "status" && (
+        <>
+          <ColorRow
+            caption={t("map:globe.panel.cruiseColorMode.swatchSailed")}
+            value={colors.past}
+            presets={CRUISE_COLOR_PRESETS}
+            onChange={(c) => onColorChange("past", c)}
+          />
+          <ColorRow
+            caption={t("map:globe.panel.cruiseColorMode.swatchPlanned")}
+            value={colors.planned}
+            presets={CRUISE_COLOR_PRESETS}
+            onChange={(c) => onColorChange("planned", c)}
+          />
+        </>
+      )}
+      {mode === "solid" && (
+        <ColorRow
+          caption={t("map:globe.panel.routes")}
+          value={colors.solid}
+          presets={CRUISE_COLOR_PRESETS}
+          onChange={(c) => onColorChange("solid", c)}
+        />
+      )}
+
+      {/* Route width slider */}
+      <Slider
+        label={widthLabel}
+        value={routeWidth}
+        min={0.3}
+        max={2}
+        step={0.1}
+        onChange={onRouteWidthChange}
+      />
+
+      {/* Port-marker colour + Auto reset */}
+      <div className="mt-2 flex items-center justify-between gap-2 py-0.5">
+        <ColorField
+          label={markerLabel}
+          value={markerColor ?? markerDefault}
+          onChange={onMarkerColorChange}
+        />
+        <AutoPill
+          active={markerColor === null}
+          label={markerAutoLabel}
+          onClick={() => onMarkerColorChange(null)}
+        />
+      </div>
+
+      {/* Port-marker size slider (0 = hidden) */}
+      <div className="mt-1">
+        <Slider
+          label={sizeLabel}
+          value={markerSize}
+          min={0}
+          max={1.6}
+          step={0.1}
+          onChange={onMarkerSizeChange}
+          format={(v) => (v <= 0 ? t("map:globe.panel.off") : `${v.toFixed(1)}×`)}
+        />
+      </div>
+
+      {/* Flat-map only: direction-arrow size slider */}
+      {arrowScale != null && onArrowScaleChange && (
+        <Slider
+          label={arrowLabel ?? ""}
+          value={arrowScale}
+          min={0}
+          max={2.5}
+          step={0.1}
+          onChange={onArrowScaleChange}
+          format={(v) => (v <= 0 ? t("map:globe.panel.off") : `${v.toFixed(1)}×`)}
+        />
+      )}
     </div>
   );
 }
