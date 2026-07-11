@@ -11,11 +11,6 @@ export const BOARD_TYPES = [
 export const STAY_STATUSES = ["scheduled", "completed", "cancelled"] as const;
 export const CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
 
-const emptyToUndefined = z
-  .string()
-  .optional()
-  .transform((v) => (v === "" ? undefined : v));
-
 // Accept partial datetimes and coerce them to full ISO 8601, mirroring schemas/cruise.ts.
 const isoDateTimeRequired = z.preprocess((v) => {
   if (typeof v !== "string" || v === "") return v;
@@ -40,7 +35,6 @@ const baseLodgingSchema = z.object({
     .string()
     .transform((v) => v.replace(/<[^>]*>/g, ""))
     .optional(),
-  dataSource: emptyToUndefined,
 });
 
 export const createLodgingSchema = baseLodgingSchema;
@@ -84,13 +78,18 @@ export const createStaySchema = baseStaySchema.refine(
   (d) => new Date(d.checkOut).getTime() >= new Date(d.checkIn).getTime(),
   { message: "checkOut must not precede checkIn", path: ["checkOut"] },
 );
-export const updateStaySchema = baseStaySchema.partial().refine(
-  (d) => {
-    if (!d.checkIn || !d.checkOut) return true;
-    return new Date(d.checkOut).getTime() >= new Date(d.checkIn).getTime();
-  },
-  { message: "checkOut must not precede checkIn", path: ["checkOut"] },
-);
+export const updateStaySchema = baseStaySchema
+  .partial()
+  .refine((d) => Object.keys(d).length > 0, {
+    message: "At least one field must be provided for update",
+  })
+  .refine(
+    (d) => {
+      if (!d.checkIn || !d.checkOut) return true;
+      return new Date(d.checkOut).getTime() >= new Date(d.checkIn).getTime();
+    },
+    { message: "checkOut must not precede checkIn", path: ["checkOut"] },
+  );
 
 export const lodgingQuerySchema = z.object({
   type: z.enum(LODGING_TYPES).optional(),
