@@ -7,6 +7,8 @@ import { extractTextFromPdf, isBcbpText } from '../services/pdfParser';
 import { parseBookingText } from '../services/bookingParser';
 import { parseCruiseBookingText } from '../services/cruiseBookingParser';
 import { resolveCruiseEntities, hydrateResolvedCruises } from '../services/cruiseEntityResolver';
+import { parseLodgingBookingText } from '../services/lodging/lodgingBookingParser';
+import { bookingsToCandidates } from '../services/lodging/lodgingCandidates';
 import { FILE_LIMITS } from '../config/constants';
 import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
 import { describeParserError } from '../utils/parserErrors';
@@ -76,6 +78,22 @@ router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest
         ollamaAvailable: cruiseResult.ollamaAvailable,
         pdfTextLength: pdfText.length,
         domain: 'cruise',
+      });
+    }
+
+    if (parsed.domain === 'lodging') {
+      const lodgingResult = await parseLodgingBookingText(pdfText);
+      logger.info(
+        { userId, parserUsed: lodgingResult.parserUsed, bookingCount: lodgingResult.bookings.length },
+        '[PDF Parse] Lodging parsing complete',
+      );
+      return res.json({
+        domain: 'lodging',
+        candidates: bookingsToCandidates(lodgingResult.bookings),
+        parserUsed: lodgingResult.parserUsed,
+        ollamaAvailable: lodgingResult.ollamaAvailable,
+        fallbackReason: lodgingResult.fallbackReason,
+        pdfTextLength: pdfText.length,
       });
     }
 
