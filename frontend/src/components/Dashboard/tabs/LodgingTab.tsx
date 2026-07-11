@@ -87,6 +87,9 @@ export function LodgingTab(): JSX.Element {
         visMode="routes"
         lodgingsOverride={visibleLodgings}
         appearanceDomains={[]}
+        // Without this the map fetches and draws every cruise route on top of the
+        // hotel pins (showInternalCruises defaults to true).
+        showInternalCruises={false}
       />
 
       <button
