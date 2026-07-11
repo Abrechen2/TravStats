@@ -94,3 +94,52 @@ export function collectYears(
   }
   return [...set].sort((a, b) => a - b);
 }
+
+/**
+ * Pick the chronologically closest year to `current` from `years`,
+ * skipping `current` itself. Ties prefer the older year so the user
+ * lands on a "year-over-year change" comparison by default.
+ */
+export function pickAdjacentYear(years: number[], current: number | null): number | null {
+  const candidates = years.filter((y) => y !== current);
+  if (candidates.length === 0) return null;
+  if (current === null) return candidates[candidates.length - 1];
+  let best = candidates[0];
+  let bestDist = Math.abs(best - current);
+  for (const y of candidates) {
+    const d = Math.abs(y - current);
+    if (d < bestDist || (d === bestDist && y < best)) {
+      best = y;
+      bestDist = d;
+    }
+  }
+  return best;
+}
+
+export interface CompareYearResolution {
+  compareYear: number | null;
+  /** True when no fallback year exists — comparison must be disabled. */
+  disableCompare: boolean;
+}
+
+/**
+ * Resolves a possibly-stale compare-year selection against the years
+ * currently available. A persisted `compareYear` (issue #188) can go
+ * stale in ways a same-session pick never could: the data set shrank
+ * (deleted trips), the browser's localStorage carries a preference from
+ * a different dataset, or fewer than 2 years exist at all. Returns
+ * `null` when the current selection is still valid — the caller should
+ * make no changes in that case. Otherwise returns the fallback year (or
+ * `null` with `disableCompare: true` when no other year is available).
+ */
+export function resolveStaleCompareYear(
+  years: number[],
+  selectedYear: number | null,
+  compareYear: number | null
+): CompareYearResolution | null {
+  if (compareYear === null) return null;
+  const stale = !years.includes(compareYear) || compareYear === selectedYear;
+  if (!stale) return null;
+  const fallback = pickAdjacentYear(years, selectedYear);
+  return { compareYear: fallback, disableCompare: fallback === null };
+}

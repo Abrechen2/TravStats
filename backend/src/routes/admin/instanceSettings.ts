@@ -36,6 +36,11 @@ const instancePatchSchema = z.object({
     .max(500)
     .refine((v) => v === '' || /^https?:\/\//.test(v), 'Must be a valid http(s) URL')
     .optional(),
+  // Instance-level beta gate. No admin UI on purpose — curl / PAT is the
+  // intended way to flip it (ON for RC + Beta servers, OFF for production).
+  // Every logged-in user reads the resulting value read-only via
+  // GET /api/v1/settings; only this admin-guarded route can write it.
+  betaFeaturesEnabled: z.boolean().optional(),
 });
 
 router.get('/instance-settings', async (_req: AuthRequest, res: Response, next: NextFunction) => {
@@ -62,6 +67,9 @@ router.put('/instance-settings', async (req: AuthRequest, res: Response, next: N
       }),
       ...(patch.lanUrl !== undefined && {
         lanUrl: patch.lanUrl === '' ? null : patch.lanUrl,
+      }),
+      ...(patch.betaFeaturesEnabled !== undefined && {
+        betaFeaturesEnabled: patch.betaFeaturesEnabled,
       }),
     });
     res.json({ settings });

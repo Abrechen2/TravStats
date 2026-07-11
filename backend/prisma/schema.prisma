@@ -463,6 +463,13 @@ model AdminSettings {
   publicUrl         String? @map("public_url")
   lanUrl            String? @map("lan_url")
 
+  // Instance-level beta gate. OFF on production, ON on RC/Beta servers.
+  // Reveals unfinished / not-yet-useful features (see
+  // frontend/src/config/betaFeatures.ts for the registry of what it gates).
+  // Admin-settable via PUT /api/v1/admin/instance-settings; every logged-in
+  // user reads it (read-only) from GET /api/v1/settings.
+  betaFeaturesEnabled Boolean @default(false) @map("beta_features_enabled")
+
   // Off-site backup sync via WebDAV — supersedes WEBDAV_* ENV variables.
   // webdavPasswordEncrypted is AES-GCM via encryptApiKey() — never stored plain.
   webdavSyncEnabled       Boolean @default(false) @map("webdav_sync_enabled")

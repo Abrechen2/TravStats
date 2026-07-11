@@ -149,6 +149,11 @@ export function CruisesTab(): JSX.Element {
 
   return (
     <div style={{ position: "absolute", inset: 0 }}>
+      {/* No `cruiseColorMode` prop: this tab used to pin "perCruise", which
+          meant the panel's colour setting never reached this map and the mode
+          itself was invisible magic. The mode now comes from the shared cruise
+          colour store — "Pro Reise" is one explicit click in the Kreuzfahrten
+          appearance section. */}
       <MapContainer3D
         flights={[]}
         visMode={mode === "globe" ? "globe" : "routes"}
@@ -156,7 +161,6 @@ export function CruisesTab(): JSX.Element {
         showInternalCruises={showInternalCruises}
         cruisesOverride={visibleCruises}
         appearanceDomains={["cruise"]}
-        cruiseColorMode="perCruise"
       />
       <button
         type="button"

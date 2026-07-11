@@ -1,6 +1,5 @@
 import React, { lazy, Suspense, useState, useMemo, useEffect } from "react";
 import { DeckGLMap } from "./DeckGLMap";
-import type { CruiseColorMode } from "./layers/cruiseArcsLayer";
 import { GlobeLoader } from "./GlobeLoader";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { Layer } from "@deck.gl/core";
@@ -48,26 +47,12 @@ interface MapContainer3DProps {
    * cross-tab layer bleed.
    */
   showInternalCruises?: boolean;
-  /**
-   * Override the count-based heatmap palette for flight route arcs with
-   * a single monochrome color. Set on the Alle-tab so flights read as
-   * "pink / domain-flight" against sky-blue cruises; other tabs leave
-   * it undefined to keep the count-encoded heatmap behaviour.
-   */
-  flightRouteColor?: [number, number, number];
-  /**
-   * Split flight arcs into a two-tone gradient by status (scheduled vs.
-   * historical) instead of a single flightRouteColor fill. Passed straight
-   * through to DeckGLMap's buildRouteData call; undefined on tabs that keep
-   * the default single-color/heatmap behaviour.
-   */
-  statusTwoTone?: boolean;
-  /**
-   * Color strategy for cruise arcs/arrows: shared two-tone by status, or
-   * a distinct hue per cruise. Passed straight through to DeckGLMap.
-   * Defaults to `"status"`.
-   */
-  cruiseColorMode?: CruiseColorMode;
+  // NOTE: there is deliberately no `cruiseColorMode` prop any more. The mode is
+  // the USER's, not the tab's — it lives in `store/cruiseColorStore.ts`, which
+  // both renderers and the dashboard legend read. A tab that forced a mode here
+  // was exactly the reported defect (#reported-2.3.1): the Alle tab pinned
+  // "status", the Kreuzfahrten tab pinned "perCruise", and the panel's setting
+  // reached neither.
   /**
    * Hide the top-left "<count> Flüge · <count> Routen" info pill.
    * Used by tabs that render their own overlay at top-left (e.g.
@@ -107,9 +92,6 @@ export default function MapContainer3D({
   onResetTrip,
   extraLayers,
   showInternalCruises = true,
-  flightRouteColor,
-  statusTwoTone,
-  cruiseColorMode,
   hideInfoPill = false,
   cruisesOverride,
   appearanceDomains = ["flight", "cruise"],
@@ -202,9 +184,6 @@ export default function MapContainer3D({
               cruises={cruises}
               onFlightOpen={onFlightOpen ?? onFlightClick}
               onCruiseOpen={onCruiseOpen}
-              flightRouteColor={flightRouteColor}
-              statusTwoTone={statusTwoTone}
-              cruiseColorMode={cruiseColorMode}
               minRouteCount={minRouteCount}
               appearanceDomains={appearanceDomains}
             />
@@ -221,10 +200,7 @@ export default function MapContainer3D({
             minRouteCount={minRouteCount}
             onResetTrip={onResetTrip}
             extraLayers={extraLayers}
-            flightRouteColor={flightRouteColor}
             appearanceDomains={appearanceDomains}
-            statusTwoTone={statusTwoTone}
-            cruiseColorMode={cruiseColorMode}
           />
         )}
       </div>
