@@ -1,3 +1,5 @@
+import type { Lodging, LodgingStay } from "./lodging";
+
 export interface User {
   id: string;
   username: string;
@@ -201,7 +203,7 @@ export interface Trip {
   icon: string | null;
   countries: string[];
 
-  _count?: { flights: number; cruises?: number };
+  _count?: { flights: number; cruises?: number; lodgingStays?: number };
   bookings?: Booking[];
   flights?: Pick<
     Flight,
@@ -226,6 +228,8 @@ export interface Trip {
   stops?: TripStop[];
   journalEntries?: TripJournalEntry[];
   photos?: TripPhoto[];
+  /** A stay linked to this trip via `LodgingStay.tripId` — always includes its `lodging` (GET /trips/:id). */
+  lodgingStays?: (LodgingStay & { lodging: Lodging })[];
 }
 
 export interface TripPhoto {

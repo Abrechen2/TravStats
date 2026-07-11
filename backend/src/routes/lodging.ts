@@ -31,8 +31,11 @@ const requireUser = (req: AuthRequest): string => {
   return req.userId;
 };
 
-const LODGING_INCLUDE = { stays: true, chain: true } satisfies Prisma.LodgingInclude;
-type LodgingListRow = Prisma.LodgingGetPayload<{ include: typeof LODGING_INCLUDE }>;
+// Exported so routes/lodgingChains.ts's chain-detail endpoint can reuse the
+// SAME include shape + aggregate derivation as the lodging list, instead of
+// re-deriving stayCount/nights/overallRating/totalSpendBase a second time.
+export const LODGING_INCLUDE = { stays: true, chain: true } satisfies Prisma.LodgingInclude;
+export type LodgingListRow = Prisma.LodgingGetPayload<{ include: typeof LODGING_INCLUDE }>;
 
 interface FxSnapshotFields {
   totalPriceBase: number | null;
@@ -75,7 +78,7 @@ function sumSpendBaseByCurrency<T extends AggregateStayFx>(stays: T[]): Record<s
 }
 
 /** Average of a lodging's stays' ratingOverall (nulls ignored). null when none rated. */
-function deriveOverallRating(stays: RatedStay[]): number | null {
+export function deriveOverallRating(stays: RatedStay[]): number | null {
   const rated = stays.map((s) => s.ratingOverall).filter((v): v is number => v !== null);
   if (rated.length === 0) return null;
   return Math.round((rated.reduce((sum, v) => sum + v, 0) / rated.length) * 10) / 10;
@@ -91,7 +94,7 @@ interface AggregateStay extends RatedStay, AggregateStayFx {
   checkOut: Date;
 }
 
-interface LodgingAggregates {
+export interface LodgingAggregates {
   overallRating: number | null;
   stayCount: number;
   nights: number;
@@ -101,7 +104,10 @@ interface LodgingAggregates {
   totalSpendBaseByCurrency: Record<string, number>;
 }
 
-function computeAggregates(stays: AggregateStay[], currentBaseCurrency: string): LodgingAggregates {
+export function computeAggregates(
+  stays: AggregateStay[],
+  currentBaseCurrency: string,
+): LodgingAggregates {
   const totalSpendBaseByCurrency = sumSpendBaseByCurrency(stays);
   return {
     overallRating: deriveOverallRating(stays),
@@ -112,7 +118,7 @@ function computeAggregates(stays: AggregateStay[], currentBaseCurrency: string):
   };
 }
 
-type LodgingListItem = LodgingListRow & LodgingAggregates;
+export type LodgingListItem = LodgingListRow & LodgingAggregates;
 
 function sortLodgings(
   items: LodgingListItem[],
@@ -221,7 +227,7 @@ function resolveFxFields(outcome: FxSnapshotOutcome): FxSnapshotFields {
   return outcome.status === "snapshotted" ? outcome.fields : CLEARED_FX;
 }
 
-async function getBaseCurrency(userId: string): Promise<string> {
+export async function getBaseCurrency(userId: string): Promise<string> {
   const settings = await prisma.userSettings.findUnique({
     where: { userId },
     select: { baseCurrency: true },

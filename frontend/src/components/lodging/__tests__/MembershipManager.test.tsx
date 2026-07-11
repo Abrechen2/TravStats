@@ -109,6 +109,43 @@ describe("MembershipManager", () => {
     await waitFor(() => expect(deleteMembership).toHaveBeenCalledWith("m1"));
   });
 
+  // Chain detail page scoping (filterProgramName) — a chain's membership
+  // block must show only the one membership for ITS program, pre-fill and
+  // lock the program field on "add", and hide "add" once one exists.
+  it("filterProgramName: shows only the matching membership and hides unrelated ones", async () => {
+    vi.mocked(listMemberships).mockResolvedValue([
+      existingMembership,
+      { ...existingMembership, id: "m2", programName: "Hilton Honors" },
+    ]);
+
+    render(<MembershipManager filterProgramName="Hilton Honors" />);
+
+    await screen.findByText("Hilton Honors");
+    expect(screen.queryByText("Marriott Bonvoy")).not.toBeInTheDocument();
+  });
+
+  it("filterProgramName: hides the add button once a membership for the program exists", async () => {
+    vi.mocked(listMemberships).mockResolvedValue([existingMembership]);
+
+    render(<MembershipManager filterProgramName="Marriott Bonvoy" />);
+
+    await screen.findByText("Marriott Bonvoy");
+    expect(screen.queryByText("lodging:membership.add")).not.toBeInTheDocument();
+  });
+
+  it("filterProgramName: offers to add one, pre-filled and locked, when none exists yet", async () => {
+    vi.mocked(listMemberships).mockResolvedValue([]);
+
+    render(<MembershipManager filterProgramName="Hyatt World of Hyatt" />);
+
+    await waitFor(() => expect(listMemberships).toHaveBeenCalled());
+    await userEvent.click(screen.getByText("lodging:membership.add"));
+
+    const input = screen.getByLabelText("lodging:field.programName") as HTMLInputElement;
+    expect(input.value).toBe("Hyatt World of Hyatt");
+    expect(input).toBeDisabled();
+  });
+
   it("updates an existing membership on edit+save", async () => {
     vi.mocked(updateMembership).mockResolvedValue({ ...existingMembership, tier: "Platinum" });
 

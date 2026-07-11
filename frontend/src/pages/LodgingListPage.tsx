@@ -5,6 +5,7 @@ import NavigationBar from "../components/NavigationBar";
 import { LodgingStatStrip } from "../components/Dashboard/tabs/lodging/LodgingStatStrip";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import { StarRating } from "../components/lodging/StarRating";
+import { ChainNameLink } from "../components/lodging/ChainNameLink";
 import { useTranslation } from "../hooks/useTranslation";
 import { getLodgingStats, listLodgings } from "../lib/api/lodging";
 import { formatCurrency } from "../lib/units";
@@ -281,7 +282,11 @@ export default function LodgingListPage(): JSX.Element {
                       <span className="font-medium text-[var(--text-primary)]">{l.name}</span>
                     </td>
                     <td className="px-3 py-2 text-[var(--text-muted)]">
-                      {l.chain?.name ?? t("lodging:field.independent")}
+                      {l.chain ? (
+                        <ChainNameLink chainId={l.chain.id} name={l.chain.name} />
+                      ) : (
+                        t("lodging:field.independent")
+                      )}
                     </td>
                     <td className="px-3 py-2 text-[var(--text-muted)]">
                       {l.city || l.country ? (
