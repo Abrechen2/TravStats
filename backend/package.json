@@ -25,6 +25,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "check:drift": "tsx scripts/check-schema-drift.ts",
+    "generate:airline-catalog": "tsx scripts/generate-airline-catalog.ts",
     "seed:airports:csv": "node dist/seedAirportsFromCSV.js",
     "backfill:closed-airports": "node dist/scripts/backfillClosedAirports.js",
     "seed:demo": "node dist/seedDemoAccount.js",
