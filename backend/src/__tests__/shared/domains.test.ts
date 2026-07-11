@@ -10,14 +10,14 @@ import {
 
 describe('domain registry', () => {
   it('exposes all domain keys', () => {
-    expect(DOMAIN_KEYS).toEqual(['flight', 'cruise', 'hotel', 'poi']);
+    expect(DOMAIN_KEYS).toEqual(['flight', 'cruise', 'lodging', 'poi']);
   });
 
   it('only lists available domains in AVAILABLE_DOMAINS', () => {
-    expect(AVAILABLE_DOMAINS).toEqual(['flight', 'cruise']);
+    expect(AVAILABLE_DOMAINS).toEqual(['flight', 'cruise', 'lodging']);
     expect(DOMAINS.flight.available).toBe(true);
     expect(DOMAINS.cruise.available).toBe(true);
-    expect(DOMAINS.hotel.available).toBe(false);
+    expect(DOMAINS.lodging.available).toBe(true);
     expect(DOMAINS.poi.available).toBe(false);
   });
 
