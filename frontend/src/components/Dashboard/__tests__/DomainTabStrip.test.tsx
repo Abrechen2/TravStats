@@ -12,6 +12,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
         "dashboard:tabStrip.tabs.flight": "Flights",
         "dashboard:tabStrip.tabs.cruise": "Cruises",
         "dashboard:tabStrip.tabs.poi": "POIs",
+        "dashboard:tabStrip.tabs.lodging": "Lodging",
       };
       return labels[key] ?? key;
     },
@@ -21,12 +22,12 @@ vi.mock("../../../hooks/useTranslation", () => ({
 }));
 
 describe("DomainTabStrip", () => {
-  it("renders the four tabs with counts", () => {
+  it("renders the five tabs with counts", () => {
     render(
       <DomainTabStrip
         active="all"
-        counts={{ flight: 127, cruise: 2, poi: 0 }}
-        enabled={{ flight: true, cruise: true, poi: true }}
+        counts={{ flight: 127, cruise: 2, poi: 0, lodging: 0 }}
+        enabled={{ flight: true, cruise: true, poi: true, lodging: true }}
         onSelect={() => {}}
       />
     );
@@ -41,8 +42,8 @@ describe("DomainTabStrip", () => {
     render(
       <DomainTabStrip
         active="cruise"
-        counts={{ flight: 0, cruise: 2, poi: 0 }}
-        enabled={{ flight: true, cruise: true, poi: true }}
+        counts={{ flight: 0, cruise: 2, poi: 0, lodging: 0 }}
+        enabled={{ flight: true, cruise: true, poi: true, lodging: true }}
         onSelect={() => {}}
       />
     );
@@ -55,8 +56,8 @@ describe("DomainTabStrip", () => {
     render(
       <DomainTabStrip
         active="all"
-        counts={{ flight: 0, cruise: 0, poi: 0 }}
-        enabled={{ flight: true, cruise: true, poi: true }}
+        counts={{ flight: 0, cruise: 0, poi: 0, lodging: 0 }}
+        enabled={{ flight: true, cruise: true, poi: true, lodging: true }}
         onSelect={onSelect}
       />
     );
@@ -69,8 +70,8 @@ describe("DomainTabStrip", () => {
     render(
       <DomainTabStrip
         active="all"
-        counts={{ flight: 0, cruise: 0, poi: 0 }}
-        enabled={{ flight: true, cruise: true, poi: false }}
+        counts={{ flight: 0, cruise: 0, poi: 0, lodging: 0 }}
+        enabled={{ flight: true, cruise: true, poi: false, lodging: true }}
         onSelect={onSelect}
       />
     );
