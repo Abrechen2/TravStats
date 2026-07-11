@@ -174,6 +174,102 @@ describe("buildLodgingPreviewRows", () => {
     expect(rows[0].action).toBe("needs_input");
   });
 
+  it("lets a proven stay externalRef hit win over an earlier name+city guess for a DIFFERENT lodging", async () => {
+    // Lodging B is unrelated to the name/city-matched "NH Ludwigsburg" (lodging A,
+    // seeded in beforeAll) but owns the stay whose externalRef the candidate carries.
+    // A proven exact-ref match must overrule the heuristic guess: matchedLodgingId
+    // must end up pointing at B, not the earlier name+city guess against A.
+    const lodgingB = await prisma.lodging.create({
+      data: { userId, name: "Other Hotel", city: "Berlin" },
+    });
+    const stayB = await prisma.lodgingStay.create({
+      data: {
+        userId,
+        lodgingId: lodgingB.id,
+        checkIn: new Date("2027-02-10T00:00:00.000Z"),
+        checkOut: new Date("2027-02-12T00:00:00.000Z"),
+        externalRef: "booking:cross-lodging-ref",
+      },
+    });
+
+    const candidates: LodgingImportCandidate[] = [
+      {
+        sourceRowIndex: 0,
+        // Matches lodging A (existingId) by name+city — a guess.
+        lodging: { name: "nh ludwigsburg", city: "LUDWIGSBURG" },
+        stay: {
+          checkIn: "2027-02-10",
+          checkOut: "2027-02-12",
+          // But this stay externalRef is proven to belong to lodging B.
+          externalRef: "booking:cross-lodging-ref",
+        },
+      },
+    ];
+    const { rows } = await buildLodgingPreviewRows(userId, candidates);
+    expect(rows[0].matchedLodgingId).toBe(lodgingB.id);
+    expect(rows[0].matchedLodgingId).not.toBe(existingId);
+    expect(rows[0].matchedStayId).toBe(stayB.id);
+    expect(rows[0].dedupeHint).toBe("stay_exact_ref");
+    expect(rows[0].action).toBe("skip");
+  });
+
+  it("scopes dedup matching to the requesting user — never matches another user's data", async () => {
+    const otherUser = await prisma.user.create({
+      data: {
+        username: `lodging-import-preview-test-other-${Date.now()}`,
+        passwordHash: "x",
+      },
+    });
+    const otherLodging = await prisma.lodging.create({
+      data: {
+        userId: otherUser.id,
+        name: "Shared Name Hotel",
+        city: "Shared City",
+        externalRef: "google:shared-ref",
+      },
+    });
+    await prisma.lodgingStay.create({
+      data: {
+        userId: otherUser.id,
+        lodgingId: otherLodging.id,
+        checkIn: new Date("2027-03-01T00:00:00.000Z"),
+        checkOut: new Date("2027-03-02T00:00:00.000Z"),
+        externalRef: "booking:shared-stay-ref",
+      },
+    });
+
+    try {
+      const candidates: LodgingImportCandidate[] = [
+        {
+          sourceRowIndex: 0,
+          lodging: {
+            name: "Shared Name Hotel",
+            city: "Shared City",
+            externalRef: "google:shared-ref",
+          },
+          stay: {
+            checkIn: "2027-03-01",
+            checkOut: "2027-03-02",
+            externalRef: "booking:shared-stay-ref",
+          },
+        },
+      ];
+      // Run the preview for user 1 (`userId`), whose data has none of this —
+      // it all belongs to `otherUser`. Nothing should dedupe.
+      const { rows, summary } = await buildLodgingPreviewRows(
+        userId,
+        candidates,
+      );
+      expect(rows[0].matchedLodgingId).toBeNull();
+      expect(rows[0].matchedStayId).toBeNull();
+      expect(rows[0].dedupeHint).toBe("none");
+      expect(rows[0].action).toBe("create");
+      expect(summary).toEqual({ newRows: 1, alreadyPresent: 0, needsInput: 0 });
+    } finally {
+      await prisma.user.delete({ where: { id: otherUser.id } });
+    }
+  });
+
   it("sorts questionable rows to the top, keeping source order within each group", async () => {
     const candidates: LodgingImportCandidate[] = [
       {
