@@ -17,6 +17,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import type { Quartile } from "./heatmapUtils";
 import {
   AppearanceSection,
+  FlightAppearanceSection,
   SectionLabel,
   SegControl,
   Toggle,
@@ -27,6 +28,7 @@ import {
   TEXT,
   type AppearanceDomain,
   type DomainAppearanceState,
+  type FlightAppearanceState,
 } from "../map/controlPanelKit";
 import { MapChromeSections } from "../map/MapChromeSections";
 import type { LabelsMode } from "../map/labelPriority";
@@ -38,8 +40,6 @@ import {
 
 export type StyleId = "standard" | "light" | "dark" | "voyager" | "satellite" | "osm";
 export type LiteMode = "auto" | "on" | "off";
-
-const FLIGHT_ROUTE_DEFAULT: [number, number, number] = [240, 169, 71];
 
 export interface GlobeControlPanelProps {
   autoRotate: boolean;
@@ -72,7 +72,7 @@ export interface GlobeControlPanelProps {
 
   /** Which domain appearance sections to show, in render order. */
   appearanceDomains: readonly AppearanceDomain[];
-  flightAppearance: DomainAppearanceState;
+  flightAppearance: FlightAppearanceState;
   cruiseAppearance: DomainAppearanceState;
 }
 
@@ -223,24 +223,14 @@ export function GlobeControlPanel({
 
           {/* Per-domain appearance sections (Flüge / Kreuzfahrten / …) */}
           {appearanceDomains.includes("flight") && (
-            <AppearanceSection
+            <FlightAppearanceSection
               title={t("map:globe.panel.domainFlight")}
-              routeLabel={t("map:globe.panel.routes")}
-              routeColor={flightAppearance.routeColor}
-              routeDefault={FLIGHT_ROUTE_DEFAULT}
-              onRouteColorChange={flightAppearance.onRouteColorChange}
-              routeAutoLabel={t("map:globe.panel.frequency")}
-              widthLabel={t("map:globe.panel.width")}
-              routeWidth={flightAppearance.routeWidth}
-              onRouteWidthChange={flightAppearance.onRouteWidthChange}
-              markerLabel={t("map:globe.panel.airports")}
-              markerColor={flightAppearance.markerColor}
+              {...flightAppearance}
               markerDefault={DEFAULT_AIRPORT_COLOR}
-              onMarkerColorChange={flightAppearance.onMarkerColorChange}
+              markerLabel={t("map:globe.panel.airports")}
               markerAutoLabel={t("map:globe.panel.auto")}
+              widthLabel={t("map:globe.panel.width")}
               sizeLabel={t("map:globe.panel.size")}
-              markerSize={flightAppearance.markerSize}
-              onMarkerSizeChange={flightAppearance.onMarkerSizeChange}
             />
           )}
           {appearanceDomains.includes("cruise") && (

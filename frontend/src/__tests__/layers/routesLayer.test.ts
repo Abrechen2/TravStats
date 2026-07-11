@@ -1,10 +1,6 @@
 import { describe, it, expect } from "vitest";
-import {
-  buildRouteData,
-  createRoutesLayers,
-  SCHEDULED_BLUE,
-  MIXED_RED_HIGH,
-} from "../../components/layers/routesLayer";
+import { buildRouteData, createRoutesLayers } from "../../components/layers/routesLayer";
+import { DEFAULT_FLIGHT_COLORS } from "../../lib/flightColor";
 import type { ArcDatum } from "../../components/layers/layerTypes";
 import type { GeoJSONFeature } from "../../types";
 
@@ -201,7 +197,9 @@ describe("buildRouteData", () => {
     expect(arcs[0].sourceColor).toEqual(arcs[0].targetColor);
   });
 
-  it("renders pure-scheduled routes (upcoming, never flown) as solid sky-blue", () => {
+  it("renders pure-scheduled routes (upcoming, never flown) in the planned colour", () => {
+    // Default config = status mode, so a never-flown route takes the planned
+    // colour (coral). The old sky-blue default is gone — see lib/flightColor.
     const scheduledOnly: GeoJSONFeature = {
       ...mockFlight,
       properties: { ...mockFlight.properties, id: "sched-only-1", status: "scheduled" },
@@ -211,17 +209,15 @@ describe("buildRouteData", () => {
     const arc = arcs[0];
     expect(arc.hasUpcoming).toBe(true);
     expect(arc.hasPastFlown).toBe(false);
-    expect(arc.sourceColor[0]).toBe(SCHEDULED_BLUE[0]);
-    expect(arc.sourceColor[1]).toBe(SCHEDULED_BLUE[1]);
-    expect(arc.sourceColor[2]).toBe(SCHEDULED_BLUE[2]);
+    expect(arc.sourceColor[0]).toBe(DEFAULT_FLIGHT_COLORS.upcoming[0]);
+    expect(arc.sourceColor[1]).toBe(DEFAULT_FLIGHT_COLORS.upcoming[1]);
+    expect(arc.sourceColor[2]).toBe(DEFAULT_FLIGHT_COLORS.upcoming[2]);
     expect(arc.sourceColor).toEqual(arc.targetColor);
   });
 
-  it("renders mixed routes (flown + scheduled) with hardcoded red core", () => {
-    // Single canonical pair, frequency = 2 (one flown + one scheduled). With
-    // a one-route dataset, q50 = 2, so count <= q50 → MIXED_RED_LOW. To
-    // exercise MIXED_RED_HIGH we need count > q50, which requires a second
-    // shorter route in the dataset.
+  it("renders mixed routes (flown + scheduled) with the flown colour in the core", () => {
+    // A mixed route counts as flown; its planned leg is conveyed by the arc
+    // TIP gradient (UpcomingArcLayer), not by the core colour.
     const flown: GeoJSONFeature = {
       ...mockFlight,
       properties: { ...mockFlight.properties, id: "mix-flown-1", status: "flown" },
@@ -252,15 +248,13 @@ describe("buildRouteData", () => {
     expect(mixedArc).toBeDefined();
     expect(mixedArc!.hasUpcoming).toBe(true);
     expect(mixedArc!.hasPastFlown).toBe(true);
-    // mixed pair has count = 2, other has count = 1 → q50 = 1, so 2 > q50
-    // → MIXED_RED_HIGH (red-600).
-    expect(mixedArc!.sourceColor[0]).toBe(MIXED_RED_HIGH[0]);
-    expect(mixedArc!.sourceColor[1]).toBe(MIXED_RED_HIGH[1]);
-    expect(mixedArc!.sourceColor[2]).toBe(MIXED_RED_HIGH[2]);
+    expect(mixedArc!.sourceColor[0]).toBe(DEFAULT_FLIGHT_COLORS.past[0]);
+    expect(mixedArc!.sourceColor[1]).toBe(DEFAULT_FLIGHT_COLORS.past[1]);
+    expect(mixedArc!.sourceColor[2]).toBe(DEFAULT_FLIGHT_COLORS.past[2]);
     expect(mixedArc!.sourceColor).toEqual(mixedArc!.targetColor);
   });
 
-  it("colours pure-historical routes grey and flags isHistorical", () => {
+  it("flags isHistorical (grey is a frequency-mode treatment, see flightColor)", () => {
     const historical: GeoJSONFeature = {
       ...mockFlight,
       properties: { ...mockFlight.properties, id: "hist-1", status: "historical" },
@@ -268,9 +262,8 @@ describe("buildRouteData", () => {
     const { arcs } = buildRouteData([historical], 1);
     expect(arcs).toHaveLength(1);
     expect(arcs[0].isHistorical).toBe(true);
-    expect(arcs[0].sourceColor[0]).toBe(150);
-    expect(arcs[0].sourceColor[1]).toBe(150);
-    expect(arcs[0].sourceColor[2]).toBe(150);
+    // Default (status) mode: a historical route is part of the flown family.
+    expect(arcs[0].sourceColor[0]).toBe(DEFAULT_FLIGHT_COLORS.past[0]);
   });
 });
 

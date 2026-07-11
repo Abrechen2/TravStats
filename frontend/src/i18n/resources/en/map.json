@@ -53,7 +53,6 @@
       "basemap": "Base map",
       "appearance": "Customise",
       "routes": "Routes",
-      "frequency": "Frequency",
       "width": "Width",
       "airports": "Airports",
       "ports": "Ports",
@@ -68,7 +67,24 @@
       "widthThin": "Thin",
       "widthNormal": "Normal",
       "widthThick": "Thick",
-      "arrows": "Arrows"
+      "arrows": "Arrows",
+      "colorMode": {
+        "label": "Colouring",
+        "status": {
+          "label": "Status",
+          "hint": "Two colours: flown and planned."
+        },
+        "frequency": {
+          "label": "Frequency",
+          "hint": "One base colour — the more often flown, the stronger."
+        },
+        "solid": {
+          "label": "Solid",
+          "hint": "One colour for every route."
+        },
+        "swatchFlown": "flown",
+        "swatchPlanned": "planned"
+      }
     },
     "timesFlown": "Flown {{count}}x",
     "flight_one": "flight",

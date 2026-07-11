@@ -194,6 +194,8 @@
     "flightPast": "Flüge (geflogen)",
     "flightUpcoming": "Flüge (geplant)",
     "cruisePast": "Kreuzfahrten (gefahren)",
-    "cruisePlanned": "Kreuzfahrten (geplant)"
+    "cruisePlanned": "Kreuzfahrten (geplant)",
+    "flightFrequency": "Flüge (Häufigkeit)",
+    "flightSolid": "Flüge"
   }
 }
