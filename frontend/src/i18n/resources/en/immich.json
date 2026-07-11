@@ -70,6 +70,7 @@
     "saving": "Saving …",
     "saved": "Instance-wide Immich connection saved.",
     "cleared": "Instance-wide Immich connection removed.",
-    "saveFailed": "Could not save."
+    "saveFailed": "Could not save.",
+    "loadFailed": "Could not load the stored connection. To prevent data loss, the form is only shown after a successful load."
   }
 }

@@ -5,14 +5,34 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
 import type { ImmichTestResult } from "../../types/immich";
 
+/** Best-effort extraction of an HTTP status from an axios-shaped error, without
+ * logging the error object itself (which, on the save path, carries the
+ * request body — i.e. the freshly typed plaintext API key). */
+function errorStatus(error: unknown): number | undefined {
+  if (typeof error !== "object" || error === null) return undefined;
+  const status = (error as { response?: { status?: unknown } }).response?.status;
+  return typeof status === "number" ? status : undefined;
+}
+
 /**
  * Instance-wide Immich connection (tier 2 of the resolver: user → admin-global
  * → env). Self-contained on purpose — AdminPage is already over its line budget
  * and must not grow another block of state.
  *
  * The API key round-trips MASKED. Echoing the mask back in the PUT is how the
- * backend (`looksMasked`) recognises "unchanged"; sending an empty string would
- * be a real value and would wipe the stored key. Sending `null` clears it.
+ * backend (`looksMasked`) recognises "unchanged" — and an EMPTY string is also
+ * treated as "unchanged" by `looksMasked` (`!value`), so it is a no-op, not a
+ * wipe (Zod's `.min(1)` would reject it before that anyway). What actually
+ * clears a field is an explicit `null`, which `handleSave` sends below when the
+ * trimmed field is empty.
+ *
+ * A failed initial load must never render the editable form: baseUrl/apiKey
+ * stay at their "" initial state, which is visually identical to "nothing
+ * configured yet". If the form rendered anyway, clicking save would PUT
+ * {baseUrl: null, apiKey: null} and the backend would execute that as an
+ * explicit CLEAR of whatever connection is actually stored — so a transient
+ * GET failure (500, timeout, blip) could silently destroy a working
+ * connection the admin never even saw. `loadError` gates the form instead.
  */
 export default function ImmichGlobalSettings(): JSX.Element {
   const { t } = useTranslation(["immich", "common"]);
@@ -21,9 +41,11 @@ export default function ImmichGlobalSettings(): JSX.Element {
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<ImmichTestResult | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,15 +55,25 @@ export default function ImmichGlobalSettings(): JSX.Element {
         if (cancelled) return;
         setBaseUrl(settings.baseUrl ?? "");
         setApiKey(settings.apiKey ?? "");
+        setLoadError(false);
       })
-      .catch((error: unknown) => logger.debug("failed to load global immich settings", error))
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        logger.debug("failed to load global immich settings", { status: errorStatus(error) });
+        setLoadError(true);
+      })
       .finally(() => {
         if (!cancelled) setLoaded(true);
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [retryToken]);
+
+  const handleRetryLoad = (): void => {
+    setLoaded(false);
+    setRetryToken((n) => n + 1);
+  };
 
   const handleSave = async (): Promise<void> => {
     setSaving(true);
@@ -65,7 +97,10 @@ export default function ImmichGlobalSettings(): JSX.Element {
       const fullyCleared = next.baseUrl === null && next.apiKey === null;
       addToast("success", fullyCleared ? t("admin.cleared") : t("admin.saved"));
     } catch (error) {
-      logger.debug("failed to save global immich settings", error);
+      // Never log the raw error here: for an axios error, `error.config.data`
+      // is the REQUEST BODY, which on this path contains the freshly typed
+      // plaintext API key. Log only a status code.
+      logger.debug("failed to save global immich settings", { status: errorStatus(error) });
       addToast("error", t("admin.saveFailed"));
     } finally {
       setSaving(false);
@@ -79,7 +114,10 @@ export default function ImmichGlobalSettings(): JSX.Element {
     const trimmedKey = apiKey.trim();
     try {
       // Omit empty fields entirely: the route falls back to the STORED pair only
-      // when they are absent. An empty string would trip the schema's .min(1).
+      // when a field is absent. `immichTestSchema` already coerces an empty
+      // string to `undefined` before validation (`optionalConnectionField`), so
+      // this omission isn't a workaround for `.min(1)` — it's just clearer than
+      // relying on that preprocessing step.
       const payload: { baseUrl?: string; apiKey?: string } = {};
       if (trimmedUrl !== "") payload.baseUrl = trimmedUrl;
       if (trimmedKey !== "") payload.apiKey = trimmedKey;
@@ -99,6 +137,27 @@ export default function ImmichGlobalSettings(): JSX.Element {
 
   if (!loaded) {
     return <p style={{ color: "var(--text-muted)" }}>{t("common:loading.title")}</p>;
+  }
+
+  if (loadError) {
+    return (
+      <section className="flex flex-col gap-3 p-6">
+        <div>
+          <h3 className="font-medium" style={{ color: "var(--text-primary)" }}>
+            {t("admin.title")}
+          </h3>
+        </div>
+        <p className="text-sm text-rose-400">{t("admin.loadFailed")}</p>
+        <button
+          type="button"
+          onClick={handleRetryLoad}
+          className="w-fit rounded-md border px-3 py-1.5 text-sm"
+          style={{ borderColor: "var(--color-border)", color: "var(--text-primary)" }}
+        >
+          {t("errors.retry")}
+        </button>
+      </section>
+    );
   }
 
   return (
