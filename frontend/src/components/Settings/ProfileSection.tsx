@@ -12,8 +12,10 @@ interface ProfileSectionProps {
   };
   savingProfile: boolean;
   uploadingProfilePicture: boolean;
+  removingProfilePicture: boolean;
   onSaveProfile: () => void;
   onAvatarUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onAvatarDelete: () => void;
   onSetProfile: (partial: { username?: string; email?: string; birthdate?: string | null }) => void;
   onShowPasswordModal: () => void;
 }
@@ -22,8 +24,10 @@ export default function ProfileSection({
   profile,
   savingProfile,
   uploadingProfilePicture,
+  removingProfilePicture,
   onSaveProfile,
   onAvatarUpload,
+  onAvatarDelete,
   onSetProfile,
   onShowPasswordModal,
 }: ProfileSectionProps): JSX.Element {
@@ -113,6 +117,36 @@ export default function ProfileSection({
               className="sr-only"
             />
           </label>
+          {profile.profilePicture && (
+            <button
+              type="button"
+              onClick={onAvatarDelete}
+              disabled={removingProfilePicture || uploadingProfilePicture}
+              className="btn-secondary inline-flex items-center gap-2 text-sm ml-2"
+              style={{
+                color: "var(--color-danger, #ef4444)",
+                opacity: removingProfilePicture ? 0.6 : 1,
+              }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+              {removingProfilePicture
+                ? t("common:buttons.removing", { defaultValue: "Removing..." })
+                : t("settings:profile.removeAvatar", { defaultValue: "Remove picture" })}
+            </button>
+          )}
         </div>
       </div>
 
