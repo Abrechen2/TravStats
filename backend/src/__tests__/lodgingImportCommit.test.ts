@@ -165,6 +165,44 @@ describe("commitLodgingImport", () => {
     expect(result.failed[0].sourceRowIndex).toBe(1);
   });
 
+  it("rejects a matchedLodgingId that belongs to another user (IDOR) without sinking the batch", async () => {
+    const otherUser = await prisma.user.create({
+      data: { username: "lodging-import-commit-test-victim", passwordHash: "x" },
+    });
+    const victimLodging = await prisma.lodging.create({
+      data: { userId: otherUser.id, name: "Victim's Hotel" },
+    });
+
+    try {
+      const rows: CommitRowInput[] = [
+        { sourceRowIndex: 0, action: "create", lodging: { name: "Attacker Good Row" }, stay: null },
+        {
+          sourceRowIndex: 1,
+          action: "create",
+          matchedLodgingId: victimLodging.id,
+          lodging: null,
+          stay: { checkIn: "2026-09-01", checkOut: "2026-09-02" },
+        },
+        { sourceRowIndex: 2, action: "create", lodging: { name: "Attacker Also Good" }, stay: null },
+      ];
+
+      const result = await commitLodgingImport(userId, "csv", "idor.csv", rows);
+
+      expect(result.failed).toHaveLength(1);
+      expect(result.failed[0].sourceRowIndex).toBe(1);
+      expect(result.createdLodgings).toBe(2);
+
+      const attachedStay = await prisma.lodgingStay.findFirst({
+        where: { lodgingId: victimLodging.id },
+      });
+      expect(attachedStay).toBeNull();
+    } finally {
+      await prisma.lodgingStay.deleteMany({ where: { lodgingId: victimLodging.id } });
+      await prisma.lodging.delete({ where: { id: victimLodging.id } });
+      await prisma.user.delete({ where: { id: otherUser.id } });
+    }
+  });
+
   it("reuses a lodging created earlier in the same batch for a later row with the same name", async () => {
     const rows: CommitRowInput[] = [
       { sourceRowIndex: 0, action: "create", lodging: { name: "Same Batch Hotel" }, stay: null },
