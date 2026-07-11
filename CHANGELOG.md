@@ -4,6 +4,27 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.3.1] - 2026-07-11
+
+Patch release. Fixes the release-highlights dialog, which never appeared in
+2.3.0 — and with it the usage-statistics consent prompt, so nobody was ever
+asked.
+
+### Fixed
+- **The "What's new" dialog now actually appears.** In 2.3.0 the dialog was
+  matched to the running version by an exact string comparison, and its only
+  entry was tagged with the version the feature had originally been planned
+  for. On a 2.3.0 installation nothing matched, so the dialog stayed hidden —
+  taking the anonymous-usage-statistics consent prompt with it, since that
+  prompt is shown inside the dialog. Highlights are now matched to any version
+  at or above the one they describe, so the dialog also reaches someone who
+  skips several releases at once, and dismissing it is remembered across
+  later patch updates.
+- **Database index name reconciled with the schema.** A hand-written migration
+  had created the trip-photos index under a different name than the schema
+  expects, so every newly generated migration on every branch carried a
+  spurious rename. Renamed once (metadata only — no data is touched).
+
 ## [2.3.0] - 2026-07-11
 
 **TravStats 2.3.** Aggregates the entire `dev/v2.3` forward line — a
