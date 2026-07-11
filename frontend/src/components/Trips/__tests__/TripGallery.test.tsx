@@ -86,12 +86,25 @@ describe("TripGallery — uploaded-photos section visibility (#179)", () => {
     expect(screen.getByTestId("immich-album-section")).toBeInTheDocument();
   });
 
-  it("always keeps the upload button and the link-album button visible, regardless of state", () => {
-    render(
-      <TripGallery tripId="trip-1" photos={[]} immichAlbums={[ALBUM]} onChange={vi.fn()} />
-    );
+  it.each<[string, TripPhoto[], LinkedAlbum[]]>([
+    ["no photos, no albums", [], []],
+    ["no photos, one linked album", [], [ALBUM]],
+    ["photos, no linked albums", [PHOTO], []],
+    ["photos and a linked album", [PHOTO], [ALBUM]],
+  ])(
+    "keeps the upload button and the link-album button visible when %s",
+    (_label, photos, immichAlbums) => {
+      render(
+        <TripGallery
+          tripId="trip-1"
+          photos={photos}
+          immichAlbums={immichAlbums}
+          onChange={vi.fn()}
+        />
+      );
 
-    expect(screen.getByText("trips:gallery.uploadButton")).toBeInTheDocument();
-    expect(screen.getByText("immich:albums.link")).toBeInTheDocument();
-  });
+      expect(screen.getByText("trips:gallery.uploadButton")).toBeInTheDocument();
+      expect(screen.getByText("immich:albums.link")).toBeInTheDocument();
+    }
+  );
 });

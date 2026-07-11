@@ -32,6 +32,8 @@
     "searchLabel": "Search albums",
     "searchPlaceholder": "Search by album name…",
     "noMatches": "No albums match your search",
+    "hiddenSelections": "{{count}} selected album is hidden by your search",
+    "hiddenSelections_other": "{{count}} selected albums are hidden by your search",
     "unlink": "Unlink",
     "unlinkTitle": "Unlink album",
     "unlinkKeepCopies": "Keep copies",
