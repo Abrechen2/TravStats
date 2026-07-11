@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { StayEditor } from "../StayEditor";
 import { createStay, updateStay, listMemberships, getFxPreview } from "../../../lib/api/lodging";
 import { tripsApi } from "../../../lib/api";
+import { logger } from "../../../lib/logger";
 import type { LodgingStay } from "../../../types/lodging";
 
 // Mocked at the resolved-module level — StayEditor.tsx imports the same
@@ -196,5 +197,45 @@ describe("StayEditor", () => {
     expect(await screen.findByTestId("stay-editor-error")).toBeInTheDocument();
     expect(createStay).not.toHaveBeenCalled();
     expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  // Guards against a caller bug (edit mode without the entity to edit) —
+  // must surface as a clean, handled error rather than reaching an unsafe
+  // cast past a possibly-absent `stay` (`(stay as LodgingStay).id`). Note:
+  // the surrounding try/catch already swallows the resulting TypeError and
+  // shows the same generic message, so `stay-editor-error` alone can't tell
+  // an explicit guard apart from an accidentally-caught crash — the
+  // `logger.error` assertion below is what actually distinguishes them (a
+  // real guard returns before ever entering the catch/log path).
+  it("shows a save error and never calls updateStay or logs a crash when mode='edit' has no stay", async () => {
+    const onSaved = vi.fn();
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => undefined);
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        stay={null}
+        onClose={vi.fn()}
+        onSaved={onSaved}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+      target: { value: "2026-07-11" },
+    });
+    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+      target: { value: "2026-07-12" },
+    });
+
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    expect(await screen.findByTestId("stay-editor-error")).toBeInTheDocument();
+    expect(updateStay).not.toHaveBeenCalled();
+    expect(onSaved).not.toHaveBeenCalled();
+    // The explicit guard returns before the try/catch — no crash is ever
+    // caught-and-logged. Without the guard, the unsafe cast throws inside
+    // the try block and `logger.error("StayEditor: save failed", ...)` fires.
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 });

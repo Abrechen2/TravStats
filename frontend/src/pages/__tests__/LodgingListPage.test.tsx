@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import type { Lodging } from "../../types/lodging";
+import type { Lodging, LodgingStay } from "../../types/lodging";
 
 const listLodgingsMock = vi.fn();
 
@@ -24,6 +25,46 @@ vi.unmock("../../store/settingsStore");
 // Imported after the mocks above so the module graph picks them up.
 import LodgingListPage from "../LodgingListPage";
 import { useSettingsStore } from "../../store/settingsStore";
+
+function makeStay(overrides: Partial<LodgingStay> = {}): LodgingStay {
+  return {
+    id: "stay-1",
+    lodgingId: "lodging-1",
+    userId: "user-1",
+    tripId: null,
+    bookingId: null,
+    checkIn: "2024-01-01T00:00:00.000Z",
+    checkOut: "2024-01-02T00:00:00.000Z",
+    status: "completed",
+    roomNumber: null,
+    roomCategory: null,
+    board: "none",
+    pricePerNight: null,
+    currency: "EUR",
+    totalPrice: null,
+    totalPriceBase: null,
+    fxRate: null,
+    fxRateDate: null,
+    fxBaseCurrency: null,
+    isAwardStay: false,
+    ratingRoom: null,
+    ratingBreakfast: null,
+    ratingService: null,
+    ratingOverall: null,
+    roomAmenities: [],
+    bookingReference: null,
+    membershipId: null,
+    receiptUrl: null,
+    companions: [],
+    notes: null,
+    parserTemplate: null,
+    parserConfidence: null,
+    dataSource: null,
+    createdAt: "2024-01-01T00:00:00.000Z",
+    updatedAt: "2024-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
 
 function makeLodging(overrides: Partial<Lodging> = {}): Lodging {
   return {
@@ -90,5 +131,121 @@ describe("LodgingListPage", () => {
     const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
     expect(row?.textContent).toMatch(/CHF/);
     expect(row?.textContent).not.toMatch(/\$883/);
+  });
+
+  it("passes the active type/year/country filters and sort as query params to listLodgings", async () => {
+    // Baseline (the unfiltered fetch used only to derive the year/country
+    // dropdown option sets) needs distinct countries/years so those
+    // <select>s have real, non-"all" options to pick below.
+    const baseline: Lodging[] = [
+      makeLodging({
+        id: "l-ch",
+        country: "CH",
+        stays: [makeStay({ checkIn: "2023-05-01T00:00:00.000Z" })],
+      }),
+      makeLodging({
+        id: "l-us",
+        country: "US",
+        stays: [makeStay({ checkIn: "2024-06-01T00:00:00.000Z" })],
+      }),
+    ];
+    listLodgingsMock.mockResolvedValue(baseline);
+
+    const user = userEvent.setup();
+    renderListPage();
+
+    // Wait for the initial baseline + reload fetches to settle and the
+    // dropdown options to be populated from `baseline`.
+    await screen.findByRole("option", { name: "2024" });
+    listLodgingsMock.mockClear();
+
+    await user.selectOptions(screen.getByLabelText("lodging:filter.type"), "campsite");
+    await waitFor(() => {
+      expect(listLodgingsMock).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "campsite", sort: "name" })
+      );
+    });
+
+    listLodgingsMock.mockClear();
+    await user.selectOptions(screen.getByLabelText("lodging:filter.year"), "2023");
+    await waitFor(() => {
+      expect(listLodgingsMock).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "campsite", year: 2023, sort: "name" })
+      );
+    });
+
+    listLodgingsMock.mockClear();
+    await user.selectOptions(screen.getByLabelText("lodging:filter.country"), "US");
+    await waitFor(() => {
+      expect(listLodgingsMock).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "campsite", year: 2023, country: "US", sort: "name" })
+      );
+    });
+
+    listLodgingsMock.mockClear();
+    await user.selectOptions(screen.getByLabelText("lodging:filter.sort"), "spend");
+    await waitFor(() => {
+      expect(listLodgingsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "campsite",
+          year: 2023,
+          country: "US",
+          sort: "spend",
+        })
+      );
+    });
+  });
+
+  it("renders rows in exactly the order the API returned them — never re-sorted client-side", async () => {
+    // The backend sorts the full set THEN paginates; a local re-sort of an
+    // already-ordered response would silently produce a wrong order. This
+    // order is deliberately NOT alphabetical and NOT sorted by nights/spend,
+    // so a client-side re-sort bug (by any of those keys) would be caught.
+    const ordered: Lodging[] = [
+      makeLodging({ id: "l-1", name: "Zebra Lodge", nights: 1, totalSpendBase: 500 }),
+      makeLodging({ id: "l-2", name: "Alpha Inn", nights: 9, totalSpendBase: 10 }),
+      makeLodging({ id: "l-3", name: "Mid Motel", nights: 4, totalSpendBase: 250 }),
+    ];
+    listLodgingsMock.mockResolvedValue(ordered);
+
+    const { container } = renderListPage();
+
+    await waitFor(() => {
+      expect(container.querySelectorAll("tbody tr").length).toBe(3);
+    });
+
+    const rowNames = Array.from(container.querySelectorAll("tbody tr")).map(
+      (row) => row.querySelector("td")?.textContent ?? ""
+    );
+    expect(rowNames[0]).toContain("Zebra Lodge");
+    expect(rowNames[1]).toContain("Alpha Inn");
+    expect(rowNames[2]).toContain("Mid Motel");
+  });
+
+  it("renders the empty state without crashing when there are no lodgings", async () => {
+    listLodgingsMock.mockResolvedValue([]);
+
+    renderListPage();
+
+    expect(await screen.findByText("lodging:list.empty")).toBeInTheDocument();
+  });
+
+  it("surfaces an error state (not a blank page) when the filtered fetch fails", async () => {
+    // The baseline call is always `listLodgings({})` — no `sort` key. The
+    // reload call that actually feeds the table always includes `sort`.
+    // Only the latter fails here, mirroring a real backend 500 on the list
+    // query while the dropdown-options fetch still succeeds.
+    listLodgingsMock.mockImplementation((query: Record<string, unknown>) => {
+      if ("sort" in query) return Promise.reject(new Error("network failure"));
+      return Promise.resolve([]);
+    });
+
+    renderListPage();
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe("lodging:list.loadError");
+    // The failure must not silently render as if there were zero lodgings —
+    // the error alert state supersedes the empty state.
+    expect(screen.queryByText("lodging:list.empty")).not.toBeInTheDocument();
   });
 });

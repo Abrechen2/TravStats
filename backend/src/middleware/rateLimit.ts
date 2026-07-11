@@ -94,6 +94,26 @@ export const portGeocodeLimiter = rateLimit({
 });
 
 /**
+ * Per-user/IP limit for the FX preview proxy (`/lodging/fx-preview`).
+ *
+ * The route proxies to the free public Frankfurter/ECB API so the frontend
+ * can show a live rate preview without the app's CSP blocking a direct
+ * browser call. `fx.convertToBase` caches per (from, to, date), so repeated
+ * identical queries are free — but a caller can simply vary `date` to force
+ * unlimited uncached outbound calls, risking the instance's IP getting
+ * banned from the free upstream. Mirrors `portGeocodeLimiter`'s shape (same
+ * per-caller keying + PAT-aware multiplier, comparable 30/min window).
+ */
+export const fxPreviewLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: patAwareMax(30),
+  message: 'Too many FX preview requests in a short time — please slow down',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
  * Rate limiter for flight creation
  * Allows 20 flight creations per hour per IP
  */

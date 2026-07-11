@@ -134,6 +134,12 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
       setError(t("lodging:stayEditor.datesRequired"));
       return;
     }
+    if (mode === "edit" && !stay) {
+      // Defensive only — callers always pass `stay` in edit mode. Surfaces
+      // as a clean error instead of a runtime throw on the cast below.
+      setError(t("lodging:stayEditor.saveError"));
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -163,10 +169,16 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
         companions: splitCsv(companionsInput),
         notes: notes.trim() || undefined,
       };
-      const saved =
-        mode === "create"
-          ? await createStay(lodgingId, input)
-          : await updateStay(lodgingId, (stay as LodgingStay).id, input);
+      let saved: LodgingStay;
+      if (mode === "create") {
+        saved = await createStay(lodgingId, input);
+      } else if (stay) {
+        saved = await updateStay(lodgingId, stay.id, input);
+      } else {
+        // Unreachable — the guard above already returned for this case —
+        // but this keeps `stay.id` above type-checked without an assertion.
+        return;
+      }
       await onSaved(saved);
     } catch (err: unknown) {
       logger.error("StayEditor: save failed", err);
