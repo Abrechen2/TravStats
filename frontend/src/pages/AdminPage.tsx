@@ -19,6 +19,7 @@ import CreateLinkInviteModal from "../components/Admin/CreateLinkInviteModal";
 import CreateEmailInviteModal from "../components/Admin/CreateEmailInviteModal";
 import InviteSuccessModal from "../components/Admin/InviteSuccessModal";
 import GlobalApiKeysManager from "../components/Admin/GlobalApiKeysManager";
+import ImmichGlobalSettings from "../components/Admin/ImmichGlobalSettings";
 import ParserSettingsTab from "../components/Admin/ParserSettings";
 import LoggingManager from "../components/Admin/LoggingManager";
 import SmtpManager from "../components/Admin/SmtpManager";
@@ -730,27 +731,26 @@ export default function AdminPage(): JSX.Element {
           )}
 
           {activeSection === "externalServices" && (
-            <GlobalApiKeysManager
-              globalApiKeys={globalApiKeys}
-              parserSettings={
-                parserSettings
-                  ? {
-                      allowUserApiKeys: parserSettings.allowUserApiKeys,
-                    }
-                  : null
-              }
-              saving={savingGlobalApiKeys || savingParsers}
-              onSave={handleSaveGlobalApiKeys}
-              onGlobalApiKeysChange={setGlobalApiKeys}
-              onParserSettingsChange={(apiKeySettings: ParserApiKeySettings) => {
-                if (parserSettings) {
-                  setParserSettings({
-                    ...parserSettings,
-                    allowUserApiKeys: apiKeySettings.allowUserApiKeys,
-                  });
+            <>
+              <GlobalApiKeysManager
+                globalApiKeys={globalApiKeys}
+                parserSettings={
+                  parserSettings ? { allowUserApiKeys: parserSettings.allowUserApiKeys } : null
                 }
-              }}
-            />
+                saving={savingGlobalApiKeys || savingParsers}
+                onSave={handleSaveGlobalApiKeys}
+                onGlobalApiKeysChange={setGlobalApiKeys}
+                onParserSettingsChange={(apiKeySettings: ParserApiKeySettings) => {
+                  if (parserSettings) {
+                    setParserSettings({
+                      ...parserSettings,
+                      allowUserApiKeys: apiKeySettings.allowUserApiKeys,
+                    });
+                  }
+                }}
+              />
+              <ImmichGlobalSettings />
+            </>
           )}
 
           {activeSection === "parsers" && parserSettings && (
