@@ -12,6 +12,17 @@ export function formatBytes(bytes: number): string {
   return exponent === 0 ? `${value} B` : `${value.toFixed(1)} ${UNITS[exponent]}`;
 }
 
+// Folds a string for search matching: trims, lower-cases, and strips
+// diacritics so a plain-ASCII query (e.g. "munchen") finds "München" — the
+// first thing a DE-first user types for an umlaut-bearing album name.
+function foldForSearch(value: string): string {
+  return value
+    .trim()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLocaleLowerCase();
+}
+
 interface Props {
   tripId: string;
   onClose: () => void;
@@ -125,12 +136,20 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
 
   const count = Object.keys(selected).length;
 
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = foldForSearch(query);
   const filteredAlbums =
     normalizedQuery === ""
       ? albums
-      : albums.filter((album) => album.albumName.toLowerCase().includes(normalizedQuery));
+      : albums.filter((album) => foldForSearch(album.albumName).includes(normalizedQuery));
   const hasNoMatches = albums.length > 0 && normalizedQuery !== "" && filteredAlbums.length === 0;
+  // Selections the current query hides from view — the confirm button's
+  // count deliberately still includes these (linking hidden selections is
+  // correct), but the user needs a visible reminder they exist.
+  const hiddenSelectedCount =
+    normalizedQuery === ""
+      ? 0
+      : Object.keys(selected).filter((id) => !filteredAlbums.some((album) => album.id === id))
+          .length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
@@ -142,7 +161,7 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
           <p className="text-sm text-slate-400">{t("albums.empty")}</p>
         )}
 
-        {!loading && !failure && albums.length > 0 && (
+        {!loading && albums.length > 0 && (
           <input
             type="text"
             aria-label={t("albums.searchLabel")}
@@ -154,6 +173,11 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
         )}
 
         {hasNoMatches && <p className="text-sm text-slate-400">{t("albums.noMatches")}</p>}
+        {hiddenSelectedCount > 0 && (
+          <p className="mb-2 text-xs text-amber-400">
+            {t("albums.hiddenSelections", { count: hiddenSelectedCount })}
+          </p>
+        )}
 
         <ul className="space-y-2">
           {filteredAlbums.map((album) => {

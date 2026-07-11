@@ -60,6 +60,15 @@ const ALBUMS = [
   },
 ];
 
+const MUENCHEN_ALBUM = {
+  id: "a4",
+  albumName: "München 2024",
+  assetCount: 20,
+  thumbnailAssetId: null,
+  linked: false,
+  linkId: null,
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   listAlbums.mockResolvedValue({ albums: ALBUMS, defaultMode: "link" });
@@ -223,6 +232,39 @@ describe("ImmichAlbumPicker", () => {
     expect(screen.queryByText("Oslo")).not.toBeInTheDocument();
   });
 
+  it("matches diacritic album names against a plain-ASCII query, regardless of case", async () => {
+    listAlbums.mockResolvedValue({ albums: [...ALBUMS, MUENCHEN_ALBUM], defaultMode: "link" });
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("München 2024")).toBeInTheDocument());
+    const user = userEvent.setup();
+    const search = screen.getByRole("textbox", { name: "albums.searchLabel" });
+
+    await user.type(search, "munchen");
+    expect(screen.getByText("München 2024")).toBeInTheDocument();
+    expect(screen.queryByText("Rome")).not.toBeInTheDocument();
+
+    await user.clear(search);
+    await user.type(search, "München");
+    expect(screen.getByText("München 2024")).toBeInTheDocument();
+
+    await user.clear(search);
+    await user.type(search, "MUNCHEN");
+    expect(screen.getByText("München 2024")).toBeInTheDocument();
+  });
+
+  it("treats a whitespace-only query as no filter at all", async () => {
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+
+    await user.type(screen.getByRole("textbox", { name: "albums.searchLabel" }), "   ");
+
+    expect(screen.getByText("Rome")).toBeInTheDocument();
+    expect(screen.getByText("Oslo")).toBeInTheDocument();
+    expect(screen.getByText("Paris")).toBeInTheDocument();
+    expect(screen.queryByText("albums.noMatches")).not.toBeInTheDocument();
+  });
+
   it("keeps a selection alive after the matching album is filtered out of view", async () => {
     renderPicker();
     await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
@@ -239,7 +281,9 @@ describe("ImmichAlbumPicker", () => {
     expect(screen.queryByText("Rome")).not.toBeInTheDocument();
     await user.click(screen.getByRole("checkbox", { name: /Paris/ }));
 
-    await user.clear(search);
+    // Confirm while the "Paris" filter is still active — Rome is hidden at
+    // the moment of confirm, so a handleConfirm that only submits the
+    // currently-visible selections would silently drop it here.
     await user.click(screen.getByRole("button", { name: /albums.confirm/ }));
 
     await waitFor(() => expect(linkAlbums).toHaveBeenCalledTimes(1));
@@ -262,6 +306,54 @@ describe("ImmichAlbumPicker", () => {
 
     expect(screen.getByText("albums.noMatches")).toBeInTheDocument();
     expect(screen.queryByText("albums.empty")).not.toBeInTheDocument();
+  });
+
+  it("does not strand the user behind an unclearable search filter after a failed confirm", async () => {
+    linkAlbums.mockRejectedValue({ response: { data: { error: "unreachable" } } });
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+    const search = screen.getByRole("textbox", { name: "albums.searchLabel" });
+
+    await user.type(search, "Rome");
+    await user.click(screen.getByRole("checkbox", { name: /Rome/ }));
+    await user.click(screen.getByRole("button", { name: /albums.confirm/ }));
+
+    await waitFor(() => expect(screen.getByText("errors.unreachable")).toBeInTheDocument());
+
+    // The search box must still be reachable after a failed confirm so the
+    // user can clear the leftover filter themselves — the only alternative
+    // today is closing and reopening the whole picker.
+    const searchAfterFailure = screen.getByRole("textbox", { name: "albums.searchLabel" });
+    await user.clear(searchAfterFailure);
+    expect(screen.getByText("Oslo")).toBeInTheDocument();
+    expect(screen.getByText("Paris")).toBeInTheDocument();
+  });
+
+  it("shows a hint when a selected album is hidden by the current search filter", async () => {
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+    const search = screen.getByRole("textbox", { name: "albums.searchLabel" });
+
+    await user.type(search, "Rome");
+    await user.click(screen.getByRole("checkbox", { name: /Rome/ }));
+
+    // Rome (selected) is now hidden by a filter for a different album.
+    await user.clear(search);
+    await user.type(search, "Paris");
+
+    expect(screen.getByText("albums.hiddenSelections")).toBeInTheDocument();
+  });
+
+  it("does not show the hidden-selections hint when every selected album is visible", async () => {
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("checkbox", { name: /Rome/ }));
+
+    expect(screen.queryByText("albums.hiddenSelections")).not.toBeInTheDocument();
   });
 
   it("restores the full album list once the query is cleared", async () => {
