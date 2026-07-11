@@ -19,7 +19,7 @@ export interface AchievementDefinition {
   name: string;
   description: string;
   category: string;
-  domain: 'flight' | 'cruise' | 'shared';
+  domain: 'flight' | 'cruise' | 'lodging' | 'shared';
   icon: string;
   tier: string;
   requirement: number;
