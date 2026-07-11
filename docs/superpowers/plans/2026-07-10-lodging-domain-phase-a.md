@@ -1634,6 +1634,7 @@ git commit -am "feat(lodging): lodging list + detail pages with FX readouts"
 
 **Interfaces:**
 - Consumes: Task 14 API client; `CURRENCIES`/`BOARD_TYPES`/`STAY_STATUSES`.
+- **`isAwardStay` MUST be settable here** (a toggle: "Prämienübernachtung" / "Award stay"). Task 11 shipped four `POINTS_PRO_*` achievements that count award nights — without a UI path to set the flag they are permanently unreachable.
 - Produces: modal editor (dates, room, board segmented control, 1–5 half-star pickers for room/breakfast/service/overall, price + currency, room-amenity chips, booking ref, membership select, trip link, receipt upload) + a live **FX readout** (shows `X CUR → Y BASE · rate · date` once price+currency+checkIn set and currency ≠ base). `ChainPicker` = searchable select over `listChains` + add-new. `MembershipManager` = CRUD list.
 
 - [ ] **Step 1: Read the cruise editor modal** (star pickers, segmented control, receipt upload) as the template. Reproduce mockup screen ③.
@@ -1674,6 +1675,8 @@ git commit -am "feat(lodging): base-currency setting + spend-by-currency breakdo
 
 **Interfaces:**
 - Consumes: all frontend tasks' `t()` keys.
+
+- [ ] **Step 0: Add the `lodging` filter to `frontend/src/pages/AchievementsPage.tsx`.** Task 11 seeded 41 lodging + cross-domain achievements and they unlock correctly, but the achievements page has no `lodging` domain filter — so they are earned yet not browsable. Mirror how the page filters `flight`/`cruise`.
 
 - [ ] **Step 1: Add every `t()` key** used in Tasks 16–19 to BOTH `de` and `en` (DE primary). Include `domain.lodging` = "Unterkünfte" / "Lodging"; board/status/type enum labels; FX strings ("In Basiswährung", "EZB-Kurs", "Basiswährung").
 
