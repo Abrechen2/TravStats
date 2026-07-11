@@ -6,10 +6,17 @@ import type { Lodging, LodgingStay } from "../../types/lodging";
 
 const getLodgingMock = vi.fn();
 const deleteLodgingMock = vi.fn();
+const listMembershipsMock = vi.fn();
+const tripsGetAllMock = vi.fn();
 
 vi.mock("../../lib/api/lodging", () => ({
   getLodging: (...args: unknown[]) => getLodgingMock(...args),
   deleteLodging: (...args: unknown[]) => deleteLodgingMock(...args),
+  listMemberships: () => listMembershipsMock(),
+}));
+
+vi.mock("../../lib/api", () => ({
+  tripsApi: { getAll: () => tripsGetAllMock() },
 }));
 
 vi.mock("../../components/NavigationBar", () => ({
@@ -109,6 +116,10 @@ describe("LodgingDetailPage", () => {
   beforeEach(() => {
     getLodgingMock.mockReset();
     deleteLodgingMock.mockReset();
+    listMembershipsMock.mockReset();
+    tripsGetAllMock.mockReset();
+    listMembershipsMock.mockResolvedValue([]);
+    tripsGetAllMock.mockResolvedValue([]);
     useSettingsStore.setState({
       baseCurrency: "EUR",
       units: { distanceUnit: "kilometers", currency: "EUR" },
@@ -236,5 +247,86 @@ describe("LodgingDetailPage", () => {
       expect(getLodgingMock).toHaveBeenCalled();
     });
     expect(screen.queryByTestId("lodging-delete-button")).not.toBeInTheDocument();
+  });
+
+  it("shows the trip pill and the loyalty program when a stay is linked to both", async () => {
+    tripsGetAllMock.mockResolvedValue([
+      { id: "trip-1", name: "Zürich City" },
+    ]);
+    listMembershipsMock.mockResolvedValue([
+      { id: "mem-1", programName: "NH Rewards" },
+    ]);
+    const linkedStay: LodgingStay = { ...baseStay, tripId: "trip-1", membershipId: "mem-1" };
+    getLodgingMock.mockResolvedValue(makeLodging({}, [linkedStay]));
+
+    renderDetailPage();
+
+    const tripPill = await screen.findByTestId("stay-trip-pill-stay-1");
+    expect(tripPill.textContent).toContain("Zürich City");
+    const membershipChip = screen.getByTestId("stay-membership-chip-stay-1");
+    expect(membershipChip.textContent).toContain("NH Rewards");
+  });
+
+  it("does not render a trip pill or loyalty chip when a stay has neither linked", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging({}, [baseStay])); // tripId/membershipId both null
+
+    renderDetailPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Engimatt City & Garden")).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("stay-trip-pill-stay-1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("stay-membership-chip-stay-1")).not.toBeInTheDocument();
+  });
+
+  it("shows the Original amount and per-category rating averages in the sidebar cards", async () => {
+    getLodgingMock.mockResolvedValue(
+      makeLodging({ totalSpendBase: 883, totalSpendBaseByCurrency: { EUR: 883 } }, [baseStay]),
+    );
+
+    renderDetailPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Engimatt City & Garden")).toBeInTheDocument();
+    });
+
+    // "Original" spend line — the stay's own CHF amount, alongside (not
+    // instead of) the converted base-currency figure.
+    const originalLabel = screen.getByText("lodging:detail.spendOriginal");
+    expect(originalLabel.closest("div")?.textContent).toMatch(/840/);
+
+    // Per-category rating averages, not one collapsed aggregate.
+    const roomLabel = screen.getByText("lodging:field.ratingRoom");
+    expect(roomLabel.closest("div")?.textContent).toContain("4");
+  });
+
+  it("renders — (not 0 €) for the spend card when every stay's price has been cleared", async () => {
+    const clearedStay: LodgingStay = {
+      ...baseStay,
+      totalPrice: null,
+      totalPriceBase: null,
+      fxRate: null,
+      fxRateDate: null,
+      fxBaseCurrency: null,
+    };
+    // Mirrors the real backend: a lodging with no priced stay computes
+    // totalSpendBase as 0 (computeAggregates' `?? 0` fallback) — the page
+    // must not render that 0 as "0 €", which would wrongly assert the stay
+    // was free.
+    getLodgingMock.mockResolvedValue(
+      makeLodging({ totalSpendBase: 0, totalSpendBaseByCurrency: {} }, [clearedStay]),
+    );
+
+    renderDetailPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Engimatt City & Garden")).toBeInTheDocument();
+    });
+
+    const spendBaseLabel = screen.getByText("lodging:detail.spendBase");
+    expect(spendBaseLabel.closest("div")?.textContent).toMatch(/—/);
+    expect(spendBaseLabel.closest("div")?.textContent).not.toMatch(/0\s*€/);
+    const perNightLabel = screen.getByText("lodging:detail.spendPerNight");
+    expect(perNightLabel.closest("div")?.textContent).toMatch(/—/);
   });
 });

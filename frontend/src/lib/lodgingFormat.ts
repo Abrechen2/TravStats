@@ -100,9 +100,125 @@ export function nightsBetween(checkIn: string, checkOut: string): number {
 
 /**
  * "★ 4.3" for a rating value, "—" when unrated. Half-steps render as-is
- * (e.g. 4.5). Single shared formatter for the rating text repeated across
- * `LodgingListPage`, `LodgingDetailPage`, and `LodgingStayCard`.
+ * (e.g. 4.5). Single shared plain-text formatter for the compact rating
+ * mentions the mockup ALSO renders as plain text (meta lines, per-category
+ * inline mentions like "Frühstück ★4") — for the full filled/half/muted
+ * star-glyph rendering (mockup's list-table and rating-card cells), use the
+ * `StarRating` component instead.
  */
 export function formatRatingText(value: number | null): string {
   return value !== null ? `★ ${value}` : FALLBACK;
+}
+
+/** The subset of `LodgingStay` needed to derive a lodging's original-currency spend. */
+export interface StaySpendSnapshot {
+  totalPrice: number | null;
+  currency: string;
+}
+
+/** True when at least one stay has a recorded price — used to tell a genuine
+ * zero-spend total apart from "nothing priced yet" (a cleared/never-entered
+ * price must render "—", never "0 €" — see `hasAnyPrice` callers). */
+export function hasAnyPrice(stays: readonly StaySpendSnapshot[]): boolean {
+  return stays.some((s) => s.totalPrice !== null);
+}
+
+/**
+ * When every priced stay on a lodging shares the SAME currency and that
+ * currency differs from the user's base currency, returns that shared
+ * original-currency total — a plain sum of the already-stored `totalPrice`
+ * values, no FX math performed here (the converted figure the caller pairs
+ * this with is `Lodging.totalSpendBase`, already computed server-side).
+ *
+ * Returns `null` when every priced stay is already in the base currency,
+ * when priced stays mix multiple currencies (no single honest "original"
+ * amount to show), or when nothing is priced — callers fall back to
+ * showing only the converted total in all three cases.
+ */
+export function singleOriginalCurrencySpend(
+  stays: readonly StaySpendSnapshot[],
+  baseCurrency: string
+): { amount: number; currency: string } | null {
+  let amount = 0;
+  let currency: string | null = null;
+  for (const stay of stays) {
+    if (stay.totalPrice === null) continue;
+    if (currency === null) currency = stay.currency;
+    else if (currency !== stay.currency) return null; // mixed currencies — no single "original"
+    amount += stay.totalPrice;
+  }
+  if (currency === null || currency === baseCurrency) return null;
+  return { amount, currency };
+}
+
+export interface OtherCurrencySpend {
+  /** Sum of every non-base-currency amount, grouped by currency — original amounts, no FX math. */
+  currencies: readonly { currency: string; amount: number }[];
+  /** The combined converted total for all of those non-base amounts. */
+  convertedTotal: number;
+}
+
+/**
+ * Sum of `LodgingStats.spendByCurrency` amounts NOT in the user's base
+ * currency, and the matching converted total — both derived from numbers
+ * `GET /stats/lodging` already computed, with no FX math performed here:
+ *
+ * - the base-currency-native amount (`spendByCurrency[baseCurrency]`) always
+ *   equals its own `totalPriceBase` slice one-for-one (an identity
+ *   conversion, rate 1 — see `convertToBase`'s `from === base` short
+ *   circuit), so subtracting it from `spendBaseTotal` (the combined
+ *   converted total across every currency) isolates exactly the portion
+ *   that came from foreign-currency stays.
+ *
+ * Returns `null` when there is no foreign-currency spend to show, or when
+ * the derived converted total isn't positive (a defensive guard against a
+ * stats snapshot where every foreign stay's FX lookup happened to fail).
+ */
+export function otherCurrencySpend(
+  spendByCurrency: Record<string, number>,
+  spendBaseTotal: number,
+  baseCurrency: string,
+): OtherCurrencySpend | null {
+  const otherEntries = Object.entries(spendByCurrency).filter(
+    ([currency, amount]) => currency !== baseCurrency && amount > 0,
+  );
+  if (otherEntries.length === 0) return null;
+  const convertedTotal = spendBaseTotal - (spendByCurrency[baseCurrency] ?? 0);
+  if (convertedTotal <= 0) return null;
+  return {
+    currencies: otherEntries.map(([currency, amount]) => ({ currency, amount })),
+    convertedTotal,
+  };
+}
+
+/** The subset of `LodgingStay` needed to derive per-category rating averages. */
+export interface StayCategoryRatings {
+  ratingRoom: number | null;
+  ratingBreakfast: number | null;
+  ratingService: number | null;
+}
+
+export interface CategoryRatingAverages {
+  room: number | null;
+  breakfast: number | null;
+  service: number | null;
+}
+
+function average(values: readonly number[]): number | null {
+  if (values.length === 0) return null;
+  return Math.round((values.reduce((sum, v) => sum + v, 0) / values.length) * 10) / 10;
+}
+
+/**
+ * Averages a lodging's stays' per-category ratings (Zimmer / Frühstück /
+ * Service), nulls ignored per category — mirrors the backend's own
+ * `deriveOverallRating` rounding (one decimal), but per category instead of
+ * collapsed into one aggregate (mockup screen ②'s "★ Ø-Bewertung" card).
+ */
+export function averageRatingsByCategory(stays: readonly StayCategoryRatings[]): CategoryRatingAverages {
+  return {
+    room: average(stays.map((s) => s.ratingRoom).filter((v): v is number => v !== null)),
+    breakfast: average(stays.map((s) => s.ratingBreakfast).filter((v): v is number => v !== null)),
+    service: average(stays.map((s) => s.ratingService).filter((v): v is number => v !== null)),
+  };
 }

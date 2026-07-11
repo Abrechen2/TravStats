@@ -69,6 +69,7 @@
       "nights": "Nights",
       "chains": "Chains",
       "spend": "Spend",
+      "spendOtherCurrency": "incl. {{orig}} → {{converted}}",
       "rating": "Avg. rating",
       "noRating": "No rating"
     },

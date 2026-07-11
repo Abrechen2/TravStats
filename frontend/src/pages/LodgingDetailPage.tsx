@@ -5,11 +5,18 @@ import NavigationBar from "../components/NavigationBar";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import { LodgingMiniMap } from "../components/lodging/LodgingMiniMap";
 import { LodgingStayCard } from "../components/lodging/LodgingStayCard";
+import { StarRating } from "../components/lodging/StarRating";
 import { StayEditor } from "../components/lodging/StayEditor";
 import { useTranslation } from "../hooks/useTranslation";
-import { deleteLodging, getLodging } from "../lib/api/lodging";
+import { deleteLodging, getLodging, listMemberships } from "../lib/api/lodging";
+import { tripsApi } from "../lib/api";
 import { formatCurrency } from "../lib/units";
-import { formatRatingText } from "../lib/lodgingFormat";
+import {
+  averageRatingsByCategory,
+  formatRatingText,
+  hasAnyPrice,
+  singleOriginalCurrencySpend,
+} from "../lib/lodgingFormat";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
@@ -33,6 +40,12 @@ export default function LodgingDetailPage(): JSX.Element {
   const [deleting, setDeleting] = useState<boolean>(false);
   // "new" = create mode, a LodgingStay = edit mode for that stay, null = closed.
   const [editingStay, setEditingStay] = useState<LodgingStay | "new" | null>(null);
+  // Name lookups for the stay cards' trip pill / loyalty mention — a stay
+  // only stores `tripId`/`membershipId`, never the display name, so this
+  // page resolves both once against the user's full trip and membership
+  // lists (small, already-fetched-elsewhere lists; no per-stay round trip).
+  const [tripNameById, setTripNameById] = useState<Record<string, string>>({});
+  const [membershipNameById, setMembershipNameById] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!id) return;
@@ -53,6 +66,35 @@ export default function LodgingDetailPage(): JSX.Element {
       cancelled = true;
     };
   }, [id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const trips = await tripsApi.getAll();
+        if (!cancelled) {
+          setTripNameById(Object.fromEntries(trips.map((trip) => [trip.id, trip.name])));
+        }
+      } catch (err: unknown) {
+        logger.error("LodgingDetailPage: failed to load trips", err);
+      }
+    })();
+    void (async () => {
+      try {
+        const memberships = await listMemberships();
+        if (!cancelled) {
+          setMembershipNameById(
+            Object.fromEntries(memberships.map((m) => [m.id, m.programName])),
+          );
+        }
+      } catch (err: unknown) {
+        logger.error("LodgingDetailPage: failed to load memberships", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // The owner-decided-and-non-negotiable safety net: deletion cascades to
   // every stay in the DB (no `Restrict`), so this is the ONLY confirmation
@@ -103,7 +145,10 @@ export default function LodgingDetailPage(): JSX.Element {
 
   const typeIcon = lodging.type === "campsite" ? "⛺" : "🏨";
   const addressLine = [lodging.address, lodging.city, lodging.country].filter(Boolean).join(", ");
+  const priced = hasAnyPrice(lodging.stays);
   const avgPerNight = lodging.nights > 0 ? lodging.totalSpendBase / lodging.nights : null;
+  const originalSpend = singleOriginalCurrencySpend(lodging.stays, baseCurrency);
+  const categoryRatings = averageRatingsByCategory(lodging.stays);
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
@@ -195,7 +240,15 @@ export default function LodgingDetailPage(): JSX.Element {
             {lodging.stays.length > 0 ? (
               <div className="flex flex-col gap-2">
                 {lodging.stays.map((stay) => (
-                  <LodgingStayCard key={stay.id} stay={stay} onEdit={setEditingStay} />
+                  <LodgingStayCard
+                    key={stay.id}
+                    stay={stay}
+                    onEdit={setEditingStay}
+                    tripName={stay.tripId ? tripNameById[stay.tripId] : undefined}
+                    membershipName={
+                      stay.membershipId ? membershipNameById[stay.membershipId] : undefined
+                    }
+                  />
                 ))}
               </div>
             ) : (
@@ -213,13 +266,25 @@ export default function LodgingDetailPage(): JSX.Element {
                 {t("lodging:detail.spend")}
               </h3>
               <dl className="mt-2 space-y-1 text-xs text-[var(--text-muted)]">
+                {originalSpend && (
+                  <div className="flex justify-between">
+                    <dt>{t("lodging:detail.spendOriginal")}</dt>
+                    <dd className="text-[var(--text-primary)]">
+                      {formatCurrency(originalSpend.amount, originalSpend.currency)}
+                    </dd>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <dt>{t("lodging:detail.spendBase")}</dt>
-                  <dd>{formatCurrency(lodging.totalSpendBase, baseCurrency)}</dd>
+                  <dd style={originalSpend ? { color: "var(--fx, #6ab7d8)" } : undefined}>
+                    {priced ? formatCurrency(lodging.totalSpendBase, baseCurrency) : "—"}
+                  </dd>
                 </div>
                 <div className="flex justify-between">
                   <dt>{t("lodging:detail.spendPerNight")}</dt>
-                  <dd>{avgPerNight !== null ? formatCurrency(avgPerNight, baseCurrency) : "—"}</dd>
+                  <dd>
+                    {priced && avgPerNight !== null ? formatCurrency(avgPerNight, baseCurrency) : "—"}
+                  </dd>
                 </div>
               </dl>
             </div>
@@ -228,9 +293,26 @@ export default function LodgingDetailPage(): JSX.Element {
               <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                 {t("lodging:detail.avgRating")}
               </h3>
-              <p className="mt-2 text-sm" style={{ color: "var(--star)" }}>
-                {formatRatingText(lodging.overallRating)}
-              </p>
+              <dl className="mt-2 space-y-1.5 text-xs text-[var(--text-muted)]">
+                <div className="flex items-center justify-between">
+                  <dt>{t("lodging:field.ratingRoom")}</dt>
+                  <dd>
+                    <StarRating value={categoryRatings.room} />
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt>{t("lodging:field.ratingBreakfast")}</dt>
+                  <dd>
+                    <StarRating value={categoryRatings.breakfast} />
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt>{t("lodging:field.ratingService")}</dt>
+                  <dd>
+                    <StarRating value={categoryRatings.service} />
+                  </dd>
+                </div>
+              </dl>
             </div>
           </aside>
         </div>

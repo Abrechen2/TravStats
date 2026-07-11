@@ -45,6 +45,7 @@
     "stays": "Stays",
     "staysEmpty": "No stays recorded yet",
     "spend": "Spend",
+    "spendOriginal": "Original",
     "spendBase": "In base currency",
     "spendPerNight": "Per night",
     "noLocation": "No location on file",
@@ -124,6 +125,7 @@
   },
   "chainPicker": {
     "placeholder": "Search chain …",
+    "clear": "✕ Clear",
     "addMissing": "Add “{{name}}” as a new chain",
     "confirmAdd": "Really add “{{name}}” as a new chain?",
     "matchedExisting": "Already exists — matched to “{{name}}”",

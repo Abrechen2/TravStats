@@ -69,6 +69,7 @@
       "nights": "Übernachtungen",
       "chains": "Ketten",
       "spend": "Ausgaben",
+      "spendOtherCurrency": "inkl. {{orig}} → {{converted}}",
       "rating": "Ø Bewertung",
       "noRating": "Keine Bewertung"
     },
