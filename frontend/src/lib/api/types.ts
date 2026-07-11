@@ -136,6 +136,10 @@ export interface UserSettings {
   historicalEnrichment?: HistoricalEnrichmentSettings;
   enabledDomains?: DomainKey[];
   whatsNewSeenVersion?: string;
+  /** ISO 4217 alpha-3 code. The user's real base currency (see `UserSettings.baseCurrency`
+   * on the backend) — used to convert/aggregate money figures like lodging spend. Distinct
+   * from `units.currency`, a separate display preference. */
+  baseCurrency?: string;
   [key: string]: unknown;
 }
 

@@ -26,10 +26,10 @@ function ratingText(value: number | null): string {
 export default function LodgingListPage(): JSX.Element {
   const { t } = useTranslation(["lodging", "common"]);
   const navigate = useNavigate();
-  // No dedicated `baseCurrency` wired to the frontend yet (Task 19 adds the
-  // settings-page currency picker) — `units.currency` is the same
-  // aggregate-spend-formatting proxy already used by LodgingStatStrip.tsx.
-  const baseCurrency = useSettingsStore((s) => s.units.currency);
+  // `totalSpendBase` is computed by the backend in the user's actual base
+  // currency (`UserSettings.baseCurrency`) — NOT `units.currency`, which is an
+  // independent display preference used elsewhere for flight-cost figures.
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
 
   // `baseline` is an UNFILTERED fetch, used only to derive the year/country
   // dropdown option sets so they don't shrink as the user narrows other
