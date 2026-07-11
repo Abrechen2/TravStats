@@ -4,6 +4,7 @@ import type { ChangeEvent } from "react";
 
 const mocks = vi.hoisted(() => ({
   uploadProfilePicture: vi.fn(),
+  deleteProfilePicture: vi.fn(),
   getSettings: vi.fn(),
   getApiKeys: vi.fn(),
   getProfile: vi.fn(),
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../../../lib/api", () => ({
   settingsApi: {
     uploadProfilePicture: mocks.uploadProfilePicture,
+    deleteProfilePicture: mocks.deleteProfilePicture,
     get: mocks.getSettings,
     getApiKeys: mocks.getApiKeys,
     getProfile: mocks.getProfile,
@@ -105,5 +107,30 @@ describe("useSettingsPage.handleAvatarUpload (#186)", () => {
     expect(mocks.setProfile).toHaveBeenCalledWith({
       profilePicture: "/api/v1/settings/profile-picture/abc.png",
     });
+  });
+
+  it("clears the stored URL after a successful delete", async () => {
+    mocks.deleteProfilePicture.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useSettingsPage());
+    await act(async () => {
+      await result.current.handleAvatarDelete();
+    });
+
+    expect(mocks.deleteProfilePicture).toHaveBeenCalledTimes(1);
+    // `undefined`, not `null` — an omitted key can never re-fail the general
+    // PUT's profilePicture URL validation on the next auto-save.
+    expect(mocks.setProfile).toHaveBeenCalledWith({ profilePicture: undefined });
+  });
+
+  it("keeps the current avatar when the delete request fails", async () => {
+    mocks.deleteProfilePicture.mockRejectedValue(new Error("network error"));
+
+    const { result } = renderHook(() => useSettingsPage());
+    await act(async () => {
+      await result.current.handleAvatarDelete();
+    });
+
+    expect(mocks.setProfile).not.toHaveBeenCalled();
   });
 });

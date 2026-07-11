@@ -184,4 +184,39 @@ describe('settings profile picture (#186)', () => {
       expect(res.status).toBe(400);
     });
   });
+
+  describe('DELETE /api/v1/settings/profile-picture', () => {
+    it('clears the stored avatar URL and deletes the file, and is idempotent', async () => {
+      const upload = await request(app)
+        .post('/api/v1/settings/profile-picture')
+        .set('Cookie', [`auth_token=${token}`])
+        .attach('profilePicture', validPngBuffer, 'avatar.png');
+      expect(upload.status).toBe(201);
+      const filename = upload.body.profilePictureUrl.split('/').pop() as string;
+      uploadedFilenames.push(filename);
+      const filePath = path.join(getProfilePictureDir(), filename);
+      expect(fs.existsSync(filePath)).toBe(true);
+
+      const del = await request(app)
+        .delete('/api/v1/settings/profile-picture')
+        .set('Cookie', [`auth_token=${token}`]);
+      expect(del.status).toBe(200);
+      expect(fs.existsSync(filePath)).toBe(false);
+
+      const settings = await prisma.userSettings.findUnique({ where: { userId } });
+      const data = settings?.data as { profile?: { profilePicture?: string | null } };
+      expect(data.profile?.profilePicture ?? null).toBeNull();
+
+      // Second delete with nothing set — a 200 no-op, never an error.
+      const again = await request(app)
+        .delete('/api/v1/settings/profile-picture')
+        .set('Cookie', [`auth_token=${token}`]);
+      expect(again.status).toBe(200);
+    });
+
+    it('rejects unauthenticated requests', async () => {
+      const res = await request(app).delete('/api/v1/settings/profile-picture');
+      expect(res.status).toBe(401);
+    });
+  });
 });
