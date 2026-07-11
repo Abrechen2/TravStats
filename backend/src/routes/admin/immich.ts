@@ -31,7 +31,12 @@ function maskKey(encrypted: string | null | undefined): string | null {
   return `${plain.slice(0, 4)}****${plain.slice(-4)}`;
 }
 
-/** A value the client echoed back from a masked GET carries no new secret. */
+/**
+ * A value the client echoed back from a masked GET carries no new secret. Also
+ * true for an empty string (`!value`) — the write branch below is skipped
+ * entirely for one, so it is a no-op, not a wipe. Only an explicit `null`
+ * clears the stored field.
+ */
 function looksMasked(value: string | null | undefined): boolean {
   return !value || value.includes("****");
 }

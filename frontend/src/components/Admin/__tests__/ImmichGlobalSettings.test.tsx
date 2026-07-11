@@ -60,10 +60,40 @@ beforeEach(() => {
 });
 
 describe("ImmichGlobalSettings", () => {
-  it("shows the stored connection with the key MASKED, never in plaintext", async () => {
+  it("displays the baseUrl/apiKey exactly as returned by getAdminSettings (masking itself is enforced server-side)", async () => {
     render(<ImmichGlobalSettings />);
     expect(await screen.findByDisplayValue("https://immich.example.com")).toBeInTheDocument();
     expect(screen.getByDisplayValue("abcd****wxyz")).toBeInTheDocument();
+  });
+
+  it("does NOT render a save button when the initial load fails — a failed load must never be able to wipe the stored connection", async () => {
+    // baseUrl/apiKey stay "" (their initial state) when getAdminSettings rejects.
+    // That is visually IDENTICAL to "nothing configured yet". If the card still
+    // rendered the editable form, clicking save would PUT {baseUrl: null,
+    // apiKey: null} and the backend would execute that as an explicit CLEAR of
+    // whatever connection is actually stored — destroying it without the admin
+    // ever having seen it. The card must show an error state instead.
+    getAdminSettings.mockRejectedValue(new Error("network down"));
+    render(<ImmichGlobalSettings />);
+
+    await waitFor(() => expect(getAdminSettings).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("button", { name: "admin.save" })).not.toBeInTheDocument();
+    expect(updateAdminSettings).not.toHaveBeenCalled();
+  });
+
+  it("offers a retry after a failed load, and the retry can recover into the normal editable form", async () => {
+    getAdminSettings.mockRejectedValueOnce(new Error("network down"));
+    render(<ImmichGlobalSettings />);
+
+    const retry = await screen.findByRole("button", { name: "errors.retry" });
+    getAdminSettings.mockResolvedValueOnce({
+      baseUrl: "https://immich.example.com",
+      apiKey: "abcd****wxyz",
+    });
+    await userEvent.click(retry);
+
+    expect(await screen.findByDisplayValue("https://immich.example.com")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "admin.save" })).toBeInTheDocument();
   });
 
   it("renders the API key field as a password input, not readable on screen", async () => {

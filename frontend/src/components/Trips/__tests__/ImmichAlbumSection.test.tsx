@@ -110,6 +110,29 @@ describe("ImmichAlbumSection", () => {
     expect(screen.getByRole("button", { name: "albums.unlink" })).toBeInTheDocument();
   });
 
+  // Regression guard for the `failure !== "errors.notFound"` check on line ~220:
+  // that literal must keep the "errors." prefix in sync with the full i18n key
+  // now stored in `failure` (it used to compare against the bare kind
+  // "notFound"). Without this test, dropping the prefix again would make the
+  // retry button reappear for a deleted album — a useless "Try again" click,
+  // since re-fetching a permanently-gone album can never succeed — while every
+  // other test still passes.
+  it("does NOT render a retry button when the album was not found (permanent failure)", async () => {
+    getAlbumAssets.mockRejectedValue({ response: { data: { error: "notFound" } } });
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText("errors.notFound")).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: "errors.retry" })).not.toBeInTheDocument();
+  });
+
+  it("DOES render a retry button for a retryable failure (unreachable)", async () => {
+    getAlbumAssets.mockRejectedValue({ response: { data: { error: "unreachable" } } });
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText("errors.unreachable")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "errors.retry" })).toBeInTheDocument();
+  });
+
   it("unlinks a link-mode album without asking about copies", async () => {
     const onChanged = vi.fn();
     const user = userEvent.setup();

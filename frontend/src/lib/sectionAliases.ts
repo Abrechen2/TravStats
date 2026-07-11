@@ -16,5 +16,10 @@ const SECTION_ALIASES: Readonly<Record<string, string>> = {
 
 export function normalizeSectionId(raw: string | null): string | null {
   if (raw === null) return null;
-  return SECTION_ALIASES[raw] ?? raw;
+  // A plain `SECTION_ALIASES[raw]` lookup resolves prototype members (e.g.
+  // "constructor", "toString") through Object.prototype and returns a
+  // FUNCTION instead of `undefined`, violating this function's `string | null`
+  // return type. Guard with an own-property check first.
+  if (!Object.prototype.hasOwnProperty.call(SECTION_ALIASES, raw)) return raw;
+  return SECTION_ALIASES[raw];
 }
