@@ -12,6 +12,7 @@ import {
   calculateAirportStats,
 } from '../utils/statsCalculator';
 import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from '../utils/cruiseStats';
+import { calculateLodgingStats, type LodgingStayData } from '../utils/lodgingStats';
 import { normalizeHistory } from '../utils/homeAirport';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
@@ -1201,6 +1202,75 @@ router.get(
       next(error);
     }
   }
+);
+
+/**
+ * Lodging-domain stats endpoint for the StatsPage lodging tab.
+ *
+ * Loads the user's stays (own scope only — `where: { userId }`) with
+ * their parent `Lodging` row, maps them to `LodgingStayData`, and pipes
+ * them through the shared `calculateLodgingStats` (no arithmetic is
+ * duplicated here). `countries` is a `Set<string>` on the return value —
+ * a bare `Set` silently JSON-serializes to `{}`, so it is converted to a
+ * sorted array before the response leaves this handler.
+ */
+router.get(
+  '/lodging',
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const stays = await prisma.lodgingStay.findMany({
+        where: { userId },
+        include: { lodging: true },
+      });
+
+      const stayData: LodgingStayData[] = stays.map((s) => ({
+        lodgingId: s.lodgingId,
+        type: s.lodging.type,
+        country: s.lodging.country,
+        city: s.lodging.city,
+        chainId: s.lodging.chainId,
+        checkIn: s.checkIn,
+        checkOut: s.checkOut,
+        status: s.status,
+        totalPriceBase: s.totalPriceBase,
+        currency: s.currency,
+        totalPrice: s.totalPrice,
+        isAwardStay: s.isAwardStay,
+        ratingOverall: s.ratingOverall,
+      }));
+
+      // Defensive parity with the cruise/flight stats endpoints: a
+      // calculation error on one malformed stay must not 500 the whole
+      // tab — fall back to an empty stats object and log the cause.
+      let stats: ReturnType<typeof calculateLodgingStats>;
+      try {
+        stats = calculateLodgingStats(stayData);
+      } catch (calcError) {
+        logger.error({
+          operation: 'lodging_stats_calculation_failed',
+          userId,
+          error: calcError instanceof Error ? calcError.message : calcError,
+        });
+        stats = calculateLodgingStats([]);
+      }
+
+      res.json({
+        success: true,
+        data: {
+          ...stats,
+          countries: Array.from(stats.countries).sort(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
 );
 
 // ─── Aircraft (tail number) ─────────────────────────────────────────────────
