@@ -15,6 +15,7 @@ import JournalViewModal from "../components/Trips/JournalViewModal";
 import StopModal from "../components/Trips/StopModal";
 import TripMap from "../components/Trips/TripMap";
 import TripGallery from "../components/Trips/TripGallery";
+import TripSummaryPanel from "../components/Trips/TripSummaryPanel";
 
 type TabKey = "overview" | "timeline" | "map" | "gallery" | "logistics";
 const TABS: TabKey[] = ["overview", "timeline", "map", "gallery", "logistics"];
@@ -384,7 +385,7 @@ function OverviewTab({
       <TripStatsRow trip={trip} t={t} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
         <div className="lg:col-span-2 space-y-4">
-          <SummaryPanel trip={trip} t={t} onChanged={onChanged} />
+          <TripSummaryPanel trip={trip} t={t} onChanged={onChanged} />
           {trip.notes && <NotesPanel notes={trip.notes} t={t} />}
           {!trip.notes && (
             <div
@@ -1149,96 +1150,6 @@ function StatTile({ value, label }: { value: string | number; label: string }): 
       >
         {label}
       </div>
-    </div>
-  );
-}
-
-function SummaryPanel({
-  trip,
-  t,
-  onChanged,
-}: {
-  trip: Trip;
-  t: ReturnType<typeof useTranslation>["t"];
-  onChanged: () => void;
-}): JSX.Element {
-  const addToast = useToastStore((s) => s.addToast);
-  const [generating, setGenerating] = useState(false);
-
-  const generate = async (): Promise<void> => {
-    setGenerating(true);
-    try {
-      await tripsApi.summarize(trip.id);
-      addToast("success", t("trips:summary.generated"));
-      onChanged();
-    } catch (err: unknown) {
-      const status =
-        typeof err === "object" && err !== null && "response" in err
-          ? ((err as { response?: { status?: number } }).response?.status ?? 0)
-          : 0;
-      addToast("error", status === 503 ? t("trips:summary.unavailable") : t("trips:summary.error"));
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  if (!trip.summary) {
-    return (
-      <div
-        className="rounded-xl p-4 flex items-center gap-3"
-        style={{
-          background: "linear-gradient(135deg, rgba(240,169,71,0.06), rgba(74,166,176,0.04))",
-          border: "1px dashed var(--color-border)",
-        }}
-      >
-        <div className="text-2xl shrink-0" aria-hidden>
-          ✨
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-            {t("trips:summary.title")}
-          </div>
-          <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-            {t("trips:summary.cta")}
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => void generate()}
-          disabled={generating}
-          className="px-3 py-1.5 rounded-md text-xs font-medium border disabled:opacity-50"
-          style={{ borderColor: "var(--accent)", color: "var(--accent)" }}
-        >
-          {generating ? t("trips:summary.generating") : t("trips:summary.generateButton")}
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="rounded-xl p-4"
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <div
-          className="text-[10px] uppercase tracking-wide flex items-center gap-1.5"
-          style={{ color: "var(--text-muted)" }}
-        >
-          <span aria-hidden>✨</span>
-          {t("trips:summary.title")}
-        </div>
-        <button
-          type="button"
-          onClick={() => void generate()}
-          disabled={generating}
-          className="text-[11px] underline disabled:opacity-50"
-          style={{ color: "var(--text-muted)" }}
-        >
-          {generating ? t("trips:summary.generating") : t("trips:summary.regenerate")}
-        </button>
-      </div>
-      <div className="text-sm whitespace-pre-wrap leading-relaxed">{trip.summary}</div>
     </div>
   );
 }
