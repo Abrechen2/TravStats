@@ -145,7 +145,10 @@ export function loadMapAppearance(): MapAppearance {
 /**
  * The flight colour config for the persisted blob, migrating the legacy
  * `routeColor` field on first read:
- *   - `routeColor: null`   → "frequency" with the default base colour
+ *   - `routeColor: null`   → "status" with the default (orange / coral) pair
+ *     (NOT "frequency" — `null` was written on every mount, so it can't be
+ *     read as a deliberate pick; see the migration comment in
+ *     `lib/flightColor.ts` for the full trade-off)
  *   - `routeColor: <rgb>`  → "solid" with that colour
  *   - nothing stored       → "status" with the default (orange / coral) pair
  */

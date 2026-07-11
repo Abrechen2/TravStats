@@ -132,10 +132,11 @@ describe("buildFlightLegend", () => {
 });
 
 describe("localStorage migration (flightColorFromStored)", () => {
-  it("routeColor === null  ⇒  frequency mode with the default base colour", () => {
+  it("routeColor === null  ⇒  status mode with the default colour pair (was written on every mount, so it's not a deliberate pick)", () => {
     const out = flightColorFromStored({ routeColor: null, flightRouteWidth: 1 });
-    expect(out.mode).toBe("frequency");
-    expect(out.colors.frequency).toEqual(DEFAULT_FLIGHT_COLORS.frequency);
+    expect(out.mode).toBe("status");
+    expect(out.colors.past).toEqual(DEFAULT_FLIGHT_COLORS.past);
+    expect(out.colors.upcoming).toEqual(DEFAULT_FLIGHT_COLORS.upcoming);
   });
 
   it("routeColor === <rgb>  ⇒  solid mode with THAT colour", () => {
