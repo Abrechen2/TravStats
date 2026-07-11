@@ -205,11 +205,13 @@ export function useSettingsPage() {
       setProfile({ profilePicture: result.profilePictureUrl });
       addToast("success", t("settings:profile.uploadSuccess"));
     } catch (error: unknown) {
+      // Do NOT fall back to a `URL.createObjectURL(file)` blob: that blob
+      // dies on reload (and the backend rejects it anyway — see #186), so
+      // showing it here just hides the real failure from the user. Leave
+      // the previous avatar in place and surface the error instead.
       logger.error("Failed to upload profile picture:", error);
       const axiosError = error as { response?: { data?: { error?: string } } };
       addToast("error", axiosError.response?.data?.error || t("settings:profile.uploadError"));
-      const url = URL.createObjectURL(file);
-      setProfile({ profilePicture: url });
     } finally {
       setUploadingProfilePicture(false);
       if (event.target) event.target.value = "";
