@@ -139,6 +139,14 @@ export interface SettingsState {
   setCruise: SettingsUpdater<CruiseSettings>;
   setApiKeys: (status: ApiKeysStatus) => void;
   setEnabledDomains: (keys: DomainKey[]) => void;
+  /**
+   * Updates the lodging base currency and persists it immediately (like
+   * `setEnabledDomains`) rather than waiting on the `units`-scoped debounce
+   * in `useSettingsPage` — that effect only watches `units` and would never
+   * fire for this field. Deliberately NOT part of `saveRemoteSettings`'s
+   * payload for the same reason.
+   */
+  setBaseCurrency: (currency: string) => void;
   loadApiKeysStatus: () => Promise<void>;
   resetSettings: () => void;
   loadRemoteSettings: () => Promise<void>;
@@ -181,6 +189,7 @@ const defaultSettings: Omit<
   | "setCruise"
   | "setApiKeys"
   | "setEnabledDomains"
+  | "setBaseCurrency"
   | "loadApiKeysStatus"
   | "resetSettings"
   | "loadRemoteSettings"
@@ -268,6 +277,12 @@ export const useSettingsStore = create<SettingsState>()(
       setEnabledDomains: (keys) => {
         set({ enabledDomains: keys });
         void settingsApi.update({ enabledDomains: keys });
+      },
+      setBaseCurrency: (currency) => {
+        set({ baseCurrency: currency });
+        settingsApi.update({ baseCurrency: currency }).catch((error: unknown) => {
+          logger.warn("Failed to save base currency", error);
+        });
       },
       loadApiKeysStatus: async () => {
         try {

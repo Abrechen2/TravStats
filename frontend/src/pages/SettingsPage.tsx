@@ -27,9 +27,10 @@ import AboutSection from "../components/Settings/AboutSection";
 import ImportSection from "../components/Settings/ImportSection";
 import FeaturesSection from "../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../components/Settings/CruisePreferencesSection";
+import LodgingPreferencesSection from "../components/Settings/LodgingPreferencesSection";
 import PasswordModal from "../components/Settings/PasswordModal";
 
-type TabId = "general" | "flight" | "cruise";
+type TabId = "general" | "flight" | "cruise" | "lodging";
 
 interface SectionRef {
   id: string;
@@ -48,12 +49,14 @@ export default function SettingsPage(): JSX.Element {
     defaults,
     map,
     cruise,
+    baseCurrency,
     setProfile,
     setDisplay,
     setUnits,
     setDefaults,
     setMap,
     setCruise,
+    setBaseCurrency,
     savingProfile,
     uploadingProfilePicture,
     saveProfileSettings,
@@ -83,8 +86,7 @@ export default function SettingsPage(): JSX.Element {
     setShowPasswordModal,
   } = useSettingsPage();
 
-  // Sections are grouped into one of three tabs. The cruise group is empty
-  // for now; a placeholder is shown so users see the scaffold exists.
+  // Sections are grouped into one of four tabs.
   const sectionsByTab = useMemo<Record<TabId, SectionRef[]>>(() => {
     const general: SectionRef[] = [
       { id: "profile", label: t("settings:profile.title") || "Profile" },
@@ -114,7 +116,13 @@ export default function SettingsPage(): JSX.Element {
         label: t("settings:cruisePreferences.title") || "Präferenzen",
       },
     ];
-    return { general, flight, cruise: cruiseTab };
+    const lodgingTab: SectionRef[] = [
+      {
+        id: "lodgingPreferences",
+        label: t("settings:lodgingPreferences.title") || "Präferenzen",
+      },
+    ];
+    return { general, flight, cruise: cruiseTab, lodging: lodgingTab };
   }, [t, user?.isAdmin]);
 
   // Visible tabs + active-tab state + URL sync + drift guard now live
@@ -134,6 +142,12 @@ export default function SettingsPage(): JSX.Element {
         label: t("settings:tabs.cruise") || "Kreuzfahrt",
         icon: DOMAINS.cruise.icon,
         requiresDomain: "cruise",
+      },
+      {
+        id: "lodging",
+        label: t("settings:tabs.lodging") || "Unterkünfte",
+        icon: DOMAINS.lodging.icon,
+        requiresDomain: "lodging",
       },
     ],
     defaultTab: "general",
@@ -176,7 +190,7 @@ export default function SettingsPage(): JSX.Element {
   useEffect(() => {
     const hash = window.location.hash.slice(1);
     if (!hash) return;
-    for (const tab of ["general", "flight", "cruise"] as TabId[]) {
+    for (const tab of ["general", "flight", "cruise", "lodging"] as TabId[]) {
       if (sectionsByTab[tab].some((s) => s.id === hash)) {
         setActiveTab(tab);
         setActiveSection(hash);
@@ -198,7 +212,7 @@ export default function SettingsPage(): JSX.Element {
   useEffect(() => {
     if (!initialSection) return;
     if (sectionsByTab[activeTab].some((s) => s.id === initialSection)) return;
-    for (const tab of ["general", "flight", "cruise"] as TabId[]) {
+    for (const tab of ["general", "flight", "cruise", "lodging"] as TabId[]) {
       if (sectionsByTab[tab].some((s) => s.id === initialSection)) {
         setActiveTab(tab);
         setActiveSection(initialSection);
@@ -340,6 +354,12 @@ export default function SettingsPage(): JSX.Element {
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
             {activeSection === "cruisePreferences" && (
               <CruisePreferencesSection cruise={cruise} onSetCruise={setCruise} />
+            )}
+            {activeSection === "lodgingPreferences" && (
+              <LodgingPreferencesSection
+                baseCurrency={baseCurrency}
+                onSetBaseCurrency={setBaseCurrency}
+              />
             )}
 
             {activeSection === "profile" && (

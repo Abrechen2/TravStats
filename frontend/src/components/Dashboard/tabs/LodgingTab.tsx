@@ -11,6 +11,7 @@ import MapContainer3D from "../../MapContainer3D";
 import { LodgingListPanel } from "../sidebars/LodgingListPanel";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
 import { LodgingChainsView } from "./lodging/LodgingChainsView";
+import { LodgingCurrencyBreakdown } from "./lodging/LodgingCurrencyBreakdown";
 import { LodgingNightsChart } from "./lodging/LodgingNightsChart";
 import { LodgingStatStrip } from "./lodging/LodgingStatStrip";
 
@@ -113,6 +114,7 @@ export function LodgingTab(): JSX.Element {
       />
 
       {hasData && stats && <LodgingStatStrip stats={stats} />}
+      {hasData && stats && <LodgingCurrencyBreakdown stats={stats} />}
       {hasData && mode === "nights" && stats && (
         <LodgingNightsChart nightsByMonth={stats.nightsByMonth} />
       )}
