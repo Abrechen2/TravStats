@@ -306,6 +306,100 @@ git commit -m "feat(lodging): add Lodging/LodgingStay/LodgingChain/LodgingMember
 
 ---
 
+## Task 2b: Schema hardening (from the cold data-model review)
+
+> Two independent cold reviews (Codex `gpt-5.5`, Gemini) of the Task-2 schema converged on
+> the same defects. Owner decisions 2026-07-11 are folded in below. This lands as a **second
+> generated migration** on top of `20260711061740_lodging_domain` — the tables are new and
+> empty, so every change here is free now and expensive later.
+
+**Files:**
+- Modify: `backend/prisma/schema.prisma`
+- Migration: generated `backend/prisma/migrations/<ts>_lodging_hardening/`
+- Test: `backend/src/__tests__/lodgingSchema.test.ts` (create — proves the constraints exist)
+
+**Interfaces:**
+- Produces: the same four models, with the constraint/index/nullability fixes below.
+
+### The changes (exactly these — nothing else)
+
+1. **FK indexes** (Postgres does NOT auto-index foreign keys; both `SET NULL` deletes would otherwise full-table-scan `lodging_stays`):
+   - `Lodging` → add `@@index([chainId])`
+   - `LodgingMembership` → add `@@index([chainId])` — **superseded by change 4; skip it, the column is going away**
+   - `LodgingStay` → add `@@index([membershipId])`
+2. **Drop the redundant index** on `LodgingStay`: `@@index([userId])` is a strict prefix of `@@index([userId, checkIn])`, so it only costs write throughput. Remove it, keep the composite.
+3. **`LodgingChain.name` becomes `@unique`** — the CSV seed (Task 7) must be idempotent. With a unique constraint the seed is a clean `upsert` keyed on `name`; without it, a re-seed on every container boot can duplicate every chain. (This also simplifies Task 7: use `upsert`, not `findFirst`-then-create. User-added rows still survive because they are matched by the same unique name.)
+4. **Loyalty is program-based** (owner decision): several chains share one program (Sheraton/Westin/Ritz-Carlton → Marriott Bonvoy), so a membership must NOT be pinned to a single chain.
+   - `LodgingMembership` → **remove** the `chainId` field AND the `chain` relation.
+   - `LodgingChain` → **remove** the now-dangling `memberships LodgingMembership[]` back-relation.
+   - `LodgingMembership` → add `@@unique([userId, programName])` (a user has one membership per program).
+   - The chain already carries `loyaltyProgram`, so stay → program attribution resolves through `Lodging.chain.loyaltyProgram`. `LodgingStay.membershipId` stays as it is.
+5. **Nullable-with-default columns become NOT NULL** (a default on a nullable column is a trap: an explicit `null` write bypasses the default and the TS code carries `string | null` forever):
+   - `UserSettings.baseCurrency` → `String @default("EUR") @map("base_currency")`
+   - `LodgingStay.currency` → `String @default("EUR")`
+   - The generated migration must backfill before the NOT NULL flip. `base_currency` was added with `DEFAULT 'EUR'` in the previous migration, so existing rows already hold `'EUR'` — but **verify the generated SQL contains the backfill/`SET DEFAULT` before `SET NOT NULL`**, and if Prisma emits a bare `SET NOT NULL`, hand-add `UPDATE "user_settings" SET "base_currency" = 'EUR' WHERE "base_currency" IS NULL;` ahead of it. `lodging_stays` is empty, so it needs no backfill.
+
+### Explicitly NOT doing (reviewed and rejected — do not "fix" these)
+
+- **Money stays `Float`.** Codex argued for `Decimal`. Every pre-existing money column in this schema (`Flight.ticketPrice`, `Cruise.price`, `Booking.price`) is `Float?`; a Decimal island in one domain would break cross-domain spend aggregation and change the Prisma JS API for this domain only. House style wins.
+- **No CHECK constraint requiring the FX fields when `totalPrice` is set.** That would contradict the core FX rule: a failed rate lookup must still save the stay, with `totalPriceBase = NULL` (see Task 5's "saves the stay even when FX fails" test).
+- **No composite `(id, user_id)` FKs** to prevent cross-user references. Ownership is enforced in the routes (`findFirst({ where: { id, userId } })`) throughout this codebase; adding DB-level composite FKs here only would be inconsistent.
+- **No `@@unique` on `Lodging`** (e.g. `[userId, name, city]`). Hotel dedup on import is Phase B's `lodgingEntityResolver` job, and a hard constraint would wrongly reject two genuinely different places with the same name and a null city.
+- **`onDelete: Cascade` from `Lodging` to its stays stays as-is** (owner decision): deleting a hotel deletes its stays. The safety net is a UI confirmation showing the stay count, added in the frontend tasks — not a DB `Restrict`.
+
+- [ ] **Step 1: Write the failing test**
+
+`backend/src/__tests__/lodgingSchema.test.ts` — assert the constraints via the DB, not by reading the schema file (a test that greps `schema.prisma` proves nothing about the database):
+```typescript
+import prisma from "../db";
+
+describe("lodging schema constraints", () => {
+  afterEach(async () => {
+    await prisma.lodgingMembership.deleteMany({ where: { programName: { startsWith: "TEST_" } } });
+    await prisma.lodgingChain.deleteMany({ where: { name: { startsWith: "TEST_" } } });
+  });
+
+  it("rejects a duplicate chain name", async () => {
+    await prisma.lodgingChain.create({ data: { name: "TEST_Chain" } });
+    await expect(prisma.lodgingChain.create({ data: { name: "TEST_Chain" } })).rejects.toThrow();
+  });
+
+  it("rejects a second membership for the same user + program", async () => {
+    const user = await prisma.user.findFirstOrThrow();
+    await prisma.lodgingMembership.create({ data: { userId: user.id, programName: "TEST_Bonvoy" } });
+    await expect(
+      prisma.lodgingMembership.create({ data: { userId: user.id, programName: "TEST_Bonvoy" } }),
+    ).rejects.toThrow();
+  });
+
+  it("defaults baseCurrency to EUR and never stores NULL", async () => {
+    const user = await prisma.user.findFirstOrThrow();
+    const settings = await prisma.userSettings.findUnique({ where: { userId: user.id } });
+    expect(settings === null || typeof settings.baseCurrency === "string").toBe(true);
+  });
+});
+```
+
+- [ ] **Step 2: Run → fail** (`cd backend && npm test -- src/__tests__/lodgingSchema.test.ts --forceExit`). The duplicate-chain and duplicate-membership creates currently SUCCEED, so those two tests fail.
+
+- [ ] **Step 3: Apply the schema changes** listed above.
+
+- [ ] **Step 4: Generate the migration**
+
+Run: `cd backend && npx prisma migrate dev --name lodging_hardening`
+(The worktree's `backend/.env` already points `DATABASE_URL` at the isolated `flights_hotels` DB — do NOT point anything at `flights_dev`, it carries other branches' migrations and Prisma would offer to reset it.)
+**Read the generated SQL**: it must touch only the lodging tables + the `user_settings.base_currency` NOT NULL flip. Verify the NOT NULL flip is preceded by a backfill (see change 5). Anything else → STOP, report BLOCKED.
+
+- [ ] **Step 5: Run → pass. Then `npm run check:drift` (must pass `DATABASE_URL` explicitly — the script does not read `.env`) and `npx tsc --noEmit`.**
+
+- [ ] **Step 6: Commit**
+```bash
+git add backend/prisma/schema.prisma backend/prisma/migrations backend/src/__tests__/lodgingSchema.test.ts
+git commit -m "feat(lodging): harden schema — FK indexes, unique chain name, program-based memberships, NOT NULL currencies"
+```
+
+---
+
 ## Task 3: FX service (Frankfurter / ECB, historical, cached)
 
 **Files:**
@@ -595,9 +689,10 @@ export const lodgingQuerySchema = z.object({
   sort: z.enum(["nights", "rating", "spend", "name", "checkIn"]).optional(),
 });
 
+// Memberships are program-based, NOT chain-based (Task 2b): several chains share one
+// program (Sheraton/Westin/Ritz-Carlton -> Marriott Bonvoy). There is no chainId here.
 const baseMembershipSchema = z.object({
   programName: z.string().trim().min(1).max(120),
-  chainId: z.number().int().positive().nullable().optional(),
   membershipNumber: z.string().max(60).optional(),
   tier: z.string().max(40).optional(),
 });
@@ -1185,7 +1280,7 @@ git commit -m "feat(lodging): chain search/add + membership CRUD routes"
 - Test: `backend/src/__tests__/seedLodgingChains.test.ts`
 
 **Interfaces:**
-- Consumes: `prisma`. Mirror `seedShipsFromCSV.ts` exactly (idempotent: skip rows whose unique key already exists; never overwrite `isUserAdded:true`). Chain uniqueness is by `name` (no unique constraint in schema — dedupe in code via `findFirst({ where: { name } })`).
+- Consumes: `prisma`. Mirror `seedShipsFromCSV.ts` (idempotent; never overwrite `isUserAdded:true`). **`LodgingChain.name` is `@unique` since Task 2b**, so dedupe with a real `upsert` keyed on `name` — do NOT hand-roll `findFirst`-then-create (that races and was the original duplicate-chain risk the cold review flagged).
 - Produces: `seedLodgingChainsFromCSV(): Promise<void>`.
 
 - [ ] **Step 1: Read `seedShipsFromCSV.ts`** to copy its CSV parse + idempotent-upsert structure and its test's wipe/reseed convention (`beforeEach` wipes, `afterAll` reseeds — per CLAUDE.md seed-test convention).
@@ -1518,6 +1613,7 @@ git commit -am "feat(lodging): dashboard LodgingTab (map/nights/chains) gated by
 
 **Interfaces:**
 - Consumes: Task 14 API client. Detail shows the hotel (address/stars/amenities/chain/map mini) + its stays (dates, nights, room, ratings, price + **FX readout** `840 CHF → 883 € · EZB 0,9895 · 12.05.24`) + derived overall rating. List: search + filters (type/year/country) + sort (nights/rating/spend/name).
+- **Delete confirmation (owner decision, Task 2b):** deleting a lodging cascades to its stays in the DB. The detail page's delete action MUST therefore show a confirmation naming the stay count — DE: „Dieses Hotel hat {{count}} Übernachtungen. Beim Löschen gehen sie mit verloren." / EN: "This hotel has {{count}} stays. Deleting it removes them too." — before calling `deleteLodging`. This confirmation is the only safety net; there is deliberately no DB-level `Restrict`.
 
 - [ ] **Step 1: Read the cruise list/detail pages** as templates. Reproduce the mockup screens ① (list) and ② (detail).
 
