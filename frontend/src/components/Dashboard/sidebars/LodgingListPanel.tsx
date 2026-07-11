@@ -30,7 +30,13 @@ export function LodgingListPanel({
         left: 0,
         bottom: 0,
         width: 320,
-        background: "rgba(22,27,34,0.95)",
+        // Solid, not translucent — this sidebar sits directly over the
+        // map's own FlatMapControlPanel (bottom-left, same left column,
+        // open by default on this tab). A translucent background let that
+        // panel's "Karte / Modus / Filter / Ebenen" text bleed through as
+        // faded ghost text underneath the hotel list (finding: dashboard
+        // ghost-text bleed-through).
+        background: "var(--bg-surface)",
         borderRight: "1px solid var(--color-border)",
         zIndex: 20,
         overflowY: "auto",

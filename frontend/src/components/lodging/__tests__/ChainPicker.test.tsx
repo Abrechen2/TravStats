@@ -64,6 +64,17 @@ describe("ChainPicker", () => {
     expect(notice.textContent).toBe("lodging:chainPicker.matchedExisting");
   });
 
+  it("labels the clear button as a clear action, not the 'independent' field label (no stray text next to the selected chain)", async () => {
+    // Regression: the clear button used to render `t("lodging:field.independent")`
+    // ("Unabhängig") right next to the just-selected chain name, reading as a
+    // stray duplicate label rather than a clear/remove action.
+    render(<ChainPicker value={hilton} onChange={vi.fn()} />);
+
+    const clearButton = await screen.findByText("lodging:chainPicker.clear");
+    expect(clearButton.textContent).not.toBe("lodging:field.independent");
+    expect(screen.queryByText("lodging:field.independent")).not.toBeInTheDocument();
+  });
+
   it("does NOT show the matched-existing notice for a genuinely new chain (typed name === returned name)", async () => {
     const novotel: LodgingChain = { ...hilton, id: 2, name: "Novotel Business", isUserAdded: true };
     vi.mocked(listChains).mockResolvedValue([]);

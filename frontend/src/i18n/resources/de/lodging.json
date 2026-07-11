@@ -45,6 +45,7 @@
     "stays": "Aufenthalte",
     "staysEmpty": "Noch keine Aufenthalte erfasst",
     "spend": "Ausgaben",
+    "spendOriginal": "Original",
     "spendBase": "In Basiswährung",
     "spendPerNight": "Pro Übernachtung",
     "noLocation": "Kein Standort hinterlegt",
@@ -124,6 +125,7 @@
   },
   "chainPicker": {
     "placeholder": "Kette suchen …",
+    "clear": "✕ Entfernen",
     "addMissing": "„{{name}}“ als neue Kette anlegen",
     "confirmAdd": "„{{name}}“ wirklich als neue Kette anlegen?",
     "matchedExisting": "Bereits vorhanden — „{{name}}“ zugeordnet",

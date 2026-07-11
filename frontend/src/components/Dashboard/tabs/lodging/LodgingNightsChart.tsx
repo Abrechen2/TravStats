@@ -44,7 +44,10 @@ export function LodgingNightsChart({ nightsByMonth }: LodgingNightsChartProps): 
         zIndex: 25,
         padding: 16,
         borderRadius: 12,
-        background: "rgba(22,27,34,0.92)",
+        // Solid, not translucent — this card sits over the map's own
+        // bottom-left FlatMapControlPanel; a translucent background let
+        // its text bleed through as faded ghost text underneath.
+        background: "var(--bg-surface)",
         border: "1px solid var(--color-border)",
       }}
     >

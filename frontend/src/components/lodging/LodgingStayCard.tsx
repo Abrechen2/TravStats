@@ -7,6 +7,11 @@ import type { LodgingStay } from "../../types/lodging";
 interface LodgingStayCardProps {
   stay: LodgingStay;
   onEdit?: (stay: LodgingStay) => void;
+  /** Resolved from `stay.tripId` by the caller (a stay only stores the id).
+   * Undefined when unresolved/not linked — the pill is skipped either way. */
+  tripName?: string;
+  /** Resolved from `stay.membershipId` by the caller, same convention as `tripName`. */
+  membershipName?: string;
 }
 
 /**
@@ -19,7 +24,12 @@ interface LodgingStayCardProps {
  * this card must render the plain original price alone in that case —
  * never a partial/`null`/`NaN` conversion line (see `formatStayPriceDisplay`).
  */
-export function LodgingStayCard({ stay, onEdit }: LodgingStayCardProps): JSX.Element {
+export function LodgingStayCard({
+  stay,
+  onEdit,
+  tripName,
+  membershipName,
+}: LodgingStayCardProps): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "common"]);
   const nights = nightsBetween(stay.checkIn, stay.checkOut);
   const { original, fxReadout } = formatStayPriceDisplay(
@@ -52,6 +62,23 @@ export function LodgingStayCard({ stay, onEdit }: LodgingStayCardProps): JSX.Ele
         {stay.isAwardStay && (
           <span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-xs font-medium text-[var(--accent)]">
             {t("lodging:field.awardStay")}
+          </span>
+        )}
+        {stay.tripId && tripName && (
+          <span
+            data-testid={`stay-trip-pill-${stay.id}`}
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold"
+            style={{ background: "rgba(240,169,71,0.13)", color: "var(--accent)" }}
+          >
+            🧳 {t("lodging:field.trip")}: {tripName}
+          </span>
+        )}
+        {stay.membershipId && membershipName && (
+          <span
+            data-testid={`stay-membership-chip-${stay.id}`}
+            className="inline-flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--bg-surface-2,transparent)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
+          >
+            🎖️ {membershipName}
           </span>
         )}
         <span className="ml-auto text-sm font-semibold" style={{ color: "var(--star)" }}>

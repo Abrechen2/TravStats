@@ -60,4 +60,39 @@ describe("LodgingStatStrip", () => {
     expect(screen.getByText(/CHF/)).toBeInTheDocument();
     expect(screen.queryByText(/\$1,234/)).not.toBeInTheDocument();
   });
+
+  it("renders the inline variant without absolute positioning (list-page stat strip)", () => {
+    render(<LodgingStatStrip stats={stats} variant="inline" />);
+    const strip = screen.getByTestId("lodging-stat-strip");
+    expect(strip.getAttribute("data-variant")).toBe("inline");
+    expect(strip.style.position).not.toBe("absolute");
+  });
+
+  it("shows the FX sub-line under Ausgaben when spend includes a foreign currency", () => {
+    // The global react-i18next mock (src/__tests__/setup.ts) returns the raw
+    // key as `t`'s output and drops interpolation params entirely — the
+    // exact "840 CHF → 883 €" text (and that the converted amount is
+    // DERIVED, never re-run through an FX rate client-side) is covered
+    // precisely by `lib/__tests__/lodgingFormat.test.ts`'s `otherCurrencySpend`
+    // tests. What's load-bearing here is the wiring: the sub-line node
+    // exists exactly when there's foreign-currency spend to show.
+    const withForeignSpend = {
+      ...stats,
+      spendBaseTotal: 2553,
+      spendByCurrency: { EUR: 1670, CHF: 840 },
+      spendBaseByCurrency: { EUR: 2553 },
+    };
+
+    render(<LodgingStatStrip stats={withForeignSpend} />);
+
+    expect(screen.getByTestId("lodging-stat-strip-spend-sub")).toBeInTheDocument();
+  });
+
+  it("shows no FX sub-line when every stay is already in the base currency", () => {
+    const allBase = { ...stats, spendByCurrency: { EUR: 1234 } };
+
+    render(<LodgingStatStrip stats={allBase} />);
+
+    expect(screen.queryByTestId("lodging-stat-strip-spend-sub")).not.toBeInTheDocument();
+  });
 });

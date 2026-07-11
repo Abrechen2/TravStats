@@ -2,12 +2,36 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import type { Lodging, LodgingStay } from "../../types/lodging";
+import type { Lodging, LodgingStats, LodgingStay } from "../../types/lodging";
 
 const listLodgingsMock = vi.fn();
+const getLodgingStatsMock = vi.fn();
+
+const defaultStats: LodgingStats = {
+  lodgingsCount: 1,
+  staysCount: 1,
+  totalNights: 2,
+  nightsByYear: {},
+  nightsByMonth: {},
+  longestStayNights: 2,
+  chainsUnique: 0,
+  citiesUnique: 1,
+  countries: ["DE"],
+  countriesCount: 1,
+  spendBaseTotal: 883,
+  spendByCurrency: { EUR: 883 },
+  spendBaseByCurrency: { EUR: 883 },
+  awardNights: 0,
+  hotelNights: 2,
+  campsiteNights: 0,
+  avgRatingOverall: null,
+  chainLoyaltyMax: 0,
+  sameHotelRepeatMax: 1,
+};
 
 vi.mock("../../lib/api/lodging", () => ({
   listLodgings: (...args: unknown[]) => listLodgingsMock(...args),
+  getLodgingStats: () => getLodgingStatsMock(),
 }));
 
 vi.mock("../../components/NavigationBar", () => ({
@@ -106,6 +130,8 @@ function renderListPage(): ReturnType<typeof render> {
 describe("LodgingListPage", () => {
   beforeEach(() => {
     listLodgingsMock.mockReset();
+    getLodgingStatsMock.mockReset();
+    getLodgingStatsMock.mockResolvedValue(defaultStats);
     useSettingsStore.setState({
       baseCurrency: "EUR",
       units: { distanceUnit: "kilometers", currency: "EUR" },
@@ -121,7 +147,9 @@ describe("LodgingListPage", () => {
       baseCurrency: "CHF",
       units: { distanceUnit: "kilometers", currency: "USD" },
     });
-    listLodgingsMock.mockResolvedValue([makeLodging()]);
+    listLodgingsMock.mockResolvedValue([
+      makeLodging({ stays: [makeStay({ totalPrice: 883, currency: "CHF" })] }),
+    ]);
 
     renderListPage();
 
@@ -260,6 +288,48 @@ describe("LodgingListPage", () => {
     renderListPage();
 
     expect(await screen.findByText("lodging:list.empty")).toBeInTheDocument();
+  });
+
+  it("shows the original currency amount with the converted total beneath it (mockup screen ①)", async () => {
+    listLodgingsMock.mockResolvedValue([
+      makeLodging({
+        totalSpendBase: 883,
+        totalSpendBaseByCurrency: { EUR: 883 },
+        stays: [makeStay({ totalPrice: 840, currency: "CHF" })],
+      }),
+    ]);
+
+    renderListPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
+    });
+    const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
+    expect(row?.textContent).toMatch(/840/);
+    expect(row?.textContent).toMatch(/CHF/);
+    expect(row?.textContent).toMatch(/≈/);
+    expect(row?.textContent).toMatch(/883/);
+  });
+
+  it("renders — (not 0 €) in the spend column when every stay's price has been cleared", async () => {
+    listLodgingsMock.mockResolvedValue([
+      makeLodging({
+        totalSpendBase: 0,
+        totalSpendBaseByCurrency: {},
+        stays: [makeStay({ totalPrice: null })],
+      }),
+    ]);
+
+    renderListPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
+    });
+    const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
+    // The spend cell must read "—", never a false "0 €" (a cleared price is
+    // not the same as a confirmed free stay).
+    const spendCell = row?.querySelectorAll("td")[6];
+    expect(spendCell?.textContent).toBe("—");
   });
 
   it("surfaces an error state (not a blank page) when the filtered fetch fails", async () => {
