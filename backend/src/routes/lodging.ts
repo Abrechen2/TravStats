@@ -284,7 +284,15 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     const sorted = sortLodgings(rows, parsed.data.sort);
     const offset = parsed.data.offset ?? 0;
     const limit = parsed.data.limit ?? 200;
-    res.json({ success: true, data: sorted.slice(offset, offset + limit) });
+    // `meta.total` is the count of the FULL filtered set, before the page
+    // slice — without it a client asking for a page has no way to tell a
+    // truncated 200-row result apart from "that's really all of them", and
+    // no way to walk further pages via offset.
+    res.json({
+      success: true,
+      data: sorted.slice(offset, offset + limit),
+      meta: { total: sorted.length, limit, offset },
+    });
   } catch (err) {
     next(err);
   }

@@ -11,6 +11,7 @@ import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from './cru
 import {
   calculateLodgingStats,
   type LodgingStayData as LodgingStatsInput,
+  type LodgingRecord,
 } from './lodgingStats';
 import { computeFlyAndStayFlags, unionCountries, type TripDomainCounts } from './achievementStats';
 
@@ -53,7 +54,7 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     // + lodging stays (all statuses — calculateLodgingStats filters cancelled itself)
     // + per-trip domain counts (flights/cruises/lodgingStays) for the
     //   cross-domain Fly & Stay / Grand Tour flags.
-    const [flights, allFlights, cruises, lodgingStays, trips, userSettings] = await Promise.all([
+    const [flights, allFlights, cruises, lodgingStays, lodgings, trips, userSettings] = await Promise.all([
       prisma.flight.findMany({
         where: { userId, status: { in: ['flown', 'historical'] } },
         orderBy: { departureTime: 'asc' },
@@ -75,6 +76,10 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
         where: { userId },
         include: { lodging: true },
       }),
+      // Every lodging the user HAS, including ones with no stay yet — Hotel
+      // Collector counts hotels the user added, not only hotels stayed at
+      // (owner decision, finding 1).
+      prisma.lodging.findMany({ where: { userId } }),
       prisma.trip.findMany({
         where: { userId },
         select: {
@@ -222,7 +227,14 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       isAwardStay: s.isAwardStay,
       ratingOverall: s.ratingOverall,
     }));
-    const lodgingStats = calculateLodgingStats(lodgingStatsInput, lodgingBaseCurrency);
+    const lodgingRecords: LodgingRecord[] = lodgings.map((l) => ({
+      id: l.id,
+      chainId: l.chainId,
+      type: l.type,
+      country: l.country,
+      city: l.city,
+    }));
+    const lodgingStats = calculateLodgingStats(lodgingStatsInput, lodgingBaseCurrency, lodgingRecords);
 
     // Fly & Stay / Grand Tour — derived per-trip so a flight in one trip and
     // a stay in an unrelated trip never counts (see computeFlyAndStayFlags).

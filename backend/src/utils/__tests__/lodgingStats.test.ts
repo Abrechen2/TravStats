@@ -197,6 +197,38 @@ describe("calculateLodgingStats", () => {
     expect(afterCopy).toEqual(frozenCopy);
   });
 
+  it("counts a lodging with zero stays via the optional lodgings param", () => {
+    // Owner-decision fix: lodgingsCount/chainsUnique must reflect hotels the
+    // user HAS, including ones with no stay yet (a newly added hotel).
+    const lodgings = [
+      { id: "l1", chainId: 1, type: "hotel", country: "DE", city: "Berlin" },
+      { id: "l2-no-stay", chainId: 2, type: "hotel", country: "AT", city: "Vienna" },
+    ];
+    const s = calculateLodgingStats([stay({ lodgingId: "l1", chainId: 1 })], "EUR", lodgings);
+    expect(s.lodgingsCount).toBe(2);
+    expect(s.chainsUnique).toBe(2);
+    // The stay-less hotel's country/city count even before any stay exists.
+    expect(s.countries.has("AT")).toBe(true);
+    expect(s.citiesUnique).toBe(2);
+  });
+
+  it("falls back to stay-derived counting when lodgings is omitted (back-compat)", () => {
+    const s = calculateLodgingStats([stay({ lodgingId: "l1", chainId: 1 })]);
+    expect(s.lodgingsCount).toBe(1);
+    expect(s.chainsUnique).toBe(1);
+  });
+
+  it("does not double-count a lodging that both has a stay and appears in the lodgings list", () => {
+    const lodgings = [{ id: "l1", chainId: 1, type: "hotel", country: "DE", city: "Berlin" }];
+    const s = calculateLodgingStats(
+      [stay({ lodgingId: "l1", chainId: 1 }), stay({ lodgingId: "l1", chainId: 1 })],
+      "EUR",
+      lodgings,
+    );
+    expect(s.lodgingsCount).toBe(1);
+    expect(s.chainsUnique).toBe(1);
+  });
+
   it("tracks nights by type (award/hotel/campsite) and longest stay", () => {
     const s = calculateLodgingStats([
       stay({
