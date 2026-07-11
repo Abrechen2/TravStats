@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { failureKey, immichApi, isImmichFailureKind } from "../../lib/api/immich";
+import { failureKey, immichApi, immichFailureKind } from "../../lib/api/immich";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
@@ -57,7 +57,13 @@ export default function ImmichGlobalSettings(): JSX.Element {
       });
       setBaseUrl(next.baseUrl ?? "");
       setApiKey(next.apiKey ?? "");
-      addToast("success", next.baseUrl === null ? t("admin.cleared") : t("admin.saved"));
+      // "cleared" must only be claimed once the connection is actually gone. If
+      // only one field was cleared (e.g. baseUrl:null with the key's mask echoed
+      // back), the backend's `looksMasked()` guard keeps the stored key and the
+      // response still carries a non-null apiKey — that is a partial save, not a
+      // removal, so the message must say "saved".
+      const fullyCleared = next.baseUrl === null && next.apiKey === null;
+      addToast("success", fullyCleared ? t("admin.cleared") : t("admin.saved"));
     } catch (error) {
       logger.debug("failed to save global immich settings", error);
       addToast("error", t("admin.saveFailed"));
@@ -81,11 +87,10 @@ export default function ImmichGlobalSettings(): JSX.Element {
     } catch (error) {
       // A thrown error carries the same machine-readable `kind` vocabulary as a
       // 200 with success:false, so both paths render through failureKey.
-      const kind = (error as { response?: { data?: { error?: unknown } } })?.response?.data?.error;
       setTestResult({
         success: false,
         message: "",
-        kind: isImmichFailureKind(kind) ? kind : undefined,
+        kind: immichFailureKind(error) ?? undefined,
       });
     } finally {
       setTesting(false);
@@ -123,6 +128,8 @@ export default function ImmichGlobalSettings(): JSX.Element {
         <span style={{ color: "var(--text-primary)" }}>{t("admin.apiKey")}</span>
         <input
           id="immich-admin-api-key"
+          type="password"
+          autoComplete="off"
           className="w-full rounded border p-2"
           style={{ borderColor: "var(--color-border)", background: "var(--bg-elevated)" }}
           placeholder={t("admin.apiKeyPlaceholder")}
