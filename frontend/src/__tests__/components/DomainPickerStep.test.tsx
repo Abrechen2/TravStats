@@ -21,8 +21,10 @@ describe("DomainPickerStep", () => {
   it("locked (unavailable) cards do not trigger onChange", () => {
     const onChange = vi.fn();
     render(<DomainPickerStep value={["flight"]} onChange={onChange} />);
-    const hotelCard = screen.getByTestId("domain-card-hotel");
-    fireEvent.click(hotelCard);
+    // poi is still available:false — lodging is available:true as of the
+    // lodging domain rollout, so it no longer exercises the locked path.
+    const poiCard = screen.getByTestId("domain-card-poi");
+    fireEvent.click(poiCard);
     expect(onChange).not.toHaveBeenCalled();
   });
 });
