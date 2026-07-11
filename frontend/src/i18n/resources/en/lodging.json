@@ -184,6 +184,7 @@
       "commit": "Commit",
       "commitError": "Could not commit the import"
     },
+    "matchedLodgingHint": "This row attaches to an existing hotel — name and city cannot be edited here.",
     "fields": {
       "name": "Name",
       "city": "City",
