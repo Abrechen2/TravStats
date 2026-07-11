@@ -80,7 +80,8 @@
       "title": "Spend by currency",
       "baseLabel": "In base currency",
       "empty": "No spend recorded yet",
-      "hint": "Each amount is shown in its own original currency and is not summed — the converted total above can therefore differ from a simple sum."
+      "hint": "Each amount is shown in its own original currency and is not summed — the converted total above can therefore differ from a simple sum.",
+      "otherBaseLabel": "Older base currencies (saved before a switch, not counted here)"
     }
   },
   "success": {

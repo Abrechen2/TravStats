@@ -53,7 +53,7 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     // + lodging stays (all statuses — calculateLodgingStats filters cancelled itself)
     // + per-trip domain counts (flights/cruises/lodgingStays) for the
     //   cross-domain Fly & Stay / Grand Tour flags.
-    const [flights, allFlights, cruises, lodgingStays, trips] = await Promise.all([
+    const [flights, allFlights, cruises, lodgingStays, trips, userSettings] = await Promise.all([
       prisma.flight.findMany({
         where: { userId, status: { in: ['flown', 'historical'] } },
         orderBy: { departureTime: 'asc' },
@@ -81,7 +81,13 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
           _count: { select: { flights: true, cruises: true, lodgingStays: true } },
         },
       }),
+      prisma.userSettings.findUnique({ where: { userId }, select: { baseCurrency: true } }),
     ]);
+    // Same rule as routes/lodging.ts: a stay's FX snapshot is a permanent
+    // record of the base currency active WHEN IT WAS SAVED, so the spend-based
+    // achievement threshold must only count stays matching the CURRENT base
+    // currency — never silently mix currencies together (finding 2).
+    const lodgingBaseCurrency = userSettings?.baseCurrency ?? 'EUR';
 
     // Calculate user stats with error handling
     let stats;
@@ -210,12 +216,13 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       checkOut: s.checkOut,
       status: s.status,
       totalPriceBase: s.totalPriceBase,
+      fxBaseCurrency: s.fxBaseCurrency,
       currency: s.currency,
       totalPrice: s.totalPrice,
       isAwardStay: s.isAwardStay,
       ratingOverall: s.ratingOverall,
     }));
-    const lodgingStats = calculateLodgingStats(lodgingStatsInput);
+    const lodgingStats = calculateLodgingStats(lodgingStatsInput, lodgingBaseCurrency);
 
     // Fly & Stay / Grand Tour — derived per-trip so a flight in one trip and
     // a stay in an unrelated trip never counts (see computeFlyAndStayFlags).

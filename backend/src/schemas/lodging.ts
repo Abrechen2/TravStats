@@ -19,15 +19,21 @@ const isoDateTimeRequired = z.preprocess((v) => {
   return Number.isNaN(d.getTime()) ? v : d.toISOString();
 }, z.string().datetime());
 
-const rating = z.number().min(1).max(5).optional();
+// `.nullable()` on every field a user can explicitly CLEAR in the editors
+// (finding 4) — an emitted `null` must round-trip as "delete this value",
+// distinct from an omitted key ("leave it alone"). Fields that already had
+// a dedicated "not set" sentinel before this fix (chainId, lat/lon, stars)
+// were already nullable; this only adds the ones that previously had no way
+// to be cleared once set.
+const rating = z.number().min(1).max(5).nullable().optional();
 
 const baseLodgingSchema = z.object({
   type: z.enum(LODGING_TYPES).default("hotel"),
   name: z.string().trim().min(1).max(200),
   chainId: z.number().int().positive().nullable().optional(),
-  address: z.string().max(300).optional(),
-  city: z.string().max(120).optional(),
-  country: z.string().max(120).optional(),
+  address: z.string().max(300).nullable().optional(),
+  city: z.string().max(120).nullable().optional(),
+  country: z.string().max(120).nullable().optional(),
   lat: z.number().min(-90).max(90).nullable().optional(),
   lon: z.number().min(-180).max(180).nullable().optional(),
   stars: z.number().int().min(1).max(5).nullable().optional(),
@@ -35,6 +41,7 @@ const baseLodgingSchema = z.object({
   notes: z
     .string()
     .transform((v) => v.replace(/<[^>]*>/g, ""))
+    .nullable()
     .optional(),
 });
 
@@ -51,28 +58,32 @@ const baseStaySchema = z.object({
   status: z.enum(STAY_STATUSES).default("completed"),
   tripId: z.string().uuid().nullable().optional(),
   bookingId: z.string().uuid().nullable().optional(),
-  roomNumber: z.string().max(20).optional(),
-  roomCategory: z.string().max(120).optional(),
+  roomNumber: z.string().max(20).nullable().optional(),
+  roomCategory: z.string().max(120).nullable().optional(),
   board: z.enum(BOARD_TYPES).optional(),
-  pricePerNight: z.number().min(0).optional(),
+  pricePerNight: z.number().min(0).nullable().optional(),
   // Optional here even though the DB column is NOT NULL DEFAULT 'EUR' — omitting it
   // lets the client fall back to the column default rather than forcing every caller
   // to send a currency.
   currency: z.enum(CURRENCIES).optional(),
-  totalPrice: z.number().min(0).optional(),
+  // Nullable so a user can explicitly clear a price (e.g. an award stay that
+  // turns out to have cost nothing) — an explicit `null` here also drives the
+  // FX snapshot clear in routes/lodging.ts (finding 1 + finding 4 interact).
+  totalPrice: z.number().min(0).nullable().optional(),
   isAwardStay: z.boolean().optional(),
   ratingRoom: rating,
   ratingBreakfast: rating,
   ratingService: rating,
   ratingOverall: rating,
   roomAmenities: z.array(z.string().max(60)).max(50).optional(),
-  bookingReference: z.string().max(40).optional(),
+  bookingReference: z.string().max(40).nullable().optional(),
   membershipId: z.string().uuid().nullable().optional(),
-  receiptUrl: receiptUrlValidator,
+  receiptUrl: receiptUrlValidator.nullable(),
   companions: z.array(z.string().max(100)).max(50).optional(),
   notes: z
     .string()
     .transform((v) => v.replace(/<[^>]*>/g, ""))
+    .nullable()
     .optional(),
 });
 

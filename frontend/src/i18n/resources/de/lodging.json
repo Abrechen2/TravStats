@@ -13,7 +13,8 @@
       "nights": "Übernachtungen",
       "rating": "Bewertung",
       "spend": "Ausgaben"
-    }
+    },
+    "otherCurrencyHint": "Enthält weitere Beträge in einer älteren Basiswährung, die hier nicht mitgezählt sind."
   },
   "filter": {
     "searchPlaceholder": "Suche nach Name oder Ort …",

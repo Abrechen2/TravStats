@@ -90,6 +90,7 @@ function makeLodging(overrides: Partial<Lodging> = {}, stays: LodgingStay[] = [b
     stayCount: stays.length,
     nights: 2,
     totalSpendBase: 883,
+    totalSpendBaseByCurrency: { EUR: 883 },
     ...overrides,
   };
 }

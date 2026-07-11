@@ -277,6 +277,97 @@ describe("Lodging API", () => {
     });
   });
 
+  describe("PATCH /api/v1/lodging/:id/stays/:stayId — full-shape PATCH from the real editor (finding 1 CRITICAL)", () => {
+    // StayEditor.tsx sends checkIn/checkOut/status/currency/board/isAwardStay
+    // UNCONDITIONALLY on every save, plus totalPrice whenever the price field
+    // is non-empty (it re-sends the stay's existing value on a notes-only
+    // edit too) — never a minimal `{ notes: ... }` body. This is exactly the
+    // shape the pre-fix `"totalPrice" in input` key-presence guard mistook
+    // for "FX inputs changed" on EVERY edit, so a failed FX lookup silently
+    // nuked a good historical snapshot. These tests reproduce that shape.
+    let editorLodgingId: string;
+    let editorStayId: string;
+    const originalCheckIn = "2025-02-01T15:00:00.000Z";
+    const originalCheckOut = "2025-02-03T11:00:00.000Z";
+
+    const fullEditorPayload = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+      checkIn: originalCheckIn,
+      checkOut: originalCheckOut,
+      status: "completed",
+      currency: "EUR",
+      board: "breakfast",
+      isAwardStay: false,
+      totalPrice: 100,
+      ...overrides,
+    });
+
+    beforeEach(async () => {
+      jest
+        .spyOn(fx, "convertToBase")
+        .mockResolvedValue({ baseAmount: 100, rate: 1, rateDate: "2025-02-01" });
+      const l = await prisma.lodging.create({ data: { userId, name: "Editor Shape Hotel" } });
+      editorLodgingId = l.id;
+      const res = await request(app)
+        .post(`/api/v1/lodging/${editorLodgingId}/stays`)
+        .set("Cookie", authCookie)
+        .send({
+          checkIn: originalCheckIn,
+          checkOut: originalCheckOut,
+          currency: "EUR",
+          totalPrice: 100,
+        });
+      editorStayId = res.body.data.id;
+      jest.restoreAllMocks();
+    });
+
+    it("leaves a good snapshot untouched on a notes-only edit that resends the SAME price/currency/checkIn, even when FX is down", async () => {
+      const spy = jest.spyOn(fx, "convertToBase").mockResolvedValue(null);
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${editorLodgingId}/stays/${editorStayId}`)
+        .set("Cookie", authCookie)
+        .send(fullEditorPayload({ notes: "Updated notes only" }));
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.totalPriceBase).toBe(100);
+      expect(res.body.data.fxRate).toBe(1);
+      expect(res.body.data.fxBaseCurrency).toBe("EUR");
+      expect(res.body.data.notes).toBe("Updated notes only");
+      // The values are unchanged relative to the stored row, so FX must
+      // never even be re-attempted.
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it("clears the snapshot when totalPrice genuinely changes and the FX lookup then fails", async () => {
+      jest.spyOn(fx, "convertToBase").mockResolvedValue(null);
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${editorLodgingId}/stays/${editorStayId}`)
+        .set("Cookie", authCookie)
+        .send(fullEditorPayload({ totalPrice: 300 }));
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.totalPrice).toBe(300);
+      expect(res.body.data.totalPriceBase).toBeNull();
+      expect(res.body.data.fxRate).toBeNull();
+      expect(res.body.data.fxBaseCurrency).toBeNull();
+    });
+
+    it("clears the snapshot when the price is explicitly removed (totalPrice: null)", async () => {
+      const spy = jest.spyOn(fx, "convertToBase");
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${editorLodgingId}/stays/${editorStayId}`)
+        .set("Cookie", authCookie)
+        .send(fullEditorPayload({ totalPrice: null }));
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.totalPrice).toBeNull();
+      expect(res.body.data.totalPriceBase).toBeNull();
+      expect(res.body.data.fxRate).toBeNull();
+      expect(res.body.data.fxBaseCurrency).toBeNull();
+      // An explicit removal never needs a rate lookup.
+      expect(spy).not.toHaveBeenCalled();
+    });
+  });
+
   describe("PATCH /api/v1/lodging/:id/stays/:stayId — merged effective date validation (finding 3)", () => {
     let dateLodgingId: string;
     let dateStayId: string;
@@ -525,6 +616,165 @@ describe("Lodging API", () => {
     it("requires authentication", async () => {
       const res = await request(app).get("/api/v1/lodging");
       expect(res.status).toBe(401);
+    });
+  });
+
+  describe("PATCH — previously-set optional fields can be cleared with an explicit null (finding 4)", () => {
+    it("clears a lodging's address/city/country/notes", async () => {
+      const created = await prisma.lodging.create({
+        data: {
+          userId,
+          name: "Clearable Fields Hotel",
+          address: "Bahnhofstrasse 1",
+          city: "Zürich",
+          country: "CH",
+          notes: "Some notes",
+        },
+      });
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${created.id}`)
+        .set("Cookie", authCookie)
+        .send({ address: null, city: null, country: null, notes: null });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.address).toBeNull();
+      expect(res.body.data.city).toBeNull();
+      expect(res.body.data.country).toBeNull();
+      expect(res.body.data.notes).toBeNull();
+
+      const reread = await request(app)
+        .get(`/api/v1/lodging/${created.id}`)
+        .set("Cookie", authCookie);
+      expect(reread.body.data.address).toBeNull();
+      expect(reread.body.data.city).toBeNull();
+      expect(reread.body.data.country).toBeNull();
+      expect(reread.body.data.notes).toBeNull();
+    });
+
+    it("clears a stay's roomNumber/roomCategory/bookingReference/pricePerNight/receiptUrl/ratings/notes", async () => {
+      const l = await prisma.lodging.create({ data: { userId, name: "Clearable Stay Hotel" } });
+      const stay = await prisma.lodgingStay.create({
+        data: {
+          lodgingId: l.id,
+          userId,
+          checkIn: new Date("2025-03-01T00:00:00.000Z"),
+          checkOut: new Date("2025-03-02T00:00:00.000Z"),
+          roomNumber: "204",
+          roomCategory: "Deluxe",
+          bookingReference: "BK-123",
+          pricePerNight: 150,
+          receiptUrl: "/api/v1/uploads/receipts/abc.pdf",
+          ratingRoom: 4,
+          ratingBreakfast: 3,
+          ratingService: 5,
+          ratingOverall: 4,
+          notes: "Nice stay",
+        },
+      });
+
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${l.id}/stays/${stay.id}`)
+        .set("Cookie", authCookie)
+        .send({
+          roomNumber: null,
+          roomCategory: null,
+          bookingReference: null,
+          pricePerNight: null,
+          receiptUrl: null,
+          ratingRoom: null,
+          ratingBreakfast: null,
+          ratingService: null,
+          ratingOverall: null,
+          notes: null,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.roomNumber).toBeNull();
+      expect(res.body.data.roomCategory).toBeNull();
+      expect(res.body.data.bookingReference).toBeNull();
+      expect(res.body.data.pricePerNight).toBeNull();
+      expect(res.body.data.receiptUrl).toBeNull();
+      expect(res.body.data.ratingRoom).toBeNull();
+      expect(res.body.data.ratingBreakfast).toBeNull();
+      expect(res.body.data.ratingService).toBeNull();
+      expect(res.body.data.ratingOverall).toBeNull();
+      expect(res.body.data.notes).toBeNull();
+
+      const reread = await prisma.lodgingStay.findUnique({ where: { id: stay.id } });
+      expect(reread?.roomNumber).toBeNull();
+      expect(reread?.notes).toBeNull();
+    });
+  });
+
+  describe("totalSpendBase never mixes fxBaseCurrency snapshots (finding 2)", () => {
+    it("only sums stays whose FX snapshot matches the CURRENT base currency", async () => {
+      const l = await prisma.lodging.create({ data: { userId, name: "Currency Switch Hotel" } });
+      await prisma.lodgingStay.createMany({
+        data: [
+          {
+            lodgingId: l.id,
+            userId,
+            checkIn: new Date("2023-01-01T00:00:00.000Z"),
+            checkOut: new Date("2023-01-02T00:00:00.000Z"),
+            totalPrice: 100,
+            currency: "EUR",
+            totalPriceBase: 100,
+            fxBaseCurrency: "EUR", // snapshotted while the user's base was EUR
+          },
+          {
+            lodgingId: l.id,
+            userId,
+            checkIn: new Date("2024-01-01T00:00:00.000Z"),
+            checkOut: new Date("2024-01-02T00:00:00.000Z"),
+            totalPrice: 200,
+            currency: "EUR",
+            totalPriceBase: 200,
+            fxBaseCurrency: "EUR", // still current base = EUR for this test user
+          },
+        ],
+      });
+
+      const res = await request(app).get(`/api/v1/lodging/${l.id}`).set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      // This test user's UserSettings.baseCurrency is EUR (set in the outer
+      // beforeAll) — both stays match, so the honest total is their sum.
+      expect(res.body.data.totalSpendBase).toBe(300);
+      expect(res.body.data.totalSpendBaseByCurrency).toEqual({ EUR: 300 });
+    });
+
+    it("excludes a stay snapshotted under a DIFFERENT base currency from totalSpendBase but reports it separately", async () => {
+      const l = await prisma.lodging.create({ data: { userId, name: "Stale Snapshot Hotel" } });
+      await prisma.lodgingStay.createMany({
+        data: [
+          {
+            lodgingId: l.id,
+            userId,
+            checkIn: new Date("2022-01-01T00:00:00.000Z"),
+            checkOut: new Date("2022-01-02T00:00:00.000Z"),
+            totalPrice: 400,
+            currency: "CHF",
+            totalPriceBase: 424,
+            // Snapshotted under a base currency the user no longer uses —
+            // must NOT be added into a "EUR" total.
+            fxBaseCurrency: "CHF",
+          },
+          {
+            lodgingId: l.id,
+            userId,
+            checkIn: new Date("2024-01-01T00:00:00.000Z"),
+            checkOut: new Date("2024-01-02T00:00:00.000Z"),
+            totalPrice: 100,
+            currency: "EUR",
+            totalPriceBase: 100,
+            fxBaseCurrency: "EUR",
+          },
+        ],
+      });
+
+      const res = await request(app).get(`/api/v1/lodging/${l.id}`).set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data.totalSpendBase).toBe(100); // ONLY the EUR-snapshotted stay
+      expect(res.body.data.totalSpendBaseByCurrency).toEqual({ CHF: 424, EUR: 100 });
     });
   });
 

@@ -80,7 +80,8 @@
       "title": "Ausgaben nach Währung",
       "baseLabel": "In Basiswährung",
       "empty": "Noch keine Ausgaben erfasst",
-      "hint": "Die Einzelbeträge werden in ihrer jeweiligen Originalwährung angezeigt und nicht addiert — der umgerechnete Gesamtbetrag oben kann daher von einer einfachen Summe abweichen."
+      "hint": "Die Einzelbeträge werden in ihrer jeweiligen Originalwährung angezeigt und nicht addiert — der umgerechnete Gesamtbetrag oben kann daher von einer einfachen Summe abweichen.",
+      "otherBaseLabel": "Ältere Basiswährungen (vor einem Wechsel gespeichert, hier nicht mitgezählt)"
     }
   },
   "success": {

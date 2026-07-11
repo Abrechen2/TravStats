@@ -100,6 +100,7 @@ function makeLodging(overrides: Partial<Lodging> = {}): Lodging {
     stayCount: 1,
     nights: 2,
     totalSpendBase: 340,
+    totalSpendBaseByCurrency: { EUR: 340 },
     ...overrides,
   };
 }
@@ -117,6 +118,7 @@ const zeroStats: LodgingStats = {
   countriesCount: 0,
   spendBaseTotal: 0,
   spendByCurrency: {},
+  spendBaseByCurrency: {},
   awardNights: 0,
   hotelNights: 0,
   campsiteNights: 0,
