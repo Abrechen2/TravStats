@@ -144,5 +144,23 @@ describe("lodgingImport schemas", () => {
       });
       expect(result.success).toBe(true);
     });
+
+    it("rejects a sample row whose KEY is longer than 500 characters — the key cap must mirror the value cap, not just the count", () => {
+      const longKey = "x".repeat(501);
+      const result = suggestMappingRequestSchema.safeParse({
+        headers: ["Hotel"],
+        sampleRows: [{ [longKey]: "NH" }],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("accepts a sample row whose key is exactly 500 characters (the boundary)", () => {
+      const boundaryKey = "x".repeat(500);
+      const result = suggestMappingRequestSchema.safeParse({
+        headers: ["Hotel"],
+        sampleRows: [{ [boundaryKey]: "NH" }],
+      });
+      expect(result.success).toBe(true);
+    });
   });
 });

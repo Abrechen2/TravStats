@@ -152,14 +152,16 @@ export type LodgingImportCommitRequest = z.infer<typeof lodgingImportCommitReque
 
 // Mirrors the `headers` array cap below — a sample row is built FROM those
 // headers, so it can never legitimately need more keys than the header list
-// allows. Without this, `z.record` caps neither the key COUNT nor the key
-// LENGTH, and the whole `sampleRows` array is `JSON.stringify`'d straight
-// into the LLM prompt (`mappingSuggestion.ts`) — an attacker could otherwise
-// push a multi-MB prompt at the model up to 60 times per 15-minute window.
+// allows. Both the key COUNT and the key LENGTH are capped (mirroring the
+// 500-char value cap) — otherwise `z.record`'s bare `z.string()` key schema
+// would let each of the up to 80 keys be arbitrarily long, and the whole
+// `sampleRows` array is `JSON.stringify`'d straight into the LLM prompt
+// (`mappingSuggestion.ts`) — an attacker could otherwise push a multi-MB
+// prompt at the model up to 60 times per 15-minute window.
 const MAX_SAMPLE_ROW_KEYS = 80;
 
 const sampleRowSchema = z
-  .record(z.string(), z.string().max(500))
+  .record(z.string().max(500), z.string().max(500))
   .refine((row) => Object.keys(row).length <= MAX_SAMPLE_ROW_KEYS, {
     message: `A sample row cannot have more than ${MAX_SAMPLE_ROW_KEYS} columns`,
   });
