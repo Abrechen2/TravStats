@@ -76,12 +76,21 @@ export default function OverviewTab({ flights, achievements }: Props): JSX.Eleme
   //     with a persisted compareEnabled: true from a different dataset)
   //     — there's nothing left to fall back to, so comparison turns off
   //     rather than rendering against a year with no data.
+  //
+  // Must NOT run before the data has actually loaded: while `loading` is
+  // true (or on a genuinely data-free account) `years` is `[]`, which
+  // makes every persisted compareYear look "stale" and would wipe the
+  // user's saved preference (issue #188 regression) before it ever had a
+  // chance to be judged against the real year list. Wait for data; if
+  // there truly is none, leave the persisted preference untouched — there
+  // is simply nothing to render a comparison against yet.
   useEffect(() => {
+    if (loading || years.length === 0) return;
     const resolution = resolveStaleCompareYear(years, selectedYear, compareYear);
     if (!resolution) return;
     setCompareYear(resolution.compareYear);
     if (resolution.disableCompare) setCompareEnabled(false);
-  }, [years, compareYear, selectedYear, setCompareYear, setCompareEnabled]);
+  }, [loading, years, compareYear, selectedYear, setCompareYear, setCompareEnabled]);
 
   const agg = aggregate(stats, visible, selectedYear);
   const prevAgg =
