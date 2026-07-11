@@ -9,6 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import { useTranslation } from "../../../../hooks/useTranslation";
+import { DOMAINS } from "../../../../shared/domains";
 
 interface LodgingNightsChartProps {
   /** `LodgingStats.nightsByMonth` — "YYYY-MM" keys, already summed server-side. */
@@ -79,7 +80,7 @@ export function LodgingNightsChart({ nightsByMonth }: LodgingNightsChartProps): 
             />
             <Bar
               dataKey="nights"
-              fill="#d4778f"
+              fill={DOMAINS.lodging.color}
               radius={[4, 4, 0, 0]}
               name={t("dashboard:lodgingTab.stats.nights")}
             />

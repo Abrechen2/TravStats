@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../../../hooks/useTranslation";
+import { DOMAINS } from "../../../../shared/domains";
 import type { Lodging } from "../../../../types/lodging";
 
 interface LodgingChainsViewProps {
@@ -116,7 +117,7 @@ export function LodgingChainsView({ lodgings }: LodgingChainsViewProps): JSX.Ele
                     height: "100%",
                     borderRadius: 3,
                     width: `${(chain.nights / maxNights) * 100}%`,
-                    background: chain.color ?? "#d4778f",
+                    background: chain.color ?? DOMAINS.lodging.color,
                   }}
                 />
               </div>

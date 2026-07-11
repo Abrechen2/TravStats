@@ -97,3 +97,12 @@ export function nightsBetween(checkIn: string, checkOut: string): number {
   if (Number.isNaN(inMs) || Number.isNaN(outMs)) return 0;
   return Math.max(0, Math.round((outMs - inMs) / MS_PER_DAY));
 }
+
+/**
+ * "★ 4.3" for a rating value, "—" when unrated. Half-steps render as-is
+ * (e.g. 4.5). Single shared formatter for the rating text repeated across
+ * `LodgingListPage`, `LodgingDetailPage`, and `LodgingStayCard`.
+ */
+export function formatRatingText(value: number | null): string {
+  return value !== null ? `★ ${value}` : FALLBACK;
+}

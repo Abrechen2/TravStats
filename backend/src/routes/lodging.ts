@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
+import { fxPreviewLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import * as fx from "../services/fx/frankfurter";
 import * as geo from "../services/geo/nominatim";
@@ -236,7 +237,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
 // index.ts) blocking a direct browser call to the external Frankfurter API.
 // Must be registered BEFORE `/:id` below — otherwise Express would match
 // "fx-preview" as an `:id` path param instead of this literal route.
-router.get("/fx-preview", async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/fx-preview", fxPreviewLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
     const parsed = fxPreviewQuerySchema.safeParse(req.query);
