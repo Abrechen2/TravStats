@@ -77,7 +77,16 @@ export function LodgingTab(): JSX.Element {
 
   return (
     <div style={{ position: "absolute", inset: 0 }}>
-      <MapContainer3D flights={[]} visMode="routes" lodgingsOverride={visibleLodgings} />
+      {/* No flight/cruise appearance controls here — this tab has nothing for them
+          to configure. `AppearanceDomain` doesn't have a "lodging" member (see
+          controlPanelKit.tsx), so an empty list is the correct, type-safe value —
+          mirrors how CruisesTab/FlightsTab scope their own domain. */}
+      <MapContainer3D
+        flights={[]}
+        visMode="routes"
+        lodgingsOverride={visibleLodgings}
+        appearanceDomains={[]}
+      />
 
       <button
         type="button"

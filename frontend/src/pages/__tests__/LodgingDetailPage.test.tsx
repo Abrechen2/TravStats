@@ -20,8 +20,14 @@ vi.mock("../../components/lodging/LodgingMiniMap", () => ({
   LodgingMiniMap: () => <div data-testid="map-stub" />,
 }));
 
+// Use the real settingsStore for the baseCurrency-labeling test below, so we
+// can `setState` a divergent `units.currency` vs `baseCurrency` and observe
+// which one the page actually renders with.
+vi.unmock("../../store/settingsStore");
+
 // Imported after the mocks above so the module graph picks them up.
 import LodgingDetailPage from "../LodgingDetailPage";
+import { useSettingsStore } from "../../store/settingsStore";
 
 const baseStay: LodgingStay = {
   id: "stay-1",
@@ -102,6 +108,10 @@ describe("LodgingDetailPage", () => {
   beforeEach(() => {
     getLodgingMock.mockReset();
     deleteLodgingMock.mockReset();
+    useSettingsStore.setState({
+      baseCurrency: "EUR",
+      units: { distanceUnit: "kilometers", currency: "EUR" },
+    });
   });
 
   it("renders the FX readout line when a stay has fxRate + totalPriceBase", async () => {
@@ -189,6 +199,31 @@ describe("LodgingDetailPage", () => {
       expect(deleteLodgingMock).toHaveBeenCalledTimes(1);
       expect(deleteLodgingMock).toHaveBeenCalledWith("lodging-1");
     });
+  });
+
+  it("labels totalSpendBase with the real baseCurrency, not a differing units.currency", async () => {
+    // totalSpendBase is a base-currency figure (CHF here) computed by the
+    // backend. Units→Currency is a separate, independently-set display
+    // preference (USD here) used elsewhere for flight costs — it must not
+    // leak into this label.
+    useSettingsStore.setState({
+      baseCurrency: "CHF",
+      units: { distanceUnit: "kilometers", currency: "USD" },
+    });
+    getLodgingMock.mockResolvedValue(makeLodging({ totalSpendBase: 883 }));
+
+    renderDetailPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Engimatt City & Garden")).toBeInTheDocument();
+    });
+
+    // The global react-i18next mock (src/__tests__/setup.ts) returns the raw
+    // key as `t`'s output, so the label renders as this literal string.
+    const spendLabel = screen.getByText("lodging:detail.spendBase");
+    const spendRow = spendLabel.closest("div");
+    expect(spendRow?.textContent).toMatch(/CHF/);
+    expect(spendRow?.textContent).not.toMatch(/\$883/);
   });
 
   it("shows a not-found state when the lodging can't be loaded", async () => {

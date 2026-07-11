@@ -31,6 +31,7 @@ vi.mock("../store/settingsStore", async () => {
       const defaultState = {
         display: { language: "en" },
         units: { currency: "EUR", distanceUnit: "kilometers" },
+        baseCurrency: "EUR",
         defaults: {
           flightCategory: "business",
           seatClass: "economy",
