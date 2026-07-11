@@ -368,7 +368,7 @@ model UserSettings {
   appPrefsUpdatedAt DateTime? @map("app_prefs_updated_at")
 
   // Base currency for lodging FX snapshots (§7.1) and cross-domain totals.
-  baseCurrency String? @default("EUR") @map("base_currency")
+  baseCurrency String @default("EUR") @map("base_currency")
 
   updatedAt DateTime @updatedAt @map("updated_at")
   createdAt DateTime @default(now()) @map("created_at")
@@ -969,6 +969,7 @@ model Lodging {
 
   @@index([userId])
   @@index([userId, type])
+  @@index([chainId])
   @@map("lodgings")
 }
 
@@ -985,7 +986,7 @@ model LodgingStay {
   roomCategory     String?   @map("room_category")
   board            String?   // none | breakfast | half | full | all_inclusive
   pricePerNight    Float?    @map("price_per_night")
-  currency         String?   @default("EUR")
+  currency         String    @default("EUR")
   totalPrice       Float?    @map("total_price")
   totalPriceBase   Float?    @map("total_price_base")   // FX snapshot (§7.1)
   fxRate           Float?    @map("fx_rate")
@@ -1014,25 +1015,24 @@ model LodgingStay {
   booking    Booking?           @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   membership LodgingMembership? @relation(fields: [membershipId], references: [id], onDelete: SetNull)
 
-  @@index([userId])
   @@index([lodgingId])
   @@index([userId, checkIn])
   @@index([status])
   @@index([tripId])
   @@index([bookingId])
+  @@index([membershipId])
   @@map("lodging_stays")
 }
 
 model LodgingChain {
   id             Int      @id @default(autoincrement())
-  name           String
+  name           String   @unique
   brandColor     String?  @map("brand_color")
   loyaltyProgram String?  @map("loyalty_program")
   isUserAdded    Boolean  @default(false) @map("is_user_added")
   createdAt      DateTime @default(now()) @map("created_at")
 
-  lodgings    Lodging[]
-  memberships LodgingMembership[]
+  lodgings Lodging[]
 
   @@index([name])
   @@map("lodging_chains")
@@ -1042,16 +1042,15 @@ model LodgingMembership {
   id               String   @id @default(uuid())
   userId           String   @map("user_id")
   programName      String   @map("program_name")
-  chainId          Int?     @map("chain_id")
   membershipNumber String?  @map("membership_number")
   tier             String?
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
   user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chain LodgingChain? @relation(fields: [chainId], references: [id], onDelete: SetNull)
   stays LodgingStay[]
 
+  @@unique([userId, programName])
   @@index([userId])
   @@map("lodging_memberships")
 }
