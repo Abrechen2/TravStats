@@ -359,8 +359,26 @@ export const useSettingsStore = create<SettingsState>()(
         }
       },
       saveRemoteSettings: async () => {
-        try {
-          const {
+        const {
+          profile,
+          display,
+          units,
+          defaults,
+          map,
+          notifications,
+          features,
+          cruise,
+          enabledDomains,
+        } = get();
+
+        // The two writes are independent (issue #186): a 400 from the
+        // general settings PUT (e.g. a rejected profilePicture value) used
+        // to throw before the birthdate PUT ever ran, silently losing the
+        // birthdate on every save that also touched the picture. Firing
+        // both up front and collecting results with allSettled means one
+        // failing never blocks the other.
+        const results = await Promise.allSettled([
+          settingsApi.update({
             profile,
             display,
             units,
@@ -370,26 +388,25 @@ export const useSettingsStore = create<SettingsState>()(
             features,
             cruise,
             enabledDomains,
-          } = get();
-          await settingsApi.update({
-            profile,
-            display,
-            units,
-            defaults,
-            map,
-            notifications,
-            features,
-            cruise,
-            enabledDomains,
-          });
+          }),
           // birthdate lives on a separate endpoint (/settings/profile on the
           // User row). Only PUT when the field was explicitly loaded or set
           // — undefined means "not touched this session, leave backend as-is".
-          if (profile.birthdate !== undefined) {
-            await settingsApi.updateProfile({ birthdate: profile.birthdate });
+          profile.birthdate !== undefined
+            ? settingsApi.updateProfile({ birthdate: profile.birthdate })
+            : Promise.resolve(undefined),
+        ]);
+
+        const failures = results.filter(
+          (result): result is PromiseRejectedResult => result.status === "rejected"
+        );
+        if (failures.length > 0) {
+          for (const failure of failures) {
+            logger.warn("Failed to save settings remotely", failure.reason);
           }
-        } catch (error) {
-          logger.warn("Failed to save settings remotely", error);
+          // Surface a real failure instead of only logging a warning, so
+          // callers (e.g. saveProfileSettings) can show their error toast.
+          throw failures[0].reason;
         }
       },
     }),

@@ -22,10 +22,22 @@ const settingsSchema = z.object({
   profile: z.object({
     username: z.string().optional(),
     email: z.preprocess(emptyToUndef, z.string().email().optional()),
-    profilePicture: z.string().url().refine(
-      (url) => url.startsWith('https://') || url.startsWith('http://'),
-      'Profile picture must be an HTTP(S) URL'
-    ).optional().nullable(),
+    // Self-hosted app behind an arbitrary domain/reverse proxy can't reliably
+    // know its own public origin, so a same-origin path (e.g. the value
+    // returned by POST /settings/profile-picture) is the normal case.
+    // http(s):// is accepted for backwards compatibility with older rows
+    // that stored an absolute URL. blob:/data: URLs are rejected — they're
+    // client-local (or huge inline payloads) and don't survive a reload or
+    // another device (see issue #186).
+    profilePicture: z
+      .string()
+      .refine(
+        (value) =>
+          value.startsWith('https://') || value.startsWith('http://') || value.startsWith('/'),
+        'Profile picture must be an HTTP(S) URL or a same-origin path'
+      )
+      .optional()
+      .nullable(),
   }).partial().optional(),
   display: z.object({
     theme: z.enum(['light', 'dark']).optional(),
