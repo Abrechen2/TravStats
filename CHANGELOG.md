@@ -4,6 +4,59 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.4.0] - 2026-07-11
+
+Minor release. Six reported bugs, an overhaul of how the map is coloured, and a
+switch that keeps unfinished features out of sight until they are ready.
+
+### Added
+- **Map colouring is now an explicit choice, for flights and for cruises.**
+  Previously the colour picker was quietly overridden by whichever view you were
+  in, so picking a colour appeared to do nothing at all. Both domains now offer
+  the same three modes: **Status** (two colours — flown/sailed vs. planned),
+  **Frequency** for flights (one base colour, deeper the more often you fly a
+  route) or **Per cruise** for ships (a distinct colour per voyage), and
+  **Solid** (one colour for everything). The legend follows the mode you pick,
+  and status mode gives you a separate colour picker per state.
+- **Flat route shape for flights** (#183). Flight routes can now be drawn flat on
+  the map like cruise routes, instead of as 3D arcs. Arcs look better from a
+  distance, but their endpoints drift away from the airports as you zoom in; the
+  flat shape stays accurate at any zoom.
+- **Beta-features switch.** Features that are not finished yet are now hidden by
+  default and can be revealed instance-wide by an administrator. On a fresh
+  install this hides the POI dashboard tab, the Devices settings page and the
+  trip AI summary.
+
+### Fixed
+- **Cruise port names with non-English characters render correctly** (#185).
+  Ålesund, Flåm, Málaga and Kuşadası previously drew as empty boxes on the map.
+- **Cruise direction arrows no longer sit inside the ports.** They were anchored
+  at a fixed position in the route's point list rather than along its actual
+  length, which on a short leg put them on top of the harbour. They now sit at
+  even intervals along the leg, and very short hops get none.
+- **The profile picture and birthday are saved** (#186). Uploading a picture had
+  no backend endpoint at all, and typing a birthday never triggered a save —
+  while the page still displayed "auto-saved". Both now persist.
+- **Airport and port dots are the same size** on the flat map (#187).
+- **The statistics "compare with" year survives a page reload** (#188).
+- **Airlines are shown by name, not by code** (#178). ICAO codes now resolve to
+  full names, from the same catalogue the backend uses.
+- **Achievements: continents are resolved by country.** The Arctic was counted as
+  Antarctica (which made Svalbard flights unlock an Antarctica badge) and
+  Australia as Asia. Badges that no longer qualify are now revoked instead of
+  staying unlocked forever.
+
+### Changed — please read before updating
+- **Flight colouring:** existing settings migrate to **Status** mode. The
+  combined view looks unchanged; the flights-only view switches from the
+  frequency ramp to the two status colours. Switch back to **Frequency** in the
+  map panel if you prefer it.
+- **Cruise colouring:** the Cruises tab no longer colours each voyage
+  automatically. It starts in **Status** mode — pick **Per cruise** in the map
+  panel to get the old look back (one click, and now discoverable).
+- **Hidden by default:** POI tab, Devices settings and the trip AI summary now
+  require the beta-features switch.
+
 ## [2.3.1] - 2026-07-11
 
 Patch release. Fixes the release-highlights dialog, which never appeared in
