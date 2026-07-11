@@ -4,6 +4,7 @@ import {
   createStaySchema,
   updateStaySchema,
   lodgingQuerySchema,
+  LODGING_TYPES,
 } from "../lodging";
 
 describe("lodging schemas", () => {
@@ -13,6 +14,25 @@ describe("lodging schemas", () => {
       type: "hotel",
     });
     expect(r.success).toBe(true);
+  });
+
+  describe("LODGING_TYPES vocabulary (guesthouse/apartment/hostel)", () => {
+    it.each(LODGING_TYPES)("accepts %s as a lodging type", (type) => {
+      const r = createLodgingSchema.safeParse({ name: "X", type });
+      expect(r.success).toBe(true);
+      if (r.success) expect(r.data.type).toBe(type);
+    });
+
+    it("rejects an unknown lodging type", () => {
+      const r = createLodgingSchema.safeParse({ name: "X", type: "resort" });
+      expect(r.success).toBe(false);
+    });
+
+    it("defaults to hotel when type is omitted", () => {
+      const r = createLodgingSchema.safeParse({ name: "X" });
+      expect(r.success).toBe(true);
+      if (r.success) expect(r.data.type).toBe("hotel");
+    });
   });
 
   it("rejects an out-of-range star rating", () => {

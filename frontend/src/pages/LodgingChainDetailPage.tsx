@@ -7,7 +7,7 @@ import { MembershipManager } from "../components/lodging/MembershipManager";
 import { useTranslation } from "../hooks/useTranslation";
 import { getChainDetail } from "../lib/api/lodging";
 import { formatCurrency } from "../lib/units";
-import { hasAnyPrice, singleOriginalCurrencySpend } from "../lib/lodgingFormat";
+import { hasAnyPrice, lodgingTypeIcon, singleOriginalCurrencySpend } from "../lib/lodgingFormat";
 import { FlagImg, resolveCountryCode } from "../lib/countryFlag";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
@@ -151,7 +151,7 @@ export default function LodgingChainDetailPage(): JSX.Element {
                       >
                         <td className="px-3 py-2">
                           <span aria-hidden className="mr-2">
-                            {l.type === "campsite" ? "⛺" : "🏨"}
+                            {lodgingTypeIcon(l.type)}
                           </span>
                           <span className="font-medium text-[var(--text-primary)]">{l.name}</span>
                         </td>

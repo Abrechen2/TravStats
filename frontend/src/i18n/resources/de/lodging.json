@@ -100,7 +100,10 @@
   },
   "type": {
     "hotel": "Hotel",
-    "campsite": "Campingplatz"
+    "campsite": "Campingplatz",
+    "guesthouse": "Gasthof",
+    "apartment": "Apartment",
+    "hostel": "Hostel"
   },
   "board": {
     "none": "Ohne Verpflegung",

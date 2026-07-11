@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { lodgingTypeIcon } from "../../../lib/lodgingFormat";
 import type { Lodging } from "../../../types/lodging";
 
 interface LodgingListPanelProps {
@@ -82,7 +83,7 @@ export function LodgingListPanel({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span aria-hidden>{lodging.type === "campsite" ? "⛺" : "🏨"}</span>
+              <span aria-hidden>{lodgingTypeIcon(lodging.type)}</span>
               <strong style={{ flex: 1, fontSize: 13 }}>{lodging.name}</strong>
             </div>
             <div

@@ -948,7 +948,7 @@ model Port {
 model Lodging {
   id            String   @id @default(uuid())
   userId        String   @map("user_id")
-  type          String   @default("hotel") // hotel | campsite
+  type          String   @default("hotel") // hotel | campsite | guesthouse | apartment | hostel
   name          String
   chainId       Int?     @map("chain_id")
   address       String?
