@@ -17,16 +17,8 @@ body:
     id: summary
     attributes:
       label: Summary
-      description: One sentence — what is the problem?
+      description: One sentence — what actually happens?
       placeholder: "Auto-update silently stops after the first flight"
-    validations:
-      required: true
-
-  - type: textarea
-    id: actual
-    attributes:
-      label: What actually happened?
-      description: Describe the observed behaviour.
     validations:
       required: true
 
