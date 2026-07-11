@@ -40,7 +40,7 @@ export default function DashboardPage(): JSX.Element {
   useImportMigrationToast();
   const { tab } = useDashboardRoute();
   const { isEnabled } = useEnabledDomains();
-  const [counts, setCounts] = useState({ flight: 0, cruise: 0, poi: 0 });
+  const [counts, setCounts] = useState({ flight: 0, cruise: 0, poi: 0, lodging: 0 });
   // Bumping this token re-runs the counts effect AND remounts the
   // active tab (via key prop) so per-tab data picks up the new entry
   // without needing a separate refetch wiring per tab.
@@ -62,6 +62,9 @@ export default function DashboardPage(): JSX.Element {
           flight: flights.total,
           cruise: cruises.length,
           poi: 0,
+          // Lodging count is wired once the frontend lodging API client lands
+          // (Task 14+); the tab strip badge stays at 0 until then.
+          lodging: 0,
         });
       } catch (err) {
         logger.error("Failed to load dashboard counts:", err);
