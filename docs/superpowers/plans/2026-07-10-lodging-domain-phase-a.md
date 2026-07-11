@@ -36,6 +36,7 @@
 
 **Backend — create:**
 - `backend/src/services/fx/frankfurter.ts` — historical ECB FX (getRate / convertToBase), cached.
+- `backend/src/services/geo/nominatim.ts` — OSM geocoding (address→coords), throttled + cached.
 - `backend/src/schemas/lodging.ts` — Zod schemas for lodging, stay, chain, membership, query.
 - `backend/src/routes/lodging.ts` — Lodging CRUD + nested stays (+ receipt upload).
 - `backend/src/routes/lodgingChains.ts` — chain search + user-add.
@@ -72,7 +73,7 @@
 - `frontend/src/i18n/locales/de/*` + `en/*` — lodging strings.
 - App router — register `/lodging` list + detail routes.
 
-**Sequencing:** Tasks 1–12 (backend) are independently testable and should land first. Tasks 13–20 (frontend) depend on the API shape from tasks 4–10. FX (Task 3) is consumed by Task 5.
+**Sequencing:** Tasks 1–12 (backend) are independently testable and should land first. Tasks 13–20 (frontend) depend on the API shape from tasks 4–10. FX (Task 3) is consumed by Task 5. Geocoding (Task 5b) extends Task 5's routes and must land after it.
 
 ---
 
@@ -882,6 +883,207 @@ git commit -m "feat(lodging): lodging + stay CRUD routes with historical FX snap
 
 ---
 
+## Task 5b: Geocoding service (OSM Nominatim) + geocode-on-save
+
+> Owner decision 2026-07-11: address→coords lands in **Phase A** (spec §7), not Phase C.
+> Mirrors the FX service exactly: keyless, cached, **never blocks a save**.
+
+**Files:**
+- Create: `backend/src/services/geo/nominatim.ts`
+- Test: `backend/src/services/geo/__tests__/nominatim.test.ts`
+- Modify: `backend/src/routes/lodging.ts` (geocode on POST / PATCH)
+- Test: extend `backend/src/routes/__tests__/lodging.test.ts`
+
+**Interfaces:**
+- Produces:
+  - `geocodeAddress(parts: { address?: string | null; city?: string | null; country?: string | null }): Promise<{ lat: number; lon: number } | null>` — `null` on any failure, empty input, or no result. **Never throws.**
+  - `resolveCoordinates(input, existing?): Promise<{ lat: number; lon: number } | null>` — the route-facing helper: returns `null` (= leave coords untouched) when the caller supplied explicit coords or when there is no address to geocode; otherwise geocodes.
+- Nominatim usage policy (hard requirements): descriptive `User-Agent` (`TravStats/1.0 (self-hosted travel logbook)`), **max 1 request/second** (serialize + throttle in-process), results cached per normalized query for the process lifetime.
+
+- [ ] **Step 1: Write the failing test**
+
+`backend/src/services/geo/__tests__/nominatim.test.ts` (mock `global.fetch`):
+```typescript
+import { geocodeAddress, resolveCoordinates } from "../nominatim";
+
+const okResponse = (rows: unknown) =>
+  ({ ok: true, json: async () => rows }) as unknown as Response;
+
+describe("nominatim geocoder", () => {
+  const realFetch = global.fetch;
+  afterEach(() => { global.fetch = realFetch; });
+
+  it("returns coordinates for an address", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      okResponse([{ lat: "47.3769", lon: "8.5417" }]),
+    ) as unknown as typeof fetch;
+    const out = await geocodeAddress({ address: "Bahnhofstrasse 1", city: "Zürich", country: "CH" });
+    expect(out).toEqual({ lat: 47.3769, lon: 8.5417 });
+  });
+
+  it("sends a descriptive User-Agent (Nominatim usage policy)", async () => {
+    const fetchMock = jest.fn().mockResolvedValue(okResponse([{ lat: "1", lon: "2" }]));
+    global.fetch = fetchMock as unknown as typeof fetch;
+    await geocodeAddress({ city: "Berlin" });
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect((init.headers as Record<string, string>)["User-Agent"]).toMatch(/TravStats/);
+  });
+
+  it("returns null on empty input without any network call", async () => {
+    const fetchMock = jest.fn();
+    global.fetch = fetchMock as unknown as typeof fetch;
+    expect(await geocodeAddress({ address: "", city: null, country: null })).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("returns null (never throws) when the API fails or finds nothing", async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error("network")) as unknown as typeof fetch;
+    expect(await geocodeAddress({ city: "Nowhere" })).toBeNull();
+    global.fetch = jest.fn().mockResolvedValue(okResponse([])) as unknown as typeof fetch;
+    expect(await geocodeAddress({ city: "Nowhere" })).toBeNull();
+  });
+
+  it("caches a repeated query (one network call)", async () => {
+    const fetchMock = jest.fn().mockResolvedValue(okResponse([{ lat: "52.52", lon: "13.405" }]));
+    global.fetch = fetchMock as unknown as typeof fetch;
+    await geocodeAddress({ city: "Berlin", country: "DE" });
+    await geocodeAddress({ city: "Berlin", country: "DE" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("never geocodes when the caller supplied coordinates", async () => {
+    const fetchMock = jest.fn();
+    global.fetch = fetchMock as unknown as typeof fetch;
+    expect(await resolveCoordinates({ lat: 1, lon: 2, city: "Berlin" })).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd backend && npx jest src/services/geo/__tests__/nominatim.test.ts`
+Expected: FAIL — module not found.
+
+- [ ] **Step 3: Implement `services/geo/nominatim.ts`**
+
+Structure (mirror `services/fx/frankfurter.ts` — module-level cache, `logger.warn` + `null` on every failure path, no throws):
+```typescript
+import logger from "../../utils/logger";
+
+const BASE_URL = "https://nominatim.openstreetmap.org/search";
+// Nominatim's usage policy demands a descriptive UA and at most 1 req/s.
+const USER_AGENT = "TravStats/1.0 (self-hosted travel logbook)";
+const MIN_INTERVAL_MS = 1000;
+const REQUEST_TIMEOUT_MS = 5000;
+
+export interface Coordinates {
+  lat: number;
+  lon: number;
+}
+
+// Geocoding results for an address are stable; cache for the process lifetime.
+const cache = new Map<string, Coordinates | null>();
+// Serializes requests so concurrent saves cannot exceed 1 req/s.
+let queue: Promise<unknown> = Promise.resolve();
+let lastRequestAt = 0;
+
+function buildQuery(parts: {
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
+}): string {
+  return [parts.address, parts.city, parts.country]
+    .map((p) => p?.trim())
+    .filter((p): p is string => !!p)
+    .join(", ");
+}
+
+async function throttle(): Promise<void> {
+  const wait = Math.max(0, MIN_INTERVAL_MS - (Date.now() - lastRequestAt));
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+  lastRequestAt = Date.now();
+}
+```
+Then `geocodeAddress`: build the query → return `null` if empty → cache hit? return it → chain onto `queue` (so calls serialize), `await throttle()`, `fetch(`${BASE_URL}?q=…&format=json&limit=1`, { headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })` → non-OK / empty array / unparseable lat-lon → cache + return `null` → else parse `Number(row.lat)` / `Number(row.lon)`, reject non-finite, cache, return. Every catch logs `logger.warn({ error, query }, "geocoding failed")` and returns `null`.
+
+Then `resolveCoordinates(input: { lat?: number | null; lon?: number | null; address?: string | null; city?: string | null; country?: string | null }): Promise<Coordinates | null>`:
+- If `input.lat != null && input.lon != null` → return `null` (caller's explicit coords win; nothing to fill).
+- Else → `return geocodeAddress(input)`.
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd backend && npx jest src/services/geo/__tests__/nominatim.test.ts`
+Expected: PASS (6 tests).
+
+- [ ] **Step 5: Wire into `routes/lodging.ts` (POST + PATCH)**
+
+In `POST /` — after `createLodgingSchema.parse`, before `prisma.lodging.create`:
+```typescript
+const coords = await resolveCoordinates(input);
+const lodging = await prisma.lodging.create({
+  data: { ...input, ...(coords ?? {}), userId: req.user!.id },
+});
+```
+In `PATCH /:id` — only geocode when the address actually changed and the caller did not send coords:
+```typescript
+const addressChanged =
+  (input.address !== undefined && input.address !== existing.address) ||
+  (input.city !== undefined && input.city !== existing.city) ||
+  (input.country !== undefined && input.country !== existing.country);
+const coords = addressChanged
+  ? await resolveCoordinates({
+      lat: input.lat ?? null,
+      lon: input.lon ?? null,
+      address: input.address ?? existing.address,
+      city: input.city ?? existing.city,
+      country: input.country ?? existing.country,
+    })
+  : null;
+const lodging = await prisma.lodging.update({
+  where: { id: existing.id },
+  data: { ...input, ...(coords ?? {}) },
+});
+```
+A `null` from `resolveCoordinates` means "don't touch coords" — a failed geocode must never null out coordinates the user already had, and must never fail the request.
+
+- [ ] **Step 6: Extend the route test** (`routes/__tests__/lodging.test.ts`)
+```typescript
+it("geocodes an address-only lodging on create", async () => {
+  jest.spyOn(geo, "resolveCoordinates").mockResolvedValue({ lat: 47.3769, lon: 8.5417 });
+  const res = await agent.post("/api/v1/lodging").send({ name: "Hotel Zürich", city: "Zürich" });
+  expect(res.status).toBe(201);
+  expect(res.body.data.lat).toBeCloseTo(47.3769, 4);
+});
+
+it("still saves the lodging when geocoding fails", async () => {
+  jest.spyOn(geo, "resolveCoordinates").mockResolvedValue(null);
+  const res = await agent.post("/api/v1/lodging").send({ name: "Hotel Nowhere", city: "Nowhere" });
+  expect(res.status).toBe(201);
+  expect(res.body.data.lat).toBeNull();
+});
+
+it("keeps explicit coordinates and does not geocode", async () => {
+  const spy = jest.spyOn(geo, "resolveCoordinates");
+  const res = await agent.post("/api/v1/lodging").send({ name: "Pinned", city: "Berlin", lat: 1.5, lon: 2.5 });
+  expect(res.body.data.lat).toBe(1.5);
+  expect(await spy.mock.results[0].value).toBeNull(); // resolveCoordinates short-circuits
+});
+```
+
+- [ ] **Step 7: Run tests + typecheck**
+
+Run: `cd backend && npm test -- src/services/geo src/routes/__tests__/lodging.test.ts --forceExit && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Step 8: Commit**
+```bash
+git add backend/src/services/geo backend/src/routes/lodging.ts backend/src/routes/__tests__/lodging.test.ts
+git commit -m "feat(lodging): OSM Nominatim geocode-on-save (throttled, cached, never blocks a save)"
+```
+
+---
+
 ## Task 6: Chains + Memberships routes
 
 **Files:**
@@ -1397,7 +1599,7 @@ Then `npx gitnexus analyze` to refresh the index.
 
 ## Self-Review Notes (author checklist — done)
 
-- **Spec coverage:** §3 models → T2; §4 registration → T1/T13; §5 routes/services → T5/T6/T7/T8/T10/T11; §7 geocoding → deferred to Phase C (map pins here use stored coords, manual entry sets them; OSM geocode-on-save is Phase C — Phase A ships the pin layer + manual coords, per spec §6 "map pins"); §7.1 FX → T3/T5/T8/T9/T10/T19; §8 trip timeline → the `Trip.lodgingStays` FK (T2) + detail rendering (T17); §9 stats/achievements → T9/T10/T11; §14 surface area → all tasks. **Gap noted:** OSM geocode-on-manual-save (§5 `nominatim.ts`) is intentionally deferred to Phase C; Phase A relies on coords from the editor. If the owner wants geocode-on-save in Phase A, add a task mirroring the FX service (address→coords, never-block-save) before T17.
+- **Spec coverage:** §3 models → T2; §4 registration → T1/T13; §5 routes/services → T5/T5b/T6/T7/T8/T10/T11; §7 geocoding → **T5b** (owner decision 2026-07-11: OSM geocode-on-save is Phase A; the spec's §1 phasing was updated to match — Phase C is keyed enrichers only); §7.1 FX → T3/T5/T8/T9/T10/T19; §8 trip timeline → the `Trip.lodgingStays` FK (T2) + detail rendering (T17); §9 stats/achievements → T9/T10/T11; §14 surface area → all tasks. No open gaps.
 - **Placeholder scan:** none — every code step carries real code or a named template file to copy with explicit adaptations.
 - **Type consistency:** `applyFxSnapshot`, `convertToBase`, `calculateLodgingStats`, `LodgingStayData`, `LODGING_MODES`, `deriveOverallRating` names are used identically across tasks.
 - **Verify-before-code hooks:** middleware import names (T5), settings route location (T8), achievement checker signature (T11), seed aggregator location (T11), API-client axios convention (T14) are each gated by a "read the blueprint first" step because exact names may differ in the merged tree.

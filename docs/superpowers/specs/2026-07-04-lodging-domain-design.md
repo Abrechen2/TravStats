@@ -37,13 +37,13 @@ first-class.
 ### Phasing (build order on the branch; released together)
 - **A — Core domain:** models + migration + CRUD + manual entry + chains +
   memberships + trip-timeline + map pins + achievements + stats + **base currency &
-  historical FX (§7.1)** + turn the domain on. (The bulk.)
+  historical FX (§7.1)** + **OSM geocode-on-save (§7)** + turn the domain on.
+  (The bulk.)
 - **B — Booking import:** `lodgingBookingParser` + `lodgingEntityResolver`
   (chain match, **hotel dedup**, geocode) + email/PDF branch + import preview,
   driven by the 7 samples.
-- **C — Geocoding & enrichment:** OSM Nominatim address→coords as the free
-  default; optional keyed enrichers (Amadeus/Foursquare) behind the
-  User→Admin→ENV resolver.
+- **C — Keyed enrichment:** optional keyed enrichers (Amadeus/Foursquare) behind
+  the User→Admin→ENV resolver, filling stars/amenities/photo/chain.
 
 Each phase gets its own implementation plan; this spec is the shared contract.
 
@@ -220,8 +220,11 @@ next `git merge main`.
 
 ## 7. Geocoding & enrichment
 
-- **Free default — OSM Nominatim** (§5): address→coords for the map. Keyless,
-  works out of the box; the app is fully functional without any API key.
+- **Free default — OSM Nominatim (Phase A)** (§5): address→coords for the map,
+  run on lodging save (create/update) whenever the address changed and no manual
+  coordinates were supplied. Keyless, works out of the box; the app is fully
+  functional without any API key. A geocode failure never blocks the save — the
+  lodging persists without coordinates and the user can pin it manually.
 - **Optional keyed enrichers (Phase C)** — Amadeus Self-Service / Foursquare via
   the User→Admin→ENV resolver, to fill stars/amenities/photo/chain. Google Places
   is out (killed its free tier Feb 2025).
