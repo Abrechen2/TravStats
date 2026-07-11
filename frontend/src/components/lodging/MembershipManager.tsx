@@ -13,6 +13,21 @@ import type { LodgingMembership, MembershipInput } from "../../types/lodging";
 interface MembershipManagerProps {
   /** Fired after every successful load/create/update/delete with the fresh list. */
   onChanged?: (memberships: LodgingMembership[]) => void;
+  /**
+   * Scopes the manager to a single loyalty program — used by the chain
+   * detail page, which cares about exactly ONE program (the chain's
+   * `loyaltyProgram`), not the caller's whole membership list. When set:
+   *  - only the membership(s) matching this program name are shown
+   *    (there is at most one, enforced by the backend's
+   *    `@@unique([userId, programName])`);
+   *  - the "add" flow pre-fills and locks the program-name field to this
+   *    value, since the chain page — not the user — determines the program;
+   *  - the "add" button is hidden once a matching membership exists (one
+   *    membership per program per user, so there's nothing left to add).
+   */
+  filterProgramName?: string;
+  /** Extra note rendered under the title — e.g. "shared with Westin, Ritz-Carlton" when the program spans multiple chains. */
+  sharedWithLabel?: string;
 }
 
 type EditingId = string | "new" | null;
@@ -32,7 +47,11 @@ function httpStatus(err: unknown): number | undefined {
  * on a duplicate (`routes/lodgingMemberships.ts`) — that must surface as a
  * clean, readable sentence, never a raw error or a crash.
  */
-export function MembershipManager({ onChanged }: MembershipManagerProps): JSX.Element {
+export function MembershipManager({
+  onChanged,
+  filterProgramName,
+  sharedWithLabel,
+}: MembershipManagerProps): JSX.Element {
   const { t } = useTranslation(["lodging", "common"]);
   const [memberships, setMemberships] = useState<LodgingMembership[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -67,9 +86,18 @@ export function MembershipManager({ onChanged }: MembershipManagerProps): JSX.El
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // The list this component actually renders — every membership when
+  // unscoped, or just the (at most one) membership for `filterProgramName`
+  // on the chain detail page.
+  const visibleMemberships =
+    filterProgramName !== undefined
+      ? memberships.filter((m) => m.programName === filterProgramName)
+      : memberships;
+  const hasFilteredMembership = filterProgramName !== undefined && visibleMemberships.length > 0;
+
   const startCreate = (): void => {
     setEditingId("new");
-    setProgramName("");
+    setProgramName(filterProgramName ?? "");
     setMembershipNumber("");
     setTier("");
     setFormError(null);
@@ -132,10 +160,15 @@ export function MembershipManager({ onChanged }: MembershipManagerProps): JSX.El
   return (
     <div className="space-y-3" data-testid="membership-manager">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-          {t("lodging:membership.title")}
-        </h3>
-        {editingId === null && (
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+            {filterProgramName ?? t("lodging:membership.title")}
+          </h3>
+          {sharedWithLabel && (
+            <p className="text-xs text-[var(--text-muted)]">{sharedWithLabel}</p>
+          )}
+        </div>
+        {editingId === null && !hasFilteredMembership && (
           <button
             type="button"
             onClick={startCreate}
@@ -150,11 +183,11 @@ export function MembershipManager({ onChanged }: MembershipManagerProps): JSX.El
 
       {loading ? (
         <p className="text-xs text-[var(--text-muted)]">{t("common:buttons.loading")}</p>
-      ) : memberships.length === 0 && editingId === null ? (
+      ) : visibleMemberships.length === 0 && editingId === null ? (
         <p className="text-xs text-[var(--text-muted)]">{t("lodging:membership.empty")}</p>
       ) : (
         <ul className="space-y-2">
-          {memberships.map((m) => (
+          {visibleMemberships.map((m) => (
             <li
               key={m.id}
               data-testid={`membership-row-${m.id}`}
@@ -196,7 +229,8 @@ export function MembershipManager({ onChanged }: MembershipManagerProps): JSX.El
             placeholder={t("lodging:field.programName")}
             value={programName}
             onChange={(e) => setProgramName(e.target.value)}
-            className="w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+            disabled={filterProgramName !== undefined}
+            className="w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] disabled:opacity-70"
           />
           <div className="grid grid-cols-2 gap-2">
             <input

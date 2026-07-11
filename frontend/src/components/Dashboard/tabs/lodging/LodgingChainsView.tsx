@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../../../hooks/useTranslation";
 import { DOMAINS } from "../../../../shared/domains";
+import { ChainNameLink } from "../../../lodging/ChainNameLink";
 import type { Lodging } from "../../../../types/lodging";
 
 interface LodgingChainsViewProps {
@@ -10,6 +11,7 @@ interface LodgingChainsViewProps {
 
 interface ChainSummary {
   key: string;
+  id: number | null;
   name: string;
   color: string | null;
   hotelCount: number;
@@ -40,6 +42,7 @@ function groupByChain(lodgings: readonly Lodging[], independentLabel: string): C
     } else {
       byKey.set(key, {
         key,
+        id: lodging.chain?.id ?? null,
         name: lodging.chain?.name ?? independentLabel,
         color: lodging.chain?.brandColor ?? null,
         hotelCount: 1,
@@ -101,7 +104,13 @@ export function LodgingChainsView({ lodgings }: LodgingChainsViewProps): JSX.Ele
                   color: "var(--text-primary)",
                 }}
               >
-                <span>{chain.name}</span>
+                <span>
+                  {chain.id !== null ? (
+                    <ChainNameLink chainId={chain.id} name={chain.name} />
+                  ) : (
+                    chain.name
+                  )}
+                </span>
                 <span style={{ color: "var(--text-muted)" }}>
                   {chain.stayCount} {t("dashboard:lodgingTab.stats.stays")} · {chain.nights}{" "}
                   {t("dashboard:lodgingTab.stats.nights")}

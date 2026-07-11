@@ -195,6 +195,31 @@ export interface FxPreview {
   baseCurrency: string;
 }
 
+/**
+ * Shape of `GET /api/v1/lodging-chains/:id` (routes/lodgingChains.ts). The
+ * membership is matched on `chain.loyaltyProgram`, never `chain.id` — see
+ * the module comment there and on `LodgingMembership` for why (several
+ * chains, e.g. Sheraton/Westin/Ritz-Carlton, share one program).
+ */
+export interface LodgingChainStats {
+  hotelCount: number;
+  stayCount: number;
+  nights: number;
+  totalSpendBase: number;
+  avgRating: number | null;
+}
+
+export interface LodgingChainDetail {
+  chain: LodgingChain;
+  /** The caller's own lodgings in this chain, with the same derived aggregates as the `/lodging` list. */
+  lodgings: Lodging[];
+  stats: LodgingChainStats;
+  /** The caller's membership for `chain.loyaltyProgram`, if any — null when the chain has no program or the user has no membership for it. */
+  membership: LodgingMembership | null;
+  /** Other chains sharing the same `loyaltyProgram` (excludes this chain itself). */
+  siblingChains: LodgingChain[];
+}
+
 export interface LodgingListQuery {
   type?: LodgingType;
   chainId?: number;

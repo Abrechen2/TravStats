@@ -152,7 +152,23 @@
     "empty": "Noch keine Bonusprogramme hinterlegt",
     "loadError": "Bonusprogramme konnten nicht geladen werden",
     "saveError": "Bonusprogramm konnte nicht gespeichert werden",
-    "duplicateError": "Dieses Programm ist für diese Kette bereits hinterlegt",
+    "duplicateError": "Dieses Programm ist bereits hinterlegt",
     "deleteError": "Bonusprogramm konnte nicht gelöscht werden"
+  },
+  "chainDetail": {
+    "loading": "Kette wird geladen …",
+    "notFound": "Kette nicht gefunden",
+    "noLoyaltyProgram": "Kein Bonusprogramm hinterlegt",
+    "sharedWith": "„{{program}}“ — geteilt mit {{chains}}",
+    "hotelsTitle": "Deine Hotels dieser Kette",
+    "hotelsEmpty": "Noch keine Hotels dieser Kette erfasst.",
+    "noMembershipYet": "Noch kein Bonusprogramm-Eintrag für dieses Programm.",
+    "stats": {
+      "hotels": "Hotels",
+      "stays": "Aufenthalte",
+      "nights": "Übernachtungen",
+      "spend": "Ausgaben",
+      "rating": "Ø Bewertung"
+    }
   }
 }

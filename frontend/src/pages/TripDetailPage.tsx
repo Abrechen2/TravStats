@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { differenceInCalendarDays } from "date-fns";
 import { tripsApi } from "../lib/api";
+import { formatDateInTimezone } from "../lib/dateUtils";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
@@ -51,23 +52,34 @@ export default function TripDetailPage(): JSX.Element {
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Domain-gating: when the cruise domain is disabled, every tab gets a
-  // trip copy with the cruise segments stripped, so timeline, map, and
-  // logistics stay cruise-free without per-tab checks. A counter banner
+  // Domain-gating: when the cruise/lodging domain is disabled, every tab
+  // gets a trip copy with those segments stripped, so timeline, map, and
+  // logistics stay domain-free without per-tab checks. A counter banner
   // below the tab bar tells the user the segments are hidden, not lost.
   const { isEnabled } = useEnabledDomains();
   const cruiseEnabled = isEnabled("cruise");
+  const lodgingEnabled = isEnabled("lodging");
   const displayTrip = useMemo<Trip | null>(() => {
-    if (trip === null || cruiseEnabled) return trip;
+    if (trip === null || (cruiseEnabled && lodgingEnabled)) return trip;
     return {
       ...trip,
-      cruises: [],
-      _count: trip._count ? { ...trip._count, cruises: 0 } : trip._count,
+      cruises: cruiseEnabled ? trip.cruises : [],
+      lodgingStays: lodgingEnabled ? trip.lodgingStays : [],
+      _count: trip._count
+        ? {
+            ...trip._count,
+            ...(cruiseEnabled ? {} : { cruises: 0 }),
+            ...(lodgingEnabled ? {} : { lodgingStays: 0 }),
+          }
+        : trip._count,
     };
-  }, [trip, cruiseEnabled]);
+  }, [trip, cruiseEnabled, lodgingEnabled]);
   const hiddenCruiseCount = cruiseEnabled
     ? 0
     : (trip?._count?.cruises ?? trip?.cruises?.length ?? 0);
+  const hiddenLodgingCount = lodgingEnabled
+    ? 0
+    : (trip?._count?.lodgingStays ?? trip?.lodgingStays?.length ?? 0);
 
   const load = async (): Promise<void> => {
     if (!id) return;
@@ -144,6 +156,18 @@ export default function TripDetailPage(): JSX.Element {
               }}
             >
               ⚓ {t("trips:detail.hiddenCruises", { count: hiddenCruiseCount })}
+            </div>
+          )}
+          {hiddenLodgingCount > 0 && (
+            <div
+              className="mb-4 rounded-lg px-4 py-2.5 text-xs"
+              style={{
+                background: "var(--bg-surface)",
+                border: "1px solid var(--color-border)",
+                color: "var(--text-muted)",
+              }}
+            >
+              🏨 {t("trips:detail.hiddenLodging", { count: hiddenLodgingCount })}
             </div>
           )}
           {tab === "overview" && (
@@ -488,6 +512,12 @@ type TimelineEvent =
       kind: "journal";
       date: string;
       entry: TripJournalEntry;
+    }
+  | {
+      id: string;
+      kind: "lodging-checkin" | "lodging-checkout";
+      date: string;
+      stay: NonNullable<Trip["lodgingStays"]>[number];
     };
 
 const STOP_DOMAIN_ICON: Record<string, string> = {
@@ -554,6 +584,19 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
         kind: "journal",
         date: e.date,
         entry: e,
+      });
+    }
+    // Each linked stay renders as TWO timeline entries — a check-in and a
+    // check-out — mirroring how TripStop entries already work, so the
+    // hotel is actually visible in the trip's chronology instead of
+    // disappearing once it's assigned (the spec gap this closes).
+    for (const s of trip.lodgingStays ?? []) {
+      out.push({ id: `lodging-checkin-${s.id}`, kind: "lodging-checkin", date: s.checkIn, stay: s });
+      out.push({
+        id: `lodging-checkout-${s.id}`,
+        kind: "lodging-checkout",
+        date: s.checkOut,
+        stay: s,
       });
     }
     return out.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -675,6 +718,9 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
               />
               {ev.kind === "flight" && <FlightCard ev={ev} />}
               {ev.kind === "cruise" && <CruiseCard ev={ev} />}
+              {(ev.kind === "lodging-checkin" || ev.kind === "lodging-checkout") && (
+                <LodgingCheckCard ev={ev} t={t} />
+              )}
               {ev.kind === "stop" && (
                 <StopCard
                   ev={ev}
@@ -752,6 +798,9 @@ function dotColor(ev: TimelineEvent): string {
       return "var(--domain-poi, #5ec2b2)";
     case "journal":
       return "#60a5fa";
+    case "lodging-checkin":
+    case "lodging-checkout":
+      return "var(--domain-lodging, #d4778f)";
   }
 }
 
@@ -838,6 +887,44 @@ function CruiseCard({ ev }: { ev: Extract<TimelineEvent, { kind: "cruise" }> }):
       subtitle={ev.subtitle}
       date={ev.date}
     />
+  );
+}
+
+/**
+ * Renders one half (check-in OR check-out) of a linked LodgingStay as a
+ * timeline entry. Uses the lodging domain colour (`DOMAINS.lodging.color`,
+ * `#d4778f` via the `--domain-lodging` CSS var) and the hotel icon, and
+ * clicking it navigates to that hotel's own detail page — the whole point
+ * being that a hotel linked to a trip is no longer a dead end.
+ */
+function LodgingCheckCard({
+  ev,
+  t,
+}: {
+  ev: Extract<TimelineEvent, { kind: "lodging-checkin" | "lodging-checkout" }>;
+  t: ReturnType<typeof useTranslation>["t"];
+}): JSX.Element {
+  const { stay } = ev;
+  const isCheckIn = ev.kind === "lodging-checkin";
+  const title = t(
+    isCheckIn ? "trips:detail.timeline.lodgingCheckIn" : "trips:detail.timeline.lodgingCheckOut",
+    { name: stay.lodging.name },
+  );
+  // Check-in/out are stored as the calendar day at UTC midnight and we capture no
+  // time of day. Rendering them in local time would print a meaningless "02:00" and,
+  // west of UTC, shift the day backwards.
+  const subtitle = formatDateInTimezone(ev.date, "UTC");
+  return (
+    <Link to={`/lodging/${stay.lodgingId}`} className="block">
+      <EventCard
+        icon="🏨"
+        bg="rgba(212,119,143,0.15)"
+        iconColor="var(--domain-lodging, #d4778f)"
+        title={title}
+        subtitle={subtitle}
+        date={ev.date}
+      />
+    </Link>
   );
 }
 
@@ -1112,12 +1199,14 @@ function TripStatsRow({
   trip: Trip;
   t: ReturnType<typeof useTranslation>["t"];
 }): JSX.Element {
-  // Domain-gating: the cruise tile disappears entirely when the cruise
+  // Domain-gating: the cruise/lodging tile disappears entirely when that
   // domain is disabled (a "0" tile would still advertise the domain).
   const { isEnabled } = useEnabledDomains();
   const cruiseEnabled = isEnabled("cruise");
+  const lodgingEnabled = isEnabled("lodging");
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
   const cruiseCount = trip._count?.cruises ?? trip.cruises?.length ?? 0;
+  const lodgingCount = trip._count?.lodgingStays ?? trip.lodgingStays?.length ?? 0;
   const totalCost = trip.bookings?.reduce((sum, b) => sum + (b.price ?? 0), 0) ?? 0;
   const currency = trip.bookings?.find((b) => b.currency)?.currency ?? "EUR";
 
@@ -1125,6 +1214,7 @@ function TripStatsRow({
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
       <StatTile value={flightCount} label={t("trips:detail.stats.flights")} />
       {cruiseEnabled && <StatTile value={cruiseCount} label={t("trips:detail.stats.cruises")} />}
+      {lodgingEnabled && <StatTile value={lodgingCount} label={t("trips:detail.stats.lodging")} />}
       <StatTile value={trip.countries.length} label={t("trips:detail.stats.countries")} />
       <StatTile value={trip.companions.length} label={t("trips:detail.stats.companions")} />
       <StatTile

@@ -5,6 +5,12 @@ import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
+import {
+  LODGING_INCLUDE,
+  computeAggregates,
+  deriveOverallRating,
+  getBaseCurrency,
+} from "./lodging";
 
 // A shared, global catalog: every authenticated user reads the SAME rows
 // (Marriott, Hilton, NH, ...), seeded from CSV in a later task. A user may
@@ -45,6 +51,13 @@ function isUniqueConstraintError(
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
 
+const requireUser = (req: AuthRequest): string => {
+  if (!req.userId) throw new AppError("Not authenticated", 401);
+  return req.userId;
+};
+
+const chainIdParamSchema = z.object({ id: z.coerce.number().int().positive() });
+
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const parsed = chainQuerySchema.safeParse(req.query);
@@ -58,6 +71,73 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       take: MAX_CHAINS_PER_REQUEST,
     });
     res.json({ success: true, data: chains });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /:id — chain detail page (collaborator request: click a chain to see
+// every hotel of that chain the CALLER has stayed at, plus their loyalty
+// membership for it). Memberships are PROGRAM-based, not chain-based (see
+// the module comment on lodgingMemberships.ts), so the membership match here
+// is on `chain.loyaltyProgram`, never `chain.id` — there is intentionally no
+// `chainId` anywhere on `LodgingMembership`.
+router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const parsedId = chainIdParamSchema.safeParse(req.params);
+    if (!parsedId.success) throw new AppError(parsedId.error.message, 400);
+    const { id } = parsedId.data;
+
+    const chain = await prisma.lodgingChain.findUnique({ where: { id } });
+    if (!chain) throw new AppError("Chain not found", 404);
+
+    // The caller's own lodgings for this chain — same include + aggregate
+    // derivation as GET /lodging (routes/lodging.ts), reused rather than
+    // re-derived so stayCount/nights/overallRating/totalSpendBase can never
+    // drift between the two endpoints.
+    const baseCurrency = await getBaseCurrency(userId);
+    const rawLodgings = await prisma.lodging.findMany({
+      where: { userId, chainId: id },
+      include: LODGING_INCLUDE,
+      orderBy: { createdAt: "desc" },
+    });
+    const lodgings = rawLodgings.map((l) => ({
+      ...l,
+      ...computeAggregates(l.stays, baseCurrency),
+    }));
+
+    const stats = {
+      hotelCount: lodgings.length,
+      stayCount: lodgings.reduce((sum, l) => sum + l.stayCount, 0),
+      nights: lodgings.reduce((sum, l) => sum + l.nights, 0),
+      totalSpendBase: lodgings.reduce((sum, l) => sum + l.totalSpendBase, 0),
+      // Averaged across every stay of every one of the caller's hotels in
+      // this chain — NOT an average of the per-hotel averages, so a hotel
+      // with 10 rated stays counts 10x more than one with a single stay.
+      avgRating: deriveOverallRating(rawLodgings.flatMap((l) => l.stays)),
+    };
+
+    // A membership is matched on the PROGRAM, never the chain id — several
+    // chains can share one program (Sheraton/Westin/Ritz-Carlton -> Marriott
+    // Bonvoy). A chain with no `loyaltyProgram` set simply has no membership
+    // and no siblings.
+    const membership = chain.loyaltyProgram
+      ? await prisma.lodgingMembership.findFirst({
+          where: { userId, programName: chain.loyaltyProgram },
+        })
+      : null;
+    const siblingChains = chain.loyaltyProgram
+      ? await prisma.lodgingChain.findMany({
+          where: { loyaltyProgram: chain.loyaltyProgram, id: { not: chain.id } },
+          orderBy: { name: "asc" },
+        })
+      : [];
+
+    res.json({
+      success: true,
+      data: { chain, lodgings, stats, membership, siblingChains },
+    });
   } catch (err) {
     next(err);
   }

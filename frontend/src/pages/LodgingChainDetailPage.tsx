@@ -1,0 +1,268 @@
+import { useEffect, useState } from "react";
+import type { JSX } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import NavigationBar from "../components/NavigationBar";
+import { StarRating } from "../components/lodging/StarRating";
+import { MembershipManager } from "../components/lodging/MembershipManager";
+import { useTranslation } from "../hooks/useTranslation";
+import { getChainDetail } from "../lib/api/lodging";
+import { formatCurrency } from "../lib/units";
+import { hasAnyPrice, singleOriginalCurrencySpend } from "../lib/lodgingFormat";
+import { FlagImg, resolveCountryCode } from "../lib/countryFlag";
+import { logger } from "../lib/logger";
+import { useSettingsStore } from "../store/settingsStore";
+import { DOMAINS } from "../shared/domains";
+import type { Lodging, LodgingChainDetail } from "../types/lodging";
+
+/**
+ * Chain detail page (collaborator request): click a chain name anywhere it
+ * appears — the `/lodging` list's "Kette" column, a hotel's own detail page,
+ * or the dashboard's chains view — and land here to see every hotel of that
+ * chain the caller has stayed at, plus their loyalty membership for it.
+ *
+ * Memberships are PROGRAM-based, not chain-based (`LodgingChain.loyaltyProgram`
+ * is the bridge — see routes/lodgingChains.ts and MembershipManager's own
+ * doc comment), so the membership block below is scoped to the chain's
+ * program via `MembershipManager`'s `filterProgramName`, never to the
+ * chain's id.
+ */
+export default function LodgingChainDetailPage(): JSX.Element {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { t } = useTranslation(["lodging", "common"]);
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+
+  const [detail, setDetail] = useState<LodgingChainDetail | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [notFound, setNotFound] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!id) return;
+    const chainId = Number.parseInt(id, 10);
+    if (Number.isNaN(chainId)) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      setLoading(true);
+      try {
+        const data = await getChainDetail(chainId);
+        if (!cancelled) setDetail(data);
+      } catch (err: unknown) {
+        logger.error("LodgingChainDetailPage: failed to load chain", err);
+        if (!cancelled) setNotFound(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
+        <NavigationBar />
+        <div className="p-6 text-[var(--text-muted)]">{t("lodging:chainDetail.loading")}</div>
+      </div>
+    );
+  }
+
+  if (notFound || !detail) {
+    return (
+      <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
+        <NavigationBar />
+        <div className="mx-auto max-w-3xl p-6">
+          <button
+            onClick={() => navigate("/lodging")}
+            className="text-sm text-[var(--accent)] hover:underline"
+          >
+            ← {t("lodging:list.title")}
+          </button>
+          <div className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]">
+            {t("lodging:chainDetail.notFound")}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const { chain, lodgings, stats, membership, siblingChains } = detail;
+  const accent = chain.brandColor ?? DOMAINS.lodging.color;
+  const sharedWithLabel =
+    chain.loyaltyProgram && siblingChains.length > 0
+      ? t("lodging:chainDetail.sharedWith", {
+          program: chain.loyaltyProgram,
+          chains: siblingChains.map((c) => c.name).join(", "),
+        })
+      : undefined;
+
+  return (
+    <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
+      <NavigationBar />
+      <div className="mx-auto max-w-6xl px-4 py-6">
+        <button
+          onClick={() => navigate("/lodging")}
+          className="mb-3 text-sm text-[var(--accent)] hover:underline"
+        >
+          ← {t("lodging:list.title")}
+        </button>
+
+        {/* Header: chain name + brand-colour accent + loyalty program */}
+        <div
+          className="mb-6 rounded-lg border border-[var(--color-border)] bg-[var(--bg-surface)] p-4"
+          style={{ borderLeft: `4px solid ${accent}` }}
+        >
+          <h1 className="text-xl font-semibold text-[var(--text-primary)]">{chain.name}</h1>
+          <p data-testid="chain-loyalty-program" className="text-sm text-[var(--text-muted)]">
+            {chain.loyaltyProgram ?? t("lodging:chainDetail.noLoyaltyProgram")}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+          <div className="md:col-span-3">
+            <ChainStatsRow stats={stats} baseCurrency={baseCurrency} t={t} />
+
+            <h2 className="mb-2 mt-4 text-sm font-semibold text-[var(--text-muted)]">
+              {t("lodging:chainDetail.hotelsTitle")}
+            </h2>
+            {lodgings.length > 0 ? (
+              <div className="overflow-x-auto rounded-md border border-[var(--color-border)]">
+                <table className="w-full text-sm min-w-[520px]">
+                  <thead className="bg-[var(--bg-surface)] text-[var(--text-muted)]">
+                    <tr>
+                      <th className="px-3 py-2 text-left">{t("lodging:list.columns.name")}</th>
+                      <th className="px-3 py-2 text-left">{t("lodging:list.columns.location")}</th>
+                      <th className="px-3 py-2 text-right">{t("lodging:list.columns.stays")}</th>
+                      <th className="px-3 py-2 text-right">{t("lodging:list.columns.nights")}</th>
+                      <th className="px-3 py-2 text-left">{t("lodging:list.columns.rating")}</th>
+                      <th className="px-3 py-2 text-right">{t("lodging:list.columns.spend")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lodgings.map((l) => (
+                      <tr
+                        key={l.id}
+                        onClick={() => navigate(`/lodging/${l.id}`)}
+                        className="cursor-pointer border-t border-[var(--color-border)] hover:bg-[var(--bg-surface)]"
+                      >
+                        <td className="px-3 py-2">
+                          <span aria-hidden className="mr-2">
+                            {l.type === "campsite" ? "⛺" : "🏨"}
+                          </span>
+                          <span className="font-medium text-[var(--text-primary)]">{l.name}</span>
+                        </td>
+                        <td className="px-3 py-2 text-[var(--text-muted)]">
+                          {l.city || l.country ? (
+                            <span className="inline-flex items-center gap-1.5">
+                              <span>{l.city || l.country}</span>
+                              <FlagImg country={resolveCountryCode(l.country)} height={12} />
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right">{l.stayCount}</td>
+                        <td className="px-3 py-2 text-right">{l.nights}</td>
+                        <td className="px-3 py-2">
+                          <StarRating value={l.overallRating} />
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <ChainHotelSpendCell lodging={l} baseCurrency={baseCurrency} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-4 py-8 text-center text-[var(--text-muted)]">
+                {t("lodging:chainDetail.hotelsEmpty")}
+              </div>
+            )}
+          </div>
+
+          <aside className="md:col-span-2">
+            {chain.loyaltyProgram ? (
+              <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
+                <MembershipManager
+                  filterProgramName={chain.loyaltyProgram}
+                  sharedWithLabel={sharedWithLabel}
+                />
+              </div>
+            ) : (
+              <div className="rounded-md border border-dashed border-[var(--color-border)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-muted)]">
+                {t("lodging:chainDetail.noLoyaltyProgram")}
+              </div>
+            )}
+            {membership === null && chain.loyaltyProgram && (
+              <p className="mt-2 text-xs text-[var(--text-muted)]">
+                {t("lodging:chainDetail.noMembershipYet")}
+              </p>
+            )}
+          </aside>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChainStatsRow({
+  stats,
+  baseCurrency,
+  t,
+}: {
+  stats: LodgingChainDetail["stats"];
+  baseCurrency: string;
+  t: ReturnType<typeof useTranslation>["t"];
+}): JSX.Element {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <StatTile value={stats.hotelCount} label={t("lodging:chainDetail.stats.hotels")} />
+      <StatTile value={stats.stayCount} label={t("lodging:chainDetail.stats.stays")} />
+      <StatTile value={stats.nights} label={t("lodging:chainDetail.stats.nights")} />
+      <StatTile
+        value={stats.totalSpendBase > 0 ? formatCurrency(stats.totalSpendBase, baseCurrency) : "—"}
+        label={t("lodging:chainDetail.stats.spend")}
+      />
+      <StatTile
+        value={stats.avgRating !== null ? `★ ${stats.avgRating}` : "—"}
+        label={t("lodging:chainDetail.stats.rating")}
+      />
+    </div>
+  );
+}
+
+function StatTile({ value, label }: { value: string | number; label: string }): JSX.Element {
+  return (
+    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--bg-surface)] p-3">
+      <div className="text-lg font-display font-bold text-[var(--text-primary)]">{value}</div>
+      <div className="mt-0.5 text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+        {label}
+      </div>
+    </div>
+  );
+}
+
+function ChainHotelSpendCell({
+  lodging,
+  baseCurrency,
+}: {
+  lodging: Lodging;
+  baseCurrency: string;
+}): JSX.Element {
+  if (!hasAnyPrice(lodging.stays)) return <>—</>;
+  const original = singleOriginalCurrencySpend(lodging.stays, baseCurrency);
+  if (!original) return <>{formatCurrency(lodging.totalSpendBase, baseCurrency)}</>;
+  return (
+    <>
+      <div>{formatCurrency(original.amount, original.currency)}</div>
+      <div className="text-[10px]" style={{ color: "var(--fx, #6ab7d8)" }}>
+        ≈ {formatCurrency(lodging.totalSpendBase, baseCurrency)}
+      </div>
+    </>
+  );
+}
