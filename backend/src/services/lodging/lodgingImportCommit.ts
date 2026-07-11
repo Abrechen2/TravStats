@@ -167,11 +167,32 @@ async function resolveFxOutcomes(
     const currency = row.stay.currency ?? "EUR";
     const key = fxOutcomeKey(currency, row.stay.checkIn);
     if (outcomes.has(key)) continue;
-    const outcome = await applyFxSnapshot(
-      { totalPrice: row.stay.totalPrice, currency, checkIn: toDate(row.stay.checkIn) },
-      baseCurrency,
-    );
-    outcomes.set(key, outcome);
+    // `applyFxSnapshot` documents itself as never throwing — but that
+    // guarantee now lives two modules away (`fx/frankfurter.ts`), and this
+    // loop runs BEFORE the row loop, after the batch row has already been
+    // created. If that guarantee is ever violated, an uncaught throw here
+    // would escape `commitLodgingImport` entirely and fail the WHOLE batch
+    // with a 500, leaving an orphaned empty `LodgingImportBatch` behind.
+    // Contain it locally: one bad pair degrades to `lookupFailed` — the
+    // same outcome a null rate already produces — and never costs the batch.
+    try {
+      const outcome = await applyFxSnapshot(
+        { totalPrice: row.stay.totalPrice, currency, checkIn: toDate(row.stay.checkIn) },
+        baseCurrency,
+      );
+      outcomes.set(key, outcome);
+    } catch (err) {
+      logger.warn(
+        {
+          operation: "lodging_import_fx_lookup_failed",
+          currency,
+          checkInDay: row.stay.checkIn,
+          message: err instanceof Error ? err.message : String(err),
+        },
+        "FX pre-resolve lookup threw unexpectedly — degrading this pair to lookupFailed",
+      );
+      outcomes.set(key, { status: "lookupFailed" });
+    }
   }
   return outcomes;
 }
