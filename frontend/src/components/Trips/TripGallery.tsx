@@ -108,41 +108,43 @@ export default function TripGallery({
         </div>
       </div>
 
-      <section>
-        <h4
-          className="text-sm font-semibold mb-2"
-          style={{ color: "var(--text-secondary, var(--text-primary))" }}
-        >
-          {t("immich:gallery.uploaded")}{" "}
-          <span className="text-xs font-normal" style={{ color: "var(--text-muted)" }}>
-            · {photos.length}
-          </span>
-        </h4>
-
-        {photos.length === 0 ? (
-          <div
-            className="rounded-xl p-8 text-center text-sm"
-            style={{
-              background: "var(--bg-elevated)",
-              border: "1px dashed var(--color-border)",
-              color: "var(--text-muted)",
-            }}
+      {(photos.length > 0 || immichAlbums.length === 0) && (
+        <section>
+          <h4
+            className="text-sm font-semibold mb-2"
+            style={{ color: "var(--text-secondary, var(--text-primary))" }}
           >
-            {t("trips:gallery.empty")}
-          </div>
-        ) : (
-          <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
-            {photos.map((p, i) => (
-              <PhotoTile
-                key={p.id}
-                photo={p}
-                onClick={() => setLightbox({ index: i })}
-                onDelete={() => void handleDelete(p)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+            {t("immich:gallery.uploaded")}{" "}
+            <span className="text-xs font-normal" style={{ color: "var(--text-muted)" }}>
+              · {photos.length}
+            </span>
+          </h4>
+
+          {photos.length === 0 ? (
+            <div
+              className="rounded-xl p-8 text-center text-sm"
+              style={{
+                background: "var(--bg-elevated)",
+                border: "1px dashed var(--color-border)",
+                color: "var(--text-muted)",
+              }}
+            >
+              {t("trips:gallery.empty")}
+            </div>
+          ) : (
+            <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
+              {photos.map((p, i) => (
+                <PhotoTile
+                  key={p.id}
+                  photo={p}
+                  onClick={() => setLightbox({ index: i })}
+                  onDelete={() => void handleDelete(p)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {immichAlbums.map((album) => (
         <ImmichAlbumSection key={album.id} tripId={tripId} album={album} onChanged={onChange} />
