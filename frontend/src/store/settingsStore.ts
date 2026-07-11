@@ -142,6 +142,20 @@ export interface SettingsState {
   resetSettings: () => void;
   loadRemoteSettings: () => Promise<void>;
   saveRemoteSettings: () => Promise<void>;
+  /**
+   * Serialized copy of the settings the server is known to hold, stamped after
+   * every load and every successful save. The settings page's debounced
+   * auto-save compares against it so hydrating the store from the server does
+   * not immediately echo the same values back as a write (issue #186).
+   * `null` until the first load completes. Never persisted.
+   */
+  remoteSnapshot: string | null;
+  /**
+   * True when the current settings differ from what the server is known to
+   * hold. Before the first load completes we cannot know, so we assume yes —
+   * losing a user's edit is worse than one redundant write.
+   */
+  hasPendingChanges: () => boolean;
 }
 
 // Browser-aware fallbacks for display fields that the backend no longer
@@ -168,6 +182,26 @@ const detectInitialDateFormat = (): DateFormat => {
   return "DD.MM.YYYY";
 };
 
+/**
+ * Serialize exactly the slices `saveRemoteSettings` transmits, so an unchanged
+ * snapshot provably means "the server already has this". Anything not listed
+ * here is not written by the save path and must not be listed here either —
+ * otherwise a purely local change (e.g. the beta gate) would look like a
+ * pending write forever.
+ */
+const snapshotOf = (state: SettingsState): string =>
+  JSON.stringify([
+    state.profile,
+    state.display,
+    state.units,
+    state.defaults,
+    state.map,
+    state.notifications,
+    state.features,
+    state.cruise,
+    state.enabledDomains,
+  ]);
+
 const defaultSettings: Omit<
   SettingsState,
   | "setProfile"
@@ -184,7 +218,9 @@ const defaultSettings: Omit<
   | "resetSettings"
   | "loadRemoteSettings"
   | "saveRemoteSettings"
+  | "hasPendingChanges"
 > = {
+  remoteSnapshot: null,
   profile: {
     username: "",
     email: "",
@@ -277,6 +313,11 @@ export const useSettingsStore = create<SettingsState>()(
         }
       },
       resetSettings: () => set(defaultSettings),
+      hasPendingChanges: () => {
+        const state = get();
+        if (state.remoteSnapshot === null) return true;
+        return snapshotOf(state) !== state.remoteSnapshot;
+      },
       loadRemoteSettings: async () => {
         // birthdate lives on the User row, not in UserSettings JSON — so
         // it rides on a parallel request. Failure here is non-fatal:
@@ -373,6 +414,10 @@ export const useSettingsStore = create<SettingsState>()(
         } catch (error) {
           logger.warn("Failed to load remote settings, using local defaults", error);
         }
+        // Record what the server is now known to hold, so the settings page's
+        // debounced auto-save can tell a genuine user edit apart from the
+        // hydration it just performed and skip echoing the value straight back.
+        set({ remoteSnapshot: snapshotOf(get()) });
       },
       saveRemoteSettings: async () => {
         const {
@@ -424,6 +469,7 @@ export const useSettingsStore = create<SettingsState>()(
           // callers (e.g. saveProfileSettings) can show their error toast.
           throw failures[0].reason;
         }
+        set({ remoteSnapshot: snapshotOf(get()) });
       },
     }),
     {
@@ -432,7 +478,10 @@ export const useSettingsStore = create<SettingsState>()(
       // A cached `true` in localStorage would let a hidden feature flash into
       // view on production before the first /settings response lands.
       partialize: (state) => {
-        const { betaFeaturesEnabled: _beta, ...rest } = state;
+        // The beta gate is instance state; `remoteSnapshot` is a belief about
+        // the live server. Persisting either would let a stale value from a
+        // previous session decide what we skip writing today.
+        const { betaFeaturesEnabled: _beta, remoteSnapshot: _snapshot, ...rest } = state;
         return rest as unknown as Record<string, unknown>;
       },
       // Strip removed fields from persisted state so stale localStorage doesn't crash the app

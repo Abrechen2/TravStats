@@ -44,6 +44,7 @@ vi.mock("../../../store/settingsStore", () => ({
     setMap: vi.fn(),
     setCruise: vi.fn(),
     saveRemoteSettings: vi.fn().mockResolvedValue(undefined),
+    hasPendingChanges: () => false,
   }),
 }));
 
