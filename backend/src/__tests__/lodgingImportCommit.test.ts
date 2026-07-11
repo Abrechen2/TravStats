@@ -314,6 +314,40 @@ describe("commitLodgingImport", () => {
     expect(stay?.fxRateDate).toBeNull();
   });
 
+  it("degrades a single pair to lookupFailed when the FX service THROWS (not just returns null) — never sinks the batch", async () => {
+    frankfurterMock.convertToBase.mockImplementationOnce(async () => {
+      throw new Error("ECB feed unreachable");
+    });
+
+    const rows: CommitRowInput[] = [
+      {
+        sourceRowIndex: 0,
+        action: "create",
+        lodging: { name: "FX Throw Hotel" },
+        stay: { checkIn: "2026-12-10", checkOut: "2026-12-11", totalPrice: 200, currency: "EUR" },
+      },
+      { sourceRowIndex: 1, action: "create", lodging: { name: "FX Throw Companion" }, stay: null },
+    ];
+
+    const result = await commitLodgingImport(userId, "csv", "fx-throw.csv", rows);
+
+    // The batch as a whole still succeeds — no row failure, no orphaned batch.
+    expect(result.failed).toEqual([]);
+    expect(result.createdLodgings).toBe(2);
+    expect(result.createdStays).toBe(1);
+
+    const batch = await prisma.lodgingImportBatch.findUnique({ where: { id: result.batchId } });
+    expect(batch).not.toBeNull();
+
+    const stay = await prisma.lodgingStay.findFirst({ where: { batchId: result.batchId } });
+    expect(stay?.totalPrice).toBeCloseTo(200, 2);
+    // All four snapshot fields are null together — never a partial snapshot.
+    expect(stay?.totalPriceBase).toBeNull();
+    expect(stay?.fxRate).toBeNull();
+    expect(stay?.fxBaseCurrency).toBeNull();
+    expect(stay?.fxRateDate).toBeNull();
+  });
+
   // ---- Finding 1: raw exception messages must never reach a 201 response ----
 
   it("maps an unexpected Prisma error to the stable unexpected_error code — never leaks Prisma internals", async () => {
