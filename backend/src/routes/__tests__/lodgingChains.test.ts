@@ -107,5 +107,64 @@ describe("Lodging Chains API", () => {
       expect(second.status).toBe(200);
       expect(second.body.data.id).toBe(first.body.data.id);
     });
+
+    it("still creates a genuinely new chain name, flagged isUserAdded", async () => {
+      const countBefore = await prisma.lodgingChain.count();
+
+      const res = await request(app)
+        .post("/api/v1/lodging-chains")
+        .set("Cookie", authCookie)
+        .send({ name: "Totally Novel Chain Name" });
+      expect(res.status).toBe(201);
+      expect(res.body.data.isUserAdded).toBe(true);
+      createdChainIds.push(res.body.data.id);
+
+      const countAfter = await prisma.lodgingChain.count();
+      expect(countAfter).toBe(countBefore + 1);
+    });
+
+    it("matches an existing chain case-insensitively (lowercase variant), without creating a near-duplicate", async () => {
+      // "Hilton" is part of the real CSV-seeded catalog (see
+      // seedLodgingChainsFromCSV.ts) — look it up rather than creating it,
+      // so this test doesn't collide with (or delete) catalog data.
+      let seeded = await prisma.lodgingChain.findFirst({
+        where: { name: { equals: "Hilton", mode: "insensitive" } },
+      });
+      if (!seeded) {
+        seeded = await prisma.lodgingChain.create({ data: { name: "Hilton" } });
+        createdChainIds.push(seeded.id);
+      }
+      const countBefore = await prisma.lodgingChain.count();
+
+      const res = await request(app)
+        .post("/api/v1/lodging-chains")
+        .set("Cookie", authCookie)
+        .send({ name: "hilton" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.id).toBe(seeded.id);
+      expect(res.body.data.name).toBe(seeded.name); // catalog casing wins, not the user's spelling
+
+      const countAfter = await prisma.lodgingChain.count();
+      expect(countAfter).toBe(countBefore);
+    });
+
+    it("matches an existing chain case-insensitively (mixed-case variant), without creating a near-duplicate", async () => {
+      const seeded = await prisma.lodgingChain.create({ data: { name: "Hilton Mixed" } });
+      createdChainIds.push(seeded.id);
+      const countBefore = await prisma.lodgingChain.count();
+
+      const res = await request(app)
+        .post("/api/v1/lodging-chains")
+        .set("Cookie", authCookie)
+        .send({ name: "HILTON MIXED" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.id).toBe(seeded.id);
+      expect(res.body.data.name).toBe("Hilton Mixed");
+
+      const countAfter = await prisma.lodgingChain.count();
+      expect(countAfter).toBe(countBefore);
+    });
   });
 });
