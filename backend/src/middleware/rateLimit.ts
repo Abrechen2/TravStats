@@ -344,3 +344,29 @@ export const diagnosticExportLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
 });
+
+/**
+ * Rate limiter for the Immich image proxy. A single gallery render can
+ * request hundreds of tiles (thumbnails for every asset in a linked album),
+ * so this budget is deliberately generous — it exists to bound abuse, not
+ * normal browsing.
+ */
+export const immichProxyLimiter = rateLimit({
+  windowMs: RATE_LIMITS.IMMICH_PROXY_WINDOW_MS,
+  max: patAwareMax(RATE_LIMITS.IMMICH_PROXY_MAX),
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
+ * Rate limiter for Immich album import (rare, heavy — downloads every asset
+ * in an album to local storage). Consumed by a later task's import route.
+ */
+export const immichImportLimiter = rateLimit({
+  windowMs: RATE_LIMITS.IMMICH_IMPORT_WINDOW_MS,
+  max: patAwareMax(RATE_LIMITS.IMMICH_IMPORT_MAX),
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});

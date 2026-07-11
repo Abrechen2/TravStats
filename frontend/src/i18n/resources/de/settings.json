@@ -499,6 +499,9 @@
     "saved": "Anreicherungs-Einstellungen gespeichert",
     "saveFailed": "Fehler beim Speichern der Anreicherungs-Einstellungen"
   },
+  "externalServices": {
+    "title": "Externe Dienste"
+  },
   "apiKeys": {
     "title": "API-Schlüssel",
     "description": "Verwalte API-Schlüssel für externe Dienste. Vom Administrator geteilte Schlüssel werden automatisch verwendet.",

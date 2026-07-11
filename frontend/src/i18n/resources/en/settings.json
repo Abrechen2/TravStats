@@ -499,6 +499,9 @@
     "saved": "Enrichment settings saved successfully",
     "saveFailed": "Failed to save enrichment settings"
   },
+  "externalServices": {
+    "title": "External services"
+  },
   "apiKeys": {
     "title": "API Keys",
     "description": "Manage API keys for external services. Keys shared by the administrator are automatically used.",

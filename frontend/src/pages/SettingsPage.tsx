@@ -27,7 +27,9 @@ import AboutSection from "../components/Settings/AboutSection";
 import ImportSection from "../components/Settings/ImportSection";
 import FeaturesSection from "../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../components/Settings/CruisePreferencesSection";
+import ImmichConnectionCard from "../components/Settings/ImmichConnectionCard";
 import PasswordModal from "../components/Settings/PasswordModal";
+import { normalizeSectionId } from "../lib/sectionAliases";
 
 type TabId = "general" | "flight" | "cruise";
 
@@ -96,7 +98,10 @@ export default function SettingsPage(): JSX.Element {
       { id: "backup", label: t("settings:backup.title") || "Backup" },
       { id: "import", label: t("settings:import.title") || "Import" },
       { id: "autoupdate", label: t("settings:autoUpdate.title") || "Auto-Update" },
-      { id: "apikeys", label: t("settings:apiKeys.title") || "API Keys" },
+      {
+        id: "externalServices",
+        label: t("settings:externalServices.title") || "External services",
+      },
       { id: "devices", label: t("settings:devices.title") || "Devices" },
       { id: "apitokens", label: t("settings:apiTokens.title") || "API Tokens" },
       ...(user?.isAdmin ? [{ id: "admin", label: t("settings:admin.title") || "Admin" }] : []),
@@ -150,7 +155,7 @@ export default function SettingsPage(): JSX.Element {
       : null
   );
 
-  const initialSection = searchParams.get("section");
+  const initialSection = normalizeSectionId(searchParams.get("section"));
 
   const currentSections = sectionsByTab[activeTab];
   const [activeSection, setActiveSection] = useState<string>(
@@ -174,7 +179,7 @@ export default function SettingsPage(): JSX.Element {
   // before the tab refactor. Translate a matching hash to the correct tab
   // + section once on mount.
   useEffect(() => {
-    const hash = window.location.hash.slice(1);
+    const hash = normalizeSectionId(window.location.hash.slice(1));
     if (!hash) return;
     for (const tab of ["general", "flight", "cruise"] as TabId[]) {
       if (sectionsByTab[tab].some((s) => s.id === hash)) {
@@ -388,14 +393,17 @@ export default function SettingsPage(): JSX.Element {
                 onSave={saveHistoricalEnrichmentSettings}
               />
             )}
-            {activeSection === "apikeys" && (
-              <ApiKeysSection
-                apiKeysStatus={apiKeysStatus}
-                apiKeys={apiKeys}
-                loadingApiKeys={loadingApiKeys}
-                onSetApiKeys={setApiKeys}
-                onSave={saveApiKeys}
-              />
+            {activeSection === "externalServices" && (
+              <>
+                <ApiKeysSection
+                  apiKeysStatus={apiKeysStatus}
+                  apiKeys={apiKeys}
+                  loadingApiKeys={loadingApiKeys}
+                  onSetApiKeys={setApiKeys}
+                  onSave={saveApiKeys}
+                />
+                <ImmichConnectionCard />
+              </>
             )}
             {activeSection === "devices" && <DevicesSection />}
             {activeSection === "apitokens" && <ApiTokensSection />}

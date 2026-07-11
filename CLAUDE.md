@@ -182,8 +182,10 @@ frontend/src/
   any other). If a port is busy, ask the user to handle it.
 - **`any` is FORBIDDEN** — always use `unknown` + type guards. The only
   exception is `.d.ts` files.
-- **Pino logger** — no `console.log`. Import:
-  `import logger from '../utils/logger'`.
+- **Pino logger** — no `console.log`. `utils/logger.ts` exports the logger as a
+  **default** export, so import it as
+  `import logger from '../utils/logger'` (there is no named `logger` export;
+  the named exports are the category loggers like `httpLogger`, `parserLogger`).
 - **Prisma JSON fields** — cast via
   `as unknown as Prisma.InputJsonValue`, never directly from
   `Record<string, unknown>`.
@@ -271,6 +273,29 @@ frontend/src/
   `parsed.domain === 'cruise'` and call `parseCruiseBookingText` →
   `resolveCruiseEntities`). Sample booking emails for regression
   tests live under `test-samples/Kreuzfahrt-emails/`.
+- **Immich albums** — a trip links Immich albums in one of two modes.
+  **Link mode** stores zero bytes: images stream through an ownership- and
+  membership-checked proxy (`routes/immich/assetProxy.ts`) with browser ETag
+  caching. **Import mode** downloads originals into `getTripPhotoDir()` as
+  ordinary `TripPhoto` rows, idempotent via the `(tripId, immichAssetId)` unique
+  index. Three things that look wrong but are deliberate:
+  (1) `POST /resync` checks `isImportInFlight(linkId)` and resolves the
+  connection **before** resetting the job row to `pending` — reversing that order
+  clobbers a live `running` job and then strands it forever, because
+  `startAlbumImport` refuses an in-flight link.
+  (2) An ENV-provided connection counts as **shared** (`isShared = source !== "user"`),
+  deliberately diverging from `apiKeyResolver.hasApiKeyAccess`.
+  (3) `normalizeImmichBaseUrl` has **no egress restriction** on purpose — a
+  self-hosted Immich lives on the LAN, so a private-IP block would break the
+  primary use case. Instances that expose Immich configuration to untrusted users
+  must restrict it at the deployment layer.
+  Every Immich error body uses the fixed kind vocabulary
+  (`notConfigured|unreachable|auth|notFound|protocol|invalidUrl`) that the
+  frontend's `immichFailureKind()` parses — prose in `{error: …}` silently
+  degrades to a generic toast. `invalidUrl` (a rejected/malformed base URL, the
+  user's own typo) is deliberately distinct from `protocol` (Immich answered but
+  the payload/version was unexpected) so a URL typo does not send the user
+  debugging their server version.
 
 ## Code Style
 
@@ -334,7 +359,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **usage-stats** (4905 symbols, 12811 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **immich-albums** (4972 symbols, 12765 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -350,7 +375,7 @@ This project is indexed by GitNexus as **usage-stats** (4905 symbols, 12811 rela
 
 1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
 2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
-3. `READ gitnexus://repo/usage-stats/process/{processName}` — trace the full execution flow step by step
+3. `READ gitnexus://repo/immich-albums/process/{processName}` — trace the full execution flow step by step
 4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
 
 ## When Refactoring
@@ -389,10 +414,10 @@ This project is indexed by GitNexus as **usage-stats** (4905 symbols, 12811 rela
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/usage-stats/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/usage-stats/clusters` | All functional areas |
-| `gitnexus://repo/usage-stats/processes` | All execution flows |
-| `gitnexus://repo/usage-stats/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/immich-albums/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/immich-albums/clusters` | All functional areas |
+| `gitnexus://repo/immich-albums/processes` | All execution flows |
+| `gitnexus://repo/immich-albums/process/{name}` | Step-by-step execution trace |
 
 ## Self-Check Before Finishing
 

@@ -339,6 +339,11 @@ model UserSettings {
   openskyUsername     String? @map("opensky_username")
   openskyPassword     String? @map("opensky_password")
 
+  // Immich connection (base URL plain, API key encrypted at application level)
+  immichBaseUrl     String? @map("immich_base_url")
+  immichApiKey      String? @map("immich_api_key")
+  immichDefaultMode String  @default("link") @map("immich_default_mode")
+
   // Auto-update settings
   autoUpdateEnabled          Boolean @default(false) @map("auto_update_enabled")
   autoUpdateRequireApproval  Boolean @default(true) @map("auto_update_require_approval")
@@ -423,6 +428,10 @@ model AdminSettings {
   globalOpenskyClientSecret String? @map("global_opensky_client_secret")
   globalOpenskyUsername     String? @map("global_opensky_username")
   globalOpenskyPassword     String? @map("global_opensky_password")
+
+  // Global Immich connection (base URL plain, API key encrypted)
+  globalImmichBaseUrl String? @map("global_immich_base_url")
+  globalImmichApiKey  String? @map("global_immich_api_key")
 
   // User permissions
   allowUserApiKeys       Boolean @default(true) @map("allow_user_api_keys")
@@ -704,6 +713,7 @@ model Trip {
   stops          TripStop[]
   journalEntries TripJournalEntry[]
   photos         TripPhoto[]
+  immichAlbums   TripImmichAlbum[]
 
   @@index([userId])
   @@index([userId, status])
@@ -721,11 +731,62 @@ model TripPhoto {
   sortIdx   Int       @default(0) @map("sort_idx")
   createdAt DateTime  @default(now()) @map("created_at")
 
-  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  // Immich provenance — set only for photos imported from a linked album.
+  immichAssetId     String? @map("immich_asset_id")
+  immichAlbumLinkId String? @map("immich_album_link_id")
 
+  // EXIF coordinates (Phase C map layer). Populated on Immich import;
+  // best-effort for manual uploads.
+  lat Float?
+  lon Float?
+
+  trip        Trip             @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  immichAlbum TripImmichAlbum? @relation(fields: [immichAlbumLinkId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, immichAssetId])
   @@index([tripId])
   @@index([tripId, sortIdx])
+  @@index([immichAlbumLinkId])
   @@map("trip_photos")
+}
+
+model TripImmichAlbum {
+  id               String    @id @default(uuid())
+  tripId           String    @map("trip_id")
+  immichAlbumId    String    @map("immich_album_id")
+  albumName        String    @map("album_name")
+  assetCount       Int       @default(0) @map("asset_count")
+  thumbnailAssetId String?   @map("thumbnail_asset_id")
+  mode             String    @default("link")
+  sortIdx          Int       @default(0) @map("sort_idx")
+  lastSyncedAt     DateTime? @map("last_synced_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  trip      Trip             @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  photos    TripPhoto[]
+  importJob ImmichImportJob?
+
+  @@unique([tripId, immichAlbumId])
+  @@index([tripId])
+  @@map("trip_immich_albums")
+}
+
+model ImmichImportJob {
+  id              String    @id @default(uuid())
+  albumLinkId     String    @unique @map("album_link_id")
+  status          String    @default("pending") // pending | running | completed | failed
+  totalAssets     Int       @default(0) @map("total_assets")
+  processedAssets Int       @default(0) @map("processed_assets")
+  failedAssets    Int       @default(0) @map("failed_assets")
+  error           String?
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  albumLink TripImmichAlbum @relation(fields: [albumLinkId], references: [id], onDelete: Cascade)
+
+  @@map("immich_import_jobs")
 }
 
 model TripStop {
