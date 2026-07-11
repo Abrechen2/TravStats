@@ -500,8 +500,7 @@
     "saveFailed": "Fehler beim Speichern der Anreicherungs-Einstellungen"
   },
   "externalServices": {
-    "title": "Externe Dienste",
-    "description": "Verbindungen zu externen Diensten — API-Schlüssel für Flugdaten und deine Immich-Instanz. Vom Administrator bereitgestellte Verbindungen werden automatisch verwendet."
+    "title": "Externe Dienste"
   },
   "apiKeys": {
     "title": "API-Schlüssel",
