@@ -1,4 +1,4 @@
-import { Client, ForumChannel, ThreadChannel } from "discord.js";
+import { Client, ForumChannel, TextChannel, ThreadChannel } from "discord.js";
 import { log } from "./log.js";
 
 /**
@@ -43,6 +43,32 @@ export function resolveThread(threads: ThreadChannel[], query: string): ThreadCh
   return null;
 }
 
+/** `resolveThread` without the diagnostics, for use as the first of two lookups. */
+function resolveThreadQuietly(threads: ThreadChannel[], query: string): ThreadChannel | null {
+  const byId = threads.find((t) => t.id === query);
+  if (byId) return byId;
+  const needle = query.toLowerCase();
+  const matches = threads.filter((t) => t.name.toLowerCase().includes(needle));
+  return matches.length === 1 ? matches[0] : null;
+}
+
+/**
+ * Resolve a plain text channel (e.g. #general) by id or exact name. Deliberately
+ * stricter than the thread lookup: a substring match across channel names would
+ * happily resolve "general" to some unrelated "#general-dev", and posting to the
+ * wrong public channel is not undoable in any way that matters.
+ */
+function resolveTextChannel(
+  guild: { channels: { cache: Map<string, unknown> } },
+  query: string
+): TextChannel | null {
+  const needle = query.replace(/^#/, "").toLowerCase();
+  const channels = [...guild.channels.cache.values()].filter(
+    (c): c is TextChannel => c instanceof TextChannel
+  );
+  return channels.find((c) => c.id === query || c.name.toLowerCase() === needle) ?? null;
+}
+
 /**
  * Post a reply message into a forum thread (e.g. a #bug-report post) identified
  * by id or title substring, then disconnect. One-shot per invocation. With
@@ -73,20 +99,27 @@ export async function runReply(
       }
 
       const threads = await collectForumThreads(forums);
-      const thread = resolveThread(threads, threadQuery);
-      if (!thread) {
+      // Forum threads first — that is the common case. But conversations also
+      // happen in plain text channels (#general), and a follow-up owes the
+      // reporter an answer wherever they raised it, so fall back to matching a
+      // text channel by name before giving up.
+      const target: ThreadChannel | TextChannel | null =
+        resolveThreadQuietly(threads, threadQuery) ?? resolveTextChannel(full, threadQuery);
+
+      if (!target) {
+        resolveThread(threads, threadQuery); // re-run for its diagnostic output
         process.exitCode = 1;
         return;
       }
 
       if (dryRun) {
-        log(`[dry-run] would post to "${thread.name}" (id ${thread.id}):`);
+        log(`[dry-run] would post to "${target.name}" (id ${target.id}):`);
         log(`[dry-run] ${message}`);
         return;
       }
 
-      const sent = await thread.send(message);
-      log(`Posted reply to "${thread.name}" (id ${thread.id}): ${sent.url}`);
+      const sent = await target.send(message);
+      log(`Posted reply to "${target.name}" (id ${target.id}): ${sent.url}`);
     } catch (err) {
       log(`ERROR: ${err instanceof Error ? err.message : String(err)}`);
       process.exitCode = 1;
