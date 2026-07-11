@@ -95,6 +95,23 @@
         },
         "swatchFlown": "geflogen",
         "swatchPlanned": "geplant"
+      },
+      "cruiseColorMode": {
+        "label": "Färbung",
+        "status": {
+          "label": "Status",
+          "hint": "Zwei Farben: gefahren und geplant."
+        },
+        "perCruise": {
+          "label": "Pro Reise",
+          "hint": "Jede Reise bekommt eine eigene Farbe. In der Ansicht „Alle“ teilen sich diese Farben die Karte mit den Flugfarben und können mit ihnen konkurrieren."
+        },
+        "solid": {
+          "label": "Einfarbig",
+          "hint": "Eine Farbe für alle Kreuzfahrt-Routen."
+        },
+        "swatchSailed": "gefahren",
+        "swatchPlanned": "geplant"
       }
     },
     "timesFlown": "{{count}}x geflogen",

@@ -10,7 +10,7 @@
 import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
-  AppearanceSection,
+  CruiseAppearanceSection,
   FlightAppearanceSection,
   SectionLabel,
   SegControl,
@@ -21,10 +21,9 @@ import {
   BORDER,
   TEXT,
   type AppearanceDomain,
-  type DomainAppearanceState,
+  type CruiseAppearanceState,
   type FlightAppearanceState,
 } from "./controlPanelKit";
-import { DEFAULT_CRUISE_ROUTE_COLOR } from "../Globe/buildGlobeLayers";
 import { MapChromeSections } from "./MapChromeSections";
 import type { LabelsMode } from "./labelPriority";
 
@@ -47,7 +46,7 @@ export interface FlatMapControlPanelProps {
   /** Which domain appearance sections to show, in render order. */
   appearanceDomains: readonly AppearanceDomain[];
   flightAppearance: FlightAppearanceState;
-  cruiseAppearance: DomainAppearanceState;
+  cruiseAppearance: CruiseAppearanceState;
 }
 
 export function FlatMapControlPanel({
@@ -123,8 +122,13 @@ export function FlatMapControlPanel({
             </div>
             {/* Marker labels: off / key markers only / all */}
             <div className="mt-2">
-              <div className="mb-1 flex items-center gap-2 px-1 text-xs font-medium" style={{ color: TEXT }}>
-                <span aria-hidden style={{ opacity: 0.9 }}>🏷️</span>
+              <div
+                className="mb-1 flex items-center gap-2 px-1 text-xs font-medium"
+                style={{ color: TEXT }}
+              >
+                <span aria-hidden style={{ opacity: 0.9 }}>
+                  🏷️
+                </span>
                 {t("map:globe.panel.labels")}
               </div>
               <SegControl<LabelsMode>
@@ -179,27 +183,15 @@ export function FlatMapControlPanel({
             />
           )}
           {appearanceDomains.includes("cruise") && (
-            <AppearanceSection
+            <CruiseAppearanceSection
               title={t("map:globe.panel.domainCruise")}
-              routeLabel={t("map:globe.panel.routes")}
-              routeColor={cruiseAppearance.routeColor}
-              routeDefault={DEFAULT_CRUISE_ROUTE_COLOR}
-              onRouteColorChange={cruiseAppearance.onRouteColorChange}
-              routeAutoLabel={t("map:globe.panel.standard")}
-              widthLabel={t("map:globe.panel.width")}
-              routeWidth={cruiseAppearance.routeWidth}
-              onRouteWidthChange={cruiseAppearance.onRouteWidthChange}
-              markerLabel={t("map:globe.panel.ports")}
-              markerColor={cruiseAppearance.markerColor}
+              {...cruiseAppearance}
               markerDefault={CRUISE_MARKER_DEFAULT}
-              onMarkerColorChange={cruiseAppearance.onMarkerColorChange}
+              markerLabel={t("map:globe.panel.ports")}
               markerAutoLabel={t("map:globe.panel.auto")}
+              widthLabel={t("map:globe.panel.width")}
               sizeLabel={t("map:globe.panel.size")}
-              markerSize={cruiseAppearance.markerSize}
-              onMarkerSizeChange={cruiseAppearance.onMarkerSizeChange}
               arrowLabel={t("map:globe.panel.arrows")}
-              arrowScale={cruiseAppearance.arrowScale}
-              onArrowScaleChange={cruiseAppearance.onArrowScaleChange}
             />
           )}
         </div>

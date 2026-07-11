@@ -95,6 +95,23 @@
         },
         "swatchFlown": "flown",
         "swatchPlanned": "planned"
+      },
+      "cruiseColorMode": {
+        "label": "Colouring",
+        "status": {
+          "label": "Status",
+          "hint": "Two colours: sailed and planned."
+        },
+        "perCruise": {
+          "label": "Per cruise",
+          "hint": "Each cruise gets its own colour. In the \"All\" view these colours share the map with the flight colours and can compete with them."
+        },
+        "solid": {
+          "label": "Solid",
+          "hint": "One colour for every cruise route."
+        },
+        "swatchSailed": "sailed",
+        "swatchPlanned": "planned"
       }
     },
     "timesFlown": "Flown {{count}}x",

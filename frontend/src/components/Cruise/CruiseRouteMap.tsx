@@ -7,11 +7,18 @@ import type { Cruise } from "../../types";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 import { createCruiseArcsLayer, createCruiseArrowsLayer } from "../layers/cruiseArcsLayer";
 import { createCruisePortsLayer } from "../layers/cruisePortsLayer";
+import { DEFAULT_CRUISE_COLORS, type CruiseColorConfig } from "../../lib/cruiseColor";
 import { computeBbox } from "../../utils/mapAnimationHelpers";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 
 const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+
+/** The detail map shows ONE cruise — always in that cruise's own hue. */
+const DETAIL_MAP_COLOR_CONFIG: CruiseColorConfig = {
+  mode: "perCruise",
+  colors: DEFAULT_CRUISE_COLORS,
+};
 
 const INITIAL_VIEW: MapViewState = {
   longitude: 10,
@@ -82,13 +89,17 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   );
 
   const layers: Layer[] = useMemo(() => {
+    // The cruise DETAIL map, not a dashboard view: it shows exactly one cruise,
+    // so it always paints that cruise's own hue. It has no control panel and
+    // deliberately does not follow the dashboard's cruise colour mode — a
+    // per-cruise page showing the cruise's own colour needs no user setting.
     const arcsLayer = createCruiseArcsLayer([cruise], geometryMap, null, undefined, {
       zoom,
-      colorMode: "perCruise",
+      colorConfig: DETAIL_MAP_COLOR_CONFIG,
     });
     const arrowsLayer = createCruiseArrowsLayer([cruise], geometryMap, null, {
       zoom,
-      colorMode: "perCruise",
+      colorConfig: DETAIL_MAP_COLOR_CONFIG,
     });
     const portsLayers = createCruisePortsLayer([cruise], zoom);
     return [
