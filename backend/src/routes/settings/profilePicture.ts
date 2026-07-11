@@ -145,6 +145,57 @@ router.post(
 );
 
 /**
+ * DELETE /api/v1/settings/profile-picture
+ * Remove the current user's avatar: null the settings field first, then
+ * delete the file (same commit-before-cleanup order as the upload's
+ * replacement path). Idempotent — deleting with no avatar set is a 200
+ * no-op, so the UI never has to special-case "was there one?".
+ */
+router.delete(
+  '/',
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const existing = await prisma.userSettings.findUnique({ where: { userId } });
+      const existingData =
+        typeof existing?.data === 'object' && existing.data !== null
+          ? (existing.data as SettingsDataJson)
+          : {};
+      const previousUrl = existingData.profile?.profilePicture;
+
+      if (existing && previousUrl) {
+        const merged: SettingsDataJson = {
+          ...existingData,
+          profile: {
+            ...existingData.profile,
+            profilePicture: null,
+          },
+        };
+        await prisma.userSettings.update({
+          where: { userId },
+          data: { data: merged as Prisma.InputJsonValue },
+        });
+      }
+
+      if (
+        previousUrl &&
+        typeof previousUrl === 'string' &&
+        previousUrl.startsWith('/api/v1/settings/profile-picture/')
+      ) {
+        const previousFilename = previousUrl.split('/').pop();
+        if (previousFilename) {
+          deleteProfilePictureFile(previousFilename);
+        }
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
  * GET /api/v1/settings/profile-picture/:filename
  * Serve an uploaded avatar. Ownership is enforced from the filename itself
  * — the requesting user's id is baked in as the prefix at upload time

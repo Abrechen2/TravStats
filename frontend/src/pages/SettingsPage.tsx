@@ -57,8 +57,10 @@ export default function SettingsPage(): JSX.Element {
     setCruise,
     savingProfile,
     uploadingProfilePicture,
+    removingProfilePicture,
     saveProfileSettings,
     handleAvatarUpload,
+    handleAvatarDelete,
     showPasswordModal,
     changingPassword,
     passwordForm,
@@ -384,8 +386,10 @@ export default function SettingsPage(): JSX.Element {
                 profile={profile}
                 savingProfile={savingProfile}
                 uploadingProfilePicture={uploadingProfilePicture}
+                removingProfilePicture={removingProfilePicture}
                 onSaveProfile={saveProfileSettings}
                 onAvatarUpload={handleAvatarUpload}
+                onAvatarDelete={handleAvatarDelete}
                 onSetProfile={setProfile}
                 onShowPasswordModal={() => setShowPasswordModal(true)}
               />

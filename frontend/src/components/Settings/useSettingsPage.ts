@@ -54,6 +54,7 @@ export function useSettingsPage() {
   // Profile
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingProfilePicture, setUploadingProfilePicture] = useState(false);
+  const [removingProfilePicture, setRemovingProfilePicture] = useState(false);
 
   // Password modal
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -239,6 +240,23 @@ export function useSettingsPage() {
     }
   };
 
+  const handleAvatarDelete = async () => {
+    setRemovingProfilePicture(true);
+    try {
+      await settingsApi.deleteProfilePicture();
+      // `undefined`, not `null`: the auto-save serializes the profile slice,
+      // and an omitted key can never re-fail the general PUT's URL validation.
+      setProfile({ profilePicture: undefined });
+      addToast("success", t("settings:profile.removeSuccess"));
+    } catch (error: unknown) {
+      logger.error("Failed to remove profile picture:", error);
+      const axiosError = error as { response?: { data?: { error?: string } } };
+      addToast("error", axiosError.response?.data?.error || t("settings:profile.removeError"));
+    } finally {
+      setRemovingProfilePicture(false);
+    }
+  };
+
   const handlePasswordChange = async () => {
     setPasswordError("");
     if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
@@ -374,8 +392,10 @@ export function useSettingsPage() {
     // Profile
     savingProfile,
     uploadingProfilePicture,
+    removingProfilePicture,
     saveProfileSettings,
     handleAvatarUpload,
+    handleAvatarDelete,
     // Password modal
     showPasswordModal,
     setShowPasswordModal,
