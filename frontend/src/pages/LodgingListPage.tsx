@@ -2,14 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import NavigationBar from "../components/NavigationBar";
+import { LodgingStatStrip } from "../components/Dashboard/tabs/lodging/LodgingStatStrip";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
+import { StarRating } from "../components/lodging/StarRating";
 import { useTranslation } from "../hooks/useTranslation";
-import { listLodgings } from "../lib/api/lodging";
+import { getLodgingStats, listLodgings } from "../lib/api/lodging";
 import { formatCurrency } from "../lib/units";
-import { formatRatingText } from "../lib/lodgingFormat";
+import { hasAnyPrice, singleOriginalCurrencySpend } from "../lib/lodgingFormat";
+import { FlagImg, resolveCountryCode } from "../lib/countryFlag";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
-import type { Lodging, LodgingListQuery, LodgingType } from "../types/lodging";
+import type { Lodging, LodgingListQuery, LodgingStats, LodgingType } from "../types/lodging";
 
 type TypeFilter = LodgingType | "all";
 type YearFilter = number | "all";
@@ -36,6 +39,7 @@ export default function LodgingListPage(): JSX.Element {
   // client-side would silently produce a different, wrong order).
   const [baseline, setBaseline] = useState<Lodging[]>([]);
   const [rows, setRows] = useState<Lodging[]>([]);
+  const [stats, setStats] = useState<LodgingStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<boolean>(false);
   const [showAdd, setShowAdd] = useState<boolean>(false);
@@ -50,6 +54,9 @@ export default function LodgingListPage(): JSX.Element {
     void listLodgings({})
       .then(setBaseline)
       .catch((err: unknown) => logger.error("LodgingListPage: baseline fetch failed", err));
+    void getLodgingStats()
+      .then(setStats)
+      .catch((err: unknown) => logger.error("LodgingListPage: stats fetch failed", err));
   }, []);
 
   const reload = useCallback(async (): Promise<void> => {
@@ -80,6 +87,9 @@ export default function LodgingListPage(): JSX.Element {
       listLodgings({})
         .then(setBaseline)
         .catch((err: unknown) => logger.error("LodgingListPage: baseline reload failed", err)),
+      getLodgingStats()
+        .then(setStats)
+        .catch((err: unknown) => logger.error("LodgingListPage: stats reload failed", err)),
     ]);
   }, [reload]);
 
@@ -228,6 +238,8 @@ export default function LodgingListPage(): JSX.Element {
           </button>
         </div>
 
+        {stats && <LodgingStatStrip stats={stats} variant="inline" />}
+
         {loading ? (
           <div className="text-[var(--text-muted)]">{t("lodging:list.loading")}</div>
         ) : loadError ? (
@@ -272,15 +284,22 @@ export default function LodgingListPage(): JSX.Element {
                       {l.chain?.name ?? t("lodging:field.independent")}
                     </td>
                     <td className="px-3 py-2 text-[var(--text-muted)]">
-                      {[l.city, l.country].filter(Boolean).join(", ") || "—"}
+                      {l.city || l.country ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span>{l.city || l.country}</span>
+                          <FlagImg country={resolveCountryCode(l.country)} height={12} />
+                        </span>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="px-3 py-2 text-right">{l.stayCount}</td>
                     <td className="px-3 py-2 text-right">{l.nights}</td>
-                    <td className="px-3 py-2" style={{ color: "var(--star)" }}>
-                      {formatRatingText(l.overallRating)}
+                    <td className="px-3 py-2">
+                      <StarRating value={l.overallRating} />
                     </td>
                     <td className="px-3 py-2 text-right">
-                      {formatCurrency(l.totalSpendBase, baseCurrency)}
+                      <LodgingSpendCell lodging={l} baseCurrency={baseCurrency} />
                       {hasOtherBaseCurrencySpend(l.totalSpendBaseByCurrency, baseCurrency) && (
                         <span
                           className="ml-1 align-super text-[10px] text-[var(--text-muted)]"
@@ -325,4 +344,33 @@ function hasOtherBaseCurrencySpend(
   currentBaseCurrency: string,
 ): boolean {
   return Object.keys(byCurrency).some((currency) => currency !== currentBaseCurrency);
+}
+
+/**
+ * Spend column body for one list row (mockup screen ①): the original
+ * currency amount with the converted total underneath when every priced
+ * stay shares one non-base currency (e.g. "840 CHF" / "≈ 883 €"), the plain
+ * converted total when spend is already base-currency or mixed, and "—"
+ * (never "0 €") when nothing on this lodging has a recorded price at all.
+ */
+function LodgingSpendCell({
+  lodging,
+  baseCurrency,
+}: {
+  lodging: Lodging;
+  baseCurrency: string;
+}): JSX.Element {
+  if (!hasAnyPrice(lodging.stays)) return <>—</>;
+
+  const original = singleOriginalCurrencySpend(lodging.stays, baseCurrency);
+  if (!original) return <>{formatCurrency(lodging.totalSpendBase, baseCurrency)}</>;
+
+  return (
+    <>
+      <div>{formatCurrency(original.amount, original.currency)}</div>
+      <div className="text-[10px]" style={{ color: "var(--fx, #6ab7d8)" }}>
+        ≈ {formatCurrency(lodging.totalSpendBase, baseCurrency)}
+      </div>
+    </>
+  );
 }

@@ -114,7 +114,7 @@ export function ChainPicker({ value, onChange }: ChainPickerProps): JSX.Element 
             onClick={handleClear}
             className="whitespace-nowrap text-xs text-[var(--text-muted)] hover:underline"
           >
-            {t("lodging:field.independent")}
+            {t("lodging:chainPicker.clear")}
           </button>
         )}
       </div>
