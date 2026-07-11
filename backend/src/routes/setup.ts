@@ -9,6 +9,7 @@ import { getSeedingStatus } from '../services/airportSeedingService';
 import { updateInstanceSettings } from '../services/instanceSettingsService';
 import { authLimiter } from '../middleware/rateLimit';
 import { DOMAIN_KEYS, type DomainKey } from '../shared/domains';
+import logger from '../utils/logger';
 
 const initializeSchema = z.object({
   username: z.string().min(1, 'Username is required').max(50),
@@ -21,6 +22,7 @@ const initializeSchema = z.object({
     .array(z.enum(DOMAIN_KEYS as unknown as [DomainKey, ...DomainKey[]]))
     .optional()
     .default(['flight']),
+  usageStatsConsent: z.enum(['granted', 'denied']).optional(),
 });
 
 const router = Router();
@@ -62,6 +64,7 @@ router.post('/initialize', authLimiter, async (req: Request, res: Response, next
       maxUsers,
       allowRegistration,
       enabledDomains,
+      usageStatsConsent,
     } = validated;
 
     // Check if setup already completed (admin exists)
@@ -104,6 +107,18 @@ router.post('/initialize', authLimiter, async (req: Request, res: Response, next
       ...(maxUsers !== undefined && { maxUsers }),
       ...(allowRegistration !== undefined && { allowRegistration }),
     });
+
+    // Apply the first-boot usage-stats consent choice. This must never fail the
+    // install: applyConsentChange already swallows its own network errors, but a
+    // DB error inside setConsent must not abort an otherwise-successful setup.
+    if (usageStatsConsent) {
+      try {
+        const { applyConsentChange } = await import('./admin/usageStats');
+        await applyConsentChange(usageStatsConsent);
+      } catch (error) {
+        logger.debug({ error }, 'usage-stats consent could not be applied during setup');
+      }
+    }
 
     // Generate token and set HttpOnly cookie for automatic login
     const token = generateToken(user.id);
