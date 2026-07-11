@@ -1,20 +1,12 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
-import { Slider, AppearanceSection, FlightAppearanceSection } from "./controlPanelKit";
+import { Slider, CruiseAppearanceSection, FlightAppearanceSection } from "./controlPanelKit";
 import { DEFAULT_FLIGHT_COLOR_CONFIG, FLIGHT_COLOR_MODES } from "../../lib/flightColor";
+import { CRUISE_COLOR_MODES, DEFAULT_CRUISE_COLOR_CONFIG } from "../../lib/cruiseColor";
 
 describe("Slider", () => {
   it("renders a range input with the value and formatted readout", () => {
-    render(
-      <Slider
-        label="Stärke"
-        value={1.4}
-        min={0.3}
-        max={2}
-        step={0.1}
-        onChange={() => {}}
-      />
-    );
+    render(<Slider label="Stärke" value={1.4} min={0.3} max={2} step={0.1} onChange={() => {}} />);
     const input = screen.getByRole("slider") as HTMLInputElement;
     expect(input.value).toBe("1.4");
     expect(screen.getByText("1.4×")).toBeTruthy();
@@ -22,9 +14,7 @@ describe("Slider", () => {
 
   it("emits a parsed number on change", () => {
     const onChange = vi.fn();
-    render(
-      <Slider label="x" value={1} min={0} max={2} step={0.1} onChange={onChange} />
-    );
+    render(<Slider label="x" value={1} min={0} max={2} step={0.1} onChange={onChange} />);
     fireEvent.change(screen.getByRole("slider"), { target: { value: "0.5" } });
     expect(onChange).toHaveBeenCalledWith(0.5);
   });
@@ -45,13 +35,13 @@ describe("Slider", () => {
   });
 });
 
-const baseSectionProps = {
+// The cruise section is rendered by BOTH control panels (globe + flat map)
+// from this one component, so they cannot drift on which controls exist.
+const cruiseSectionProps = {
   title: "Kreuzfahrten",
-  routeLabel: "Routen",
-  routeColor: null,
-  routeDefault: [111, 160, 214] as [number, number, number],
-  onRouteColorChange: () => {},
-  routeAutoLabel: "Standard",
+  colorConfig: DEFAULT_CRUISE_COLOR_CONFIG,
+  onColorModeChange: () => {},
+  onColorChange: () => {},
   widthLabel: "Stärke",
   routeWidth: 1,
   onRouteWidthChange: () => {},
@@ -65,14 +55,73 @@ const baseSectionProps = {
   onMarkerSizeChange: () => {},
 };
 
-describe("AppearanceSection arrow slider", () => {
-  it("renders the arrow slider only when arrow props are provided", () => {
-    const { rerender } = render(<AppearanceSection {...baseSectionProps} />);
+describe("CruiseAppearanceSection", () => {
+  it("offers every cruise colour mode as an explicit choice — including 'Pro Reise', which used to be invisible", () => {
+    render(<CruiseAppearanceSection {...cruiseSectionProps} />);
+    // i18n is not initialised in this unit test, so t() echoes the key —
+    // asserting on the key still proves each mode has its own control.
+    for (const mode of CRUISE_COLOR_MODES) {
+      expect(screen.getByText(`map:globe.panel.cruiseColorMode.${mode}.label`)).toBeTruthy();
+    }
+  });
+
+  it("emits the picked mode", () => {
+    const onColorModeChange = vi.fn();
+    render(
+      <CruiseAppearanceSection {...cruiseSectionProps} onColorModeChange={onColorModeChange} />
+    );
+    fireEvent.click(screen.getByText("map:globe.panel.cruiseColorMode.perCruise.label"));
+    expect(onColorModeChange).toHaveBeenCalledWith("perCruise");
+  });
+
+  it("shows TWO colour rows in status mode, ONE in solid, and NONE in perCruise", () => {
+    const { rerender } = render(<CruiseAppearanceSection {...cruiseSectionProps} />);
+    expect(screen.getByText("map:globe.panel.cruiseColorMode.swatchSailed")).toBeTruthy();
+    expect(screen.getByText("map:globe.panel.cruiseColorMode.swatchPlanned")).toBeTruthy();
+
+    rerender(
+      <CruiseAppearanceSection
+        {...cruiseSectionProps}
+        colorConfig={{ ...DEFAULT_CRUISE_COLOR_CONFIG, mode: "solid" }}
+      />
+    );
+    expect(screen.queryByText("map:globe.panel.cruiseColorMode.swatchSailed")).toBeNull();
+    expect(screen.getByText("map:globe.panel.routes")).toBeTruthy();
+
+    // perCruise has no colour to set — the colours come from the cruises.
+    rerender(
+      <CruiseAppearanceSection
+        {...cruiseSectionProps}
+        colorConfig={{ ...DEFAULT_CRUISE_COLOR_CONFIG, mode: "perCruise" }}
+      />
+    );
+    expect(screen.queryByText("map:globe.panel.cruiseColorMode.swatchSailed")).toBeNull();
+    expect(screen.queryByText("map:globe.panel.routes")).toBeNull();
+    // …but it does warn that per-cruise hues compete with the flight colours
+    // in the "Alle" view.
+    expect(screen.getByText("map:globe.panel.cruiseColorMode.perCruise.hint")).toBeTruthy();
+  });
+
+  it("emits the slot the active mode actually uses", () => {
+    const onColorChange = vi.fn();
+    render(
+      <CruiseAppearanceSection
+        {...cruiseSectionProps}
+        colorConfig={{ ...DEFAULT_CRUISE_COLOR_CONFIG, mode: "solid" }}
+        onColorChange={onColorChange}
+      />
+    );
+    fireEvent.click(screen.getByLabelText("rgb(126,200,122)"));
+    expect(onColorChange).toHaveBeenCalledWith("solid", [126, 200, 122]);
+  });
+
+  it("renders the arrow slider only when arrow props are provided (flat map only)", () => {
+    const { rerender } = render(<CruiseAppearanceSection {...cruiseSectionProps} />);
     expect(screen.queryByText("Pfeile")).toBeNull();
 
     rerender(
-      <AppearanceSection
-        {...baseSectionProps}
+      <CruiseAppearanceSection
+        {...cruiseSectionProps}
         arrowLabel="Pfeile"
         arrowScale={1}
         onArrowScaleChange={() => {}}
@@ -82,7 +131,7 @@ describe("AppearanceSection arrow slider", () => {
   });
 
   it("renders width + size as sliders (range inputs)", () => {
-    render(<AppearanceSection {...baseSectionProps} />);
+    render(<CruiseAppearanceSection {...cruiseSectionProps} />);
     expect(screen.getAllByRole("slider").length).toBe(2);
   });
 });

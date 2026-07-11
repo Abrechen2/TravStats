@@ -11,6 +11,12 @@
 
 import type { LabelsMode } from "./labelPriority";
 import {
+  cruiseColorFromStored,
+  type CruiseColorConfig,
+  type CruiseColorMode,
+  type CruiseColors,
+} from "../../lib/cruiseColor";
+import {
   flightColorFromStored,
   type FlightColorConfig,
   type FlightColorMode,
@@ -43,6 +49,16 @@ export interface MapAppearance {
   airportColor?: [number, number, number] | null;
   flightMarkerSize?: number;
   // Cruise domain
+  /** How cruise routes are coloured + the user's colour per slot. Owned by
+   *  `store/cruiseColorStore.ts`; both maps and the dashboard legend read it
+   *  from there so they can never disagree. */
+  cruiseColorMode?: CruiseColorMode;
+  cruiseColors?: CruiseColors;
+  /**
+   * @deprecated Pre-mode single colour override (null = the tab decided the
+   * mode). Still READ once, to migrate an existing user forward into
+   * `cruiseColorMode` (see `cruiseColorFromStored`); never written again.
+   */
   cruiseRouteColor?: [number, number, number] | null;
   cruiseRouteWidth?: number;
   portColor?: [number, number, number] | null;
@@ -159,6 +175,19 @@ export function loadMapAppearance(): MapAppearance {
  */
 export function loadFlightColorConfig(): FlightColorConfig {
   return flightColorFromStored(loadMapAppearance() as unknown as Record<string, unknown>);
+}
+
+/**
+ * The cruise colour config from the persisted blob, migrating the legacy
+ * `cruiseRouteColor` field on first read:
+ *   - `cruiseRouteColor: <rgb>`  → "solid" with that colour (a deliberate pick)
+ *   - `cruiseRouteColor: null`   → "status" with the default (blue / cyan) pair
+ *   - nothing stored             → "status" with the default pair
+ * See the migration comment in `lib/cruiseColor.ts` for the trade-off (the
+ * Kreuzfahrten tab's implicit per-cruise colouring is not preserved).
+ */
+export function loadCruiseColorConfig(): CruiseColorConfig {
+  return cruiseColorFromStored(loadMapAppearance() as unknown as Record<string, unknown>);
 }
 
 /**

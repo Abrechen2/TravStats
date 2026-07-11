@@ -25,8 +25,8 @@ import {
   createCruiseArcsLayer,
   createCruiseArrowsLayer,
   type CruiseGeometryMap,
-  type CruiseColorMode,
 } from "./layers/cruiseArcsLayer";
+import { useCruiseColorStore } from "../store/cruiseColorStore";
 import { createCruisePortsLayer } from "./layers/cruisePortsLayer";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
 import { TimeSlider } from "./TimeSlider";
@@ -110,9 +110,6 @@ interface DeckGLMapProps {
   extraLayers?: Layer[];
   /** Which domain appearance sections the control panel exposes. */
   appearanceDomains?: readonly AppearanceDomain[];
-  /** Color strategy for cruise arcs/arrows: shared two-tone by status, or
-   *  a distinct hue per cruise. Defaults to `"status"`. */
-  cruiseColorMode?: CruiseColorMode;
 }
 
 export function DeckGLMap({
@@ -127,7 +124,6 @@ export function DeckGLMap({
   cruises = [],
   extraLayers,
   appearanceDomains = ["flight", "cruise"],
-  cruiseColorMode = "status",
 }: DeckGLMapProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
@@ -142,15 +138,19 @@ export function DeckGLMap({
   const flightColorConfig = useFlightColorStore((s) => s.config);
   const setFlightColorMode = useFlightColorStore((s) => s.setMode);
   const setFlightColor = useFlightColorStore((s) => s.setColor);
+  // Same deal for cruises: the mode + colours live in one store the globe, both
+  // panels and the dashboard legend read too. The mode used to be a hardcoded
+  // prop per dashboard tab — the user had no say and never saw "Pro Reise".
+  const cruiseColorConfig = useCruiseColorStore((s) => s.config);
+  const setCruiseColorMode = useCruiseColorStore((s) => s.setMode);
+  const setCruiseColor = useCruiseColorStore((s) => s.setColor);
   const mapRef = useRef<MapRef>(null);
 
   const [mapLoaded, setMapLoaded] = useState(false);
   // Flat-map appearance customisation (mirrors the globe's "Anpassung"
   // panel) + style-level overlays, persisted so the look survives reloads.
   // `markerColor === null` keeps the theme airport-dot colour.
-  const [styleId, setStyleId] = useState<FlatStyleId>(
-    () => loadMapAppearance().styleId ?? "dark"
-  );
+  const [styleId, setStyleId] = useState<FlatStyleId>(() => loadMapAppearance().styleId ?? "dark");
   // Flight-domain appearance. The route COLOUR lives in the flight-colour
   // store above (mode + colours); only shape / width / marker settings are local.
   //
@@ -170,10 +170,8 @@ export function DeckGLMap({
   const [flightMarkerSize, setFlightMarkerSize] = useState<number>(
     () => loadMapAppearance().flightMarkerSize ?? 1
   );
-  // Cruise-domain appearance.
-  const [cruiseRouteColor, setCruiseRouteColor] = useState<[number, number, number] | null>(
-    () => loadMapAppearance().cruiseRouteColor ?? null
-  );
+  // Cruise-domain appearance. The route COLOUR lives in the cruise-colour store
+  // above (mode + colours); only width / marker / arrow settings are local.
   const [cruiseRouteWidth, setCruiseRouteWidth] = useState<number>(
     () => loadMapAppearance().cruiseRouteWidth ?? 1
   );
@@ -202,7 +200,6 @@ export function DeckGLMap({
       flightRouteWidth,
       airportColor: markerColor,
       flightMarkerSize,
-      cruiseRouteColor,
       cruiseRouteWidth,
       portColor,
       cruiseMarkerSize,
@@ -217,7 +214,6 @@ export function DeckGLMap({
     flightRouteWidth,
     markerColor,
     flightMarkerSize,
-    cruiseRouteColor,
     cruiseRouteWidth,
     portColor,
     cruiseMarkerSize,
@@ -596,10 +592,9 @@ export function DeckGLMap({
     const geometryMap: CruiseGeometryMap = cruiseGeometry;
     const cruiseArcAppearance = {
       zoom,
-      arcColor: cruiseRouteColor ?? undefined,
       arcWidthScale: cruiseRouteWidth,
       arrowSizeScale: cruiseArrowScale,
-      colorMode: cruiseColorMode,
+      colorConfig: cruiseColorConfig,
     };
     const arcs = createCruiseArcsLayer(
       cruises,
@@ -658,11 +653,10 @@ export function DeckGLMap({
     cruiseMarkerSize,
     flightRouteShape,
     flightRouteWidth,
-    cruiseRouteColor,
     cruiseRouteWidth,
     cruiseArrowScale,
     labelsMode,
-    cruiseColorMode,
+    cruiseColorConfig,
     flightColorConfig,
   ]);
 
@@ -788,8 +782,9 @@ export function DeckGLMap({
             onMarkerSizeChange: setFlightMarkerSize,
           }}
           cruiseAppearance={{
-            routeColor: cruiseRouteColor,
-            onRouteColorChange: setCruiseRouteColor,
+            colorConfig: cruiseColorConfig,
+            onColorModeChange: setCruiseColorMode,
+            onColorChange: setCruiseColor,
             routeWidth: cruiseRouteWidth,
             onRouteWidthChange: setCruiseRouteWidth,
             markerColor: portColor,
