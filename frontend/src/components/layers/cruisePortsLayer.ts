@@ -156,7 +156,12 @@ export function createCruisePortsLayer(
   const labelData =
     labelsMode === "all"
       ? budgeted
-      : declutterByDistance(budgeted, (d) => d.visits, (d) => d.position, zoom);
+      : declutterByDistance(
+          budgeted,
+          (d) => d.visits,
+          (d) => d.position,
+          zoom
+        );
   const labelLayer = new TextLayer<PortDatum>({
     id: "cruise-ports-labels",
     data: labelData,
@@ -175,6 +180,12 @@ export function createCruisePortsLayer(
     sizeUnits: "pixels",
     pickable: true,
     billboard: true,
+    // Port names come straight from the catalog (e.g. "Travemünde") and
+    // routinely contain umlauts/accents. deck.gl's default `characterSet`
+    // only covers ASCII 32-127, so anything outside that range is silently
+    // dropped from the font atlas and never renders (#185). "auto" builds
+    // the atlas from the actual label text instead — do not remove.
+    characterSet: "auto",
     visible: labelsMode !== "off",
   });
 
