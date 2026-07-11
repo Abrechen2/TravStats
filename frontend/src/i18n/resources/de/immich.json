@@ -55,5 +55,21 @@
     "protocol": "Unerwartete Antwort von Immich. Passt die Server-Version?",
     "invalidUrl": "Die Server-URL ist ungültig.",
     "retry": "Erneut versuchen"
+  },
+  "admin": {
+    "title": "Immich (instanzweit)",
+    "subtitle": "Eine Immich-Instanz für alle Nutzer. Wer eine eigene hinterlegt, überschreibt sie.",
+    "baseUrl": "Basis-URL",
+    "baseUrlPlaceholder": "https://immich.example.com",
+    "apiKey": "API-Schlüssel",
+    "apiKeyPlaceholder": "Immich API-Schlüssel",
+    "apiKeyHint": "Der gespeicherte Schlüssel wird nur maskiert angezeigt. Lässt du ihn unverändert, bleibt er erhalten.",
+    "test": "Verbindung testen",
+    "testing": "Teste …",
+    "save": "Speichern",
+    "saving": "Speichere …",
+    "saved": "Instanzweite Immich-Verbindung gespeichert.",
+    "cleared": "Instanzweite Immich-Verbindung entfernt.",
+    "saveFailed": "Speichern fehlgeschlagen."
   }
 }
