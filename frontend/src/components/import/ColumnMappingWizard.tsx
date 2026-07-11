@@ -79,7 +79,9 @@ export function ColumnMappingWizard<F extends string>({
   // Keying on these value-equal strings instead means the memo (and the
   // effect that consumes it) only actually reruns when the CSV headers, the
   // field spec, or the suggested mapping truly change.
-  const fieldsSignature = JSON.stringify(fields.map((f) => [f.key, f.required ?? false, f.aliases]));
+  const fieldsSignature = JSON.stringify(
+    fields.map((f) => [f.key, f.required ?? false, f.aliases])
+  );
   const headerSignature = JSON.stringify(csvHeaders);
   const initialMappingSignature = JSON.stringify(initialMapping ?? {});
 
