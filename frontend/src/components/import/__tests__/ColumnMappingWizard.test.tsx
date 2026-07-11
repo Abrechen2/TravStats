@@ -263,6 +263,50 @@ describe("ColumnMappingWizard", () => {
     );
     expect(onCancel).toHaveBeenCalled();
   });
+
+  // Regression test for a Critical bug: `useFlightMappingFields()` memoizes
+  // on `[t]`, and the project's `useTranslation` wrapper returns a new `t`
+  // identity every render (react-i18next returns a fresh array each render,
+  // and the wrapper's `useCallback` deps track it) — so `fields` gets a new
+  // array identity on every parent re-render (e.g. a 30s admin poll in
+  // SettingsPage, or a language switch), even though its CONTENT is
+  // unchanged. A prior implementation memoized `initial` on `[fields, ...]`
+  // (identity), which recomputed and wiped the user's mapping on every such
+  // re-render. This test reproduces exactly that: same content, new identity.
+  it("keeps a user's manual selection across a parent re-render that only changes the `fields` array identity", () => {
+    const onSubmit = vi.fn();
+    const { rerender } = render(
+      <ColumnMappingWizard
+        fields={FLIGHT_MAPPING_FIELDS}
+        csvHeaders={["something_else", "toIata"]}
+        csvSamples={{ something_else: "foo", toIata: "FCO" }}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    // The heuristic cannot map "date" from these headers — pick it manually.
+    const dateSelect = screen.getByRole("combobox", { name: /fields\.date/i }) as HTMLSelectElement;
+    expect(dateSelect.value).toBe("");
+    fireEvent.change(dateSelect, { target: { value: "something_else" } });
+    expect(dateSelect.value).toBe("something_else");
+
+    // Re-render with a brand-new (but content-equal) `fields` array — this is
+    // exactly what happens on every parent re-render in the real app.
+    rerender(
+      <ColumnMappingWizard
+        fields={[...FLIGHT_MAPPING_FIELDS]}
+        csvHeaders={["something_else", "toIata"]}
+        csvSamples={{ something_else: "foo", toIata: "FCO" }}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    expect(
+      (screen.getByRole("combobox", { name: /fields\.date/i }) as HTMLSelectElement).value
+    ).toBe("something_else");
+  });
 });
 
 type LodgingField = "name" | "city" | "checkIn";
@@ -314,5 +358,62 @@ describe("ColumnMappingWizard (generic)", () => {
 
     fireEvent.click(submit);
     expect(onSubmit).toHaveBeenCalledWith({ name: "Spalte A", city: "Ort" });
+  });
+
+  // Regression test for the related trap the naive fix for the identity-churn
+  // bug would create: an `initialMapping` (e.g. an LLM suggestion) that
+  // arrives AFTER the wizard already mounted with the heuristic must only
+  // fill fields the user has not touched yet — it must never discard a field
+  // the user already picked manually.
+  it("applies a late-arriving initialMapping only to untouched fields, without discarding a manual choice", () => {
+    const onSubmit = vi.fn();
+    const headers = ["Hotel", "Unterkunft", "Ort", "Datum Anreise"];
+    const samples = {
+      Hotel: "NH",
+      Unterkunft: "NH Ludwigsburg",
+      Ort: "Ludwigsburg",
+      "Datum Anreise": "2024-06-01",
+    };
+
+    const { rerender } = render(
+      <ColumnMappingWizard
+        fields={LODGING_FIELDS}
+        csvHeaders={headers}
+        csvSamples={samples}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    // Heuristic auto-maps "name" -> "Hotel" (first alias match). Override it
+    // manually before the suggestion arrives.
+    const nameSelect = screen.getByLabelText("Name") as HTMLSelectElement;
+    expect(nameSelect.value).toBe("Hotel");
+    fireEvent.change(nameSelect, { target: { value: "Unterkunft" } });
+    expect(nameSelect.value).toBe("Unterkunft");
+
+    // "Datum Anreise" doesn't match the checkIn aliases ("checkin", "anreise"),
+    // so the heuristic leaves it unmapped — the user hasn't touched it either.
+    const checkInSelect = screen.getByLabelText("Anreise") as HTMLSelectElement;
+    expect(checkInSelect.value).toBe("");
+
+    // Simulate the suggestion landing a second later: same CSV (csvHeaders
+    // unchanged), the wizard stays mounted, only `initialMapping` shows up.
+    // It (wrongly, from the LLM's perspective) also suggests "name" -> "Hotel".
+    rerender(
+      <ColumnMappingWizard
+        fields={LODGING_FIELDS}
+        csvHeaders={headers}
+        csvSamples={samples}
+        initialMapping={{ name: "Hotel", checkIn: "Datum Anreise" }}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    // The user's manual choice survives ...
+    expect((screen.getByLabelText("Name") as HTMLSelectElement).value).toBe("Unterkunft");
+    // ... while the untouched field gets filled from the late suggestion.
+    expect((screen.getByLabelText("Anreise") as HTMLSelectElement).value).toBe("Datum Anreise");
   });
 });
