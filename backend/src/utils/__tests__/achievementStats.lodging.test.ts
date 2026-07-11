@@ -28,6 +28,7 @@ describe('UserStats — lodging field defaults', () => {
     const stats = await calculateUserStats([] as FlightData[]);
 
     expect(stats.lodgingsCount).toBe(0);
+    expect(stats.lodgingStaysCount).toBe(0);
     expect(stats.lodgingNights).toBe(0);
     expect(stats.lodgingChainsUnique).toBe(0);
     expect(stats.lodgingCountries).toBeInstanceOf(Set);
