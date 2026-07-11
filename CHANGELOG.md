@@ -4,13 +4,13 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
-## [2.3.0-rc.5] - 2026-07-10 (Release Candidate)
+## [2.3.0] - 2026-07-11
 
-Release candidate for **TravStats 2.3**. Aggregates the entire
-`dev/v2.3` forward line — a redesigned map/globe appearance system,
-per-cruise and status-based map coloring, a new statistics scorecard,
-unresolved cruise ports, device pairing for the companion app — and
-adds opt-in anonymous usage statistics with a What's-New dialog.
+**TravStats 2.3.** Aggregates the entire `dev/v2.3` forward line — a
+redesigned map/globe appearance system, per-cruise and status-based map
+coloring, a new statistics scorecard, unresolved cruise ports, device
+pairing for the companion app — and adds opt-in anonymous usage
+statistics with a What's-New dialog.
 
 ### Added
 - **Anonymous usage statistics (opt-in)** — TravStats can now optionally
