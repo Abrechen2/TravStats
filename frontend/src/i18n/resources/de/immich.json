@@ -32,6 +32,8 @@
     "searchLabel": "Alben durchsuchen",
     "searchPlaceholder": "Nach Albumnamen suchen …",
     "noMatches": "Keine Alben gefunden, die zur Suche passen",
+    "hiddenSelections": "{{count}} ausgewähltes Album ist durch deine Suche ausgeblendet",
+    "hiddenSelections_other": "{{count}} ausgewählte Alben sind durch deine Suche ausgeblendet",
     "unlink": "Trennen",
     "unlinkTitle": "Album trennen",
     "unlinkKeepCopies": "Kopien behalten",
