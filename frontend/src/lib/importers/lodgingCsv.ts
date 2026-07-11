@@ -197,21 +197,75 @@ function toIsoDay(raw: string): string | null {
   return null;
 }
 
-/** German ("451,70" / "1.234,50") and plain ("451.70") both parse. */
-function toNumber(raw: string): number | null {
-  if (!raw) return null;
-  const cleaned = raw
-    .replace(/[^\d.,-]/g, "")
-    .replace(/\.(?=\d{3}(?:\D|$))/g, "")
-    .replace(",", ".");
-  const n = Number(cleaned);
-  return Number.isFinite(n) ? n : null;
+export interface NumericCellResult {
+  value: number | null;
+  /**
+   * True when the cell held non-empty text that could not be parsed as a
+   * number at all (e.g. "unbekannt" / "N/A" / "?"). Distinct from a cell
+   * that was legitimately empty (`value: null, unparseable: false`) — the
+   * caller must surface this as a row error rather than silently coercing
+   * it to a fabricated 0 (`Number("") === 0` in JS, which is the trap this
+   * type exists to make impossible to ignore).
+   */
+  unparseable: boolean;
 }
 
-function toRating(raw: string): number | null {
-  const n = toNumber(raw);
-  if (n === null) return null;
-  return n >= 1 && n <= 5 ? n : null;
+/**
+ * Parses a numeric cell that may use either German (`"1.234,56"`) or plain /
+ * US (`"12,345.67"`) thousands-vs-decimal conventions, without guessing on a
+ * genuinely ambiguous format:
+ *   - No separator at all → parsed as-is.
+ *   - One or more separators present → the LAST separator in the string is
+ *     the decimal point, UNLESS it has exactly 3 trailing digits, in which
+ *     case there is no decimal part at all and every separator (comma or
+ *     dot alike) is a thousands grouping — `"1.234"` and `"1,234"` both →
+ *     `1234`, `"1.234.567"` → `1234567`. Any other separator occurring
+ *     earlier than the decimal one is likewise treated as a thousands
+ *     grouping and dropped, so `"1.234,56"` (German) and `"12,345.67"` /
+ *     `"$1,234.50"` (US) all resolve to the correct value regardless of
+ *     which character plays which role.
+ * A cleaned cell with no digit at all (garbage text survives the
+ * non-numeric strip down to `""`) is `unparseable` — this must never
+ * return `value: 0` for that case, since `Number("") === 0` in JavaScript.
+ */
+export function parseNumericCell(raw: string): NumericCellResult {
+  if (!raw) return { value: null, unparseable: false };
+  const cleaned = raw.replace(/[^\d.,-]/g, "");
+  if (!/\d/.test(cleaned)) {
+    return { value: null, unparseable: true };
+  }
+
+  const separatorPositions: number[] = [];
+  for (let i = 0; i < cleaned.length; i++) {
+    if (cleaned[i] === "." || cleaned[i] === ",") separatorPositions.push(i);
+  }
+
+  let normalized = cleaned;
+  if (separatorPositions.length > 0) {
+    const lastPos = separatorPositions[separatorPositions.length - 1];
+    const trailingDigits = cleaned.length - lastPos - 1;
+    normalized =
+      trailingDigits === 3
+        ? cleaned.replace(/[.,]/g, "")
+        : Array.from(cleaned)
+            .map((ch, i) => {
+              if (ch !== "." && ch !== ",") return ch;
+              return i === lastPos ? "." : "";
+            })
+            .join("");
+  }
+
+  const n = Number(normalized);
+  return Number.isFinite(n) ? { value: n, unparseable: false } : { value: null, unparseable: true };
+}
+
+function toRating(raw: string): NumericCellResult {
+  const parsed = parseNumericCell(raw);
+  if (parsed.unparseable) return parsed;
+  return {
+    value: parsed.value !== null && parsed.value >= 1 && parsed.value <= 5 ? parsed.value : null,
+    unparseable: false,
+  };
 }
 
 const LODGING_TYPES = ["hotel", "campsite", "guesthouse", "apartment", "hostel"] as const;
@@ -237,30 +291,55 @@ function toCurrency(raw: string): LodgingCurrency | null {
   return (CURRENCIES as readonly string[]).includes(v) ? (v as (typeof CURRENCIES)[number]) : null;
 }
 
+interface FieldBuildResult<T> {
+  fields: T;
+  /**
+   * Row-level errors surfaced from mapped numeric cells that held garbage
+   * text (e.g. "unbekannt" / "N/A" / "?") — the cell resolves to `null`,
+   * never a fabricated 0, and the row is still built; the caller decides
+   * whether/how to surface these (never drops the row for them).
+   */
+  errors: string[];
+}
+
 function buildLodgingFields(
   record: Record<string, string>,
   m: LodgingCsvMapping,
   name: string
-): LodgingCandidateFields {
+): FieldBuildResult<LodgingCandidateFields> {
+  const errors: string[] = [];
   const placeId = cell(record, m.googlePlaceId);
-  const stars = (() => {
-    const n = toNumber(cell(record, m.stars));
-    return n !== null && n >= 1 && n <= 5 ? Math.round(n) : null;
-  })();
+
+  const starsCell = parseNumericCell(cell(record, m.stars));
+  if (starsCell.unparseable) errors.push("Row has an unreadable stars value");
+  const stars =
+    starsCell.value !== null && starsCell.value >= 1 && starsCell.value <= 5
+      ? Math.round(starsCell.value)
+      : null;
+
+  const latCell = parseNumericCell(cell(record, m.lat));
+  if (latCell.unparseable) errors.push("Row has an unreadable latitude value");
+
+  const lonCell = parseNumericCell(cell(record, m.lon));
+  if (lonCell.unparseable) errors.push("Row has an unreadable longitude value");
+
   return {
-    name,
-    type: toLodgingType(cell(record, m.type)),
-    chainName: cell(record, m.chainName) || null,
-    stars,
-    address: cell(record, m.address) || null,
-    city: cell(record, m.city) || null,
-    country: cell(record, m.country) || null,
-    lat: toNumber(cell(record, m.lat)),
-    lon: toNumber(cell(record, m.lon)),
-    // A Google place id is a PROVEN identity — it is what makes a re-import
-    // of the owner's 232-row file a no-op rather than 232 duplicates.
-    externalRef: placeId ? `google:${placeId}` : null,
-    notes: cell(record, m.notes) || null,
+    fields: {
+      name,
+      type: toLodgingType(cell(record, m.type)),
+      chainName: cell(record, m.chainName) || null,
+      stars,
+      address: cell(record, m.address) || null,
+      city: cell(record, m.city) || null,
+      country: cell(record, m.country) || null,
+      lat: latCell.value,
+      lon: lonCell.value,
+      // A Google place id is a PROVEN identity — it is what makes a re-import
+      // of the owner's 232-row file a no-op rather than 232 duplicates.
+      externalRef: placeId ? `google:${placeId}` : null,
+      notes: cell(record, m.notes) || null,
+    },
+    errors,
   };
 }
 
@@ -269,24 +348,41 @@ function buildStayFields(
   m: LodgingCsvMapping,
   checkIn: string,
   checkOut: string
-): StayCandidateFields {
+): FieldBuildResult<StayCandidateFields> {
+  const errors: string[] = [];
+
+  const priceCell = parseNumericCell(cell(record, m.totalPrice));
+  if (priceCell.unparseable) errors.push("Row has an unreadable price value");
+
+  const ratingRoomCell = toRating(cell(record, m.ratingRoom));
+  if (ratingRoomCell.unparseable) errors.push("Row has an unreadable room rating value");
+
+  const ratingBreakfastCell = toRating(cell(record, m.ratingBreakfast));
+  if (ratingBreakfastCell.unparseable) errors.push("Row has an unreadable breakfast rating value");
+
+  const ratingOverallCell = toRating(cell(record, m.ratingOverall));
+  if (ratingOverallCell.unparseable) errors.push("Row has an unreadable overall rating value");
+
   return {
-    checkIn,
-    checkOut,
-    roomCategory: cell(record, m.roomCategory) || null,
-    board: toBoard(cell(record, m.board)),
-    // Alex's stays sheet has no price column at all — null here is correct
-    // data, and the backend simply writes no FX snapshot for it.
-    totalPrice: toNumber(cell(record, m.totalPrice)),
-    currency: toCurrency(cell(record, m.currency)),
-    ratingRoom: toRating(cell(record, m.ratingRoom)),
-    ratingBreakfast: toRating(cell(record, m.ratingBreakfast)),
-    ratingOverall: toRating(cell(record, m.ratingOverall)),
-    bookingReference: cell(record, m.bookingReference) || null,
-    // A CSV row never carries a booking-confirmation externalRef — that only
-    // arrives via the email/PDF parser.
-    externalRef: null,
-    notes: null,
+    fields: {
+      checkIn,
+      checkOut,
+      roomCategory: cell(record, m.roomCategory) || null,
+      board: toBoard(cell(record, m.board)),
+      // Alex's stays sheet has no price column at all — null here is correct
+      // data, and the backend simply writes no FX snapshot for it.
+      totalPrice: priceCell.value,
+      currency: toCurrency(cell(record, m.currency)),
+      ratingRoom: ratingRoomCell.value,
+      ratingBreakfast: ratingBreakfastCell.value,
+      ratingOverall: ratingOverallCell.value,
+      bookingReference: cell(record, m.bookingReference) || null,
+      // A CSV row never carries a booking-confirmation externalRef — that only
+      // arrives via the email/PDF parser.
+      externalRef: null,
+      notes: null,
+    },
+    errors,
   };
 }
 
@@ -305,6 +401,12 @@ export function buildLodgingCandidates(
       return;
     }
 
+    // Field-level errors (unparseable numeric cells) never drop the row —
+    // they're collected here and appended to rowErrors alongside the
+    // row-dropping errors above, so one garbage cell surfaces as a warning
+    // rather than silently vanishing OR taking the whole row down.
+    const fieldErrors: string[] = [];
+
     let stay: StayCandidateFields | null = null;
     if (shape !== "places") {
       const checkIn = toIsoDay(cell(record, mapping.checkIn));
@@ -316,14 +418,25 @@ export function buildLodgingCandidates(
         });
         return;
       }
-      stay = buildStayFields(record, mapping, checkIn, checkOut);
+      const stayResult = buildStayFields(record, mapping, checkIn, checkOut);
+      stay = stayResult.fields;
+      fieldErrors.push(...stayResult.errors);
     }
+
+    // In the "stays" shape the file has no lodging columns at all — the row
+    // joins an EXISTING lodging by free-text name; the preview resolves it.
+    let lodging: LodgingCandidateFields | null = null;
+    if (shape !== "stays") {
+      const lodgingResult = buildLodgingFields(record, mapping, name);
+      lodging = lodgingResult.fields;
+      fieldErrors.push(...lodgingResult.errors);
+    }
+
+    fieldErrors.forEach((message) => rowErrors.push({ rowIndex, message }));
 
     candidates.push({
       sourceRowIndex: rowIndex,
-      // In the "stays" shape the file has no lodging columns at all — the row
-      // joins an EXISTING lodging by free-text name; the preview resolves it.
-      lodging: shape === "stays" ? null : buildLodgingFields(record, mapping, name),
+      lodging,
       lodgingName: name,
       stay,
     });

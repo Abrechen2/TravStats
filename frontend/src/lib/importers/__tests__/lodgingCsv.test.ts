@@ -76,6 +76,14 @@ describe("detectCsvShape", () => {
     };
     expect(detectCsvShape(mapping)).toBe("both");
   });
+
+  it("falls through to places for a name-only mapping (no lodging-only, no stay-only field)", () => {
+    // A bare name-only file is still just a places list — pinning this as a
+    // deliberate decision rather than an accident of the `hasLodging`/
+    // `hasStay` fallthrough logic.
+    const mapping: LodgingCsvMapping = { name: "Name" };
+    expect(detectCsvShape(mapping)).toBe("places");
+  });
 });
 
 describe("buildLodgingCandidates", () => {
@@ -182,5 +190,133 @@ describe("buildLodgingCandidates", () => {
     expect(result.candidates).toHaveLength(1);
     expect(result.candidates[0].lodging?.name).toBe("Real Hotel");
     expect(result.rowErrors).toHaveLength(1);
+  });
+});
+
+describe("buildLodgingCandidates: garbage coordinates never fabricate 0,0", () => {
+  const mapping: LodgingCsvMapping = { name: "Name", lat: "lat", lon: "lon" };
+
+  function coordsFor(rawLat: string, rawLon: string) {
+    const csv = ["Name,lat,lon", `Test Hotel,${rawLat},${rawLon}`].join("\n");
+    return buildLodgingCandidates(parseCsv(csv), mapping);
+  }
+
+  it("does not turn unreadable text into a null-island coordinate", () => {
+    for (const [rawLat, rawLon] of [
+      ["unbekannt", "N/A"],
+      ["?", "TBD"],
+    ]) {
+      const result = coordsFor(rawLat, rawLon);
+      expect(result.candidates).toHaveLength(1);
+      expect(result.candidates[0].lodging?.lat).toBeNull();
+      expect(result.candidates[0].lodging?.lon).toBeNull();
+      expect(result.rowErrors.length).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it("does not fail the whole file for a garbage coordinate — the row is still built", () => {
+    const result = coordsFor("unbekannt", "13.3807");
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0].lodging?.lat).toBeNull();
+    expect(result.candidates[0].lodging?.lon).toBeCloseTo(13.3807, 4);
+    expect(result.rowErrors).toEqual([
+      { rowIndex: 0, message: expect.stringContaining("latitude") },
+    ]);
+  });
+
+  it("still preserves a genuine 0 longitude (e.g. a real Accra hotel on the meridian)", () => {
+    const result = coordsFor("5.55", "0");
+    expect(result.candidates[0].lodging?.lat).toBeCloseTo(5.55, 2);
+    expect(result.candidates[0].lodging?.lon).toBe(0);
+    expect(result.rowErrors).toEqual([]);
+  });
+});
+
+describe("buildLodgingCandidates: totalPrice garbage vs. genuine 0 vs. locale formats", () => {
+  const mapping: LodgingCsvMapping = {
+    name: "Hotel",
+    checkIn: "Anreise",
+    checkOut: "Abreise",
+    totalPrice: "Preis",
+  };
+
+  function priceFor(rawPrice: string) {
+    const csv = [
+      "Hotel,Anreise,Abreise,Preis",
+      `Test Hotel,01.01.2026,02.01.2026,"${rawPrice}"`,
+    ].join("\n");
+    return buildLodgingCandidates(parseCsv(csv), mapping);
+  }
+
+  it.each(["unbekannt", "N/A", "?", "TBD"])(
+    "does NOT fabricate a free stay (0) for garbage text %s",
+    (raw) => {
+      const result = priceFor(raw);
+      expect(result.candidates).toHaveLength(1);
+      expect(result.candidates[0].stay?.totalPrice).toBeNull();
+      expect(result.rowErrors).toEqual([
+        { rowIndex: 0, message: expect.stringContaining("price") },
+      ]);
+    }
+  );
+
+  it("preserves a genuine 0 price (a real free stay) without a row error", () => {
+    const result = priceFor("0");
+    expect(result.candidates[0].stay?.totalPrice).toBe(0);
+    expect(result.rowErrors).toEqual([]);
+  });
+
+  it("parses German thousands+decimal (1.234,56)", () => {
+    const result = priceFor("1.234,56");
+    expect(result.candidates[0].stay?.totalPrice).toBeCloseTo(1234.56, 2);
+    expect(result.rowErrors).toEqual([]);
+  });
+
+  it("parses US thousands+decimal (12,345.67)", () => {
+    const result = priceFor("12,345.67");
+    expect(result.candidates[0].stay?.totalPrice).toBeCloseTo(12345.67, 2);
+    expect(result.rowErrors).toEqual([]);
+  });
+
+  it("parses a US-formatted currency amount ($1,234.50)", () => {
+    const result = priceFor("$1,234.50");
+    expect(result.candidates[0].stay?.totalPrice).toBeCloseTo(1234.5, 2);
+    expect(result.rowErrors).toEqual([]);
+  });
+
+  it("resolves a lone thousands separator consistently for both comma and dot", () => {
+    // Neither "1,234" nor "1.234" is fabricated as ~1000x too small anymore —
+    // both resolve to the same thousands-grouped value.
+    expect(priceFor("1,234").candidates[0].stay?.totalPrice).toBeCloseTo(1234, 2);
+    expect(priceFor("1.234").candidates[0].stay?.totalPrice).toBeCloseTo(1234, 2);
+  });
+});
+
+describe("buildLodgingCandidates: isRealCalendarDay rejects impossible calendar days", () => {
+  const mapping: LodgingCsvMapping = { name: "Hotel", checkIn: "Anreise", checkOut: "Abreise" };
+
+  function checkInFor(rawCheckIn: string) {
+    const csv = ["Hotel,Anreise,Abreise", `Test Hotel,${rawCheckIn},01.03.2026`].join("\n");
+    return buildLodgingCandidates(parseCsv(csv), mapping);
+  }
+
+  it("rejects a German-format day that does not exist (31 February)", () => {
+    const result = checkInFor("31.02.2026");
+    expect(result.candidates).toHaveLength(0);
+    expect(result.rowErrors).toHaveLength(1);
+    expect(result.rowErrors[0].message).toContain("date");
+  });
+
+  it("rejects an ISO day that does not exist in a non-leap year (2026-02-29)", () => {
+    const result = checkInFor("2026-02-29");
+    expect(result.candidates).toHaveLength(0);
+    expect(result.rowErrors).toHaveLength(1);
+  });
+
+  it("accepts a real leap day (2024-02-29)", () => {
+    const result = checkInFor("2024-02-29");
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0].stay?.checkIn).toBe("2024-02-29");
+    expect(result.rowErrors).toEqual([]);
   });
 });
