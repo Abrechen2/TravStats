@@ -3,7 +3,12 @@ import HelpIcon from "../Help/HelpIcon";
 import { useTranslation } from "../../hooks/useTranslation";
 import { GlobeLoader } from "../GlobeLoader";
 import type { ParsedBooking } from "../../types";
-import { isCruiseEmailResult, isCruisePdfResult } from "../../lib/api/parse";
+import {
+  isCruiseEmailResult,
+  isCruisePdfResult,
+  isLodgingEmailResult,
+  isLodgingPdfResult,
+} from "../../lib/api/parse";
 
 const BoardingPassScanner = lazy(() => import("../BoardingPassScanner"));
 const EmailImportTab = lazy(() => import("../import/EmailImportTab"));
@@ -273,7 +278,7 @@ export default function FlightLookupStep({
                 domain="flight"
                 acceptedExtensions={[".eml", ".msg", ".txt", ".pdf"]}
                 onEmailResult={(result) => {
-                  if (isCruiseEmailResult(result)) {
+                  if (isCruiseEmailResult(result) || isLodgingEmailResult(result)) {
                     setError(t("flights:form.noFlightsInEmail"));
                     return;
                   }
@@ -294,7 +299,7 @@ export default function FlightLookupStep({
                   }
                 }}
                 onPdfResult={(result) => {
-                  if (isCruisePdfResult(result)) {
+                  if (isCruisePdfResult(result) || isLodgingPdfResult(result)) {
                     setError(t("flights:form.noFlightsInEmail"));
                     return;
                   }
