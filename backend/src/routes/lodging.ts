@@ -223,7 +223,7 @@ export async function applyFxSnapshot(
  * would misrepresent the NEW price/currency/date, so null is the only
  * honest value, matching a genuine price removal.
  */
-function resolveFxFields(outcome: FxSnapshotOutcome): FxSnapshotFields {
+export function resolveFxFields(outcome: FxSnapshotOutcome): FxSnapshotFields {
   return outcome.status === "snapshotted" ? outcome.fields : CLEARED_FX;
 }
 
