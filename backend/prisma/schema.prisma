@@ -1034,7 +1034,6 @@ model LodgingChain {
 
   lodgings Lodging[]
 
-  @@index([name])
   @@map("lodging_chains")
 }
 
