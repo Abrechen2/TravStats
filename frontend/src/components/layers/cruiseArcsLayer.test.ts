@@ -435,3 +435,113 @@ describe("cruise arrow placement — arc length, not vertex index (2.3.1 fix)", 
     expect(data[0].angleDeg).toBeCloseTo(-90, 5);
   });
 });
+
+// Reported on 2.4.0-rc.1: an out-and-back cruise (A→B→A that is not a
+// circular route) draws both legs on the same path, so the two midpoint
+// arrows land on exactly the same spot and render as an unreadable "X".
+// When a leg's opposite direction is also on the map, each arrow shifts
+// toward its own journey's first half so the pair flanks the midpoint.
+describe("cruise arrow placement — opposing legs don't overlap (out-and-back)", () => {
+  const outAndBack = () =>
+    makeCruise([
+      makeStop(1, 1, { id: 1, lat: 0, lon: 0 }),
+      makeStop(2, 2, { id: 2, lat: 0, lon: 10 }),
+      makeStop(3, 1, { id: 1, lat: 0, lon: 0 }),
+    ]);
+
+  it("separates the two arrows of an out-and-back cruise along the shared path", () => {
+    const arrows = createCruiseArrowsLayer([outAndBack()]);
+    expect(arrows).not.toBeNull();
+    const data = (arrows as { props: { data: unknown } }).props.data as Array<{
+      position: [number, number];
+    }>;
+    expect(data).toHaveLength(2);
+    const lons = data.map((d) => d.position[0]).sort((a, b) => a - b);
+    // Both used to sit at the shared midpoint (lon 5). Now they flank it
+    // with a clear gap (≥ 10% of the leg) and stay away from both ports.
+    expect(lons[1] - lons[0]).toBeGreaterThan(1);
+    expect(lons[0]).toBeGreaterThan(2);
+    expect(lons[1]).toBeLessThan(8);
+  });
+
+  it("keeps each arrow pointing in its own travel direction", () => {
+    const arrows = createCruiseArrowsLayer([outAndBack()]);
+    const data = (arrows as { props: { data: unknown } }).props.data as Array<{
+      position: [number, number];
+      angleDeg: number;
+    }>;
+    const eastbound = data.find((d) => Math.abs(d.angleDeg) < 1);
+    const westbound = data.find((d) => Math.abs(Math.abs(d.angleDeg) - 180) < 1);
+    expect(eastbound).toBeDefined();
+    expect(westbound).toBeDefined();
+    // Each arrow sits in the first half of its own journey: the eastbound
+    // (0→10) arrow west of the midpoint, the westbound (10→0) arrow east of it.
+    expect(eastbound!.position[0]).toBeLessThan(5);
+    expect(westbound!.position[0]).toBeGreaterThan(5);
+  });
+
+  it("also separates opposing legs when they belong to two different cruises", () => {
+    const forward = makeCruise([
+      makeStop(1, 1, { id: 1, lat: 0, lon: 0 }),
+      makeStop(2, 2, { id: 2, lat: 0, lon: 10 }),
+    ]);
+    const backward = {
+      ...makeCruise([
+        makeStop(1, 2, { id: 2, lat: 0, lon: 10 }),
+        makeStop(2, 1, { id: 1, lat: 0, lon: 0 }),
+      ]),
+      id: "c2",
+    };
+    const arrows = createCruiseArrowsLayer([forward, backward]);
+    const data = (arrows as { props: { data: unknown } }).props.data as Array<{
+      position: [number, number];
+    }>;
+    expect(data).toHaveLength(2);
+    const lons = data.map((d) => d.position[0]).sort((a, b) => a - b);
+    expect(lons[1] - lons[0]).toBeGreaterThan(1);
+  });
+
+  it("leaves a plain one-way leg at the exact midpoint (no shift without an opposing twin)", () => {
+    const cruise = makeCruise([
+      makeStop(1, 1, { id: 1, lat: 0, lon: 0 }),
+      makeStop(2, 2, { id: 2, lat: 0, lon: 10 }),
+    ]);
+    const arrows = createCruiseArrowsLayer([cruise]);
+    const data = (arrows as { props: { data: unknown } }).props.data as Array<{
+      position: [number, number];
+    }>;
+    expect(data).toHaveLength(1);
+    expect(data[0].position[0]).toBeCloseTo(5, 1);
+  });
+});
+
+// Reported on 2.4.0-rc.1: arrows go blurry when scaled up. The SVG data-URL
+// is rasterised by the browser at the SVG's declared width/height, so a
+// 22×16 icon stretched to 2.5× on a HiDPI display samples a 16-px bitmap
+// at ~75 device pixels. The icon must be rasterised at a multiple of its
+// display size so every slider setting stays crisp.
+describe("cruise arrow icon — rasterised above display resolution (sharp when scaled)", () => {
+  it("declares an icon raster several times larger than the on-screen size", () => {
+    const cruise = makeCruise([
+      makeStop(1, 1, { id: 1, lat: 41.38, lon: 2.17 }),
+      makeStop(2, 2, { id: 2, lat: 42.1, lon: 11.8 }),
+    ]);
+    const layer = createCruiseArrowsLayer([cruise]) as unknown as {
+      props: {
+        data: unknown[];
+        getSize: number;
+        getIcon: (d: unknown) => { url: string; width: number; height: number };
+      };
+    };
+    const icon = layer.props.getIcon(layer.props.data[0]);
+    // Max slider setting is 2.5× on up to ~3× devicePixelRatio ⇒ the raster
+    // must be at least ~75 device px tall to never upsample.
+    expect(icon.height).toBeGreaterThanOrEqual(75);
+    // The SVG itself must be declared at the raster size — deck.gl draws the
+    // decoded image at its natural size, so a small SVG with big icon dims
+    // would still rasterise small (and blurry).
+    const svg = decodeURIComponent(icon.url.split(",")[1]);
+    expect(svg).toContain(`width="${icon.width}"`);
+    expect(svg).toContain(`height="${icon.height}"`);
+  });
+});
