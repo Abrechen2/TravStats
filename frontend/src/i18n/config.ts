@@ -24,6 +24,7 @@ import enAircraft from "./resources/en/aircraft.json";
 import enSpecialFlights from "./resources/en/specialFlights.json";
 import enWhatsNew from "./resources/en/whatsNew.json";
 import enUsageStats from "./resources/en/usageStats.json";
+import enLodging from "./resources/en/lodging.json";
 
 import deCommon from "./resources/de/common.json";
 import deDashboard from "./resources/de/dashboard.json";
@@ -46,6 +47,7 @@ import deAircraft from "./resources/de/aircraft.json";
 import deSpecialFlights from "./resources/de/specialFlights.json";
 import deWhatsNew from "./resources/de/whatsNew.json";
 import deUsageStats from "./resources/de/usageStats.json";
+import deLodging from "./resources/de/lodging.json";
 
 // Get initial language: stored preference → browser language → fallback "en"
 const getInitialLanguage = (): string => {
@@ -91,6 +93,7 @@ const resources = {
     specialFlights: enSpecialFlights,
     whatsNew: enWhatsNew,
     usageStats: enUsageStats,
+    lodging: enLodging,
   },
   de: {
     common: deCommon,
@@ -114,6 +117,7 @@ const resources = {
     specialFlights: deSpecialFlights,
     whatsNew: deWhatsNew,
     usageStats: deUsageStats,
+    lodging: deLodging,
   },
 };
 
@@ -146,6 +150,7 @@ i18n.use(initReactI18next).init({
     "specialFlights",
     "whatsNew",
     "usageStats",
+    "lodging",
   ],
   interpolation: {
     escapeValue: false, // React already escapes values
