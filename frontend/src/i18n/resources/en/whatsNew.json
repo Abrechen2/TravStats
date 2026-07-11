@@ -3,7 +3,7 @@
   "subtitle": "A short overview of the most important changes.",
   "dismiss": "Got it",
   "entries": {
-    "v240": {
+    "v230": {
       "stats": {
         "title": "Anonymous usage statistics",
         "body": "TravStats can now optionally send anonymous usage data. It is off by default, and you can turn it back off at any time."
