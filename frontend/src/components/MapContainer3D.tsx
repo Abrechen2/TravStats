@@ -3,8 +3,10 @@ import { DeckGLMap } from "./DeckGLMap";
 import type { CruiseColorMode } from "./layers/cruiseArcsLayer";
 import { GlobeLoader } from "./GlobeLoader";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
+import type { Lodging } from "../types/lodging";
 import type { Layer } from "@deck.gl/core";
 import type { AppearanceDomain } from "./map/controlPanelKit";
+import { buildLodgingPins } from "./layers/lodgingPinsLayer";
 
 /**
  * The narrow set of map-rendering modes that MapContainer3D actually implements.
@@ -85,6 +87,17 @@ interface MapContainer3DProps {
    */
   cruisesOverride?: readonly Cruise[];
   /**
+   * Lodging places (hotels/campsites) to render as pins on the flat map.
+   * Unlike `cruisesOverride`, there is no internal fetch fallback —
+   * MapContainer3D has no lodging-domain equivalent of `showInternalCruises`
+   * yet, so the pin layer only ever renders what the caller passes here.
+   * Undefined (the default) means "no lodging layer at all", so tabs that
+   * don't pass it (flight/cruise tabs) are unaffected. Lodgings without
+   * both `lat` and `lon` are silently skipped by `buildLodgingPins`.
+   * Globe mode doesn't render this yet — pins are flat-map only for now.
+   */
+  lodgingsOverride?: Lodging[];
+  /**
    * Which domain appearance sections the map control panel exposes. The
    * Alle tab passes both; single-domain tabs pass just their own domain
    * so the panel only surfaces the relevant route/marker controls.
@@ -112,6 +125,7 @@ export default function MapContainer3D({
   cruiseColorMode,
   hideInfoPill = false,
   cruisesOverride,
+  lodgingsOverride,
   appearanceDomains = ["flight", "cruise"],
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
@@ -157,6 +171,21 @@ export default function MapContainer3D({
   const cruises = useMemo<Cruise[]>(
     () => (cruisesOverride !== undefined ? [...cruisesOverride] : internalCruises),
     [cruisesOverride, internalCruises]
+  );
+
+  // Lodging pins are flat-map only (no globe support yet) and additive to
+  // whatever the caller already passes as extraLayers — merged just below
+  // the DeckGLMap render, not GlobeView's. `buildLodgingPins` returns null
+  // when nothing has coordinates, so this contributes nothing by default.
+  const lodgingLayers = useMemo<Layer[]>(() => {
+    if (!lodgingsOverride || lodgingsOverride.length === 0) return [];
+    const layer = buildLodgingPins(lodgingsOverride);
+    return layer ? [layer] : [];
+  }, [lodgingsOverride]);
+
+  const mapExtraLayers = useMemo<Layer[]>(
+    () => [...(extraLayers ?? []), ...lodgingLayers],
+    [extraLayers, lodgingLayers]
   );
 
   const routeCount = useMemo(() => {
@@ -220,7 +249,7 @@ export default function MapContainer3D({
             visMode={visMode}
             minRouteCount={minRouteCount}
             onResetTrip={onResetTrip}
-            extraLayers={extraLayers}
+            extraLayers={mapExtraLayers}
             flightRouteColor={flightRouteColor}
             appearanceDomains={appearanceDomains}
             statusTwoTone={statusTwoTone}
