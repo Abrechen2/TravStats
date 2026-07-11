@@ -11,6 +11,7 @@ import smtpRouter from './smtp';
 import backupSettingsRouter from './backupSettings';
 import instanceSettingsRouter from './instanceSettings';
 import immichAdminRouter from './immich';
+import usageStatsRouter from './usageStats';
 
 const router = Router();
 
@@ -37,5 +38,6 @@ router.use('/smtp', smtpRouter);
 router.use('/', backupSettingsRouter);
 router.use('/', instanceSettingsRouter);
 router.use('/immich', immichAdminRouter);
+router.use('/', usageStatsRouter);
 
 export default router;

@@ -24,6 +24,7 @@ export const setupApi = {
     maxUsers?: number;
     allowRegistration?: boolean;
     enabledDomains?: DomainKey[];
+    usageStatsConsent?: "granted" | "denied";
   }): Promise<{
     success: boolean;
     message: string;

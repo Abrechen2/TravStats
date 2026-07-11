@@ -45,7 +45,7 @@ export default function CruiseStatsSection(): JSX.Element {
         style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
       >
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-          {t("common:loading")} …
+          {t("common:loading.default")}
         </p>
       </div>
     );
