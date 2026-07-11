@@ -1,7 +1,12 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
-import { applyFxSnapshot, getBaseCurrency, resolveFxFields } from "../../routes/lodging";
+import {
+  applyFxSnapshot,
+  getBaseCurrency,
+  resolveFxFields,
+  type FxSnapshotOutcome,
+} from "../../routes/lodging";
 import type {
   CommitRowInput,
   LodgingCandidateFields,
@@ -10,12 +15,57 @@ import type {
 } from "../../schemas/lodgingImport";
 import { normalizeLodgingName } from "./lodgingImportPreview";
 
+/**
+ * A small, STABLE set of client-safe failure codes (finding: raw exception
+ * messages — including Prisma's, which embed the model name, the failing
+ * column, and a rendered snippet of the query invocation — were being
+ * returned verbatim in `failed[].error` on a 201 SUCCESS response, where
+ * the error handler's leak protections never run). Only the two failure
+ * modes this function deliberately throws for get their own code; anything
+ * else — a Prisma error, a driver hiccup, literally any unanticipated
+ * exception — collapses to `unexpected_error`. The full untouched detail
+ * still reaches Pino via `logger.warn` below; only the CLIENT-visible
+ * string is generic.
+ */
+export type LodgingImportRowFailureCode =
+  | "ownership_mismatch"
+  | "missing_lodging_reference"
+  | "unexpected_error";
+
+const FAILURE_MESSAGES: Record<LodgingImportRowFailureCode, string> = {
+  ownership_mismatch: "This lodging does not belong to your account.",
+  missing_lodging_reference: "This row has no lodging to create or attach to.",
+  unexpected_error: "This row could not be imported due to an unexpected error.",
+};
+
+/** Thrown when a client-supplied `matchedLodgingId` fails the ownership check. */
+class OwnershipMismatchError extends Error {
+  constructor() {
+    super("matchedLodgingId does not belong to this user");
+    this.name = "OwnershipMismatchError";
+  }
+}
+
+/** Thrown when a row has neither `lodging` fields nor a `matchedLodgingId`. */
+class MissingLodgingReferenceError extends Error {
+  constructor() {
+    super("Row has neither a lodging to create nor a lodging to attach to");
+    this.name = "MissingLodgingReferenceError";
+  }
+}
+
+function classifyFailure(err: unknown): LodgingImportRowFailureCode {
+  if (err instanceof OwnershipMismatchError) return "ownership_mismatch";
+  if (err instanceof MissingLodgingReferenceError) return "missing_lodging_reference";
+  return "unexpected_error";
+}
+
 export interface CommitResult {
   batchId: string;
   createdLodgings: number;
   createdStays: number;
   skipped: number;
-  failed: { sourceRowIndex: number; error: string }[];
+  failed: { sourceRowIndex: number; code: LodgingImportRowFailureCode; error: string }[];
 }
 
 const UNIQUE_VIOLATION = "P2002";
@@ -89,28 +139,72 @@ async function createLodging(
   return lodging.id;
 }
 
+/** Dedupe key for the FX pre-resolve pass: one lookup per distinct
+ *  (currency, check-in calendar day) pair, not one per row. */
+function fxOutcomeKey(currency: string, checkInDay: string): string {
+  return `${currency}|${checkInDay}`;
+}
+
+/**
+ * Pre-resolve every distinct (currency, check-in day) FX outcome ONCE,
+ * before the row loop runs (finding: `POST /commit` fanned out up to
+ * `MAX_LODGING_IMPORT_ROWS` sequential outbound FX calls inside one HTTP
+ * request — a real import with 1000 distinct check-in dates meant 1000
+ * uncached Frankfurter/ECB calls held open in a single request, exactly the
+ * abuse `fxPreviewLimiter` exists to prevent, reintroduced with 1000x
+ * per-request amplification). A row whose stay carries no price never
+ * reaches `applyFxSnapshot`'s network path at all (it short-circuits on
+ * `totalPrice == null`), so those rows are intentionally excluded here and
+ * resolved inline (synchronously) at write time instead.
+ */
+async function resolveFxOutcomes(
+  rows: readonly CommitRowInput[],
+  baseCurrency: string,
+): Promise<Map<string, FxSnapshotOutcome>> {
+  const outcomes = new Map<string, FxSnapshotOutcome>();
+  for (const row of rows) {
+    if (row.action === "skip" || !row.stay || row.stay.totalPrice == null) continue;
+    const currency = row.stay.currency ?? "EUR";
+    const key = fxOutcomeKey(currency, row.stay.checkIn);
+    if (outcomes.has(key)) continue;
+    const outcome = await applyFxSnapshot(
+      { totalPrice: row.stay.totalPrice, currency, checkIn: toDate(row.stay.checkIn) },
+      baseCurrency,
+    );
+    outcomes.set(key, outcome);
+  }
+  return outcomes;
+}
+
+/** Look up the pre-resolved outcome for one row's stay. A priceless stay
+ *  never had a key to begin with — resolve it to `priceRemoved` directly,
+ *  matching exactly what `applyFxSnapshot` itself would have returned. */
+function fxOutcomeForStay(
+  fields: StayCandidateFields,
+  outcomes: ReadonlyMap<string, FxSnapshotOutcome>,
+): FxSnapshotOutcome {
+  if (fields.totalPrice == null) return { status: "priceRemoved" };
+  const currency = fields.currency ?? "EUR";
+  // Absent from the map only if the pre-resolve pass's lookup for this exact
+  // pair itself failed — same non-blocking contract as a live failed lookup:
+  // never fail the row, just omit the snapshot.
+  return outcomes.get(fxOutcomeKey(currency, fields.checkIn)) ?? { status: "lookupFailed" };
+}
+
 async function createStay(
   userId: string,
   batchId: string,
   lodgingId: string,
   fields: StayCandidateFields,
-  baseCurrency: string,
+  fxOutcome: FxSnapshotOutcome,
 ): Promise<void> {
   const checkIn = toDate(fields.checkIn);
   const currency = fields.currency ?? "EUR";
 
-  // A stay with no price simply has no FX snapshot — `applyFxSnapshot` treats
-  // a null price as `status: "priceRemoved"` (short-circuits before any
-  // network call), and `resolveFxFields` collapses that to an all-null
-  // snapshot. A common real import (stays joined by hotel name, no price
-  // column at all) is correct data this way, not an error. Reusing
-  // `resolveFxFields` (routes/lodging.ts) instead of re-implementing its
-  // fallback here keeps this in lockstep if `FxSnapshotFields` ever grows a
-  // field.
-  const fxOutcome = await applyFxSnapshot(
-    { totalPrice: fields.totalPrice, currency, checkIn },
-    baseCurrency,
-  );
+  // A stay with no price simply has no FX snapshot — `resolveFxFields`
+  // collapses any non-"snapshotted" outcome to an all-null snapshot. A
+  // common real import (stays joined by hotel name, no price column at all)
+  // is correct data this way, not an error.
   const fx = resolveFxFields(fxOutcome);
 
   await prisma.lodgingStay.create({
@@ -155,6 +249,9 @@ export async function commitLodgingImport(
 ): Promise<CommitResult> {
   const batch = await prisma.lodgingImportBatch.create({ data: { userId, source, fileName } });
   const baseCurrency = await getBaseCurrency(userId);
+  // See `resolveFxOutcomes` — one lookup per distinct (currency, day) pair
+  // across the WHOLE batch, resolved before any row is written.
+  const fxOutcomes = await resolveFxOutcomes(rows, baseCurrency);
 
   // Lodgings created by THIS run, so a later row naming the same hotel attaches
   // to it instead of creating a second copy.
@@ -163,7 +260,8 @@ export async function commitLodgingImport(
   let createdLodgings = 0;
   let createdStays = 0;
   let skipped = 0;
-  const failed: { sourceRowIndex: number; error: string }[] = [];
+  const failed: { sourceRowIndex: number; code: LodgingImportRowFailureCode; error: string }[] =
+    [];
 
   for (const row of rows) {
     if (row.action === "skip") {
@@ -191,7 +289,7 @@ export async function commitLodgingImport(
           select: { id: true },
         });
         if (!owned) {
-          throw new Error("matchedLodgingId does not belong to this user");
+          throw new OwnershipMismatchError();
         }
       }
 
@@ -223,12 +321,13 @@ export async function commitLodgingImport(
       }
 
       if (!lodgingId) {
-        throw new Error("Row has neither a lodging to create nor a lodging to attach to");
+        throw new MissingLodgingReferenceError();
       }
 
       if (row.stay) {
         try {
-          await createStay(userId, batch.id, lodgingId, row.stay, baseCurrency);
+          const fxOutcome = fxOutcomeForStay(row.stay, fxOutcomes);
+          await createStay(userId, batch.id, lodgingId, row.stay, fxOutcome);
           createdStays++;
         } catch (err) {
           if (!isUniqueViolation(err)) throw err;
@@ -236,17 +335,24 @@ export async function commitLodgingImport(
         }
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      // The FULL detail (including any Prisma internals — model name,
+      // column, a rendered query snippet) is logged server-side ONLY.
+      const detail = err instanceof Error ? err.message : String(err);
+      const code = classifyFailure(err);
       logger.warn(
         {
           operation: "lodging_import_row_failed",
           userId,
           sourceRowIndex: row.sourceRowIndex,
-          message,
+          code,
+          message: detail,
         },
         "Lodging import row failed — batch continues",
       );
-      failed.push({ sourceRowIndex: row.sourceRowIndex, error: message });
+      // The client only ever sees the stable, generic message for `code` —
+      // this response is a 201 success body, so the error handler's leak
+      // protections never run on it.
+      failed.push({ sourceRowIndex: row.sourceRowIndex, code, error: FAILURE_MESSAGES[code] });
     }
   }
 

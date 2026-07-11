@@ -4,6 +4,7 @@ import { lodgingImportLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
 import {
+  batchIdParamsSchema,
   lodgingImportCommitRequestSchema,
   lodgingImportPreviewRequestSchema,
   suggestMappingRequestSchema,
@@ -95,7 +96,14 @@ router.get("/batches", async (req: AuthRequest, res: Response, next: NextFunctio
 router.delete("/batches/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
-    const result = await revertLodgingImportBatch(userId, req.params.id);
+    // Validate BEFORE any DB work — `revertLodgingImportBatch` opens a
+    // Serializable transaction just to look the id up, so a malformed id
+    // must 400 here rather than pay for a transaction that can only ever
+    // 404.
+    const parsedParams = batchIdParamsSchema.safeParse(req.params);
+    if (!parsedParams.success) throw new AppError(parsedParams.error.message, 400);
+
+    const result = await revertLodgingImportBatch(userId, parsedParams.data.id);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);

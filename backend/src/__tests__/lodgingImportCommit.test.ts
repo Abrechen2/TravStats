@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { commitLodgingImport } from "../services/lodging/lodgingImportCommit";
 import type { CommitRowInput } from "../schemas/lodgingImport";
@@ -12,6 +13,10 @@ jest.mock("../services/fx/frankfurter", () => ({
   })),
   getRate: jest.fn(async () => 1),
 }));
+
+const frankfurterMock = jest.requireMock("../services/fx/frankfurter") as {
+  convertToBase: jest.Mock;
+};
 
 // Geocoding must NOT run during a commit.
 const geocodeSpy = jest.fn(async () => null);
@@ -32,6 +37,7 @@ describe("commitLodgingImport", () => {
 
   beforeEach(() => {
     geocodeSpy.mockClear();
+    frankfurterMock.convertToBase.mockClear();
   });
 
   afterAll(async () => {
@@ -216,5 +222,150 @@ describe("commitLodgingImport", () => {
     const result = await commitLodgingImport(userId, "csv", "both.csv", rows);
     expect(result.createdLodgings).toBe(1);
     expect(result.createdStays).toBe(1);
+  });
+
+  // ---- Finding 2: FX fan-out (POST /commit was fanning out up to
+  // MAX_LODGING_IMPORT_ROWS sequential outbound FX calls inside the request) ----
+
+  it("resolves FX exactly once for N rows sharing the same (currency, check-in day) pair", async () => {
+    const rows: CommitRowInput[] = [
+      {
+        sourceRowIndex: 0,
+        action: "create",
+        lodging: { name: "FX Dedupe Hotel A" },
+        stay: { checkIn: "2026-11-01", checkOut: "2026-11-02", totalPrice: 100, currency: "EUR" },
+      },
+      {
+        sourceRowIndex: 1,
+        action: "create",
+        lodging: { name: "FX Dedupe Hotel B" },
+        stay: { checkIn: "2026-11-01", checkOut: "2026-11-02", totalPrice: 250, currency: "EUR" },
+      },
+      {
+        sourceRowIndex: 2,
+        action: "create",
+        lodging: { name: "FX Dedupe Hotel C" },
+        stay: { checkIn: "2026-11-01", checkOut: "2026-11-02", totalPrice: 75, currency: "EUR" },
+      },
+    ];
+
+    const result = await commitLodgingImport(userId, "csv", "fx-dedupe.csv", rows);
+
+    expect(result.failed).toEqual([]);
+    expect(result.createdStays).toBe(3);
+    // Three rows, same (currency, day) pair — exactly ONE outbound FX call,
+    // not three.
+    expect(frankfurterMock.convertToBase).toHaveBeenCalledTimes(1);
+
+    const stays = await prisma.lodgingStay.findMany({ where: { batchId: result.batchId } });
+    expect(stays).toHaveLength(3);
+    for (const stay of stays) {
+      expect(stay.totalPriceBase).not.toBeNull();
+      expect(stay.fxRate).not.toBeNull();
+    }
+  });
+
+  it("resolves FX once per DISTINCT (currency, day) pair — different days each get their own lookup", async () => {
+    const rows: CommitRowInput[] = [
+      {
+        sourceRowIndex: 0,
+        action: "create",
+        lodging: { name: "FX Multi-day Hotel A" },
+        stay: { checkIn: "2026-11-05", checkOut: "2026-11-06", totalPrice: 100, currency: "EUR" },
+      },
+      {
+        sourceRowIndex: 1,
+        action: "create",
+        lodging: { name: "FX Multi-day Hotel B" },
+        stay: { checkIn: "2026-11-06", checkOut: "2026-11-07", totalPrice: 100, currency: "EUR" },
+      },
+    ];
+
+    const result = await commitLodgingImport(userId, "csv", "fx-multiday.csv", rows);
+
+    expect(result.failed).toEqual([]);
+    expect(result.createdStays).toBe(2);
+    expect(frankfurterMock.convertToBase).toHaveBeenCalledTimes(2);
+  });
+
+  it("saves a priced stay without an FX snapshot when the FX lookup fails — never blocks the write", async () => {
+    frankfurterMock.convertToBase.mockImplementationOnce(async () => null);
+
+    const rows: CommitRowInput[] = [
+      {
+        sourceRowIndex: 0,
+        action: "create",
+        lodging: { name: "FX Failure Hotel" },
+        stay: { checkIn: "2026-12-01", checkOut: "2026-12-02", totalPrice: 150, currency: "EUR" },
+      },
+    ];
+
+    const result = await commitLodgingImport(userId, "csv", "fx-fail.csv", rows);
+
+    expect(result.failed).toEqual([]);
+    expect(result.createdStays).toBe(1);
+
+    const stay = await prisma.lodgingStay.findFirst({ where: { batchId: result.batchId } });
+    expect(stay?.totalPrice).toBeCloseTo(150, 2);
+    // No partial snapshot: price is saved, but the FX fields are all null.
+    expect(stay?.totalPriceBase).toBeNull();
+    expect(stay?.fxRate).toBeNull();
+    expect(stay?.fxBaseCurrency).toBeNull();
+    expect(stay?.fxRateDate).toBeNull();
+  });
+
+  // ---- Finding 1: raw exception messages must never reach a 201 response ----
+
+  it("maps an unexpected Prisma error to the stable unexpected_error code — never leaks Prisma internals", async () => {
+    // A realistic PrismaClientKnownRequestError: its message embeds the
+    // model name, the failing column, and a rendered snippet of the query
+    // invocation — exactly what must never reach the client.
+    const prismaError = new Prisma.PrismaClientKnownRequestError(
+      "Invalid `prisma.lodging.create()` invocation in\n" +
+        "/app/backend/src/services/lodging/lodgingImportCommit.ts:119:25\n\n" +
+        "Foreign key constraint failed on the field: `Lodging_chain_id_fkey (index)`",
+      { code: "P2003", clientVersion: "5.99.0", meta: { field_name: "chain_id" } },
+    );
+    const createSpy = jest
+      .spyOn(prisma.lodging, "create")
+      .mockRejectedValueOnce(prismaError);
+
+    try {
+      const rows: CommitRowInput[] = [
+        { sourceRowIndex: 0, action: "create", lodging: { name: "Unexpected Error Hotel" }, stay: null },
+      ];
+      const result = await commitLodgingImport(userId, "csv", "unexpected.csv", rows);
+
+      expect(result.failed).toHaveLength(1);
+      expect(result.failed[0].sourceRowIndex).toBe(0);
+      expect(result.failed[0].code).toBe("unexpected_error");
+
+      const clientMessage = result.failed[0].error;
+      const lower = clientMessage.toLowerCase();
+      expect(lower).not.toContain("prisma");
+      expect(lower).not.toContain("lodging.create");
+      expect(lower).not.toContain("chain_id");
+      expect(lower).not.toContain("foreign key");
+      expect(clientMessage).not.toContain("lodgingImportCommit.ts");
+    } finally {
+      createSpy.mockRestore();
+    }
+  });
+
+  it("keeps ownership failures on their own stable code, distinct from unexpected errors", async () => {
+    const rows: CommitRowInput[] = [
+      {
+        sourceRowIndex: 0,
+        action: "create",
+        matchedLodgingId: "00000000-0000-0000-0000-000000000000",
+        lodging: null,
+        stay: null,
+      },
+    ];
+    const result = await commitLodgingImport(userId, "csv", "ownership.csv", rows);
+
+    expect(result.failed).toHaveLength(1);
+    expect(result.failed[0].code).toBe("ownership_mismatch");
+    expect(result.failed[0].error.toLowerCase()).not.toContain("prisma");
   });
 });

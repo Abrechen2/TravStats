@@ -150,7 +150,28 @@ export const lodgingImportCommitRequestSchema = z.object({
 });
 export type LodgingImportCommitRequest = z.infer<typeof lodgingImportCommitRequestSchema>;
 
+// Mirrors the `headers` array cap below — a sample row is built FROM those
+// headers, so it can never legitimately need more keys than the header list
+// allows. Without this, `z.record` caps neither the key COUNT nor the key
+// LENGTH, and the whole `sampleRows` array is `JSON.stringify`'d straight
+// into the LLM prompt (`mappingSuggestion.ts`) — an attacker could otherwise
+// push a multi-MB prompt at the model up to 60 times per 15-minute window.
+const MAX_SAMPLE_ROW_KEYS = 80;
+
+const sampleRowSchema = z
+  .record(z.string(), z.string().max(500))
+  .refine((row) => Object.keys(row).length <= MAX_SAMPLE_ROW_KEYS, {
+    message: `A sample row cannot have more than ${MAX_SAMPLE_ROW_KEYS} columns`,
+  });
+
 export const suggestMappingRequestSchema = z.object({
   headers: z.array(z.string().max(200)).min(1).max(80),
-  sampleRows: z.array(z.record(z.string(), z.string().max(500))).max(5),
+  sampleRows: z.array(sampleRowSchema).max(5),
+});
+
+/** Route param for `DELETE /batches/:id` — the only client-supplied value in
+ * this router that used to reach a service function (and a Serializable
+ * transaction) unvalidated. */
+export const batchIdParamsSchema = z.object({
+  id: z.string().uuid(),
 });
