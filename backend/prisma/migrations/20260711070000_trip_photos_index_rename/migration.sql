@@ -1,0 +1,15 @@
+-- Reconcile a pre-existing drift between schema.prisma and the migration history.
+--
+-- The hand-written migration 20260509140000_trip_photos created the composite index
+-- as "trip_photos_trip_id_sort_idx", but Prisma's default name for
+-- @@index([tripId, sortIdx]) on table "trip_photos" is
+-- "trip_photos_trip_id_sort_idx_idx" (column "sort_idx" + the "_idx" suffix).
+--
+-- Because of that mismatch every newly generated migration on every branch bundled
+-- this rename, and `npm run check:drift` was red. Renaming the index here is a
+-- metadata-only operation (no table rewrite, no data touched) and reconciles the
+-- database with schema.prisma once and for all.
+--
+-- IF EXISTS keeps the migration safe on any database where the index was already
+-- reconciled by hand: it becomes a no-op instead of failing the deploy.
+ALTER INDEX IF EXISTS "trip_photos_trip_id_sort_idx" RENAME TO "trip_photos_trip_id_sort_idx_idx";
