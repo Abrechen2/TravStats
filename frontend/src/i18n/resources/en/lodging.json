@@ -100,7 +100,10 @@
   },
   "type": {
     "hotel": "Hotel",
-    "campsite": "Campsite"
+    "campsite": "Campsite",
+    "guesthouse": "Guesthouse",
+    "apartment": "Apartment",
+    "hostel": "Hostel"
   },
   "board": {
     "none": "No board",

@@ -118,7 +118,7 @@ for (const [namespace, { de, en }] of Object.entries(NAMESPACES)) {
  */
 describe("every dynamic lodging:* union member resolves to a string", () => {
   const dynamicUnions: Record<string, readonly string[]> = {
-    type: ["hotel", "campsite"],
+    type: ["hotel", "campsite", "guesthouse", "apartment", "hostel"],
     board: ["none", "breakfast", "half", "full", "all_inclusive"],
     stayStatus: ["scheduled", "completed", "cancelled"],
   };

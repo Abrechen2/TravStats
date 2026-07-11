@@ -74,8 +74,7 @@ describe("calculateLodgingStats", () => {
     expect(s.spendByCurrency).toEqual({});
     expect(s.spendBaseByCurrency).toEqual({});
     expect(s.awardNights).toBe(0);
-    expect(s.hotelNights).toBe(0);
-    expect(s.campsiteNights).toBe(0);
+    expect(s.nightsByType).toEqual({});
     expect(s.avgRatingOverall).toBeNull();
     expect(s.chainLoyaltyMax).toBe(0);
     expect(s.sameHotelRepeatMax).toBe(0);
@@ -248,7 +247,41 @@ describe("calculateLodgingStats", () => {
     ]);
     expect(s.longestStayNights).toBe(3);
     expect(s.awardNights).toBe(3);
-    expect(s.hotelNights).toBe(3);
-    expect(s.campsiteNights).toBe(1);
+    expect(s.nightsByType).toEqual({ hotel: 3, campsite: 1 });
+  });
+
+  it("tracks nights by type for every lodging type in the vocabulary, not just hotel/campsite", () => {
+    const s = calculateLodgingStats([
+      stay({
+        lodgingId: "l1",
+        type: "guesthouse",
+        checkIn: new Date("2024-01-01T00:00:00Z"),
+        checkOut: new Date("2024-01-03T00:00:00Z"),
+      }),
+      stay({
+        lodgingId: "l2",
+        type: "apartment",
+        checkIn: new Date("2024-02-01T00:00:00Z"),
+        checkOut: new Date("2024-02-05T00:00:00Z"),
+      }),
+      stay({
+        lodgingId: "l3",
+        type: "hostel",
+        checkIn: new Date("2024-03-01T00:00:00Z"),
+        checkOut: new Date("2024-03-02T00:00:00Z"),
+      }),
+    ]);
+    expect(s.nightsByType).toEqual({ guesthouse: 2, apartment: 4, hostel: 1 });
+  });
+
+  it("omits a type entirely from nightsByType when its only stay has 0 nights", () => {
+    const s = calculateLodgingStats([
+      stay({
+        type: "hostel",
+        checkIn: new Date("2024-05-14T00:00:00Z"),
+        checkOut: new Date("2024-05-14T00:00:00Z"),
+      }),
+    ]);
+    expect(s.nightsByType).toEqual({});
   });
 });

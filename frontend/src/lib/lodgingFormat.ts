@@ -1,7 +1,26 @@
 import { formatCurrency } from "./units";
+import type { LodgingType } from "../types/lodging";
 
 const FALLBACK = "—";
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const LODGING_TYPE_ICONS: Record<LodgingType, string> = {
+  hotel: "🏨",
+  campsite: "⛺",
+  guesthouse: "🏡",
+  apartment: "🏢",
+  hostel: "🛏️",
+};
+
+/**
+ * Emoji glyph for a lodging type — one shared mapping so the list, chain-detail,
+ * detail, and dashboard-sidebar rows all render the same icon per type instead
+ * of four independent `type === "campsite" ? … : …` ternaries (which silently
+ * fell back to the hotel icon for any type added after campsite).
+ */
+export function lodgingTypeIcon(type: LodgingType): string {
+  return LODGING_TYPE_ICONS[type];
+}
 
 /**
  * The subset of `LodgingStay` needed to render its price + FX readout.

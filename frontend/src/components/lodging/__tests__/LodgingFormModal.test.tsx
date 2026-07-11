@@ -78,6 +78,14 @@ describe("LodgingFormModal", () => {
     expect(payload.notes).not.toBeUndefined();
   });
 
+  it("offers all five lodging types in the type selector", () => {
+    render(<LodgingFormModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    const select = screen.getByLabelText("lodging:field.type") as HTMLSelectElement;
+    const values = Array.from(select.options).map((o) => o.value);
+    expect(values).toEqual(["hotel", "campsite", "guesthouse", "apartment", "hostel"]);
+  });
+
   it("creates a lodging with the entered fields", async () => {
     vi.mocked(createLodging).mockResolvedValue({ ...baseLodging, id: "new-lodging" });
     const onSaved = vi.fn();
