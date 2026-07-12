@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { describeLodgingCommitResult } from "../lodgingImportResult";
-import type { LodgingImportCommitResult } from "../../types/lodgingImport";
+import { describeLodgingCommitResult, describeLodgingRevertResult } from "../lodgingImportResult";
+import type {
+  LodgingImportCommitResult,
+  LodgingImportRevertResult,
+} from "../../types/lodgingImport";
 
 /**
  * Translation function stub — maps i18n keys to readable test labels.
@@ -347,5 +350,95 @@ describe("describeLodgingCommitResult", () => {
       expect(toast.message).not.toContain("This is a very specific technical error message");
       expect(toast.message).toContain("unexpected error");
     });
+  });
+});
+
+/**
+ * Translation function stub for the revert-result toast (Task 18b). Mirrors
+ * the batch-list translations added to `lodging.json`'s `import.batches.*`
+ * subtree.
+ */
+function makeMockRevertTranslate() {
+  const translations: Record<string, string> = {
+    "lodging:import.batches.revertResult.success":
+      "{{deletedLodgings}} hotel(s) and {{deletedStays}} stay(s) deleted.",
+    "lodging:import.batches.revertResult.withDetached":
+      "{{deletedLodgings}} hotel(s) and {{deletedStays}} stay(s) deleted, {{detachedLodgings}} hotel(s) kept (they have other stays).",
+  };
+
+  return (key: string, options?: Record<string, unknown>): string => {
+    let result = translations[key] ?? key;
+    if (options) {
+      Object.entries(options).forEach(([k, v]) => {
+        result = result.replace(`{{${k}}}`, String(v));
+      });
+    }
+    return result;
+  };
+}
+
+describe("describeLodgingRevertResult", () => {
+  // The owner's revert semantics: a batch-created lodging with foreign stays
+  // (hand-added, or attached by a later batch) survives, merely detached —
+  // `detachedLodgings` is what lets the message honestly say "kept" instead
+  // of silently losing that distinction. A result with `detachedLodgings > 0`
+  // MUST read differently from one with 0.
+  it("reports a clean revert (no detached lodgings) without a 'kept' clause", () => {
+    const t = makeMockRevertTranslate();
+    const result: LodgingImportRevertResult = {
+      deletedLodgings: 3,
+      deletedStays: 5,
+      detachedLodgings: 0,
+    };
+
+    const toast = describeLodgingRevertResult(result, t);
+
+    expect(toast.type).toBe("success");
+    expect(toast.message).toContain("3 hotel");
+    expect(toast.message).toContain("5 stay");
+    expect(toast.message).not.toContain("kept");
+  });
+
+  it("reports the kept count when detachedLodgings > 0", () => {
+    const t = makeMockRevertTranslate();
+    const result: LodgingImportRevertResult = {
+      deletedLodgings: 2,
+      deletedStays: 4,
+      detachedLodgings: 1,
+    };
+
+    const toast = describeLodgingRevertResult(result, t);
+
+    expect(toast.type).toBe("success");
+    expect(toast.message).toContain("2 hotel");
+    expect(toast.message).toContain("4 stay");
+    expect(toast.message).toContain("1 hotel");
+    expect(toast.message).toContain("kept");
+  });
+
+  it("produces a message that visibly differs between detached>0 and detached=0", () => {
+    const t = makeMockRevertTranslate();
+    const clean = describeLodgingRevertResult(
+      { deletedLodgings: 1, deletedStays: 1, detachedLodgings: 0 },
+      t
+    );
+    const withDetached = describeLodgingRevertResult(
+      { deletedLodgings: 1, deletedStays: 1, detachedLodgings: 1 },
+      t
+    );
+
+    expect(clean.message).not.toBe(withDetached.message);
+  });
+
+  it("handles zero counts across the board without crashing", () => {
+    const t = makeMockRevertTranslate();
+    const toast = describeLodgingRevertResult(
+      { deletedLodgings: 0, deletedStays: 0, detachedLodgings: 0 },
+      t
+    );
+
+    expect(toast.type).toBe("success");
+    expect(toast.message).toContain("0 hotel");
+    expect(toast.message).toContain("0 stay");
   });
 });

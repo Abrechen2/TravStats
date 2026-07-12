@@ -41,6 +41,15 @@ vi.mock("../../components/lodging/LodgingFormModal", () => ({
   LodgingFormModal: () => null,
 }));
 
+// LodgingImportBatchList fetches on mount — stub it to an empty list so
+// every test in this file stays deterministic and doesn't hit the real
+// (unmocked) network. Task 18b's own behaviour is covered by
+// LodgingImportBatchList.test.tsx.
+vi.mock("../../lib/api/lodgingImport", () => ({
+  listLodgingImportBatches: vi.fn().mockResolvedValue([]),
+  revertLodgingImportBatch: vi.fn(),
+}));
+
 // Use the real settingsStore so we can `setState` a divergent baseCurrency
 // vs units.currency, mirroring LodgingDetailPage.test.tsx.
 vi.unmock("../../store/settingsStore");
@@ -197,9 +206,7 @@ describe("LodgingListPage", () => {
 
     renderListPage();
 
-    const select = (await screen.findByLabelText(
-      "lodging:filter.type"
-    )) as HTMLSelectElement;
+    const select = (await screen.findByLabelText("lodging:filter.type")) as HTMLSelectElement;
     const values = Array.from(select.options).map((o) => o.value);
     expect(values).toEqual(["all", "hotel", "campsite", "guesthouse", "apartment", "hostel"]);
   });
