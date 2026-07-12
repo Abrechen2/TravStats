@@ -20,7 +20,16 @@ it("falls back to the airline name text when the logo fails", () => {
   expect(screen.getByText("Lufthansa")).toBeInTheDocument();
 });
 
-it("falls back to the name immediately when no code resolves", () => {
+it("resolves the logo from the stored airline NAME when no structured code exists", () => {
+  // Most stored flights carry only the name — the catalogue maps it to LH.
   render(<AirlineWordmarkCell flight={{ ...flight, airlineIata: undefined, flightNumber: undefined } as unknown as Flight} />);
-  expect(screen.getByText("Lufthansa")).toBeInTheDocument();
+  const img = screen.getByRole("img") as HTMLImageElement;
+  expect(img.src).toContain("/api/v1/airline-logos/LH?variant=logo");
+});
+
+it("falls back to the name immediately when nothing resolves", () => {
+  render(<AirlineWordmarkCell flight={{
+    ...flight, airline: "Some Unknown Carrier", airlineIata: undefined, flightNumber: undefined,
+  } as unknown as Flight} />);
+  expect(screen.getByText("Some Unknown Carrier")).toBeInTheDocument();
 });
