@@ -5,7 +5,6 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { calculateDistance } from "../../lib/geo";
 import type { Airport } from "../../lib/api";
 import { useSuggestions } from "../../hooks/useSuggestions";
-import { useSettingsStore } from "../../store/settingsStore";
 import { useToastStore } from "../../store/toastStore";
 import { estimateArrivalFromDeparture } from "../../lib/timeEstimation";
 import CurrencyInput from "../CurrencyInput";
@@ -77,6 +76,11 @@ export interface FlightCompleteStepProps {
   setSeatClass: (v: "economy" | "premium_economy" | "business" | "first") => void;
   setStatus: (v: "scheduled" | "flown" | "cancelled" | "historical") => void;
   setCategory: (v: "business" | "private" | "vacation") => void;
+  // Booking (#197 — same fields the edit modal offers)
+  bookingReference: string;
+  ticketNumber: string;
+  setBookingReference: (v: string) => void;
+  setTicketNumber: (v: string) => void;
   // Price
   price: number | undefined;
   /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
@@ -136,6 +140,10 @@ export default function FlightCompleteStep({
   setSeatClass,
   setStatus,
   setCategory,
+  bookingReference,
+  ticketNumber,
+  setBookingReference,
+  setTicketNumber,
   price,
   currency,
   setPrice,
@@ -154,7 +162,6 @@ export default function FlightCompleteStep({
   setTimeEstimationWarning,
 }: FlightCompleteStepProps): JSX.Element {
   const { t, i18n } = useTranslation(["flights"]);
-  const { features } = useSettingsStore();
   const { airlines: airlineSuggestions, aircraft: aircraftSuggestions } = useSuggestions();
   const addToast = useToastStore((s) => s.addToast);
 
@@ -685,38 +692,61 @@ export default function FlightCompleteStep({
         </div>
       </div>
 
-      {/* Price & Currency */}
-      {features.enableCostTracking && (
-        <div className="grid grid-cols-3 gap-4">
-          <div className="col-span-2">
-            <label className={`label ${textClass} flex items-center gap-2`}>
-              {t("flights:form.price")}
-              <HelpIcon
-                content={t("flights:form.help.price")}
-                expandedContent={t("flights:form.help.price")}
-                position="top"
-              />
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={price ?? ""}
-              onChange={(e) => setPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
-              className={`input ${sizedInputClass}`}
-              placeholder={t("flights:form.placeholders.price")}
+      {/* Price & Currency — always available, matching the cruise form (#192).
+          Only the tax/fee breakdown elsewhere stays behind cost tracking. */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="col-span-2">
+          <label className={`label ${textClass} flex items-center gap-2`}>
+            {t("flights:form.price")}
+            <HelpIcon
+              content={t("flights:form.help.price")}
+              expandedContent={t("flights:form.help.price")}
+              position="top"
             />
-          </div>
-          <div>
-            <label className={`label ${textClass}`}>{t("flights:form.currency")}</label>
-            <CurrencyInput
-              value={currency}
-              onChange={setCurrency}
-              className={`input ${sizedInputClass}`}
-            />
-          </div>
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={price ?? ""}
+            onChange={(e) => setPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
+            className={`input ${sizedInputClass}`}
+            placeholder={t("flights:form.placeholders.price")}
+          />
         </div>
-      )}
+        <div>
+          <label className={`label ${textClass}`}>{t("flights:form.currency")}</label>
+          <CurrencyInput
+            value={currency}
+            onChange={setCurrency}
+            className={`input ${sizedInputClass}`}
+          />
+        </div>
+      </div>
+
+      {/* Booking Reference / Ticket Number (#197) */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className={`label ${textClass}`}>{t("flights:form.bookingReference")}</label>
+          <input
+            type="text"
+            value={bookingReference}
+            onChange={(e) => setBookingReference(e.target.value.toUpperCase())}
+            className={`input ${sizedInputClass}`}
+            placeholder={t("flights:form.placeholders.bookingReference")}
+          />
+        </div>
+        <div>
+          <label className={`label ${textClass}`}>{t("flights:form.ticketNumber")}</label>
+          <input
+            type="text"
+            value={ticketNumber}
+            onChange={(e) => setTicketNumber(e.target.value)}
+            className={`input ${sizedInputClass}`}
+            placeholder={t("flights:form.placeholders.ticketNumber")}
+          />
+        </div>
+      </div>
 
       {/* Tags */}
       <div>

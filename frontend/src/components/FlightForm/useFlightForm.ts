@@ -130,6 +130,8 @@ export function useFlightForm(
   const [tags, setTags] = useState<string[]>([]);
   const [companions, setCompanions] = useState<string[]>([]);
   const [companionInput, setCompanionInput] = useState("");
+  const [bookingReference, setBookingReference] = useState("");
+  const [ticketNumber, setTicketNumber] = useState("");
   const [baggageAllowance, setBaggageAllowance] = useState<string | undefined>(undefined);
   const [frequentFlyerNumber, setFrequentFlyerNumber] = useState<string | undefined>(undefined);
   const [bookingClassLetter, setBookingClassLetter] = useState<string | undefined>(undefined);
@@ -468,6 +470,8 @@ export function useFlightForm(
       arrTimeSemantics,
       status,
       notes: notes || undefined,
+      bookingReference: bookingReference || undefined,
+      ticketNumber: ticketNumber || undefined,
       price,
       currency,
       category,
@@ -499,10 +503,11 @@ export function useFlightForm(
 
   /**
    * After a successful save, prepare the form for entering the return leg:
-   * swaps departure/arrival airports, keeps trip-stable fields (airline,
-   * category, tags, companions, booking ref via notes) and clears
-   * leg-specific ones (flight number, seat, gate, terminal, aircraft,
-   * times). The user must pick new dates and times.
+   * swaps departure/arrival airports, keeps booking-stable fields (airline,
+   * category, tags, companions, booking reference, ticket number — the
+   * return leg belongs to the same PNR/e-ticket) and clears leg-specific
+   * ones (flight number, seat, gate, terminal, aircraft, times). The user
+   * must pick new dates and times.
    */
   const prepareReturnFlightForm = (): void => {
     const outboundDeparture = departure;
@@ -782,6 +787,8 @@ export function useFlightForm(
     seatClass,
     status,
     notes,
+    bookingReference,
+    ticketNumber,
     price,
     currency,
     category,
@@ -819,6 +826,8 @@ export function useFlightForm(
     setSeatClass,
     setStatus,
     setNotes,
+    setBookingReference,
+    setTicketNumber,
     setPrice,
     setCurrency,
     setCategory,
