@@ -5,7 +5,10 @@ import { dayShift } from "../../lib/dayShift";
 const dateFmt = (iso: string, tz: string, lang: string): string =>
   new Intl.DateTimeFormat(lang === "de" ? "de-DE" : "en-GB", {
     weekday: "short", day: "2-digit", month: "2-digit", year: "2-digit", timeZone: tz,
-  }).format(new Date(iso));
+  })
+    .format(new Date(iso))
+    // de-DE renders "Mo., 09.11.26" — the mockup wants the bare "Mo 09.11.26".
+    .replace(".,", "");
 
 const timeFmt = (iso: string, tz: string): string =>
   new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: tz })
