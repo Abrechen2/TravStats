@@ -7,7 +7,7 @@
 // and the flat-map panel render the very same `FlightAppearanceSection` /
 // `CruiseAppearanceSection`, so the two can never drift apart.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { loadMapAppearance, saveMapAppearance } from "./mapAppearance";
 import {
@@ -58,15 +58,21 @@ export const PANEL_OPTION_STYLE = { background: "#0d1117", color: "#f1f5f9" } as
 
 // ── Collapsible panel header ─────────────────────────────────────────
 /**
- * Expanded/collapsed state for the map control panels, persisted in the shared
- * `mapAppearance` blob so the choice survives reloads (#194) and carries across
- * the 2D ↔ globe switch — it is the same panel to the user.
+ * Expanded/collapsed state for the map control panels: collapsed by default
+ * (owner decision on #194 — the panel is rarely needed, the map is), persisted
+ * in the shared `mapAppearance` blob so the choice survives reloads and
+ * carries across the 2D ↔ globe switch — it is the same panel to the user.
+ *
+ * Persisted only on an actual toggle, never on mount — writing the default
+ * into the blob would bake it in and make any future default change a no-op
+ * for everyone who ever loaded the app.
  */
 export function usePanelExpanded(): [boolean, () => void] {
-  const [expanded, setExpanded] = useState(() => loadMapAppearance().panelExpanded ?? true);
-  const toggle = useCallback(() => setExpanded((prev) => !prev), []);
-  useEffect(() => {
-    saveMapAppearance({ panelExpanded: expanded });
+  const [expanded, setExpanded] = useState(() => loadMapAppearance().panelExpanded ?? false);
+  const toggle = useCallback(() => {
+    const next = !expanded;
+    saveMapAppearance({ panelExpanded: next });
+    setExpanded(next);
   }, [expanded]);
   return [expanded, toggle];
 }
