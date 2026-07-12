@@ -27,6 +27,19 @@ interface AirlineLogoProps {
   className?: string;
   /** Accessible label (defaults to airline display name or IATA code). */
   alt?: string;
+  /**
+   * Custom fallback rendered instead of the letterbox when the image
+   * errors or no code resolves. Left undefined to keep the default
+   * letterbox behaviour.
+   */
+  fallback?: React.ReactNode;
+  /**
+   * Width of the rendered image box, in pixels. When set, the img gets a
+   * `width` × `size` box instead of a square one — `object-contain` (via
+   * `className`) keeps the logo's own aspect ratio inside it. Defaults to
+   * `size` (square).
+   */
+  width?: number;
 }
 
 /** Derive IATA from flight number prefix when no explicit code is given. */
@@ -58,6 +71,8 @@ export default function AirlineLogo({
   variant = "icon",
   className,
   alt,
+  fallback,
+  width,
 }: AirlineLogoProps): JSX.Element {
   const [errored, setErrored] = useState(false);
 
@@ -76,6 +91,7 @@ export default function AirlineLogo({
   const accessibleAlt = alt ?? (resolvedIata ? `${resolvedIata} logo` : "Airline logo");
 
   if (!url || errored) {
+    if (fallback !== undefined) return <>{fallback}</>;
     return (
       <span
         className={
@@ -95,13 +111,13 @@ export default function AirlineLogo({
     <img
       src={url}
       alt={accessibleAlt}
-      width={size}
+      width={width ?? size}
       height={size}
       loading="lazy"
       decoding="async"
       onError={() => setErrored(true)}
       className={className ?? "rounded object-contain bg-white/90"}
-      style={{ width: size, height: size }}
+      style={{ width: width ?? size, height: size }}
     />
   );
 }
