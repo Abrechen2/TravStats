@@ -23,16 +23,22 @@ is scoped to change size:
 
 | Change size | Branch | When |
 |---|---|---|
-| Trivial (≤3 files, 1-line / config, no DB) | Direct commit to `main` | Typo, lint fix, tweak |
-| Risky fix (multi-file, logic, migration, dep bump) | `fix/<slug>` off `main`, merge when green | Any bug fix with blast radius |
-| Small feature | `feat/<slug>` off `main`, merge when done | Isolated enhancement |
+| Trivial (≤3 files, docs/tooling, no app logic, no DB) | Direct commit to `main` — only with the owner's explicit OK | Typo, lint fix, doc tweak |
+| Risky fix (multi-file, logic, migration, dep bump) | `fix/<slug>` off `main` | Any bug fix with blast radius |
+| Small feature | `feat/<slug>` off `main` | Isolated enhancement |
 | Large / long-running feature | `dev/<slug>` off `main`, NEVER commit to main until complete | Multi-phase work (e.g. `dev/multi-domain-v1` for cruise) |
 
-**Rule of thumb:** if you'd want to be able to revert the change as a unit
-or isolate it during review, branch it. Otherwise commit directly.
+**Rule of thumb:** develop on a branch. `main` mirrors what is (about to be)
+released, so landing anything there is a product decision, not a workflow step.
 
 **`main` is the deploy trunk** — every commit on `main` is a candidate
 for `/deploy`. Dev branches never deploy.
+
+> **Merging into `main` is the owner's RELEASE decision.** A branch being
+> green, reviewed and complete says nothing about whether it should ship.
+> When a branch is done: report it, then ask as a **single, isolated
+> question** whether to merge — never bundled into a list of next steps
+> where a general "ja" could be mistaken for release consent.
 
 ### Long-running feature branches (e.g. `dev/multi-domain-v1`)
 
@@ -202,6 +208,19 @@ frontend/src/
   `react-i18next`.
 - **Zod** — mandatory for all user input and API requests. Schemas live
   in `backend/src/schemas/`.
+- **Beta gating (since 2.4.0)** — unfinished features must register in
+  `frontend/src/config/betaFeatures.ts` and hide behind
+  `betaFeaturesEnabled` (admin_settings column, default `false`). Currently
+  gated: POI dashboard tab, Devices settings entry, trip AI summary. The
+  Devices entry is the ONLY phone-pairing entry point — it must be
+  un-gated when the mobile app ships. The flag is instance state: never
+  persist it client-side (see the `partialize` in `settingsStore.ts`).
+- **Map colour modes (since 2.4.0)** — flight and cruise colouring are
+  explicit modes (`lib/flightColor.ts`, `lib/cruiseColor.ts` + their
+  Zustand stores). Layers AND the legend must resolve colours through
+  these stores — never hardcode an arc colour or legend swatch, and never
+  let a view/tab decide the mode implicitly. That implicit override is
+  exactly the bug 2.4.0 removed.
 - **Domain gating** — every new page/feature must check
   `useEnabledDomains()` on the frontend; every new parser-target must register
   in `backend/src/shared/domains.ts` and its frontend mirror at
@@ -334,7 +353,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **hotels** (5397 symbols, 14064 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **TravStats** (5172 symbols, 13431 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -350,7 +369,7 @@ This project is indexed by GitNexus as **hotels** (5397 symbols, 14064 relations
 
 1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
 2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
-3. `READ gitnexus://repo/hotels/process/{processName}` — trace the full execution flow step by step
+3. `READ gitnexus://repo/TravStats/process/{processName}` — trace the full execution flow step by step
 4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
 
 ## When Refactoring
@@ -389,10 +408,10 @@ This project is indexed by GitNexus as **hotels** (5397 symbols, 14064 relations
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/hotels/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/hotels/clusters` | All functional areas |
-| `gitnexus://repo/hotels/processes` | All execution flows |
-| `gitnexus://repo/hotels/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/TravStats/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/TravStats/clusters` | All functional areas |
+| `gitnexus://repo/TravStats/processes` | All execution flows |
+| `gitnexus://repo/TravStats/process/{name}` | Step-by-step execution trace |
 
 ## Self-Check Before Finishing
 

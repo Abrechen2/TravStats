@@ -32,6 +32,9 @@ export const FILE_LIMITS = {
   PDF_MAX_SIZE: 20 * 1024 * 1024, // 20 MB
   TRIP_PHOTO_MAX_SIZE: 15 * 1024 * 1024, // 15 MB per photo
   TRIP_PHOTO_MAX_COUNT: 20, // per upload request
+  // Matches the client-side check in useSettingsPage.ts (handleAvatarUpload)
+  // — the client check alone is not a security control, this is the real cap.
+  PROFILE_PICTURE_MAX_SIZE: 5 * 1024 * 1024, // 5 MB
 
   // Body parsing limits
   JSON_BODY_MAX_SIZE: '10mb',
@@ -92,6 +95,10 @@ export const RATE_LIMITS = {
   // Receipt upload rate limits (prevent disk exhaustion)
   UPLOAD_RECEIPT_WINDOW_MS: 60 * 60 * 1000, // 1 hour
   UPLOAD_RECEIPT_MAX: 30, // 30 uploads per hour
+
+  // Profile picture upload rate limits (prevent disk exhaustion)
+  UPLOAD_PROFILE_PICTURE_WINDOW_MS: 60 * 60 * 1000, // 1 hour
+  UPLOAD_PROFILE_PICTURE_MAX: 20, // 20 uploads per hour per user
 
   // /settings is authenticated and per-user — no rate limiter is mounted.
   // These constants are kept for the limiter export so other code can still

@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useTranslation as useI18nTranslation } from "react-i18next";
 import { useSettingsStore } from "../store/settingsStore";
 import { logger } from "../lib/logger";
@@ -28,12 +28,23 @@ export function useTranslation(namespace?: string | string[]): {
     }
   }, [language, i18nInstance]);
 
-  // Wrap t function to ensure it always uses the current language
+  // react-i18next returns a NEW translation object on every render, so a
+  // `t` memoized on it is a new function every render too. Components list
+  // `t` in effect/memo dependency arrays; a per-render identity re-fires
+  // those on every keystroke (#190 — the admin instance-settings form
+  // refetched and reset itself on each typed character). Delegating through
+  // a ref keeps `t` referentially stable without going stale, and the
+  // deliberate `language` dependency is the ONE re-identity consumers need:
+  // it makes `useMemo`s that cache translated strings recompute on a
+  // language switch.
+  const translationRef = useRef(translation);
+  translationRef.current = translation;
   const t = useCallback(
     (key: string, options?: Record<string, unknown>) => {
-      return translation.t(key, options);
+      return translationRef.current.t(key, options);
     },
-    [translation]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `language` is intentional (see above)
+    [language]
   );
 
   return {

@@ -67,6 +67,13 @@ export interface SettingsResponse extends SettingsDataJson {
   historicalEnrichment: HistoricalEnrichmentResponseSettings;
   enabledDomains: string[];
   baseCurrency: string;
+  /**
+   * READ-ONLY mirror of the instance-level beta gate (AdminSettings row).
+   * It is NOT part of the user's own settings and deliberately absent from
+   * `settingsSchema`, so a PUT /settings carrying it is silently stripped by
+   * Zod — only an admin can change it, via PUT /admin/instance-settings.
+   */
+  betaFeaturesEnabled: boolean;
 }
 
 export interface UserSettingsUpdateData {

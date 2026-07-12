@@ -22,15 +22,17 @@ import {
 import type { NightCell } from "./sunPosition";
 import type { Quartile } from "./heatmapUtils";
 import type { ArcDatum, CruisePathDatum, GlobePinned, PointDatum } from "./globeLayerTypes";
-import { FLIGHT_STATUS_PAST_COLOR, FLIGHT_STATUS_UPCOMING_COLOR } from "../../lib/statusColors";
+import {
+  resolveFlightColor,
+  tierFromQuartile,
+  type FlightColorConfig,
+} from "../../lib/flightColor";
 
-// Default cruise-route colour — the canonical cruise-domain blue
-// (BRAND.md §3, --domain-cruise = rgb(111,160,214)). Matches the port
-// marker default + the flat-map cruise arcs so ship routes read the same
-// on the globe and the 2D map. Used as the "Standard" swatch default in
-// the appearance panels; the actual per-leg render color is resolved in
-// GlobeView's `cruisePaths` builder (user override, else `colorMode`).
-export const DEFAULT_CRUISE_ROUTE_COLOR: [number, number, number] = [111, 160, 214];
+// NOTE: there is no `DEFAULT_CRUISE_ROUTE_COLOR` any more. It existed to seed
+// the "Standard" pill of the old single-colour cruise picker; cruise routes are
+// now coloured by an explicit mode whose defaults live in `lib/cruiseColor.ts`
+// (`DEFAULT_CRUISE_COLORS`). The brand blue survives as a palette preset there.
+//
 // Alpha applied to a cruise path. Planned (scheduled) cruises render
 // dimmer than past ones — matching the flat map's `cruiseArcsLayer`
 // PLANNED_ALPHA so the two renderers agree on how "not yet sailed" reads.
@@ -68,31 +70,27 @@ export function resolveCruisePathColor(
 }
 
 /**
- * Resolve a flight arc's render color. Mirrors the flat map's
- * `routesLayer.ts` collapsing rule exactly: when `statusTwoTone` is
- * active, every route becomes flight-orange (`FLIGHT_STATUS_PAST_COLOR`)
- * unless it's pure-scheduled (never flown), which renders coral
- * (`FLIGHT_STATUS_UPCOMING_COLOR`) — warm, to stay distinct from the
- * cool cruise blues/cyans sharing the same "Alle" globe. Otherwise falls back
- * to the existing single-tint override (`flightRouteColor`) or the
- * per-route count heatmap color — unchanged behaviour for callers that
- * don't pass `statusTwoTone` (e.g. journey mode).
+ * Resolve a flight arc's render color for the globe.
+ *
+ * Delegates to `resolveFlightColor` — the SAME function the flat map's
+ * `routesLayer.ts` uses — so the two renderers cannot drift on what a given
+ * route looks like in a given mode. The globe already carries a pre-computed
+ * `quartile` per arc; it maps 1:1 onto the shared frequency tier.
  *
  * Exported as a pure function (no deck.gl / React dependency) so it's
  * unit-testable in isolation.
  */
 export function resolveFlightArcColor(
-  status: ArcDatum["status"],
-  heatmapColor: [number, number, number],
-  opts: {
-    flightRouteColor?: [number, number, number];
-    statusTwoTone?: boolean;
-  }
+  arc: Pick<ArcDatum, "status" | "quartile">,
+  colorConfig: FlightColorConfig
 ): [number, number, number] {
-  if (opts.statusTwoTone) {
-    return status === "scheduled" ? FLIGHT_STATUS_UPCOMING_COLOR : FLIGHT_STATUS_PAST_COLOR;
-  }
-  return opts.flightRouteColor ?? heatmapColor;
+  return resolveFlightColor(
+    {
+      tier: tierFromQuartile(arc.quartile),
+      pureScheduled: arc.status === "scheduled",
+    },
+    colorConfig
+  );
 }
 // Head-flight arrival marker keeps a little 3-D pop via ColumnLayer,
 // but airports + ports go flat. The numbers below are only used by
@@ -171,20 +169,12 @@ export interface BuildGlobeLayersOptions {
   flyToArc?: (arc: ArcDatum) => void;
   setPinned: (pinned: GlobePinned | null) => void;
   /**
-   * When set, every flight arc renders in this RGB instead of the
-   * heatmap palette derived from per-route quartile. The quartile
-   * dimming (active filter) is preserved as alpha so the filter still
-   * works visually. Same prop semantics as `MapContainer3D.flightRouteColor`
-   * on the flat map. Superseded by `statusTwoTone` when that's set.
+   * The user's flight-colour mode + colours (`store/flightColorStore`). The
+   * only thing that decides a flight arc's hue — identical to the flat map,
+   * via the shared `resolveFlightColor`. The active-quartile filter still
+   * dims non-matching arcs via alpha, so it keeps working in every mode.
    */
-  flightRouteColor?: [number, number, number];
-  /**
-   * Split flight arcs into a two-tone gradient by status (scheduled vs.
-   * past/historical) instead of a single flightRouteColor fill or the
-   * count heatmap. Same prop semantics as `MapContainer3D.statusTwoTone`
-   * on the flat map — see `resolveFlightArcColor`.
-   */
-  statusTwoTone?: boolean;
+  flightColorConfig: FlightColorConfig;
   /** User multiplier on flight-arc line width (1 = default). */
   arcWidthScale: number;
   /** User multiplier on cruise-path line width (1 = default). */
@@ -220,8 +210,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     onPortHover,
     onCruisePathHover,
     setPinned,
-    flightRouteColor,
-    statusTwoTone,
+    flightColorConfig,
     arcWidthScale,
     cruiseArcWidthScale,
     airportColor,
@@ -231,14 +220,12 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     nightCells,
     showNight,
   } = opts;
-  // Pick the per-arc colour. With `statusTwoTone` set, every arc is
-  // orange/blue by status (see `resolveFlightArcColor`); otherwise with
-  // `flightRouteColor` set, every arc gets that single tint; otherwise
-  // the per-arc quartile heatmap applies. Active-quartile alpha dimming
-  // is preserved in all cases so the click-to-isolate filter still reads
-  // visually.
+  // Per-arc colour — resolved through the shared `resolveFlightColor` (see
+  // `resolveFlightArcColor`), so the globe and the flat map agree on every
+  // mode. Active-quartile alpha dimming is preserved on top so the
+  // click-to-isolate filter still reads visually in all modes.
   const arcColor = (d: ArcDatum, baseAlpha: number): [number, number, number, number] => {
-    const rgb = resolveFlightArcColor(d.status, d.color, { flightRouteColor, statusTwoTone });
+    const rgb = resolveFlightArcColor(d, flightColorConfig);
     return [rgb[0], rgb[1], rgb[2], baseAlpha];
   };
 
@@ -293,7 +280,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       // read as too heavy on the globe.
       getWidth: (d) => Math.min(Math.sqrt(d.count), 4) * arcWidthScale,
       updateTriggers: {
-        getColor: [activeQuartile, flightRouteColor, statusTwoTone],
+        getColor: [activeQuartile, flightColorConfig],
         getWidth: [arcWidthScale],
       },
       widthUnits: "pixels",
@@ -338,7 +325,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       getPath: (d) => d.waypoints,
       getColor: (d) =>
         arcColor(d, activeQuartile === null || activeQuartile === d.quartile ? 160 : 25),
-      updateTriggers: { getColor: [activeQuartile, flightRouteColor, statusTwoTone] },
+      updateTriggers: { getColor: [activeQuartile, flightColorConfig] },
       getWidth: 1,
       widthUnits: "pixels",
       widthMinPixels: 1,

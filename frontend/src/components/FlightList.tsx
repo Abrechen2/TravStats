@@ -3,7 +3,7 @@ import type { Flight } from "../types";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { formatCurrency as formatCurrencyUtil } from "../lib/units";
-import { resolveAirlineDisplay } from "../lib/airlineUtils";
+import { resolveAirlineDisplay, resolveAirlineIata } from "../lib/airlineUtils";
 import AirlineLogo from "./AirlineLogo";
 import DataSourceBadges from "./DataSourceBadges";
 import SpecialTypeBadge from "./specialFlights/SpecialTypeBadge";
@@ -107,13 +107,12 @@ export default function FlightList({
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <AirlineLogo
-                    iata={flight.airline?.length === 2 ? flight.airline : undefined}
+                    iata={resolveAirlineIata(flight)}
                     flightNumber={flight.flightNumber}
                     size={28}
                   />
                   <h3 className="font-semibold text-lg" style={{ color: "var(--text-primary)" }}>
-                    {resolveAirlineDisplay(flight.airline, flight.flightNumber) || flight.airline}{" "}
-                    {flight.flightNumber}
+                    {resolveAirlineDisplay(flight) || flight.airline} {flight.flightNumber}
                   </h3>
                   {getStatusBadge(flight.status)}
                   {getCategoryBadge(flight.category)}
