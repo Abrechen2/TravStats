@@ -5,6 +5,8 @@ import deCommon from "../resources/de/common.json";
 import enCommon from "../resources/en/common.json";
 import deLodging from "../resources/de/lodging.json";
 import enLodging from "../resources/en/lodging.json";
+import deLocation from "../resources/de/location.json";
+import enLocation from "../resources/en/location.json";
 
 /**
  * Guard against a regression class where a namespace's resource file defines
@@ -30,6 +32,7 @@ const SRC_ROOT = path.resolve(__dirname, "..", "..");
 const NAMESPACES: Record<string, { de: unknown; en: unknown }> = {
   common: { de: deCommon, en: enCommon },
   lodging: { de: deLodging, en: enLodging },
+  location: { de: deLocation, en: enLocation },
 };
 
 function buildKeyCallRegex(namespace: string): RegExp {
