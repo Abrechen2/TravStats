@@ -12,6 +12,28 @@
         "title": "This dialog",
         "body": "After every update you will see a one-time summary of what changed."
       }
+    },
+    "v240": {
+      "colorModes": {
+        "title": "Map colors that listen to you",
+        "body": "Flight and cruise coloring are now proper modes: status, frequency, per journey, or a single custom color. The color picker finally works everywhere — and the legend always matches what the map actually shows."
+      },
+      "airlines": {
+        "title": "Airlines with names and logos",
+        "body": "Instead of cryptic codes like \"DLH\" you now see \"Lufthansa\" — including the logo, even when only the ICAO code is known."
+      },
+      "map": {
+        "title": "The map, your way",
+        "body": "New: flat 2D routes along the true great circle as an alternative to 3D arcs. Also: place names with special characters, consistent dot sizes for airports and ports, and direction arrows that sit right on long legs."
+      },
+      "fixes": {
+        "title": "Reported bugs fixed",
+        "body": "Profile picture and birthday now survive a reload, \"Compare with\" in statistics is remembered, and booking and ticket numbers can be entered right when adding a flight manually."
+      },
+      "polish": {
+        "title": "A tidier interface",
+        "body": "The map menu remembers whether it was open, the year selector is readable again, buttons have better contrast — and unfinished features stay hidden by default until they are ready."
+      }
     }
   }
 }

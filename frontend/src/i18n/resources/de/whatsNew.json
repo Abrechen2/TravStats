@@ -12,6 +12,28 @@
         "title": "Dieses Fenster",
         "body": "Nach jedem Update siehst du hier einmalig, was sich geändert hat."
       }
+    },
+    "v240": {
+      "colorModes": {
+        "title": "Kartenfarben, die dir gehorchen",
+        "body": "Flug- und Kreuzfahrt-Färbung sind jetzt echte Modi: Status, Frequenz bzw. Pro Reise oder eine eigene Farbe. Der Farbwähler wirkt endlich überall — und die Legende zeigt immer genau das, was auf der Karte zu sehen ist."
+      },
+      "airlines": {
+        "title": "Airlines mit Namen und Logo",
+        "body": "Statt kryptischer Codes wie \"DLH\" siehst du jetzt \"Lufthansa\" — inklusive Logo, auch wenn nur der ICAO-Code bekannt ist."
+      },
+      "map": {
+        "title": "Karte nach deinem Geschmack",
+        "body": "Neu: flache 2D-Routen entlang der echten Großkreislinie als Alternative zu 3D-Bögen. Außerdem: Ortsnamen mit Umlauten (Travemünde!), einheitliche Punktgrößen für Flughäfen und Häfen, und Richtungspfeile, die auf langen Strecken sitzen."
+      },
+      "fixes": {
+        "title": "Gemeldete Fehler behoben",
+        "body": "Profilbild und Geburtstag überleben jetzt den Neuladen, \"Vergleiche mit\" in der Statistik wird gemerkt, und Buchungs- sowie Ticketnummer lassen sich direkt beim manuellen Anlegen eines Fluges eintragen."
+      },
+      "polish": {
+        "title": "Aufgeräumte Oberfläche",
+        "body": "Das Karten-Menü merkt sich, ob es offen war, die Jahresauswahl ist wieder lesbar, Buttons haben mehr Kontrast — und unfertige Funktionen sind standardmäßig ausgeblendet, bis sie so weit sind."
+      }
     }
   }
 }
