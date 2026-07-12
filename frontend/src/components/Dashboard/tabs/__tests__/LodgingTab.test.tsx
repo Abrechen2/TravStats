@@ -153,7 +153,7 @@ describe("LodgingTab", () => {
     expect(screen.getByTestId("map-stub").getAttribute("data-lodging-count")).toBe("1");
   });
 
-  it("passes an empty appearanceDomains to MapContainer3D — no flight/cruise appearance controls on the Hotels tab", async () => {
+  it("passes only the lodging appearanceDomains to MapContainer3D — no flight/cruise appearance controls on the Hotels tab", async () => {
     const lodging = makeLodging();
     listLodgingsMock.mockResolvedValue([lodging]);
     getLodgingStatsMock.mockResolvedValue({
@@ -168,7 +168,9 @@ describe("LodgingTab", () => {
     await waitFor(() => {
       expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
     });
-    expect(screen.getByTestId("map-stub").getAttribute("data-appearance-domains")).toBe("[]");
+    expect(screen.getByTestId("map-stub").getAttribute("data-appearance-domains")).toBe(
+      '["lodging"]'
+    );
   });
 
   it("shows an empty state with zero lodgings — no crash, no NaN", async () => {

@@ -2,6 +2,8 @@ import { ScatterplotLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import { DOMAINS } from "../../shared/domains";
 import type { Lodging } from "../../types/lodging";
+import { hexToRgb } from "../map/controlPanelKit";
+import { markerDotRadiusProps } from "./markerDotStyle";
 
 interface LodgingPinDatum {
   position: [number, number];
@@ -10,28 +12,25 @@ interface LodgingPinDatum {
   type: Lodging["type"];
 }
 
-/** "#rrggbb" → [r, g, b]. Returns a mid-gray fallback for a malformed hex (defensive only — `DOMAINS` colors are hand-authored constants). */
-function hexToRgb(hex: string): [number, number, number] {
-  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
-  if (!m) return [128, 128, 128];
-  const n = parseInt(m[1], 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-
 // Brand lodging rose (BRAND.md §3), derived from the single source of truth
 // `DOMAINS.lodging.color` (shared/domains.ts) rather than a second inlined
 // hex — there's no CSS custom property for this domain yet (unlike
 // --domain-flight/--domain-cruise), so this map layer needs the RGB tuple
-// deck.gl expects.
+// deck.gl expects. `hexToRgb` is the ONE shared implementation exported by
+// controlPanelKit.tsx (Task 8) — this layer used to hand-roll its own copy.
 const LODGING_RGB: [number, number, number] = hexToRgb(DOMAINS.lodging.color);
-
-const PIN_RADIUS_M = 2200;
 
 /**
  * Build a ScatterplotLayer of lodging pins — one dot per hotel/campsite
- * with resolved coordinates. Mirrors the visual weight of the cruise-port
- * dot (`cruisePortsLayer.ts`'s `PORT_DOT_RADIUS_M`) so lodging markers read
- * as the same scale as other place markers on the map.
+ * with resolved coordinates. Sized via the SAME model as the airport dot
+ * (`routesLayer.ts`'s `routes-dot`) and the cruise-port dot
+ * (`cruisePortsLayer.ts`'s `cruise-ports`) — `markerDotRadiusProps` from
+ * `markerDotStyle.ts` (#187) — so lodging markers read as the same visual
+ * weight and respond to the same size-slider semantics: `sizeScale` is the
+ * user's marker-size slider multiplier (1 = default, 0 = "Aus" — the pixel
+ * radius clamps collapse to 0, same as flight/cruise markers). This layer
+ * used to hand-copy its own 2200 m radius constant and a fixed 4/8 pixel
+ * clamp with no scale input at all.
  *
  * A `Lodging`'s `lat`/`lon` are independently nullable — set by the user
  * pinning a location manually or by the OSM geocoder on save, and either
@@ -44,7 +43,10 @@ const PIN_RADIUS_M = 2200;
  * entirely rather than mounting a no-op (same convention as
  * `createCruisePortsLayer`/`createCruiseArcsLayer`).
  */
-export function buildLodgingPins(lodgings: readonly Lodging[]): Layer | null {
+export function buildLodgingPins(
+  lodgings: readonly Lodging[],
+  sizeScale: number = 1
+): Layer | null {
   const data: LodgingPinDatum[] = [];
   for (const lodging of lodgings) {
     if (lodging.lat === null || lodging.lon === null) continue;
@@ -61,9 +63,7 @@ export function buildLodgingPins(lodgings: readonly Lodging[]): Layer | null {
     id: "lodging-pins",
     data,
     getPosition: (d) => d.position,
-    getRadius: PIN_RADIUS_M,
-    radiusMinPixels: 4,
-    radiusMaxPixels: 8,
+    ...markerDotRadiusProps(sizeScale),
     getFillColor: [...LODGING_RGB, 220],
     getLineColor: [255, 255, 255, 220],
     lineWidthUnits: "pixels",

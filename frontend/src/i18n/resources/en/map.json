@@ -61,6 +61,7 @@
       "standard": "Default",
       "domainFlight": "Flights",
       "domainCruise": "Cruises",
+      "domainLodging": "Lodging",
       "off": "Off",
       "labelsImportant": "Key",
       "labelsAll": "All",
