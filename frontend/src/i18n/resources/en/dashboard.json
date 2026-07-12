@@ -233,6 +233,7 @@
     "cruisePerCruise": "Cruises (one colour per cruise)",
     "cruiseSolid": "Cruises",
     "flightFrequency": "Flights (frequency)",
-    "flightSolid": "Flights"
+    "flightSolid": "Flights",
+    "lodging": "Lodging"
   }
 }
