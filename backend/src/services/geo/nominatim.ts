@@ -1,4 +1,7 @@
-import { resolveGeocoderUrls } from "../instanceSettingsService";
+import {
+  resolveGeocoderUrls,
+  DEFAULT_NOMINATIM_URL,
+} from "../instanceSettingsService";
 import logger from "../../utils/logger";
 
 // Nominatim's usage policy demands a descriptive UA and at most 1 req/s.
@@ -60,7 +63,10 @@ function parseRow(row: NominatimRow): Coordinates | null {
   return { lat, lon };
 }
 
-async function fetchCoordinates(query: string, baseUrl: string): Promise<Coordinates | null> {
+async function fetchCoordinates(
+  query: string,
+  baseUrl: string,
+): Promise<Coordinates | null> {
   const url = `${baseUrl}/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
   const res = await fetch(url, {
     headers: { "User-Agent": USER_AGENT },
@@ -77,7 +83,10 @@ async function fetchCoordinates(query: string, baseUrl: string): Promise<Coordin
   }
   const coords = parseRow(rows[0]);
   if (coords === null) {
-    logger.warn({ query, row: rows[0] }, "geocoding response had unparseable coordinates");
+    logger.warn(
+      { query, row: rows[0] },
+      "geocoding response had unparseable coordinates",
+    );
   }
   return coords;
 }
@@ -88,11 +97,23 @@ async function fetchCoordinates(query: string, baseUrl: string): Promise<Coordin
  * unparseable coordinates) logs a warning and resolves to `null` so a
  * lodging save is never blocked by a flaky or rate-limiting geocoder.
  */
-export async function geocodeAddress(parts: GeocodeParts): Promise<Coordinates | null> {
+export async function geocodeAddress(
+  parts: GeocodeParts,
+): Promise<Coordinates | null> {
   const query = buildQuery(parts);
   if (!query) return null;
 
-  const { nominatimUrl } = await resolveGeocoderUrls();
+  let nominatimUrl = DEFAULT_NOMINATIM_URL;
+  try {
+    const settings = await resolveGeocoderUrls();
+    nominatimUrl = settings.nominatimUrl;
+  } catch (error) {
+    logger.warn(
+      { error },
+      "failed to resolve geocoder settings, falling back to default URL",
+    );
+  }
+
   const baseUrl = nominatimUrl.replace(/\/+$/, "");
   const key = `${baseUrl}|${query.toLowerCase()}`;
   const cached = cache.get(key);
