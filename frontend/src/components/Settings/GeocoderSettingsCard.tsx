@@ -226,7 +226,7 @@ export default function GeocoderSettingsCard({
               onClick={() => void handleSave()}
               disabled={saving}
               className="px-4 py-2 text-sm rounded-md font-medium disabled:opacity-50"
-              style={{ background: "var(--accent)", color: "white" }}
+              style={{ background: "var(--accent)", color: "var(--bg-base)" }}
             >
               {saving ? t("common:buttons.saving") : t("common:buttons.save")}
             </button>
