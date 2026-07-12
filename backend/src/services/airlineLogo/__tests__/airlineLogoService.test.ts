@@ -126,8 +126,10 @@ describe("resolveAirlineLogo", () => {
 
     expect(r).toBeNull();
     expect(warnSpy).toHaveBeenCalled();
-    const loggedPayload = JSON.stringify(warnSpy.mock.calls);
-    expect(loggedPayload).not.toContain(FAKE_KEY);
-    expect(loggedPayload).toContain("key=***");
+    const logObj = warnSpy.mock.calls[0][0] as Record<string, unknown>;
+    expect(logObj).not.toHaveProperty("error");
+    expect(String(logObj.message)).toContain("key=***");
+    expect(String(logObj.message)).not.toContain(FAKE_KEY);
+    expect(String(logObj.url)).not.toContain(FAKE_KEY);
   });
 });
