@@ -43,26 +43,29 @@ describe("usePanelExpanded", () => {
     window.localStorage.clear();
   });
 
-  it("defaults to expanded", () => {
+  it("defaults to collapsed (#194 owner decision) without baking the default into storage", () => {
     const { result } = renderHook(() => usePanelExpanded());
-    expect(result.current[0]).toBe(true);
+    expect(result.current[0]).toBe(false);
+    // No write on mount — persisting the default would make any future
+    // default change a no-op for everyone who ever loaded the app.
+    expect(window.localStorage.getItem("mapAppearance.v2")).toBeNull();
   });
 
   it("persists the choice in the shared mapAppearance blob and restores it (#194)", () => {
     const { result, unmount } = renderHook(() => usePanelExpanded());
     act(() => result.current[1]());
-    expect(result.current[0]).toBe(false);
+    expect(result.current[0]).toBe(true);
     unmount();
 
     const blob = JSON.parse(window.localStorage.getItem("mapAppearance.v2") ?? "{}") as {
       panelExpanded?: boolean;
     };
-    expect(blob.panelExpanded).toBe(false);
+    expect(blob.panelExpanded).toBe(true);
 
     // A fresh mount — e.g. after a reload or the 2D ↔ globe switch — starts
-    // from the persisted value instead of snapping back open.
+    // from the persisted value instead of snapping back to the default.
     const { result: remounted } = renderHook(() => usePanelExpanded());
-    expect(remounted.current[0]).toBe(false);
+    expect(remounted.current[0]).toBe(true);
   });
 });
 
