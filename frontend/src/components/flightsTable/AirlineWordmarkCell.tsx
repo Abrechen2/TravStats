@@ -27,8 +27,8 @@ export default function AirlineWordmarkCell({ flight }: { flight: Flight }): JSX
         icao={flight.airlineIcao}
         flightNumber={flight.flightNumber}
         variant="logo"
-        size={34}
-        width={88}
+        size={44}
+        width={114}
         className="rounded object-contain"
         alt={name ?? "Airline logo"}
         fallback={fallback}
