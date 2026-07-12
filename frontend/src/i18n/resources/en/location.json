@@ -1,0 +1,20 @@
+{
+  "searchLabel": "Place or coordinates",
+  "searchPlaceholder": "Type an address or paste coordinates …",
+  "searchHint": "e.g. »Hotel Adlon Berlin« or »47.3769, 8.5417«",
+  "searching": "Searching …",
+  "noResults": "No matches.",
+  "searchError": "Search failed. Please try again.",
+  "coordinatesDetected": "Coordinates detected",
+  "advanced": "Advanced",
+  "mapShow": "Show map",
+  "mapHide": "Hide map",
+  "mapAriaLabel": "Map for choosing a position",
+  "attribution": "© OpenStreetMap contributors",
+  "clear": "✕ Clear position",
+  "currentPosition": "Position: {{lat}}, {{lon}}",
+  "field": {
+    "lat": "Latitude",
+    "lon": "Longitude"
+  }
+}

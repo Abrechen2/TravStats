@@ -1,0 +1,20 @@
+{
+  "searchLabel": "Ort oder Koordinaten",
+  "searchPlaceholder": "Adresse eingeben oder Koordinaten einfügen …",
+  "searchHint": "z. B. »Hotel Adlon Berlin« oder »47.3769, 8.5417«",
+  "searching": "Suche läuft …",
+  "noResults": "Keine Treffer.",
+  "searchError": "Suche fehlgeschlagen. Bitte erneut versuchen.",
+  "coordinatesDetected": "Koordinaten erkannt",
+  "advanced": "Erweitert",
+  "mapShow": "Karte anzeigen",
+  "mapHide": "Karte ausblenden",
+  "mapAriaLabel": "Karte zur Positionsauswahl",
+  "attribution": "© OpenStreetMap Mitwirkende",
+  "clear": "✕ Position zurücksetzen",
+  "currentPosition": "Position: {{lat}}, {{lon}}",
+  "field": {
+    "lat": "Breite",
+    "lon": "Länge"
+  }
+}
