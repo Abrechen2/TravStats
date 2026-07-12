@@ -10,21 +10,12 @@
 
 import { DOMAINS } from "../shared/domains";
 import type { Rgb } from "./cruiseColor";
-
-/** Parses a `#rrggbb` hex string into an `Rgb` tuple. Falls back to white for
- *  a malformed input (mirrors `cruiseColor.ts`'s private `parseHex`) — should
- *  never trigger in practice since `DOMAINS.lodging.color` is a compile-time
- *  constant, not user input. */
-function parseHex(hex: string): Rgb {
-  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
-  if (!m) return [255, 255, 255];
-  const n = parseInt(m[1], 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
+import { hexToRgb } from "../components/map/controlPanelKit";
 
 /** The one lodging pin colour — derived from the SAME constant
- *  `lodgingPinsLayer.ts`'s `LODGING_RGB` derives from. */
-export const LODGING_COLOR: Rgb = parseHex(DOMAINS.lodging.color);
+ *  `lodgingPinsLayer.ts`'s `LODGING_RGB` derives from, via the ONE shared
+ *  `hexToRgb` (`controlPanelKit.tsx`) rather than a third private hex parser. */
+export const LODGING_COLOR: Rgb = hexToRgb(DOMAINS.lodging.color);
 
 /** One row of the map legend. Lodging has exactly one — there is no mode to
  *  switch between — but the shape mirrors `FlightLegendRow`/`CruiseLegendRow`'s
