@@ -206,6 +206,7 @@
       "same": "Als gleichen Flug",
       "return": "Als Rückflug"
     },
+    "sourceInfo": "Datenquelle",
     "sort": {
       "departure": "Abflug",
       "airline": "Airline",
