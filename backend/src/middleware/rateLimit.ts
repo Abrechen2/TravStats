@@ -94,6 +94,26 @@ export const portGeocodeLimiter = rateLimit({
 });
 
 /**
+ * Per-user/IP limit for the Photon place-search proxy (`/geo/search`).
+ *
+ * Photon (komoot's public instance, or a self-hosted one) has no documented
+ * hard rate limit the way Nominatim's usage policy does, but it is still a
+ * shared public resource sitting behind search-as-you-type — a spammy client
+ * could burn through it fast enough to get the instance's IP throttled or
+ * banned upstream. Mirrors `portGeocodeLimiter`'s shape (same per-caller
+ * keying + PAT-aware multiplier, same 30/min window) since the usage
+ * pattern — debounced typeahead — is identical.
+ */
+export const photonSearchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: patAwareMax(30),
+  message: 'Too many place searches in a short time — please slow down',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
  * Per-user/IP limit for the FX preview proxy (`/lodging/fx-preview`).
  *
  * The route proxies to the free public Frankfurter/ECB API so the frontend
