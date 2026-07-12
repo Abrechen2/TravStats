@@ -14,7 +14,7 @@ export default function RouteCell({ flight }: { flight: Flight }): JSX.Element {
         </span>
         <span className="inline-flex items-center opacity-60" style={{ color: "var(--text-muted)" }}>
           <span className="inline-block w-3 h-px" style={{ background: "var(--color-border)" }} />
-          <span className="text-[13px] mx-0.5 inline-block" style={{ transform: "rotate(45deg)" }}>✈</span>
+          <span className="text-[16px] mx-0.5 inline-block" style={{ transform: "rotate(45deg)" }}>✈</span>
           <span className="inline-block w-3 h-px" style={{ background: "var(--color-border)" }} />
         </span>
         <FlagImg country={flight.arrCountry} height={12} />
