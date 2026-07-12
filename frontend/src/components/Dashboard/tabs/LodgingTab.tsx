@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -20,6 +21,7 @@ import { LodgingStatStrip } from "./lodging/LodgingStatStrip";
 
 export function LodgingTab(): JSX.Element {
   const { mode } = useDashboardRoute();
+  const navigate = useNavigate();
   const { isEnabled } = useEnabledDomains();
   const lodgingEnabled = isEnabled("lodging");
   const { t } = useTranslation(["dashboard"]);
@@ -53,6 +55,16 @@ export function LodgingTab(): JSX.Element {
     if (!lodgingEnabled) return;
     void loadLodgings();
   }, [lodgingEnabled, loadLodgings]);
+
+  // Clicking a map pin opens the lodging's detail page — same route
+  // LodgingListPage/LodgingChainDetailPage already navigate to on a row
+  // click (`/lodging/:id`, registered in App.tsx).
+  const handleLodgingPinClick = useCallback(
+    (lodgingId: string): void => {
+      navigate(`/lodging/${lodgingId}`);
+    },
+    [navigate]
+  );
 
   // Apply the global year filter to the map/list view: a lodging stays
   // visible if ANY of its stays overlaps the selected range. The stat strip
@@ -88,6 +100,7 @@ export function LodgingTab(): JSX.Element {
         flights={[]}
         visMode="routes"
         lodgingsOverride={visibleLodgings}
+        onLodgingClick={handleLodgingPinClick}
         appearanceDomains={["lodging"]}
         // Without this the map fetches and draws every cruise route on top of the
         // hotel pins (showInternalCruises defaults to true).

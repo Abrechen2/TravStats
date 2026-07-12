@@ -73,10 +73,11 @@ export interface MapAppearance {
    * coercion in `normalizeAppearance`; a missing key just defaults to `1`
    * at the read site, same convention as every other appearance field here.
    * Owned by `MapContainer3D` (not `DeckGLMap`, unlike the flight/cruise
-   * marker sizes) because `MapContainer3D` is what builds the lodging pin
-   * layer (`buildLodgingPins`) and needs the current value to re-memo on;
-   * it's threaded down into `DeckGLMap` as a controlled prop purely so the
-   * flat-map control panel can render the slider.
+   * marker sizes) purely so it persists here the same way every other
+   * appearance field does; it's threaded down into `DeckGLMap` as a
+   * controlled prop both to render the slider AND (since Task 9) to
+   * actually build the lodging pin layer (`buildLodgingPins`), which lives
+   * in `DeckGLMap` alongside the cruise-port layer it mirrors.
    */
   lodgingMarkerSize?: number;
   // Layers

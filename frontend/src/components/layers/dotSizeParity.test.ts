@@ -131,9 +131,11 @@ function getPortDotProps(sizeScale: number): DotLayerProps {
 }
 
 function getLodgingDotProps(sizeScale: number): DotLayerProps {
-  const layer = buildLodgingPins([makeLodging()], sizeScale);
-  if (!layer) throw new Error("buildLodgingPins returned null");
-  return (layer as unknown as { props: DotLayerProps }).props;
+  const layers = buildLodgingPins([makeLodging()], sizeScale);
+  if (!layers) throw new Error("buildLodgingPins returned null");
+  const dotLayer = layers.find((l) => l.id === "lodging-pins");
+  if (!dotLayer) throw new Error("lodging-pins layer not found");
+  return (dotLayer as unknown as { props: DotLayerProps }).props;
 }
 
 describe("airport dot vs. port dot size parity (#187)", () => {
@@ -206,9 +208,11 @@ describe("lodging dot parity with airport/port dots (Task 8)", () => {
   });
 
   it("defaults sizeScale to 1 when called with only lodgings", () => {
-    const layer = buildLodgingPins([makeLodging()]);
-    if (!layer) throw new Error("buildLodgingPins returned null");
-    const props = (layer as unknown as { props: DotLayerProps }).props;
+    const layers = buildLodgingPins([makeLodging()]);
+    if (!layers) throw new Error("buildLodgingPins returned null");
+    const dotLayer = layers.find((l) => l.id === "lodging-pins");
+    if (!dotLayer) throw new Error("lodging-pins layer not found");
+    const props = (dotLayer as unknown as { props: DotLayerProps }).props;
     expect(props.radiusMinPixels).toBe(MARKER_DOT_MIN_PX);
     expect(props.radiusMaxPixels).toBe(MARKER_DOT_MAX_PX);
   });
