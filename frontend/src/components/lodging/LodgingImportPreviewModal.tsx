@@ -67,6 +67,34 @@ function ensureStay(row: EditableRow): NonNullable<EditableRow["stay"]> {
 }
 
 /**
+ * `ensureStay` above is a one-way door: the first touch of ANY stay input on
+ * a stay-less row materializes `stay: {checkIn: "", checkOut: ""}`, and
+ * nothing in this UI ever sets `stay` back to `null` — there is no "clear
+ * stay" control. If the user touches a stay field and then clears it again
+ * (or never fills in real dates), the row would otherwise commit an
+ * all-empty stay object that 400s wholesale on the backend's `isoDay` regex.
+ * `handleCommit` calls this to fold such a stay back to `null` right before
+ * building the payload, so a touch-then-clear on a places-only row is a
+ * genuine no-op rather than a dead end.
+ */
+function isEmptyStay(stay: NonNullable<EditableRow["stay"]>): boolean {
+  return (
+    stay.checkIn === "" &&
+    stay.checkOut === "" &&
+    stay.totalPrice == null &&
+    stay.roomCategory == null &&
+    stay.board == null &&
+    stay.currency == null &&
+    stay.ratingRoom == null &&
+    stay.ratingBreakfast == null &&
+    stay.ratingOverall == null &&
+    stay.bookingReference == null &&
+    stay.externalRef == null &&
+    stay.notes == null
+  );
+}
+
+/**
  * Parses the raw string from the total-price `<input type="number">` into a
  * finite number or `null`. `??`/a plain falsy check does not catch `NaN`
  * (`NaN ?? 0` is still `NaN`) — without `Number.isFinite`, a malformed entry
@@ -140,7 +168,17 @@ export function LodgingImportPreviewModal({
           action: r.decision,
           matchedLodgingId: r.matchedLodgingId,
           lodging: r.lodging,
-          stay: r.stay,
+          // An UNEDITED stays-only row the preview matched by free-text name
+          // against ANOTHER candidate in this same payload (`lodging` stays
+          // null, no dedupe hint) still needs that name at commit time — the
+          // commit service resolves it against the lodging the other row
+          // creates. Harmless to send even when `lodging` is set: the backend
+          // only consults it when `lodging` is null.
+          lodgingName: r.lodgingName ?? null,
+          // See `isEmptyStay` — fold a touched-then-cleared stay back to null
+          // instead of sending an all-empty stay that fails the backend's
+          // date validation.
+          stay: r.stay && isEmptyStay(r.stay) ? null : r.stay,
         }));
       await onCommit(payload);
     } catch (err) {
@@ -287,8 +325,14 @@ function PreviewRowLine({ row, onChange, t }: PreviewRowLineProps): JSX.Element 
             value={name}
             onChange={(e): void =>
               onChange(sourceRowIndex, {
-                // Immutable: a NEW lodging object, never a mutation of the prop.
-                lodging: row.lodging ? { ...row.lodging, name: e.target.value } : null,
+                // Immutable: a NEW lodging object, never a mutation of the
+                // prop. Mirrors the city-edit path below: a name edit on a
+                // NON-matched row must materialize `row.lodging` — otherwise
+                // `commitRowSchema` has no `lodgingName` field, commit reads
+                // only `lodging`/`matchedLodgingId`, and an unresolved row the
+                // user only renamed is guaranteed to fail with
+                // `missing_lodging_reference`.
+                lodging: { ...ensureLodging(row, name), name: e.target.value },
                 lodgingName: e.target.value,
               })
             }

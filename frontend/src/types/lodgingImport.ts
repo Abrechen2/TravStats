@@ -65,11 +65,7 @@ export type LodgingImportFlag =
   | "missing_coordinates";
 
 export type LodgingDedupeHint =
-  | "none"
-  | "lodging_exact_ref"
-  | "lodging_name_city"
-  | "stay_exact_ref"
-  | "stay_same_dates";
+  "none" | "lodging_exact_ref" | "lodging_name_city" | "stay_exact_ref" | "stay_same_dates";
 
 export type LodgingImportAction = "create" | "skip" | "needs_input";
 
@@ -98,6 +94,10 @@ export interface LodgingImportCommitRow {
   action: "create" | "skip";
   matchedLodgingId?: string | null;
   lodging: LodgingCandidateFields | null;
+  /** Free-text hotel name used to join a stays-only row against a lodging
+   *  ANOTHER row in this same commit payload creates (see
+   *  `lodgingImportCommit.ts`'s `createdByName` fallback). */
+  lodgingName?: string | null;
   stay: StayCandidateFields | null;
 }
 
@@ -108,9 +108,7 @@ export interface LodgingImportCommitRow {
  * a raw exception message — branch UI behaviour on `code`, not on `error`.
  */
 export type LodgingImportRowFailureCode =
-  | "ownership_mismatch"
-  | "missing_lodging_reference"
-  | "unexpected_error";
+  "ownership_mismatch" | "missing_lodging_reference" | "unexpected_error";
 
 export interface LodgingImportCommitResult {
   batchId: string;
