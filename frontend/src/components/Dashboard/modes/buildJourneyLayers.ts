@@ -1,6 +1,7 @@
 import { ArcLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import { createCruiseArcsLayer, createCruiseArrowsLayer } from "../../layers/cruiseArcsLayer";
+import type { CruiseColorConfig } from "../../../lib/cruiseColor";
 import type { GeoJSONFeature } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
 
@@ -108,7 +109,11 @@ function flightToArcRow(f: GeoJSONFeature): FlightArcRow | null {
 export function buildJourneyLayers(
   flights: readonly GeoJSONFeature[],
   cruises: readonly Cruise[],
-  selectedTripId: string | null
+  selectedTripId: string | null,
+  /** The user's cruise colour mode + colours. Passed through so journey mode's
+   *  cruise legs are tinted exactly like the dashboard legend says they are —
+   *  omitting it falls back to the default status pair. */
+  cruiseColorConfig?: CruiseColorConfig
 ): Layer[] {
   const groups = groupByTripId(flights, cruises);
 
@@ -127,9 +132,16 @@ export function buildJourneyLayers(
 
   // Cruise legs (PathLayer via shared helper) + directional arrow heads.
   if (trip.cruises.length > 0) {
-    const cruiseLayer = createCruiseArcsLayer(trip.cruises);
+    const cruiseOptions = { colorConfig: cruiseColorConfig };
+    const cruiseLayer = createCruiseArcsLayer(
+      trip.cruises,
+      undefined,
+      null,
+      undefined,
+      cruiseOptions
+    );
     if (cruiseLayer !== null) layers.push(cruiseLayer);
-    const arrowsLayer = createCruiseArrowsLayer(trip.cruises);
+    const arrowsLayer = createCruiseArrowsLayer(trip.cruises, undefined, null, cruiseOptions);
     if (arrowsLayer !== null) layers.push(arrowsLayer);
   }
 

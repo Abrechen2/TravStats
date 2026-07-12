@@ -4,6 +4,105 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.4.0] - 2026-07-11
+
+Minor release. Six reported bugs, an overhaul of how the map is coloured, and a
+switch that keeps unfinished features out of sight until they are ready.
+
+### Added
+- **Map colouring is now an explicit choice, for flights and for cruises.**
+  Previously the colour picker was quietly overridden by whichever view you were
+  in, so picking a colour appeared to do nothing at all. Both domains now offer
+  the same three modes: **Status** (two colours — flown/sailed vs. planned),
+  **Frequency** for flights (one base colour, deeper the more often you fly a
+  route) or **Per cruise** for ships (a distinct colour per voyage), and
+  **Solid** (one colour for everything). The legend follows the mode you pick,
+  and status mode gives you a separate colour picker per state.
+- **Flat route shape for flights** (#183). Flight routes can now be drawn flat on
+  the map like cruise routes, instead of as 3D arcs. Arcs look better from a
+  distance, but their endpoints drift away from the airports as you zoom in; the
+  flat shape stays accurate at any zoom.
+- **Beta-features switch.** Features that are not finished yet are now hidden by
+  default and can be revealed instance-wide by an administrator. On a fresh
+  install this hides the POI dashboard tab, the Devices settings page and the
+  trip AI summary.
+- **The profile picture can be removed.** A Remove button next to the file
+  picker deletes the stored picture; the initial-letter avatar returns.
+- **Flight price and currency are always editable** (#192). The fields sat
+  behind the cost-tracking toggle while cruises always showed them — an
+  imported price was visible in the flight list but not editable. The toggle
+  now only gates the taxes/fees breakdown and the business statistics.
+- **The map control panel starts collapsed and remembers its state** (#194).
+  It no longer springs open on every reload; opening or closing it persists
+  across reloads and the 2D/globe switch.
+- **The settings domain switch moved into the sidebar.** As a top-right pill
+  row it was easy to miss; on desktop it now sits directly above the section
+  list it scopes. On phones it stays in the top bar.
+
+### Fixed
+- **Cruise port names with non-English characters render correctly** (#185).
+  Ålesund, Flåm, Málaga and Kuşadası previously drew as empty boxes on the map.
+- **Cruise direction arrows no longer sit inside the ports.** They were anchored
+  at a fixed position in the route's point list rather than along its actual
+  length, which on a short leg put them on top of the harbour. They now sit at
+  even intervals along the leg, and very short hops get none.
+- **The profile picture and birthday are saved** (#186). Uploading a picture had
+  no backend endpoint at all, and typing a birthday never triggered a save —
+  while the page still displayed "auto-saved". Both now persist.
+- **Airport and port dots are the same size** on the flat map (#187).
+- **The statistics "compare with" year survives a page reload** (#188).
+- **Airlines are shown by name, not by code** (#178). ICAO codes now resolve to
+  full names, from the same catalogue the backend uses.
+- **Achievements: continents are resolved by country.** The Arctic was counted as
+  Antarctica (which made Svalbard flights unlock an Antarctica badge) and
+  Australia as Asia. Badges that no longer qualify are now revoked instead of
+  staying unlocked forever.
+- **Direction arrows on out-and-back cruise routes no longer stack into an "X".**
+  When the same water is sailed in both directions (there and back on one
+  route), the two midpoint arrows landed on exactly the same spot. They now
+  flank the midpoint, each pointing in its own direction of travel. Arrows also
+  render sharp at every size — they were rasterised at their native size and
+  went blurry when scaled up on high-DPI screens.
+- **The admin instance-settings form no longer resets while you type** (#190).
+  Every keystroke re-triggered the form's initial load, which overwrote the
+  input with the server's values — editing the public URL was impossible. The
+  underlying cause (an unstable translation-function identity re-firing
+  effects on every render) is fixed app-wide.
+- **Uploading a profile picture no longer ends in "Not found".** The web
+  server's static-asset cache rule intercepted API URLs ending in an image
+  extension, so the freshly uploaded picture 404'd before the request ever
+  reached the backend. Image receipts were affected by the same rule.
+- **The year dropdown in the map panel is readable again** (#196). On Windows
+  the dropdown popup rendered white-on-white; the options now carry explicit
+  dark styling. The globe's performance dropdown had the same flaw.
+- **The map panel chevron points the way the panel moves** (#195) — down while
+  open, up while collapsed — and is larger.
+- **Dark text on amber buttons** (#193). The trip module's primary buttons
+  referenced a CSS variable that does not exist, so their text silently
+  rendered near-white on the amber accent; several admin and cruise buttons
+  hardcoded white. All of them now use the same dark text as the standard
+  primary button.
+- **Cruise direction arrows no longer pile up on shared shipping lanes.**
+  Different cruises routed onto the same lane each placed their own arrows,
+  stacking into unreadable clusters. Overlapping arrows are now hidden and
+  reappear as you zoom in; a selected cruise always keeps its own.
+
+### Changed — please read before updating
+- **Flight colouring:** existing settings migrate to **Status** mode. The
+  combined view looks unchanged; the flights-only view switches from the
+  frequency ramp to the two status colours. Switch back to **Frequency** in the
+  map panel if you prefer it.
+- **Cruise colouring:** the Cruises tab no longer colours each voyage
+  automatically. It starts in **Status** mode — pick **Per cruise** in the map
+  panel to get the old look back (one click, and now discoverable).
+- **Hidden by default:** POI tab, Devices settings and the trip AI summary now
+  require the beta-features switch.
+
+### Removed
+- **The "Map settings" section is gone from the flight settings tab.** Base
+  map, start zoom, marker style and route colour had no effect anywhere since
+  the in-map control panel took over — every control there was a silent no-op.
+
 ## [2.3.1] - 2026-07-11
 
 Patch release. Fixes the release-highlights dialog, which never appeared in

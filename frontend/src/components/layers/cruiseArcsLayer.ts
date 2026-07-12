@@ -1,17 +1,17 @@
 import { IconLayer, PathLayer } from "@deck.gl/layers";
+import { CollisionFilterExtension, type CollisionFilterExtensionProps } from "@deck.gl/extensions";
 import type { Layer } from "@deck.gl/core";
 import type { Cruise } from "../../types";
 import type { CruiseStatus } from "../../types/cruise";
 import type { CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 import { effectivePortSequence } from "../Cruise/cruisePorts";
 import { catmullRomSpline } from "./catmullRom";
-import { resolveCruiseArcColor, type CruiseColorMode, type Rgb } from "../../lib/cruiseColor";
-
-/** How cruise arcs/arrows are tinted: shared two-tone by status, or a
- *  distinct hue per cruise (#150). Re-exported from the shared color lib
- *  so existing `import { type CruiseColorMode } from "./layers/cruiseArcsLayer"`
- *  call sites (MapContainer3D, DeckGLMap) keep working unchanged. */
-export type { CruiseColorMode };
+import {
+  DEFAULT_CRUISE_COLOR_CONFIG,
+  resolveCruiseArcColor,
+  type CruiseColorConfig,
+  type Rgb,
+} from "../../lib/cruiseColor";
 
 interface ArcDatum {
   path: [number, number][];
@@ -20,6 +20,11 @@ interface ArcDatum {
   status: CruiseStatus;
   color: Rgb;
   planned: boolean;
+  // Port ids of the leg's endpoints — lets the arrow layer detect when the
+  // same water is sailed in both directions (out-and-back) and de-overlap
+  // the opposing arrows (see pickArrowAnchors).
+  fromPortId: number;
+  toPortId: number;
 }
 
 interface ArrowDatum {
@@ -37,26 +42,22 @@ interface CruiseArcBuildOptions {
    * more exact as the user zooms in.
    */
   zoom?: number;
-  /**
-   * Base cruise-route colour (RGB) override, from the map control panel's
-   * Kreuzfahrten appearance section. When set, it takes precedence over
-   * `colorMode`'s status/per-cruise palette for every arc/arrow. Falls
-   * back to the brand cruise blue when neither this nor `colorMode`
-   * resolves a color.
-   */
-  arcColor?: [number, number, number];
   /** User multiplier on cruise-arc line width (1 = default). */
   arcWidthScale?: number;
   /** User multiplier on the directional arrow size (1 = default). 0 hides arrows. */
   arrowSizeScale?: number;
-  /** Color strategy for arcs/arrows when `arcColor` is unset. Defaults to `"status"`. */
-  colorMode?: CruiseColorMode;
+  /**
+   * The user's cruise colour mode + colours, straight from
+   * `store/cruiseColorStore.ts`. THE only colour input — the pre-mode
+   * `arcColor` override is gone: it used to silently flatten status/per-cruise
+   * colouring into one tint, which is now the explicit `"solid"` mode instead.
+   * Defaults to the status pair.
+   */
+  colorConfig?: CruiseColorConfig;
 }
 
-// Brand cruise blue (BRAND.md §3, --domain-cruise). Shared default with
-// the globe cruise paths + port markers so ship routes read the same
-// everywhere. The selected-cruise highlight stays amber.
-const CRUISE_BASE_COLOR: [number, number, number] = [111, 160, 214];
+// The selected-cruise highlight stays amber, whatever the colour mode —
+// "this is the one you clicked" is a different message than "this is a cruise".
 const CRUISE_HIGHLIGHT_COLOR: [number, number, number] = [253, 224, 71];
 
 interface LegGeometry {
@@ -99,7 +100,7 @@ export function buildCruiseArcs(
   geometryByCruise: CruiseGeometryMap = new Map(),
   options: CruiseArcBuildOptions = {}
 ): ArcDatum[] {
-  const mode = options.colorMode ?? "status";
+  const colorConfig = options.colorConfig ?? DEFAULT_CRUISE_COLOR_CONFIG;
   const arcs: ArcDatum[] = [];
   for (const cruise of cruises) {
     // Effective sequence includes departure/arrival ports so minimal
@@ -108,9 +109,9 @@ export function buildCruiseArcs(
 
     const geometry = geometryByCruise.get(cruise.id);
     const waypointsByPair = buildWaypointIndex(geometry);
-    // An explicit user color override (map control panel) wins over the
-    // colorMode-driven status/per-cruise palette for every arc.
-    const color = options.arcColor ?? resolveCruiseArcColor(cruise, mode);
+    // The user's mode + colours are the ONLY input — same resolver the globe
+    // and the dashboard legend call, so the three can never disagree.
+    const color = resolveCruiseArcColor(cruise, colorConfig);
     const planned = cruise.status === "scheduled";
 
     for (let i = 0; i < ports.length - 1; i++) {
@@ -131,6 +132,8 @@ export function buildCruiseArcs(
         status: cruise.status,
         color,
         planned,
+        fromPortId: a.id,
+        toPortId: b.id,
       });
     }
   }
@@ -153,7 +156,7 @@ export function createCruiseArcsLayer(
   if (arcs.length === 0) return null;
 
   const hasSelection = selectedCruiseId !== null;
-  const BASE_COLOR = options.arcColor ?? CRUISE_BASE_COLOR;
+  const colorConfig = options.colorConfig ?? DEFAULT_CRUISE_COLOR_CONFIG;
   const HIGHLIGHT_COLOR = CRUISE_HIGHLIGHT_COLOR;
   const widthScale = options.arcWidthScale ?? 1;
   const DIM_ALPHA = 90;
@@ -181,20 +184,23 @@ export function createCruiseArcsLayer(
         }
       : undefined,
     updateTriggers: {
-      getColor: [selectedCruiseId, BASE_COLOR],
+      getColor: [selectedCruiseId, colorConfig],
       getWidth: [selectedCruiseId, widthScale],
     },
   });
 }
 
 /**
- * Build a directional arrow TextLayer per cruise leg. Arrows are
- * placed near (but not on top of) the destination port and rotated
- * to align with the local segment direction so the user can read
- * the cruise's flow at a glance.
+ * Build a directional arrow IconLayer for cruise legs. Arrows are placed
+ * by real-world arc length along each leg — never near either port
+ * marker (see `pickArrowAnchors`) — and rotated to align with the local
+ * segment direction at their anchor so the user can read the cruise's
+ * flow at a glance. Short legs get one arrow at the midpoint, long legs
+ * get several evenly spaced, and legs below the minimum length get none.
  *
- * Returns `null` when no arrows can be drawn (no qualifying legs)
- * so callers can omit the layer rather than mounting a no-op.
+ * Returns `null` when no arrows can be drawn (no qualifying legs, or all
+ * legs too short) so callers can omit the layer rather than mounting a
+ * no-op.
  */
 export function createCruiseArrowsLayer(
   cruises: Cruise[],
@@ -203,17 +209,25 @@ export function createCruiseArrowsLayer(
   options: CruiseArcBuildOptions = {}
 ): Layer | null {
   const arcs = buildCruiseArcs(cruises, geometryByCruise, options);
+  // Out-and-back detection: when the SAME port pair is sailed in both
+  // directions (one cruise's return leg, or two cruises passing each other),
+  // both legs share one path and their midpoint arrows would stack into an
+  // unreadable "X" (reported on 2.4.0-rc.1). Legs whose opposite direction
+  // is also on the map get their anchors shifted toward their own journey's
+  // first half, which mirrors into two arrows flanking the midpoint.
+  const orderedPairKeys = new Set(arcs.map((arc) => pairKey(arc.fromPortId, arc.toPortId)));
   const arrows: ArrowDatum[] = [];
   for (const arc of arcs) {
-    const anchor = pickArrowAnchor(arc.path);
-    if (anchor === null) continue;
-    arrows.push({ ...anchor, cruiseId: arc.cruiseId, color: arc.color, planned: arc.planned });
+    const hasOpposingTwin = orderedPairKeys.has(pairKey(arc.toPortId, arc.fromPortId));
+    for (const anchor of pickArrowAnchors(arc.path, hasOpposingTwin)) {
+      arrows.push({ ...anchor, cruiseId: arc.cruiseId, color: arc.color, planned: arc.planned });
+    }
   }
   const arrowSizeScale = options.arrowSizeScale ?? 1;
   if (arrows.length === 0 || arrowSizeScale <= 0) return null;
 
   const hasSelection = selectedCruiseId !== null;
-  const BASE_COLOR = options.arcColor ?? CRUISE_BASE_COLOR;
+  const colorConfig = options.colorConfig ?? DEFAULT_CRUISE_COLOR_CONFIG;
   const HIGHLIGHT_COLOR = CRUISE_HIGHLIGHT_COLOR;
   const DIM_ALPHA = 90;
   const FULL_ALPHA = 230;
@@ -227,7 +241,7 @@ export function createCruiseArrowsLayer(
     return arrowIcon(rgba(d.color, alpha));
   };
 
-  return new IconLayer<ArrowDatum>({
+  return new IconLayer<ArrowDatum, CollisionFilterExtensionProps<ArrowDatum>>({
     id: "cruise-arc-arrows",
     data: arrows,
     getPosition: (d) => d.position,
@@ -236,8 +250,28 @@ export function createCruiseArrowsLayer(
     getSize: ARROW_DISPLAY_HEIGHT * arrowSizeScale,
     sizeUnits: "pixels",
     pickable: false,
+    // Screen-space decluttering: unrelated cruises routed onto the SAME
+    // marnet shipping lane each place their own arrows, which piled up into
+    // clusters of near-identical (and interleaved opposing) chevrons on
+    // shared corridors — ~20 arrows on the transatlantic lane past Funchal
+    // (reported on 2.4.0-rc.2). Data-space dedup is not an option: every leg
+    // is Douglas-Peucker-simplified independently on the backend, so legs
+    // sharing a lane do NOT share vertex sequences. The collision pass hides
+    // whichever arrows would overlap on screen and reveals them again as the
+    // user zooms in; per-leg anchor placement (arc length, away from ports,
+    // out-and-back flanking) is unchanged.
+    extensions: [new CollisionFilterExtension()],
+    collisionGroup: "cruise-arrows",
+    // The selected cruise always wins its corridor; flown beats planned.
+    getCollisionPriority: (d) =>
+      hasSelection && d.cruiseId === selectedCruiseId ? 100 : d.planned ? 0 : 10,
+    // Test with enlarged footprints so arrows disappear BEFORE they visually
+    // touch — a chevron needs breathing room to stay readable, not just
+    // non-overlapping pixels.
+    collisionTestProps: { sizeScale: COLLISION_BREATHING_ROOM },
     updateTriggers: {
-      getIcon: [selectedCruiseId, BASE_COLOR],
+      getIcon: [selectedCruiseId, colorConfig],
+      getCollisionPriority: [selectedCruiseId],
     },
   });
 }
@@ -253,6 +287,24 @@ const ARROW_ICON_HEIGHT = 16;
 // Rendered screen height in pixels — deliberately smaller than the icon's
 // native size above so the border stroke stays crisp at typical map zooms.
 const ARROW_DISPLAY_HEIGHT = 10;
+// Multiplier on the arrow's footprint during the collision pass (not on
+// screen). The collision pass only counts the chevron's opaque pixels (not
+// its full quad), so the effective clearance is noticeably tighter than the
+// nominal footprint — tuned visually against the reported transatlantic
+// corridor: 2.5 and 4 still let same-corridor pairs sit ~15 px apart, 40
+// suppressed every arrow on the map; 8 (≈ 80-px footprint) collapses
+// shared-lane clusters to single readable arrows ~30 px+ apart while arrows
+// on distinct nearby lanes survive and more reappear on zoom-in.
+const COLLISION_BREATHING_ROOM = 8;
+// The browser rasterises the SVG data-URL at the SVG's declared
+// width/height, and deck.gl packs THAT bitmap into its icon atlas — so a
+// 22×16 icon shown at 2.5× slider scale on a HiDPI display upsamples a
+// 16-px bitmap to ~75 device pixels (reported on 2.4.0-rc.1: "Pfeile
+// werden unscharf beim Skalieren"). Rasterising at 6× (132×96) keeps the
+// atlas above every reachable on-screen size: 10 px base × 2.5 max slider
+// × 3 devicePixelRatio = 75 ≤ 96. The geometry lives in the viewBox, so
+// path and border scale losslessly.
+const ARROW_RASTER_SCALE = 6;
 const arrowIconCache = new Map<string, { url: string; width: number; height: number }>();
 
 function rgba([r, g, b]: Rgb, alpha: number): string {
@@ -262,36 +314,138 @@ function rgba([r, g, b]: Rgb, alpha: number): string {
 function arrowIcon(fill: string): { url: string; width: number; height: number } {
   const cached = arrowIconCache.get(fill);
   if (cached) return cached;
+  const width = ARROW_ICON_WIDTH * ARROW_RASTER_SCALE;
+  const height = ARROW_ICON_HEIGHT * ARROW_RASTER_SCALE;
   const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${ARROW_ICON_WIDTH}" height="${ARROW_ICON_HEIGHT}" ` +
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" ` +
     `viewBox="0 0 ${ARROW_ICON_WIDTH} ${ARROW_ICON_HEIGHT}">` +
     `<path d="M 21 8 L 2 1.5 L 8.5 8 L 2 14.5 Z" fill="${fill}" stroke="white" stroke-width="1.25" stroke-linejoin="round"/>` +
     `</svg>`;
   const icon = {
     url: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,
-    width: ARROW_ICON_WIDTH,
-    height: ARROW_ICON_HEIGHT,
+    width,
+    height,
   };
   arrowIconCache.set(fill, icon);
   return icon;
 }
 
+// Earth's mean radius in km — used to convert the path's lon/lat vertices
+// into a real-world leg length for arrow placement (see pickArrowAnchors).
+const EARTH_RADIUS_KM = 6371;
+
+// Legs shorter than this get no arrow at all. Below this length, any
+// anchor position still visually overlaps the port markers regardless of
+// where on the leg it sits — river-cruise hops and adjacent-berth
+// repositioning legs land here; better to draw nothing than noise on top
+// of a port icon.
+const MIN_ARROW_LEG_LENGTH_KM = 30;
+
+// Target spacing between arrows on long legs. Most cruise legs
+// (Mediterranean/Baltic/Caribbean hops) are roughly 300-1000 km and are
+// meant to get exactly one arrow (the n=1 case below always anchors at
+// the midpoint); this interval is deliberately well above that range so
+// ordinary legs never pick up a second arrow. Only genuine long crossings
+// (transatlantic/repositioning, north of ~2000 km) start to.
+const ARROW_LEG_INTERVAL_KM = 1500;
+
+// Hard cap so an extreme leg (world-cruise repositioning, multi-day ocean
+// crossings) doesn't spam the route with arrows.
+const MAX_ARROWS_PER_LEG = 5;
+
+/** Great-circle distance between two [lon, lat] points, in kilometers. */
+function haversineKm(a: readonly [number, number], b: readonly [number, number]): number {
+  const [lon1, lat1] = a;
+  const [lon2, lat2] = b;
+  const lat1Rad = (lat1 * Math.PI) / 180;
+  const lat2Rad = (lat2 * Math.PI) / 180;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLon = Math.sin(dLon / 2);
+  const h = sinDLat * sinDLat + Math.cos(lat1Rad) * Math.cos(lat2Rad) * sinDLon * sinDLon;
+  return 2 * EARTH_RADIUS_KM * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
 /**
- * Pick a position + screen-space angle for the directional arrow on
- * a splined leg path. The anchor sits at ~88 % along the spline so
- * the arrow visibly leads into the destination port without overlapping
- * the port marker. Returns `null` when the path is degenerate (less
- * than two distinct points) — the caller skips that leg's arrow.
+ * Pick position(s) + screen-space angle(s) for directional arrow(s) along
+ * a splined leg path, spaced by real-world (great-circle) arc length
+ * rather than vertex index.
+ *
+ * Why arc length and not index: the path is a densified Catmull-Rom
+ * spline, so its vertices are NOT evenly spaced — the spline places more
+ * vertices where the route curves, which for harbour approaches is right
+ * next to the port. The previous version anchored at
+ * `path[floor(path.length * 0.88)]`, which both (a) deliberately targeted
+ * a point right before the destination port and (b) compounded that by
+ * indexing into the vertex-dense region near it, landing the arrow
+ * visually inside the port marker on most cruise legs (reported 2.3.1:
+ * "the cruise arrows all seem to sit IN the port"). Interpolating by
+ * cumulative haversine distance fixes both: the anchor sits at an exact
+ * fraction of the leg's real length, independent of vertex density.
+ *
+ * The arrow count scales with leg length (ARROW_LEG_INTERVAL_KM /
+ * MAX_ARROWS_PER_LEG); for `n` arrows they're placed at fractions
+ * `(i+1)/(n+1)` of the leg. This structurally guarantees a margin of
+ * `length/(n+1)` from both endpoints and between adjacent arrows, and for
+ * n=1 places the single arrow exactly at the midpoint — the point
+ * furthest from both ports. Returns `[]` when the leg is shorter than
+ * MIN_ARROW_LEG_LENGTH_KM or the path is degenerate.
+ *
+ * `shiftTowardStart` is set when the leg's opposite direction is also on
+ * the map (out-and-back): every fraction moves a quarter-spacing toward
+ * the leg's own start. Because the opposing leg runs the same water the
+ * other way, the identical own-fraction shift lands on the OTHER side of
+ * the shared midpoint — the two arrows flank it (n=1: 37.5% / 62.5% of
+ * the path) instead of stacking into an "X", and each arrow still sits in
+ * the first half of its own journey, well clear of both ports.
  */
-function pickArrowAnchor(
-  path: ReadonlyArray<[number, number]>
+function pickArrowAnchors(
+  path: ReadonlyArray<[number, number]>,
+  shiftTowardStart = false
+): Array<{ position: [number, number]; angleDeg: number }> {
+  if (path.length < 2) return [];
+
+  const cumulative: number[] = [0];
+  for (let i = 1; i < path.length; i++) {
+    cumulative.push(cumulative[i - 1] + haversineKm(path[i - 1], path[i]));
+  }
+  const totalLength = cumulative[cumulative.length - 1];
+  if (totalLength < MIN_ARROW_LEG_LENGTH_KM) return [];
+
+  const arrowCount = Math.min(
+    MAX_ARROWS_PER_LEG,
+    Math.max(1, Math.round(totalLength / ARROW_LEG_INTERVAL_KM))
+  );
+
+  const spacing = 1 / (arrowCount + 1);
+  const fractionShift = shiftTowardStart ? -spacing / 4 : 0;
+  const anchors: Array<{ position: [number, number]; angleDeg: number }> = [];
+  for (let i = 0; i < arrowCount; i++) {
+    const targetDist = totalLength * (spacing * (i + 1) + fractionShift);
+    const anchor = interpolateAlongPath(path, cumulative, targetDist);
+    if (anchor !== null) anchors.push(anchor);
+  }
+  return anchors;
+}
+
+/**
+ * Interpolate a position + local heading at `targetDist` along `path`,
+ * using `cumulative` (running haversine distance per vertex, same length
+ * as `path`, `cumulative[0] === 0`). The heading comes from the segment
+ * the anchor falls on, so a curved route's arrow points along the curve
+ * at that point, not the leg's overall endpoint-to-endpoint direction.
+ */
+function interpolateAlongPath(
+  path: ReadonlyArray<[number, number]>,
+  cumulative: readonly number[],
+  targetDist: number
 ): { position: [number, number]; angleDeg: number } | null {
-  if (path.length < 2) return null;
-  const headIdx = Math.max(1, Math.floor(path.length * 0.88));
-  const tailIdx = Math.max(0, headIdx - 1);
-  if (headIdx === tailIdx) return null;
-  const [x0, y0] = path[tailIdx];
-  const [x1, y1] = path[headIdx];
+  let segStart = 0;
+  while (segStart < cumulative.length - 2 && cumulative[segStart + 1] < targetDist) segStart++;
+
+  const [x0, y0] = path[segStart];
+  const [x1, y1] = path[segStart + 1];
   const dx = x1 - x0;
   // deck.gl's icon/text rotation shader rotates the local (pre-flip) offset
   // and only afterwards negates its y-component, which nets out to a
@@ -302,8 +456,12 @@ function pickArrowAnchor(
   // version negated dy here, which mirrored every arrow vertically).
   const dy = y1 - y0;
   if (dx === 0 && dy === 0) return null;
+
+  const segLength = cumulative[segStart + 1] - cumulative[segStart];
+  const t = segLength > 0 ? (targetDist - cumulative[segStart]) / segLength : 0;
+  const position: [number, number] = [x0 + dx * t, y0 + dy * t];
   const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
-  return { position: [x1, y1], angleDeg };
+  return { position, angleDeg };
 }
 
 function pairKey(fromPortId: number, toPortId: number): string {

@@ -12,34 +12,32 @@
 //
 // State lives in GlobeView; this component is presentation + callbacks.
 
-import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Quartile } from "./heatmapUtils";
 import {
-  AppearanceSection,
+  CruiseAppearanceSection,
+  FlightAppearanceSection,
+  PanelHeader,
   SectionLabel,
   SegControl,
   Toggle,
+  usePanelExpanded,
   ACCENT,
   PANEL_BG,
   HAIRLINE,
   BORDER,
   TEXT,
+  PANEL_OPTION_STYLE,
   type AppearanceDomain,
-  type DomainAppearanceState,
+  type CruiseAppearanceState,
+  type FlightAppearanceState,
 } from "../map/controlPanelKit";
 import { MapChromeSections } from "../map/MapChromeSections";
 import type { LabelsMode } from "../map/labelPriority";
-import {
-  DEFAULT_AIRPORT_COLOR,
-  DEFAULT_PORT_COLOR,
-  DEFAULT_CRUISE_ROUTE_COLOR,
-} from "./buildGlobeLayers";
+import { DEFAULT_AIRPORT_COLOR, DEFAULT_PORT_COLOR } from "./buildGlobeLayers";
 
 export type StyleId = "standard" | "light" | "dark" | "voyager" | "satellite" | "osm";
 export type LiteMode = "auto" | "on" | "off";
-
-const FLIGHT_ROUTE_DEFAULT: [number, number, number] = [240, 169, 71];
 
 export interface GlobeControlPanelProps {
   autoRotate: boolean;
@@ -72,8 +70,8 @@ export interface GlobeControlPanelProps {
 
   /** Which domain appearance sections to show, in render order. */
   appearanceDomains: readonly AppearanceDomain[];
-  flightAppearance: DomainAppearanceState;
-  cruiseAppearance: DomainAppearanceState;
+  flightAppearance: FlightAppearanceState;
+  cruiseAppearance: CruiseAppearanceState;
 }
 
 export function GlobeControlPanel({
@@ -105,7 +103,7 @@ export function GlobeControlPanel({
   cruiseAppearance,
 }: GlobeControlPanelProps): JSX.Element {
   const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, toggleExpanded] = usePanelExpanded();
 
   return (
     <div
@@ -123,24 +121,11 @@ export function GlobeControlPanel({
       }}
     >
       {/* Header — click to collapse */}
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full shrink-0 cursor-pointer items-center justify-between px-3 py-2.5"
-        style={{ background: "transparent" }}
-      >
-        <span className="flex items-center gap-2 text-[13px] font-semibold" style={{ color: TEXT }}>
-          <span aria-hidden>🗺️</span>
-          {t("map:globe.panel.title")}
-        </span>
-        <span
-          className="transition-transform"
-          style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.6 }}
-          aria-hidden
-        >
-          ▾
-        </span>
-      </button>
+      <PanelHeader
+        title={t("map:globe.panel.title")}
+        expanded={expanded}
+        onToggle={toggleExpanded}
+      />
 
       {expanded && (
         <div className="scrollbar-none min-h-0 overflow-y-auto overflow-x-hidden px-3 pb-3">
@@ -178,8 +163,13 @@ export function GlobeControlPanel({
             </div>
             {/* Marker labels: off / key markers only / all */}
             <div className="mt-2">
-              <div className="mb-1 flex items-center gap-2 px-1 text-xs font-medium" style={{ color: TEXT }}>
-                <span aria-hidden style={{ opacity: 0.9 }}>🏷️</span>
+              <div
+                className="mb-1 flex items-center gap-2 px-1 text-xs font-medium"
+                style={{ color: TEXT }}
+              >
+                <span aria-hidden style={{ opacity: 0.9 }}>
+                  🏷️
+                </span>
                 {t("map:globe.panel.labels")}
               </div>
               <SegControl<LabelsMode>
@@ -223,45 +213,25 @@ export function GlobeControlPanel({
 
           {/* Per-domain appearance sections (Flüge / Kreuzfahrten / …) */}
           {appearanceDomains.includes("flight") && (
-            <AppearanceSection
+            <FlightAppearanceSection
               title={t("map:globe.panel.domainFlight")}
-              routeLabel={t("map:globe.panel.routes")}
-              routeColor={flightAppearance.routeColor}
-              routeDefault={FLIGHT_ROUTE_DEFAULT}
-              onRouteColorChange={flightAppearance.onRouteColorChange}
-              routeAutoLabel={t("map:globe.panel.frequency")}
-              widthLabel={t("map:globe.panel.width")}
-              routeWidth={flightAppearance.routeWidth}
-              onRouteWidthChange={flightAppearance.onRouteWidthChange}
-              markerLabel={t("map:globe.panel.airports")}
-              markerColor={flightAppearance.markerColor}
+              {...flightAppearance}
               markerDefault={DEFAULT_AIRPORT_COLOR}
-              onMarkerColorChange={flightAppearance.onMarkerColorChange}
+              markerLabel={t("map:globe.panel.airports")}
               markerAutoLabel={t("map:globe.panel.auto")}
+              widthLabel={t("map:globe.panel.width")}
               sizeLabel={t("map:globe.panel.size")}
-              markerSize={flightAppearance.markerSize}
-              onMarkerSizeChange={flightAppearance.onMarkerSizeChange}
             />
           )}
           {appearanceDomains.includes("cruise") && (
-            <AppearanceSection
+            <CruiseAppearanceSection
               title={t("map:globe.panel.domainCruise")}
-              routeLabel={t("map:globe.panel.routes")}
-              routeColor={cruiseAppearance.routeColor}
-              routeDefault={DEFAULT_CRUISE_ROUTE_COLOR}
-              onRouteColorChange={cruiseAppearance.onRouteColorChange}
-              routeAutoLabel={t("map:globe.panel.standard")}
-              widthLabel={t("map:globe.panel.width")}
-              routeWidth={cruiseAppearance.routeWidth}
-              onRouteWidthChange={cruiseAppearance.onRouteWidthChange}
-              markerLabel={t("map:globe.panel.ports")}
-              markerColor={cruiseAppearance.markerColor}
+              {...cruiseAppearance}
               markerDefault={DEFAULT_PORT_COLOR}
-              onMarkerColorChange={cruiseAppearance.onMarkerColorChange}
+              markerLabel={t("map:globe.panel.ports")}
               markerAutoLabel={t("map:globe.panel.auto")}
+              widthLabel={t("map:globe.panel.width")}
               sizeLabel={t("map:globe.panel.size")}
-              markerSize={cruiseAppearance.markerSize}
-              onMarkerSizeChange={cruiseAppearance.onMarkerSizeChange}
             />
           )}
 
@@ -284,7 +254,10 @@ export function GlobeControlPanel({
                       }}
                       title={t("map:globe.quartileFilterHint")}
                     >
-                      <span className="h-[3px] w-7 rounded-full" style={{ backgroundColor: color }} />
+                      <span
+                        className="h-[3px] w-7 rounded-full"
+                        style={{ backgroundColor: color }}
+                      />
                       <span className="text-[11px]">{label}</span>
                     </button>
                   );
@@ -353,14 +326,22 @@ export function GlobeControlPanel({
                 background: "rgba(255,255,255,0.06)",
                 border: `1px solid ${BORDER}`,
                 color: TEXT,
+                colorScheme: "dark",
               }}
               title={t("map:globe.performanceHint")}
             >
-              <option value="auto">
-                ⚡ {t("map:globe.performanceAuto")} ({lite ? t("map:globe.performanceOn") : t("map:globe.performanceOff")})
+              {/* Options MUST be styled explicitly — the popup ignores the
+                  select's colours on Windows and was white-on-white (#196). */}
+              <option value="auto" style={PANEL_OPTION_STYLE}>
+                ⚡ {t("map:globe.performanceAuto")} (
+                {lite ? t("map:globe.performanceOn") : t("map:globe.performanceOff")})
               </option>
-              <option value="on">⚡ {t("map:globe.performanceOn")}</option>
-              <option value="off">⚡ {t("map:globe.performanceOff")}</option>
+              <option value="on" style={PANEL_OPTION_STYLE}>
+                ⚡ {t("map:globe.performanceOn")}
+              </option>
+              <option value="off" style={PANEL_OPTION_STYLE}>
+                ⚡ {t("map:globe.performanceOff")}
+              </option>
             </select>
           </div>
         </div>

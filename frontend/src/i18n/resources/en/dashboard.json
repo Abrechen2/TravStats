@@ -194,6 +194,10 @@
     "flightPast": "Flights (flown)",
     "flightUpcoming": "Flights (upcoming)",
     "cruisePast": "Cruises (sailed)",
-    "cruisePlanned": "Cruises (planned)"
+    "cruisePlanned": "Cruises (planned)",
+    "cruisePerCruise": "Cruises (one colour per cruise)",
+    "cruiseSolid": "Cruises",
+    "flightFrequency": "Flights (frequency)",
+    "flightSolid": "Flights"
   }
 }

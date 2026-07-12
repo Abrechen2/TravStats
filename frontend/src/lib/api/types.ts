@@ -123,12 +123,6 @@ export interface UserSettings {
     favoriteAirline?: string;
     flightCategory?: string;
   };
-  map?: {
-    mapStyle?: string;
-    zoomLevel?: number;
-    markerStyle?: string;
-    routeColor?: string;
-  };
   notifications?: {
     flightReminder?: string;
   };
@@ -136,6 +130,12 @@ export interface UserSettings {
   historicalEnrichment?: HistoricalEnrichmentSettings;
   enabledDomains?: DomainKey[];
   whatsNewSeenVersion?: string;
+  /**
+   * Instance-level beta gate — READ-ONLY. Served by GET /settings for
+   * convenience; PUT /settings ignores it (Zod strips it server-side). Only
+   * an admin can write it, via PUT /admin/instance-settings.
+   */
+  betaFeaturesEnabled?: boolean;
   [key: string]: unknown;
 }
 

@@ -53,7 +53,6 @@
       "basemap": "Base map",
       "appearance": "Customise",
       "routes": "Routes",
-      "frequency": "Frequency",
       "width": "Width",
       "airports": "Airports",
       "ports": "Ports",
@@ -68,7 +67,52 @@
       "widthThin": "Thin",
       "widthNormal": "Normal",
       "widthThick": "Thick",
-      "arrows": "Arrows"
+      "arrows": "Arrows",
+      "routeShape": {
+        "label": "Shape",
+        "arc": {
+          "label": "Arc",
+          "hint": "3D arcs above the map — great from a distance."
+        },
+        "flat": {
+          "label": "Flat",
+          "hint": "Flat on the map like cruise routes — stays readable when zoomed in."
+        }
+      },
+      "colorMode": {
+        "label": "Colouring",
+        "status": {
+          "label": "Status",
+          "hint": "Two colours: flown and planned."
+        },
+        "frequency": {
+          "label": "Frequency",
+          "hint": "One base colour — the more often flown, the stronger."
+        },
+        "solid": {
+          "label": "Solid",
+          "hint": "One colour for every route."
+        },
+        "swatchFlown": "flown",
+        "swatchPlanned": "planned"
+      },
+      "cruiseColorMode": {
+        "label": "Colouring",
+        "status": {
+          "label": "Status",
+          "hint": "Two colours: sailed and planned."
+        },
+        "perCruise": {
+          "label": "Per cruise",
+          "hint": "Each cruise gets its own colour. In the \"All\" view these colours share the map with the flight colours and can compete with them."
+        },
+        "solid": {
+          "label": "Solid",
+          "hint": "One colour for every cruise route."
+        },
+        "swatchSailed": "sailed",
+        "swatchPlanned": "planned"
+      }
     },
     "timesFlown": "Flown {{count}}x",
     "flight_one": "flight",

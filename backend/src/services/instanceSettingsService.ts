@@ -20,6 +20,18 @@ export interface InstanceSettings {
   frontendUrl: string | null;
   publicUrl: string | null;
   lanUrl: string | null;
+  /**
+   * Instance-level beta gate — ON on RC/Beta servers, OFF on production.
+   * Reveals features that are unfinished or not yet useful (registry:
+   * `frontend/src/config/betaFeatures.ts`). Admin-settable only, via
+   * PUT /api/v1/admin/instance-settings.
+   *
+   * NOTE: this is a *visibility* flag, not an authorisation boundary. The
+   * endpoints behind the gated features (trip AI summary, /pairing/*) stay
+   * reachable for any authenticated user regardless of its value — that is
+   * deliberate, so the owner can still pair a phone while the UI is hidden.
+   */
+  betaFeaturesEnabled: boolean;
 }
 
 export interface WebDAVSettings {
@@ -56,6 +68,9 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
       null,
     publicUrl: row.publicUrl ?? process.env.PUBLIC_URL ?? null,
     lanUrl: row.lanUrl ?? process.env.LAN_URL ?? null,
+    // Non-nullable column (default false) — no ENV fallback on purpose: an
+    // instance is either flagged beta by an admin or it is not.
+    betaFeaturesEnabled: row.betaFeaturesEnabled,
   };
 }
 
@@ -79,6 +94,9 @@ export async function updateInstanceSettings(
       }),
       ...(patch.lanUrl !== undefined && {
         lanUrl: patch.lanUrl || null,
+      }),
+      ...(patch.betaFeaturesEnabled !== undefined && {
+        betaFeaturesEnabled: patch.betaFeaturesEnabled,
       }),
     },
   });
