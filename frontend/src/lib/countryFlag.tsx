@@ -10,16 +10,6 @@ import type { JSX } from "react";
 
 const FLAG_ASPECT = 4 / 3;
 
-/** ISO 3166-1 alpha-2 → regional-indicator emoji ("DE" → 🇩🇪). */
-export function countryFlag(iso2: string | null | undefined): string | null {
-  if (!iso2 || !/^[A-Za-z]{2}$/.test(iso2)) return null;
-  const upper = iso2.toUpperCase();
-  return String.fromCodePoint(
-    0x1f1e6 + (upper.charCodeAt(0) - 65),
-    0x1f1e6 + (upper.charCodeAt(1) - 65)
-  );
-}
-
 // Lowercase, validated 2-letter code — or null when it can't be a flag.
 function normCc(code?: string | null): string | null {
   if (!code) return null;

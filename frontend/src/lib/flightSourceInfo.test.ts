@@ -34,4 +34,14 @@ describe("getFlightSourceInfo", () => {
     expect(lines[0].icon).toBe("🔍");
     expect(lines[0].detail).toContain("92");
   });
+
+  it("attaches enrichment details to the historical_enrichment primary line", () => {
+    const lines = getFlightSourceInfo({
+      ...base, dataSource: "historical_enrichment",
+      enrichmentHistory: [{ type: "historical", timestamp: "2026-07-04T00:00:00Z", confidence: 88, sourceFlightsCount: 9 }],
+    } as unknown as Flight, t);
+    expect(lines).toHaveLength(1);
+    expect(lines[0].icon).toBe("🔍");
+    expect(lines[0].detail).toContain("88");
+  });
 });
