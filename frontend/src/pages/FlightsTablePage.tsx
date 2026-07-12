@@ -23,17 +23,17 @@ import SpecialFlightFilter, {
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { TripFilterBar } from "../components/Flights/TripFilterBar";
 import { useToastStore } from "../store/toastStore";
-import { useSettingsStore } from "../store/settingsStore";
 import { API_LIMITS } from "../lib/constants";
-import { formatDateInTimezone } from "../lib/dateUtils";
 import { getFlightDuration, getFlightDurationMinutes } from "../lib/flightDuration";
 import { formatDurationWithEstimate } from "../lib/formatters";
-import { resolveAirlineDisplay } from "../lib/airlineUtils";
 import { useTranslation } from "../hooks/useTranslation";
-import DataSourceBadges from "../components/DataSourceBadges";
 import { logger } from "../lib/logger";
 import PageTransition from "../components/PageTransition";
 import { SkeletonTable } from "../components/SkeletonLoader";
+import AirlineWordmarkCell from "../components/flightsTable/AirlineWordmarkCell";
+import RouteCell from "../components/flightsTable/RouteCell";
+import TimeCell from "../components/flightsTable/TimeCell";
+import SourceInfoDot from "../components/flightsTable/SourceInfoDot";
 
 // Trips moved to their own /trips top-level page (Phase-1 redesign).
 // This page now focuses purely on the flight table; the trip badge in
@@ -59,7 +59,6 @@ export default function FlightsTablePage(): JSX.Element {
   const [showAddFlight, setShowAddFlight] = useState(false);
   const [showSpecialModal, setShowSpecialModal] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
-  const timezone = useSettingsStore((s) => s.display.timezone);
 
   useEffect(() => {
     loadFlights();
@@ -265,9 +264,6 @@ export default function FlightsTablePage(): JSX.Element {
     [sortedFlights, tripFilter, specialFilter]
   );
 
-  const formatDate = (date: string | null): string =>
-    date ? formatDateInTimezone(date, timezone) : "—";
-
   const formatFlightDurationCell = (flight: Flight) => {
     const d = getFlightDuration(flight);
     return formatDurationWithEstimate(d?.minutes ?? null, d?.estimated ?? false);
@@ -383,15 +379,9 @@ export default function FlightsTablePage(): JSX.Element {
                             className="flex items-center gap-1"
                             style={sortBy === "departureTime" ? activeSortStyle : undefined}
                           >
-                            {t("flights:table.departure")}
+                            {t("flights:table.time")}
                             {sortBy === "departureTime" && (sortOrder === "asc" ? "▼" : "▲")}
                           </button>
-                        </th>
-                        <th
-                          className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                          style={thStyle}
-                        >
-                          {t("flights:table.arrival")}
                         </th>
                         <th
                           className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
@@ -466,9 +456,7 @@ export default function FlightsTablePage(): JSX.Element {
                             }}
                           >
                             <td className="px-4 py-3" style={{ color: "var(--text-primary)" }}>
-                              <div className="font-medium">
-                                {resolveAirlineDisplay(flight) || t("common:labels.notAvailable")}
-                              </div>
+                              <AirlineWordmarkCell flight={flight} />
                               {flight.specialType && (
                                 <div className="mt-1">
                                   <SpecialTypeBadge type={flight.specialType as SpecialType} />
@@ -482,75 +470,35 @@ export default function FlightsTablePage(): JSX.Element {
                               className="px-4 py-3 max-w-[16rem]"
                               style={{ color: "var(--text-primary)" }}
                             >
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className="font-mono font-semibold"
-                                  style={{ color: "var(--accent)" }}
-                                >
-                                  {flight.depIata || flight.depIcao}
-                                </span>
-                                <span style={{ color: "var(--text-muted)" }}>
-                                  {t("common:labels.routeSeparator")}
-                                </span>
-                                <span
-                                  className="font-mono font-semibold"
-                                  style={{ color: "var(--accent)" }}
-                                >
-                                  {flight.arrIata || flight.arrIcao}
-                                </span>
-                              </div>
-                              <div
-                                className="text-xs truncate"
-                                style={{ color: "var(--text-muted)" }}
-                                title={
-                                  flight.depName && flight.arrName
-                                    ? `${flight.depName} ${t("common:labels.routeSeparator")} ${flight.arrName}`
-                                    : (flight.depName ?? flight.arrName ?? undefined)
-                                }
-                              >
-                                {flight.depName} {t("common:labels.routeSeparator")}{" "}
-                                {flight.arrName}
-                              </div>
-                            </td>
-                            <td
-                              className="px-4 py-3 text-sm"
-                              style={{ color: "var(--text-muted)" }}
-                            >
-                              {formatDate(flight.departureTime)}
-                            </td>
-                            <td
-                              className="px-4 py-3 text-sm"
-                              style={{ color: "var(--text-muted)" }}
-                            >
-                              {formatDate(flight.arrivalTime)}
+                              <RouteCell flight={flight} />
                             </td>
                             <td className="px-4 py-3">
-                              <div className="flex flex-col gap-2">
-                                <span
-                                  className="px-2 py-1 text-xs font-semibold rounded-full"
-                                  style={
-                                    flight.status === "flown"
+                              <TimeCell flight={flight} />
+                            </td>
+                            <td className="px-4 py-3">
+                              <span
+                                className="px-2 py-1 text-xs font-semibold rounded-full"
+                                style={
+                                  flight.status === "flown"
+                                    ? {
+                                        background: "rgba(63,185,80,0.15)",
+                                        color: "var(--success)",
+                                      }
+                                    : flight.status === "scheduled"
                                       ? {
-                                          background: "rgba(63,185,80,0.15)",
-                                          color: "var(--success)",
+                                          background: "rgba(56,139,253,0.15)",
+                                          color: "#388bfd",
                                         }
-                                      : flight.status === "scheduled"
-                                        ? {
-                                            background: "rgba(56,139,253,0.15)",
-                                            color: "#388bfd",
-                                          }
-                                        : {
-                                            background: "rgba(248,81,73,0.15)",
-                                            color: "var(--danger)",
-                                          }
-                                  }
-                                >
-                                  {t(`flights:status.${flight.status}`, {
-                                    defaultValue: flight.status,
-                                  })}
-                                </span>
-                                <DataSourceBadges flight={flight} />
-                              </div>
+                                      : {
+                                          background: "rgba(248,81,73,0.15)",
+                                          color: "var(--danger)",
+                                        }
+                                }
+                              >
+                                {t(`flights:status.${flight.status}`, {
+                                  defaultValue: flight.status,
+                                })}
+                              </span>
                             </td>
                             <td
                               className="px-4 py-3 text-sm"
@@ -566,11 +514,21 @@ export default function FlightsTablePage(): JSX.Element {
                             </td>
                             <td
                               className="px-4 py-3 text-sm"
-                              style={{ color: "var(--text-muted)" }}
+                              style={{
+                                color: "var(--text-muted)",
+                                fontVariantNumeric: "tabular-nums",
+                              }}
                             >
-                              {flight.price
-                                ? `${flight.price.toFixed(2)} ${flight.currency || "EUR"}`
-                                : t("common:labels.notAvailable")}
+                              {flight.price ? (
+                                <>
+                                  {flight.price.toFixed(2)}
+                                  <span className="ml-1 text-[11px]">
+                                    {flight.currency || "EUR"}
+                                  </span>
+                                </>
+                              ) : (
+                                t("common:labels.notAvailable")
+                              )}
                             </td>
                             <td className="px-3 py-2">
                               {tripEntry ? (
@@ -594,24 +552,29 @@ export default function FlightsTablePage(): JSX.Element {
                               )}
                             </td>
                             <td className="px-4 py-3 text-right whitespace-nowrap">
-                              <FlightRowActions
-                                flight={flight}
-                                openDuplicateMenuFor={duplicateMenuFor}
-                                onToggleDuplicateMenu={setDuplicateMenuFor}
-                                onEdit={(f) => {
-                                  // Special flights → SpecialFlightModal so the user
-                                  // edits eclipse coords / parabolas / etc. through the
-                                  // same UI that created them, not the generic edit
-                                  // modal (which hides those fields entirely).
-                                  if (f.specialType) {
-                                    setEditingSpecialFlight(f);
-                                  } else {
-                                    setEditingFlight(f);
-                                  }
-                                }}
-                                onDuplicate={(f, mode) => void handleDuplicate(f, mode)}
-                                onDelete={handleDeleteClick}
-                              />
+                              <div className="flex items-center justify-end gap-1.5">
+                                <FlightRowActions
+                                  flight={flight}
+                                  openDuplicateMenuFor={duplicateMenuFor}
+                                  onToggleDuplicateMenu={setDuplicateMenuFor}
+                                  onEdit={(f) => {
+                                    // Special flights → SpecialFlightModal so the user
+                                    // edits eclipse coords / parabolas / etc. through the
+                                    // same UI that created them, not the generic edit
+                                    // modal (which hides those fields entirely).
+                                    if (f.specialType) {
+                                      setEditingSpecialFlight(f);
+                                    } else {
+                                      setEditingFlight(f);
+                                    }
+                                  }}
+                                  onDuplicate={(f, mode) => void handleDuplicate(f, mode)}
+                                  onDelete={handleDeleteClick}
+                                />
+                                <span className="inline-flex w-[18px] justify-center">
+                                  <SourceInfoDot flight={flight} />
+                                </span>
+                              </div>
                             </td>
                           </tr>
                         );
