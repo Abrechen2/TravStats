@@ -132,6 +132,9 @@ export interface Flight {
   patternLat?: number | null;
   patternLon?: number | null;
   specialData?: Record<string, unknown> | null;
+  // Display helpers (populated by backend for enriched flights)
+  depCountry?: string | null;
+  arrCountry?: string | null;
 }
 
 export interface Booking {
