@@ -379,14 +379,14 @@
   "features": {
     "title": "Funktionen",
     "costTracking": "Kostenerfassung",
-    "costTrackingDesc": "Preis- und Kostenfelder in Formularen anzeigen und Business-Statistiken auswerten.",
+    "costTrackingDesc": "Steuer- und Gebührenfelder in Flugformularen anzeigen und Business-Statistiken auswerten. Preis und Währung sind immer verfügbar.",
     "trackAircraft": "Heckkennungen erfassen",
     "trackAircraftDesc": "Speichert Tail-Nummer und Mode-S aus dem Flug-Lookup. Aus = Nur Aggregate, kein Audit-Trail einzelner Flugzeuge.",
     "help": {
       "title": "Optionale Funktionen",
       "description": "Hier kannst du Funktionen ein- und ausblenden, um die Oberfläche an deine Nutzung anzupassen. Deaktivierte Funktionen bleiben im Code vorhanden und können jederzeit wieder eingeschaltet werden.",
       "costTitle": "Kostenerfassung:",
-      "cost": "Blendet Preis-, Steuer- und Kostenfelder in den Flugformularen ein. Nur sinnvoll, wenn du Geschäftsreisen abrechnest oder Privat-Budget trackst — sonst macht es die Maske unnötig voll."
+      "cost": "Blendet die Steuer- und Gebührenfelder in den Flugformularen ein und aktiviert die Business-Statistiken. Preis und Währung sind unabhängig davon immer verfügbar — nur die Aufschlüsselung ist optional, damit die Maske schlank bleibt."
     }
   },
   "autoSaved": {
