@@ -5,9 +5,18 @@ import { getCachedLogo, putCachedLogo, type CachedLogo } from "./logoCache";
 
 export type LogoVariant = "icon" | "logo" | "logo-white" | "tail";
 
-// Daisycon serves a generic placeholder with HTTP 200 for unknown airlines —
-// recognisable only by content hash (verified 2026-07-12, 300x150 request).
-const DAISYCON_PLACEHOLDER_MD5S = new Set(["e868e45186e3f2e758f42dcd1029da2d"]);
+// Daisycon serves a generic placeholder with HTTP 200 for unknown airlines.
+// The placeholder is NOT byte-stable (multiple render generations exist),
+// so this hash set is BEST-EFFORT: it filters the generations we have
+// observed; an unrecognised generation slips through and is served/cached
+// like a real logo. That is cosmetic-only (the same image users saw before
+// this proxy existed) and only reachable for airlines logostream does not
+// know. Add newly observed hashes here.
+const DAISYCON_PLACEHOLDER_MD5S = new Set([
+  "e868e45186e3f2e758f42dcd1029da2d",
+  "fdbd908af301103989b2373c18c170a5",
+  "9722f0e8186537a02ca39846f7b4cf7b",
+]);
 
 // Confirmed empirically 2026-07-12 — see
 // docs/superpowers/plans/2026-07-12-airline-logo-api-fixtures.md. Neither
