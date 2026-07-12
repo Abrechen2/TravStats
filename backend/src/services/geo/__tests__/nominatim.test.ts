@@ -1,11 +1,27 @@
+jest.mock("../../instanceSettingsService", () => ({
+  resolveGeocoderUrls: jest.fn(),
+}));
+
 import { geocodeAddress, resolveCoordinates } from "../nominatim";
+import { resolveGeocoderUrls } from "../../instanceSettingsService";
 
 const okResponse = (rows: unknown) => ({ ok: true, json: async () => rows }) as unknown as Response;
 
+const mockResolveGeocoderUrls = resolveGeocoderUrls as jest.Mock;
+
 describe("nominatim geocoder", () => {
   const realFetch = global.fetch;
+
+  beforeEach(() => {
+    mockResolveGeocoderUrls.mockResolvedValue({
+      photonUrl: "https://photon.komoot.io",
+      nominatimUrl: "https://nominatim.openstreetmap.org",
+    });
+  });
+
   afterEach(() => {
     global.fetch = realFetch;
+    jest.clearAllMocks();
   });
 
   it("returns coordinates for an address", async () => {
@@ -51,5 +67,41 @@ describe("nominatim geocoder", () => {
     global.fetch = fetchMock as unknown as typeof fetch;
     expect(await resolveCoordinates({ lat: 1, lon: 2, city: "Berlin" })).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("fetches against the instance-configured Nominatim URL, not a hardcoded host", async () => {
+    mockResolveGeocoderUrls.mockResolvedValue({
+      photonUrl: "https://photon.komoot.io",
+      nominatimUrl: "https://nominatim.self-hosted.example",
+    });
+    const fetchMock = jest.fn().mockResolvedValue(okResponse([{ lat: "10", lon: "20" }]));
+    global.fetch = fetchMock as unknown as typeof fetch;
+    await geocodeAddress({ city: "Configured City" });
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toMatch(/^https:\/\/nominatim\.self-hosted\.example\/search\?/);
+  });
+
+  it("isolates the cache by resolved URL so switching instances never serves a stale cross-instance result", async () => {
+    mockResolveGeocoderUrls.mockResolvedValue({
+      photonUrl: "https://photon.komoot.io",
+      nominatimUrl: "https://nominatim.instance-a.example",
+    });
+    const fetchA = jest.fn().mockResolvedValue(okResponse([{ lat: "1", lon: "1" }]));
+    global.fetch = fetchA as unknown as typeof fetch;
+    const resultA = await geocodeAddress({ city: "Shared Query City" });
+    expect(resultA).toEqual({ lat: 1, lon: 1 });
+    expect(fetchA).toHaveBeenCalledTimes(1);
+
+    mockResolveGeocoderUrls.mockResolvedValue({
+      photonUrl: "https://photon.komoot.io",
+      nominatimUrl: "https://nominatim.instance-b.example",
+    });
+    const fetchB = jest.fn().mockResolvedValue(okResponse([{ lat: "2", lon: "2" }]));
+    global.fetch = fetchB as unknown as typeof fetch;
+    const resultB = await geocodeAddress({ city: "Shared Query City" });
+    expect(resultB).toEqual({ lat: 2, lon: 2 });
+    // A second network call was required — the cache key is not just the
+    // query text, so instance B does not see instance A's cached coords.
+    expect(fetchB).toHaveBeenCalledTimes(1);
   });
 });

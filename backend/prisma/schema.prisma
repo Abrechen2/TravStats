@@ -470,6 +470,13 @@ model AdminSettings {
   publicUrl         String? @map("public_url")
   lanUrl            String? @map("lan_url")
 
+  // Geocoder endpoints — supersedes PHOTON_URL / NOMINATIM_URL ENV variables.
+  // Defaults are the public instances (photon.komoot.io, OSM Nominatim); an
+  // operator may point either at a self-hosted instance. Resolution order:
+  // this column -> ENV -> default (see `resolveGeocoderUrls()`).
+  photonUrl    String? @map("photon_url")
+  nominatimUrl String? @map("nominatim_url")
+
   // Instance-level beta gate. OFF on production, ON on RC/Beta servers.
   // Reveals unfinished / not-yet-useful features (see
   // frontend/src/config/betaFeatures.ts for the registry of what it gates).

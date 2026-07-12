@@ -1,6 +1,6 @@
+import { resolveGeocoderUrls } from "../instanceSettingsService";
 import logger from "../../utils/logger";
 
-const BASE_URL = "https://nominatim.openstreetmap.org/search";
 // Nominatim's usage policy demands a descriptive UA and at most 1 req/s.
 const USER_AGENT = "TravStats/1.0 (self-hosted travel logbook)";
 const MIN_INTERVAL_MS = 1000;
@@ -28,7 +28,10 @@ interface NominatimRow {
 }
 
 // Geocoding results for a given normalized query are stable for the process
-// lifetime, so an unbounded cache is safe and small in practice.
+// lifetime, so an unbounded cache is safe and small in practice. The key
+// includes the resolved base URL so switching an instance's Nominatim
+// target (self-hosted vs. public) never serves a stale cross-instance
+// result out of the cache.
 const cache = new Map<string, Coordinates | null>();
 
 // Serializes every outbound request onto a single chain so concurrent saves
@@ -57,8 +60,8 @@ function parseRow(row: NominatimRow): Coordinates | null {
   return { lat, lon };
 }
 
-async function fetchCoordinates(query: string): Promise<Coordinates | null> {
-  const url = `${BASE_URL}?q=${encodeURIComponent(query)}&format=json&limit=1`;
+async function fetchCoordinates(query: string, baseUrl: string): Promise<Coordinates | null> {
+  const url = `${baseUrl}/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
   const res = await fetch(url, {
     headers: { "User-Agent": USER_AGENT },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -89,7 +92,9 @@ export async function geocodeAddress(parts: GeocodeParts): Promise<Coordinates |
   const query = buildQuery(parts);
   if (!query) return null;
 
-  const key = query.toLowerCase();
+  const { nominatimUrl } = await resolveGeocoderUrls();
+  const baseUrl = nominatimUrl.replace(/\/+$/, "");
+  const key = `${baseUrl}|${query.toLowerCase()}`;
   const cached = cache.get(key);
   if (cached !== undefined) return cached;
 
@@ -98,7 +103,7 @@ export async function geocodeAddress(parts: GeocodeParts): Promise<Coordinates |
   const task = queue.then(async () => {
     await throttle();
     try {
-      const coords = await fetchCoordinates(query);
+      const coords = await fetchCoordinates(query, baseUrl);
       // Only cache a definitive answer (found or confirmed-empty/unparseable).
       // A thrown error is transient (network blip, timeout) and must not
       // poison the cache for the process lifetime.
