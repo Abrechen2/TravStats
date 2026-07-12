@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { LodgingFormModal } from "../LodgingFormModal";
 import { createLodging, updateLodging } from "../../../lib/api/lodging";
 import type { Lodging } from "../../../types/lodging";
+import type { LocationCoordinates, LocationSelection } from "../../location/LocationInput";
 
 vi.mock("../../../lib/api/lodging", () => ({
   createLodging: vi.fn(),
@@ -12,6 +13,40 @@ vi.mock("../../../lib/api/lodging", () => ({
 
 vi.mock("../ChainPicker", () => ({
   ChainPicker: () => null,
+}));
+
+// Task 4's established child-picker technique (see ChainPicker above): the
+// suite focuses on LodgingFormModal's own logic, not LocationInput's search/
+// map/paste internals (those have their own Task 3 test suite). This mock is
+// intentionally FUNCTIONAL (not just `() => null`) so one test can exercise
+// the wiring contract end-to-end: it renders the received `value` (to assert
+// pin-seeding on edit) and a button that fires a full `LocationSelection` via
+// `onChange` (to assert the payload picks up address/city/country/lat/lon).
+const MOCK_SELECTION: LocationSelection = {
+  lat: 47.3769,
+  lon: 8.5417,
+  name: "Hotel Adlon",
+  address: "Unter den Linden 77",
+  city: "Berlin",
+  country: "Germany",
+  countryCode: "DE",
+};
+
+vi.mock("../../location/LocationInput", () => ({
+  LocationInput: ({
+    value,
+    onChange,
+  }: {
+    value: LocationCoordinates | null;
+    onChange: (selection: LocationSelection) => void;
+  }) => (
+    <div>
+      <span data-testid="location-input-value">{value ? `${value.lat},${value.lon}` : "null"}</span>
+      <button type="button" onClick={() => onChange(MOCK_SELECTION)}>
+        mock-select-location
+      </button>
+    </div>
+  ),
 }));
 
 const baseLodging: Lodging = {
@@ -53,12 +88,7 @@ describe("LodgingFormModal", () => {
     vi.mocked(updateLodging).mockResolvedValue({ ...baseLodging });
 
     render(
-      <LodgingFormModal
-        mode="edit"
-        lodging={baseLodging}
-        onClose={vi.fn()}
-        onSaved={vi.fn()}
-      />,
+      <LodgingFormModal mode="edit" lodging={baseLodging} onClose={vi.fn()} onSaved={vi.fn()} />
     );
 
     fireEvent.change(screen.getByLabelText("lodging:field.address"), { target: { value: "" } });
@@ -100,6 +130,86 @@ describe("LodgingFormModal", () => {
     await waitFor(() => expect(createLodging).toHaveBeenCalled());
     const [payload] = vi.mocked(createLodging).mock.calls[0];
     expect(payload.name).toBe("New Hotel");
+    // Manual-only flow (no LocationInput selection made): the payload still
+    // carries explicit `null` coords, not `undefined` — geocode-on-save
+    // stays entirely unchanged by this task.
+    expect(payload.lat).toBeNull();
+    expect(payload.lon).toBeNull();
     expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: "new-lodging" }));
+  });
+
+  it("seeds the LocationInput pin from the stored lodging coordinates on edit", () => {
+    render(
+      <LodgingFormModal
+        mode="edit"
+        lodging={{ ...baseLodging, lat: 52.516, lon: 13.3777 }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId("location-input-value")).toHaveTextContent("52.516,13.3777");
+  });
+
+  it("fills address/city/country/lat/lon from a LocationInput selection but never overwrites a pre-filled name", async () => {
+    vi.mocked(updateLodging).mockResolvedValue({ ...baseLodging });
+
+    render(
+      <LodgingFormModal mode="edit" lodging={baseLodging} onClose={vi.fn()} onSaved={vi.fn()} />
+    );
+
+    await userEvent.click(screen.getByText("mock-select-location"));
+    await userEvent.click(screen.getByText("common:buttons.save"));
+
+    await waitFor(() => expect(updateLodging).toHaveBeenCalled());
+    const [, payload] = vi.mocked(updateLodging).mock.calls[0];
+    expect(payload.address).toBe("Unter den Linden 77");
+    expect(payload.city).toBe("Berlin");
+    expect(payload.country).toBe("Germany");
+    expect(payload.lat).toBe(47.3769);
+    expect(payload.lon).toBe(8.5417);
+    // `baseLodging.name` is "Old Name" — the selection's "Hotel Adlon" must
+    // NOT overwrite it (never overwrite user text).
+    expect(payload.name).toBe("Old Name");
+  });
+
+  it("fills the name from a LocationInput selection when the name is still empty", async () => {
+    vi.mocked(createLodging).mockResolvedValue({ ...baseLodging, id: "new-lodging" });
+
+    render(<LodgingFormModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByText("mock-select-location"));
+    await userEvent.click(screen.getByText("common:buttons.save"));
+
+    await waitFor(() => expect(createLodging).toHaveBeenCalled());
+    const [payload] = vi.mocked(createLodging).mock.calls[0];
+    expect(payload.name).toBe("Hotel Adlon");
+  });
+
+  it("clears the pin via the clear affordance and sends explicit null coords", async () => {
+    vi.mocked(updateLodging).mockResolvedValue({ ...baseLodging });
+
+    render(
+      <LodgingFormModal
+        mode="edit"
+        lodging={{ ...baseLodging, lat: 52.516, lon: 13.3777 }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+
+    // The clear affordance only renders once a position is set.
+    const clearButton = screen.getByText("location:clear");
+    await userEvent.click(clearButton);
+
+    expect(screen.getByTestId("location-input-value")).toHaveTextContent("null");
+    expect(screen.queryByText("location:clear")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByText("common:buttons.save"));
+
+    await waitFor(() => expect(updateLodging).toHaveBeenCalled());
+    const [, payload] = vi.mocked(updateLodging).mock.calls[0];
+    expect(payload.lat).toBeNull();
+    expect(payload.lon).toBeNull();
   });
 });
