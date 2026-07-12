@@ -15,9 +15,6 @@ type SeatClass = "economy" | "premium_economy" | "business" | "first";
 
 type FlightReminder = "off" | "24h" | "48h";
 
-type MapStyle = "osm" | "satellite";
-type MarkerStyle = "pin" | "circle" | "custom";
-
 type DateFormat = "DD.MM.YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD";
 type TimeFormat = "24h" | "12h";
 
@@ -56,13 +53,6 @@ export interface DefaultsSettings {
   seatClass: SeatClass;
   favoriteAirline: string;
   flightCategory: FlightCategory;
-}
-
-export interface MapSettings {
-  mapStyle: MapStyle;
-  zoomLevel: number;
-  markerStyle: MarkerStyle;
-  routeColor: string;
 }
 
 export interface NotificationSettings {
@@ -114,7 +104,6 @@ export interface SettingsState {
   display: DisplaySettings;
   units: UnitsSettings;
   defaults: DefaultsSettings;
-  map: MapSettings;
   notifications: NotificationSettings;
   features: FeaturesSettings;
   cruise: CruiseSettings;
@@ -132,7 +121,6 @@ export interface SettingsState {
   setDisplay: SettingsUpdater<DisplaySettings>;
   setUnits: SettingsUpdater<UnitsSettings>;
   setDefaults: SettingsUpdater<DefaultsSettings>;
-  setMap: SettingsUpdater<MapSettings>;
   setNotifications: SettingsUpdater<NotificationSettings>;
   setFeatures: SettingsUpdater<FeaturesSettings>;
   setCruise: SettingsUpdater<CruiseSettings>;
@@ -195,7 +183,6 @@ const snapshotOf = (state: SettingsState): string =>
     state.display,
     state.units,
     state.defaults,
-    state.map,
     state.notifications,
     state.features,
     state.cruise,
@@ -208,7 +195,6 @@ const defaultSettings: Omit<
   | "setDisplay"
   | "setUnits"
   | "setDefaults"
-  | "setMap"
   | "setNotifications"
   | "setFeatures"
   | "setCruise"
@@ -242,12 +228,6 @@ const defaultSettings: Omit<
     seatClass: "economy",
     favoriteAirline: "Lufthansa",
     flightCategory: "business",
-  },
-  map: {
-    mapStyle: "osm",
-    zoomLevel: 3,
-    markerStyle: "pin",
-    routeColor: "#2563eb",
   },
   notifications: {
     flightReminder: "24h",
@@ -285,10 +265,6 @@ export const useSettingsStore = create<SettingsState>()(
       setDefaults: (updates) =>
         set((state) => ({
           defaults: { ...state.defaults, ...updates },
-        })),
-      setMap: (updates) =>
-        set((state) => ({
-          map: { ...state.map, ...updates },
         })),
       setNotifications: (updates) =>
         set((state) => ({
@@ -366,7 +342,6 @@ export const useSettingsStore = create<SettingsState>()(
                 display: mergeGroup("display") as DisplaySettings,
                 units: mergeGroup("units") as UnitsSettings,
                 defaults: mergeGroup("defaults") as DefaultsSettings,
-                map: mergeGroup("map") as MapSettings,
                 notifications: mergeGroup("notifications") as NotificationSettings,
                 features: mergeGroup("features") as FeaturesSettings,
               };
@@ -405,9 +380,7 @@ export const useSettingsStore = create<SettingsState>()(
               // `true`/`false` (missing field, older backend) stays `null` =
               // gate closed.
               newState.betaFeaturesEnabled =
-                typeof remote.betaFeaturesEnabled === "boolean"
-                  ? remote.betaFeaturesEnabled
-                  : null;
+                typeof remote.betaFeaturesEnabled === "boolean" ? remote.betaFeaturesEnabled : null;
               return newState;
             });
           }
@@ -425,7 +398,6 @@ export const useSettingsStore = create<SettingsState>()(
           display,
           units,
           defaults,
-          map,
           notifications,
           features,
           cruise,
@@ -444,7 +416,6 @@ export const useSettingsStore = create<SettingsState>()(
             display,
             units,
             defaults,
-            map,
             notifications,
             features,
             cruise,
@@ -489,6 +460,9 @@ export const useSettingsStore = create<SettingsState>()(
         const s = { ...(persisted as Record<string, unknown>) };
         delete s["privacy"];
         delete s["backup"];
+        // Legacy per-user map settings (style/zoom/marker/colour) — nothing
+        // consumed them anymore; the in-map control panel owns map appearance.
+        delete s["map"];
         // Drop any value written before `partialize` existed.
         delete s["betaFeaturesEnabled"];
         return s;

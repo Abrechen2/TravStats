@@ -157,29 +157,6 @@
       "category": "Business / Privat / Urlaub — nur für deine Statistiken relevant, wirkt sich nicht auf Live-Daten oder Kosten aus."
     }
   },
-  "map": {
-    "title": "Karten-Einstellungen",
-    "description": "Steuere Basiskarte, Zoom und Marker.",
-    "mapStyle": "Kartenansicht",
-    "zoomLevel": "Start-Zoom",
-    "markerStyle": "Marker-Stil",
-    "routeColor": "Routenfarbe",
-    "options": {
-      "osm": "OpenStreetMap",
-      "satellite": "Satellite",
-      "pin": "Pin",
-      "circle": "Kreis",
-      "custom": "Custom"
-    },
-    "help": {
-      "title": "Karten-Darstellung",
-      "description": "Diese Einstellungen gelten für die 2D-Flugkarte (Routes/Heatmap/Columns-Modi). Der Globus-Modus nutzt eigene Basiskarten.",
-      "styleTitle": "Basiskarte:",
-      "style": "OpenStreetMap ist werbefrei und frei nutzbar. Satellit verwendet MapLibre-Tiles und ist schwerer, aber gut für Geländebezug.",
-      "colorTitle": "Routenfarbe:",
-      "color": "Betrifft Arc- und Path-Layer auf der Karte. Die Farbe wird auf alle Routen gleich angewendet — für reise-bezogene Färbung nutze stattdessen die Trip-Funktion."
-    }
-  },
   "notifications": {
     "title": "Benachrichtigungen",
     "description": "Erinnerungen und Updates steuern.",
