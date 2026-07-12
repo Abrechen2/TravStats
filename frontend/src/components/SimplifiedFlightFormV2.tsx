@@ -147,6 +147,10 @@ export default function SimplifiedFlightFormV2({
               setSeatClass={form.setSeatClass}
               setStatus={form.setStatus}
               setCategory={form.setCategory}
+              bookingReference={form.bookingReference}
+              ticketNumber={form.ticketNumber}
+              setBookingReference={form.setBookingReference}
+              setTicketNumber={form.setTicketNumber}
               price={form.price}
               currency={form.currency}
               setPrice={form.setPrice}
