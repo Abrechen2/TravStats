@@ -15,7 +15,6 @@ import DisplaySection from "../components/Settings/DisplaySection";
 import ModuleSection from "../components/Settings/ModuleSection";
 import UnitsSection from "../components/Settings/UnitsSection";
 import DefaultsSection from "../components/Settings/DefaultsSection";
-import MapSection from "../components/Settings/MapSection";
 import NotificationsSection from "../components/Settings/NotificationsSection";
 import BackupSection from "../components/Settings/BackupSection";
 import AutoUpdateSection from "../components/Settings/AutoUpdateSection";
@@ -47,13 +46,11 @@ export default function SettingsPage(): JSX.Element {
     display,
     units,
     defaults,
-    map,
     cruise,
     setProfile,
     setDisplay,
     setUnits,
     setDefaults,
-    setMap,
     setCruise,
     savingProfile,
     uploadingProfilePicture,
@@ -122,7 +119,6 @@ export default function SettingsPage(): JSX.Element {
     const flight: SectionRef[] = [
       { id: "homeAirport", label: t("settings:homeAirport.title") || "Home airport" },
       { id: "defaults", label: t("settings:defaults.title") || "Defaults" },
-      { id: "map", label: t("settings:map.title") || "Map" },
       { id: "enrichment", label: t("settings:historicalEnrichment.title") || "Enrichment" },
     ];
     const cruiseTab: SectionRef[] = [
@@ -444,7 +440,6 @@ export default function SettingsPage(): JSX.Element {
             {activeSection === "defaults" && (
               <DefaultsSection defaults={defaults} onSetDefaults={setDefaults} />
             )}
-            {activeSection === "map" && <MapSection map={map} onSetMap={setMap} />}
             {activeSection === "notifications" && <NotificationsSection />}
             {activeSection === "features" && <FeaturesSection />}
             {activeSection === "backup" && (

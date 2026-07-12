@@ -157,29 +157,6 @@
       "category": "Business / private / vacation — only relevant for your statistics, has no effect on live data or cost calculation."
     }
   },
-  "map": {
-    "title": "Map Settings",
-    "description": "Control base map, zoom, and markers.",
-    "mapStyle": "Map View",
-    "zoomLevel": "Start Zoom",
-    "markerStyle": "Marker Style",
-    "routeColor": "Route Color",
-    "options": {
-      "osm": "OpenStreetMap",
-      "satellite": "Satellite",
-      "pin": "Pin",
-      "circle": "Circle",
-      "custom": "Custom"
-    },
-    "help": {
-      "title": "Map appearance",
-      "description": "These settings apply to the 2D flight map (routes/heatmap/columns modes). The globe mode uses its own base maps.",
-      "styleTitle": "Base map:",
-      "style": "OpenStreetMap is ad-free and free to use. Satellite uses MapLibre tiles — heavier, but useful for terrain context.",
-      "colorTitle": "Route color:",
-      "color": "Applied to arc and path layers on the map. The same color is used for all routes — for trip-based coloring, use the Trips feature instead."
-    }
-  },
   "notifications": {
     "title": "Notifications",
     "description": "Control reminders and updates.",

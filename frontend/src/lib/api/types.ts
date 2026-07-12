@@ -123,12 +123,6 @@ export interface UserSettings {
     favoriteAirline?: string;
     flightCategory?: string;
   };
-  map?: {
-    mapStyle?: string;
-    zoomLevel?: number;
-    markerStyle?: string;
-    routeColor?: string;
-  };
   notifications?: {
     flightReminder?: string;
   };
