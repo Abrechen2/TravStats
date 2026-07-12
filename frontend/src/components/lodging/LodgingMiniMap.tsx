@@ -39,9 +39,10 @@ export function LodgingMiniMap({ lodging }: LodgingMiniMapProps): JSX.Element {
   const { t } = useTranslation(["lodging"]);
   const [mapLoaded, setMapLoaded] = useState(false);
 
+  // buildLodgingPins now returns the pin ScatterplotLayer AND its name-label
+  // TextLayer (Task 9) rather than a single layer — flatten straight through.
   const layers: Layer[] = useMemo(() => {
-    const pins = buildLodgingPins([lodging]);
-    return pins !== null ? [pins] : [];
+    return buildLodgingPins([lodging]) ?? [];
   }, [lodging]);
 
   if (lodging.lat === null || lodging.lon === null) {

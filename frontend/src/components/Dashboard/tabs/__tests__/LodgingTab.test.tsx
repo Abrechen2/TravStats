@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import type { Lodging, LodgingStats } from "../../../../types/lodging";
 
 const listLodgingsMock = vi.fn();
@@ -144,7 +145,11 @@ describe("LodgingTab", () => {
       avgRatingOverall: 4.3,
     });
 
-    render(<LodgingTab />);
+    render(
+      <MemoryRouter>
+        <LodgingTab />
+      </MemoryRouter>
+    );
 
     await waitFor(() => {
       expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
@@ -163,7 +168,11 @@ describe("LodgingTab", () => {
       totalNights: 11,
     });
 
-    render(<LodgingTab />);
+    render(
+      <MemoryRouter>
+        <LodgingTab />
+      </MemoryRouter>
+    );
 
     await waitFor(() => {
       expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
@@ -177,7 +186,11 @@ describe("LodgingTab", () => {
     listLodgingsMock.mockResolvedValue([]);
     getLodgingStatsMock.mockResolvedValue(zeroStats);
 
-    render(<LodgingTab />);
+    render(
+      <MemoryRouter>
+        <LodgingTab />
+      </MemoryRouter>
+    );
 
     await waitFor(() => {
       expect(listLodgingsMock).toHaveBeenCalled();
@@ -191,7 +204,11 @@ describe("LodgingTab", () => {
     listLodgingsMock.mockRejectedValue(new Error("network down"));
     getLodgingStatsMock.mockResolvedValue(zeroStats);
 
-    render(<LodgingTab />);
+    render(
+      <MemoryRouter>
+        <LodgingTab />
+      </MemoryRouter>
+    );
 
     await waitFor(() => {
       expect(screen.getByText("dashboard:errors.loadLodgings")).toBeInTheDocument();

@@ -5,7 +5,6 @@ import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { Lodging } from "../types/lodging";
 import type { Layer } from "@deck.gl/core";
 import type { AppearanceDomain } from "./map/controlPanelKit";
-import { buildLodgingPins } from "./layers/lodgingPinsLayer";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 
 /**
@@ -84,6 +83,15 @@ interface MapContainer3DProps {
    */
   lodgingsOverride?: Lodging[];
   /**
+   * Fired when a lodging pin is clicked — receives the lodging id.
+   * Threaded straight through to DeckGLMap, which builds the actual pin
+   * layer (see its `onLodgingClick` doc comment for why the layer itself
+   * lives there and not here). Undefined means pins render but aren't
+   * clickable — the callers that don't pass `lodgingsOverride` don't have
+   * any pins to click anyway.
+   */
+  onLodgingClick?: (lodgingId: string) => void;
+  /**
    * Which domain appearance sections the map control panel exposes. The
    * Alle tab passes both; single-domain tabs pass just their own domain
    * so the panel only surfaces the relevant route/marker controls.
@@ -109,6 +117,7 @@ export default function MapContainer3D({
   hideInfoPill = false,
   cruisesOverride,
   lodgingsOverride,
+  onLodgingClick,
   appearanceDomains = ["flight", "cruise"],
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
@@ -157,33 +166,20 @@ export default function MapContainer3D({
   );
 
   // Lodging marker-size slider (Task 8). Lives HERE rather than in
-  // DeckGLMap's local state (unlike the flight/cruise marker sizes) because
-  // this component is what builds the lodging pin layer below via
-  // `buildLodgingPins` and needs the current value to re-memo on; it's
-  // threaded down into DeckGLMap purely so the flat-map control panel can
-  // render the slider. Persisted the same way every other appearance field
-  // is — a merge-write via `saveMapAppearance` that only touches this key.
+  // DeckGLMap's local state (unlike the flight/cruise marker sizes) purely
+  // so it persists via `saveMapAppearance` the same way every other
+  // appearance field does — a merge-write that only touches this key.
+  // Threaded down into DeckGLMap both to render the slider AND (since
+  // Task 9) to actually build the lodging pin layer — DeckGLMap is what
+  // calls `buildLodgingPins` now (it needs the private zoom/labelsMode
+  // state that only exists there; see DeckGLMap's `lodgingsOverride` doc
+  // comment), this component just supplies the raw list + the size value.
   const [lodgingMarkerSize, setLodgingMarkerSize] = useState<number>(
     () => loadMapAppearance().lodgingMarkerSize ?? 1
   );
   useEffect(() => {
     saveMapAppearance({ lodgingMarkerSize });
   }, [lodgingMarkerSize]);
-
-  // Lodging pins are flat-map only (no globe support yet) and additive to
-  // whatever the caller already passes as extraLayers — merged just below
-  // the DeckGLMap render, not GlobeView's. `buildLodgingPins` returns null
-  // when nothing has coordinates, so this contributes nothing by default.
-  const lodgingLayers = useMemo<Layer[]>(() => {
-    if (!lodgingsOverride || lodgingsOverride.length === 0) return [];
-    const layer = buildLodgingPins(lodgingsOverride, lodgingMarkerSize);
-    return layer ? [layer] : [];
-  }, [lodgingsOverride, lodgingMarkerSize]);
-
-  const mapExtraLayers = useMemo<Layer[]>(
-    () => [...(extraLayers ?? []), ...lodgingLayers],
-    [extraLayers, lodgingLayers]
-  );
 
   const routeCount = useMemo(() => {
     if (visMode !== "routes") return null;
@@ -243,10 +239,12 @@ export default function MapContainer3D({
             visMode={visMode}
             minRouteCount={minRouteCount}
             onResetTrip={onResetTrip}
-            extraLayers={mapExtraLayers}
+            extraLayers={extraLayers}
             appearanceDomains={appearanceDomains}
             lodgingMarkerSize={lodgingMarkerSize}
             onLodgingMarkerSizeChange={setLodgingMarkerSize}
+            lodgingsOverride={lodgingsOverride}
+            onLodgingClick={onLodgingClick}
           />
         )}
       </div>

@@ -14,8 +14,10 @@ import { useFlightColorStore } from "../store/flightColorStore";
 import { FLAT_BASEMAPS, resolveFlatStyle, type FlatStyleId } from "./map/basemapStyles";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
+import type { Lodging } from "../types/lodging";
 import type { MapMode } from "./MapContainer3D";
 import { buildRouteData, createRoutesLayers } from "./layers/routesLayer";
+import { buildLodgingPins } from "./layers/lodgingPinsLayer";
 import { createHeatmapLayer } from "./layers/heatmapLayer";
 import { createTripsLayer, buildTripsData, getTimeRange } from "./layers/tripsLayer";
 import { createSpecialFlightsLayers } from "./layers/specialFlightsLayer";
@@ -122,6 +124,24 @@ interface DeckGLMapProps {
    */
   lodgingMarkerSize?: number;
   onLodgingMarkerSizeChange?: (s: number) => void;
+  /**
+   * Lodging places (hotels/campsites) to render as pins + name labels.
+   * Built into a ScatterplotLayer + TextLayer HERE (not by the caller, via
+   * `buildLodgingPins`) — unlike the marker-size value above, the pin layer
+   * itself needs `zoom` and `labelsMode`, both of which are private state
+   * that only exists inside this component (mirrors exactly how
+   * `createCruisePortsLayer` is built here rather than by MapContainer3D).
+   * Undefined/empty means "no lodging layer at all".
+   */
+  lodgingsOverride?: readonly Lodging[];
+  /**
+   * Fired when a lodging pin is clicked — receives the lodging id. Wrapped
+   * internally so the click also sets `deckClickedRef` (see
+   * `handleLodgingClick`), the same guard `handleAirportClick`/
+   * `handleFlightClick` use to stop the native background-click handler
+   * from immediately clearing whatever the click just did.
+   */
+  onLodgingClick?: (lodgingId: string) => void;
 }
 
 export function DeckGLMap({
@@ -138,6 +158,8 @@ export function DeckGLMap({
   appearanceDomains = ["flight", "cruise"],
   lodgingMarkerSize = 1,
   onLodgingMarkerSizeChange,
+  lodgingsOverride,
+  onLodgingClick,
 }: DeckGLMapProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
@@ -537,6 +559,18 @@ export function DeckGLMap({
     [clearSelection]
   );
 
+  // Mirrors handleAirportClick's guard exactly: set deckClickedRef BEFORE
+  // the native background-click handler runs, so a lodging pin click
+  // doesn't get immediately undone by the fallback clearSelection/
+  // clearCruiseSelection branch in handleNativeClick.
+  const handleLodgingClick = useCallback(
+    (lodgingId: string): void => {
+      deckClickedRef.current = true;
+      onLodgingClick?.(lodgingId);
+    },
+    [onLodgingClick]
+  );
+
   // Heavy data build extracted from the layer useMemo so selection changes
   // (which only need to re-style the existing arcs) don't re-aggregate
   // flights into routes. Deps are deliberately limited to fields that
@@ -643,7 +677,23 @@ export function DeckGLMap({
     ];
     const cruisePortsAbove: Layer[] = ports ?? [];
 
-    return [...cruisePathsBelow, ...base, ...cruisePortsAbove, ...(extraLayers ?? [])];
+    // Lodging pins are flat-map only, additive on top of everything else —
+    // built here (not by the caller) so the layer can read the SAME private
+    // zoom/labelsMode state the cruise-port labels use, and so a pin click
+    // can be wrapped with the deckClickedRef guard (see handleLodgingClick).
+    const lodgingLayers: Layer[] =
+      buildLodgingPins(lodgingsOverride ?? [], lodgingMarkerSize, zoom, {
+        onPinClick: handleLodgingClick,
+        labelsMode,
+      }) ?? [];
+
+    return [
+      ...cruisePathsBelow,
+      ...base,
+      ...cruisePortsAbove,
+      ...lodgingLayers,
+      ...(extraLayers ?? []),
+    ];
   }, [
     visMode,
     flights,
@@ -672,6 +722,9 @@ export function DeckGLMap({
     labelsMode,
     cruiseColorConfig,
     flightColorConfig,
+    lodgingsOverride,
+    lodgingMarkerSize,
+    handleLodgingClick,
   ]);
 
   // No 3D modes remain — lighting effect is unused but kept as empty array for
