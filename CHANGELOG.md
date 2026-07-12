@@ -38,6 +38,13 @@ switch that keeps unfinished features out of sight until they are ready.
 - **The settings domain switch moved into the sidebar.** As a top-right pill
   row it was easy to miss; on desktop it now sits directly above the section
   list it scopes. On phones it stays in the top bar.
+- **Booking reference and ticket number when adding a flight manually** (#197).
+  Both fields only appeared in the edit dialog after a flight was saved. The
+  manual add form now offers them directly, and the booking reference is
+  uppercased on entry so manually added flights group into the same booking
+  as imported ones.
+- **The What's New dialog covers 2.4.0.** A short in-app summary of this
+  release's changes (in German and English), shown once after updating.
 
 ### Fixed
 - **Cruise port names with non-English characters render correctly** (#185).
