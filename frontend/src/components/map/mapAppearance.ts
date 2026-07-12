@@ -84,6 +84,10 @@ export interface MapAppearance {
   showTerrain?: boolean;
   showPlaceLabels?: boolean;
   labelsMode?: LabelsMode;
+  // Chrome
+  /** Whether the control panel is expanded (#194). One value for both maps —
+   *  it is the same panel to the user. Absent = expanded (the default). */
+  panelExpanded?: boolean;
 }
 
 const KEY = "mapAppearance.v2";

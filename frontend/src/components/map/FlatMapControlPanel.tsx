@@ -7,15 +7,16 @@
 // filter), but the per-domain appearance controls are the exact same
 // component, so route + marker tuning reads the same across every mode.
 
-import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
   CruiseAppearanceSection,
   FlightAppearanceSection,
   LodgingAppearanceSection,
+  PanelHeader,
   SectionLabel,
   SegControl,
   Toggle,
+  usePanelExpanded,
   ACCENT,
   PANEL_BG,
   HAIRLINE,
@@ -68,7 +69,7 @@ export function FlatMapControlPanel({
   lodgingAppearance,
 }: FlatMapControlPanelProps): JSX.Element {
   const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, toggleExpanded] = usePanelExpanded();
 
   return (
     <div
@@ -83,24 +84,11 @@ export function FlatMapControlPanel({
         maxHeight: "calc(100vh - 200px)",
       }}
     >
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full shrink-0 cursor-pointer items-center justify-between px-3 py-2.5"
-        style={{ background: "transparent" }}
-      >
-        <span className="flex items-center gap-2 text-[13px] font-semibold" style={{ color: TEXT }}>
-          <span aria-hidden>🗺️</span>
-          {t("map:globe.panel.title")}
-        </span>
-        <span
-          className="transition-transform"
-          style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.6 }}
-          aria-hidden
-        >
-          ▾
-        </span>
-      </button>
+      <PanelHeader
+        title={t("map:globe.panel.title")}
+        expanded={expanded}
+        onToggle={toggleExpanded}
+      />
 
       {expanded && (
         <div className="scrollbar-none min-h-0 overflow-y-auto overflow-x-hidden px-3 pb-3">

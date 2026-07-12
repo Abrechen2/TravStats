@@ -135,7 +135,7 @@ function ShipsSection(): JSX.Element {
             void createShip();
           }}
           disabled={creating}
-          className="rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--accent-dim)] disabled:opacity-50"
+          className="rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-medium text-[var(--bg-base)] hover:bg-[var(--accent-dim)] disabled:opacity-50"
         >
           {creating ? t("common:buttons.saving") : t("admin:cruiseMasterData.ship.add")}
         </button>
@@ -323,7 +323,7 @@ function PortsSection(): JSX.Element {
             void createPort();
           }}
           disabled={creating}
-          className="rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--accent-dim)] disabled:opacity-50"
+          className="rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-medium text-[var(--bg-base)] hover:bg-[var(--accent-dim)] disabled:opacity-50"
         >
           {creating ? t("common:buttons.saving") : t("admin:cruiseMasterData.port.add")}
         </button>

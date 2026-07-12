@@ -106,7 +106,7 @@ export default function JournalViewModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--accent)] text-[var(--bg-primary)]"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--accent)] text-[var(--bg-base)]"
           >
             {t("trips:journalView.close")}
           </button>
