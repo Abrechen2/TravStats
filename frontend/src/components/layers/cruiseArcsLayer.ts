@@ -1,4 +1,5 @@
 import { IconLayer, PathLayer } from "@deck.gl/layers";
+import { CollisionFilterExtension, type CollisionFilterExtensionProps } from "@deck.gl/extensions";
 import type { Layer } from "@deck.gl/core";
 import type { Cruise } from "../../types";
 import type { CruiseStatus } from "../../types/cruise";
@@ -240,7 +241,7 @@ export function createCruiseArrowsLayer(
     return arrowIcon(rgba(d.color, alpha));
   };
 
-  return new IconLayer<ArrowDatum>({
+  return new IconLayer<ArrowDatum, CollisionFilterExtensionProps<ArrowDatum>>({
     id: "cruise-arc-arrows",
     data: arrows,
     getPosition: (d) => d.position,
@@ -249,8 +250,28 @@ export function createCruiseArrowsLayer(
     getSize: ARROW_DISPLAY_HEIGHT * arrowSizeScale,
     sizeUnits: "pixels",
     pickable: false,
+    // Screen-space decluttering: unrelated cruises routed onto the SAME
+    // marnet shipping lane each place their own arrows, which piled up into
+    // clusters of near-identical (and interleaved opposing) chevrons on
+    // shared corridors — ~20 arrows on the transatlantic lane past Funchal
+    // (reported on 2.4.0-rc.2). Data-space dedup is not an option: every leg
+    // is Douglas-Peucker-simplified independently on the backend, so legs
+    // sharing a lane do NOT share vertex sequences. The collision pass hides
+    // whichever arrows would overlap on screen and reveals them again as the
+    // user zooms in; per-leg anchor placement (arc length, away from ports,
+    // out-and-back flanking) is unchanged.
+    extensions: [new CollisionFilterExtension()],
+    collisionGroup: "cruise-arrows",
+    // The selected cruise always wins its corridor; flown beats planned.
+    getCollisionPriority: (d) =>
+      hasSelection && d.cruiseId === selectedCruiseId ? 100 : d.planned ? 0 : 10,
+    // Test with enlarged footprints so arrows disappear BEFORE they visually
+    // touch — a chevron needs breathing room to stay readable, not just
+    // non-overlapping pixels.
+    collisionTestProps: { sizeScale: COLLISION_BREATHING_ROOM },
     updateTriggers: {
       getIcon: [selectedCruiseId, colorConfig],
+      getCollisionPriority: [selectedCruiseId],
     },
   });
 }
@@ -266,6 +287,15 @@ const ARROW_ICON_HEIGHT = 16;
 // Rendered screen height in pixels — deliberately smaller than the icon's
 // native size above so the border stroke stays crisp at typical map zooms.
 const ARROW_DISPLAY_HEIGHT = 10;
+// Multiplier on the arrow's footprint during the collision pass (not on
+// screen). The collision pass only counts the chevron's opaque pixels (not
+// its full quad), so the effective clearance is noticeably tighter than the
+// nominal footprint — tuned visually against the reported transatlantic
+// corridor: 2.5 and 4 still let same-corridor pairs sit ~15 px apart, 40
+// suppressed every arrow on the map; 8 (≈ 80-px footprint) collapses
+// shared-lane clusters to single readable arrows ~30 px+ apart while arrows
+// on distinct nearby lanes survive and more reappear on zoom-in.
+const COLLISION_BREATHING_ROOM = 8;
 // The browser rasterises the SVG data-URL at the SVG's declared
 // width/height, and deck.gl packs THAT bitmap into its icon atlas — so a
 // 22×16 icon shown at 2.5× slider scale on a HiDPI display upsamples a

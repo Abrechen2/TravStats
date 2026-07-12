@@ -707,61 +707,61 @@ export default function FlightEditModal({
             />
           </div>
 
-          {/* Cost (feature-gated) */}
+          {/* Price & Currency — always available, matching the cruise editor
+              (#192). Only the tax/fee breakdown stays behind cost tracking. */}
+          <div className="grid grid-cols-4 gap-4">
+            <div className="col-span-2">
+              <label className="label">{t("common:labels.price")}</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.price}
+                onChange={(e) => update("price", parseFloat(e.target.value) || 0)}
+                className="input"
+                placeholder={t("flights:form.placeholders.price")}
+              />
+            </div>
+
+            <div>
+              <label className="label">{t("flights:form.currency")}</label>
+              <CurrencyInput
+                value={formData.currency || "EUR"}
+                onChange={(v) => update("currency", v)}
+                className="input"
+              />
+            </div>
+          </div>
+
+          {/* Tax/fee breakdown (feature-gated) */}
           {features.enableCostTracking && (
-            <>
-              <div className="grid grid-cols-4 gap-4">
-                <div className="col-span-2">
-                  <label className="label">{t("common:labels.price")}</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.price}
-                    onChange={(e) => update("price", parseFloat(e.target.value) || 0)}
-                    className="input"
-                    placeholder={t("flights:form.placeholders.price")}
-                  />
-                </div>
-
-                <div>
-                  <label className="label">{t("flights:form.currency")}</label>
-                  <CurrencyInput
-                    value={formData.currency || "EUR"}
-                    onChange={(v) => update("currency", v)}
-                    className="input"
-                  />
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">{t("common:labels.taxes")}</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.taxes}
+                  onChange={(e) => update("taxes", parseFloat(e.target.value) || 0)}
+                  className="input"
+                  placeholder={t("flights:form.placeholders.taxes")}
+                />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="label">{t("common:labels.taxes")}</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.taxes}
-                    onChange={(e) => update("taxes", parseFloat(e.target.value) || 0)}
-                    className="input"
-                    placeholder={t("flights:form.placeholders.taxes")}
-                  />
-                </div>
-
-                <div>
-                  <label className="label">{t("common:labels.fees")}</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.fees}
-                    onChange={(e) => update("fees", parseFloat(e.target.value) || 0)}
-                    className="input"
-                    placeholder={t("flights:form.placeholders.fees")}
-                  />
-                </div>
+              <div>
+                <label className="label">{t("common:labels.fees")}</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.fees}
+                  onChange={(e) => update("fees", parseFloat(e.target.value) || 0)}
+                  className="input"
+                  placeholder={t("flights:form.placeholders.fees")}
+                />
               </div>
-            </>
+            </div>
           )}
 
           {/* Tags */}

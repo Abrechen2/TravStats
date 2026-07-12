@@ -7,7 +7,9 @@
 // and the flat-map panel render the very same `FlightAppearanceSection` /
 // `CruiseAppearanceSection`, so the two can never drift apart.
 
+import { useCallback, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { loadMapAppearance, saveMapAppearance } from "./mapAppearance";
 import {
   CRUISE_COLOR_MODES,
   CRUISE_COLOR_PRESETS,
@@ -45,6 +47,78 @@ export function hexToRgb(hex: string): [number, number, number] {
   if (!m) return [255, 255, 255];
   const int = parseInt(m[1], 16);
   return [(int >> 16) & 255, (int >> 8) & 255, int & 255];
+}
+
+// ── Native <option> styling ──────────────────────────────────────────
+// The dropdown POPUP of a native <select> ignores the select's own colours on
+// Windows (Chromium renders it with system colours) — with the panel's white
+// text inherited onto unstyled options that was white-on-white (#196). Every
+// <option> inside the dark glass panels must carry this style explicitly.
+export const PANEL_OPTION_STYLE = { background: "#0d1117", color: "#f1f5f9" } as const;
+
+// ── Collapsible panel header ─────────────────────────────────────────
+/**
+ * Expanded/collapsed state for the map control panels: collapsed by default
+ * (owner decision on #194 — the panel is rarely needed, the map is), persisted
+ * in the shared `mapAppearance` blob so the choice survives reloads and
+ * carries across the 2D ↔ globe switch — it is the same panel to the user.
+ *
+ * Persisted only on an actual toggle, never on mount — writing the default
+ * into the blob would bake it in and make any future default change a no-op
+ * for everyone who ever loaded the app.
+ */
+export function usePanelExpanded(): [boolean, () => void] {
+  const [expanded, setExpanded] = useState(() => loadMapAppearance().panelExpanded ?? false);
+  const toggle = useCallback(() => {
+    const next = !expanded;
+    saveMapAppearance({ panelExpanded: next });
+    setExpanded(next);
+  }, [expanded]);
+  return [expanded, toggle];
+}
+
+/**
+ * The shared clickable header of both map control panels.
+ *
+ * The chevron points where the panel body will MOVE on click (#195): the
+ * panels are anchored bottom-left, so collapsing shrinks the body downwards
+ * (chevron down while expanded) and expanding grows it upwards (chevron up
+ * while collapsed).
+ */
+export function PanelHeader({
+  title,
+  expanded,
+  onToggle,
+}: {
+  title: string;
+  expanded: boolean;
+  onToggle: () => void;
+}): JSX.Element {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={expanded}
+      className="flex w-full shrink-0 cursor-pointer items-center justify-between px-3 py-2.5"
+      style={{ background: "transparent" }}
+    >
+      <span className="flex items-center gap-2 text-[13px] font-semibold" style={{ color: TEXT }}>
+        <span aria-hidden>🗺️</span>
+        {title}
+      </span>
+      <svg
+        aria-hidden
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.5}
+        className="h-4 w-4 shrink-0 transition-transform"
+        style={{ transform: expanded ? "none" : "rotate(180deg)", opacity: 0.75, color: TEXT }}
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+      </svg>
+    </button>
+  );
 }
 
 // ── Section label ────────────────────────────────────────────────────

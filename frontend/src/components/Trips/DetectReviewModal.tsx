@@ -305,7 +305,7 @@ export default function DetectReviewModal({
             type="button"
             onClick={() => void handleCommit()}
             disabled={selectedCount === 0 || committing}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--accent)] text-[var(--bg-primary)] disabled:opacity-50"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--accent)] text-[var(--bg-base)] disabled:opacity-50"
           >
             {committing
               ? t("common:loading.default")

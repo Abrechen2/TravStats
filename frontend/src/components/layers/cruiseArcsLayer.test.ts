@@ -515,6 +515,65 @@ describe("cruise arrow placement — opposing legs don't overlap (out-and-back)"
   });
 });
 
+// Reported on 2.4.0-rc.2: unrelated cruises routed onto the same marnet
+// shipping lane pile their arrows into clusters of near-identical chevrons
+// (~20 on the transatlantic lane past Funchal). Legs are simplified
+// independently on the backend, so data-space dedup is impossible — the
+// arrow layer must declutter in screen space via CollisionFilterExtension.
+describe("cruise arrows — screen-space decluttering on shared corridors", () => {
+  const cruise = () =>
+    makeCruise([
+      makeStop(1, 1, { id: 1, lat: 0, lon: 0 }),
+      makeStop(2, 2, { id: 2, lat: 0, lon: 10 }),
+    ]);
+
+  it("mounts a CollisionFilterExtension with an enlarged collision footprint", () => {
+    const layer = createCruiseArrowsLayer([cruise()]) as unknown as {
+      props: {
+        extensions: Array<{ constructor: { extensionName?: string } }>;
+        collisionGroup: string;
+        collisionTestProps: { sizeScale: number };
+      };
+    };
+    expect(layer.props.extensions).toHaveLength(1);
+    expect(layer.props.extensions[0].constructor.extensionName).toBe("CollisionFilterExtension");
+    expect(layer.props.collisionGroup).toBe("cruise-arrows");
+    // Arrows must vanish BEFORE they visually touch — the collision pass
+    // tests a footprint larger than the rendered icon.
+    expect(layer.props.collisionTestProps.sizeScale).toBeGreaterThan(1);
+  });
+
+  it("prioritises the selected cruise over flown, and flown over planned", () => {
+    const flown = { ...cruise(), id: "c-flown", status: "flown" as const };
+    const planned = { ...cruise(), id: "c-planned" };
+    const layer = createCruiseArrowsLayer([flown, planned], new Map(), "c-flown") as unknown as {
+      props: {
+        data: Array<{ cruiseId: string; planned: boolean }>;
+        getCollisionPriority: (d: { cruiseId: string; planned: boolean }) => number;
+      };
+    };
+    const { data, getCollisionPriority } = layer.props;
+    const selectedArrow = data.find((d) => d.cruiseId === "c-flown")!;
+    const plannedArrow = data.find((d) => d.cruiseId === "c-planned")!;
+    const selectedPriority = getCollisionPriority(selectedArrow);
+    const plannedPriority = getCollisionPriority(plannedArrow);
+    expect(selectedPriority).toBeGreaterThan(plannedPriority);
+
+    // Without a selection, flown still outranks planned.
+    const unselected = createCruiseArrowsLayer([flown, planned]) as unknown as {
+      props: {
+        data: Array<{ cruiseId: string; planned: boolean }>;
+        getCollisionPriority: (d: { cruiseId: string; planned: boolean }) => number;
+      };
+    };
+    const flownArrow = unselected.props.data.find((d) => d.cruiseId === "c-flown")!;
+    const plannedArrow2 = unselected.props.data.find((d) => d.cruiseId === "c-planned")!;
+    expect(unselected.props.getCollisionPriority(flownArrow)).toBeGreaterThan(
+      unselected.props.getCollisionPriority(plannedArrow2)
+    );
+  });
+});
+
 // Reported on 2.4.0-rc.1: arrows go blurry when scaled up. The SVG data-URL
 // is rasterised by the browser at the SVG's declared width/height, so a
 // 22×16 icon stretched to 2.5× on a HiDPI display samples a 16-px bitmap

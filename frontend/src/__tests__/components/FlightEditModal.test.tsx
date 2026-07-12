@@ -64,12 +64,16 @@ describe("FlightEditModal", () => {
     expect(document.querySelector('input[type="text"][inputmode="numeric"]')).toBeTruthy();
   });
 
-  it("hides cost fields when enableCostTracking is false", () => {
+  it("always shows price + currency but hides taxes/fees when enableCostTracking is false (#192)", () => {
     const { container } = render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
-    // Price input should not be present
-    const priceInputs = container.querySelectorAll('input[type="number"][step="0.01"]');
-    expect(priceInputs.length).toBe(0);
+    // Exactly ONE number field with the flag off: the price. Taxes and fees
+    // (the other two step-0.01 inputs) stay behind the cost-tracking toggle.
+    const numberInputs = container.querySelectorAll('input[type="number"][step="0.01"]');
+    expect(numberInputs.length).toBe(1);
+    expect((numberInputs[0] as HTMLInputElement).placeholder).toBe(
+      "flights:form.placeholders.price"
+    );
   });
 });
