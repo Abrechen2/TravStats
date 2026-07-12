@@ -76,7 +76,7 @@ export default function TripGallery({ tripId, photos, onChange }: TripGalleryPro
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="px-3 py-1.5 rounded-md text-xs font-medium bg-[var(--accent)] text-[var(--bg-primary)] disabled:opacity-50"
+          className="px-3 py-1.5 rounded-md text-xs font-medium bg-[var(--accent)] text-[var(--bg-base)] disabled:opacity-50"
         >
           {uploading ? t("common:loading.default") : t("trips:gallery.uploadButton")}
         </button>

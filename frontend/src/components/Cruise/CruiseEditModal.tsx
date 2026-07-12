@@ -409,7 +409,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 void submit();
               }}
               disabled={saving}
-              className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--accent-dim)] disabled:opacity-50"
+              className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-base)] hover:bg-[var(--accent-dim)] disabled:opacity-50"
             >
               {saving ? t("form.saving") : t("form.save")}
             </button>

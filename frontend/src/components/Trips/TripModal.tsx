@@ -474,7 +474,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
             onClick={() => void handleSave()}
             disabled={!name.trim() || saving}
             type="button"
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--accent)] text-[var(--bg-primary)] disabled:opacity-50"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--accent)] text-[var(--bg-base)] disabled:opacity-50"
           >
             {saving ? "…" : t("trips:modal.save")}
           </button>
