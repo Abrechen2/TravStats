@@ -32,7 +32,7 @@ interface Props {
  * adapter, so post-commit counts/failures are presented identically.
  */
 export function LodgingCsvImportTile({ onImported }: Props): JSX.Element {
-  const { t } = useTranslation(["lodging", "settings"]);
+  const { t } = useTranslation("lodging");
   const addToast = useToastStore((s) => s.addToast);
   const [records, setRecords] = useState<Record<string, string>[] | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
