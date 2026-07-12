@@ -23,28 +23,38 @@ const SOURCE_ICONS: Record<string, string> = {
 export function getFlightSourceInfo(flight: Flight, t: TFunction): SourceInfoLine[] {
   const lines: SourceInfoLine[] = [];
   const combined = flight.dataSource === "live_update" && flight.lastModifiedBy === "auto_update";
-
-  if (combined) {
-    lines.push({ icon: "🔄", label: t("flights:dataSource.live_update_auto") });
-  } else if (flight.dataSource && flight.dataSource !== "manual") {
-    const icon = SOURCE_ICONS[flight.dataSource];
-    if (icon) lines.push({ icon, label: t(`flights:dataSource.${flight.dataSource}`) });
-  }
-
   const history = flight.enrichmentHistory;
-  if (history && history.length > 0 && flight.dataSource !== "historical_enrichment") {
+  const enrichmentDetail = (): string | undefined => {
+    if (!history || history.length === 0) return undefined;
     const latest = history[history.length - 1];
     const details: string[] = [];
     if (latest.confidence) details.push(`${t("flights:confidence")}: ${latest.confidence}%`);
     if (latest.sourceFlightsCount)
       details.push(t("flights:sourceFlightsCount", { count: latest.sourceFlightsCount }));
+    return details.length ? details.join(" · ") : undefined;
+  };
+
+  if (combined) {
+    lines.push({ icon: "🔄", label: t("flights:dataSource.live_update_auto") });
+  } else if (flight.dataSource && flight.dataSource !== "manual") {
+    const icon = SOURCE_ICONS[flight.dataSource];
+    if (icon) {
+      lines.push({
+        icon,
+        label: t(`flights:dataSource.${flight.dataSource}`),
+        detail: flight.dataSource === "historical_enrichment" ? enrichmentDetail() : undefined,
+      });
+    }
+  }
+
+  if (history && history.length > 0 && flight.dataSource !== "historical_enrichment") {
     lines.push({
       icon: "🔍",
       label:
         history.length > 1
           ? t("flights:enrichmentCount", { count: history.length })
           : t("flights:dataSource.historical_enrichment"),
-      detail: details.length ? details.join(" · ") : undefined,
+      detail: enrichmentDetail(),
     });
   }
 
