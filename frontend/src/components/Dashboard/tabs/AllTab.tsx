@@ -498,6 +498,7 @@ export function AllTab(): JSX.Element {
           visMode="routes"
           extraLayers={journeyLayers}
           showInternalCruises={false}
+          appearanceDomains={["flight", "cruise", "lodging"]}
           onFlightClick={handleFlightClick}
           onRouteClick={handleRouteClick}
           onFlightOpen={handlePanelFlightDetails}
@@ -521,6 +522,7 @@ export function AllTab(): JSX.Element {
       <MapContainer3D
         flights={visibleFlights}
         visMode={visMode}
+        appearanceDomains={["flight", "cruise", "lodging"]}
         onFlightClick={handleFlightClick}
         onRouteClick={handleRouteClick}
         onFlightOpen={handlePanelFlightDetails}
