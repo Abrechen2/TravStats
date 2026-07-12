@@ -149,4 +149,20 @@ describe("AllTab: the lodging domain chip actually does something", () => {
     });
     expect(screen.queryByText("dashboard:legend.lodging")).toBeNull();
   });
+
+  it("passes appearanceDomains including lodging to MapContainer3D — so the lodging size slider appears in the control panel", async () => {
+    render(
+      <MemoryRouter>
+        <AllTab />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(listLodgingsMock).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      const last = mapProps[mapProps.length - 1];
+      expect(last.appearanceDomains).toEqual(["flight", "cruise", "lodging"]);
+    });
+  });
 });
