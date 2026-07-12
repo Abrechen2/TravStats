@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import NavigationBar from "../components/NavigationBar";
 import { LodgingStatStrip } from "../components/Dashboard/tabs/lodging/LodgingStatStrip";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
+import { LodgingImportBatchList } from "../components/lodging/LodgingImportBatchList";
 import { StarRating } from "../components/lodging/StarRating";
 import { ChainNameLink } from "../components/lodging/ChainNameLink";
 import DomainImportButton from "../components/import/DomainImportButton";
@@ -47,6 +48,10 @@ export default function LodgingListPage(): JSX.Element {
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<boolean>(false);
   const [showAdd, setShowAdd] = useState<boolean>(false);
+  // Bumped every time `reloadAll` runs (i.e. after either import entry point
+  // commits, or after a batch revert) — the only signal `LodgingImportBatchList`
+  // needs to re-fetch its own list without this page reaching into its state.
+  const [batchListRefreshToken, setBatchListRefreshToken] = useState<number>(0);
 
   const [search, setSearch] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
@@ -95,6 +100,7 @@ export default function LodgingListPage(): JSX.Element {
         .then(setStats)
         .catch((err: unknown) => logger.error("LodgingListPage: stats reload failed", err)),
     ]);
+    setBatchListRefreshToken((n) => n + 1);
   }, [reload]);
 
   const availableYears = useMemo(() => {
@@ -338,6 +344,12 @@ export default function LodgingListPage(): JSX.Element {
         <div className="mt-6 max-w-md">
           <LodgingCsvImportTile onImported={reloadAll} />
         </div>
+
+        {/* "Bisherige Importe" (Task 18b) — lets the user see and, if
+            needed, revert a past import batch. Reverting deletes only what
+            that batch created; a batch-created lodging with foreign stays
+            survives, detached. */}
+        <LodgingImportBatchList onReverted={reloadAll} reloadKey={batchListRefreshToken} />
 
         {showAdd && (
           <LodgingFormModal

@@ -250,6 +250,26 @@
         "missing_lodging_reference": "Hotel-Referenz fehlt",
         "unexpected_error": "unerwarteter Fehler"
       }
+    },
+    "batches": {
+      "title": "Bisherige Importe",
+      "loading": "Importe werden geladen …",
+      "empty": "Noch keine Importe.",
+      "loadError": "Die Import-Historie konnte nicht geladen werden.",
+      "source": {
+        "csv": "CSV",
+        "email": "E-Mail",
+        "pdf": "PDF"
+      },
+      "created": "{{lodgingCount}} Hotel(s) und {{stayCount}} Aufenthalt(e) angelegt",
+      "revert": "Import rückgängig machen",
+      "revertError": "Der Import konnte nicht rückgängig gemacht werden.",
+      "confirmTitle": "Import wirklich rückgängig machen?",
+      "confirmMessage": "Nur das, was dieser Import angelegt hat, wird gelöscht. Von Hand hinzugefügte oder durch einen späteren Import verknüpfte Aufenthalte bleiben erhalten — ihre Unterkunft bleibt bestehen.",
+      "revertResult": {
+        "success": "{{deletedLodgings}} Hotel(s) und {{deletedStays}} Aufenthalt(e) gelöscht.",
+        "withDetached": "{{deletedLodgings}} Hotel(s) und {{deletedStays}} Aufenthalt(e) gelöscht, {{detachedLodgings}} Hotel(s) behalten (haben weitere Aufenthalte)."
+      }
     }
   }
 }

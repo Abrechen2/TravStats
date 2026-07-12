@@ -8,6 +8,7 @@ import type {
   LodgingDedupeHint,
   LodgingImportFlag,
   LodgingImportRowFailureCode,
+  LodgingImportSource,
 } from "../../types/lodgingImport";
 
 // Hardcoded literal unions mirroring the real types (types are erased at
@@ -40,6 +41,9 @@ const FAILURE_CODES = [
   "missing_lodging_reference",
   "unexpected_error",
 ] as const satisfies readonly LodgingImportRowFailureCode[];
+
+// Task 18b — the batch-list ("Bisherige Importe") source labels.
+const SOURCES = ["csv", "email", "pdf"] as const satisfies readonly LodgingImportSource[];
 
 function flatten(obj: unknown, prefix = ""): string[] {
   if (typeof obj !== "object" || obj === null) return [prefix];
@@ -123,6 +127,49 @@ describe("lodging import i18n", () => {
       expect(locale.import.commitResult.partial).toContain("{{skipped}}");
       expect(locale.import.commitResult.partial).toContain("{{failedCount}}");
       expect(locale.import.commitResult.partial).toContain("{{reasons}}");
+    }
+  });
+
+  // Task 18b — the batch-list ("Bisherige Importe") + revert UI.
+  it("has the batch-list section strings in both locales", () => {
+    for (const locale of [deLodging, enLodging]) {
+      expect(locale.import.batches.title).toBeTruthy();
+      expect(locale.import.batches.loading).toBeTruthy();
+      expect(locale.import.batches.empty).toBeTruthy();
+      expect(locale.import.batches.loadError).toBeTruthy();
+      expect(locale.import.batches.revert).toBeTruthy();
+      expect(locale.import.batches.revertError).toBeTruthy();
+      expect(locale.import.batches.confirmTitle).toBeTruthy();
+      expect(locale.import.batches.confirmMessage).toBeTruthy();
+    }
+  });
+
+  it("has a source label for every lodging import source in both locales", () => {
+    for (const source of SOURCES) {
+      expect(deLodging.import.batches.source[source], `de batches.source.${source}`).toBeTruthy();
+      expect(enLodging.import.batches.source[source], `en batches.source.${source}`).toBeTruthy();
+    }
+  });
+
+  it("interpolates the batch created-counts label", () => {
+    for (const locale of [deLodging, enLodging]) {
+      expect(locale.import.batches.created).toContain("{{lodgingCount}}");
+      expect(locale.import.batches.created).toContain("{{stayCount}}");
+    }
+  });
+
+  // Owner-decided revert semantics: a batch-created lodging with foreign
+  // stays survives, detached — `detachedLodgings` must be renderable
+  // wherever the result carries a non-zero count, so `withDetached` must
+  // interpolate all three counters while the clean `success` string only
+  // needs the two delete counters (no hidden zero to fake).
+  it("interpolates the revert-result counters", () => {
+    for (const locale of [deLodging, enLodging]) {
+      expect(locale.import.batches.revertResult.success).toContain("{{deletedLodgings}}");
+      expect(locale.import.batches.revertResult.success).toContain("{{deletedStays}}");
+      expect(locale.import.batches.revertResult.withDetached).toContain("{{deletedLodgings}}");
+      expect(locale.import.batches.revertResult.withDetached).toContain("{{deletedStays}}");
+      expect(locale.import.batches.revertResult.withDetached).toContain("{{detachedLodgings}}");
     }
   });
 
