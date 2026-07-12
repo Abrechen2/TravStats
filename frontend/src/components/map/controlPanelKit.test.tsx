@@ -1,8 +1,70 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
-import { Slider, CruiseAppearanceSection, FlightAppearanceSection } from "./controlPanelKit";
+import { render, screen, fireEvent, renderHook, act } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import {
+  PanelHeader,
+  Slider,
+  CruiseAppearanceSection,
+  FlightAppearanceSection,
+  usePanelExpanded,
+} from "./controlPanelKit";
 import { DEFAULT_FLIGHT_COLOR_CONFIG, FLIGHT_COLOR_MODES } from "../../lib/flightColor";
 import { CRUISE_COLOR_MODES, DEFAULT_CRUISE_COLOR_CONFIG } from "../../lib/cruiseColor";
+
+describe("PanelHeader", () => {
+  it("calls onToggle when the header is clicked", () => {
+    const onToggle = vi.fn();
+    render(<PanelHeader title="Karte" expanded={true} onToggle={onToggle} />);
+    fireEvent.click(screen.getByRole("button", { name: /Karte/ }));
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it("points the chevron down while expanded and up while collapsed (#195)", () => {
+    // The panels are anchored bottom-left, so the body collapses DOWNWARDS
+    // (chevron down) and expands UPWARDS (chevron up) — the chevron always
+    // shows where the body moves on click.
+    const { container, rerender } = render(
+      <PanelHeader title="Karte" expanded={true} onToggle={() => {}} />
+    );
+    const chevron = (): SVGElement => container.querySelector("svg") as SVGElement;
+    expect(chevron().style.transform).toBe("none");
+
+    rerender(<PanelHeader title="Karte" expanded={false} onToggle={() => {}} />);
+    expect(chevron().style.transform).toBe("rotate(180deg)");
+  });
+
+  it("exposes the state via aria-expanded", () => {
+    render(<PanelHeader title="Karte" expanded={false} onToggle={() => {}} />);
+    expect(screen.getByRole("button").getAttribute("aria-expanded")).toBe("false");
+  });
+});
+
+describe("usePanelExpanded", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("defaults to expanded", () => {
+    const { result } = renderHook(() => usePanelExpanded());
+    expect(result.current[0]).toBe(true);
+  });
+
+  it("persists the choice in the shared mapAppearance blob and restores it (#194)", () => {
+    const { result, unmount } = renderHook(() => usePanelExpanded());
+    act(() => result.current[1]());
+    expect(result.current[0]).toBe(false);
+    unmount();
+
+    const blob = JSON.parse(window.localStorage.getItem("mapAppearance.v2") ?? "{}") as {
+      panelExpanded?: boolean;
+    };
+    expect(blob.panelExpanded).toBe(false);
+
+    // A fresh mount — e.g. after a reload or the 2D ↔ globe switch — starts
+    // from the persisted value instead of snapping back open.
+    const { result: remounted } = renderHook(() => usePanelExpanded());
+    expect(remounted.current[0]).toBe(false);
+  });
+});
 
 describe("Slider", () => {
   it("renders a range input with the value and formatted readout", () => {
