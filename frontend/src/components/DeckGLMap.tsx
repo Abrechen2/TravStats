@@ -110,6 +110,18 @@ interface DeckGLMapProps {
   extraLayers?: Layer[];
   /** Which domain appearance sections the control panel exposes. */
   appearanceDomains?: readonly AppearanceDomain[];
+  /**
+   * Lodging marker-size slider value + setter. Controlled from the PARENT
+   * (`MapContainer3D`), unlike the flight/cruise marker sizes which
+   * DeckGLMap owns as local state — MapContainer3D is what builds the
+   * lodging pin layer (via `buildLodgingPins`) and passes it in as part of
+   * `extraLayers`, so it needs to own the value to re-memo on it. DeckGLMap
+   * only needs it to render the slider in the flat-map control panel.
+   * Both default to a no-op 1× so callers that don't use the lodging
+   * domain (every tab except LodgingTab) are unaffected.
+   */
+  lodgingMarkerSize?: number;
+  onLodgingMarkerSizeChange?: (s: number) => void;
 }
 
 export function DeckGLMap({
@@ -124,6 +136,8 @@ export function DeckGLMap({
   cruises = [],
   extraLayers,
   appearanceDomains = ["flight", "cruise"],
+  lodgingMarkerSize = 1,
+  onLodgingMarkerSizeChange,
 }: DeckGLMapProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
@@ -793,6 +807,10 @@ export function DeckGLMap({
             onMarkerSizeChange: setCruiseMarkerSize,
             arrowScale: cruiseArrowScale,
             onArrowScaleChange: setCruiseArrowScale,
+          }}
+          lodgingAppearance={{
+            markerSize: lodgingMarkerSize,
+            onMarkerSizeChange: onLodgingMarkerSizeChange ?? (() => {}),
           }}
         />
       </div>
