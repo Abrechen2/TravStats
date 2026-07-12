@@ -12,20 +12,22 @@
 //
 // State lives in GlobeView; this component is presentation + callbacks.
 
-import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Quartile } from "./heatmapUtils";
 import {
   CruiseAppearanceSection,
   FlightAppearanceSection,
+  PanelHeader,
   SectionLabel,
   SegControl,
   Toggle,
+  usePanelExpanded,
   ACCENT,
   PANEL_BG,
   HAIRLINE,
   BORDER,
   TEXT,
+  PANEL_OPTION_STYLE,
   type AppearanceDomain,
   type CruiseAppearanceState,
   type FlightAppearanceState,
@@ -101,7 +103,7 @@ export function GlobeControlPanel({
   cruiseAppearance,
 }: GlobeControlPanelProps): JSX.Element {
   const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, toggleExpanded] = usePanelExpanded();
 
   return (
     <div
@@ -119,24 +121,11 @@ export function GlobeControlPanel({
       }}
     >
       {/* Header — click to collapse */}
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full shrink-0 cursor-pointer items-center justify-between px-3 py-2.5"
-        style={{ background: "transparent" }}
-      >
-        <span className="flex items-center gap-2 text-[13px] font-semibold" style={{ color: TEXT }}>
-          <span aria-hidden>🗺️</span>
-          {t("map:globe.panel.title")}
-        </span>
-        <span
-          className="transition-transform"
-          style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.6 }}
-          aria-hidden
-        >
-          ▾
-        </span>
-      </button>
+      <PanelHeader
+        title={t("map:globe.panel.title")}
+        expanded={expanded}
+        onToggle={toggleExpanded}
+      />
 
       {expanded && (
         <div className="scrollbar-none min-h-0 overflow-y-auto overflow-x-hidden px-3 pb-3">
@@ -337,15 +326,22 @@ export function GlobeControlPanel({
                 background: "rgba(255,255,255,0.06)",
                 border: `1px solid ${BORDER}`,
                 color: TEXT,
+                colorScheme: "dark",
               }}
               title={t("map:globe.performanceHint")}
             >
-              <option value="auto">
+              {/* Options MUST be styled explicitly — the popup ignores the
+                  select's colours on Windows and was white-on-white (#196). */}
+              <option value="auto" style={PANEL_OPTION_STYLE}>
                 ⚡ {t("map:globe.performanceAuto")} (
                 {lite ? t("map:globe.performanceOn") : t("map:globe.performanceOff")})
               </option>
-              <option value="on">⚡ {t("map:globe.performanceOn")}</option>
-              <option value="off">⚡ {t("map:globe.performanceOff")}</option>
+              <option value="on" style={PANEL_OPTION_STYLE}>
+                ⚡ {t("map:globe.performanceOn")}
+              </option>
+              <option value="off" style={PANEL_OPTION_STYLE}>
+                ⚡ {t("map:globe.performanceOff")}
+              </option>
             </select>
           </div>
         </div>

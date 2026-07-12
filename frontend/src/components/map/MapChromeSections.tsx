@@ -21,7 +21,15 @@ import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useDashboardFilterStore } from "../../store/dashboardFilterStore";
 import { TAB_MODE_REGISTRY, type DashboardMode } from "../../types/dashboard";
 import { AVAILABLE_DOMAINS, DOMAINS, type DomainKey } from "../../shared/domains";
-import { SectionLabel, SegControl, ACCENT, HAIRLINE, BORDER, TEXT } from "./controlPanelKit";
+import {
+  SectionLabel,
+  SegControl,
+  ACCENT,
+  HAIRLINE,
+  BORDER,
+  TEXT,
+  PANEL_OPTION_STYLE,
+} from "./controlPanelKit";
 
 const YEAR_RANGE_BACK = 14;
 
@@ -105,9 +113,13 @@ export function MapChromeSections(): JSX.Element {
                 colorScheme: "dark",
               }}
             >
-              <option value="">{t("dashboard:filter.allYears")}</option>
+              {/* Options MUST be styled explicitly — the popup ignores the
+                  select's colours on Windows and was white-on-white (#196). */}
+              <option value="" style={PANEL_OPTION_STYLE}>
+                {t("dashboard:filter.allYears")}
+              </option>
               {yearOptions.map((y) => (
-                <option key={y} value={y}>
+                <option key={y} value={y} style={PANEL_OPTION_STYLE}>
                   {y}
                 </option>
               ))}
