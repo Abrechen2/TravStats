@@ -467,7 +467,7 @@ git commit -m "feat(flights-table): wordmark airline cell with name fallback"
 
 **Interfaces:**
 - `TimeCell({ flight }: { flight: Flight })` — two rows `ab` / `an` (labels via `t("flights:table.timeDep")` / `t("flights:table.timeArr")`): weekday short + compact date + time in **airport-local** timezone (`flight.depTimezone`/`arrTimezone`, fallback UTC). `+N` accent marker on the arrival row when `dayShift(...) >= 1`. Flights with `depTimeSemantics === "DATE_ONLY" | "UNKNOWN"` show the date only (no fake "00:00", no marker). Missing `departureTime` → "—".
-- `RouteCell({ flight }: { flight: Flight })` — line 1: `{flag} {depCode} ─✈─ {flag} {arrCode}` (flags from `countryFlag(flight.depCountry)`, omitted when null; codes `depIata || depIcao`); line 2: truncated airport names exactly as today (keep the existing `title` tooltip with both full names).
+- `RouteCell({ flight }: { flight: Flight })` — line 1: `{flag} {depCode} ─✈─ {flag} {arrCode}`; **flags via the EXISTING SVG component `FlagImg` from `frontend/src/lib/countryFlag.tsx`** (`<FlagImg country={flight.depCountry} height={12} />` — renders nothing for null/unknown). Do NOT use emoji flags: the repo abandoned them because Windows/Chrome renders regional-indicator pairs as raw letters (documented at the top of countryFlag.tsx). Codes `depIata || depIcao`; line 2: truncated airport names exactly as today (keep the existing `title` tooltip with both full names).
 
 - [ ] **Step 1: Failing tests**
 
@@ -521,18 +521,18 @@ const flight = {
   depLat: 0, depLon: 0, arrLat: 0, arrLon: 0,
 } as unknown as Flight;
 
-it("renders flags, codes and the names line", () => {
-  render(<RouteCell flight={flight} />);
-  expect(screen.getByText("🇩🇪")).toBeInTheDocument();
-  expect(screen.getByText("🇦🇪")).toBeInTheDocument();
+it("renders SVG flags, codes and the names line", () => {
+  const { container } = render(<RouteCell flight={flight} />);
+  expect(container.querySelector('img[src*="flagcdn.com/de"]')).not.toBeNull();
+  expect(container.querySelector('img[src*="flagcdn.com/ae"]')).not.toBeNull();
   expect(screen.getByText("MUC")).toBeInTheDocument();
   expect(screen.getByText("DXB")).toBeInTheDocument();
   expect(screen.getByText(/Munich Airport/)).toBeInTheDocument();
 });
 
 it("omits flags gracefully when countries are missing", () => {
-  render(<RouteCell flight={{ ...flight, depCountry: null, arrCountry: null } as unknown as Flight} />);
-  expect(screen.queryByText("🇩🇪")).not.toBeInTheDocument();
+  const { container } = render(<RouteCell flight={{ ...flight, depCountry: null, arrCountry: null } as unknown as Flight} />);
+  expect(container.querySelector('img[src*="flagcdn"]')).toBeNull();
   expect(screen.getByText("MUC")).toBeInTheDocument();
 });
 ```
@@ -597,18 +597,16 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
 ```tsx
 // frontend/src/components/flightsTable/RouteCell.tsx
 import type { Flight } from "../../types";
-import { countryFlag } from "../../lib/countryFlag";
+import { FlagImg } from "../../lib/countryFlag";
 
-/** Route cell: flags + IATA codes with a plane connector, airport names below. */
+/** Route cell: SVG flags + IATA codes with a plane connector, airport names below. */
 export default function RouteCell({ flight }: { flight: Flight }): JSX.Element {
-  const depFlag = countryFlag(flight.depCountry);
-  const arrFlag = countryFlag(flight.arrCountry);
   const namesTitle =
     flight.depName && flight.arrName ? `${flight.depName} → ${flight.arrName}` : undefined;
   return (
     <div className="max-w-[16rem]">
       <div className="flex items-center gap-1.5">
-        {depFlag && <span className="text-[13px]">{depFlag}</span>}
+        <FlagImg country={flight.depCountry} height={12} />
         <span className="font-mono font-semibold" style={{ color: "var(--accent)" }}>
           {flight.depIata || flight.depIcao}
         </span>
@@ -617,7 +615,7 @@ export default function RouteCell({ flight }: { flight: Flight }): JSX.Element {
           <span className="text-[13px] mx-0.5 inline-block" style={{ transform: "rotate(45deg)" }}>✈</span>
           <span className="inline-block w-3 h-px" style={{ background: "var(--color-border)" }} />
         </span>
-        {arrFlag && <span className="text-[13px]">{arrFlag}</span>}
+        <FlagImg country={flight.arrCountry} height={12} />
         <span className="font-mono font-semibold" style={{ color: "var(--accent)" }}>
           {flight.arrIata || flight.arrIcao}
         </span>
