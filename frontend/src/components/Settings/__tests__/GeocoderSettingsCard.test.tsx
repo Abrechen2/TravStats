@@ -82,6 +82,56 @@ describe("GeocoderSettingsCard", () => {
     expect((nominatimInput as HTMLInputElement).value).toBe("https://nominatim.openstreetmap.org");
   });
 
+  // ── Finding 1/2 (pinning the resolved default) ────────────────────────
+  // GET always returns RESOLVED urls — never null — so on a fresh instance
+  // the inputs are pre-filled with the literal default (photon.komoot.io).
+  // Clicking Save without editing anything must NOT re-send that default
+  // as an explicit DB override — doing so would permanently pin it and
+  // silently swallow any future ENV/default change.
+  it("does not pin the resolved defaults into the DB when Save is clicked without any edits", async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminApi.getInstanceSettings).mockResolvedValue({ settings: SETTINGS_FIXTURE });
+
+    render(<GeocoderSettingsCard isAdmin={true} />);
+
+    await screen.findByLabelText("settings:lodgingPreferences.geocoder.photonUrlLabel");
+
+    await user.click(screen.getByText("common:buttons.save"));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("settings:lodgingPreferences.geocoder.saveSuccess")
+      ).toBeInTheDocument()
+    );
+
+    expect(adminApi.updateInstanceSettings).not.toHaveBeenCalled();
+  });
+
+  it("only sends the field that was actually edited (per-field dirty tracking)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminApi.getInstanceSettings).mockResolvedValue({ settings: SETTINGS_FIXTURE });
+    vi.mocked(adminApi.updateInstanceSettings).mockResolvedValue({
+      settings: { ...SETTINGS_FIXTURE, photonUrl: "https://photon.example.com" },
+    });
+
+    render(<GeocoderSettingsCard isAdmin={true} />);
+
+    const photonInput = await screen.findByLabelText(
+      "settings:lodgingPreferences.geocoder.photonUrlLabel"
+    );
+
+    await user.clear(photonInput);
+    await user.type(photonInput, "https://photon.example.com");
+
+    await user.click(screen.getByText("common:buttons.save"));
+
+    await waitFor(() =>
+      expect(adminApi.updateInstanceSettings).toHaveBeenCalledWith({
+        photonUrl: "https://photon.example.com",
+      })
+    );
+  });
+
   it("saves the entered URLs via PUT (roundtrip), including clearing to empty", async () => {
     const user = userEvent.setup();
     vi.mocked(adminApi.getInstanceSettings).mockResolvedValue({ settings: SETTINGS_FIXTURE });
@@ -129,6 +179,24 @@ describe("GeocoderSettingsCard", () => {
     expect(
       await screen.findByText("settings:lodgingPreferences.geocoder.testSuccess")
     ).toBeInTheDocument();
+  });
+
+  // ── Finding 3 (empty result must not read as an error) ────────────────
+  // Zero hits is still a SUCCESSFUL connection ("Verbindung erfolgreich,
+  // aber keine Treffer") — it must render in the same neutral/success
+  // color as a hit, not the red used for an actual connection failure.
+  it("shows the empty-result message in a non-error color when the test succeeds with zero hits", async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminApi.getInstanceSettings).mockResolvedValue({ settings: SETTINGS_FIXTURE });
+    vi.mocked(searchPlaces).mockResolvedValue([]);
+
+    render(<GeocoderSettingsCard isAdmin={true} />);
+
+    await screen.findByLabelText("settings:lodgingPreferences.geocoder.photonUrlLabel");
+    await user.click(screen.getByText("settings:lodgingPreferences.geocoder.testButton"));
+
+    const message = await screen.findByText("settings:lodgingPreferences.geocoder.testEmpty");
+    expect(message).toHaveStyle({ color: "var(--success)" });
   });
 
   it("shows a translated failure message (and logs) when the connection test fails", async () => {
