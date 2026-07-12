@@ -187,10 +187,26 @@
     "matchedLodgingHint": "Diese Zeile wird mit einem vorhandenen Hotel verknüpft — Name und Ort können hier nicht geändert werden.",
     "fields": {
       "name": "Name",
+      "type": "Typ",
+      "chainName": "Kette",
+      "stars": "Sterne",
+      "address": "Adresse",
       "city": "Ort",
+      "country": "Land",
+      "lat": "Breitengrad",
+      "lon": "Längengrad",
+      "googlePlaceId": "Google-Place-ID",
       "checkIn": "Anreise",
       "checkOut": "Abreise",
+      "roomCategory": "Zimmerkategorie",
+      "board": "Verpflegung",
       "totalPrice": "Preis",
+      "currency": "Währung",
+      "ratingRoom": "Bewertung Zimmer",
+      "ratingBreakfast": "Bewertung Frühstück",
+      "ratingOverall": "Bewertung Gesamt",
+      "bookingReference": "Buchungsnummer",
+      "notes": "Notizen",
       "hints": "Hinweise",
       "action": "Aktion"
     },
@@ -212,6 +228,28 @@
       "lodging_name_city": "Passendes Hotel gefunden (Name + Ort)",
       "stay_exact_ref": "Aufenthalt bereits vorhanden (gleiche Referenz)",
       "stay_same_dates": "Aufenthalt bereits vorhanden (gleiche Daten)"
+    },
+    "noBookings": "In dieser E-Mail bzw. diesem PDF wurden keine Buchungsdaten gefunden.",
+    "csv": {
+      "title": "CSV-Import",
+      "description": "Unterkünfte und/oder Aufenthalte aus einer CSV-Datei importieren — z. B. ein Google-Maps-Export oder eine selbst gepflegte Tabelle. Einmaliges Migrationswerkzeug, kein laufender Import-Weg.",
+      "uploadLabel": "CSV-Datei wählen"
+    },
+    "errors": {
+      "emptyCsv": "Diese CSV-Datei enthält keine Zeilen.",
+      "noRows": "Aus dieser Datei konnte keine einzige Zeile übernommen werden.",
+      "skippedRows": "{{count}} Zeile(n) wurden wegen ungültiger Werte übersprungen.",
+      "parseFailed": "Diese CSV-Datei konnte nicht gelesen werden.",
+      "previewFailed": "Die Vorschau konnte nicht geladen werden."
+    },
+    "commitResult": {
+      "success": "{{createdLodgings}} Hotel(s) und {{createdStays}} Aufenthalt(e) importiert.",
+      "partial": "{{createdLodgings}} Hotel(s) und {{createdStays}} Aufenthalt(e) importiert, {{failedCount}} Zeile(n) fehlgeschlagen: {{reasons}}",
+      "failureCodes": {
+        "ownership_mismatch": "gehört einem anderen Konto",
+        "missing_lodging_reference": "Hotel-Referenz fehlt",
+        "unexpected_error": "unerwarteter Fehler"
+      }
     }
   }
 }
