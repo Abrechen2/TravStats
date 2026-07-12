@@ -1,5 +1,5 @@
 import { useTranslation } from "../../hooks/useTranslation";
-import { resolveAirlineDisplay } from "../../lib/airlineUtils";
+import { resolveAirlineDisplay, resolveAirlineIata } from "../../lib/airlineUtils";
 import AirlineLogo from "../AirlineLogo";
 
 interface FlightLookupResult {
@@ -60,14 +60,13 @@ export default function FlightSelectStep({
           <div className="flex justify-between items-start">
             <div className="flex items-start gap-2">
               <AirlineLogo
-                iata={flight.airline?.length === 2 ? flight.airline : undefined}
+                iata={resolveAirlineIata(flight)}
                 flightNumber={flight.flightNumber}
                 size={28}
               />
               <div>
                 <div className={`font-bold ${textClass}`}>
-                  {resolveAirlineDisplay(flight.airline, flight.flightNumber) || flight.airline}{" "}
-                  {flight.flightNumber}
+                  {resolveAirlineDisplay(flight) || flight.airline} {flight.flightNumber}
                 </div>
                 <div className={`text-sm ${mutedTextClass}`}>
                   {flight.departure.iata} {t("common:labels.routeSeparator")} {flight.arrival.iata}

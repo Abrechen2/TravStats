@@ -1,8 +1,10 @@
 import { ArcLayer } from "@deck.gl/layers";
+import { FLIGHT_STATUS_UPCOMING_COLOR } from "../../lib/statusColors";
 
-// Sky-blue at both ends of upcoming arcs — the single flight-domain view's
-// default tip color. Matches SCHEDULED_BLUE in routesLayer.ts.
-const DEFAULT_EDGE_COLOR: [number, number, number] = [80, 200, 255];
+// Fallback tip colour for callers that don't pass one. Production callers
+// always pass `edgeColor` — resolved from the user's flight-colour config via
+// `resolveFlightTipColor` (see routesLayer.ts) — so this is only a safety net.
+const DEFAULT_EDGE_COLOR: [number, number, number] = FLIGHT_STATUS_UPCOMING_COLOR;
 
 /** Convert an 8-bit RGB triplet into a GLSL `vec3` literal (0..1 normalised). */
 function toGlslVec3(rgb: readonly [number, number, number]): string {
@@ -12,27 +14,24 @@ function toGlslVec3(rgb: readonly [number, number, number]): string {
 
 export interface UpcomingArcLayerExtraProps {
   /**
-   * RGB (0-255) tip color for the gradient at both arc ends. Defaults to
-   * the sky-blue used by the single flight-domain view. The two-tone
-   * "Alle" view passes coral here so the mixed-route tips read consistently
-   * with the two-tone pure-scheduled color (see routesLayer.ts).
+   * RGB (0-255) tip colour for the gradient at both arc ends. Callers pass
+   * the user's planned colour for the active flight-colour mode — see
+   * `resolveFlightTipColor` in `lib/flightColor.ts`.
    */
   edgeColor?: [number, number, number];
 }
 
 /**
  * ArcLayer subclass that renders the same arc geometry but applies a
- * symmetric edge-tipped gradient: hardcoded red (or orange, in two-tone)
- * core in the middle, fading to `edgeColor` (coral, in two-tone) at BOTH
- * ends. Used for *mixed* routes only — i.e. routes that have ALREADY been
- * flown AND carry an upcoming scheduled flight. The tips on each side
- * "Zahnpasta" the arc into an edge → core → edge stroke that reads as
- * "this route is both lived-in and has more flights coming" without any
- * second visual element.
+ * symmetric edge-tipped gradient: the route's flown colour in the core,
+ * fading to `edgeColor` (the planned colour) at BOTH ends. Used for *mixed*
+ * routes only — i.e. routes that have ALREADY been flown AND carry an upcoming
+ * scheduled flight. The tips on each side "Zahnpasta" the arc into an
+ * edge → core → edge stroke that reads as "this route is both lived-in and has
+ * more flights coming" without any second visual element.
  *
- * Pure-scheduled routes (upcoming, never flown) skip this layer entirely
- * and render through plain ArcLayer with `SCHEDULED_BLUE` /
- * `FLIGHT_STATUS_UPCOMING_COLOR` (see routesLayer.ts).
+ * Pure-scheduled routes (upcoming, never flown) skip this layer entirely and
+ * render through a plain ArcLayer in the flat planned colour (routesLayer.ts).
  *
  * Implementation: fragment-shader inject only. ArcLayer's existing `uv`
  * varying (uv.x = 0..1 along the arc) is the segment parameter we need;
