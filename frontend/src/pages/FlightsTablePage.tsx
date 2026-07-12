@@ -455,7 +455,9 @@ export default function FlightsTablePage(): JSX.Element {
                                 index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)";
                             }}
                           >
-                            <td className="px-4 py-3" style={{ color: "var(--text-primary)" }}>
+                            {/* py-1 instead of py-3: the brand tile fills the row height
+                                set by the two-line route/time cells instead of growing it. */}
+                            <td className="px-4 py-1" style={{ color: "var(--text-primary)" }}>
                               <AirlineWordmarkCell flight={flight} />
                               {flight.specialType && (
                                 <div className="mt-1">
