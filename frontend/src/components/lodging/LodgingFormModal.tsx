@@ -5,6 +5,8 @@ import { createLodging, updateLodging } from "../../lib/api/lodging";
 import type { Lodging, LodgingChain, LodgingInput, LodgingType } from "../../types/lodging";
 import { logger } from "../../lib/logger";
 import { ChainPicker } from "./ChainPicker";
+import { LocationInput } from "../location/LocationInput";
+import type { LocationCoordinates, LocationSelection } from "../location/LocationInput";
 
 const LODGING_TYPES: LodgingType[] = ["hotel", "campsite", "guesthouse", "apartment", "hostel"];
 
@@ -21,19 +23,50 @@ interface LodgingFormModalProps {
  * chain ("— unabhängig" in the mockup) — clearing the `ChainPicker` sends
  * `chainId: null`.
  */
-export function LodgingFormModal({ mode, lodging, onClose, onSaved }: LodgingFormModalProps): JSX.Element {
-  const { t } = useTranslation(["lodging", "common"]);
+export function LodgingFormModal({
+  mode,
+  lodging,
+  onClose,
+  onSaved,
+}: LodgingFormModalProps): JSX.Element {
+  const { t } = useTranslation(["lodging", "common", "location"]);
   const [type, setType] = useState<LodgingType>(lodging?.type ?? "hotel");
   const [chain, setChain] = useState<LodgingChain | null>(lodging?.chain ?? null);
   const [name, setName] = useState<string>(lodging?.name ?? "");
   const [address, setAddress] = useState<string>(lodging?.address ?? "");
   const [city, setCity] = useState<string>(lodging?.city ?? "");
   const [country, setCountry] = useState<string>(lodging?.country ?? "");
+  const [lat, setLat] = useState<number | null>(lodging?.lat ?? null);
+  const [lon, setLon] = useState<number | null>(lodging?.lon ?? null);
   const [stars, setStars] = useState<string>(lodging?.stars?.toString() ?? "");
-  const [amenitiesInput, setAmenitiesInput] = useState<string>((lodging?.amenities ?? []).join(", "));
+  const [amenitiesInput, setAmenitiesInput] = useState<string>(
+    (lodging?.amenities ?? []).join(", ")
+  );
   const [notes, setNotes] = useState<string>(lodging?.notes ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const position: LocationCoordinates | null = lat !== null && lon !== null ? { lat, lon } : null;
+
+  // A selection always reports the picked position; the text fields it
+  // ALSO carries (search hit) only overwrite what the user already typed
+  // when they're actually present — a coordinate paste or a map drag/click
+  // reports just {lat, lon}, so it must never blank out an existing
+  // address/city/country. `name` is even more conservative: it's only
+  // ever filled while the user hasn't typed one yet (never overwrite user text).
+  const handleLocationChange = (selection: LocationSelection): void => {
+    setLat(selection.lat);
+    setLon(selection.lon);
+    if (selection.address) setAddress(selection.address);
+    if (selection.city) setCity(selection.city);
+    if (selection.country) setCountry(selection.country);
+    if (selection.name && name.trim().length === 0) setName(selection.name);
+  };
+
+  const handleClearPosition = (): void => {
+    setLat(null);
+    setLon(null);
+  };
 
   const handleSave = async (): Promise<void> => {
     if (mode === "edit" && !lodging) {
@@ -54,6 +87,11 @@ export function LodgingFormModal({ mode, lodging, onClose, onSaved }: LodgingFor
         address: address.trim() || null,
         city: city.trim() || null,
         country: country.trim() || null,
+        // Explicit `null` (not `undefined`) for the same reason as
+        // address/city/country above — clearing the pin must actually
+        // clear the stored coords, not be dropped as "unchanged".
+        lat,
+        lon,
         stars: stars.trim() ? Number.parseInt(stars, 10) : null,
         amenities: amenitiesInput
           .split(",")
@@ -129,6 +167,18 @@ export function LodgingFormModal({ mode, lodging, onClose, onSaved }: LodgingFor
               className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
             />
           </label>
+          <div className="flex flex-col gap-1 sm:col-span-2">
+            <LocationInput value={position} onChange={handleLocationChange} />
+            {position !== null && (
+              <button
+                type="button"
+                onClick={handleClearPosition}
+                className="self-start text-xs text-[var(--text-muted)] hover:underline"
+              >
+                {t("location:clear")}
+              </button>
+            )}
+          </div>
           <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)] sm:col-span-2">
             {t("lodging:field.address")}
             <input
