@@ -243,8 +243,8 @@
       "previewFailed": "The import preview could not be loaded."
     },
     "commitResult": {
-      "success": "Imported {{createdLodgings}} hotel(s) and {{createdStays}} stay(s).",
-      "partial": "Imported {{createdLodgings}} hotel(s) and {{createdStays}} stay(s), {{failedCount}} row(s) failed: {{reasons}}",
+      "success": "Imported {{createdLodgings}} hotel(s) and {{createdStays}} stay(s), skipped {{skipped}} (already present).",
+      "partial": "Imported {{createdLodgings}} hotel(s) and {{createdStays}} stay(s), skipped {{skipped}} (already present), {{failedCount}} row(s) failed: {{reasons}}",
       "failureCodes": {
         "ownership_mismatch": "belongs to another account",
         "missing_lodging_reference": "missing hotel reference",

@@ -42,7 +42,9 @@ describe("commitLodgingImport", () => {
 
   afterAll(async () => {
     await prisma.user.delete({ where: { id: userId } });
-    await prisma.lodgingChain.deleteMany({ where: { name: "NH Hotels", isUserAdded: true } });
+    await prisma.lodgingChain.deleteMany({
+      where: { name: "NH Hotels", isUserAdded: true },
+    });
     await prisma.$disconnect();
   });
 
@@ -68,10 +70,20 @@ describe("commitLodgingImport", () => {
           externalRef: "booking:5967563369",
         },
       },
-      { sourceRowIndex: 1, action: "skip", lodging: { name: "Skipped" }, stay: null },
+      {
+        sourceRowIndex: 1,
+        action: "skip",
+        lodging: { name: "Skipped" },
+        stay: null,
+      },
     ];
 
-    const result = await commitLodgingImport(userId, "email", "confirmation.msg", rows);
+    const result = await commitLodgingImport(
+      userId,
+      "email",
+      "confirmation.msg",
+      rows,
+    );
 
     expect(result.createdLodgings).toBe(1);
     expect(result.createdStays).toBe(1);
@@ -79,16 +91,22 @@ describe("commitLodgingImport", () => {
     expect(result.failed).toEqual([]);
     expect(geocodeSpy).not.toHaveBeenCalled();
 
-    const batch = await prisma.lodgingImportBatch.findUnique({ where: { id: result.batchId } });
+    const batch = await prisma.lodgingImportBatch.findUnique({
+      where: { id: result.batchId },
+    });
     expect(batch?.source).toBe("email");
     expect(batch?.fileName).toBe("confirmation.msg");
 
-    const lodging = await prisma.lodging.findFirst({ where: { batchId: result.batchId } });
+    const lodging = await prisma.lodging.findFirst({
+      where: { batchId: result.batchId },
+    });
     expect(lodging?.dataSource).toBe("import");
     expect(lodging?.lat).toBeNull();
     expect(lodging?.chainId).not.toBeNull();
 
-    const stay = await prisma.lodgingStay.findFirst({ where: { batchId: result.batchId } });
+    const stay = await prisma.lodgingStay.findFirst({
+      where: { batchId: result.batchId },
+    });
     expect(stay?.totalPriceBase).toBeCloseTo(385.07, 2);
     expect(stay?.checkIn.toISOString()).toBe("2026-04-22T00:00:00.000Z");
   });
@@ -99,14 +117,21 @@ describe("commitLodgingImport", () => {
         sourceRowIndex: 0,
         action: "create",
         lodging: { name: "Hotel No Price" },
-        stay: { checkIn: "2026-05-01", checkOut: "2026-05-02", ratingRoom: 4, ratingBreakfast: 3 },
+        stay: {
+          checkIn: "2026-05-01",
+          checkOut: "2026-05-02",
+          ratingRoom: 4,
+          ratingBreakfast: 3,
+        },
       },
     ];
     const result = await commitLodgingImport(userId, "csv", "stays.csv", rows);
     expect(result.failed).toEqual([]);
     expect(result.createdStays).toBe(1);
 
-    const stay = await prisma.lodgingStay.findFirst({ where: { batchId: result.batchId } });
+    const stay = await prisma.lodgingStay.findFirst({
+      where: { batchId: result.batchId },
+    });
     expect(stay?.totalPrice).toBeNull();
     expect(stay?.totalPriceBase).toBeNull();
     expect(stay?.fxRate).toBeNull();
@@ -114,7 +139,9 @@ describe("commitLodgingImport", () => {
   });
 
   it("attaches a stay to an existing lodging via matchedLodgingId", async () => {
-    const host = await prisma.lodging.create({ data: { userId, name: "Existing Host" } });
+    const host = await prisma.lodging.create({
+      data: { userId, name: "Existing Host" },
+    });
     const rows: CommitRowInput[] = [
       {
         sourceRowIndex: 0,
@@ -128,7 +155,9 @@ describe("commitLodgingImport", () => {
     expect(result.createdLodgings).toBe(0);
     expect(result.createdStays).toBe(1);
 
-    const stay = await prisma.lodgingStay.findFirst({ where: { batchId: result.batchId } });
+    const stay = await prisma.lodgingStay.findFirst({
+      where: { batchId: result.batchId },
+    });
     expect(stay?.lodgingId).toBe(host.id);
   });
 
@@ -149,13 +178,20 @@ describe("commitLodgingImport", () => {
     expect(second.skipped).toBe(1);
     expect(second.failed).toEqual([]);
 
-    const all = await prisma.lodging.findMany({ where: { userId, name: "Rerun Hotel" } });
+    const all = await prisma.lodging.findMany({
+      where: { userId, name: "Rerun Hotel" },
+    });
     expect(all).toHaveLength(1);
   });
 
   it("isolates a failing row — the rest of the batch still commits", async () => {
     const rows: CommitRowInput[] = [
-      { sourceRowIndex: 0, action: "create", lodging: { name: "Good Row" }, stay: null },
+      {
+        sourceRowIndex: 0,
+        action: "create",
+        lodging: { name: "Good Row" },
+        stay: null,
+      },
       {
         sourceRowIndex: 1,
         action: "create",
@@ -163,7 +199,12 @@ describe("commitLodgingImport", () => {
         lodging: null,
         stay: { checkIn: "2026-07-01", checkOut: "2026-07-02" },
       },
-      { sourceRowIndex: 2, action: "create", lodging: { name: "Also Good" }, stay: null },
+      {
+        sourceRowIndex: 2,
+        action: "create",
+        lodging: { name: "Also Good" },
+        stay: null,
+      },
     ];
     const result = await commitLodgingImport(userId, "csv", "mixed.csv", rows);
     expect(result.createdLodgings).toBe(2);
@@ -173,7 +214,10 @@ describe("commitLodgingImport", () => {
 
   it("rejects a matchedLodgingId that belongs to another user (IDOR) without sinking the batch", async () => {
     const otherUser = await prisma.user.create({
-      data: { username: "lodging-import-commit-test-victim", passwordHash: "x" },
+      data: {
+        username: "lodging-import-commit-test-victim",
+        passwordHash: "x",
+      },
     });
     const victimLodging = await prisma.lodging.create({
       data: { userId: otherUser.id, name: "Victim's Hotel" },
@@ -181,7 +225,12 @@ describe("commitLodgingImport", () => {
 
     try {
       const rows: CommitRowInput[] = [
-        { sourceRowIndex: 0, action: "create", lodging: { name: "Attacker Good Row" }, stay: null },
+        {
+          sourceRowIndex: 0,
+          action: "create",
+          lodging: { name: "Attacker Good Row" },
+          stay: null,
+        },
         {
           sourceRowIndex: 1,
           action: "create",
@@ -189,7 +238,12 @@ describe("commitLodgingImport", () => {
           lodging: null,
           stay: { checkIn: "2026-09-01", checkOut: "2026-09-02" },
         },
-        { sourceRowIndex: 2, action: "create", lodging: { name: "Attacker Also Good" }, stay: null },
+        {
+          sourceRowIndex: 2,
+          action: "create",
+          lodging: { name: "Attacker Also Good" },
+          stay: null,
+        },
       ];
 
       const result = await commitLodgingImport(userId, "csv", "idor.csv", rows);
@@ -203,15 +257,91 @@ describe("commitLodgingImport", () => {
       });
       expect(attachedStay).toBeNull();
     } finally {
-      await prisma.lodgingStay.deleteMany({ where: { lodgingId: victimLodging.id } });
+      await prisma.lodgingStay.deleteMany({
+        where: { lodgingId: victimLodging.id },
+      });
       await prisma.lodging.delete({ where: { id: victimLodging.id } });
       await prisma.user.delete({ where: { id: otherUser.id } });
     }
   });
 
+  // ---- Finding 5: preview→commit contract gap on same-payload joins ----
+  // `lodgingImportPreview.ts`'s `payloadNames` branch lets a stays-only
+  // candidate resolve cleanly against a lodging ANOTHER candidate in the
+  // same payload will create, without ever setting `matchedLodgingId` (the
+  // lodging doesn't exist yet at preview time) or `lodging` (there's no
+  // lodging data on the stays-only row itself). The row's only remaining
+  // handle is `lodgingName` — the commit service must resolve it against
+  // `createdByName` the same way an edited/matched row would.
+
+  it("resolves a stays-only row's lodgingName against a lodging another row in the SAME commit creates", async () => {
+    const rows: CommitRowInput[] = [
+      {
+        sourceRowIndex: 0,
+        action: "create",
+        lodging: { name: "Payload Join Hotel" },
+        stay: null,
+      },
+      {
+        sourceRowIndex: 1,
+        action: "create",
+        lodging: null,
+        lodgingName: "Payload Join Hotel",
+        stay: { checkIn: "2026-10-01", checkOut: "2026-10-02" },
+      },
+    ];
+
+    const result = await commitLodgingImport(
+      userId,
+      "csv",
+      "payload-join.csv",
+      rows,
+    );
+
+    expect(result.failed).toEqual([]);
+    expect(result.createdLodgings).toBe(1);
+    expect(result.createdStays).toBe(1);
+
+    const lodging = await prisma.lodging.findFirst({
+      where: { batchId: result.batchId },
+    });
+    const stay = await prisma.lodgingStay.findFirst({
+      where: { batchId: result.batchId },
+    });
+    expect(stay?.lodgingId).toBe(lodging?.id);
+  });
+
+  it("fails a stays-only row with missing_lodging_reference when its lodgingName resolves against nothing", async () => {
+    const rows: CommitRowInput[] = [
+      {
+        sourceRowIndex: 0,
+        action: "create",
+        lodging: null,
+        lodgingName: "Nobody Ever Creates This Hotel",
+        stay: { checkIn: "2026-10-10", checkOut: "2026-10-11" },
+      },
+    ];
+
+    const result = await commitLodgingImport(
+      userId,
+      "csv",
+      "payload-join-miss.csv",
+      rows,
+    );
+
+    expect(result.failed).toHaveLength(1);
+    expect(result.failed[0].code).toBe("missing_lodging_reference");
+    expect(result.createdStays).toBe(0);
+  });
+
   it("reuses a lodging created earlier in the same batch for a later row with the same name", async () => {
     const rows: CommitRowInput[] = [
-      { sourceRowIndex: 0, action: "create", lodging: { name: "Same Batch Hotel" }, stay: null },
+      {
+        sourceRowIndex: 0,
+        action: "create",
+        lodging: { name: "Same Batch Hotel" },
+        stay: null,
+      },
       {
         sourceRowIndex: 1,
         action: "create",
@@ -233,23 +363,43 @@ describe("commitLodgingImport", () => {
         sourceRowIndex: 0,
         action: "create",
         lodging: { name: "FX Dedupe Hotel A" },
-        stay: { checkIn: "2026-11-01", checkOut: "2026-11-02", totalPrice: 100, currency: "EUR" },
+        stay: {
+          checkIn: "2026-11-01",
+          checkOut: "2026-11-02",
+          totalPrice: 100,
+          currency: "EUR",
+        },
       },
       {
         sourceRowIndex: 1,
         action: "create",
         lodging: { name: "FX Dedupe Hotel B" },
-        stay: { checkIn: "2026-11-01", checkOut: "2026-11-02", totalPrice: 250, currency: "EUR" },
+        stay: {
+          checkIn: "2026-11-01",
+          checkOut: "2026-11-02",
+          totalPrice: 250,
+          currency: "EUR",
+        },
       },
       {
         sourceRowIndex: 2,
         action: "create",
         lodging: { name: "FX Dedupe Hotel C" },
-        stay: { checkIn: "2026-11-01", checkOut: "2026-11-02", totalPrice: 75, currency: "EUR" },
+        stay: {
+          checkIn: "2026-11-01",
+          checkOut: "2026-11-02",
+          totalPrice: 75,
+          currency: "EUR",
+        },
       },
     ];
 
-    const result = await commitLodgingImport(userId, "csv", "fx-dedupe.csv", rows);
+    const result = await commitLodgingImport(
+      userId,
+      "csv",
+      "fx-dedupe.csv",
+      rows,
+    );
 
     expect(result.failed).toEqual([]);
     expect(result.createdStays).toBe(3);
@@ -257,7 +407,9 @@ describe("commitLodgingImport", () => {
     // not three.
     expect(frankfurterMock.convertToBase).toHaveBeenCalledTimes(1);
 
-    const stays = await prisma.lodgingStay.findMany({ where: { batchId: result.batchId } });
+    const stays = await prisma.lodgingStay.findMany({
+      where: { batchId: result.batchId },
+    });
     expect(stays).toHaveLength(3);
     for (const stay of stays) {
       expect(stay.totalPriceBase).not.toBeNull();
@@ -271,17 +423,32 @@ describe("commitLodgingImport", () => {
         sourceRowIndex: 0,
         action: "create",
         lodging: { name: "FX Multi-day Hotel A" },
-        stay: { checkIn: "2026-11-05", checkOut: "2026-11-06", totalPrice: 100, currency: "EUR" },
+        stay: {
+          checkIn: "2026-11-05",
+          checkOut: "2026-11-06",
+          totalPrice: 100,
+          currency: "EUR",
+        },
       },
       {
         sourceRowIndex: 1,
         action: "create",
         lodging: { name: "FX Multi-day Hotel B" },
-        stay: { checkIn: "2026-11-06", checkOut: "2026-11-07", totalPrice: 100, currency: "EUR" },
+        stay: {
+          checkIn: "2026-11-06",
+          checkOut: "2026-11-07",
+          totalPrice: 100,
+          currency: "EUR",
+        },
       },
     ];
 
-    const result = await commitLodgingImport(userId, "csv", "fx-multiday.csv", rows);
+    const result = await commitLodgingImport(
+      userId,
+      "csv",
+      "fx-multiday.csv",
+      rows,
+    );
 
     expect(result.failed).toEqual([]);
     expect(result.createdStays).toBe(2);
@@ -296,16 +463,28 @@ describe("commitLodgingImport", () => {
         sourceRowIndex: 0,
         action: "create",
         lodging: { name: "FX Failure Hotel" },
-        stay: { checkIn: "2026-12-01", checkOut: "2026-12-02", totalPrice: 150, currency: "EUR" },
+        stay: {
+          checkIn: "2026-12-01",
+          checkOut: "2026-12-02",
+          totalPrice: 150,
+          currency: "EUR",
+        },
       },
     ];
 
-    const result = await commitLodgingImport(userId, "csv", "fx-fail.csv", rows);
+    const result = await commitLodgingImport(
+      userId,
+      "csv",
+      "fx-fail.csv",
+      rows,
+    );
 
     expect(result.failed).toEqual([]);
     expect(result.createdStays).toBe(1);
 
-    const stay = await prisma.lodgingStay.findFirst({ where: { batchId: result.batchId } });
+    const stay = await prisma.lodgingStay.findFirst({
+      where: { batchId: result.batchId },
+    });
     expect(stay?.totalPrice).toBeCloseTo(150, 2);
     // No partial snapshot: price is saved, but the FX fields are all null.
     expect(stay?.totalPriceBase).toBeNull();
@@ -324,22 +503,41 @@ describe("commitLodgingImport", () => {
         sourceRowIndex: 0,
         action: "create",
         lodging: { name: "FX Throw Hotel" },
-        stay: { checkIn: "2026-12-10", checkOut: "2026-12-11", totalPrice: 200, currency: "EUR" },
+        stay: {
+          checkIn: "2026-12-10",
+          checkOut: "2026-12-11",
+          totalPrice: 200,
+          currency: "EUR",
+        },
       },
-      { sourceRowIndex: 1, action: "create", lodging: { name: "FX Throw Companion" }, stay: null },
+      {
+        sourceRowIndex: 1,
+        action: "create",
+        lodging: { name: "FX Throw Companion" },
+        stay: null,
+      },
     ];
 
-    const result = await commitLodgingImport(userId, "csv", "fx-throw.csv", rows);
+    const result = await commitLodgingImport(
+      userId,
+      "csv",
+      "fx-throw.csv",
+      rows,
+    );
 
     // The batch as a whole still succeeds — no row failure, no orphaned batch.
     expect(result.failed).toEqual([]);
     expect(result.createdLodgings).toBe(2);
     expect(result.createdStays).toBe(1);
 
-    const batch = await prisma.lodgingImportBatch.findUnique({ where: { id: result.batchId } });
+    const batch = await prisma.lodgingImportBatch.findUnique({
+      where: { id: result.batchId },
+    });
     expect(batch).not.toBeNull();
 
-    const stay = await prisma.lodgingStay.findFirst({ where: { batchId: result.batchId } });
+    const stay = await prisma.lodgingStay.findFirst({
+      where: { batchId: result.batchId },
+    });
     expect(stay?.totalPrice).toBeCloseTo(200, 2);
     // All four snapshot fields are null together — never a partial snapshot.
     expect(stay?.totalPriceBase).toBeNull();
@@ -358,7 +556,11 @@ describe("commitLodgingImport", () => {
       "Invalid `prisma.lodging.create()` invocation in\n" +
         "/app/backend/src/services/lodging/lodgingImportCommit.ts:119:25\n\n" +
         "Foreign key constraint failed on the field: `Lodging_chain_id_fkey (index)`",
-      { code: "P2003", clientVersion: "5.99.0", meta: { field_name: "chain_id" } },
+      {
+        code: "P2003",
+        clientVersion: "5.99.0",
+        meta: { field_name: "chain_id" },
+      },
     );
     const createSpy = jest
       .spyOn(prisma.lodging, "create")
@@ -366,9 +568,19 @@ describe("commitLodgingImport", () => {
 
     try {
       const rows: CommitRowInput[] = [
-        { sourceRowIndex: 0, action: "create", lodging: { name: "Unexpected Error Hotel" }, stay: null },
+        {
+          sourceRowIndex: 0,
+          action: "create",
+          lodging: { name: "Unexpected Error Hotel" },
+          stay: null,
+        },
       ];
-      const result = await commitLodgingImport(userId, "csv", "unexpected.csv", rows);
+      const result = await commitLodgingImport(
+        userId,
+        "csv",
+        "unexpected.csv",
+        rows,
+      );
 
       expect(result.failed).toHaveLength(1);
       expect(result.failed[0].sourceRowIndex).toBe(0);
@@ -396,7 +608,12 @@ describe("commitLodgingImport", () => {
         stay: null,
       },
     ];
-    const result = await commitLodgingImport(userId, "csv", "ownership.csv", rows);
+    const result = await commitLodgingImport(
+      userId,
+      "csv",
+      "ownership.csv",
+      rows,
+    );
 
     expect(result.failed).toHaveLength(1);
     expect(result.failed[0].code).toBe("ownership_mismatch");
