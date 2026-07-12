@@ -10,10 +10,15 @@ const DEFAULT_NOMINATIM_URL = "https://nominatim.openstreetmap.org";
 const TEST_QUERY = "Berlin";
 
 type LoadStatus = "loading" | "error" | "ready";
-type TestStatus = "idle" | "loading" | "ok" | "error";
+type TestStatus = "idle" | "loading" | "ok" | "empty" | "error";
 
 interface GeocoderSettingsCardProps {
   isAdmin: boolean;
+}
+
+interface LoadedGeocoderUrls {
+  photonUrl: string;
+  nominatimUrl: string;
 }
 
 /**
@@ -38,6 +43,15 @@ export default function GeocoderSettingsCard({
   const [loadStatus, setLoadStatus] = useState<LoadStatus>("loading");
   const [photonUrl, setPhotonUrl] = useState("");
   const [nominatimUrl, setNominatimUrl] = useState("");
+  // Snapshot of the values as last returned by the backend (GET or PUT
+  // response). GET always returns RESOLVED urls — never null — so on a
+  // fresh instance the inputs are pre-filled with the literal default
+  // (e.g. https://photon.komoot.io). Comparing against this snapshot lets
+  // handleSave detect "nothing was actually edited" and skip sending that
+  // resolved default back as an explicit DB override (see finding: an
+  // untouched Save would otherwise pin the default forever and silently
+  // ignore future ENV/default changes).
+  const [loaded, setLoaded] = useState<LoadedGeocoderUrls | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [testStatus, setTestStatus] = useState<TestStatus>("idle");
@@ -53,6 +67,7 @@ export default function GeocoderSettingsCard({
       const { settings } = await adminApi.getInstanceSettings();
       setPhotonUrl(settings.photonUrl);
       setNominatimUrl(settings.nominatimUrl);
+      setLoaded({ photonUrl: settings.photonUrl, nominatimUrl: settings.nominatimUrl });
       setLoadStatus("ready");
     } catch (err) {
       logger.error("Failed to load geocoder settings", err);
@@ -70,15 +85,35 @@ export default function GeocoderSettingsCard({
   if (!isAdmin) return null;
 
   const handleSave = async (): Promise<void> => {
+    const trimmedPhotonUrl = photonUrl.trim();
+    const trimmedNominatimUrl = nominatimUrl.trim();
+
+    // Per-field dirty tracking: only include a field in the patch when it
+    // actually differs from what was loaded. An absent key means
+    // "unchanged" on the backend (instancePatchSchema fields are all
+    // `.optional()`), so an untouched field never gets re-sent as an
+    // explicit override.
+    const patch: { photonUrl?: string; nominatimUrl?: string } = {};
+    if (loaded === null || trimmedPhotonUrl !== loaded.photonUrl) {
+      patch.photonUrl = trimmedPhotonUrl;
+    }
+    if (loaded === null || trimmedNominatimUrl !== loaded.nominatimUrl) {
+      patch.nominatimUrl = trimmedNominatimUrl;
+    }
+
     setSaving(true);
     setSaveMessage(null);
     try {
-      const { settings } = await adminApi.updateInstanceSettings({
-        photonUrl: photonUrl.trim(),
-        nominatimUrl: nominatimUrl.trim(),
-      });
+      if (Object.keys(patch).length === 0) {
+        // Nothing was edited — skip the PUT entirely so we never pin the
+        // resolved default (or the current override) back into the DB.
+        setSaveMessage({ ok: true, text: t("settings:lodgingPreferences.geocoder.saveSuccess") });
+        return;
+      }
+      const { settings } = await adminApi.updateInstanceSettings(patch);
       setPhotonUrl(settings.photonUrl);
       setNominatimUrl(settings.nominatimUrl);
+      setLoaded({ photonUrl: settings.photonUrl, nominatimUrl: settings.nominatimUrl });
       setSaveMessage({ ok: true, text: t("settings:lodgingPreferences.geocoder.saveSuccess") });
     } catch (err) {
       logger.error("Failed to save geocoder settings", err);
@@ -99,7 +134,10 @@ export default function GeocoderSettingsCard({
           t("settings:lodgingPreferences.geocoder.testSuccess", { count: results.length })
         );
       } else {
-        setTestStatus("error");
+        // Zero hits is still a SUCCESSFUL connection (the copy says so) —
+        // a distinct "empty" status keeps this out of the error/red
+        // styling reserved for an actual connection failure.
+        setTestStatus("empty");
         setTestMessage(t("settings:lodgingPreferences.geocoder.testEmpty"));
       }
     } catch (err) {
@@ -220,7 +258,7 @@ export default function GeocoderSettingsCard({
           {testMessage && (
             <p
               className="text-sm"
-              style={{ color: testStatus === "ok" ? "var(--success)" : "var(--danger)" }}
+              style={{ color: testStatus === "error" ? "var(--danger)" : "var(--success)" }}
             >
               {testMessage}
             </p>
