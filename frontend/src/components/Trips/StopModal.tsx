@@ -3,6 +3,8 @@ import type { TripStop } from "../../types";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
+import { LocationInput } from "../location/LocationInput";
+import type { LocationCoordinates, LocationSelection } from "../location/LocationInput";
 
 interface StopModalProps {
   tripId: string;
@@ -33,15 +35,15 @@ export default function StopModal({
   onClose,
   onSaved,
 }: StopModalProps): JSX.Element {
-  const { t } = useTranslation(["trips"]);
+  const { t } = useTranslation(["trips", "location"]);
   const addToast = useToastStore((s) => s.addToast);
 
   const [title, setTitle] = useState(stop?.title ?? "");
   const [domain, setDomain] = useState<string>(stop?.domain ?? "poi");
   const [startDate, setStartDate] = useState(toDateInput(stop?.startDate ?? defaultDate ?? null));
   const [endDate, setEndDate] = useState(toDateInput(stop?.endDate ?? null));
-  const [lat, setLat] = useState(stop?.lat?.toString() ?? "");
-  const [lon, setLon] = useState(stop?.lon?.toString() ?? "");
+  const [lat, setLat] = useState<number | null>(stop?.lat ?? null);
+  const [lon, setLon] = useState<number | null>(stop?.lon ?? null);
   const [notes, setNotes] = useState(stop?.notes ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -51,32 +53,39 @@ export default function StopModal({
     setDomain(stop.domain ?? "poi");
     setStartDate(toDateInput(stop.startDate));
     setEndDate(toDateInput(stop.endDate));
-    setLat(stop.lat?.toString() ?? "");
-    setLon(stop.lon?.toString() ?? "");
     setNotes(stop.notes ?? "");
   }, [stop]);
 
-  const parseCoord = (raw: string): number | null => {
-    const trimmed = raw.trim();
-    if (!trimmed) return null;
-    const n = Number(trimmed);
-    return Number.isFinite(n) ? n : null;
+  const position: LocationCoordinates | null = lat !== null && lon !== null ? { lat, lon } : null;
+
+  // A selection always reports the picked position (search hit, coordinate
+  // paste, map drag/click, or the advanced raw-input panel). It only fills
+  // `title` while the user hasn't typed one yet — mirrors LodgingFormModal's
+  // `handleLocationChange` (Task 4) so a search selection never overwrites
+  // text the user already entered.
+  const handleLocationChange = (selection: LocationSelection): void => {
+    setLat(selection.lat);
+    setLon(selection.lon);
+    if (selection.name && title.trim().length === 0) setTitle(selection.name);
+  };
+
+  const handleClearPosition = (): void => {
+    setLat(null);
+    setLon(null);
   };
 
   const handleSave = async (): Promise<void> => {
     if (!title.trim()) return;
     setSaving(true);
     try {
-      const latNum = parseCoord(lat);
-      const lonNum = parseCoord(lon);
       if (stop) {
         await tripsApi.updateStop(tripId, stop.id, {
           title: title.trim(),
           domain,
           startDate: fromDateInput(startDate),
           endDate: fromDateInput(endDate),
-          lat: latNum,
-          lon: lonNum,
+          lat,
+          lon,
           notes: notes.trim() || null,
         });
       } else {
@@ -85,8 +94,8 @@ export default function StopModal({
           domain,
           startDate: fromDateInput(startDate) ?? undefined,
           endDate: fromDateInput(endDate) ?? undefined,
-          lat: latNum ?? undefined,
-          lon: lonNum ?? undefined,
+          lat: lat ?? undefined,
+          lon: lon ?? undefined,
           notes: notes.trim() || undefined,
         });
       }
@@ -167,27 +176,18 @@ export default function StopModal({
               />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label={t("trips:stopModal.latLabel")}>
-              <input
-                value={lat}
-                onChange={(e) => setLat(e.target.value)}
-                placeholder="52.520"
-                inputMode="decimal"
-                className="w-full rounded-lg px-3 py-2 text-sm"
-                style={inputStyle}
-              />
-            </Field>
-            <Field label={t("trips:stopModal.lonLabel")}>
-              <input
-                value={lon}
-                onChange={(e) => setLon(e.target.value)}
-                placeholder="13.405"
-                inputMode="decimal"
-                className="w-full rounded-lg px-3 py-2 text-sm"
-                style={inputStyle}
-              />
-            </Field>
+          <div>
+            <LocationInput value={position} onChange={handleLocationChange} />
+            {position !== null && (
+              <button
+                type="button"
+                onClick={handleClearPosition}
+                className="mt-1 text-xs hover:underline"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {t("location:clear")}
+              </button>
+            )}
           </div>
           <Field label={t("trips:stopModal.notesLabel")}>
             <textarea

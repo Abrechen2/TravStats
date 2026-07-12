@@ -210,8 +210,6 @@
     },
     "startDateLabel": "Start",
     "endDateLabel": "End",
-    "latLabel": "Latitude",
-    "lonLabel": "Longitude",
     "notesLabel": "Notes",
     "save": "Save",
     "cancel": "Cancel"

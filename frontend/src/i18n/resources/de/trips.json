@@ -210,8 +210,6 @@
     },
     "startDateLabel": "Beginn",
     "endDateLabel": "Ende",
-    "latLabel": "Breitengrad",
-    "lonLabel": "Längengrad",
     "notesLabel": "Notizen",
     "save": "Speichern",
     "cancel": "Abbrechen"
