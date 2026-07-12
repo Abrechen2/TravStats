@@ -29,6 +29,7 @@ import ImportSection from "../components/Settings/ImportSection";
 import FeaturesSection from "../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../components/Settings/CruisePreferencesSection";
 import LodgingPreferencesSection from "../components/Settings/LodgingPreferencesSection";
+import GeocoderSettingsCard from "../components/Settings/GeocoderSettingsCard";
 import PasswordModal from "../components/Settings/PasswordModal";
 
 type TabId = "general" | "flight" | "cruise" | "lodging";
@@ -397,10 +398,15 @@ export default function SettingsPage(): JSX.Element {
               <CruisePreferencesSection cruise={cruise} onSetCruise={setCruise} />
             )}
             {activeSection === "lodgingPreferences" && (
-              <LodgingPreferencesSection
-                baseCurrency={baseCurrency}
-                onSetBaseCurrency={setBaseCurrency}
-              />
+              <>
+                <LodgingPreferencesSection
+                  baseCurrency={baseCurrency}
+                  onSetBaseCurrency={setBaseCurrency}
+                />
+                {/* Admin-only; the card itself renders null for non-admins so
+                    the Präferenzen section stays unchanged for everyone else. */}
+                <GeocoderSettingsCard isAdmin={user?.isAdmin ?? false} />
+              </>
             )}
 
             {activeSection === "profile" && (
