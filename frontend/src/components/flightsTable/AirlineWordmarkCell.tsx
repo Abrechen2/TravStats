@@ -3,16 +3,13 @@ import AirlineLogo from "../AirlineLogo";
 import { resolveAirlineDisplay, resolveAirlineIata } from "../../lib/airlineUtils";
 
 /**
- * Airline column cell: the carrier's wordmark logo on a white chip (dark
- * logos stay readable on the dark theme). The written airline name is
- * deliberately NOT shown next to it (owner decision 2026-07-12) — it
- * remains available as the chip's title tooltip and as the text fallback
- * when no logo resolves.
- *
- * The white chip is the `<img>`'s OWN className (no outer wrapper span) —
- * that way the error/no-code fallback (plain airline-name text) renders
- * without the chip automatically, since `AirlineLogo` swaps the whole
- * element out in that branch.
+ * Airline column cell: the carrier's wordmark logo as a departures-board
+ * style brand tile — the `variant="logo"` asset ships its own brand
+ * background (logostream's `*_logo_bg`), so it renders directly without
+ * any chip around it (owner reference: airport departure boards). The
+ * written airline name is deliberately NOT shown next to it (owner
+ * decision 2026-07-12) — it remains available as the title tooltip and
+ * as the text fallback when no logo resolves.
  */
 export default function AirlineWordmarkCell({ flight }: { flight: Flight }): JSX.Element {
   const name = resolveAirlineDisplay(flight);
@@ -30,9 +27,9 @@ export default function AirlineWordmarkCell({ flight }: { flight: Flight }): JSX
         icao={flight.airlineIcao}
         flightNumber={flight.flightNumber}
         variant="logo"
-        size={28}
-        width={96}
-        className="bg-white rounded-md px-2 py-1 object-contain"
+        size={34}
+        width={88}
+        className="rounded object-contain"
         alt={name ?? "Airline logo"}
         fallback={fallback}
       />
