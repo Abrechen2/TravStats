@@ -28,14 +28,13 @@ import { normalizeLodgingName } from "./lodgingImportPreview";
  * string is generic.
  */
 export type LodgingImportRowFailureCode =
-  | "ownership_mismatch"
-  | "missing_lodging_reference"
-  | "unexpected_error";
+  "ownership_mismatch" | "missing_lodging_reference" | "unexpected_error";
 
 const FAILURE_MESSAGES: Record<LodgingImportRowFailureCode, string> = {
   ownership_mismatch: "This lodging does not belong to your account.",
   missing_lodging_reference: "This row has no lodging to create or attach to.",
-  unexpected_error: "This row could not be imported due to an unexpected error.",
+  unexpected_error:
+    "This row could not be imported due to an unexpected error.",
 };
 
 /** Thrown when a client-supplied `matchedLodgingId` fails the ownership check. */
@@ -56,7 +55,8 @@ class MissingLodgingReferenceError extends Error {
 
 function classifyFailure(err: unknown): LodgingImportRowFailureCode {
   if (err instanceof OwnershipMismatchError) return "ownership_mismatch";
-  if (err instanceof MissingLodgingReferenceError) return "missing_lodging_reference";
+  if (err instanceof MissingLodgingReferenceError)
+    return "missing_lodging_reference";
   return "unexpected_error";
 }
 
@@ -65,13 +65,20 @@ export interface CommitResult {
   createdLodgings: number;
   createdStays: number;
   skipped: number;
-  failed: { sourceRowIndex: number; code: LodgingImportRowFailureCode; error: string }[];
+  failed: {
+    sourceRowIndex: number;
+    code: LodgingImportRowFailureCode;
+    error: string;
+  }[];
 }
 
 const UNIQUE_VIOLATION = "P2002";
 
 function isUniqueViolation(err: unknown): boolean {
-  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === UNIQUE_VIOLATION;
+  return (
+    err instanceof Prisma.PrismaClientKnownRequestError &&
+    err.code === UNIQUE_VIOLATION
+  );
 }
 
 /** A hotel-local calendar day widened to the UTC-midnight instant the column stores. */
@@ -88,7 +95,9 @@ function toDate(day: string): Date {
  * race-safe backstop for two concurrent creates of the exact same name (the
  * residual case-variant race is the same accepted gap documented there).
  */
-async function resolveChainId(chainName: string | null | undefined): Promise<number | null> {
+async function resolveChainId(
+  chainName: string | null | undefined,
+): Promise<number | null> {
   const name = chainName?.trim();
   if (!name) return null;
 
@@ -98,7 +107,9 @@ async function resolveChainId(chainName: string | null | undefined): Promise<num
   if (existing) return existing.id;
 
   try {
-    const created = await prisma.lodgingChain.create({ data: { name, isUserAdded: true } });
+    const created = await prisma.lodgingChain.create({
+      data: { name, isUserAdded: true },
+    });
     return created.id;
   } catch (err) {
     if (!isUniqueViolation(err)) throw err;
@@ -163,7 +174,8 @@ async function resolveFxOutcomes(
 ): Promise<Map<string, FxSnapshotOutcome>> {
   const outcomes = new Map<string, FxSnapshotOutcome>();
   for (const row of rows) {
-    if (row.action === "skip" || !row.stay || row.stay.totalPrice == null) continue;
+    if (row.action === "skip" || !row.stay || row.stay.totalPrice == null)
+      continue;
     const currency = row.stay.currency ?? "EUR";
     const key = fxOutcomeKey(currency, row.stay.checkIn);
     if (outcomes.has(key)) continue;
@@ -177,7 +189,11 @@ async function resolveFxOutcomes(
     // same outcome a null rate already produces — and never costs the batch.
     try {
       const outcome = await applyFxSnapshot(
-        { totalPrice: row.stay.totalPrice, currency, checkIn: toDate(row.stay.checkIn) },
+        {
+          totalPrice: row.stay.totalPrice,
+          currency,
+          checkIn: toDate(row.stay.checkIn),
+        },
         baseCurrency,
       );
       outcomes.set(key, outcome);
@@ -209,7 +225,11 @@ function fxOutcomeForStay(
   // Absent from the map only if the pre-resolve pass's lookup for this exact
   // pair itself failed — same non-blocking contract as a live failed lookup:
   // never fail the row, just omit the snapshot.
-  return outcomes.get(fxOutcomeKey(currency, fields.checkIn)) ?? { status: "lookupFailed" };
+  return (
+    outcomes.get(fxOutcomeKey(currency, fields.checkIn)) ?? {
+      status: "lookupFailed",
+    }
+  );
 }
 
 async function createStay(
@@ -268,7 +288,9 @@ export async function commitLodgingImport(
   fileName: string | null,
   rows: CommitRowInput[],
 ): Promise<CommitResult> {
-  const batch = await prisma.lodgingImportBatch.create({ data: { userId, source, fileName } });
+  const batch = await prisma.lodgingImportBatch.create({
+    data: { userId, source, fileName },
+  });
   const baseCurrency = await getBaseCurrency(userId);
   // See `resolveFxOutcomes` — one lookup per distinct (currency, day) pair
   // across the WHOLE batch, resolved before any row is written.
@@ -281,8 +303,11 @@ export async function commitLodgingImport(
   let createdLodgings = 0;
   let createdStays = 0;
   let skipped = 0;
-  const failed: { sourceRowIndex: number; code: LodgingImportRowFailureCode; error: string }[] =
-    [];
+  const failed: {
+    sourceRowIndex: number;
+    code: LodgingImportRowFailureCode;
+    error: string;
+  }[] = [];
 
   for (const row of rows) {
     if (row.action === "skip") {
@@ -341,6 +366,21 @@ export async function commitLodgingImport(
         }
       }
 
+      // Preview→commit contract for the payload-name join: a stays-only
+      // candidate can match by free-text name against a lodging ANOTHER
+      // candidate in this same payload will create (`lodgingImportPreview.ts`'s
+      // `payloadNames` branch never sets `matchedLodgingId` for that case,
+      // since the lodging doesn't exist yet at preview time). If this row
+      // never got a `lodging` object of its own either, its only remaining
+      // handle is `lodgingName` — resolve it against the lodgings created
+      // earlier in THIS run, same normalization as the `createdByName` keys
+      // above. Order-dependent by design (mirrors the same-batch dedupe a
+      // few lines up): the creating row must come before this one.
+      if (!lodgingId && !row.lodging && row.lodgingName) {
+        lodgingId =
+          createdByName.get(normalizeLodgingName(row.lodgingName)) ?? null;
+      }
+
       if (!lodgingId) {
         throw new MissingLodgingReferenceError();
       }
@@ -373,7 +413,11 @@ export async function commitLodgingImport(
       // The client only ever sees the stable, generic message for `code` —
       // this response is a 201 success body, so the error handler's leak
       // protections never run on it.
-      failed.push({ sourceRowIndex: row.sourceRowIndex, code, error: FAILURE_MESSAGES[code] });
+      failed.push({
+        sourceRowIndex: row.sourceRowIndex,
+        code,
+        error: FAILURE_MESSAGES[code],
+      });
     }
   }
 

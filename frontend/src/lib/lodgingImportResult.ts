@@ -26,12 +26,17 @@ export function describeLodgingCommitResult(
   result: LodgingImportCommitResult,
   t: Translate
 ): LodgingCommitToast {
+  // `result.skipped` MUST reach the user (Task-16 carry-in) — the headline
+  // externalRef-dedup feature otherwise reads as a silent "0 hotels, 0 stays
+  // imported" on a same-file re-import (every row skipped, nothing failed),
+  // with no indication the import worked exactly as designed.
   if (result.failed.length === 0) {
     return {
       type: "success",
       message: t("lodging:import.commitResult.success", {
         createdLodgings: result.createdLodgings,
         createdStays: result.createdStays,
+        skipped: result.skipped,
       }),
     };
   }
@@ -49,6 +54,7 @@ export function describeLodgingCommitResult(
     message: t("lodging:import.commitResult.partial", {
       createdLodgings: result.createdLodgings,
       createdStays: result.createdStays,
+      skipped: result.skipped,
       failedCount: result.failed.length,
       reasons,
     }),

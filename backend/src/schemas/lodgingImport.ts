@@ -23,8 +23,25 @@ export const MAX_LODGING_IMPORT_ROWS = 1000;
 
 /** Calendar day only. The DB column is a DateTime, but an import row carries a
  *  hotel-local calendar day — never an instant — so it stays a plain date here
- *  and is widened to UTC midnight exactly once, at commit time. */
-const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD");
+ *  and is widened to UTC midnight exactly once, at commit time.
+ *
+ *  The regex alone accepts calendar-impossible days like "2026-02-31" —
+ *  `Date.parse` (and therefore `new Date(...)`) silently ROLLS them over
+ *  (2026-02-31 becomes 2026-03-03), so a candidate would commit under the
+ *  date the user typed but store a different one. The `.refine` below is a
+ *  UTC round-trip check that rejects any string which doesn't survive
+ *  parse-and-reformat unchanged — it mirrors the frontend's
+ *  `isRealCalendarDay` (frontend/src/lib/importers/lodgingCsv.ts). */
+const isoDay = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD")
+  .refine(
+    (s) => {
+      const t = Date.parse(`${s}T00:00:00.000Z`);
+      return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === s;
+    },
+    { message: "must be a real calendar day" },
+  );
 
 const rating = z.number().min(1).max(5).nullable().optional();
 
@@ -42,7 +59,9 @@ export const lodgingCandidateFieldsSchema = z.object({
   externalRef: z.string().max(200).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
 });
-export type LodgingCandidateFields = z.infer<typeof lodgingCandidateFieldsSchema>;
+export type LodgingCandidateFields = z.infer<
+  typeof lodgingCandidateFieldsSchema
+>;
 
 export const stayCandidateFieldsSchema = z.object({
   checkIn: isoDay,
@@ -80,7 +99,9 @@ export const lodgingImportCandidateSchema = z
     message: "A candidate needs either `lodging` or `lodgingName`",
     path: ["lodgingName"],
   });
-export type LodgingImportCandidate = z.infer<typeof lodgingImportCandidateSchema>;
+export type LodgingImportCandidate = z.infer<
+  typeof lodgingImportCandidateSchema
+>;
 
 export type LodgingImportFlag =
   | "missing_name"
@@ -126,7 +147,10 @@ export interface LodgingImportBatchSummary {
 }
 
 export const lodgingImportPreviewRequestSchema = z.object({
-  candidates: z.array(lodgingImportCandidateSchema).min(1).max(MAX_LODGING_IMPORT_ROWS),
+  candidates: z
+    .array(lodgingImportCandidateSchema)
+    .min(1)
+    .max(MAX_LODGING_IMPORT_ROWS),
 });
 
 // `needs_input` is deliberately NOT accepted here: the preview may produce it,
@@ -139,6 +163,13 @@ export const commitRowSchema = z.object({
   action: z.enum(["create", "skip"]),
   matchedLodgingId: z.string().uuid().nullable().optional(),
   lodging: lodgingCandidateFieldsSchema.nullable(),
+  // Free-text hotel name for an UNEDITED stays-only row the preview matched
+  // by name against another candidate in the SAME payload (`lodging` stays
+  // null there — see lodgingImportPreview.ts's `payloadNames` branch). The
+  // commit service resolves it against that other row's `createdByName`
+  // entry; if it resolves nothing the row fails `missing_lodging_reference`
+  // exactly as before this field existed.
+  lodgingName: z.string().trim().max(200).nullable().optional(),
   stay: stayCandidateFieldsSchema.nullable(),
 });
 export type CommitRowInput = z.infer<typeof commitRowSchema>;
@@ -148,7 +179,9 @@ export const lodgingImportCommitRequestSchema = z.object({
   fileName: z.string().max(260).nullable(),
   rows: z.array(commitRowSchema).min(1).max(MAX_LODGING_IMPORT_ROWS),
 });
-export type LodgingImportCommitRequest = z.infer<typeof lodgingImportCommitRequestSchema>;
+export type LodgingImportCommitRequest = z.infer<
+  typeof lodgingImportCommitRequestSchema
+>;
 
 // Mirrors the `headers` array cap below — a sample row is built FROM those
 // headers, so it can never legitimately need more keys than the header list

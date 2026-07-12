@@ -8,9 +8,9 @@ import type { LodgingImportCommitResult } from "../../types/lodgingImport";
 function makeMockTranslate() {
   const translations: Record<string, string> = {
     "lodging:import.commitResult.success":
-      "Imported {{createdLodgings}} hotel(s) and {{createdStays}} stay(s).",
+      "Imported {{createdLodgings}} hotel(s) and {{createdStays}} stay(s), skipped {{skipped}} (already present).",
     "lodging:import.commitResult.partial":
-      "Imported {{createdLodgings}} hotel(s) and {{createdStays}} stay(s), {{failedCount}} row(s) failed: {{reasons}}",
+      "Imported {{createdLodgings}} hotel(s) and {{createdStays}} stay(s), skipped {{skipped}} (already present), {{failedCount}} row(s) failed: {{reasons}}",
     "lodging:import.commitResult.failureCodes.ownership_mismatch": "belongs to another account",
     "lodging:import.commitResult.failureCodes.missing_lodging_reference": "missing hotel reference",
     "lodging:import.commitResult.failureCodes.unexpected_error": "unexpected error",
@@ -62,6 +62,66 @@ describe("describeLodgingCommitResult", () => {
       expect(toast.type).toBe("success");
       expect(toast.message).toContain("0 hotel");
       expect(toast.message).toContain("0 stay");
+    });
+  });
+
+  // Finding 3: `result.skipped` was dropped by both toast branches, violating
+  // the Task-16 carry-in ("present createdLodgings/createdStays/skipped/
+  // failed[] honestly"). The headline externalRef-dedup feature (re-import
+  // the same file/e-mail is a no-op) otherwise reads as an unexplained
+  // "0 hotels, 0 stays imported".
+  describe("skipped rows are surfaced (Finding 3)", () => {
+    it("includes the skipped count in a clean success message", () => {
+      const t = makeMockTranslate();
+      const result: LodgingImportCommitResult = {
+        batchId: "b1",
+        createdLodgings: 3,
+        createdStays: 4,
+        skipped: 2,
+        failed: [],
+      };
+
+      const toast = describeLodgingCommitResult(result, t);
+
+      expect(toast.type).toBe("success");
+      expect(toast.message).toContain("2");
+    });
+
+    it("explains a same-file re-import — everything skipped, nothing created, nothing failed", () => {
+      const t = makeMockTranslate();
+      const result: LodgingImportCommitResult = {
+        batchId: "b1",
+        createdLodgings: 0,
+        createdStays: 0,
+        skipped: 12,
+        failed: [],
+      };
+
+      const toast = describeLodgingCommitResult(result, t);
+
+      expect(toast.type).toBe("success");
+      // Must not read as an unexplained no-op: the skipped count has to be
+      // present alongside the (honestly zero) created counts.
+      expect(toast.message).toContain("0 hotel");
+      expect(toast.message).toContain("0 stay");
+      expect(toast.message).toContain("12");
+    });
+
+    it("includes the skipped count in a partial-failure warning message too", () => {
+      const t = makeMockTranslate();
+      const result: LodgingImportCommitResult = {
+        batchId: "b1",
+        createdLodgings: 1,
+        createdStays: 1,
+        skipped: 5,
+        failed: [{ sourceRowIndex: 0, code: "unexpected_error", error: "Database error" }],
+      };
+
+      const toast = describeLodgingCommitResult(result, t);
+
+      expect(toast.type).toBe("warning");
+      expect(toast.message).toContain("5");
+      expect(toast.message).toContain("1 row(s) failed");
     });
   });
 

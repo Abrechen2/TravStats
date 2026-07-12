@@ -114,8 +114,13 @@ describe("lodging import i18n", () => {
     for (const locale of [deLodging, enLodging]) {
       expect(locale.import.commitResult.success).toContain("{{createdLodgings}}");
       expect(locale.import.commitResult.success).toContain("{{createdStays}}");
+      // Finding 3: `skipped` must be shown, not just created/failed — a
+      // same-file re-import (everything skipped, nothing failed) otherwise
+      // reads as a silent "0 hotels, 0 stays imported".
+      expect(locale.import.commitResult.success).toContain("{{skipped}}");
       expect(locale.import.commitResult.partial).toContain("{{createdLodgings}}");
       expect(locale.import.commitResult.partial).toContain("{{createdStays}}");
+      expect(locale.import.commitResult.partial).toContain("{{skipped}}");
       expect(locale.import.commitResult.partial).toContain("{{failedCount}}");
       expect(locale.import.commitResult.partial).toContain("{{reasons}}");
     }

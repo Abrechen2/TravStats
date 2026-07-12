@@ -4,6 +4,7 @@ import {
   lodgingImportCommitRequestSchema,
   lodgingImportPreviewRequestSchema,
   MAX_LODGING_IMPORT_ROWS,
+  stayCandidateFieldsSchema,
   suggestMappingRequestSchema,
 } from "../schemas/lodgingImport";
 
@@ -57,11 +58,14 @@ describe("lodgingImport schemas", () => {
   });
 
   it("caps the preview payload at MAX_LODGING_IMPORT_ROWS", () => {
-    const candidates = Array.from({ length: MAX_LODGING_IMPORT_ROWS + 1 }, (_, i) => ({
-      sourceRowIndex: i,
-      lodging: { name: `Hotel ${i}` },
-      stay: null,
-    }));
+    const candidates = Array.from(
+      { length: MAX_LODGING_IMPORT_ROWS + 1 },
+      (_, i) => ({
+        sourceRowIndex: i,
+        lodging: { name: `Hotel ${i}` },
+        stay: null,
+      }),
+    );
     const result = lodgingImportPreviewRequestSchema.safeParse({ candidates });
     expect(result.success).toBe(false);
   });
@@ -71,7 +75,12 @@ describe("lodgingImport schemas", () => {
       source: "csv",
       fileName: "hotels.csv",
       rows: [
-        { sourceRowIndex: 0, action: "skip", lodging: { name: "Dup" }, stay: null },
+        {
+          sourceRowIndex: 0,
+          action: "skip",
+          lodging: { name: "Dup" },
+          stay: null,
+        },
         {
           sourceRowIndex: 1,
           action: "create",
@@ -89,9 +98,69 @@ describe("lodgingImport schemas", () => {
     const result = lodgingImportCommitRequestSchema.safeParse({
       source: "csv",
       fileName: null,
-      rows: [{ sourceRowIndex: 0, action: "needs_input", lodging: { name: "X" }, stay: null }],
+      rows: [
+        {
+          sourceRowIndex: 0,
+          action: "needs_input",
+          lodging: { name: "X" },
+          stay: null,
+        },
+      ],
     });
     expect(result.success).toBe(false);
+  });
+
+  // ---- Finding 4: the regex alone accepted calendar-impossible days, and ----
+  // ---- Date.parse silently rolled them over to a DIFFERENT real day      ----
+
+  describe("isoDay calendar validation (Finding 4)", () => {
+    it("rejects 2026-02-31 — the regex matches, but the day does not exist", () => {
+      const result = stayCandidateFieldsSchema.safeParse({
+        checkIn: "2026-02-31",
+        checkOut: "2026-03-05",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects 2027-02-29 — 2027 is not a leap year", () => {
+      const result = stayCandidateFieldsSchema.safeParse({
+        checkIn: "2027-02-29",
+        checkOut: "2027-03-01",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("accepts 2028-02-29 — 2028 IS a leap year (the boundary case)", () => {
+      const result = stayCandidateFieldsSchema.safeParse({
+        checkIn: "2028-02-29",
+        checkOut: "2028-03-01",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects an impossible checkOut even when checkIn is a real day", () => {
+      const result = stayCandidateFieldsSchema.safeParse({
+        checkIn: "2026-04-01",
+        checkOut: "2026-04-31",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects an impossible calendar day inside a full commit row, not just in isolation", () => {
+      const result = lodgingImportCommitRequestSchema.safeParse({
+        source: "csv",
+        fileName: null,
+        rows: [
+          {
+            sourceRowIndex: 0,
+            action: "create",
+            lodging: { name: "Impossible Date Hotel" },
+            stay: { checkIn: "2026-02-31", checkOut: "2026-03-03" },
+          },
+        ],
+      });
+      expect(result.success).toBe(false);
+    });
   });
 
   // ---- Finding 3: DELETE /batches/:id was the only client-supplied value ----
@@ -99,7 +168,9 @@ describe("lodgingImport schemas", () => {
 
   describe("batchIdParamsSchema", () => {
     it("accepts a well-formed uuid", () => {
-      const result = batchIdParamsSchema.safeParse({ id: "00000000-0000-0000-0000-000000000000" });
+      const result = batchIdParamsSchema.safeParse({
+        id: "00000000-0000-0000-0000-000000000000",
+      });
       expect(result.success).toBe(true);
     });
 
@@ -120,7 +191,9 @@ describe("lodgingImport schemas", () => {
     it("accepts a normal set of headers and sample rows", () => {
       const result = suggestMappingRequestSchema.safeParse({
         headers: ["Hotel", "Anreise", "Abreise"],
-        sampleRows: [{ Hotel: "NH", Anreise: "2026-03-30", Abreise: "2026-03-31" }],
+        sampleRows: [
+          { Hotel: "NH", Anreise: "2026-03-30", Abreise: "2026-03-31" },
+        ],
       });
       expect(result.success).toBe(true);
     });
