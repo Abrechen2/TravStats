@@ -15,6 +15,7 @@ interface GlobalApiKeysUpdateData {
   globalAirlabsApiKey?: string | null;
   globalAviationstackApiKey?: string | null;
   globalAerodataboxApiKey?: string | null;
+  globalLogostreamApiKey?: string | null;
   globalOpenskyClientId?: string | null;
   globalOpenskyClientSecret?: string | null;
   globalOpenskyUsername?: string | null;
@@ -26,6 +27,7 @@ const globalApiKeysSchema = z.object({
   globalAirlabsApiKey: z.string().optional().nullable(),
   globalAviationstackApiKey: z.string().optional().nullable(),
   globalAerodataboxApiKey: z.string().optional().nullable(),
+  globalLogostreamApiKey: z.string().optional().nullable(),
   globalOpenskyClientId: z.string().optional().nullable(),
   globalOpenskyClientSecret: z.string().optional().nullable(),
   globalOpenskyUsername: z.string().optional().nullable(),
@@ -84,6 +86,7 @@ router.get('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
         globalAirlabsApiKey: undefined,
         globalAviationstackApiKey: undefined,
         globalAerodataboxApiKey: undefined,
+        globalLogostreamApiKey: undefined,
         globalOpenskyClientId: undefined,
         globalOpenskyClientSecret: undefined,
         globalOpenskyUsername: undefined,
@@ -96,6 +99,7 @@ router.get('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
       globalAirlabsApiKey: maskKey(adminSettings.globalAirlabsApiKey),
       globalAviationstackApiKey: maskKey(adminSettings.globalAviationstackApiKey),
       globalAerodataboxApiKey: maskKey(adminSettings.globalAerodataboxApiKey),
+      globalLogostreamApiKey: maskKey(adminSettings.globalLogostreamApiKey),
       globalOpenskyClientId: maskKey(adminSettings.globalOpenskyClientId),
       globalOpenskyClientSecret: maskKey(adminSettings.globalOpenskyClientSecret),
       globalOpenskyUsername: maskKey(adminSettings.globalOpenskyUsername),
@@ -131,6 +135,14 @@ router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
     }
     if (payload.globalAerodataboxApiKey !== undefined) {
       updateData.globalAerodataboxApiKey = encryptApiKey(payload.globalAerodataboxApiKey);
+    }
+    if (payload.globalLogostreamApiKey !== undefined) {
+      // Don't overwrite the stored key when the client echoes the masked
+      // GET value back unchanged; empty string / null still clears the key.
+      const incoming = payload.globalLogostreamApiKey;
+      if (!incoming || !incoming.includes('****')) {
+        updateData.globalLogostreamApiKey = encryptApiKey(incoming);
+      }
     }
     if (payload.globalOpenskyClientId !== undefined) {
       updateData.globalOpenskyClientId = encryptApiKey(payload.globalOpenskyClientId);
@@ -171,6 +183,7 @@ router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
         globalAirlabsApiKey: maskKey(adminSettings.globalAirlabsApiKey),
         globalAviationstackApiKey: maskKey(adminSettings.globalAviationstackApiKey),
         globalAerodataboxApiKey: maskKey(adminSettings.globalAerodataboxApiKey),
+        globalLogostreamApiKey: maskKey(adminSettings.globalLogostreamApiKey),
         globalOpenskyClientId: maskKey(adminSettings.globalOpenskyClientId),
         globalOpenskyClientSecret: maskKey(adminSettings.globalOpenskyClientSecret),
         globalOpenskyUsername: maskKey(adminSettings.globalOpenskyUsername),
