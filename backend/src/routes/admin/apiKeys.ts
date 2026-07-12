@@ -27,7 +27,17 @@ const globalApiKeysSchema = z.object({
   globalAirlabsApiKey: z.string().optional().nullable(),
   globalAviationstackApiKey: z.string().optional().nullable(),
   globalAerodataboxApiKey: z.string().optional().nullable(),
-  globalLogostreamApiKey: z.string().optional().nullable(),
+  // Encryption silently corrupts secrets shorter than 16 bytes (see
+  // utils/encryption.ts). Allow the "no change" sentinels — empty string
+  // (clear the key) and a masked echo of the GET response (unchanged) —
+  // but reject any other short value before it ever reaches encryptApiKey.
+  globalLogostreamApiKey: z
+    .string()
+    .refine((v) => v === "" || v.includes("****") || v.length >= 16, {
+      message: "API key must be at least 16 characters",
+    })
+    .optional()
+    .nullable(),
   globalOpenskyClientId: z.string().optional().nullable(),
   globalOpenskyClientSecret: z.string().optional().nullable(),
   globalOpenskyUsername: z.string().optional().nullable(),
