@@ -379,14 +379,14 @@
   "features": {
     "title": "Features",
     "costTracking": "Cost Tracking",
-    "costTrackingDesc": "Show price and cost fields in forms and enable business cost statistics.",
+    "costTrackingDesc": "Show tax and fee fields on flight forms and enable business cost statistics. Price and currency are always available.",
     "trackAircraft": "Track tail numbers",
     "trackAircraftDesc": "Persist aircraft registration + Mode-S from flight lookups. Off = aggregates only, no audit trail of specific airframes.",
     "help": {
       "title": "Optional features",
       "description": "Toggle features on and off to tailor the UI to your usage. Disabled features stay in the code and can be re-enabled any time.",
       "costTitle": "Cost tracking:",
-      "cost": "Shows price, tax and cost fields on the flight forms. Only useful if you bill business trips or track a private travel budget — otherwise it just clutters the form."
+      "cost": "Shows the tax and fee fields on the flight forms and enables the business cost statistics. Price and currency are always available regardless — only the breakdown is optional, to keep the form lean."
     }
   },
   "autoSaved": {
