@@ -267,11 +267,12 @@ export default function SettingsPage(): JSX.Element {
       <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
         <NavigationBar />
 
-        {/* Top tab bar — domain switch (Allgemein / Flug / Kreuzfahrt).
-            The sidebar below picks a section *within* the active tab,
-            so this row is the higher-level axis. Pill-style with the
-            page title on the left clarifies the hierarchy: domain group
-            up here, section navigation down there. */}
+        {/* Page header. The domain switch (Allgemein / Flug / Kreuzfahrt)
+            lives at the top of the section sidebar on desktop — as a
+            top-right pill row it sat visually disconnected from the
+            navigation it scopes and users overlooked it entirely. On
+            mobile the sidebar doesn't exist, so the pill row stays up
+            here (md:hidden). */}
         <div
           className="px-4 py-3"
           style={{ background: "var(--bg-base)", borderBottom: "1px solid var(--color-border)" }}
@@ -283,7 +284,7 @@ export default function SettingsPage(): JSX.Element {
             <div
               role="tablist"
               aria-label={t("settings:title", { defaultValue: "Einstellungen" })}
-              className="flex gap-1 p-1 rounded-lg"
+              className="flex gap-1 p-1 rounded-lg md:hidden"
               style={{
                 background: "var(--bg-surface)",
                 border: "1px solid var(--color-border)",
@@ -354,6 +355,46 @@ export default function SettingsPage(): JSX.Element {
               borderRight: "1px solid var(--color-border)",
             }}
           >
+            {/* Domain switch — sits directly above the sections it scopes so
+                both navigation levels read as one column (the old top-right
+                pill row was easy to miss). Boxed + icons so it doesn't blend
+                into the section list below. */}
+            <div
+              className="mx-2 mb-3 pb-3"
+              style={{ borderBottom: "1px solid var(--color-border)" }}
+            >
+              <div
+                role="tablist"
+                aria-label={t("settings:title", { defaultValue: "Einstellungen" })}
+                className="flex flex-col gap-1 rounded-lg p-1"
+                style={{
+                  background: "var(--bg-base)",
+                  border: "1px solid var(--color-border)",
+                }}
+              >
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === tab.id}
+                    onClick={(): void => setActiveTab(tab.id)}
+                    className="w-full rounded-md px-3 py-2 text-left text-sm font-semibold transition-colors"
+                    style={{
+                      background: activeTab === tab.id ? "var(--bg-elevated)" : "transparent",
+                      color: activeTab === tab.id ? "var(--accent)" : "var(--text-secondary)",
+                    }}
+                  >
+                    {tab.icon && (
+                      <span className="mr-1.5" aria-hidden>
+                        {tab.icon}
+                      </span>
+                    )}
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <nav className="space-y-0.5 px-2">
               {currentNavSections.map((section) => (
                 <button
