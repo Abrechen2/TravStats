@@ -28,6 +28,16 @@ switch that keeps unfinished features out of sight until they are ready.
   trip AI summary.
 - **The profile picture can be removed.** A Remove button next to the file
   picker deletes the stored picture; the initial-letter avatar returns.
+- **Flight price and currency are always editable** (#192). The fields sat
+  behind the cost-tracking toggle while cruises always showed them — an
+  imported price was visible in the flight list but not editable. The toggle
+  now only gates the taxes/fees breakdown and the business statistics.
+- **The map control panel starts collapsed and remembers its state** (#194).
+  It no longer springs open on every reload; opening or closing it persists
+  across reloads and the 2D/globe switch.
+- **The settings domain switch moved into the sidebar.** As a top-right pill
+  row it was easy to miss; on desktop it now sits directly above the section
+  list it scopes. On phones it stays in the top bar.
 
 ### Fixed
 - **Cruise port names with non-English characters render correctly** (#185).
@@ -62,6 +72,20 @@ switch that keeps unfinished features out of sight until they are ready.
   server's static-asset cache rule intercepted API URLs ending in an image
   extension, so the freshly uploaded picture 404'd before the request ever
   reached the backend. Image receipts were affected by the same rule.
+- **The year dropdown in the map panel is readable again** (#196). On Windows
+  the dropdown popup rendered white-on-white; the options now carry explicit
+  dark styling. The globe's performance dropdown had the same flaw.
+- **The map panel chevron points the way the panel moves** (#195) — down while
+  open, up while collapsed — and is larger.
+- **Dark text on amber buttons** (#193). The trip module's primary buttons
+  referenced a CSS variable that does not exist, so their text silently
+  rendered near-white on the amber accent; several admin and cruise buttons
+  hardcoded white. All of them now use the same dark text as the standard
+  primary button.
+- **Cruise direction arrows no longer pile up on shared shipping lanes.**
+  Different cruises routed onto the same lane each placed their own arrows,
+  stacking into unreadable clusters. Overlapping arrows are now hidden and
+  reappear as you zoom in; a selected cruise always keeps its own.
 
 ### Changed — please read before updating
 - **Flight colouring:** existing settings migrate to **Status** mode. The
@@ -73,6 +97,11 @@ switch that keeps unfinished features out of sight until they are ready.
   panel to get the old look back (one click, and now discoverable).
 - **Hidden by default:** POI tab, Devices settings and the trip AI summary now
   require the beta-features switch.
+
+### Removed
+- **The "Map settings" section is gone from the flight settings tab.** Base
+  map, start zoom, marker style and route colour had no effect anywhere since
+  the in-map control panel took over — every control there was a silent no-op.
 
 ## [2.3.1] - 2026-07-11
 
