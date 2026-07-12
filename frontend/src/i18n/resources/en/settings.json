@@ -27,7 +27,24 @@
     "title": "Lodging preferences",
     "description": "Base currency for lodging stats and spend totals.",
     "baseCurrency": "Base currency",
-    "baseCurrencyHint": "Every stay is converted into this currency at the ECB rate for its check-in day. Already-saved stays keep their original conversion rate — a change only affects future calculations."
+    "baseCurrencyHint": "Every stay is converted into this currency at the ECB rate for its check-in day. Already-saved stays keep their original conversion rate — a change only affects future calculations.",
+    "geocoder": {
+      "title": "Geocoder",
+      "description": "Admins only: configure this instance's address search and coordinate resolution.",
+      "photonUrlLabel": "Photon URL (address search)",
+      "photonUrlHint": "Used for live search-as-you-type (e.g. the lodging or trip location picker). Leave empty to use the public default, photon.komoot.io.",
+      "nominatimUrlLabel": "Nominatim URL (coordinate resolution)",
+      "nominatimUrlHint": "Used for one-shot geocoding requests. Leave empty to use the public default, nominatim.openstreetmap.org.",
+      "saveSuccess": "Geocoder settings saved.",
+      "saveError": "Failed to save the geocoder settings.",
+      "loadError": "Failed to load the geocoder settings.",
+      "retry": "Retry",
+      "testButton": "Test connection",
+      "testing": "Testing connection …",
+      "testSuccess": "Connection successful — {{count}} hits for \"Berlin\".",
+      "testEmpty": "Connection successful, but no hits for \"Berlin\".",
+      "testError": "Connection failed. Please check the URL and reachability."
+    }
   },
   "about": {
     "buildLabel": "Build",
