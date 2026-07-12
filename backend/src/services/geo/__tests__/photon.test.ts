@@ -157,6 +157,27 @@ describe("Photon place search", () => {
     expect(url).toMatch(/^https:\/\/photon\.komoot\.io\/api\/\?/);
   });
 
+  it("honors the PHOTON_URL env tier (not the public default) when resolveGeocoderUrls rejects", async () => {
+    const realEnv = process.env.PHOTON_URL;
+    process.env.PHOTON_URL = "https://photon.env-configured.example";
+    try {
+      mockResolveGeocoderUrls.mockRejectedValue(new Error("DB down"));
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValue(jsonResponse(featureCollection([zurichFeature])));
+      global.fetch = fetchMock as unknown as typeof fetch;
+      const results = await searchPlaces("Berlin");
+      expect(results).toHaveLength(1);
+      const url = fetchMock.mock.calls[0][0] as string;
+      expect(url).toMatch(
+        /^https:\/\/photon\.env-configured\.example\/api\/\?/,
+      );
+    } finally {
+      if (realEnv === undefined) delete process.env.PHOTON_URL;
+      else process.env.PHOTON_URL = realEnv;
+    }
+  });
+
   it("searches against the instance-configured Photon URL, not a hardcoded host", async () => {
     mockResolveGeocoderUrls.mockResolvedValue({
       photonUrl: "https://photon.self-hosted.example",

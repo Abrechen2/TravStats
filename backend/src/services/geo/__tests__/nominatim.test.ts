@@ -150,4 +150,27 @@ describe("nominatim geocoder", () => {
     const url = fetchMock.mock.calls[0][0] as string;
     expect(url).toMatch(/^https:\/\/nominatim\.openstreetmap\.org\/search\?/);
   });
+
+  it("honors the NOMINATIM_URL env tier (not the public default) when resolveGeocoderUrls rejects", async () => {
+    const realEnv = process.env.NOMINATIM_URL;
+    process.env.NOMINATIM_URL = "https://nominatim.env-configured.example";
+    try {
+      mockResolveGeocoderUrls.mockRejectedValue(
+        new Error("DB connection failed"),
+      );
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValue(okResponse([{ lat: "5", lon: "6" }]));
+      global.fetch = fetchMock as unknown as typeof fetch;
+      const result = await geocodeAddress({ city: "Env Fallback City" });
+      expect(result).toEqual({ lat: 5, lon: 6 });
+      const url = fetchMock.mock.calls[0][0] as string;
+      expect(url).toMatch(
+        /^https:\/\/nominatim\.env-configured\.example\/search\?/,
+      );
+    } finally {
+      if (realEnv === undefined) delete process.env.NOMINATIM_URL;
+      else process.env.NOMINATIM_URL = realEnv;
+    }
+  });
 });
