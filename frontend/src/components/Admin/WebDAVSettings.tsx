@@ -206,7 +206,7 @@ export default function WebDAVSettings(): JSX.Element {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-base)] hover:opacity-90 disabled:opacity-50"
         >
           {saving ? t("common:buttons.saving") : t("common:buttons.save")}
         </button>
