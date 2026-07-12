@@ -6,6 +6,7 @@ import PageTransition from "../components/PageTransition";
 import { useSettingsPage } from "../components/Settings/useSettingsPage";
 import { useDomainTabs } from "../hooks/useDomainTabs";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { DOMAINS } from "../shared/domains";
 // Section components
 import ProfileSection from "../components/Settings/ProfileSection";
@@ -59,8 +60,10 @@ export default function SettingsPage(): JSX.Element {
     setBaseCurrency,
     savingProfile,
     uploadingProfilePicture,
+    removingProfilePicture,
     saveProfileSettings,
     handleAvatarUpload,
+    handleAvatarDelete,
     showPasswordModal,
     changingPassword,
     passwordForm,
@@ -86,7 +89,22 @@ export default function SettingsPage(): JSX.Element {
     setShowPasswordModal,
   } = useSettingsPage();
 
-  // Sections are grouped into one of four tabs.
+  const { isFeatureVisible } = useBetaFeatures();
+
+  // ── Section MODEL vs section NAV ────────────────────────────────────────
+  // `sectionsByTab` is the MODEL: every section that EXISTS and can render.
+  // It is what the validation / deep-link effects below consult, so a section
+  // stays reachable by URL even when it is not advertised anywhere.
+  //
+  // `navSectionsByTab` (further down) is what the sidebar and the mobile
+  // picker actually LIST. The two are not the same thing, and conflating them
+  // is exactly the trap: `devices` is hidden from the nav behind the beta gate
+  // but MUST still open at /settings?section=devices — it is the only way to
+  // pair a phone until the mobile app ships (see config/betaFeatures.ts).
+  // Removing it from the model would bounce that URL back to "profile".
+  //
+  // Sections are grouped into one of four tabs. The cruise group is empty
+  // for now; a placeholder is shown so users see the scaffold exists.
   const sectionsByTab = useMemo<Record<TabId, SectionRef[]>>(() => {
     const general: SectionRef[] = [
       { id: "profile", label: t("settings:profile.title") || "Profile" },
@@ -124,6 +142,19 @@ export default function SettingsPage(): JSX.Element {
     ];
     return { general, flight, cruise: cruiseTab, lodging: lodgingTab };
   }, [t, user?.isAdmin]);
+
+  // The NAV list — the model minus everything the beta gate hides. Rendering
+  // reads this; validation and deep-linking never do.
+  const navSectionsByTab = useMemo<Record<TabId, SectionRef[]>>(() => {
+    const isHidden = (id: string): boolean =>
+      id === "devices" && !isFeatureVisible("devicePairing");
+    return {
+      general: sectionsByTab.general.filter((s) => !isHidden(s.id)),
+      flight: sectionsByTab.flight.filter((s) => !isHidden(s.id)),
+      cruise: sectionsByTab.cruise.filter((s) => !isHidden(s.id)),
+      lodging: sectionsByTab.lodging.filter((s) => !isHidden(s.id)),
+    };
+  }, [sectionsByTab, isFeatureVisible]);
 
   // Visible tabs + active-tab state + URL sync + drift guard now live
   // in the shared useDomainTabs hook. Hotel / POI tabs plug in via the
@@ -166,23 +197,29 @@ export default function SettingsPage(): JSX.Element {
 
   const initialSection = searchParams.get("section");
 
+  // MODEL for the active tab — drives initial state, drift correction and the
+  // deep-link effects. NOT the nav (see navSectionsByTab above).
   const currentSections = sectionsByTab[activeTab];
+  const currentNavSections = navSectionsByTab[activeTab];
   const [activeSection, setActiveSection] = useState<string>(
+    // Validate the deep-linked section against the MODEL — a gated-but-real
+    // section (devices) must be honoured here, not bounced to "profile".
     initialSection && currentSections.some((s) => s.id === initialSection)
       ? initialSection
-      : (currentSections[0]?.id ?? "")
+      : (navSectionsByTab[activeTab][0]?.id ?? currentSections[0]?.id ?? "")
   );
 
   // Keep activeSection valid when the user switches tabs (e.g. switching
   // from flight → general while on "homeAirport" must not leave an empty
-  // main area). Falls back to the first section of the new tab. The
-  // useDomainTabs hook takes care of activeTab drift when a domain is
-  // disabled mid-session — this effect only handles the section half.
+  // main area). Validity is judged against the MODEL, so a hidden-but-real
+  // section survives; the fallback lands on the first *visible* section of the
+  // new tab. The useDomainTabs hook takes care of activeTab drift when a
+  // domain is disabled mid-session — this effect only handles the section half.
   useEffect(() => {
     if (!currentSections.some((s) => s.id === activeSection)) {
-      setActiveSection(currentSections[0]?.id ?? "");
+      setActiveSection(currentNavSections[0]?.id ?? currentSections[0]?.id ?? "");
     }
-  }, [activeTab, activeSection, currentSections]);
+  }, [activeTab, activeSection, currentSections, currentNavSections]);
 
   // Legacy deep-link support: someone bookmarked /settings#homeAirport
   // before the tab refactor. Translate a matching hash to the correct tab
@@ -306,13 +343,17 @@ export default function SettingsPage(): JSX.Element {
           <label htmlFor="settings-section-picker" className="sr-only">
             {t("settings:sectionPicker", { defaultValue: "Section" })}
           </label>
+          {/* Nav — lists only visible sections. When the user deep-linked to a
+              gated section (e.g. ?section=devices) the picker has no matching
+              option, so it shows blank rather than lying about what's on
+              screen; the section itself still renders below. */}
           <select
             id="settings-section-picker"
-            value={activeSection}
+            value={currentNavSections.some((s) => s.id === activeSection) ? activeSection : ""}
             onChange={(e): void => setActiveSection(e.target.value)}
             className="input w-full"
           >
-            {currentSections.map((section) => (
+            {currentNavSections.map((section) => (
               <option key={section.id} value={section.id}>
                 {section.label}
               </option>
@@ -330,7 +371,7 @@ export default function SettingsPage(): JSX.Element {
             }}
           >
             <nav className="space-y-0.5 px-2">
-              {currentSections.map((section) => (
+              {currentNavSections.map((section) => (
                 <button
                   key={section.id}
                   onClick={() => setActiveSection(section.id)}
@@ -367,8 +408,10 @@ export default function SettingsPage(): JSX.Element {
                 profile={profile}
                 savingProfile={savingProfile}
                 uploadingProfilePicture={uploadingProfilePicture}
+                removingProfilePicture={removingProfilePicture}
                 onSaveProfile={saveProfileSettings}
                 onAvatarUpload={handleAvatarUpload}
+                onAvatarDelete={handleAvatarDelete}
                 onSetProfile={setProfile}
                 onShowPasswordModal={() => setShowPasswordModal(true)}
               />
@@ -417,6 +460,10 @@ export default function SettingsPage(): JSX.Element {
                 onSave={saveApiKeys}
               />
             )}
+            {/* Intentionally NOT gated: the nav entry is hidden behind the
+                beta flag, but the section itself must still render for anyone
+                who reaches /settings?section=devices directly — that URL is
+                the only remaining way to pair a phone. */}
             {activeSection === "devices" && <DevicesSection />}
             {activeSection === "apitokens" && <ApiTokensSection />}
             {activeSection === "import" && <ImportSection />}

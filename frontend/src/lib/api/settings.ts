@@ -118,6 +118,9 @@ export const settingsApi = {
     );
     return data;
   },
+  deleteProfilePicture: async (): Promise<void> => {
+    await api.delete("/settings/profile-picture");
+  },
   getHomeAirports: async (): Promise<{ history: HomeAirportEntry[] }> => {
     const { data } = await api.get<{ history: HomeAirportEntry[] }>("/settings/home-airports");
     return data;

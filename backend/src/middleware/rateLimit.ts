@@ -327,6 +327,20 @@ export const uploadReceiptLimiter = rateLimit({
 });
 
 /**
+ * Rate limiter for profile picture uploads
+ * Prevents disk exhaustion through repeated uploads
+ * Allows 20 uploads per hour per user
+ */
+export const uploadProfilePictureLimiter = rateLimit({
+  windowMs: RATE_LIMITS.UPLOAD_PROFILE_PICTURE_WINDOW_MS,
+  max: RATE_LIMITS.UPLOAD_PROFILE_PICTURE_MAX,
+  message: 'Too many profile picture uploads, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
  * Rate limiter for settings endpoints
  * Prevents enumeration and brute-force of settings values
  * Allows 60 requests per 15 minutes per IP

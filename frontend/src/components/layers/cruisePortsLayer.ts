@@ -3,6 +3,7 @@ import type { Layer } from "@deck.gl/core";
 import type { Cruise, Port } from "../../types";
 import { toPortLabel } from "../map/portLabel";
 import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
+import { markerDotRadiusProps } from "./markerDotStyle";
 
 interface PortDatum {
   position: [number, number];
@@ -25,10 +26,10 @@ interface PortDatum {
   lastVisit?: string;
 }
 
-// Match the airport `routes-dot` radius (meters) so flat-map ports
-// read as the same visual weight as airport markers. Halo ring +
-// solid centre + label mirror the airport stack in routesLayer.ts.
-const PORT_DOT_RADIUS_M = 2200;
+// The solid centre dot's radius (metres + pixel clamps) is shared with
+// the airport `routes-dot` layer via markerDotStyle.ts (#187) so flat-map
+// ports read as the same visual weight as airport markers. The halo ring
+// below stays port-specific — only the dot sizing model is shared.
 const PORT_RING_RADIUS_M = 6000;
 // Cruise domain hex per BRAND.md §3 (--domain-cruise = #6fa0d6 / rgb(111,160,214)).
 // Was sky-400 [56, 189, 248] which is a different blue and not in the brand
@@ -132,13 +133,12 @@ export function createCruisePortsLayer(
     id: "cruise-ports",
     data,
     getPosition: (d) => d.position,
-    getRadius: PORT_DOT_RADIUS_M,
     // Cap the marker so it stays a recognisable dot at every zoom —
     // sub-pixel meters at low zoom collapse to just the white stroke
     // (visible "clipping"), and at very high zoom the meter radius
-    // would balloon to cover the entire port city.
-    radiusMinPixels: 4 * portSizeScale,
-    radiusMaxPixels: 8 * portSizeScale,
+    // would balloon to cover the entire port city. Shared with the
+    // airport dot via markerDotStyle.ts (#187).
+    ...markerDotRadiusProps(portSizeScale),
     getFillColor: [...portRgb, 220] as [number, number, number, number],
     getLineColor: [255, 255, 255, 220],
     lineWidthUnits: "pixels",
@@ -156,7 +156,12 @@ export function createCruisePortsLayer(
   const labelData =
     labelsMode === "all"
       ? budgeted
-      : declutterByDistance(budgeted, (d) => d.visits, (d) => d.position, zoom);
+      : declutterByDistance(
+          budgeted,
+          (d) => d.visits,
+          (d) => d.position,
+          zoom
+        );
   const labelLayer = new TextLayer<PortDatum>({
     id: "cruise-ports-labels",
     data: labelData,
@@ -175,6 +180,12 @@ export function createCruisePortsLayer(
     sizeUnits: "pixels",
     pickable: true,
     billboard: true,
+    // Port names come straight from the catalog (e.g. "Travemünde") and
+    // routinely contain umlauts/accents. deck.gl's default `characterSet`
+    // only covers ASCII 32-127, so anything outside that range is silently
+    // dropped from the font atlas and never renders (#185). "auto" builds
+    // the atlas from the actual label text instead — do not remove.
+    characterSet: "auto",
     visible: labelsMode !== "off",
   });
 

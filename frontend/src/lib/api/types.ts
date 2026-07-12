@@ -140,6 +140,12 @@ export interface UserSettings {
    * on the backend) — used to convert/aggregate money figures like lodging spend. Distinct
    * from `units.currency`, a separate display preference. */
   baseCurrency?: string;
+  /**
+   * Instance-level beta gate — READ-ONLY. Served by GET /settings for
+   * convenience; PUT /settings ignores it (Zod strips it server-side). Only
+   * an admin can write it, via PUT /admin/instance-settings.
+   */
+  betaFeaturesEnabled?: boolean;
   [key: string]: unknown;
 }
 

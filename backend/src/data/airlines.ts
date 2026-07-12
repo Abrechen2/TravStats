@@ -198,3 +198,12 @@ export const AIRLINES: Airline[] = [
 export const AIRLINE_IATA_MAP: Record<string, string> = Object.fromEntries(
   AIRLINES.map(a => [a.iata, a.name])
 );
+
+/**
+ * Build a Record<string, string> from ICAO code to airline name. Not every
+ * entry carries an ICAO code (the rail/bus/ferry intermodal rows don't have
+ * one), so those are skipped.
+ */
+export const AIRLINE_ICAO_MAP: Record<string, string> = Object.fromEntries(
+  AIRLINES.filter(a => a.icao).map(a => [a.icao as string, a.name])
+);

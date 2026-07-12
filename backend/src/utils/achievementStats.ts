@@ -3,6 +3,7 @@
 // 800-line limit mandated by CLAUDE.md.
 
 import { calculateDistance } from './geo';
+import { getContinent } from './continents';
 import logger from './logger';
 import { getCachedAirports } from '../services/airportCache';
 import { normalizeAircraft } from './aircraftNormalize';
@@ -173,23 +174,13 @@ export interface UserStats {
   grandTour: boolean;
 }
 
-export function getContinent(lat: number, lon: number): string | null {
-  // Simplified continent detection based on coordinates — rough approximation.
-  if (lat > 70 || lat < -60) return 'Antarctica';
-  if (lon >= -170 && lon <= -30) {
-    return lat > 15 ? 'North America' : 'South America';
-  }
-  // Middle East: roughly Israel/Jordan east to Iran/UAE, lat 10°–42°N
-  // Lower lon bound at 30° keeps Turkey (Istanbul lon ~29) in Europe.
-  if (lon >= 30 && lon <= 63 && lat >= 10 && lat <= 42) return 'Middle East';
-  // Europe: lon -30° to 40°, lat > 35°N
-  if (lon >= -30 && lon <= 40 && lat > 35) return 'Europe';
-  // Africa: lon -20° to 55°, lat -35° to 35°
-  if (lon >= -20 && lon <= 55 && lat >= -35 && lat < 35) return 'Africa';
-  if (lon >= 60 && lon <= 150) return 'Asia';
-  if (lon >= 150 || lon <= -170) return 'Oceania';
-  return null;
-}
+// The coordinate-box implementation that used to live here called the Arctic
+// 'Antarctica', called Australia 'Asia', and returned a phantom eighth continent
+// ('Middle East') that made CONTINENTS_7 reachable without ever going south.
+// It now lives in `utils/continents.ts`, resolves by ISO country, and is the only
+// copy — `utils/stats/uniqueStats.ts` used to carry a byte-identical duplicate.
+// Re-exported here so the existing import sites keep working.
+export { getContinent };
 
 export async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
   const stats: UserStats = {
@@ -368,13 +359,14 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     if (depAirport?.country) stats.countries.add(depAirport.country);
     if (arrAirport?.country) stats.countries.add(arrAirport.country);
 
-    // Continents (simplified mapping based on coordinates)
+    // Continents — resolved from the airport's ISO country, with the coordinates only
+    // as a fallback. The country is exact; boxes drawn on a lat/lon grid are not.
     if (depAirport) {
-      const continent = getContinent(depAirport.lat, depAirport.lon);
+      const continent = getContinent(depAirport.lat, depAirport.lon, depAirport.country);
       if (continent) stats.continents.add(continent);
     }
     if (arrAirport) {
-      const continent = getContinent(arrAirport.lat, arrAirport.lon);
+      const continent = getContinent(arrAirport.lat, arrAirport.lon, arrAirport.country);
       if (continent) stats.continents.add(continent);
     }
 

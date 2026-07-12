@@ -266,13 +266,15 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
 
     // Union flight + cruise + lodging countries into the shared countries Set.
     // Same for continents — map each cruise port to its continent via getContinent().
+    // Ports store the country as an English NAME ("Germany"), airports as an ISO-3166
+    // alpha-2 code ("DE"); getContinent accepts both.
     const combinedCountries = new Set<string>(stats.countries);
     const combinedContinents = new Set<string>(stats.continents);
     for (const c of cruiseStatsInput) {
       for (const stop of c.stops) {
         if (stop.port?.country) combinedCountries.add(stop.port.country);
         if (stop.port) {
-          const continent = getContinent(stop.port.lat, stop.port.lon);
+          const continent = getContinent(stop.port.lat, stop.port.lon, stop.port.country);
           if (continent) combinedContinents.add(continent);
         }
       }
@@ -336,17 +338,21 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     // Use callback-based transaction to prevent race conditions
     const newlyUnlocked: UserAchievementWithRelation[] = [];
 
+    const revoked: string[] = [];
+
     try {
       await prisma.$transaction(async (tx) => {
         for (const achievement of allAchievements) {
           const existing = existingAchievementMap.get(achievement.id);
-          const alreadyUnlocked =
-            existing && existing.progress >= achievement.requirement;
+          const wasUnlocked = Boolean(
+            existing && existing.progress >= achievement.requirement,
+          );
 
-          if (alreadyUnlocked) {
-            continue;
-          }
-
+          // Every achievement is re-evaluated on every run, unlocked ones included.
+          // This used to `continue` on an already-unlocked achievement, which meant a
+          // badge granted from data that was later corrected or deleted could never be
+          // taken back. It also meant a scoring bug (the Arctic being classified as
+          // Antarctica, say) stayed rewarded forever even after the bug was fixed.
           const { isUnlocked, progress } = checkAchievement(
             achievement,
             augmentedStats,
@@ -360,13 +366,25 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
           // the unique constraint. Use upsert instead of create — it
           // handles both cases atomically inside the transaction.
           if (isUnlocked) {
+            // Steady state: the user already holds it and the stored progress is
+            // already the requirement. Re-evaluating is cheap (in memory), but writing
+            // is not — without this guard every flight save would re-upsert every badge
+            // the user has ever earned, adding dozens of pointless writes to a
+            // transaction that is already contended.
+            if (wasUnlocked && existing && existing.progress === achievement.requirement) {
+              continue;
+            }
+
             const updated = await tx.userAchievement.upsert({
               where: {
                 userId_achievementId: { userId, achievementId: achievement.id },
               },
               update: {
                 progress: achievement.requirement,
-                unlockedAt: new Date(),
+                // Keep the ORIGINAL unlock date. Re-checking an achievement the user
+                // already holds must not make it look freshly earned — that would
+                // reshuffle the trophy case on every flight they add.
+                ...(wasUnlocked ? {} : { unlockedAt: new Date() }),
               },
               create: {
                 userId,
@@ -378,10 +396,22 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
             // Only count as newly-unlocked when the pre-transaction snapshot
             // had no unlock yet. Re-upserting an already-unlocked row
             // shouldn't emit another "unlocked" event.
-            if (!existing || existing.progress < achievement.requirement) {
+            if (!wasUnlocked) {
               newlyUnlocked.push(updated);
             }
           } else if (existing) {
+            // Nothing changed — skip the write. (An unlocked badge that is still
+            // unlocked never reaches here; this is the progress-row steady state.)
+            if (existing.progress === progress) {
+              continue;
+            }
+            if (wasUnlocked) {
+              // The user holds this badge but no longer meets its requirement — the
+              // flights behind it were deleted, or it was granted by a scoring bug.
+              // Writing the true progress drops it back below the threshold, which is
+              // what "revoked" means here (there is no separate unlocked flag).
+              revoked.push(achievement.code);
+            }
             await tx.userAchievement.update({
               where: { id: existing.id },
               data: { progress },
@@ -403,6 +433,14 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
           }
         }
       });
+
+      if (revoked.length > 0) {
+        logger.info({
+          operation: 'revoke_achievements',
+          message: 'Achievements no longer met their requirement and were revoked',
+          context: { userId, codes: revoked },
+        });
+      }
     } catch (error) {
       logger.error({
         operation: 'update_achievements_transaction',

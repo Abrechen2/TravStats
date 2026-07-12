@@ -1,6 +1,13 @@
 import { describe, it, expect } from "vitest";
 import type { DomainStatsMap } from "../../../../lib/stats/domain-stats";
-import { aggregate, collectYears, delta, isWithData } from "../aggregate";
+import {
+  aggregate,
+  collectYears,
+  delta,
+  isWithData,
+  pickAdjacentYear,
+  resolveStaleCompareYear,
+} from "../aggregate";
 
 const flightStats = {
   domain: "flight" as const,
@@ -132,5 +139,66 @@ describe("isWithData", () => {
 
   it("rejects hasData=false", () => {
     expect(isWithData({ domain: "lodging", hasData: false })).toBe(false);
+  });
+});
+
+describe("pickAdjacentYear", () => {
+  it("prefers the chronologically closest year", () => {
+    expect(pickAdjacentYear([2020, 2022, 2023], 2024)).toBe(2023);
+  });
+
+  it("skips the current year itself", () => {
+    expect(pickAdjacentYear([2023, 2024], 2024)).toBe(2023);
+  });
+
+  it("ties prefer the older year", () => {
+    expect(pickAdjacentYear([2022, 2024], 2023)).toBe(2022);
+  });
+
+  it("returns null when no other candidate exists", () => {
+    expect(pickAdjacentYear([2024], 2024)).toBeNull();
+    expect(pickAdjacentYear([], 2024)).toBeNull();
+  });
+
+  it("picks the most recent year when current is null", () => {
+    expect(pickAdjacentYear([2021, 2022, 2023], null)).toBe(2023);
+  });
+});
+
+// Covers issue #188's stale-year requirement: a persisted compareYear
+// (from localStorage) can go stale in ways a same-session pick never
+// could — deleted trips, a different dataset, or fewer than 2 years of
+// data at all. The comparison must fall back gracefully, never crash,
+// and must not render a comparison against a year with no data.
+describe("resolveStaleCompareYear", () => {
+  it("returns null (no change) when compareYear is null", () => {
+    expect(resolveStaleCompareYear([2023, 2024], 2024, null)).toBeNull();
+  });
+
+  it("returns null (no change) when compareYear is valid and not the selected year", () => {
+    expect(resolveStaleCompareYear([2022, 2023, 2024], 2024, 2023)).toBeNull();
+  });
+
+  it("falls back to the closest other year when compareYear no longer exists", () => {
+    // e.g. the user deleted all 2023 trips since choosing it as compareYear.
+    const result = resolveStaleCompareYear([2022, 2024], 2024, 2023);
+    expect(result).toEqual({ compareYear: 2022, disableCompare: false });
+  });
+
+  it("falls back when compareYear equals the newly selected year", () => {
+    const result = resolveStaleCompareYear([2023, 2024], 2024, 2024);
+    expect(result).toEqual({ compareYear: 2023, disableCompare: false });
+  });
+
+  it("disables comparison when no fallback year exists (single year of data)", () => {
+    // Brand-new install / thinned-out dataset with only one year left,
+    // but a persisted compareEnabled/compareYear from a richer dataset.
+    const result = resolveStaleCompareYear([2024], 2024, 2023);
+    expect(result).toEqual({ compareYear: null, disableCompare: true });
+  });
+
+  it("disables comparison when there are no years at all", () => {
+    const result = resolveStaleCompareYear([], null, 2023);
+    expect(result).toEqual({ compareYear: null, disableCompare: true });
   });
 });
