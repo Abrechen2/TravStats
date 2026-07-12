@@ -14,11 +14,20 @@ it("renders nothing for a plain manual flight", () => {
   expect(container.firstChild).toBeNull();
 });
 
+it("keeps the hover path: tooltip is present with group-hover visibility when closed", () => {
+  render(<SourceInfoDot flight={{ ...base, dataSource: "email_import" } as unknown as Flight} />);
+  const tooltip = screen.getByRole("tooltip", { hidden: true });
+  expect(tooltip.className).toContain("group-hover:block");
+  expect(tooltip.className).toContain("hidden");
+});
+
 it("shows the tooltip on click (touch fallback) and hides on second click", () => {
   render(<SourceInfoDot flight={{ ...base, dataSource: "email_import" } as unknown as Flight} />);
   const dot = screen.getByRole("button");
   fireEvent.click(dot);
   expect(screen.getByText(/flights:dataSource.email_import/)).toBeInTheDocument();
   fireEvent.click(dot);
-  expect(screen.queryByText(/flights:dataSource.email_import/)).not.toBeInTheDocument();
+  // When hidden, verify by class instead of DOM absence
+  const tooltip = screen.getByRole("tooltip", { hidden: true });
+  expect(tooltip.className).toContain("hidden");
 });

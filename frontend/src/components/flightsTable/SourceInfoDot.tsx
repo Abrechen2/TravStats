@@ -5,9 +5,10 @@ import { getFlightSourceInfo } from "../../lib/flightSourceInfo";
 
 /**
  * ℹ dot next to the row actions carrying the data-provenance tooltip.
- * Renders nothing when there is nothing to tell. Hover shows the tooltip
- * via CSS (group-hover); click toggles it (touch fallback) and a document
- * listener closes it again.
+ * Renders nothing when there is nothing to tell. Desktop hover shows
+ * the tooltip via CSS (group-hover); touch/click toggles it (touch fallback)
+ * with the click-open state winning over hover. A document listener closes
+ * it when clicking outside.
  */
 export default function SourceInfoDot({ flight }: { flight: Flight }): JSX.Element | null {
   const { t } = useTranslation(["flights"]);
@@ -38,22 +39,20 @@ export default function SourceInfoDot({ flight }: { flight: Flight }): JSX.Eleme
       >
         i
       </button>
-      {open && (
-        <span
-          className="absolute right-0 top-full mt-2 z-20 rounded-lg border px-3 py-2 text-xs whitespace-nowrap shadow-lg"
-          style={{ background: "var(--bg-base)", borderColor: "var(--color-border)", color: "var(--text-primary)" }}
-          role="tooltip"
-        >
-          {lines.map((line, i) => (
-            <span key={i} className="block">
-              <span className="font-medium">{line.icon} {line.label}</span>
-              {line.detail && (
-                <span className="block" style={{ color: "var(--text-muted)" }}>{line.detail}</span>
-              )}
-            </span>
-          ))}
-        </span>
-      )}
+      <span
+        className={`absolute right-0 top-full mt-2 z-20 rounded-lg border px-3 py-2 text-xs whitespace-nowrap shadow-lg ${open ? "block" : "hidden group-hover:block"}`}
+        style={{ background: "var(--bg-base)", borderColor: "var(--color-border)", color: "var(--text-primary)" }}
+        role="tooltip"
+      >
+        {lines.map((line, i) => (
+          <span key={i} className="block">
+            <span className="font-medium">{line.icon} {line.label}</span>
+            {line.detail && (
+              <span className="block" style={{ color: "var(--text-muted)" }}>{line.detail}</span>
+            )}
+          </span>
+        ))}
+      </span>
     </span>
   );
 }
