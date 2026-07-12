@@ -76,6 +76,11 @@ export interface FlightCompleteStepProps {
   setSeatClass: (v: "economy" | "premium_economy" | "business" | "first") => void;
   setStatus: (v: "scheduled" | "flown" | "cancelled" | "historical") => void;
   setCategory: (v: "business" | "private" | "vacation") => void;
+  // Booking (#197 — same fields the edit modal offers)
+  bookingReference: string;
+  ticketNumber: string;
+  setBookingReference: (v: string) => void;
+  setTicketNumber: (v: string) => void;
   // Price
   price: number | undefined;
   /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
@@ -135,6 +140,10 @@ export default function FlightCompleteStep({
   setSeatClass,
   setStatus,
   setCategory,
+  bookingReference,
+  ticketNumber,
+  setBookingReference,
+  setTicketNumber,
   price,
   currency,
   setPrice,
@@ -711,6 +720,30 @@ export default function FlightCompleteStep({
             value={currency}
             onChange={setCurrency}
             className={`input ${sizedInputClass}`}
+          />
+        </div>
+      </div>
+
+      {/* Booking Reference / Ticket Number (#197) */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className={`label ${textClass}`}>{t("flights:form.bookingReference")}</label>
+          <input
+            type="text"
+            value={bookingReference}
+            onChange={(e) => setBookingReference(e.target.value.toUpperCase())}
+            className={`input ${sizedInputClass}`}
+            placeholder={t("flights:form.placeholders.bookingReference")}
+          />
+        </div>
+        <div>
+          <label className={`label ${textClass}`}>{t("flights:form.ticketNumber")}</label>
+          <input
+            type="text"
+            value={ticketNumber}
+            onChange={(e) => setTicketNumber(e.target.value)}
+            className={`input ${sizedInputClass}`}
+            placeholder={t("flights:form.placeholders.ticketNumber")}
           />
         </div>
       </div>
