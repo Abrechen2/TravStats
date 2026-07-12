@@ -82,12 +82,37 @@ garbage input) still returns **200 OK** with a dynamically generated
 `image/svg+xml` placeholder — a colored square with the (truncated,
 uppercased) input code rendered as text. The placeholder is **not** a
 fixed/constant asset — both the fill color and the text content vary per
-input code, so there is no single stable MD5 to pin:
+input code, so there is no single stable MD5 to pin.
+
+**Update (2026-07-12, same day, verification phase):** End-to-end testing
+revealed that the Daisycon placeholder itself (for the same code and
+dimensions) is **not byte-stable across render generations**. Three
+distinct MD5 hashes have been observed for the identical visual placeholder
+PNG, indicating backend re-renders or CDN cache invalidations over time.
+As a result, the MD5-based filter in the proxy's
+`DAISYCON_PLACEHOLDER_MD5S` set can never be exhaustive — new unknown-airline
+codes may arrive with unobserved MD5 hashes, slip through the filter, and
+get disk-cached as if they were real logos. This is cosmetic-only (users
+saw the same placeholder PNG before the proxy existed) and unobservable in
+production (only reachable for airlines logostream doesn't know). The filter
+is treated as BEST-EFFORT and will be extended incrementally as new hashes
+are encountered:
 
 | Input | Status | Content-Type | Size | `X-Asset` | Body (placeholder SVG) | MD5 |
 |---|---|---|---|---|---|---|
 | `iata=Q9` (garbage) | 200 | `image/svg+xml` | 265 B | `-` | `fill="#1F2853"` … `<text>Q9</text>` | `96311784596dabd9a136333a667054b8` |
 | `icao=ZZZZ` (garbage) | 200 | `image/svg+xml` | 266 B | `-` | `fill="#084059"` … `<text>ZZZ</text>` | `460305bde733245401990f34feef14a0` |
+
+### Observed Daisycon placeholder PNG render generations (cosmetic filter)
+
+These MD5 hashes represent the same visual 300×150 placeholder PNG across
+different Daisycon backend render generations (2026-07-12 / 2026-07-XX / 2026-07-XX):
+
+| Generation | MD5 |
+|---|---|
+| 1 | `e868e45186e3f2e758f42dcd1029da2d` |
+| 2 | `fdbd908af301103989b2373c18c170a5` |
+| 3 | `9722f0e8186537a02ca39846f7b4cf7b` |
 
 Implication for the proxy (Task 4+): a 200 response is **not** sufficient
 to detect "known airline" — must check `Content-Type` (`image/png` =
