@@ -35,10 +35,9 @@ export interface ArcDatum {
    * `"scheduled"` only when EVERY constituent flight is still scheduled
    * (pure-scheduled, never flown); `"past"` otherwise — this collapses
    * historical-only, mixed (flown + scheduled), and regular past-only
-   * routes into one bucket, mirroring the flat map's
-   * `routesLayer.ts`/`statusTwoTone` collapsing rule. Consumed by
-   * `buildGlobeLayers`'s `resolveFlightArcColor` when `statusTwoTone`
-   * is active; ignored otherwise.
+   * routes into one bucket, mirroring the flat map's `routesLayer.ts`
+   * `pureScheduled` rule. Consumed by `buildGlobeLayers`'s
+   * `resolveFlightArcColor` → the shared `resolveFlightColor`.
    */
   status: "past" | "scheduled";
 }

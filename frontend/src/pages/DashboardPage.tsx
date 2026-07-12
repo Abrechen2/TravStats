@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { DashboardLayout } from "../components/Dashboard/DashboardLayout";
 import { useDashboardRoute } from "../hooks/useDashboardRoute";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { flightsApi } from "../lib/api/flights";
 import { cruiseApi } from "../lib/api/cruise";
 import { logger } from "../lib/logger";
@@ -40,6 +41,7 @@ export default function DashboardPage(): JSX.Element {
   useImportMigrationToast();
   const { tab } = useDashboardRoute();
   const { isEnabled } = useEnabledDomains();
+  const { isFeatureVisible } = useBetaFeatures();
   const [counts, setCounts] = useState({ flight: 0, cruise: 0, poi: 0 });
   // Bumping this token re-runs the counts effect AND remounts the
   // active tab (via key prop) so per-tab data picks up the new entry
@@ -78,7 +80,9 @@ export default function DashboardPage(): JSX.Element {
       {tab === "all" && <AllTab key={refreshToken} />}
       {tab === "flight" && <FlightsTab key={refreshToken} />}
       {tab === "cruise" && <CruisesTab key={refreshToken} />}
-      {tab === "poi" && <PoiTab key={refreshToken} />}
+      {/* POI is a placeholder panel — hidden with its tab-bar entry behind the
+          beta gate, so /dashboard/poi renders nothing on a gated instance. */}
+      {tab === "poi" && isFeatureVisible("poiDashboardTab") && <PoiTab key={refreshToken} />}
     </DashboardLayout>
   );
 }

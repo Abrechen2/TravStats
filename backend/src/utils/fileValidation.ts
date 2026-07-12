@@ -266,6 +266,35 @@ export function validateEmailFile(filePath: string, declaredMimeType: string, ex
 }
 
 /**
+ * Validate profile picture file (images only, no PDF)
+ */
+export function validateProfilePictureFile(filePath: string, declaredMimeType: string): { valid: boolean; reason?: string } {
+  const allowedMimeTypes = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+  ];
+
+  if (!allowedMimeTypes.includes(declaredMimeType)) {
+    return { valid: false, reason: `Invalid MIME type: ${declaredMimeType}` };
+  }
+
+  // Then validate with magic numbers — this is what actually stops a
+  // renamed .exe or malicious payload claiming to be image/png.
+  if (!validateFileType(filePath, declaredMimeType)) {
+    const detectedType = detectFileType(filePath);
+    return {
+      valid: false,
+      reason: `File signature does not match declared type. Declared: ${declaredMimeType}, Detected: ${detectedType || 'unknown'}`,
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
  * Validate image file for boarding pass parsing
  */
 export function validateBoardingPassImage(filePath: string, declaredMimeType: string): { valid: boolean; reason?: string } {

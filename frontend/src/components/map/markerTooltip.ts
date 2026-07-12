@@ -29,6 +29,10 @@ const ARC_LAYER_IDS = new Set<string>([
   "routes-arc",
   "routes-arc-scheduled",
   "routes-arc-upcoming",
+  // …and the same routes in "flat" shape (#183, flatRoutesLayer). The datum
+  // carries the same departure/arrival/count/sourceColor fields, so the route
+  // card is identical whichever shape the user picked.
+  "routes-path",
 ]);
 const CRUISE_PATH_LAYER_IDS = new Set<string>(["cruise-arcs"]);
 

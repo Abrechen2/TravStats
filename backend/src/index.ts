@@ -436,6 +436,26 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({ operation: 'server_start_timezone_backfill_error', message: 'Failed to backfill airport timezones', error });
     }
 
+    // Re-evaluate achievements for every user. The engine only runs on a flight/cruise
+    // write, so a user who adds nothing would keep a badge that a scoring fix has since
+    // invalidated (the continent mapping used to call the Arctic "Antarctica" and count a
+    // phantom "Middle East" continent). Idempotent: writes nothing when nothing changed.
+    try {
+      const { recheckAllAchievements } = await import('./scripts/recheckAchievements');
+      const { users, failed } = await recheckAllAchievements();
+      logger.info({
+        operation: 'server_start_achievement_recheck',
+        message: `Re-evaluated achievements for ${users - failed} of ${users} users`,
+        context: { users, failed },
+      });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_achievement_recheck_error',
+        message: 'Failed to re-evaluate achievements',
+        error,
+      });
+    }
+
     // Initialize backup scheduler
     try {
       const { startScheduler } = await import('./services/backupScheduler');

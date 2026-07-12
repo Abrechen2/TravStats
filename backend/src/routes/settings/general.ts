@@ -11,6 +11,7 @@ import {
   defaultSettings,
 } from './types';
 import { DOMAIN_KEYS, type DomainKey } from '../../shared/domains';
+import { getInstanceSettings } from '../../services/instanceSettingsService';
 
 const router = Router();
 
@@ -22,10 +23,22 @@ const settingsSchema = z.object({
   profile: z.object({
     username: z.string().optional(),
     email: z.preprocess(emptyToUndef, z.string().email().optional()),
-    profilePicture: z.string().url().refine(
-      (url) => url.startsWith('https://') || url.startsWith('http://'),
-      'Profile picture must be an HTTP(S) URL'
-    ).optional().nullable(),
+    // Self-hosted app behind an arbitrary domain/reverse proxy can't reliably
+    // know its own public origin, so a same-origin path (e.g. the value
+    // returned by POST /settings/profile-picture) is the normal case.
+    // http(s):// is accepted for backwards compatibility with older rows
+    // that stored an absolute URL. blob:/data: URLs are rejected — they're
+    // client-local (or huge inline payloads) and don't survive a reload or
+    // another device (see issue #186).
+    profilePicture: z
+      .string()
+      .refine(
+        (value) =>
+          value.startsWith('https://') || value.startsWith('http://') || value.startsWith('/'),
+        'Profile picture must be an HTTP(S) URL or a same-origin path'
+      )
+      .optional()
+      .nullable(),
   }).partial().optional(),
   display: z.object({
     theme: z.enum(['light', 'dark']).optional(),
@@ -95,8 +108,15 @@ const settingsSchema = z.object({
 
 export const settingsUpdateSchema = settingsSchema;
 
-/** Build a SettingsResponse from a Prisma userSettings record */
-function buildSettingsResponse(record: {
+/**
+ * Build a SettingsResponse from a Prisma userSettings record.
+ *
+ * `betaFeaturesEnabled` is instance-level (AdminSettings), not user-level —
+ * it rides along on this payload purely so the frontend learns the value at
+ * boot without a second request. It is read-only here: the write path is the
+ * admin-guarded PUT /api/v1/admin/instance-settings.
+ */
+function buildSettingsResponse(betaFeaturesEnabled: boolean, record: {
   data: Prisma.JsonValue;
   autoUpdateEnabled: boolean;
   autoUpdateRequireApproval: boolean;
@@ -129,6 +149,9 @@ function buildSettingsResponse(record: {
       maxPerDay: record.historicalEnrichmentMaxPerDay ?? 50,
     },
     enabledDomains: record.enabledDomains,
+    // Listed after the `...baseData` spread so a stale key that somehow made
+    // it into the settings JSON can never shadow the authoritative value.
+    betaFeaturesEnabled,
   };
 }
 
@@ -136,6 +159,7 @@ function buildSettingsResponse(record: {
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
+    const { betaFeaturesEnabled } = await getInstanceSettings();
     const existing = await prisma.userSettings.findUnique({
       where: { userId },
     });
@@ -159,12 +183,12 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
           historicalEnrichmentMaxPerDay: 50,
         },
       });
-      const response = buildSettingsResponse(created);
+      const response = buildSettingsResponse(betaFeaturesEnabled, created);
       res.json(response);
       return;
     }
 
-    const response = buildSettingsResponse(existing);
+    const response = buildSettingsResponse(betaFeaturesEnabled, existing);
 
     logger.info({
       operation: 'get_settings_response',
@@ -182,8 +206,12 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
 router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
+    // Zod strips unknown keys, so a client PUTting `betaFeaturesEnabled` here
+    // never reaches the DB — the value below is always re-read from
+    // AdminSettings, never taken from the request body.
     const payload = settingsSchema.parse(req.body);
     const { enabledDomains, ...rest } = payload;
+    const { betaFeaturesEnabled } = await getInstanceSettings();
     logger.info({ operation: 'settings_update', userId });
 
     const existing = await prisma.userSettings.findUnique({
@@ -297,7 +325,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     });
 
     // Return response with autoUpdate and historicalEnrichment settings included
-    const response = buildSettingsResponse(saved);
+    const response = buildSettingsResponse(betaFeaturesEnabled, saved);
     res.json(response);
   } catch (error) {
     next(error);
