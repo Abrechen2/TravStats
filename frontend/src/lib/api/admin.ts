@@ -494,6 +494,10 @@ export const adminApi = {
       frontendUrl: string | null;
       publicUrl: string | null;
       lanUrl: string | null;
+      // Geocoder base URLs — always resolved (DB > ENV > public default),
+      // unlike the nullable URL fields above. See `resolveGeocoderUrls()`.
+      photonUrl: string;
+      nominatimUrl: string;
     };
   }> => {
     const { data } = await api.get<{
@@ -504,6 +508,8 @@ export const adminApi = {
         frontendUrl: string | null;
         publicUrl: string | null;
         lanUrl: string | null;
+        photonUrl: string;
+        nominatimUrl: string;
       };
     }>("/admin/instance-settings");
     return data;
@@ -516,6 +522,9 @@ export const adminApi = {
     frontendUrl?: string;
     publicUrl?: string;
     lanUrl?: string;
+    // Empty string clears the DB override, reverting to ENV/default.
+    photonUrl?: string;
+    nominatimUrl?: string;
   }): Promise<{
     settings: {
       instanceName: string;
@@ -524,6 +533,8 @@ export const adminApi = {
       frontendUrl: string | null;
       publicUrl: string | null;
       lanUrl: string | null;
+      photonUrl: string;
+      nominatimUrl: string;
     };
   }> => {
     const { data } = await api.put<{
@@ -534,6 +545,8 @@ export const adminApi = {
         frontendUrl: string | null;
         publicUrl: string | null;
         lanUrl: string | null;
+        photonUrl: string;
+        nominatimUrl: string;
       };
     }>("/admin/instance-settings", patch);
     return data;
