@@ -419,6 +419,7 @@ model AdminSettings {
   globalAirlabsApiKey       String? @map("global_airlabs_api_key")
   globalAviationstackApiKey String? @map("global_aviationstack_api_key")
   globalAerodataboxApiKey   String? @map("global_aerodatabox_api_key")
+  globalLogostreamApiKey    String? @map("global_logostream_api_key")
   globalOpenskyClientId     String? @map("global_opensky_client_id")
   globalOpenskyClientSecret String? @map("global_opensky_client_secret")
   globalOpenskyUsername     String? @map("global_opensky_username")
