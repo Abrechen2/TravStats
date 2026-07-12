@@ -117,7 +117,10 @@ describe("resolveAirlineLogo", () => {
     jest.spyOn(resolver, "getApiKey").mockResolvedValue(FAKE_KEY);
     jest.spyOn(cache, "getCachedLogo").mockResolvedValue(null);
     const warnSpy = jest.spyOn(logger, "warn").mockImplementation(() => undefined as unknown as void);
-    global.fetch = jest.fn().mockRejectedValue(new Error("network down")) as unknown as typeof fetch;
+    // Simulate an error message that embeds the key (simulating a future fetch implementation detail)
+    global.fetch = jest.fn().mockRejectedValue(
+      new Error(`request to https://airlines-api.logostream.dev/airlines/iata/LH?variant=icon&key=${FAKE_KEY} failed`)
+    ) as unknown as typeof fetch;
 
     const r = await resolveAirlineLogo("LH", "icon");
 
