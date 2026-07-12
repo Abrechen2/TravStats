@@ -6,8 +6,11 @@
 // caller is the only place that can present counts honestly. Branching is
 // done on `failed[].code` (a small closed union), NEVER on `failed[].error`
 // (a diagnostic string, not meant for the user).
+//
+// Also builds the toast for `LodgingImportRevertResult` (Task 18b), used by
+// `LodgingImportBatchList`.
 
-import type { LodgingImportCommitResult } from "../types/lodgingImport";
+import type { LodgingImportCommitResult, LodgingImportRevertResult } from "../types/lodgingImport";
 
 export interface LodgingCommitToast {
   type: "success" | "warning";
@@ -57,6 +60,40 @@ export function describeLodgingCommitResult(
       skipped: result.skipped,
       failedCount: result.failed.length,
       reasons,
+    }),
+  };
+}
+
+/**
+ * Builds the toast to show after reverting an import batch (Task 18b). The
+ * owner's semantics: a revert deletes only what the batch created — a
+ * batch-created lodging that still has foreign stays (added by hand, or
+ * attached by a later batch) survives, merely detached from the batch.
+ * `detachedLodgings` is what lets this say "kept" instead of silently
+ * losing that distinction, so a result with `detachedLodgings > 0` MUST
+ * produce a visibly different message than one with 0 — never just the
+ * same "deleted" sentence with a hidden zero.
+ */
+export function describeLodgingRevertResult(
+  result: LodgingImportRevertResult,
+  t: Translate
+): LodgingCommitToast {
+  if (result.detachedLodgings > 0) {
+    return {
+      type: "success",
+      message: t("lodging:import.batches.revertResult.withDetached", {
+        deletedLodgings: result.deletedLodgings,
+        deletedStays: result.deletedStays,
+        detachedLodgings: result.detachedLodgings,
+      }),
+    };
+  }
+
+  return {
+    type: "success",
+    message: t("lodging:import.batches.revertResult.success", {
+      deletedLodgings: result.deletedLodgings,
+      deletedStays: result.deletedStays,
     }),
   };
 }
