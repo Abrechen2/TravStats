@@ -14,22 +14,23 @@ const timeFmt = (iso: string, tz: string): string =>
 /** One ab/an row pair: weekday + compact date + airport-local time, +N overnight marker. */
 export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
   const { t, i18n } = useTranslation(["flights"]);
-  const dateOnly =
-    flight.depTimeSemantics === "DATE_ONLY" || flight.depTimeSemantics === "UNKNOWN";
+  const isDateOnly = (s: Flight["depTimeSemantics"]) => s === "DATE_ONLY" || s === "UNKNOWN";
+  const depDateOnly = isDateOnly(flight.depTimeSemantics);
+  const arrDateOnly = isDateOnly(flight.arrTimeSemantics);
   const depTz = flight.depTimezone || "UTC";
   const arrTz = flight.arrTimezone || "UTC";
   const shift =
-    !dateOnly && flight.departureTime && flight.arrivalTime
+    !depDateOnly && !arrDateOnly && flight.departureTime && flight.arrivalTime
       ? dayShift(flight.departureTime, flight.arrivalTime, depTz, arrTz)
       : 0;
 
-  const row = (label: string, iso: string | null | undefined, tz: string, marker?: number) => (
+  const row = (label: string, iso: string | null | undefined, tz: string, showTime: boolean, marker?: number) => (
     <div className="flex items-baseline gap-2 whitespace-nowrap text-[12.5px]" style={{ fontVariantNumeric: "tabular-nums" }}>
       <span className="w-4 text-[10px]" style={{ color: "var(--text-muted)" }}>{label}</span>
       {iso ? (
         <>
           <span style={{ color: "var(--text-primary)" }}>{dateFmt(iso, tz, i18n.language)}</span>
-          {!dateOnly && <span style={{ color: "var(--text-muted)" }}>{timeFmt(iso, tz)}</span>}
+          {showTime && <span style={{ color: "var(--text-muted)" }}>{timeFmt(iso, tz)}</span>}
           {marker !== undefined && marker >= 1 && (
             <span className="text-[10px] font-semibold" style={{ color: "var(--accent)" }}>+{marker}</span>
           )}
@@ -42,8 +43,8 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
 
   return (
     <div className="flex flex-col gap-0.5">
-      {row(t("flights:table.timeDep"), flight.departureTime, depTz)}
-      {row(t("flights:table.timeArr"), flight.arrivalTime, arrTz, shift)}
+      {row(t("flights:table.timeDep"), flight.departureTime, depTz, !depDateOnly)}
+      {row(t("flights:table.timeArr"), flight.arrivalTime, arrTz, !arrDateOnly, shift)}
     </div>
   );
 }
