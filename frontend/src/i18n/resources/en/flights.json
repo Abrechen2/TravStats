@@ -206,6 +206,7 @@
       "same": "As same flight",
       "return": "As return flight"
     },
+    "sourceInfo": "Data source",
     "sort": {
       "departure": "Departure",
       "airline": "Airline",
