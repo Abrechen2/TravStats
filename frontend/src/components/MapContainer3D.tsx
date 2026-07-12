@@ -6,6 +6,7 @@ import type { Lodging } from "../types/lodging";
 import type { Layer } from "@deck.gl/core";
 import type { AppearanceDomain } from "./map/controlPanelKit";
 import { buildLodgingPins } from "./layers/lodgingPinsLayer";
+import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 
 /**
  * The narrow set of map-rendering modes that MapContainer3D actually implements.
@@ -155,15 +156,29 @@ export default function MapContainer3D({
     [cruisesOverride, internalCruises]
   );
 
+  // Lodging marker-size slider (Task 8). Lives HERE rather than in
+  // DeckGLMap's local state (unlike the flight/cruise marker sizes) because
+  // this component is what builds the lodging pin layer below via
+  // `buildLodgingPins` and needs the current value to re-memo on; it's
+  // threaded down into DeckGLMap purely so the flat-map control panel can
+  // render the slider. Persisted the same way every other appearance field
+  // is — a merge-write via `saveMapAppearance` that only touches this key.
+  const [lodgingMarkerSize, setLodgingMarkerSize] = useState<number>(
+    () => loadMapAppearance().lodgingMarkerSize ?? 1
+  );
+  useEffect(() => {
+    saveMapAppearance({ lodgingMarkerSize });
+  }, [lodgingMarkerSize]);
+
   // Lodging pins are flat-map only (no globe support yet) and additive to
   // whatever the caller already passes as extraLayers — merged just below
   // the DeckGLMap render, not GlobeView's. `buildLodgingPins` returns null
   // when nothing has coordinates, so this contributes nothing by default.
   const lodgingLayers = useMemo<Layer[]>(() => {
     if (!lodgingsOverride || lodgingsOverride.length === 0) return [];
-    const layer = buildLodgingPins(lodgingsOverride);
+    const layer = buildLodgingPins(lodgingsOverride, lodgingMarkerSize);
     return layer ? [layer] : [];
-  }, [lodgingsOverride]);
+  }, [lodgingsOverride, lodgingMarkerSize]);
 
   const mapExtraLayers = useMemo<Layer[]>(
     () => [...(extraLayers ?? []), ...lodgingLayers],
@@ -230,6 +245,8 @@ export default function MapContainer3D({
             onResetTrip={onResetTrip}
             extraLayers={mapExtraLayers}
             appearanceDomains={appearanceDomains}
+            lodgingMarkerSize={lodgingMarkerSize}
+            onLodgingMarkerSizeChange={setLodgingMarkerSize}
           />
         )}
       </div>

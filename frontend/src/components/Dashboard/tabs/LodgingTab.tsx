@@ -5,7 +5,10 @@ import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { getLodgingStats, listLodgings } from "../../../lib/api/lodging";
 import { logger } from "../../../lib/logger";
-import { intervalOverlapsRange, useDashboardFilterStore } from "../../../store/dashboardFilterStore";
+import {
+  intervalOverlapsRange,
+  useDashboardFilterStore,
+} from "../../../store/dashboardFilterStore";
 import type { Lodging, LodgingStats } from "../../../types/lodging";
 import MapContainer3D from "../../MapContainer3D";
 import { LodgingListPanel } from "../sidebars/LodgingListPanel";
@@ -78,15 +81,14 @@ export function LodgingTab(): JSX.Element {
 
   return (
     <div style={{ position: "absolute", inset: 0 }}>
-      {/* No flight/cruise appearance controls here — this tab has nothing for them
-          to configure. `AppearanceDomain` doesn't have a "lodging" member (see
-          controlPanelKit.tsx), so an empty list is the correct, type-safe value —
-          mirrors how CruisesTab/FlightsTab scope their own domain. */}
+      {/* Only the lodging appearance section (marker-size slider) — no
+          flight/cruise controls, since this tab renders neither of those
+          domains. Mirrors how CruisesTab/FlightsTab scope their own domain. */}
       <MapContainer3D
         flights={[]}
         visMode="routes"
         lodgingsOverride={visibleLodgings}
-        appearanceDomains={[]}
+        appearanceDomains={["lodging"]}
         // Without this the map fetches and draws every cruise route on top of the
         // hotel pins (showInternalCruises defaults to true).
         showInternalCruises={false}
