@@ -1,6 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { DomainTabStrip } from "../DomainTabStrip";
+import { useSettingsStore } from "../../../store/settingsStore";
+
+// Real Zustand store instead of the global static mock — the POI tab is gated
+// behind the instance-level beta flag, which lives in this store.
+vi.unmock("../../../store/settingsStore");
 
 // Override the global key-passthrough mock with human-readable labels for this component.
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -21,6 +26,12 @@ vi.mock("../../../hooks/useTranslation", () => ({
 }));
 
 describe("DomainTabStrip", () => {
+  // The POI tab only exists on a beta-flagged instance; the pre-existing cases
+  // below are about tab behaviour, so run them with the gate open.
+  beforeEach(() => {
+    useSettingsStore.setState({ betaFeaturesEnabled: true });
+  });
+
   it("renders the four tabs with counts", () => {
     render(
       <DomainTabStrip
@@ -78,5 +89,39 @@ describe("DomainTabStrip", () => {
     expect(poi.getAttribute("data-disabled")).toBe("true");
     fireEvent.click(poi);
     expect(onSelect).toHaveBeenCalledWith("poi");
+  });
+
+  describe("beta gate: poiDashboardTab", () => {
+    const renderStrip = (): void => {
+      render(
+        <DomainTabStrip
+          active="all"
+          counts={{ flight: 1, cruise: 1, poi: 0 }}
+          enabled={{ flight: true, cruise: true, poi: true }}
+          onSelect={() => {}}
+        />
+      );
+    };
+
+    it("hides the POI tab when the beta flag is OFF", () => {
+      useSettingsStore.setState({ betaFeaturesEnabled: false });
+      renderStrip();
+      expect(screen.queryByRole("tab", { name: /poi/i })).toBeNull();
+      // the non-gated tabs are untouched
+      expect(screen.getByRole("tab", { name: /flights/i })).toBeTruthy();
+      expect(screen.getByRole("tab", { name: /cruises/i })).toBeTruthy();
+    });
+
+    it("hides the POI tab while the flag is still unknown (not loaded yet)", () => {
+      useSettingsStore.setState({ betaFeaturesEnabled: null });
+      renderStrip();
+      expect(screen.queryByRole("tab", { name: /poi/i })).toBeNull();
+    });
+
+    it("shows the POI tab when the beta flag is ON", () => {
+      useSettingsStore.setState({ betaFeaturesEnabled: true });
+      renderStrip();
+      expect(screen.getByRole("tab", { name: /poi/i })).toBeTruthy();
+    });
   });
 });

@@ -51,7 +51,12 @@ export default function InstanceSettings(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [addToast, t]);
+    // Mount-only on purpose (#190): this fetch seeds the form once. Listing
+    // `t`/`addToast` here re-ran it on re-renders (their identity is not
+    // guaranteed stable), and every re-run overwrote whatever the admin was
+    // typing with the server's values — the form was uneditable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,7 +208,7 @@ export default function InstanceSettings(): JSX.Element {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-base)] hover:opacity-90 disabled:opacity-50"
         >
           {saving ? t("common:buttons.saving") : t("common:buttons.save")}
         </button>

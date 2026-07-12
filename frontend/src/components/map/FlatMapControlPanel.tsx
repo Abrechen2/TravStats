@@ -7,26 +7,27 @@
 // filter), but the per-domain appearance controls are the exact same
 // component, so route + marker tuning reads the same across every mode.
 
-import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
-  AppearanceSection,
+  CruiseAppearanceSection,
+  FlightAppearanceSection,
+  PanelHeader,
   SectionLabel,
   SegControl,
   Toggle,
+  usePanelExpanded,
   ACCENT,
   PANEL_BG,
   HAIRLINE,
   BORDER,
   TEXT,
   type AppearanceDomain,
-  type DomainAppearanceState,
+  type CruiseAppearanceState,
+  type FlightAppearanceState,
 } from "./controlPanelKit";
-import { DEFAULT_CRUISE_ROUTE_COLOR } from "../Globe/buildGlobeLayers";
 import { MapChromeSections } from "./MapChromeSections";
 import type { LabelsMode } from "./labelPriority";
 
-const FLIGHT_ROUTE_DEFAULT: [number, number, number] = [240, 169, 71];
 const FLIGHT_MARKER_DEFAULT: [number, number, number] = [240, 169, 71];
 // Brand cruise blue — matches the port markers + the globe cruise routes.
 const CRUISE_MARKER_DEFAULT: [number, number, number] = [111, 160, 214];
@@ -45,8 +46,8 @@ export interface FlatMapControlPanelProps {
 
   /** Which domain appearance sections to show, in render order. */
   appearanceDomains: readonly AppearanceDomain[];
-  flightAppearance: DomainAppearanceState;
-  cruiseAppearance: DomainAppearanceState;
+  flightAppearance: FlightAppearanceState;
+  cruiseAppearance: CruiseAppearanceState;
 }
 
 export function FlatMapControlPanel({
@@ -64,7 +65,7 @@ export function FlatMapControlPanel({
   cruiseAppearance,
 }: FlatMapControlPanelProps): JSX.Element {
   const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, toggleExpanded] = usePanelExpanded();
 
   return (
     <div
@@ -79,24 +80,11 @@ export function FlatMapControlPanel({
         maxHeight: "calc(100vh - 200px)",
       }}
     >
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full shrink-0 cursor-pointer items-center justify-between px-3 py-2.5"
-        style={{ background: "transparent" }}
-      >
-        <span className="flex items-center gap-2 text-[13px] font-semibold" style={{ color: TEXT }}>
-          <span aria-hidden>🗺️</span>
-          {t("map:globe.panel.title")}
-        </span>
-        <span
-          className="transition-transform"
-          style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.6 }}
-          aria-hidden
-        >
-          ▾
-        </span>
-      </button>
+      <PanelHeader
+        title={t("map:globe.panel.title")}
+        expanded={expanded}
+        onToggle={toggleExpanded}
+      />
 
       {expanded && (
         <div className="scrollbar-none min-h-0 overflow-y-auto overflow-x-hidden px-3 pb-3">
@@ -122,8 +110,13 @@ export function FlatMapControlPanel({
             </div>
             {/* Marker labels: off / key markers only / all */}
             <div className="mt-2">
-              <div className="mb-1 flex items-center gap-2 px-1 text-xs font-medium" style={{ color: TEXT }}>
-                <span aria-hidden style={{ opacity: 0.9 }}>🏷️</span>
+              <div
+                className="mb-1 flex items-center gap-2 px-1 text-xs font-medium"
+                style={{ color: TEXT }}
+              >
+                <span aria-hidden style={{ opacity: 0.9 }}>
+                  🏷️
+                </span>
                 {t("map:globe.panel.labels")}
               </div>
               <SegControl<LabelsMode>
@@ -167,48 +160,26 @@ export function FlatMapControlPanel({
 
           {/* Per-domain appearance sections (Flüge / Kreuzfahrten / …) */}
           {appearanceDomains.includes("flight") && (
-            <AppearanceSection
+            <FlightAppearanceSection
               title={t("map:globe.panel.domainFlight")}
-              routeLabel={t("map:globe.panel.routes")}
-              routeColor={flightAppearance.routeColor}
-              routeDefault={FLIGHT_ROUTE_DEFAULT}
-              onRouteColorChange={flightAppearance.onRouteColorChange}
-              routeAutoLabel={t("map:globe.panel.frequency")}
-              widthLabel={t("map:globe.panel.width")}
-              routeWidth={flightAppearance.routeWidth}
-              onRouteWidthChange={flightAppearance.onRouteWidthChange}
-              markerLabel={t("map:globe.panel.airports")}
-              markerColor={flightAppearance.markerColor}
+              {...flightAppearance}
               markerDefault={FLIGHT_MARKER_DEFAULT}
-              onMarkerColorChange={flightAppearance.onMarkerColorChange}
+              markerLabel={t("map:globe.panel.airports")}
               markerAutoLabel={t("map:globe.panel.auto")}
+              widthLabel={t("map:globe.panel.width")}
               sizeLabel={t("map:globe.panel.size")}
-              markerSize={flightAppearance.markerSize}
-              onMarkerSizeChange={flightAppearance.onMarkerSizeChange}
             />
           )}
           {appearanceDomains.includes("cruise") && (
-            <AppearanceSection
+            <CruiseAppearanceSection
               title={t("map:globe.panel.domainCruise")}
-              routeLabel={t("map:globe.panel.routes")}
-              routeColor={cruiseAppearance.routeColor}
-              routeDefault={DEFAULT_CRUISE_ROUTE_COLOR}
-              onRouteColorChange={cruiseAppearance.onRouteColorChange}
-              routeAutoLabel={t("map:globe.panel.standard")}
-              widthLabel={t("map:globe.panel.width")}
-              routeWidth={cruiseAppearance.routeWidth}
-              onRouteWidthChange={cruiseAppearance.onRouteWidthChange}
-              markerLabel={t("map:globe.panel.ports")}
-              markerColor={cruiseAppearance.markerColor}
+              {...cruiseAppearance}
               markerDefault={CRUISE_MARKER_DEFAULT}
-              onMarkerColorChange={cruiseAppearance.onMarkerColorChange}
+              markerLabel={t("map:globe.panel.ports")}
               markerAutoLabel={t("map:globe.panel.auto")}
+              widthLabel={t("map:globe.panel.width")}
               sizeLabel={t("map:globe.panel.size")}
-              markerSize={cruiseAppearance.markerSize}
-              onMarkerSizeChange={cruiseAppearance.onMarkerSizeChange}
               arrowLabel={t("map:globe.panel.arrows")}
-              arrowScale={cruiseAppearance.arrowScale}
-              onArrowScaleChange={cruiseAppearance.onArrowScaleChange}
             />
           )}
         </div>

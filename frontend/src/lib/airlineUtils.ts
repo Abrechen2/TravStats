@@ -1,90 +1,29 @@
 /**
- * IATA airline code → airline name mapping (subset of common carriers).
- * Mirrors the backend AIRLINE_IATA_MAP in flightLookup.ts.
+ * Airline code → name (and code → code) resolution for display purposes.
+ *
+ * All lookup tables are derived from `AIRLINE_CATALOG`
+ * (`./generated/airlineCatalog.ts`), an auto-generated mirror of the
+ * backend's single source of truth at `backend/src/data/airlines.ts`. Do
+ * NOT hand-add entries here — regenerate the catalogue instead:
+ *
+ *   cd backend && npx tsx scripts/generate-airline-catalog.ts
  */
-const AIRLINE_IATA_MAP: Record<string, string> = {
-  // Germany / Austria / Switzerland
-  LH: "Lufthansa",
-  EW: "Eurowings",
-  OS: "Austrian Airlines",
-  LX: "SWISS",
-  "4U": "Germanwings",
-  X3: "TUI fly Deutschland",
-  EN: "Air Dolomiti",
-  // UK / Ireland
-  BA: "British Airways",
-  U2: "easyJet",
-  FR: "Ryanair",
-  EI: "Aer Lingus",
-  BE: "Flybe",
-  LS: "Jet2",
-  BY: "TUI Airways",
-  // France / Benelux / Iberia
-  AF: "Air France",
-  KL: "KLM",
-  SN: "Brussels Airlines",
-  TK: "Turkish Airlines",
-  VY: "Vueling",
-  IB: "Iberia",
-  I2: "Iberia Express",
-  UX: "Air Europa",
-  TP: "TAP Air Portugal",
-  // Scandinavia / Eastern Europe
-  SK: "SAS",
-  AY: "Finnair",
-  DY: "Norwegian",
-  W6: "Wizz Air",
-  WZ: "Wizz Air",
-  OK: "Czech Airlines",
-  LO: "LOT Polish Airlines",
-  RO: "TAROM",
-  // Middle East
-  EK: "Emirates",
-  QR: "Qatar Airways",
-  EY: "Etihad Airways",
-  GF: "Gulf Air",
-  WY: "Oman Air",
-  FZ: "flydubai",
-  // Asia / Pacific
-  SQ: "Singapore Airlines",
-  CX: "Cathay Pacific",
-  JL: "Japan Airlines",
-  NH: "ANA",
-  KE: "Korean Air",
-  OZ: "Asiana Airlines",
-  TG: "Thai Airways",
-  MH: "Malaysia Airlines",
-  GA: "Garuda Indonesia",
-  CI: "China Airlines",
-  BR: "EVA Air",
-  CA: "Air China",
-  MU: "China Eastern",
-  CZ: "China Southern",
-  AI: "Air India",
-  "6E": "IndiGo",
-  // North America
-  UA: "United Airlines",
-  AA: "American Airlines",
-  DL: "Delta Air Lines",
-  WN: "Southwest Airlines",
-  B6: "JetBlue",
-  AS: "Alaska Airlines",
-  AC: "Air Canada",
-  WS: "WestJet",
-  F9: "Frontier Airlines",
-  NK: "Spirit Airlines",
-  // Africa / Latin America / Others
-  ET: "Ethiopian Airlines",
-  KQ: "Kenya Airways",
-  SA: "South African Airways",
-  MS: "EgyptAir",
-  LA: "LATAM Airlines",
-  G3: "Gol",
-  AR: "Aerolíneas Argentinas",
-  AM: "Aeromexico",
-  CM: "Copa Airlines",
-  AV: "Avianca",
-};
+import { AIRLINE_CATALOG } from "./generated/airlineCatalog";
+
+/** IATA code (2 chars, e.g. "LH") → airline name. */
+const AIRLINE_IATA_MAP: Record<string, string> = Object.fromEntries(
+  AIRLINE_CATALOG.map((a) => [a.iata, a.name])
+);
+
+/** ICAO code (3 chars, e.g. "DLH") → airline name. */
+const AIRLINE_ICAO_MAP: Record<string, string> = Object.fromEntries(
+  AIRLINE_CATALOG.filter((a) => a.icao).map((a) => [a.icao as string, a.name])
+);
+
+/** ICAO code → IATA code, so a logo lookup (which wants IATA) can succeed. */
+const AIRLINE_ICAO_TO_IATA_MAP: Record<string, string> = Object.fromEntries(
+  AIRLINE_CATALOG.filter((a) => a.icao).map((a) => [a.icao as string, a.iata])
+);
 
 /**
  * Derive airline name from an IATA flight number prefix (first 2 characters).
@@ -97,29 +36,92 @@ export function getAirlineFromFlightNumber(flightNumber: string): string | null 
 }
 
 /**
- * Resolve a display-ready airline name from the stored airline field and
- * optionally the flight number. Normalizes inconsistent storage where some
- * flights hold the full name ("Lufthansa") and others only the IATA code
- * ("LH"). Fallback order:
- *   1. Stored airline: if it is a known 2-char IATA code, expand to full name
- *   2. Stored airline as-is (if non-empty, > 2 chars)
- *   3. IATA prefix of the flight number
- *   4. null
+ * The fields relevant to airline code resolution. Deliberately a small,
+ * standalone shape (not imported from `types/index.ts`) so this module has
+ * no dependency edge on the rest of the app's types — any object with a
+ * subset of these fields (e.g. a `Flight`, a `FlightInput`, a lookup
+ * result) can be passed directly.
  */
-export function resolveAirlineDisplay(
-  airline: string | null | undefined,
-  flightNumber?: string | null
-): string | null {
+export interface AirlineCodeSource {
+  airline?: string | null;
+  airlineIata?: string | null;
+  airlineIcao?: string | null;
+  flightNumber?: string | null;
+}
+
+/**
+ * Resolve a display-ready airline name. Prefers the backend's structured
+ * `airlineIata` / `airlineIcao` columns (populated by the parser / flight
+ * lookup services) over sniffing the free-text `airline` field, since the
+ * free-text field can be stale, user-typed, or simply wrong while the
+ * structured columns were resolved and validated at write time.
+ *
+ * Resolution order:
+ *   1. Structured `airlineIata`, if it maps to a known IATA code
+ *   2. Structured `airlineIcao`, if it maps to a known ICAO code
+ *   3. Free-text `airline`: 2 chars → try IATA map, 3 chars → try ICAO map
+ *   4. Free-text `airline` as-is (already a name, or an unknown code —
+ *      degrades gracefully to showing the raw value rather than nothing)
+ *   5. IATA prefix of the flight number
+ *   6. null
+ */
+export function resolveAirlineDisplay(source: AirlineCodeSource): string | null {
+  const { airline, airlineIata, airlineIcao, flightNumber } = source;
+
+  if (airlineIata) {
+    const resolved = AIRLINE_IATA_MAP[airlineIata.trim().toUpperCase()];
+    if (resolved) return resolved;
+  }
+  if (airlineIcao) {
+    const resolved = AIRLINE_ICAO_MAP[airlineIcao.trim().toUpperCase()];
+    if (resolved) return resolved;
+  }
+
   if (airline) {
     const trimmed = airline.trim();
+    const upper = trimmed.toUpperCase();
     if (trimmed.length === 2) {
-      const resolved = AIRLINE_IATA_MAP[trimmed.toUpperCase()];
+      const resolved = AIRLINE_IATA_MAP[upper];
+      if (resolved) return resolved;
+    } else if (trimmed.length === 3) {
+      const resolved = AIRLINE_ICAO_MAP[upper];
       if (resolved) return resolved;
     }
     if (trimmed.length > 0) return trimmed;
   }
+
   if (flightNumber) {
     return getAirlineFromFlightNumber(flightNumber);
   }
+
   return null;
+}
+
+/**
+ * Resolve the IATA code to feed a logo lookup (e.g. `<AirlineLogo iata={…}>`)
+ * from whichever field carries it. Unlike `resolveAirlineDisplay`, this only
+ * looks at explicit codes (structured columns or a code-shaped free-text
+ * value) — it never derives from the flight number, since `AirlineLogo`
+ * already does that fallback itself when `iata` is left undefined.
+ */
+export function resolveAirlineIata(source: AirlineCodeSource): string | undefined {
+  const { airline, airlineIata, airlineIcao } = source;
+
+  if (airlineIata) {
+    return airlineIata.trim().toUpperCase();
+  }
+  if (airlineIcao) {
+    const mapped = AIRLINE_ICAO_TO_IATA_MAP[airlineIcao.trim().toUpperCase()];
+    if (mapped) return mapped;
+  }
+  if (airline) {
+    const trimmed = airline.trim().toUpperCase();
+    if (trimmed.length === 2) return trimmed;
+    if (trimmed.length === 3) {
+      const mapped = AIRLINE_ICAO_TO_IATA_MAP[trimmed];
+      if (mapped) return mapped;
+    }
+  }
+
+  return undefined;
 }

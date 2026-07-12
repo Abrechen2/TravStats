@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useAuthStore } from "../../store/authStore";
 import { settingsApi, authApi, backupApi } from "../../lib/api";
@@ -37,15 +37,14 @@ export function useSettingsPage() {
     display,
     units,
     defaults,
-    map,
     cruise,
     setProfile,
     setDisplay,
     setUnits,
     setDefaults,
-    setMap,
     setCruise,
     saveRemoteSettings,
+    hasPendingChanges,
   } = useSettingsStore();
 
   const addToast = useToastStore((state) => state.addToast);
@@ -53,6 +52,7 @@ export function useSettingsPage() {
   // Profile
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingProfilePicture, setUploadingProfilePicture] = useState(false);
+  const [removingProfilePicture, setRemovingProfilePicture] = useState(false);
 
   // Password modal
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -146,22 +146,42 @@ export function useSettingsPage() {
     loadApiKeysStatus();
   }, []);
 
+  // Debounced auto-save for the settings the UI presents as auto-saving.
+  //
+  // `profile` belongs in here (issue #186). Without it, typing a birthdate
+  // updated the store but scheduled no write: the user saw the page's
+  // "auto-saved" toast (fired by a neighbouring effect) and the avatar persist
+  // itself through its own endpoint, then lost the date on the next visit.
+  //
+  // The mount run is skipped deliberately. Mounting the page is not an edit,
+  // and firing a save on the first render PUT whatever the store happened to
+  // hold at that instant — `{ birthdate: null }` while the real value was still
+  // in flight from `loadRemoteSettings`, overwriting a stored date with null.
+  //
+  // `remoteSnapshot` covers the second half of that: hydration changes `profile`
+  // and would otherwise re-trigger this effect and echo the server's own values
+  // straight back at it on every page load.
+  const isInitialSave = useRef(true);
   useEffect(() => {
+    if (isInitialSave.current) {
+      isInitialSave.current = false;
+      return;
+    }
+    if (!hasPendingChanges()) return;
     const saveSettings = async () => {
       try {
         await saveRemoteSettings();
       } catch (error) {
-        logger.error("Failed to save units settings:", error);
+        logger.error("Failed to save settings:", error);
         addToast("error", t("settings:errors.saveFailed") || "Failed to save settings");
       }
     };
     const timeoutId = setTimeout(saveSettings, 500);
     return () => clearTimeout(timeoutId);
     // `t` and `addToast` are intentionally omitted: `t` is unstable across
-    // renders and would cause this effect to re-fire on every render, which
-    // before debounce was tripping the settings rate limit. We only want to
-    // save when `units` actually changes.
-  }, [units, saveRemoteSettings]);
+    // renders and would re-fire this effect on every render, which before the
+    // debounce was tripping the settings rate limit.
+  }, [units, profile, saveRemoteSettings, hasPendingChanges]);
 
   useEffect(() => {
     if (user?.isAdmin) {
@@ -205,14 +225,33 @@ export function useSettingsPage() {
       setProfile({ profilePicture: result.profilePictureUrl });
       addToast("success", t("settings:profile.uploadSuccess"));
     } catch (error: unknown) {
+      // Do NOT fall back to a `URL.createObjectURL(file)` blob: that blob
+      // dies on reload (and the backend rejects it anyway — see #186), so
+      // showing it here just hides the real failure from the user. Leave
+      // the previous avatar in place and surface the error instead.
       logger.error("Failed to upload profile picture:", error);
       const axiosError = error as { response?: { data?: { error?: string } } };
       addToast("error", axiosError.response?.data?.error || t("settings:profile.uploadError"));
-      const url = URL.createObjectURL(file);
-      setProfile({ profilePicture: url });
     } finally {
       setUploadingProfilePicture(false);
       if (event.target) event.target.value = "";
+    }
+  };
+
+  const handleAvatarDelete = async () => {
+    setRemovingProfilePicture(true);
+    try {
+      await settingsApi.deleteProfilePicture();
+      // `undefined`, not `null`: the auto-save serializes the profile slice,
+      // and an omitted key can never re-fail the general PUT's URL validation.
+      setProfile({ profilePicture: undefined });
+      addToast("success", t("settings:profile.removeSuccess"));
+    } catch (error: unknown) {
+      logger.error("Failed to remove profile picture:", error);
+      const axiosError = error as { response?: { data?: { error?: string } } };
+      addToast("error", axiosError.response?.data?.error || t("settings:profile.removeError"));
+    } finally {
+      setRemovingProfilePicture(false);
     }
   };
 
@@ -338,21 +377,21 @@ export function useSettingsPage() {
     display,
     units,
     defaults,
-    map,
     cruise,
     setProfile,
     setDisplay,
     setUnits,
     setDefaults,
-    setMap,
     setCruise,
     // Derived
     hasParserAccess,
     // Profile
     savingProfile,
     uploadingProfilePicture,
+    removingProfilePicture,
     saveProfileSettings,
     handleAvatarUpload,
+    handleAvatarDelete,
     // Password modal
     showPasswordModal,
     setShowPasswordModal,

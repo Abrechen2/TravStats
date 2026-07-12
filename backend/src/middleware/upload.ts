@@ -300,3 +300,75 @@ export function deleteTripPhotoFile(filename: string): void {
     }
   }
 }
+
+// =============== Profile pictures (issue #186) ===============
+
+const PROFILE_PICTURE_DIR = path.join(__dirname, '../../uploads/profile-pictures');
+
+try {
+  if (!fs.existsSync(PROFILE_PICTURE_DIR)) {
+    fs.mkdirSync(PROFILE_PICTURE_DIR, { recursive: true });
+  }
+} catch (error: unknown) {
+  const errMsg = error instanceof Error ? error.message : String(error);
+  logger.warn({
+    operation: 'upload_profile_picture_dir_creation_failed',
+    message: `Could not create profile picture directory: ${PROFILE_PICTURE_DIR}`,
+    context: { directory: PROFILE_PICTURE_DIR, error: errMsg },
+  });
+}
+
+// The requesting user's id is embedded as the filename prefix (separated by
+// "_", which never appears in a UUID) so the GET route can enforce
+// ownership from the filename alone, without a database lookup — there is
+// no per-avatar DB row (profilePicture is a JSON field on UserSettings).
+const profilePictureStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, PROFILE_PICTURE_DIR);
+  },
+  filename: (req, file, cb) => {
+    const userId = (req as { userId?: string }).userId ?? 'unknown';
+    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${userId}_${uniqueSuffix}${ext}`);
+  },
+});
+
+const profilePictureFilter = (
+  _req: Express.Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback,
+): void => {
+  const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+  if (!allowed.includes(file.mimetype)) {
+    return cb(new Error(`Invalid image type. Allowed: ${allowed.join(', ')}`));
+  }
+  cb(null, true);
+};
+
+export const uploadProfilePicture = multer({
+  storage: profilePictureStorage,
+  fileFilter: profilePictureFilter,
+  limits: {
+    fileSize: FILE_LIMITS.PROFILE_PICTURE_MAX_SIZE,
+  },
+});
+
+export function getProfilePictureDir(): string {
+  return PROFILE_PICTURE_DIR;
+}
+
+export function deleteProfilePictureFile(filename: string): void {
+  const filePath = path.join(PROFILE_PICTURE_DIR, path.basename(filename));
+  if (fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath);
+    } catch (error) {
+      logger.warn({
+        operation: 'upload_profile_picture_delete_error',
+        message: `Failed to delete profile picture file: ${filename}`,
+        context: { filename, error: error instanceof Error ? error.message : 'Unknown error' },
+      });
+    }
+  }
+}

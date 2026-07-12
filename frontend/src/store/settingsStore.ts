@@ -15,9 +15,6 @@ type SeatClass = "economy" | "premium_economy" | "business" | "first";
 
 type FlightReminder = "off" | "24h" | "48h";
 
-type MapStyle = "osm" | "satellite";
-type MarkerStyle = "pin" | "circle" | "custom";
-
 type DateFormat = "DD.MM.YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD";
 type TimeFormat = "24h" | "12h";
 
@@ -56,13 +53,6 @@ export interface DefaultsSettings {
   seatClass: SeatClass;
   favoriteAirline: string;
   flightCategory: FlightCategory;
-}
-
-export interface MapSettings {
-  mapStyle: MapStyle;
-  zoomLevel: number;
-  markerStyle: MarkerStyle;
-  routeColor: string;
 }
 
 export interface NotificationSettings {
@@ -114,17 +104,23 @@ export interface SettingsState {
   display: DisplaySettings;
   units: UnitsSettings;
   defaults: DefaultsSettings;
-  map: MapSettings;
   notifications: NotificationSettings;
   features: FeaturesSettings;
   cruise: CruiseSettings;
   apiKeys: ApiKeysStatus | null;
   enabledDomains: DomainKey[];
+  /**
+   * Instance-level beta gate, mirrored read-only from `GET /settings`.
+   * `null` = not loaded yet → consumers must treat it as OFF (see
+   * `hooks/useBetaFeatures.ts`). There is deliberately no setter and it is
+   * never persisted or sent back: only an admin can change it, through
+   * `PUT /admin/instance-settings`.
+   */
+  betaFeaturesEnabled: boolean | null;
   setProfile: SettingsUpdater<ProfileSettings>;
   setDisplay: SettingsUpdater<DisplaySettings>;
   setUnits: SettingsUpdater<UnitsSettings>;
   setDefaults: SettingsUpdater<DefaultsSettings>;
-  setMap: SettingsUpdater<MapSettings>;
   setNotifications: SettingsUpdater<NotificationSettings>;
   setFeatures: SettingsUpdater<FeaturesSettings>;
   setCruise: SettingsUpdater<CruiseSettings>;
@@ -134,6 +130,20 @@ export interface SettingsState {
   resetSettings: () => void;
   loadRemoteSettings: () => Promise<void>;
   saveRemoteSettings: () => Promise<void>;
+  /**
+   * Serialized copy of the settings the server is known to hold, stamped after
+   * every load and every successful save. The settings page's debounced
+   * auto-save compares against it so hydrating the store from the server does
+   * not immediately echo the same values back as a write (issue #186).
+   * `null` until the first load completes. Never persisted.
+   */
+  remoteSnapshot: string | null;
+  /**
+   * True when the current settings differ from what the server is known to
+   * hold. Before the first load completes we cannot know, so we assume yes —
+   * losing a user's edit is worse than one redundant write.
+   */
+  hasPendingChanges: () => boolean;
 }
 
 // Browser-aware fallbacks for display fields that the backend no longer
@@ -160,13 +170,31 @@ const detectInitialDateFormat = (): DateFormat => {
   return "DD.MM.YYYY";
 };
 
+/**
+ * Serialize exactly the slices `saveRemoteSettings` transmits, so an unchanged
+ * snapshot provably means "the server already has this". Anything not listed
+ * here is not written by the save path and must not be listed here either —
+ * otherwise a purely local change (e.g. the beta gate) would look like a
+ * pending write forever.
+ */
+const snapshotOf = (state: SettingsState): string =>
+  JSON.stringify([
+    state.profile,
+    state.display,
+    state.units,
+    state.defaults,
+    state.notifications,
+    state.features,
+    state.cruise,
+    state.enabledDomains,
+  ]);
+
 const defaultSettings: Omit<
   SettingsState,
   | "setProfile"
   | "setDisplay"
   | "setUnits"
   | "setDefaults"
-  | "setMap"
   | "setNotifications"
   | "setFeatures"
   | "setCruise"
@@ -176,7 +204,9 @@ const defaultSettings: Omit<
   | "resetSettings"
   | "loadRemoteSettings"
   | "saveRemoteSettings"
+  | "hasPendingChanges"
 > = {
+  remoteSnapshot: null,
   profile: {
     username: "",
     email: "",
@@ -199,12 +229,6 @@ const defaultSettings: Omit<
     favoriteAirline: "Lufthansa",
     flightCategory: "business",
   },
-  map: {
-    mapStyle: "osm",
-    zoomLevel: 3,
-    markerStyle: "pin",
-    routeColor: "#2563eb",
-  },
   notifications: {
     flightReminder: "24h",
   },
@@ -219,6 +243,7 @@ const defaultSettings: Omit<
   },
   apiKeys: null,
   enabledDomains: ["flight"],
+  betaFeaturesEnabled: null,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -240,10 +265,6 @@ export const useSettingsStore = create<SettingsState>()(
       setDefaults: (updates) =>
         set((state) => ({
           defaults: { ...state.defaults, ...updates },
-        })),
-      setMap: (updates) =>
-        set((state) => ({
-          map: { ...state.map, ...updates },
         })),
       setNotifications: (updates) =>
         set((state) => ({
@@ -268,6 +289,11 @@ export const useSettingsStore = create<SettingsState>()(
         }
       },
       resetSettings: () => set(defaultSettings),
+      hasPendingChanges: () => {
+        const state = get();
+        if (state.remoteSnapshot === null) return true;
+        return snapshotOf(state) !== state.remoteSnapshot;
+      },
       loadRemoteSettings: async () => {
         // birthdate lives on the User row, not in UserSettings JSON — so
         // it rides on a parallel request. Failure here is non-fatal:
@@ -316,7 +342,6 @@ export const useSettingsStore = create<SettingsState>()(
                 display: mergeGroup("display") as DisplaySettings,
                 units: mergeGroup("units") as UnitsSettings,
                 defaults: mergeGroup("defaults") as DefaultsSettings,
-                map: mergeGroup("map") as MapSettings,
                 notifications: mergeGroup("notifications") as NotificationSettings,
                 features: mergeGroup("features") as FeaturesSettings,
               };
@@ -351,55 +376,95 @@ export const useSettingsStore = create<SettingsState>()(
                 );
                 newState.enabledDomains = filtered;
               }
+              // Instance-level, read-only. Anything that isn't an explicit
+              // `true`/`false` (missing field, older backend) stays `null` =
+              // gate closed.
+              newState.betaFeaturesEnabled =
+                typeof remote.betaFeaturesEnabled === "boolean" ? remote.betaFeaturesEnabled : null;
               return newState;
             });
           }
         } catch (error) {
           logger.warn("Failed to load remote settings, using local defaults", error);
         }
+        // Record what the server is now known to hold, so the settings page's
+        // debounced auto-save can tell a genuine user edit apart from the
+        // hydration it just performed and skip echoing the value straight back.
+        set({ remoteSnapshot: snapshotOf(get()) });
       },
       saveRemoteSettings: async () => {
-        try {
-          const {
+        const {
+          profile,
+          display,
+          units,
+          defaults,
+          notifications,
+          features,
+          cruise,
+          enabledDomains,
+        } = get();
+
+        // The two writes are independent (issue #186): a 400 from the
+        // general settings PUT (e.g. a rejected profilePicture value) used
+        // to throw before the birthdate PUT ever ran, silently losing the
+        // birthdate on every save that also touched the picture. Firing
+        // both up front and collecting results with allSettled means one
+        // failing never blocks the other.
+        const results = await Promise.allSettled([
+          settingsApi.update({
             profile,
             display,
             units,
             defaults,
-            map,
             notifications,
             features,
             cruise,
             enabledDomains,
-          } = get();
-          await settingsApi.update({
-            profile,
-            display,
-            units,
-            defaults,
-            map,
-            notifications,
-            features,
-            cruise,
-            enabledDomains,
-          });
+          }),
           // birthdate lives on a separate endpoint (/settings/profile on the
           // User row). Only PUT when the field was explicitly loaded or set
           // — undefined means "not touched this session, leave backend as-is".
-          if (profile.birthdate !== undefined) {
-            await settingsApi.updateProfile({ birthdate: profile.birthdate });
+          profile.birthdate !== undefined
+            ? settingsApi.updateProfile({ birthdate: profile.birthdate })
+            : Promise.resolve(undefined),
+        ]);
+
+        const failures = results.filter(
+          (result): result is PromiseRejectedResult => result.status === "rejected"
+        );
+        if (failures.length > 0) {
+          for (const failure of failures) {
+            logger.warn("Failed to save settings remotely", failure.reason);
           }
-        } catch (error) {
-          logger.warn("Failed to save settings remotely", error);
+          // Surface a real failure instead of only logging a warning, so
+          // callers (e.g. saveProfileSettings) can show their error toast.
+          throw failures[0].reason;
         }
+        set({ remoteSnapshot: snapshotOf(get()) });
       },
     }),
     {
       name: "settings-storage",
+      // The beta gate is instance state, not user state: never persist it.
+      // A cached `true` in localStorage would let a hidden feature flash into
+      // view on production before the first /settings response lands.
+      partialize: (state) => {
+        // The beta gate is instance state; `remoteSnapshot` is a belief about
+        // the live server. Persisting either would let a stale value from a
+        // previous session decide what we skip writing today.
+        const { betaFeaturesEnabled: _beta, remoteSnapshot: _snapshot, ...rest } = state;
+        return rest as unknown as Record<string, unknown>;
+      },
       // Strip removed fields from persisted state so stale localStorage doesn't crash the app
       migrate: (persisted: unknown) => {
         const s = { ...(persisted as Record<string, unknown>) };
         delete s["privacy"];
         delete s["backup"];
+        // Legacy per-user map settings (style/zoom/marker/colour) — nothing
+        // consumed them anymore; the in-map control panel owns map appearance.
+        delete s["map"];
+        // Drop any value written before `partialize` existed.
+        delete s["betaFeaturesEnabled"];
         return s;
       },
     }

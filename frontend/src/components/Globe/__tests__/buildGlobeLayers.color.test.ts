@@ -1,39 +1,50 @@
 import { describe, it, expect } from "vitest";
 import { resolveFlightArcColor, resolveCruisePathColor } from "../buildGlobeLayers";
+import {
+  DEFAULT_FLIGHT_COLORS,
+  DEFAULT_FLIGHT_COLOR_CONFIG,
+  tintForTier,
+  washOut,
+  type FlightColorConfig,
+} from "../../../lib/flightColor";
+import type { Rgb } from "../../../lib/cruiseColor";
 
-const HEATMAP_FALLBACK: [number, number, number] = [100, 116, 139];
-const OVERRIDE: [number, number, number] = [255, 0, 255];
+const FLOWN: Rgb = [10, 200, 30];
+const PLANNED: Rgb = [200, 20, 180];
+const BASE: Rgb = [60, 120, 240];
+const colors = { ...DEFAULT_FLIGHT_COLORS, past: FLOWN, upcoming: PLANNED, frequency: BASE };
 
 describe("resolveFlightArcColor", () => {
-  it("colors a past-family route orange in two-tone mode", () => {
-    expect(resolveFlightArcColor("past", HEATMAP_FALLBACK, { statusTwoTone: true })).toEqual([
-      240, 169, 71,
-    ]);
+  it("status mode honours the user's colours (it must NOT force the defaults)", () => {
+    const cfg: FlightColorConfig = { mode: "status", colors };
+    expect(resolveFlightArcColor({ status: "past", quartile: 2 }, cfg)).toEqual(FLOWN);
+    expect(resolveFlightArcColor({ status: "scheduled", quartile: 2 }, cfg)).toEqual(PLANNED);
   });
 
-  it("colors a pure-scheduled route coral in two-tone mode", () => {
-    expect(resolveFlightArcColor("scheduled", HEATMAP_FALLBACK, { statusTwoTone: true })).toEqual([
-      251, 113, 133,
-    ]);
+  it("solid mode paints every arc the one colour", () => {
+    const cfg: FlightColorConfig = { mode: "solid", colors: { ...colors, solid: BASE } };
+    expect(resolveFlightArcColor({ status: "past", quartile: 1 }, cfg)).toEqual(BASE);
+    expect(resolveFlightArcColor({ status: "scheduled", quartile: 4 }, cfg)).toEqual(BASE);
   });
 
-  it("two-tone mode ignores flightRouteColor — status wins", () => {
+  it("frequency mode scales the base colour with the arc's quartile", () => {
+    const cfg: FlightColorConfig = { mode: "frequency", colors };
+    expect(resolveFlightArcColor({ status: "past", quartile: 1 }, cfg)).toEqual(
+      tintForTier(BASE, 0)
+    );
+    expect(resolveFlightArcColor({ status: "past", quartile: 4 }, cfg)).toEqual(
+      tintForTier(BASE, 3)
+    );
+    expect(resolveFlightArcColor({ status: "scheduled", quartile: 3 }, cfg)).toEqual(washOut(BASE));
+  });
+
+  it("defaults (no user customisation) stay orange / coral", () => {
     expect(
-      resolveFlightArcColor("past", HEATMAP_FALLBACK, {
-        statusTwoTone: true,
-        flightRouteColor: OVERRIDE,
-      })
+      resolveFlightArcColor({ status: "past", quartile: 2 }, DEFAULT_FLIGHT_COLOR_CONFIG)
     ).toEqual([240, 169, 71]);
-  });
-
-  it("without two-tone, flightRouteColor overrides regardless of status", () => {
     expect(
-      resolveFlightArcColor("scheduled", HEATMAP_FALLBACK, { flightRouteColor: OVERRIDE })
-    ).toEqual(OVERRIDE);
-  });
-
-  it("without two-tone and no override, falls back to the heatmap color (regression guard)", () => {
-    expect(resolveFlightArcColor("past", HEATMAP_FALLBACK, {})).toEqual(HEATMAP_FALLBACK);
+      resolveFlightArcColor({ status: "scheduled", quartile: 2 }, DEFAULT_FLIGHT_COLOR_CONFIG)
+    ).toEqual([251, 113, 133]);
   });
 });
 
