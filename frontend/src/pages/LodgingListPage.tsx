@@ -6,6 +6,9 @@ import { LodgingStatStrip } from "../components/Dashboard/tabs/lodging/LodgingSt
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import { StarRating } from "../components/lodging/StarRating";
 import { ChainNameLink } from "../components/lodging/ChainNameLink";
+import DomainImportButton from "../components/import/DomainImportButton";
+import { useLodgingImportAdapter } from "../components/import/adapters/lodgingAdapter";
+import { LodgingCsvImportTile } from "../components/import/LodgingCsvImportTile";
 import { useTranslation } from "../hooks/useTranslation";
 import { getLodgingStats, listLodgings } from "../lib/api/lodging";
 import { formatCurrency } from "../lib/units";
@@ -137,6 +140,8 @@ export default function LodgingListPage(): JSX.Element {
   const hasActiveFilter =
     search.length > 0 || typeFilter !== "all" || yearFilter !== "all" || countryFilter !== "all";
 
+  const importAdapter = useLodgingImportAdapter();
+
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
       <NavigationBar />
@@ -173,7 +178,9 @@ export default function LodgingListPage(): JSX.Element {
             <select
               value={yearFilter === "all" ? "all" : String(yearFilter)}
               onChange={(e): void =>
-                setYearFilter(e.target.value === "all" ? "all" : Number.parseInt(e.target.value, 10))
+                setYearFilter(
+                  e.target.value === "all" ? "all" : Number.parseInt(e.target.value, 10)
+                )
               }
               aria-label={t("lodging:filter.year")}
               className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
@@ -228,15 +235,20 @@ export default function LodgingListPage(): JSX.Element {
 
       <div className="mx-auto max-w-6xl px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold text-[var(--text-primary)]">{t("lodging:list.title")}</h1>
-          <button
-            type="button"
-            onClick={() => setShowAdd(true)}
-            className="btn-primary flex items-center gap-2 whitespace-nowrap"
-          >
-            <span>+</span>
-            <span>{t("lodging:add.title")}</span>
-          </button>
+          <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
+            {t("lodging:list.title")}
+          </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <DomainImportButton adapter={importAdapter} onItemsCreated={reloadAll} />
+            <button
+              type="button"
+              onClick={() => setShowAdd(true)}
+              className="btn-primary flex items-center gap-2 whitespace-nowrap"
+            >
+              <span>+</span>
+              <span>{t("lodging:add.title")}</span>
+            </button>
+          </div>
         </div>
 
         {stats && <LodgingStatStrip stats={stats} variant="inline" />}
@@ -321,6 +333,12 @@ export default function LodgingListPage(): JSX.Element {
           </div>
         )}
 
+        {/* One-time migration tool (spec §3.1), not the everyday import
+            path — kept below the list rather than in the header actions. */}
+        <div className="mt-6 max-w-md">
+          <LodgingCsvImportTile onImported={reloadAll} />
+        </div>
+
         {showAdd && (
           <LodgingFormModal
             mode="create"
@@ -346,7 +364,7 @@ export default function LodgingListPage(): JSX.Element {
  */
 function hasOtherBaseCurrencySpend(
   byCurrency: Record<string, number>,
-  currentBaseCurrency: string,
+  currentBaseCurrency: string
 ): boolean {
   return Object.keys(byCurrency).some((currency) => currency !== currentBaseCurrency);
 }

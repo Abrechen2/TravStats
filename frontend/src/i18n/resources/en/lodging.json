@@ -187,10 +187,26 @@
     "matchedLodgingHint": "This row attaches to an existing hotel — name and city cannot be edited here.",
     "fields": {
       "name": "Name",
+      "type": "Type",
+      "chainName": "Chain",
+      "stars": "Stars",
+      "address": "Address",
       "city": "City",
+      "country": "Country",
+      "lat": "Latitude",
+      "lon": "Longitude",
+      "googlePlaceId": "Google place ID",
       "checkIn": "Check-in",
       "checkOut": "Check-out",
+      "roomCategory": "Room category",
+      "board": "Board",
       "totalPrice": "Price",
+      "currency": "Currency",
+      "ratingRoom": "Room rating",
+      "ratingBreakfast": "Breakfast rating",
+      "ratingOverall": "Overall rating",
+      "bookingReference": "Booking reference",
+      "notes": "Notes",
       "hints": "Hints",
       "action": "Action"
     },
@@ -212,6 +228,28 @@
       "lodging_name_city": "Matching hotel found (name + city)",
       "stay_exact_ref": "Stay already on file (exact reference match)",
       "stay_same_dates": "Stay already on file (same dates)"
+    },
+    "noBookings": "No booking data was found in this email or PDF.",
+    "csv": {
+      "title": "CSV import",
+      "description": "Import lodgings and/or stays from a CSV file — e.g. a Google Maps export or a hand-maintained spreadsheet. A one-time migration tool, not the ongoing import path.",
+      "uploadLabel": "Choose CSV file"
+    },
+    "errors": {
+      "emptyCsv": "This CSV file has no rows.",
+      "noRows": "No row in this file could be turned into an import candidate.",
+      "skippedRows": "{{count}} row(s) were skipped due to invalid values.",
+      "parseFailed": "This CSV file could not be read.",
+      "previewFailed": "The import preview could not be loaded."
+    },
+    "commitResult": {
+      "success": "Imported {{createdLodgings}} hotel(s) and {{createdStays}} stay(s).",
+      "partial": "Imported {{createdLodgings}} hotel(s) and {{createdStays}} stay(s), {{failedCount}} row(s) failed: {{reasons}}",
+      "failureCodes": {
+        "ownership_mismatch": "belongs to another account",
+        "missing_lodging_reference": "missing hotel reference",
+        "unexpected_error": "unexpected error"
+      }
     }
   }
 }
