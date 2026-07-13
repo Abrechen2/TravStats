@@ -66,6 +66,7 @@ read live at each run, so it can never drift.
 | `git.ts` | `git` (local) | branches, worktrees, commits ahead/behind `main`, tags |
 | `github.ts` | `gh` CLI | open issues (number, title, state, labels, author), open Dependabot PRs, releases |
 | `deployments.ts` | `ssh` → Proxmox `pct exec` → `docker inspect` | the image tag running on each instance |
+| `discord.ts` | the existing `tools/discord-setup` bot | messages in the watched channels newer than the per-channel triage watermark |
 
 **Curated (`roadmap.local.yaml`, gitignored):**
 
@@ -77,6 +78,12 @@ instances:                      # host/CT wiring lives here, NOT in committed co
     ct: 100
     container: TravStats
     role: production
+
+discord:                        # per-channel triage watermark
+  - channel: dev-talk
+    triagedUpTo: "2026-07-12T16:42:30Z"
+  - channel: beta-channel
+    triagedUpTo: "2026-07-10T10:24:53Z"
 
 versions:
   - id: "2.4.0"
@@ -112,8 +119,29 @@ order:
 2. Items with `status: fixed-awaiting-release` grouped by version → "promoting
    X closes N issues".
 3. Items with `status: blocked` → the blocker is named.
+4. Discord messages newer than their channel's watermark → "N untriaged".
 
 If the rules produce nothing, the zone says so rather than rendering empty.
+
+### Discord triage
+
+A GitHub issue is one item. A Discord message is not: a single post from a tester
+routinely carries half a dozen distinct asks, and a machine that turns one message
+into one card buries five of them. So the tool does **not** convert messages into
+items.
+
+Instead it surfaces them. Every message newer than its channel's `triagedUpTo`
+watermark is listed verbatim — author, timestamp, full text, jump link — under an
+**Untriaged** heading. The page therefore never claims to know more than it does.
+
+Triage itself is an agent step, invoked on the owner's command: read the untriaged
+messages, split each into discrete items, propose a version and status for each,
+**present the proposal, and write to `roadmap.local.yaml` only after the owner
+approves**. The watermark advances only on a write. An unapproved triage leaves
+the state untouched, so nothing is half-ingested.
+
+Watermarks are per channel, not global: the channels are read at different
+cadences and a single global cursor would mark an unread channel as triaged.
 
 ### Page zones
 
