@@ -147,6 +147,10 @@ export default function SimplifiedFlightFormV2({
               setSeatClass={form.setSeatClass}
               setStatus={form.setStatus}
               setCategory={form.setCategory}
+              bookingReference={form.bookingReference}
+              ticketNumber={form.ticketNumber}
+              setBookingReference={form.setBookingReference}
+              setTicketNumber={form.setTicketNumber}
               price={form.price}
               currency={form.currency}
               setPrice={form.setPrice}
@@ -249,21 +253,21 @@ export default function SimplifiedFlightFormV2({
               <button
                 type="button"
                 onClick={() => form.setDuplicateFlight(null)}
-                className="flex-1 px-4 py-2 border border-[var(--color-border)] rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] transition-colors"
+                className="btn-secondary flex-1"
               >
                 {t("flights:form.duplicate.cancel")}
               </button>
               <button
                 type="button"
                 onClick={() => void form.handleMergeSubmit()}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                className="btn-primary flex-1"
               >
                 {t("flights:form.duplicate.merge")}
               </button>
               <button
                 type="button"
                 onClick={() => void form.handleForceSubmit()}
-                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                className="btn-secondary flex-1"
               >
                 {t("flights:form.duplicate.addAnyway")}
               </button>

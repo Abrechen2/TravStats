@@ -12,13 +12,16 @@ import type { ProviderQuota } from "../../lib/api/settings";
 export type ApiCardCapability = "historical365";
 
 export interface ApiKeyCardProps {
-  provider: "airlabs" | "aviationstack" | "aerodatabox" | "opensky";
+  provider: "airlabs" | "aviationstack" | "aerodatabox" | "opensky" | "logostream";
   label: string;
   description: string;
   getKeyUrl: string;
   isShared: boolean;
   hasAccess: boolean;
   value?: string;
+  /** Whether the card offers a "Test" button. Providers without a
+   *  backend test endpoint (e.g. logostream) must pass false. */
+  testable?: boolean;
   /** Explicit "the user has saved their own key" signal. User cards MUST
    *  pass this from `apiKeysStatus.<provider>.hasKey` because their `value`
    *  is always empty (the GET only returns booleans, never the stored key),
@@ -54,6 +57,7 @@ export default function ApiKeyCard({
   isShared,
   hasAccess,
   value,
+  testable = true,
   hasOwnKey: hasOwnKeyProp,
   quota,
   capabilities,
@@ -84,6 +88,11 @@ export default function ApiKeyCard({
   };
 
   const handleTest = async () => {
+    // No backend test endpoint exists for these providers; the early return
+    // also narrows `provider` for the testApiKey union below.
+    if (!testable || provider === "logostream") {
+      return;
+    }
     setTesting(true);
     setTestResult(null);
     try {
@@ -361,6 +370,7 @@ export default function ApiKeyCard({
             </span>
           )}
         </div>
+        {testable && (
         <button
           type="button"
           onClick={handleTest}
@@ -369,7 +379,7 @@ export default function ApiKeyCard({
             isShared ||
             (!localValue && !value && (!openskyFields || !openskyFields.clientId))
           }
-          className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-[var(--bg-muted)] disabled:cursor-not-allowed rounded-md transition-colors flex items-center gap-2"
+          className="btn-secondary px-3 py-1.5 text-sm flex items-center gap-2"
         >
           {testing ? (
             <>
@@ -409,6 +419,7 @@ export default function ApiKeyCard({
             </>
           )}
         </button>
+        )}
       </div>
       {testResult && (
         <div

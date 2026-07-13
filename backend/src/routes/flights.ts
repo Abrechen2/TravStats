@@ -538,10 +538,12 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       if (f.arrIcao) allCodes.add(f.arrIcao);
     }
     let tzMap = new Map<string, string>();
+    const countryMap = new Map<string, string>();
     try {
       const airports = await getCachedAirports(Array.from(allCodes));
       for (const [code, data] of airports.entries()) {
         if (data?.timezone) tzMap.set(code, data.timezone);
+        if (data?.country) countryMap.set(code, data.country);
       }
     } catch { /* timezone lookup failed — durations use naïve diff */ }
 
@@ -567,6 +569,10 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       return {
         ...f,
         durationMinutes: rawDuration === null ? null : Math.round(rawDuration),
+        depCountry: (f.depIata && countryMap.get(f.depIata)) || (f.depIcao && countryMap.get(f.depIcao)) || null,
+        arrCountry: (f.arrIata && countryMap.get(f.arrIata)) || (f.arrIcao && countryMap.get(f.arrIcao)) || null,
+        depTimezone: depTz,
+        arrTimezone: arrTz,
       };
     });
 
