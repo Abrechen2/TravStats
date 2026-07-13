@@ -80,10 +80,7 @@ export default function WhatsNewModal({
           className="px-6 py-4 border-t flex justify-end"
           style={{ borderColor: "var(--color-border)" }}
         >
-          <button
-            onClick={onClose}
-            className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none"
-          >
+          <button onClick={onClose} className="btn-primary">
             {t("whatsNew:dismiss")}
           </button>
         </div>
