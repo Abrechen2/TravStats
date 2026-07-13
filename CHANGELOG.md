@@ -89,6 +89,19 @@ switch that keeps unfinished features out of sight until they are ready.
   rendered near-white on the amber accent; several admin and cruise buttons
   hardcoded white. All of them now use the same dark text as the standard
   primary button.
+- **Every button in the app follows the same system.** A dozen controls still
+  carried hardcoded blues, greens and oranges from before the design system
+  existed — the admin API-key and parser saves, the airport-seeding dialog, the
+  pending-update card and editor, the flight review submit, the duplicate
+  warning and the delete-demo-user button — so on those surfaces the loudest
+  control was the off-brand one. They now use the shared primary, secondary and
+  danger classes and follow the accent colour. Two were also wrong on the
+  merits, not just off-palette: the pending-update card highlighted **Edit**
+  while **Apply** — the action the card exists for — sat in green beside it, and
+  the duplicate warning painted the risky "add anyway" escape hatch louder than
+  the recommended merge. In both, the recommended action is now the primary one.
+  Deleting the demo user and rejecting a pending update are destructive, and now
+  look it.
 - **Cruise direction arrows no longer pile up on shared shipping lanes.**
   Different cruises routed onto the same lane each placed their own arrows,
   stacking into unreadable clusters. Overlapping arrows are now hidden and
