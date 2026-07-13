@@ -117,3 +117,107 @@ describe("useSettingsPage — profile auto-save (#186)", () => {
     );
   });
 });
+
+/**
+ * Issue #198. `saveRemoteSettings` transmits seven slices, but the debounced
+ * effect only listed two of them (`units`, `profile`), so editing any of the
+ * other five updated the store and scheduled no write at all. The page kept
+ * claiming "auto-saved" while the value died on reload.
+ *
+ * These cases pin the invariant rather than the symptom: every slice the save
+ * path sends must trigger the save. Adding a slice to `saveRemoteSettings`
+ * without covering it here is the bug returning.
+ */
+describe("useSettingsPage — every transmitted slice auto-saves (#198)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useSettingsStore.setState({
+      profile: { username: "admin", email: "", birthdate: undefined },
+    });
+  });
+
+  const settle = async () => {
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 700));
+    });
+    mocks.update.mockClear();
+  };
+
+  it("saves a flight default (the reported case: it was forgotten on reload)", async () => {
+    const { result } = renderHook(() => useSettingsPage());
+    await settle();
+
+    act(() => {
+      result.current.setDefaults({ seatClass: "business" });
+    });
+
+    await waitFor(
+      () =>
+        expect(mocks.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            defaults: expect.objectContaining({ seatClass: "business" }),
+          })
+        ),
+      { timeout: 2000 }
+    );
+  });
+
+  it("saves a feature toggle (cost tracking never persisted either)", async () => {
+    renderHook(() => useSettingsPage());
+    await settle();
+
+    act(() => {
+      useSettingsStore.getState().setFeatures({ enableCostTracking: true });
+    });
+
+    await waitFor(
+      () =>
+        expect(mocks.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            features: expect.objectContaining({ enableCostTracking: true }),
+          })
+        ),
+      { timeout: 2000 }
+    );
+  });
+
+  it("saves a display change", async () => {
+    const { result } = renderHook(() => useSettingsPage());
+    await settle();
+
+    act(() => {
+      result.current.setDisplay({ dateFormat: "YYYY-MM-DD" });
+    });
+
+    await waitFor(
+      () =>
+        expect(mocks.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            display: expect.objectContaining({ dateFormat: "YYYY-MM-DD" }),
+          })
+        ),
+      { timeout: 2000 }
+    );
+  });
+
+  it("saves a notification setting", async () => {
+    renderHook(() => useSettingsPage());
+    await settle();
+
+    // "24h" is the default — setting it would change nothing and must NOT
+    // schedule a write, which is exactly what the snapshot guard is for.
+    act(() => {
+      useSettingsStore.getState().setNotifications({ flightReminder: "48h" });
+    });
+
+    await waitFor(
+      () =>
+        expect(mocks.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            notifications: expect.objectContaining({ flightReminder: "48h" }),
+          })
+        ),
+      { timeout: 2000 }
+    );
+  });
+});

@@ -366,9 +366,10 @@
       "cost": "Shows the tax and fee fields on the flight forms and enables the business cost statistics. Price and currency are always available regardless — only the breakdown is optional, to keep the form lean."
     }
   },
-  "autoSaved": {
-    "title": "Auto-saved",
-    "description": "All settings are saved locally and are immediately active."
+  "autoSave": {
+    "idle": "Changes are saved automatically",
+    "saving": "Saving …",
+    "saved": "Saved"
   },
   "scrollToTop": "Scroll to top",
   "sectionPicker": "Section",
