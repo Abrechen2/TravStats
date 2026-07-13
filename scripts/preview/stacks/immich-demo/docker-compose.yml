@@ -1,0 +1,45 @@
+services:
+  immich-demo-server:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich-demo-server
+    restart: unless-stopped
+    environment:
+      DB_HOSTNAME: immich-demo-db
+      DB_USERNAME: postgres
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: immich-demo-redis
+      IMMICH_MACHINE_LEARNING_ENABLED: "false"
+      TZ: UTC
+    volumes:
+      - immich-upload:/data
+    depends_on:
+      - immich-demo-redis
+      - immich-demo-db
+    networks:
+      - default
+      - preview-net
+
+  immich-demo-redis:
+    image: docker.io/valkey/valkey:9
+    container_name: immich-demo-redis
+    restart: unless-stopped
+
+  immich-demo-db:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+    container_name: immich-demo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: immich
+    volumes:
+      - immich-pgdata:/var/lib/postgresql/data
+
+volumes:
+  immich-upload:
+  immich-pgdata:
+
+networks:
+  preview-net:
+    external: true
