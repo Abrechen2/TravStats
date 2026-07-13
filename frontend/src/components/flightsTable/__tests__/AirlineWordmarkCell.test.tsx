@@ -50,18 +50,28 @@ it("falls back to the name immediately when nothing resolves", () => {
 });
 
 /**
- * The keyless default ships square brand MARKS (Lufthansa's crane), not
- * wordmarks. A mark alone on a dark surface reads as a floating glyph, so the
- * tile carries the airline's own colour behind it.
+ * The vendored mark is drawn IN the brand colour — Lufthansa's crane has
+ * fill="#05164d". The first beta painted that same navy behind it and shipped an
+ * invisible logo. The plate must therefore CONTRAST with the mark, not match it.
  */
-it("paints the airline's brand colour behind a vendored mark", () => {
+it("puts a light plate under a dark brand mark", () => {
   manifest.value = { premium: false, brands: { LH: { color: "#05164d" } } };
 
   const { container } = render(<AirlineWordmarkCell flight={flight} />);
 
   const tile = container.querySelector("span > span") as HTMLElement;
   expect(tile).toBeTruthy();
-  expect(tile.style.background).toContain("rgb(5, 22, 77)");
+  expect(tile.style.background).toContain("rgb(255, 255, 255)");
+});
+
+/** ...and the other way round, or a white mark would vanish on white. */
+it("puts a dark plate under a light brand mark", () => {
+  manifest.value = { premium: false, brands: { LH: { color: "#f5f5f5" } } };
+
+  const { container } = render(<AirlineWordmarkCell flight={flight} />);
+
+  const tile = container.querySelector("span > span") as HTMLElement;
+  expect(tile.style.background).toContain("rgb(13, 17, 23)");
 });
 
 /**
