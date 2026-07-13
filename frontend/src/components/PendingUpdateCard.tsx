@@ -254,22 +254,13 @@ export default function PendingUpdateCard({
         {/* Actions */}
         {update.status === "pending" || update.status === "edited" ? (
           <div className="p-4 border-t border-[var(--color-border)] flex gap-2">
-            <button
-              onClick={() => setShowEditor(true)}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
+            <button onClick={() => setShowEditor(true)} className="btn-secondary flex-1">
               {t("pendingUpdates:actions.edit")}
             </button>
-            <button
-              onClick={onApply}
-              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
+            <button onClick={onApply} className="btn-primary flex-1">
               {t("pendingUpdates:actions.apply")}
             </button>
-            <button
-              onClick={onReject}
-              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
+            <button onClick={onReject} className="btn-danger flex-1">
               {t("pendingUpdates:actions.reject")}
             </button>
             <button
