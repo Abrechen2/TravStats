@@ -82,11 +82,18 @@ function buildColumns(input: ModelInput): Column[] {
 
   const toCard = (item: RoadmapConfig["items"][number]): Card => {
     const live = item.source.ref !== undefined ? issueByNumber.get(item.source.ref) : undefined;
+    // A github card's title is ALWAYS live, even if a (stale) config title is
+    // present — the config loader is supposed to reject one, but the model
+    // must not trust that and must not let a config title win regardless.
+    // If the issue is gone from the open set (closed, deleted), say so rather
+    // than inventing a title from the config.
+    const title =
+      item.source.type === "github"
+        ? (live?.title ?? `#${item.source.ref ?? "?"} (not among the open issues)`)
+        : (item.title ?? `${item.id} (no title configured)`);
     return {
       id: item.id,
-      // A github title is ALWAYS live. If the issue is gone (closed, deleted),
-      // say so rather than inventing a title from the config.
-      title: item.title ?? live?.title ?? `#${item.source.ref ?? "?"} (not among the open issues)`,
+      title,
       source: item.source.type,
       sourceRef: item.source.ref ?? null,
       url: live?.url ?? item.source.url ?? null,
@@ -135,15 +142,37 @@ function buildColumns(input: ModelInput): Column[] {
   return [...declared, backlog, unassigned];
 }
 
-function buildDecisions(input: ModelInput, columns: readonly Column[]): Decision[] {
-  const decisions: Decision[] = [];
-  const branches = input.git.data?.branches ?? [];
+interface DecisionsResult {
+  readonly decisions: Decision[];
+  readonly warnings: string[];
+}
 
-  // 1. A finished line that is not in main is a decision, not a task.
+function buildDecisions(input: ModelInput, columns: readonly Column[]): DecisionsResult {
+  const decisions: Decision[] = [];
+  const warnings: string[] = [];
+  const branches = input.git.data?.branches ?? [];
+  // Only a genuinely successful collection run can be trusted to say a branch
+  // is absent. A failed run (data === null) already gets the generic Git
+  // warning from warningsFor — reporting the same absence again here would
+  // be a duplicate, and a stale cached branch list is not proof of anything.
+  const gitCollectionSucceeded = input.git.reason === null;
+
+  // 1. A finished line that is not in main is a decision, not a task —
+  //    UNLESS the declared branch does not exist at all, which is a config
+  //    problem (renamed/deleted/typo'd branch) that must never fail silently.
   for (const version of input.config.versions) {
     if (version.state !== "awaiting-merge" || version.branch === undefined) continue;
     const branch = branches.find((b) => b.name === version.branch);
-    if (!branch || branch.ahead === 0) continue;
+
+    if (!branch) {
+      if (gitCollectionSucceeded) {
+        warnings.push(
+          `${version.id}: declared branch "${version.branch}" is awaiting-merge but does not exist in git — the roadmap config is stale`
+        );
+      }
+      continue;
+    }
+    if (branch.ahead === 0) continue;
 
     const riders = columns.find((c) => c.versionId === version.id)?.cards ?? [];
     decisions.push({
@@ -159,17 +188,25 @@ function buildDecisions(input: ModelInput, columns: readonly Column[]): Decision
   }
 
   // 2. Fixed work waiting on a release — the thing that had 13 issues hostage.
-  const waitingByVersion = new Map<string, Card[]>();
+  //    Only a DECLARED version is a release that can be promoted; fixed work
+  //    parked in the synthetic backlog/unassigned columns is a config
+  //    mistake and gets a warning naming the item(s), not a fake decision.
+  const declaredVersionIds = new Set(input.config.versions.map((v) => v.id));
   for (const column of columns) {
     const waiting = column.cards.filter((c) => c.status === "fixed-awaiting-release");
-    if (waiting.length > 0) waitingByVersion.set(column.versionId, waiting);
-  }
-  for (const [versionId, waiting] of waitingByVersion) {
-    decisions.push({
-      kind: "promote",
-      headline: `Promote ${versionId} — closes ${waiting.length} issue(s)`,
-      detail: waiting.map((c) => `${c.sourceRef !== null ? `#${c.sourceRef} ` : ""}${c.title}`),
-    });
+    if (waiting.length === 0) continue;
+
+    if (declaredVersionIds.has(column.versionId)) {
+      decisions.push({
+        kind: "promote",
+        headline: `Promote ${column.versionId} — closes ${waiting.length} issue(s)`,
+        detail: waiting.map((c) => `${c.sourceRef !== null ? `#${c.sourceRef} ` : ""}${c.title}`),
+      });
+    } else {
+      warnings.push(
+        `${waiting.map((c) => c.id).join(", ")}: marked fixed-awaiting-release but has no declared release version ("${column.versionId}") — this is a config mistake, not a release to promote`
+      );
+    }
   }
 
   // 3. Anything explicitly blocked names its blocker.
@@ -192,7 +229,7 @@ function buildDecisions(input: ModelInput, columns: readonly Column[]): Decision
     });
   }
 
-  return decisions;
+  return { decisions, warnings };
 }
 
 function buildInstances(input: ModelInput): InstanceTile[] {
@@ -216,15 +253,16 @@ function buildInstances(input: ModelInput): InstanceTile[] {
 /** Pure: the whole judgement of the tool, and therefore the whole test surface. */
 export function buildViewModel(input: ModelInput): ViewModel {
   const columns = buildColumns(input);
+  const { decisions, warnings: decisionWarnings } = buildDecisions(input, columns);
 
   return {
     generatedAt: input.generatedAt,
-    decisions: buildDecisions(input, columns),
+    decisions,
     instances: buildInstances(input),
     columns,
     untriaged: input.discord.data?.untriaged ?? [],
     branches: input.git.data?.branches ?? [],
     dependabotPrs: input.github.data?.dependabotPrs ?? [],
-    warnings: warningsFor(input),
+    warnings: [...warningsFor(input), ...decisionWarnings],
   };
 }

@@ -135,9 +135,74 @@ describe("buildViewModel", () => {
     expect(vm.instances).toHaveLength(1);
   });
 
-  it("says so explicitly when there is nothing to decide", () => {
+  it("produces no decisions when there is nothing to decide", () => {
     const bare: RoadmapConfig = { ...CONFIG, items: [], versions: [], discord: [] };
     const vm = buildViewModel({ ...input(), config: bare });
     expect(vm.decisions).toHaveLength(0);
+  });
+
+  it("warns when an awaiting-merge version's declared branch is missing from a successful git collection", () => {
+    const vm = buildViewModel(
+      input({
+        git: {
+          data: { branches: [{ name: "main", head: "abc123", ahead: 0, worktree: null }] },
+          staleSince: null,
+          reason: null,
+        },
+      })
+    );
+    expect(
+      vm.warnings.some(
+        (w) =>
+          w.includes("2.5.0") &&
+          w.includes("dev/immich-albums") &&
+          w.toLowerCase().includes("stale")
+      )
+    ).toBe(true);
+    expect(vm.decisions.find((d) => d.kind === "merge")).toBeUndefined();
+  });
+
+  it("does not double-report a missing branch when the git collector itself failed", () => {
+    const vm = buildViewModel(
+      input({
+        git: { data: null, staleSince: null, reason: "git ls-remote timeout" },
+      })
+    );
+    expect(vm.warnings.some((w) => w.includes("git ls-remote timeout"))).toBe(true);
+    expect(vm.warnings.some((w) => w.includes("declared branch"))).toBe(false);
+    expect(vm.decisions.find((d) => d.kind === "merge")).toBeUndefined();
+  });
+
+  it("never derives a promote decision for the synthetic backlog column", () => {
+    const withBacklogFix: RoadmapConfig = {
+      ...CONFIG,
+      items: [
+        ...CONFIG.items,
+        {
+          id: "gh-999",
+          source: { type: "github", ref: 999 },
+          title: "Stray backlog fix",
+          version: "backlog",
+          status: "fixed-awaiting-release",
+        },
+      ],
+    };
+    const vm = buildViewModel(input({ config: withBacklogFix }));
+    expect(
+      vm.decisions.find((d) => d.kind === "promote" && d.headline.includes("backlog"))
+    ).toBeUndefined();
+    expect(vm.warnings.some((w) => w.includes("gh-999"))).toBe(true);
+  });
+
+  it("prefers the live issue title over a stale config title for a github-sourced item", () => {
+    const withStaleTitle: RoadmapConfig = {
+      ...CONFIG,
+      items: CONFIG.items.map((item) =>
+        item.id === "gh-197" ? { ...item, title: "Old stale title from config" } : item
+      ),
+    };
+    const vm = buildViewModel(input({ config: withStaleTitle }));
+    const card = vm.columns.flatMap((c) => c.cards).find((c) => c.sourceRef === 197);
+    expect(card?.title).toBe("Booking number missing");
   });
 });
