@@ -66,6 +66,27 @@ describe("resolveAirlineIata", () => {
   it("returns undefined for an unknown code", () => {
     expect(resolveAirlineIata({ airline: "ZZZ" })).toBeUndefined();
   });
+
+  it("resolves a full airline name via the catalogue", () => {
+    expect(resolveAirlineIata({ airline: "Lufthansa" })).toBe("LH");
+    expect(resolveAirlineIata({ airline: "  lufthansa " })).toBe("LH");
+  });
+
+  it("derives a catalogue-known IATA prefix from the flight number", () => {
+    expect(resolveAirlineIata({ flightNumber: "LH2462" })).toBe("LH");
+  });
+
+  it("does not derive from a flight number with an unknown prefix", () => {
+    expect(resolveAirlineIata({ flightNumber: "ZZ999" })).toBeUndefined();
+  });
+
+  it("does not let the flight number override a structured code", () => {
+    expect(resolveAirlineIata({ airlineIata: "EW", flightNumber: "LH123" })).toBe("EW");
+  });
+
+  it("returns undefined for an unknown airline name", () => {
+    expect(resolveAirlineIata({ airline: "Some Unknown Carrier" })).toBeUndefined();
+  });
 });
 
 describe("getAirlineFromFlightNumber", () => {

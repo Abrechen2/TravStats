@@ -31,4 +31,11 @@ describe("AirlineLogo", () => {
     render(<AirlineLogo flightNumber="12345" />);
     expect(screen.getByText("?")).toBeInTheDocument();
   });
+
+  it("renders the custom fallback instead of the letterbox", () => {
+    render(<AirlineLogo iata="LH" fallback={<em>Lufthansa</em>} />);
+    fireEvent.error(screen.getByRole("img"));
+    expect(screen.getByText("Lufthansa")).toBeInTheDocument();
+    expect(screen.queryByText("LH")).not.toBeInTheDocument();
+  });
 });
