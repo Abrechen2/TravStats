@@ -1,0 +1,39 @@
+# Copy to <repo-root>/roadmap.local.yaml and fill in from CLAUDE.local.md.
+# That file is gitignored. This one is not — never put real hosts here.
+
+instances:
+  - id: prod
+    label: Prod
+    role: production
+    node: 192.0.2.1 # placeholder — see CLAUDE.local.md
+    ct: 100
+    container: TravStats
+    expect: "2.3.1" # the version the roadmap believes runs here
+
+discord:
+  - channel: dev-talk
+    triagedUpTo: "2026-07-12T16:42:30Z"
+
+versions:
+  - id: "2.4.0"
+    state: rc # released | rc | awaiting-merge | planned
+    branch: main
+    note: |
+      Markdown. Rendered in the version's detail panel.
+
+items:
+  # A github item carries NO title — it is read live from the issue number.
+  - id: gh-197
+    source: { type: github, ref: 197 }
+    version: "2.4.0"
+    status: fixed-awaiting-release
+    branch: main
+    notes: |
+      Markdown. Long-form context lives here.
+
+  # Non-github items have no live anchor, so they carry a title.
+  - id: discord-lodging-fx
+    source: { type: discord, url: "https://discord.com/channels/..." }
+    title: "Detail page converts EUR to EUR and prints an ECB rate"
+    version: "2.6.0"
+    status: planned
