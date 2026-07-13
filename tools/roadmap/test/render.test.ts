@@ -203,12 +203,16 @@ describe("render", () => {
     expect(html).not.toContain('<details class="d-more">');
   });
 
-  it("marks the current RC and Unassigned rows as open by default, and released as closed", () => {
+  it("marks awaiting-merge and Unassigned rows as open by default; released, RC and backlog stay collapsed", () => {
+    // A version with 18 items expanded is a wall of text no matter how tight
+    // the rows are — only what needs a decision opens by default.
     const withReleased: ViewModel = {
       ...VM,
       columns: [
         { versionId: "2.3.0", state: "released", branch: null, note: null, cards: [] },
         { versionId: "2.4.0", state: "rc", branch: "main", note: null, cards: [] },
+        { versionId: "2.5.0", state: "awaiting-merge", branch: "dev/x", note: null, cards: [] },
+        { versionId: "backlog", state: null, branch: null, note: null, cards: [] },
         { versionId: "unassigned", state: null, branch: null, note: null, cards: [] },
       ],
     };
@@ -216,10 +220,76 @@ describe("render", () => {
     const rows = html.split('<details class="release-row"').slice(1);
     const released = rows.find((r) => r.includes(">2.3.0<"));
     const rc = rows.find((r) => r.includes(">2.4.0<"));
+    const awaitingMerge = rows.find((r) => r.includes(">2.5.0<"));
+    const backlog = rows.find((r) => r.includes(">Backlog<"));
     const unassigned = rows.find((r) => r.includes(">Nicht zugeordnet<"));
     expect(released?.startsWith(">")).toBe(true);
-    expect(rc?.startsWith(" open>")).toBe(true);
+    expect(rc?.startsWith(">")).toBe(true);
+    expect(backlog?.startsWith(">")).toBe(true);
+    expect(awaitingMerge?.startsWith(" open>")).toBe(true);
     expect(unassigned?.startsWith(" open>")).toBe(true);
+  });
+
+  it("keeps an item row to one line — notes sit behind their own collapsed toggle, not inline", () => {
+    const withNotes: ViewModel = {
+      ...VM,
+      columns: [
+        {
+          versionId: "2.4.0",
+          state: "rc",
+          branch: "main",
+          note: null,
+          cards: [
+            {
+              id: "gh-197",
+              title: "Booking number missing",
+              source: "github",
+              sourceRef: 197,
+              url: "u197",
+              status: "fixed-awaiting-release",
+              branch: "main",
+              notes: "A long paragraph of context that used to flood the table by default.",
+              closed: false,
+            },
+          ],
+        },
+      ],
+    };
+    const html = render(withNotes);
+    expect(html).toContain('<details class="note-toggle">');
+    // Present in the markup (so it stays reachable) but not expanded by default.
+    expect(html).not.toMatch(/<details class="note-toggle"[^>]*\bopen\b/);
+    expect(html).toContain("A long paragraph of context that used to flood the table by default.");
+  });
+
+  it("renders the effective 'shipped' status, never the stale pending label, for a closed item", () => {
+    const withShipped: ViewModel = {
+      ...VM,
+      columns: [
+        {
+          versionId: "2.4.0",
+          state: "rc",
+          branch: "main",
+          note: null,
+          cards: [
+            {
+              id: "gh-178",
+              title: "Promote 2.4.0",
+              source: "github",
+              sourceRef: 178,
+              url: "u178",
+              status: "shipped",
+              branch: null,
+              notes: null,
+              closed: true,
+            },
+          ],
+        },
+      ],
+    };
+    const html = render(withShipped);
+    expect(html).toContain("ausgeliefert");
+    expect(html).not.toContain("wartet auf Release");
   });
 
   it("shows a closed card with a visible closed badge", () => {

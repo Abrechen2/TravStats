@@ -21,13 +21,24 @@ export interface ModelInput {
   readonly discord: Resolved<DiscordState>;
 }
 
+/**
+ * `ItemStatus` plus "shipped" — a status the curator never writes by hand
+ * (it is not in the config's Zod enum), only the model derives it. It wins
+ * over whatever the curated file still says the moment a github item's live
+ * issue is closed, so the page never shows a "closed" badge next to a
+ * "wartet auf Release" status for the same item.
+ */
+export type EffectiveStatus = ItemStatus | "shipped";
+
 export interface Card {
   readonly id: string;
   readonly title: string;
   readonly source: SourceType;
   readonly sourceRef: number | null;
   readonly url: string | null;
-  readonly status: ItemStatus;
+  /** The reader-facing status — see EffectiveStatus. Never the raw curated
+   * value verbatim; a closed github item always reports "shipped" here. */
+  readonly status: EffectiveStatus;
   readonly branch: string | null;
   readonly notes: string | null;
   /**
@@ -108,13 +119,19 @@ function buildColumns(input: ModelInput): Column[] {
         ? (live?.title ?? `#${item.source.ref ?? "?"} (nicht auf GitHub gefunden)`)
         : (item.title ?? `${item.id} (kein Titel konfiguriert)`);
     const closed = item.source.type === "github" && live !== undefined && live.state === "closed";
+    // The reader sees the truth derived from live data, never the raw
+    // curated status verbatim: a closed issue is shipped, full stop — no
+    // matter what roadmap.local.yaml still claims (fixed-awaiting-release,
+    // blocked, whatever). The curated file is allowed to drift behind
+    // reality; the board must not repeat its mistake on screen.
+    const status: EffectiveStatus = closed ? "shipped" : item.status;
     return {
       id: item.id,
       title,
       source: item.source.type,
       sourceRef: item.source.ref ?? null,
       url: live?.url ?? item.source.url ?? null,
-      status: item.status,
+      status,
       branch: item.branch ?? null,
       notes: item.notes ?? null,
       closed,
