@@ -260,10 +260,7 @@ export default function PendingUpdateCard({
             <button onClick={onApply} className="btn-primary flex-1">
               {t("pendingUpdates:actions.apply")}
             </button>
-            <button
-              onClick={onReject}
-              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
+            <button onClick={onReject} className="btn-danger flex-1">
               {t("pendingUpdates:actions.reject")}
             </button>
             <button
