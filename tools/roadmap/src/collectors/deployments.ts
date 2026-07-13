@@ -12,11 +12,26 @@ export interface DeploymentState {
   readonly running: readonly RunningInstance[];
 }
 
-/** "ghcr.io/abrechen2/travstats:2.4.0-rc.4" -> "2.4.0-rc.4" */
-function toTag(imageRef: string): string {
-  const trimmed = imageRef.trim();
-  const colon = trimmed.lastIndexOf(":");
-  return colon === -1 ? trimmed : trimmed.slice(colon + 1);
+/**
+ * Extracts the tag from a full image reference, e.g.
+ * "ghcr.io/abrechen2/travstats:2.4.0-rc.4" -> "2.4.0-rc.4".
+ *
+ * Returns null when no tag is present, which covers three distinct shapes
+ * that must NOT be mistaken for a tag:
+ * - a digest-pinned reference ("img@sha256:...") — the digest is not a version
+ * - a bare reference with no tag or digest at all ("img")
+ * - a registry-with-port reference with no tag ("registry:5000/img") — the
+ *   port number must not be misread as a tag
+ */
+function toTag(imageRef: string): string | null {
+  const withoutDigest = imageRef.trim().split("@")[0];
+  const lastSlash = withoutDigest.lastIndexOf("/");
+  const lastColon = withoutDigest.lastIndexOf(":");
+  // A colon only separates a tag when it appears after the final path
+  // segment — otherwise it is a registry port (e.g. "registry:5000/img").
+  if (lastColon === -1 || lastColon < lastSlash) return null;
+  const tag = withoutDigest.slice(lastColon + 1);
+  return tag.length > 0 ? tag : null;
 }
 
 async function probe(instance: InstanceDef, run: Runner): Promise<RunningInstance> {
@@ -30,7 +45,7 @@ async function probe(instance: InstanceDef, run: Runner): Promise<RunningInstanc
       `pct exec ${instance.ct} -- docker inspect --format '{{.Config.Image}}' ${instance.container}`,
     ]);
     const tag = toTag(raw);
-    return tag.length > 0
+    return tag !== null
       ? { id: instance.id, image: tag, error: null }
       : { id: instance.id, image: null, error: "container not found" };
   } catch (error) {
