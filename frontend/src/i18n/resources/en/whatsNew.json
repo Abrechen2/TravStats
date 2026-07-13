@@ -19,8 +19,8 @@
         "body": "Flight and cruise coloring are now proper modes: status, frequency, per journey, or a single custom color. The color picker finally works everywhere — and the legend always matches what the map actually shows."
       },
       "airlines": {
-        "title": "Airlines with names and logos",
-        "body": "Instead of cryptic codes like \"DLH\" you now see \"Lufthansa\" — including the logo, even when only the ICAO code is known."
+        "title": "Airlines by name",
+        "body": "Instead of cryptic codes like \"DLH\" you now see \"Lufthansa\" — in the table, the list and the calendar. Flights that only carry an ICAO code now resolve correctly too."
       },
       "map": {
         "title": "The map, your way",
