@@ -366,9 +366,10 @@
       "cost": "Blendet die Steuer- und Gebührenfelder in den Flugformularen ein und aktiviert die Business-Statistiken. Preis und Währung sind unabhängig davon immer verfügbar — nur die Aufschlüsselung ist optional, damit die Maske schlank bleibt."
     }
   },
-  "autoSaved": {
-    "title": "Automatisch gespeichert",
-    "description": "Alle Einstellungen werden lokal gespeichert und sind sofort aktiv."
+  "autoSave": {
+    "idle": "Änderungen werden automatisch gespeichert",
+    "saving": "Wird gespeichert …",
+    "saved": "Gespeichert"
   },
   "scrollToTop": "Nach oben",
   "sectionPicker": "Bereich",
