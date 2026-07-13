@@ -57,10 +57,27 @@ h3 { font-size:11px; margin:14px 0 6px; color:var(--muted); text-transform:upper
 .release-row summary::-webkit-details-marker { display:none; }
 .release-row[open] summary { border-bottom:1px solid var(--line); }
 .release-row .col-version { font-weight:600; }
-.items { border-collapse:collapse; width:100%; }
-.items th, .items td { text-align:left; padding:6px 12px; border-bottom:1px solid var(--line); font-size:12px; }
+/* One line per item — title-first table with fixed side columns so a long
+   issue title can never grow the row; notes live behind their own toggle. */
+.items { border-collapse:collapse; width:100%; table-layout:fixed; }
+.items th, .items td { text-align:left; padding:6px 12px; border-bottom:1px solid var(--line);
+                        font-size:12px; vertical-align:top; }
 .items th { color:var(--muted); font-weight:500; }
-.items .notes { margin-top:4px; color:var(--muted); white-space:pre-wrap; font-size:12px; }
+.items th:nth-child(1), .items td:nth-child(1) { width:64px; }
+.items th:nth-child(3), .items td:nth-child(3) { width:130px; }
+.items th:nth-child(4), .items td:nth-child(4) { width:80px; }
+.items th:nth-child(5), .items td:nth-child(5) { width:170px; }
+.items td.item-title { display:flex; flex-wrap:wrap; align-items:baseline; column-gap:6px; row-gap:2px; }
+/* No flex-grow: the title shrinks to make room for the badge/toggle but never
+   stretches to fill the row — a short title must sit flush next to its
+   badge, not have it stranded at the far edge of the cell. */
+.items .title-text { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:0 1 auto; }
+.items td.item-title .badge, .items .note-toggle { flex:0 0 auto; }
+.items .note-toggle summary { cursor:pointer; color:var(--muted); font-size:11px; list-style:none; }
+.items .note-toggle summary::-webkit-details-marker { display:none; }
+.items .note-toggle[open] { flex-basis:100%; }
+.items .note-toggle[open] summary { color:var(--text); margin-bottom:2px; }
+.items .notes { color:var(--muted); white-space:pre-wrap; font-size:12px; }
 .items p.empty { padding:8px 12px; margin:0; }
 .badge { font-size:11px; padding:1px 6px; border-radius:10px; border:1px solid var(--line); }
 .badge.green { border-color:var(--green); color:var(--green); }

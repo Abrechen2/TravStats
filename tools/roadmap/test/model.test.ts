@@ -381,6 +381,52 @@ describe("buildViewModel", () => {
     expect(unassigned?.cards.map((c) => c.sourceRef)).toEqual([200]);
   });
 
+  // --- Bug C: an item must never claim two contradictory states at once ---
+
+  it("derives an effective 'shipped' status for a closed github item, overriding a stale curated status", () => {
+    const config: RoadmapConfig = {
+      ...CONFIG,
+      versions: [{ id: "2.4.0", state: "rc", branch: "main" }],
+      items: [
+        {
+          id: "gh-178",
+          source: { type: "github", ref: 178 },
+          version: "2.4.0",
+          status: "fixed-awaiting-release",
+        },
+      ],
+    };
+    const vm = buildViewModel(
+      input({
+        config,
+        github: {
+          data: {
+            issues: [
+              {
+                number: 178,
+                title: "Promote 2.4.0",
+                state: "closed",
+                labels: [],
+                author: "alex",
+                url: "u178",
+              },
+            ],
+            dependabotPrs: [],
+          },
+          staleSince: null,
+          reason: null,
+        },
+      })
+    );
+    const cards = vm.columns.flatMap((c) => c.cards);
+    const card = cards.find((c) => c.sourceRef === 178);
+    expect(card?.status).toBe("shipped");
+    // The stale curated status ("fixed-awaiting-release") must not survive
+    // anywhere in the view model — a reader scanning any column must never
+    // see a pending status next to a card whose issue already shipped.
+    expect(cards.some((c) => c.status === "fixed-awaiting-release")).toBe(false);
+  });
+
   // --- Bug B: the promote decision must print the reference once ---
 
   it("prints the issue reference once in the promote decision detail, not twice", () => {
