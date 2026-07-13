@@ -32,7 +32,8 @@
     "seed:dev-admin": "tsx src/seedDevAdmin.ts",
     "seed:dev-admin-keys": "tsx src/seedDevAdminKeys.ts",
     "dead-code": "ts-prune | grep -v \"(used in module)\"",
-    "lint:py": "ruff check src/scripts/"
+    "lint:py": "ruff check src/scripts/",
+    "refresh:airline-logos": "bash scripts/refresh-airline-logos.sh"
   },
   "keywords": [
     "flight",
