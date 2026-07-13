@@ -2,6 +2,7 @@ import crypto from "crypto";
 import logger from "../../utils/logger";
 import { getApiKey } from "../apiKeyResolver";
 import { getCachedLogo, putCachedLogo, type CachedLogo } from "./logoCache";
+import { getVendoredLogo } from "./vendoredLogos";
 
 export type LogoVariant = "icon" | "logo" | "logo-white" | "tail";
 
@@ -108,7 +109,22 @@ export async function resolveAirlineLogo(
   if (negativeUntil !== undefined && negativeUntil > Date.now()) return null;
   negativeCache.delete(cacheKey);
 
-  const logo = (await fromLogostream(code, variant)) ?? (await fromDaisycon(code));
+  // Three tiers, in order of what they cost the instance:
+  //
+  //   logostream — best quality, but it burns an admin's API-key budget, so it
+  //                only runs where a key is actually configured (premium tier).
+  //   vendored   — the KEYLESS DEFAULT. SVG logos snapshotted into this repo:
+  //                no network call, no key, works offline. Covers 93 curated
+  //                airlines — 86 % of flights measured against production data.
+  //   Daisycon   — the tail net for everything the snapshot does not hold.
+  //                Keyless too, but an external request per cold miss.
+  //
+  // A miss in one tier must fall through, never be papered over: that is why
+  // each tier returns null rather than a placeholder.
+  const logo =
+    (await fromLogostream(code, variant)) ??
+    getVendoredLogo(code, variant) ??
+    (await fromDaisycon(code));
   if (!logo) {
     negativeCache.set(cacheKey, Date.now() + NEGATIVE_TTL_MS);
     return null;

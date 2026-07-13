@@ -80,11 +80,36 @@ describe("resolveAirlineLogo", () => {
     expect(put).toHaveBeenCalledWith("Q9-icon", expect.objectContaining({ contentType: "image/png" }));
   });
 
-  it("falls back to Daisycon without a key", async () => {
+  /**
+   * The keyless default. An instance with no API key must not reach out to
+   * anyone for an airline the vendored snapshot holds — no logostream call
+   * (there is no key), and no Daisycon call either. This is the whole point of
+   * the tier: 86 % of flights resolve without leaving the machine.
+   */
+  it("serves a covered airline from the vendored snapshot without any network call", async () => {
+    jest.spyOn(cache, "getCachedLogo").mockResolvedValue(null);
+    const put = jest.spyOn(cache, "putCachedLogo").mockResolvedValue();
+    const fn = jest.fn();
+    global.fetch = fn as unknown as typeof fetch;
+
+    const r = await resolveAirlineLogo("LH", "icon");
+
+    expect(r).not.toBeNull();
+    expect(r!.contentType).toBe("image/svg+xml");
+    expect(fn).not.toHaveBeenCalled();
+    expect(put).toHaveBeenCalledWith("LH-icon", expect.objectContaining({ contentType: "image/svg+xml" }));
+  });
+
+  /**
+   * ...but the snapshot is only 93 airlines. Anything it does not hold must
+   * still fall through to the tail net rather than 404. American Airlines is a
+   * real gap (12 flights in the production data).
+   */
+  it("falls through to Daisycon for an airline the snapshot does not hold", async () => {
     jest.spyOn(cache, "getCachedLogo").mockResolvedValue(null);
     jest.spyOn(cache, "putCachedLogo").mockResolvedValue();
     const fn = mockFetchOnce(200, Buffer.from("realpng"), "image/png");
-    const r = await resolveAirlineLogo("LH", "icon");
+    const r = await resolveAirlineLogo("AA", "icon");
     expect(r).not.toBeNull();
     expect(String(fn.mock.calls[0][0])).toContain("daisycon");
   });
@@ -119,10 +144,13 @@ describe("resolveAirlineLogo", () => {
     const warnSpy = jest.spyOn(logger, "warn").mockImplementation(() => undefined as unknown as void);
     // Simulate an error message that embeds the key (simulating a future fetch implementation detail)
     global.fetch = jest.fn().mockRejectedValue(
-      new Error(`request to https://airlines-api.logostream.dev/airlines/iata/LH?variant=icon&key=${FAKE_KEY} failed`)
+      new Error(`request to https://airlines-api.logostream.dev/airlines/iata/AA?variant=icon&key=${FAKE_KEY} failed`)
     ) as unknown as typeof fetch;
 
-    const r = await resolveAirlineLogo("LH", "icon");
+    // Deliberately an airline the vendored snapshot does NOT hold, so the whole
+    // chain still ends in a miss and the assertion below is about the log, not
+    // about a tier accidentally rescuing the request.
+    const r = await resolveAirlineLogo("AA", "icon");
 
     expect(r).toBeNull();
     expect(warnSpy).toHaveBeenCalled();
