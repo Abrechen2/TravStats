@@ -30,11 +30,19 @@ export interface Card {
   readonly status: ItemStatus;
   readonly branch: string | null;
   readonly notes: string | null;
+  /**
+   * True only for a github-sourced card whose live issue was found AND is
+   * closed. A closed issue is shipped work: it resolves its title normally
+   * but must never re-enter the promote decision (promoting cannot "close"
+   * an issue that is already closed) or the Unassigned anti-drift column.
+   */
+  readonly closed: boolean;
 }
 
 export interface Column {
   readonly versionId: string;
   readonly state: VersionState | null;
+  readonly branch: string | null;
   readonly note: string | null;
   readonly cards: readonly Card[];
 }
@@ -92,12 +100,14 @@ function buildColumns(input: ModelInput): Column[] {
     // A github card's title is ALWAYS live, even if a (stale) config title is
     // present — the config loader is supposed to reject one, but the model
     // must not trust that and must not let a config title win regardless.
-    // If the issue is gone from the open set (closed, deleted), say so rather
-    // than inventing a title from the config.
+    // The live issue resolves its title whether it is open OR closed — a
+    // shipped issue is not a ghost. Only a ref in NEITHER list (deleted, or
+    // a typo'd config) falls back to an explicit placeholder.
     const title =
       item.source.type === "github"
-        ? (live?.title ?? `#${item.source.ref ?? "?"} (not among the open issues)`)
-        : (item.title ?? `${item.id} (no title configured)`);
+        ? (live?.title ?? `#${item.source.ref ?? "?"} (nicht auf GitHub gefunden)`)
+        : (item.title ?? `${item.id} (kein Titel konfiguriert)`);
+    const closed = item.source.type === "github" && live !== undefined && live.state === "closed";
     return {
       id: item.id,
       title,
@@ -107,12 +117,14 @@ function buildColumns(input: ModelInput): Column[] {
       status: item.status,
       branch: item.branch ?? null,
       notes: item.notes ?? null,
+      closed,
     };
   };
 
   const declared: Column[] = config.versions.map((version) => ({
     versionId: version.id,
     state: version.state,
+    branch: version.branch ?? null,
     note: version.note ?? null,
     cards: config.items.filter((i) => i.version === version.id).map(toCard),
   }));
@@ -120,20 +132,24 @@ function buildColumns(input: ModelInput): Column[] {
   const backlog: Column = {
     versionId: BACKLOG,
     state: null,
+    branch: null,
     note: null,
     cards: config.items.filter((i) => i.version === BACKLOG).map(toCard),
   };
 
-  // The anti-drift column: every open issue that no item claims.
+  // The anti-drift column: every OPEN issue that no item claims. A closed
+  // issue nobody tracked is not a gap — it shipped without ceremony, not
+  // without oversight.
   const claimed = new Set(
     config.items.map((i) => i.source.ref).filter((ref): ref is number => ref !== undefined)
   );
   const unassigned: Column = {
     versionId: UNASSIGNED,
     state: null,
+    branch: null,
     note: null,
     cards: issues
-      .filter((issue) => !claimed.has(issue.number))
+      .filter((issue) => issue.state === "open" && !claimed.has(issue.number))
       .map((issue) => ({
         id: `gh-${issue.number}`,
         title: issue.title,
@@ -143,6 +159,7 @@ function buildColumns(input: ModelInput): Column[] {
         status: "planned" as const,
         branch: null,
         notes: null,
+        closed: false,
       })),
   };
 
@@ -184,12 +201,12 @@ function buildDecisions(input: ModelInput, columns: readonly Column[]): Decision
     const riders = columns.find((c) => c.versionId === version.id)?.cards ?? [];
     decisions.push({
       kind: "merge",
-      headline: `Merge decision open: ${version.id} (${version.branch})`,
+      headline: `Merge-Entscheidung offen: ${version.id} (${version.branch})`,
       detail: [
-        `${branch.ahead} commits ahead of main`,
+        `${branch.ahead} Commits vor main`,
         riders.length > 0
-          ? `carries ${riders.length} item(s): ${riders.map((c) => c.title).join(", ")}`
-          : "carries no tracked items",
+          ? `trägt ${riders.length} Item(s): ${riders.map((c) => c.title).join(", ")}`
+          : "keine Items zugeordnet — Tracking-Lücke",
       ],
     });
   }
@@ -198,16 +215,27 @@ function buildDecisions(input: ModelInput, columns: readonly Column[]): Decision
   //    Only a DECLARED version is a release that can be promoted; fixed work
   //    parked in the synthetic backlog/unassigned columns is a config
   //    mistake and gets a warning naming the item(s), not a fake decision.
+  //    A card whose GitHub issue is already closed is shipped work — it must
+  //    never re-enter the promote decision, since promoting cannot "close"
+  //    an issue that is already closed.
   const declaredVersionIds = new Set(input.config.versions.map((v) => v.id));
   for (const column of columns) {
-    const waiting = column.cards.filter((c) => c.status === "fixed-awaiting-release");
+    const waiting = column.cards.filter((c) => c.status === "fixed-awaiting-release" && !c.closed);
     if (waiting.length === 0) continue;
 
     if (declaredVersionIds.has(column.versionId)) {
       decisions.push({
         kind: "promote",
-        headline: `Promote ${column.versionId} — closes ${waiting.length} issue(s)`,
-        detail: waiting.map((c) => `${c.sourceRef !== null ? `#${c.sourceRef} ` : ""}${c.title}`),
+        headline: `${column.versionId} freigeben — schließt ${waiting.length} Issue(s)`,
+        // Print the reference once: the fallback title for an unresolved
+        // ref already begins with "#<ref>" — prepending it again duplicates
+        // it ("#178 #178 (...)").  Only prepend when the title does not
+        // already carry it.
+        detail: waiting.map((c) => {
+          if (c.sourceRef === null) return c.title;
+          const ref = `#${c.sourceRef}`;
+          return c.title.startsWith(ref) ? c.title : `${ref} ${c.title}`;
+        }),
       });
     } else {
       warnings.push(
@@ -221,18 +249,26 @@ function buildDecisions(input: ModelInput, columns: readonly Column[]): Decision
   if (blocked.length > 0) {
     decisions.push({
       kind: "blocked",
-      headline: `${blocked.length} item(s) blocked`,
+      headline: `${blocked.length} Item(s) blockiert`,
       detail: blocked.map((c) => c.title),
     });
   }
 
-  // 4. Feedback nobody has sorted yet.
+  // 4. Feedback nobody has sorted yet. Never list every message inline — a
+  //    per-channel count is enough to see that triage is needed; the
+  //    verbatim messages live in the Discord digest section instead.
   const untriaged = input.discord.data?.untriaged ?? [];
   if (untriaged.length > 0) {
+    const byChannel = new Map<string, number>();
+    for (const message of untriaged) {
+      byChannel.set(message.channel, (byChannel.get(message.channel) ?? 0) + 1);
+    }
     decisions.push({
       kind: "triage",
-      headline: `${untriaged.length} untriaged Discord message(s)`,
-      detail: untriaged.map((m) => `#${m.channel} · ${m.author} · ${m.timestamp}`),
+      headline: `${untriaged.length} untriagierte Discord-Nachricht(en)`,
+      detail: [...byChannel.entries()].map(
+        ([channel, count]) => `#${channel} · ${count} Nachricht(en)`
+      ),
     });
   }
 
