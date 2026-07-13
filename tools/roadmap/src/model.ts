@@ -3,7 +3,14 @@ import type { DeploymentState } from "./collectors/deployments.js";
 import type { DiscordMessage, DiscordState } from "./collectors/discord.js";
 import type { GitState } from "./collectors/git.js";
 import type { GithubPr, GithubState } from "./collectors/github.js";
-import { BACKLOG, UNASSIGNED, type ItemStatus, type RoadmapConfig, type SourceType, type VersionState } from "./types.js";
+import {
+  BACKLOG,
+  UNASSIGNED,
+  type ItemStatus,
+  type RoadmapConfig,
+  type SourceType,
+  type VersionState,
+} from "./types.js";
 
 export interface ModelInput {
   readonly config: RoadmapConfig;
