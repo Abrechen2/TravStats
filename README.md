@@ -269,6 +269,18 @@ You may use, modify and redistribute TravStats, but if you run it as a web
 service (even modified) you must make the complete source code of your
 modifications available under the same licence. See [LICENSE](LICENSE).
 
+### Third-party data and assets
+
+- **Airline logos** — [soaring-symbols](https://github.com/soaring-symbols/soaring-symbols),
+  MIT, © 2024 Anh Thang. Vendored under `backend/data/airline-logos/` so a
+  self-hosted instance gets logos with no API key and no external request.
+  *The logos are the trademarks of the respective airlines. They are shown to
+  identify the carrier of a flight (nominative use) and neither TravStats nor
+  the asset authors claim any right in them, nor imply any endorsement by or
+  affiliation with the airlines.*
+- **Airports** — [OurAirports](https://ourairports.com/), public domain.
+- **Shipping lanes** — Eurostat *marnet* network, © European Union.
+
 ## Support the project
 
 TravStats is a solo side project. If it's useful to you,
