@@ -33,7 +33,7 @@ export function withFallback<T>(
 export async function readCache(path: string): Promise<Record<string, CachedSection<unknown>>> {
   try {
     const raw: unknown = JSON.parse(await readFile(path, "utf8"));
-    return typeof raw === "object" && raw !== null
+    return typeof raw === "object" && raw !== null && !Array.isArray(raw)
       ? (raw as Record<string, CachedSection<unknown>>)
       : {};
   } catch {
