@@ -384,3 +384,19 @@ export const immichImportLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
 });
+
+/**
+ * Rate limiter for the airline-logo proxy. Cheap after the first fetch
+ * (disk cache in logoCache.ts), but each cold miss costs an upstream
+ * request against the 20k/month logostream budget — the cap bounds how
+ * fast a single caller can burn through that budget on unseen codes.
+ * Allows 600 requests per 15 minutes per user/IP.
+ */
+export const airlineLogoLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 600,
+  message: 'Too many airline logo requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});

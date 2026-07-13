@@ -25,6 +25,12 @@ const AIRLINE_ICAO_TO_IATA_MAP: Record<string, string> = Object.fromEntries(
   AIRLINE_CATALOG.filter((a) => a.icao).map((a) => [a.icao as string, a.iata])
 );
 
+/** UPPERCASED airline name → IATA code, so stored free-text names ("Lufthansa")
+ * can still feed a logo lookup even when no structured code was written. */
+const AIRLINE_NAME_TO_IATA_MAP: Record<string, string> = Object.fromEntries(
+  AIRLINE_CATALOG.map((a) => [a.name.toUpperCase(), a.iata])
+);
+
 /**
  * Derive airline name from an IATA flight number prefix (first 2 characters).
  * Returns null if unknown.
@@ -99,13 +105,18 @@ export function resolveAirlineDisplay(source: AirlineCodeSource): string | null 
 
 /**
  * Resolve the IATA code to feed a logo lookup (e.g. `<AirlineLogo iata={…}>`)
- * from whichever field carries it. Unlike `resolveAirlineDisplay`, this only
- * looks at explicit codes (structured columns or a code-shaped free-text
- * value) — it never derives from the flight number, since `AirlineLogo`
- * already does that fallback itself when `iata` is left undefined.
+ * from whichever field carries it.
+ *
+ * Resolution order:
+ *   1. Structured `airlineIata` / `airlineIcao` columns
+ *   2. Code-shaped free-text `airline` value (2-char IATA / 3-char ICAO)
+ *   3. Full airline NAME via the catalogue ("Lufthansa" → LH) — most stored
+ *      flights only carry the name, no structured code
+ *   4. Catalogue-KNOWN IATA prefix of the flight number ("LH2462" → LH).
+ *      Unknown prefixes stay undefined so no wrong logo is ever requested.
  */
 export function resolveAirlineIata(source: AirlineCodeSource): string | undefined {
-  const { airline, airlineIata, airlineIcao } = source;
+  const { airline, airlineIata, airlineIcao, flightNumber } = source;
 
   if (airlineIata) {
     return airlineIata.trim().toUpperCase();
@@ -121,6 +132,12 @@ export function resolveAirlineIata(source: AirlineCodeSource): string | undefine
       const mapped = AIRLINE_ICAO_TO_IATA_MAP[trimmed];
       if (mapped) return mapped;
     }
+    const byName = AIRLINE_NAME_TO_IATA_MAP[trimmed];
+    if (byName) return byName;
+  }
+  if (flightNumber) {
+    const match = flightNumber.trim().toUpperCase().match(/^([A-Z]{2})\d/);
+    if (match && AIRLINE_IATA_MAP[match[1]]) return match[1];
   }
 
   return undefined;
