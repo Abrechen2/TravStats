@@ -369,7 +369,7 @@ export default function ApiKeyCard({
             isShared ||
             (!localValue && !value && (!openskyFields || !openskyFields.clientId))
           }
-          className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-[var(--bg-muted)] disabled:cursor-not-allowed rounded-md transition-colors flex items-center gap-2"
+          className="btn-secondary px-3 py-1.5 text-sm flex items-center gap-2"
         >
           {testing ? (
             <>

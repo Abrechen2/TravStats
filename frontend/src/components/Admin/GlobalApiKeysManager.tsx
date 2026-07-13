@@ -51,7 +51,7 @@ export default function GlobalApiKeysManager({
         <button
           onClick={onSave}
           disabled={saving || !globalApiKeys || !parserSettings}
-          className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition font-medium"
+          className="btn-primary"
         >
           {saving ? t("common:buttons.saving") : t("admin:globalApiKeys.save")}
         </button>
