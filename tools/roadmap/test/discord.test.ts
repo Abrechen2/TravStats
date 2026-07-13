@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  collectDiscord,
-  type MessageFetcher,
-} from "../src/collectors/discord.js";
+import { collectDiscord, type MessageFetcher } from "../src/collectors/discord.js";
 import type { DiscordWatermark } from "../src/types.js";
 
 const WATERMARKS: DiscordWatermark[] = [
@@ -40,26 +37,19 @@ describe("collectDiscord", () => {
     if (!result.ok) throw new Error(result.reason);
 
     expect(result.data.untriaged).toHaveLength(2);
-    expect(result.data.untriaged.map((m) => m.content)).toEqual([
-      "new one",
-      "new two",
-    ]);
+    expect(result.data.untriaged.map((m) => m.content)).toEqual(["new one", "new two"]);
   });
 
   it("tags each message with its channel, because watermarks are per channel", async () => {
     const result = await collectDiscord(WATERMARKS, fetcher);
     if (!result.ok) throw new Error(result.reason);
-    expect(result.data.untriaged.every((m) => m.channel === "dev-talk")).toBe(
-      true,
-    );
+    expect(result.data.untriaged.every((m) => m.channel === "dev-talk")).toBe(true);
   });
 
   it("sorts untriaged messages oldest first", async () => {
     const result = await collectDiscord(WATERMARKS, fetcher);
     if (!result.ok) throw new Error(result.reason);
-    expect(
-      result.data.untriaged[0].timestamp < result.data.untriaged[1].timestamp,
-    ).toBe(true);
+    expect(result.data.untriaged[0].timestamp < result.data.untriaged[1].timestamp).toBe(true);
   });
 
   it("reports a failure when the bot cannot connect", async () => {
@@ -128,9 +118,7 @@ describe("collectDiscord", () => {
   });
 
   it("fails instead of silently passing everything when a watermark is unparseable", async () => {
-    const watermarks: DiscordWatermark[] = [
-      { channel: "dev-talk", triagedUpTo: "not-a-date" },
-    ];
+    const watermarks: DiscordWatermark[] = [{ channel: "dev-talk", triagedUpTo: "not-a-date" }];
     const fetcher: MessageFetcher = async () => [
       {
         author: "alex",
