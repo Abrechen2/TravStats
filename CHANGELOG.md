@@ -38,6 +38,13 @@ switch that keeps unfinished features out of sight until they are ready.
 - **The settings domain switch moved into the sidebar.** As a top-right pill
   row it was easy to miss; on desktop it now sits directly above the section
   list it scopes. On phones it stays in the top bar.
+- **Booking reference and ticket number when adding a flight manually** (#197).
+  Both fields only appeared in the edit dialog after a flight was saved. The
+  manual add form now offers them directly, and the booking reference is
+  uppercased on entry so manually added flights group into the same booking
+  as imported ones.
+- **The What's New dialog covers 2.4.0.** A short in-app summary of this
+  release's changes (in German and English), shown once after updating.
 
 ### Fixed
 - **Cruise port names with non-English characters render correctly** (#185).
@@ -82,6 +89,28 @@ switch that keeps unfinished features out of sight until they are ready.
   rendered near-white on the amber accent; several admin and cruise buttons
   hardcoded white. All of them now use the same dark text as the standard
   primary button.
+- **Every button in the app follows the same system.** A dozen controls still
+  carried hardcoded blues, greens and oranges from before the design system
+  existed — the admin API-key and parser saves, the airport-seeding dialog, the
+  pending-update card and editor, the flight review submit, the duplicate
+  warning and the delete-demo-user button — so on those surfaces the loudest
+  control was the off-brand one. They now use the shared primary, secondary and
+  danger classes and follow the accent colour. Two were also wrong on the
+  merits, not just off-palette: the pending-update card highlighted **Edit**
+  while **Apply** — the action the card exists for — sat in green beside it, and
+  the duplicate warning painted the risky "add anyway" escape hatch louder than
+  the recommended merge. In both, the recommended action is now the primary one.
+  Deleting the demo user and rejecting a pending update are destructive, and now
+  look it.
+- **An update now actually reaches the browser.** The app shell (`index.html`)
+  was served without any caching instructions, so browsers were free to reuse
+  their copy for hours without asking the server. That stale copy still points
+  at the previous build's JavaScript files: either they are still in the
+  browser's cache and you keep running the old frontend against the new backend,
+  or they have been evicted, the request 404s and the page stays blank. The
+  shell is now revalidated on every load, while the versioned assets keep their
+  long cache. If you have ever had to hard-refresh TravStats after an update,
+  this was why.
 - **Cruise direction arrows no longer pile up on shared shipping lanes.**
   Different cruises routed onto the same lane each placed their own arrows,
   stacking into unreadable clusters. Overlapping arrows are now hidden and
