@@ -180,8 +180,9 @@
     "airline": "Airline",
     "flightNumber": "Flugnummer",
     "route": "Route",
-    "departure": "Abflug",
-    "arrival": "Ankunft",
+    "time": "Zeit",
+    "timeDep": "ab",
+    "timeArr": "an",
     "status": "Status",
     "flightTime": "Flugzeit (h)",
     "aircraft": "Flugzeug",
@@ -204,6 +205,7 @@
       "same": "Als gleichen Flug",
       "return": "Als Rückflug"
     },
+    "sourceInfo": "Datenquelle",
     "sort": {
       "departure": "Abflug",
       "airline": "Airline",
