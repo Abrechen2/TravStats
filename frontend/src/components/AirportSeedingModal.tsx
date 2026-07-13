@@ -122,7 +122,7 @@ export default function AirportSeedingModal({
             <button
               type="button"
               onClick={onClose}
-              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+              className="btn-primary w-full justify-center sm:ml-3 sm:w-auto"
             >
               {t("setup:airportSeeding.modal.understood")}
             </button>

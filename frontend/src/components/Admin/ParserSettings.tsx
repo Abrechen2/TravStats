@@ -109,7 +109,7 @@ export default function ParserSettings({
         <button
           onClick={onSave}
           disabled={savingParsers}
-          className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition font-medium"
+          className="btn-primary"
         >
           {savingParsers ? t("common:buttons.saving") : t("admin:saveSettings")}
         </button>
