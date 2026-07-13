@@ -6,6 +6,7 @@ const ISSUES = JSON.stringify([
   {
     number: 197,
     title: "Booking- and Ticketnumber fields missing",
+    state: "OPEN",
     labels: [{ name: "bug" }],
     author: { login: "alexanderkuenzel" },
     url: "https://github.com/Abrechen2/TravStats/issues/197",
@@ -13,9 +14,18 @@ const ISSUES = JSON.stringify([
   {
     number: 189,
     title: "Airline and aircraft master data",
+    state: "OPEN",
     labels: [{ name: "enhancement" }],
     author: { login: "Abrechen2" },
     url: "https://github.com/Abrechen2/TravStats/issues/189",
+  },
+  {
+    number: 178,
+    title: "Promote 2.4.0",
+    state: "CLOSED",
+    labels: [{ name: "release" }],
+    author: { login: "Abrechen2" },
+    url: "https://github.com/Abrechen2/TravStats/issues/178",
   },
 ]);
 
@@ -38,6 +48,28 @@ describe("collectGithub", () => {
     expect(issue?.title).toContain("Booking");
     expect(issue?.labels).toEqual(["bug"]);
     expect(issue?.author).toBe("alexanderkuenzel");
+  });
+
+  it("carries the open/closed state of each issue", async () => {
+    const result = await collectGithub(fakeRunner);
+    if (!result.ok) throw new Error(result.reason);
+
+    expect(result.data.issues.find((i) => i.number === 197)?.state).toBe("open");
+    expect(result.data.issues.find((i) => i.number === 178)?.state).toBe("closed");
+  });
+
+  it("requests both open and closed issues so a shipped issue is never a ghost", async () => {
+    const seenArgs: (readonly string[])[] = [];
+    const capturingRunner: Runner = async (_cmd, args) => {
+      seenArgs.push(args);
+      return args[0] === "issue" ? ISSUES : PRS;
+    };
+    await collectGithub(capturingRunner);
+
+    const issueCall = seenArgs.find((args) => args[0] === "issue");
+    expect(issueCall).toBeDefined();
+    expect(issueCall).toContain("--state");
+    expect(issueCall?.[issueCall.indexOf("--state") + 1]).toBe("all");
   });
 
   it("collects the open dependabot PRs", async () => {

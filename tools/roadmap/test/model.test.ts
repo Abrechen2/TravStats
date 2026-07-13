@@ -60,6 +60,7 @@ function input(overrides: Partial<ModelInput> = {}): ModelInput {
           {
             number: 197,
             title: "Booking number missing",
+            state: "open",
             labels: ["bug"],
             author: "alex",
             url: "u197",
@@ -67,14 +68,23 @@ function input(overrides: Partial<ModelInput> = {}): ModelInput {
           {
             number: 186,
             title: "Profile picture lost",
+            state: "open",
             labels: ["bug"],
             author: "alex",
             url: "u186",
           },
-          { number: 154, title: "Link Immich album", labels: [], author: "alex", url: "u154" },
+          {
+            number: 154,
+            title: "Link Immich album",
+            state: "open",
+            labels: [],
+            author: "alex",
+            url: "u154",
+          },
           {
             number: 200,
             title: "Actual and scheduled times",
+            state: "open",
             labels: [],
             author: "alex",
             url: "u200",
@@ -256,5 +266,144 @@ describe("buildViewModel", () => {
     const vm = buildViewModel(input({ config: withStaleTitle }));
     const card = vm.columns.flatMap((c) => c.cards).find((c) => c.sourceRef === 197);
     expect(card?.title).toBe("Booking number missing");
+  });
+
+  // --- Bug A: a shipped (closed) issue must resolve, not render as a ghost ---
+
+  it("resolves a closed issue's title normally instead of rendering it as a ghost", () => {
+    const config: RoadmapConfig = {
+      ...CONFIG,
+      items: [
+        ...CONFIG.items,
+        { id: "gh-178", source: { type: "github", ref: 178 }, version: "2.4.0", status: "done" },
+      ],
+    };
+    const base = input();
+    const vm = buildViewModel(
+      input({
+        config,
+        github: {
+          data: {
+            issues: [
+              ...(base.github.data?.issues ?? []),
+              {
+                number: 178,
+                title: "Promote 2.4.0",
+                state: "closed",
+                labels: [],
+                author: "alex",
+                url: "u178",
+              },
+            ],
+            dependabotPrs: [],
+          },
+          staleSince: null,
+          reason: null,
+        },
+      })
+    );
+    const card = vm.columns.flatMap((c) => c.cards).find((c) => c.sourceRef === 178);
+    expect(card?.title).toBe("Promote 2.4.0");
+    expect(card?.closed).toBe(true);
+  });
+
+  it("does not let a closed issue feed the promote decision — promoting cannot close an already-closed issue", () => {
+    const config: RoadmapConfig = {
+      ...CONFIG,
+      versions: [{ id: "2.4.0", state: "rc", branch: "main" }],
+      items: [
+        {
+          id: "gh-178",
+          source: { type: "github", ref: 178 },
+          version: "2.4.0",
+          status: "fixed-awaiting-release",
+        },
+      ],
+    };
+    const vm = buildViewModel(
+      input({
+        config,
+        github: {
+          data: {
+            issues: [
+              {
+                number: 178,
+                title: "Promote 2.4.0",
+                state: "closed",
+                labels: [],
+                author: "alex",
+                url: "u178",
+              },
+            ],
+            dependabotPrs: [],
+          },
+          staleSince: null,
+          reason: null,
+        },
+      })
+    );
+    expect(vm.decisions.find((d) => d.kind === "promote")).toBeUndefined();
+  });
+
+  it("never lands a closed issue in the Unassigned column", () => {
+    const config: RoadmapConfig = { ...CONFIG, items: [] };
+    const vm = buildViewModel(
+      input({
+        config,
+        github: {
+          data: {
+            issues: [
+              {
+                number: 178,
+                title: "Promote 2.4.0",
+                state: "closed",
+                labels: [],
+                author: "alex",
+                url: "u178",
+              },
+              {
+                number: 200,
+                title: "Actual and scheduled times",
+                state: "open",
+                labels: [],
+                author: "alex",
+                url: "u200",
+              },
+            ],
+            dependabotPrs: [],
+          },
+          staleSince: null,
+          reason: null,
+        },
+      })
+    );
+    const unassigned = vm.columns.find((c) => c.versionId === "unassigned");
+    expect(unassigned?.cards.map((c) => c.sourceRef)).toEqual([200]);
+  });
+
+  // --- Bug B: the promote decision must print the reference once ---
+
+  it("prints the issue reference once in the promote decision detail, not twice", () => {
+    const config: RoadmapConfig = {
+      ...CONFIG,
+      versions: [{ id: "2.4.0", state: "rc", branch: "main" }],
+      items: [
+        {
+          id: "gh-999",
+          source: { type: "github", ref: 999 },
+          version: "2.4.0",
+          status: "fixed-awaiting-release",
+        },
+      ],
+    };
+    const vm = buildViewModel(
+      input({
+        config,
+        github: { data: { issues: [], dependabotPrs: [] }, staleSince: null, reason: null },
+      })
+    );
+    const promote = vm.decisions.find((d) => d.kind === "promote");
+    const line = promote?.detail.find((d) => d.includes("999"));
+    expect(line?.match(/#999/g)).toHaveLength(1);
   });
 });
