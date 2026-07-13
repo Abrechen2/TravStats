@@ -102,6 +102,15 @@ switch that keeps unfinished features out of sight until they are ready.
   the recommended merge. In both, the recommended action is now the primary one.
   Deleting the demo user and rejecting a pending update are destructive, and now
   look it.
+- **An update now actually reaches the browser.** The app shell (`index.html`)
+  was served without any caching instructions, so browsers were free to reuse
+  their copy for hours without asking the server. That stale copy still points
+  at the previous build's JavaScript files: either they are still in the
+  browser's cache and you keep running the old frontend against the new backend,
+  or they have been evicted, the request 404s and the page stays blank. The
+  shell is now revalidated on every load, while the versioned assets keep their
+  long cache. If you have ever had to hard-refresh TravStats after an update,
+  this was why.
 - **Cruise direction arrows no longer pile up on shared shipping lanes.**
   Different cruises routed onto the same lane each placed their own arrows,
   stacking into unreadable clusters. Overlapping arrows are now hidden and
