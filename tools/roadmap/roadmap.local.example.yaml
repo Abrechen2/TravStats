@@ -20,6 +20,12 @@ versions:
     branch: main
     note: |
       Markdown. Rendered in the version's detail panel.
+  - id: "2.6.0"
+    state: planned
+    note: |
+      Every item's `version` must match a declared id here, or the
+      literal "backlog" — this second version exists so the example
+      below (which targets "2.6.0") validates on its own.
 
 items:
   # A github item carries NO title — it is read live from the issue number.
