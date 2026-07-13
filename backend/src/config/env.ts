@@ -51,6 +51,7 @@ const envSchema = z.object({
   OPENSKY_USERNAME: z.string().optional(),
   OPENSKY_PASSWORD: z.string().optional(),
   AVIATIONSTACK_API_KEY: z.string().optional(),
+  LOGOSTREAM_API_KEY: z.string().min(10).optional(),
 
   // Training Settings
   PYTHON_CMD: z.string().default('python3'),
