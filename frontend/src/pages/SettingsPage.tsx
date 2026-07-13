@@ -49,6 +49,7 @@ export default function SettingsPage(): JSX.Element {
     units,
     defaults,
     cruise,
+    autoSaveState,
     setProfile,
     setDisplay,
     setUnits,
@@ -492,38 +493,53 @@ export default function SettingsPage(): JSX.Element {
             {activeSection === "admin" && user?.isAdmin && <AdminSection />}
             {activeSection === "about" && <AboutSection />}
 
-            {/* Auto-saved notice — compact strip; the verbose two-line
-                version was visually heavy on small viewports where the
-                whole settings page already scrolls. Single row with the
-                scroll-to-top action collapsed to an icon button. */}
+            {/* Auto-save strip. It reports what actually happened: a hint while
+                idle, "saving" during the write, a green confirmation for a few
+                seconds after one lands. It used to be a permanent green
+                checkmark reading "Auto-saved", which is why a flight default
+                silently failing to persist looked like a success (issue #198). */}
             <div
               className="rounded-md px-3 py-1.5 text-xs flex items-center justify-between gap-3"
               style={{
-                background: "rgba(63,185,80,0.08)",
-                border: "1px solid rgba(63,185,80,0.2)",
+                background:
+                  autoSaveState === "saved" ? "rgba(63,185,80,0.08)" : "var(--bg-elevated)",
+                border:
+                  autoSaveState === "saved"
+                    ? "1px solid rgba(63,185,80,0.2)"
+                    : "1px solid var(--color-border)",
               }}
               role="status"
+              aria-live="polite"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ color: "var(--success)" }}
-                  aria-hidden="true"
+                {autoSaveState === "saved" ? (
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ color: "var(--success)" }}
+                    aria-hidden="true"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : null}
+                <span
+                  className="font-medium"
+                  style={{
+                    color:
+                      autoSaveState === "saved" ? "var(--success)" : "var(--text-muted)",
+                  }}
                 >
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span className="font-medium" style={{ color: "var(--success)" }}>
-                  {t("settings:autoSaved.title")}
-                </span>
-                <span className="truncate" style={{ color: "var(--text-muted)" }}>
-                  {t("settings:autoSaved.description")}
+                  {autoSaveState === "saved"
+                    ? t("settings:autoSave.saved")
+                    : autoSaveState === "saving"
+                      ? t("settings:autoSave.saving")
+                      : t("settings:autoSave.idle")}
                 </span>
               </div>
               <button
