@@ -63,4 +63,38 @@ describe("loadConfig", () => {
     const yaml = VALID.replace('version: "2.4.0"\n    status', "version: backlog\n    status");
     expect(loadConfig(yaml).items[0].version).toBe("backlog");
   });
+
+  it("rejects a source.url with a javascript: scheme, naming the offending item", () => {
+    const yaml = `${VALID}
+  - id: discord-nav
+    source: { type: discord, url: "javascript:alert(document.cookie)" }
+    title: "Nav proposal"
+    version: "2.4.0"
+    status: planned
+`;
+    expect(() => loadConfig(yaml)).toThrow(/discord-nav/);
+    expect(() => loadConfig(yaml)).toThrow(/http/i);
+  });
+
+  it("rejects a source.url with a data: scheme", () => {
+    const yaml = `${VALID}
+  - id: discord-nav
+    source: { type: discord, url: "data:text/html,<script>alert(1)</script>" }
+    title: "Nav proposal"
+    version: "2.4.0"
+    status: planned
+`;
+    expect(() => loadConfig(yaml)).toThrow(/discord-nav/);
+  });
+
+  it("accepts a source.url with an https scheme", () => {
+    const yaml = `${VALID}
+  - id: discord-nav
+    source: { type: discord, url: "https://discord.com/channels/1/2/3" }
+    title: "Nav proposal"
+    version: "2.4.0"
+    status: planned
+`;
+    expect(loadConfig(yaml).items[1].id).toBe("discord-nav");
+  });
 });

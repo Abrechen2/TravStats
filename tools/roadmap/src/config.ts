@@ -40,6 +40,25 @@ const itemSchema = z
         message: `item "${item.id}": a ${item.source.type} item has no live anchor and therefore needs a title`,
       });
     }
+
+    // z.string().url() (WHATWG URL) accepts ANY scheme, including
+    // javascript: and data: — both render as a live, clickable <a href>
+    // on the roadmap page. Reject anything but http(s) here, at load time,
+    // rather than relying on the renderer alone to catch it.
+    if (item.source.url !== undefined) {
+      let scheme: string | null = null;
+      try {
+        scheme = new URL(item.source.url).protocol;
+      } catch {
+        scheme = null;
+      }
+      if (scheme !== "http:" && scheme !== "https:") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `item "${item.id}": source.url must be an http(s) URL, got "${item.source.url}"`,
+        });
+      }
+    }
   });
 
 const configSchema = z.object({
