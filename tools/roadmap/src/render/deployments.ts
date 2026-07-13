@@ -1,54 +1,31 @@
 import type { InstanceTile } from "../model.js";
 import { esc } from "./escape.js";
 
-interface MatrixRow {
-  /** The running image tag, or null for the "unreachable" bucket. */
-  readonly tag: string | null;
-  readonly instances: readonly InstanceTile[];
-}
-
 /**
- * Version-first, not target-first: one row per distinct running tag, the
- * instances running it as the row's content. Forces the reader to compare
- * versions directly instead of scanning six separate boxes by hand.
+ * Target-first: one row per server, in the order the config declares them, with
+ * the tag it actually runs behind it. The owner reads this as "which of my boxes
+ * is on what", so the box is the anchor and the version is the answer — not the
+ * other way round.
  */
-function buildMatrix(instances: readonly InstanceTile[]): readonly MatrixRow[] {
-  const byTag = new Map<string | null, InstanceTile[]>();
-  for (const instance of instances) {
-    const bucket = byTag.get(instance.running) ?? [];
-    bucket.push(instance);
-    byTag.set(instance.running, bucket);
-  }
-  return [...byTag.entries()]
-    .map(([tag, tiles]) => ({ tag, instances: tiles }))
-    .sort((a, b) => {
-      if (a.tag === null) return 1;
-      if (b.tag === null) return -1;
-      return b.tag.localeCompare(a.tag);
-    });
-}
-
-function renderChip(instance: InstanceTile): string {
+function renderRow(instance: InstanceTile): string {
   const drift = instance.mismatch || instance.error !== null;
+  const version =
+    instance.running !== null ? esc(instance.running) : "<span>nicht erreichbar</span>";
   const hint = instance.mismatch
     ? `<span class="hint">erwartet ${esc(instance.expected ?? "?")}</span>`
     : instance.error !== null
       ? `<span class="hint">${esc(instance.error)}</span>`
       : "";
-  return `<span class="chip${drift ? " red" : ""}">${esc(instance.label)}${hint}</span>`;
+
+  return `<tr class="${drift ? "red" : ""}">
+    <th>${esc(instance.label)}</th>
+    <td><span class="tag${drift ? " red" : ""}">${version}</span>${hint}</td>
+  </tr>`;
 }
 
 export function renderDeploymentMatrix(instances: readonly InstanceTile[]): string {
   if (instances.length === 0) {
     return `<p class="empty">Keine Instanzen konfiguriert.</p>`;
   }
-  const rows = buildMatrix(instances);
-  return `<table class="matrix"><tbody>${rows
-    .map(
-      (row) => `<tr class="${row.tag === null ? "red" : ""}">
-        <th>${row.tag !== null ? esc(row.tag) : "nicht erreichbar"}</th>
-        <td>${row.instances.map(renderChip).join("")}</td>
-      </tr>`
-    )
-    .join("")}</tbody></table>`;
+  return `<table class="matrix"><tbody>${instances.map(renderRow).join("")}</tbody></table>`;
 }
