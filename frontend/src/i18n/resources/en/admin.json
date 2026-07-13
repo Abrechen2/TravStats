@@ -614,6 +614,10 @@
       "password": "Password",
       "or": "OR (use basic auth instead)"
     },
+    "logostream": {
+      "label": "Airline logos (logostream.dev)",
+      "description": "Provides airline logos as icon, wordmark and dark-mode variants. Without a key only the basic full logos (Daisycon) are shown."
+    },
     "help": {
       "title": "Global API Keys",
       "description": "These keys are shared with all users and enable access to external AI and flight data services.",
