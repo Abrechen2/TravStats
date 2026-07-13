@@ -6,6 +6,7 @@ export interface GlobalApiKeys {
   globalAirlabsApiKey?: string;
   globalAviationstackApiKey?: string;
   globalAerodataboxApiKey?: string;
+  globalLogostreamApiKey?: string;
   globalOpenskyClientId?: string;
   globalOpenskyClientSecret?: string;
   globalOpenskyUsername?: string;
@@ -160,6 +161,23 @@ export default function GlobalApiKeysManager({
                   onClientSecretChange: (value) =>
                     onGlobalApiKeysChange({ ...globalApiKeys, globalOpenskyClientSecret: value }),
                 }}
+                isAdmin={true}
+              />
+              <ApiKeyCard
+                provider="logostream"
+                label={t("admin:globalApiKeys.logostream.label")}
+                description={t("admin:globalApiKeys.logostream.description")}
+                getKeyUrl="https://airline.logostream.dev/"
+                isShared={false}
+                hasAccess={!!globalApiKeys.globalLogostreamApiKey}
+                value={globalApiKeys.globalLogostreamApiKey || ""}
+                testable={false}
+                onChange={(value) =>
+                  onGlobalApiKeysChange({ ...globalApiKeys, globalLogostreamApiKey: value })
+                }
+                onClear={() =>
+                  onGlobalApiKeysChange({ ...globalApiKeys, globalLogostreamApiKey: "" })
+                }
                 isAdmin={true}
               />
             </div>
