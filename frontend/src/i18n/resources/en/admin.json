@@ -8,7 +8,7 @@
     "invitations": "Invitations",
     "system": "System Info",
     "instance": "Instance",
-    "apiKeys": "API Keys",
+    "externalServices": "External services",
     "parsers": "Parsers",
     "training": "Training Config",
     "logging": "Logging",

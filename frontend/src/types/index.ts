@@ -1,3 +1,5 @@
+import type { LinkedAlbum } from "./immich";
+
 export interface User {
   id: string;
   username: string;
@@ -231,6 +233,7 @@ export interface Trip {
   stops?: TripStop[];
   journalEntries?: TripJournalEntry[];
   photos?: TripPhoto[];
+  immichAlbums?: LinkedAlbum[];
 }
 
 export interface TripPhoto {

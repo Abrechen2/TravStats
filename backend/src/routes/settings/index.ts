@@ -8,6 +8,7 @@ import homeAirportsRouter from './homeAirports';
 import profileRouter from './profile';
 import profilePictureRouter from './profilePicture';
 import tokensRouter from './tokens';
+import immichRouter from './immich';
 
 const router = Router();
 
@@ -34,5 +35,6 @@ router.use('/home-airports', homeAirportsRouter);
 router.use('/profile', profileRouter);
 router.use('/profile-picture', profilePictureRouter);
 router.use('/tokens', tokensRouter);
+router.use('/immich', immichRouter);
 
 export default router;
