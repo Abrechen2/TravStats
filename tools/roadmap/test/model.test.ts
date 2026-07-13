@@ -20,10 +20,26 @@ const CONFIG: RoadmapConfig = {
     { id: "2.5.0", state: "awaiting-merge", branch: "dev/immich-albums" },
   ],
   items: [
-    { id: "gh-197", source: { type: "github", ref: 197 }, version: "2.4.0", status: "fixed-awaiting-release" },
-    { id: "gh-186", source: { type: "github", ref: 186 }, version: "2.4.0", status: "fixed-awaiting-release" },
+    {
+      id: "gh-197",
+      source: { type: "github", ref: 197 },
+      version: "2.4.0",
+      status: "fixed-awaiting-release",
+    },
+    {
+      id: "gh-186",
+      source: { type: "github", ref: 186 },
+      version: "2.4.0",
+      status: "fixed-awaiting-release",
+    },
     { id: "gh-154", source: { type: "github", ref: 154 }, version: "2.5.0", status: "done" },
-    { id: "d-nav", source: { type: "discord" }, title: "Nav submenus", version: "backlog", status: "planned" },
+    {
+      id: "d-nav",
+      source: { type: "discord" },
+      title: "Nav submenus",
+      version: "backlog",
+      status: "planned",
+    },
   ],
 };
 
@@ -32,24 +48,48 @@ function input(overrides: Partial<ModelInput> = {}): ModelInput {
     config: CONFIG,
     generatedAt: "2026-07-13T12:00:00Z",
     git: {
-      data: { branches: [{ name: "dev/immich-albums", head: "9f8397fa", ahead: 81, worktree: null }] },
+      data: {
+        branches: [{ name: "dev/immich-albums", head: "9f8397fa", ahead: 81, worktree: null }],
+      },
       staleSince: null,
       reason: null,
     },
     github: {
       data: {
         issues: [
-          { number: 197, title: "Booking number missing", labels: ["bug"], author: "alex", url: "u197" },
-          { number: 186, title: "Profile picture lost", labels: ["bug"], author: "alex", url: "u186" },
+          {
+            number: 197,
+            title: "Booking number missing",
+            labels: ["bug"],
+            author: "alex",
+            url: "u197",
+          },
+          {
+            number: 186,
+            title: "Profile picture lost",
+            labels: ["bug"],
+            author: "alex",
+            url: "u186",
+          },
           { number: 154, title: "Link Immich album", labels: [], author: "alex", url: "u154" },
-          { number: 200, title: "Actual and scheduled times", labels: [], author: "alex", url: "u200" },
+          {
+            number: 200,
+            title: "Actual and scheduled times",
+            labels: [],
+            author: "alex",
+            url: "u200",
+          },
         ],
         dependabotPrs: [],
       },
       staleSince: null,
       reason: null,
     },
-    deployments: { data: { running: [{ id: "prod", image: "2.3.1", error: null }] }, staleSince: null, reason: null },
+    deployments: {
+      data: { running: [{ id: "prod", image: "2.3.1", error: null }] },
+      staleSince: null,
+      reason: null,
+    },
     discord: { data: { untriaged: [] }, staleSince: null, reason: null },
     ...overrides,
   };
@@ -86,7 +126,9 @@ describe("buildViewModel", () => {
     const vm = buildViewModel(
       input({
         git: {
-          data: { branches: [{ name: "dev/immich-albums", head: "9f8397fa", ahead: 0, worktree: null }] },
+          data: {
+            branches: [{ name: "dev/immich-albums", head: "9f8397fa", ahead: 0, worktree: null }],
+          },
           staleSince: null,
           reason: null,
         },
@@ -101,7 +143,13 @@ describe("buildViewModel", () => {
         discord: {
           data: {
             untriaged: [
-              { channel: "dev-talk", author: "alex", timestamp: "2026-07-12T14:20:00Z", content: "six asks", url: "u" },
+              {
+                channel: "dev-talk",
+                author: "alex",
+                timestamp: "2026-07-12T14:20:00Z",
+                content: "six asks",
+                url: "u",
+              },
             ],
           },
           staleSince: null,
@@ -115,7 +163,11 @@ describe("buildViewModel", () => {
   it("flags an instance whose running version differs from the expected one", () => {
     const vm = buildViewModel(
       input({
-        deployments: { data: { running: [{ id: "prod", image: "2.2.0", error: null }] }, staleSince: null, reason: null },
+        deployments: {
+          data: { running: [{ id: "prod", image: "2.2.0", error: null }] },
+          staleSince: null,
+          reason: null,
+        },
       })
     );
     expect(vm.instances[0].mismatch).toBe(true);

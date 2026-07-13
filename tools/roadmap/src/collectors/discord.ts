@@ -17,9 +17,7 @@ export interface DiscordState {
   readonly untriaged: readonly DiscordMessage[];
 }
 
-export type MessageFetcher = (
-  channel: string,
-) => Promise<readonly RawMessage[]>;
+export type MessageFetcher = (channel: string) => Promise<readonly RawMessage[]>;
 
 const FETCH_LIMIT = 50;
 
@@ -65,7 +63,7 @@ interface TimedMessage {
  */
 export async function collectDiscord(
   watermarks: readonly DiscordWatermark[],
-  fetch: MessageFetcher,
+  fetch: MessageFetcher
 ): Promise<CollectorResult<DiscordState>> {
   try {
     const perChannel = await Promise.all(
@@ -73,7 +71,7 @@ export async function collectDiscord(
         const markInstant = parseInstant(mark.triagedUpTo);
         if (markInstant === null) {
           throw new Error(
-            `Watermark for channel "${mark.channel}" is not a parseable timestamp: "${mark.triagedUpTo}"`,
+            `Watermark for channel "${mark.channel}" is not a parseable timestamp: "${mark.triagedUpTo}"`
           );
         }
 
@@ -83,7 +81,7 @@ export async function collectDiscord(
           const instant = parseInstant(m.timestamp);
           if (instant === null) {
             throw new Error(
-              `Message from channel "${mark.channel}" has an unparseable timestamp: "${m.timestamp}"`,
+              `Message from channel "${mark.channel}" has an unparseable timestamp: "${m.timestamp}"`
             );
           }
           if (instant > markInstant) {
@@ -91,7 +89,7 @@ export async function collectDiscord(
           }
         }
         return timed;
-      }),
+      })
     );
 
     const untriaged = perChannel
@@ -127,9 +125,7 @@ export function createDiscordFetcher(envPath: string): DiscordFetcher {
     readonly guildId: string;
   }> {
     if (!token || !guildId) {
-      throw new Error(
-        `DISCORD_BOT_TOKEN / DISCORD_GUILD_ID missing — expected them in ${envPath}`,
-      );
+      throw new Error(`DISCORD_BOT_TOKEN / DISCORD_GUILD_ID missing — expected them in ${envPath}`);
     }
 
     if (client === null) {
@@ -145,8 +141,7 @@ export function createDiscordFetcher(envPath: string): DiscordFetcher {
   }
 
   const fetch: MessageFetcher = async (channelName) => {
-    const { client: activeClient, guildId: activeGuildId } =
-      await ensureClient();
+    const { client: activeClient, guildId: activeGuildId } = await ensureClient();
     const guild = await activeClient.guilds.fetch(activeGuildId);
     await guild.channels.fetch();
     const channel = guild.channels.cache.find((c) => c.name === channelName);

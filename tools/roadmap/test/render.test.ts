@@ -53,7 +53,11 @@ const VM: ViewModel = {
   ],
   branches: [{ name: "dev/hotels", head: "27389802", ahead: 42, worktree: "/w/hotels" }],
   dependabotPrs: [
-    { number: 165, title: "Bump tailwindcss", url: "https://github.com/Abrechen2/TravStats/pull/165" },
+    {
+      number: 165,
+      title: "Bump tailwindcss",
+      url: "https://github.com/Abrechen2/TravStats/pull/165",
+    },
   ],
   warnings: ["Instances: ssh timeout — showing cached state from 2026-07-13T09:00:00Z"],
 };
@@ -151,7 +155,9 @@ describe("render", () => {
   it("refuses to render a data: URL as a live link on the Dependabot PR link", () => {
     const evil: ViewModel = {
       ...VM,
-      dependabotPrs: [{ number: 165, title: "Bump tailwindcss", url: "data:text/html,<script>1</script>" }],
+      dependabotPrs: [
+        { number: 165, title: "Bump tailwindcss", url: "data:text/html,<script>1</script>" },
+      ],
     };
     const html = render(evil);
     expect(html).not.toContain("data:text/html");

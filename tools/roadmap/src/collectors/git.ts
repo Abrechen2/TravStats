@@ -31,7 +31,11 @@ function parseWorktrees(porcelain: string): Map<string, string> {
 
 export async function collectGit(run: Runner): Promise<CollectorResult<GitState>> {
   try {
-    const refs = await run("git", ["for-each-ref", "--format=%(refname:short)\t%(objectname:short)", "refs/heads"]);
+    const refs = await run("git", [
+      "for-each-ref",
+      "--format=%(refname:short)\t%(objectname:short)",
+      "refs/heads",
+    ]);
     const worktrees = parseWorktrees(await run("git", ["worktree", "list", "--porcelain"]));
 
     const branches: GitBranch[] = [];
@@ -40,7 +44,10 @@ export async function collectGit(run: Runner): Promise<CollectorResult<GitState>
       const ahead =
         name === TRUNK
           ? 0
-          : Number.parseInt((await run("git", ["rev-list", "--count", `${TRUNK}..${name}`])).trim(), 10);
+          : Number.parseInt(
+              (await run("git", ["rev-list", "--count", `${TRUNK}..${name}`])).trim(),
+              10
+            );
       branches.push({
         name,
         head: head.trim(),

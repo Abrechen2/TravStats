@@ -5,12 +5,7 @@
 export type CollectorResult<T> = { ok: true; data: T } | { ok: false; reason: string };
 
 export type ItemStatus =
-  | "planned"
-  | "active"
-  | "blocked"
-  | "parked"
-  | "fixed-awaiting-release"
-  | "done";
+  "planned" | "active" | "blocked" | "parked" | "fixed-awaiting-release" | "done";
 
 export type SourceType = "github" | "discord" | "audit" | "owner";
 
