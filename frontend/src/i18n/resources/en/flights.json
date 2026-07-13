@@ -180,8 +180,9 @@
     "airline": "Airline",
     "flightNumber": "Flight #",
     "route": "Route",
-    "departure": "Departure",
-    "arrival": "Arrival",
+    "time": "Time",
+    "timeDep": "dep",
+    "timeArr": "arr",
     "status": "Status",
     "flightTime": "Flight Time (h)",
     "aircraft": "Aircraft",
@@ -204,6 +205,7 @@
       "same": "As same flight",
       "return": "As return flight"
     },
+    "sourceInfo": "Data source",
     "sort": {
       "departure": "Departure",
       "airline": "Airline",

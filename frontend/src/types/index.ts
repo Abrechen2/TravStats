@@ -132,6 +132,11 @@ export interface Flight {
   patternLat?: number | null;
   patternLon?: number | null;
   specialData?: Record<string, unknown> | null;
+  // Display helpers (populated by backend for enriched flights)
+  depCountry?: string | null;
+  arrCountry?: string | null;
+  depTimezone?: string | null;
+  arrTimezone?: string | null;
 }
 
 export interface Booking {
@@ -258,9 +263,9 @@ export interface FlightInput {
   // and let the server build the real UTC instant via fromZonedTime().
   // Format: "YYYY-MM-DDTHH:mm" (no TZ suffix, no seconds required).
   departureLocal?: string;
-  depTimezone?: string;
+  depTimezone?: string | null;
   arrivalLocal?: string;
-  arrTimezone?: string;
+  arrTimezone?: string | null;
   actualDepartureLocal?: string;
   actualDepartureTz?: string;
   actualArrivalLocal?: string;
