@@ -104,6 +104,7 @@ backend/scripts/test-parser-samples.ts
 tools/*
 # Committed, non-scratch tools (real deliverables, tracked normally):
 !tools/discord-setup/
+!tools/roadmap/
 frontend/test-export.xlsx
 
 # Training data and outputs (should not be committed)
@@ -142,3 +143,9 @@ brand-smoke-shots/
 # Private memory archive + backups (owner-local, never committed)
 memory-archive/
 memory-backup-*.tar.gz
+
+# Internal roadmap board — the curated data layer and the generated page.
+# The *.md rule above does NOT cover .yaml, so this must be explicit:
+# without it the internal roadmap would be published to the public repo.
+roadmap.local.yaml
+.roadmap/
