@@ -5,6 +5,7 @@ import type { Runner } from "./run.js";
 export interface GithubIssue {
   readonly number: number;
   readonly title: string;
+  readonly state: "open" | "closed";
   readonly labels: readonly string[];
   readonly author: string;
   readonly url: string;
@@ -25,6 +26,7 @@ const issuesSchema = z.array(
   z.object({
     number: z.number(),
     title: z.string(),
+    state: z.enum(["OPEN", "CLOSED"]),
     labels: z.array(z.object({ name: z.string() })),
     author: z.object({ login: z.string() }),
     url: z.string(),
@@ -33,17 +35,29 @@ const issuesSchema = z.array(
 
 const prsSchema = z.array(z.object({ number: z.number(), title: z.string(), url: z.string() }));
 
+/** `gh` reports issue state as "OPEN"/"CLOSED"; the rest of the tool works with lowercase. */
+function toIssueState(raw: "OPEN" | "CLOSED"): "open" | "closed" {
+  return raw === "OPEN" ? "open" : "closed";
+}
+
+/**
+ * Fetches both open AND closed issues. A release day closes every issue it
+ * ships, so an open-only fetch turns every one of them into an unresolvable
+ * ghost the moment they're needed most — see model.ts for how the closed
+ * state is then used to resolve titles without letting shipped work re-enter
+ * the promote decision or the Unassigned column.
+ */
 export async function collectGithub(run: Runner): Promise<CollectorResult<GithubState>> {
   try {
     const issuesRaw = await run("gh", [
       "issue",
       "list",
       "--state",
-      "open",
+      "all",
       "--limit",
-      "200",
+      "300",
       "--json",
-      "number,title,labels,author,url",
+      "number,title,state,labels,author,url",
     ]);
     const prsRaw = await run("gh", [
       "pr",
@@ -61,6 +75,7 @@ export async function collectGithub(run: Runner): Promise<CollectorResult<Github
     const issues = issuesSchema.parse(JSON.parse(issuesRaw)).map((i) => ({
       number: i.number,
       title: i.title,
+      state: toIssueState(i.state),
       labels: i.labels.map((l) => l.name),
       author: i.author.login,
       url: i.url,
