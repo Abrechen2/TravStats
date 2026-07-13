@@ -10,11 +10,40 @@ function esc(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/**
+ * A URL is only safe to interpolate into `href="..."` if its SCHEME is
+ * http(s). `esc()` alone stops attribute breakout, but never inspects the
+ * scheme — a `javascript:` or `data:` URL survives untouched and executes
+ * when the owner clicks it. The config loader also rejects these at load
+ * time (defense in depth), but the renderer must never trust that a caller
+ * validated its input, so it checks again here. Returns the escaped, safe
+ * href string, or `null` if the URL must not become a live link.
+ */
+function escUrl(value: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    return null;
+  }
+  return parsed.protocol === "http:" || parsed.protocol === "https:" ? esc(value) : null;
+}
+
+/**
+ * Renders a jump link when `url` is present AND safe. When `url` is present
+ * but its scheme is not http(s), the label still renders — as plain escaped
+ * text, never as `<a>` — so the information survives without being
+ * clickable.
+ */
+function renderLink(url: string | null, label: string): string {
+  if (url === null) return "";
+  const safeHref = escUrl(url);
+  return safeHref !== null ? `<a href="${safeHref}">${esc(label)}</a>` : esc(label);
+}
+
 function renderCard(card: Card): string {
-  const link =
-    card.url !== null
-      ? `<a href="${esc(card.url)}">${card.sourceRef !== null ? `#${card.sourceRef}` : "link"}</a> `
-      : "";
+  const label = card.sourceRef !== null ? `#${card.sourceRef}` : "link";
+  const link = card.url !== null ? `${renderLink(card.url, label)} ` : "";
   const notes = card.notes !== null ? `<div class="notes">${esc(card.notes)}</div>` : "";
 
   return `<details class="card"><summary>${link}${esc(card.title)}
@@ -63,7 +92,7 @@ export function render(vm: ViewModel): string {
   const messages = vm.untriaged
     .map(
       (m) => `<div class="msg">
-        <div class="h">#${esc(m.channel)} · ${esc(m.author)} · ${esc(m.timestamp)} · <a href="${esc(m.url)}">öffnen</a></div>
+        <div class="h">#${esc(m.channel)} · ${esc(m.author)} · ${esc(m.timestamp)} · ${renderLink(m.url, "öffnen")}</div>
         <div class="c">${esc(m.content)}</div>
       </div>`
     )
@@ -71,14 +100,13 @@ export function render(vm: ViewModel): string {
 
   const branchRows = vm.branches
     .map(
-      (b) => `<tr><td>${esc(b.name)}</td><td>${b.ahead}</td><td>${esc(b.worktree ?? "—")}</td></tr>`
+      (b) =>
+        `<tr><td>${esc(b.name)}</td><td>${esc(b.head)}</td><td>${b.ahead}</td><td>${esc(b.worktree ?? "—")}</td></tr>`
     )
     .join("");
 
   const prRows = vm.dependabotPrs
-    .map(
-      (p) => `<tr><td><a href="${esc(p.url)}">#${p.number}</a></td><td>${esc(p.title)}</td></tr>`
-    )
+    .map((p) => `<tr><td>${renderLink(p.url, `#${p.number}`)}</td><td>${esc(p.title)}</td></tr>`)
     .join("");
 
   return `<!doctype html>
@@ -102,7 +130,7 @@ export function render(vm: ViewModel): string {
   ${vm.untriaged.length > 0 ? `<h2>Untriagiert (Discord)</h2>${messages}` : ""}
 
   <h2>Branches</h2>
-  <table><thead><tr><th>Branch</th><th>ahead</th><th>Worktree</th></tr></thead><tbody>${branchRows}</tbody></table>
+  <table><thead><tr><th>Branch</th><th>Commit</th><th>ahead</th><th>Worktree</th></tr></thead><tbody>${branchRows}</tbody></table>
 
   ${vm.dependabotPrs.length > 0 ? `<h2>Dependabot</h2><table><tbody>${prRows}</tbody></table>` : ""}
 </body></html>`;
