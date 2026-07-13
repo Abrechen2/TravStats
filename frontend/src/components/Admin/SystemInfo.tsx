@@ -112,7 +112,7 @@ export default function SystemInfo({
                 onDeleteDemoUser(demoUser.id);
               }
             }}
-            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition text-sm font-medium"
+            className="btn-danger text-sm"
           >
             {t("admin:demoWarning.button")}
           </button>
