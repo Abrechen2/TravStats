@@ -33,17 +33,17 @@ h3 { font-size:11px; margin:14px 0 6px; color:var(--muted); text-transform:upper
 .decision .d-more summary::-webkit-details-marker { display:none; }
 .decision .d-more ul { margin:6px 0 0; padding-left:18px; color:var(--muted); font-size:13px; }
 
-/* Deployment matrix: version-first, one row per running tag. */
+/* Deployment matrix: target-first — one row per server, its running tag behind it. */
 .matrix { border-collapse:collapse; width:100%; }
-.matrix th, .matrix td { text-align:left; padding:6px 10px 6px 0; border-bottom:1px solid var(--line);
-                          font-size:13px; vertical-align:top; }
+.matrix th, .matrix td { text-align:left; padding:7px 10px 7px 0; border-bottom:1px solid var(--line);
+                          font-size:13px; vertical-align:middle; }
 .matrix th { font-weight:600; white-space:nowrap; }
 .matrix tr.red th { color:var(--red); }
-.chip { display:inline-block; border:1px solid var(--line); border-radius:10px; padding:2px 8px;
-        margin:0 6px 4px 0; font-size:12px; background:var(--card-quiet); }
-.chip.red { border-color:var(--red); color:var(--red); }
-.chip .hint { color:var(--muted); margin-left:6px; font-size:11px; }
-.chip.red .hint { color:var(--red); }
+.tag { display:inline-block; border:1px solid var(--line); border-radius:10px; padding:2px 8px;
+       font-size:12px; background:var(--card-quiet); font-variant-numeric:tabular-nums; }
+.tag.red { border-color:var(--red); color:var(--red); }
+.hint { color:var(--muted); margin-left:8px; font-size:11px; }
+.matrix tr.red .hint { color:var(--red); }
 
 /* Release table replaces the old 7-column kanban board. */
 .release-table { border:1px solid var(--line); border-radius:6px; overflow:hidden; }
