@@ -149,3 +149,8 @@ memory-backup-*.tar.gz
 # without it the internal roadmap would be published to the public repo.
 roadmap.local.yaml
 .roadmap/
+# Nor does the *.md rule cover a renamed *.md.archive (glob `*.md` only
+# matches names ending in ".md" — verified with `git check-ignore`, it did
+# NOT match). The archived hand-written roadmap carries the same real
+# hosts/IPs as roadmap.local.yaml, so it needs the same explicit rule.
+ROADMAP.local.md.archive
