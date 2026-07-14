@@ -28,6 +28,16 @@ const DAISYCON_BASE = "https://images.daisycon.io/airline";
 const FETCH_TIMEOUT_MS = 5_000;
 const NEGATIVE_TTL_MS = 24 * 60 * 60 * 1000;
 
+const KIWI_BASE = "https://images.kiwi.com/airlines";
+// kiwi offers 32/64/128 only (256+ is a 404). 128 is the largest, and the
+// flights-table tile renders at 44–56 px, so 128 also covers a 2× display.
+const KIWI_SIZE = 128;
+
+// kiwi answers HTTP 200 with a generic grey-aeroplane glyph for codes it does
+// not know. Unlike Daisycon's, this placeholder IS byte-stable: every unknown
+// code returns the identical image (verified 2026-07-14 across ZZ/XX/99).
+export const KIWI_PLACEHOLDER_MD5S = new Set(["946bca53c7e1c56d66a7f13e69520aee"]);
+
 // In-memory negative cache: a miss today may resolve after logostream adds
 // the airline, so it expires — unlike positive entries, which are immutable.
 const negativeCache = new Map<string, number>();
@@ -88,6 +98,22 @@ async function fromLogostream(code: string, variant: LogoVariant): Promise<Cache
   return logo;
 }
 
+/**
+ * The keyless default. kiwi returns a finished square brand tile that already
+ * carries the airline's own background — Lufthansa white, Delta navy — so
+ * nothing downstream needs a brand colour, a manifest or a contrast heuristic.
+ *
+ * IATA only: the endpoint takes a 2-letter code. A 3-letter ICAO is a miss here
+ * and falls through, which is correct — Daisycon accepts ICAO.
+ */
+async function fromKiwi(code: string): Promise<CachedLogo | null> {
+  if (code.length !== 2) return null;
+  const logo = await fetchImage(`${KIWI_BASE}/${KIWI_SIZE}/${code}.png`);
+  if (!logo) return null;
+  if (KIWI_PLACEHOLDER_MD5S.has(md5(logo.body))) return null;
+  return logo;
+}
+
 async function fromDaisycon(code: string): Promise<CachedLogo | null> {
   // Daisycon only has the full wordmark logo; every variant maps onto it.
   const param = code.length === 3 ? "icao" : "iata";
@@ -109,21 +135,24 @@ export async function resolveAirlineLogo(
   if (negativeUntil !== undefined && negativeUntil > Date.now()) return null;
   negativeCache.delete(cacheKey);
 
-  // Three tiers, in order of what they cost the instance:
+  // Tiers, in order of what they cost the instance. A miss in one tier must
+  // fall through, never be papered over: that is why each returns null rather
+  // than a placeholder.
   //
-  //   logostream — best quality, but it burns an admin's API-key budget, so it
-  //                only runs where a key is actually configured (premium tier).
-  //   vendored   — the KEYLESS DEFAULT. SVG logos snapshotted into this repo:
-  //                no network call, no key, works offline. Covers 93 curated
-  //                airlines — 86 % of flights measured against production data.
-  //   Daisycon   — the tail net for everything the snapshot does not hold.
-  //                Keyless too, but an external request per cold miss.
-  //
-  // A miss in one tier must fall through, never be papered over: that is why
-  // each tier returns null rather than a placeholder.
+  //   logostream — best quality, burns an admin's key budget, so it only runs
+  //                where a key is configured. NOT complete (British Airways is
+  //                missing), which is why the keyless tier below is not merely
+  //                a fallback.
+  //   vendored   — the ICON tier. Square marks for compact surfaces. It no
+  //                longer serves wordmarks: its `logo.svg` was missing for 10
+  //                of 93 airlines and its marks need a plate we no longer draw.
+  //   kiwi       — the KEYLESS DEFAULT for wordmark-shaped variants. A finished
+  //                brand tile with its own background; 133/133 measured.
+  //   Daisycon   — the tail net for whatever even kiwi does not know.
   const logo =
     (await fromLogostream(code, variant)) ??
     getVendoredLogo(code, variant) ??
+    (await fromKiwi(code)) ??
     (await fromDaisycon(code));
   if (!logo) {
     negativeCache.set(cacheKey, Date.now() + NEGATIVE_TTL_MS);
