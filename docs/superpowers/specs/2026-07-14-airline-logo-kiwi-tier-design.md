@@ -76,21 +76,28 @@ rebrand would never reach an instance.
 
 ### The refresh contract
 
-- `logoCache` meta gains **`fetchedAt`** (epoch ms) and **`source`** (which tier
-  answered). Entries written before this change have no `fetchedAt` and are
-  treated as **infinitely stale** — they refresh on first touch.
+- `logoCache` meta gains three fields: **`fetchedAt`** (epoch ms of the last
+  *successful* fetch), **`lastAttemptAt`** (epoch ms of the last attempt,
+  successful or not) and **`source`** (which tier answered). Entries written
+  before this change have no `fetchedAt` and are treated as **infinitely
+  stale** — they refresh on first touch.
 - **Stale-while-revalidate.** A read always serves the cached bytes
   immediately, even when stale. If the entry is older than `LOGO_MAX_AGE_DAYS`
   (default **30**), a background refresh is kicked off and the *next* request
   gets the new bytes. A user request never waits on a refresh, and a dead
   upstream never blocks a page.
-- A background refresh that fails leaves the existing entry **untouched** and
-  bumps `fetchedAt` by a short backoff, so a flapping upstream cannot cause a
-  refresh storm. A stale logo beats no logo.
+- A background refresh that fails leaves the entry's bytes **and its
+  `fetchedAt` untouched**, and writes only `lastAttemptAt`. Staleness is
+  therefore always measured from the last *success*, while the retry backoff is
+  measured from the last *attempt*: a failing upstream cannot make a stale entry
+  look fresh (which would let the nightly sweep skip it forever), and cannot
+  trigger a refresh storm either. A stale logo beats no logo.
 - **Scheduled sweep**: `src/jobs/airlineLogoRefreshScheduler.ts`, modelled on
   `historicalEnrichmentScheduler.ts` (node-cron, UTC — see the timezone note in
-  `CLAUDE.local.md`). Runs nightly, re-fetches entries past the max age, rate-
-  limited so a cold instance does not hammer kiwi.
+  `CLAUDE.local.md`). Runs nightly and re-fetches entries whose `fetchedAt` is
+  past the max age and whose `lastAttemptAt` is outside the retry backoff.
+  Sequential with a small delay between fetches, so a cold instance with a few
+  hundred cached codes does not hammer kiwi in one burst.
 - **Admin action**: `POST /admin/airline-logos/refresh` + a status poll, mirroring
   the existing `POST /admin/airports/reseed` pattern (`routes/admin/system.ts`,
   `adminReseedLimiter`). Surfaced in the admin UI next to the airport re-seed.
@@ -155,8 +162,12 @@ files from the snapshot is a follow-up, not part of this change.
   tier never becomes a placeholder.
 - **Cache freshness**: an entry with no `fetchedAt` is stale; one within
   `LOGO_MAX_AGE_DAYS` is fresh; a stale read serves the old bytes *and* triggers
-  exactly one background refresh; a failing refresh leaves the entry intact.
-- **Scheduler**: picks only entries past the max age; honours the rate limit.
+  exactly one background refresh; a failing refresh leaves both the bytes and
+  `fetchedAt` intact and writes only `lastAttemptAt` — assert explicitly that a
+  failed refresh does **not** make the entry look fresh, because that bug would
+  silently freeze a logo forever.
+- **Scheduler**: picks only entries past the max age; skips entries still inside
+  the retry backoff; spaces its fetches out.
 - **Frontend**: `AirlineWordmarkCell` renders the image with no manifest present
   (the manifest hook is gone); falls back to the name when the image 404s.
   The existing plate assertions get deleted, not adapted — they encode the bug.
