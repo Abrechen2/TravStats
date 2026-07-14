@@ -234,7 +234,7 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
           <button
             type="button"
             disabled={linking}
-            className="px-3 py-1.5 text-sm disabled:opacity-40"
+            className="btn-secondary px-3 py-1.5 text-sm"
             onClick={onClose}
           >
             {t("albums.cancel")}
@@ -242,7 +242,7 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
           <button
             type="button"
             disabled={count === 0 || linking}
-            className="rounded bg-sky-600 px-3 py-1.5 text-sm disabled:opacity-40"
+            className="btn-primary px-3 py-1.5 text-sm"
             onClick={() => void handleConfirm()}
           >
             {t("albums.confirm", { count })}
