@@ -1,5 +1,5 @@
 import { prisma } from '../db';
-import { enrichAirportMetadata, findOrCreateAirport } from '../services/airportLookup';
+import { enrichAirportMetadata, findNearestAirport, findOrCreateAirport } from '../services/airportLookup';
 import { getCachedAirport, getCachedAirports } from '../services/airportCache';
 
 describe('Airport Lookup', () => {
@@ -199,6 +199,59 @@ describe('Airport Lookup', () => {
       const row = await prisma.airport.findFirst({ where: { iata: TEST_CODE } });
       expect(row?.shortName).toBe('Whitespace Short');
       expect(row?.municipalityName).toBe('Whitespace City');
+    });
+  });
+
+  describe('findNearestAirport', () => {
+    // Synthetic pair in an empty stretch of the Gulf of Guinea, so the
+    // assertion never depends on which real airports the OurAirports seed
+    // happens to hold. The closed airfield sits CLOSER to the probe than the
+    // open airport — the exact geometry that made a coarsely-rounded JFK
+    // coordinate resolve to the closed Rockaway Airport (NOLF).
+    const OPEN_ICAO = 'ZZZQ';
+    const CLOSED_ICAO = 'ZZ-9999';
+    const PROBE = { lat: 0, lon: 0 };
+
+    beforeAll(async () => {
+      await prisma.airport.deleteMany({ where: { icao: { in: [OPEN_ICAO, CLOSED_ICAO] } } });
+      await prisma.airport.createMany({
+        data: [
+          {
+            iata: 'ZZQ',
+            icao: OPEN_ICAO,
+            name: 'Testville International',
+            lat: 0.03, // ~4.7 km from the probe
+            lon: 0.03,
+            isClosed: false,
+          },
+          {
+            iata: null,
+            icao: CLOSED_ICAO,
+            name: 'Testville Closed Airfield',
+            lat: 0.01, // ~1.6 km from the probe — geometrically the winner
+            lon: 0.01,
+            isClosed: true,
+          },
+        ],
+      });
+    });
+
+    afterAll(async () => {
+      await prisma.airport.deleteMany({ where: { icao: { in: [OPEN_ICAO, CLOSED_ICAO] } } });
+    });
+
+    it('never returns a closed airfield, even when it is the closest row', async () => {
+      const airport = await findNearestAirport(PROBE.lat, PROBE.lon, 5);
+
+      expect(airport?.icao).toBe(OPEN_ICAO);
+      expect(airport?.name).toBe('Testville International');
+    });
+
+    it('returns null when the only airport in range is closed', async () => {
+      // Radius covers the closed airfield (~1.6 km) but not the open one (~4.7 km).
+      const airport = await findNearestAirport(PROBE.lat, PROBE.lon, 3);
+
+      expect(airport).toBeNull();
     });
   });
 });
