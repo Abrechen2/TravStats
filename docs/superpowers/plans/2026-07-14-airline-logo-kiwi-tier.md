@@ -109,24 +109,33 @@ describe("kiwi tier", () => {
 });
 ```
 
-`placeholderBytes()` is a helper that returns a buffer whose md5 equals the
-constant. Simplest honest way — build it from the constant itself is impossible,
-so instead **export the guard set** and assert against it:
+`placeholderBytes()` reads the **real** placeholder, committed as a fixture:
 
 ```ts
-// in airlineLogoService.ts
-export const KIWI_PLACEHOLDER_MD5S = new Set(["946bca53c7e1c56d66a7f13e69520aee"]);
-```
+import fs from "fs";
+import path from "path";
 
-and in the test, seed a known buffer and add its hash:
-
-```ts
+// The actual bytes kiwi returns for an unknown code (fetched from
+// images.kiwi.com/airlines/128/ZZ.png on 2026-07-14). Using the real image —
+// rather than a stub whose hash we inject into the guard set — means this test
+// also proves the KIWI_PLACEHOLDER_MD5S constant itself is correct. If kiwi
+// ever changes the placeholder, this test fails and tells us to re-vendor it,
+// which is exactly the signal we want.
 function placeholderBytes(): Buffer {
-  const buf = Buffer.from("pretend-this-is-the-grey-aeroplane");
-  KIWI_PLACEHOLDER_MD5S.add(crypto.createHash("md5").update(buf).digest("hex"));
-  return buf;
+  return fs.readFileSync(
+    path.join(__dirname, "fixtures", "kiwi-placeholder-128.png")
+  );
 }
 ```
+
+The fixture is already committed at
+`backend/src/services/airlineLogo/__tests__/fixtures/kiwi-placeholder-128.png`
+(2477 B, md5 `946bca53c7e1c56d66a7f13e69520aee`).
+
+**Do not mutate `KIWI_PLACEHOLDER_MD5S` from a test.** A test that injects its
+own stub's hash into the production guard set proves only that the guard works
+on a value the test invented — it would stay green if the real constant were
+wrong.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
