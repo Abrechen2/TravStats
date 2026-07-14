@@ -162,7 +162,7 @@ export default function ImmichConnectionCard(): JSX.Element {
         <button
           type="button"
           disabled={saving}
-          className="rounded bg-sky-600 px-3 py-1.5 text-sm"
+          className="btn-primary px-3 py-1.5 text-sm"
           onClick={() => void handleSave()}
         >
           {saving ? t("saving") : t("save")}
@@ -170,7 +170,7 @@ export default function ImmichConnectionCard(): JSX.Element {
         <button
           type="button"
           disabled={testing}
-          className="rounded border border-slate-600 px-3 py-1.5 text-sm"
+          className="btn-secondary px-3 py-1.5 text-sm"
           onClick={() => void handleTest()}
         >
           {testing ? t("testing") : t("test")}
