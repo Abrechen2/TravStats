@@ -205,8 +205,7 @@ export default function ImmichGlobalSettings(): JSX.Element {
           type="button"
           onClick={() => void handleTest()}
           disabled={testing || saving}
-          className="rounded-md border px-3 py-1.5 text-sm disabled:opacity-50"
-          style={{ borderColor: "var(--color-border)", color: "var(--text-primary)" }}
+          className="btn-secondary px-3 py-1.5 text-sm"
         >
           {testing ? t("admin.testing") : t("admin.test")}
         </button>
@@ -214,7 +213,7 @@ export default function ImmichGlobalSettings(): JSX.Element {
           type="button"
           onClick={() => void handleSave()}
           disabled={saving || testing}
-          className="rounded-md px-3 py-1.5 text-sm bg-blue-600 text-white disabled:opacity-50"
+          className="btn-primary px-3 py-1.5 text-sm"
         >
           {saving ? t("admin.saving") : t("admin.save")}
         </button>
