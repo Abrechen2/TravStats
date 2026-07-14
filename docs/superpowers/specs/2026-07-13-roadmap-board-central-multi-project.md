@@ -1,5 +1,25 @@
 # Brief: make the roadmap board a central, multi-project tool
 
+> **Status 2026-07-14: DONE.** The tool now lives at `D:/Projekte/CC/tools/roadmap`
+> (123 tests green) and serves TravStats and Sublarr. It is no longer in this repo:
+> this branch keeps only the `.gitignore` entries and these documents. Each project
+> keeps its own gitignored `roadmap.local.yaml` + `.roadmap/`.
+>
+> Two assumptions that only a SECOND project could expose, both fixed and both now
+> configuration rather than constants:
+>
+> - **The trunk was hardcoded to `main`.** Sublarr's is `master`, so every
+>   ahead-count ran `main..<branch>` against a revision that does not exist — and
+>   the first failure took the ENTIRE git section down with it. Now `trunk:` in the
+>   YAML (default `main`), checked against the branch list, with the fix named in
+>   the error. A missing `git` still reports as a missing git, not a missing trunk.
+> - **The page title said "TravStats" on every board.** Now `project:` in the YAML,
+>   defaulting to the repo directory's name.
+>
+> Also: a project with no Discord gets no Discord SECTION, not merely no warning —
+> an empty "keine untriagierten Nachrichten" block implies a source that is being
+> watched.
+
 The roadmap board currently lives inside the TravStats repo at
 `D:/TravStats_Projekt/TravStats/.claude/worktrees/roadmap/tools/roadmap` (branch
 `feat/roadmap-board`). It works: 85 tests green, live-verified. The owner now wants it as the
