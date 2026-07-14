@@ -104,7 +104,6 @@ backend/scripts/test-parser-samples.ts
 tools/*
 # Committed, non-scratch tools (real deliverables, tracked normally):
 !tools/discord-setup/
-!tools/roadmap/
 frontend/test-export.xlsx
 
 # Training data and outputs (should not be committed)

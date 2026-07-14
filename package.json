@@ -20,8 +20,7 @@
     "lint:frontend": "cd frontend && npm run lint",
     "typecheck": "npm run typecheck:backend && npm run typecheck:frontend",
     "typecheck:backend": "cd backend && npx tsc --noEmit",
-    "typecheck:frontend": "cd frontend && npx tsc --noEmit",
-    "roadmap": "cd tools/roadmap && npm run start --"
+    "typecheck:frontend": "cd frontend && npx tsc --noEmit"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
