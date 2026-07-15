@@ -274,6 +274,28 @@ frontend/src/
   User-added rows (`isUserAdded=true`) are never overwritten by
   re-seeding. Seed test suites wipe ALL rows in `beforeEach` and re-seed
   in `afterAll` to keep the dev DB in a predictable populated state.
+- **Airline logos (chain since 2.5.0)** — `resolveAirlineLogo`
+  (`backend/src/services/airlineLogo/airlineLogoService.ts`) resolves a code+variant
+  through four tiers, each returning `null` on a miss so it falls through (a tier
+  must NEVER return a placeholder — that invariant the whole chain rests on):
+  **logostream** (premium, only where an admin key is configured) → **vendored**
+  (`vendoredLogos.ts`, the ICON tier: serves ONLY `icon` + `logo-white`→`icon-mono.svg`,
+  no wordmarks) → **kiwi** (`images.kiwi.com`, the keyless default for wordmark-shaped
+  variants — a finished 128px SQUARE brand tile that carries its own background;
+  IATA-only, unknown codes return a byte-stable grey-aeroplane placeholder guarded by
+  md5) → **Daisycon** (tail net). The frontend renders the tile **BARE**
+  (`AirlineWordmarkCell.tsx`): there is no manifest endpoint, no brand-colour map and
+  no `isDark` luminance plate any more — all three were DELETED because painting a
+  plate behind a tile that already has its own background shipped an INVISIBLE logo in
+  2.5.0-beta.1 (and every unit test passed while it was invisible — so changes here get
+  a browser look, not just green tests). The disk cache (`logoCache.ts`,
+  `getCachedLogoEntry`) is stale-while-revalidate: it always serves cached bytes and
+  kicks a background refresh when stale, coalesced per key. Entries carry
+  `fetchedAt`/`lastAttemptAt`/`source`; a FAILED refresh writes only `lastAttemptAt`
+  (never `fetchedAt`), so a stale entry stays visibly stale for the next retry instead
+  of freezing forever. A nightly cron sweep (`jobs/airlineLogoRefreshScheduler.ts`,
+  3 AM UTC) plus an admin re-sync (`POST /admin/airline-logos/refresh`) keep stored
+  logos current.
 - **Cruise migrations** — the initial cruise migration
   (`20260419120000_cruise_module`) and its fixups
   (`20260419130000_cruise_fixups`) were hand-written rather than
@@ -378,7 +400,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **TravStats** (5436 symbols, 13822 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **TravStats** (5494 symbols, 13940 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
