@@ -3,7 +3,6 @@ import { z } from "zod";
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { airlineLogoLimiter } from "../middleware/rateLimit";
 import { resolveAirlineLogo, type LogoVariant } from "../services/airlineLogo/airlineLogoService";
-import { getApiKey } from "../services/apiKeyResolver";
 
 const paramsSchema = z.object({
   code: z.string().regex(/^[A-Za-z0-9]{2,3}$/, "IATA (2) or ICAO (3) code expected"),
@@ -13,31 +12,6 @@ const querySchema = z.object({
 });
 
 const router = Router();
-
-/**
- * What the client needs to render a logo tile correctly, in one cached request.
- *
- * `premium` is the load-bearing field. The vendored tier ships square brand
- * MARKS, so the tile paints the airline's colour behind them. But the moment an
- * admin configures a logostream key, the premium tier answers first and returns
- * a WORDMARK for the same code — painting that on a brand-coloured square would
- * look broken. The client must therefore know which tier will serve it, and only
- * the server can say.
- *
- * Registered before `/:code` so "manifest" is never parsed as an airline code.
- */
-router.get(
-  "/manifest",
-  authenticate,
-  async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const premium = (await getApiKey("logostream")) !== null;
-      res.json({ premium, brands: {} });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
 
 // Authenticated, cached proxy for airline logos (icon/logo/logo-white/tail).
 // resolveAirlineLogo() checks disk cache first, then falls back to the
