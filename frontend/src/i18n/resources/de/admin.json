@@ -311,6 +311,14 @@
       "format": "JSON-Datei, die einfach importiert oder analysiert werden kann"
     }
   },
+  "airlineLogos": {
+    "title": "Airline-Logos",
+    "description": "Gespeicherte Logos gegen die Quellen prüfen und veraltete erneuern. Läuft ohnehin jede Nacht.",
+    "action": "Logos aktualisieren",
+    "running": "Wird geprüft …",
+    "result": "{{refreshed}} von {{checked}} Logos erneuert",
+    "failed": "Aktualisierung fehlgeschlagen"
+  },
   "export": {
     "button": "📥 Daten exportieren",
     "description": "Exportieren Sie alle Benutzerdaten als JSON-Datei.",
