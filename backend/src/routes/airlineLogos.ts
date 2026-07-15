@@ -3,7 +3,6 @@ import { z } from "zod";
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { airlineLogoLimiter } from "../middleware/rateLimit";
 import { resolveAirlineLogo, type LogoVariant } from "../services/airlineLogo/airlineLogoService";
-import { vendoredBrands } from "../services/airlineLogo/vendoredLogos";
 import { getApiKey } from "../services/apiKeyResolver";
 
 const paramsSchema = z.object({
@@ -33,7 +32,7 @@ router.get(
   async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const premium = (await getApiKey("logostream")) !== null;
-      res.json({ premium, brands: premium ? {} : vendoredBrands() });
+      res.json({ premium, brands: {} });
     } catch (error) {
       next(error);
     }
