@@ -1,9 +1,18 @@
-import { resolveAirlineLogo, __resetNegativeCacheForTests } from "../airlineLogoService";
+import {
+  resolveAirlineLogo,
+  refreshLogo,
+  __resetNegativeCacheForTests,
+  __flushRefreshesForTests,
+  __resetInFlightForTests,
+  LOGO_MAX_AGE_MS,
+} from "../airlineLogoService";
 import * as cache from "../logoCache";
+import { getCachedLogoEntry, putCachedLogo, isStale, logoCacheDir } from "../logoCache";
 import * as resolver from "../../apiKeyResolver";
 import logger from "../../../utils/logger";
 import crypto from "crypto";
 import fs from "fs";
+import fsp from "fs/promises";
 import path from "path";
 
 // The Daisycon "unknown airline" placeholder defeats status-based detection
@@ -31,8 +40,15 @@ function mockFetchOnce(status: number, body: Buffer, contentType: string): jest.
 
 describe("resolveAirlineLogo", () => {
   it("returns the disk-cache hit without any network call", async () => {
-    jest.spyOn(cache, "getCachedLogo").mockResolvedValue({
-      body: Buffer.from("hit"), contentType: "image/png",
+    jest.spyOn(cache, "getCachedLogoEntry").mockResolvedValue({
+      body: Buffer.from("hit"),
+      contentType: "image/png",
+      // A FRESH entry: under stale-while-revalidate a STALE hit would kick a
+      // background refresh (a fetch call), so the entry must be fresh to keep
+      // this test's "no network call" assertion true.
+      fetchedAt: Date.now(),
+      lastAttemptAt: Date.now(),
+      source: "kiwi",
     });
     const fn = jest.fn();
     global.fetch = fn as unknown as typeof fetch;
@@ -43,7 +59,7 @@ describe("resolveAirlineLogo", () => {
 
   it("uses logostream when a key resolves and caches the result", async () => {
     jest.spyOn(resolver, "getApiKey").mockResolvedValue("FREE-TEST-KEY-000000");
-    jest.spyOn(cache, "getCachedLogo").mockResolvedValue(null);
+    jest.spyOn(cache, "getCachedLogoEntry").mockResolvedValue(null);
     const put = jest.spyOn(cache, "putCachedLogo").mockResolvedValue();
     const fn = mockFetchOnce(200, Buffer.from("realpng"), "image/png");
     const r = await resolveAirlineLogo("LH", "icon");
@@ -51,12 +67,16 @@ describe("resolveAirlineLogo", () => {
     const requestedUrl = String(fn.mock.calls[0][0]);
     expect(requestedUrl).toContain("airlines-api.logostream.dev");
     expect(requestedUrl).toContain("key=");
-    expect(put).toHaveBeenCalledWith("LH-icon", expect.objectContaining({ contentType: "image/png" }));
+    expect(put).toHaveBeenCalledWith(
+      "LH-icon",
+      expect.objectContaining({ contentType: "image/png" }),
+      "logostream"
+    );
   });
 
   it("falls through to Daisycon when logostream returns the unknown-airline svg placeholder", async () => {
     jest.spyOn(resolver, "getApiKey").mockResolvedValue("FREE-TEST-KEY-000000");
-    jest.spyOn(cache, "getCachedLogo").mockResolvedValue(null);
+    jest.spyOn(cache, "getCachedLogoEntry").mockResolvedValue(null);
     const put = jest.spyOn(cache, "putCachedLogo").mockResolvedValue();
     const fn = jest
       .fn()
@@ -82,7 +102,11 @@ describe("resolveAirlineLogo", () => {
     expect(String(fn.mock.calls[0][0])).toContain("airlines-api.logostream.dev");
     expect(String(fn.mock.calls[1][0])).toContain("images.kiwi.com");
     expect(String(fn.mock.calls[2][0])).toContain("daisycon");
-    expect(put).toHaveBeenCalledWith("Q9-icon", expect.objectContaining({ contentType: "image/png" }));
+    expect(put).toHaveBeenCalledWith(
+      "Q9-icon",
+      expect.objectContaining({ contentType: "image/png" }),
+      "daisycon"
+    );
   });
 
   /**
@@ -92,7 +116,7 @@ describe("resolveAirlineLogo", () => {
    * the tier: 86 % of flights resolve without leaving the machine.
    */
   it("serves a covered airline from the vendored snapshot without any network call", async () => {
-    jest.spyOn(cache, "getCachedLogo").mockResolvedValue(null);
+    jest.spyOn(cache, "getCachedLogoEntry").mockResolvedValue(null);
     const put = jest.spyOn(cache, "putCachedLogo").mockResolvedValue();
     const fn = jest.fn();
     global.fetch = fn as unknown as typeof fetch;
@@ -102,7 +126,11 @@ describe("resolveAirlineLogo", () => {
     expect(r).not.toBeNull();
     expect(r!.contentType).toBe("image/svg+xml");
     expect(fn).not.toHaveBeenCalled();
-    expect(put).toHaveBeenCalledWith("LH-icon", expect.objectContaining({ contentType: "image/svg+xml" }));
+    expect(put).toHaveBeenCalledWith(
+      "LH-icon",
+      expect.objectContaining({ contentType: "image/svg+xml" }),
+      "vendored"
+    );
   });
 
   /**
@@ -112,7 +140,7 @@ describe("resolveAirlineLogo", () => {
    * test's kiwi mock (404), so the request keeps falling through to Daisycon.
    */
   it("falls through to Daisycon for an airline the snapshot does not hold", async () => {
-    jest.spyOn(cache, "getCachedLogo").mockResolvedValue(null);
+    jest.spyOn(cache, "getCachedLogoEntry").mockResolvedValue(null);
     jest.spyOn(cache, "putCachedLogo").mockResolvedValue();
     const fn = jest
       .fn()
@@ -131,7 +159,7 @@ describe("resolveAirlineLogo", () => {
   });
 
   it("treats the Daisycon placeholder body as a miss", async () => {
-    jest.spyOn(cache, "getCachedLogo").mockResolvedValue(null);
+    jest.spyOn(cache, "getCachedLogoEntry").mockResolvedValue(null);
     const put = jest.spyOn(cache, "putCachedLogo").mockResolvedValue();
     // Craft a body whose md5 matches the known placeholder hash by mocking crypto:
     const body = Buffer.from("placeholder-bytes");
@@ -151,7 +179,7 @@ describe("resolveAirlineLogo", () => {
   });
 
   it("negative-caches misses so a second call makes no network request", async () => {
-    jest.spyOn(cache, "getCachedLogo").mockResolvedValue(null);
+    jest.spyOn(cache, "getCachedLogoEntry").mockResolvedValue(null);
     const fn = mockFetchOnce(404, Buffer.alloc(0), "text/plain");
     expect(await resolveAirlineLogo("ZZ", "icon")).toBeNull();
     const calls = fn.mock.calls.length;
@@ -162,7 +190,7 @@ describe("resolveAirlineLogo", () => {
   it("never logs the raw API key when a fetch fails", async () => {
     const FAKE_KEY = "FREE-TEST-KEY-000000";
     jest.spyOn(resolver, "getApiKey").mockResolvedValue(FAKE_KEY);
-    jest.spyOn(cache, "getCachedLogo").mockResolvedValue(null);
+    jest.spyOn(cache, "getCachedLogoEntry").mockResolvedValue(null);
     const warnSpy = jest.spyOn(logger, "warn").mockImplementation(() => undefined as unknown as void);
     // Simulate an error message that embeds the key (simulating a future fetch implementation detail)
     global.fetch = jest.fn().mockRejectedValue(
@@ -219,7 +247,7 @@ describe("kiwi tier", () => {
     // null and the top-level afterEach already restores all mocks after
     // every test, so re-declaring those here would only reorder them ahead
     // of that stub within a single test's setup — re-mock the cache only.
-    jest.spyOn(cache, "getCachedLogo").mockResolvedValue(null);
+    jest.spyOn(cache, "getCachedLogoEntry").mockResolvedValue(null);
     jest.spyOn(cache, "putCachedLogo").mockResolvedValue();
   });
 
@@ -262,5 +290,190 @@ describe("kiwi tier", () => {
     await resolveAirlineLogo("LH", "logo");
     expect(fn).toHaveBeenCalledTimes(1);
     expect(String(fn.mock.calls[0][0])).toContain("logostream");
+  });
+});
+
+describe("stale-while-revalidate", () => {
+  const OLD = Buffer.from("old-bytes");
+  const NEW = Buffer.from("new-bytes");
+  const DAY = 24 * 60 * 60 * 1000;
+
+  // This block exercises the REAL disk cache (real putCachedLogo, real
+  // getCachedLogoEntry) — mocking it would just re-test the mock. Only
+  // `fetch` and `getApiKey` (stubbed null by the top-level beforeEach) are
+  // faked.
+  beforeEach(async () => {
+    await fsp.rm(logoCacheDir(), { recursive: true, force: true });
+    // A never-resolving mocked upstream (below) leaves a permanently-pending
+    // entry in the module-level in-flight map; without this reset every
+    // later flushRefreshes() in this file would hang on that stale promise.
+    __resetInFlightForTests();
+  });
+
+  async function ageEntry(key: string, ms: number): Promise<void> {
+    const file = path.join(logoCacheDir(), `${key}.meta.json`);
+    const raw = JSON.parse(await fsp.readFile(file, "utf-8")) as Record<string, unknown>;
+    const past = Date.now() - ms;
+    await fsp.writeFile(file, JSON.stringify({ ...raw, fetchedAt: past, lastAttemptAt: past }));
+  }
+
+  async function flushRefreshes(): Promise<void> {
+    await __flushRefreshesForTests();
+  }
+
+  function mockFetchOnce(opts: { url: RegExp; body: Buffer; contentType: string }): jest.Mock {
+    const fn = jest.fn().mockImplementation((input: RequestInfo | URL) => {
+      if (opts.url.test(String(input))) {
+        return Promise.resolve(
+          new Response(new Uint8Array(opts.body), {
+            status: 200,
+            headers: { "content-type": opts.contentType },
+          })
+        );
+      }
+      return Promise.resolve(new Response(new Uint8Array(), { status: 404 }));
+    });
+    global.fetch = fn as unknown as typeof fetch;
+    return fn;
+  }
+
+  function mockFetchNeverResolves(urlRe: RegExp): jest.Mock {
+    const fn = jest.fn().mockImplementation((input: RequestInfo | URL) => {
+      if (urlRe.test(String(input))) return new Promise<Response>(() => undefined);
+      return Promise.resolve(new Response(new Uint8Array(), { status: 404 }));
+    });
+    global.fetch = fn as unknown as typeof fetch;
+    return fn;
+  }
+
+  function mockFetchAllFail(): jest.Mock {
+    const fn = jest.fn().mockResolvedValue(new Response(new Uint8Array(), { status: 404 }));
+    global.fetch = fn as unknown as typeof fetch;
+    return fn;
+  }
+
+  // The background refresh is a fire-and-forget `void refreshLogo(...)`: it
+  // is kicked off but not awaited, so resolveAirlineLogo's own promise can
+  // settle (and hand control back to the test) via a SHORTER microtask chain
+  // than the refresh needs to reach its actual fetch() call (getApiKey ->
+  // fromLogostream -> fetchFromChain -> getVendoredLogo -> fromKiwi ->
+  // fetchImage). Without a tick to let that chain finish unwinding, the
+  // "was the network reached" assertion can run before it has been.
+  function flushMicrotasks(): Promise<void> {
+    return new Promise((resolve) => setImmediate(resolve));
+  }
+
+  it("serves a stale entry immediately and does not block on the network", async () => {
+    await putCachedLogo("LH-logo", { body: OLD, contentType: "image/png" }, "kiwi");
+    await ageEntry("LH-logo", 40 * DAY); // helper: rewrite fetchedAt
+    const slow = mockFetchNeverResolves(/kiwi/); // upstream hangs
+
+    const logo = await resolveAirlineLogo("LH", "logo");
+    await flushMicrotasks();
+
+    expect(logo?.body).toEqual(OLD); // served from cache, at once
+    expect(slow).toHaveBeenCalled(); // refresh WAS kicked off
+  });
+
+  it("a fresh entry triggers no refresh at all", async () => {
+    await putCachedLogo("LH-logo", { body: OLD, contentType: "image/png" }, "kiwi");
+    const spy = mockFetchOnce({ url: /kiwi/, body: NEW, contentType: "image/png" });
+    await resolveAirlineLogo("LH", "logo");
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("the next request gets the refreshed bytes", async () => {
+    await putCachedLogo("LH-logo", { body: OLD, contentType: "image/png" }, "kiwi");
+    await ageEntry("LH-logo", 40 * DAY);
+    mockFetchOnce({ url: /kiwi/, body: NEW, contentType: "image/png" });
+
+    await resolveAirlineLogo("LH", "logo"); // serves OLD, refreshes behind it
+    await flushRefreshes(); // helper: await the in-flight refresh
+
+    const second = await resolveAirlineLogo("LH", "logo");
+    expect(second?.body).toEqual(NEW);
+  });
+
+  it("a failed refresh keeps the old bytes and leaves the entry stale", async () => {
+    await putCachedLogo("LH-logo", { body: OLD, contentType: "image/png" }, "kiwi");
+    await ageEntry("LH-logo", 40 * DAY);
+    mockFetchAllFail();
+
+    const logo = await resolveAirlineLogo("LH", "logo");
+    await flushRefreshes();
+
+    expect(logo?.body).toEqual(OLD);
+    const entry = (await getCachedLogoEntry("LH-logo"))!;
+    expect(entry.body).toEqual(OLD);
+    expect(isStale(entry, LOGO_MAX_AGE_MS)).toBe(true); // still due for retry
+  });
+
+  it("coalesces concurrent refreshes of the same key into one", async () => {
+    await putCachedLogo("LH-logo", { body: OLD, contentType: "image/png" }, "kiwi");
+    await ageEntry("LH-logo", 40 * DAY);
+    const spy = mockFetchOnce({ url: /kiwi/, body: NEW, contentType: "image/png" });
+
+    await Promise.all([
+      resolveAirlineLogo("LH", "logo"),
+      resolveAirlineLogo("LH", "logo"),
+      resolveAirlineLogo("LH", "logo"),
+    ]);
+    await flushRefreshes();
+
+    expect(spy).toHaveBeenCalledTimes(1); // a table of 200 rows must not fan out
+  });
+
+  /**
+   * refreshLogo re-derives {code, variant} from the cache key using the FIRST
+   * hyphen. "logo-white" itself contains a hyphen, so a naive lastIndexOf
+   * split would mis-parse "ZZ-logo-white" into code "ZZ-logo", variant
+   * "white" — and then ask logostream/kiwi/Daisycon for an airline called
+   * "ZZ-logo", which can never exist. ZZ (not a real airline) is used rather
+   * than the brief's illustrative BA so the vendored tier — which DOES ship a
+   * "logo-white" (icon-mono.svg) asset for British Airways — cannot answer
+   * first and hide the bug this test targets; the request must fall through
+   * to kiwi to prove the split.
+   */
+  it("round-trips a logo-white key through refreshLogo using the right code", async () => {
+    await putCachedLogo("ZZ-logo-white", { body: OLD, contentType: "image/png" }, "kiwi");
+    await ageEntry("ZZ-logo-white", 40 * DAY);
+    const spy = mockFetchOnce({ url: /images\.kiwi\.com/, body: NEW, contentType: "image/png" });
+
+    await resolveAirlineLogo("ZZ", "logo-white");
+    await flushRefreshes();
+
+    expect(spy).toHaveBeenCalled();
+    const requestedUrl = String(spy.mock.calls[0][0]);
+    // kiwi's URL embeds the CODE only ("/airlines/128/ZZ.png") — if the split
+    // had mis-parsed the key, this would read ".../ZZ-logo.png" instead.
+    expect(requestedUrl).toContain("/ZZ.png");
+    expect(requestedUrl).not.toContain("ZZ-logo");
+
+    const entry = (await getCachedLogoEntry("ZZ-logo-white"))!;
+    expect(entry.body).toEqual(NEW);
+  });
+});
+
+describe("refreshLogo", () => {
+  afterEach(async () => {
+    await fsp.rm(logoCacheDir(), { recursive: true, force: true });
+  });
+
+  it("is exported directly and can be invoked standalone", async () => {
+    await putCachedLogo("LH-logo", { body: Buffer.from("old"), contentType: "image/png" }, "kiwi");
+    jest.spyOn(resolver, "getApiKey").mockResolvedValue(null);
+    const fn = jest.fn().mockResolvedValue(
+      new Response(new Uint8Array(Buffer.from("new")), {
+        status: 200,
+        headers: { "content-type": "image/png" },
+      })
+    );
+    global.fetch = fn as unknown as typeof fetch;
+
+    const changed = await refreshLogo("LH-logo");
+
+    expect(changed).toBe(true);
+    const entry = (await getCachedLogoEntry("LH-logo"))!;
+    expect(entry.body.toString()).toBe("new");
   });
 });
