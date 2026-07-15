@@ -1,7 +1,15 @@
 import crypto from "crypto";
 import logger from "../../utils/logger";
 import { getApiKey } from "../apiKeyResolver";
-import { getCachedLogo, putCachedLogo, type CachedLogo } from "./logoCache";
+import {
+  getCachedLogoEntry,
+  putCachedLogo,
+  touchFailedRefresh,
+  isStale,
+  type CachedLogo,
+  type CachedLogoEntry,
+  type LogoSource,
+} from "./logoCache";
 import { getVendoredLogo } from "./vendoredLogos";
 
 export type LogoVariant = "icon" | "logo" | "logo-white" | "tail";
@@ -122,43 +130,137 @@ async function fromDaisycon(code: string): Promise<CachedLogo | null> {
   return logo;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const LOGO_MAX_AGE_DAYS = Number(process.env.LOGO_MAX_AGE_DAYS ?? 30);
+export const LOGO_MAX_AGE_MS = LOGO_MAX_AGE_DAYS * DAY_MS;
+export const RETRY_BACKOFF_MS = 6 * 60 * 60 * 1000;
+
+// One in-flight refresh per key. A flights table renders hundreds of rows at
+// once; without this, a single stale logo would fan out into hundreds of
+// identical upstream requests.
+const inFlight = new Map<string, Promise<boolean>>();
+
+/** Test seam: await every refresh currently in flight. */
+export async function __flushRefreshesForTests(): Promise<void> {
+  await Promise.allSettled([...inFlight.values()]);
+}
+
+/**
+ * Test seam: forget any in-flight refreshes without waiting for them.
+ *
+ * A mocked upstream that never resolves (proving "the caller does not block")
+ * otherwise leaks a permanently-pending entry into this module-level map for
+ * the rest of the test run — every later `__flushRefreshesForTests()` in the
+ * same file would then hang forever on that one dangling promise.
+ */
+export function __resetInFlightForTests(): void {
+  inFlight.clear();
+}
+
+// Tiers, in order of what they cost the instance. A miss in one tier must
+// fall through, never be papered over: that is why each returns null rather
+// than a placeholder.
+//
+//   logostream — best quality, burns an admin's key budget, so it only runs
+//                where a key is configured. NOT complete (British Airways is
+//                missing), which is why the keyless tier below is not merely
+//                a fallback.
+//   vendored   — the ICON tier. Square marks for compact surfaces. It no
+//                longer serves wordmarks: its `logo.svg` was missing for 10
+//                of 93 airlines and its marks need a plate we no longer draw.
+//   kiwi       — the KEYLESS DEFAULT for wordmark-shaped variants. A finished
+//                brand tile with its own background; 133/133 measured.
+//   Daisycon   — the tail net for whatever even kiwi does not know.
+async function fetchFromChain(
+  code: string,
+  variant: LogoVariant
+): Promise<{ logo: CachedLogo; source: LogoSource } | null> {
+  const premium = await fromLogostream(code, variant);
+  if (premium) return { logo: premium, source: "logostream" };
+  const vendored = getVendoredLogo(code, variant);
+  if (vendored) return { logo: vendored, source: "vendored" };
+  const kiwi = await fromKiwi(code);
+  if (kiwi) return { logo: kiwi, source: "kiwi" };
+  const daisycon = await fromDaisycon(code);
+  if (daisycon) return { logo: daisycon, source: "daisycon" };
+  return null;
+}
+
+/**
+ * Re-fetch one cache key through the chain. Returns true when the bytes changed.
+ *
+ * A failure leaves the cached bytes AND their fetchedAt untouched: a stale logo
+ * beats no logo, and the entry must stay visibly stale so the next sweep retries
+ * it.
+ */
+export async function refreshLogo(key: string): Promise<boolean> {
+  const existing = inFlight.get(key);
+  if (existing) return existing;
+
+  const task = (async (): Promise<boolean> => {
+    // The FIRST hyphen always separates code from variant: airline codes are
+    // route-validated `[A-Za-z0-9]{2,3}` and never contain a hyphen, but the
+    // "logo-white" variant does — lastIndexOf would mis-parse "XX-logo-white"
+    // into code "XX-logo", variant "white".
+    const sep = key.indexOf("-");
+    const code = key.slice(0, sep);
+    const variant = key.slice(sep + 1) as LogoVariant;
+    try {
+      const found = await fetchFromChain(code, variant);
+      if (!found) {
+        await touchFailedRefresh(key);
+        return false;
+      }
+      await putCachedLogo(key, found.logo, found.source);
+      return true;
+    } catch (error) {
+      logger.warn(
+        { operation: "logo_refresh_failed", key, message: (error as Error).message },
+        "airline logo refresh failed"
+      );
+      await touchFailedRefresh(key);
+      return false;
+    } finally {
+      inFlight.delete(key);
+    }
+  })();
+
+  inFlight.set(key, task);
+  return task;
+}
+
+function dueForRetry(entry: CachedLogoEntry): boolean {
+  if (entry.lastAttemptAt === null) return true;
+  return Date.now() - entry.lastAttemptAt > RETRY_BACKOFF_MS;
+}
+
 export async function resolveAirlineLogo(
   code: string,
   variant: LogoVariant
 ): Promise<CachedLogo | null> {
   const cacheKey = `${code}-${variant}`;
 
-  const cached = await getCachedLogo(cacheKey);
-  if (cached) return cached;
+  const cached = await getCachedLogoEntry(cacheKey);
+  if (cached) {
+    // Stale-while-revalidate: the caller ALWAYS gets bytes now. A stale entry
+    // refreshes behind the response, so no user ever waits on an upstream and a
+    // dead upstream never blocks a page.
+    if (isStale(cached, LOGO_MAX_AGE_MS) && dueForRetry(cached)) {
+      void refreshLogo(cacheKey);
+    }
+    return { body: cached.body, contentType: cached.contentType };
+  }
 
   const negativeUntil = negativeCache.get(cacheKey);
   if (negativeUntil !== undefined && negativeUntil > Date.now()) return null;
   negativeCache.delete(cacheKey);
 
-  // Tiers, in order of what they cost the instance. A miss in one tier must
-  // fall through, never be papered over: that is why each returns null rather
-  // than a placeholder.
-  //
-  //   logostream — best quality, burns an admin's key budget, so it only runs
-  //                where a key is configured. NOT complete (British Airways is
-  //                missing), which is why the keyless tier below is not merely
-  //                a fallback.
-  //   vendored   — the ICON tier. Square marks for compact surfaces. It no
-  //                longer serves wordmarks: its `logo.svg` was missing for 10
-  //                of 93 airlines and its marks need a plate we no longer draw.
-  //   kiwi       — the KEYLESS DEFAULT for wordmark-shaped variants. A finished
-  //                brand tile with its own background; 133/133 measured.
-  //   Daisycon   — the tail net for whatever even kiwi does not know.
-  const logo =
-    (await fromLogostream(code, variant)) ??
-    getVendoredLogo(code, variant) ??
-    (await fromKiwi(code)) ??
-    (await fromDaisycon(code));
-  if (!logo) {
+  const found = await fetchFromChain(code, variant);
+  if (!found) {
     negativeCache.set(cacheKey, Date.now() + NEGATIVE_TTL_MS);
     return null;
   }
 
-  await putCachedLogo(cacheKey, logo);
-  return logo;
+  await putCachedLogo(cacheKey, found.logo, found.source);
+  return found.logo;
 }
