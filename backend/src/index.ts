@@ -299,6 +299,8 @@ process.on('SIGINT', async () => {
   stopReminderScheduler();
   const { stopUsageStatsScheduler } = await import('./jobs/usageStatsScheduler');
   stopUsageStatsScheduler();
+  const { stopAirlineLogoRefreshScheduler } = await import('./jobs/airlineLogoRefreshScheduler');
+  stopAirlineLogoRefreshScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -313,6 +315,8 @@ process.on('SIGTERM', async () => {
   stopReminderScheduler();
   const { stopUsageStatsScheduler } = await import('./jobs/usageStatsScheduler');
   stopUsageStatsScheduler();
+  const { stopAirlineLogoRefreshScheduler } = await import('./jobs/airlineLogoRefreshScheduler');
+  stopAirlineLogoRefreshScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -503,6 +507,24 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({
         operation: 'server_start_historical_enrichment_scheduler_error',
         message: 'Failed to start historical enrichment scheduler',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+
+    // Start airline logo refresh scheduler
+    try {
+      const { startAirlineLogoRefreshScheduler } = await import('./jobs/airlineLogoRefreshScheduler');
+      startAirlineLogoRefreshScheduler();
+      logger.info({
+        operation: 'server_start_airline_logo_refresh_scheduler',
+        message: 'Airline logo refresh scheduler started',
+      });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_airline_logo_refresh_scheduler_error',
+        message: 'Failed to start airline logo refresh scheduler',
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
         },
