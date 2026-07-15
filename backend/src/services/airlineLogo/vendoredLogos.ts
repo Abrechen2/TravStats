@@ -37,45 +37,38 @@ interface VendoredAirline {
   readonly iata?: string;
   readonly icao?: string;
   readonly slug: string;
-  readonly branding?: { readonly primary_color?: string };
-}
-
-/** What the frontend needs to render a vendored mark as a brand tile. */
-export interface VendoredBrand {
-  readonly color: string;
 }
 
 /**
- * Our four public variants map onto the snapshot's file names. `logo-white` maps
- * to the monochrome wordmark — the snapshot has no white-specific asset, and a
- * monochrome SVG is what a dark surface actually needs. `tail` exists for three
- * airlines; every other code misses and falls through.
+ * The vendored snapshot is the ICON tier. It deliberately does NOT serve the
+ * wordmark variants any more: its `logo.svg` was absent for 10 of the 93
+ * airlines, and the marks it does ship are drawn in the brand's own colour, so
+ * they needed a contrasting plate — the heuristic that shipped an invisible
+ * logo in 2.5.0-beta.1. kiwi serves wordmark-shaped variants now; this tier
+ * keeps what it is genuinely good at.
+ *
+ * `logo-white` maps to the monochrome mark: a dark surface wants a
+ * single-colour glyph it can tint, and that needs no plate at all.
  */
-const VARIANT_FILES: Record<LogoVariant, string> = {
+const VARIANT_FILES: Partial<Record<LogoVariant, string>> = {
   icon: "icon.svg",
-  logo: "logo.svg",
-  "logo-white": "logo-mono.svg",
-  tail: "tail.svg",
+  "logo-white": "icon-mono.svg",
 };
 
 /** code (IATA or ICAO, upper-case) → slug. Built once at module load. */
 let index: Map<string, string> | null = null;
-let brands: Map<string, VendoredBrand> = new Map();
 let airlineCount = 0;
 
 function buildIndex(): Map<string, string> {
   const map = new Map<string, string>();
-  brands = new Map();
   try {
     const raw = fs.readFileSync(path.join(ASSET_ROOT, "airlines.json"), "utf8");
     const airlines = JSON.parse(raw) as VendoredAirline[];
     airlineCount = airlines.length;
     for (const airline of airlines) {
-      const color = airline.branding?.primary_color;
       for (const code of [airline.iata, airline.icao]) {
         if (!code) continue;
         map.set(code.toUpperCase(), airline.slug);
-        if (color) brands.set(code.toUpperCase(), { color });
       }
     }
   } catch (error) {
@@ -101,25 +94,13 @@ export function vendoredAirlineCount(): number {
 }
 
 /**
- * Brand colour per code, for every airline whose mark we vendor.
- *
- * The frontend needs this to paint the departures-board tile: the snapshot ships
- * square brand MARKS (Lufthansa's crane), not wordmarks, so the tile carries the
- * airline's colour and the mark sits on it. It must only do that when the mark
- * is what will actually be served — with a logostream key configured, the
- * premium tier answers first and returns a wordmark instead. That is why the
- * manifest also reports whether a key is present.
- */
-export function vendoredBrands(): Record<string, VendoredBrand> {
-  getIndex();
-  return Object.fromEntries(brands);
-}
-
-/**
  * Resolve a logo from the vendored snapshot, or null when the snapshot holds
  * neither the airline nor that variant of it.
  */
 export function getVendoredLogo(code: string, variant: LogoVariant): CachedLogo | null {
+  const file = VARIANT_FILES[variant];
+  if (!file) return null; // wordmark-shaped variants belong to kiwi now
+
   const slug = getIndex().get(code.trim().toUpperCase());
   if (!slug) return null;
 
@@ -127,15 +108,15 @@ export function getVendoredLogo(code: string, variant: LogoVariant): CachedLogo 
   // carry a traversal — but resolve and re-check anyway: this function's only
   // argument is user input, and a future refactor that indexes by a caller-
   // supplied value must not turn into an arbitrary file read.
-  const file = path.resolve(ASSET_DIR, slug, VARIANT_FILES[variant]);
-  if (!file.startsWith(path.resolve(ASSET_DIR) + path.sep)) return null;
+  const resolved = path.resolve(ASSET_DIR, slug, file);
+  if (!resolved.startsWith(path.resolve(ASSET_DIR) + path.sep)) return null;
 
   try {
-    const body = fs.readFileSync(file);
+    const body = fs.readFileSync(resolved);
     return { body, contentType: "image/svg+xml" };
   } catch {
-    // The variant is genuinely absent for this airline (only 3 airlines ship a
-    // tail, 39 a monochrome wordmark). A miss, not an error.
+    // The variant is genuinely absent for this airline (only 22 of 93 ship a
+    // monochrome mark). A miss, not an error.
     return null;
   }
 }
