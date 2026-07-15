@@ -1,7 +1,7 @@
 # Airline logos: a keyless tier that carries its own background
 
 **Date:** 2026-07-14
-**Status:** approved (owner, 2026-07-14)
+**Status:** implemented (2026-07-15, branch `feat/airline-logo-kiwi-tier`)
 **Rides:** 2.5.0, inside the `#189 + #191 + OpenFlights` block that closes the logo complex.
 
 ## The problem
