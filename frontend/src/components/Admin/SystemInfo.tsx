@@ -1,5 +1,6 @@
 import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
+import AirlineLogoRefreshButton from "./AirlineLogoRefreshButton";
 
 // ==================== SystemInfo Interfaces ====================
 
@@ -198,6 +199,7 @@ export default function SystemInfo({
             </div>
           }
         />
+        <AirlineLogoRefreshButton />
       </div>
     </div>
   );

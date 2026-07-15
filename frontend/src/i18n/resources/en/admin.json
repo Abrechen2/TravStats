@@ -311,6 +311,14 @@
       "format": "JSON file that can be easily imported or analyzed"
     }
   },
+  "airlineLogos": {
+    "title": "Airline logos",
+    "description": "Check the stored logos against their sources and refresh the stale ones. This also runs nightly.",
+    "action": "Refresh logos",
+    "running": "Checking …",
+    "result": "Refreshed {{refreshed}} of {{checked}} logos",
+    "failed": "Refresh failed"
+  },
   "export": {
     "button": "📥 Export Data",
     "description": "Export all user data as a JSON file.",
