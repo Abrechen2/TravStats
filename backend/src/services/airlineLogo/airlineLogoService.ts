@@ -131,7 +131,16 @@ async function fromDaisycon(code: string): Promise<CachedLogo | null> {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const LOGO_MAX_AGE_DAYS = Number(process.env.LOGO_MAX_AGE_DAYS ?? 30);
+const DEFAULT_LOGO_MAX_AGE_DAYS = 30;
+// A typo'd LOGO_MAX_AGE_DAYS (e.g. "30d") would make Number() return NaN, and
+// `now - fetchedAt > NaN` is always false — so NOTHING would ever look stale,
+// the nightly sweep would become a silent no-op, and logos would freeze forever.
+// Fall back to the default on any non-finite / non-positive value.
+const parsedMaxAgeDays = Number(process.env.LOGO_MAX_AGE_DAYS);
+const LOGO_MAX_AGE_DAYS =
+  Number.isFinite(parsedMaxAgeDays) && parsedMaxAgeDays > 0
+    ? parsedMaxAgeDays
+    : DEFAULT_LOGO_MAX_AGE_DAYS;
 export const LOGO_MAX_AGE_MS = LOGO_MAX_AGE_DAYS * DAY_MS;
 export const RETRY_BACKOFF_MS = 6 * 60 * 60 * 1000;
 
