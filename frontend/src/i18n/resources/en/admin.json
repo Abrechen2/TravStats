@@ -52,6 +52,34 @@
       "missingFields": "Name, latitude and longitude are required."
     }
   },
+  "airlineAircraftMasterData": {
+    "menuLabel": "Airlines & Aircraft",
+    "userAdded": "User-added",
+    "airline": {
+      "title": "Airlines",
+      "description": "Catalog from the seed CSV plus user-added entries. User-added airlines are marked and kept across re-seeds.",
+      "name": "Name",
+      "callsign": "Callsign",
+      "country": "Country",
+      "add": "Add",
+      "searchPlaceholder": "Search airline, IATA or ICAO …",
+      "empty": "No results.",
+      "created": "Airline added.",
+      "createFailed": "Failed to add airline.",
+      "missingFields": "Name is required."
+    },
+    "aircraft": {
+      "title": "Aircraft types",
+      "description": "Catalog from the seed CSV plus user-added entries. User-added aircraft types are marked and kept across re-seeds.",
+      "name": "Name",
+      "add": "Add",
+      "searchPlaceholder": "Search aircraft type or ICAO …",
+      "empty": "No results.",
+      "created": "Aircraft type added.",
+      "createFailed": "Failed to add aircraft type.",
+      "missingFields": "Name is required."
+    }
+  },
   "instanceLabel": "Instance",
   "instance": {
     "title": "Instance settings",

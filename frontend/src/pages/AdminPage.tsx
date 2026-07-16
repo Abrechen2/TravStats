@@ -24,6 +24,7 @@ import ParserSettingsTab from "../components/Admin/ParserSettings";
 import LoggingManager from "../components/Admin/LoggingManager";
 import SmtpManager from "../components/Admin/SmtpManager";
 import CruiseMasterData from "../components/Admin/CruiseMasterData";
+import AirlineAircraftMasterData from "../components/Admin/AirlineAircraftMasterData";
 import { useTranslation } from "../hooks/useTranslation";
 import { copyToClipboard } from "../lib/clipboard";
 import { normalizeSectionId } from "../lib/sectionAliases";
@@ -58,7 +59,8 @@ type ActiveSection =
   | "backups"
   | "externalServices"
   | "smtp"
-  | "cruiseMasterData";
+  | "cruiseMasterData"
+  | "airlineAircraftMasterData";
 
 type TabId = "general" | "flight" | "cruise";
 
@@ -68,6 +70,9 @@ type TabId = "general" | "flight" | "cruise";
 // the same Ollama endpoint as flights — so it lives under "general", not
 // "flight" (where cruise-only users never found it; see issue #129).
 // cruiseMasterData (ship + port management) lives under the cruise tab.
+// airlineAircraftMasterData (airline + aircraft catalogue management) is the
+// first flight-specific section, so the "flight" tab (dropped when it went
+// empty, see the comment on the tabConfig below) is back.
 const TAB_FOR_SECTION: Record<ActiveSection, TabId> = {
   system: "general",
   instance: "general",
@@ -79,6 +84,7 @@ const TAB_FOR_SECTION: Record<ActiveSection, TabId> = {
   smtp: "general",
   parsers: "general",
   cruiseMasterData: "cruise",
+  airlineAircraftMasterData: "flight",
 };
 
 // ==================== Admin Page Component ====================
@@ -101,11 +107,17 @@ export default function AdminPage(): JSX.Element {
   // hook. Filtered by enabledDomains, URL param "tab", activeTab resets
   // to "general" if its domain gets disabled mid-session.
   // The admin "Flug" tab was dropped once its only section (parser config)
-  // moved to "Allgemein" — an empty domain tab is worse UX than none. Flight
-  // admin settings can re-add a tab here if a flight-specific section appears.
+  // moved to "Allgemein" — an empty domain tab is worse UX than none. It's
+  // back now that airlineAircraftMasterData gives it a real section again.
   const { tabs, activeTab, setActiveTab } = useDomainTabs<TabId>({
     tabConfig: [
       { id: "general", label: t("admin:tabs2.general") || "Allgemein" },
+      {
+        id: "flight",
+        label: t("admin:tabs2.flight") || "Flug",
+        icon: DOMAINS.flight.icon,
+        requiresDomain: "flight",
+      },
       {
         id: "cruise",
         label: t("admin:tabs2.cruise") || "Kreuzfahrt",
@@ -509,6 +521,10 @@ export default function AdminPage(): JSX.Element {
       id: "cruiseMasterData",
       label: t("admin:cruiseMasterData.menuLabel") || "Schiffe & Häfen",
     },
+    {
+      id: "airlineAircraftMasterData",
+      label: t("admin:airlineAircraftMasterData.menuLabel") || "Airlines & Flugzeuge",
+    },
   ];
 
   const sections = allSections.filter((s) => TAB_FOR_SECTION[s.id] === activeTab);
@@ -671,6 +687,8 @@ export default function AdminPage(): JSX.Element {
         {/* Main content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           {activeSection === "cruiseMasterData" && <CruiseMasterData />}
+
+          {activeSection === "airlineAircraftMasterData" && <AirlineAircraftMasterData />}
 
           {activeSection === "system" && systemInfo && (
             <SystemInfoTab
