@@ -1005,3 +1005,28 @@ model Port {
   @@index([region])
   @@map("ports")
 }
+
+model Airline {
+  id          Int     @id @default(autoincrement())
+  iata        String? @unique
+  icao        String?
+  name        String
+  callsign    String?
+  country     String?
+  active      Boolean @default(true)
+  isUserAdded Boolean @default(false) @map("is_user_added")
+
+  @@index([name])
+  @@index([icao])
+  @@map("airlines")
+}
+
+model Aircraft {
+  id          Int     @id @default(autoincrement())
+  icao        String? @unique
+  name        String
+  isUserAdded Boolean @default(false) @map("is_user_added")
+
+  @@index([name])
+  @@map("aircraft")
+}
