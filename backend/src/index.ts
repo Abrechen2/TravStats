@@ -404,6 +404,14 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({ operation: 'server_start_catalog_preload_error', message: 'Failed to preload catalogues', error });
     }
 
+    try {
+      const { backfillAirlineCodes } = await import("./scripts/backfillAirlineCodes");
+      const n = await backfillAirlineCodes();
+      if (n > 0) logger.info({ operation: 'server_start_backfill_airline_codes', message: `Backfilled ${n} flights` });
+    } catch (error) {
+      logger.warn({ operation: 'server_start_backfill_airline_codes_error', message: 'Failed to backfill airline codes', error });
+    }
+
     // Normalize aircraft type names in existing flights (idempotent)
     try {
       const { normalizeAircraft } = await import('./utils/aircraftNormalize');
