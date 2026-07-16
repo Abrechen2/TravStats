@@ -102,6 +102,12 @@ COPY backend/data/marnet/marnet.geojson ./data/marnet/marnet.geojson
 # feature exists to remove. It fails soft (a warn, not a crash), so nothing but
 # this comment will tell you.
 COPY backend/data/airline-logos ./data/airline-logos
+# Vendored OpenFlights airline + aircraft seed data (data/openflights/*.dat),
+# consumed by the boot seeders (seedAirlinesFromData / seedAircraftFromData).
+# Without these the airline/aircraft tables seed empty and the logo lookup
+# degrades to placeholders.
+COPY backend/data/openflights/airlines.dat ./data/openflights/airlines.dat
+COPY backend/data/openflights/planes.dat ./data/openflights/planes.dat
 # Bundle one-shot maintenance scripts (e.g. backfillRouteDistance.ts) into
 # the production image so the `docker exec TravStats npx tsx
 # /app/backend/scripts/<name>.ts` workflow advertised in the CHANGELOG
