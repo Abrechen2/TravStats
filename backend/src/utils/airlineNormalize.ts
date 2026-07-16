@@ -14,6 +14,7 @@
  */
 
 import { getAirlineCatalogSync, type CachedAirline } from '../services/airlineCatalogCache';
+import { AIRLINES } from '../data/airlines';
 
 /**
  * Lowercased variant → canonical display name. Only add entries known to
@@ -65,11 +66,7 @@ const NAME_TO_IATA: Record<string, string> = {
 };
 
 /**
- * Build lowercase-name / IATA / ICAO lookup maps from the current DB-backed
- * catalogue snapshot. Rebuilt per call (cheap — the snapshot is an
- * in-memory array from `getAirlineCatalogSync`, no I/O) rather than once at
- * module load, so a cache refresh (admin reseed) is picked up without a
- * process restart.
+ * Build lowercase-name / IATA / ICAO lookup maps from a catalogue snapshot.
  */
 function buildLookups(catalog: CachedAirline[]) {
   const byName = new Map<string, CachedAirline>();
@@ -81,6 +78,36 @@ function buildLookups(catalog: CachedAirline[]) {
     if (a.icao) byIcao.set(a.icao.toUpperCase(), a);
   }
   return { byName, byIata, byIcao };
+}
+
+// Cold-start fallback (curated ~147), built once at module load. Used until the
+// DB cache is preloaded — so resolveAirlineCodes is correct even in a script or
+// test that never called preloadAirlineCatalog(), and never silently returns
+// null for a known carrier while the boot-time preload is still pending.
+const FALLBACK_LOOKUPS = buildLookups(
+  AIRLINES.map((a) => ({ iata: a.iata, icao: a.icao ?? null, name: a.name })),
+);
+
+let warmSource: CachedAirline[] | null = null;
+let warmLookups: ReturnType<typeof buildLookups> | null = null;
+
+/**
+ * Return the current lookup maps: the warm DB-backed catalogue once
+ * `preloadAirlineCatalog()` has run, otherwise the curated cold-start
+ * fallback. The warm maps are memoized and only rebuilt when the cache
+ * snapshot's array identity changes (a fresh preload or admin reseed via
+ * `invalidateAirlineCatalogCache` + reload) — not on every call, since
+ * callers like `flightsBatch.ts` resolve twice per flight in a
+ * transaction loop.
+ */
+function currentLookups(): ReturnType<typeof buildLookups> {
+  const catalog = getAirlineCatalogSync();
+  if (catalog.length === 0) return FALLBACK_LOOKUPS;
+  if (catalog !== warmSource) {
+    warmSource = catalog;
+    warmLookups = buildLookups(catalog);
+  }
+  return warmLookups as ReturnType<typeof buildLookups>;
 }
 
 /**
@@ -110,7 +137,7 @@ export function resolveAirlineCodes(
   const upper = trimmed.toUpperCase();
   const lower = trimmed.toLowerCase();
 
-  const { byName, byIata, byIcao } = buildLookups(getAirlineCatalogSync());
+  const { byName, byIata, byIcao } = currentLookups();
 
   // 1. Direct IATA code
   if (upper.length === 2) {
