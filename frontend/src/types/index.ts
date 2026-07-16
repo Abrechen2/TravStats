@@ -716,6 +716,7 @@ export interface CountryStatsResponse {
 }
 
 export * from "./cruise";
+export * from "./catalogue";
 
 export interface AircraftRankingItem {
   registration: string;
