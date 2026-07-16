@@ -3,8 +3,6 @@
  * Centralized configuration for magic numbers and common values
  */
 
-import { AIRLINE_CATALOG } from "./generated/airlineCatalog";
-
 /**
  * API Pagination Limits
  */
@@ -82,17 +80,6 @@ export const FLIGHT_STATUS = {
   FLOWN: "flown",
   CANCELLED: "cancelled",
 } as const;
-
-/**
- * Airlines for autocomplete (IATA code → display name).
- * Derived from the generated airline catalogue (backend seed, 1000+
- * carriers) instead of a hand-maintained list — see
- * `./generated/airlineCatalog.ts`. Sorted by IATA code, mirroring the
- * ordering of the previous hand-typed list.
- */
-export const AIRLINES: { iata: string; name: string }[] = [...AIRLINE_CATALOG]
-  .sort((a, b) => a.iata.localeCompare(b.iata))
-  .map((a) => ({ iata: a.iata, name: a.name }));
 
 /**
  * Storage Keys for localStorage
