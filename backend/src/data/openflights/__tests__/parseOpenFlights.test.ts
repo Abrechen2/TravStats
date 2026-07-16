@@ -29,6 +29,15 @@ describe("dedupeAirlinesByIata", () => {
     expect(out[0].name).toBe("Lufthansa"); // active wins
     expect(out.some((r) => r.iata === null)).toBe(false); // blank dropped
   });
+
+  it("prefers the active carrier even when the inactive row is seen first", () => {
+    const rows = parseAirlinesDat(`99,"Defunct Air","\\N","LH","OLD","C","Nowhere","N"
+5,"Lufthansa","\\N","LH","DLH","C","Germany","Y"`);
+    const out = dedupeAirlinesByIata(rows);
+    expect(out).toHaveLength(1);
+    expect(out[0].name).toBe("Lufthansa"); // active wins despite being second
+    expect(out[0].active).toBe(true);
+  });
 });
 
 describe("parsePlanesDat", () => {
