@@ -394,6 +394,16 @@ if (process.env.NODE_ENV !== 'test') {
       });
     }
 
+    try {
+      const { preloadAirlineCatalog } = await import("./services/airlineCatalogCache");
+      const { preloadAircraftCatalog } = await import("./services/aircraftCatalogCache");
+      await preloadAirlineCatalog();
+      await preloadAircraftCatalog();
+      logger.info({ operation: 'server_start_catalog_preload', message: 'Airline+aircraft caches preloaded' });
+    } catch (error) {
+      logger.warn({ operation: 'server_start_catalog_preload_error', message: 'Failed to preload catalogues', error });
+    }
+
     // Normalize aircraft type names in existing flights (idempotent)
     try {
       const { normalizeAircraft } = await import('./utils/aircraftNormalize');
