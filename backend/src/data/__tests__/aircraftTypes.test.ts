@@ -11,8 +11,8 @@ describe("AIRCRAFT_TYPES data integrity", () => {
     expect(dupes).toEqual([]);
   });
 
-  it("uses 4-character ICAO type designators", () => {
-    const bad = AIRCRAFT_TYPES.filter((t) => !/^[A-Z0-9]{4}$/.test(t.icao));
+  it("uses 2-4 character ICAO type designators (ICAO Doc 8643 range)", () => {
+    const bad = AIRCRAFT_TYPES.filter((t) => !/^[A-Z0-9]{2,4}$/.test(t.icao));
     expect(bad.map((t) => t.icao)).toEqual([]);
   });
 });
