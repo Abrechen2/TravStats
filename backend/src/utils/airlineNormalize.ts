@@ -13,7 +13,7 @@
  * data. Unknown names return null and the row keeps its IATA/ICAO empty.
  */
 
-import { AIRLINES, type Airline } from '../data/airlines';
+import { getAirlineCatalogSync, type CachedAirline } from '../services/airlineCatalogCache';
 
 /**
  * Lowercased variant → canonical display name. Only add entries known to
@@ -65,23 +65,23 @@ const NAME_TO_IATA: Record<string, string> = {
 };
 
 /**
- * Build a lookup map from lowercase canonical name → Airline. Built once
- * at module load, NOT per call.
+ * Build lowercase-name / IATA / ICAO lookup maps from the current DB-backed
+ * catalogue snapshot. Rebuilt per call (cheap — the snapshot is an
+ * in-memory array from `getAirlineCatalogSync`, no I/O) rather than once at
+ * module load, so a cache refresh (admin reseed) is picked up without a
+ * process restart.
  */
-const NAME_LOOKUP: Map<string, Airline> = new Map(
-  AIRLINES.map((a) => [a.name.toLowerCase(), a]),
-);
-
-/**
- * Build IATA → Airline and ICAO → Airline lookups for direct-code input
- * (e.g. user typed "IB" or "IBE" instead of "Iberia").
- */
-const IATA_LOOKUP: Map<string, Airline> = new Map(
-  AIRLINES.map((a) => [a.iata.toUpperCase(), a]),
-);
-const ICAO_LOOKUP: Map<string, Airline> = new Map(
-  AIRLINES.filter((a) => a.icao).map((a) => [a.icao!.toUpperCase(), a]),
-);
+function buildLookups(catalog: CachedAirline[]) {
+  const byName = new Map<string, CachedAirline>();
+  const byIata = new Map<string, CachedAirline>();
+  const byIcao = new Map<string, CachedAirline>();
+  for (const a of catalog) {
+    byName.set(a.name.toLowerCase(), a);
+    byIata.set(a.iata.toUpperCase(), a);
+    if (a.icao) byIcao.set(a.icao.toUpperCase(), a);
+  }
+  return { byName, byIata, byIcao };
+}
 
 /**
  * Normalize an airline name to its canonical display form. Returns the
@@ -110,27 +110,29 @@ export function resolveAirlineCodes(
   const upper = trimmed.toUpperCase();
   const lower = trimmed.toLowerCase();
 
+  const { byName, byIata, byIcao } = buildLookups(getAirlineCatalogSync());
+
   // 1. Direct IATA code
   if (upper.length === 2) {
-    const hit = IATA_LOOKUP.get(upper);
-    if (hit) return { iata: hit.iata, icao: hit.icao, name: hit.name };
+    const hit = byIata.get(upper);
+    if (hit) return { iata: hit.iata, icao: hit.icao ?? undefined, name: hit.name };
   }
 
   // 2. Direct ICAO code
   if (upper.length === 3) {
-    const hit = ICAO_LOOKUP.get(upper);
-    if (hit) return { iata: hit.iata, icao: hit.icao, name: hit.name };
+    const hit = byIcao.get(upper);
+    if (hit) return { iata: hit.iata, icao: hit.icao ?? undefined, name: hit.name };
   }
 
   // 3. Canonical name (case-insensitive)
-  const byName = NAME_LOOKUP.get(lower);
-  if (byName) return { iata: byName.iata, icao: byName.icao, name: byName.name };
+  const nameHit = byName.get(lower);
+  if (nameHit) return { iata: nameHit.iata, icao: nameHit.icao ?? undefined, name: nameHit.name };
 
   // 4. Explicit alias
   const aliasIata = NAME_TO_IATA[lower];
   if (aliasIata) {
-    const hit = IATA_LOOKUP.get(aliasIata);
-    if (hit) return { iata: hit.iata, icao: hit.icao, name: hit.name };
+    const hit = byIata.get(aliasIata);
+    if (hit) return { iata: hit.iata, icao: hit.icao ?? undefined, name: hit.name };
   }
 
   return null;
