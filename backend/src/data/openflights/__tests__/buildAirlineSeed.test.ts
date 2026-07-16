@@ -32,4 +32,13 @@ describe("buildAirlineSeed", () => {
     const iatas = seed.map((r) => r.iata);
     expect(new Set(iatas).size).toBe(iatas.length);
   });
+
+  it("drops a stale OpenFlights row that collides with a curated name under a different IATA", () => {
+    // curated airlines.ts has { iata:"LH", name:"Lufthansa" }.
+    const raw = `999,"Lufthansa","\\N","L9","XXX","Callsign","Germany","N"`;
+    const seed = buildAirlineSeed(raw);
+    const lufthansa = seed.filter((r) => r.name.toLowerCase() === "lufthansa");
+    expect(lufthansa).toHaveLength(1);
+    expect(lufthansa[0].iata).toBe("LH"); // curated wins, stale L9 dropped
+  });
 });
