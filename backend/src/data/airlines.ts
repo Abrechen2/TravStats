@@ -1,10 +1,14 @@
 /**
- * Comprehensive airline list for autocomplete suggestions.
- * ~150 airlines covering major, medium, and notable regional carriers.
- * Format: { iata: IATA code, name: display name }
- *
- * This is the single source of truth — used by the suggestions API
- * and by the flight lookup service (via AIRLINE_IATA_MAP export).
+ * Curated airline override list (~147). No longer the runtime resolver
+ * source — that is the `airlines` DB table, resolved via
+ * `services/airlineCatalogCache.ts` + `utils/airlineNormalize.ts`. This
+ * list now serves two roles:
+ *   1. UNIONed into the seed by `data/openflights/buildAirlineSeed.ts` and
+ *      WINS on a shared IATA, preserving the exact display names TravStats
+ *      shows for common carriers.
+ *   2. The cold-start fallback inside `airlineNormalize.ts` — used until
+ *      `preloadAirlineCatalog()` has warmed the DB-backed cache, so lookups
+ *      are correct even in a script or test that never preloaded it.
  */
 
 export interface Airline {
