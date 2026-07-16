@@ -1,37 +1,58 @@
 import { Router, Response, NextFunction } from 'express';
+import { z } from 'zod';
 import { prisma } from '../db';
 import { authenticate, AuthRequest } from '../middleware/auth';
-import { AIRLINES } from '../data/airlines';
-import { AIRCRAFT_TYPES } from '../data/aircraftTypes';
+import { AppError } from '../middleware/errorHandler';
 import { normalizeAircraft } from '../utils/aircraftNormalize';
 
 const router = Router();
 
 router.use(authenticate);
 
+const SUGGESTION_CAP = 50;
+
+const listQuerySchema = z.object({
+  q: z.string().max(100).optional(),
+});
+
 /**
  * GET /api/v1/suggestions/airlines
- * Returns deduplicated, sorted list of airline names:
- * static seed data + user's unique entries from flights.
+ * Returns a deduplicated, sorted, capped list of airline names:
+ * DB catalogue matches (optionally filtered by `q`) + the user's own
+ * flight entries (also filtered by `q` when present).
  */
 router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const parsed = listQuerySchema.safeParse(req.query);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    const { q } = parsed.data;
     const userId = req.userId!;
 
-    // User's unique airlines from flight history
-    const userAirlines = await prisma.flight.findMany({
-      where: { userId, airline: { not: null } },
-      select: { airline: true },
-      distinct: ['airline'],
-    });
+    const [dbAirlines, userAirlines] = await Promise.all([
+      prisma.airline.findMany({
+        where: q ? { name: { contains: q, mode: 'insensitive' } } : {},
+        take: SUGGESTION_CAP,
+        orderBy: { name: 'asc' },
+        select: { name: true },
+      }),
+      prisma.flight.findMany({
+        where: { userId, airline: { not: null } },
+        select: { airline: true },
+        distinct: ['airline'],
+      }),
+    ]);
 
-    // Merge: static names + user's custom entries
-    const nameSet = new Set(AIRLINES.map(a => a.name));
+    const qLower = q?.toLowerCase();
+    const nameSet = new Set(dbAirlines.map((a) => a.name));
     for (const row of userAirlines) {
-      if (row.airline) nameSet.add(row.airline);
+      if (!row.airline) continue;
+      if (qLower && !row.airline.toLowerCase().includes(qLower)) continue;
+      nameSet.add(row.airline);
     }
 
-    const sorted = Array.from(nameSet).sort((a, b) => a.localeCompare(b));
+    const sorted = Array.from(nameSet)
+      .sort((a, b) => a.localeCompare(b))
+      .slice(0, SUGGESTION_CAP);
 
     res.json({ suggestions: sorted });
   } catch (error) {
@@ -41,27 +62,43 @@ router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFuncti
 
 /**
  * GET /api/v1/suggestions/aircraft
- * Returns deduplicated, sorted list of aircraft type names:
- * static seed data + user's unique entries from flights.
+ * Returns a deduplicated, sorted, capped list of aircraft type names:
+ * DB catalogue matches (optionally filtered by `q`) + the user's own
+ * flight entries (normalized, also filtered by `q` when present).
  */
 router.get('/aircraft', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const parsed = listQuerySchema.safeParse(req.query);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    const { q } = parsed.data;
     const userId = req.userId!;
 
-    // User's unique aircraft from flight history
-    const userAircraft = await prisma.flight.findMany({
-      where: { userId, aircraft: { not: null } },
-      select: { aircraft: true },
-      distinct: ['aircraft'],
-    });
+    const [dbAircraft, userAircraft] = await Promise.all([
+      prisma.aircraft.findMany({
+        where: q ? { name: { contains: q, mode: 'insensitive' } } : {},
+        take: SUGGESTION_CAP,
+        orderBy: { name: 'asc' },
+        select: { name: true },
+      }),
+      prisma.flight.findMany({
+        where: { userId, aircraft: { not: null } },
+        select: { aircraft: true },
+        distinct: ['aircraft'],
+      }),
+    ]);
 
-    // Merge: static names + user's custom entries (normalized)
-    const nameSet = new Set(AIRCRAFT_TYPES.map(a => a.name));
+    const qLower = q?.toLowerCase();
+    const nameSet = new Set(dbAircraft.map((a) => a.name));
     for (const row of userAircraft) {
-      if (row.aircraft) nameSet.add(normalizeAircraft(row.aircraft));
+      if (!row.aircraft) continue;
+      const normalized = normalizeAircraft(row.aircraft);
+      if (qLower && !normalized.toLowerCase().includes(qLower)) continue;
+      nameSet.add(normalized);
     }
 
-    const sorted = Array.from(nameSet).sort((a, b) => a.localeCompare(b));
+    const sorted = Array.from(nameSet)
+      .sort((a, b) => a.localeCompare(b))
+      .slice(0, SUGGESTION_CAP);
 
     res.json({ suggestions: sorted });
   } catch (error) {
