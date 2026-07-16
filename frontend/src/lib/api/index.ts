@@ -20,6 +20,7 @@ export * from "./template";
 export * from "./suggestions";
 export * from "./diagnosticExport";
 export * from "./cruise";
+export * from "./catalogue";
 export * from "./version";
 export * from "./immich";
 export * from "./usageStats";
