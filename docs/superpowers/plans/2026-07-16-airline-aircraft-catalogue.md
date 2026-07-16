@@ -1789,11 +1789,11 @@ git add frontend/src/lib/airline-parsers/bcbpHelpers.ts
 git commit -m "refactor(catalogue): resolve BCBP airline names from the shared catalogue"
 ```
 
-### Task 23: Delete `backend/src/data/airlines.ts`
+### Task 23: Reframe `backend/src/data/airlines.ts` as curated-override input (NO deletion)
 
 **Files:**
-- Delete: `backend/src/data/airlines.ts`
-- Modify: any remaining importers surfaced by the compiler.
+- Modify: `backend/src/data/airlines.ts` (header comment only)
+- Verify: no runtime resolver still imports it (only `buildAirlineSeed` may).
 
 - [ ] **Step 1: Find remaining importers**
 
