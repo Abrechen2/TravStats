@@ -15,7 +15,7 @@ describe("seedAircraftFromData", () => {
     const count = await seedAircraftFromData();
     expect(count).toBeGreaterThan(100);
     const at72 = await prisma.aircraft.findUnique({ where: { icao: "AT72" } });
-    expect(at72?.name).toBe("ATR 72-600");
+    expect(at72?.name).toBe("ATR 72-500");
   });
 
   it("is idempotent: second run inserts 0", async () => {
