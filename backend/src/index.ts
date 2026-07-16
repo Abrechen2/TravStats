@@ -49,6 +49,8 @@ import { appVersion, buildVersion } from './utils/version';
 import { templateRegistry } from './services/parsers/templates/registry';
 import { seedPortsFromCSV } from './seedPortsFromCSV';
 import { seedShipsFromCSV } from './seedShipsFromCSV';
+import { seedAirlinesFromData } from './seedAirlinesFromData';
+import { seedAircraftFromData } from './seedAircraftFromData';
 
 // Load environment variables
 dotenv.config();
@@ -367,6 +369,28 @@ if (process.env.NODE_ENV !== 'test') {
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
         },
+      });
+    }
+
+    try {
+      await seedAirlinesFromData();
+      logger.info({ operation: 'server_start_seed_airlines', message: 'Airlines seeded' });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_seed_airlines_error',
+        message: 'Failed to seed airlines',
+        error: { message: error instanceof Error ? error.message : 'Unknown error' },
+      });
+    }
+
+    try {
+      await seedAircraftFromData();
+      logger.info({ operation: 'server_start_seed_aircraft', message: 'Aircraft seeded' });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_seed_aircraft_error',
+        message: 'Failed to seed aircraft',
+        error: { message: error instanceof Error ? error.message : 'Unknown error' },
       });
     }
 
