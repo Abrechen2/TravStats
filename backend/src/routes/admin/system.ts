@@ -109,6 +109,42 @@ router.get('/airports/seeding-status', async (_req: AuthRequest, res: Response, 
   }
 });
 
+// POST /admin/airlines/reseed — force a re-run of the OpenFlights airline
+// importer against the existing DB. Idempotent (composite-key upsert on
+// IATA); user-added rows are never overwritten. Runs synchronously and
+// refreshes the in-memory airline catalog cache before responding.
+router.post('/airlines/reseed', adminReseedLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { seedAirlinesFromData } = await import('../../seedAirlinesFromData');
+    const { invalidateAirlineCatalogCache, preloadAirlineCatalog } = await import('../../services/airlineCatalogCache');
+    const inserted = await seedAirlinesFromData();
+    invalidateAirlineCatalogCache();
+    await preloadAirlineCatalog();
+    logger.info({ operation: 'admin_airline_reseed', context: { inserted, triggeredBy: req.userId } });
+    res.json({ inserted });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /admin/aircraft/reseed — force a re-run of the OpenFlights aircraft
+// importer against the existing DB. Idempotent (unique ICAO); user-added
+// rows are never overwritten. Runs synchronously and refreshes the
+// in-memory aircraft catalog cache before responding.
+router.post('/aircraft/reseed', adminReseedLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { seedAircraftFromData } = await import('../../seedAircraftFromData');
+    const { invalidateAircraftCatalogCache, preloadAircraftCatalog } = await import('../../services/aircraftCatalogCache');
+    const inserted = await seedAircraftFromData();
+    invalidateAircraftCatalogCache();
+    await preloadAircraftCatalog();
+    logger.info({ operation: 'admin_aircraft_reseed', context: { inserted, triggeredBy: req.userId } });
+    res.json({ inserted });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get system information
 router.get('/system/info', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
