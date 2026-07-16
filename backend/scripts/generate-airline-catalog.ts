@@ -1,6 +1,7 @@
 /**
  * generate-airline-catalog.ts — regenerates the frontend's airline lookup
- * catalogue from the single source of truth at backend/src/data/airlines.ts.
+ * catalogue from the DB seed builder, sourced from
+ * backend/data/openflights/airlines.dat (via buildAirlineSeed).
  *
  * Why this exists (issue #178): the frontend cannot import backend
  * TypeScript modules directly (they build and deploy as two separate
@@ -10,22 +11,47 @@
  * is what caused issue #178 (ICAO codes like "DLH"/"EWG" rendering raw
  * instead of resolving to "Lufthansa"/"Eurowings").
  *
- * Instead of hand-copying entries again, this script emits a generated,
- * DO-NOT-EDIT mirror of the full AIRLINES catalogue (iata + icao + name)
- * that frontend/src/lib/airlineUtils.ts derives all of its lookup maps
- * from. Re-run this whenever backend/src/data/airlines.ts changes:
+ * The catalogue later grew beyond the hand-curated AIRLINES list: the DB is
+ * now seeded from buildAirlineSeed(airlines.dat) — OpenFlights data unioned
+ * with the curated AIRLINES list, with curated rows winning on a shared
+ * IATA. This script emits a generated, DO-NOT-EDIT mirror of that same seed
+ * (iata + icao + name) that frontend/src/lib/airlineUtils.ts derives all of
+ * its lookup maps from, so the vendored frontend copy always matches the
+ * table. Re-run this whenever backend/data/openflights/airlines.dat or the
+ * curated backend/src/data/airlines.ts changes:
  *
  *   cd backend && npx tsx scripts/generate-airline-catalog.ts
  */
 
-import { promises as fs } from 'fs';
+import { promises as fs, readFileSync } from 'fs';
 import path from 'path';
-import { AIRLINES, type Airline } from '../src/data/airlines';
+import { buildAirlineSeed } from '../src/data/openflights/buildAirlineSeed';
+
+export interface Airline {
+  iata: string;
+  icao?: string;
+  name: string;
+}
 
 const OUTPUT_PATH = path.join(
   __dirname,
   '../../frontend/src/lib/generated/airlineCatalog.ts',
 );
+
+const AIRLINES_DAT_PATH = path.join(__dirname, '../data/openflights/airlines.dat');
+
+/**
+ * Loads the airline seed (OpenFlights ∪ curated AIRLINES, IATA-keyed) and
+ * maps it to the flat shape the catalogue generator emits.
+ */
+export function loadSeed(): Airline[] {
+  const raw = readFileSync(AIRLINES_DAT_PATH, 'utf-8');
+  return buildAirlineSeed(raw).map((r) => ({
+    iata: r.iata,
+    icao: r.icao ?? undefined,
+    name: r.name,
+  }));
+}
 
 /**
  * Pure function that generates the airline catalogue contents.
@@ -36,8 +62,9 @@ export function generateAirlineCatalogContents(airlines: Airline[]): string {
   const header = `/**
  * AUTO-GENERATED — DO NOT EDIT BY HAND.
  *
- * Mirrors backend/src/data/airlines.ts (the single source of truth for the
- * airline catalogue). Regenerate with:
+ * Mirrors the DB airline seed (buildAirlineSeed over
+ * backend/data/openflights/airlines.dat, unioned with the curated
+ * backend/src/data/airlines.ts). Regenerate with:
  *
  *   cd backend && npx tsx scripts/generate-airline-catalog.ts
  *
@@ -64,11 +91,12 @@ export const AIRLINE_CATALOG: AirlineCatalogEntry[] = [
 }
 
 async function main(): Promise<void> {
-  const contents = generateAirlineCatalogContents(AIRLINES);
+  const airlines = loadSeed();
+  const contents = generateAirlineCatalogContents(airlines);
 
   await fs.mkdir(path.dirname(OUTPUT_PATH), { recursive: true });
   await fs.writeFile(OUTPUT_PATH, contents, 'utf-8');
-  console.log(`Wrote ${AIRLINES.length} airline entries to ${OUTPUT_PATH}`);
+  console.log(`Wrote ${airlines.length} airline entries to ${OUTPUT_PATH}`);
 }
 
 main().catch((err) => {
