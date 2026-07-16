@@ -52,6 +52,34 @@
       "missingFields": "Name, Breite und Länge sind erforderlich."
     }
   },
+  "airlineAircraftMasterData": {
+    "menuLabel": "Airlines & Flugzeuge",
+    "userAdded": "Benutzerdefiniert",
+    "airline": {
+      "title": "Airlines",
+      "description": "Katalog aus Seed-CSV plus benutzerdefinierte Einträge. Neu angelegte Airlines werden mit „Benutzerdefiniert\" markiert und bleiben bei Re-Seeds erhalten.",
+      "name": "Name",
+      "callsign": "Rufzeichen",
+      "country": "Land",
+      "add": "Hinzufügen",
+      "searchPlaceholder": "Airline, IATA oder ICAO suchen …",
+      "empty": "Keine Treffer.",
+      "created": "Airline angelegt.",
+      "createFailed": "Airline konnte nicht angelegt werden.",
+      "missingFields": "Name ist erforderlich."
+    },
+    "aircraft": {
+      "title": "Flugzeugtypen",
+      "description": "Katalog aus Seed-CSV plus benutzerdefinierte Einträge. Neu angelegte Flugzeugtypen werden mit „Benutzerdefiniert\" markiert und bleiben bei Re-Seeds erhalten.",
+      "name": "Name",
+      "add": "Hinzufügen",
+      "searchPlaceholder": "Flugzeugtyp oder ICAO suchen …",
+      "empty": "Keine Treffer.",
+      "created": "Flugzeugtyp angelegt.",
+      "createFailed": "Flugzeugtyp konnte nicht angelegt werden.",
+      "missingFields": "Name ist erforderlich."
+    }
+  },
   "instanceLabel": "Instanz",
   "instance": {
     "title": "Instanz-Einstellungen",
