@@ -38,7 +38,7 @@ export const AIRCRAFT_TYPES: AircraftType[] = [
   { icao: "AT43", name: "ATR 42-300" },
   { icao: "AT45", name: "ATR 42-500" },
   { icao: "AT46", name: "ATR 42-600" },
-  { icao: "AT72", name: "ATR 72-600" },
+  { icao: "AT72", name: "ATR 72-500" },
   { icao: "AT76", name: "ATR 72-600" },
 
   // Boeing
