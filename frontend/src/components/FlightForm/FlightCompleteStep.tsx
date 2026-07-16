@@ -162,7 +162,9 @@ export default function FlightCompleteStep({
   setTimeEstimationWarning,
 }: FlightCompleteStepProps): JSX.Element {
   const { t, i18n } = useTranslation(["flights"]);
-  const { airlines: airlineSuggestions, aircraft: aircraftSuggestions } = useSuggestions();
+  // Debounced-search the live airline catalogue as the user types (#Task 26) —
+  // FlightEditModal/FlightReviewModal still call useSuggestions() unfiltered.
+  const { airlines: airlineSuggestions, aircraft: aircraftSuggestions } = useSuggestions(airline);
   const addToast = useToastStore((s) => s.addToast);
 
   const canEstimateArrival = Boolean(
