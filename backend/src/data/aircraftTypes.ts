@@ -94,10 +94,10 @@ export const AIRCRAFT_TYPES: AircraftType[] = [
 
   // COMAC
   { icao: "C919", name: "COMAC C919" },
-  { icao: "ARJ2", name: "COMAC ARJ21" },
+  { icao: "AJ27", name: "COMAC ARJ21" },
 
   // Fokker
-  { icao: "F700", name: "Fokker 70" },
+  { icao: "F70", name: "Fokker 70" },
   { icao: "F100", name: "Fokker 100" },
 
   // McDonnell Douglas (legacy, still in service)
