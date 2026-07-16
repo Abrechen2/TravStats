@@ -21,7 +21,17 @@ export function buildAirlineSeed(openflightsRaw: string): AirlineSeedRow[] {
   const openflights = dedupeAirlinesByIata(parseAirlinesDat(openflightsRaw));
   const byIata = new Map<string, AirlineSeedRow>();
 
+  const curatedIatas = new Set(AIRLINES.map((a) => a.iata));
+  const curatedNames = new Set(AIRLINES.map((a) => a.name.toLowerCase()));
+
   for (const r of openflights) {
+    // Drop a stale OpenFlights row that duplicates a curated carrier's NAME under a
+    // different IATA — otherwise the resolver's name lookup could resolve the curated
+    // name to the wrong (stale) IATA (e.g. "Scoot" → TZ instead of the curated TR).
+    if (!curatedIatas.has(r.iata as string) && curatedNames.has(r.name.toLowerCase())) {
+      continue;
+    }
+
     // iata is guaranteed non-null after dedupe
     byIata.set(r.iata as string, {
       iata: r.iata as string,
