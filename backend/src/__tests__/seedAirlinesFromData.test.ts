@@ -7,7 +7,10 @@ describe("seedAirlinesFromData", () => {
   });
 
   afterAll(async () => {
-    await seedAirlinesFromData(); // leave dev DB populated
+    // Wipe + reseed so no synthetic/user-added row from this suite survives
+    // into downstream suites that share the dev DB (Jest runs serially).
+    await prisma.airline.deleteMany({});
+    await seedAirlinesFromData(); // leave dev DB populated, fully real
     await prisma.$disconnect();
   });
 
@@ -25,12 +28,16 @@ describe("seedAirlinesFromData", () => {
   });
 
   it("never overwrites a user-added row", async () => {
+    // Q9 is not synthetic enough (two real OpenFlights carriers use it:
+    // Afrinat International Airlines, Arik Niger) — Q0 is absent from both
+    // data/openflights/airlines.dat and src/data/airlines.ts, so even a
+    // leaked row can't be mistaken for real data downstream.
     await prisma.airline.create({
-      data: { iata: "LH", name: "My Custom LH", isUserAdded: true },
+      data: { iata: "Q0", name: "My Custom Q0", isUserAdded: true },
     });
     await seedAirlinesFromData();
-    const lh = await prisma.airline.findUnique({ where: { iata: "LH" } });
-    expect(lh?.name).toBe("My Custom LH");
-    expect(lh?.isUserAdded).toBe(true);
+    const q0 = await prisma.airline.findUnique({ where: { iata: "Q0" } });
+    expect(q0?.name).toBe("My Custom Q0");
+    expect(q0?.isUserAdded).toBe(true);
   });
 });
