@@ -18,6 +18,7 @@ import { findOrCreateAirport } from './airportLookup';
 import { getApiKey, getOpenSkyCredentials } from './apiKeyResolver';
 import { lookupFlightAerodatabox } from './aerodataboxLookup';
 import { convertAviationstackTimeToUtc, convertAirlabsTimeToUtc } from '../utils/timezone';
+import { resolveAirlineCodes } from '../utils/airlineNormalize';
 import { prisma } from '../db';
 import logger from '../utils/logger';
 
@@ -1085,12 +1086,12 @@ export function parseFlightNumber(flightNumber: string): {
 }
 
 /**
- * Get airline name from IATA code (basic fallback)
+ * Get airline name from IATA code. Resolves via the DB-backed airline
+ * catalogue cache (with the curated cold-start fallback baked into
+ * `resolveAirlineCodes` for use before the cache is warm) — a superset of
+ * the old static 147-entry map, and correct even on a fresh boot.
  */
-// Re-export from consolidated data source
-import { AIRLINE_IATA_MAP } from '../data/airlines';
-export { AIRLINE_IATA_MAP };
-
 export function getAirlineName(iataCode: string): string | null {
-  return AIRLINE_IATA_MAP[iataCode.toUpperCase()] ?? null;
+  if (!iataCode) return null;
+  return resolveAirlineCodes(iataCode)?.name ?? null;
 }
