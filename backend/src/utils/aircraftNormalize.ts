@@ -1,20 +1,10 @@
 import { AIRCRAFT_TYPES } from '../data/aircraftTypes';
+import { getAircraftCatalogSync } from '../services/aircraftCatalogCache';
 
 /**
- * Build lookup maps from the canonical aircraft types list.
- *
- * Maps ICAO code → canonical name (e.g. "A319" → "Airbus A319")
- * and known aliases → canonical name.
+ * Hand-curated aliases that appear in imported flight data.
+ * Key = lowercased alias, Value = canonical name from the aircraft catalogue.
  */
-const byIcao = new Map<string, string>();
-const byAlias = new Map<string, string>();
-
-for (const t of AIRCRAFT_TYPES) {
-  byIcao.set(t.icao.toUpperCase(), t.name);
-}
-
-// Hand-curated aliases that appear in imported flight data.
-// Key = lowercased alias, Value = canonical name from AIRCRAFT_TYPES.
 const ALIASES: Record<string, string> = {
   // Short Airbus codes
   'a318': 'Airbus A318',
@@ -98,8 +88,19 @@ const ALIASES: Record<string, string> = {
   'dh8d': 'De Havilland Dash 8-400',
 };
 
+const byAlias = new Map<string, string>();
 for (const [alias, canonical] of Object.entries(ALIASES)) {
   byAlias.set(alias, canonical);
+}
+
+// Cold-start fallback (curated list), used until the DB cache is preloaded —
+// so normalizeAircraft is correct even in a script or test that never called
+// preloadAircraftCatalog(), and never silently stops normalizing while the
+// boot-time preload is still pending. AIRCRAFT_TYPES is already
+// `{ icao, name }[]`, matching the cache's shape, so no mapping is needed.
+function currentCatalog(): { icao: string; name: string }[] {
+  const cat = getAircraftCatalogSync();
+  return cat.length === 0 ? AIRCRAFT_TYPES : cat;
 }
 
 /**
@@ -107,7 +108,7 @@ for (const [alias, canonical] of Object.entries(ALIASES)) {
  *
  * Tries (in order):
  * 1. Exact alias match (case-insensitive)
- * 2. ICAO code match (e.g. "A319" → "Airbus A319")
+ * 2. ICAO code match against the current catalogue (e.g. "A319" → "Airbus A319")
  * 3. If the input is already a canonical name → return as-is
  * 4. Otherwise return the input trimmed but unchanged
  */
@@ -121,12 +122,16 @@ export function normalizeAircraft(input: string): string {
   const aliased = byAlias.get(lower);
   if (aliased) return aliased;
 
+  const catalog = currentCatalog();
+  const upper = trimmed.toUpperCase();
+
   // 2. ICAO code match
-  const icaoMatch = byIcao.get(trimmed.toUpperCase());
-  if (icaoMatch) return icaoMatch;
+  for (const t of catalog) {
+    if (t.icao.toUpperCase() === upper) return t.name;
+  }
 
   // 3. Already canonical? (exact match in the name list)
-  for (const t of AIRCRAFT_TYPES) {
+  for (const t of catalog) {
     if (t.name.toLowerCase() === lower) return t.name;
   }
 
