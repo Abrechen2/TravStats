@@ -1,18 +1,11 @@
 /**
  * Unit tests for pure functions in flightAutoUpdate.ts that don't need the DB.
- * Focused on the recent significance / empty-string semantics fix and the
- * zombie-flight transition logic.
+ * Focused on the recent significance / empty-string semantics fix. The
+ * zombie-flight transition logic these tests used to cover was retired in
+ * favor of the hourly status sweep (services/statusSweep.ts) — see
+ * services/__tests__/statusSweep.test.ts for the equivalent coverage.
  */
-import { describe, it, expect, jest, beforeEach } from "@jest/globals";
-
-// ─── Mocks ──────────────────────────────────────────────────────────────────
-
-const mockFlightUpdateMany = jest.fn();
-jest.mock("../db", () => ({
-  prisma: {
-    flight: { updateMany: mockFlightUpdateMany },
-  },
-}));
+import { describe, it, expect, jest } from "@jest/globals";
 
 jest.mock("../utils/logger", () => ({
   __esModule: true,
@@ -23,7 +16,6 @@ jest.mock("../utils/logger", () => ({
 import {
   calculateChanges,
   hasSignificantChanges,
-  transitionZombieFlights,
   type FlightChange,
 } from "../services/flightAutoUpdate";
 
@@ -134,92 +126,6 @@ describe("hasSignificantChanges", () => {
         change("terminal", "changed", "1", "2"),
       ]),
     ).toBe(true);
-  });
-});
-
-// ─── transitionZombieFlights ────────────────────────────────────────────────
-
-describe("transitionZombieFlights", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it("flips status=scheduled flights past arrival+6h to flown", async () => {
-    mockFlightUpdateMany.mockResolvedValue({ count: 3 });
-
-    const result = await transitionZombieFlights();
-
-    expect(result).toBe(3);
-    expect(mockFlightUpdateMany).toHaveBeenCalledTimes(1);
-
-    const call = mockFlightUpdateMany.mock.calls[0][0] as {
-      where: {
-        status: string;
-        OR: Array<
-          | { arrivalTime: { not: null; lt: Date } }
-          | { departureTime: { not: null; lt: Date } }
-        >;
-      };
-      data: { status: string; lastModifiedBy: string; nextApiCheckAt: null };
-    };
-    expect(call.where.status).toBe("scheduled");
-    expect(Array.isArray(call.where.OR)).toBe(true);
-
-    // Find the arrivalTime branch in the OR — 6h cutoff
-    const arrBranch = call.where.OR.find(
-      (b): b is { arrivalTime: { not: null; lt: Date } } => "arrivalTime" in b,
-    );
-    expect(arrBranch).toBeDefined();
-    expect(arrBranch!.arrivalTime.not).toBeNull();
-    const expectedArrCutoff = Date.now() - 6 * 60 * 60 * 1000;
-    const actualArrCutoff = arrBranch!.arrivalTime.lt.getTime();
-    expect(Math.abs(actualArrCutoff - expectedArrCutoff)).toBeLessThan(60 * 1000);
-
-    expect(call.data).toEqual({
-      status: "flown",
-      lastModifiedBy: "zombie_auto_flown",
-      nextApiCheckAt: null,
-    });
-  });
-
-  it("also flips flights past departure+30h (safety net when arrivalTime is corrupted into future)", async () => {
-    // Regression test for overnight 2026-04-16: KE907 had its arrivalTime
-    // pushed into the future by a bad aviationstack lookup, so the arrival-
-    // based cutoff never fired. The departure-based safety net catches this.
-    mockFlightUpdateMany.mockResolvedValue({ count: 1 });
-
-    await transitionZombieFlights();
-
-    const call = mockFlightUpdateMany.mock.calls[0][0] as {
-      where: {
-        OR: Array<
-          | { arrivalTime: { not: null; lt: Date } }
-          | { departureTime: { not: null; lt: Date } }
-        >;
-      };
-    };
-    const depBranch = call.where.OR.find(
-      (b): b is { departureTime: { not: null; lt: Date } } => "departureTime" in b,
-    );
-    expect(depBranch).toBeDefined();
-    expect(depBranch!.departureTime.not).toBeNull();
-
-    // 30h cutoff — gives ultra-long-haul (SIN→JFK ~19h) 11h of slack
-    const expectedDepCutoff = Date.now() - 30 * 60 * 60 * 1000;
-    const actualDepCutoff = depBranch!.departureTime.lt.getTime();
-    expect(Math.abs(actualDepCutoff - expectedDepCutoff)).toBeLessThan(60 * 1000);
-  });
-
-  it("returns 0 when no zombie flights exist", async () => {
-    mockFlightUpdateMany.mockResolvedValue({ count: 0 });
-
-    expect(await transitionZombieFlights()).toBe(0);
-  });
-
-  it("returns 0 gracefully on DB error", async () => {
-    mockFlightUpdateMany.mockRejectedValue(new Error("Connection refused"));
-
-    expect(await transitionZombieFlights()).toBe(0);
   });
 });
 
