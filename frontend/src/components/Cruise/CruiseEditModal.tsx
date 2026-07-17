@@ -13,6 +13,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { ShipPicker } from "./ShipPicker";
 import { PortPicker } from "./PortPicker";
 import { CruiseStopsEditor } from "./CruiseStopsEditor";
+import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 
 type Mode = "create" | "edit";
 
@@ -23,7 +24,6 @@ interface Props {
   onSaved: (saved: Cruise) => void | Promise<void>;
 }
 
-const STATUSES: CruiseStatus[] = ["scheduled", "flown", "cancelled", "historical"];
 const CABIN_TYPES: CabinType[] = ["inside", "oceanview", "balcony", "suite"];
 const CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
 
@@ -219,18 +219,26 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                   onChange={(e): void => setEndDate(e.target.value)}
                 />
               </div>
-              <select
-                aria-label={t("field.status")}
-                className={`mt-3 ${INPUT_CLASS}`}
-                value={status}
-                onChange={(e): void => setStatus(e.target.value as CruiseStatus)}
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {t(`status.${s}`)}
-                  </option>
-                ))}
-              </select>
+              {/* #status-from-dates: cruise write paths derive scheduled/
+                  in_progress/flown from the dates — a select just let the UI
+                  set a value the backend would immediately overwrite. Only
+                  "cancelled" stays user-controlled, via the checkbox below. */}
+              <div className="mt-3">
+                <span
+                  className="inline-block rounded-full px-2 py-1 text-xs font-semibold"
+                  style={cruiseStatusPillStyle(status)}
+                >
+                  {t(`status.${status}`, { defaultValue: status })}
+                </span>
+              </div>
+              <label className="mt-2 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={status === "cancelled"}
+                  onChange={(e): void => setStatus(e.target.checked ? "cancelled" : "scheduled")}
+                />
+                {t("status.cancelledCheckbox")}
+              </label>
             </Section>
 
             <Section title={t("detail.mapColor")}>
