@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 // Mock the lib/api module: keep everything real except for the endpoints
@@ -38,27 +38,56 @@ vi.unmock("../../store/settingsStore");
 import NavigationBar from "../../components/NavigationBar";
 import { useSettingsStore } from "../../store/settingsStore";
 
-describe("NavigationBar domain gating", () => {
+// NOTE: src/__tests__/setup.ts globally mocks react-i18next with an identity
+// `t: (key) => key` (verified: no test file in this repo unmocks it). Labels
+// therefore render as raw "namespace:key" strings, not localized text — the
+// same convention the pre-existing domain-gating tests and useNavItems.test.ts
+// rely on. Assertions below match the raw keys (case-insensitively) instead
+// of the localized "Logbuch"/"Einstellungen" strings a real i18n run would
+// produce. Donate/Star/Discord/Bug stay literal since those labels are
+// hardcoded English strings, never routed through t().
+describe("NavigationBar grouped navigation", () => {
   beforeEach(() => {
+    useSettingsStore.setState({ enabledDomains: ["flight", "cruise"] });
+  });
+
+  function renderNav() {
+    return render(
+      <MemoryRouter>
+        <NavigationBar />
+      </MemoryRouter>
+    );
+  }
+
+  it("renders a Logbuch dropdown with both domains when two are enabled", () => {
+    renderNav();
+    const trigger = screen.getAllByRole("button", { name: /nav\.logbook/i })[0];
+    fireEvent.click(trigger);
+    expect(screen.getByRole("menuitem", { name: /domain\.flight/i })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: /domain\.cruise/i })).toBeTruthy();
+  });
+
+  it("collapses Logbuch to a direct link with one enabled domain", () => {
     useSettingsStore.setState({ enabledDomains: ["flight"] });
+    renderNav();
+    expect(screen.queryByRole("button", { name: /nav\.logbook/i })).toBeNull();
+    expect(screen.getAllByRole("link", { name: /domain\.flight/i }).length).toBeGreaterThan(0);
   });
 
-  it("shows Flights link when flight domain enabled", () => {
-    render(
-      <MemoryRouter>
-        <NavigationBar />
-      </MemoryRouter>
-    );
-    expect(screen.getAllByRole("link", { name: /flights|flüge/i }).length).toBeGreaterThan(0);
+  it("collapses System to a direct Einstellungen link for non-admin without updates", () => {
+    renderNav();
+    expect(screen.queryByRole("button", { name: /nav\.system/i })).toBeNull();
+    expect(
+      screen.getAllByRole("link", { name: /dashboard:settings/i }).length
+    ).toBeGreaterThan(0);
   });
 
-  it("hides Flights link when flight domain disabled", () => {
-    useSettingsStore.setState({ enabledDomains: [] });
-    render(
-      <MemoryRouter>
-        <NavigationBar />
-      </MemoryRouter>
-    );
-    expect(screen.queryByRole("link", { name: /flights|flüge/i })).not.toBeInTheDocument();
+  it("keeps the Bug button visible and groups support links in a dropdown", () => {
+    renderNav();
+    expect(screen.getByRole("button", { name: /Bug/ })).toBeTruthy();
+    fireEvent.click(screen.getAllByRole("button", { name: /nav\.support/i })[0]);
+    expect(screen.getByRole("menuitem", { name: /Donate/ })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: /Star/ })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: /Discord/ })).toBeTruthy();
   });
 });
