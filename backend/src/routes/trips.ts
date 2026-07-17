@@ -1,6 +1,7 @@
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
+import { Prisma } from "@prisma/client";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import {
@@ -8,6 +9,7 @@ import {
   updateTripSchema,
   assignFlightsSchema,
   createBookingSchema,
+  updateBookingSchema,
   createStopSchema,
   updateStopSchema,
   createJournalSchema,
@@ -160,6 +162,28 @@ router.post("/trips/bookings", authenticate, requireWriteScope, async (req: Auth
     }
 
     res.status(201).json({ booking });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/** PATCH /trips/bookings/:id — edit pnr/price/currency. Never touches the
+ *  booking's flights (their prices stay whatever they are). */
+router.patch("/trips/bookings/:id", authenticate, requireWriteScope, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.userId!;
+    const body = updateBookingSchema.parse(req.body);
+
+    const existing = await prisma.booking.findFirst({ where: { id: req.params.id, userId } });
+    if (!existing) throw new AppError("Booking not found", 404);
+
+    const data: Prisma.BookingUpdateInput = {};
+    if (body.pnr !== undefined) data.pnr = body.pnr;
+    if (body.price !== undefined) data.price = body.price;
+    if (body.currency !== undefined) data.currency = body.currency;
+
+    const booking = await prisma.booking.update({ where: { id: existing.id }, data });
+    res.json({ booking });
   } catch (error) {
     next(error);
   }
