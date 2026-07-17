@@ -9,7 +9,7 @@ import DiagnosticExportModal from "./DiagnosticExportModal";
 import { LogoMark, LogoWordmark } from "./Brand/Logo";
 import UpdateBadge from "./UpdateBadge";
 import NavDropdown, { type ExternalLink } from "./Nav/NavDropdown";
-import { useNavItems, isPathActive, type NavLeaf, type NavNode } from "./Nav/useNavItems";
+import { useNavItems, isPathActive, type NavLeaf } from "./Nav/useNavItems";
 
 function DesktopLeaf({ node, pathname }: { node: NavLeaf; pathname: string }): JSX.Element {
   const active = isPathActive(node.path, pathname);
@@ -49,10 +49,51 @@ function DesktopLeaf({ node, pathname }: { node: NavLeaf; pathname: string }): J
   );
 }
 
-/** Flattens the nav model into a flat leaf list for the mobile panel (interim —
- *  Task 4 replaces this with labelled groups; this only keeps tsc/tests green). */
-function flattenNavNodes(nodes: NavNode[]): NavLeaf[] {
-  return nodes.flatMap((node) => (node.kind === "leaf" ? [node] : node.children));
+function MobileLeaf({
+  node,
+  indent = false,
+  onNavigate,
+}: {
+  node: NavLeaf;
+  indent?: boolean;
+  onNavigate: () => void;
+}): JSX.Element {
+  const location = useLocation();
+  const active = isPathActive(node.path, location.pathname);
+  const hasBadge = (node.badge ?? 0) > 0;
+  return (
+    <Link
+      to={node.path}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors ${
+        indent ? "pl-7" : ""
+      }`}
+      style={{
+        fontWeight: active ? 600 : 500,
+        background: active ? "var(--bg-elevated)" : "transparent",
+        color: active ? "var(--accent)" : node.warn ? "var(--warning)" : "var(--text-muted)",
+        borderLeft: active ? "3px solid var(--accent)" : "3px solid transparent",
+      }}
+    >
+      <span className="flex items-center gap-1.5">
+        {node.label}
+        {node.betaBadge && (
+          <span className="inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium leading-none text-amber-700 bg-amber-100 ring-1 ring-inset ring-amber-600/20 dark:text-amber-400 dark:bg-amber-500/10 dark:ring-amber-400/20">
+            Beta
+          </span>
+        )}
+      </span>
+      {hasBadge && (
+        <span
+          className="text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center"
+          style={{ background: "var(--danger)", color: "#fff" }}
+        >
+          {(node.badge ?? 0) > 9 ? "9+" : node.badge}
+        </span>
+      )}
+    </Link>
+  );
 }
 
 export default function NavigationBar(): JSX.Element {
@@ -89,7 +130,6 @@ export default function NavigationBar(): JSX.Element {
   };
 
   const { center, system } = useNavItems(pendingUpdatesCount, location.pathname);
-  const mobileFlat: NavLeaf[] = [...flattenNavNodes(center), ...flattenNavNodes([system])];
 
   const supportLinks: ExternalLink[] = [
     {
@@ -298,49 +338,58 @@ export default function NavigationBar(): JSX.Element {
           </div>
 
           <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-            {mobileFlat.map((item) => {
-              const active = isPathActive(item.path, location.pathname);
-              const hasBadge = (item.badge ?? 0) > 0;
-              return (
-                <Link
-                  key={item.id}
-                  to={item.path}
-                  onClick={() => setMobileMenuOpen(false)}
-                  aria-current={active ? "page" : undefined}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors"
-                  style={{
-                    fontWeight: active ? 600 : 500,
-                    background: active ? "var(--bg-elevated)" : "transparent",
-                    color: active
-                      ? "var(--accent)"
-                      : item.warn
-                        ? "var(--warning)"
-                        : "var(--text-muted)",
-                    borderLeft: active ? "3px solid var(--accent)" : "3px solid transparent",
-                  }}
+            {center.map((node) =>
+              node.kind === "group" ? (
+                <div key={node.id}>
+                  <div
+                    className="px-3 pt-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wider"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    {node.label}
+                  </div>
+                  {node.children.map((child) => (
+                    <MobileLeaf
+                      key={child.id}
+                      node={child}
+                      indent
+                      onNavigate={closeMobileMenu}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <MobileLeaf key={node.id} node={node} onNavigate={closeMobileMenu} />
+              )
+            )}
+            <div className="my-2" style={{ borderTop: "1px solid var(--color-border)" }} />
+            {system.kind === "group" ? (
+              <div>
+                <div
+                  className="px-3 pt-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wider"
+                  style={{ color: "var(--text-muted)" }}
                 >
-                  <span className="flex items-center gap-1.5">
-                    {item.label}
-                    {item.betaBadge && (
-                      <span className="inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium leading-none text-amber-700 bg-amber-100 ring-1 ring-inset ring-amber-600/20 dark:text-amber-400 dark:bg-amber-500/10 dark:ring-amber-400/20">
-                        Beta
-                      </span>
-                    )}
-                  </span>
-                  {hasBadge && (
-                    <span
-                      className="text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center"
-                      style={{ background: "var(--danger)", color: "#fff" }}
-                    >
-                      {(item.badge ?? 0) > 9 ? "9+" : item.badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
+                  {system.label}
+                </div>
+                {system.children.map((child) => (
+                  <MobileLeaf
+                    key={child.id}
+                    node={child}
+                    indent
+                    onNavigate={closeMobileMenu}
+                  />
+                ))}
+              </div>
+            ) : (
+              <MobileLeaf node={system} onNavigate={closeMobileMenu} />
+            )}
           </nav>
 
           <div className="p-4" style={{ borderTop: "1px solid var(--color-border)" }}>
+            <div
+              className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wider"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {t("dashboard:nav.support")}
+            </div>
             <div className="flex gap-1.5 mb-3">
               <a
                 href="https://www.paypal.com/donate?hosted_button_id=HW9MPYVURCT42"
