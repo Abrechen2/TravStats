@@ -92,6 +92,26 @@ describe("FlightEditModal", () => {
     expect(checkbox.checked).toBe(false);
   });
 
+  it("renders the historical pill in amber, not red — historical is archival data, not an error", () => {
+    const historicalFlight: Flight = { ...mockFlight, status: "historical" };
+    const { container } = render(
+      <FlightEditModal flight={historicalFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+    );
+    const pill = container.querySelector(".rounded-full") as HTMLElement;
+    expect(pill).toBeTruthy();
+    expect(pill.style.color).toBe("rgb(251, 191, 36)");
+  });
+
+  it("renders the duplicated pill in amber, not red", () => {
+    const duplicatedFlight: Flight = { ...mockFlight, status: "duplicated" };
+    const { container } = render(
+      <FlightEditModal flight={duplicatedFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+    );
+    const pill = container.querySelector(".rounded-full") as HTMLElement;
+    expect(pill).toBeTruthy();
+    expect(pill.style.color).toBe("rgb(251, 191, 36)");
+  });
+
   it("checking the cancelled checkbox submits status \"cancelled\"", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     const { container, getByText } = render(
