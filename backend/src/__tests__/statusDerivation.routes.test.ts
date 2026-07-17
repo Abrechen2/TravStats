@@ -233,3 +233,161 @@ describe("Flight write paths derive temporal status from dates", () => {
     expect(stored?.status).toBe("flown");
   });
 });
+
+// Task 5 (spec 2026-07-17-status-from-dates): cruise write paths (create,
+// update) derive the temporal status ('scheduled' | 'in_progress' | 'flown')
+// from the FINAL startDate/endDate instead of storing the client-sent hint
+// verbatim. Passthrough statuses (CRUISE_PASSTHROUGH: cancelled, historical)
+// are always assigned verbatim. Unlike flights, the cruise Zod schema has no
+// status/date sanity-gate refinement, so a future-dated cruise with a
+// 'flown' hint is NOT rejected at create — it reaches route-level derivation
+// directly and is overridden to 'scheduled'.
+describe("Cruise write paths derive temporal status from dates", () => {
+  let authCookie: string;
+  let userId: string;
+
+  const daysFromNowIso = (days: number): string =>
+    new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+
+  beforeAll(async () => {
+    await prisma.cruise.deleteMany({ where: { user: { username: "cruisestatusderive" } } });
+    await prisma.user.deleteMany({ where: { username: "cruisestatusderive" } });
+    const user = await prisma.user.create({
+      data: { username: "cruisestatusderive", passwordHash: await hashPassword("password123") },
+    });
+    userId = user.id;
+    authCookie = `auth_token=${generateToken(user.id)}`;
+  });
+
+  afterAll(async () => {
+    // Cruises cascade from the user delete (onDelete: Cascade).
+    await prisma.user.delete({ where: { id: userId } });
+    await prisma.$disconnect();
+  });
+
+  it("create: dates spanning now derive 'in_progress' regardless of a 'scheduled' hint", async () => {
+    const res = await request(app)
+      .post("/api/v1/cruises")
+      .set("Cookie", authCookie)
+      .send({
+        cruiseLine: "Status Derive Line",
+        startDate: daysFromNowIso(-3),
+        endDate: daysFromNowIso(3),
+        status: "scheduled",
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.data.status).toBe("in_progress");
+
+    const stored = await prisma.cruise.findUnique({ where: { id: res.body.data.id } });
+    expect(stored?.status).toBe("in_progress");
+  });
+
+  it("create: fully past dates (beyond the 48h slack) store 'flown' regardless of a 'scheduled' hint", async () => {
+    const res = await request(app)
+      .post("/api/v1/cruises")
+      .set("Cookie", authCookie)
+      .send({
+        cruiseLine: "Status Derive Line",
+        startDate: daysFromNowIso(-40),
+        endDate: daysFromNowIso(-35),
+        status: "scheduled",
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.data.status).toBe("flown");
+  });
+
+  it("create: a future-dated cruise with a 'flown' hint is not schema-rejected and derives to 'scheduled'", async () => {
+    // Unlike flights, the cruise schema has no axis-sanity refinement, so
+    // this reaches route-level derivation directly (no 400).
+    const res = await request(app)
+      .post("/api/v1/cruises")
+      .set("Cookie", authCookie)
+      .send({
+        cruiseLine: "Status Derive Line",
+        startDate: daysFromNowIso(10),
+        endDate: daysFromNowIso(17),
+        status: "flown",
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.data.status).toBe("scheduled");
+  });
+
+  it("create: historical is respected verbatim even with future dates", async () => {
+    const res = await request(app)
+      .post("/api/v1/cruises")
+      .set("Cookie", authCookie)
+      .send({
+        cruiseLine: "Status Derive Line",
+        startDate: daysFromNowIso(20),
+        endDate: daysFromNowIso(27),
+        status: "historical",
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.data.status).toBe("historical");
+  });
+
+  it("create: omitting status entirely (schema default 'scheduled') still derives from past dates", async () => {
+    const res = await request(app)
+      .post("/api/v1/cruises")
+      .set("Cookie", authCookie)
+      .send({
+        cruiseLine: "Status Derive Line",
+        startDate: daysFromNowIso(-40),
+        endDate: daysFromNowIso(-35),
+        // no status field — schema defaults to 'scheduled', which is a
+        // non-passthrough hint and must still be overridden by derivation.
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.data.status).toBe("flown");
+  });
+
+  it("update: moving dates into the past re-derives status without a status field", async () => {
+    const created = await request(app)
+      .post("/api/v1/cruises")
+      .set("Cookie", authCookie)
+      .send({
+        cruiseLine: "Status Derive Line",
+        startDate: daysFromNowIso(32),
+        endDate: daysFromNowIso(39),
+        status: "scheduled",
+      })
+      .expect(201);
+    expect(created.body.data.status).toBe("scheduled");
+
+    const updated = await request(app)
+      .patch(`/api/v1/cruises/${created.body.data.id}`)
+      .set("Cookie", authCookie)
+      .send({
+        startDate: daysFromNowIso(-40),
+        endDate: daysFromNowIso(-35),
+      })
+      .expect(200);
+
+    expect(updated.body.data.status).toBe("flown");
+  });
+
+  it("update: a passthrough status (cancelled) is left untouched when dates move to the past without a status field", async () => {
+    const created = await request(app)
+      .post("/api/v1/cruises")
+      .set("Cookie", authCookie)
+      .send({
+        cruiseLine: "Status Derive Line",
+        startDate: daysFromNowIso(33),
+        endDate: daysFromNowIso(40),
+        status: "cancelled",
+      })
+      .expect(201);
+    expect(created.body.data.status).toBe("cancelled");
+
+    const updated = await request(app)
+      .patch(`/api/v1/cruises/${created.body.data.id}`)
+      .set("Cookie", authCookie)
+      .send({
+        startDate: daysFromNowIso(-41),
+        endDate: daysFromNowIso(-36),
+      })
+      .expect(200);
+
+    expect(updated.body.data.status).toBe("cancelled");
+  });
+});

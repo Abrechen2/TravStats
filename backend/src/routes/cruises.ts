@@ -9,6 +9,7 @@ import { checkAndUpdateAchievements } from '../utils/achievements';
 import { buildEffectivePortSequence } from '../shared/cruise/portSequence';
 import { computeSchematicRoute } from '../services/schematicRouter';
 import { recomputeLegsForCruise } from '../services/cruiseDistance/cruiseLegService';
+import { deriveCruiseStatus, CRUISE_PASSTHROUGH } from '../shared/statusDerivation';
 import logger from '../utils/logger';
 
 interface GeometryFeature {
@@ -276,15 +277,27 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
     const parsed = createCruiseSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    const { stops, startDate, endDate, tripId, bookingId, ...rest } = parsed.data;
+    const { stops, startDate, endDate, tripId, bookingId, status, ...rest } = parsed.data;
+
+    const startDateUtc = startDate ? new Date(startDate) : null;
+    const endDateUtc = endDate ? new Date(endDate) : null;
+
+    // The status field is a client-sent HINT, not the source of truth (spec
+    // 2026-07-17-status-from-dates) — passthrough statuses (cancelled,
+    // historical) are assigned verbatim, everything else (including the
+    // schema's 'scheduled' default) is derived from the dates being written.
+    const effectiveStatus = (CRUISE_PASSTHROUGH as readonly string[]).includes(status)
+      ? status
+      : deriveCruiseStatus({ startDate: startDateUtc, endDate: endDateUtc, current: status });
 
     const cruise = await prisma.$transaction(async (tx) => {
       const created = await tx.cruise.create({
         data: {
           userId,
           ...rest,
-          startDate: startDate ? new Date(startDate) : null,
-          endDate: endDate ? new Date(endDate) : null,
+          status: effectiveStatus,
+          startDate: startDateUtc,
+          endDate: endDateUtc,
           tripId: tripId ?? null,
           bookingId: bookingId ?? null,
         },
@@ -333,16 +346,49 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
     const parsed = updateCruiseSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    const { stops, startDate, endDate, ...rest } = parsed.data;
+    const { stops, startDate, endDate, status: requestedStatus, ...rest } = parsed.data;
+
+    const nextStartDate =
+      startDate === undefined ? undefined : startDate ? new Date(startDate) : null;
+    const nextEndDate = endDate === undefined ? undefined : endDate ? new Date(endDate) : null;
+
+    // The status field is a client-sent HINT, not the source of truth (spec
+    // 2026-07-17-status-from-dates). Derive from the FINAL start/end values —
+    // an update may move dates without sending status, or send status
+    // without moving dates — merged with the existing row's stored dates.
+    const isRequestedPassthrough =
+      requestedStatus !== undefined &&
+      (CRUISE_PASSTHROUGH as readonly string[]).includes(requestedStatus);
+    const currentIsPassthrough = (CRUISE_PASSTHROUGH as readonly string[]).includes(
+      existing.status,
+    );
+    let effectiveStatus: string | undefined;
+    if (isRequestedPassthrough) {
+      // Passthrough statuses are always assigned verbatim.
+      effectiveStatus = requestedStatus;
+    } else if (requestedStatus === undefined && currentIsPassthrough) {
+      // Stored status is passthrough and no status field arrived — leave it
+      // alone. A bare date edit must never pull a cancelled/historical
+      // cruise back into the derived scheduled/in_progress/flown lifecycle.
+      effectiveStatus = undefined;
+    } else {
+      const finalStart = nextStartDate !== undefined ? nextStartDate : existing.startDate;
+      const finalEnd = nextEndDate !== undefined ? nextEndDate : existing.endDate;
+      effectiveStatus = deriveCruiseStatus({
+        startDate: finalStart,
+        endDate: finalEnd,
+        current: requestedStatus ?? existing.status,
+      });
+    }
 
     const updated = await prisma.$transaction(async (tx) => {
       await tx.cruise.update({
         where: { id: existing.id },
         data: {
           ...rest,
-          startDate:
-            startDate === undefined ? undefined : startDate ? new Date(startDate) : null,
-          endDate: endDate === undefined ? undefined : endDate ? new Date(endDate) : null,
+          status: effectiveStatus,
+          startDate: nextStartDate,
+          endDate: nextEndDate,
         },
       });
 
