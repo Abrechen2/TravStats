@@ -24,6 +24,7 @@ import {
   trimZeroEdges,
   type DatedRow,
 } from '../utils/stats/timeseries';
+import { computeDedupedTotalCost } from '../utils/stats/dedupedCost';
 
 const router = Router();
 
@@ -99,7 +100,7 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
   // counts use the original where so that planned and cancelled flights are visible.
   const geoWhere: Prisma.FlightWhereInput = { ...where, status: { in: ['flown', 'historical'] } };
 
-  const [flownFlights, totalFlights, statusCounts, airlineCounts, categoryCounts, costAgg] = await Promise.all([
+  const [flownFlights, totalFlights, statusCounts, airlineCounts, categoryCounts, costFlights] = await Promise.all([
     prisma.flight.findMany({
       where: geoWhere,
       select: {
@@ -133,12 +134,14 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
       where,
       _count: true,
     }),
-    prisma.flight.aggregate({
+    prisma.flight.findMany({
       where,
-      _sum: {
+      select: {
         price: true,
         taxes: true,
         fees: true,
+        bookingId: true,
+        booking: { select: { price: true } },
       },
     }),
   ]);
@@ -214,12 +217,10 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
     return acc;
   }, {} as Record<string, number>);
 
-  const costParts = [
-    costAgg._sum.price,
-    costAgg._sum.taxes,
-    costAgg._sum.fees,
-  ].filter((v): v is number => typeof v === 'number');
-  const totalCost = costParts.length > 0 ? costParts.reduce((a, b) => a + b, 0) : 0;
+  // Booking-aware: a booking's price counts once, not once per segment —
+  // and grouped segments (price nulled by the import) still contribute
+  // their booking's total (spec 2026-07-17-cost-booking-price §4).
+  const totalCost = computeDedupedTotalCost(costFlights);
 
   return {
     totalFlights,
@@ -228,7 +229,7 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
     avgDistance: Math.round(avgDistance),
     byStatus,
     byAirline,
-    totalCost: Math.round(totalCost * 100) / 100,
+    totalCost,
     byCategory,
   };
 }
