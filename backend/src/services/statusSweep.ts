@@ -1,0 +1,110 @@
+import { prisma } from "../db";
+import logger from "../utils/logger";
+import {
+  FLIGHT_ARRIVAL_SLACK_HOURS,
+  FLIGHT_DEPARTURE_SLACK_HOURS,
+  CRUISE_SLACK_HOURS,
+  deriveTripStatus,
+} from "../shared/statusDerivation";
+
+const H = 60 * 60 * 1000;
+
+/**
+ * Hourly convergence sweep (spec 2026-07-17-status-from-dates): makes the
+ * stored temporal statuses agree with the dates. Generalizes and replaces
+ * the retired one-way flips (transitionZombieFlights, transitionPastCruises).
+ * Passthrough statuses (cancelled/historical/duplicated) are never touched.
+ */
+export async function sweepStatuses(
+  now: Date = new Date()
+): Promise<{ flights: number; cruises: number; trips: number }> {
+  const arrivalCutoff = new Date(now.getTime() - FLIGHT_ARRIVAL_SLACK_HOURS * H);
+  const departureCutoff = new Date(now.getTime() - FLIGHT_DEPARTURE_SLACK_HOURS * H);
+  const cruiseCutoff = new Date(now.getTime() - CRUISE_SLACK_HOURS * H);
+
+  // Flights: scheduled -> flown (stale) and flown -> scheduled (future-dated)
+  const staleFlights = await prisma.flight.updateMany({
+    where: {
+      status: "scheduled",
+      OR: [
+        { arrivalTime: { not: null, lt: arrivalCutoff } },
+        { arrivalTime: null, departureTime: { not: null, lt: departureCutoff } },
+      ],
+    },
+    data: { status: "flown", lastModifiedBy: "status_sweep", nextApiCheckAt: null },
+  });
+  const futureFlown = await prisma.flight.updateMany({
+    where: {
+      status: "flown",
+      OR: [{ arrivalTime: { gt: now } }, { arrivalTime: null, departureTime: { gt: now } }],
+    },
+    data: { status: "scheduled", lastModifiedBy: "status_sweep" },
+  });
+
+  // Cruises: three-way from start/end (+slack)
+  const cruiseToInProgress = await prisma.cruise.updateMany({
+    where: {
+      status: { in: ["scheduled", "flown"] },
+      startDate: { not: null, lte: now },
+      endDate: { not: null, gte: cruiseCutoff },
+    },
+    data: { status: "in_progress" },
+  });
+  const cruiseToFlown = await prisma.cruise.updateMany({
+    where: {
+      status: { in: ["scheduled", "in_progress"] },
+      OR: [
+        { endDate: { not: null, lt: cruiseCutoff } },
+        { endDate: null, startDate: { not: null, lt: cruiseCutoff } },
+      ],
+    },
+    data: { status: "flown" },
+  });
+  const cruiseToScheduled = await prisma.cruise.updateMany({
+    where: {
+      status: { in: ["flown", "in_progress"] },
+      startDate: { gt: now },
+    },
+    data: { status: "scheduled" },
+  });
+
+  // Trips: recompute from segment date bounds, update diffs only
+  const trips = await prisma.trip.findMany({
+    select: {
+      id: true,
+      status: true,
+      flights: { select: { departureTime: true, arrivalTime: true } },
+      cruises: { select: { startDate: true, endDate: true } },
+    },
+  });
+  let tripFlips = 0;
+  for (const trip of trips) {
+    const starts = [
+      ...trip.flights.map((f) => f.departureTime),
+      ...trip.cruises.map((c) => c.startDate),
+    ].filter((d): d is Date => d != null);
+    const ends = [
+      ...trip.flights.map((f) => f.arrivalTime ?? f.departureTime),
+      ...trip.cruises.map((c) => c.endDate ?? c.startDate),
+    ].filter((d): d is Date => d != null);
+    const derived = deriveTripStatus({
+      earliestStart: starts.length ? new Date(Math.min(...starts.map((d) => d.getTime()))) : null,
+      latestEnd: ends.length ? new Date(Math.max(...ends.map((d) => d.getTime()))) : null,
+      now,
+    });
+    if (derived != null && derived !== trip.status) {
+      await prisma.trip.update({ where: { id: trip.id }, data: { status: derived } });
+      tripFlips++;
+    }
+  }
+
+  const flights = staleFlights.count + futureFlown.count;
+  const cruises = cruiseToInProgress.count + cruiseToFlown.count + cruiseToScheduled.count;
+  if (flights + cruises + tripFlips > 0) {
+    logger.info({
+      operation: "status_sweep_done",
+      context: { flights, cruises, trips: tripFlips },
+    });
+  }
+  return { flights, cruises, trips: tripFlips };
+}
