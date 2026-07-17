@@ -611,10 +611,21 @@ export default function FlightCompleteStep({
                         background: "rgba(56,139,253,0.15)",
                         color: "#388bfd",
                       }
-                    : {
-                        background: "rgba(248,81,73,0.15)",
-                        color: "var(--danger)",
-                      }
+                    : status === "historical"
+                      ? {
+                          // historical is archival data, not an error state —
+                          // amber matches the cruise pill palette
+                          // (cruiseStatusStyle.ts) instead of red. "duplicated"
+                          // never reaches this form step (only assigned by
+                          // lib/flightDuplicate.ts, which bypasses this UI), so
+                          // this component's status prop type excludes it.
+                          background: "rgba(251,191,36,0.15)",
+                          color: "#fbbf24",
+                        }
+                      : {
+                          background: "rgba(248,81,73,0.15)",
+                          color: "var(--danger)",
+                        }
               }
             >
               {t(`flights:status.${status}`, { defaultValue: status })}

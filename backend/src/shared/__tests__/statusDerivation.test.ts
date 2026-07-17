@@ -76,6 +76,12 @@ describe("deriveCruiseStatus", () => {
     ).toBe("in_progress");
   });
 
+  it("null start + future end is not in_progress — a not-yet-started cruise stays scheduled", () => {
+    expect(
+      deriveCruiseStatus({ startDate: null, endDate: future(72), current: "scheduled", now })
+    ).toBe("scheduled");
+  });
+
   it("missing end: no in_progress — scheduled until start+48h past, then flown", () => {
     expect(
       deriveCruiseStatus({ startDate: past(47), endDate: null, current: "scheduled", now })
