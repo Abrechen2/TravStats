@@ -20,10 +20,13 @@ const H = 60 * 60 * 1000;
  * the FLIGHT_ARRIVAL_SLACK_HOURS band (now-6h to now) untouched. This band
  * is a hysteresis zone: a stored "flown" status is legitimate there
  * (from user/parser-set values at creation/import, direct script/seed writes,
- * or pre-existing data), and reverting it would fight deliberate data
- * on every hourly sweep. The deriver's "scheduled" return for the whole band
- * applies to WRITE paths (API client); the sweep deliberately does NOT narrow
- * its window to match—only corrects clearly contradictory (future-dated) rows.
+ * or pre-existing data—the pending-update apply path never touches status,
+ * and the only automated status writers are the legacy one-way flips this sweep
+ * replaces, retired in a follow-up task, whose 6h/30h/48h cutoffs equal these
+ * slack constants), and reverting it would fight deliberate data on every hourly
+ * sweep. The deriver's "scheduled" return for the whole band applies to WRITE
+ * paths; the sweep deliberately does NOT narrow its window to match—only
+ * corrects clearly contradictory (future-dated) rows.
  */
 export async function sweepStatuses(
   now: Date = new Date()

@@ -101,8 +101,9 @@ describe("sweepStatuses", () => {
     // "flown" (e.g., from user/parser-set values at creation/import, direct seed
     // writes, or pre-existing data). The sweep must NOT revert it to scheduled — the
     // slack band is a hysteresis zone where both values are valid. Reverting would
-    // fight deliberate data on every hourly sweep. Auto-update paths never change
-    // status, so "flown" in the band is never an API confirmation.
+    // fight deliberate data on every hourly sweep. The pending-update apply path
+    // never changes status, so "flown" in the band stems from user/parser sets,
+    // seed writes, or pre-existing data—never from applyPendingUpdate.
     const insideSlack = await flight({ status: "flown", arrivalTime: past(2) });
     await sweepStatuses();
     expect((await prisma.flight.findUnique({ where: { id: insideSlack.id } }))?.status).toBe(
