@@ -8,6 +8,7 @@ import type {
   TripStop,
   TripJournalEntry,
   TripPhoto,
+  UpdateBookingInput,
 } from "../../types";
 
 export interface CreateTripInput {
@@ -105,6 +106,11 @@ export const tripsApi = {
 
   createBooking: async (input: CreateBookingInput): Promise<Booking> => {
     const { data } = await api.post<{ booking: Booking }>("/trips/bookings", input);
+    return data.booking;
+  },
+
+  updateBooking: async (id: string, input: UpdateBookingInput): Promise<Booking> => {
+    const { data } = await api.patch<{ booking: Booking }>(`/trips/bookings/${id}`, input);
     return data.booking;
   },
 

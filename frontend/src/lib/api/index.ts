@@ -33,3 +33,4 @@ export type {
   AssignFlightsInput,
   CreateBookingInput,
 } from "./trips";
+// UpdateBookingInput lives in ../../types (see the note above re: Booking).

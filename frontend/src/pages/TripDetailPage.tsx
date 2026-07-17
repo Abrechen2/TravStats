@@ -7,13 +7,14 @@ import { sumByCurrency } from "../lib/bookingCost";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useTranslation } from "../hooks/useTranslation";
-import type { Trip, TripJournalEntry, TripStatus, TripStop } from "../types";
+import type { Booking, Trip, TripJournalEntry, TripStatus, TripStop } from "../types";
 import PageTransition from "../components/PageTransition";
 import NavigationBar from "../components/NavigationBar";
 import TripModal from "../components/Trips/TripModal";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
 import JournalViewModal from "../components/Trips/JournalViewModal";
 import StopModal from "../components/Trips/StopModal";
+import BookingEditModal from "../components/Trips/BookingEditModal";
 import TripMap from "../components/Trips/TripMap";
 import TripGallery from "../components/Trips/TripGallery";
 import TripSummaryPanel from "../components/Trips/TripSummaryPanel";
@@ -163,7 +164,9 @@ export default function TripDetailPage(): JSX.Element {
               onChange={() => void load()}
             />
           )}
-          {tab === "logistics" && <LogisticsTab trip={shownTrip} t={t} />}
+          {tab === "logistics" && (
+            <LogisticsTab trip={shownTrip} t={t} onChanged={() => void load()} />
+          )}
         </div>
       </div>
 
@@ -951,13 +954,16 @@ function truncate(text: string, n: number): string {
 function LogisticsTab({
   trip,
   t,
+  onChanged,
 }: {
   trip: Trip;
   t: ReturnType<typeof useTranslation>["t"];
+  onChanged: () => void;
 }): JSX.Element {
   const flights = trip.flights ?? [];
   const cruises = trip.cruises ?? [];
   const bookings = trip.bookings ?? [];
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
 
   const costTotals = sumByCurrency(bookings);
 
@@ -1079,6 +1085,7 @@ function LogisticsTab({
               >
                 <th className="text-left px-4 py-2">PNR</th>
                 <th className="text-right px-4 py-2">Preis</th>
+                <th className="text-right px-4 py-2"></th>
               </tr>
             </thead>
             <tbody>
@@ -1088,11 +1095,44 @@ function LogisticsTab({
                   <td className="px-4 py-2.5 text-right">
                     {b.price != null ? `${b.currency ?? "EUR"} ${b.price.toFixed(2)}` : "—"}
                   </td>
+                  <td className="px-4 py-2.5 text-right">
+                    <button
+                      type="button"
+                      onClick={() => setEditingBooking(b)}
+                      className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-[var(--bg-muted)] hover:text-[#388bfd]"
+                      style={{ color: "var(--text-muted)" }}
+                      aria-label={t("trips:bookingEdit.title")}
+                      title={t("trips:bookingEdit.title")}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.8}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                      </svg>
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {editingBooking && (
+        <BookingEditModal
+          booking={editingBooking}
+          onClose={() => setEditingBooking(null)}
+          onSaved={() => {
+            setEditingBooking(null);
+            onChanged();
+          }}
+        />
       )}
     </div>
   );
