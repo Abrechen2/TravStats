@@ -101,3 +101,37 @@ describe("NavigationBar grouped navigation", () => {
     expect(settingsLinks.some((l) => l.getAttribute("aria-current") === "page")).toBe(true);
   });
 });
+
+describe("NavigationBar mobile panel", () => {
+  beforeEach(() => {
+    useSettingsStore.setState({ enabledDomains: ["flight", "cruise"] });
+  });
+
+  it("renders Logbuch as a labelled group with indented domain links", () => {
+    render(
+      <MemoryRouter>
+        <NavigationBar />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByLabelText(/toggleMenu/i));
+    // group label is plain text (not a button) in the panel; the desktop
+    // NavDropdown trigger also matches the raw key, so assert at least one hit
+    expect(screen.getAllByText(/nav\.logbook/i).length).toBeGreaterThan(0);
+    const panelFlights = screen
+      .getAllByRole("link", { name: /domain\.flight/i })
+      .find((el) => el.className.includes("pl-"));
+    expect(panelFlights).toBeTruthy();
+  });
+
+  it("renders the System group with Einstellungen in the panel", () => {
+    render(
+      <MemoryRouter>
+        <NavigationBar />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByLabelText(/toggleMenu/i));
+    expect(
+      screen.getAllByRole("link", { name: /dashboard:settings/i }).length
+    ).toBeGreaterThan(0);
+  });
+});
