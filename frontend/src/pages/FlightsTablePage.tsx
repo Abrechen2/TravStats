@@ -40,7 +40,14 @@ import SourceInfoDot from "../components/flightsTable/SourceInfoDot";
 // each flight row is a Link to /trips/:id.
 
 export default function FlightsTablePage(): JSX.Element {
-  const { t } = useTranslation(["flights", "common", "dashboard", "trips", "specialFlights"]);
+  const { t } = useTranslation([
+    "flights",
+    "common",
+    "dashboard",
+    "trips",
+    "specialFlights",
+    "settings",
+  ]);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripFilter, setTripFilter] = useState<"all" | "with" | "without" | string>("all");
@@ -307,13 +314,22 @@ export default function FlightsTablePage(): JSX.Element {
             <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
               {t("dashboard:flightsTitle")}
             </h1>
-            <button
-              className="btn-primary flex items-center gap-2 whitespace-nowrap"
-              onClick={() => setShowAddFlight(true)}
-            >
-              <span>+</span>
-              <span>{t("dashboard:addFlight")}</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/settings?section=import"
+                className="flex items-center gap-2 whitespace-nowrap rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] hover:border-[var(--accent)]"
+              >
+                <span aria-hidden="true">📥</span>
+                <span>{t("settings:import.openHub")}</span>
+              </Link>
+              <button
+                className="btn-primary flex items-center gap-2 whitespace-nowrap"
+                onClick={() => setShowAddFlight(true)}
+              >
+                <span>+</span>
+                <span>{t("dashboard:addFlight")}</span>
+              </button>
+            </div>
           </div>
 
           {/* Table */}
