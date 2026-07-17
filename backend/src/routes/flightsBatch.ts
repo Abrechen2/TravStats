@@ -11,6 +11,7 @@ import { calculateCo2Kg, haversineKm, toSeatClass } from "../services/co2Calcula
 import { resolveAirlineCodes } from "../utils/airlineNormalize";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
+import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from "../shared/statusDerivation";
 
 function toUtcDate(local: string | null | undefined, tz: string | null | undefined): Date | null {
   if (!local || !tz) return null;
@@ -81,6 +82,16 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
         const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
         const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
         const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
+        // The status field is a client-sent HINT, not the source of truth
+        // (spec 2026-07-17-status-from-dates) — same rule as the single-create
+        // route in flights.ts.
+        const effectiveStatus = (FLIGHT_PASSTHROUGH as readonly string[]).includes(data.status ?? "")
+          ? data.status!
+          : deriveFlightStatus({
+              departureTime: departureUtc,
+              arrivalTime: arrivalUtc,
+              current: data.status ?? "scheduled",
+            });
         // Auto-resolve IATA/ICAO from a free-text airline name (issue #106B).
         // Importers (Generic-CSV, FR24, AI-agent) often only supply a name —
         // without codes downstream features like airline filters and codeshare
@@ -140,7 +151,7 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
               enriched.arrival.lat,
               enriched.arrival.lon,
             ),
-            status: data.status,
+            status: effectiveStatus,
             notes: data.notes,
             price: data.price,
             taxes: data.taxes,
@@ -168,7 +179,7 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
             nextApiCheckAt: calculateNextApiCheckAt(
               departureUtc,
               arrivalUtc,
-              data.status ?? "scheduled",
+              effectiveStatus,
               data.flightNumber,
             ),
           },
