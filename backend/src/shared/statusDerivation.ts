@@ -10,9 +10,11 @@
  * on WRITE paths — this is the safe value for incoming API data. However, the
  * sweep's flown→scheduled revert intentionally covers only STRICTLY FUTURE dates,
  * leaving the slack band untouched. This asymmetry is deliberate: inside the
- * band, a stored "flown" is legitimate (API-confirmed landing), and the sweep
- * must not flip it back. The band acts as a hysteresis zone protecting valid
- * API-confirmed data from repeated reversions on the hourly tick.
+ * band, a stored "flown" is legitimate (from user/parser-set values, script/seed
+ * writes, or pre-existing data—not from API auto-updates, which deliberately never
+ * change status), and the sweep must not fight that deliberate data. The band
+ * acts as a hysteresis zone, protecting intentional user/import data from
+ * repeated reversions on the hourly tick.
  */
 export const FLIGHT_ARRIVAL_SLACK_HOURS = 6;
 export const FLIGHT_DEPARTURE_SLACK_HOURS = 30;
