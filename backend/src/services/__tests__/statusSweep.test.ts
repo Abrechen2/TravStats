@@ -95,4 +95,16 @@ describe("sweepStatuses", () => {
     expect(typeof second.flights).toBe("number");
     expect(typeof third.trips).toBe("number");
   });
+
+  it("does NOT revert flown→scheduled inside the slack band (hysteresis protects API-confirmed landings)", async () => {
+    // A flight with arrival 2h in the past (inside the 6h slack band) has status
+    // "flown" (e.g., from flightAutoUpdate after API confirmation). The sweep must
+    // NOT revert it to scheduled — the slack band is a hysteresis zone where both
+    // values are valid. Reverting would flip legitimate API-confirmed landings.
+    const insideSlack = await flight({ status: "flown", arrivalTime: past(2) });
+    await sweepStatuses();
+    expect((await prisma.flight.findUnique({ where: { id: insideSlack.id } }))?.status).toBe(
+      "flown"
+    );
+  });
 });

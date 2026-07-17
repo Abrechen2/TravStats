@@ -14,6 +14,15 @@ const H = 60 * 60 * 1000;
  * stored temporal statuses agree with the dates. Generalizes and replaces
  * the retired one-way flips (transitionZombieFlights, transitionPastCruises).
  * Passthrough statuses (cancelled/historical/duplicated) are never touched.
+ *
+ * Hysteresis in the slack band: The flown→scheduled revert covers only
+ * STRICTLY FUTURE dates (arrival/departure > now), intentionally leaving
+ * the FLIGHT_ARRIVAL_SLACK_HOURS band (now-6h to now) untouched. This band
+ * is a hysteresis zone: a stored "flown" status is legitimate there
+ * (API-confirmed landing from flightAutoUpdate), and reverting it would
+ * flip valid data back to scheduled on every hourly sweep. The deriver's
+ * "scheduled" return for the whole band applies to WRITE paths (API
+ * client); the sweep deliberately does NOT narrow its window to match.
  */
 export async function sweepStatuses(
   now: Date = new Date()
