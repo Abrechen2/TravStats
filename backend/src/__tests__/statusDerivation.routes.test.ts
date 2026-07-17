@@ -442,6 +442,27 @@ describe("Trip status derives from segment dates", () => {
     return res.body.flight.id as string;
   }
 
+  async function createPastFlight(flightNumber: string): Promise<string> {
+    const dep = daysFromNow(-30);
+    const arr = daysFromNow(-30, 3);
+    const res = await request(app)
+      .post("/api/v1/flights")
+      .set("Cookie", authCookie)
+      .send({
+        airline: "Lufthansa",
+        flightNumber,
+        departure: { iata: "FRA", lat: 50.0333, lon: 8.5706 },
+        arrival: { iata: "JFK", lat: 40.6413, lon: -73.7781 },
+        depTimezone: "UTC",
+        arrTimezone: "UTC",
+        departureLocal: isoLocal(dep),
+        arrivalLocal: isoLocal(arr),
+        status: "flown",
+      })
+      .expect(201);
+    return res.body.flight.id as string;
+  }
+
   it("create with linked segments derives: a trip created with the default status flips once a future flight is linked via the bookings route", async () => {
     const created = await request(app)
       .post("/api/v1/trips")
@@ -517,5 +538,59 @@ describe("Trip status derives from segment dates", () => {
       .set("Cookie", authCookie)
       .expect(200);
     expect(fetched.body.trip.status).toBe("planned");
+  });
+
+  it("merging trips recomputes the target's derived status from the combined date bounds", async () => {
+    // Target starts out with ONLY a past flight — derives to "completed".
+    const target = await request(app)
+      .post("/api/v1/trips")
+      .set("Cookie", authCookie)
+      .send({ name: "Trip Status Derive — merge target" })
+      .expect(201);
+    const targetId = target.body.trip.id as string;
+
+    const pastFlightId = await createPastFlight("LH962");
+    await request(app)
+      .post(`/api/v1/trips/${targetId}/flights`)
+      .set("Cookie", authCookie)
+      .send({ flightIds: [pastFlightId], action: "add" })
+      .expect(200);
+
+    const targetBeforeMerge = await request(app)
+      .get(`/api/v1/trips/${targetId}`)
+      .set("Cookie", authCookie)
+      .expect(200);
+    expect(targetBeforeMerge.body.trip.status).toBe("completed");
+
+    // Source carries a future flight — derives to "planned" on its own.
+    const source = await request(app)
+      .post("/api/v1/trips")
+      .set("Cookie", authCookie)
+      .send({ name: "Trip Status Derive — merge source" })
+      .expect(201);
+    const sourceId = source.body.trip.id as string;
+
+    const futureFlightId = await createFutureFlight("LH963");
+    await request(app)
+      .post(`/api/v1/trips/${sourceId}/flights`)
+      .set("Cookie", authCookie)
+      .send({ flightIds: [futureFlightId], action: "add" })
+      .expect(200);
+
+    // After the merge, the target's combined bounds span past → future, so
+    // "now" falls inside them — the derived status must flip to
+    // "in_progress". Before the fix, mergeTrips() never called
+    // recomputeTripStatus() and the target kept its stale "completed".
+    await request(app)
+      .post("/api/v1/trips/merge")
+      .set("Cookie", authCookie)
+      .send({ tripIds: [targetId, sourceId], targetId })
+      .expect(200);
+
+    const merged = await request(app)
+      .get(`/api/v1/trips/${targetId}`)
+      .set("Cookie", authCookie)
+      .expect(200);
+    expect(merged.body.trip.status).toBe("in_progress");
   });
 });
