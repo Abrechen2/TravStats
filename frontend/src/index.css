@@ -324,6 +324,11 @@
   background-color: var(--bg-elevated);
 }
 
+[role="menu"] [role="menuitem"]:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
 /* ─── Map Theme Tokens ───────────────────────────────────── */
 
 [data-map-theme="glassmorphism"] {
