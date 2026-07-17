@@ -589,7 +589,8 @@
   },
   "import": {
     "title": "Import",
-    "description": "Migrate your flight history from another logbook, or re-import a TravStats Excel export.",
+    "description": "Import existing data from other services — grouped per area.",
+    "openHub": "Import",
     "tile": {
       "fr24": {
         "title": "From Flightradar24",
@@ -600,12 +601,6 @@
         "title": "From any logbook (CSV)",
         "description": "Upload a flat per-flight CSV — after upload, a mapping wizard opens so you can match each column to a TravStats field.",
         "uploadLabel": "Choose CSV file"
-      },
-      "roundTrip": {
-        "title": "Re-import TravStats Excel",
-        "description": "Round-trip XLSX/CSV/JSON exported from TravStats. Existing rows are updated by ID; new rows are created.",
-        "uploadLabel": "Choose .xlsx / .csv / .json",
-        "successSummary": "Updated: {{updated}} · Created: {{created}}"
       }
     },
     "preview": {
