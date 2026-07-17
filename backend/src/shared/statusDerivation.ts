@@ -11,10 +11,13 @@
  * sweep's flown→scheduled revert intentionally covers only STRICTLY FUTURE dates,
  * leaving the slack band untouched. This asymmetry is deliberate: inside the
  * band, a stored "flown" is legitimate (from user/parser-set values, script/seed
- * writes, or pre-existing data—not from API auto-updates, which deliberately never
- * change status), and the sweep must not fight that deliberate data. The band
- * acts as a hysteresis zone, protecting intentional user/import data from
- * repeated reversions on the hourly tick.
+ * writes, or pre-existing data—never from applyPendingUpdate, which deliberately
+ * never touches status; the only automated status writers are the legacy one-way
+ * flips this sweep replaces, transitionZombieFlights and transitionPastCruises,
+ * retired in a follow-up task, whose 6h/30h/48h cutoffs equal these slack
+ * constants), and the sweep must not fight that deliberate data. The band acts as
+ * a hysteresis zone, protecting intentional user/import data from repeated
+ * reversions on the hourly tick.
  */
 export const FLIGHT_ARRIVAL_SLACK_HOURS = 6;
 export const FLIGHT_DEPARTURE_SLACK_HOURS = 30;
