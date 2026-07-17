@@ -32,6 +32,7 @@ import { normalizeAircraft } from '../utils/aircraftNormalize';
 import { calculateNextApiCheckAt } from '../utils/smartCheckSchedule';
 import { buildFlightMergePatch } from '../utils/flightMerge';
 import batchRouter from './flightsBatch';
+import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from '../shared/statusDerivation';
 
 const router = Router();
 
@@ -259,6 +260,18 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
     const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
     const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
 
+    // The status field is a client-sent HINT, not the source of truth (spec
+    // 2026-07-17-status-from-dates) — passthrough statuses (cancelled,
+    // historical, duplicated) are assigned verbatim, everything else is
+    // derived from the actual departure/arrival dates being written.
+    const effectiveStatus = (FLIGHT_PASSTHROUGH as readonly string[]).includes(data.status ?? '')
+      ? data.status!
+      : deriveFlightStatus({
+          departureTime: departureUtc,
+          arrivalTime: arrivalUtc,
+          current: data.status ?? 'scheduled',
+        });
+
     // Resolve airline codes if name provided but IATA/ICAO missing
     let airlineIata = data.airlineIata;
     let airlineIcao = data.airlineIcao;
@@ -418,7 +431,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
           enriched.arrival.lat,
           enriched.arrival.lon,
         ),
-        status: data.status,
+        status: effectiveStatus,
         notes: data.notes,
         price: data.price,
         taxes: data.taxes,
@@ -445,7 +458,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         nextApiCheckAt: calculateNextApiCheckAt(
           departureUtc,
           arrivalUtc,
-          data.status ?? 'scheduled',
+          effectiveStatus,
           data.flightNumber,
         ),
         // Special flights (Sonder-Flüge) — non-null specialType marks
@@ -924,7 +937,6 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.aircraft !== undefined) updateData.aircraft = data.aircraft ? normalizeAircraft(data.aircraft) : data.aircraft;
     if (data.aircraftRegistration !== undefined) updateData.aircraftRegistration = data.aircraftRegistration;
     if (data.aircraftModeS !== undefined) updateData.aircraftModeS = data.aircraftModeS;
-    if (data.status) updateData.status = data.status;
     if (data.notes !== undefined) updateData.notes = data.notes;
     if (data.price !== undefined) updateData.price = data.price;
     if (data.taxes !== undefined) updateData.taxes = data.taxes;
@@ -1010,6 +1022,35 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       }
     }
 
+    // The status field is a client-sent HINT, not the source of truth (spec
+    // 2026-07-17-status-from-dates). Derive from the FINAL dep/arr values —
+    // an update may move dates without sending status, or send status
+    // without moving dates, so this must run after the time fields above are
+    // resolved and read the resolved values, not the raw payload.
+    const requestedStatus = data.status;
+    const isRequestedPassthrough =
+      requestedStatus !== undefined &&
+      (FLIGHT_PASSTHROUGH as readonly string[]).includes(requestedStatus);
+    const currentIsPassthrough = (FLIGHT_PASSTHROUGH as readonly string[]).includes(
+      existingFlight.status,
+    );
+    if (isRequestedPassthrough) {
+      // Passthrough statuses are always assigned verbatim.
+      updateData.status = requestedStatus!;
+    } else if (requestedStatus === undefined && currentIsPassthrough) {
+      // Stored status is passthrough and no status field arrived — leave it
+      // alone. A bare date edit must never pull a cancelled/historical/
+      // duplicated flight back into the derived scheduled/flown lifecycle.
+    } else {
+      const finalDep = updateData.departureTime ?? existingFlight.departureTime;
+      const finalArr = updateData.arrivalTime ?? existingFlight.arrivalTime;
+      updateData.status = deriveFlightStatus({
+        departureTime: finalDep,
+        arrivalTime: finalArr,
+        current: requestedStatus ?? existingFlight.status,
+      });
+    }
+
     // Actual times and delay
     if (data.actualDepartureLocal !== undefined) {
       updateData.actualDeparture = incomingActualDepUtc;
@@ -1053,7 +1094,10 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       const effectiveArr = data.arrivalLocal !== undefined
         ? incomingArrUtc
         : existingFlight.arrivalTime;
-      const effectiveStatus = data.status ?? existingFlight.status;
+      // updateData.status already carries the derived value from the block
+      // above (or is absent when the passthrough-preserved branch fired, in
+      // which case existingFlight.status is still accurate).
+      const effectiveStatus = updateData.status ?? existingFlight.status;
       const effectiveFn = data.flightNumber ?? existingFlight.flightNumber;
       updateData.nextApiCheckAt = calculateNextApiCheckAt(
         effectiveDep,
@@ -1068,9 +1112,12 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       data: updateData,
     });
 
-    // Check achievements if status changed to flown and return newly unlocked ones
+    // Check achievements if status changed to flown and return newly unlocked ones.
+    // Read the PERSISTED status, not the raw `data.status` hint — status is now
+    // derived (spec 2026-07-17-status-from-dates), so a date-only edit can flip
+    // a flight to 'flown' with no status field in the payload at all.
     let newAchievements: Awaited<ReturnType<typeof checkAndUpdateAchievements>> = [];
-    if (data.status === 'flown' && existingFlight.status !== 'flown') {
+    if (flight.status === 'flown' && existingFlight.status !== 'flown') {
       try {
         newAchievements = await checkAndUpdateAchievements(userId);
       } catch (err: unknown) {
