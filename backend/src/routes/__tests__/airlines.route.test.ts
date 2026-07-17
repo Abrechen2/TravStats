@@ -64,6 +64,17 @@ describe("Airlines API", () => {
       );
     });
 
+    it("returns 409 for a duplicate IATA (seeded carrier)", async () => {
+      // LH/Lufthansa is always in the seeded catalogue — the common real-world
+      // collision: an admin adds a carrier that already exists.
+      const res = await request(app)
+        .post("/api/v1/airlines")
+        .set("Cookie", authCookie)
+        .send({ iata: "LH", name: "Lufthansa Again" });
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe("DUPLICATE");
+    });
+
     it("rejects a missing name", async () => {
       const res = await request(app)
         .post("/api/v1/airlines")

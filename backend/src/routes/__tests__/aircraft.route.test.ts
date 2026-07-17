@@ -63,6 +63,15 @@ describe("Aircraft API", () => {
       );
     });
 
+    it("returns 409 for a duplicate ICAO (seeded type)", async () => {
+      const res = await request(app)
+        .post("/api/v1/aircraft")
+        .set("Cookie", authCookie)
+        .send({ icao: "A320", name: "Airbus A320 Again" });
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe("DUPLICATE");
+    });
+
     it("rejects a missing name", async () => {
       const res = await request(app)
         .post("/api/v1/aircraft")
