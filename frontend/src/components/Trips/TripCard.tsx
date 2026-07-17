@@ -3,6 +3,7 @@ import type { Trip, TripCategory, TripStatus } from "../../types";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useSettingsStore } from "../../store/settingsStore";
+import { sumByCurrency } from "../../lib/bookingCost";
 
 interface TripCardProps {
   trip: Trip;
@@ -49,8 +50,7 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
   const cruiseCount = isEnabled("cruise") ? (trip._count?.cruises ?? trip.cruises?.length ?? 0) : 0;
 
-  const totalCost = trip.bookings?.reduce((sum, b) => sum + (b.price ?? 0), 0) ?? 0;
-  const currency = trip.bookings?.find((b) => b.currency)?.currency ?? "EUR";
+  const costTotals = sumByCurrency(trip.bookings ?? []);
 
   const distanceKm = estimateFlightDistanceKm(trip);
 
@@ -206,8 +206,10 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
           />
           <Stat
             value={
-              features.enableCostTracking && totalCost > 0
-                ? formatCurrency(totalCost, currency, i18n.language)
+              features.enableCostTracking && costTotals.length > 0
+                ? costTotals
+                    .map((c) => formatCurrency(c.total, c.currency, i18n.language))
+                    .join(" + ")
                 : "—"
             }
             label={t("trips:totalCost")}
