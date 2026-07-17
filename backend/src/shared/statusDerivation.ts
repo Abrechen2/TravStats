@@ -4,6 +4,15 @@
  * these functions: write paths call them, the hourly sweep converges drift.
  * Slack constants copy the retired one-way flips exactly
  * (zombie flip 6h/30h, past-cruise 48h).
+ *
+ * Hysteresis in the slack band: Derivers return the conservative default
+ * ("scheduled") for the entire FLIGHT_ARRIVAL_SLACK_HOURS window (now-6h to now)
+ * on WRITE paths — this is the safe value for incoming API data. However, the
+ * sweep's flown→scheduled revert intentionally covers only STRICTLY FUTURE dates,
+ * leaving the slack band untouched. This asymmetry is deliberate: inside the
+ * band, a stored "flown" is legitimate (API-confirmed landing), and the sweep
+ * must not flip it back. The band acts as a hysteresis zone protecting valid
+ * API-confirmed data from repeated reversions on the hourly tick.
  */
 export const FLIGHT_ARRIVAL_SLACK_HOURS = 6;
 export const FLIGHT_DEPARTURE_SLACK_HOURS = 30;
