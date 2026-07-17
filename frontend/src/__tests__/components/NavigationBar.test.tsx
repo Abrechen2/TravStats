@@ -90,4 +90,14 @@ describe("NavigationBar grouped navigation", () => {
     expect(screen.getByRole("menuitem", { name: /Star/ })).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: /Discord/ })).toBeTruthy();
   });
+
+  it("marks the collapsed System settings link active on /settings", () => {
+    render(
+      <MemoryRouter initialEntries={["/settings"]}>
+        <NavigationBar />
+      </MemoryRouter>
+    );
+    const settingsLinks = screen.getAllByRole("link", { name: /dashboard:settings/i });
+    expect(settingsLinks.some((l) => l.getAttribute("aria-current") === "page")).toBe(true);
+  });
 });

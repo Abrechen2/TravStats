@@ -224,13 +224,24 @@ export default function NavigationBar(): JSX.Element {
                 {system.kind === "group" ? (
                   <NavDropdown group={system} align="right" variant="chip" />
                 ) : (
-                  <Link
-                    to={system.path}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium"
-                    style={{ color: "var(--text-muted)", border: "1px solid var(--color-border)" }}
-                  >
-                    {system.label}
-                  </Link>
+                  (() => {
+                    const active = isPathActive(system.path, location.pathname);
+                    return (
+                      <Link
+                        to={system.path}
+                        aria-current={active ? "page" : undefined}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium"
+                        style={{
+                          color: active ? "var(--accent)" : "var(--text-muted)",
+                          borderColor: active ? "var(--accent)" : "var(--color-border)",
+                          border: `1px solid ${active ? "var(--accent)" : "var(--color-border)"}`,
+                          fontWeight: active ? 600 : 500,
+                        }}
+                      >
+                        {system.label}
+                      </Link>
+                    );
+                  })()
                 )}
               </div>
               <span className="hidden xl:inline text-sm" style={{ color: "var(--text-muted)" }}>
