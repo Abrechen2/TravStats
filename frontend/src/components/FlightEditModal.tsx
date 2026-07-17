@@ -554,28 +554,37 @@ export default function FlightEditModal({
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="label">{t("flights:form.status")}</label>
-              <select
-                value={formData.status}
-                onChange={(e) => {
-                  const newStatus = e.target.value as Flight["status"];
-                  if (newStatus === "historical") {
-                    setFormData({
-                      ...formData,
-                      status: newStatus,
-                      departureTime: "",
-                      arrivalTime: "",
-                    });
-                  } else {
-                    update("status", newStatus);
+              <div>
+                <span
+                  className="px-2 py-1 text-xs font-semibold rounded-full inline-block"
+                  style={
+                    formData.status === "flown"
+                      ? {
+                          background: "rgba(63,185,80,0.15)",
+                          color: "var(--success)",
+                        }
+                      : formData.status === "scheduled"
+                        ? {
+                            background: "rgba(56,139,253,0.15)",
+                            color: "#388bfd",
+                          }
+                        : {
+                            background: "rgba(248,81,73,0.15)",
+                            color: "var(--danger)",
+                          }
                   }
-                }}
-                className="input"
-              >
-                <option value="flown">{t("flights:status.flown")}</option>
-                <option value="scheduled">{t("flights:status.scheduled")}</option>
-                <option value="cancelled">{t("flights:status.cancelled")}</option>
-                <option value="historical">{t("flights:status.historical")}</option>
-              </select>
+                >
+                  {t(`flights:status.${formData.status}`, { defaultValue: formData.status })}
+                </span>
+              </div>
+              <label className="flex items-center gap-2 text-sm mt-2">
+                <input
+                  type="checkbox"
+                  checked={formData.status === "cancelled"}
+                  onChange={(e) => update("status", e.target.checked ? "cancelled" : "scheduled")}
+                />
+                {t("flights:status.cancelledCheckbox")}
+              </label>
             </div>
 
             <div>
