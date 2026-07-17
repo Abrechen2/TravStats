@@ -72,10 +72,21 @@ export const createBookingSchema = z.object({
   flightIds: z.array(z.string().uuid()).optional(),
 });
 
+export const updateBookingSchema = z.object({
+  pnr: z.string().max(20).nullable().optional(),
+  price: z.number().min(0).nullable().optional(),
+  currency: z
+    .string()
+    .regex(/^[A-Z]{3}$/, "Must be a 3-letter ISO 4217 code (e.g. EUR, USD, INR)")
+    .nullable()
+    .optional(),
+});
+
 export type CreateTripInput = z.infer<typeof createTripSchema>;
 export type UpdateTripInput = z.infer<typeof updateTripSchema>;
 export type AssignFlightsInput = z.infer<typeof assignFlightsSchema>;
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
+export type UpdateBookingInput = z.infer<typeof updateBookingSchema>;
 export type TripStatus = (typeof TRIP_STATUSES)[number];
 export type TripCategory = (typeof TRIP_CATEGORIES)[number];
 
