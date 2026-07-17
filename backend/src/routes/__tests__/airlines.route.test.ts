@@ -4,11 +4,19 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 
+// Q1 is absent from both data/openflights/airlines.dat and src/data/airlines.ts,
+// so the created row can never collide with a seeded catalogue airline (Q2 is
+// real: Maldivian). Distinct from seedAirlinesFromData.test.ts's Q0 so the two
+// suites can never interfere. The beforeAll delete makes the suite self-healing
+// after a crashed prior run.
+const THROWAWAY_IATA = "Q1";
+
 describe("Airlines API", () => {
   let authCookie: string;
   let userId: string;
 
   beforeAll(async () => {
+    await prisma.airline.deleteMany({ where: { iata: THROWAWAY_IATA } });
     await prisma.user.deleteMany({ where: { username: "airlinetest" } });
     const user = await prisma.user.create({
       data: { username: "airlinetest", passwordHash: await hashPassword("password123") },
@@ -18,7 +26,7 @@ describe("Airlines API", () => {
   });
 
   afterAll(async () => {
-    await prisma.airline.deleteMany({ where: { iata: "Q2" } });
+    await prisma.airline.deleteMany({ where: { iata: THROWAWAY_IATA } });
     await prisma.user.delete({ where: { id: userId } });
     await prisma.$disconnect();
   });
@@ -43,15 +51,17 @@ describe("Airlines API", () => {
       const res = await request(app)
         .post("/api/v1/airlines")
         .set("Cookie", authCookie)
-        .send({ iata: "Q2", name: "Test Air" });
+        .send({ iata: THROWAWAY_IATA, name: "Test Air" });
       expect(res.status).toBe(201);
       expect(res.body.data.isUserAdded).toBe(true);
-      expect(res.body.data.iata).toBe("Q2");
+      expect(res.body.data.iata).toBe(THROWAWAY_IATA);
       expect(res.body.data.name).toBe("Test Air");
 
       const listRes = await request(app).get("/api/v1/airlines?q=test").set("Cookie", authCookie);
       expect(listRes.status).toBe(200);
-      expect(listRes.body.data.some((a: { iata: string }) => a.iata === "Q2")).toBe(true);
+      expect(listRes.body.data.some((a: { iata: string }) => a.iata === THROWAWAY_IATA)).toBe(
+        true
+      );
     });
 
     it("rejects a missing name", async () => {
