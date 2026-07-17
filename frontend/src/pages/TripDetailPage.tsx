@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { differenceInCalendarDays } from "date-fns";
 import { tripsApi } from "../lib/api";
 import { logger } from "../lib/logger";
+import { sumByCurrency } from "../lib/bookingCost";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useTranslation } from "../hooks/useTranslation";
@@ -958,8 +959,7 @@ function LogisticsTab({
   const cruises = trip.cruises ?? [];
   const bookings = trip.bookings ?? [];
 
-  const totalCost = bookings.reduce((sum, b) => sum + (b.price ?? 0), 0);
-  const currency = bookings.find((b) => b.currency)?.currency ?? "EUR";
+  const costTotals = sumByCurrency(bookings);
 
   if (flights.length === 0 && cruises.length === 0 && bookings.length === 0) {
     return <Placeholder text={t("trips:detail.noLinks")} />;
@@ -1062,11 +1062,11 @@ function LogisticsTab({
         >
           <PanelHeader>
             {t("trips:detail.logistics.bookings")} ({bookings.length})
-            {totalCost > 0 && (
+            {costTotals.length > 0 && (
               <span className="ml-2 text-xs font-normal" style={{ color: "var(--text-muted)" }}>
                 · {t("trips:detail.logistics.totalBooked")}:{" "}
                 <strong style={{ color: "var(--text-primary)" }}>
-                  {currency} {Math.round(totalCost)}
+                  {costTotals.map((c) => `${c.currency} ${Math.round(c.total)}`).join(" + ")}
                 </strong>
               </span>
             )}
@@ -1113,8 +1113,7 @@ function TripStatsRow({
   const cruiseEnabled = isEnabled("cruise");
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
   const cruiseCount = trip._count?.cruises ?? trip.cruises?.length ?? 0;
-  const totalCost = trip.bookings?.reduce((sum, b) => sum + (b.price ?? 0), 0) ?? 0;
-  const currency = trip.bookings?.find((b) => b.currency)?.currency ?? "EUR";
+  const costTotals = sumByCurrency(trip.bookings ?? []);
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -1123,7 +1122,11 @@ function TripStatsRow({
       <StatTile value={trip.countries.length} label={t("trips:detail.stats.countries")} />
       <StatTile value={trip.companions.length} label={t("trips:detail.stats.companions")} />
       <StatTile
-        value={totalCost > 0 ? `${currency} ${Math.round(totalCost)}` : "—"}
+        value={
+          costTotals.length > 0
+            ? costTotals.map((c) => `${c.currency} ${Math.round(c.total)}`).join(" + ")
+            : "—"
+        }
         label={t("trips:totalCost")}
       />
       <StatTile value={trip.tags.length} label={t("trips:detail.stats.tags")} />
