@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { render, fireEvent, waitFor } from "@testing-library/react";
 import FlightEditModal from "../../components/FlightEditModal";
 import type { Flight } from "../../types";
 
@@ -75,5 +75,54 @@ describe("FlightEditModal", () => {
     expect((numberInputs[0] as HTMLInputElement).placeholder).toBe(
       "flights:form.placeholders.price"
     );
+  });
+
+  it("has no status select — status is a read-only pill plus a cancelled checkbox (#status-from-dates)", () => {
+    const { container } = render(
+      <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+    );
+    // The old status <select> had flown/scheduled/cancelled/historical options.
+    // "flown" only ever appeared as a status option value, so its absence proves
+    // the combobox is gone.
+    expect(container.querySelector('option[value="flown"]')).toBeFalsy();
+    // The pill renders the raw i18n key under the globally-mocked t(key) => key.
+    expect(container.textContent).toContain("flights:status.flown");
+    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(checkbox).toBeTruthy();
+    expect(checkbox.checked).toBe(false);
+  });
+
+  it("checking the cancelled checkbox submits status \"cancelled\"", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { container, getByText } = render(
+      <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(true);
+
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.status).toBe("cancelled");
+  });
+
+  it('unchecking the cancelled checkbox on an already-cancelled flight submits status "scheduled" (backend re-derives)', async () => {
+    const cancelledFlight: Flight = { ...mockFlight, status: "cancelled" };
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { container, getByText } = render(
+      <FlightEditModal flight={cancelledFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(false);
+
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.status).toBe("scheduled");
   });
 });
