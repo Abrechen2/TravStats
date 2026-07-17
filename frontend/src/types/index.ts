@@ -151,6 +151,12 @@ export interface Booking {
   currency: string | null;
 }
 
+export interface UpdateBookingInput {
+  pnr?: string | null;
+  price?: number | null;
+  currency?: string | null;
+}
+
 export type TripStatus = "planned" | "in_progress" | "completed";
 export type TripCategory = "vacation" | "business" | "weekend" | "family" | "other";
 

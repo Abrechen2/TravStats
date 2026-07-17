@@ -211,6 +211,15 @@
     "save": "Save",
     "cancel": "Cancel"
   },
+  "bookingEdit": {
+    "title": "Edit booking",
+    "pnr": "PNR",
+    "price": "Total price",
+    "currency": "Currency",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saved": "Booking updated"
+  },
   "toasts": {
     "created": "Journey created",
     "updated": "Journey updated",

@@ -211,6 +211,15 @@
     "save": "Speichern",
     "cancel": "Abbrechen"
   },
+  "bookingEdit": {
+    "title": "Buchung bearbeiten",
+    "pnr": "PNR",
+    "price": "Gesamtpreis",
+    "currency": "Währung",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "saved": "Buchung aktualisiert"
+  },
   "toasts": {
     "created": "Reise erstellt",
     "updated": "Reise aktualisiert",
