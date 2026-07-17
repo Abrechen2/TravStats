@@ -14,7 +14,9 @@ import { sortCruises, type CruiseSortKey, type SortOrder } from "../components/C
 type StatusFilter = CruiseStatus | "all";
 type YearFilter = number | "all";
 
-const STATUSES: CruiseStatus[] = ["scheduled", "flown", "cancelled", "historical"];
+// #status-from-dates: in_progress included so the filter dropdown can
+// discover cruises currently under way, not just scheduled/flown/cancelled.
+const STATUSES: CruiseStatus[] = ["scheduled", "in_progress", "flown", "cancelled", "historical"];
 
 export default function CruisesPage(): JSX.Element {
   const { t } = useTranslation(["cruise", "common"]);
