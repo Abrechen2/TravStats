@@ -19,10 +19,11 @@ const H = 60 * 60 * 1000;
  * STRICTLY FUTURE dates (arrival/departure > now), intentionally leaving
  * the FLIGHT_ARRIVAL_SLACK_HOURS band (now-6h to now) untouched. This band
  * is a hysteresis zone: a stored "flown" status is legitimate there
- * (API-confirmed landing from flightAutoUpdate), and reverting it would
- * flip valid data back to scheduled on every hourly sweep. The deriver's
- * "scheduled" return for the whole band applies to WRITE paths (API
- * client); the sweep deliberately does NOT narrow its window to match.
+ * (from user/parser-set values at creation/import, direct script/seed writes,
+ * or pre-existing data), and reverting it would fight deliberate data
+ * on every hourly sweep. The deriver's "scheduled" return for the whole band
+ * applies to WRITE paths (API client); the sweep deliberately does NOT narrow
+ * its window to match—only corrects clearly contradictory (future-dated) rows.
  */
 export async function sweepStatuses(
   now: Date = new Date()
