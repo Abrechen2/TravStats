@@ -66,6 +66,32 @@ export function deriveCruiseStatus(input: {
   return startDate != null && nowMs - startDate.getTime() > slack ? "flown" : "scheduled";
 }
 
+/**
+ * Extract a trip's date bounds from its linked flights + cruises — the
+ * earliest segment start and the latest segment end. Shared by the sweep
+ * (statusSweep.ts) and the per-trip recompute service (tripStatusService.ts)
+ * so the two write paths can never drift on how bounds are computed.
+ * A flight/cruise missing its end date falls back to its start date (a
+ * single-ended segment still contributes a point-in-time bound).
+ */
+export function tripDateBounds(
+  flights: Array<{ departureTime: Date | null; arrivalTime: Date | null }>,
+  cruises: Array<{ startDate: Date | null; endDate: Date | null }>,
+): { earliestStart: Date | null; latestEnd: Date | null } {
+  const starts = [
+    ...flights.map((f) => f.departureTime),
+    ...cruises.map((c) => c.startDate),
+  ].filter((d): d is Date => d != null);
+  const ends = [
+    ...flights.map((f) => f.arrivalTime ?? f.departureTime),
+    ...cruises.map((c) => c.endDate ?? c.startDate),
+  ].filter((d): d is Date => d != null);
+  return {
+    earliestStart: starts.length ? new Date(Math.min(...starts.map((d) => d.getTime()))) : null,
+    latestEnd: ends.length ? new Date(Math.max(...ends.map((d) => d.getTime()))) : null,
+  };
+}
+
 export function deriveTripStatus(input: {
   earliestStart: Date | null;
   latestEnd: Date | null;

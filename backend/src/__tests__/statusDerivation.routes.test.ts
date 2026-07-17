@@ -391,3 +391,131 @@ describe("Cruise write paths derive temporal status from dates", () => {
     expect(updated.body.data.status).toBe("cancelled");
   });
 });
+
+// Task 6 (spec 2026-07-17-status-from-dates): trip status derives from the
+// date bounds of its linked flights/cruises (`tripDateBounds` +
+// `deriveTripStatus`, shared with the sweep). POST /trips itself cannot
+// derive anything — a trip has no linked segments until AFTER it exists —
+// so creation keeps the client-sent hint (or the schema default) verbatim;
+// derivation happens the moment segments get linked via
+// `recomputeTripStatus()`. PATCH /trips/:id keeps ACCEPTING a `status`
+// field for API compat (never a 400) but ignores it entirely — status is
+// never set directly, only derived.
+describe("Trip status derives from segment dates", () => {
+  let authCookie: string;
+  let userId: string;
+
+  beforeAll(async () => {
+    await prisma.trip.deleteMany({ where: { user: { username: "tripstatusderive" } } });
+    await prisma.user.deleteMany({ where: { username: "tripstatusderive" } });
+    const user = await prisma.user.create({
+      data: { username: "tripstatusderive", passwordHash: await hashPassword("password123") },
+    });
+    userId = user.id;
+    authCookie = `auth_token=${generateToken(user.id)}`;
+  });
+
+  afterAll(async () => {
+    // Trips/flights cascade from the user delete (onDelete: Cascade).
+    await prisma.user.delete({ where: { id: userId } });
+    await prisma.$disconnect();
+  });
+
+  async function createFutureFlight(flightNumber: string): Promise<string> {
+    const dep = daysFromNow(10);
+    const arr = daysFromNow(10, 3);
+    const res = await request(app)
+      .post("/api/v1/flights")
+      .set("Cookie", authCookie)
+      .send({
+        airline: "Lufthansa",
+        flightNumber,
+        departure: { iata: "FRA", lat: 50.0333, lon: 8.5706 },
+        arrival: { iata: "JFK", lat: 40.6413, lon: -73.7781 },
+        depTimezone: "UTC",
+        arrTimezone: "UTC",
+        departureLocal: isoLocal(dep),
+        arrivalLocal: isoLocal(arr),
+        status: "scheduled",
+      })
+      .expect(201);
+    return res.body.flight.id as string;
+  }
+
+  it("create with linked segments derives: a trip created with the default status flips once a future flight is linked via the bookings route", async () => {
+    const created = await request(app)
+      .post("/api/v1/trips")
+      .set("Cookie", authCookie)
+      .send({ name: "Trip Status Derive — bookings link" })
+      .expect(201);
+    const tripId = created.body.trip.id as string;
+    // No segments exist yet — creation cannot derive, so the schema default
+    // ("completed") is kept verbatim.
+    expect(created.body.trip.status).toBe("completed");
+
+    const flightId = await createFutureFlight("LH960");
+
+    await request(app)
+      .post("/api/v1/trips/bookings")
+      .set("Cookie", authCookie)
+      .send({ tripId, flightIds: [flightId] })
+      .expect(201);
+
+    const fetched = await request(app)
+      .get(`/api/v1/trips/${tripId}`)
+      .set("Cookie", authCookie)
+      .expect(200);
+    expect(fetched.body.trip.status).toBe("planned");
+  });
+
+  it("PATCH sending status is ignored: the stored status is unchanged by a client-sent status field", async () => {
+    const created = await request(app)
+      .post("/api/v1/trips")
+      .set("Cookie", authCookie)
+      .send({ name: "Trip Status Derive — PATCH ignored", status: "planned" })
+      .expect(201);
+    const tripId = created.body.trip.id as string;
+    expect(created.body.trip.status).toBe("planned");
+
+    const patched = await request(app)
+      .patch(`/api/v1/trips/${tripId}`)
+      .set("Cookie", authCookie)
+      .send({ status: "completed", name: "Trip Status Derive — PATCH ignored (renamed)" })
+      .expect(200);
+
+    // status is ignored entirely — the PATCH must not 400, and the stored
+    // value must stay whatever it was before this request.
+    expect(patched.body.trip.status).toBe("planned");
+    expect(patched.body.trip.name).toBe("Trip Status Derive — PATCH ignored (renamed)");
+
+    const fetched = await request(app)
+      .get(`/api/v1/trips/${tripId}`)
+      .set("Cookie", authCookie)
+      .expect(200);
+    expect(fetched.body.trip.status).toBe("planned");
+  });
+
+  it("linking a future flight to a 'completed' trip flips it via the assign-flights route", async () => {
+    const created = await request(app)
+      .post("/api/v1/trips")
+      .set("Cookie", authCookie)
+      .send({ name: "Trip Status Derive — assign flights", status: "completed" })
+      .expect(201);
+    const tripId = created.body.trip.id as string;
+    expect(created.body.trip.status).toBe("completed");
+
+    const flightId = await createFutureFlight("LH961");
+
+    await request(app)
+      .post(`/api/v1/trips/${tripId}/flights`)
+      .set("Cookie", authCookie)
+      .send({ flightIds: [flightId], action: "add" })
+      .expect(200);
+
+    const fetched = await request(app)
+      .get(`/api/v1/trips/${tripId}`)
+      .set("Cookie", authCookie)
+      .expect(200);
+    expect(fetched.body.trip.status).toBe("planned");
+  });
+});

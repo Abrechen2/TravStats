@@ -5,6 +5,7 @@ import {
   FLIGHT_DEPARTURE_SLACK_HOURS,
   CRUISE_SLACK_HOURS,
   deriveTripStatus,
+  tripDateBounds,
 } from "../shared/statusDerivation";
 
 const H = 60 * 60 * 1000;
@@ -92,19 +93,8 @@ export async function sweepStatuses(
   });
   let tripFlips = 0;
   for (const trip of trips) {
-    const starts = [
-      ...trip.flights.map((f) => f.departureTime),
-      ...trip.cruises.map((c) => c.startDate),
-    ].filter((d): d is Date => d != null);
-    const ends = [
-      ...trip.flights.map((f) => f.arrivalTime ?? f.departureTime),
-      ...trip.cruises.map((c) => c.endDate ?? c.startDate),
-    ].filter((d): d is Date => d != null);
-    const derived = deriveTripStatus({
-      earliestStart: starts.length ? new Date(Math.min(...starts.map((d) => d.getTime()))) : null,
-      latestEnd: ends.length ? new Date(Math.max(...ends.map((d) => d.getTime()))) : null,
-      now,
-    });
+    const bounds = tripDateBounds(trip.flights, trip.cruises);
+    const derived = deriveTripStatus({ ...bounds, now });
     if (derived != null && derived !== trip.status) {
       await prisma.trip.update({ where: { id: trip.id }, data: { status: derived } });
       tripFlips++;
