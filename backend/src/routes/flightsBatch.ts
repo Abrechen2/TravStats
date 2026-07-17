@@ -205,14 +205,35 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
         const name = `${origin} – ${dest} · ${month}`;
 
         const trip = await tx.trip.create({ data: { userId, name, color } });
+
+        // Identical non-null total on every segment = the repeated booking
+        // total from the email. Move it to the booking; segments become
+        // priceless (the price belongs to the booking — spec 2026-07-17).
+        const firstPrice = groupFlights[0]?.price ?? null;
+        const firstCurrency = groupFlights[0]?.currency ?? "EUR";
+        const identicalTotal =
+          firstPrice != null &&
+          groupFlights.every(
+            (f) => f.price === firstPrice && (f.currency ?? "EUR") === firstCurrency
+          );
+
         const booking = await tx.booking.create({
-          data: { userId, tripId: trip.id, pnr },
+          data: {
+            userId,
+            tripId: trip.id,
+            pnr,
+            ...(identicalTotal ? { price: firstPrice, currency: firstCurrency } : {}),
+          },
         });
 
         const flightIds = groupFlights.map((f) => f.id);
         await tx.flight.updateMany({
           where: { id: { in: flightIds } },
-          data: { tripId: trip.id, bookingId: booking.id },
+          data: {
+            tripId: trip.id,
+            bookingId: booking.id,
+            ...(identicalTotal ? { price: null } : {}),
+          },
         });
 
         logger.info(
@@ -221,7 +242,14 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
         );
       }
 
-      return flights;
+      // Re-read: the grouping updateMany made the in-memory rows stale
+      // (old price, missing tripId/bookingId) — the response must show the
+      // final state (Codex review finding, spec §1).
+      const fresh = await tx.flight.findMany({
+        where: { id: { in: flights.map((f) => f.id) } },
+      });
+      const byId = new Map(fresh.map((f) => [f.id, f]));
+      return flights.map((f) => byId.get(f.id) ?? f);
     });
 
     // Check achievements after batch creation (outside transaction — non-critical)
