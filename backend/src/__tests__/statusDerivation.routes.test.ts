@@ -390,6 +390,75 @@ describe("Cruise write paths derive temporal status from dates", () => {
 
     expect(updated.body.data.status).toBe("cancelled");
   });
+
+  it("create: a cruise linked to a trip via tripId recomputes the trip's derived status", async () => {
+    const trip = await request(app)
+      .post("/api/v1/trips")
+      .set("Cookie", authCookie)
+      .send({ name: "Cruise-Trip Link — create" })
+      .expect(201);
+    const tripId = trip.body.trip.id as string;
+    // No segments yet — creation cannot derive, schema default is kept verbatim.
+    expect(trip.body.trip.status).toBe("completed");
+
+    await request(app)
+      .post("/api/v1/cruises")
+      .set("Cookie", authCookie)
+      .send({
+        cruiseLine: "Status Derive Line",
+        startDate: daysFromNowIso(-3),
+        endDate: daysFromNowIso(3),
+        status: "scheduled",
+        tripId,
+      })
+      .expect(201);
+
+    const fetched = await request(app)
+      .get(`/api/v1/trips/${tripId}`)
+      .set("Cookie", authCookie)
+      .expect(200);
+    expect(fetched.body.trip.status).toBe("in_progress");
+  });
+
+  it("update: linking an existing in-progress-dated cruise to a trip via tripId recomputes the trip", async () => {
+    const trip = await request(app)
+      .post("/api/v1/trips")
+      .set("Cookie", authCookie)
+      .send({ name: "Cruise-Trip Link — update" })
+      .expect(201);
+    const tripId = trip.body.trip.id as string;
+    expect(trip.body.trip.status).toBe("completed");
+
+    const cruise = await request(app)
+      .post("/api/v1/cruises")
+      .set("Cookie", authCookie)
+      .send({
+        cruiseLine: "Status Derive Line",
+        startDate: daysFromNowIso(-3),
+        endDate: daysFromNowIso(3),
+        status: "scheduled",
+      })
+      .expect(201);
+
+    // Trip has no segments yet — still unaffected.
+    const beforeLink = await request(app)
+      .get(`/api/v1/trips/${tripId}`)
+      .set("Cookie", authCookie)
+      .expect(200);
+    expect(beforeLink.body.trip.status).toBe("completed");
+
+    await request(app)
+      .patch(`/api/v1/cruises/${cruise.body.data.id}`)
+      .set("Cookie", authCookie)
+      .send({ tripId })
+      .expect(200);
+
+    const afterLink = await request(app)
+      .get(`/api/v1/trips/${tripId}`)
+      .set("Cookie", authCookie)
+      .expect(200);
+    expect(afterLink.body.trip.status).toBe("in_progress");
+  });
 });
 
 // Task 6 (spec 2026-07-17-status-from-dates): trip status derives from the

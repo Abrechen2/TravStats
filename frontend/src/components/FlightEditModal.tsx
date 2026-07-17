@@ -568,10 +568,18 @@ export default function FlightEditModal({
                             background: "rgba(56,139,253,0.15)",
                             color: "#388bfd",
                           }
-                        : {
-                            background: "rgba(248,81,73,0.15)",
-                            color: "var(--danger)",
-                          }
+                        : formData.status === "historical" || formData.status === "duplicated"
+                          ? {
+                              // historical/duplicated are archival data, not an
+                              // error state — amber matches the cruise pill
+                              // palette (cruiseStatusStyle.ts) instead of red.
+                              background: "rgba(251,191,36,0.15)",
+                              color: "#fbbf24",
+                            }
+                          : {
+                              background: "rgba(248,81,73,0.15)",
+                              color: "var(--danger)",
+                            }
                   }
                 >
                   {t(`flights:status.${formData.status}`, { defaultValue: formData.status })}

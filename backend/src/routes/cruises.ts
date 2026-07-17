@@ -10,6 +10,7 @@ import { buildEffectivePortSequence } from '../shared/cruise/portSequence';
 import { computeSchematicRoute } from '../services/schematicRouter';
 import { recomputeLegsForCruise } from '../services/cruiseDistance/cruiseLegService';
 import { deriveCruiseStatus, CRUISE_PASSTHROUGH } from '../shared/statusDerivation';
+import { recomputeTripStatus } from '../services/tripStatusService';
 import logger from '../utils/logger';
 
 interface GeometryFeature {
@@ -323,6 +324,13 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
       return tx.cruise.findUniqueOrThrow({ where: { id: created.id }, include: CRUISE_INCLUDE });
     });
 
+    // Status derivation (spec 2026-07-17-status-from-dates) needs to read
+    // the cruise it just linked, so recomputeTripStatus() runs AFTER the
+    // transaction commits — same after-commit idiom as flightsBatch.ts.
+    if (cruise.tripId) {
+      await recomputeTripStatus(cruise.tripId);
+    }
+
     checkAndUpdateAchievements(userId).catch((err) => {
       logger.error({
         operation: 'cruise_achievement_check_failed',
@@ -421,6 +429,20 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
 
       return tx.cruise.findUniqueOrThrow({ where: { id: existing.id }, include: CRUISE_INCLUDE });
     });
+
+    // Status derivation (spec 2026-07-17-status-from-dates) needs to read
+    // the FINAL linked cruise, so recomputeTripStatus() runs AFTER the
+    // transaction commits. Covers both a plain date/status edit on an
+    // already-linked cruise AND a tripId move — recompute whichever of the
+    // old/new trip the cruise was or is now linked to (both, if it moved).
+    const oldTripId = existing.tripId;
+    const newTripId = 'tripId' in rest ? (rest.tripId ?? null) : oldTripId;
+    const tripIdsToRecompute = new Set<string>();
+    if (oldTripId) tripIdsToRecompute.add(oldTripId);
+    if (newTripId) tripIdsToRecompute.add(newTripId);
+    for (const id of tripIdsToRecompute) {
+      await recomputeTripStatus(id);
+    }
 
     checkAndUpdateAchievements(userId).catch((err) => {
       logger.error({

@@ -60,7 +60,13 @@ export function deriveCruiseStatus(input: {
   if (startDate == null && endDate == null) return current;
   if (startDate != null && nowMs < startDate.getTime()) return "scheduled";
   if (endDate != null) {
-    return nowMs - endDate.getTime() > slack ? "flown" : "in_progress";
+    if (nowMs - endDate.getTime() > slack) return "flown";
+    // A known end date within slack only means "in_progress" if the start
+    // date is also known (and, per the branch above, already past/now) —
+    // a null start with a future/near end is a not-yet-started cruise, not
+    // an ongoing one. Keeps this deriver in agreement with the sweep's
+    // cruiseToInProgress, which requires startDate != null too.
+    return startDate != null ? "in_progress" : "scheduled";
   }
   // start only: no in_progress without an end — flown once start+slack is past
   return startDate != null && nowMs - startDate.getTime() > slack ? "flown" : "scheduled";
