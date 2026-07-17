@@ -416,6 +416,18 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({ operation: 'server_start_backfill_airline_codes_error', message: 'Failed to backfill airline codes', error });
     }
 
+    // Backfill booking-level prices (idempotent — heals bookings created
+    // priceless by pre-2.5 imports; spec 2026-07-17-cost-booking-price)
+    try {
+      const { backfillBookingPrices } = await import("./scripts/backfillBookingPrices");
+      const healed = await backfillBookingPrices();
+      if (healed > 0) {
+        logger.info({ operation: "server_start_backfill_booking_prices", message: `Healed ${healed} bookings` });
+      }
+    } catch (error) {
+      logger.warn({ operation: "server_start_backfill_booking_prices_error", message: "Failed to backfill booking prices", error });
+    }
+
     // Normalize aircraft type names in existing flights (idempotent)
     try {
       const { normalizeAircraft } = await import('./utils/aircraftNormalize');
