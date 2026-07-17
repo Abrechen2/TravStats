@@ -98,6 +98,15 @@ const C = c({
   status: "cancelled",
   stops: [],
 });
+const D = c({
+  id: "d",
+  startDate: "2026-07-10",
+  price: 200,
+  shipNameOverride: "Delta",
+  cruiseLine: "TUI",
+  status: "in_progress",
+  stops: [],
+});
 
 describe("sortCruises", () => {
   it("sorts by date asc, nulls last", () => {
@@ -140,6 +149,15 @@ describe("sortCruises", () => {
   });
   it("sorts by status rank desc (cancelled first when desc)", () => {
     expect(sortCruises([A, B, C], "status", "desc").map((x) => x.id)).toEqual(["c", "a", "b"]);
+  });
+
+  it("ranks in_progress between scheduled and flown (#status-from-dates)", () => {
+    expect(sortCruises([A, B, C, D], "status", "asc").map((x) => x.id)).toEqual([
+      "b",
+      "d",
+      "a",
+      "c",
+    ]);
   });
 
   it("does not mutate the input array", () => {

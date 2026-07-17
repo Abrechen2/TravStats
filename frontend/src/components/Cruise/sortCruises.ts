@@ -4,12 +4,15 @@ import { countUniquePorts } from "./cruisePorts";
 export type CruiseSortKey = "date" | "ship" | "line" | "ports" | "status" | "price";
 export type SortOrder = "asc" | "desc";
 
-// Upcoming-first rank when ascending; unknown → end (see `?? 99` fallback below).
+// Upcoming-first rank when ascending; unknown → end (see `?? 99` fallback
+// below). in_progress (#status-from-dates) sits between scheduled and flown —
+// it mirrors the cruise's actual lifecycle (scheduled → in_progress → flown).
 const STATUS_RANK: Record<CruiseStatus, number> = {
   scheduled: 0,
-  flown: 1,
-  historical: 2,
-  cancelled: 3,
+  in_progress: 1,
+  flown: 2,
+  historical: 3,
+  cancelled: 4,
 };
 
 const shipName = (c: Cruise): string => (c.ship?.name ?? c.shipNameOverride ?? "").trim();
