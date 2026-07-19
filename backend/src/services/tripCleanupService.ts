@@ -21,6 +21,7 @@
 import { prisma } from "../db";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
+import { recomputeTripStatus } from "./tripStatusService";
 
 /** A trip is "micro" when it has at most this many flights. Matches the
  *  shape of the legacy one-booking auto-trips (outbound + return). */
@@ -80,6 +81,12 @@ export async function findMicroTripCandidates(userId: string): Promise<MicroTrip
  * Every id is re-validated against the candidate criteria server-side —
  * a stale client list can never dissolve a trip that gained content in
  * the meantime. Returns how many were dissolved vs. skipped.
+ *
+ * No recomputeTripStatus() call here: dissolution only DELETES trip rows.
+ * Flights/cruises/bookings.tripId all use `onDelete: SetNull` (see
+ * schema.prisma), so they end up unlinked (tripId = null), not relinked to
+ * a surviving trip — there is no target trip whose derived status could be
+ * stale.
  */
 export async function dissolveMicroTrips(
   userId: string,
@@ -167,6 +174,13 @@ export async function mergeTrips(
 
     await tx.trip.deleteMany({ where: { id: { in: sourceIds }, userId } });
   });
+
+  // Segments from every source trip are now linked to the target — its
+  // stored status is stale (still whatever it derived to BEFORE the merge
+  // widened its date bounds). Recompute AFTER the transaction commits, same
+  // pattern as every other segment-relinking write path (assign/remove
+  // flights, booking links, trip auto-detection — see tripStatusService.ts).
+  await recomputeTripStatus(targetId);
 
   logger.info({
     operation: "trips_merge",

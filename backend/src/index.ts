@@ -307,6 +307,8 @@ process.on('SIGINT', async () => {
   stopUsageStatsScheduler();
   const { stopAirlineLogoRefreshScheduler } = await import('./jobs/airlineLogoRefreshScheduler');
   stopAirlineLogoRefreshScheduler();
+  const { stopStatusSweepScheduler } = await import('./jobs/statusSweepScheduler');
+  stopStatusSweepScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -323,6 +325,8 @@ process.on('SIGTERM', async () => {
   stopUsageStatsScheduler();
   const { stopAirlineLogoRefreshScheduler } = await import('./jobs/airlineLogoRefreshScheduler');
   stopAirlineLogoRefreshScheduler();
+  const { stopStatusSweepScheduler } = await import('./jobs/statusSweepScheduler');
+  stopStatusSweepScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -500,6 +504,16 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({ operation: 'server_start_timezone_backfill_error', message: 'Failed to backfill airport timezones', error });
     }
 
+    // Converge stored temporal statuses with the dates on boot (idempotent —
+    // same logic as the hourly sweep, see services/statusSweep.ts).
+    try {
+      const { sweepStatuses } = await import('./services/statusSweep');
+      const counts = await sweepStatuses();
+      logger.info({ operation: 'server_start_status_sweep', context: counts });
+    } catch (error) {
+      logger.warn({ operation: 'server_start_status_sweep_error', message: 'Failed to run boot status sweep', error });
+    }
+
     // Re-evaluate achievements for every user. The engine only runs on a flight/cruise
     // write, so a user who adds nothing would keep a badge that a scoring fix has since
     // invalidated (the continent mapping used to call the Arctic "Antarctica" and count a
@@ -583,6 +597,24 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({
         operation: 'server_start_airline_logo_refresh_scheduler_error',
         message: 'Failed to start airline logo refresh scheduler',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+
+    // Start hourly status sweep scheduler
+    try {
+      const { startStatusSweepScheduler } = await import('./jobs/statusSweepScheduler');
+      startStatusSweepScheduler();
+      logger.info({
+        operation: 'server_start_status_sweep_scheduler',
+        message: 'Status sweep scheduler started',
+      });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_status_sweep_scheduler_error',
+        message: 'Failed to start status sweep scheduler',
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
         },

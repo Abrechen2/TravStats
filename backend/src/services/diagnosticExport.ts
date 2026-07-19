@@ -177,9 +177,9 @@ export interface FlightStateSection {
  * bundle needs. No IDs, no route data — only counts. Parallel queries keep
  * this under a single DB round trip-worth of latency.
  *
- * zombieCandidates uses the same OR-logic as transitionZombieFlights in
- * services/flightAutoUpdate.ts so the bundle surfaces exactly what the
- * scheduler is about to flip.
+ * zombieCandidates uses the same OR-logic as the stale-flight branch of the
+ * hourly status sweep (services/statusSweep.ts) so the bundle surfaces
+ * exactly what the sweep is about to flip.
  */
 export async function collectFlightState(userId: string): Promise<FlightStateSection> {
   const arrivalCutoff = new Date(Date.now() - 6 * 60 * 60 * 1000);

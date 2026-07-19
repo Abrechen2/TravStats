@@ -597,18 +597,48 @@ export default function FlightCompleteStep({
         </div>
         <div>
           <label className={`label ${textClass}`}>{t("flights:form.status")}</label>
-          <select
-            value={status}
-            onChange={(e) =>
-              setStatus(e.target.value as "scheduled" | "flown" | "cancelled" | "historical")
-            }
-            className={`input ${sizedInputClass}`}
-          >
-            <option value="flown">{t("flights:status.flown")}</option>
-            <option value="scheduled">{t("flights:status.scheduled")}</option>
-            <option value="cancelled">{t("flights:status.cancelled")}</option>
-            <option value="historical">{t("flights:status.historical")}</option>
-          </select>
+          <div>
+            <span
+              className="px-2 py-1 text-xs font-semibold rounded-full inline-block"
+              style={
+                status === "flown"
+                  ? {
+                      background: "rgba(63,185,80,0.15)",
+                      color: "var(--success)",
+                    }
+                  : status === "scheduled"
+                    ? {
+                        background: "rgba(56,139,253,0.15)",
+                        color: "#388bfd",
+                      }
+                    : status === "historical"
+                      ? {
+                          // historical is archival data, not an error state —
+                          // amber matches the cruise pill palette
+                          // (cruiseStatusStyle.ts) instead of red. "duplicated"
+                          // never reaches this form step (only assigned by
+                          // lib/flightDuplicate.ts, which bypasses this UI), so
+                          // this component's status prop type excludes it.
+                          background: "rgba(251,191,36,0.15)",
+                          color: "#fbbf24",
+                        }
+                      : {
+                          background: "rgba(248,81,73,0.15)",
+                          color: "var(--danger)",
+                        }
+              }
+            >
+              {t(`flights:status.${status}`, { defaultValue: status })}
+            </span>
+          </div>
+          <label className="flex items-center gap-2 text-sm mt-2">
+            <input
+              type="checkbox"
+              checked={status === "cancelled"}
+              onChange={(e) => setStatus(e.target.checked ? "cancelled" : "scheduled")}
+            />
+            {t("flights:status.cancelledCheckbox")}
+          </label>
         </div>
       </div>
 
