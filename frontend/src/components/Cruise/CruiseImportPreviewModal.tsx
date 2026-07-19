@@ -24,6 +24,7 @@ import { logger } from "../../lib/logger";
 import { ShipPicker } from "./ShipPicker";
 import { PortPicker } from "./PortPicker";
 import { CruiseStopsEditor } from "./CruiseStopsEditor";
+import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import AirportAutocomplete from "../AirportAutocomplete";
 
 interface CruiseImportPreviewModalProps {
@@ -32,7 +33,6 @@ interface CruiseImportPreviewModalProps {
   onSaved: () => void | Promise<void>;
 }
 
-const STATUSES: CruiseStatus[] = ["scheduled", "flown", "cancelled", "historical"];
 const CABIN_TYPES: CabinType[] = ["inside", "oceanview", "balcony", "suite"];
 const CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
 const SEAT_CLASSES = ["economy", "premium_economy", "business", "first"] as const;
@@ -444,18 +444,27 @@ function CruiseImportEntryEditor({
             className={INPUT}
           />
         </Field>
+        {/* #status-from-dates: cruise write paths derive scheduled/in_progress/
+            flown from the dates — a select just let the UI set a value the
+            backend would immediately overwrite. Only "cancelled" stays
+            user-controlled, via the checkbox below. Mirrors CruiseEditModal. */}
         <Field label={t("field.status")}>
-          <select
-            value={status}
-            onChange={(e): void => setStatus(e.target.value as CruiseStatus)}
-            className={INPUT}
-          >
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {t(`status.${s}`)}
-              </option>
-            ))}
-          </select>
+          <div>
+            <span
+              className="inline-block rounded-full px-2 py-1 text-xs font-semibold"
+              style={cruiseStatusPillStyle(status)}
+            >
+              {t(`status.${status}`, { defaultValue: status })}
+            </span>
+          </div>
+          <label className="mt-2 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={status === "cancelled"}
+              onChange={(e): void => setStatus(e.target.checked ? "cancelled" : "scheduled")}
+            />
+            {t("status.cancelledCheckbox")}
+          </label>
         </Field>
       </div>
 

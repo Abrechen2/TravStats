@@ -39,7 +39,7 @@ export interface CruiseStop {
   unresolvedPortName: string | null;
 }
 
-export type CruiseStatus = "scheduled" | "flown" | "cancelled" | "historical";
+export type CruiseStatus = "scheduled" | "in_progress" | "flown" | "cancelled" | "historical";
 export type CabinType = "inside" | "oceanview" | "balcony" | "suite";
 
 export interface Cruise {

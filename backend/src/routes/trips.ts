@@ -18,6 +18,7 @@ import {
 } from "../schemas/trip";
 import logger from "../utils/logger";
 import { detectTrips } from "../services/tripDetectionService";
+import { recomputeTripStatus } from "../services/tripStatusService";
 import {
   findMicroTripCandidates,
   dissolveMicroTrips,
@@ -159,6 +160,9 @@ router.post("/trips/bookings", authenticate, requireWriteScope, async (req: Auth
           ...(body.tripId ? { tripId: body.tripId } : {}),
         },
       });
+      if (body.tripId) {
+        await recomputeTripStatus(body.tripId);
+      }
     }
 
     res.status(201).json({ booking });
@@ -313,6 +317,13 @@ router.post("/trips", authenticate, requireWriteScope, async (req: AuthRequest, 
         color,
         startDate: body.startDate,
         endDate: body.endDate,
+        // Status derivation (spec 2026-07-17-status-from-dates) needs linked
+        // flights/cruises, which cannot exist yet — a trip must exist before
+        // anything can reference its id. So creation genuinely has no
+        // segments to derive from; the client-sent hint (or the schema
+        // default) is kept verbatim here, and recomputeTripStatus() takes
+        // over the moment segments get linked (assign-flights, bookings
+        // link, PNR auto-trip creation, trip detection).
         status: body.status,
         category: body.category,
         tags: body.tags,
@@ -342,6 +353,20 @@ router.patch("/trips/:id", authenticate, requireWriteScope, async (req: AuthRequ
     if (!existing) throw new AppError("Trip not found", 404);
 
     const body = updateTripSchema.parse(req.body);
+
+    // Status derivation (spec 2026-07-17-status-from-dates): the schema
+    // still ACCEPTS `status` for API compat (never a 400), but the route
+    // ignores it — status is derived from segment dates, never set
+    // directly. A stale client sending its own guess must not fight
+    // recomputeTripStatus()/the sweep on every save.
+    if (body.status !== undefined) {
+      logger.debug({
+        operation: "trip_status_field_ignored",
+        message: "PATCH /trips/:id ignored a client-sent status field",
+        context: { tripId: req.params.id, requestedStatus: body.status },
+      });
+    }
+
     const trip = await prisma.trip.update({
       where: { id: req.params.id },
       data: {
@@ -350,7 +375,6 @@ router.patch("/trips/:id", authenticate, requireWriteScope, async (req: AuthRequ
         ...(body.color !== undefined && { color: body.color }),
         ...(body.startDate !== undefined && { startDate: body.startDate }),
         ...(body.endDate !== undefined && { endDate: body.endDate }),
-        ...(body.status !== undefined && { status: body.status }),
         ...(body.category !== undefined && { category: body.category }),
         ...(body.tags !== undefined && { tags: body.tags }),
         ...(body.companions !== undefined && { companions: body.companions }),
@@ -413,6 +437,8 @@ router.post("/trips/:id/flights", authenticate, requireWriteScope, async (req: A
         data: { tripId: null },
       });
     }
+
+    await recomputeTripStatus(trip.id);
 
     res.json({ message: `Flights ${action === "add" ? "added to" : "removed from"} trip` });
   } catch (error) {

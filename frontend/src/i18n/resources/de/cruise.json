@@ -97,9 +97,11 @@
   },
   "status": {
     "scheduled": "Geplant",
+    "in_progress": "Unterwegs",
     "flown": "Abgeschlossen",
     "cancelled": "Storniert",
-    "historical": "Historisch"
+    "historical": "Historisch",
+    "cancelledCheckbox": "Storniert"
   },
   "stops": {
     "title": "Hafenfolge",

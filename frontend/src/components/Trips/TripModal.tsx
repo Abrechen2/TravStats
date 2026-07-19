@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import type { Trip, TripCategory, TripStatus } from "../../types";
+import type { Trip, TripCategory } from "../../types";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -11,7 +11,6 @@ interface TripModalProps {
   onSaved: () => void;
 }
 
-const STATUSES: TripStatus[] = ["planned", "in_progress", "completed"];
 const CATEGORIES: TripCategory[] = ["vacation", "business", "weekend", "family", "other"];
 
 const CATEGORY_ICON: Record<TripCategory, string> = {
@@ -64,7 +63,6 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
   const [name, setName] = useState(trip?.name ?? "");
   const [description, setDescription] = useState(trip?.description ?? "");
   const [color, setColor] = useState(trip?.color ?? PALETTE[0]);
-  const [status, setStatus] = useState<TripStatus>(trip?.status ?? "completed");
   const [category, setCategory] = useState<TripCategory | "">(trip?.category ?? "");
   const [startDate, setStartDate] = useState(toDateInput(trip?.startDate ?? null));
   const [endDate, setEndDate] = useState(toDateInput(trip?.endDate ?? null));
@@ -113,7 +111,6 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
     setName(trip.name);
     setDescription(trip.description ?? "");
     setColor(trip.color);
-    setStatus(trip.status);
     setCategory(trip.category ?? "");
     setStartDate(toDateInput(trip.startDate));
     setEndDate(toDateInput(trip.endDate));
@@ -141,7 +138,6 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           name: name.trim(),
           description: description.trim() || null,
           color,
-          status,
           category: category === "" ? null : category,
           startDate: fromDateInput(startDate),
           endDate: fromDateInput(endDate),
@@ -157,7 +153,6 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           name: name.trim(),
           description: description.trim() || undefined,
           color,
-          status,
           category: category === "" ? undefined : category,
           startDate: fromDateInput(startDate) ?? undefined,
           endDate: fromDateInput(endDate) ?? undefined,
@@ -260,37 +255,24 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
                 />
               </Field>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Field label={t("trips:modal.statusLabel")}>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as TripStatus)}
-                    className="w-full rounded-lg px-3 py-2 text-sm"
-                    style={inputStyle}
-                  >
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {t(`trips:status.${s}`)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label={t("trips:modal.categoryLabel")}>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value as TripCategory | "")}
-                    className="w-full rounded-lg px-3 py-2 text-sm"
-                    style={inputStyle}
-                  >
-                    <option value="">—</option>
-                    {CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {CATEGORY_ICON[c]} {t(`trips:category.${c}`)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
+              {/* #status-from-dates: trip status now derives from linked
+                  segment dates (deriveTripStatus) — there is no manual
+                  control here, and no "cancelled" concept for trips. */}
+              <Field label={t("trips:modal.categoryLabel")}>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as TripCategory | "")}
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={inputStyle}
+                >
+                  <option value="">—</option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {CATEGORY_ICON[c]} {t(`trips:category.${c}`)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
 
               <div className="grid grid-cols-2 gap-3">
                 <Field label={t("trips:modal.startDateLabel")}>
