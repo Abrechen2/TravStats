@@ -62,7 +62,7 @@ describe("Custom Hooks", () => {
 
     it("should not call handler when ref is null", () => {
       const handler = vi.fn();
-      const ref: RefObject<HTMLDivElement> = { current: null };
+      const ref: RefObject<HTMLDivElement | null> = { current: null };
 
       renderHook(() => useClickOutside(ref, handler));
 
