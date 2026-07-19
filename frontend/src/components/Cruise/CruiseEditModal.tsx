@@ -65,7 +65,7 @@ const splitCsv = (v: string): string[] =>
     .filter((x) => x.length > 0);
 
 const INPUT_CLASS =
-  "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-3 text-base text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none";
+  "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden";
 
 // color-scheme: dark tells the browser to render native picker widgets
 // (calendar icon, spinners) in dark mode colors. Without it, date /
@@ -177,10 +177,10 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
       role="dialog"
       aria-modal="true"
     >
-      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--bg-base)] shadow-xl">
+      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-auto rounded-lg border border-border bg-(--bg-base) shadow-xl">
         {/* Header */}
-        <div className="sticky top-0 z-10 border-b border-[var(--color-border)] bg-[var(--bg-base)] px-6 py-4">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">{headerTitle}</h2>
+        <div className="sticky top-0 z-10 border-b border-border bg-(--bg-base) px-6 py-4">
+          <h2 className="text-xl font-semibold text-(--text-primary)">{headerTitle}</h2>
         </div>
 
         <>
@@ -277,7 +277,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                   aria-label={t("field.color")}
                   value={color ?? "#000000"}
                   onChange={(e): void => setColor(e.target.value)}
-                  className="h-7 w-9 cursor-pointer rounded border border-[var(--color-border)] bg-transparent p-0"
+                  className="h-7 w-9 cursor-pointer rounded-sm border border-border bg-transparent p-0"
                 />
               </div>
             </Section>
@@ -395,19 +395,19 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
             </Section>
 
             {error !== null && (
-              <div className="mb-3 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-3 py-2 text-sm text-[var(--danger)]">
+              <div className="mb-3 rounded-md border border-(--danger)/50 bg-(--danger)/10 px-3 py-2 text-sm text-(--danger)">
                 {error}
               </div>
             )}
           </div>
 
           {/* Footer with action buttons — only on manual step */}
-          <div className="sticky bottom-0 flex justify-end gap-2 border-t border-[var(--color-border)] bg-[var(--bg-base)] px-6 py-4">
+          <div className="sticky bottom-0 flex justify-end gap-2 border-t border-border bg-(--bg-base) px-6 py-4">
             <button
               type="button"
               onClick={onClose}
               disabled={saving}
-              className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50"
+              className="rounded-md border border-border px-4 py-2 text-sm text-(--text-muted) hover:bg-(--bg-surface) disabled:opacity-50"
             >
               {t("form.cancel")}
             </button>
@@ -417,7 +417,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 void submit();
               }}
               disabled={saving}
-              className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-base)] hover:bg-[var(--accent-dim)] disabled:opacity-50"
+              className="rounded-md bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base) hover:bg-(--accent-dim) disabled:opacity-50"
             >
               {saving ? t("form.saving") : t("form.save")}
             </button>
@@ -432,9 +432,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <details
       open
-      className="mb-4 rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)]/50 p-3"
+      className="mb-4 rounded-md border border-border bg-(--bg-surface)/50 p-3"
     >
-      <summary className="cursor-pointer text-sm font-medium text-[var(--text-primary)]">
+      <summary className="cursor-pointer text-sm font-medium text-(--text-primary)">
         {title}
       </summary>
       <div className="mt-3">{children}</div>

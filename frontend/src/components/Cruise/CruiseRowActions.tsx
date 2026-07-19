@@ -26,21 +26,21 @@ export default function CruiseRowActions({
     <div className="flex items-center justify-end gap-2">
       <button
         onClick={stop(() => onEdit(cruise))}
-        className="px-3 py-1 text-xs font-medium rounded"
+        className="px-3 py-1 text-xs font-medium rounded-sm"
         style={{ background: "rgba(56,139,253,0.15)", color: "#388bfd" }}
       >
         {t("common:buttons.edit")}
       </button>
       <button
         onClick={stop(() => onDuplicate(cruise))}
-        className="px-3 py-1 text-xs font-medium rounded"
+        className="px-3 py-1 text-xs font-medium rounded-sm"
         style={{ background: "rgba(139,148,158,0.15)", color: "var(--text-muted)" }}
       >
         {t("cruise:list.duplicate")}
       </button>
       <button
         onClick={stop(() => onDelete(cruise.id))}
-        className="px-3 py-1 text-xs font-medium rounded"
+        className="px-3 py-1 text-xs font-medium rounded-sm"
         style={{ background: "rgba(248,81,73,0.15)", color: "var(--danger, #f85149)" }}
       >
         {t("common:buttons.delete")}

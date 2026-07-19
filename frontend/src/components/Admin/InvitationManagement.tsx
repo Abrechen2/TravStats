@@ -88,7 +88,7 @@ export default function InvitationManagement({
       />
 
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+        <h2 className="text-lg font-semibold text-(--text-primary)">
           {t("admin:invitations.invitationLinks")}
         </h2>
         <div className="flex gap-2">
@@ -113,8 +113,8 @@ export default function InvitationManagement({
             onClick={() => onStatusFilterChange(s)}
             className={`px-3 py-1 rounded-full text-xs border transition-colors ${
               statusFilter === s
-                ? "bg-[var(--accent)]/20 border-[var(--accent)]/50 text-[var(--accent)]"
-                : "border-[var(--color-border)] text-[var(--text-muted)]"
+                ? "bg-(--accent)/20 border-(--accent)/50 text-(--accent)"
+                : "border-border text-(--text-muted)"
             }`}
           >
             {t(`admin:invitations.filter.${s}`)}
@@ -122,26 +122,26 @@ export default function InvitationManagement({
         ))}
       </div>
 
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow overflow-x-auto">
+      <div className="bg-(--bg-surface) rounded-lg shadow-sm overflow-x-auto">
         <table className="w-full min-w-[720px]">
-          <thead className="bg-[var(--bg-base)]">
+          <thead className="bg-(--bg-base)">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-(--text-muted)">
                 {t("admin:invitations.table.email")}
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-(--text-muted)">
                 {t("admin:invitations.table.createdBy")}
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-(--text-muted)">
                 {t("admin:invitations.table.expires")}
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-(--text-muted)">
                 {t("admin:invitations.table.usedBy")}
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-(--text-muted)">
                 {t("admin:invitations.table.status")}
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-(--text-muted)">
                 {t("admin:invitations.table.actions")}
               </th>
             </tr>
@@ -156,7 +156,7 @@ export default function InvitationManagement({
               return (
                 <tr key={invitation.id}>
                   <td className="px-4 py-3 text-sm">
-                    {invitation.email ?? <span className="text-[var(--text-muted)]">—</span>}
+                    {invitation.email ?? <span className="text-(--text-muted)">—</span>}
                   </td>
                   <td className="px-4 py-3 text-sm">{invitation.creator.username}</td>
                   <td className="px-4 py-3 text-sm">
@@ -164,12 +164,12 @@ export default function InvitationManagement({
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {invitation.user?.username ?? (
-                      <span className="text-[var(--text-muted)]">—</span>
+                      <span className="text-(--text-muted)">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
                     {status === "used" ? (
-                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-[var(--bg-elevated)]">
+                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-(--bg-elevated)">
                         {t("admin:invitations.status.usedOn", {
                           date: format(new Date(invitation.usedAt!), "MMM d"),
                         })}

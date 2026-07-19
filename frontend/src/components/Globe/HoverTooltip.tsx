@@ -29,7 +29,7 @@ export const HoverTooltip = forwardRef<HoverTooltipApi>(function HoverTooltip(_,
   if (!state) return null;
   return (
     <div
-      className="pointer-events-none absolute z-30 rounded px-3 py-2 text-xs"
+      className="pointer-events-none absolute z-30 rounded-sm px-3 py-2 text-xs"
       style={{
         left: state.x + 12,
         top: state.y + 12,

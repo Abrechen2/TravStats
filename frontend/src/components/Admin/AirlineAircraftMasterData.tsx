@@ -97,10 +97,10 @@ function AirlinesSection(): JSX.Element {
       style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
     >
       <header className="mb-4">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+        <h3 className="text-lg font-semibold text-(--text-primary)">
           ✈ {t("admin:airlineAircraftMasterData.airline.title")}
         </h3>
-        <p className="text-sm text-[var(--text-muted)] mt-1">
+        <p className="text-sm text-(--text-muted) mt-1">
           {t("admin:airlineAircraftMasterData.airline.description")}
         </p>
       </header>
@@ -148,7 +148,7 @@ function AirlinesSection(): JSX.Element {
             void createAirline();
           }}
           disabled={creating}
-          className="rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-medium text-[var(--bg-base)] hover:bg-[var(--accent-dim)] disabled:opacity-50"
+          className="rounded-md bg-(--accent) px-3 py-2 text-sm font-medium text-(--bg-base) hover:bg-(--accent-dim) disabled:opacity-50"
         >
           {creating ? t("common:buttons.saving") : t("admin:airlineAircraftMasterData.airline.add")}
         </button>
@@ -164,9 +164,9 @@ function AirlinesSection(): JSX.Element {
       />
 
       {loading ? (
-        <p className="text-sm text-[var(--text-muted)]">{t("common:loading.default")}</p>
+        <p className="text-sm text-(--text-muted)">{t("common:loading.default")}</p>
       ) : airlines.length === 0 ? (
-        <p className="text-sm text-[var(--text-muted)]">
+        <p className="text-sm text-(--text-muted)">
           {t("admin:airlineAircraftMasterData.airline.empty")}
         </p>
       ) : (
@@ -174,8 +174,8 @@ function AirlinesSection(): JSX.Element {
           {airlines.slice(0, 50).map((a) => (
             <li key={a.id} className="flex items-center justify-between py-2 text-sm">
               <div>
-                <span className="font-medium text-[var(--text-primary)]">{a.name}</span>
-                {a.country && <span className="text-[var(--text-muted)]"> · {a.country}</span>}
+                <span className="font-medium text-(--text-primary)">{a.name}</span>
+                {a.country && <span className="text-(--text-muted)"> · {a.country}</span>}
               </div>
               <div className="flex items-center gap-2 text-xs">
                 {a.isUserAdded && (
@@ -190,8 +190,8 @@ function AirlinesSection(): JSX.Element {
                     {t("admin:airlineAircraftMasterData.userAdded")}
                   </span>
                 )}
-                {a.iata && <span className="text-[var(--text-muted)] font-mono">{a.iata}</span>}
-                {a.icao && <span className="text-[var(--text-muted)] font-mono">{a.icao}</span>}
+                {a.iata && <span className="text-(--text-muted) font-mono">{a.iata}</span>}
+                {a.icao && <span className="text-(--text-muted) font-mono">{a.icao}</span>}
               </div>
             </li>
           ))}
@@ -264,10 +264,10 @@ function AircraftSection(): JSX.Element {
       style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
     >
       <header className="mb-4">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+        <h3 className="text-lg font-semibold text-(--text-primary)">
           🛩 {t("admin:airlineAircraftMasterData.aircraft.title")}
         </h3>
-        <p className="text-sm text-[var(--text-muted)] mt-1">
+        <p className="text-sm text-(--text-muted) mt-1">
           {t("admin:airlineAircraftMasterData.aircraft.description")}
         </p>
       </header>
@@ -293,7 +293,7 @@ function AircraftSection(): JSX.Element {
             void createAircraft();
           }}
           disabled={creating}
-          className="rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-medium text-[var(--bg-base)] hover:bg-[var(--accent-dim)] disabled:opacity-50"
+          className="rounded-md bg-(--accent) px-3 py-2 text-sm font-medium text-(--bg-base) hover:bg-(--accent-dim) disabled:opacity-50"
         >
           {creating ? t("common:buttons.saving") : t("admin:airlineAircraftMasterData.aircraft.add")}
         </button>
@@ -308,9 +308,9 @@ function AircraftSection(): JSX.Element {
       />
 
       {loading ? (
-        <p className="text-sm text-[var(--text-muted)]">{t("common:loading.default")}</p>
+        <p className="text-sm text-(--text-muted)">{t("common:loading.default")}</p>
       ) : aircraft.length === 0 ? (
-        <p className="text-sm text-[var(--text-muted)]">
+        <p className="text-sm text-(--text-muted)">
           {t("admin:airlineAircraftMasterData.aircraft.empty")}
         </p>
       ) : (
@@ -318,7 +318,7 @@ function AircraftSection(): JSX.Element {
           {aircraft.slice(0, 50).map((ac) => (
             <li key={ac.id} className="flex items-center justify-between py-2 text-sm">
               <div>
-                <span className="font-medium text-[var(--text-primary)]">{ac.name}</span>
+                <span className="font-medium text-(--text-primary)">{ac.name}</span>
               </div>
               <div className="flex items-center gap-2 text-xs">
                 {ac.isUserAdded && (
@@ -333,7 +333,7 @@ function AircraftSection(): JSX.Element {
                     {t("admin:airlineAircraftMasterData.userAdded")}
                   </span>
                 )}
-                {ac.icao && <span className="text-[var(--text-muted)] font-mono">{ac.icao}</span>}
+                {ac.icao && <span className="text-(--text-muted) font-mono">{ac.icao}</span>}
               </div>
             </li>
           ))}

@@ -71,7 +71,7 @@ export default function CrossDomainKpis({
       {cards.map((c) => (
         <div
           key={c.label}
-          className="rounded-lg shadow p-6"
+          className="rounded-lg shadow-sm p-6"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>

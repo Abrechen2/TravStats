@@ -85,7 +85,7 @@ export function SpecialFlightTooltip({
         <button
           type="button"
           onClick={() => onEdit(flight)}
-          className="text-xs px-2 py-1 rounded transition-colors"
+          className="text-xs px-2 py-1 rounded-sm transition-colors"
           style={{ background: "var(--accent)", color: "white" }}
         >
           {t("common:buttons.edit")}
@@ -93,7 +93,7 @@ export function SpecialFlightTooltip({
         <button
           type="button"
           onClick={onClose}
-          className="text-xs px-2 py-1 rounded transition-colors"
+          className="text-xs px-2 py-1 rounded-sm transition-colors"
           style={{
             background: "var(--bg-elevated)",
             color: "var(--text-primary)",

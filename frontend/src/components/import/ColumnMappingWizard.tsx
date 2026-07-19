@@ -145,7 +145,7 @@ export function ColumnMappingWizard({
       role="dialog"
       aria-modal="true"
       aria-labelledby="mapping-wizard-title"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 p-4"
     >
       <div
         className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg shadow-xl"
@@ -315,7 +315,7 @@ function FieldSection({
                 )}
                 {wasAutoFilled && (
                   <span
-                    className="ml-2 inline-flex items-center rounded px-1.5 py-0.5 text-xs"
+                    className="ml-2 inline-flex items-center rounded-sm px-1.5 py-0.5 text-xs"
                     style={{
                       background: "rgba(34, 197, 94, 0.18)",
                       color: "rgb(134, 239, 172)",

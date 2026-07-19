@@ -42,10 +42,10 @@ export default function GlobalApiKeysManager({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+          <h2 className="text-xl font-semibold text-(--text-primary)">
             {t("admin:globalApiKeys.title")}
           </h2>
-          <p className="text-sm text-[var(--text-muted)] mt-1">
+          <p className="text-sm text-(--text-muted) mt-1">
             {t("admin:globalApiKeys.description")}
           </p>
         </div>
@@ -92,11 +92,11 @@ export default function GlobalApiKeysManager({
       {globalApiKeys && parserSettings && (
         <>
           {/* Flight Lookup APIs */}
-          <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+          <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-(--text-primary) mb-4">
               {t("admin:globalApiKeys.flightApis")}
             </h3>
-            <p className="text-sm text-[var(--text-muted)] mb-4">
+            <p className="text-sm text-(--text-muted) mb-4">
               {t("admin:globalApiKeys.flightApisDescription")}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -184,17 +184,17 @@ export default function GlobalApiKeysManager({
           </div>
 
           {/* User Permissions */}
-          <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+          <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-(--text-primary) mb-4">
               {t("admin:globalApiKeys.permissions")}
             </h3>
-            <p className="text-sm text-[var(--text-muted)] mb-4">
+            <p className="text-sm text-(--text-muted) mb-4">
               {t("admin:globalApiKeys.permissionsDescription")}
             </p>
             <div className="space-y-4">
               {/* Parser Permissions */}
-              <div className="border-b border-[var(--color-border)] pb-4">
-                <h4 className="text-md font-medium text-[var(--text-primary)] mb-3">
+              <div className="border-b border-border pb-4">
+                <h4 className="text-md font-medium text-(--text-primary) mb-3">
                   Parser-Berechtigungen
                 </h4>
                 <label className="flex items-start gap-3">
@@ -205,10 +205,10 @@ export default function GlobalApiKeysManager({
                     className="checkbox mt-1"
                   />
                   <div>
-                    <span className="font-medium text-[var(--text-primary)]">
+                    <span className="font-medium text-(--text-primary)">
                       {t("admin:globalApiKeys.allowUserParserApiKeys")}
                     </span>
-                    <p className="text-sm text-[var(--text-muted)]">
+                    <p className="text-sm text-(--text-muted)">
                       {t("admin:globalApiKeys.allowUserParserApiKeysDescription")}
                     </p>
                   </div>
@@ -217,7 +217,7 @@ export default function GlobalApiKeysManager({
 
               {/* Flight API Permissions */}
               <div>
-                <h4 className="text-md font-medium text-[var(--text-primary)] mb-3">
+                <h4 className="text-md font-medium text-(--text-primary) mb-3">
                   {t("admin:globalApiKeys.flightPermissions")}
                 </h4>
                 <div className="space-y-3">
@@ -234,10 +234,10 @@ export default function GlobalApiKeysManager({
                       className="checkbox mt-1"
                     />
                     <div>
-                      <span className="font-medium text-[var(--text-primary)]">
+                      <span className="font-medium text-(--text-primary)">
                         {t("admin:globalApiKeys.allowUserFlightApiKeys")}
                       </span>
-                      <p className="text-sm text-[var(--text-muted)]">
+                      <p className="text-sm text-(--text-muted)">
                         {t("admin:globalApiKeys.allowUserFlightApiKeysDescription")}
                       </p>
                     </div>

@@ -339,9 +339,9 @@ export default function EmailAnnotation({
 
   if (loading) {
     return (
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Email Annotation</h2>
-        <p className="text-sm text-[var(--text-muted)]">
+      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+        <h2 className="text-xl font-semibold text-(--text-primary) mb-4">Email Annotation</h2>
+        <p className="text-sm text-(--text-muted)">
           {t("training:annotation.emailTextLoading")}
         </p>
       </div>
@@ -406,7 +406,7 @@ export default function EmailAnnotation({
         return (
           <mark
             key={`highlight-${segmentIndex}`}
-            className={`${colorClass} px-1 rounded`}
+            className={`${colorClass} px-1 rounded-sm`}
             title={`${segment.label}${flightLabel}`}
           >
             {segment.text}
@@ -418,18 +418,18 @@ export default function EmailAnnotation({
   };
 
   return (
-    <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
+    <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+      <h2 className="text-xl font-semibold text-(--text-primary) mb-4">
         {t("training:annotation.title")}
       </h2>
-      <p className="text-sm text-[var(--text-muted)] mb-4">
+      <p className="text-sm text-(--text-muted) mb-4">
         {t("training:annotation.description")}
       </p>
 
       <div className="space-y-4">
         {/* Flug-Auswahl vor dem Labeln */}
-        <div className="p-4 bg-[var(--bg-base)] rounded-lg border border-[var(--color-border)]">
-          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+        <div className="p-4 bg-(--bg-base) rounded-lg border border-border">
+          <label className="block text-sm font-medium text-(--text-primary) mb-2">
             {t("training:annotation.selectFlight")}
           </label>
           <div className="flex gap-2 items-center">
@@ -460,16 +460,16 @@ export default function EmailAnnotation({
             ref={labelSelectorRef}
             className="sticky top-0 z-10 p-4 bg-blue-50 rounded-lg border-2 border-blue-500 shadow-lg"
           >
-            <p className="text-sm font-medium text-[var(--text-primary)] mb-2">
+            <p className="text-sm font-medium text-(--text-primary) mb-2">
               Ausgewählter Text: &quot;{displayText.substring(selectedText.start, selectedText.end)}
               &quot;
             </p>
-            <p className="text-xs text-[var(--text-muted)] mb-2">
+            <p className="text-xs text-(--text-muted) mb-2">
               Flug {selectedFlightIndex + 1} wird annotiert
             </p>
             <div className="flex flex-wrap gap-2 items-end">
               <div className="flex-1 min-w-[200px]">
-                <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                <label className="block text-xs font-medium text-(--text-primary) mb-1">
                   Label
                 </label>
                 <select
@@ -526,7 +526,7 @@ export default function EmailAnnotation({
         {/* Email Text Display */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-[var(--text-primary)]">
+            <label className="block text-sm font-medium text-(--text-primary)">
               Email Text
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -534,16 +534,16 @@ export default function EmailAnnotation({
                 type="checkbox"
                 checked={showFiltered}
                 onChange={(e) => setShowFiltered(e.target.checked)}
-                className="rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500"
+                className="rounded-sm border-border text-blue-600 focus:ring-blue-500"
               />
-              <span className="text-sm text-[var(--text-muted)]">
+              <span className="text-sm text-(--text-muted)">
                 {t("training:annotation.showFiltered")}
               </span>
             </label>
           </div>
           <div
             ref={textContainerRef}
-            className="w-full p-4 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] min-h-[300px] max-h-[600px] overflow-y-auto whitespace-pre-wrap select-text"
+            className="w-full p-4 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) min-h-[300px] max-h-[600px] overflow-y-auto whitespace-pre-wrap select-text"
             onMouseUp={handleTextSelect}
             contentEditable={false}
             suppressContentEditableWarning
@@ -555,7 +555,7 @@ export default function EmailAnnotation({
         {/* Multi-Flight Support */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-[var(--text-primary)]">
+            <h3 className="text-sm font-medium text-(--text-primary)">
               Flight Data (Ground Truth)
             </h3>
             <button
@@ -569,10 +569,10 @@ export default function EmailAnnotation({
             {flights.map((flight, index) => (
               <div
                 key={index}
-                className="p-4 border border-[var(--color-border)] rounded-lg bg-[var(--bg-base)]"
+                className="p-4 border border-border rounded-lg bg-(--bg-base)"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-[var(--text-primary)]">
+                  <h4 className="text-sm font-semibold text-(--text-primary)">
                     Flug {index + 1}
                   </h4>
                   {flights.length > 1 && (
@@ -587,7 +587,7 @@ export default function EmailAnnotation({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {/* Flug */}
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
                       Flight Number
                     </label>
                     <input
@@ -599,7 +599,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
                       Airline
                     </label>
                     <input
@@ -611,7 +611,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
                       Aircraft Type
                     </label>
                     <input
@@ -624,7 +624,7 @@ export default function EmailAnnotation({
                   </div>
                   {/* Route */}
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
                       Departure Code
                     </label>
                     <input
@@ -639,7 +639,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
                       Arrival Code
                     </label>
                     <input
@@ -654,7 +654,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
                       Departure Date
                     </label>
                     <input
@@ -665,7 +665,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
                       Departure Time
                     </label>
                     <input
@@ -676,7 +676,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
                       Arrival Date
                     </label>
                     <input
@@ -687,7 +687,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
                       Arrival Time
                     </label>
                     <input
@@ -699,7 +699,7 @@ export default function EmailAnnotation({
                   </div>
                   {/* Boarding */}
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
                       Seat
                     </label>
                     <input
@@ -711,7 +711,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
                       Seat Class
                     </label>
                     <select
@@ -727,7 +727,7 @@ export default function EmailAnnotation({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
                       Terminal
                     </label>
                     <input
@@ -739,7 +739,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
                       Gate
                     </label>
                     <input
@@ -751,7 +751,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
                       Boarding Group
                     </label>
                     <input
@@ -764,7 +764,7 @@ export default function EmailAnnotation({
                   </div>
                   {/* Buchung */}
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
                       PNR / Booking Reference
                     </label>
                     <input
@@ -776,7 +776,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                    <label className="block text-xs font-medium text-(--text-primary) mb-1">
                       Ticket Number
                     </label>
                     <input
@@ -795,7 +795,7 @@ export default function EmailAnnotation({
 
         {/* Tags */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Tags</label>
+          <label className="block text-sm font-medium text-(--text-primary) mb-2">Tags</label>
           <div className="flex gap-2 mb-2">
             <input
               type="text"
@@ -823,7 +823,7 @@ export default function EmailAnnotation({
               {tags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm"
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-sm text-sm"
                 >
                   {tag}
                   <button

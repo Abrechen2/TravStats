@@ -175,7 +175,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
         <span className="text-xs text-slate-400">
           {t("albums.photoCount", { count: album.assetCount })}
         </span>
-        <span className="rounded bg-slate-700 px-1.5 py-0.5 text-xs">
+        <span className="rounded-sm bg-slate-700 px-1.5 py-0.5 text-xs">
           {album.mode === "import" ? t("albums.badgeImport") : t("albums.badgeLink")}
         </span>
 
@@ -199,7 +199,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
       </header>
 
       {confirmingUnlink && (
-        <div className="mb-2 flex gap-2 rounded border border-slate-600 p-2 text-sm">
+        <div className="mb-2 flex gap-2 rounded-sm border border-slate-600 p-2 text-sm">
           <span className="flex-1">{t("albums.unlinkTitle")}</span>
           <button type="button" className="underline" onClick={() => void handleUnlink(false)}>
             {t("albums.unlinkKeepCopies")}
@@ -215,7 +215,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
       )}
 
       {failure ? (
-        <div className="rounded border border-slate-700 bg-slate-900/60 p-4 text-sm">
+        <div className="rounded-sm border border-slate-700 bg-slate-900/60 p-4 text-sm">
           <p className="text-rose-400">{t(failure)}</p>
           {failure !== "errors.notFound" && (
             <button type="button" className="mt-2 underline" onClick={() => void load()}>
@@ -231,7 +231,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
                 src={asset.url}
                 alt={album.albumName}
                 loading="lazy"
-                className="aspect-square w-full rounded object-cover"
+                className="aspect-square w-full rounded-sm object-cover"
               />
             </button>
           ))}

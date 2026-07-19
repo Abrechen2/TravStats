@@ -215,7 +215,7 @@ export default function StopModal({
             type="button"
             onClick={() => void handleSave()}
             disabled={!title.trim() || saving}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--accent)] text-[var(--bg-base)] disabled:opacity-50"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-(--accent) text-(--bg-base) disabled:opacity-50"
           >
             {saving ? "…" : t("trips:stopModal.save")}
           </button>

@@ -247,7 +247,7 @@ export function GlobeControlPanel({
                       key={color}
                       type="button"
                       onClick={() => onQuartileChange(active ? null : q)}
-                      className="flex w-full cursor-pointer items-center gap-2 rounded px-1.5 py-1 transition-colors"
+                      className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-1.5 py-1 transition-colors"
                       style={{
                         background: active ? "rgba(255,255,255,0.09)" : "transparent",
                         opacity: activeQuartile === null || active ? 1 : 0.5,

@@ -594,8 +594,8 @@ export default function AdminPage(): JSX.Element {
               onClick={(): void => setActiveTab(tab.id)}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
-                  ? "border-[var(--accent)] text-[var(--accent)]"
-                  : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  ? "border-(--accent) text-(--accent)"
+                  : "border-transparent text-(--text-secondary) hover:text-(--text-primary)"
               }`}
             >
               {tab.icon && (
@@ -638,7 +638,7 @@ export default function AdminPage(): JSX.Element {
       <div className="flex md:h-[calc(100vh-3.5rem-2.75rem)]">
         {/* Sidebar */}
         <aside
-          className="w-52 flex-shrink-0 flex-col py-4 overflow-y-auto hidden md:flex"
+          className="w-52 shrink-0 flex-col py-4 overflow-y-auto hidden md:flex"
           style={{
             background: "var(--bg-surface)",
             borderRight: "1px solid var(--color-border)",

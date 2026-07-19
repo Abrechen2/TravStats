@@ -108,7 +108,7 @@ function getDataSourceConfig(
   // shares the neutral elevated surface. The historical_enrichment
   // badge keeps brand amber as the single intentional exception
   // (it's the parser's own "we improved this" stamp, brand voice).
-  const NEUTRAL_BADGE = "bg-[var(--bg-elevated)] text-[var(--text-muted)]";
+  const NEUTRAL_BADGE = "bg-(--bg-elevated) text-(--text-muted)";
   const configs: Record<string, { icon: string; label: string; color: string }> = {
     manual: {
       icon: "✏️",
@@ -128,7 +128,7 @@ function getDataSourceConfig(
     historical_enrichment: {
       icon: "🔍",
       label: t("flights:dataSource.historical_enrichment"),
-      color: "bg-[var(--accent-soft)] text-[var(--accent)]",
+      color: "bg-(--accent-soft) text-(--accent)",
     },
     live_update: {
       icon: "🔄",

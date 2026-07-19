@@ -58,7 +58,7 @@ export default function NavDropdown(props: NavDropdownProps | ExternalDropdownPr
 
   const triggerClass =
     variant === "chip"
-      ? "flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-colors duration-150"
+      ? "flex items-center gap-1 px-2.5 py-1 rounded-sm text-[11px] font-medium transition-colors duration-150"
       : "relative px-3 py-1.5 text-sm transition-colors duration-200 rounded-md flex items-center gap-1";
 
   return (
@@ -102,7 +102,7 @@ export default function NavDropdown(props: NavDropdownProps | ExternalDropdownPr
       {open && (
         <div
           role="menu"
-          className={`absolute top-full mt-1.5 min-w-[176px] z-[70] rounded-lg p-1 shadow-xl ${
+          className={`absolute top-full mt-1.5 min-w-[176px] z-70 rounded-lg p-1 shadow-xl ${
             align === "right" ? "right-0" : "left-0"
           }`}
           style={{ background: "var(--bg-elevated)", border: "1px solid var(--color-border)" }}
@@ -130,7 +130,7 @@ export default function NavDropdown(props: NavDropdownProps | ExternalDropdownPr
                     <span className="flex items-center gap-1.5">
                       {child.label}
                       {child.betaBadge && (
-                        <span className="inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium leading-none text-amber-700 bg-amber-100 ring-1 ring-inset ring-amber-600/20 dark:text-amber-400 dark:bg-amber-500/10 dark:ring-amber-400/20">
+                        <span className="inline-flex items-center rounded-sm px-1 py-0.5 text-[10px] font-medium leading-none text-amber-700 bg-amber-100 ring-1 ring-inset ring-amber-600/20 dark:text-amber-400 dark:bg-amber-500/10 dark:ring-amber-400/20">
                           Beta
                         </span>
                       )}

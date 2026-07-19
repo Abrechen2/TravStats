@@ -181,7 +181,7 @@ export function GlobeLabelsOverlay({
           ref={(el) => {
             nodeRefs.current[i] = el;
           }}
-          className="absolute left-0 top-0 whitespace-nowrap rounded font-semibold tabular-nums"
+          className="absolute left-0 top-0 whitespace-nowrap rounded-sm font-semibold tabular-nums"
           style={{
             display: "none",
             fontSize: "11px",

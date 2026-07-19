@@ -19,7 +19,7 @@ interface SkeletonTextProps {
 function SkeletonText({ width = "w-full", height = "h-4" }: SkeletonTextProps): JSX.Element {
   return (
     <div
-      className={`rounded animate-pulse ${width} ${height}`}
+      className={`rounded-sm animate-pulse ${width} ${height}`}
       style={{ background: "var(--border)" }}
     />
   );

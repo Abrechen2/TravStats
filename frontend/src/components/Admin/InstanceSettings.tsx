@@ -94,14 +94,14 @@ export default function InstanceSettings(): JSX.Element {
   return (
     <form onSubmit={handleSave} className="max-w-2xl space-y-6 p-6">
       <div>
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+        <h2 className="text-xl font-semibold text-(--text-primary)">
           {t("admin:instance.title")}
         </h2>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">{t("admin:instance.subtitle")}</p>
+        <p className="mt-1 text-sm text-(--text-muted)">{t("admin:instance.subtitle")}</p>
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+        <label className="mb-1 block text-sm font-medium text-(--text-primary)">
           {t("admin:instance.fields.name.label")}
         </label>
         <input
@@ -109,15 +109,15 @@ export default function InstanceSettings(): JSX.Element {
           maxLength={100}
           value={form.instanceName}
           onChange={(e) => setForm({ ...form, instanceName: e.target.value })}
-          className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
         />
-        <p className="mt-1 text-xs text-[var(--text-muted)]">
+        <p className="mt-1 text-xs text-(--text-muted)">
           {t("admin:instance.fields.name.help")}
         </p>
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+        <label className="mb-1 block text-sm font-medium text-(--text-primary)">
           {t("admin:instance.fields.frontendUrl.label")}
         </label>
         <input
@@ -126,15 +126,15 @@ export default function InstanceSettings(): JSX.Element {
           value={form.frontendUrl ?? ""}
           onChange={(e) => setForm({ ...form, frontendUrl: e.target.value })}
           placeholder="https://travstats.example.com"
-          className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
         />
-        <p className="mt-1 text-xs text-[var(--text-muted)]">
+        <p className="mt-1 text-xs text-(--text-muted)">
           {t("admin:instance.fields.frontendUrl.help")}
         </p>
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+        <label className="mb-1 block text-sm font-medium text-(--text-primary)">
           {t("admin:instance.fields.publicUrl.label")}
         </label>
         <input
@@ -143,15 +143,15 @@ export default function InstanceSettings(): JSX.Element {
           value={form.publicUrl ?? ""}
           onChange={(e) => setForm({ ...form, publicUrl: e.target.value })}
           placeholder="https://trav.example.de"
-          className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
         />
-        <p className="mt-1 text-xs text-[var(--text-muted)]">
+        <p className="mt-1 text-xs text-(--text-muted)">
           {t("admin:instance.fields.publicUrl.help")}
         </p>
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+        <label className="mb-1 block text-sm font-medium text-(--text-primary)">
           {t("admin:instance.fields.lanUrl.label")}
         </label>
         <input
@@ -160,15 +160,15 @@ export default function InstanceSettings(): JSX.Element {
           value={form.lanUrl ?? ""}
           onChange={(e) => setForm({ ...form, lanUrl: e.target.value })}
           placeholder="http://192.168.1.10:3010"
-          className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
         />
-        <p className="mt-1 text-xs text-[var(--text-muted)]">
+        <p className="mt-1 text-xs text-(--text-muted)">
           {t("admin:instance.fields.lanUrl.help")}
         </p>
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+        <label className="mb-1 block text-sm font-medium text-(--text-primary)">
           {t("admin:instance.fields.maxUsers.label")}
         </label>
         <input
@@ -182,23 +182,23 @@ export default function InstanceSettings(): JSX.Element {
               maxUsers: Math.max(1, Math.min(1000, Number(e.target.value) || 10)),
             })
           }
-          className="w-40 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm"
+          className="w-40 rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
         />
-        <p className="mt-1 text-xs text-[var(--text-muted)]">
+        <p className="mt-1 text-xs text-(--text-muted)">
           {t("admin:instance.fields.maxUsers.help")}
         </p>
       </div>
 
-      <label className="flex items-start gap-3 text-sm text-[var(--text-primary)]">
+      <label className="flex items-start gap-3 text-sm text-(--text-primary)">
         <input
           type="checkbox"
           checked={form.allowRegistration}
           onChange={(e) => setForm({ ...form, allowRegistration: e.target.checked })}
-          className="mt-1 h-4 w-4 rounded border-[var(--border)]"
+          className="mt-1 h-4 w-4 rounded-sm border-(--border)"
         />
         <span>
           <span className="font-medium">{t("admin:instance.fields.allowRegistration.label")}</span>
-          <span className="block text-xs text-[var(--text-muted)]">
+          <span className="block text-xs text-(--text-muted)">
             {t("admin:instance.fields.allowRegistration.help")}
           </span>
         </span>
@@ -208,7 +208,7 @@ export default function InstanceSettings(): JSX.Element {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-base)] hover:opacity-90 disabled:opacity-50"
+          className="rounded-lg bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base) hover:opacity-90 disabled:opacity-50"
         >
           {saving ? t("common:buttons.saving") : t("common:buttons.save")}
         </button>

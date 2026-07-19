@@ -6,10 +6,10 @@ const ToastItem = ({ toast }: { toast: Toast }) => {
   const { t } = useTranslation("common");
 
   const bgColors = {
-    success: "border-[var(--success)]",
-    error: "border-[var(--danger)]",
-    warning: "border-[var(--warning)]",
-    info: "border-[var(--color-border)]",
+    success: "border-(--success)",
+    error: "border-(--danger)",
+    warning: "border-(--warning)",
+    info: "border-border",
   };
 
   const icons = {
@@ -30,13 +30,13 @@ const ToastItem = ({ toast }: { toast: Toast }) => {
       style={{ background: "var(--bg-elevated)", color: "var(--text-primary)" }}
       role="alert"
     >
-      <div className="flex-shrink-0 text-lg">{icons[toast.type]}</div>
+      <div className="shrink-0 text-lg">{icons[toast.type]}</div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium break-words">{toast.message}</p>
+        <p className="text-sm font-medium wrap-break-word">{toast.message}</p>
       </div>
       <button
         onClick={() => removeToast(toast.id)}
-        className="flex-shrink-0 transition-colors"
+        className="shrink-0 transition-colors"
         style={{ color: "var(--text-muted)" }}
         aria-label={t("buttons.close")}
       >
@@ -59,7 +59,7 @@ export default function Toast(): JSX.Element | null {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-[9999] max-w-md w-full space-y-2 pointer-events-none">
+    <div className="fixed top-4 right-4 z-9999 max-w-md w-full space-y-2 pointer-events-none">
       <div className="pointer-events-auto">
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} />

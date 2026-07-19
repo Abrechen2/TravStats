@@ -40,7 +40,7 @@ export default function PasswordModal({
         <div className="space-y-4">
           {passwordError && (
             <div
-              className="px-4 py-3 rounded"
+              className="px-4 py-3 rounded-sm"
               style={{
                 background: "rgba(248,81,73,0.1)",
                 border: "1px solid rgba(248,81,73,0.3)",

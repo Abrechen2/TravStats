@@ -49,9 +49,9 @@ export default function ParserPage(): JSX.Element {
   ];
 
   return (
-    <div className="min-h-screen bg-[var(--bg-base)]">
+    <div className="min-h-screen bg-(--bg-base)">
       <NavigationBar />
-      <header className="bg-[var(--bg-elevated)] border-b border-gray-200 dark:border-gray-700">
+      <header className="bg-(--bg-elevated) border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
@@ -95,7 +95,7 @@ export default function ParserPage(): JSX.Element {
         {activeTab === "annotate" && (
           <div className="space-y-6">
             {!uploadedFile ? (
-              <div className="bg-[var(--bg-elevated)] rounded-lg shadow p-6">
+              <div className="bg-(--bg-elevated) rounded-lg shadow-sm p-6">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                   {t("parser:annotate.title")}
                 </h2>
@@ -183,7 +183,7 @@ export default function ParserPage(): JSX.Element {
 
         {/* Tab: Community Templates */}
         {activeTab === "community" && (
-          <div className="bg-[var(--bg-elevated)] rounded-lg shadow p-6">
+          <div className="bg-(--bg-elevated) rounded-lg shadow-sm p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
               {t("parser:communityTemplates.title")}
             </h2>

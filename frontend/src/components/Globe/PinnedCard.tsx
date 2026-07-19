@@ -88,7 +88,7 @@ export function PinnedCard({
           type="button"
           aria-label="close"
           onClick={onClose}
-          className="cursor-pointer rounded px-1 text-[11px] leading-none opacity-70 hover:opacity-100"
+          className="cursor-pointer rounded-sm px-1 text-[11px] leading-none opacity-70 hover:opacity-100"
           style={{ background: "rgba(255,255,255,0.08)" }}
         >
           ✕
@@ -175,7 +175,7 @@ function IcaoPill({ icao }: { icao?: string }): JSX.Element | null {
   if (!icao) return null;
   return (
     <span
-      className="rounded px-1.5 py-0.5 font-mono text-[10px]"
+      className="rounded-sm px-1.5 py-0.5 font-mono text-[10px]"
       style={{ color: "rgba(241,245,249,0.5)", background: "rgba(255,255,255,0.06)" }}
     >
       {icao}
@@ -532,7 +532,7 @@ function Cta({ label, onClick }: { label: string; onClick: () => void }): JSX.El
     <button
       type="button"
       onClick={onClick}
-      className="mt-3 w-full cursor-pointer rounded px-2 py-1.5 text-[11px] font-medium transition-colors"
+      className="mt-3 w-full cursor-pointer rounded-sm px-2 py-1.5 text-[11px] font-medium transition-colors"
       style={{
         background: "rgba(240,169,71,0.18)",
         border: "1px solid rgba(240,169,71,0.45)",

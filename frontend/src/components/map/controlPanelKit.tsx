@@ -198,7 +198,7 @@ export function ColorField({
   return (
     <label className="flex cursor-pointer items-center gap-1.5">
       <span
-        className="relative inline-block h-4 w-4 shrink-0 overflow-hidden rounded"
+        className="relative inline-block h-4 w-4 shrink-0 overflow-hidden rounded-sm"
         style={{ background: rgbToHex(value), border: "1px solid rgba(255,255,255,0.25)" }}
       >
         <input
@@ -231,7 +231,7 @@ function AutoPill({
     <button
       type="button"
       onClick={onClick}
-      className="cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors"
+      className="cursor-pointer rounded-sm px-1.5 py-0.5 text-[10px] font-medium transition-colors"
       style={{
         background: active ? `rgba(${ACCENT},0.16)` : "rgba(255,255,255,0.04)",
         color: active ? `rgb(${ACCENT})` : "rgba(241,245,249,0.7)",

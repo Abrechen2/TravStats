@@ -55,7 +55,7 @@ export default function FlightSelectStep({
           key={idx}
           type="button"
           onClick={() => handleSelectFlight(flight)}
-          className="w-full text-left p-4 rounded-lg border-2 border-[var(--color-border)] hover:border-blue-500 bg-[var(--bg-surface)] transition-colors"
+          className="w-full text-left p-4 rounded-lg border-2 border-border hover:border-blue-500 bg-(--bg-surface) transition-colors"
         >
           <div className="flex justify-between items-start">
             <div className="flex items-start gap-2">
@@ -97,7 +97,7 @@ export default function FlightSelectStep({
                     ? "bg-green-100 text-green-800"
                     : flight.status === "scheduled"
                       ? "bg-blue-100 text-blue-800"
-                      : "bg-[var(--bg-elevated)] text-[var(--text-primary)]"
+                      : "bg-(--bg-elevated) text-(--text-primary)"
                 }`}
               >
                 {t("flights:status." + flight.status, { defaultValue: flight.status })}
@@ -109,7 +109,7 @@ export default function FlightSelectStep({
       <button
         type="button"
         onClick={() => setStep("input")}
-        className="w-full text-center text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+        className="w-full text-center text-sm text-(--text-muted) hover:text-(--text-primary)"
       >
         {t("flights:lookup.backToSearch")}
       </button>

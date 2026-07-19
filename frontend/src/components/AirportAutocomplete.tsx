@@ -184,7 +184,7 @@ export default function AirportAutocomplete({
                 key={airport.id}
                 type="button"
                 onClick={() => handleSelect(airport)}
-                className="w-full px-4 py-2 text-left focus:outline-none border-b last:border-0"
+                className="w-full px-4 py-2 text-left focus:outline-hidden border-b last:border-0"
                 style={{ borderColor: "var(--color-border)" }}
                 title={
                   airport.isClosed ? t("flights:airportAutocomplete.closedTooltip") : undefined
@@ -211,7 +211,7 @@ export default function AirportAutocomplete({
                       <span className="ml-2">{airport.name}</span>
                       {airport.isClosed && (
                         <span
-                          className="ml-2 px-1.5 py-0.5 text-xs rounded"
+                          className="ml-2 px-1.5 py-0.5 text-xs rounded-sm"
                           style={{
                             background: "rgba(220, 38, 38, 0.15)",
                             color: "var(--text-muted)",

@@ -40,15 +40,15 @@ export default function SimplifiedFlightFormV2({
   const form = useFlightForm(onSubmit, onCancel, onBatchComplete);
 
   // Theme classes (dark-only — see TravStatsWeb/brand/BRAND.md §1.1)
-  const bgClass = "bg-[var(--bg-surface)]";
+  const bgClass = "bg-(--bg-surface)";
   const textClass = "text-white";
-  const mutedTextClass = "text-[var(--text-muted)]";
-  const borderClass = "border-[var(--color-border)]";
+  const mutedTextClass = "text-(--text-muted)";
+  const borderClass = "border-border";
   const sizedInputClass =
-    "bg-[var(--bg-surface)] border-[var(--color-border)] text-white placeholder-[var(--text-muted)] text-base py-3";
+    "bg-(--bg-surface) border-border text-white placeholder-(--text-muted) text-base py-3";
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-100 p-4">
       <div className={`${bgClass} rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto`}>
         {/* Header */}
         <div className={`sticky top-0 ${bgClass} border-b ${borderClass} px-6 py-4`}>
@@ -61,13 +61,13 @@ export default function SimplifiedFlightFormV2({
         </div>
 
         {form.error && (
-          <div className="mx-6 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <div className="mx-6 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-sm">
             {form.error}
           </div>
         )}
 
         {form.step === "complete" && (!form.departure || !form.arrival) && (
-          <div className="mx-6 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <div className="mx-6 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-sm">
             {t("errors:missingAirports")}
           </div>
         )}
@@ -236,17 +236,17 @@ export default function SimplifiedFlightFormV2({
       {/* Duplicate Flight Dialog */}
       {form.duplicateFlight && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-[var(--bg-elevated)] border border-[var(--color-border)] rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">
+          <div className="bg-(--bg-elevated) border border-border rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <h3 className="text-lg font-bold text-(--text-primary) mb-2">
               {t("flights:form.duplicate.title")}
             </h3>
-            <p className="text-[var(--text-secondary)] mb-4">
+            <p className="text-(--text-secondary) mb-4">
               {t("flights:form.duplicate.message", {
                 flightNumber: form.duplicateFlight.flightNumber,
                 route: `${form.duplicateFlight.depIata ?? "?"} → ${form.duplicateFlight.arrIata ?? "?"}`,
               })}
             </p>
-            <p className="text-xs text-[var(--text-muted)] mb-4">
+            <p className="text-xs text-(--text-muted) mb-4">
               {t("flights:form.duplicate.mergeHint")}
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
