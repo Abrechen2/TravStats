@@ -182,6 +182,18 @@ export function useSettingsPage() {
     }
     if (!hasPendingChanges()) return;
     const saveSettings = async () => {
+      // Re-check at FIRE time, not just schedule time. Hydration
+      // (`loadRemoteSettings`) mutates the settings slices and updates the
+      // `remoteSnapshot` baseline in separate `set()` calls; a save scheduled
+      // in the transient window between them must not actually run once the
+      // baseline has caught up. React 18 happened to clear this timeout via a
+      // follow-up re-render; React 19's effect timing does not, which re-exposed
+      // the issue-#186 hydration echo. A genuine edit still differs from the
+      // (now-settled) snapshot, so it still saves.
+      if (!hasPendingChanges()) {
+        setAutoSaveState("idle");
+        return;
+      }
       setAutoSaveState("saving");
       try {
         await saveRemoteSettings();
