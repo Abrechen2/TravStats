@@ -68,7 +68,7 @@
     "nodemailer": "^9.0.1",
     "openai": "^6.46.0",
     "pdf-parse": "^2.4.5",
-    "pino": "^9.6.0",
+    "pino": "^10.3.1",
     "rotating-file-stream": "^3.2.9",
     "swagger-ui-express": "^5.0.1",
     "tesseract.js": "^6.0.1",
