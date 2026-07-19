@@ -51,7 +51,12 @@ router.post(
       if (!req.file) {
         throw new AppError('No file uploaded', 400);
       }
-      filePath = req.file.path;
+      // Rebuild the cleanup path from the trusted upload dir + the basename of
+      // multer's server-generated filename, never the raw req.file.path. The
+      // filename is already server-side (userId_timestamp-random+ext), so this
+      // is defense-in-depth, and it clears the CodeQL js/path-injection taint
+      // on the fs.unlinkSync cleanup below.
+      filePath = path.join(getProfilePictureDir(), path.basename(req.file.filename));
 
       // Magic-number validation — never trust the client-supplied mimetype.
       const validation = validateProfilePictureFile(filePath, req.file.mimetype);

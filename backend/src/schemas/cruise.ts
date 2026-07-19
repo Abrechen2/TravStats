@@ -91,10 +91,13 @@ const baseCruiseSchema = z.object({
   bookingReference: z.string().max(40).optional(),
   price: z.number().min(0).optional(),
   currency: z.enum(CURRENCIES).optional(),
-  notes: z
-    .string()
-    .transform((v) => v.replace(/<[^>]*>/g, ''))
-    .optional(),
+  // Plain-text notes. The frontend renders these as React text (auto-escaped),
+  // so no HTML sanitization happens or is needed here. The previous
+  // `.replace(/<[^>]*>/g, '')` transform was INCOMPLETE sanitization (trivially
+  // bypassable, e.g. nested/unclosed tags) that gave false security confidence
+  // without an HTML sink — removed rather than "improved". Bounded to guard
+  // against unbounded storage, consistent with the other string fields.
+  notes: z.string().max(5000).optional(),
   tags: z.array(z.string().max(40)).max(30).optional(),
   companions: z.array(z.string().max(100)).max(50).optional(),
   tripId: z.string().uuid().nullable().optional(),
