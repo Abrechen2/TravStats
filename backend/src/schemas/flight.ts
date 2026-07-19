@@ -138,6 +138,11 @@ const baseFlightSchema = z.object({
   actualDepartureTz: ianaTimezone.optional().nullable(),
   actualArrivalLocal: localDateTime.optional().nullable(),
   actualArrivalTz: ianaTimezone.optional().nullable(),
+  // 'scheduled'/'flown' are HINTS only — the server derives the actual
+  // temporal status from departureLocal/arrivalLocal (deriveFlightStatus,
+  // shared/statusDerivation.ts; spec 2026-07-17-status-from-dates).
+  // 'cancelled'/'historical'/'duplicated' are passthrough: always stored
+  // verbatim, never overridden by derivation.
   status: z.enum(['scheduled', 'flown', 'cancelled', 'historical', 'duplicated']).default('scheduled'),
   notes: z
     .string()

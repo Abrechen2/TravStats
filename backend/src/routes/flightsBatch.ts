@@ -11,6 +11,8 @@ import { calculateCo2Kg, haversineKm, toSeatClass } from "../services/co2Calcula
 import { resolveAirlineCodes } from "../utils/airlineNormalize";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
+import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from "../shared/statusDerivation";
+import { recomputeTripStatus } from "../services/tripStatusService";
 
 function toUtcDate(local: string | null | undefined, tz: string | null | undefined): Date | null {
   if (!local || !tz) return null;
@@ -73,6 +75,11 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
     );
 
     // Step 2: All DB writes inside a single transaction — if any step fails, all are rolled back
+    // Trip ids auto-created below for shared-PNR groups — status derivation
+    // (spec 2026-07-17-status-from-dates) needs to read the flights it just
+    // linked, so recomputeTripStatus() runs AFTER the transaction commits
+    // (reading inside an open tx would see the pre-link, tripId=null rows).
+    const createdTripIds: string[] = [];
     const createdFlights = await prisma.$transaction(async (tx) => {
       // Create all flights
       const flights = [];
@@ -81,6 +88,16 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
         const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
         const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
         const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
+        // The status field is a client-sent HINT, not the source of truth
+        // (spec 2026-07-17-status-from-dates) — same rule as the single-create
+        // route in flights.ts.
+        const effectiveStatus = (FLIGHT_PASSTHROUGH as readonly string[]).includes(data.status ?? "")
+          ? data.status!
+          : deriveFlightStatus({
+              departureTime: departureUtc,
+              arrivalTime: arrivalUtc,
+              current: data.status ?? "scheduled",
+            });
         // Auto-resolve IATA/ICAO from a free-text airline name (issue #106B).
         // Importers (Generic-CSV, FR24, AI-agent) often only supply a name —
         // without codes downstream features like airline filters and codeshare
@@ -140,7 +157,7 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
               enriched.arrival.lat,
               enriched.arrival.lon,
             ),
-            status: data.status,
+            status: effectiveStatus,
             notes: data.notes,
             price: data.price,
             taxes: data.taxes,
@@ -168,7 +185,7 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
             nextApiCheckAt: calculateNextApiCheckAt(
               departureUtc,
               arrivalUtc,
-              data.status ?? "scheduled",
+              effectiveStatus,
               data.flightNumber,
             ),
           },
@@ -205,6 +222,7 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
         const name = `${origin} – ${dest} · ${month}`;
 
         const trip = await tx.trip.create({ data: { userId, name, color } });
+        createdTripIds.push(trip.id);
 
         // Identical non-null total on every segment = the repeated booking
         // total from the email. Move it to the booking; segments become
@@ -251,6 +269,12 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
       const byId = new Map(fresh.map((f) => [f.id, f]));
       return flights.map((f) => byId.get(f.id) ?? f);
     });
+
+    // Now that the transaction has committed, derive each auto-created
+    // trip's status from its just-linked flights (spec 2026-07-17).
+    for (const tripId of createdTripIds) {
+      await recomputeTripStatus(tripId);
+    }
 
     // Check achievements after batch creation (outside transaction — non-critical)
     let newAchievements: Awaited<ReturnType<typeof checkAndUpdateAchievements>> = [];
