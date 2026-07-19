@@ -190,7 +190,7 @@ export default function PendingUpdatesPage(): JSX.Element {
         {/* Statistics Dashboard */}
         {statistics && (
           <div
-            className="rounded-lg shadow-sm p-6 mb-6"
+            className="rounded-lg shadow-xs p-6 mb-6"
             style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
           >
             <h2 className="text-xl font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
@@ -243,7 +243,7 @@ export default function PendingUpdatesPage(): JSX.Element {
 
         {/* Filters and Sort */}
         <div
-          className="rounded-lg shadow-sm p-4 mb-6"
+          className="rounded-lg shadow-xs p-4 mb-6"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <div className="flex flex-wrap items-center gap-4">
@@ -295,7 +295,7 @@ export default function PendingUpdatesPage(): JSX.Element {
           </div>
         ) : sortedUpdates.length === 0 ? (
           <div
-            className="rounded-lg shadow-sm p-12 text-center"
+            className="rounded-lg shadow-xs p-12 text-center"
             style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
           >
             <svg

@@ -70,9 +70,9 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
       {stops.map((stop, i) => (
         <div
           key={i}
-          className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-3"
+          className="rounded-md border border-border bg-(--bg-surface) p-3"
         >
-          <div className="mb-2 flex items-center justify-between text-xs text-[var(--text-muted)]">
+          <div className="mb-2 flex items-center justify-between text-xs text-(--text-muted)">
             <span>
               {t("stops.day")} {stop.dayNumber}
             </span>
@@ -100,7 +100,7 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
               <button
                 type="button"
                 onClick={(): void => remove(i)}
-                className="px-1 text-[var(--danger)] hover:text-[var(--danger)]"
+                className="px-1 text-(--danger) hover:text-(--danger)"
                 aria-label={t("stops.remove")}
                 title={t("stops.remove")}
               >
@@ -113,10 +113,10 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
             value={stop.date?.slice(0, 10) ?? ""}
             onChange={(e): void => update(i, { date: fromDateInput(e.target.value) })}
             style={{ colorScheme: "dark" }}
-            className="mb-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-xs text-[var(--text-primary)]"
+            className="mb-2 w-full rounded-md border border-border bg-(--bg-elevated) px-2 py-1 text-xs text-(--text-primary)"
             aria-label={t("stops.date")}
           />
-          <label className="mb-2 flex items-center gap-2 text-xs text-[var(--text-muted)]">
+          <label className="mb-2 flex items-center gap-2 text-xs text-(--text-muted)">
             <input
               type="checkbox"
               checked={stop.isAtSea}
@@ -154,7 +154,7 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
                       arrivalTime: fromStopInput(e.target.value),
                     })
                   }
-                  className="rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-xs text-[var(--text-primary)]"
+                  className="rounded-md border border-border bg-(--bg-elevated) px-2 py-1 text-xs text-(--text-primary)"
                   aria-label={t("field.arrive")}
                 />
                 <input
@@ -165,7 +165,7 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
                       departureTime: fromStopInput(e.target.value),
                     })
                   }
-                  className="rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-xs text-[var(--text-primary)]"
+                  className="rounded-md border border-border bg-(--bg-elevated) px-2 py-1 text-xs text-(--text-primary)"
                   aria-label={t("field.depart")}
                 />
               </div>
@@ -173,7 +173,7 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
                 value={stop.excursionNote ?? ""}
                 onChange={(e): void => update(i, { excursionNote: e.target.value })}
                 rows={2}
-                className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-xs text-[var(--text-primary)]"
+                className="mt-2 w-full rounded-md border border-border bg-(--bg-elevated) px-2 py-1 text-xs text-(--text-primary)"
                 placeholder={t("stops.excursion")}
               />
             </>
@@ -183,7 +183,7 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
       <button
         type="button"
         onClick={add}
-        className="w-full rounded-md border border-dashed border-[var(--color-border)] py-2 text-xs text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+        className="w-full rounded-md border border-dashed border-border py-2 text-xs text-(--text-muted) hover:border-(--accent) hover:text-(--accent)"
       >
         + {t("stops.add")}
       </button>

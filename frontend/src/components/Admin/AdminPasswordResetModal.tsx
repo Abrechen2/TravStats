@@ -111,8 +111,8 @@ export default function AdminPasswordResetModal({
               }}
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === tab
-                  ? "bg-[var(--accent)] text-[var(--bg-base)]"
-                  : "bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  ? "bg-(--accent) text-(--bg-base)"
+                  : "bg-(--bg-elevated) text-(--text-muted) hover:text-(--text-primary)"
               }`}
             >
               {t(`admin:users.resetPasswordModal.tabs.${tab}`)}
@@ -133,7 +133,7 @@ export default function AdminPasswordResetModal({
                 type="checkbox"
                 checked={generateMustChange}
                 onChange={(e) => setGenerateMustChange(e.target.checked)}
-                className="rounded"
+                className="rounded-sm"
               />
               <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
                 {t("admin:users.resetPasswordModal.generate.mustChange")}
@@ -152,7 +152,7 @@ export default function AdminPasswordResetModal({
                   <button
                     type="button"
                     onClick={handleCopy}
-                    className="text-xs px-3 py-1 rounded btn-secondary shrink-0"
+                    className="text-xs px-3 py-1 rounded-sm btn-secondary shrink-0"
                   >
                     {copied
                       ? t("admin:users.resetPasswordModal.generate.copied")
@@ -219,7 +219,7 @@ export default function AdminPasswordResetModal({
                     type="checkbox"
                     checked={setMustChange}
                     onChange={(e) => setSetMustChange(e.target.checked)}
-                    className="rounded"
+                    className="rounded-sm"
                   />
                   <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
                     {t("admin:users.resetPasswordModal.set.mustChange")}

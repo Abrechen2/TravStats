@@ -136,7 +136,7 @@ export function TripTooltip({
           <button
             type="button"
             onClick={onShowDetails}
-            className="text-xs px-3 py-1.5 rounded font-medium transition-colors"
+            className="text-xs px-3 py-1.5 rounded-sm font-medium transition-colors"
             style={{ background: "var(--accent)", color: "white" }}
           >
             {t("dashboard:routeDetails")} →
@@ -147,7 +147,7 @@ export function TripTooltip({
         <button
           type="button"
           onClick={onClose}
-          className="text-xs px-2 py-1 rounded transition-colors"
+          className="text-xs px-2 py-1 rounded-sm transition-colors"
           style={{ background: "var(--bg-elevated)", color: "var(--text-primary)" }}
         >
           ✕

@@ -102,7 +102,7 @@ export default function AirlineLogoRefreshButton(): JSX.Element {
       >
         {state === "running" ? t("airlineLogos.running") : t("airlineLogos.action")}
       </button>
-      <p className="text-sm text-[var(--text-muted)] mt-2">{t("airlineLogos.description")}</p>
+      <p className="text-sm text-(--text-muted) mt-2">{t("airlineLogos.description")}</p>
       {state === "done" && (
         <p className="text-sm mt-1" style={{ color: "var(--success)" }}>
           {t("airlineLogos.result", { refreshed, checked })}

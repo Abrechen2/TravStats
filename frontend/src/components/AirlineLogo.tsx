@@ -96,7 +96,7 @@ export default function AirlineLogo({
       <span
         className={
           className ??
-          "inline-flex items-center justify-center rounded font-semibold text-[var(--text-muted)] bg-[var(--bg-elevated)]"
+          "inline-flex items-center justify-center rounded-sm font-semibold text-(--text-muted) bg-(--bg-elevated)"
         }
         style={{ width: size, height: size, fontSize: Math.max(10, size * 0.4) }}
         aria-label={accessibleAlt}
@@ -116,7 +116,7 @@ export default function AirlineLogo({
       loading="lazy"
       decoding="async"
       onError={() => setErrored(true)}
-      className={className ?? "rounded object-contain bg-white/90"}
+      className={className ?? "rounded-sm object-contain bg-white/90"}
       style={{ width: width ?? size, height: size }}
     />
   );

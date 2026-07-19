@@ -75,7 +75,7 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
   };
 
   const getIntensityClass = (count: number): string => {
-    if (count === 0) return "bg-[var(--bg-elevated)] border-[var(--color-border)]";
+    if (count === 0) return "bg-(--bg-elevated) border-border";
     if (count === 1) return "bg-green-200 border-green-300";
     if (count === 2) return "bg-green-400 border-green-500";
     if (count === 3) return "bg-green-600 border-green-700";
@@ -108,15 +108,15 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
   ];
 
   return (
-    <div className="bg-[var(--bg-surface)] rounded-lg shadow-lg p-6 border border-[var(--color-border)]">
+    <div className="bg-(--bg-surface) rounded-lg shadow-lg p-6 border border-border">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-[var(--text-primary)]">{t("stats:heatmap.title")}</h3>
+        <h3 className="text-xl font-bold text-(--text-primary)">{t("stats:heatmap.title")}</h3>
         {availableYears.length > 1 && (
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="px-3 py-1 bg-[var(--bg-muted)] text-[var(--text-primary)] rounded border border-[var(--color-border)]"
+            className="px-3 py-1 bg-(--bg-muted) text-(--text-primary) rounded-sm border border-border"
           >
             {availableYears.map((year) => (
               <option key={year} value={year}>
@@ -146,7 +146,7 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
                 return (
                   <div
                     key={month}
-                    className="text-xs text-[var(--text-muted)]"
+                    className="text-xs text-(--text-muted)"
                     style={{
                       width: "12px",
                       marginLeft:
@@ -168,7 +168,7 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
               {weekDayLabels.map((day, i) => (
                 <div
                   key={day}
-                  className="text-xs text-[var(--text-muted)] h-3 flex items-center"
+                  className="text-xs text-(--text-muted) h-3 flex items-center"
                   style={{ opacity: i % 2 === 0 ? 1 : 0 }}
                 >
                   {day}
@@ -186,7 +186,7 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
                       <div
                         key={dayIndex}
                         className={`
-                          w-3 h-3 rounded-sm border cursor-pointer transition-all hover:scale-125
+                          w-3 h-3 rounded-xs border cursor-pointer transition-all hover:scale-125
                           ${!isCurrentYear ? "opacity-20" : ""}
                           ${getIntensityClass(day.flightCount)}
                         `}
@@ -208,8 +208,8 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
 
       {/* Hover tooltip */}
       {hoveredCell && hoveredCell.flightCount > 0 && (
-        <div className="mt-4 p-3 bg-[var(--bg-base)] rounded-lg border border-[var(--color-border)]">
-          <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">
+        <div className="mt-4 p-3 bg-(--bg-base) rounded-lg border border-border">
+          <p className="text-sm font-semibold text-(--text-primary) mb-2">
             {hoveredCell.date.toLocaleDateString("de-DE", {
               weekday: "long",
               year: "numeric",
@@ -219,7 +219,7 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
           </p>
           <div className="space-y-1">
             {hoveredCell.flights.map((flight) => (
-              <div key={flight.id} className="text-xs text-[var(--text-primary)]">
+              <div key={flight.id} className="text-xs text-(--text-primary)">
                 {resolveAirlineDisplay(flight) || flight.airline} {flight.flightNumber}:{" "}
                 {flight.depIata || flight.depIcao} {t("common:labels.routeSeparator")}{" "}
                 {flight.arrIata || flight.arrIcao}
@@ -230,37 +230,37 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
       )}
 
       {/* Legend */}
-      <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
+      <div className="mt-6 pt-4 border-t border-border">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-[var(--text-muted)]">{t("stats:heatmap.legend.less")}</p>
+          <p className="text-sm text-(--text-muted)">{t("stats:heatmap.legend.less")}</p>
           <div className="flex gap-1">
             {[0, 1, 2, 3, 4].map((level) => (
               <div
                 key={level}
-                className={`w-4 h-4 rounded-sm border ${getIntensityClass(level)}`}
+                className={`w-4 h-4 rounded-xs border ${getIntensityClass(level)}`}
               />
             ))}
           </div>
-          <p className="text-sm text-[var(--text-muted)]">{t("stats:heatmap.legend.more")}</p>
+          <p className="text-sm text-(--text-muted)">{t("stats:heatmap.legend.more")}</p>
         </div>
       </div>
 
       {/* Statistics */}
       <div className="mt-4 grid grid-cols-3 gap-4">
         <div className="text-center">
-          <p className="text-2xl font-bold text-[var(--text-primary)]">
+          <p className="text-2xl font-bold text-(--text-primary)">
             {
               flights.filter(
                 (f) => f.departureTime && new Date(f.departureTime).getFullYear() === selectedYear
               ).length
             }
           </p>
-          <p className="text-xs text-[var(--text-muted)]">
+          <p className="text-xs text-(--text-muted)">
             {t("stats:heatmap.flightsInYear", { year: selectedYear })}
           </p>
         </div>
         <div className="text-center">
-          <p className="text-2xl font-bold text-[var(--text-primary)]">
+          <p className="text-2xl font-bold text-(--text-primary)">
             {
               new Set(
                 flights
@@ -272,13 +272,13 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
               ).size
             }
           </p>
-          <p className="text-xs text-[var(--text-muted)]">{t("stats:heatmap.daysWithFlights")}</p>
+          <p className="text-xs text-(--text-muted)">{t("stats:heatmap.daysWithFlights")}</p>
         </div>
         <div className="text-center">
-          <p className="text-2xl font-bold text-[var(--text-primary)]">
+          <p className="text-2xl font-bold text-(--text-primary)">
             {Math.max(...yearData.flat().map((d) => d.flightCount), 0)}
           </p>
-          <p className="text-xs text-[var(--text-muted)]">{t("stats:heatmap.maxFlightsPerDay")}</p>
+          <p className="text-xs text-(--text-muted)">{t("stats:heatmap.maxFlightsPerDay")}</p>
         </div>
       </div>
     </div>

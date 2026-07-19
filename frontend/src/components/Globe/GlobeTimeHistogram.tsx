@@ -301,7 +301,7 @@ export const GlobeTimeHistogram = ({
                 <button
                   type="button"
                   onClick={() => reset()}
-                  className="ml-1 rounded px-1.5 text-[11px] leading-none"
+                  className="ml-1 rounded-sm px-1.5 text-[11px] leading-none"
                   style={{ color: "rgba(241,245,249,0.6)", background: "rgba(255,255,255,0.06)" }}
                   title={t("map:globe.timeSlider.reset")}
                 >
@@ -318,7 +318,7 @@ export const GlobeTimeHistogram = ({
           onPointerDown={onTrackDown}
           onPointerMove={onTrackMove}
           onPointerUp={onTrackUp}
-          className="relative flex cursor-crosshair touch-none items-end gap-[2px] px-[1px]"
+          className="relative flex cursor-crosshair touch-none items-end gap-[2px] px-px"
           style={{
             height: expanded ? BAR_H_EXPANDED : BAR_H_COLLAPSED,
             transition: "height 160ms ease",

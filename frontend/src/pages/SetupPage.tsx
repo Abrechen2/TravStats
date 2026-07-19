@@ -92,7 +92,7 @@ export default function SetupPage(): JSX.Element {
       style={{ background: "var(--bg-base)" }}
     >
       <div className="max-w-md w-full">
-        <div className="bg-[var(--bg-elevated)] rounded-lg shadow-xl p-8">
+        <div className="bg-(--bg-elevated) rounded-lg shadow-xl p-8">
           <div className="text-center mb-8">
             <div className="text-5xl mb-4">✈️</div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">

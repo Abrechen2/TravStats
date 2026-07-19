@@ -113,7 +113,7 @@ export default function ImmichConnectionCard(): JSX.Element {
       </label>
       <input
         id="immich-base-url"
-        className="mb-3 w-full rounded border border-slate-600 bg-slate-900 p-2"
+        className="mb-3 w-full rounded-sm border border-slate-600 bg-slate-900 p-2"
         placeholder={t("baseUrlPlaceholder")}
         value={baseUrl}
         onChange={(e) => setBaseUrl(e.target.value)}
@@ -126,7 +126,7 @@ export default function ImmichConnectionCard(): JSX.Element {
         id="immich-api-key"
         type="password"
         autoComplete="off"
-        className="w-full rounded border border-slate-600 bg-slate-900 p-2"
+        className="w-full rounded-sm border border-slate-600 bg-slate-900 p-2"
         placeholder={t("apiKeyPlaceholder")}
         value={apiKey}
         onChange={(e) => setApiKey(e.target.value)}

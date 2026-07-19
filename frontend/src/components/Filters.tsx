@@ -266,7 +266,7 @@ export default function Filters({
               </h3>
               <button
                 onClick={() => setShowFilters(false)}
-                className="p-1 rounded transition-colors"
+                className="p-1 rounded-sm transition-colors"
                 style={{ color: "var(--text-muted)" }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -296,7 +296,7 @@ export default function Filters({
               <select
                 value={yearFilter ?? ""}
                 onChange={(e) => setYearFilter(e.target.value ? Number(e.target.value) : null)}
-                className="w-full p-2 text-sm rounded"
+                className="w-full p-2 text-sm rounded-sm"
                 style={{
                   background: "var(--bg-elevated)",
                   border: "1px solid var(--color-border)",
@@ -314,7 +314,7 @@ export default function Filters({
               <select
                 value={monthFilter ?? ""}
                 onChange={(e) => setMonthFilter(e.target.value ? Number(e.target.value) : null)}
-                className="w-full p-2 text-sm rounded mt-2"
+                className="w-full p-2 text-sm rounded-sm mt-2"
                 style={{
                   background: "var(--bg-elevated)",
                   border: "1px solid var(--color-border)",
@@ -384,7 +384,7 @@ export default function Filters({
                   </button>
                 </div>
                 <div
-                  className="max-h-32 overflow-y-auto rounded p-2"
+                  className="max-h-32 overflow-y-auto rounded-sm p-2"
                   style={{
                     border: "1px solid var(--color-border)",
                     background: "var(--bg-elevated)",
@@ -393,7 +393,7 @@ export default function Filters({
                   {availableAirlines.slice(0, API_LIMITS.MAX_FILTER_AIRLINES).map((airline) => (
                     <label
                       key={airline.name}
-                      className="flex items-center gap-2 text-sm mb-1 cursor-pointer p-1 rounded"
+                      className="flex items-center gap-2 text-sm mb-1 cursor-pointer p-1 rounded-sm"
                       style={{ color: "var(--text-primary)" }}
                     >
                       <input
@@ -469,7 +469,7 @@ export default function Filters({
             {/* Reset Button */}
             <button
               onClick={handleReset}
-              className="w-full p-2 rounded text-sm font-medium transition-colors"
+              className="w-full p-2 rounded-sm text-sm font-medium transition-colors"
               style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}
             >
               {t("map:filters.reset")}

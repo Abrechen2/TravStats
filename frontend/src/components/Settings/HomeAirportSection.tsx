@@ -101,16 +101,16 @@ export default function HomeAirportSection(): JSX.Element {
       />
 
       {loading ? (
-        <p className="text-sm text-[var(--text-muted)]">{t("common:loading.default")}</p>
+        <p className="text-sm text-(--text-muted)">{t("common:loading.default")}</p>
       ) : (
         <>
           {/* Current home airport */}
           <div>
             <label className="label">{t("settings:homeAirport.currentLabel")}</label>
             {current ? (
-              <div className="flex items-center gap-3 p-3 rounded border border-[var(--color-border)]">
+              <div className="flex items-center gap-3 p-3 rounded-sm border border-border">
                 <span className="font-semibold text-lg">{current.iata}</span>
-                <span className="text-sm text-[var(--text-muted)]">
+                <span className="text-sm text-(--text-muted)">
                   {t("settings:homeAirport.since", { date: current.fromDate })}
                 </span>
                 <div className="ml-auto">
@@ -127,7 +127,7 @@ export default function HomeAirportSection(): JSX.Element {
                 </div>
               </div>
             ) : (
-              <div className="p-3 rounded border border-dashed border-[var(--color-border)] text-sm text-[var(--text-muted)] flex items-center justify-between gap-3">
+              <div className="p-3 rounded-sm border border-dashed border-border text-sm text-(--text-muted) flex items-center justify-between gap-3">
                 <span>{t("settings:homeAirport.notSet")}</span>
                 <button
                   type="button"
@@ -153,10 +153,10 @@ export default function HomeAirportSection(): JSX.Element {
                   return (
                     <li
                       key={`${entry.iata}-${entry.fromDate}`}
-                      className="flex items-center gap-3 p-2 text-sm rounded border border-[var(--color-border)]"
+                      className="flex items-center gap-3 p-2 text-sm rounded-sm border border-border"
                     >
                       <span className="font-semibold">{entry.iata}</span>
-                      <span className="text-[var(--text-muted)]">
+                      <span className="text-(--text-muted)">
                         {entry.fromDate} → {entry.toDate ?? t("settings:homeAirport.stillActive")}
                       </span>
                       <button
@@ -176,7 +176,7 @@ export default function HomeAirportSection(): JSX.Element {
 
           {/* Picker */}
           {pickerOpen && (
-            <div className="p-4 rounded border border-[var(--color-border)] space-y-3">
+            <div className="p-4 rounded-sm border border-border space-y-3">
               <h4 className="font-semibold">
                 {current
                   ? t("settings:homeAirport.newHomeHeading")
@@ -200,7 +200,7 @@ export default function HomeAirportSection(): JSX.Element {
                   onChange={(e) => setPickerFromDate(e.target.value)}
                   max={todayIso()}
                 />
-                <p className="text-xs text-[var(--text-muted)] mt-1">
+                <p className="text-xs text-(--text-muted) mt-1">
                   {t("settings:homeAirport.fromDateHint")}
                 </p>
               </div>

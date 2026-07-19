@@ -93,7 +93,7 @@ export default function CrossDomainActivityChart({
                 {total}
               </div>
               <div
-                className="w-full max-w-16 mx-auto flex flex-col-reverse rounded overflow-hidden flex-1 self-stretch"
+                className="w-full max-w-16 mx-auto flex flex-col-reverse rounded-sm overflow-hidden flex-1 self-stretch"
                 style={{
                   background: "var(--bg-elevated)",
                   opacity: dimmed ? 0.35 : 1,

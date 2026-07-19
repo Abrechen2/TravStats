@@ -70,14 +70,14 @@ export function RouteDetailsSidebar({ flights, onBack }: RouteDetailsSidebarProp
       <button
         type="button"
         onClick={onBack}
-        className="flex items-center gap-1 px-3 py-2 text-xs font-medium transition-colors flex-shrink-0"
+        className="flex items-center gap-1 px-3 py-2 text-xs font-medium transition-colors shrink-0"
         style={{ color: "var(--accent)", borderBottom: "1px solid var(--color-border)" }}
       >
         ← {t("common:buttons.back")}
       </button>
 
       <div
-        className="px-3 py-3 flex-shrink-0"
+        className="px-3 py-3 shrink-0"
         style={{ borderBottom: "1px solid var(--color-border)" }}
       >
         <div className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
@@ -110,7 +110,7 @@ export function RouteDetailsSidebar({ flights, onBack }: RouteDetailsSidebarProp
       </div>
 
       <div
-        className="px-3 py-2 text-xs font-medium uppercase tracking-wider flex-shrink-0"
+        className="px-3 py-2 text-xs font-medium uppercase tracking-wider shrink-0"
         style={{ color: "var(--text-muted)", borderBottom: "1px solid var(--color-border)" }}
       >
         {t("dashboard:flightsOnRoute")}
@@ -123,7 +123,7 @@ export function RouteDetailsSidebar({ flights, onBack }: RouteDetailsSidebarProp
             className="px-3 py-2 text-xs flex items-center gap-2"
             style={{ borderBottom: "1px solid var(--color-border)" }}
           >
-            <span className="w-20 flex-shrink-0" style={{ color: "var(--text-muted)" }}>
+            <span className="w-20 shrink-0" style={{ color: "var(--text-muted)" }}>
               {f.departureTime
                 ? new Date(f.departureTime).toLocaleDateString(locale, {
                     day: "2-digit",
@@ -133,12 +133,12 @@ export function RouteDetailsSidebar({ flights, onBack }: RouteDetailsSidebarProp
                 : "—"}
             </span>
             <span
-              className="w-16 flex-shrink-0 font-mono font-medium"
+              className="w-16 shrink-0 font-mono font-medium"
               style={{ color: "var(--text-primary)" }}
             >
               {f.flightNumber ?? "—"}
             </span>
-            <span className="flex-shrink-0 font-mono" style={{ color: "var(--text-secondary)" }}>
+            <span className="shrink-0 font-mono" style={{ color: "var(--text-secondary)" }}>
               {f.depIata}→{f.arrIata}
             </span>
             <span className="ml-auto" style={{ color: "var(--text-muted)" }}>

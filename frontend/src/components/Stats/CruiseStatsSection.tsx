@@ -79,7 +79,7 @@ export default function CruiseStatsSection(): JSX.Element {
         <p className="mb-2 text-3xl" aria-hidden>
           🚢
         </p>
-        <p className="font-medium text-[var(--text-primary)]">
+        <p className="font-medium text-(--text-primary)">
           {t("stats:cruiseSection.emptyTitle")}
         </p>
         <p className="mt-1 text-sm">{t("stats:cruiseSection.emptyHint")}</p>
@@ -196,7 +196,7 @@ function KpiGrid({
       {kpis.map((kpi) => (
         <div
           key={kpi.label}
-          className="rounded-lg shadow p-4"
+          className="rounded-lg shadow-sm p-4"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <h3 className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>

@@ -533,7 +533,7 @@ export default function AchievementsPage(): JSX.Element {
                                   {isMystery ? "❔" : achievement.icon}
                                 </div>
                                 <div
-                                  className="text-xs font-bold uppercase px-2 py-1 rounded"
+                                  className="text-xs font-bold uppercase px-2 py-1 rounded-sm"
                                   style={{
                                     color: achievement.isUnlocked
                                       ? tierTextColorValues[achievement.tier]

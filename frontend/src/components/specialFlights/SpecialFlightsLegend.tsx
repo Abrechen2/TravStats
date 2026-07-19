@@ -42,7 +42,7 @@ export default function SpecialFlightsLegend({ presentTypes }: Props): JSX.Eleme
           return (
             <li key={type} className="flex items-center gap-1.5">
               <span
-                className="inline-block w-2.5 h-2.5 rounded-sm"
+                className="inline-block w-2.5 h-2.5 rounded-xs"
                 style={{
                   background: rgbToCss(meta.rgb, 0.9),
                   border: `1px solid ${rgbToCss(meta.rgb, 1)}`,

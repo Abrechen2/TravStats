@@ -86,10 +86,10 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
   // Each cell is also labelled with the count in the tooltip / legend so the
   // colour isn't conveying state alone (BRAND.md "❌ Don't" #3).
   const getIntensityColor = (flightCount: number): string => {
-    if (flightCount === 0) return "bg-[var(--bg-elevated)]";
-    if (flightCount === 1) return "bg-[var(--accent-soft)]";
-    if (flightCount === 2) return "bg-[var(--accent-dim)]";
-    return "bg-[var(--accent)]";
+    if (flightCount === 0) return "bg-(--bg-elevated)";
+    if (flightCount === 1) return "bg-(--accent-soft)";
+    if (flightCount === 2) return "bg-(--accent-dim)";
+    return "bg-(--accent)";
   };
 
   const goToPreviousMonth = () => {
@@ -130,22 +130,22 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
   const calendarDays = getCalendarDays();
 
   return (
-    <div className="bg-[var(--bg-surface)] rounded-lg shadow-lg p-6 border border-[var(--color-border)]">
+    <div className="bg-(--bg-surface) rounded-lg shadow-lg p-6 border border-border">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-[var(--text-primary)]">
+        <h3 className="text-xl font-bold text-(--text-primary)">
           {monthNames[month]} {year}
         </h3>
         <div className="flex gap-2">
           <button
             onClick={goToPreviousMonth}
-            className="px-3 py-1 bg-[var(--bg-muted)] text-[var(--text-primary)] rounded hover:bg-[var(--bg-elevated)] transition"
+            className="px-3 py-1 bg-(--bg-muted) text-(--text-primary) rounded-sm hover:bg-(--bg-elevated) transition"
           >
             ←
           </button>
           <button
             onClick={goToNextMonth}
-            className="px-3 py-1 bg-[var(--bg-muted)] text-[var(--text-primary)] rounded hover:bg-[var(--bg-elevated)] transition"
+            className="px-3 py-1 bg-(--bg-muted) text-(--text-primary) rounded-sm hover:bg-(--bg-elevated) transition"
           >
             →
           </button>
@@ -158,7 +158,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
         {weekDays.map((day) => (
           <div
             key={day}
-            className="text-center text-sm font-semibold text-[var(--text-muted)] py-2"
+            className="text-center text-sm font-semibold text-(--text-muted) py-2"
           >
             {day}
           </div>
@@ -183,7 +183,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
             >
               <span
                 className={`text-sm font-medium ${
-                  dayData.flights.length > 0 ? "text-white" : "text-[var(--text-primary)]"
+                  dayData.flights.length > 0 ? "text-white" : "text-(--text-primary)"
                 }`}
               >
                 {dayData.date.getDate()}
@@ -192,7 +192,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
                 <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2">
                   <div className="flex gap-0.5">
                     {dayData.flights.slice(0, 3).map((_, i) => (
-                      <div key={i} className="w-1 h-1 rounded-full bg-[var(--bg-surface)]" />
+                      <div key={i} className="w-1 h-1 rounded-full bg-(--bg-surface)" />
                     ))}
                   </div>
                 </div>
@@ -204,9 +204,9 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
 
       {/* Selected Day Details */}
       {selectedDay && (
-        <div className="mt-6 p-4 bg-[var(--bg-base)] rounded-lg border border-[var(--color-border)]">
+        <div className="mt-6 p-4 bg-(--bg-base) rounded-lg border border-border">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-lg font-semibold text-[var(--text-primary)]">
+            <h4 className="text-lg font-semibold text-(--text-primary)">
               {selectedDay.date.toLocaleDateString("de-DE", {
                 weekday: "long",
                 year: "numeric",
@@ -216,7 +216,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
             </h4>
             <button
               onClick={() => setSelectedDay(null)}
-              className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              className="text-(--text-muted) hover:text-(--text-primary)"
             >
               ✕
             </button>
@@ -225,7 +225,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
             {selectedDay.flights.map((flight) => (
               <div
                 key={flight.id}
-                className="p-3 bg-[var(--bg-surface)] rounded border border-[var(--color-border)]"
+                className="p-3 bg-(--bg-surface) rounded-sm border border-border"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -236,20 +236,20 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
                     />
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium text-[var(--text-primary)]">
+                        <p className="font-medium text-(--text-primary)">
                           {resolveAirlineDisplay(flight) || flight.airline} {flight.flightNumber}
                         </p>
                         {flight.specialType && (
                           <SpecialTypeBadge type={flight.specialType as SpecialType} />
                         )}
                       </div>
-                      <p className="text-sm text-[var(--text-muted)]">
+                      <p className="text-sm text-(--text-muted)">
                         {flight.depIata || flight.depIcao} → {flight.arrIata || flight.arrIcao}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-[var(--text-muted)]">
+                    <p className="text-sm text-(--text-muted)">
                       {flight.departureTime && flight.depTimeSemantics !== "DATE_ONLY"
                         ? new Date(flight.departureTime).toLocaleTimeString("de-DE", {
                             hour: "2-digit",
@@ -258,7 +258,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
                         : "—"}
                     </p>
                     {flight.seatClass && (
-                      <p className="text-xs text-[var(--text-muted)]">{flight.seatClass}</p>
+                      <p className="text-xs text-(--text-muted)">{flight.seatClass}</p>
                     )}
                   </div>
                 </div>
@@ -269,24 +269,24 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
       )}
 
       {/* Legend */}
-      <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
-        <p className="text-sm text-[var(--text-muted)] mb-2">{t("stats:calendar.intensity")}:</p>
+      <div className="mt-4 pt-4 border-t border-border">
+        <p className="text-sm text-(--text-muted) mb-2">{t("stats:calendar.intensity")}:</p>
         <div className="flex gap-2 items-center">
           <div className="flex items-center gap-1">
-            <div className="w-6 h-6 rounded bg-[var(--bg-elevated)] border border-[var(--color-border)]" />
-            <span className="text-xs text-[var(--text-muted)]">0</span>
+            <div className="w-6 h-6 rounded-sm bg-(--bg-elevated) border border-border" />
+            <span className="text-xs text-(--text-muted)">0</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-6 h-6 rounded bg-[var(--accent-soft)]" />
-            <span className="text-xs text-[var(--text-muted)]">1</span>
+            <div className="w-6 h-6 rounded-sm bg-(--accent-soft)" />
+            <span className="text-xs text-(--text-muted)">1</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-6 h-6 rounded bg-[var(--accent-dim)]" />
-            <span className="text-xs text-[var(--text-muted)]">2</span>
+            <div className="w-6 h-6 rounded-sm bg-(--accent-dim)" />
+            <span className="text-xs text-(--text-muted)">2</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-6 h-6 rounded bg-[var(--accent)]" />
-            <span className="text-xs text-[var(--text-muted)]">3+</span>
+            <div className="w-6 h-6 rounded-sm bg-(--accent)" />
+            <span className="text-xs text-(--text-muted)">3+</span>
           </div>
         </div>
       </div>
