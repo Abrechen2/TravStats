@@ -73,7 +73,7 @@ describe("TripGallery — uploaded-photos section visibility (#179)", () => {
 
     expect(screen.getByText("immich:gallery.uploaded")).toBeInTheDocument();
     expect(screen.queryByText("trips:gallery.empty")).not.toBeInTheDocument();
-    expect(screen.getByRole("img")).toBeInTheDocument();
+    expect(screen.getByRole("presentation")).toBeInTheDocument();
   });
 
   it("shows both the photo grid and the Immich album sections when both exist", () => {
@@ -82,7 +82,7 @@ describe("TripGallery — uploaded-photos section visibility (#179)", () => {
     );
 
     expect(screen.getByText("immich:gallery.uploaded")).toBeInTheDocument();
-    expect(screen.getByRole("img")).toBeInTheDocument();
+    expect(screen.getByRole("presentation")).toBeInTheDocument();
     expect(screen.getByTestId("immich-album-section")).toBeInTheDocument();
   });
 

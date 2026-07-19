@@ -104,6 +104,7 @@ export default function PhotoLightbox({
     >
       <div className="relative max-h-[85vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
         <img
+          data-testid="lightbox-image"
           src={item.previewUrl}
           alt={item.caption ?? ""}
           className="max-h-[85vh] object-contain"
