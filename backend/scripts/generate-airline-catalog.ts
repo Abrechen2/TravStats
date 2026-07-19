@@ -99,7 +99,16 @@ async function main(): Promise<void> {
   console.log(`Wrote ${airlines.length} airline entries to ${OUTPUT_PATH}`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Only run the generator (which WRITES OUTPUT_PATH) when this file is executed
+// directly as a CLI — e.g. `npm run generate:airline-catalog`. Without this
+// guard, importing anything from this module (the dataIntegrity drift-guard
+// test imports generateAirlineCatalogContents) fired main() as a load-time
+// side effect, rewriting the committed frontend catalogue mid-test-run. That
+// async write raced the drift guard's synchronous compare and made the suite
+// fail intermittently depending on suite ordering (CRLF churn on Windows).
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
