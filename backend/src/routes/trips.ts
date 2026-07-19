@@ -701,12 +701,16 @@ router.post(
       // Cleanup uploaded files on any failure to avoid orphaning bytes.
       for (const f of uploaded) {
         try {
-          fs.existsSync(f.path) && fs.unlinkSync(f.path);
+          // Rebuild from the trusted dir + basename of multer's generated
+          // filename, not the raw f.path — defense-in-depth + clears the
+          // CodeQL js/path-injection taint.
+          const safePath = path.join(getTripPhotoDir(), path.basename(f.filename));
+          fs.existsSync(safePath) && fs.unlinkSync(safePath);
         } catch (_e) {
           logger.warn({
             operation: "trip_photo_upload_cleanup_error",
             message: "Failed to cleanup orphaned trip photo file",
-            context: { path: f.path },
+            context: { filename: f.filename },
           });
         }
       }
@@ -824,12 +828,16 @@ router.post(
     } catch (error) {
       if (uploaded) {
         try {
-          fs.existsSync(uploaded.path) && fs.unlinkSync(uploaded.path);
+          // Rebuild from the trusted dir + basename of multer's generated
+          // filename, not the raw uploaded.path — defense-in-depth + clears
+          // the CodeQL js/path-injection taint.
+          const safePath = path.join(getTripPhotoDir(), path.basename(uploaded.filename));
+          fs.existsSync(safePath) && fs.unlinkSync(safePath);
         } catch (_e) {
           logger.warn({
             operation: "trip_cover_upload_cleanup_error",
             message: "Failed to cleanup orphaned trip cover file",
-            context: { path: uploaded.path },
+            context: { filename: uploaded.filename },
           });
         }
       }
