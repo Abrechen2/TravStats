@@ -91,10 +91,10 @@ function ShipsSection(): JSX.Element {
       style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
     >
       <header className="mb-4">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+        <h3 className="text-lg font-semibold text-(--text-primary)">
           🚢 {t("admin:cruiseMasterData.ship.title")}
         </h3>
-        <p className="text-sm text-[var(--text-muted)] mt-1">
+        <p className="text-sm text-(--text-muted) mt-1">
           {t("admin:cruiseMasterData.ship.description")}
         </p>
       </header>
@@ -135,7 +135,7 @@ function ShipsSection(): JSX.Element {
             void createShip();
           }}
           disabled={creating}
-          className="rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-medium text-[var(--bg-base)] hover:bg-[var(--accent-dim)] disabled:opacity-50"
+          className="rounded-md bg-(--accent) px-3 py-2 text-sm font-medium text-(--bg-base) hover:bg-(--accent-dim) disabled:opacity-50"
         >
           {creating ? t("common:buttons.saving") : t("admin:cruiseMasterData.ship.add")}
         </button>
@@ -151,17 +151,17 @@ function ShipsSection(): JSX.Element {
       />
 
       {loading ? (
-        <p className="text-sm text-[var(--text-muted)]">{t("common:loading.default")}</p>
+        <p className="text-sm text-(--text-muted)">{t("common:loading.default")}</p>
       ) : ships.length === 0 ? (
-        <p className="text-sm text-[var(--text-muted)]">{t("admin:cruiseMasterData.ship.empty")}</p>
+        <p className="text-sm text-(--text-muted)">{t("admin:cruiseMasterData.ship.empty")}</p>
       ) : (
         <ul className="divide-y" style={{ borderColor: "var(--color-border)" }}>
           {ships.slice(0, 50).map((s) => (
             <li key={s.id} className="flex items-center justify-between py-2 text-sm">
               <div>
-                <span className="font-medium text-[var(--text-primary)]">{s.name}</span>
-                <span className="text-[var(--text-muted)]"> · {s.cruiseLine}</span>
-                {s.yearBuilt && <span className="text-[var(--text-muted)]"> · {s.yearBuilt}</span>}
+                <span className="font-medium text-(--text-primary)">{s.name}</span>
+                <span className="text-(--text-muted)"> · {s.cruiseLine}</span>
+                {s.yearBuilt && <span className="text-(--text-muted)"> · {s.yearBuilt}</span>}
               </div>
               <div className="flex items-center gap-2 text-xs">
                 {s.isUserAdded && (
@@ -176,7 +176,7 @@ function ShipsSection(): JSX.Element {
                     {t("admin:cruiseMasterData.userAdded")}
                   </span>
                 )}
-                {s.imo && <span className="text-[var(--text-muted)] font-mono">IMO {s.imo}</span>}
+                {s.imo && <span className="text-(--text-muted) font-mono">IMO {s.imo}</span>}
               </div>
             </li>
           ))}
@@ -260,10 +260,10 @@ function PortsSection(): JSX.Element {
       style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
     >
       <header className="mb-4">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+        <h3 className="text-lg font-semibold text-(--text-primary)">
           ⚓ {t("admin:cruiseMasterData.port.title")}
         </h3>
-        <p className="text-sm text-[var(--text-muted)] mt-1">
+        <p className="text-sm text-(--text-muted) mt-1">
           {t("admin:cruiseMasterData.port.description")}
         </p>
       </header>
@@ -323,7 +323,7 @@ function PortsSection(): JSX.Element {
             void createPort();
           }}
           disabled={creating}
-          className="rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-medium text-[var(--bg-base)] hover:bg-[var(--accent-dim)] disabled:opacity-50"
+          className="rounded-md bg-(--accent) px-3 py-2 text-sm font-medium text-(--bg-base) hover:bg-(--accent-dim) disabled:opacity-50"
         >
           {creating ? t("common:buttons.saving") : t("admin:cruiseMasterData.port.add")}
         </button>
@@ -338,17 +338,17 @@ function PortsSection(): JSX.Element {
       />
 
       {loading ? (
-        <p className="text-sm text-[var(--text-muted)]">{t("common:loading.default")}</p>
+        <p className="text-sm text-(--text-muted)">{t("common:loading.default")}</p>
       ) : ports.length === 0 ? (
-        <p className="text-sm text-[var(--text-muted)]">{t("admin:cruiseMasterData.port.empty")}</p>
+        <p className="text-sm text-(--text-muted)">{t("admin:cruiseMasterData.port.empty")}</p>
       ) : (
         <ul className="divide-y" style={{ borderColor: "var(--color-border)" }}>
           {ports.slice(0, 50).map((p) => (
             <li key={p.id} className="flex items-center justify-between py-2 text-sm">
               <div>
-                <span className="font-medium text-[var(--text-primary)]">{p.name}</span>
-                {p.city && <span className="text-[var(--text-muted)]"> · {p.city}</span>}
-                {p.country && <span className="text-[var(--text-muted)]"> · {p.country}</span>}
+                <span className="font-medium text-(--text-primary)">{p.name}</span>
+                {p.city && <span className="text-(--text-muted)"> · {p.city}</span>}
+                {p.country && <span className="text-(--text-muted)"> · {p.country}</span>}
               </div>
               <div className="flex items-center gap-2 text-xs">
                 {p.isUserAdded && (
@@ -364,7 +364,7 @@ function PortsSection(): JSX.Element {
                   </span>
                 )}
                 {p.unlocode && (
-                  <span className="text-[var(--text-muted)] font-mono">{p.unlocode}</span>
+                  <span className="text-(--text-muted) font-mono">{p.unlocode}</span>
                 )}
               </div>
             </li>

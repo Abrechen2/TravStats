@@ -48,7 +48,7 @@ export default function StatsFlightBreakdown({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Airlines */}
         <div
-          className="rounded-lg shadow p-6"
+          className="rounded-lg shadow-sm p-6"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
@@ -78,7 +78,7 @@ export default function StatsFlightBreakdown({
 
         {/* Airports */}
         <div
-          className="rounded-lg shadow p-6"
+          className="rounded-lg shadow-sm p-6"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
@@ -100,7 +100,7 @@ export default function StatsFlightBreakdown({
 
         {/* Seat Classes */}
         <div
-          className="rounded-lg shadow p-6"
+          className="rounded-lg shadow-sm p-6"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
@@ -127,7 +127,7 @@ export default function StatsFlightBreakdown({
 
         {/* Aircraft Types */}
         <div
-          className="rounded-lg shadow p-6"
+          className="rounded-lg shadow-sm p-6"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
@@ -149,7 +149,7 @@ export default function StatsFlightBreakdown({
 
         {/* Status Distribution */}
         <div
-          className="rounded-lg shadow p-6"
+          className="rounded-lg shadow-sm p-6"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
@@ -190,7 +190,7 @@ export default function StatsFlightBreakdown({
         {/* Boarding Groups */}
         {Object.keys(boardingGroupStats).length > 0 && (
           <div
-            className="rounded-lg shadow p-6"
+            className="rounded-lg shadow-sm p-6"
             style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
           >
             <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
@@ -218,7 +218,7 @@ export default function StatsFlightBreakdown({
       {longestFlight && shortestFlight && longestFlight.flight && shortestFlight.flight && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           <div
-            className="rounded-lg shadow p-6"
+            className="rounded-lg shadow-sm p-6"
             style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
           >
             <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
@@ -242,7 +242,7 @@ export default function StatsFlightBreakdown({
           </div>
 
           <div
-            className="rounded-lg shadow p-6"
+            className="rounded-lg shadow-sm p-6"
             style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
           >
             <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>

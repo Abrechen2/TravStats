@@ -103,22 +103,22 @@ export default function DomainImportPanel({
         aria-modal="true"
         aria-labelledby="domain-import-title"
       >
-        <div className="w-full max-w-2xl rounded-xl bg-[var(--bg-surface)] shadow-2xl">
-          <header className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-6 py-4">
+        <div className="w-full max-w-2xl rounded-xl bg-(--bg-surface) shadow-2xl">
+          <header className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
             <div>
               <h2
                 id="domain-import-title"
-                className="text-xl font-semibold text-[var(--text-primary)]"
+                className="text-xl font-semibold text-(--text-primary)"
               >
                 {adapter.panelTitle}
               </h2>
-              <p className="mt-0.5 text-sm text-[var(--text-muted)]">{adapter.panelHint}</p>
+              <p className="mt-0.5 text-sm text-(--text-muted)">{adapter.panelHint}</p>
             </div>
             <button
               type="button"
               onClick={onClose}
               aria-label={t("common:buttons.close")}
-              className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
+              className="rounded-sm p-1 text-(--text-muted) hover:bg-(--bg-elevated) hover:text-(--text-primary)"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -136,7 +136,7 @@ export default function DomainImportPanel({
           </header>
 
           <nav
-            className="flex gap-1 border-b border-[var(--color-border)] px-4"
+            className="flex gap-1 border-b border-border px-4"
             role="tablist"
             aria-label={adapter.panelTitle}
           >
@@ -182,7 +182,7 @@ export default function DomainImportPanel({
               </Suspense>
             )}
             {activeTab === "manual" && !showManual && (
-              <div className="text-sm text-[var(--text-muted)]">{t("import:tabs.manualHint")}</div>
+              <div className="text-sm text-(--text-muted)">{t("import:tabs.manualHint")}</div>
             )}
           </div>
         </div>
@@ -225,8 +225,8 @@ function TabButton({ id, activeTab, label, onClick }: TabButtonProps): JSX.Eleme
       className={[
         "px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px",
         isActive
-          ? "border-[var(--accent)] text-[var(--text-primary)]"
-          : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+          ? "border-(--accent) text-(--text-primary)"
+          : "border-transparent text-(--text-muted) hover:text-(--text-primary)",
       ].join(" ")}
     >
       {label}
@@ -236,7 +236,7 @@ function TabButton({ id, activeTab, label, onClick }: TabButtonProps): JSX.Eleme
 
 function TabFallback({ label }: { label: string }): JSX.Element {
   return (
-    <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--text-muted)]">
+    <div className="flex min-h-[220px] items-center justify-center text-sm text-(--text-muted)">
       {label}
     </div>
   );

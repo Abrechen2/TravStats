@@ -317,7 +317,7 @@ export default function FlightEditModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-100 p-4">
       <div
         className="rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
         style={{ background: "var(--bg-surface)" }}
@@ -354,7 +354,7 @@ export default function FlightEditModal({
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-sm">
               {error}
             </div>
           )}

@@ -175,7 +175,7 @@ export default function ImmichGlobalSettings(): JSX.Element {
         <span style={{ color: "var(--text-primary)" }}>{t("admin.baseUrl")}</span>
         <input
           id="immich-admin-base-url"
-          className="w-full rounded border p-2"
+          className="w-full rounded-sm border p-2"
           style={{ borderColor: "var(--color-border)", background: "var(--bg-elevated)" }}
           placeholder={t("admin.baseUrlPlaceholder")}
           value={baseUrl}
@@ -189,7 +189,7 @@ export default function ImmichGlobalSettings(): JSX.Element {
           id="immich-admin-api-key"
           type="password"
           autoComplete="off"
-          className="w-full rounded border p-2"
+          className="w-full rounded-sm border p-2"
           style={{ borderColor: "var(--color-border)", background: "var(--bg-elevated)" }}
           placeholder={t("admin.apiKeyPlaceholder")}
           value={apiKey}

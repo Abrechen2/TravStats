@@ -113,7 +113,7 @@ export default function DiagnosticExportModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-100 bg-black/60 flex items-center justify-center p-4">
       <div
         className="rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col"
         style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
@@ -159,7 +159,7 @@ export default function DiagnosticExportModal({
             <textarea
               readOnly
               value={bundleText}
-              className="w-full font-mono text-xs p-3 rounded resize-none"
+              className="w-full font-mono text-xs p-3 rounded-sm resize-none"
               style={{
                 background: "var(--bg-elevated)",
                 color: "var(--text-primary)",
@@ -186,7 +186,7 @@ export default function DiagnosticExportModal({
             <>
               <button
                 onClick={handleDownload}
-                className="px-3 py-1.5 text-sm rounded"
+                className="px-3 py-1.5 text-sm rounded-sm"
                 style={{
                   background: "var(--bg-elevated)",
                   color: "var(--text-primary)",
@@ -197,7 +197,7 @@ export default function DiagnosticExportModal({
               </button>
               <button
                 onClick={handleCopy}
-                className="px-3 py-1.5 text-sm rounded"
+                className="px-3 py-1.5 text-sm rounded-sm"
                 style={{
                   background: "var(--bg-elevated)",
                   color: "var(--text-primary)",

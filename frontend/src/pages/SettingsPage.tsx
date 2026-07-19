@@ -351,7 +351,7 @@ export default function SettingsPage(): JSX.Element {
         <div className="flex md:h-[calc(100vh-3.5rem-3.75rem)]">
           {/* Desktop sidebar — scoped to the current tab's sections */}
           <aside
-            className="w-52 flex-shrink-0 flex-col py-4 overflow-y-auto hidden md:flex"
+            className="w-52 shrink-0 flex-col py-4 overflow-y-auto hidden md:flex"
             style={{
               background: "var(--bg-surface)",
               borderRight: "1px solid var(--color-border)",
@@ -547,7 +547,7 @@ export default function SettingsPage(): JSX.Element {
                 onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
                 aria-label={t("settings:scrollToTop")}
                 title={t("settings:scrollToTop")}
-                className="flex items-center justify-center w-7 h-7 rounded transition-colors"
+                className="flex items-center justify-center w-7 h-7 rounded-sm transition-colors"
                 style={{ color: "var(--text-muted)" }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = "var(--text-primary)";

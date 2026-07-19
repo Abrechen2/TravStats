@@ -22,7 +22,7 @@ export function QuickActions({
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
-    <div className="flex gap-1 items-center flex-shrink-0" onClick={stop} onMouseEnter={stop}>
+    <div className="flex gap-1 items-center shrink-0" onClick={stop} onMouseEnter={stop}>
       {(
         [
           { label: "✏️", title: t("common:buttons.edit"), onClick: () => onEdit(flight) },
@@ -36,7 +36,7 @@ export function QuickActions({
           key={title}
           onClick={onClick}
           title={title}
-          className="w-7 h-7 flex items-center justify-center rounded text-sm transition-colors"
+          className="w-7 h-7 flex items-center justify-center rounded-sm text-sm transition-colors"
           style={{ background: "var(--bg-surface)" }}
           type="button"
           aria-label={title}

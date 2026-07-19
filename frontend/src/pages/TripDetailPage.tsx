@@ -288,7 +288,7 @@ function TripHero({ trip, locale, t, onEdit, onDelete }: TripHeroProps): JSX.Ele
           🗑
         </button>
       </div>
-      <div className="absolute bottom-0 left-0 right-0 max-w-7xl mx-auto px-4 pb-5 z-[1]">
+      <div className="absolute bottom-0 left-0 right-0 max-w-7xl mx-auto px-4 pb-5 z-1">
         <Link
           to="/trips"
           className="inline-flex items-center gap-1 text-xs mb-3"
@@ -357,7 +357,7 @@ function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
             <button
               key={key}
               onClick={() => onChange(key)}
-              className="px-4 py-3.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 hover:text-[var(--text-primary)]"
+              className="px-4 py-3.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 hover:text-(--text-primary)"
               style={{
                 color: isActive ? "var(--accent)" : "var(--text-secondary)",
                 borderColor: isActive ? "var(--accent)" : "transparent",
@@ -430,7 +430,7 @@ function OverviewTab({
                 {trip.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-2 py-0.5 rounded text-xs"
+                    className="px-2 py-0.5 rounded-sm text-xs"
                     style={{
                       background: "var(--bg-muted)",
                       color: "var(--text-muted)",
@@ -448,7 +448,7 @@ function OverviewTab({
                 {trip.countries.map((cc) => (
                   <span
                     key={cc}
-                    className="px-2 py-0.5 rounded"
+                    className="px-2 py-0.5 rounded-sm"
                     style={{
                       background: "var(--bg-muted)",
                       color: "var(--text-muted)",
@@ -597,7 +597,7 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
         <button
           type="button"
           onClick={() => setAdding("journal")}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-(--accent) hover:text-(--accent)"
           style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
         >
           {t("trips:detail.timeline.addJournal")}
@@ -605,7 +605,7 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
         <button
           type="button"
           onClick={() => setAdding("stop")}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-(--accent) hover:text-(--accent)"
           style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
         >
           {t("trips:detail.timeline.addStop")}
@@ -912,7 +912,7 @@ function RowActions({
         <button
           type="button"
           onClick={onView}
-          className="text-[11px] px-1.5 py-0.5 rounded"
+          className="text-[11px] px-1.5 py-0.5 rounded-sm"
           style={{ color: "var(--text-muted)" }}
           aria-label="view"
           title="view"
@@ -923,7 +923,7 @@ function RowActions({
       <button
         type="button"
         onClick={onEdit}
-        className="text-[11px] px-1.5 py-0.5 rounded"
+        className="text-[11px] px-1.5 py-0.5 rounded-sm"
         style={{ color: "var(--text-muted)" }}
         aria-label="edit"
         title="edit"
@@ -933,7 +933,7 @@ function RowActions({
       <button
         type="button"
         onClick={onDelete}
-        className="text-[11px] px-1.5 py-0.5 rounded"
+        className="text-[11px] px-1.5 py-0.5 rounded-sm"
         style={{ color: "var(--danger, #f87171)" }}
         aria-label="delete"
         title="delete"
@@ -1099,7 +1099,7 @@ function LogisticsTab({
                     <button
                       type="button"
                       onClick={() => setEditingBooking(b)}
-                      className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-[var(--bg-muted)] hover:text-[#388bfd]"
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-sm hover:bg-(--bg-muted) hover:text-[#388bfd]"
                       style={{ color: "var(--text-muted)" }}
                       aria-label={t("trips:bookingEdit.title")}
                       title={t("trips:bookingEdit.title")}

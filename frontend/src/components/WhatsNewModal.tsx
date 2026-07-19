@@ -21,7 +21,7 @@ export default function WhatsNewModal({
   if (!isOpen || !entry) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-100 bg-black/60 flex items-center justify-center p-4">
       <div
         className="rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col"
         style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}

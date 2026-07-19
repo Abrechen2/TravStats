@@ -36,7 +36,7 @@ export default function ImportSection(): JSX.Element {
                 className="h-2 w-2 rounded-full"
                 style={{ background: DOMAINS[key].color }}
               />
-              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              <span className="text-xs font-semibold uppercase tracking-wider text-(--text-muted)">
                 {t(`common:${DOMAINS[key].i18nKey}`)}
               </span>
             </div>

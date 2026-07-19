@@ -309,15 +309,15 @@ export default function FlightsTablePage(): JSX.Element {
         </div>
 
         {/* Main Content */}
-        <div className="container mx-auto px-4 py-6 max-w-screen-2xl">
+        <div className="container mx-auto px-4 py-6 max-w-(--breakpoint-2xl)">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
+            <h1 className="text-2xl font-semibold text-(--text-primary)">
               {t("dashboard:flightsTitle")}
             </h1>
             <div className="flex items-center gap-2">
               <Link
                 to="/settings?section=import"
-                className="flex items-center gap-2 whitespace-nowrap rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] hover:border-[var(--accent)]"
+                className="flex items-center gap-2 whitespace-nowrap rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary) hover:border-(--accent)"
               >
                 <span aria-hidden="true">📥</span>
                 <span>{t("settings:import.openHub")}</span>
@@ -334,7 +334,7 @@ export default function FlightsTablePage(): JSX.Element {
 
           {/* Table */}
           <div
-            className="rounded-lg shadow-sm overflow-hidden"
+            className="rounded-lg shadow-xs overflow-hidden"
             style={{ border: "1px solid var(--color-border)" }}
           >
             <>
@@ -560,7 +560,7 @@ export default function FlightsTablePage(): JSX.Element {
                                   }}
                                 >
                                   <span
-                                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                    className="w-1.5 h-1.5 rounded-full shrink-0"
                                     style={{ background: tripEntry.color }}
                                   />
                                   {tripEntry.name}

@@ -311,7 +311,7 @@ export default function FlightCompleteStep({
                 else setStatus("scheduled");
               }
             }}
-            className="rounded"
+            className="rounded-sm"
           />
           <span className={`text-sm ${textClass}`}>{t("flights:historicalCheckbox")}</span>
         </label>

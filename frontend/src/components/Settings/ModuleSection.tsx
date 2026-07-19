@@ -67,8 +67,8 @@ export default function ModuleSection(): JSX.Element {
                 aria-label={d.i18nKey}
                 disabled={!d.available}
                 onClick={() => toggle(key)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none shrink-0 ${
-                  enabled ? "bg-[var(--accent)]" : "bg-gray-600"
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-hidden shrink-0 ${
+                  enabled ? "bg-(--accent)" : "bg-gray-600"
                 } ${d.available ? "" : "opacity-50 cursor-not-allowed"}`}
               >
                 <span

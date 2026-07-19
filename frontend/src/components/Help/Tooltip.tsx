@@ -219,7 +219,7 @@ export default function Tooltip({
   const tooltipContent = (isHovered || isExpanded) && (
     <div
       ref={tooltipRef}
-      className="fixed z-[9999] pointer-events-auto"
+      className="fixed z-9999 pointer-events-auto"
       style={tooltipStyle}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
@@ -229,14 +229,14 @@ export default function Tooltip({
       }}
     >
       <div
-        className="text-xs rounded-lg shadow-xl p-3 max-w-sm sm:max-w-md break-words"
+        className="text-xs rounded-lg shadow-xl p-3 max-w-sm sm:max-w-md wrap-break-word"
         style={{
           background: "var(--bg-elevated)",
           color: "var(--text-primary)",
           border: "1px solid var(--color-border)",
         }}
       >
-        <div className="whitespace-normal break-words">{content}</div>
+        <div className="whitespace-normal wrap-break-word">{content}</div>
         {expandedContent && !isExpanded && (
           <p className="mt-2 text-xs italic" style={{ color: "var(--accent)" }}>
             {t("help.clickForMore")}
@@ -244,7 +244,7 @@ export default function Tooltip({
         )}
         {expandedContent && isExpanded && (
           <div className="mt-2 pt-2 border-t" style={{ borderColor: "var(--color-border)" }}>
-            <div className="whitespace-normal break-words" style={{ color: "var(--text-muted)" }}>
+            <div className="whitespace-normal wrap-break-word" style={{ color: "var(--text-muted)" }}>
               {expandedContent}
             </div>
           </div>

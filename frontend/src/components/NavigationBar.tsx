@@ -27,7 +27,7 @@ function DesktopLeaf({ node, pathname }: { node: NavLeaf; pathname: string }): J
     >
       {node.label}
       {node.betaBadge && (
-        <span className="ml-1.5 inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium leading-none text-amber-700 bg-amber-100 ring-1 ring-inset ring-amber-600/20 dark:text-amber-400 dark:bg-amber-500/10 dark:ring-amber-400/20">
+        <span className="ml-1.5 inline-flex items-center rounded-sm px-1 py-0.5 text-[10px] font-medium leading-none text-amber-700 bg-amber-100 ring-1 ring-inset ring-amber-600/20 dark:text-amber-400 dark:bg-amber-500/10 dark:ring-amber-400/20">
           Beta
         </span>
       )}
@@ -79,7 +79,7 @@ function MobileLeaf({
       <span className="flex items-center gap-1.5">
         {node.label}
         {node.betaBadge && (
-          <span className="inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium leading-none text-amber-700 bg-amber-100 ring-1 ring-inset ring-amber-600/20 dark:text-amber-400 dark:bg-amber-500/10 dark:ring-amber-400/20">
+          <span className="inline-flex items-center rounded-sm px-1 py-0.5 text-[10px] font-medium leading-none text-amber-700 bg-amber-100 ring-1 ring-inset ring-amber-600/20 dark:text-amber-400 dark:bg-amber-500/10 dark:ring-amber-400/20">
             Beta
           </span>
         )}
@@ -234,7 +234,7 @@ export default function NavigationBar(): JSX.Element {
               <button
                 type="button"
                 onClick={() => setDiagnosticModalOpen(true)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-colors duration-150"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-sm text-[11px] font-medium transition-colors duration-150"
                 style={{ color: "var(--text-muted)", border: "1px solid var(--color-border)" }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = "#f85149";
@@ -270,7 +270,7 @@ export default function NavigationBar(): JSX.Element {
                       <Link
                         to={system.path}
                         aria-current={active ? "page" : undefined}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium"
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-sm text-[11px] font-medium"
                         style={{
                           color: active ? "var(--accent)" : "var(--text-muted)",
                           borderColor: active ? "var(--accent)" : "var(--color-border)",
@@ -298,7 +298,7 @@ export default function NavigationBar(): JSX.Element {
       {/* Mobile Menu Backdrop */}
       {mobileMenuOpen && (
         <div
-          className="xl:hidden fixed inset-0 bg-black/60 z-[55]"
+          className="xl:hidden fixed inset-0 bg-black/60 z-55"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
@@ -307,7 +307,7 @@ export default function NavigationBar(): JSX.Element {
       {mobileMenuOpen && (
         <div
           ref={mobileMenuRef}
-          className="xl:hidden fixed inset-y-0 left-0 w-72 max-w-[calc(100vw-3rem)] z-[60] flex flex-col"
+          className="xl:hidden fixed inset-y-0 left-0 w-72 max-w-[calc(100vw-3rem)] z-60 flex flex-col"
           style={{
             background: "var(--bg-surface)",
             borderRight: "1px solid var(--color-border)",
@@ -395,7 +395,7 @@ export default function NavigationBar(): JSX.Element {
                 href="https://www.paypal.com/donate?hosted_button_id=HW9MPYVURCT42"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1 flex-1 py-1 rounded text-[11px] font-medium transition-colors duration-150"
+                className="flex items-center justify-center gap-1 flex-1 py-1 rounded-sm text-[11px] font-medium transition-colors duration-150"
                 style={{ color: "var(--text-muted)", border: "1px solid var(--color-border)" }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = "#e85d8a";
@@ -416,7 +416,7 @@ export default function NavigationBar(): JSX.Element {
                 href="https://github.com/Abrechen2/TravStats"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1 flex-1 py-1 rounded text-[11px] font-medium transition-colors duration-150"
+                className="flex items-center justify-center gap-1 flex-1 py-1 rounded-sm text-[11px] font-medium transition-colors duration-150"
                 style={{ color: "var(--text-muted)", border: "1px solid var(--color-border)" }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = "#f5a623";
@@ -437,7 +437,7 @@ export default function NavigationBar(): JSX.Element {
                 href="https://discord.gg/CRnjB9f78t"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1 flex-1 py-1 rounded text-[11px] font-medium transition-colors duration-150"
+                className="flex items-center justify-center gap-1 flex-1 py-1 rounded-sm text-[11px] font-medium transition-colors duration-150"
                 style={{ color: "var(--text-muted)", border: "1px solid var(--color-border)" }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = "#5865F2";

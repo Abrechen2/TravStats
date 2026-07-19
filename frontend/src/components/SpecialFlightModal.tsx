@@ -445,7 +445,7 @@ export default function SpecialFlightModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-100 p-4">
       <div
         className="rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
         style={{ background: "var(--bg-surface)" }}
@@ -491,7 +491,7 @@ export default function SpecialFlightModal({
           {error && (
             <div
               role="alert"
-              className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"
+              className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-sm"
             >
               {error}
             </div>
@@ -570,7 +570,7 @@ export default function SpecialFlightModal({
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="px-4 py-2 rounded border"
+                  className="px-4 py-2 rounded-sm border"
                   style={{
                     borderColor: "var(--color-border)",
                     color: "var(--text-muted)",
@@ -582,7 +582,7 @@ export default function SpecialFlightModal({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-4 py-2 rounded font-medium disabled:opacity-50"
+                  className="px-4 py-2 rounded-sm font-medium disabled:opacity-50"
                   style={{
                     background: "var(--accent)",
                     color: "#fff",

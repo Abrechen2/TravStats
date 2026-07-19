@@ -136,7 +136,7 @@ export default function PhotoLightbox({
         {item.caption && <span className="text-sm text-slate-300">{item.caption}</span>}
         <button
           type="button"
-          className="rounded border border-slate-500 px-3 py-1 text-sm"
+          className="rounded-sm border border-slate-500 px-3 py-1 text-sm"
           onClick={() => void handleSetCover()}
           disabled={settingCover}
         >
@@ -145,7 +145,7 @@ export default function PhotoLightbox({
         <button
           type="button"
           aria-label={t("gallery.close")}
-          className="rounded border border-slate-500 px-3 py-1 text-sm"
+          className="rounded-sm border border-slate-500 px-3 py-1 text-sm"
           onClick={onClose}
         >
           ✕

@@ -225,14 +225,14 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
       >
         <button
           onClick={() => onOpen(trip)}
-          className="px-2.5 py-1 rounded text-xs font-medium"
+          className="px-2.5 py-1 rounded-sm text-xs font-medium"
           style={{ background: "var(--bg-muted)", color: "var(--accent)" }}
         >
           → {t("trips:openTrip")}
         </button>
         <button
           onClick={() => onEdit(trip)}
-          className="px-2.5 py-1 rounded text-xs font-medium"
+          className="px-2.5 py-1 rounded-sm text-xs font-medium"
           style={{ background: "var(--bg-muted)", color: "var(--color-success, #4ade80)" }}
           aria-label={t("trips:editTrip")}
           title={t("trips:editTrip")}
@@ -241,7 +241,7 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
         </button>
         <button
           onClick={() => onDelete(trip)}
-          className="px-2.5 py-1 rounded text-xs font-medium ml-auto"
+          className="px-2.5 py-1 rounded-sm text-xs font-medium ml-auto"
           style={{ background: "var(--bg-muted)", color: "var(--color-error, #f87171)" }}
           aria-label={t("trips:deleteTrip")}
           title={t("trips:deleteTrip")}

@@ -58,7 +58,7 @@ export default function ChangeDiffView({ changes }: ChangeDiffViewProps): JSX.El
 
   return (
     <div className="space-y-3">
-      <h4 className="text-sm font-semibold text-[var(--text-primary)]">
+      <h4 className="text-sm font-semibold text-(--text-primary)">
         {t("pendingUpdates:changes.detailed")}
       </h4>
       <div className="space-y-2">
@@ -67,7 +67,7 @@ export default function ChangeDiffView({ changes }: ChangeDiffViewProps): JSX.El
           return (
             <div
               key={index}
-              className="border rounded-lg p-3 border-[var(--color-border)] bg-[var(--bg-surface)]"
+              className="border rounded-lg p-3 border-border bg-(--bg-surface)"
             >
               <button
                 onClick={() => toggleField(change.field)}
@@ -75,10 +75,10 @@ export default function ChangeDiffView({ changes }: ChangeDiffViewProps): JSX.El
               >
                 <div className="flex items-center gap-2">
                   {getChangeIcon(change.type)}
-                  <span className="font-medium text-[var(--text-primary)]">{change.field}</span>
+                  <span className="font-medium text-(--text-primary)">{change.field}</span>
                 </div>
                 <svg
-                  className={`w-4 h-4 text-[var(--text-muted)] transition-transform ${
+                  className={`w-4 h-4 text-(--text-muted) transition-transform ${
                     isExpanded ? "transform rotate-180" : ""
                   }`}
                   fill="none"
@@ -94,9 +94,9 @@ export default function ChangeDiffView({ changes }: ChangeDiffViewProps): JSX.El
                 </svg>
               </button>
               {isExpanded && (
-                <div className="mt-3 space-y-2 pt-3 border-t border-[var(--color-border)]">
+                <div className="mt-3 space-y-2 pt-3 border-t border-border">
                   <div>
-                    <div className="text-xs text-[var(--text-muted)] mb-1">
+                    <div className="text-xs text-(--text-muted) mb-1">
                       {t("pendingUpdates:changes.original")}
                     </div>
                     <div className="text-sm text-red-600 line-through">
@@ -104,7 +104,7 @@ export default function ChangeDiffView({ changes }: ChangeDiffViewProps): JSX.El
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-[var(--text-muted)] mb-1">
+                    <div className="text-xs text-(--text-muted) mb-1">
                       {t("pendingUpdates:changes.new")}
                     </div>
                     <div className="text-sm text-green-600">{formatValue(change.newValue)}</div>

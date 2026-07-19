@@ -119,11 +119,11 @@ export default function ApiKeyCard({
   };
 
   return (
-    <div className="border border-[var(--color-border)] rounded-lg p-4 space-y-3">
+    <div className="border border-border rounded-lg p-4 space-y-3">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-semibold text-[var(--text-primary)]">{label}</h3>
+            <h3 className="font-semibold text-(--text-primary)">{label}</h3>
             {(() => {
               // Prefer the explicit hasOwnKey signal (user cards); fall back
               // to deriving from the (masked) value for admin cards. For
@@ -136,7 +136,7 @@ export default function ApiKeyCard({
               if (hasOwnKey) {
                 return (
                   <span
-                    className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded"
+                    className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-sm"
                     title={t("settings:apiKeys.ownTooltip") || "Eigener API-Schlüssel eingegeben"}
                   >
                     {t("settings:apiKeys.own")}
@@ -148,7 +148,7 @@ export default function ApiKeyCard({
               if (hasAccess) {
                 return (
                   <span
-                    className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded"
+                    className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-sm"
                     title={
                       t("settings:apiKeys.sharedTooltip") || "Vom Administrator geteilter Schlüssel"
                     }
@@ -161,7 +161,7 @@ export default function ApiKeyCard({
               // Only show "Nicht konfiguriert" if no access at all
               return (
                 <span
-                  className="px-2 py-0.5 text-xs font-medium bg-[var(--bg-elevated)] text-[var(--text-muted)] rounded"
+                  className="px-2 py-0.5 text-xs font-medium bg-(--bg-elevated) text-(--text-muted) rounded-sm"
                   title={
                     t("settings:apiKeys.notConfiguredTooltip") || "Kein API-Schlüssel konfiguriert"
                   }
@@ -171,13 +171,13 @@ export default function ApiKeyCard({
               );
             })()}
           </div>
-          <p className="text-sm text-[var(--text-muted)]">{description}</p>
+          <p className="text-sm text-(--text-muted)">{description}</p>
           {capabilities && capabilities.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
               {capabilities.map((cap) => (
                 <span
                   key={cap}
-                  className="px-2 py-0.5 text-xs font-medium rounded"
+                  className="px-2 py-0.5 text-xs font-medium rounded-sm"
                   style={{
                     background: "var(--bg-elevated)",
                     color: "var(--accent)",
@@ -191,12 +191,12 @@ export default function ApiKeyCard({
             </div>
           )}
           {quota && (
-            <div className="mt-2 text-xs text-[var(--text-muted)]">
+            <div className="mt-2 text-xs text-(--text-muted)">
               {quota.kind === "observed" && (
                 <>
                   <div>
                     {t("settings:apiKeys.quota.label")}:{" "}
-                    <span className="font-semibold text-[var(--text-primary)]">
+                    <span className="font-semibold text-(--text-primary)">
                       {quota.remaining ?? "?"}
                     </span>
                     {quota.limit !== null && <span> / {quota.limit}</span>}{" "}
@@ -231,7 +231,7 @@ export default function ApiKeyCard({
       {provider === "opensky" && openskyFields ? (
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+            <label className="block text-sm font-medium text-(--text-primary) mb-1">
               {t("settings:apiKeys.opensky.clientId")}
             </label>
             <div className="flex gap-2">
@@ -250,7 +250,7 @@ export default function ApiKeyCard({
               <button
                 type="button"
                 onClick={() => setShowKey(!showKey)}
-                className="px-3 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-[var(--color-border)] rounded-md hover:bg-[var(--bg-base)] transition-colors"
+                className="px-3 py-2 text-sm text-(--text-muted) hover:text-(--text-primary) border border-border rounded-md hover:bg-(--bg-base) transition-colors"
                 title={showKey ? t("settings:apiKeys.hide") : t("settings:apiKeys.show")}
               >
                 {showKey ? (
@@ -282,7 +282,7 @@ export default function ApiKeyCard({
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+            <label className="block text-sm font-medium text-(--text-primary) mb-1">
               {t("settings:apiKeys.opensky.clientSecret")}
             </label>
             <input
@@ -312,7 +312,7 @@ export default function ApiKeyCard({
           <button
             type="button"
             onClick={() => setShowKey(!showKey)}
-            className="px-3 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-[var(--color-border)] rounded-md hover:bg-[var(--bg-base)] transition-colors"
+            className="px-3 py-2 text-sm text-(--text-muted) hover:text-(--text-primary) border border-border rounded-md hover:bg-(--bg-base) transition-colors"
             title={showKey ? t("settings:apiKeys.hide") : t("settings:apiKeys.show")}
           >
             {showKey ? (
@@ -365,7 +365,7 @@ export default function ApiKeyCard({
             {t("settings:apiKeys.getKey")} →
           </a>
           {isShared && (
-            <span className="text-[var(--text-muted)] text-xs">
+            <span className="text-(--text-muted) text-xs">
               {t("settings:apiKeys.sharedNote")}
             </span>
           )}

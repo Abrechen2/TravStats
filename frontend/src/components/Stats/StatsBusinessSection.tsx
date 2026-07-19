@@ -21,7 +21,7 @@ export default function StatsBusinessSection({
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div
-          className="rounded-lg shadow p-6"
+          className="rounded-lg shadow-sm p-6"
           style={{
             background: "var(--bg-surface)",
             border: "1px solid var(--color-border)",
@@ -41,7 +41,7 @@ export default function StatsBusinessSection({
         </div>
 
         <div
-          className="rounded-lg shadow p-6"
+          className="rounded-lg shadow-sm p-6"
           style={{
             background: "var(--bg-surface)",
             border: "1px solid var(--color-border)",
@@ -61,7 +61,7 @@ export default function StatsBusinessSection({
         </div>
 
         <div
-          className="rounded-lg shadow p-6"
+          className="rounded-lg shadow-sm p-6"
           style={{
             background: "var(--bg-surface)",
             border: "1px solid var(--color-border)",
@@ -82,7 +82,7 @@ export default function StatsBusinessSection({
         </div>
 
         <div
-          className="rounded-lg shadow p-6"
+          className="rounded-lg shadow-sm p-6"
           style={{
             background: "var(--bg-surface)",
             border: "1px solid var(--color-border)",
@@ -102,7 +102,7 @@ export default function StatsBusinessSection({
         </div>
 
         <div
-          className="rounded-lg shadow p-6"
+          className="rounded-lg shadow-sm p-6"
           style={{
             background: "var(--bg-surface)",
             border: "1px solid var(--color-border)",
@@ -123,7 +123,7 @@ export default function StatsBusinessSection({
 
         {businessStats.busiestMonth && (
           <div
-            className="rounded-lg shadow p-6"
+            className="rounded-lg shadow-sm p-6"
             style={{
               background: "var(--bg-surface)",
               border: "1px solid var(--color-border)",
@@ -146,7 +146,7 @@ export default function StatsBusinessSection({
 
         {businessStats.mostCommonCategory && (
           <div
-            className="rounded-lg shadow p-6"
+            className="rounded-lg shadow-sm p-6"
             style={{
               background: "var(--bg-surface)",
               border: "1px solid var(--color-border)",
@@ -163,7 +163,7 @@ export default function StatsBusinessSection({
 
         {Object.keys(businessStats.seatClassDistribution).length > 0 && (
           <div
-            className="rounded-lg shadow p-6 col-span-1 md:col-span-2 lg:col-span-3"
+            className="rounded-lg shadow-sm p-6 col-span-1 md:col-span-2 lg:col-span-3"
             style={{
               background: "var(--bg-surface)",
               border: "1px solid var(--color-border)",

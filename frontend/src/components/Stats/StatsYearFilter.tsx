@@ -37,7 +37,7 @@ export default function StatsYearFilter({
       {/* Year Filter Controls */}
       {availableYears.length > 0 && (
         <div
-          className="rounded-lg shadow p-4 mb-6 flex flex-wrap items-center gap-4"
+          className="rounded-lg shadow-sm p-4 mb-6 flex flex-wrap items-center gap-4"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <div className="flex items-center gap-2">
@@ -61,7 +61,7 @@ export default function StatsYearFilter({
                   onSelectedYearChange(Number(val));
                 }
               }}
-              className="rounded border px-2 py-1 text-sm"
+              className="rounded-sm border px-2 py-1 text-sm"
               style={{
                 background: "var(--bg-elevated)",
                 borderColor: "var(--color-border)",
@@ -88,7 +88,7 @@ export default function StatsYearFilter({
                     onCompareYearChange(null);
                   }
                 }}
-                className="rounded"
+                className="rounded-sm"
               />
               <span className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
                 {t("stats:yearFilter.compareWith")}
@@ -103,7 +103,7 @@ export default function StatsYearFilter({
                 const val = e.target.value;
                 onCompareYearChange(val === "" ? null : Number(val));
               }}
-              className="rounded border px-2 py-1 text-sm"
+              className="rounded-sm border px-2 py-1 text-sm"
               style={{
                 background: "var(--bg-elevated)",
                 borderColor: "var(--color-border)",
@@ -152,7 +152,7 @@ export default function StatsYearFilter({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {/* Total Flights */}
             <div
-              className="rounded-lg shadow p-6"
+              className="rounded-lg shadow-sm p-6"
               style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
             >
               <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
@@ -183,7 +183,7 @@ export default function StatsYearFilter({
 
             {/* Total Distance */}
             <div
-              className="rounded-lg shadow p-6"
+              className="rounded-lg shadow-sm p-6"
               style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
             >
               <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
@@ -218,7 +218,7 @@ export default function StatsYearFilter({
 
             {/* Total Flight Time */}
             <div
-              className="rounded-lg shadow p-6"
+              className="rounded-lg shadow-sm p-6"
               style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
             >
               <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
@@ -251,7 +251,7 @@ export default function StatsYearFilter({
 
             {/* Total Cost */}
             <div
-              className="rounded-lg shadow p-6"
+              className="rounded-lg shadow-sm p-6"
               style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
             >
               <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>

@@ -38,7 +38,7 @@ export default function AirlineWordmarkCell({ flight }: { flight: Flight }): JSX
         // max-w-none: Tailwind's preflight sets img { max-width: 100% }, and
         // Firefox's auto table layout computes this column narrower than
         // Chrome — the cap would shrink the tile to the cell width there.
-        className="rounded object-contain max-w-none"
+        className="rounded-sm object-contain max-w-none"
         alt={name ?? "Airline logo"}
         fallback={fallback}
       />

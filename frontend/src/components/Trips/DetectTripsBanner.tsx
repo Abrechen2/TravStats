@@ -90,7 +90,7 @@ export default function DetectTripsBanner({ onChange }: Props): JSX.Element | nu
         <button
           type="button"
           onClick={() => setReviewOpen(true)}
-          className="px-3 py-1.5 rounded-md text-xs font-medium border transition-colors hover:bg-[var(--accent)] hover:text-[var(--bg-base)]"
+          className="px-3 py-1.5 rounded-md text-xs font-medium border transition-colors hover:bg-(--accent) hover:text-(--bg-base)"
           style={{ borderColor: "var(--accent)", color: "var(--accent)" }}
         >
           {t("trips:detectBanner.review")}

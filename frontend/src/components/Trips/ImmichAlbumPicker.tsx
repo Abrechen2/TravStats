@@ -168,7 +168,7 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
             placeholder={t("albums.searchPlaceholder")}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="mb-3 w-full rounded border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm"
+            className="mb-3 w-full rounded-sm border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm"
           />
         )}
 
@@ -183,7 +183,7 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
           {filteredAlbums.map((album) => {
             const selection = selected[album.id];
             return (
-              <li key={album.id} className="rounded border border-slate-700 p-2">
+              <li key={album.id} className="rounded-sm border border-slate-700 p-2">
                 <label className="flex items-center gap-3">
                   <input
                     type="checkbox"

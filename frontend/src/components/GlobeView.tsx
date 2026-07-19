@@ -1626,7 +1626,7 @@ export default function GlobeView({
             <button
               type="button"
               onClick={dismissCoachmark}
-              className="w-full cursor-pointer rounded px-3 py-2 text-[12px] font-medium transition-colors"
+              className="w-full cursor-pointer rounded-sm px-3 py-2 text-[12px] font-medium transition-colors"
               style={{
                 background: "rgba(240,169,71,0.22)",
                 border: "1px solid rgba(240,169,71,0.55)",

@@ -217,7 +217,7 @@ export default function DetectReviewModal({
                     <input
                       value={s.name}
                       onChange={(e) => renamePart(i, e.target.value)}
-                      className="w-full bg-transparent border-0 text-sm font-semibold outline-none focus:bg-[var(--bg-base)] focus:px-2 focus:py-1 focus:rounded"
+                      className="w-full bg-transparent border-0 text-sm font-semibold outline-hidden focus:bg-(--bg-base) focus:px-2 focus:py-1 focus:rounded-sm"
                       style={{ color: "var(--text-primary)" }}
                     />
                     <div
@@ -254,7 +254,7 @@ export default function DetectReviewModal({
                         e.stopPropagation();
                         toggleExpanded(key);
                       }}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors hover:bg-[var(--bg-base)]"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors hover:bg-(--bg-base)"
                       style={{ color: "var(--text-muted)" }}
                       aria-expanded={isOpen}
                       aria-controls={panelId}
@@ -305,7 +305,7 @@ export default function DetectReviewModal({
             type="button"
             onClick={() => void handleCommit()}
             disabled={selectedCount === 0 || committing}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--accent)] text-[var(--bg-base)] disabled:opacity-50"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-(--accent) text-(--bg-base) disabled:opacity-50"
           >
             {committing
               ? t("common:loading.default")

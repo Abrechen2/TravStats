@@ -87,7 +87,7 @@ export default function AirportSeedingBanner({
 
   return (
     <div
-      className="w-full shadow-sm"
+      className="w-full shadow-xs"
       style={{
         background: "var(--accent-soft)",
         borderBottom: "1px solid rgba(240,169,71,0.35)",
@@ -96,9 +96,9 @@ export default function AirportSeedingBanner({
       <div className="max-w-7xl mx-auto px-4 py-3">
         <div className="flex items-start gap-3">
           {/* Icon */}
-          <div className="flex-shrink-0 mt-0.5">
+          <div className="shrink-0 mt-0.5">
             {status.status === "running" ? (
-              <div className="animate-spin text-[var(--accent)]">
+              <div className="animate-spin text-(--accent)">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -124,7 +124,7 @@ export default function AirportSeedingBanner({
               </svg>
             ) : (
               <svg
-                className="w-5 h-5 text-[var(--accent)]"
+                className="w-5 h-5 text-(--accent)"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -143,14 +143,14 @@ export default function AirportSeedingBanner({
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-4 mb-2">
               <div>
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                <h3 className="text-sm font-semibold text-(--text-primary)">
                   {status.status === "running"
                     ? t("setup:airportSeeding.banner.loading")
                     : status.status === "failed"
                       ? t("setup:airportSeeding.banner.failed")
                       : t("setup:airportSeeding.banner.preparing")}
                 </h3>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                <p className="text-xs text-(--text-muted) mt-0.5">
                   {status.status === "running"
                     ? t("setup:airportSeeding.banner.limitedFeatures")
                     : status.status === "failed"
@@ -161,14 +161,14 @@ export default function AirportSeedingBanner({
 
               {/* Status info */}
               {status.status === "running" && (
-                <div className="flex-shrink-0 text-right">
+                <div className="shrink-0 text-right">
                   {status.processedAirports !== undefined && status.totalAirports !== undefined && (
-                    <p className="text-xs text-[var(--accent)] font-medium">
+                    <p className="text-xs text-(--accent) font-medium">
                       {status.processedAirports} / {status.totalAirports}
                     </p>
                   )}
                   {status.estimatedSecondsRemaining !== undefined && (
-                    <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    <p className="text-xs text-(--text-muted) mt-0.5">
                       {formatEstimatedTime(status.estimatedSecondsRemaining)}
                     </p>
                   )}
@@ -189,7 +189,7 @@ export default function AirportSeedingBanner({
                   ></div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-[var(--accent)]">
+                  <p className="text-xs text-(--accent)">
                     {t("setup:airportSeeding.banner.progress", { percent: progressPercent })}
                   </p>
                 </div>

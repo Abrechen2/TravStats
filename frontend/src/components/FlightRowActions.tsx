@@ -34,7 +34,7 @@ export default function FlightRowActions({
       {/* Edit button */}
       <button
         onClick={() => onEdit(flight)}
-        className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-[var(--bg-muted)] hover:text-[#388bfd]"
+        className="inline-flex items-center justify-center w-7 h-7 rounded-sm hover:bg-(--bg-muted) hover:text-[#388bfd]"
         style={{ color: "var(--text-muted)" }}
         aria-label={t("common:buttons.edit")}
         title={t("common:buttons.edit")}
@@ -48,7 +48,7 @@ export default function FlightRowActions({
       <div className="relative" data-duplicate-menu>
         <button
           onClick={() => onToggleDuplicateMenu(menuOpen ? null : flight.id)}
-          className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-[var(--bg-muted)] hover:text-[var(--text-primary)]"
+          className="inline-flex items-center justify-center w-7 h-7 rounded-sm hover:bg-(--bg-muted) hover:text-(--text-primary)"
           style={{ color: "var(--text-muted)" }}
           aria-label={t("flights:table.duplicate.label")}
           title={t("flights:table.duplicate.label")}
@@ -60,7 +60,7 @@ export default function FlightRowActions({
         </button>
         {menuOpen && (
           <div
-            className="absolute right-0 mt-1 rounded shadow-lg z-20 min-w-[180px]"
+            className="absolute right-0 mt-1 rounded-sm shadow-lg z-20 min-w-[180px]"
             style={{
               background: "var(--bg-surface)",
               border: "1px solid var(--color-border)",
@@ -68,14 +68,14 @@ export default function FlightRowActions({
           >
             <button
               onClick={() => onDuplicate(flight, "same")}
-              className="block w-full text-left px-3 py-2 text-xs hover:bg-[var(--bg-elevated)]"
+              className="block w-full text-left px-3 py-2 text-xs hover:bg-(--bg-elevated)"
               style={{ color: "var(--text-primary)" }}
             >
               {t("flights:table.duplicate.same")}
             </button>
             <button
               onClick={() => onDuplicate(flight, "return")}
-              className="block w-full text-left px-3 py-2 text-xs hover:bg-[var(--bg-elevated)]"
+              className="block w-full text-left px-3 py-2 text-xs hover:bg-(--bg-elevated)"
               style={{ color: "var(--text-primary)" }}
             >
               {t("flights:table.duplicate.return")}
@@ -87,7 +87,7 @@ export default function FlightRowActions({
       {/* Delete button */}
       <button
         onClick={() => onDelete(flight.id)}
-        className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-[var(--bg-muted)] hover:text-[var(--danger)]"
+        className="inline-flex items-center justify-center w-7 h-7 rounded-sm hover:bg-(--bg-muted) hover:text-(--danger)"
         style={{ color: "var(--text-muted)" }}
         aria-label={t("common:buttons.delete")}
         title={t("common:buttons.delete")}
