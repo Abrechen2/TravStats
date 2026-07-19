@@ -331,12 +331,20 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
       await recomputeTripStatus(cruise.tripId);
     }
 
-    checkAndUpdateAchievements(userId).catch((err) => {
+    // Await the recalc (was fire-and-forget). Its $transaction on
+    // user_achievement rows must commit before the response returns — a
+    // leaked, un-awaited transaction outlived the request and deadlocked
+    // (40P01) against the next mutation or the test teardown cascade, and
+    // could silently drop an achievement update on a rapid double-mutation
+    // for one user. Mirrors the awaited try/catch in flights.ts.
+    try {
+      await checkAndUpdateAchievements(userId);
+    } catch (achErr) {
       logger.error({
         operation: 'cruise_achievement_check_failed',
-        error: err instanceof Error ? err.message : err,
+        error: achErr instanceof Error ? achErr.message : achErr,
       });
-    });
+    }
 
     logger.info({ operation: 'cruise_create', cruiseId: cruise.id, userId });
     res.status(201).json({ success: true, data: cruise });
@@ -444,12 +452,20 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
       await recomputeTripStatus(id);
     }
 
-    checkAndUpdateAchievements(userId).catch((err) => {
+    // Await the recalc (was fire-and-forget). Its $transaction on
+    // user_achievement rows must commit before the response returns — a
+    // leaked, un-awaited transaction outlived the request and deadlocked
+    // (40P01) against the next mutation or the test teardown cascade, and
+    // could silently drop an achievement update on a rapid double-mutation
+    // for one user. Mirrors the awaited try/catch in flights.ts.
+    try {
+      await checkAndUpdateAchievements(userId);
+    } catch (achErr) {
       logger.error({
         operation: 'cruise_achievement_check_failed',
-        error: err instanceof Error ? err.message : err,
+        error: achErr instanceof Error ? achErr.message : achErr,
       });
-    });
+    }
 
     res.json({ success: true, data: updated });
   } catch (err) {
