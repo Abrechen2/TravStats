@@ -41,7 +41,7 @@ const renderBox = (startIndex = 0, onCoverChanged = vi.fn()) =>
 describe("PhotoLightbox", () => {
   it("shows the item at startIndex", () => {
     renderBox(1);
-    expect(screen.getByRole("img")).toHaveAttribute("src", "/a1.jpg");
+    expect(screen.getByTestId("lightbox-image")).toHaveAttribute("src", "/a1.jpg");
   });
 
   it("navigates with the next/previous buttons and wraps around", async () => {
@@ -49,13 +49,13 @@ describe("PhotoLightbox", () => {
     renderBox(0);
 
     await user.click(screen.getByRole("button", { name: "gallery.next" }));
-    expect(screen.getByRole("img")).toHaveAttribute("src", "/a1.jpg");
+    expect(screen.getByTestId("lightbox-image")).toHaveAttribute("src", "/a1.jpg");
 
     await user.click(screen.getByRole("button", { name: "gallery.next" }));
-    expect(screen.getByRole("img")).toHaveAttribute("src", "/p1.jpg");
+    expect(screen.getByTestId("lightbox-image")).toHaveAttribute("src", "/p1.jpg");
 
     await user.click(screen.getByRole("button", { name: "gallery.previous" }));
-    expect(screen.getByRole("img")).toHaveAttribute("src", "/a1.jpg");
+    expect(screen.getByTestId("lightbox-image")).toHaveAttribute("src", "/a1.jpg");
   });
 
   it("navigates with the arrow keys and closes on Escape", async () => {
@@ -64,7 +64,7 @@ describe("PhotoLightbox", () => {
     render(<PhotoLightbox tripId="trip-1" items={ITEMS} startIndex={0} onClose={onClose} />);
 
     await user.keyboard("{ArrowRight}");
-    expect(screen.getByRole("img")).toHaveAttribute("src", "/a1.jpg");
+    expect(screen.getByTestId("lightbox-image")).toHaveAttribute("src", "/a1.jpg");
 
     await user.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalled();
@@ -126,7 +126,7 @@ describe("PhotoLightbox", () => {
     await user.click(screen.getByRole("button", { name: "gallery.setAsCover" }));
     // Still pending — navigate to the next item before the request resolves.
     await user.click(screen.getByRole("button", { name: "gallery.next" }));
-    expect(screen.getByRole("img")).toHaveAttribute("src", "/a1.jpg");
+    expect(screen.getByTestId("lightbox-image")).toHaveAttribute("src", "/a1.jpg");
 
     resolveCover({ coverImageUrl: "/cover-photo" });
 
