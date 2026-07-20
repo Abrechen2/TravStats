@@ -43,7 +43,7 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.111.0",
+    "@anthropic-ai/sdk": "^0.112.3",
     "@asteasolutions/zod-to-openapi": "^7.3.4",
     "@kenjiuno/msgreader": "^1.28.0",
     "@prisma/client": "^5.7.0",
@@ -104,7 +104,7 @@
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "ts-prune": "^0.10.3",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.1",
     "typescript": "^5.3.3"
   },
   "overrides": {
