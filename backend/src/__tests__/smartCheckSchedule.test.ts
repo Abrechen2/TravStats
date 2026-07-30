@@ -87,6 +87,72 @@ describe('calculateNextApiCheckAt', () => {
     });
   });
 
+  describe('arrival follow-up (delayed flights)', () => {
+    // The three fixed checkpoints derive from SCHEDULED times, so the last one
+    // sits at scheduled arrival + 30 min. A flight delayed by more than that is
+    // still airborne when it fires, and without a follow-up its actual_arrival
+    // could never be captured (observed on LO729 WAW-EVN, 2026-07-21).
+    it('keeps polling when a departure was observed but no arrival was', () => {
+      const dep = future(-5 * HOURS);
+      const arr = future(-2 * HOURS); // all three checkpoints already past
+      const result = calculateNextApiCheckAt(dep, arr, 'scheduled', 'LO729', NOW, {
+        hasActualDeparture: true,
+        hasActualArrival: false,
+      });
+      expect(result?.getTime()).toBe(NOW.getTime() + 30 * MINUTES);
+    });
+
+    it('stops as soon as the arrival has been observed', () => {
+      const dep = future(-5 * HOURS);
+      const arr = future(-2 * HOURS);
+      const result = calculateNextApiCheckAt(dep, arr, 'scheduled', 'LO729', NOW, {
+        hasActualDeparture: true,
+        hasActualArrival: true,
+      });
+      expect(result).toBeNull();
+    });
+
+    it('does not follow up on a flight that was never observed departing', () => {
+      const dep = future(-5 * HOURS);
+      const arr = future(-2 * HOURS);
+      const result = calculateNextApiCheckAt(dep, arr, 'scheduled', 'LH400', NOW, {
+        hasActualDeparture: false,
+        hasActualArrival: false,
+      });
+      expect(result).toBeNull();
+    });
+
+    it('gives up once the follow-up window (arrival + 6h) has closed', () => {
+      const dep = future(-10 * HOURS);
+      const arr = future(-7 * HOURS); // deadline was an hour ago
+      const result = calculateNextApiCheckAt(dep, arr, 'scheduled', 'LO729', NOW, {
+        hasActualDeparture: true,
+        hasActualArrival: false,
+      });
+      expect(result).toBeNull();
+    });
+
+    it('clamps the final follow-up to the window deadline', () => {
+      const dep = future(-9 * HOURS);
+      const arr = future(-5 * HOURS - 45 * MINUTES); // deadline is in 15 min
+      const result = calculateNextApiCheckAt(dep, arr, 'scheduled', 'LO729', NOW, {
+        hasActualDeparture: true,
+        hasActualArrival: false,
+      });
+      expect(result?.getTime()).toBe(arr.getTime() + 6 * HOURS);
+    });
+
+    it('leaves the normal checkpoint chain untouched while checkpoints remain', () => {
+      const dep = future(5 * HOURS);
+      const arr = future(12 * HOURS);
+      const result = calculateNextApiCheckAt(dep, arr, 'scheduled', 'LH400', NOW, {
+        hasActualDeparture: true,
+        hasActualArrival: false,
+      });
+      expect(result?.getTime()).toBe(dep.getTime() - 30 * MINUTES);
+    });
+  });
+
   describe('short-haul edge cases', () => {
     it('deduplicates / orders checkpoints correctly on ultra-short flights', () => {
       // 55 min MUC-VIE flight: dep in 2h, arr in 2h55min.
