@@ -3,7 +3,11 @@
 # Never builds. Never targets any CT other than 134.
 #
 #   bash scripts/preview/deploy-preview.sh beta 2.3.0-beta.11
-#   bash scripts/preview/deploy-preview.sh immich preview-immich
+#   bash scripts/preview/deploy-preview.sh poi preview-poi
+#
+# The immich slot (port 3011) was retired on 2026-08-01: dev/immich-albums is
+# fully merged, so the feature ships on the beta slot. The demo Immich server
+# stays on preview-net and is now the beta slot's admin-global instance.
 set -uo pipefail
 
 NODE1="${NODE1:-192.168.178.171}"
@@ -18,11 +22,10 @@ fi
 slot="${1:-}"; tag="${2:-}"
 case "$slot" in
   beta)   host="beta.travstats.de";        port=3010 ;;
-  immich) host="immich-beta.travstats.de"; port=3011 ;;
   poi)    host="poi-beta.travstats.de";    port=3012 ;;
-  *) echo "usage: $0 <beta|immich|poi> <ghcr-tag>" >&2; exit 2 ;;
+  *) echo "usage: $0 <beta|poi> <ghcr-tag>" >&2; exit 2 ;;
 esac
-[[ -n "$tag" ]] || { echo "usage: $0 <beta|immich|poi> <ghcr-tag>" >&2; exit 2; }
+[[ -n "$tag" ]] || { echo "usage: $0 <beta|poi> <ghcr-tag>" >&2; exit 2; }
 if ! [[ "$tag" =~ ^[A-Za-z0-9._-]+$ ]]; then
   echo "invalid tag: $tag (allowed: A-Za-z0-9._-)" >&2; exit 2
 fi
