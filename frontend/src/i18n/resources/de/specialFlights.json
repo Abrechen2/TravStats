@@ -65,7 +65,7 @@
     "arrivalTime": "Ankunft",
     "notes": "Notizen",
     "tags": "Tags (kommagetrennt)",
-    "companions": "Begleitung (kommagetrennt)"
+    "companions": "Begleitung"
   },
   "picker": {
     "provider_other": "Sonstiger Anbieter"

@@ -65,7 +65,7 @@
     "arrivalTime": "Arrival",
     "notes": "Notes",
     "tags": "Tags (comma-separated)",
-    "companions": "Companions (comma-separated)"
+    "companions": "Companions"
   },
   "picker": {
     "provider_other": "Other provider"

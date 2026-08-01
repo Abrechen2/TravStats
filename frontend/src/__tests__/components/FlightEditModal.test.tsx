@@ -1,7 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, fireEvent, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import FlightEditModal from "../../components/FlightEditModal";
 import type { Flight } from "../../types";
+
+const mocks = vi.hoisted(() => ({ companionsList: vi.fn() }));
 
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
@@ -13,6 +16,9 @@ vi.mock("../../store/settingsStore", () => ({
   useSettingsStore: () => ({
     features: { enableCostTracking: false },
   }),
+}));
+vi.mock("../../lib/api", () => ({
+  companionsApi: { list: mocks.companionsList },
 }));
 
 const mockFlight: Flight = {
@@ -31,6 +37,10 @@ const mockFlight: Flight = {
 };
 
 describe("FlightEditModal", () => {
+  beforeEach(() => {
+    mocks.companionsList.mockReset().mockResolvedValue([]);
+  });
+
   it("renders departure and arrival time inputs when modal is open", () => {
     render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
@@ -144,5 +154,41 @@ describe("FlightEditModal", () => {
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     const [, updates] = onSave.mock.calls[0];
     expect(updates.status).toBe("scheduled");
+  });
+
+  // Task 12 — the comma-separated companions text input is replaced by the
+  // shared CompanionPicker.
+  it("renders the existing companions as removable chips instead of a CSV text field", () => {
+    const flightWithCompanions: Flight = { ...mockFlight, companions: ["Anna", "Jonas"] };
+    render(
+      <FlightEditModal
+        flight={flightWithCompanions}
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId("companion-remove-Anna")).toBeInTheDocument();
+    expect(screen.getByTestId("companion-remove-Jonas")).toBeInTheDocument();
+  });
+
+  it("submits companions as a string[] built from the picker chips", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const flightWithCompanions: Flight = { ...mockFlight, companions: ["Anna"] };
+    const { getByText } = render(
+      <FlightEditModal
+        flight={flightWithCompanions}
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />
+    );
+
+    await userEvent.type(screen.getByRole("combobox", { name: "picker.label" }), "Jonas{Enter}");
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.companions).toEqual(["Anna", "Jonas"]);
   });
 });

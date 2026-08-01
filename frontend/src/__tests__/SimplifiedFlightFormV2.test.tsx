@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
+import { companionsApi } from "../lib/api";
 
 vi.mock("../lib/api");
 vi.mock("../store/settingsStore", () => ({
@@ -33,6 +34,11 @@ describe("SimplifiedFlightFormV2", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // CompanionPicker (rendered on the "complete" step) fetches suggestions
+    // via companionsApi.list() on mount — the bare `vi.mock("../lib/api")`
+    // above auto-mocks every export to a vi.fn() returning undefined, which
+    // makes CompanionPicker's `.then()` throw. Give it a resolvable promise.
+    vi.mocked(companionsApi.list).mockResolvedValue([]);
   });
 
   it("should render flight form", () => {
