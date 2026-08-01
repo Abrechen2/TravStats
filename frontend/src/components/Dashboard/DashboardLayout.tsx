@@ -12,7 +12,7 @@ import SpecialFlightModal from "../SpecialFlightModal";
 import { CruiseAddChooser } from "../Cruise/CruiseAddChooser";
 import { DomainTabStrip } from "./DomainTabStrip";
 import { AddDomainPicker, type AddableDomain } from "./AddDomainPicker";
-import type { FlightInput } from "../../types";
+import type { Flight, FlightInput } from "../../types";
 import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
 
 interface DashboardLayoutProps {
@@ -45,12 +45,14 @@ export function DashboardLayout({
   const handleFlightCreate = async (
     flight: FlightInput,
     opts?: FlightSubmitOptions
-  ): Promise<void> => {
+  ): Promise<Flight> => {
     try {
-      await flightsApi.create(flight, opts);
+      const created = await flightsApi.create(flight, opts);
       addToast("success", t("flights:table.toast.updated"));
       setAddingDomain(null);
       onDataChanged?.();
+      // Flows back into the form's post-create trip assignment (#199).
+      return created;
     } catch (error) {
       logger.error("Failed to add flight from dashboard:", error);
       throw error;
