@@ -37,6 +37,17 @@ describe('resolveCompanions', () => {
     expect(result.map((c) => c.displayName)).toEqual(['Bea', 'Anna', 'Cem']);
   });
 
+  // Every real caller sends a mix of known and new names. An implementation
+  // that resolved existing companions in bulk and appended new ones would
+  // reorder the result and still pass the all-new-names test above.
+  it('keeps input order when known and new names are interleaved', async () => {
+    await resolveCompanions(userId, ['Anna', 'Cem']);
+
+    const result = await resolveCompanions(userId, ['Bea', 'Anna', 'Dora', 'Cem']);
+
+    expect(result.map((c) => c.displayName)).toEqual(['Bea', 'Anna', 'Dora', 'Cem']);
+  });
+
   it('drops blank entries', async () => {
     const result = await resolveCompanions(userId, ['Anna', '   ', '']);
     expect(result).toHaveLength(1);
