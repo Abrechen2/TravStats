@@ -1,7 +1,7 @@
 import HelpIcon from "../Help/HelpIcon";
 import AirportAutocomplete from "../AirportAutocomplete";
 import CompanionPicker from "../CompanionPicker";
-import TimesFields from "./fields/TimesFields";
+import TimesFields, { type ActualTimesFieldsValue } from "./fields/TimesFields";
 import { useTranslation } from "../../hooks/useTranslation";
 import { calculateDistance } from "../../lib/geo";
 import type { Airport } from "../../lib/api";
@@ -56,6 +56,19 @@ export interface FlightCompleteStepProps {
   setDepartureTime: (v: string) => void;
   setArrivalDate: (v: string) => void;
   setArrivalTime: (v: string) => void;
+  // Actual departure/arrival (#200) — optional so existing callers/tests that
+  // don't wire this in (e.g. FlightCompleteStep.timesFieldsWiring.test.tsx's
+  // baseProps()) keep compiling; SimplifiedFlightFormV2 always supplies all
+  // eight. When any setter is missing, the corresponding field just no-ops
+  // instead of crashing — see handleActualChange below.
+  actualDepartureDate?: string;
+  actualDepartureTime?: string;
+  actualArrivalDate?: string;
+  actualArrivalTime?: string;
+  setActualDepartureDate?: (v: string) => void;
+  setActualDepartureTime?: (v: string) => void;
+  setActualArrivalDate?: (v: string) => void;
+  setActualArrivalTime?: (v: string) => void;
   // Flight info
   airline: string;
   operatingAirline: string;
@@ -119,6 +132,14 @@ export default function FlightCompleteStep({
   setDepartureTime,
   setArrivalDate,
   setArrivalTime,
+  actualDepartureDate,
+  actualDepartureTime,
+  actualArrivalDate,
+  actualArrivalTime,
+  setActualDepartureDate,
+  setActualDepartureTime,
+  setActualArrivalDate,
+  setActualArrivalTime,
   airline,
   operatingAirline,
   flightNumber,
@@ -167,6 +188,23 @@ export default function FlightCompleteStep({
   const canEstimateArrival = Boolean(
     departure && arrival && departureDate && departureTime && status !== "historical"
   );
+
+  // Actual departure/arrival (#200) — defaults to empty strings when the
+  // caller didn't wire the optional props in (see FlightCompleteStepProps),
+  // so <TimesFields> always gets a well-formed actualValue. The individual
+  // setter calls are optional-chained for the same reason.
+  const actualTimesValue: ActualTimesFieldsValue = {
+    actualDepDate: actualDepartureDate ?? "",
+    actualDepTime: actualDepartureTime ?? "",
+    actualArrDate: actualArrivalDate ?? "",
+    actualArrTime: actualArrivalTime ?? "",
+  };
+  const handleActualTimesChange = (next: ActualTimesFieldsValue): void => {
+    setActualDepartureDate?.(next.actualDepDate);
+    setActualDepartureTime?.(next.actualDepTime);
+    setActualArrivalDate?.(next.actualArrDate);
+    setActualArrivalTime?.(next.actualArrTime);
+  };
 
   const handleEstimateArrival = (): void => {
     if (!departure || !arrival || !departureDate || !departureTime) return;
@@ -484,6 +522,8 @@ export default function FlightCompleteStep({
               expandedContent: t("flights:form.help.arrivalTimeExpanded"),
             },
           }}
+          actualValue={actualTimesValue}
+          onActualChange={handleActualTimesChange}
         />
       )}
 
