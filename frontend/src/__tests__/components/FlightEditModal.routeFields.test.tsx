@@ -59,23 +59,30 @@ vi.mock("../../lib/api", () => ({
   companionsApi: { list: vi.fn().mockResolvedValue([]) },
 }));
 // See file header: AirportAutocomplete's own search UI isn't under test
-// here. The stub renders two buttons per side (labelled by the placeholder
-// RouteFields passes in, which differ for departure vs. arrival): one
-// simulates "the user picked this airport" (real onChange(airport)), the
-// other simulates the real component's own onChange(null) — what it does
-// when the user types text that doesn't match a real airport (an abandoned
-// edit). Reproducing that null-on-abandon contract is enough to test how
-// FlightEditModal/RouteFields react to it, without re-testing
-// AirportAutocomplete's own search/matching logic.
+// here. The stub reproduces its actual value/onChange/onFocus/onBlur
+// contract with one button per action:
+//   "{placeholder}"        -> onChange(mocks.nextAirport)  (pick a suggestion)
+//   "{placeholder}-clear"  -> onChange(null)                (a keystroke that
+//                              diverges from the current selection — the real
+//                              component calls this on EVERY such keystroke,
+//                              not just an abandoned one — see
+//                              AirportAutocomplete.tsx's handleInputChange)
+//   "{placeholder}-blur"   -> onBlur()                      (leaving the field)
+// Round 2 (review follow-up): the FIRST version of this mock exposed only
+// "pick" and a TERMINAL "clear" — never clear-then-pick, and no blur at
+// all — so the hint's "fires on every keystroke, not just an abandoned
+// edit" regression was unexercised. It is now.
 vi.mock("../../components/AirportAutocomplete", () => ({
   default: ({
     value,
     onChange,
     placeholder,
+    onBlur,
   }: {
     value: Airport | null;
     onChange: (a: Airport | null) => void;
     placeholder?: string;
+    onBlur?: () => void;
   }) => (
     <div>
       <button type="button" aria-label={placeholder} onClick={() => onChange(mocks.nextAirport)}>
@@ -83,6 +90,9 @@ vi.mock("../../components/AirportAutocomplete", () => ({
       </button>
       <button type="button" aria-label={`${placeholder}-clear`} onClick={() => onChange(null)}>
         clear
+      </button>
+      <button type="button" aria-label={`${placeholder}-blur`} onClick={() => onBlur?.()}>
+        blur
       </button>
     </div>
   ),
@@ -229,12 +239,17 @@ describe("FlightEditModal route editing (Task 4)", () => {
     expect(payload.depTimezone).toBe("Asia/Tokyo");
   });
 
-  // Review follow-up #2: an abandoned typed edit (AirportAutocomplete's own
-  // onChange(null) when the typed text doesn't resolve) must be visible, not
-  // silent — before this fix, departureAirport just went null and the save
+  // Review follow-up #2 (round 1): an abandoned typed edit (AirportAutocomplete's
+  // own onChange(null) when the typed text doesn't resolve) must be visible, not
+  // silent — before that fix, departureAirport just went null and the save
   // quietly kept the flight's stored airport with no indication anything was
   // dropped.
-  it("shows a hint instead of silently dropping an abandoned typed edit, and still saves with the stored airport kept", async () => {
+  //
+  // Round 2 correction: the hint must only appear once the field SETTLES
+  // unresolved — a blur while still null — not on the raw null itself. So this
+  // test now drives BOTH "type" (clear) and "leave the field" (blur) before
+  // expecting the hint; see the next test for the case that round 1 missed.
+  it("shows a hint once an abandoned typed edit is left unresolved, and still saves with the stored airport kept", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     render(<FlightEditModal flight={FLIGHT} isOpen onClose={() => {}} onSave={onSave} />);
     await waitForHydration();
@@ -242,8 +257,11 @@ describe("FlightEditModal route editing (Task 4)", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "flights:form.placeholders.departureAirport-clear" })
     );
+    await userEvent.click(
+      screen.getByRole("button", { name: "flights:form.placeholders.departureAirport-blur" })
+    );
 
-    // The abandoned edit must be visible — not a blocking error, just a hint.
+    // The abandoned, LEFT edit must be visible — not a blocking error, just a hint.
     expect(await screen.findByText("flights:edit.routeUnresolvedHint")).toBeInTheDocument();
 
     // Not a blocking validation: saving must still work.
@@ -254,5 +272,41 @@ describe("FlightEditModal route editing (Task 4)", () => {
     // Not a data-integrity bug: the field is simply omitted, so the server
     // keeps the flight's currently stored departure untouched.
     expect(payload.departure).toBeUndefined();
+  });
+
+  // THE test round 2 was missing: the normal editing path — typing toward a
+  // NEW airport and picking it — passes through the exact same onChange(null)
+  // the abandoned-edit path does (see AirportAutocomplete.tsx's
+  // handleInputChange, which nulls the value on the FIRST keystroke that
+  // diverges from the current selection). A hint gated on raw null fires here
+  // too, mid-search, for an edit that's about to succeed. It must not.
+  it("shows NO hint at any point while typing toward a new airport and picking it", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<FlightEditModal flight={FLIGHT} isOpen onClose={() => {}} onSave={onSave} />);
+    await waitForHydration();
+
+    // "Typing": the first diverging keystroke nulls the value, same as the
+    // real component. Mid-search — no hint yet.
+    await userEvent.click(
+      screen.getByRole("button", { name: "flights:form.placeholders.departureAirport-clear" })
+    );
+    expect(screen.queryByText("flights:edit.routeUnresolvedHint")).not.toBeInTheDocument();
+
+    // "Picking": lands on a real airport from the dropdown.
+    await userEvent.click(
+      screen.getByRole("button", { name: "flights:form.placeholders.departureAirport" })
+    );
+    expect(screen.queryByText("flights:edit.routeUnresolvedHint")).not.toBeInTheDocument();
+
+    // Leaving the field afterwards must not resurrect a stale hint either.
+    await userEvent.click(
+      screen.getByRole("button", { name: "flights:form.placeholders.departureAirport-blur" })
+    );
+    expect(screen.queryByText("flights:edit.routeUnresolvedHint")).not.toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole("button", { name: /speichern|save/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, payload] = onSave.mock.calls[onSave.mock.calls.length - 1];
+    expect(payload.departure).toMatchObject({ iata: "LHR" });
   });
 });
