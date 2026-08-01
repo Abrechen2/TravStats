@@ -399,8 +399,11 @@ export default function FlightEditModal({
               return (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="label">{t("flights:historicalYear")}</label>
+                    <label className="label" htmlFor="editHistoricalYear">
+                      {t("flights:historicalYear")}
+                    </label>
                     <input
+                      id="editHistoricalYear"
                       type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
@@ -415,8 +418,11 @@ export default function FlightEditModal({
                     />
                   </div>
                   <div>
-                    <label className="label">{t("flights:historicalMonth")}</label>
+                    <label className="label" htmlFor="editHistoricalMonth">
+                      {t("flights:historicalMonth")}
+                    </label>
                     <select
+                      id="editHistoricalMonth"
                       value={monthValue}
                       onChange={(e) => {
                         const y = yearStr || String(new Date().getFullYear());
