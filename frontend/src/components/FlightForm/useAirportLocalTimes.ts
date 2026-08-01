@@ -28,8 +28,16 @@ interface UseAirportLocalTimesResult {
  * `isOpen`, `depCode`, or `arrCode` changes, so callers whose airport
  * codes are editable stay in sync automatically.
  *
- * Until hydration completes (or if it never does — an airport miss, a
- * network error), both zones report `browserTimezone` unchanged.
+ * Until the FIRST hydration completes (or if it never does — an airport
+ * miss, a network error), both zones report `browserTimezone`. Once
+ * hydrated, a re-resolution (triggered by a code change) never un-hydrates
+ * mid-flight: the last known-good pair is held until the new lookup either
+ * completes (the new pair replaces it) or definitively fails (only then
+ * does it fall back to `browserTimezone`). Never un-hydrating during the
+ * resolve window matters because a consumer may submit using whatever this
+ * hook currently reports at any instant — a synchronous reset to
+ * `browserTimezone` while the on-screen value was still airport-local
+ * would pair a stale wall clock with the wrong zone basis.
  */
 export function useAirportLocalTimes({
   isOpen,
@@ -44,27 +52,35 @@ export function useAirportLocalTimes({
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
-    setHydrated(false);
-    setDepTimezone(browserTimezone);
-    setArrTimezone(browserTimezone);
 
     void (async () => {
       const [depAirport, arrAirport] = await Promise.all([
         depCode ? airportsApi.getByCode(depCode).catch(() => null) : Promise.resolve(null),
         arrCode ? airportsApi.getByCode(arrCode).catch(() => null) : Promise.resolve(null),
       ]);
+      // Guards against a stale response from an earlier, superseded lookup
+      // landing after a newer one: React runs this effect's cleanup (which
+      // flips `cancelled`) before starting the next effect instance, so an
+      // in-flight promise from a prior depCode/arrCode/isOpen combination
+      // can never apply its result once a newer resolution has started.
       if (cancelled) return;
 
       const dTz = depAirport?.timezone ?? null;
       const aTz = arrAirport?.timezone ?? null;
-      // Only apply the pair — and only report hydrated — when BOTH
-      // resolved. A lone resolved zone stays discarded so depTimezone /
-      // arrTimezone never disagree on which basis (browser vs. airport)
-      // they're expressed in.
       if (dTz && aTz) {
+        // Both resolved — apply the new pair.
         setDepTimezone(dTz);
         setArrTimezone(aTz);
         setHydrated(true);
+      } else {
+        // Definitive failure: this lookup will not produce a usable pair.
+        // Only now fall back to the browser zone — never synchronously at
+        // the top of the effect, which would un-hydrate an already-good
+        // pair for the entire resolve window even when the new lookup is
+        // about to succeed.
+        setDepTimezone(browserTimezone);
+        setArrTimezone(browserTimezone);
+        setHydrated(false);
       }
     })();
 
