@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import type { Flight, Trip } from "../types";
-import ReceiptUpload from "./ReceiptUpload";
 import TimesFields from "./FlightForm/fields/TimesFields";
 import RouteFields from "./FlightForm/fields/RouteFields";
 import CatalogueCombobox, {
@@ -9,6 +8,7 @@ import CatalogueCombobox, {
   searchAircraftOptions,
 } from "./FlightForm/fields/CatalogueCombobox";
 import BookingFields from "./FlightForm/fields/BookingFields";
+import CostFields from "./FlightForm/fields/CostFields";
 import { useAirportLocalTimes } from "./FlightForm/useAirportLocalTimes";
 import { buildLocalString } from "./FlightForm/useFlightForm";
 import CompanionPicker from "./CompanionPicker";
@@ -19,7 +19,6 @@ import { estimateArrivalFromDeparture } from "../lib/timeEstimation";
 import { airportsApi } from "../lib/api/airports";
 import { tripsApi } from "../lib/api/trips";
 import { logger } from "../lib/logger";
-import CurrencyInput from "./CurrencyInput";
 
 import type { FlightInput } from "../types";
 import type { Airport } from "../lib/api";
@@ -773,62 +772,30 @@ export default function FlightEditModal({
             />
           </div>
 
-          {/* Price & Currency — always available, matching the cruise editor
-              (#192). Only the tax/fee breakdown stays behind cost tracking. */}
-          <div className="grid grid-cols-4 gap-4">
-            <div className="col-span-2">
-              <label className="label">{t("common:labels.price")}</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.price}
-                onChange={(e) => update("price", parseFloat(e.target.value) || 0)}
-                className="input"
-                placeholder={t("flights:form.placeholders.price")}
-              />
-            </div>
-
-            <div>
-              <label className="label">{t("flights:form.currency")}</label>
-              <CurrencyInput
-                value={formData.currency || "EUR"}
-                onChange={(v) => update("currency", v)}
-                className="input"
-              />
-            </div>
-          </div>
-
-          {/* Tax/fee breakdown (feature-gated) */}
-          {features.enableCostTracking && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="label">{t("common:labels.taxes")}</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.taxes}
-                  onChange={(e) => update("taxes", parseFloat(e.target.value) || 0)}
-                  className="input"
-                  placeholder={t("flights:form.placeholders.taxes")}
-                />
-              </div>
-
-              <div>
-                <label className="label">{t("common:labels.fees")}</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.fees}
-                  onChange={(e) => update("fees", parseFloat(e.target.value) || 0)}
-                  className="input"
-                  placeholder={t("flights:form.placeholders.fees")}
-                />
-              </div>
-            </div>
-          )}
+          {/* Cost (#192, #199) — shared with the create form. The modal keeps
+              its historical empty-means-0 internal state; CostFields speaks
+              undefined-means-unrecorded, so the adapter converts both ways.
+              The submit-side `> 0` strip below is unchanged. */}
+          <CostFields
+            value={{
+              price: formData.price > 0 ? formData.price : undefined,
+              currency: formData.currency || "EUR",
+              taxes: formData.taxes > 0 ? formData.taxes : undefined,
+              fees: formData.fees > 0 ? formData.fees : undefined,
+              receiptUrl: formData.receiptUrl,
+            }}
+            onChange={(v) =>
+              setFormData((prev) => ({
+                ...prev,
+                price: v.price ?? 0,
+                currency: v.currency,
+                taxes: v.taxes ?? 0,
+                fees: v.fees ?? 0,
+                receiptUrl: v.receiptUrl,
+              }))
+            }
+            showBreakdown={features.enableCostTracking}
+          />
 
           {/* Tags */}
           <div>
@@ -853,13 +820,6 @@ export default function FlightEditModal({
               placeholder={t("flights:form.placeholders.notes")}
             />
           </div>
-
-          {/* Receipt Upload */}
-          <ReceiptUpload
-            currentReceiptUrl={formData.receiptUrl}
-            onUploadSuccess={(receiptUrl) => update("receiptUrl", receiptUrl)}
-            onDelete={() => update("receiptUrl", "")}
-          />
 
           {/* Actions */}
           <div className="flex gap-3 pt-4">

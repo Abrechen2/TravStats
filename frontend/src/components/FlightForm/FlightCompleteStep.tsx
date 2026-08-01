@@ -12,7 +12,8 @@ import { calculateDistance } from "../../lib/geo";
 import type { Airport } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { estimateArrivalFromDeparture } from "../../lib/timeEstimation";
-import CurrencyInput from "../CurrencyInput";
+import CostFields, { type CostFieldsValue } from "./fields/CostFields";
+import { useSettingsStore } from "../../store/settingsStore";
 
 interface FlightLookupResult {
   flightNumber: string;
@@ -106,12 +107,10 @@ export interface FlightCompleteStepProps {
   setBookingClassLetter: (v: string) => void;
   setBaggageAllowance: (v: string) => void;
   setFrequentFlyerNumber: (v: string) => void;
-  // Price
-  price: number | undefined;
-  /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
-  currency: string;
-  setPrice: (v: number | undefined) => void;
-  setCurrency: (v: string) => void;
+  // Cost (#192; #199 added taxes/fees/receipt to the create path). Grouped
+  // as one value object — this component just hands it to CostFields.
+  cost: CostFieldsValue;
+  onCostChange: (v: CostFieldsValue) => void;
   // Tags & companions
   tags: string[];
   companions: string[];
@@ -181,10 +180,8 @@ export default function FlightCompleteStep({
   setBookingClassLetter,
   setBaggageAllowance,
   setFrequentFlyerNumber,
-  price,
-  currency,
-  setPrice,
-  setCurrency,
+  cost,
+  onCostChange,
   tags,
   companions,
   setTags,
@@ -198,6 +195,7 @@ export default function FlightCompleteStep({
 }: FlightCompleteStepProps): JSX.Element {
   const { t, i18n } = useTranslation(["flights"]);
   const addToast = useToastStore((s) => s.addToast);
+  const { features } = useSettingsStore();
 
   const canEstimateArrival = Boolean(
     departure && arrival && departureDate && departureTime && status !== "historical"
@@ -697,37 +695,21 @@ export default function FlightCompleteStep({
         </div>
       </div>
 
-      {/* Price & Currency — always available, matching the cruise form (#192).
-          Only the tax/fee breakdown elsewhere stays behind cost tracking. */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2">
-          <label className={`label ${textClass} flex items-center gap-2`}>
-            {t("flights:form.price")}
-            <HelpIcon
-              content={t("flights:form.help.price")}
-              expandedContent={t("flights:form.help.price")}
-              position="top"
-            />
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={price ?? ""}
-            onChange={(e) => setPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
-            className={`input ${sizedInputClass}`}
-            placeholder={t("flights:form.placeholders.price")}
-          />
-        </div>
-        <div>
-          <label className={`label ${textClass}`}>{t("flights:form.currency")}</label>
-          <CurrencyInput
-            value={currency}
-            onChange={setCurrency}
-            className={`input ${sizedInputClass}`}
-          />
-        </div>
-      </div>
+      {/* Cost (#192, #199) — shared with the edit modal. Price + currency are
+          always available; the tax/fee breakdown stays behind cost tracking,
+          and the receipt can now be uploaded while ADDING a flight (an
+          abandoned upload is swept by the 90-day orphan cleanup). */}
+      <CostFields
+        value={cost}
+        onChange={onCostChange}
+        showBreakdown={features.enableCostTracking}
+        priceHelp={{
+          content: t("flights:form.help.price"),
+          expandedContent: t("flights:form.help.price"),
+        }}
+        labelClassName={textClass}
+        inputClassName={sizedInputClass}
+      />
 
       {/* Booking (#197, #199) — shared with the edit modal */}
       <BookingFields

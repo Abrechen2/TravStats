@@ -17,6 +17,11 @@ const mocks = vi.hoisted(() => ({ companionsList: vi.fn() }));
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }));
+// Breakdown ON in this file — the other FlightCompleteStep suites mock it
+// off. The price pins below don't depend on the flag either way.
+vi.mock("../../store/settingsStore", () => ({
+  useSettingsStore: () => ({ features: { enableCostTracking: true } }),
+}));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: vi.fn(() => vi.fn()),
 }));
@@ -80,10 +85,8 @@ function baseProps(overrides: Partial<FlightCompleteStepProps> = {}): FlightComp
     setBookingClassLetter: vi.fn(),
     setBaggageAllowance: vi.fn(),
     setFrequentFlyerNumber: vi.fn(),
-    price: undefined,
-    currency: "EUR",
-    setPrice: vi.fn(),
-    setCurrency: vi.fn(),
+    cost: { price: undefined, currency: "EUR", taxes: undefined, fees: undefined, receiptUrl: "" },
+    onCostChange: vi.fn(),
     tags: [],
     companions: [],
     setTags: vi.fn(),
@@ -108,36 +111,62 @@ beforeEach(() => {
   mocks.companionsList.mockReset().mockResolvedValue([]);
 });
 
+const EMPTY_COST = {
+  price: undefined,
+  currency: "EUR",
+  taxes: undefined,
+  fees: undefined,
+  receiptUrl: "",
+};
+
 describe("FlightCompleteStep cost field wiring (Phase 2 Task 3)", () => {
-  it("routes a typed price to its setter as a number", () => {
-    const setPrice = vi.fn();
-    const { container } = render(<FlightCompleteStep {...baseProps({ setPrice })} />);
+  it("routes a typed price out as a number", () => {
+    const onCostChange = vi.fn();
+    const { container } = render(<FlightCompleteStep {...baseProps({ onCostChange })} />);
 
     fireEvent.change(priceInput(container), { target: { value: "199.99" } });
 
-    expect(setPrice).toHaveBeenCalledWith(199.99);
+    expect(onCostChange).toHaveBeenCalledWith({ ...EMPTY_COST, price: 199.99 });
   });
 
   it("routes a cleared price as undefined, never 0", () => {
-    const setPrice = vi.fn();
+    const onCostChange = vi.fn();
     const { container } = render(
-      <FlightCompleteStep {...baseProps({ price: 199.99, setPrice })} />
+      <FlightCompleteStep {...baseProps({ cost: { ...EMPTY_COST, price: 199.99 }, onCostChange })} />
     );
 
     fireEvent.change(priceInput(container), { target: { value: "" } });
 
-    expect(setPrice).toHaveBeenCalledWith(undefined);
+    expect(onCostChange).toHaveBeenCalledWith({ ...EMPTY_COST, price: undefined });
   });
 
-  it("renders the current price prop, and an empty input for undefined", () => {
+  // Phase 2 Task 3 — new create-form surface: with cost tracking enabled the
+  // create form now offers the tax/fee breakdown and the receipt upload,
+  // which previously existed only when editing.
+  it("renders taxes, fees and the receipt upload in the create form (cost tracking on)", () => {
+    const onCostChange = vi.fn();
+    const { container } = render(<FlightCompleteStep {...baseProps({ onCostChange })} />);
+
+    const taxesInput = container.querySelector(
+      'input[placeholder="flights:form.placeholders.taxes"]'
+    ) as HTMLInputElement;
+    expect(taxesInput).toBeTruthy();
+    expect(
+      container.querySelector('input[placeholder="flights:form.placeholders.fees"]')
+    ).toBeTruthy();
+    expect(container.querySelector('input[type="file"]')).toBeTruthy();
+
+    fireEvent.change(taxesInput, { target: { value: "30.5" } });
+    expect(onCostChange).toHaveBeenCalledWith({ ...EMPTY_COST, taxes: 30.5 });
+  });
+
+  it("renders the current price value, and an empty input for undefined", () => {
     const { container: withPrice } = render(
-      <FlightCompleteStep {...baseProps({ price: 42.5 })} />
+      <FlightCompleteStep {...baseProps({ cost: { ...EMPTY_COST, price: 42.5 } })} />
     );
     expect(priceInput(withPrice).value).toBe("42.5");
 
-    const { container: withoutPrice } = render(
-      <FlightCompleteStep {...baseProps({ price: undefined })} />
-    );
+    const { container: withoutPrice } = render(<FlightCompleteStep {...baseProps()} />);
     expect(priceInput(withoutPrice).value).toBe("");
   });
 });
