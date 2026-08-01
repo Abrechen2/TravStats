@@ -40,9 +40,18 @@ Replace `<APP_ID>` with the Application ID from the Developer Portal's
 
 `permissions=8` grants **Administrator**, the simplest option for running
 `setup` (it creates categories/channels, roles, permission overwrites, and
-posts messages). For least-privilege afterward, the bot only needs **Manage
-Roles**, **Manage Channels**, **View Channels**, **Send Messages**, and
-**Read Message History**.
+posts messages). For least-privilege afterward, the bot needs **Manage
+Roles**, **Manage Channels**, **View Channels**, **Send Messages**, **Send
+Messages in Threads**, **Read Message History**, and **Embed Links**.
+
+- **Send Messages in Threads** is required by `reply` — forum posts (e.g. a
+  `#bug-report` thread) are threads, and plain **Send Messages** does not
+  cover posting into one. Without it, `reply` fails on the actual post while
+  its resolution/preview step works fine.
+- **Embed Links** is required by `announce`, which posts an embed, not plain
+  text. Without it, `announce` fails only on the real send — `--dry-run`
+  builds and prints the same embed locally without ever touching the
+  permission, so a dry run looks perfect right up until the live post 403s.
 
 ## 3. Run it
 
