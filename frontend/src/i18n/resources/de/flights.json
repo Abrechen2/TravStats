@@ -14,6 +14,7 @@
     "arrivalDate": "Ankunftsdatum",
     "arrivalTime": "Ankunftszeit",
     "copyDepartureDate": "Abflugdatum übernehmen",
+    "copyToArrival": "Abflugdatum übernehmen",
     "estimateArrivalTime": "Ankunftszeit schätzen",
     "arrivalNextDay": "Ankunft am Folgetag (+1)",
     "arrivalDayOffset": "Ankunft nach {{count}} Tagen",
