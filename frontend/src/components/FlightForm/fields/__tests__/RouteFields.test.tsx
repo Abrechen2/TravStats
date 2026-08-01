@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { useState } from "react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import type { Airport } from "../../../../lib/api";
 import RouteFields from "../RouteFields";
 
@@ -18,8 +19,18 @@ vi.mock("../../../../hooks/useTranslation", () => ({
 //                                 current selection — AirportAutocomplete
 //                                 calls this on EVERY such keystroke, not
 //                                 just an abandoned one)
-//   "-pick"  -> onChange(NEXT)   (clicking a dropdown suggestion)
-//   "-blur"  -> onBlur()         (leaving the field)
+//   "-pick"  -> onBlur() THEN, a microtask later, onChange(NEXT) (clicking
+//                                 a dropdown suggestion — see the round-3
+//                                 note in FlightEditModal.routeFields.test.tsx
+//                                 for why the microtask gap is load-bearing:
+//                                 without it, React 18 batches the blur- and
+//                                 select-triggered state updates into one
+//                                 commit and no assertion can ever observe
+//                                 the intermediate "blurred, not yet
+//                                 resolved" state — the exact reason two
+//                                 earlier rounds' mocks looked green and
+//                                 weren't)
+//   "-blur"  -> onBlur()         (leaving the field WITHOUT picking anything)
 //   "-focus" -> onFocus()        (entering the field)
 vi.mock("../../../AirportAutocomplete", () => ({
   default: ({
@@ -37,7 +48,14 @@ vi.mock("../../../AirportAutocomplete", () => ({
   }) => (
     <div>
       <span>{value?.iata ?? "none"}</span>
-      <button type="button" aria-label={`${placeholder}-pick`} onClick={() => onChange(NEXT)}>
+      <button
+        type="button"
+        aria-label={`${placeholder}-pick`}
+        onClick={() => {
+          onBlur?.();
+          void Promise.resolve().then(() => onChange(NEXT));
+        }}
+      >
         pick
       </button>
       <button type="button" aria-label={`${placeholder}-clear`} onClick={() => onChange(null)}>
@@ -56,6 +74,23 @@ vi.mock("../../../AirportAutocomplete", () => ({
 const NEXT: Airport = { iata: "LHR", icao: "EGLL", name: "London Heathrow", lat: 51.5, lon: -0.45 };
 const DEP_PLACEHOLDER = "flights:form.placeholders.departureAirport";
 
+/** A real state owner for `departure` — a no-op `onDepartureChange` (as
+ *  most tests in this file use) can never observably resolve, so a test
+ *  that needs to see a pick actually LAND needs a genuine parent, exactly
+ *  like FlightEditModal is in production. */
+function StatefulDeparture(): JSX.Element {
+  const [departure, setDeparture] = useState<Airport | null>(null);
+  return (
+    <RouteFields
+      departure={departure}
+      arrival={null}
+      onDepartureChange={setDeparture}
+      onArrivalChange={() => {}}
+      departureHint="not recognised"
+    />
+  );
+}
+
 describe("RouteFields", () => {
   it("renders both pickers seeded with the current departure/arrival values", () => {
     const departure: Airport = { iata: "HND", name: "Tokyo Haneda", lat: 35.5, lon: 139.8 };
@@ -71,7 +106,7 @@ describe("RouteFields", () => {
     expect(screen.getByText("none")).toBeInTheDocument();
   });
 
-  it("routes a departure change through onDepartureChange only", () => {
+  it("routes a departure change through onDepartureChange only", async () => {
     const onDepartureChange = vi.fn();
     const onArrivalChange = vi.fn();
     render(
@@ -83,7 +118,7 @@ describe("RouteFields", () => {
       />
     );
     fireEvent.click(screen.getByRole("button", { name: `${DEP_PLACEHOLDER}-pick` }));
-    expect(onDepartureChange).toHaveBeenCalledWith(NEXT);
+    await waitFor(() => expect(onDepartureChange).toHaveBeenCalledWith(NEXT));
     expect(onArrivalChange).not.toHaveBeenCalled();
   });
 
@@ -115,7 +150,12 @@ describe("RouteFields", () => {
   // RouteFields must only show it once the field SETTLES unresolved: a
   // blur while still null. Merely going null (typing) must never be enough
   // by itself.
-  describe("unresolved-airport hint (gated on blur, not raw null)", () => {
+  //
+  // Review follow-up #2 (round 3) — blur ALSO fires before a dropdown pick
+  // resolves (see the mock's "-pick" control above), so "settled" itself
+  // can't be decided synchronously on blur either — handleBlur defers by a
+  // macrotask and re-checks the LATEST value. These tests wait accordingly.
+  describe("unresolved-airport hint (gated on a deferred blur check, not raw null)", () => {
     it("shows no hint while the value is null but the field hasn't been left yet", () => {
       render(
         <RouteFields
@@ -134,7 +174,7 @@ describe("RouteFields", () => {
       expect(screen.queryByText("not recognised")).not.toBeInTheDocument();
     });
 
-    it("shows the hint once the field is blurred while still unresolved", () => {
+    it("shows the hint once the field is blurred and stays unresolved past the grace check", async () => {
       render(
         <RouteFields
           departure={null}
@@ -146,10 +186,43 @@ describe("RouteFields", () => {
       );
       fireEvent.click(screen.getByRole("button", { name: `${DEP_PLACEHOLDER}-clear` }));
       fireEvent.click(screen.getByRole("button", { name: `${DEP_PLACEHOLDER}-blur` }));
-      expect(screen.getByText("not recognised")).toBeInTheDocument();
+      await waitFor(() => expect(screen.getByText("not recognised")).toBeInTheDocument());
     });
 
-    it("clears the hint immediately once the field resolves to a real airport", () => {
+    it("never shows the hint for a dropdown pick — blur fires, but the pick resolves before the grace check", async () => {
+      render(<StatefulDeparture />);
+      fireEvent.click(screen.getByRole("button", { name: `${DEP_PLACEHOLDER}-clear` }));
+      fireEvent.click(screen.getByRole("button", { name: `${DEP_PLACEHOLDER}-pick` }));
+      // Give both the pick's microtask AND handleBlur's macrotask a chance
+      // to run, in the order they actually would: the airport display
+      // settling on "LHR" confirms onChange landed through REAL state (not
+      // a no-op callback, which could never observably resolve).
+      await waitFor(() => expect(screen.getByText("LHR")).toBeInTheDocument());
+      expect(screen.queryByText("not recognised")).not.toBeInTheDocument();
+    });
+
+    // The synchronous companion to the test above: checks the instant right
+    // after blur lands, BEFORE the pick's microtask-deferred onChange has
+    // had any chance to run. This is what actually distinguishes "deferred
+    // grace check" from "decide synchronously on blur" — the test above
+    // alone would pass against either implementation, since both settle to
+    // the same end state eventually.
+    it("shows no hint synchronously right after a pick's blur, before its onChange resolves", () => {
+      render(
+        <RouteFields
+          departure={null}
+          arrival={null}
+          onDepartureChange={() => {}}
+          onArrivalChange={() => {}}
+          departureHint="not recognised"
+        />
+      );
+      fireEvent.click(screen.getByRole("button", { name: `${DEP_PLACEHOLDER}-clear` }));
+      fireEvent.click(screen.getByRole("button", { name: `${DEP_PLACEHOLDER}-pick` }));
+      expect(screen.queryByText("not recognised")).not.toBeInTheDocument();
+    });
+
+    it("clears the hint immediately once the field resolves to a real airport", async () => {
       const { rerender } = render(
         <RouteFields
           departure={null}
@@ -161,7 +234,7 @@ describe("RouteFields", () => {
       );
       fireEvent.click(screen.getByRole("button", { name: `${DEP_PLACEHOLDER}-clear` }));
       fireEvent.click(screen.getByRole("button", { name: `${DEP_PLACEHOLDER}-blur` }));
-      expect(screen.getByText("not recognised")).toBeInTheDocument();
+      await waitFor(() => expect(screen.getByText("not recognised")).toBeInTheDocument());
 
       // Parent re-renders with a resolved value (a later successful edit).
       rerender(
@@ -176,7 +249,7 @@ describe("RouteFields", () => {
       expect(screen.queryByText("not recognised")).not.toBeInTheDocument();
     });
 
-    it("renders no hint when the caller doesn't supply one, even after blurring unresolved", () => {
+    it("renders no hint when the caller doesn't supply one, even after blurring unresolved", async () => {
       render(
         <RouteFields
           departure={null}
@@ -186,6 +259,8 @@ describe("RouteFields", () => {
         />
       );
       fireEvent.click(screen.getByRole("button", { name: `${DEP_PLACEHOLDER}-blur` }));
+      // Let the deferred grace-check run; still nothing to show either way.
+      await new Promise((resolve) => setTimeout(resolve, 10));
       expect(screen.queryByText("not recognised")).not.toBeInTheDocument();
     });
   });

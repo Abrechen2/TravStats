@@ -21,7 +21,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { fromZonedTime } from "date-fns-tz";
 import type { Flight } from "../../types";
@@ -61,17 +61,44 @@ vi.mock("../../lib/api", () => ({
 // See file header: AirportAutocomplete's own search UI isn't under test
 // here. The stub reproduces its actual value/onChange/onFocus/onBlur
 // contract with one button per action:
-//   "{placeholder}"        -> onChange(mocks.nextAirport)  (pick a suggestion)
+//   "{placeholder}"        -> onBlur() THEN onChange(mocks.nextAirport)
+//                              (pick a suggestion from the dropdown)
 //   "{placeholder}-clear"  -> onChange(null)                (a keystroke that
 //                              diverges from the current selection — the real
 //                              component calls this on EVERY such keystroke,
 //                              not just an abandoned one — see
 //                              AirportAutocomplete.tsx's handleInputChange)
-//   "{placeholder}-blur"   -> onBlur()                      (leaving the field)
+//   "{placeholder}-blur"   -> onBlur()                      (leaving the field
+//                              WITHOUT picking anything afterward)
+//
 // Round 2 (review follow-up): the FIRST version of this mock exposed only
 // "pick" and a TERMINAL "clear" — never clear-then-pick, and no blur at
 // all — so the hint's "fires on every keystroke, not just an abandoned
-// edit" regression was unexercised. It is now.
+// edit" regression was unexercised.
+//
+// Round 3 (review follow-up): "pick" itself used to call ONLY onChange —
+// but a real dropdown option is a plain <button> with no mousedown guard
+// (AirportAutocomplete.tsx:199-203 pre-fix), so clicking it moves focus
+// off the input FIRST, firing a native blur, BEFORE the button's own click
+// handler runs onChange. Blur-then-select is the actual order for the
+// component's primary interaction, not select-then-blur — every earlier
+// round's mock let the test author pick the order by hand, and every
+// passing scenario picked the wrong one. The stub now reproduces the real
+// order unconditionally, so a test can no longer get this backwards.
+//
+// onChange is scheduled a microtask AFTER onBlur runs — NOT called
+// synchronously in the same handler. Two things force this: (1) jsdom does
+// not implement the browser's native "mousedown moves focus, firing blur"
+// default action at all (verified empirically — fireEvent.mousedown never
+// shifts document.activeElement in jsdom), so there is no way to reproduce
+// the real DOM race through the real component in this test environment;
+// or a mock that plays the two calls back synchronously (verified
+// empirically too — React 18 batches both resulting state updates into one
+// commit, so no test assertion can ever observe the intermediate state).
+// A microtask boundary is the smallest gap that forces a REAL separate
+// commit between "blur lands" and "the pick resolves", which is what makes
+// this reproducible and what the RouteFields-side fix (see its own
+// handleBlur) is written against.
 vi.mock("../../components/AirportAutocomplete", () => ({
   default: ({
     value,
@@ -85,7 +112,14 @@ vi.mock("../../components/AirportAutocomplete", () => ({
     onBlur?: () => void;
   }) => (
     <div>
-      <button type="button" aria-label={placeholder} onClick={() => onChange(mocks.nextAirport)}>
+      <button
+        type="button"
+        aria-label={placeholder}
+        onClick={() => {
+          onBlur?.();
+          void Promise.resolve().then(() => onChange(mocks.nextAirport));
+        }}
+      >
         {value?.iata ?? "none"}
       </button>
       <button type="button" aria-label={`${placeholder}-clear`} onClick={() => onChange(null)}>
@@ -292,7 +326,12 @@ describe("FlightEditModal route editing (Task 4)", () => {
     );
     expect(screen.queryByText("flights:edit.routeUnresolvedHint")).not.toBeInTheDocument();
 
-    // "Picking": lands on a real airport from the dropdown.
+    // "Picking": the mock's pick control now reproduces the REAL browser
+    // order for a dropdown click — blur fires first (moving focus off the
+    // input), THEN the option's own click handler resolves the airport.
+    // Checking immediately after is the assertion round 2 was missing: it
+    // catches a hint that only ever existed for the split second between
+    // that blur and the resolving onChange.
     await userEvent.click(
       screen.getByRole("button", { name: "flights:form.placeholders.departureAirport" })
     );
@@ -308,5 +347,59 @@ describe("FlightEditModal route editing (Task 4)", () => {
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     const [, payload] = onSave.mock.calls[onSave.mock.calls.length - 1];
     expect(payload.departure).toMatchObject({ iata: "LHR" });
+  });
+
+  // Round 3 — the specific gap the reviewer described: blur-then-pick as a
+  // SINGLE gesture (no explicit prior "-clear"), matching a user who clicks
+  // straight into the field and picks a suggestion without ever typing
+  // (e.g. re-selecting the same field, or a very short query that already
+  // has one match). departure starts non-null here (HND, from the fixture),
+  // so this is the "resolved -> resolved" pick path, not the abandoned-edit
+  // path — it must never warn either.
+  it("shows NO hint when picking a suggestion directly, without any preceding typing", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<FlightEditModal flight={FLIGHT} isOpen onClose={() => {}} onSave={onSave} />);
+    await waitForHydration();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "flights:form.placeholders.departureAirport" })
+    );
+    expect(screen.queryByText("flights:edit.routeUnresolvedHint")).not.toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole("button", { name: /speichern|save/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, payload] = onSave.mock.calls[onSave.mock.calls.length - 1];
+    expect(payload.departure).toMatchObject({ iata: "LHR" });
+  });
+
+  // THE test that actually closes the chain. The two tests above both use
+  // `userEvent.click`, which awaits internally — by the time it resolves,
+  // the mock's microtask-deferred onChange has ALSO resolved, so they can
+  // only ever observe the settled, already-correct end state. They would
+  // pass even against a completely naive implementation that shows the
+  // hint for one microtask on every single pick. This test uses the
+  // synchronous `fireEvent.click` instead, specifically to inspect the DOM
+  // in the GAP between "blur landed" and "the pick's onChange resolves" —
+  // the exact window the reviewer described, and the one no earlier round's
+  // test suite could see into.
+  it("never renders the hint in the gap between a pick's blur and its resolving onChange", () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<FlightEditModal flight={FLIGHT} isOpen onClose={() => {}} onSave={onSave} />);
+
+    // Skip waitForHydration (async) — this test only cares about the
+    // synchronous instant right after firing the pick, so it stays fully
+    // synchronous throughout rather than mixing await points that could
+    // themselves drain the microtask queue early.
+    fireEvent.click(
+      screen.getByRole("button", { name: "flights:form.placeholders.departureAirport-clear" })
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "flights:form.placeholders.departureAirport" })
+    );
+
+    // Blur has landed synchronously; the pick's onChange is still a pending
+    // microtask. THIS is the instant a false "entry not recognised" would
+    // be visible if the hint were gated on raw synchronous blur.
+    expect(screen.queryByText("flights:edit.routeUnresolvedHint")).not.toBeInTheDocument();
   });
 });
