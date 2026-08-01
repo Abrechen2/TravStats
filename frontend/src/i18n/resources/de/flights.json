@@ -288,8 +288,7 @@
     "tripAssignedToast": "Reise-Zuordnung aktualisiert",
     "tripAssignFailed": "Reise-Zuordnung fehlgeschlagen — andere Änderungen wurden gespeichert",
     "routeFrom": "Von",
-    "routeTo": "Nach",
-    "routeUnresolvedHint": "Eingabe nicht erkannt. Die gespeicherte Auswahl wird nicht geändert."
+    "routeTo": "Nach"
   },
   "quickActions": {
     "showOnMap": "Auf Karte zeigen",
