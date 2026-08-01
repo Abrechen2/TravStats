@@ -200,6 +200,18 @@ export default function AirportAutocomplete({
               <button
                 key={airport.id}
                 type="button"
+                // Prevents the browser's default mousedown action (shifting
+                // focus to this button), which would otherwise blur the
+                // text input a beat BEFORE this button's own click fires
+                // handleSelect. That ordering made a caller listening for
+                // blur (RouteFields' unresolved-airport hint) see the field
+                // as abandoned for one render, for a selection that was
+                // about to succeed. Keeping focus on the input means the
+                // click completes with no intervening blur at all — for a
+                // mouse pick specifically; keyboard selection (Tab focuses
+                // this button directly, no mousedown involved) and the
+                // click-outside-close handler are untouched by this.
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleSelect(airport)}
                 className="w-full px-4 py-2 text-left focus:outline-hidden border-b last:border-0"
                 style={{ borderColor: "var(--color-border)" }}
