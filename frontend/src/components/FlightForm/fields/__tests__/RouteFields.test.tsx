@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import type { Airport } from "../../../../lib/api";
 import RouteFields from "../RouteFields";
 
@@ -8,26 +8,53 @@ vi.mock("../../../../hooks/useTranslation", () => ({
 }));
 // AirportAutocomplete does its own debounced search + seeding-status polling
 // against the API — irrelevant to what RouteFields itself is responsible
-// for (wiring two pickers to two onChange callbacks), so it's replaced with
-// a minimal stub that exposes the same value/onChange contract. Same
+// for (wiring two pickers to two onChange callbacks plus the "did this
+// field settle on a match" hint gating), so it's replaced with a minimal
+// stub exposing the same value/onChange/onFocus/onBlur contract. Same
 // isolation boundary FlightCompleteStep.timesFieldsWiring.test.tsx uses.
+//
+// Four controls per side, matching what the REAL component actually does:
+//   "-clear" -> onChange(null)   (a keystroke that diverges from the
+//                                 current selection — AirportAutocomplete
+//                                 calls this on EVERY such keystroke, not
+//                                 just an abandoned one)
+//   "-pick"  -> onChange(NEXT)   (clicking a dropdown suggestion)
+//   "-blur"  -> onBlur()         (leaving the field)
+//   "-focus" -> onFocus()        (entering the field)
 vi.mock("../../../AirportAutocomplete", () => ({
   default: ({
     value,
     onChange,
     placeholder,
+    onFocus,
+    onBlur,
   }: {
     value: Airport | null;
     onChange: (a: Airport | null) => void;
     placeholder?: string;
+    onFocus?: () => void;
+    onBlur?: () => void;
   }) => (
-    <button type="button" aria-label={placeholder} onClick={() => onChange(NEXT)}>
-      {value?.iata ?? "none"}
-    </button>
+    <div>
+      <span>{value?.iata ?? "none"}</span>
+      <button type="button" aria-label={`${placeholder}-pick`} onClick={() => onChange(NEXT)}>
+        pick
+      </button>
+      <button type="button" aria-label={`${placeholder}-clear`} onClick={() => onChange(null)}>
+        clear
+      </button>
+      <button type="button" aria-label={`${placeholder}-blur`} onClick={() => onBlur?.()}>
+        blur
+      </button>
+      <button type="button" aria-label={`${placeholder}-focus`} onClick={() => onFocus?.()}>
+        focus
+      </button>
+    </div>
   ),
 }));
 
 const NEXT: Airport = { iata: "LHR", icao: "EGLL", name: "London Heathrow", lat: 51.5, lon: -0.45 };
+const DEP_PLACEHOLDER = "flights:form.placeholders.departureAirport";
 
 describe("RouteFields", () => {
   it("renders both pickers seeded with the current departure/arrival values", () => {
@@ -44,7 +71,7 @@ describe("RouteFields", () => {
     expect(screen.getByText("none")).toBeInTheDocument();
   });
 
-  it("routes a departure change through onDepartureChange only", async () => {
+  it("routes a departure change through onDepartureChange only", () => {
     const onDepartureChange = vi.fn();
     const onArrivalChange = vi.fn();
     render(
@@ -55,8 +82,7 @@ describe("RouteFields", () => {
         onArrivalChange={onArrivalChange}
       />
     );
-    const [depButton] = screen.getAllByRole("button");
-    depButton.click();
+    fireEvent.click(screen.getByRole("button", { name: `${DEP_PLACEHOLDER}-pick` }));
     expect(onDepartureChange).toHaveBeenCalledWith(NEXT);
     expect(onArrivalChange).not.toHaveBeenCalled();
   });
@@ -83,34 +109,84 @@ describe("RouteFields", () => {
     expect(screen.queryByText("flights:form.to")).not.toBeInTheDocument();
   });
 
-  // Review follow-up #2: an abandoned typed edit (the AirportAutocomplete's
-  // own onChange(null) when the typed text doesn't match a real airport)
-  // must not vanish silently — RouteFields renders whatever hint text the
-  // caller supplies under the corresponding field. RouteFields itself is
-  // dumb about WHEN to show one; FlightEditModal decides that (see its own
-  // test file) by only passing a hint when its airport state is null.
-  it("shows the caller-supplied hint under a field with a null value, none when absent", () => {
-    render(
-      <RouteFields
-        departure={null}
-        arrival={{ iata: "JFK", name: "JFK", lat: 40.6, lon: -73.8 }}
-        onDepartureChange={() => {}}
-        onArrivalChange={() => {}}
-        departureHint="not recognised"
-      />
-    );
-    expect(screen.getByText("not recognised")).toBeInTheDocument();
-  });
+  // Review follow-up #2 (round 2) — AirportAutocomplete nulls its value on
+  // the FIRST keystroke of any edit, including a perfectly good one, so
+  // gating the hint on raw null cried wolf during ordinary typing/searching.
+  // RouteFields must only show it once the field SETTLES unresolved: a
+  // blur while still null. Merely going null (typing) must never be enough
+  // by itself.
+  describe("unresolved-airport hint (gated on blur, not raw null)", () => {
+    it("shows no hint while the value is null but the field hasn't been left yet", () => {
+      render(
+        <RouteFields
+          departure={null}
+          arrival={null}
+          onDepartureChange={() => {}}
+          onArrivalChange={() => {}}
+          departureHint="not recognised"
+        />
+      );
+      // departure is ALREADY null at mount (no typing simulated even) —
+      // still must render nothing until a blur says the field settled here.
+      expect(screen.queryByText("not recognised")).not.toBeInTheDocument();
 
-  it("renders no hint when the caller doesn't supply one", () => {
-    render(
-      <RouteFields
-        departure={null}
-        arrival={null}
-        onDepartureChange={() => {}}
-        onArrivalChange={() => {}}
-      />
-    );
-    expect(screen.queryByText("not recognised")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: `${DEP_PLACEHOLDER}-clear` }));
+      expect(screen.queryByText("not recognised")).not.toBeInTheDocument();
+    });
+
+    it("shows the hint once the field is blurred while still unresolved", () => {
+      render(
+        <RouteFields
+          departure={null}
+          arrival={null}
+          onDepartureChange={() => {}}
+          onArrivalChange={() => {}}
+          departureHint="not recognised"
+        />
+      );
+      fireEvent.click(screen.getByRole("button", { name: `${DEP_PLACEHOLDER}-clear` }));
+      fireEvent.click(screen.getByRole("button", { name: `${DEP_PLACEHOLDER}-blur` }));
+      expect(screen.getByText("not recognised")).toBeInTheDocument();
+    });
+
+    it("clears the hint immediately once the field resolves to a real airport", () => {
+      const { rerender } = render(
+        <RouteFields
+          departure={null}
+          arrival={null}
+          onDepartureChange={() => {}}
+          onArrivalChange={() => {}}
+          departureHint="not recognised"
+        />
+      );
+      fireEvent.click(screen.getByRole("button", { name: `${DEP_PLACEHOLDER}-clear` }));
+      fireEvent.click(screen.getByRole("button", { name: `${DEP_PLACEHOLDER}-blur` }));
+      expect(screen.getByText("not recognised")).toBeInTheDocument();
+
+      // Parent re-renders with a resolved value (a later successful edit).
+      rerender(
+        <RouteFields
+          departure={NEXT}
+          arrival={null}
+          onDepartureChange={() => {}}
+          onArrivalChange={() => {}}
+          departureHint="not recognised"
+        />
+      );
+      expect(screen.queryByText("not recognised")).not.toBeInTheDocument();
+    });
+
+    it("renders no hint when the caller doesn't supply one, even after blurring unresolved", () => {
+      render(
+        <RouteFields
+          departure={null}
+          arrival={null}
+          onDepartureChange={() => {}}
+          onArrivalChange={() => {}}
+        />
+      );
+      fireEvent.click(screen.getByRole("button", { name: `${DEP_PLACEHOLDER}-blur` }));
+      expect(screen.queryByText("not recognised")).not.toBeInTheDocument();
+    });
   });
 });
