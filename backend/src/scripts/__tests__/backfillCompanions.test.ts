@@ -141,4 +141,39 @@ describe('backfillCompanions', () => {
     });
     expect(after).toEqual(before);
   });
+
+  // The rollback round trip (FIX 2): a record that already has links must
+  // still be revisited if its legacy array moved on without them -- e.g. the
+  // user rolled back to the pre-entity image, edited companions there (only
+  // the array gets written on that image), then re-upgraded. The old
+  // `companionLinks: { none: {} } }` filter permanently skipped any record
+  // that already had links, so this edit would be lost once the legacy
+  // column is dropped.
+  it('repairs links after a rollback edit touches only the legacy array', async () => {
+    const flight = await legacyFlight(['Anna']);
+    await backfillCompanions();
+
+    const firstPass = await prisma.flightCompanion.findMany({
+      where: { flightId: flight.id },
+      include: { companion: true },
+      orderBy: { position: 'asc' },
+    });
+    expect(firstPass.map((l) => l.companion.displayName)).toEqual(['Anna']);
+
+    // Simulate the previous image: only the legacy array is written, links
+    // are left exactly as they were.
+    await prisma.flight.update({
+      where: { id: flight.id },
+      data: { companions: { set: ['Anna', 'Ben'] } },
+    });
+
+    await backfillCompanions();
+
+    const repaired = await prisma.flightCompanion.findMany({
+      where: { flightId: flight.id },
+      include: { companion: true },
+      orderBy: { position: 'asc' },
+    });
+    expect(repaired.map((l) => l.companion.displayName)).toEqual(['Anna', 'Ben']);
+  });
 });
