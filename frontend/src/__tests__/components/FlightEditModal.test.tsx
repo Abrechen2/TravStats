@@ -84,6 +84,73 @@ describe("FlightEditModal", () => {
     expect(document.querySelector('input[type="text"][inputmode="numeric"]')).toBeTruthy();
   });
 
+  // Task 3 follow-up: clearing/setting the historical year used to touch only
+  // the departure fields and leave the arrival ones stale (an asymmetry bug
+  // pre-dating the date/time split). The split's rewrite made both directions
+  // symmetric — this pins that behaviour so it can't silently regress back to
+  // the old asymmetry.
+  it("clearing the historical year clears departure AND arrival date+time together", async () => {
+    const historicalFlight: Flight = {
+      ...mockFlight,
+      status: "historical",
+      // Noon UTC on two different dates so the split-vs-not-split difference
+      // is unambiguous regardless of the test runner's local timezone.
+      departureTime: "2020-03-15T12:00:00.000Z",
+      arrivalTime: "2020-03-20T12:00:00.000Z",
+    };
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { getByText } = render(
+      <FlightEditModal flight={historicalFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+
+    const yearInput = document.querySelector("#editHistoricalYear") as HTMLInputElement;
+    expect(yearInput.value).toBe("2020");
+
+    fireEvent.change(yearInput, { target: { value: "" } });
+    expect(yearInput.value).toBe("");
+
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    // Old (asymmetric) behaviour left arrivalLocal/arrTimezone populated —
+    // asserting all four are gone is what catches a regression back to it.
+    expect(updates.departureLocal).toBeUndefined();
+    expect(updates.depTimezone).toBeUndefined();
+    expect(updates.arrivalLocal).toBeUndefined();
+    expect(updates.arrTimezone).toBeUndefined();
+  });
+
+  it("setting the historical year (with no prior date) sets departure AND arrival together", async () => {
+    const historicalFlight: Flight = {
+      ...mockFlight,
+      status: "historical",
+      departureTime: null,
+      arrivalTime: null,
+    };
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { getByText } = render(
+      <FlightEditModal flight={historicalFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+
+    const yearInput = document.querySelector("#editHistoricalYear") as HTMLInputElement;
+    expect(yearInput.value).toBe("");
+
+    fireEvent.change(yearInput, { target: { value: "2019" } });
+    expect(yearInput.value).toBe("2019");
+
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    // Both sides land on the same year-01-01 shape — proving arrival was set
+    // in the same action as departure, not left behind.
+    expect(updates.departureLocal).toBe("2019-01-01T00:00");
+    expect(updates.arrivalLocal).toBe("2019-01-01T00:00");
+    expect(updates.depTimezone).toBeTruthy();
+    expect(updates.arrTimezone).toBeTruthy();
+  });
+
   it("always shows price + currency but hides taxes/fees when enableCostTracking is false (#192)", () => {
     const { container } = render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
