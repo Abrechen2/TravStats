@@ -13,6 +13,7 @@ import type { Airport } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { estimateArrivalFromDeparture } from "../../lib/timeEstimation";
 import CostFields, { type CostFieldsValue } from "./fields/CostFields";
+import TripSelectField from "./fields/TripSelectField";
 import { useSettingsStore } from "../../store/settingsStore";
 
 interface FlightLookupResult {
@@ -111,6 +112,10 @@ export interface FlightCompleteStepProps {
   // as one value object — this component just hands it to CostFields.
   cost: CostFieldsValue;
   onCostChange: (v: CostFieldsValue) => void;
+  // Trip (#199) — the assignment itself runs AFTER the create, in
+  // useFlightForm; this form only collects the choice.
+  tripId: string;
+  setTripId: (v: string) => void;
   // Tags & companions
   tags: string[];
   companions: string[];
@@ -182,6 +187,8 @@ export default function FlightCompleteStep({
   setFrequentFlyerNumber,
   cost,
   onCostChange,
+  tripId,
+  setTripId,
   tags,
   companions,
   setTags,
@@ -727,6 +734,15 @@ export default function FlightCompleteStep({
           setBaggageAllowance(v.baggageAllowance);
           setFrequentFlyerNumber(v.frequentFlyerNumber);
         }}
+        labelClassName={textClass}
+        inputClassName={sizedInputClass}
+      />
+
+      {/* Trip (#199) — the assignment runs after the create, see
+          useFlightForm.maybeAssignTrip */}
+      <TripSelectField
+        value={tripId}
+        onChange={setTripId}
         labelClassName={textClass}
         inputClassName={sizedInputClass}
       />

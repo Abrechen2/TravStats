@@ -90,6 +90,8 @@ function baseProps(overrides: Partial<FlightCompleteStepProps> = {}): FlightComp
     setFrequentFlyerNumber: vi.fn(),
     cost: { price: undefined, currency: "EUR", taxes: undefined, fees: undefined, receiptUrl: "" },
     onCostChange: vi.fn(),
+    tripId: "",
+    setTripId: vi.fn(),
     tags: [],
     companions: [],
     setTags: vi.fn(),
