@@ -80,6 +80,20 @@ interface TimesFieldsProps {
   onActualChange?: (value: ActualTimesFieldsValue) => void;
 }
 
+/** Parse a "YYYY-MM-DD" + "HH:mm" pair into an offset-free millisecond
+ *  timestamp for DIFFING purposes only — never a real UTC instant, just a
+ *  pure numeric encoding of the wall clock so no timezone (host or
+ *  otherwise) can skew a difference between two such values. Same approach
+ *  as arrivalDayOffset below (Date.UTC over a raw `new Date(string)` parse,
+ *  which is subject to the calling process's own local offset). Returns
+ *  null when either input can't be parsed as plain numbers. */
+function parseWallClockAsUtcMs(date: string, time: string): number | null {
+  const [y, m, d] = date.split("-").map(Number);
+  const [h, mi] = time.split(":").map(Number);
+  if ([y, m, d, h, mi].some((n) => Number.isNaN(n))) return null;
+  return Date.UTC(y, m - 1, d, h, mi);
+}
+
 /** Departure + arrival date/time as four separate inputs (matches the
  *  create form). Copying the departure date onto the arrival date preserves
  *  the arrival time untouched. */
@@ -128,15 +142,22 @@ export default function TimesFields({
   // shown here matches what gets stored once this same pair is saved. Both
   // wall-clock strings share the departure airport's timezone (depTz), so
   // diffing them directly is equivalent to diffing the two UTC instants —
-  // no conversion needed. This is display-only and is NEVER submitted or
-  // rendered as an input, exactly like the flight-status pill above it.
+  // no conversion needed. Parsed via Date.UTC — same as arrivalDayOffset
+  // above — rather than `new Date(...)`, which parses in the CALLING
+  // PROCESS's own local offset: that offset cancels between the two
+  // operands normally, but not across a DST transition of THAT (host, not
+  // airport) zone falling between them, which silently bakes in an hour
+  // shift (see TimesFields.delayDst.test.tsx). Date.UTC sidesteps any host
+  // timezone entirely, so the arithmetic is pure wall-clock and offset-free.
+  // This is display-only and is NEVER submitted or rendered as an input,
+  // exactly like the flight-status pill above it.
   const delayMinutes = (() => {
     if (!value.depDate || !value.depTime) return null;
     if (!actualValue?.actualDepDate || !actualValue.actualDepTime) return null;
-    const scheduled = new Date(`${value.depDate}T${value.depTime}`);
-    const actual = new Date(`${actualValue.actualDepDate}T${actualValue.actualDepTime}`);
-    if (Number.isNaN(scheduled.getTime()) || Number.isNaN(actual.getTime())) return null;
-    return Math.round((actual.getTime() - scheduled.getTime()) / 60000);
+    const scheduled = parseWallClockAsUtcMs(value.depDate, value.depTime);
+    const actual = parseWallClockAsUtcMs(actualValue.actualDepDate, actualValue.actualDepTime);
+    if (scheduled == null || actual == null) return null;
+    return Math.round((actual - scheduled) / 60000);
   })();
 
   const delayText =
