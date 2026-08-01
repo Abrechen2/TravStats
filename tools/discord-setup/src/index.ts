@@ -6,7 +6,7 @@ import { ensureStructure } from "./guildStructure.js";
 import { postRulesAndWelcome } from "./rulesMessage.js";
 import { writeState } from "./state.js";
 import { runServe } from "./reactionRole.js";
-import { runRead } from "./readChannel.js";
+import { runRead, parseLimit } from "./readChannel.js";
 import { runReply } from "./replyThread.js";
 import {
   runAnnounce,
@@ -83,8 +83,7 @@ async function main(): Promise<void> {
       process.exitCode = 1;
       return;
     }
-    const limitArg = Number(process.argv[4] ?? "20");
-    const limit = Number.isInteger(limitArg) && limitArg > 0 && limitArg <= 100 ? limitArg : 20;
+    const limit = parseLimit(process.argv[4]);
     await runRead(client, token, guildId, channelName, limit);
     return; // runRead owns login + destroy
   }
