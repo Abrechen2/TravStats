@@ -44,6 +44,8 @@
     "notes": "Notes",
     "tags": "Tags",
     "companions": "Travel companions",
+    "coPassengersParsed": "Co-passengers found by the parser",
+    "coPassengersTakeOver": "Take over",
     "submit": "Save Flight",
     "submitAndReturn": "Save + add return flight",
     "returnFlightHint": "Outbound saved — please fill in date and times for the return flight",

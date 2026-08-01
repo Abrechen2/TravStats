@@ -402,6 +402,28 @@ describe("FlightEditModal", () => {
     expect(screen.getByTestId("companion-remove-Jonas")).toBeInTheDocument();
   });
 
+  // Phase 2 Task 5 — the parsed co-passengers surface beside the picker,
+  // and taking them over flows into the SUBMITTED companions.
+  it("shows parsed co-passengers and take-over copies them into the saved companions", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const parsedFlight: Flight = {
+      ...mockFlight,
+      companions: ["Anna"],
+      coPassengers: ["Jonas Weber"],
+    };
+    const { getByText } = render(
+      <FlightEditModal flight={parsedFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+
+    expect(screen.getByTestId("co-passengers-row").textContent).toContain("Jonas Weber");
+    fireEvent.click(screen.getByTestId("co-passengers-take-over"));
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.companions).toEqual(["Anna", "Jonas Weber"]);
+  });
+
   it("submits companions as a string[] built from the picker chips", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     const flightWithCompanions: Flight = { ...mockFlight, companions: ["Anna"] };

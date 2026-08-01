@@ -868,6 +868,7 @@ export function useFlightForm(
     category,
     tags,
     companions,
+    coPassengers,
     canSubmit,
     // Setters
     setLoading,
