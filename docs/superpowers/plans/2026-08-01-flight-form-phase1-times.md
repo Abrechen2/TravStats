@@ -54,7 +54,7 @@ This is a characterization test. It must pass against the CURRENT code. Its job 
 - Consumes: nothing
 - Produces: the guard every later task must keep green
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 ```typescript
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -126,21 +126,21 @@ describe("FlightEditModal timezone round trip", () => {
 
 Adjust the props and the mocked module paths to what `FlightEditModal` actually takes and imports — read it first. Keep both assertions exactly as written; they are the point.
 
-- [ ] **Step 2: Run it and confirm it PASSES**
+- [x] **Step 2: Run it and confirm it PASSES**
 
 Run: `cd frontend && npx vitest --run src/__tests__/components/FlightEditModal.timezone.test.tsx`
 Expected: PASS. This is a characterization test; the behaviour already works.
 
 If it FAILS, stop and report rather than "fixing" anything — that would mean the property does not hold today and the whole premise of this phase needs revisiting.
 
-- [ ] **Step 3: Prove the guard can fail**
+- [x] **Step 3: Prove the guard can fail**
 
 Temporarily change the submit basis in `FlightEditModal.tsx` from
 `hydratedRef.current ? depTz : browserTz` to always `browserTz`, re-run, and
 confirm the test FAILS. Restore it and confirm it passes again. Report both
 outcomes — a guard nobody watched fail is not a guard.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add frontend/src/__tests__/components/FlightEditModal.timezone.test.tsx
@@ -174,7 +174,7 @@ Verified it can fail by forcing the submit basis to the browser zone."
   }): { depTimezone: string; arrTimezone: string; hydrated: boolean }
   ```
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -239,20 +239,20 @@ describe("useAirportLocalTimes", () => {
 });
 ```
 
-- [ ] **Step 2: Run it and confirm it fails**
+- [x] **Step 2: Run it and confirm it fails**
 
 Run: `cd frontend && npx vitest --run src/components/FlightForm/__tests__/useAirportLocalTimes.test.ts`
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Implement the hook**
+- [x] **Step 3: Implement the hook**
 
 Lift the existing effect out of `FlightEditModal.tsx` (currently around lines 193–223) without changing what it does, with two additions the tests demand: it reports `hydrated` only when BOTH zones resolved, and it re-resolves when a code changes — the latter is what makes editable airports possible in Task 4.
 
-- [ ] **Step 4: Use it in the modal**
+- [x] **Step 4: Use it in the modal**
 
 Replace the inline effect and the `depTz` / `arrTz` / `hydratedRef` state in `FlightEditModal.tsx` with the hook. The submit basis becomes `hydrated ? depTimezone : browserTimezone`, unchanged in meaning.
 
-- [ ] **Step 5: Run the guard and the modal suite**
+- [x] **Step 5: Run the guard and the modal suite**
 
 ```bash
 cd frontend
@@ -263,7 +263,7 @@ npm run lint
 ```
 Task 1's guard must still pass. If it does not, the extraction changed behaviour — fix the extraction, not the test.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add frontend/src/components/FlightForm/useAirportLocalTimes.ts frontend/src/components/FlightForm/__tests__/useAirportLocalTimes.test.ts frontend/src/components/FlightEditModal.tsx
