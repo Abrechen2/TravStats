@@ -377,6 +377,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 placeholder={t("field.tags")}
               />
               <div className="mt-3">
+                <label className="label">{t("field.companions")}</label>
                 <CompanionPicker value={companions} onChange={setCompanions} />
               </div>
               <textarea

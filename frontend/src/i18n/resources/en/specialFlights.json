@@ -81,8 +81,7 @@
     "eclipse": "Total Solar Eclipse 2026-08-12 — centerline",
     "rocket_launch": "Starship IFT-X, Boca Chica",
     "aurora": "Aurora Borealis 2026-11-15, 65°N",
-    "tags": "e.g. bucket-list, anniversary",
-    "companions": "e.g. Max, Anna"
+    "tags": "e.g. bucket-list, anniversary"
   },
   "actions": {
     "save": "Save",
