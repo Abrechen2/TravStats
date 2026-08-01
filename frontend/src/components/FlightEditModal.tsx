@@ -394,12 +394,16 @@ export default function FlightEditModal({
             </div>
           )}
 
-          {/* Changing either side re-resolves its timezone (useAirportLocalTimes above). */}
+          {/* Changing either side re-resolves its timezone (useAirportLocalTimes above).
+              A null airport here only ever means an abandoned typed edit (both start
+              non-null) — surface it instead of silently keeping the stored airport. */}
           <RouteFields
             departure={departureAirport}
             arrival={arrivalAirport}
             onDepartureChange={setDepartureAirport}
             onArrivalChange={setArrivalAirport}
+            departureHint={departureAirport ? undefined : t("flights:edit.routeUnresolvedHint")}
+            arrivalHint={arrivalAirport ? undefined : t("flights:edit.routeUnresolvedHint")}
           />
 
           {/* Date & Time — year/month for historical, split date+time for others */}

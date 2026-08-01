@@ -286,7 +286,10 @@
     "tripNone": "Keiner Reise zugeordnet",
     "tripHint": "Verlinkt diesen Flug mit einer manuell angelegten Reise. Reisen werden im Flüge-Tab erstellt.",
     "tripAssignedToast": "Reise-Zuordnung aktualisiert",
-    "tripAssignFailed": "Reise-Zuordnung fehlgeschlagen — andere Änderungen wurden gespeichert"
+    "tripAssignFailed": "Reise-Zuordnung fehlgeschlagen — andere Änderungen wurden gespeichert",
+    "routeFrom": "Von",
+    "routeTo": "Nach",
+    "routeUnresolvedHint": "Eingabe nicht erkannt. Die gespeicherte Auswahl wird nicht geändert."
   },
   "quickActions": {
     "showOnMap": "Auf Karte zeigen",

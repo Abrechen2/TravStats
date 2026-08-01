@@ -60,4 +60,57 @@ describe("RouteFields", () => {
     expect(onDepartureChange).toHaveBeenCalledWith(NEXT);
     expect(onArrivalChange).not.toHaveBeenCalled();
   });
+
+  // Review follow-up #1: the labels must come from the edit-only,
+  // non-asterisk key pair (flights:edit.routeFrom/routeTo) — NOT the create
+  // form's flights:form.from/form.to, whose translated strings bake a "*"
+  // required-marker directly into the text. RouteFields dropped the
+  // `required` attribute (see its own docblock), so a baked-in asterisk
+  // would now be a false claim. `t` is mocked as identity above, so the
+  // rendered text IS the key itself.
+  it("labels the pickers with the non-required edit-form keys, not the create form's", () => {
+    render(
+      <RouteFields
+        departure={null}
+        arrival={null}
+        onDepartureChange={() => {}}
+        onArrivalChange={() => {}}
+      />
+    );
+    expect(screen.getByText("flights:edit.routeFrom")).toBeInTheDocument();
+    expect(screen.getByText("flights:edit.routeTo")).toBeInTheDocument();
+    expect(screen.queryByText("flights:form.from")).not.toBeInTheDocument();
+    expect(screen.queryByText("flights:form.to")).not.toBeInTheDocument();
+  });
+
+  // Review follow-up #2: an abandoned typed edit (the AirportAutocomplete's
+  // own onChange(null) when the typed text doesn't match a real airport)
+  // must not vanish silently — RouteFields renders whatever hint text the
+  // caller supplies under the corresponding field. RouteFields itself is
+  // dumb about WHEN to show one; FlightEditModal decides that (see its own
+  // test file) by only passing a hint when its airport state is null.
+  it("shows the caller-supplied hint under a field with a null value, none when absent", () => {
+    render(
+      <RouteFields
+        departure={null}
+        arrival={{ iata: "JFK", name: "JFK", lat: 40.6, lon: -73.8 }}
+        onDepartureChange={() => {}}
+        onArrivalChange={() => {}}
+        departureHint="not recognised"
+      />
+    );
+    expect(screen.getByText("not recognised")).toBeInTheDocument();
+  });
+
+  it("renders no hint when the caller doesn't supply one", () => {
+    render(
+      <RouteFields
+        departure={null}
+        arrival={null}
+        onDepartureChange={() => {}}
+        onArrivalChange={() => {}}
+      />
+    );
+    expect(screen.queryByText("not recognised")).not.toBeInTheDocument();
+  });
 });
