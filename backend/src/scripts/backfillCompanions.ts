@@ -9,6 +9,43 @@ const RECORD_PAGE_SIZE = 200;
 /** canonicalName -> (trimmed spelling -> occurrence count), scoped to one user's pass. */
 type SpellingFrequency = Map<string, Map<string, number>>;
 
+/** The shape every domain's candidate query selects for its `companionLinks`. */
+interface LinkedCanonicalName {
+  companion: { canonicalName: string };
+}
+
+/**
+ * The canonical identity sequence `resolveCompanions()` would produce for
+ * this array: blanks dropped, deduped by canonical name, each identity
+ * positioned at its LAST occurrence. Pure (no DB access) so it is cheap
+ * enough to run as a read-only mismatch check on every candidate, every run.
+ */
+function expectedCanonicalOrder(companions: string[]): string[] {
+  const order = new Map<string, true>();
+  for (const raw of companions) {
+    const canonical = canonicalizeCompanionName(raw.trim());
+    if (!canonical) continue;
+    order.delete(canonical);
+    order.set(canonical, true);
+  }
+  return Array.from(order.keys());
+}
+
+/**
+ * True when a record's current `companionLinks` already match what its
+ * legacy `companions` array would resolve to -- same identities, same
+ * order. False for a never-linked record, a record whose array grew/shrunk/
+ * changed since it was last linked (the rollback round-trip case), or one
+ * whose link `position` values drifted out of the array's order.
+ */
+function isAlreadyReconciled(companions: string[], companionLinks: LinkedCanonicalName[]): boolean {
+  const expected = expectedCanonicalOrder(companions);
+  const actual = companionLinks.map((link) => link.companion.canonicalName);
+  return (
+    expected.length === actual.length && expected.every((name, index) => name === actual[index])
+  );
+}
+
 /**
  * Genuinely one-shot, idempotent backfill: converts the legacy free-text
  * `companions` arrays on flights, trips and cruises into `Companion`
@@ -23,16 +60,30 @@ type SpellingFrequency = Map<string, Map<string, number>>;
  * spelling wins as the final `displayName` and the other spellings are
  * logged as aliases at info level.
  *
- * Terminates for good: each domain query filters on `companionLinks: {
- * none: {} }` in addition to a non-empty `companions` array, so a record
- * drops out of the scan the moment it has been linked. This matters because
- * the live write paths (see `routes/{flights,trips,cruises}.ts`) dual-write
- * the legacy array alongside the new link rows -- `companions` therefore
- * stays non-empty forever, and without the link-emptiness filter this
- * routine would rescan every companion-bearing record, and have
- * `resolveCompanions()` rewrite every `Companion.updatedAt`, on every boot,
- * indefinitely. Matches the sibling pattern in `backfillBookingPrices.ts`,
- * where healed rows fall out of future scans via `price: null`.
+ * Reconciliation, not just first-fill: every domain query selects every
+ * record with a non-empty `companions` array (not just unlinked ones) plus
+ * its current `companionLinks` (companion canonical names, in position
+ * order). A record is only touched -- `resolveCompanions()` called,
+ * existing links deleted and recreated -- when the *expected* canonical
+ * order (deduped from `companions`, same last-occurrence-wins rule
+ * `resolveCompanions()` itself uses) differs from the *actual* linked
+ * order. This catches not only never-linked records but also ones where the
+ * two stores drifted back apart after the initial link -- e.g. a user
+ * upgrades (links get written), rolls back to the previous image and edits
+ * companions there (only the array is written), then re-upgrades: the old
+ * `companionLinks: { none: {} } }` filter would skip that record forever
+ * because it already had (now-stale) links, silently losing the rollback
+ * edit once the legacy column is eventually dropped. It also subsumes a
+ * previously parked finding that link `position` drift (same identities,
+ * wrong order) could never self-heal under the old filter -- a full rebuild
+ * recomputes position from the array every time a mismatch is found, order
+ * included.
+ *
+ * Still terminates: the comparison above is pure (string canonicalization
+ * only, no writes) and a record that already matches is left untouched, so
+ * once every record's links agree with its array the scan changes nothing
+ * on any later run -- `resolveCompanions()` (the only call that can bump
+ * `Companion.updatedAt`) is never invoked for an already-consistent record.
  *
  * Paged in two dimensions -- users, then records per user, per domain -- so
  * at most one page of one domain's `{id, companions}` rows is ever held in
@@ -96,8 +147,15 @@ async function backfillFlights(
 
   for (;;) {
     const flights = await prisma.flight.findMany({
-      where: { userId, companions: { isEmpty: false }, companionLinks: { none: {} } },
-      select: { id: true, companions: true },
+      where: { userId, companions: { isEmpty: false } },
+      select: {
+        id: true,
+        companions: true,
+        companionLinks: {
+          orderBy: { position: "asc" },
+          select: { companion: { select: { canonicalName: true } } },
+        },
+      },
       orderBy: { id: "asc" },
       take: RECORD_PAGE_SIZE,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -105,8 +163,11 @@ async function backfillFlights(
     if (flights.length === 0) break;
 
     for (const flight of flights) {
+      if (isAlreadyReconciled(flight.companions, flight.companionLinks)) continue;
+
       flight.companions.forEach(recordSpelling);
       const resolved = await resolveCompanions(userId, flight.companions);
+      await prisma.flightCompanion.deleteMany({ where: { flightId: flight.id } });
       if (resolved.length > 0) {
         const result = await prisma.flightCompanion.createMany({
           data: linkRowsFor(resolved.map((c) => c.id)).map((row) => ({
@@ -136,8 +197,15 @@ async function backfillTrips(
 
   for (;;) {
     const trips = await prisma.trip.findMany({
-      where: { userId, companions: { isEmpty: false }, companionLinks: { none: {} } },
-      select: { id: true, companions: true },
+      where: { userId, companions: { isEmpty: false } },
+      select: {
+        id: true,
+        companions: true,
+        companionLinks: {
+          orderBy: { position: "asc" },
+          select: { companion: { select: { canonicalName: true } } },
+        },
+      },
       orderBy: { id: "asc" },
       take: RECORD_PAGE_SIZE,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -145,8 +213,11 @@ async function backfillTrips(
     if (trips.length === 0) break;
 
     for (const trip of trips) {
+      if (isAlreadyReconciled(trip.companions, trip.companionLinks)) continue;
+
       trip.companions.forEach(recordSpelling);
       const resolved = await resolveCompanions(userId, trip.companions);
+      await prisma.tripCompanion.deleteMany({ where: { tripId: trip.id } });
       if (resolved.length > 0) {
         const result = await prisma.tripCompanion.createMany({
           data: linkRowsFor(resolved.map((c) => c.id)).map((row) => ({
@@ -176,8 +247,15 @@ async function backfillCruises(
 
   for (;;) {
     const cruises = await prisma.cruise.findMany({
-      where: { userId, companions: { isEmpty: false }, companionLinks: { none: {} } },
-      select: { id: true, companions: true },
+      where: { userId, companions: { isEmpty: false } },
+      select: {
+        id: true,
+        companions: true,
+        companionLinks: {
+          orderBy: { position: "asc" },
+          select: { companion: { select: { canonicalName: true } } },
+        },
+      },
       orderBy: { id: "asc" },
       take: RECORD_PAGE_SIZE,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -185,8 +263,11 @@ async function backfillCruises(
     if (cruises.length === 0) break;
 
     for (const cruise of cruises) {
+      if (isAlreadyReconciled(cruise.companions, cruise.companionLinks)) continue;
+
       cruise.companions.forEach(recordSpelling);
       const resolved = await resolveCompanions(userId, cruise.companions);
+      await prisma.cruiseCompanion.deleteMany({ where: { cruiseId: cruise.id } });
       if (resolved.length > 0) {
         const result = await prisma.cruiseCompanion.createMany({
           data: linkRowsFor(resolved.map((c) => c.id)).map((row) => ({
