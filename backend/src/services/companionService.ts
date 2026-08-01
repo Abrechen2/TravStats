@@ -10,8 +10,16 @@ export interface ResolvedCompanion {
 
 /**
  * Finds or creates the user's companions for a list of raw names and returns
- * them in input order. Blank entries are dropped. The newest spelling wins as
- * the display name; identity is the canonical form and never changes.
+ * them UNIQUE BY ID, in input order. Blank entries are dropped. The newest
+ * spelling wins as the display name; identity is the canonical form and
+ * never changes. When a single call repeats the same identity (e.g.
+ * `['Anna', 'anna']` — same person, different casing), only ONE entry is
+ * returned for it, positioned where its LAST occurrence appeared in the
+ * input, carrying that last occurrence's (newest) display name. Callers
+ * that turn the result into join rows (`linkRowsFor`) or a legacy
+ * denormalized array depend on this uniqueness to avoid writing duplicate
+ * `(flightId, companionId)` rows that would silently disagree with the
+ * array's length.
  */
 export async function resolveCompanions(
   userId: string,
@@ -49,7 +57,17 @@ export async function resolveCompanions(
     }
   }
 
-  return resolved;
+  // Dedupe by id, keeping the LAST occurrence: deleting-then-setting on a Map
+  // moves the re-inserted key to the end, so the final iteration order is
+  // exactly "one entry per id, positioned at its last occurrence" — with
+  // that occurrence's (newest) displayName already attached.
+  const byLastOccurrence = new Map<string, ResolvedCompanion>();
+  for (const companion of resolved) {
+    byLastOccurrence.delete(companion.id);
+    byLastOccurrence.set(companion.id, companion);
+  }
+
+  return Array.from(byLastOccurrence.values());
 }
 
 /** Turns an ordered list of companion ids into join rows carrying their order. */

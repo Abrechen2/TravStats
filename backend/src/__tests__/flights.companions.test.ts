@@ -80,4 +80,42 @@ describe('flight companions', () => {
       await prisma.flightCompanion.count({ where: { flightId: created.body.flight.id } })
     ).toBe(1);
   });
+
+  // The invariant is array-vs-links agreement; near-duplicates in ONE request
+  // used to produce 2 array entries and 1 link row.
+  it('keeps array and links in agreement when one request repeats a name', async () => {
+    const created = await request(app)
+      .post('/api/v1/flights')
+      .set('Cookie', cookie)
+      .send(newFlight(['Anna', 'anna']))
+      .expect(201);
+
+    const row = await prisma.flight.findUniqueOrThrow({
+      where: { id: created.body.flight.id },
+      include: { companionLinks: true },
+    });
+    expect(row.companions).toHaveLength(row.companionLinks.length);
+    expect(row.companionLinks).toHaveLength(1);
+  });
+
+  it('clears links when an update sends an empty list', async () => {
+    const created = await request(app)
+      .post('/api/v1/flights')
+      .set('Cookie', cookie)
+      .send(newFlight(['Anna', 'Jonas']))
+      .expect(201);
+
+    await request(app)
+      .put(`/api/v1/flights/${created.body.flight.id}`)
+      .set('Cookie', cookie)
+      .send({ companions: [] })
+      .expect(200);
+
+    const row = await prisma.flight.findUniqueOrThrow({
+      where: { id: created.body.flight.id },
+      include: { companionLinks: true },
+    });
+    expect(row.companions).toEqual([]);
+    expect(row.companionLinks).toEqual([]);
+  });
 });
