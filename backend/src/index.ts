@@ -434,6 +434,25 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({ operation: "server_start_backfill_booking_prices_error", message: "Failed to backfill booking prices", error });
     }
 
+    // Convert legacy free-text companion arrays on flights/trips/cruises into
+    // Companion entities + link rows (idempotent — see backfillCompanions.ts)
+    try {
+      const { backfillCompanions } = await import("./scripts/backfillCompanions");
+      const n = await backfillCompanions();
+      if (n > 0) {
+        logger.info({
+          operation: "server_start_backfill_companions",
+          message: `Linked ${n} companion rows`,
+        });
+      }
+    } catch (error) {
+      logger.warn({
+        operation: "server_start_backfill_companions_error",
+        message: "Failed to backfill companions",
+        error,
+      });
+    }
+
     // Normalize aircraft type names in existing flights (idempotent)
     try {
       const { normalizeAircraft } = await import('./utils/aircraftNormalize');
