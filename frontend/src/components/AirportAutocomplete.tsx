@@ -9,6 +9,17 @@ interface AirportAutocompleteProps {
   label: string;
   placeholder?: string;
   required?: boolean;
+  /** Fires on the input's native focus event, IN ADDITION to (not instead
+   *  of) the component's own dropdown-open behavior. Opt-in — existing
+   *  callers that don't pass it see no change. */
+  onFocus?: () => void;
+  /** Fires on the input's native blur event. Opt-in, same as `onFocus`.
+   *  Neither this nor `onFocus` existed before a caller (RouteFields)
+   *  needed to tell "the user left this field without landing on a valid
+   *  selection" apart from "still actively typing/searching" — the
+   *  component otherwise exposes no such signal (no "search settled"
+   *  event, no ref). */
+  onBlur?: () => void;
 }
 
 export default function AirportAutocomplete({
@@ -17,6 +28,8 @@ export default function AirportAutocomplete({
   label,
   placeholder,
   required = false,
+  onFocus,
+  onBlur,
 }: AirportAutocompleteProps): JSX.Element {
   const { t } = useTranslation(["flights", "common"]);
   const [query, setQuery] = useState("");
@@ -147,7 +160,11 @@ export default function AirportAutocomplete({
         type="text"
         value={query}
         onChange={handleInputChange}
-        onFocus={() => !isSeeding && query.length >= 2 && setIsOpen(true)}
+        onFocus={() => {
+          if (!isSeeding && query.length >= 2) setIsOpen(true);
+          onFocus?.();
+        }}
+        onBlur={() => onBlur?.()}
         placeholder={isSeeding ? t("flights:airportAutocomplete.seeding") : defaultPlaceholder}
         className="input"
         required={required}

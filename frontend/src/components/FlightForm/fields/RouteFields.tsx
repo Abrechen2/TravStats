@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import AirportAutocomplete from "../../AirportAutocomplete";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { Airport } from "../../../lib/api";
@@ -15,13 +16,40 @@ interface RouteFieldsProps {
   arrival: Airport | null;
   onDepartureChange: (airport: Airport | null) => void;
   onArrivalChange: (airport: Airport | null) => void;
-  /** Rendered under the departure/arrival field when supplied. RouteFields
-   *  doesn't decide WHEN a hint is warranted — the caller does, by only
-   *  passing one when its own airport state is null (see FlightEditModal:
-   *  its airports always start non-null, so a null there only ever means
-   *  an abandoned typed edit, never "nothing chosen yet"). */
+  /** Text to show under the departure/arrival field once RouteFields decides
+   *  that side has SETTLED unresolved (see useSettledUnresolved below) — the
+   *  caller supplies the copy, RouteFields decides the timing. Pass the same
+   *  string unconditionally; it is never displayed just because the value is
+   *  null (that happens on every keystroke of ANY edit, not just an
+   *  abandoned one — see AirportAutocomplete's handleInputChange). */
   departureHint?: string;
   arrivalHint?: string;
+}
+
+/** True only once the field has been LEFT (blurred) while still unresolved.
+ *  AirportAutocomplete nulls its value on the very first keystroke that
+ *  diverges from the current selection — that happens for a perfectly good
+ *  in-progress edit just as much as an abandoned one, so raw `!value` is not
+ *  a usable signal on its own (round 2 review finding: gating on it made the
+ *  hint fire mid-search for edits that were about to succeed). Resolves
+ *  immediately, in the same render, the moment `value` becomes non-null
+ *  again — a hint about a now-fixed problem must not linger. */
+function useSettledUnresolved(value: Airport | null): {
+  settledUnresolved: boolean;
+  handleFocus: () => void;
+  handleBlur: () => void;
+} {
+  const [settledUnresolved, setSettledUnresolved] = useState(false);
+
+  useEffect(() => {
+    if (value) setSettledUnresolved(false);
+  }, [value]);
+
+  return {
+    settledUnresolved,
+    handleFocus: () => setSettledUnresolved(false),
+    handleBlur: () => setSettledUnresolved(!value),
+  };
 }
 
 /** Departure + arrival airport pickers, shared between the create and edit
@@ -50,6 +78,8 @@ export default function RouteFields({
   arrivalHint,
 }: RouteFieldsProps): JSX.Element {
   const { t } = useTranslation(["flights"]);
+  const dep = useSettledUnresolved(departure);
+  const arr = useSettledUnresolved(arrival);
 
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -60,8 +90,10 @@ export default function RouteFields({
           onChange={onDepartureChange}
           label=""
           placeholder={t("flights:form.placeholders.departureAirport")}
+          onFocus={dep.handleFocus}
+          onBlur={dep.handleBlur}
         />
-        {departureHint && (
+        {dep.settledUnresolved && departureHint && (
           <p className="text-xs mt-1" style={{ color: "var(--warning)" }}>
             {departureHint}
           </p>
@@ -74,8 +106,10 @@ export default function RouteFields({
           onChange={onArrivalChange}
           label=""
           placeholder={t("flights:form.placeholders.arrivalAirport")}
+          onFocus={arr.handleFocus}
+          onBlur={arr.handleBlur}
         />
-        {arrivalHint && (
+        {arr.settledUnresolved && arrivalHint && (
           <p className="text-xs mt-1" style={{ color: "var(--warning)" }}>
             {arrivalHint}
           </p>
