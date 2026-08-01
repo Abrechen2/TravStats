@@ -13,7 +13,6 @@
     "departureTime": "Departure Time",
     "arrivalDate": "Arrival Date",
     "arrivalTime": "Arrival Time",
-    "copyDepartureDate": "Copy departure date",
     "copyToArrival": "Copy departure date",
     "estimateArrivalTime": "Estimate arrival time",
     "arrivalNextDay": "Arrives next day (+1)",

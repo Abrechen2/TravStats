@@ -41,6 +41,13 @@ interface TimesFieldsProps {
    *  button only renders when a handler is supplied. */
   onEstimateArrival?: () => void;
   canEstimateArrival?: boolean;
+  /** Already-translated override for the disabled calculator button's
+   *  tooltip. The create form can tell "no airports selected" apart from
+   *  "no departure time yet" — this component can't (it doesn't own
+   *  `departure`/`arrival`), so the caller decides the message and this
+   *  just displays it. Falls back to the generic "no departure time"
+   *  text when omitted, which is what FlightEditModal gets. */
+  estimateDisabledHint?: string;
   ids?: TimesFieldsIds;
   /** Per-field help tooltips (the create form has these, the edit form does
    *  not) — a field only gets a <HelpIcon> when its entry is supplied, so
@@ -56,6 +63,7 @@ export default function TimesFields({
   onChange,
   onEstimateArrival,
   canEstimateArrival = false,
+  estimateDisabledHint,
   ids,
   help,
 }: TimesFieldsProps): JSX.Element {
@@ -184,7 +192,7 @@ export default function TimesFields({
               title={
                 canEstimateArrival
                   ? t("flights:form.estimateArrivalTime")
-                  : t("flights:form.estimateNoDepartureTime")
+                  : (estimateDisabledHint ?? t("flights:form.estimateNoDepartureTime"))
               }
               disabled={!canEstimateArrival}
               onClick={onEstimateArrival}
