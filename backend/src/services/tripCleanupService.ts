@@ -19,6 +19,7 @@
  */
 
 import { prisma } from "../db";
+import { linkRowsFor, resolveCompanions } from "./companionService";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
 import { recomputeTripStatus } from "./tripStatusService";
@@ -144,6 +145,18 @@ export async function mergeTrips(
   const startDate = dates.length > 0 ? new Date(Math.min(...dates.map((d) => d.getTime()))) : null;
   const endDate = dates.length > 0 ? new Date(Math.max(...dates.map((d) => d.getTime()))) : null;
 
+  // The merged companions array is a union of every source trip's legacy
+  // array, so the target's links must be rebuilt from that same union —
+  // not carried over from the target's pre-merge links, which cover only
+  // its own original companions. resolveCompanions() uses the top-level
+  // Prisma client, so it must run BEFORE the transaction (same reasoning
+  // as routes/trips.ts): find-or-create is idempotent and safe outside a
+  // transaction, and the resolved ids are only written inside it, so a
+  // failure between the two never leaves the array and `companionLinks`
+  // disagreeing.
+  const unionedCompanionNames = union(trips.map((t) => t.companions));
+  const resolvedCompanions = await resolveCompanions(userId, unionedCompanionNames);
+
   await prisma.$transaction(async (tx) => {
     const move = { where: { tripId: { in: sourceIds } }, data: { tripId: targetId } };
     await tx.flight.updateMany(move);
@@ -162,7 +175,11 @@ export async function mergeTrips(
         startDate,
         endDate,
         tags: union(trips.map((t) => t.tags)),
-        companions: union(trips.map((t) => t.companions)),
+        // Dual write: resolved display names keep this legacy array in
+        // agreement with `companionLinks` below — a name that appears in
+        // two source trips with different spellings collapses in both
+        // stores identically (same pattern as routes/trips.ts).
+        companions: resolvedCompanions.map((c) => c.displayName),
         countries: union(trips.map((t) => t.countries)),
         coverImageUrl: target.coverImageUrl ?? sources.find((s) => s.coverImageUrl)?.coverImageUrl,
         notes:
@@ -171,6 +188,22 @@ export async function mergeTrips(
             .join("\n\n") || null,
       },
     });
+
+    // The target's own links only cover its pre-merge companions; the
+    // source trips' TripCompanion rows are about to be cascade-deleted
+    // along with their trips (onDelete: Cascade), so they are never a
+    // basis to build on. Replace wholesale from the unioned+resolved list,
+    // same delete-then-recreate pattern as the update handler.
+    await tx.tripCompanion.deleteMany({ where: { tripId: targetId } });
+    if (resolvedCompanions.length > 0) {
+      await tx.tripCompanion.createMany({
+        data: linkRowsFor(resolvedCompanions.map((c) => c.id)).map((row) => ({
+          ...row,
+          tripId: targetId,
+        })),
+        skipDuplicates: true,
+      });
+    }
 
     await tx.trip.deleteMany({ where: { id: { in: sourceIds }, userId } });
   });

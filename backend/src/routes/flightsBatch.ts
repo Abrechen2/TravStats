@@ -13,6 +13,7 @@ import { checkAndUpdateAchievements } from "../utils/achievements";
 import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
 import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from "../shared/statusDerivation";
 import { recomputeTripStatus } from "../services/tripStatusService";
+import { resolveCompanions, linkRowsFor } from "../services/companionService";
 
 function toUtcDate(local: string | null | undefined, tz: string | null | undefined): Date | null {
   if (!local || !tz) return null;
@@ -51,7 +52,12 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
       }
     }
 
-    // Step 1: Enrich airports OUTSIDE the transaction (async I/O, not DB ops)
+    // Step 1: Enrich airports OUTSIDE the transaction (async I/O, not DB ops).
+    // Companion names are resolved to Companion entities here too (find-or-create
+    // is idempotent via companionService, so it's safe to run outside the
+    // transaction) — the row write and the link write still happen together
+    // inside the transaction below, so a failure never leaves the legacy
+    // `companions` array and the `companionLinks` table disagreeing.
     const enrichedDataList = await Promise.all(
       parsedFlights.map(async (data) => {
         const enriched = await enrichFlightAirports({
@@ -70,7 +76,8 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
             lon: data.arrival.lon,
           },
         });
-        return { data, enriched };
+        const resolvedCompanions = await resolveCompanions(userId, data.companions ?? []);
+        return { data, enriched, resolvedCompanions };
       })
     );
 
@@ -83,7 +90,7 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
     const createdFlights = await prisma.$transaction(async (tx) => {
       // Create all flights
       const flights = [];
-      for (const { data, enriched } of enrichedDataList) {
+      for (const { data, enriched, resolvedCompanions } of enrichedDataList) {
         const departureUtc = toUtcDate(data.departureLocal, data.depTimezone);
         const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
         const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
@@ -165,7 +172,10 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
             currency: data.currency,
             category: data.category,
             tags: data.tags ?? [],
-            companions: data.companions ?? [],
+            // Dual write: resolved display names keep this legacy array in
+            // agreement with `companionLinks` below (trimmed, blanks dropped,
+            // newest spelling wins) — same rule as the single-create route.
+            companions: resolvedCompanions.map((c) => c.displayName),
             receiptUrl: data.receiptUrl,
             seatNumber: data.seatNumber,
             boardingGroup: data.boardingGroup,
@@ -190,6 +200,17 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
             ),
           },
         });
+
+        if (resolvedCompanions.length > 0) {
+          await tx.flightCompanion.createMany({
+            data: linkRowsFor(resolvedCompanions.map((c) => c.id)).map((row) => ({
+              ...row,
+              flightId: flight.id,
+            })),
+            skipDuplicates: true,
+          });
+        }
+
         flights.push(flight);
       }
 

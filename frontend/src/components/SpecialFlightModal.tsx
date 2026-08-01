@@ -127,7 +127,7 @@ export default function SpecialFlightModal({
   const [arrivalTime, setArrivalTime] = useState("");
   const [notes, setNotes] = useState("");
   const [tagsCsv, setTagsCsv] = useState("");
-  const [companionsCsv, setCompanionsCsv] = useState("");
+  const [companions, setCompanions] = useState<string[]>([]);
 
   // Sightseeing-only
   const [aircraft, setAircraft] = useState("");
@@ -159,7 +159,7 @@ export default function SpecialFlightModal({
     setArrivalTime(toLocalDatetime(flight.arrivalTime));
     setNotes(flight.notes ?? "");
     setTagsCsv((flight.tags ?? []).join(", "));
-    setCompanionsCsv((flight.companions ?? []).join(", "));
+    setCompanions(flight.companions ?? []);
     setAircraft(flight.aircraft ?? "");
     setEventSubtype(classifyEventSubtype(flight.specialType));
     setEventLat(flight.eventLat != null ? String(flight.eventLat) : "");
@@ -196,7 +196,7 @@ export default function SpecialFlightModal({
     setArrivalTime("");
     setNotes("");
     setTagsCsv("");
-    setCompanionsCsv("");
+    setCompanions([]);
     setAircraft("");
     setEventSubtype("eclipse");
     setEventLat("");
@@ -305,7 +305,7 @@ export default function SpecialFlightModal({
     ...resolveTimesAndStatus(),
     notes: notes.trim() || undefined,
     tags: tagsCsv ? csvToArray(tagsCsv) : undefined,
-    companions: companionsCsv ? csvToArray(companionsCsv) : undefined,
+    companions: companions.length ? companions : undefined,
   });
 
   const buildSightseeingInput = (): FlightInput | null => {
@@ -562,8 +562,8 @@ export default function SpecialFlightModal({
                 onNotesChange={setNotes}
                 tagsCsv={tagsCsv}
                 onTagsCsvChange={setTagsCsv}
-                companionsCsv={companionsCsv}
-                onCompanionsCsvChange={setCompanionsCsv}
+                companions={companions}
+                onCompanionsChange={setCompanions}
               />
 
               <div className="flex justify-end gap-2 pt-2">

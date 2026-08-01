@@ -14,6 +14,7 @@ import { ShipPicker } from "./ShipPicker";
 import { PortPicker } from "./PortPicker";
 import { CruiseStopsEditor } from "./CruiseStopsEditor";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
+import CompanionPicker from "../CompanionPicker";
 
 type Mode = "create" | "edit";
 
@@ -114,9 +115,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
   const [currency, setCurrency] = useState<string>(cruise?.currency ?? "EUR");
 
   const [tagsInput, setTagsInput] = useState<string>((cruise?.tags ?? []).join(", "));
-  const [companionsInput, setCompanionsInput] = useState<string>(
-    (cruise?.companions ?? []).join(", ")
-  );
+  const [companions, setCompanions] = useState<string[]>(cruise?.companions ?? []);
   const [notes, setNotes] = useState<string>(cruise?.notes ?? "");
 
   const [saving, setSaving] = useState(false);
@@ -148,7 +147,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
         price: price ? Number.parseFloat(price) : undefined,
         currency: (currency || "EUR") as CruiseInput["currency"],
         tags: splitCsv(tagsInput),
-        companions: splitCsv(companionsInput),
+        companions,
         notes: notes || undefined,
         // Strip the UI-only `port` object from each stop before sending —
         // the backend only wants portId/isAtSea/times/note.
@@ -377,13 +376,10 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 onChange={(e): void => setTagsInput(e.target.value)}
                 placeholder={t("field.tags")}
               />
-              <input
-                aria-label={t("field.companions")}
-                className={`mt-3 ${INPUT_CLASS}`}
-                value={companionsInput}
-                onChange={(e): void => setCompanionsInput(e.target.value)}
-                placeholder={t("field.companions")}
-              />
+              <div className="mt-3">
+                <label className="label">{t("field.companions")}</label>
+                <CompanionPicker value={companions} onChange={setCompanions} />
+              </div>
               <textarea
                 aria-label={t("field.notes")}
                 rows={3}

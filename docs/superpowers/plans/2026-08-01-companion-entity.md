@@ -45,8 +45,14 @@
 
 **Deliberately NOT modified this release**
 
-`services/tripSummaryService.ts`, `services/tripCleanupService.ts` and
-`services/diagnosticsBundle.ts` read `companions` as an array. Because the legacy
+`services/tripSummaryService.ts` and `services/diagnosticsBundle.ts` read
+`companions` as an array.
+
+> **CORRECTION 2026-08-01:** `services/tripCleanupService.ts` was listed here
+> too, and that was wrong. `mergeTrips` WRITES the array
+> (`companions: union(...)`, ~line 165) and deletes the source trips in the same
+> transaction, cascading their links away — so a merge left the array and the
+> links disagreeing. Task 7b was added to close it. Because the legacy
 columns stay dual-written, they keep working unchanged and must be left alone —
 switching them to the joins now would remove the very redundancy that makes a
 rollback safe. They move in 2.6.0 together with dropping the columns.
@@ -654,7 +660,7 @@ describe('flight companions', () => {
       .post('/api/v1/flights')
       .set('Cookie', cookie)
       .send(newFlight(['Anna', 'Jonas']))
-      .expect(200 | 201);
+      .expect(201);
 
     await request(app)
       .put(`/api/v1/flights/${created.body.id}`)
