@@ -25,5 +25,8 @@
   "devDependencies": {
     "@playwright/test": "^1.59.1",
     "concurrently": "^9.2.1"
+  },
+  "overrides": {
+    "shell-quote": ">=1.9.0"
   }
 }
