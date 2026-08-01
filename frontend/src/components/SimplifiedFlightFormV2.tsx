@@ -154,6 +154,8 @@ export default function SimplifiedFlightFormV2({
               setTerminal={form.setTerminal}
               setGate={form.setGate}
               setSeatNumber={form.setSeatNumber}
+              boardingGroup={form.boardingGroup}
+              setBoardingGroup={form.setBoardingGroup}
               setSeatClass={form.setSeatClass}
               setStatus={form.setStatus}
               setCategory={form.setCategory}

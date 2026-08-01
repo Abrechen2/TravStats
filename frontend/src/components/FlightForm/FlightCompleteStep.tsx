@@ -14,6 +14,7 @@ import { useToastStore } from "../../store/toastStore";
 import { estimateArrivalFromDeparture } from "../../lib/timeEstimation";
 import CostFields, { type CostFieldsValue } from "./fields/CostFields";
 import TripSelectField from "./fields/TripSelectField";
+import StatusField from "./fields/StatusField";
 import { useSettingsStore } from "../../store/settingsStore";
 
 interface FlightLookupResult {
@@ -83,6 +84,7 @@ export interface FlightCompleteStepProps {
   terminal: string;
   gate: string;
   seatNumber: string;
+  boardingGroup: string;
   seatClass: "economy" | "premium_economy" | "business" | "first";
   status: "scheduled" | "flown" | "cancelled" | "historical";
   category: "business" | "private" | "vacation";
@@ -93,6 +95,7 @@ export interface FlightCompleteStepProps {
   setTerminal: (v: string) => void;
   setGate: (v: string) => void;
   setSeatNumber: (v: string) => void;
+  setBoardingGroup: (v: string) => void;
   setSeatClass: (v: "economy" | "premium_economy" | "business" | "first") => void;
   setStatus: (v: "scheduled" | "flown" | "cancelled" | "historical") => void;
   setCategory: (v: "business" | "private" | "vacation") => void;
@@ -164,6 +167,7 @@ export default function FlightCompleteStep({
   terminal,
   gate,
   seatNumber,
+  boardingGroup,
   seatClass,
   status,
   category,
@@ -174,6 +178,7 @@ export default function FlightCompleteStep({
   setTerminal,
   setGate,
   setSeatNumber,
+  setBoardingGroup,
   setSeatClass,
   setStatus,
   setCategory,
@@ -582,51 +587,7 @@ export default function FlightCompleteStep({
             maxLength={10}
           />
         </div>
-        <div>
-          <label className={`label ${textClass}`}>{t("flights:form.status")}</label>
-          <div>
-            <span
-              className="px-2 py-1 text-xs font-semibold rounded-full inline-block"
-              style={
-                status === "flown"
-                  ? {
-                      background: "rgba(63,185,80,0.15)",
-                      color: "var(--success)",
-                    }
-                  : status === "scheduled"
-                    ? {
-                        background: "rgba(56,139,253,0.15)",
-                        color: "#388bfd",
-                      }
-                    : status === "historical"
-                      ? {
-                          // historical is archival data, not an error state —
-                          // amber matches the cruise pill palette
-                          // (cruiseStatusStyle.ts) instead of red. "duplicated"
-                          // never reaches this form step (only assigned by
-                          // lib/flightDuplicate.ts, which bypasses this UI), so
-                          // this component's status prop type excludes it.
-                          background: "rgba(251,191,36,0.15)",
-                          color: "#fbbf24",
-                        }
-                      : {
-                          background: "rgba(248,81,73,0.15)",
-                          color: "var(--danger)",
-                        }
-              }
-            >
-              {t(`flights:status.${status}`, { defaultValue: status })}
-            </span>
-          </div>
-          <label className="flex items-center gap-2 text-sm mt-2">
-            <input
-              type="checkbox"
-              checked={status === "cancelled"}
-              onChange={(e) => setStatus(e.target.checked ? "cancelled" : "scheduled")}
-            />
-            {t("flights:status.cancelledCheckbox")}
-          </label>
-        </div>
+        <StatusField status={status} onStatusChange={setStatus} labelClassName={textClass} />
       </div>
 
       {/* Equipment / Gate / Seat / Category */}
@@ -665,7 +626,7 @@ export default function FlightCompleteStep({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <div>
           <label className={`label ${textClass}`}>{t("flights:form.seat")}</label>
           <input
@@ -674,6 +635,19 @@ export default function FlightCompleteStep({
             onChange={(e) => setSeatNumber(e.target.value.toUpperCase())}
             className={`input ${sizedInputClass}`}
             placeholder={t("flights:form.placeholders.seat")}
+          />
+        </div>
+        <div>
+          {/* #199 — the edit modal had this all along; the create form
+              dropped a parser-provided boarding group on the way in. */}
+          <label className={`label ${textClass}`}>{t("flights:form.boardingGroup")}</label>
+          <input
+            type="text"
+            value={boardingGroup}
+            onChange={(e) => setBoardingGroup(e.target.value)}
+            className={`input ${sizedInputClass}`}
+            placeholder={t("flights:form.placeholders.boardingGroup")}
+            maxLength={20}
           />
         </div>
         <div>
