@@ -44,4 +44,33 @@ describe('GET /api/v1/companions', () => {
     expect(response.body.companions[0].name).toBe('Anna');
     expect(response.body.companions[0].usageCount).toBe(0);
   });
+
+  // A row that exists is not a row you own. Without a second user holding a
+  // real companion, dropping the userId filter would leave this suite green.
+  it('never returns another user\'s companions', async () => {
+    const mine = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ username: 'companion-owner', password: 'password123' })
+      .expect(201);
+    const cookie = mine.headers['set-cookie'];
+
+    const victim = await prisma.user.create({
+      data: { username: 'companion-victim', passwordHash: 'x' },
+    });
+    await prisma.companion.create({
+      data: {
+        userId: victim.id,
+        canonicalName: 'geheim',
+        displayName: 'Geheim',
+        searchName: 'geheim',
+      },
+    });
+
+    const response = await request(app)
+      .get('/api/v1/companions')
+      .set('Cookie', cookie)
+      .expect(200);
+
+    expect(response.body.companions).toEqual([]);
+  });
 });
