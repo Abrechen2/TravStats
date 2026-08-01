@@ -264,6 +264,31 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
   }
 });
 
+// Current session. The client holds its "logged in" state in localStorage, which
+// has no expiry, while the auth cookie expires after 7 days — so on boot it must
+// ask the server whether the session is still real before rendering anything
+// protected. Returns the same user shape as login.
+router.get('/me', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.userId) {
+      throw new AppError('No token provided', 401);
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { id: true, username: true, isAdmin: true },
+    });
+
+    if (!user) {
+      throw new AppError('Invalid token - user not found', 401);
+    }
+
+    res.json({ user });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Logout
 router.post('/logout', (req: Request, res: Response) => {
   // Clear the auth cookie (use same options as when setting it)
