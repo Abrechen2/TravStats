@@ -97,4 +97,48 @@ describe('backfillCompanions', () => {
     });
     expect(cruiseLinks.map((l) => l.companion.displayName)).toEqual(['Dora']);
   });
+
+  it('keeps the most frequent trimmed spelling as displayName across records', async () => {
+    await legacyFlight(['Anna']);
+    await legacyFlight(['Anna']);
+    await legacyFlight(['anna']);
+    await backfillCompanions();
+
+    const companion = await prisma.companion.findFirst({ where: { userId } });
+    expect(companion?.displayName).toBe('Anna');
+  });
+
+  it('breaks frequency ties by the lexicographically smaller trimmed spelling', async () => {
+    // Equal counts (one record each) but "Zoe" is created before "zoe" is
+    // processed only by luck of UUID ordering -- the point of this test is
+    // that the winner is decided by the tie-break rule, not by which record
+    // happened to be resolved last.
+    await legacyFlight(['Zoe']);
+    await legacyFlight(['zoe']);
+    await backfillCompanions();
+
+    const companion = await prisma.companion.findFirst({ where: { userId } });
+    expect(companion?.displayName).toBe('Zoe');
+  });
+
+  it('is a true no-op on a second run: no companion updatedAt changes', async () => {
+    await legacyFlight(['Anna', 'Jonas']);
+    await backfillCompanions();
+
+    const before = await prisma.companion.findMany({
+      where: { userId },
+      orderBy: { canonicalName: 'asc' },
+      select: { id: true, updatedAt: true },
+    });
+    expect(before).toHaveLength(2);
+
+    await backfillCompanions();
+
+    const after = await prisma.companion.findMany({
+      where: { userId },
+      orderBy: { canonicalName: 'asc' },
+      select: { id: true, updatedAt: true },
+    });
+    expect(after).toEqual(before);
+  });
 });
