@@ -1,7 +1,7 @@
 import HelpIcon from "../Help/HelpIcon";
 import AirportAutocomplete from "../AirportAutocomplete";
-import CopyActionButton from "./CopyActionButton";
 import CompanionPicker from "../CompanionPicker";
+import TimesFields from "./fields/TimesFields";
 import { useTranslation } from "../../hooks/useTranslation";
 import { calculateDistance } from "../../lib/geo";
 import type { Airport } from "../../lib/api";
@@ -186,18 +186,6 @@ export default function FlightCompleteStep({
       addToast("warning", t("flights:form.estimateTzUnknown"));
     }
   };
-
-  // "+1 Tag" hint under the arrival date (non-historical only)
-  const arrivalDayOffset =
-    status !== "historical" && departureDate && arrivalDate && arrivalDate > departureDate
-      ? (() => {
-          const [dy, dm, dd] = departureDate.split("-").map(Number);
-          const [ay, am, ad] = arrivalDate.split("-").map(Number);
-          const from = Date.UTC(dy, dm - 1, dd);
-          const to = Date.UTC(ay, am - 1, ad);
-          return Math.max(0, Math.round((to - from) / (24 * 60 * 60 * 1000)));
-        })()
-      : 0;
 
   return (
     <div className="space-y-6">
@@ -449,102 +437,45 @@ export default function FlightCompleteStep({
           );
         })()
       ) : (
-        <>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={`label ${textClass} flex items-center gap-2`}>
-                {t("flights:form.departureDate")}
-                <HelpIcon content={t("flights:form.help.departureDate")} position="top" />
-              </label>
-              <input
-                type="date"
-                value={departureDate}
-                onChange={(e) => {
-                  setDepartureDate(e.target.value);
-                  if (!arrivalDate || arrivalDate < e.target.value) {
-                    setArrivalDate(e.target.value);
-                  }
-                }}
-                className={`input ${sizedInputClass}`}
-                required
-              />
-            </div>
-            <div>
-              <label className={`label ${textClass} flex items-center gap-2`}>
-                {t("flights:form.departureTime")}
-                <HelpIcon
-                  content={t("flights:form.help.departureTime")}
-                  expandedContent={t("flights:form.help.departureTimeExpanded")}
-                  position="top"
-                />
-              </label>
-              <input
-                type="time"
-                value={departureTime}
-                onChange={(e) => setDepartureTime(e.target.value)}
-                className={`input ${sizedInputClass}`}
-              />
-            </div>
-          </div>
-
-          {/* Arrival Date & Time */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={`label ${textClass} flex items-center gap-2`}>
-                {t("flights:form.arrivalDate")} *
-                <HelpIcon content={t("flights:form.help.arrivalDate")} position="top" />
-                <CopyActionButton
-                  icon="arrow-down"
-                  title={t("flights:form.copyDepartureDate")}
-                  disabled={!departureDate}
-                  onClick={() => setArrivalDate(departureDate)}
-                />
-              </label>
-              <input
-                type="date"
-                value={arrivalDate}
-                onChange={(e) => setArrivalDate(e.target.value)}
-                className={`input ${sizedInputClass}`}
-                required
-              />
-              {arrivalDayOffset > 0 && (
-                <p className="text-xs mt-1 text-blue-300" data-testid="arrival-day-offset">
-                  {arrivalDayOffset === 1
-                    ? t("flights:form.arrivalNextDay")
-                    : t("flights:form.arrivalDayOffset", { count: arrivalDayOffset })}
-                </p>
-              )}
-            </div>
-            <div>
-              <label className={`label ${textClass} flex items-center gap-2`}>
-                {t("flights:form.arrivalTime")}
-                <HelpIcon
-                  content={t("flights:form.help.arrivalTime")}
-                  expandedContent={t("flights:form.help.arrivalTimeExpanded")}
-                  position="top"
-                />
-                <CopyActionButton
-                  icon="calculator"
-                  title={
-                    canEstimateArrival
-                      ? t("flights:form.estimateArrivalTime")
-                      : !departure || !arrival
-                        ? t("flights:form.estimateNoAirports")
-                        : t("flights:form.estimateNoDepartureTime")
-                  }
-                  disabled={!canEstimateArrival}
-                  onClick={handleEstimateArrival}
-                />
-              </label>
-              <input
-                type="time"
-                value={arrivalTime}
-                onChange={(e) => setArrivalTime(e.target.value)}
-                className={`input ${sizedInputClass}`}
-              />
-            </div>
-          </div>
-        </>
+        <TimesFields
+          value={{
+            depDate: departureDate,
+            depTime: departureTime,
+            arrDate: arrivalDate,
+            arrTime: arrivalTime,
+          }}
+          onChange={(next) => {
+            // Create-only extra, kept here rather than inside TimesFields
+            // (which the edit form also renders and must not gain this):
+            // when the user picks a NEW departure date and the arrival date
+            // hasn't caught up yet (empty or still before it), nudge arrival
+            // forward with it. `next.arrDate` still equals the pre-change
+            // arrival date whenever the user edited the departure date input
+            // specifically (TimesFields only touches the field that changed),
+            // so comparing it here is equivalent to the pre-swap inline
+            // `onChange` that did this same check against `arrivalDate`.
+            const depDateChanged = next.depDate !== departureDate;
+            const arrivalNeedsToCatchUp = !next.arrDate || next.arrDate < next.depDate;
+            setDepartureDate(next.depDate);
+            setDepartureTime(next.depTime);
+            setArrivalDate(depDateChanged && arrivalNeedsToCatchUp ? next.depDate : next.arrDate);
+            setArrivalTime(next.arrTime);
+          }}
+          onEstimateArrival={handleEstimateArrival}
+          canEstimateArrival={canEstimateArrival}
+          help={{
+            depDate: { content: t("flights:form.help.departureDate") },
+            depTime: {
+              content: t("flights:form.help.departureTime"),
+              expandedContent: t("flights:form.help.departureTimeExpanded"),
+            },
+            arrDate: { content: t("flights:form.help.arrivalDate") },
+            arrTime: {
+              content: t("flights:form.help.arrivalTime"),
+              expandedContent: t("flights:form.help.arrivalTimeExpanded"),
+            },
+          }}
+        />
       )}
 
       {/* Additional Fields */}

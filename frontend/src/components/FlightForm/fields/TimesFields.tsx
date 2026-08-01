@@ -1,5 +1,6 @@
 import { useTranslation } from "../../../hooks/useTranslation";
 import CopyActionButton from "../CopyActionButton";
+import HelpIcon from "../../Help/HelpIcon";
 
 /** The four date/time inputs a flight leg needs, always kept in the SAME
  *  timezone basis by the caller — see FlightEditModal's hydration effect for
@@ -18,6 +19,20 @@ interface TimesFieldsIds {
   arrTime?: string;
 }
 
+/** A single field's help-tooltip content, already translated by the caller —
+ *  TimesFields doesn't own this copy, it just has somewhere to put it. */
+interface TimesFieldsFieldHelp {
+  content: string;
+  expandedContent?: string;
+}
+
+interface TimesFieldsHelp {
+  depDate?: TimesFieldsFieldHelp;
+  depTime?: TimesFieldsFieldHelp;
+  arrDate?: TimesFieldsFieldHelp;
+  arrTime?: TimesFieldsFieldHelp;
+}
+
 interface TimesFieldsProps {
   value: TimesFieldsValue;
   onChange: (value: TimesFieldsValue) => void;
@@ -27,6 +42,10 @@ interface TimesFieldsProps {
   onEstimateArrival?: () => void;
   canEstimateArrival?: boolean;
   ids?: TimesFieldsIds;
+  /** Per-field help tooltips (the create form has these, the edit form does
+   *  not) — a field only gets a <HelpIcon> when its entry is supplied, so
+   *  callers that pass nothing (FlightEditModal) render exactly as before. */
+  help?: TimesFieldsHelp;
 }
 
 /** Departure + arrival date/time as four separate inputs (matches the
@@ -38,6 +57,7 @@ export default function TimesFields({
   onEstimateArrival,
   canEstimateArrival = false,
   ids,
+  help,
 }: TimesFieldsProps): JSX.Element {
   const { t } = useTranslation(["flights"]);
 
@@ -65,9 +85,18 @@ export default function TimesFields({
   return (
     <div className="grid grid-cols-2 gap-4">
       <div>
-        <label className="label" htmlFor={depDateId}>
-          {t("flights:form.departureDate")}
-        </label>
+        <div className="flex items-center gap-2">
+          <label className="label" htmlFor={depDateId}>
+            {t("flights:form.departureDate")}
+          </label>
+          {help?.depDate && (
+            <HelpIcon
+              content={help.depDate.content}
+              expandedContent={help.depDate.expandedContent}
+              position="top"
+            />
+          )}
+        </div>
         <input
           id={depDateId}
           type="date"
@@ -77,9 +106,18 @@ export default function TimesFields({
         />
       </div>
       <div>
-        <label className="label" htmlFor={depTimeId}>
-          {t("flights:form.departureTime")}
-        </label>
+        <div className="flex items-center gap-2">
+          <label className="label" htmlFor={depTimeId}>
+            {t("flights:form.departureTime")}
+          </label>
+          {help?.depTime && (
+            <HelpIcon
+              content={help.depTime.content}
+              expandedContent={help.depTime.expandedContent}
+              position="top"
+            />
+          )}
+        </div>
         <input
           id={depTimeId}
           type="time"
@@ -99,6 +137,13 @@ export default function TimesFields({
           <label className="label" htmlFor={arrDateId}>
             {t("flights:form.arrivalDate")}
           </label>
+          {help?.arrDate && (
+            <HelpIcon
+              content={help.arrDate.content}
+              expandedContent={help.arrDate.expandedContent}
+              position="top"
+            />
+          )}
           <CopyActionButton
             icon="arrow-down"
             title={t("flights:form.copyToArrival")}
@@ -126,6 +171,13 @@ export default function TimesFields({
           <label className="label" htmlFor={arrTimeId}>
             {t("flights:form.arrivalTime")}
           </label>
+          {help?.arrTime && (
+            <HelpIcon
+              content={help.arrTime.content}
+              expandedContent={help.arrTime.expandedContent}
+              position="top"
+            />
+          )}
           {onEstimateArrival && (
             <CopyActionButton
               icon="calculator"
