@@ -1,12 +1,13 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import TripModal from "../../../components/Trips/TripModal";
-import { tripsApi } from "../../../lib/api";
+import { tripsApi, companionsApi } from "../../../lib/api";
 import type { Trip } from "../../../types";
 
 vi.mock("../../../lib/api", () => ({
   tripsApi: { create: vi.fn(), update: vi.fn(), uploadCover: vi.fn() },
+  companionsApi: { list: vi.fn() },
 }));
 
 vi.mock("../../../store/toastStore", () => ({
@@ -38,6 +39,10 @@ const existingTrip = {
 } as unknown as Trip;
 
 describe("TripModal", () => {
+  beforeEach(() => {
+    vi.mocked(companionsApi.list).mockReset().mockResolvedValue([]);
+  });
+
   // #status-from-dates: trip status is now derived from segment dates
   // (deriveTripStatus in shared/statusDerivation.ts) — a manual select let the
   // UI set a value the backend would immediately overwrite on the next sweep.
@@ -72,5 +77,38 @@ describe("TripModal", () => {
     await waitFor(() => expect(tripsApi.update).toHaveBeenCalled());
     const payload = vi.mocked(tripsApi.update).mock.calls[0][1];
     expect(payload).not.toHaveProperty("status");
+  });
+
+  // Task 12 — the comma-separated companions text input on the "people" tab
+  // is replaced by the shared CompanionPicker.
+  it("renders existing companions as removable chips instead of a CSV text field", async () => {
+    const tripWithCompanions: Trip = { ...existingTrip, companions: ["Anna", "Jonas"] };
+    render(<TripModal trip={tripWithCompanions} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole("tab", { name: /trips:modalTabs\.people/ }));
+
+    expect(screen.getByTestId("companion-remove-Anna")).toBeInTheDocument();
+    expect(screen.getByTestId("companion-remove-Jonas")).toBeInTheDocument();
+  });
+
+  it("submits companions as a string[] built from the picker chips", async () => {
+    vi.mocked(tripsApi.create).mockResolvedValue({ id: "t1" } as unknown as Trip);
+    render(<TripModal trip={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    await userEvent.type(
+      screen.getByPlaceholderText("trips:modal.namePlaceholder"),
+      "Japan trip"
+    );
+    await userEvent.click(screen.getByRole("tab", { name: /trips:modalTabs\.people/ }));
+    await userEvent.type(
+      screen.getByRole("combobox", { name: "picker.label" }),
+      "Marie{Enter}"
+    );
+    await userEvent.click(screen.getByText("trips:modal.save"));
+
+    await waitFor(() => expect(tripsApi.create).toHaveBeenCalled());
+    const calls = vi.mocked(tripsApi.create).mock.calls;
+    const payload = calls[calls.length - 1][0];
+    expect(payload.companions).toEqual(["Marie"]);
   });
 });
