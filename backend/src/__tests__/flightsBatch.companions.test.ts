@@ -95,4 +95,28 @@ describe('batch import companions', () => {
       expect(row.companions).toHaveLength(row.companionLinks.length);
     }
   });
+
+  // The two tests above never exercise a row whose OWN companions list
+  // collapses under resolution — every name in every row is a distinct
+  // identity, so the array and the links agree in length no matter whether
+  // the array is written from resolved display names or from raw input.
+  // A row that repeats one identity within itself (`['Anna', 'anna']`) is
+  // the one case where writing the array from raw input (2 entries) would
+  // diverge from the resolved links (1 row, since resolveCompanions dedupes
+  // by id) — that is exactly the deviation from the brief this test guards.
+  it('keeps array and links in agreement when one row repeats a name', async () => {
+    const res = await request(app)
+      .post('/api/v1/flights/batch')
+      .set('Cookie', cookie)
+      .send([makeFlight({ flightNumber: 'LH404', companions: ['Anna', 'anna'] })])
+      .expect(201);
+
+    const createdId = (res.body.flights as Array<{ id: string }>)[0]!.id;
+    const row = await prisma.flight.findUniqueOrThrow({
+      where: { id: createdId },
+      include: { companionLinks: true },
+    });
+    expect(row.companions).toHaveLength(row.companionLinks.length);
+    expect(row.companionLinks).toHaveLength(1);
+  });
 });
