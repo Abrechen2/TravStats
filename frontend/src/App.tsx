@@ -335,9 +335,11 @@ function AppContent() {
   );
 }
 
+// The v7_startTransition / v7_relativeSplatPath opt-ins that used to sit on
+// BrowserRouter are gone in react-router 7 — both are its default behaviour.
 function App() {
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <BrowserRouter>
       <AppContent />
     </BrowserRouter>
   );
