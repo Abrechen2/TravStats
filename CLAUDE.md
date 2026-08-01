@@ -501,3 +501,35 @@ To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
+
+---
+
+## Git-Remotes — Forgejo und GitHub (seit 2026-08-01)
+
+Dieses Repository hat **zwei Remotes**:
+
+| Remote | Ziel | Rolle |
+|--------|------|-------|
+| `origin` | GitHub | Massgeblich fuer Oeffentliches — PRs, Actions, Dependabot, GHCR |
+| `forgejo` | `ssh://git@192.168.178.254:2222/dennis/TravStats.git` | Private Vollsicherung im Haus, inkl. aller lokalen Branches |
+
+**Regel beim Pushen:**
+
+```bash
+git push origin <branch>    # oeffentlich, wie bisher
+git push forgejo --all      # zusaetzlich IMMER - alle lokalen Branches
+git push forgejo --tags
+```
+
+Der zweite Befehl ist der entscheidende. Am 1. August 2026 existierten
+15 Branches ueber vier Repositories ausschliesslich lokal, obwohl alle ein
+GitHub-Remote hatten.
+
+**Dateien, die `.gitignore` hier ausschliesst** (`CLAUDE.md`, `AGENTS.md`,
+Roadmaps, Pentest-Notizen), liegen im Begleitrepo **`TravStats-local`** auf
+Forgejo. Git kennt keine Ignore-Regeln pro Remote, deshalb der Umweg.
+
+**Secrets gehoeren in keines von beiden** — dafuer ist Infisical zustaendig
+(CT 141, `192.168.178.145`).
+
+Vollstaendiges Konzept: `D:\Projekte\CC\docs\git-konzept.md`
