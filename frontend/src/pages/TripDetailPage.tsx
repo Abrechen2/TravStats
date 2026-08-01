@@ -111,9 +111,7 @@ export default function TripDetailPage(): JSX.Element {
         style={{ background: "var(--bg-base)", color: "var(--text-muted)" }}
       >
         <NavigationBar />
-        <div className="flex items-center justify-center py-20">
-          {t("common:loading.default")}
-        </div>
+        <div className="flex items-center justify-center py-20">{t("common:loading.default")}</div>
       </div>
     );
   }
