@@ -506,9 +506,12 @@ export function useFlightForm(
       category,
       tags: tags.length ? tags : undefined,
       companions: companions.length ? companions : undefined,
-      baggageAllowance,
-      frequentFlyerNumber,
-      bookingClassLetter,
+      // `|| undefined` matters here: since #199 these are editable inputs,
+      // and a blanked field must be OMITTED — an empty string would
+      // overwrite a parser-provided value with nothing on the server.
+      baggageAllowance: baggageAllowance || undefined,
+      frequentFlyerNumber: frequentFlyerNumber || undefined,
+      bookingClassLetter: bookingClassLetter || undefined,
       coPassengers: coPassengers.length ? coPassengers : undefined,
     };
   };
@@ -822,6 +825,9 @@ export function useFlightForm(
     notes,
     bookingReference,
     ticketNumber,
+    bookingClassLetter,
+    baggageAllowance,
+    frequentFlyerNumber,
     price,
     currency,
     category,
@@ -864,6 +870,9 @@ export function useFlightForm(
     setNotes,
     setBookingReference,
     setTicketNumber,
+    setBookingClassLetter,
+    setBaggageAllowance,
+    setFrequentFlyerNumber,
     setPrice,
     setCurrency,
     setCategory,

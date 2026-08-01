@@ -120,6 +120,56 @@ describe("useFlightForm booking fields (#197)", () => {
     expect(payload.ticketNumber).toBeUndefined();
   });
 
+  // Phase 2 Task 2 — the hook must expose the three parser-filled fields so
+  // the create form can render them. A blanked field must be OMITTED from
+  // the payload: an empty string would overwrite a parser-provided value
+  // with nothing on the server.
+  it("submits the three parser-filled booking fields through their setters", async () => {
+    const { result } = renderHook(() => useFlightForm(mocks.onSubmit, vi.fn()));
+
+    act(() => {
+      result.current.setDeparture(makeAirport("FRA"));
+      result.current.setArrival(makeAirport("JFK"));
+      result.current.setDepartureDate("2026-07-01");
+      result.current.setArrivalDate("2026-07-01");
+      result.current.setBookingClassLetter("Y");
+      result.current.setBaggageAllowance("23 kg");
+      result.current.setFrequentFlyerNumber("992223334");
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit(submitEvent());
+    });
+
+    const payload = mocks.onSubmit.mock.calls[0][0];
+    expect(payload.bookingClassLetter).toBe("Y");
+    expect(payload.baggageAllowance).toBe("23 kg");
+    expect(payload.frequentFlyerNumber).toBe("992223334");
+  });
+
+  it("omits the three fields when blanked — empty string never reaches the payload", async () => {
+    const { result } = renderHook(() => useFlightForm(mocks.onSubmit, vi.fn()));
+
+    act(() => {
+      result.current.setDeparture(makeAirport("FRA"));
+      result.current.setArrival(makeAirport("JFK"));
+      result.current.setDepartureDate("2026-07-01");
+      result.current.setArrivalDate("2026-07-01");
+      result.current.setBookingClassLetter("");
+      result.current.setBaggageAllowance("");
+      result.current.setFrequentFlyerNumber("");
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit(submitEvent());
+    });
+
+    const payload = mocks.onSubmit.mock.calls[0][0];
+    expect(payload.bookingClassLetter).toBeUndefined();
+    expect(payload.baggageAllowance).toBeUndefined();
+    expect(payload.frequentFlyerNumber).toBeUndefined();
+  });
+
   it("keeps the booking reference when preparing the return leg", async () => {
     const { result } = renderHook(() =>
       useFlightForm(mocks.onSubmit, vi.fn())
