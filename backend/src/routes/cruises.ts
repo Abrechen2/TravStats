@@ -11,6 +11,7 @@ import { computeSchematicRoute } from '../services/schematicRouter';
 import { recomputeLegsForCruise } from '../services/cruiseDistance/cruiseLegService';
 import { deriveCruiseStatus, CRUISE_PASSTHROUGH } from '../shared/statusDerivation';
 import { recomputeTripStatus } from '../services/tripStatusService';
+import { resolveCompanions, linkRowsFor } from '../services/companionService';
 import logger from '../utils/logger';
 
 interface GeometryFeature {
@@ -278,7 +279,8 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
     const parsed = createCruiseSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    const { stops, startDate, endDate, tripId, bookingId, status, ...rest } = parsed.data;
+    const { stops, startDate, endDate, tripId, bookingId, status, companions, ...rest } =
+      parsed.data;
 
     const startDateUtc = startDate ? new Date(startDate) : null;
     const endDateUtc = endDate ? new Date(endDate) : null;
@@ -291,6 +293,15 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
       ? status
       : deriveCruiseStatus({ startDate: startDateUtc, endDate: endDateUtc, current: status });
 
+    // Resolve companion names to Companion entities up front (find-or-create
+    // is idempotent via companionService, so it's safe to run outside the
+    // transaction below — it cannot participate in a passed `tx` anyway). The
+    // cruise row and its links are written together inside the transaction so
+    // a failure never leaves the legacy `companions` array and the
+    // `companionLinks` table disagreeing. Mirrors routes/trips.ts.
+    const companionNames = companions ?? [];
+    const resolvedCompanions = await resolveCompanions(userId, companionNames);
+
     const cruise = await prisma.$transaction(async (tx) => {
       const created = await tx.cruise.create({
         data: {
@@ -301,8 +312,22 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
           endDate: endDateUtc,
           tripId: tripId ?? null,
           bookingId: bookingId ?? null,
+          // Dual write: resolved display names keep this legacy array in
+          // agreement with `companionLinks` below (trimmed, blanks dropped,
+          // newest spelling wins) — the previous image still reads this column.
+          companions: resolvedCompanions.map((c) => c.displayName),
         },
       });
+
+      if (resolvedCompanions.length > 0) {
+        await tx.cruiseCompanion.createMany({
+          data: linkRowsFor(resolvedCompanions.map((c) => c.id)).map((row) => ({
+            ...row,
+            cruiseId: created.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
 
       if (stops && stops.length > 0) {
         await tx.cruiseStop.createMany({
@@ -362,7 +387,8 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
     const parsed = updateCruiseSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    const { stops, startDate, endDate, status: requestedStatus, ...rest } = parsed.data;
+    const { stops, startDate, endDate, status: requestedStatus, companions, ...rest } =
+      parsed.data;
 
     const nextStartDate =
       startDate === undefined ? undefined : startDate ? new Date(startDate) : null;
@@ -397,7 +423,34 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
       });
     }
 
+    // Replace rather than append — an update always carries the FULL
+    // companion list for the cruise, so stale links must go. Resolution
+    // itself (find-or-create against Companion) is idempotent and safe to
+    // run here, outside any transaction — same reasoning as the create
+    // handler. The actual link replacement is deferred and run together
+    // with the `cruise.update` call below inside one `prisma.$transaction`,
+    // so a failure between the two never leaves the legacy array and
+    // `companionLinks` disagreeing (undefined here means "untouched": the
+    // companions field was not part of this update at all).
+    let resolvedCompanionsForUpdate: { id: string; displayName: string }[] | undefined;
+    if (companions !== undefined) {
+      resolvedCompanionsForUpdate = await resolveCompanions(userId, companions);
+    }
+
     const updated = await prisma.$transaction(async (tx) => {
+      if (resolvedCompanionsForUpdate !== undefined) {
+        await tx.cruiseCompanion.deleteMany({ where: { cruiseId: existing.id } });
+        if (resolvedCompanionsForUpdate.length > 0) {
+          await tx.cruiseCompanion.createMany({
+            data: linkRowsFor(resolvedCompanionsForUpdate.map((c) => c.id)).map((row) => ({
+              ...row,
+              cruiseId: existing.id,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
       await tx.cruise.update({
         where: { id: existing.id },
         data: {
@@ -405,6 +458,9 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
           status: effectiveStatus,
           startDate: nextStartDate,
           endDate: nextEndDate,
+          ...(resolvedCompanionsForUpdate !== undefined && {
+            companions: resolvedCompanionsForUpdate.map((c) => c.displayName),
+          }),
         },
       });
 
