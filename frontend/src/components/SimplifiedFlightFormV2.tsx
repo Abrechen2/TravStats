@@ -157,8 +157,14 @@ export default function SimplifiedFlightFormV2({
               setCategory={form.setCategory}
               bookingReference={form.bookingReference}
               ticketNumber={form.ticketNumber}
+              bookingClassLetter={form.bookingClassLetter}
+              baggageAllowance={form.baggageAllowance}
+              frequentFlyerNumber={form.frequentFlyerNumber}
               setBookingReference={form.setBookingReference}
               setTicketNumber={form.setTicketNumber}
+              setBookingClassLetter={form.setBookingClassLetter}
+              setBaggageAllowance={form.setBaggageAllowance}
+              setFrequentFlyerNumber={form.setFrequentFlyerNumber}
               price={form.price}
               currency={form.currency}
               setPrice={form.setPrice}
