@@ -13,10 +13,11 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response, next: Next
   try {
     const rows = await prisma.companion.findMany({
       where: { userId: req.userId },
+      // No orderBy here — final ordering (usageCount desc, then name) is
+      // decided in JS below, so a DB-level sort would be redundant work.
       include: {
         _count: { select: { flights: true, trips: true, cruises: true } },
       },
-      orderBy: { displayName: 'asc' },
     });
 
     const companions = rows
