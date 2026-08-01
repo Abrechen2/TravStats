@@ -338,11 +338,41 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
             return;
           }
           const { patch, mergedFields } = buildFlightMergePatch(existingFull, data);
+
+          // Companions are resolved to Companion entities up front — same
+          // reasoning as the create/update handlers, resolveCompanions uses
+          // the top-level client and cannot join a passed `tx`. Only resolve
+          // (and only touch companionLinks below) when the merge actually
+          // adopted companions (mergedFields includes "companions", i.e. the
+          // existing flight had none). If the merge left companions alone,
+          // `resolvedMergeCompanions` stays undefined and the existing links
+          // are left completely untouched, preserving fill-if-empty merge
+          // semantics.
+          let resolvedMergeCompanions: { id: string; displayName: string }[] | undefined;
+          if (mergedFields.includes('companions')) {
+            resolvedMergeCompanions = await resolveCompanions(userId, data.companions ?? []);
+            patch.companions = resolvedMergeCompanions.map((c) => c.displayName);
+          }
+
           const merged = mergedFields.length === 0
             ? existingFull
-            : await prisma.flight.update({
-                where: { id: existing.id },
-                data: { ...patch, lastModifiedBy: 'user' },
+            : await prisma.$transaction(async (tx) => {
+                if (resolvedMergeCompanions !== undefined) {
+                  await tx.flightCompanion.deleteMany({ where: { flightId: existing.id } });
+                  if (resolvedMergeCompanions.length > 0) {
+                    await tx.flightCompanion.createMany({
+                      data: linkRowsFor(resolvedMergeCompanions.map((c) => c.id)).map((row) => ({
+                        ...row,
+                        flightId: existing.id,
+                      })),
+                      skipDuplicates: true,
+                    });
+                  }
+                }
+                return tx.flight.update({
+                  where: { id: existing.id },
+                  data: { ...patch, lastModifiedBy: 'user' },
+                });
               });
           res.status(200).json({
             flight: merged,
