@@ -654,7 +654,7 @@ describe('flight companions', () => {
       .post('/api/v1/flights')
       .set('Cookie', cookie)
       .send(newFlight(['Anna', 'Jonas']))
-      .expect(200 | 201);
+      .expect(201);
 
     await request(app)
       .put(`/api/v1/flights/${created.body.id}`)
