@@ -33,6 +33,7 @@ import { calculateNextApiCheckAt } from '../utils/smartCheckSchedule';
 import { buildFlightMergePatch } from '../utils/flightMerge';
 import batchRouter from './flightsBatch';
 import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from '../shared/statusDerivation';
+import { resolveCompanions, linkRowsFor } from '../services/companionService';
 
 const router = Router();
 
@@ -377,7 +378,16 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
       },
     });
 
-    const flight = await prisma.flight.create({
+    // Resolve companion names to Companion entities up front (find-or-create
+    // is idempotent via companionService, so it's safe to run outside the
+    // transaction below). The flight row and its links are written together
+    // inside a transaction so a failure never leaves the legacy `companions`
+    // array and the `companionLinks` table disagreeing.
+    const companionNames = data.companions ?? [];
+    const resolvedCompanions = await resolveCompanions(userId, companionNames);
+
+    const flight = await prisma.$transaction(async (tx) => {
+      const created = await tx.flight.create({
       data: {
         userId,
         airline: data.airline,
@@ -439,7 +449,10 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         currency: data.currency,
         category: data.category,
         tags: data.tags ?? [],
-        companions: data.companions ?? [],
+        // Dual write: resolved display names keep this legacy array in
+        // agreement with `companionLinks` below (trimmed, blanks dropped,
+        // newest spelling wins) — the previous image still reads this column.
+        companions: resolvedCompanions.map((c) => c.displayName),
         receiptUrl: data.receiptUrl,
         // Boarding pass / email import fields
         seatNumber: data.seatNumber,
@@ -474,6 +487,19 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
             ? Prisma.JsonNull
             : (data.specialData as unknown as Prisma.InputJsonValue),
       },
+      });
+
+      if (resolvedCompanions.length > 0) {
+        await tx.flightCompanion.createMany({
+          data: linkRowsFor(resolvedCompanions.map((c) => c.id)).map((row) => ({
+            ...row,
+            flightId: created.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      return created;
     });
 
     // Check achievements after creating a flight and return newly unlocked ones
@@ -945,7 +971,26 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.category !== undefined) updateData.category = data.category;
     if (data.seatClass !== undefined) updateData.seatClass = data.seatClass;
     if (data.tags !== undefined) updateData.tags = data.tags;
-    if (data.companions !== undefined) updateData.companions = data.companions;
+    if (data.companions !== undefined) {
+      // Replace rather than append — an update always carries the FULL
+      // companion list for the flight, so stale links must go. No
+      // surrounding transaction here (unlike the create handler); a failure
+      // between the delete and the create leaves links briefly empty, which
+      // self-heals on the next successful update.
+      const resolved = await resolveCompanions(userId, data.companions);
+      await prisma.flightCompanion.deleteMany({ where: { flightId: existingFlight.id } });
+      if (resolved.length > 0) {
+        await prisma.flightCompanion.createMany({
+          data: linkRowsFor(resolved.map((c) => c.id)).map((row) => ({
+            ...row,
+            flightId: existingFlight.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
+      // Dual write: the previous image still reads this column.
+      updateData.companions = resolved.map((c) => c.displayName);
+    }
     if (data.receiptUrl !== undefined) updateData.receiptUrl = data.receiptUrl;
 
     // Special flights (Sonder-Flüge) — explicit `null` clears, `undefined` leaves untouched
