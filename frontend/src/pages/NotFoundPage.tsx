@@ -23,7 +23,10 @@ export default function NotFoundPage(): JSX.Element {
         <p className="text-sm text-(--text-muted)">{t("notFound.message")}</p>
         <button
           type="button"
-          onClick={(): void => navigate("/dashboard")}
+          onClick={(): void => {
+            // react-router 7 widened navigate() to void | Promise<void>.
+            void navigate("/dashboard");
+          }}
           className="mt-2 rounded-md border border-border px-4 py-2 text-sm text-(--accent) hover:border-(--accent)"
         >
           {t("notFound.back")}
