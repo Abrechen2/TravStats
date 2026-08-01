@@ -4,6 +4,7 @@ import { differenceInCalendarDays } from "date-fns";
 import { tripsApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import { sumByCurrency } from "../lib/bookingCost";
+import { computeRailStates } from "../lib/timelineRail";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useTranslation } from "../hooks/useTranslation";
@@ -565,6 +566,15 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
     return out.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [trip]);
 
+  // Past/upcoming is shown on the rail (line + dots), not by graying out
+  // entries — see #184. Recomputed per render; a page-lifetime "now" is fine.
+  const railStates = useMemo(() => {
+    return computeRailStates(
+      events.map((ev) => ev.date),
+      Date.now()
+    );
+  }, [events]);
+
   const empty = events.length === 0;
 
   const handleDeleteJournal = async (entry: TripJournalEntry): Promise<void> => {
@@ -619,6 +629,7 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
           {events.map((ev, i) => {
             const isFirst = i === 0;
             const isLast = i === events.length - 1;
+            const rail = railStates[i];
             return (
               <li key={ev.id} className="relative" style={{ marginBottom: isLast ? 0 : 12 }}>
                 {/*
@@ -630,6 +641,8 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
                 {!isFirst && (
                   <span
                     aria-hidden
+                    data-testid="timeline-rail-top"
+                    data-filled={rail.topFilled}
                     className="absolute"
                     style={{
                       left: -18,
@@ -637,13 +650,15 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
                       bottom: "50%",
                       width: 2,
                       transform: "translateX(-50%)",
-                      background: "var(--color-border)",
+                      background: rail.topFilled ? "var(--accent)" : "var(--color-border)",
                     }}
                   />
                 )}
                 {!isLast && (
                   <span
                     aria-hidden
+                    data-testid="timeline-rail-bottom"
+                    data-filled={rail.bottomFilled}
                     className="absolute"
                     style={{
                       left: -18,
@@ -651,7 +666,7 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
                       bottom: -12,
                       width: 2,
                       transform: "translateX(-50%)",
-                      background: "var(--color-border)",
+                      background: rail.bottomFilled ? "var(--accent)" : "var(--color-border)",
                     }}
                   />
                 )}
@@ -659,16 +674,19 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
                 Dot: filled, vertically centered on the card (the li tightly
                 wraps its card, so top:50% is the card's centre) and horizontally
                 centered on the connector line. The base-coloured ring masks the
-                line where it passes behind the dot.
+                line where it passes behind the dot. Past events keep their
+                domain colour; upcoming ones stay neutral (#184).
               */}
                 <span
                   aria-hidden
+                  data-testid="timeline-rail-dot"
+                  data-past={rail.dotPast}
                   className="absolute w-3 h-3 rounded-full"
                   style={{
                     left: -18,
                     top: "50%",
                     transform: "translate(-50%, -50%)",
-                    background: dotColor(ev),
+                    background: rail.dotPast ? dotColor(ev) : "var(--color-border)",
                     boxShadow: "0 0 0 3px var(--bg-base)",
                   }}
                 />
