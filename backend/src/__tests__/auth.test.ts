@@ -87,4 +87,45 @@ describe('Auth API', () => {
         .expect(401);
     });
   });
+
+  describe('GET /api/v1/auth/me', () => {
+    it('should reject a request that carries no auth cookie', async () => {
+      await request(app).get('/api/v1/auth/me').expect(401);
+    });
+
+    it('should return the current user for a valid session cookie', async () => {
+      const registration = await request(app)
+        .post('/api/v1/auth/register')
+        .send({
+          username: 'testuser4',
+          password: 'password123',
+        })
+        .expect(201);
+
+      const response = await request(app)
+        .get('/api/v1/auth/me')
+        .set('Cookie', registration.headers['set-cookie'])
+        .expect(200);
+
+      expect(response.body.user.username).toBe('testuser4');
+    });
+
+    it('should never expose the password hash', async () => {
+      const registration = await request(app)
+        .post('/api/v1/auth/register')
+        .send({
+          username: 'testuser5',
+          password: 'password123',
+        })
+        .expect(201);
+
+      const response = await request(app)
+        .get('/api/v1/auth/me')
+        .set('Cookie', registration.headers['set-cookie'])
+        .expect(200);
+
+      expect(response.body.user).not.toHaveProperty('password');
+      expect(JSON.stringify(response.body)).not.toContain('$2b$');
+    });
+  });
 });

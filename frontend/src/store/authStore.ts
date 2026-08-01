@@ -9,6 +9,7 @@ interface AuthState {
   _hasHydrated: boolean;
   setAuth: (user: User) => void;
   logout: () => Promise<void>;
+  clearSession: () => void;
   setHasHydrated: (value: boolean) => void;
 }
 
@@ -33,6 +34,10 @@ export const useAuthStore = create<AuthState>()(
           // JWT is now stored in HttpOnly cookie (more secure)
           set({ user });
         },
+        // Drops the local session without calling the server. Used when the
+        // server has ALREADY rejected the cookie — a logout round-trip would
+        // only confirm what the 401 just told us.
+        clearSession: () => set({ user: null }),
         logout: async () => {
           try {
             // Clear the HttpOnly cookie on server
