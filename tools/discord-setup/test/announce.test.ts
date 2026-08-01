@@ -61,14 +61,46 @@ describe("runAnnounce --dry-run", () => {
     expect(login).not.toHaveBeenCalled();
     expect(once).not.toHaveBeenCalled();
   });
+});
 
-  it("logs in when dryRun is false", async () => {
-    const login = vi.fn();
+describe("runAnnounce promise settlement (non-dry-run)", () => {
+  // discord.js's `login()` resolves on the raw gateway READY dispatch, which
+  // fires BEFORE `clientReady` — the event the actual posting work runs on.
+  // These tests pin down that runAnnounce's returned promise tracks
+  // `clientReady` (+ destroy), not the earlier `login()` resolution — see the
+  // runAnnounce docstring in src/announce.ts.
+
+  it("does not settle just because login() resolved — only once clientReady's work finishes", async () => {
+    // `once` intentionally never invokes the captured handler, emulating a
+    // client that logged in but never received `clientReady`. If runAnnounce
+    // settled as soon as login() resolves (the bug), this promise would have
+    // fulfilled by the time the microtask queue drains below.
+    const login = vi.fn().mockResolvedValue("token");
+    const once = vi.fn();
+    const destroy = vi.fn().mockResolvedValue(undefined);
+    const client = { login, once, destroy } as unknown as Client;
+
+    let settled = false;
+    void runAnnounce(client, "token", "guild", "beta", "1.0.0", null, false).then(() => {
+      settled = true;
+    });
+
+    // Flush several microtask turns — enough for login()'s promise (and any
+    // reasonable chain hanging off it) to resolve.
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+
+    expect(login).toHaveBeenCalledWith("token");
+    expect(settled).toBe(false);
+    expect(destroy).not.toHaveBeenCalled();
+  });
+
+  it("rejects instead of hanging forever when login() rejects (e.g. a bad token)", async () => {
+    const login = vi.fn().mockRejectedValue(new Error("bad token"));
     const once = vi.fn();
     const client = { login, once, destroy: vi.fn() } as unknown as Client;
 
-    await runAnnounce(client, "token", "guild", "beta", "2.3.0-beta.9", "- notes", false);
-
-    expect(login).toHaveBeenCalledWith("token");
+    await expect(
+      runAnnounce(client, "bad-token", "guild", "beta", "1.0.0", null, false),
+    ).rejects.toThrow("bad token");
   });
 });
