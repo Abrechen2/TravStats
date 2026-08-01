@@ -185,6 +185,7 @@ export default function SimplifiedFlightFormV2({
               setTripId={form.setTripId}
               tags={form.tags}
               companions={form.companions}
+              coPassengers={form.coPassengers}
               setTags={form.setTags}
               setCompanions={form.setCompanions}
               notes={form.notes}

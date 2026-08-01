@@ -44,6 +44,8 @@
     "notes": "Notizen",
     "tags": "Tags",
     "companions": "Reisebegleiter",
+    "coPassengersParsed": "Vom Parser erkannte Mitreisende",
+    "coPassengersTakeOver": "Übernehmen",
     "submit": "Flug speichern",
     "submitAndReturn": "Speichern + Rückflug anlegen",
     "returnFlightHint": "Hinflug gespeichert — bitte Datum und Zeiten für den Rückflug ergänzen",

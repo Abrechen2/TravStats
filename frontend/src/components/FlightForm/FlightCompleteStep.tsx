@@ -1,6 +1,6 @@
 import HelpIcon from "../Help/HelpIcon";
 import AirportAutocomplete from "../AirportAutocomplete";
-import CompanionPicker from "../CompanionPicker";
+import CompanionsField from "./fields/CompanionsField";
 import TimesFields, { type ActualTimesFieldsValue } from "./fields/TimesFields";
 import CatalogueCombobox, {
   searchAirlineOptions,
@@ -119,6 +119,8 @@ export interface FlightCompleteStepProps {
   // Tags & companions
   tags: string[];
   companions: string[];
+  /** Raw parser output, read-only in the UI — see CompanionsField. */
+  coPassengers: string[];
   setTags: (v: string[]) => void;
   setCompanions: React.Dispatch<React.SetStateAction<string[]>>;
   // Notes
@@ -191,6 +193,7 @@ export default function FlightCompleteStep({
   setTripId,
   tags,
   companions,
+  coPassengers,
   setTags,
   setCompanions,
   notes,
@@ -702,10 +705,8 @@ export default function FlightCompleteStep({
         </div>
       </div>
 
-      {/* Cost (#192, #199) — shared with the edit modal. Price + currency are
-          always available; the tax/fee breakdown stays behind cost tracking,
-          and the receipt can now be uploaded while ADDING a flight (an
-          abandoned upload is swept by the 90-day orphan cleanup). */}
+      {/* Cost (#192, #199) — shared with the edit modal; the tax/fee
+          breakdown stays behind cost tracking (details in CostFields). */}
       <CostFields
         value={cost}
         onChange={onCostChange}
@@ -775,10 +776,12 @@ export default function FlightCompleteStep({
       </div>
 
       {/* Travel Companions */}
-      <div>
-        <label className={`label ${textClass}`}>{t("flights:form.companions")}</label>
-        <CompanionPicker value={companions} onChange={setCompanions} />
-      </div>
+      <CompanionsField
+        companions={companions}
+        onCompanionsChange={setCompanions}
+        coPassengers={coPassengers}
+        labelClassName={textClass}
+      />
 
       {/* Notes */}
       <div>
