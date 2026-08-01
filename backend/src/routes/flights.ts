@@ -388,105 +388,105 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
 
     const flight = await prisma.$transaction(async (tx) => {
       const created = await tx.flight.create({
-      data: {
-        userId,
-        airline: data.airline,
-        airlineIata,
-        airlineIcao,
-        operatingAirline: data.operatingAirline,
-        operatingAirlineIata: data.operatingAirlineIata,
-        operatingAirlineIcao: data.operatingAirlineIcao,
-        isCodeshare: data.isCodeshare,
-        flightNumber: data.flightNumber,
-        callsign: data.callsign,
-        aircraft: data.aircraft ? normalizeAircraft(data.aircraft) : null,
-        aircraftRegistration: data.aircraftRegistration,
-        aircraftModeS: data.aircraftModeS,
-        // Use enriched departure data (fills in missing IATA/ICAO/names)
-        depIcao: enriched.departure.icao,
-        depIata: enriched.departure.iata,
-        depName: enriched.departure.name,
-        depLat: enriched.departure.lat,
-        depLon: enriched.departure.lon,
-        // Use enriched arrival data (fills in missing IATA/ICAO/names)
-        arrIcao: enriched.arrival.icao,
-        arrIata: enriched.arrival.iata,
-        arrName: enriched.arrival.name,
-        arrLat: enriched.arrival.lat,
-        arrLon: enriched.arrival.lon,
-        departureTime: departureUtc,
-        arrivalTime: arrivalUtc,
-        actualDeparture: actualDepartureUtc,
-        actualArrival: actualArrivalUtc,
-        // Default to 'UTC' (the canonical contract). Bulk-import callers can
-        // override with 'DATE_ONLY' or 'UNKNOWN' when the time component is
-        // a placeholder so downstream display/aggregation knows to estimate.
-        depTimeSemantics: data.depTimeSemantics ?? 'UTC',
-        arrTimeSemantics: data.arrTimeSemantics ?? 'UTC',
-        delayMinutes:
-          actualDepartureUtc && departureUtc
-            ? Math.round((actualDepartureUtc.getTime() - departureUtc.getTime()) / 60000)
-            : null,
-        co2Kg: calculateCo2Kg({
+        data: {
+          userId,
+          airline: data.airline,
+          airlineIata,
+          airlineIcao,
+          operatingAirline: data.operatingAirline,
+          operatingAirlineIata: data.operatingAirlineIata,
+          operatingAirlineIcao: data.operatingAirlineIcao,
+          isCodeshare: data.isCodeshare,
+          flightNumber: data.flightNumber,
+          callsign: data.callsign,
+          aircraft: data.aircraft ? normalizeAircraft(data.aircraft) : null,
+          aircraftRegistration: data.aircraftRegistration,
+          aircraftModeS: data.aircraftModeS,
+          // Use enriched departure data (fills in missing IATA/ICAO/names)
+          depIcao: enriched.departure.icao,
+          depIata: enriched.departure.iata,
+          depName: enriched.departure.name,
           depLat: enriched.departure.lat,
           depLon: enriched.departure.lon,
+          // Use enriched arrival data (fills in missing IATA/ICAO/names)
+          arrIcao: enriched.arrival.icao,
+          arrIata: enriched.arrival.iata,
+          arrName: enriched.arrival.name,
           arrLat: enriched.arrival.lat,
           arrLon: enriched.arrival.lon,
-          seatClass: toSeatClass(data.seatClass),
-        }),
-        // Haversine route distance — see flightsBatch.ts for context.
-        routeDistance: haversineKm(
-          enriched.departure.lat,
-          enriched.departure.lon,
-          enriched.arrival.lat,
-          enriched.arrival.lon,
-        ),
-        status: effectiveStatus,
-        notes: data.notes,
-        price: data.price,
-        taxes: data.taxes,
-        fees: data.fees,
-        currency: data.currency,
-        category: data.category,
-        tags: data.tags ?? [],
-        // Dual write: resolved display names keep this legacy array in
-        // agreement with `companionLinks` below (trimmed, blanks dropped,
-        // newest spelling wins) — the previous image still reads this column.
-        companions: resolvedCompanions.map((c) => c.displayName),
-        receiptUrl: data.receiptUrl,
-        // Boarding pass / email import fields
-        seatNumber: data.seatNumber,
-        boardingGroup: data.boardingGroup,
-        gate: data.gate,
-        terminal: data.terminal,
-        bookingReference: data.bookingReference,
-        ticketNumber: data.ticketNumber,
-        baggageAllowance: data.baggageAllowance,
-        frequentFlyerNumber: data.frequentFlyerNumber,
-        bookingClassLetter: data.bookingClassLetter,
-        coPassengers: data.coPassengers ?? [],
-        // Data source tracking
-        dataSource: data.dataSource ?? 'manual',
-        lastModifiedBy: 'user',
-        nextApiCheckAt: calculateNextApiCheckAt(
-          departureUtc,
-          arrivalUtc,
-          effectiveStatus,
-          data.flightNumber,
-        ),
-        // Special flights (Sonder-Flüge) — non-null specialType marks
-        // this flight as a sub-type. See schemas/flight.ts for the union.
-        specialType: data.specialType ?? null,
-        eventLat: data.eventLat ?? null,
-        eventLon: data.eventLon ?? null,
-        eventLabel: data.eventLabel ?? null,
-        patternLat: data.patternLat ?? null,
-        patternLon: data.patternLon ?? null,
-        specialData:
-          data.specialData === null || data.specialData === undefined
-            ? Prisma.JsonNull
-            : (data.specialData as unknown as Prisma.InputJsonValue),
-      },
+          departureTime: departureUtc,
+          arrivalTime: arrivalUtc,
+          actualDeparture: actualDepartureUtc,
+          actualArrival: actualArrivalUtc,
+          // Default to 'UTC' (the canonical contract). Bulk-import callers can
+          // override with 'DATE_ONLY' or 'UNKNOWN' when the time component is
+          // a placeholder so downstream display/aggregation knows to estimate.
+          depTimeSemantics: data.depTimeSemantics ?? 'UTC',
+          arrTimeSemantics: data.arrTimeSemantics ?? 'UTC',
+          delayMinutes:
+            actualDepartureUtc && departureUtc
+              ? Math.round((actualDepartureUtc.getTime() - departureUtc.getTime()) / 60000)
+              : null,
+          co2Kg: calculateCo2Kg({
+            depLat: enriched.departure.lat,
+            depLon: enriched.departure.lon,
+            arrLat: enriched.arrival.lat,
+            arrLon: enriched.arrival.lon,
+            seatClass: toSeatClass(data.seatClass),
+          }),
+          // Haversine route distance — see flightsBatch.ts for context.
+          routeDistance: haversineKm(
+            enriched.departure.lat,
+            enriched.departure.lon,
+            enriched.arrival.lat,
+            enriched.arrival.lon,
+          ),
+          status: effectiveStatus,
+          notes: data.notes,
+          price: data.price,
+          taxes: data.taxes,
+          fees: data.fees,
+          currency: data.currency,
+          category: data.category,
+          tags: data.tags ?? [],
+          // Dual write: resolved display names keep this legacy array in
+          // agreement with `companionLinks` below (trimmed, blanks dropped,
+          // newest spelling wins) — the previous image still reads this column.
+          companions: resolvedCompanions.map((c) => c.displayName),
+          receiptUrl: data.receiptUrl,
+          // Boarding pass / email import fields
+          seatNumber: data.seatNumber,
+          boardingGroup: data.boardingGroup,
+          gate: data.gate,
+          terminal: data.terminal,
+          bookingReference: data.bookingReference,
+          ticketNumber: data.ticketNumber,
+          baggageAllowance: data.baggageAllowance,
+          frequentFlyerNumber: data.frequentFlyerNumber,
+          bookingClassLetter: data.bookingClassLetter,
+          coPassengers: data.coPassengers ?? [],
+          // Data source tracking
+          dataSource: data.dataSource ?? 'manual',
+          lastModifiedBy: 'user',
+          nextApiCheckAt: calculateNextApiCheckAt(
+            departureUtc,
+            arrivalUtc,
+            effectiveStatus,
+            data.flightNumber,
+          ),
+          // Special flights (Sonder-Flüge) — non-null specialType marks
+          // this flight as a sub-type. See schemas/flight.ts for the union.
+          specialType: data.specialType ?? null,
+          eventLat: data.eventLat ?? null,
+          eventLon: data.eventLon ?? null,
+          eventLabel: data.eventLabel ?? null,
+          patternLat: data.patternLat ?? null,
+          patternLon: data.patternLon ?? null,
+          specialData:
+            data.specialData === null || data.specialData === undefined
+              ? Prisma.JsonNull
+              : (data.specialData as unknown as Prisma.InputJsonValue),
+        },
       });
 
       if (resolvedCompanions.length > 0) {
