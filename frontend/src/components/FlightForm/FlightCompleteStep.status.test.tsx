@@ -24,6 +24,9 @@ vi.mock("../../hooks/useTranslation", () => ({
 vi.mock("../../hooks/useSuggestions", () => ({
   useSuggestions: () => ({ airlines: [], aircraft: [] }),
 }));
+vi.mock("../../store/settingsStore", () => ({
+  useSettingsStore: () => ({ features: { enableCostTracking: false } }),
+}));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: vi.fn(() => vi.fn()),
 }));
@@ -89,10 +92,8 @@ function baseProps(
     setBookingClassLetter: vi.fn(),
     setBaggageAllowance: vi.fn(),
     setFrequentFlyerNumber: vi.fn(),
-    price: undefined,
-    currency: "EUR",
-    setPrice: vi.fn(),
-    setCurrency: vi.fn(),
+    cost: { price: undefined, currency: "EUR", taxes: undefined, fees: undefined, receiptUrl: "" },
+    onCostChange: vi.fn(),
     tags: [],
     companions: [],
     setTags: vi.fn(),

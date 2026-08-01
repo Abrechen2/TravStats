@@ -165,10 +165,20 @@ export default function SimplifiedFlightFormV2({
               setBookingClassLetter={form.setBookingClassLetter}
               setBaggageAllowance={form.setBaggageAllowance}
               setFrequentFlyerNumber={form.setFrequentFlyerNumber}
-              price={form.price}
-              currency={form.currency}
-              setPrice={form.setPrice}
-              setCurrency={form.setCurrency}
+              cost={{
+                price: form.price,
+                currency: form.currency,
+                taxes: form.taxes,
+                fees: form.fees,
+                receiptUrl: form.receiptUrl,
+              }}
+              onCostChange={(v) => {
+                form.setPrice(v.price);
+                form.setCurrency(v.currency);
+                form.setTaxes(v.taxes);
+                form.setFees(v.fees);
+                form.setReceiptUrl(v.receiptUrl);
+              }}
               tags={form.tags}
               companions={form.companions}
               setTags={form.setTags}
