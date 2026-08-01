@@ -288,8 +288,7 @@
     "tripAssignedToast": "Trip assignment updated",
     "tripAssignFailed": "Trip assignment failed — other changes were saved",
     "routeFrom": "From",
-    "routeTo": "To",
-    "routeUnresolvedHint": "Entry not recognised. The saved selection will not be changed."
+    "routeTo": "To"
   },
   "quickActions": {
     "showOnMap": "Show on map",

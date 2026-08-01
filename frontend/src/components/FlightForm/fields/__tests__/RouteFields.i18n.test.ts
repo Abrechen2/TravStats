@@ -38,11 +38,4 @@ describe("RouteFields i18n — required-marker accuracy (review follow-up)", () 
     expect(en.form.from).toMatch(/\*/);
     expect(en.form.to).toMatch(/\*/);
   });
-
-  it("the unresolved-edit hint exists in both languages", () => {
-    expect(typeof de.edit.routeUnresolvedHint).toBe("string");
-    expect(de.edit.routeUnresolvedHint.length).toBeGreaterThan(0);
-    expect(typeof en.edit.routeUnresolvedHint).toBe("string");
-    expect(en.edit.routeUnresolvedHint.length).toBeGreaterThan(0);
-  });
 });
