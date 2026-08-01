@@ -128,6 +128,15 @@ export function useFlightForm(
   const [departureTime, setDepartureTime] = useState("12:00");
   const [arrivalDate, setArrivalDate] = useState("");
   const [arrivalTime, setArrivalTime] = useState("14:00");
+  // Actual departure/arrival (#200) — empty by default: a freshly created
+  // flight has no recorded actual time until the user (or live tracking,
+  // out of scope here) fills it in. Kept empty rather than defaulted like
+  // departureTime/arrivalTime above, since "no value yet" must stay
+  // distinguishable from "midday" — see buildFlightPayload below.
+  const [actualDepartureDate, setActualDepartureDate] = useState("");
+  const [actualDepartureTime, setActualDepartureTime] = useState("");
+  const [actualArrivalDate, setActualArrivalDate] = useState("");
+  const [actualArrivalTime, setActualArrivalTime] = useState("");
   const [airline, setAirline] = useState("");
   const [operatingAirline, setOperatingAirline] = useState("");
   const [aircraft, setAircraft] = useState("");
@@ -471,6 +480,21 @@ export function useFlightForm(
         ? buildLocalString(effectiveArrivalDate, effectiveArrivalTime)
         : undefined,
       arrTimezone: effectiveArrivalDate ? arrTz : undefined,
+      // Actual departure/arrival (#200) — same undefined-when-empty contract
+      // as the scheduled pair above: leaving these blank must never emit an
+      // empty string or null, only omit the field entirely (a flight with no
+      // recorded actual time must stay that way). Paired with the SAME
+      // airport timezone as its scheduled counterpart (depTz/arrTz) since
+      // actual departure happens at the departure airport and actual arrival
+      // at the arrival airport, same as the scheduled times.
+      actualDepartureLocal: actualDepartureDate
+        ? buildLocalString(actualDepartureDate, actualDepartureTime)
+        : undefined,
+      actualDepartureTz: actualDepartureDate ? depTz : undefined,
+      actualArrivalLocal: actualArrivalDate
+        ? buildLocalString(actualArrivalDate, actualArrivalTime)
+        : undefined,
+      actualArrivalTz: actualArrivalDate ? arrTz : undefined,
       depTimeSemantics,
       arrTimeSemantics,
       status,
@@ -783,6 +807,10 @@ export function useFlightForm(
     departureTime,
     arrivalDate,
     arrivalTime,
+    actualDepartureDate,
+    actualDepartureTime,
+    actualArrivalDate,
+    actualArrivalTime,
     airline,
     operatingAirline,
     aircraft,
@@ -821,6 +849,10 @@ export function useFlightForm(
     setDepartureTime,
     setArrivalDate,
     setArrivalTime,
+    setActualDepartureDate,
+    setActualDepartureTime,
+    setActualArrivalDate,
+    setActualArrivalTime,
     setAirline,
     setOperatingAirline,
     setAircraft,

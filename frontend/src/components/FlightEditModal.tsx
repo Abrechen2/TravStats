@@ -87,6 +87,11 @@ export default function FlightEditModal({
   const buildFormData = (f: Flight) => {
     const dep = splitLocalDatetime(f.departureTime);
     const arr = splitLocalDatetime(f.arrivalTime);
+    // Actual departure/arrival (#200) — same browser-local seed as
+    // dep/arr above, re-derived as airport-local by the hydration effect
+    // below. Empty when the flight has no recorded actual time yet.
+    const actualDep = splitLocalDatetime(f.actualDeparture ?? null);
+    const actualArr = splitLocalDatetime(f.actualArrival ?? null);
     return {
       airline: f.airline || "",
       operatingAirline: f.operatingAirline || "",
@@ -113,6 +118,10 @@ export default function FlightEditModal({
       departureTime: dep.time,
       arrivalDate: arr.date,
       arrivalTime: arr.time,
+      actualDepartureDate: actualDep.date,
+      actualDepartureTime: actualDep.time,
+      actualArrivalDate: actualArr.date,
+      actualArrivalTime: actualArr.time,
       tripId: f.tripId ?? "",
     };
   };
@@ -244,12 +253,22 @@ export default function FlightEditModal({
     if (!hydrated) return;
     const dep = splitZonedDatetime(flight.departureTime, depTz);
     const arr = splitZonedDatetime(flight.arrivalTime, arrTz);
+    // Actual departure/arrival (#200) join the SAME update for the same
+    // reason as dep/arr above — actual departure is airport-local at the
+    // departure airport (depTz), actual arrival at the arrival airport
+    // (arrTz), mirroring the scheduled pair exactly.
+    const actualDep = splitZonedDatetime(flight.actualDeparture ?? null, depTz);
+    const actualArr = splitZonedDatetime(flight.actualArrival ?? null, arrTz);
     setFormData((prev) => ({
       ...prev,
       departureDate: dep.date,
       departureTime: dep.time,
       arrivalDate: arr.date,
       arrivalTime: arr.time,
+      actualDepartureDate: actualDep.date,
+      actualDepartureTime: actualDep.time,
+      actualArrivalDate: actualArr.date,
+      actualArrivalTime: actualArr.time,
     }));
   }, [hydrated, depTz, arrTz, flight]);
 
@@ -307,6 +326,17 @@ export default function FlightEditModal({
           ? buildLocalString(formData.arrivalDate, formData.arrivalTime)
           : undefined,
         arrTimezone: formData.arrivalDate ? submitArrTz : undefined,
+        // Actual departure/arrival (#200) — same undefined-when-empty
+        // contract as the scheduled pair: an untouched/cleared field must
+        // never submit "" or null, only omit the key entirely.
+        actualDepartureLocal: formData.actualDepartureDate
+          ? buildLocalString(formData.actualDepartureDate, formData.actualDepartureTime)
+          : undefined,
+        actualDepartureTz: formData.actualDepartureDate ? submitDepTz : undefined,
+        actualArrivalLocal: formData.actualArrivalDate
+          ? buildLocalString(formData.actualArrivalDate, formData.actualArrivalTime)
+          : undefined,
+        actualArrivalTz: formData.actualArrivalDate ? submitArrTz : undefined,
       };
 
       await onSave(flight.id, updates);
@@ -507,7 +537,26 @@ export default function FlightEditModal({
                 depTime: "editDepartureTime",
                 arrDate: "editArrivalDate",
                 arrTime: "editArrivalTime",
+                actualDepDate: "editActualDepartureDate",
+                actualDepTime: "editActualDepartureTime",
+                actualArrDate: "editActualArrivalDate",
+                actualArrTime: "editActualArrivalTime",
               }}
+              actualValue={{
+                actualDepDate: formData.actualDepartureDate,
+                actualDepTime: formData.actualDepartureTime,
+                actualArrDate: formData.actualArrivalDate,
+                actualArrTime: formData.actualArrivalTime,
+              }}
+              onActualChange={(next) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  actualDepartureDate: next.actualDepDate,
+                  actualDepartureTime: next.actualDepTime,
+                  actualArrivalDate: next.actualArrDate,
+                  actualArrivalTime: next.actualArrTime,
+                }))
+              }
             />
           )}
 
