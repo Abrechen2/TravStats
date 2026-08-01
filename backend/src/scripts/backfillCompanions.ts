@@ -10,11 +10,11 @@ const RECORD_PAGE_SIZE = 200;
 type SpellingFrequency = Map<string, Map<string, number>>;
 
 /**
- * One-shot, idempotent backfill: converts the legacy free-text `companions`
- * arrays on flights, trips and cruises into `Companion` entities plus
- * ordered `{Flight,Trip,Cruise}Companion` link rows. Blank/whitespace-only
- * entries are dropped; every other name -- however odd, e.g.
- * "MUELLER/ANNA MS" -- is preserved verbatim, never "cleaned".
+ * Genuinely one-shot, idempotent backfill: converts the legacy free-text
+ * `companions` arrays on flights, trips and cruises into `Companion`
+ * entities plus ordered `{Flight,Trip,Cruise}Companion` link rows.
+ * Blank/whitespace-only entries are dropped; every other name -- however
+ * odd, e.g. "MUELLER/ANNA MS" -- is preserved verbatim, never "cleaned".
  *
  * Identity resolution goes through the same `resolveCompanions()` the live
  * write paths use, so the backfill and runtime agree on what counts as "the
@@ -23,10 +23,16 @@ type SpellingFrequency = Map<string, Map<string, number>>;
  * spelling wins as the final `displayName` and the other spellings are
  * logged as aliases at info level.
  *
- * Safe to re-run: link rows are inserted with `createMany({ skipDuplicates:
- * true })` against the composite `(parentId, companionId)` primary key, and
- * `resolveCompanions()` is itself a find-or-create keyed on
- * `(userId, canonicalName)`.
+ * Terminates for good: each domain query filters on `companionLinks: {
+ * none: {} }` in addition to a non-empty `companions` array, so a record
+ * drops out of the scan the moment it has been linked. This matters because
+ * the live write paths (see `routes/{flights,trips,cruises}.ts`) dual-write
+ * the legacy array alongside the new link rows -- `companions` therefore
+ * stays non-empty forever, and without the link-emptiness filter this
+ * routine would rescan every companion-bearing record, and have
+ * `resolveCompanions()` rewrite every `Companion.updatedAt`, on every boot,
+ * indefinitely. Matches the sibling pattern in `backfillBookingPrices.ts`,
+ * where healed rows fall out of future scans via `price: null`.
  *
  * Paged in two dimensions -- users, then records per user, per domain -- so
  * at most one page of one domain's `{id, companions}` rows is ever held in
@@ -90,7 +96,7 @@ async function backfillFlights(
 
   for (;;) {
     const flights = await prisma.flight.findMany({
-      where: { userId, companions: { isEmpty: false } },
+      where: { userId, companions: { isEmpty: false }, companionLinks: { none: {} } },
       select: { id: true, companions: true },
       orderBy: { id: "asc" },
       take: RECORD_PAGE_SIZE,
@@ -130,7 +136,7 @@ async function backfillTrips(
 
   for (;;) {
     const trips = await prisma.trip.findMany({
-      where: { userId, companions: { isEmpty: false } },
+      where: { userId, companions: { isEmpty: false }, companionLinks: { none: {} } },
       select: { id: true, companions: true },
       orderBy: { id: "asc" },
       take: RECORD_PAGE_SIZE,
@@ -170,7 +176,7 @@ async function backfillCruises(
 
   for (;;) {
     const cruises = await prisma.cruise.findMany({
-      where: { userId, companions: { isEmpty: false } },
+      where: { userId, companions: { isEmpty: false }, companionLinks: { none: {} } },
       select: { id: true, companions: true },
       orderBy: { id: "asc" },
       take: RECORD_PAGE_SIZE,
