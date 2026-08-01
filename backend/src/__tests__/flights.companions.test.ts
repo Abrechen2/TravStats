@@ -118,4 +118,61 @@ describe('flight companions', () => {
     expect(row.companions).toEqual([]);
     expect(row.companionLinks).toEqual([]);
   });
+
+  // FIX 1 (merge blocker): the `?merge=true` duplicate branch used to write
+  // `patch.companions` via a bare `prisma.flight.update` outside any
+  // transaction and never touched `companionLinks` at all, so the array and
+  // the links disagreed and no Companion catalog row was ever created.
+  it('creates links when merging companions into a flight that has none', async () => {
+    const created = await request(app)
+      .post('/api/v1/flights')
+      .set('Cookie', cookie)
+      .send(newFlight([]))
+      .expect(201);
+
+    const merged = await request(app)
+      .post('/api/v1/flights?merge=true')
+      .set('Cookie', cookie)
+      .send(newFlight(['Anna']))
+      .expect(200);
+
+    expect(merged.body.mergedFields).toContain('companions');
+    expect(merged.body.flight.companions).toEqual(['Anna']);
+
+    const row = await prisma.flight.findUniqueOrThrow({
+      where: { id: created.body.flight.id },
+      include: { companionLinks: { include: { companion: true }, orderBy: { position: 'asc' } } },
+    });
+    expect(row.companions).toEqual(['Anna']);
+    expect(row.companionLinks.map((l) => l.companion.displayName)).toEqual(['Anna']);
+    expect(await prisma.companion.count()).toBe(1);
+  });
+
+  // Fill-if-empty must still hold for companions on the merge path: a flight
+  // that already has companions keeps its existing links untouched even when
+  // the merge adopts other unrelated fields (here: notes).
+  it('leaves existing companion links untouched when the flight already has companions', async () => {
+    const created = await request(app)
+      .post('/api/v1/flights')
+      .set('Cookie', cookie)
+      .send(newFlight(['Anna']))
+      .expect(201);
+
+    const merged = await request(app)
+      .post('/api/v1/flights?merge=true')
+      .set('Cookie', cookie)
+      .send({ ...newFlight(['Ben']), notes: 'from a second source' })
+      .expect(200);
+
+    expect(merged.body.mergedFields).not.toContain('companions');
+    expect(merged.body.mergedFields).toContain('notes');
+
+    const row = await prisma.flight.findUniqueOrThrow({
+      where: { id: created.body.flight.id },
+      include: { companionLinks: { include: { companion: true }, orderBy: { position: 'asc' } } },
+    });
+    expect(row.companions).toEqual(['Anna']);
+    expect(row.companionLinks.map((l) => l.companion.displayName)).toEqual(['Anna']);
+    expect(await prisma.companion.count()).toBe(1);
+  });
 });
