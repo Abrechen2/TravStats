@@ -463,6 +463,15 @@ export default function FlightCompleteStep({
           }}
           onEstimateArrival={handleEstimateArrival}
           canEstimateArrival={canEstimateArrival}
+          // Names the actual blocker when the calculator is disabled. Missing
+          // airports takes priority over a missing departure time — matches
+          // the pre-swap three-way tooltip this create form used to render
+          // inline before TimesFields only had the generic "no departure
+          // time" message (built for the edit form, which reaches this
+          // screen with airports already set).
+          estimateDisabledHint={
+            !departure || !arrival ? t("flights:form.estimateNoAirports") : undefined
+          }
           help={{
             depDate: { content: t("flights:form.help.departureDate") },
             depTime: {
