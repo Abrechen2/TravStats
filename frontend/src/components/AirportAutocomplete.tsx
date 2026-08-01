@@ -9,17 +9,6 @@ interface AirportAutocompleteProps {
   label: string;
   placeholder?: string;
   required?: boolean;
-  /** Fires on the input's native focus event, IN ADDITION to (not instead
-   *  of) the component's own dropdown-open behavior. Opt-in — existing
-   *  callers that don't pass it see no change. */
-  onFocus?: () => void;
-  /** Fires on the input's native blur event. Opt-in, same as `onFocus`.
-   *  Neither this nor `onFocus` existed before a caller (RouteFields)
-   *  needed to tell "the user left this field without landing on a valid
-   *  selection" apart from "still actively typing/searching" — the
-   *  component otherwise exposes no such signal (no "search settled"
-   *  event, no ref). */
-  onBlur?: () => void;
 }
 
 export default function AirportAutocomplete({
@@ -28,8 +17,6 @@ export default function AirportAutocomplete({
   label,
   placeholder,
   required = false,
-  onFocus,
-  onBlur,
 }: AirportAutocompleteProps): JSX.Element {
   const { t } = useTranslation(["flights", "common"]);
   const [query, setQuery] = useState("");
@@ -160,11 +147,7 @@ export default function AirportAutocomplete({
         type="text"
         value={query}
         onChange={handleInputChange}
-        onFocus={() => {
-          if (!isSeeding && query.length >= 2) setIsOpen(true);
-          onFocus?.();
-        }}
-        onBlur={() => onBlur?.()}
+        onFocus={() => !isSeeding && query.length >= 2 && setIsOpen(true)}
         placeholder={isSeeding ? t("flights:airportAutocomplete.seeding") : defaultPlaceholder}
         className="input"
         required={required}
@@ -203,10 +186,9 @@ export default function AirportAutocomplete({
                 // Prevents the browser's default mousedown action (shifting
                 // focus to this button), which would otherwise blur the
                 // text input a beat BEFORE this button's own click fires
-                // handleSelect. That ordering made a caller listening for
-                // blur (RouteFields' unresolved-airport hint) see the field
-                // as abandoned for one render, for a selection that was
-                // about to succeed. Keeping focus on the input means the
+                // handleSelect — an observable, if usually harmless, focus
+                // flicker away from the field the user is editing for every
+                // single mouse pick. Keeping focus on the input means the
                 // click completes with no intervening blur at all — for a
                 // mouse pick specifically; keyboard selection (Tab focuses
                 // this button directly, no mousedown involved) and the
