@@ -8,6 +8,7 @@ import CatalogueCombobox, {
   searchAirlineOptions,
   searchAircraftOptions,
 } from "./FlightForm/fields/CatalogueCombobox";
+import BookingFields from "./FlightForm/fields/BookingFields";
 import { useAirportLocalTimes } from "./FlightForm/useAirportLocalTimes";
 import { buildLocalString } from "./FlightForm/useFlightForm";
 import CompanionPicker from "./CompanionPicker";
@@ -108,6 +109,9 @@ export default function FlightEditModal({
       boardingGroup: f.boardingGroup || "",
       bookingReference: f.bookingReference || "",
       ticketNumber: f.ticketNumber || "",
+      bookingClassLetter: f.bookingClassLetter || "",
+      baggageAllowance: f.baggageAllowance || "",
+      frequentFlyerNumber: f.frequentFlyerNumber || "",
       companions: f.companions ?? [],
       price: f.price || 0,
       currency: f.currency || "EUR",
@@ -305,6 +309,9 @@ export default function FlightEditModal({
         boardingGroup: formData.boardingGroup || undefined,
         bookingReference: formData.bookingReference || undefined,
         ticketNumber: formData.ticketNumber || undefined,
+        bookingClassLetter: formData.bookingClassLetter || undefined,
+        baggageAllowance: formData.baggageAllowance || undefined,
+        frequentFlyerNumber: formData.frequentFlyerNumber || undefined,
         companions: formData.companions,
         price: formData.price > 0 ? formData.price : undefined,
         currency: formData.currency as FlightInput["currency"],
@@ -745,29 +752,17 @@ export default function FlightEditModal({
             </div>
           </div>
 
-          {/* Booking Reference / Ticket Number */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="label">{t("flights:form.bookingReference")}</label>
-              <input
-                type="text"
-                value={formData.bookingReference}
-                onChange={(e) => update("bookingReference", e.target.value)}
-                className="input"
-                placeholder={t("flights:form.placeholders.bookingReference")}
-              />
-            </div>
-            <div>
-              <label className="label">{t("flights:form.ticketNumber")}</label>
-              <input
-                type="text"
-                value={formData.ticketNumber}
-                onChange={(e) => update("ticketNumber", e.target.value)}
-                className="input"
-                placeholder={t("flights:form.placeholders.ticketNumber")}
-              />
-            </div>
-          </div>
+          {/* Booking (#197, #199) — shared with the create form */}
+          <BookingFields
+            value={{
+              bookingReference: formData.bookingReference,
+              ticketNumber: formData.ticketNumber,
+              bookingClassLetter: formData.bookingClassLetter,
+              baggageAllowance: formData.baggageAllowance,
+              frequentFlyerNumber: formData.frequentFlyerNumber,
+            }}
+            onChange={(v) => setFormData((prev) => ({ ...prev, ...v }))}
+          />
 
           {/* Companions */}
           <div>

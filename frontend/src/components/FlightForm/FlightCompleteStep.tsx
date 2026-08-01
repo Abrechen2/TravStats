@@ -6,6 +6,7 @@ import CatalogueCombobox, {
   searchAirlineOptions,
   searchAircraftOptions,
 } from "./fields/CatalogueCombobox";
+import BookingFields from "./fields/BookingFields";
 import { useTranslation } from "../../hooks/useTranslation";
 import { calculateDistance } from "../../lib/geo";
 import type { Airport } from "../../lib/api";
@@ -93,11 +94,18 @@ export interface FlightCompleteStepProps {
   setSeatClass: (v: "economy" | "premium_economy" | "business" | "first") => void;
   setStatus: (v: "scheduled" | "flown" | "cancelled" | "historical") => void;
   setCategory: (v: "business" | "private" | "vacation") => void;
-  // Booking (#197 — same fields the edit modal offers)
+  // Booking (#197 — same fields the edit modal offers; #199 added the three
+  // parser-filled ones that were previously rendered by neither form)
   bookingReference: string;
   ticketNumber: string;
+  bookingClassLetter: string | undefined;
+  baggageAllowance: string | undefined;
+  frequentFlyerNumber: string | undefined;
   setBookingReference: (v: string) => void;
   setTicketNumber: (v: string) => void;
+  setBookingClassLetter: (v: string) => void;
+  setBaggageAllowance: (v: string) => void;
+  setFrequentFlyerNumber: (v: string) => void;
   // Price
   price: number | undefined;
   /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
@@ -165,8 +173,14 @@ export default function FlightCompleteStep({
   setCategory,
   bookingReference,
   ticketNumber,
+  bookingClassLetter,
+  baggageAllowance,
+  frequentFlyerNumber,
   setBookingReference,
   setTicketNumber,
+  setBookingClassLetter,
+  setBaggageAllowance,
+  setFrequentFlyerNumber,
   price,
   currency,
   setPrice,
@@ -715,29 +729,25 @@ export default function FlightCompleteStep({
         </div>
       </div>
 
-      {/* Booking Reference / Ticket Number (#197) */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className={`label ${textClass}`}>{t("flights:form.bookingReference")}</label>
-          <input
-            type="text"
-            value={bookingReference}
-            onChange={(e) => setBookingReference(e.target.value.toUpperCase())}
-            className={`input ${sizedInputClass}`}
-            placeholder={t("flights:form.placeholders.bookingReference")}
-          />
-        </div>
-        <div>
-          <label className={`label ${textClass}`}>{t("flights:form.ticketNumber")}</label>
-          <input
-            type="text"
-            value={ticketNumber}
-            onChange={(e) => setTicketNumber(e.target.value)}
-            className={`input ${sizedInputClass}`}
-            placeholder={t("flights:form.placeholders.ticketNumber")}
-          />
-        </div>
-      </div>
+      {/* Booking (#197, #199) — shared with the edit modal */}
+      <BookingFields
+        value={{
+          bookingReference,
+          ticketNumber,
+          bookingClassLetter: bookingClassLetter ?? "",
+          baggageAllowance: baggageAllowance ?? "",
+          frequentFlyerNumber: frequentFlyerNumber ?? "",
+        }}
+        onChange={(v) => {
+          setBookingReference(v.bookingReference);
+          setTicketNumber(v.ticketNumber);
+          setBookingClassLetter(v.bookingClassLetter);
+          setBaggageAllowance(v.baggageAllowance);
+          setFrequentFlyerNumber(v.frequentFlyerNumber);
+        }}
+        labelClassName={textClass}
+        inputClassName={sizedInputClass}
+      />
 
       {/* Tags */}
       <div>
