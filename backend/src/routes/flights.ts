@@ -971,25 +971,19 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.category !== undefined) updateData.category = data.category;
     if (data.seatClass !== undefined) updateData.seatClass = data.seatClass;
     if (data.tags !== undefined) updateData.tags = data.tags;
+    // Replace rather than append — an update always carries the FULL
+    // companion list for the flight, so stale links must go. Resolution
+    // itself (find-or-create against Companion) is idempotent and safe to
+    // run here, outside any transaction — same reasoning as the create
+    // handler. The actual link replacement is deferred and run together
+    // with the `flight.update` call below inside one `prisma.$transaction`,
+    // so a failure between the two never leaves the legacy array and
+    // `companionLinks` disagreeing (undefined here means "untouched": the
+    // companions field was not part of this update at all).
+    let resolvedCompanionsForUpdate: { id: string; displayName: string }[] | undefined;
     if (data.companions !== undefined) {
-      // Replace rather than append — an update always carries the FULL
-      // companion list for the flight, so stale links must go. No
-      // surrounding transaction here (unlike the create handler); a failure
-      // between the delete and the create leaves links briefly empty, which
-      // self-heals on the next successful update.
-      const resolved = await resolveCompanions(userId, data.companions);
-      await prisma.flightCompanion.deleteMany({ where: { flightId: existingFlight.id } });
-      if (resolved.length > 0) {
-        await prisma.flightCompanion.createMany({
-          data: linkRowsFor(resolved.map((c) => c.id)).map((row) => ({
-            ...row,
-            flightId: existingFlight.id,
-          })),
-          skipDuplicates: true,
-        });
-      }
-      // Dual write: the previous image still reads this column.
-      updateData.companions = resolved.map((c) => c.displayName);
+      resolvedCompanionsForUpdate = await resolveCompanions(userId, data.companions);
+      updateData.companions = resolvedCompanionsForUpdate.map((c) => c.displayName);
     }
     if (data.receiptUrl !== undefined) updateData.receiptUrl = data.receiptUrl;
 
@@ -1152,9 +1146,24 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       );
     }
 
-    const flight = await prisma.flight.update({
-      where: { id, userId },
-      data: updateData,
+    const flight = await prisma.$transaction(async (tx) => {
+      if (resolvedCompanionsForUpdate !== undefined) {
+        await tx.flightCompanion.deleteMany({ where: { flightId: existingFlight.id } });
+        if (resolvedCompanionsForUpdate.length > 0) {
+          await tx.flightCompanion.createMany({
+            data: linkRowsFor(resolvedCompanionsForUpdate.map((c) => c.id)).map((row) => ({
+              ...row,
+              flightId: existingFlight.id,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      return tx.flight.update({
+        where: { id, userId },
+        data: updateData,
+      });
     });
 
     // Check achievements if status changed to flown and return newly unlocked ones.
