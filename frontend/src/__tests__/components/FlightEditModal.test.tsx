@@ -41,24 +41,31 @@ describe("FlightEditModal", () => {
     mocks.companionsList.mockReset().mockResolvedValue([]);
   });
 
-  it("renders departure and arrival time inputs when modal is open", () => {
+  it("renders separate date and time inputs for both departure and arrival when modal is open", () => {
     render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
+    // Four distinct controls, not two combined datetime-local fields.
+    expect(document.querySelector("#editDepartureDate")).toBeTruthy();
     expect(document.querySelector("#editDepartureTime")).toBeTruthy();
+    expect(document.querySelector("#editArrivalDate")).toBeTruthy();
     expect(document.querySelector("#editArrivalTime")).toBeTruthy();
+    expect(document.querySelector('#editDepartureDate[type="date"]')).toBeTruthy();
+    expect(document.querySelector('#editDepartureTime[type="time"]')).toBeTruthy();
   });
 
-  it("pre-fills departure time from flight data", () => {
+  it("pre-fills departure date and time from flight data", () => {
     render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
-    const input = document.querySelector("#editDepartureTime") as HTMLInputElement;
-    // Value is formatted in local timezone — just verify it's not empty
-    expect(input?.value).toBeTruthy();
+    const dateInput = document.querySelector("#editDepartureDate") as HTMLInputElement;
+    const timeInput = document.querySelector("#editDepartureTime") as HTMLInputElement;
+    // Values are formatted in local timezone — just verify they're not empty.
+    expect(dateInput?.value).toBeTruthy();
+    expect(timeInput?.value).toBeTruthy();
   });
 
-  it("shows year/month picker instead of datetime for historical flights", () => {
+  it("shows year/month picker instead of date/time inputs for historical flights", () => {
     const historicalFlight: Flight = {
       ...mockFlight,
       status: "historical",
@@ -68,8 +75,11 @@ describe("FlightEditModal", () => {
     render(
       <FlightEditModal flight={historicalFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
-    // datetime-local inputs should not be present
+    // date/time inputs should not be present
+    expect(document.querySelector("#editDepartureDate")).toBeFalsy();
     expect(document.querySelector("#editDepartureTime")).toBeFalsy();
+    expect(document.querySelector("#editArrivalDate")).toBeFalsy();
+    expect(document.querySelector("#editArrivalTime")).toBeFalsy();
     // year number input should be present
     expect(document.querySelector('input[type="text"][inputmode="numeric"]')).toBeTruthy();
   });

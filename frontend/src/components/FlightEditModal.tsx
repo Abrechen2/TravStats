@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import type { Flight, Trip } from "../types";
 import ReceiptUpload from "./ReceiptUpload";
-import CopyActionButton from "./FlightForm/CopyActionButton";
+import TimesFields from "./FlightForm/fields/TimesFields";
 import { useAirportLocalTimes } from "./FlightForm/useAirportLocalTimes";
+import { buildLocalString } from "./FlightForm/useFlightForm";
 import CompanionPicker from "./CompanionPicker";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
@@ -24,24 +25,34 @@ interface FlightEditModalProps {
   onSave: (id: string, updates: Partial<FlightInput>) => Promise<void>;
 }
 
-function toLocalDatetime(iso: string | null): string {
-  if (!iso) return "";
+/** Split a UTC instant into separate `YYYY-MM-DD` / `HH:MM` strings in the
+ *  BROWSER's local timezone. Used only as the initial seed before the
+ *  airport timezones resolve — see the hydration effect below, which
+ *  re-derives both parts as airport-local from the SAME source instant. */
+function splitLocalDatetime(iso: string | null): { date: string; time: string } {
+  if (!iso) return { date: "", time: "" };
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return "";
-  // Format as YYYY-MM-DDTHH:MM for datetime-local input (browser-local). Used
-  // only as the initial seed before the airport timezones resolve — see the
-  // hydration effect, which re-renders these fields as airport-local.
+  if (isNaN(d.getTime())) return { date: "", time: "" };
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return {
+    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
 }
 
-/** Format a UTC instant as a `YYYY-MM-DDTHH:MM` datetime-local value in the
- *  given IANA timezone (the departure/arrival airport's zone). */
-function utcToZonedInput(iso: string | null, tz: string): string {
-  if (!iso) return "";
+/** Split a UTC instant into separate `YYYY-MM-DD` / `HH:MM` strings in the
+ *  given IANA timezone (the departure/arrival airport's zone). Both parts
+ *  are derived from the same `Date` + `tz` pair and returned together so a
+ *  caller can only ever apply them in a single state update — never as two
+ *  independent ones, which is exactly the drift this split guards against. */
+function splitZonedDatetime(iso: string | null, tz: string): { date: string; time: string } {
+  if (!iso) return { date: "", time: "" };
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return "";
-  return formatInTimeZone(d, tz, "yyyy-MM-dd'T'HH:mm");
+  if (isNaN(d.getTime())) return { date: "", time: "" };
+  return {
+    date: formatInTimeZone(d, tz, "yyyy-MM-dd"),
+    time: formatInTimeZone(d, tz, "HH:mm"),
+  };
 }
 
 export default function FlightEditModal({
@@ -54,32 +65,38 @@ export default function FlightEditModal({
   const { features, display } = useSettingsStore();
   const { airlines: airlineSuggestions, aircraft: aircraftSuggestions } = useSuggestions();
 
-  const buildFormData = (f: Flight) => ({
-    airline: f.airline || "",
-    operatingAirline: f.operatingAirline || "",
-    flightNumber: f.flightNumber || "",
-    aircraft: f.aircraft || "",
-    status: f.status || "scheduled",
-    category: f.category || "",
-    seatClass: f.seatClass || "",
-    seatNumber: f.seatNumber || "",
-    gate: f.gate || "",
-    terminal: f.terminal || "",
-    boardingGroup: f.boardingGroup || "",
-    bookingReference: f.bookingReference || "",
-    ticketNumber: f.ticketNumber || "",
-    companions: f.companions ?? [],
-    price: f.price || 0,
-    currency: f.currency || "EUR",
-    taxes: f.taxes || 0,
-    fees: f.fees || 0,
-    notes: f.notes || "",
-    tags: f.tags?.join(", ") || "",
-    receiptUrl: f.receiptUrl || "",
-    departureTime: toLocalDatetime(f.departureTime),
-    arrivalTime: toLocalDatetime(f.arrivalTime),
-    tripId: f.tripId ?? "",
-  });
+  const buildFormData = (f: Flight) => {
+    const dep = splitLocalDatetime(f.departureTime);
+    const arr = splitLocalDatetime(f.arrivalTime);
+    return {
+      airline: f.airline || "",
+      operatingAirline: f.operatingAirline || "",
+      flightNumber: f.flightNumber || "",
+      aircraft: f.aircraft || "",
+      status: f.status || "scheduled",
+      category: f.category || "",
+      seatClass: f.seatClass || "",
+      seatNumber: f.seatNumber || "",
+      gate: f.gate || "",
+      terminal: f.terminal || "",
+      boardingGroup: f.boardingGroup || "",
+      bookingReference: f.bookingReference || "",
+      ticketNumber: f.ticketNumber || "",
+      companions: f.companions ?? [],
+      price: f.price || 0,
+      currency: f.currency || "EUR",
+      taxes: f.taxes || 0,
+      fees: f.fees || 0,
+      notes: f.notes || "",
+      tags: f.tags?.join(", ") || "",
+      receiptUrl: f.receiptUrl || "",
+      departureDate: dep.date,
+      departureTime: dep.time,
+      arrivalDate: arr.date,
+      arrivalTime: arr.time,
+      tripId: f.tripId ?? "",
+    };
+  };
 
   const [formData, setFormData] = useState(buildFormData(flight));
   const [loading, setLoading] = useState(false);
@@ -129,23 +146,12 @@ export default function FlightEditModal({
   const update = <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
 
-  /** Copy the date part of departureTime into arrivalTime while preserving
-   *  arrivalTime's existing HH:MM. */
-  const handleCopyDepartureDate = (): void => {
-    if (!formData.departureTime) return;
-    const depDate = formData.departureTime.split("T")[0];
-    const arrTimePart = formData.arrivalTime.includes("T")
-      ? formData.arrivalTime.split("T")[1]
-      : "12:00";
-    update("arrivalTime", `${depDate}T${arrTimePart}`);
-  };
-
-  const canEstimateArrival = Boolean(formData.departureTime && formData.status !== "historical");
+  const canEstimateArrival = Boolean(
+    formData.departureDate && formData.departureTime && formData.status !== "historical"
+  );
 
   const handleEstimateArrival = async (): Promise<void> => {
-    if (!formData.departureTime) return;
-    const [depDate, depTime] = formData.departureTime.split("T");
-    if (!depDate || !depTime) return;
+    if (!formData.departureDate || !formData.departureTime) return;
 
     // Fetch timezones for both airports (lat/lon come from the flight record).
     let depTz: string | null = null;
@@ -164,8 +170,8 @@ export default function FlightEditModal({
     }
 
     const result = estimateArrivalFromDeparture({
-      departureDate: depDate,
-      departureTime: depTime.slice(0, 5),
+      departureDate: formData.departureDate,
+      departureTime: formData.departureTime,
       departureLat: flight.depLat,
       departureLon: flight.depLon,
       departureTimezone: depTz,
@@ -174,44 +180,45 @@ export default function FlightEditModal({
       arrivalTimezone: arrTz,
     });
 
-    update("arrivalTime", `${result.arrivalDate}T${result.arrivalTime}`);
+    // Both arrival fields land in a single update — see the hydration effect
+    // below for why a half-converted date/time pair must never be observable.
+    setFormData((prev) => ({
+      ...prev,
+      arrivalDate: result.arrivalDate,
+      arrivalTime: result.arrivalTime,
+    }));
     if (!result.tzAware) {
       addToast("warning", t("flights:form.estimateTzUnknown"));
     }
   };
-
-  /** "+N day" hint below the arrival datetime-local field. */
-  const arrivalDayOffsetEdit = (() => {
-    if (formData.status === "historical") return 0;
-    if (!formData.departureTime || !formData.arrivalTime) return 0;
-    const depDate = formData.departureTime.split("T")[0];
-    const arrDate = formData.arrivalTime.split("T")[0];
-    if (!depDate || !arrDate || arrDate <= depDate) return 0;
-    const [dy, dm, dd] = depDate.split("-").map(Number);
-    const [ay, am, ad] = arrDate.split("-").map(Number);
-    const from = Date.UTC(dy, dm - 1, dd);
-    const to = Date.UTC(ay, am - 1, ad);
-    return Math.max(0, Math.round((to - from) / (24 * 60 * 60 * 1000)));
-  })();
 
   useEffect(() => {
     setFormData(buildFormData(flight));
     setError("");
   }, [flight]);
 
-  // Once useAirportLocalTimes resolves BOTH zones, re-render the time inputs
-  // as airport-local. The submit contract and the arrival estimate already
-  // treat these fields as airport-local, so this makes the whole modal
-  // consistent and fixes the open->save no-op drift. Re-applies whenever the
-  // flight changes (even if the resolved zones don't, e.g. same route on a
-  // different flight) so the wall clock always reflects the current flight's
-  // stored instant.
+  // Once useAirportLocalTimes resolves BOTH zones, re-render the date/time
+  // inputs as airport-local. The submit contract and the arrival estimate
+  // already treat these fields as airport-local, so this makes the whole
+  // modal consistent and fixes the open->save no-op drift. Re-applies
+  // whenever the flight changes (even if the resolved zones don't, e.g. same
+  // route on a different flight) so the wall clock always reflects the
+  // current flight's stored instant.
+  //
+  // All four fields land in ONE setFormData call — never two — because a
+  // render that observed departure split from arrival (or date split from
+  // time) would pair a wall clock from one zone basis with a timezone from
+  // another on the next submit. See FlightEditModal.timezone.test.tsx.
   useEffect(() => {
     if (!hydrated) return;
+    const dep = splitZonedDatetime(flight.departureTime, depTz);
+    const arr = splitZonedDatetime(flight.arrivalTime, arrTz);
     setFormData((prev) => ({
       ...prev,
-      departureTime: utcToZonedInput(flight.departureTime, depTz),
-      arrivalTime: utcToZonedInput(flight.arrivalTime, arrTz),
+      departureDate: dep.date,
+      departureTime: dep.time,
+      arrivalDate: arr.date,
+      arrivalTime: arr.time,
     }));
   }, [hydrated, depTz, arrTz, flight]);
 
@@ -256,10 +263,16 @@ export default function FlightEditModal({
               .filter(Boolean)
           : [],
         receiptUrl: formData.receiptUrl || undefined,
-        departureLocal: formData.departureTime || undefined,
-        depTimezone: formData.departureTime ? submitDepTz : undefined,
-        arrivalLocal: formData.arrivalTime || undefined,
-        arrTimezone: formData.arrivalTime ? submitArrTz : undefined,
+        // Recombine with the SAME buildLocalString the create form uses —
+        // no second implementation of date+time recombination.
+        departureLocal: formData.departureDate
+          ? buildLocalString(formData.departureDate, formData.departureTime)
+          : undefined,
+        depTimezone: formData.departureDate ? submitDepTz : undefined,
+        arrivalLocal: formData.arrivalDate
+          ? buildLocalString(formData.arrivalDate, formData.arrivalTime)
+          : undefined,
+        arrTimezone: formData.arrivalDate ? submitArrTz : undefined,
       };
 
       await onSave(flight.id, updates);
@@ -347,129 +360,107 @@ export default function FlightEditModal({
             </div>
           )}
 
-          {/* Date & Time — year/month for historical, full datetime for others */}
+          {/* Date & Time — year/month for historical, split date+time for others */}
           {formData.status === "historical" ? (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="label">{t("flights:historicalYear")}</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={4}
-                  placeholder={t("flights:historicalYearPlaceholder")}
-                  value={
-                    formData.departureTime ? new Date(formData.departureTime).getFullYear() : ""
-                  }
-                  onChange={(e) => {
-                    const y = e.target.value.replace(/\D/g, "").slice(0, 4);
-                    if (!y) {
-                      update("departureTime", "");
-                      return;
-                    }
-                    const currentMonth = formData.departureTime
-                      ? String(new Date(formData.departureTime).getMonth() + 1).padStart(2, "0")
-                      : "01";
-                    const iso = new Date(`${y}-${currentMonth}-01T00:00:00`).toISOString();
-                    setFormData({
-                      ...formData,
-                      departureTime: toLocalDatetime(iso),
-                      arrivalTime: toLocalDatetime(iso),
-                    });
-                  }}
-                  className="input"
-                />
-              </div>
-              <div>
-                <label className="label">{t("flights:historicalMonth")}</label>
-                <select
-                  value={
-                    formData.departureTime
-                      ? String(new Date(formData.departureTime).getMonth() + 1)
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const m = e.target.value;
-                    const y = formData.departureTime
-                      ? new Date(formData.departureTime).getFullYear()
-                      : new Date().getFullYear();
-                    if (!m) {
-                      const iso = new Date(`${y}-01-01T00:00:00`).toISOString();
-                      setFormData({
-                        ...formData,
-                        departureTime: toLocalDatetime(iso),
-                        arrivalTime: toLocalDatetime(iso),
-                      });
-                    } else {
-                      const iso = new Date(`${y}-${m.padStart(2, "0")}-01T00:00:00`).toISOString();
-                      setFormData({
-                        ...formData,
-                        departureTime: toLocalDatetime(iso),
-                        arrivalTime: toLocalDatetime(iso),
-                      });
-                    }
-                  }}
-                  className="input"
-                >
-                  <option value="">{t("flights:historicalMonthNone")}</option>
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <option key={i + 1} value={String(i + 1)}>
-                      {new Date(2000, i).toLocaleDateString(i18n.language, { month: "long" })}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            (() => {
+              // departureDate is always day=1 for historical rows
+              // ("YYYY-MM-01"), matching the prior toLocalDatetime-based
+              // representation this replaces — only year and month are
+              // user-editable here.
+              const yearStr = formData.departureDate ? formData.departureDate.slice(0, 4) : "";
+              const monthPadded =
+                formData.departureDate.length >= 7 ? formData.departureDate.slice(5, 7) : "";
+              const monthValue = monthPadded ? String(parseInt(monthPadded, 10)) : "";
+
+              // Clearing the month (like the original behaviour) resets to
+              // January rather than dropping back to year-only — the year
+              // and month pickers here don't support a bare "YYYY" shape.
+              const applyYearMonth = (y: string, m: string): void => {
+                if (!y) {
+                  setFormData((prev) => ({
+                    ...prev,
+                    departureDate: "",
+                    departureTime: "",
+                    arrivalDate: "",
+                    arrivalTime: "",
+                  }));
+                  return;
+                }
+                const next = `${y}-${m || "01"}-01`;
+                setFormData((prev) => ({
+                  ...prev,
+                  departureDate: next,
+                  departureTime: "00:00",
+                  arrivalDate: next,
+                  arrivalTime: "00:00",
+                }));
+              };
+
+              return (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">{t("flights:historicalYear")}</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={4}
+                      placeholder={t("flights:historicalYearPlaceholder")}
+                      value={yearStr}
+                      onChange={(e) => {
+                        const y = e.target.value.replace(/\D/g, "").slice(0, 4);
+                        applyYearMonth(y, monthPadded);
+                      }}
+                      className="input"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">{t("flights:historicalMonth")}</label>
+                    <select
+                      value={monthValue}
+                      onChange={(e) => {
+                        const y = yearStr || String(new Date().getFullYear());
+                        applyYearMonth(y, e.target.value ? e.target.value.padStart(2, "0") : "");
+                      }}
+                      className="input"
+                    >
+                      <option value="">{t("flights:historicalMonthNone")}</option>
+                      {Array.from({ length: 12 }, (_, i) => (
+                        <option key={i + 1} value={String(i + 1)}>
+                          {new Date(2000, i).toLocaleDateString(i18n.language, { month: "long" })}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              );
+            })()
           ) : (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="label" htmlFor="editDepartureTime">
-                  {t("flights:form.departure")}
-                </label>
-                <input
-                  id="editDepartureTime"
-                  type="datetime-local"
-                  className="input"
-                  value={formData.departureTime}
-                  onChange={(e) => update("departureTime", e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="label flex items-center gap-2" htmlFor="editArrivalTime">
-                  {t("flights:form.arrival")}
-                  <CopyActionButton
-                    icon="arrow-down"
-                    title={t("flights:form.copyDepartureDate")}
-                    disabled={!formData.departureTime}
-                    onClick={handleCopyDepartureDate}
-                  />
-                  <CopyActionButton
-                    icon="calculator"
-                    title={
-                      canEstimateArrival
-                        ? t("flights:form.estimateArrivalTime")
-                        : t("flights:form.estimateNoDepartureTime")
-                    }
-                    disabled={!canEstimateArrival}
-                    onClick={() => void handleEstimateArrival()}
-                  />
-                </label>
-                <input
-                  id="editArrivalTime"
-                  type="datetime-local"
-                  className="input"
-                  value={formData.arrivalTime}
-                  onChange={(e) => update("arrivalTime", e.target.value)}
-                />
-                {arrivalDayOffsetEdit > 0 && (
-                  <p className="text-xs mt-1 text-blue-700 dark:text-blue-300">
-                    {arrivalDayOffsetEdit === 1
-                      ? t("flights:form.arrivalNextDay")
-                      : t("flights:form.arrivalDayOffset", { count: arrivalDayOffsetEdit })}
-                  </p>
-                )}
-              </div>
-            </div>
+            <TimesFields
+              value={{
+                depDate: formData.departureDate,
+                depTime: formData.departureTime,
+                arrDate: formData.arrivalDate,
+                arrTime: formData.arrivalTime,
+              }}
+              onChange={(next) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  departureDate: next.depDate,
+                  departureTime: next.depTime,
+                  arrivalDate: next.arrDate,
+                  arrivalTime: next.arrTime,
+                }))
+              }
+              onEstimateArrival={() => void handleEstimateArrival()}
+              canEstimateArrival={canEstimateArrival}
+              ids={{
+                depDate: "editDepartureDate",
+                depTime: "editDepartureTime",
+                arrDate: "editArrivalDate",
+                arrTime: "editArrivalTime",
+              }}
+            />
           )}
 
           {/* Airline / Operating / FlightNo */}
