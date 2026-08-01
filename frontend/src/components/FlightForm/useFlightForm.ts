@@ -160,6 +160,9 @@ export function useFlightForm(
   const [notes, setNotes] = useState("");
   const [price, setPrice] = useState<number | undefined>(undefined);
   const [currency, setCurrency] = useState<string>("EUR");
+  const [taxes, setTaxes] = useState<number | undefined>(undefined);
+  const [fees, setFees] = useState<number | undefined>(undefined);
+  const [receiptUrl, setReceiptUrl] = useState("");
   const [category, setCategory] = useState<"business" | "private" | "vacation">("business");
   const [tags, setTags] = useState<string[]>([]);
   const [companions, setCompanions] = useState<string[]>([]);
@@ -503,6 +506,9 @@ export function useFlightForm(
       ticketNumber: ticketNumber || undefined,
       price,
       currency,
+      taxes,
+      fees,
+      receiptUrl: receiptUrl || undefined,
       category,
       tags: tags.length ? tags : undefined,
       companions: companions.length ? companions : undefined,
@@ -553,6 +559,11 @@ export function useFlightForm(
     setGate("");
     setSeatNumber("");
     setNotes("");
+    // Price/taxes/fees stay (same PNR money, like the booking reference),
+    // but the receipt is cleared: it is an uploaded FILE tied to the
+    // outbound flight, and two flights referencing one stored file would
+    // break the first flight's receipt when the other deletes it.
+    setReceiptUrl("");
     setOperatingAirline("");
     setLookupCallsign("");
     setLookupAircraftRegistration("");
@@ -830,6 +841,9 @@ export function useFlightForm(
     frequentFlyerNumber,
     price,
     currency,
+    taxes,
+    fees,
+    receiptUrl,
     category,
     tags,
     companions,
@@ -875,6 +889,9 @@ export function useFlightForm(
     setFrequentFlyerNumber,
     setPrice,
     setCurrency,
+    setTaxes,
+    setFees,
+    setReceiptUrl,
     setCategory,
     setTags,
     setCompanions,

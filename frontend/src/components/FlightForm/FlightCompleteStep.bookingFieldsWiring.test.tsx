@@ -19,6 +19,9 @@ const mocks = vi.hoisted(() => ({ companionsList: vi.fn() }));
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }));
+vi.mock("../../store/settingsStore", () => ({
+  useSettingsStore: () => ({ features: { enableCostTracking: false } }),
+}));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: vi.fn(() => vi.fn()),
 }));
@@ -82,10 +85,8 @@ function baseProps(overrides: Partial<FlightCompleteStepProps> = {}): FlightComp
     setBookingClassLetter: vi.fn(),
     setBaggageAllowance: vi.fn(),
     setFrequentFlyerNumber: vi.fn(),
-    price: undefined,
-    currency: "EUR",
-    setPrice: vi.fn(),
-    setCurrency: vi.fn(),
+    cost: { price: undefined, currency: "EUR", taxes: undefined, fees: undefined, receiptUrl: "" },
+    onCostChange: vi.fn(),
     tags: [],
     companions: [],
     setTags: vi.fn(),
