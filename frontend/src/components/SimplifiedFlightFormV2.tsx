@@ -157,10 +157,8 @@ export default function SimplifiedFlightFormV2({
               setCurrency={form.setCurrency}
               tags={form.tags}
               companions={form.companions}
-              companionInput={form.companionInput}
               setTags={form.setTags}
               setCompanions={form.setCompanions}
-              setCompanionInput={form.setCompanionInput}
               notes={form.notes}
               setNotes={form.setNotes}
               textClass={textClass}

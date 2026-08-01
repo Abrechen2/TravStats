@@ -11,9 +11,12 @@
  * the parent hook (useFlightForm) currently holds, never a stale local copy.
  */
 
-import { describe, it, expect, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import FlightCompleteStep, { type FlightCompleteStepProps } from "./FlightCompleteStep";
+
+const mocks = vi.hoisted(() => ({ companionsList: vi.fn() }));
 
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
@@ -29,6 +32,9 @@ vi.mock("../../lib/geo", () => ({
 }));
 vi.mock("../../lib/timeEstimation", () => ({
   estimateArrivalFromDeparture: vi.fn(),
+}));
+vi.mock("../../lib/api", () => ({
+  companionsApi: { list: mocks.companionsList },
 }));
 vi.mock("../Help/HelpIcon", () => ({ default: () => null }));
 vi.mock("../AirportAutocomplete", () => ({ default: () => null }));
@@ -83,10 +89,8 @@ function baseProps(
     setCurrency: vi.fn(),
     tags: [],
     companions: [],
-    companionInput: "",
     setTags: vi.fn(),
     setCompanions: vi.fn(),
-    setCompanionInput: vi.fn(),
     notes: "",
     setNotes: vi.fn(),
     textClass: "",
@@ -96,6 +100,30 @@ function baseProps(
     ...overrides,
   };
 }
+
+beforeEach(() => {
+  mocks.companionsList.mockReset().mockResolvedValue([]);
+});
+
+describe("FlightCompleteStep companions field (Task 12)", () => {
+  it("renders the shared CompanionPicker instead of a plain comma-separated input", () => {
+    render(<FlightCompleteStep {...baseProps()} />);
+    expect(screen.getByRole("combobox", { name: "picker.label" })).toBeInTheDocument();
+  });
+
+  it("threads an existing companions array through as removable chips", () => {
+    render(<FlightCompleteStep {...baseProps({ companions: ["Anna", "Jonas"] })} />);
+    expect(screen.getByTestId("companion-remove-Anna")).toBeInTheDocument();
+    expect(screen.getByTestId("companion-remove-Jonas")).toBeInTheDocument();
+  });
+
+  it("calls setCompanions with the full string[] when a new companion is entered", async () => {
+    const setCompanions = vi.fn();
+    render(<FlightCompleteStep {...baseProps({ companions: ["Anna"], setCompanions })} />);
+    await userEvent.type(screen.getByRole("combobox", { name: "picker.label" }), "Jonas{Enter}");
+    expect(setCompanions).toHaveBeenCalledWith(["Anna", "Jonas"]);
+  });
+});
 
 describe("FlightCompleteStep status field", () => {
   it("has no status select — flown/scheduled/cancelled/historical options are gone", () => {

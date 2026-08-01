@@ -1,14 +1,15 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CruiseEditModal } from "../../../components/Cruise/CruiseEditModal";
-import { cruiseApi } from "../../../lib/api";
+import { cruiseApi, companionsApi } from "../../../lib/api";
 import type { Cruise } from "../../../types";
 
 vi.mock("../../../lib/api", () => ({
   cruiseApi: { create: vi.fn(), update: vi.fn() },
   portsApi: { search: vi.fn().mockResolvedValue([]), create: vi.fn() },
   shipsApi: { search: vi.fn().mockResolvedValue([]), create: vi.fn() },
+  companionsApi: { list: vi.fn() },
 }));
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -20,6 +21,10 @@ vi.mock("../../../hooks/useTranslation", () => ({
 }));
 
 describe("CruiseEditModal", () => {
+  beforeEach(() => {
+    vi.mocked(companionsApi.list).mockReset().mockResolvedValue([]);
+  });
+
   // Create mode opens directly on the manual form now — email/PDF import is a
   // separate flow on the list page (DomainImportButton), so there's no longer
   // an import-vs-manual chooser step to advance past.
@@ -139,5 +144,38 @@ describe("CruiseEditModal", () => {
     const calls = vi.mocked(cruiseApi.update).mock.calls;
     const payload = calls[calls.length - 1][1];
     expect(payload.status).toBe("scheduled");
+  });
+
+  // Task 12 — the comma-separated companions text input is replaced by the
+  // shared CompanionPicker.
+  it("renders existing companions as removable chips instead of a CSV text field", () => {
+    const cruiseWithCompanions: Cruise = { ...baseCruise, companions: ["Anna", "Jonas"] };
+    render(
+      <CruiseEditModal mode="edit" cruise={cruiseWithCompanions} onClose={vi.fn()} onSaved={vi.fn()} />
+    );
+    expect(screen.getByTestId("companion-remove-Anna")).toBeInTheDocument();
+    expect(screen.getByTestId("companion-remove-Jonas")).toBeInTheDocument();
+  });
+
+  it("submits companions as a string[] built from the picker chips", async () => {
+    vi.mocked(cruiseApi.create).mockResolvedValue({
+      id: "c1",
+      stops: [],
+      tags: [],
+      companions: [],
+    } as unknown as Cruise);
+
+    render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    await userEvent.type(
+      screen.getByRole("combobox", { name: "picker.label" }),
+      "Marie{Enter}"
+    );
+    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+
+    await waitFor(() => expect(cruiseApi.create).toHaveBeenCalled());
+    const calls = vi.mocked(cruiseApi.create).mock.calls;
+    const payload = calls[calls.length - 1][0];
+    expect(payload.companions).toEqual(["Marie"]);
   });
 });

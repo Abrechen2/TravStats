@@ -3,6 +3,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import type { Flight, Trip } from "../types";
 import ReceiptUpload from "./ReceiptUpload";
 import CopyActionButton from "./FlightForm/CopyActionButton";
+import CompanionPicker from "./CompanionPicker";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useSuggestions } from "../hooks/useSuggestions";
@@ -66,7 +67,7 @@ export default function FlightEditModal({
     boardingGroup: f.boardingGroup || "",
     bookingReference: f.bookingReference || "",
     ticketNumber: f.ticketNumber || "",
-    companions: f.companions?.join(", ") || "",
+    companions: f.companions ?? [],
     price: f.price || 0,
     currency: f.currency || "EUR",
     taxes: f.taxes || 0,
@@ -250,12 +251,7 @@ export default function FlightEditModal({
         boardingGroup: formData.boardingGroup || undefined,
         bookingReference: formData.bookingReference || undefined,
         ticketNumber: formData.ticketNumber || undefined,
-        companions: formData.companions
-          ? formData.companions
-              .split(",")
-              .map((c) => c.trim())
-              .filter(Boolean)
-          : [],
+        companions: formData.companions,
         price: formData.price > 0 ? formData.price : undefined,
         currency: formData.currency as FlightInput["currency"],
         taxes: formData.taxes > 0 ? formData.taxes : undefined,
@@ -715,12 +711,9 @@ export default function FlightEditModal({
           {/* Companions */}
           <div>
             <label className="label">{t("flights:form.companions")}</label>
-            <input
-              type="text"
+            <CompanionPicker
               value={formData.companions}
-              onChange={(e) => update("companions", e.target.value)}
-              className="input"
-              placeholder={t("flights:form.placeholders.companions")}
+              onChange={(v) => update("companions", v)}
             />
           </div>
 

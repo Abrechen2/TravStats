@@ -129,7 +129,6 @@ export function useFlightForm(
   const [category, setCategory] = useState<"business" | "private" | "vacation">("business");
   const [tags, setTags] = useState<string[]>([]);
   const [companions, setCompanions] = useState<string[]>([]);
-  const [companionInput, setCompanionInput] = useState("");
   const [bookingReference, setBookingReference] = useState("");
   const [ticketNumber, setTicketNumber] = useState("");
   const [baggageAllowance, setBaggageAllowance] = useState<string | undefined>(undefined);
@@ -794,7 +793,6 @@ export function useFlightForm(
     category,
     tags,
     companions,
-    companionInput,
     canSubmit,
     // Setters
     setLoading,
@@ -833,7 +831,6 @@ export function useFlightForm(
     setCategory,
     setTags,
     setCompanions,
-    setCompanionInput,
     // Handlers
     handleFlightLookup,
     handleSelectFlight,
