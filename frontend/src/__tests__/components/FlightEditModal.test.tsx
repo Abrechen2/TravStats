@@ -233,6 +233,51 @@ describe("FlightEditModal", () => {
     expect(updates.status).toBe("scheduled");
   });
 
+  // Phase 2 Task 1 characterization — pins the typed-text round trip for the
+  // three catalogue-bound fields BEFORE they move onto a catalogue picker.
+  // Must pass unedited before and after the swap: the picker changes how a
+  // value can be chosen, never what a typed value submits as.
+  it("submits the typed airline, operating airline and aircraft verbatim", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { container, getByText } = render(
+      <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+    const byPlaceholder = (key: string): HTMLInputElement =>
+      container.querySelector(
+        `input[placeholder="flights:form.placeholders.${key}"]`
+      ) as HTMLInputElement;
+
+    fireEvent.change(byPlaceholder("airline"), { target: { value: "Condor" } });
+    fireEvent.change(byPlaceholder("operatingAirline"), { target: { value: "Marabu" } });
+    fireEvent.change(byPlaceholder("aircraft"), { target: { value: "Airbus A330-900" } });
+
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.airline).toBe("Condor");
+    expect(updates.operatingAirline).toBe("Marabu");
+    expect(updates.aircraft).toBe("Airbus A330-900");
+  });
+
+  it("submits a cleared airline as undefined (field omitted), not as an empty string", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { container, getByText } = render(
+      <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+    const airlineInput = container.querySelector(
+      'input[placeholder="flights:form.placeholders.airline"]'
+    ) as HTMLInputElement;
+    expect(airlineInput.value).toBe("LH");
+
+    fireEvent.change(airlineInput, { target: { value: "" } });
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.airline).toBeUndefined();
+  });
+
   // Task 12 — the comma-separated companions text input is replaced by the
   // shared CompanionPicker.
   it("renders the existing companions as removable chips instead of a CSV text field", () => {
