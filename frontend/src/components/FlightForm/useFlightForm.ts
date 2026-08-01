@@ -157,6 +157,7 @@ export function useFlightForm(
   const [terminal, setTerminal] = useState("");
   const [gate, setGate] = useState("");
   const [seatNumber, setSeatNumber] = useState("");
+  const [boardingGroup, setBoardingGroup] = useState("");
   const [seatClass, setSeatClass] = useState<"economy" | "premium_economy" | "business" | "first">(
     "economy"
   );
@@ -479,6 +480,8 @@ export function useFlightForm(
       seatNumber: seatNumber || undefined,
       terminal: terminal || undefined,
       gate: gate || undefined,
+      // Omitted when empty — "" would overwrite a parser-provided value.
+      boardingGroup: boardingGroup || undefined,
       // Server converts {departureLocal, depTimezone} -> real UTC via fromZonedTime.
       // No browser-side `new Date(...).toISOString()` — that would leak the
       // browser's local TZ into the payload.
@@ -753,6 +756,7 @@ export function useFlightForm(
     setBaggageAllowance(sourceFlight?.baggageAllowance);
     setFrequentFlyerNumber(sourceFlight?.frequentFlyerNumber);
     setBookingClassLetter(sourceFlight?.bookingClassLetter);
+    setBoardingGroup(sourceFlight?.boardingGroup ?? "");
     setCoPassengers(sourceFlight?.coPassengers ?? []);
 
     const enrichedFlight: FlightInput = {
@@ -851,6 +855,7 @@ export function useFlightForm(
     terminal,
     gate,
     seatNumber,
+    boardingGroup,
     seatClass,
     status,
     notes,
@@ -901,6 +906,7 @@ export function useFlightForm(
     setTerminal,
     setGate,
     setSeatNumber,
+    setBoardingGroup,
     setSeatClass,
     setStatus,
     setNotes,
