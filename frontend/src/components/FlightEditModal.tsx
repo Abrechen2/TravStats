@@ -4,12 +4,15 @@ import type { Flight, Trip } from "../types";
 import ReceiptUpload from "./ReceiptUpload";
 import TimesFields from "./FlightForm/fields/TimesFields";
 import RouteFields from "./FlightForm/fields/RouteFields";
+import CatalogueCombobox, {
+  searchAirlineOptions,
+  searchAircraftOptions,
+} from "./FlightForm/fields/CatalogueCombobox";
 import { useAirportLocalTimes } from "./FlightForm/useAirportLocalTimes";
 import { buildLocalString } from "./FlightForm/useFlightForm";
 import CompanionPicker from "./CompanionPicker";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
-import { useSuggestions } from "../hooks/useSuggestions";
 import { useToastStore } from "../store/toastStore";
 import { estimateArrivalFromDeparture } from "../lib/timeEstimation";
 import { airportsApi } from "../lib/api/airports";
@@ -82,7 +85,6 @@ export default function FlightEditModal({
 }: FlightEditModalProps): JSX.Element | null {
   const { t, i18n } = useTranslation(["flights", "common", "errors"]);
   const { features, display } = useSettingsStore();
-  const { airlines: airlineSuggestions, aircraft: aircraftSuggestions } = useSuggestions();
 
   const buildFormData = (f: Flight) => {
     const dep = splitLocalDatetime(f.departureTime);
@@ -564,36 +566,22 @@ export default function FlightEditModal({
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="label">{t("flights:form.airline")}</label>
-              <input
-                type="text"
+              <CatalogueCombobox
                 value={formData.airline}
-                onChange={(e) => update("airline", e.target.value)}
-                className="input"
+                onChange={(v) => update("airline", v)}
+                search={searchAirlineOptions}
                 placeholder={t("flights:form.placeholders.airline")}
-                list="airline-suggestions-edit"
               />
-              <datalist id="airline-suggestions-edit">
-                {airlineSuggestions.map((name) => (
-                  <option key={name} value={name} />
-                ))}
-              </datalist>
             </div>
 
             <div>
               <label className="label">{t("flights:form.operatingAirline")}</label>
-              <input
-                type="text"
+              <CatalogueCombobox
                 value={formData.operatingAirline}
-                onChange={(e) => update("operatingAirline", e.target.value)}
-                className="input"
+                onChange={(v) => update("operatingAirline", v)}
+                search={searchAirlineOptions}
                 placeholder={t("flights:form.placeholders.operatingAirline")}
-                list="operating-airline-suggestions-edit"
               />
-              <datalist id="operating-airline-suggestions-edit">
-                {airlineSuggestions.map((name) => (
-                  <option key={name} value={name} />
-                ))}
-              </datalist>
             </div>
 
             <div>
@@ -611,19 +599,12 @@ export default function FlightEditModal({
           {/* Aircraft */}
           <div>
             <label className="label">{t("flights:form.aircraft")}</label>
-            <input
-              type="text"
+            <CatalogueCombobox
               value={formData.aircraft}
-              onChange={(e) => update("aircraft", e.target.value)}
-              className="input"
+              onChange={(v) => update("aircraft", v)}
+              search={searchAircraftOptions}
               placeholder={t("flights:form.placeholders.aircraft")}
-              list="aircraft-suggestions-edit"
             />
-            <datalist id="aircraft-suggestions-edit">
-              {aircraftSuggestions.map((name) => (
-                <option key={name} value={name} />
-              ))}
-            </datalist>
           </div>
 
           {/* Status / Category / Seat Class */}

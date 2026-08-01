@@ -2,10 +2,13 @@ import HelpIcon from "../Help/HelpIcon";
 import AirportAutocomplete from "../AirportAutocomplete";
 import CompanionPicker from "../CompanionPicker";
 import TimesFields, { type ActualTimesFieldsValue } from "./fields/TimesFields";
+import CatalogueCombobox, {
+  searchAirlineOptions,
+  searchAircraftOptions,
+} from "./fields/CatalogueCombobox";
 import { useTranslation } from "../../hooks/useTranslation";
 import { calculateDistance } from "../../lib/geo";
 import type { Airport } from "../../lib/api";
-import { useSuggestions } from "../../hooks/useSuggestions";
 import { useToastStore } from "../../store/toastStore";
 import { estimateArrivalFromDeparture } from "../../lib/timeEstimation";
 import CurrencyInput from "../CurrencyInput";
@@ -180,9 +183,6 @@ export default function FlightCompleteStep({
   setTimeEstimationWarning,
 }: FlightCompleteStepProps): JSX.Element {
   const { t, i18n } = useTranslation(["flights"]);
-  // Debounced-search the live airline catalogue as the user types (#Task 26) —
-  // FlightEditModal/FlightReviewModal still call useSuggestions() unfiltered.
-  const { airlines: airlineSuggestions, aircraft: aircraftSuggestions } = useSuggestions(airline);
   const addToast = useToastStore((s) => s.addToast);
 
   const canEstimateArrival = Boolean(
@@ -531,35 +531,23 @@ export default function FlightCompleteStep({
       <div className="grid grid-cols-4 gap-4">
         <div>
           <label className={`label ${textClass}`}>{t("flights:form.airline")}</label>
-          <input
-            type="text"
+          <CatalogueCombobox
             value={airline}
-            onChange={(e) => setAirline(e.target.value)}
-            className={`input ${sizedInputClass}`}
+            onChange={setAirline}
+            search={searchAirlineOptions}
             placeholder={t("flights:form.placeholders.airline")}
-            list="airline-suggestions"
+            inputClassName={sizedInputClass}
           />
-          <datalist id="airline-suggestions">
-            {airlineSuggestions.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
         </div>
         <div>
           <label className={`label ${textClass}`}>{t("flights:form.operatingAirline")}</label>
-          <input
-            type="text"
+          <CatalogueCombobox
             value={operatingAirline}
-            onChange={(e) => setOperatingAirline(e.target.value)}
-            className={`input ${sizedInputClass}`}
+            onChange={setOperatingAirline}
+            search={searchAirlineOptions}
             placeholder={t("flights:form.placeholders.operatingAirline")}
-            list="operating-airline-suggestions"
+            inputClassName={sizedInputClass}
           />
-          <datalist id="operating-airline-suggestions">
-            {airlineSuggestions.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
         </div>
         <div>
           <label className={`label ${textClass}`}>{t("flights:form.flightNumber")}</label>
@@ -623,19 +611,13 @@ export default function FlightCompleteStep({
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className={`label ${textClass}`}>{t("flights:form.aircraft")}</label>
-          <input
-            type="text"
+          <CatalogueCombobox
             value={aircraft}
-            onChange={(e) => setAircraft(e.target.value)}
-            className={`input ${sizedInputClass}`}
+            onChange={setAircraft}
+            search={searchAircraftOptions}
             placeholder={t("flights:form.placeholders.aircraft")}
-            list="aircraft-suggestions"
+            inputClassName={sizedInputClass}
           />
-          <datalist id="aircraft-suggestions">
-            {aircraftSuggestions.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
