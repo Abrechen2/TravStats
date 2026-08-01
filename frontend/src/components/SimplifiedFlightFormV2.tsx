@@ -18,10 +18,12 @@ import FlightSelectStep from "./FlightForm/FlightSelectStep";
 import FlightCompleteStep from "./FlightForm/FlightCompleteStep";
 import { useFlightForm, type FlightSubmitOptions } from "./FlightForm/useFlightForm";
 
-import type { FlightInput, UserAchievement } from "../types";
+import type { Flight, FlightInput, UserAchievement } from "../types";
 
 interface SimplifiedFlightFormProps {
-  onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<void>;
+  /** Returning the created Flight enables the post-create trip assignment
+   *  (#199); returning void is still valid and simply skips it. */
+  onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<Flight | void>;
   onCancel: () => void;
   onBatchComplete?: (newAchievements?: UserAchievement[]) => void;
   // When provided, a "Sonder-Flug" card is shown in the lookup step. The
@@ -179,6 +181,8 @@ export default function SimplifiedFlightFormV2({
                 form.setFees(v.fees);
                 form.setReceiptUrl(v.receiptUrl);
               }}
+              tripId={form.tripId}
+              setTripId={form.setTripId}
               tags={form.tags}
               companions={form.companions}
               setTags={form.setTags}

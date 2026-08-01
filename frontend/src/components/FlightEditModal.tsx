@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { formatInTimeZone } from "date-fns-tz";
-import type { Flight, Trip } from "../types";
+import type { Flight } from "../types";
 import TimesFields from "./FlightForm/fields/TimesFields";
 import RouteFields from "./FlightForm/fields/RouteFields";
 import CatalogueCombobox, {
@@ -9,6 +9,7 @@ import CatalogueCombobox, {
 } from "./FlightForm/fields/CatalogueCombobox";
 import BookingFields from "./FlightForm/fields/BookingFields";
 import CostFields from "./FlightForm/fields/CostFields";
+import TripSelectField from "./FlightForm/fields/TripSelectField";
 import { useAirportLocalTimes } from "./FlightForm/useAirportLocalTimes";
 import { buildLocalString } from "./FlightForm/useFlightForm";
 import CompanionPicker from "./CompanionPicker";
@@ -134,7 +135,6 @@ export default function FlightEditModal({
   const [formData, setFormData] = useState(buildFormData(flight));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [trips, setTrips] = useState<Trip[]>([]);
   const addToast = useToastStore((s) => s.addToast);
 
   // Editable departure/arrival airports — changing either feeds a new code
@@ -165,25 +165,6 @@ export default function FlightEditModal({
     arrCode: arrivalAirport?.iata || arrivalAirport?.icao || null,
     browserTimezone: browserTz,
   });
-
-  // Load trips for the picker. Failures are non-fatal: if the list fails
-  // we just hide the picker rather than blocking the whole edit modal,
-  // so the user can still update other flight fields.
-  useEffect(() => {
-    if (!isOpen) return;
-    let cancelled = false;
-    tripsApi
-      .getAll()
-      .then((all) => {
-        if (!cancelled) setTrips(all);
-      })
-      .catch((err) => {
-        logger.warn("Failed to load trips for FlightEditModal:", err);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen]);
 
   const update = <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -672,24 +653,11 @@ export default function FlightEditModal({
               </select>
             </div>
 
-            <div>
-              <label className="label">{t("flights:edit.tripLabel")}</label>
-              <select
-                value={formData.tripId}
-                onChange={(e) => update("tripId", e.target.value)}
-                className="input"
-              >
-                <option value="">{t("flights:edit.tripNone")}</option>
-                {trips.map((trip) => (
-                  <option key={trip.id} value={trip.id}>
-                    {trip.name}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                {t("flights:edit.tripHint")}
-              </p>
-            </div>
+            <TripSelectField
+              value={formData.tripId}
+              onChange={(v) => update("tripId", v)}
+              hint={t("flights:edit.tripHint")}
+            />
 
             <div>
               <label className="label">{t("flights:form.seatClass")}</label>

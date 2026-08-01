@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Airport, airportsApi } from "../../lib/api";
 import { flightsApi } from "../../lib/api/flights";
+import { tripsApi } from "../../lib/api/trips";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useToastStore } from "../../store/toastStore";
 import { storeHistoricalFlightTime, estimateFlightTimes } from "../../lib/timeEstimation";
-import type { FlightInput, ParsedBooking, UserAchievement } from "../../types";
+import type { Flight, FlightInput, ParsedBooking, UserAchievement } from "../../types";
 import type { TimeEstimationWarning } from "./FlightCompleteStep";
 
 export interface FlightLookupResult {
@@ -88,7 +89,10 @@ export function buildLocalString(date: string, time: string): string {
 }
 
 export function useFlightForm(
-  onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<void>,
+  // Returning the created Flight is what makes the post-create trip
+  // assignment possible; `void` keeps older callers valid (they simply get
+  // no assignment).
+  onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<Flight | void>,
   onCancel: () => void,
   onBatchComplete?: (newAchievements?: UserAchievement[]) => void
 ) {
@@ -172,6 +176,7 @@ export function useFlightForm(
   const [frequentFlyerNumber, setFrequentFlyerNumber] = useState<string | undefined>(undefined);
   const [bookingClassLetter, setBookingClassLetter] = useState<string | undefined>(undefined);
   const [coPassengers, setCoPassengers] = useState<string[]>([]);
+  const [tripId, setTripId] = useState("");
 
   // Initialize defaults from settings
   useEffect(() => {
@@ -588,6 +593,21 @@ export function useFlightForm(
     setTimeEstimationWarning(null);
   };
 
+  /** Post-create trip assignment (#199) — a SECOND call on the Trip
+   *  relation's own endpoint, strictly after a successful create, mirroring
+   *  the edit modal's save-then-assign ordering. A failure here must not
+   *  fail the submit: the flight exists either way, so the user gets a
+   *  toast instead of a rolled-back-looking error. */
+  const maybeAssignTrip = async (created: Flight | void): Promise<void> => {
+    if (!tripId || !created?.id) return;
+    try {
+      await tripsApi.assignFlights(tripId, { flightIds: [created.id], action: "add" });
+    } catch (err) {
+      logger.warn("Failed to assign the new flight to the selected trip:", err);
+      useToastStore.getState().addToast("error", t("flights:edit.tripAssignFailed"));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!departure || !arrival) {
@@ -599,7 +619,7 @@ export function useFlightForm(
     try {
       storeHistoricalData();
       setTimeEstimationWarning(null);
-      await onSubmit(buildFlightPayload());
+      await maybeAssignTrip(await onSubmit(buildFlightPayload()));
     } catch (err: unknown) {
       const errorObj = err as {
         response?: {
@@ -641,7 +661,7 @@ export function useFlightForm(
     try {
       storeHistoricalData();
       setTimeEstimationWarning(null);
-      await onSubmit(buildFlightPayload(), { hasMoreFlights: true });
+      await maybeAssignTrip(await onSubmit(buildFlightPayload(), { hasMoreFlights: true }));
       prepareReturnFlightForm();
       useToastStore.getState().addToast("info", t("flights:form.returnFlightHint"));
     } catch (err: unknown) {
@@ -680,7 +700,7 @@ export function useFlightForm(
     try {
       storeHistoricalData();
       setTimeEstimationWarning(null);
-      await onSubmit(buildFlightPayload(), { force: true });
+      await maybeAssignTrip(await onSubmit(buildFlightPayload(), { force: true }));
     } catch (err: unknown) {
       const errorObj = err as {
         response?: { data?: { error?: string; details?: { field: string; message: string }[] } };
@@ -713,7 +733,7 @@ export function useFlightForm(
     try {
       storeHistoricalData();
       setTimeEstimationWarning(null);
-      await onSubmit(buildFlightPayload(), { merge: true });
+      await maybeAssignTrip(await onSubmit(buildFlightPayload(), { merge: true }));
     } catch (err: unknown) {
       const errorObj = err as {
         response?: { data?: { error?: string; details?: { field: string; message: string }[] } };
@@ -844,6 +864,7 @@ export function useFlightForm(
     taxes,
     fees,
     receiptUrl,
+    tripId,
     category,
     tags,
     companions,
@@ -892,6 +913,7 @@ export function useFlightForm(
     setTaxes,
     setFees,
     setReceiptUrl,
+    setTripId,
     setCategory,
     setTags,
     setCompanions,
