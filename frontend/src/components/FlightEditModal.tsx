@@ -3,6 +3,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import type { Flight, Trip } from "../types";
 import ReceiptUpload from "./ReceiptUpload";
 import TimesFields from "./FlightForm/fields/TimesFields";
+import RouteFields from "./FlightForm/fields/RouteFields";
 import { useAirportLocalTimes } from "./FlightForm/useAirportLocalTimes";
 import { buildLocalString } from "./FlightForm/useFlightForm";
 import CompanionPicker from "./CompanionPicker";
@@ -17,6 +18,7 @@ import { logger } from "../lib/logger";
 import CurrencyInput from "./CurrencyInput";
 
 import type { FlightInput } from "../types";
+import type { Airport } from "../lib/api";
 
 interface FlightEditModalProps {
   flight: Flight;
@@ -52,6 +54,23 @@ function splitZonedDatetime(iso: string | null, tz: string): { date: string; tim
   return {
     date: formatInTimeZone(d, tz, "yyyy-MM-dd"),
     time: formatInTimeZone(d, tz, "HH:mm"),
+  };
+}
+
+/** Build the `Airport` shape RouteFields expects from a flight's stored
+ *  departure/arrival columns, falling back to the code when no name was
+ *  ever captured. */
+function buildFlightAirports(f: Flight): { departure: Airport; arrival: Airport } {
+  const side = (iata?: string, icao?: string, name?: string, lat = 0, lon = 0): Airport => ({
+    iata,
+    icao,
+    name: name || iata || icao || "",
+    lat,
+    lon,
+  });
+  return {
+    departure: side(f.depIata, f.depIcao, f.depName, f.depLat, f.depLon),
+    arrival: side(f.arrIata, f.arrIcao, f.arrName, f.arrLat, f.arrLon),
   };
 }
 
@@ -104,6 +123,15 @@ export default function FlightEditModal({
   const [trips, setTrips] = useState<Trip[]>([]);
   const addToast = useToastStore((s) => s.addToast);
 
+  // Editable departure/arrival airports — changing either feeds a new code
+  // into useAirportLocalTimes below, which re-resolves that side's zone.
+  const [departureAirport, setDepartureAirport] = useState<Airport | null>(
+    () => buildFlightAirports(flight).departure
+  );
+  const [arrivalAirport, setArrivalAirport] = useState<Airport | null>(
+    () => buildFlightAirports(flight).arrival
+  );
+
   // Airport timezones for the departure/arrival fields. The datetime-local
   // inputs are seeded browser-local by buildFormData, then re-rendered as
   // airport-local once useAirportLocalTimes resolves both zones (see the
@@ -119,8 +147,8 @@ export default function FlightEditModal({
     hydrated,
   } = useAirportLocalTimes({
     isOpen,
-    depCode: flight.depIata || flight.depIcao || null,
-    arrCode: flight.arrIata || flight.arrIcao || null,
+    depCode: departureAirport?.iata || departureAirport?.icao || null,
+    arrCode: arrivalAirport?.iata || arrivalAirport?.icao || null,
     browserTimezone: browserTz,
   });
 
@@ -194,6 +222,9 @@ export default function FlightEditModal({
 
   useEffect(() => {
     setFormData(buildFormData(flight));
+    const airports = buildFlightAirports(flight);
+    setDepartureAirport(airports.departure);
+    setArrivalAirport(airports.arrival);
     setError("");
   }, [flight]);
 
@@ -237,6 +268,9 @@ export default function FlightEditModal({
       const submitArrTz = hydrated ? arrTz : browserTz;
 
       const updates: Partial<FlightInput> = {
+        // Server needs lat/lon to recompute status/CO2/distance.
+        departure: departureAirport ?? undefined,
+        arrival: arrivalAirport ?? undefined,
         airline: formData.airline || undefined,
         operatingAirline: formData.operatingAirline || undefined,
         flightNumber: formData.flightNumber || undefined,
@@ -348,8 +382,8 @@ export default function FlightEditModal({
             </button>
           </div>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-            {flight.depIata || flight.depIcao} {t("common:labels.routeSeparator")}{" "}
-            {flight.arrIata || flight.arrIcao}
+            {departureAirport?.iata || departureAirport?.icao} {t("common:labels.routeSeparator")}{" "}
+            {arrivalAirport?.iata || arrivalAirport?.icao}
           </p>
         </div>
 
@@ -359,6 +393,14 @@ export default function FlightEditModal({
               {error}
             </div>
           )}
+
+          {/* Changing either side re-resolves its timezone (useAirportLocalTimes above). */}
+          <RouteFields
+            departure={departureAirport}
+            arrival={arrivalAirport}
+            onDepartureChange={setDepartureAirport}
+            onArrivalChange={setArrivalAirport}
+          />
 
           {/* Date & Time — year/month for historical, split date+time for others */}
           {formData.status === "historical" ? (
