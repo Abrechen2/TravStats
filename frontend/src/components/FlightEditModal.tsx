@@ -10,6 +10,7 @@ import CatalogueCombobox, {
 import BookingFields from "./FlightForm/fields/BookingFields";
 import CostFields from "./FlightForm/fields/CostFields";
 import TripSelectField from "./FlightForm/fields/TripSelectField";
+import StatusField from "./FlightForm/fields/StatusField";
 import { useAirportLocalTimes } from "./FlightForm/useAirportLocalTimes";
 import { buildLocalString } from "./FlightForm/useFlightForm";
 import CompanionsField from "./FlightForm/fields/CompanionsField";
@@ -596,48 +597,10 @@ export default function FlightEditModal({
 
           {/* Status / Category / Seat Class */}
           <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="label">{t("flights:form.status")}</label>
-              <div>
-                <span
-                  className="px-2 py-1 text-xs font-semibold rounded-full inline-block"
-                  style={
-                    formData.status === "flown"
-                      ? {
-                          background: "rgba(63,185,80,0.15)",
-                          color: "var(--success)",
-                        }
-                      : formData.status === "scheduled"
-                        ? {
-                            background: "rgba(56,139,253,0.15)",
-                            color: "#388bfd",
-                          }
-                        : formData.status === "historical" || formData.status === "duplicated"
-                          ? {
-                              // historical/duplicated are archival data, not an
-                              // error state — amber matches the cruise pill
-                              // palette (cruiseStatusStyle.ts) instead of red.
-                              background: "rgba(251,191,36,0.15)",
-                              color: "#fbbf24",
-                            }
-                          : {
-                              background: "rgba(248,81,73,0.15)",
-                              color: "var(--danger)",
-                            }
-                  }
-                >
-                  {t(`flights:status.${formData.status}`, { defaultValue: formData.status })}
-                </span>
-              </div>
-              <label className="flex items-center gap-2 text-sm mt-2">
-                <input
-                  type="checkbox"
-                  checked={formData.status === "cancelled"}
-                  onChange={(e) => update("status", e.target.checked ? "cancelled" : "scheduled")}
-                />
-                {t("flights:status.cancelledCheckbox")}
-              </label>
-            </div>
+            <StatusField
+              status={formData.status}
+              onStatusChange={(v) => update("status", v)}
+            />
 
             <div>
               <label className="label">{t("flights:form.category")}</label>
