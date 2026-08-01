@@ -32,7 +32,7 @@ fi
     curl -fsSL https://get.docker.com | sh
   }
   docker network inspect preview-net >/dev/null 2>&1 || docker network create preview-net
-  mkdir -p /opt/preview/{ollama,beta,immich,poi}
+  mkdir -p /opt/preview/{ollama,beta,poi}
 '"
 
 echo "CT$CTID provisioned."

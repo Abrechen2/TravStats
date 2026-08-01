@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # Seed the demo Immich instance: create the admin account, mint an API key,
-# upload sample photos, and build two albums so the `immich` preview slot
-# has real data to demo without anyone handing a real Immich API key to a
+# upload sample photos, and build two albums so the preview instances have
+# real data to demo without anyone handing a real Immich API key to a
 # public pre-release instance.
+#
+# Since 2026-08-01 the consumer is the BETA slot: the dedicated immich slot
+# was retired once dev/immich-albums was fully merged, and this demo server
+# is now configured as the beta slot's admin-global Immich.
 #
 # Credentials are written ONLY to /opt/preview/immich-demo/CREDENTIALS.txt
 # (mode 0600) on CT134 — never printed, never committed to the repo.
