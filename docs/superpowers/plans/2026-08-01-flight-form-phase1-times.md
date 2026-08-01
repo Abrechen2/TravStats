@@ -366,6 +366,77 @@ The timezone round-trip guard from the previous task stayed green throughout."
 
 ---
 
+### Task 3b: The create path consumes the shared time fields
+
+**Why this task exists:** the plan's File Structure said `FlightCompleteStep.tsx`
+would consume the shared components, but no task did it. After Task 3 the two
+forms only RESEMBLE each other — both render separate date and time inputs, both
+recombine with `buildLocalString` — while still owning two separate
+implementations. That is the state the forms were already in before #197 pulled
+them apart, and it is exactly what #199 exists to end. Sharing the component is
+what makes the drift structurally impossible rather than merely currently absent.
+
+**Files:**
+- Modify: `frontend/src/components/FlightForm/FlightCompleteStep.tsx`
+- Modify: `frontend/src/components/FlightForm/fields/TimesFields.tsx` if the
+  create path needs a prop the edit path did not
+- Test: `frontend/src/components/FlightForm/FlightCompleteStep.status.test.tsx`
+  and `frontend/src/components/FlightForm/fields/__tests__/TimesFields.test.tsx`
+
+**Interfaces:**
+- Consumes: `TimesFields` from Task 3
+- Produces: one time-input implementation instead of two
+
+- [ ] **Step 1: Characterise the create path first**
+
+Before changing anything, add a test to the create path's suite asserting what
+it submits today for departure and arrival — the `departureLocal`/`depTimezone`
+pair for a filled date and time, and what it emits when the time is left empty.
+Run it and confirm it PASSES. This is the create-side equivalent of Task 1's
+guard, and it is what tells you the swap changed nothing.
+
+- [ ] **Step 2: Swap in the shared component**
+
+Replace the create path's own date/time inputs with `<TimesFields>`. The create
+path keeps its own extras — the arrival day-offset, the estimate block, the
+historical partial-date handling — unless they are already in the component.
+Do NOT move those into `TimesFields` in this task; if the component needs to
+accept them as slots or props, add the narrowest prop that works and say so.
+
+- [ ] **Step 3: Both suites must be green**
+
+```bash
+cd frontend
+npx vitest --run src/components/FlightForm
+npx vitest --run src/__tests__/components/FlightEditModal.timezone.test.tsx
+npx vitest --run
+npx tsc --noEmit
+npm run lint
+```
+The Task 1 timezone guard covers the edit side; your Step 1 test covers the
+create side. Both must pass, and the create-side test must not have been edited
+to accommodate the swap — if it needs editing, the swap changed behaviour.
+
+- [ ] **Step 4: Prove the sharing is real**
+
+Report the line counts of `FlightCompleteStep.tsx` before and after, and confirm
+by grep that no date/time input element remains outside `TimesFields.tsx`. Two
+implementations that merely agree today are what this task exists to eliminate;
+if one is left behind, the task is not done.
+
+- [ ] **Step 5: Commit**
+
+```
+refactor(flights): both forms render the same time fields
+
+Task 3 made the two forms behave alike; they still owned two implementations,
+which is the state they were in before #197 pulled them apart. The create path
+now renders the same component the edit path does, so the next field added
+cannot land on one side only.
+```
+
+---
+
 ### Task 4: Airports editable in edit mode
 
 **Files:**
