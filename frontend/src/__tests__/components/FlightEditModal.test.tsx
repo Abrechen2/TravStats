@@ -278,6 +278,33 @@ describe("FlightEditModal", () => {
     expect(updates.airline).toBeUndefined();
   });
 
+  // Phase 2 Task 2 characterization — pins the typed booking-reference and
+  // ticket-number round trip BEFORE both move into the shared BookingFields.
+  // Must pass unedited before and after the swap. The typed reference is
+  // deliberately already uppercase: the create form uppercases on input and
+  // the swap aligns the edit form onto that behaviour, so a lowercase fixture
+  // would pin the asymmetry this phase exists to remove.
+  it("submits the typed booking reference and ticket number verbatim", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { container, getByText } = render(
+      <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+    const byPlaceholder = (key: string): HTMLInputElement =>
+      container.querySelector(
+        `input[placeholder="flights:form.placeholders.${key}"]`
+      ) as HTMLInputElement;
+
+    fireEvent.change(byPlaceholder("bookingReference"), { target: { value: "9RFAA7" } });
+    fireEvent.change(byPlaceholder("ticketNumber"), { target: { value: "2202236084346" } });
+
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.bookingReference).toBe("9RFAA7");
+    expect(updates.ticketNumber).toBe("2202236084346");
+  });
+
   // Task 12 — the comma-separated companions text input is replaced by the
   // shared CompanionPicker.
   it("renders the existing companions as removable chips instead of a CSV text field", () => {
