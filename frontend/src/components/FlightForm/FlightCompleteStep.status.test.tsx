@@ -98,6 +98,7 @@ function baseProps(
     setTripId: vi.fn(),
     tags: [],
     companions: [],
+    coPassengers: [],
     setTags: vi.fn(),
     setCompanions: vi.fn(),
     notes: "",

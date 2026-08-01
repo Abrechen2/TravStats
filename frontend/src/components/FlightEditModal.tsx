@@ -12,7 +12,7 @@ import CostFields from "./FlightForm/fields/CostFields";
 import TripSelectField from "./FlightForm/fields/TripSelectField";
 import { useAirportLocalTimes } from "./FlightForm/useAirportLocalTimes";
 import { buildLocalString } from "./FlightForm/useFlightForm";
-import CompanionPicker from "./CompanionPicker";
+import CompanionsField from "./FlightForm/fields/CompanionsField";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
@@ -732,13 +732,11 @@ export default function FlightEditModal({
           />
 
           {/* Companions */}
-          <div>
-            <label className="label">{t("flights:form.companions")}</label>
-            <CompanionPicker
-              value={formData.companions}
-              onChange={(v) => update("companions", v)}
-            />
-          </div>
+          <CompanionsField
+            companions={formData.companions}
+            onCompanionsChange={(v) => update("companions", v)}
+            coPassengers={flight.coPassengers}
+          />
 
           {/* Cost (#192, #199) — shared with the create form. The modal keeps
               its historical empty-means-0 internal state; CostFields speaks
