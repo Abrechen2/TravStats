@@ -42,7 +42,12 @@
 **Modify**
 - `frontend/src/components/FlightForm/fields/RouteFields.tsx` — catalogue-backed airline and aircraft pickers
 - `frontend/src/components/FlightEditModal.tsx` and `frontend/src/components/FlightForm/FlightCompleteStep.tsx` — consume all of the above
-- `frontend/src/components/FlightForm/useFlightForm.ts` — expose the fields the create path lacks
+- `frontend/src/components/FlightForm/useFlightForm.ts` — expose the fields the create path lacks, including `boardingGroup`, which the hook does not know at all today
+
+**Verification note:** every field the mockup annotates as new or changed maps to a
+task here or was built in Phase 1. That mapping was checked field by field against
+`docs/design/flight-form-mockup.html`; it is what surfaced the missing boarding
+group. Re-run that check if the mockup changes — the mockup is the binding target.
 
 **Deliberately NOT in this phase:** the `SpecialFlightModal`, which edits flights through its own form and has no test file at all. It shares the API contract, not the components. Bringing it in would double this phase's blast radius; it gets its own decision once the two main forms are one.
 
@@ -207,7 +212,53 @@ curated list stays curated.
 
 ---
 
-### Task 6: Gate
+### Task 6: Boarding group in the create form
+
+The mockup annotates this field "neu im Anlegen", and the spec lists it under the
+field moves — but no task above builds it. The edit modal has it end to end; the
+create hook does not know the field at all, so a boarding group read out of a
+booking mail is silently dropped on the way in.
+
+**Files:**
+- Modify: `frontend/src/components/FlightForm/useFlightForm.ts`
+- Modify: `frontend/src/components/FlightForm/FlightCompleteStep.tsx`
+- Test: `frontend/src/components/FlightForm/useFlightForm.boardingGroup.test.ts`
+
+- [ ] **Step 1: Read how the edit modal already does it**
+
+`FlightEditModal.tsx:106` seeds it, `:303` sends it as
+`boardingGroup: formData.boardingGroup || undefined`, and `:756` renders it under
+the existing key `flights:form.boardingGroup`. Reuse that key — do NOT add a new
+one; DE and EN both carry it already. The backend bound is
+`backend/src/schemas/flight.ts:194`: an optional string, max 20 characters.
+
+- [ ] **Step 2: Write the failing test**
+
+Assert that a create payload carries `boardingGroup` when the field is filled, and
+omits it — `undefined`, not `""` — when it is not. The empty case is the one that
+matters: an empty string would overwrite a parser-provided value with nothing,
+which is the same data-destroying shape Task 2 guards against.
+
+- [ ] **Step 3: Run it and confirm it fails.**
+
+- [ ] **Step 4: Implement.** Add the field to the hook's state and to
+`buildFlightPayload`, and render it in the create form's seating section beside
+seat and class, matching the mockup's grouping.
+
+- [ ] **Step 5: Both suites, both guards, tsc, lint** — each on its own line.
+
+- [ ] **Step 6: Commit**
+
+```
+feat(flights): record the boarding group while adding a flight
+
+The edit modal has had this field all along; the create form never knew it, so a
+boarding group read out of a booking mail was dropped on the way in.
+```
+
+---
+
+### Task 7: Gate
 
 - [ ] **Step 1:** `cd frontend` then `npx tsc --noEmit`, `npm run lint`, `npx vitest --run`, `npx vite build` — each on its own line.
 - [ ] **Step 2:** `cd backend && npx jest src/__tests__/flights` — the contract must be unchanged.
