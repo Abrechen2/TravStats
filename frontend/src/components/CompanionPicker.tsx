@@ -81,10 +81,13 @@ export default function CompanionPicker({ value, onChange }: Props): JSX.Element
               {name}
               <button
                 type="button"
-                // Hardcoded German suffix (not routed through t()) to match the
-                // house convention for chip-remove buttons, see
-                // BoardingPassAnnotation.tsx / EmailAnnotation.tsx.
-                aria-label={`${name} entfernen`}
+                aria-label={t("picker.remove", { name })}
+                // The Vitest-global react-i18next mock is an identity function
+                // that ignores interpolation options, so every chip's aria-label
+                // resolves to the same literal string ("picker.remove") under
+                // test regardless of `name` — a per-name test id is what lets
+                // tests target one specific chip's remove button.
+                data-testid={`companion-remove-${name}`}
                 onClick={(): void => handleRemove(name)}
                 className="text-(--text-muted) hover:text-(--text-primary)"
               >

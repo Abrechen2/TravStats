@@ -1,6 +1,7 @@
 {
   "picker": {
     "label": "Companions",
-    "placeholder": "Type a name and press Enter …"
+    "placeholder": "Type a name and press Enter …",
+    "remove": "Remove {{name}}"
   }
 }

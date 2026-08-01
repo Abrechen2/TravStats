@@ -33,8 +33,19 @@ describe("CompanionPicker", () => {
   it("renders the current value as removable chips", async () => {
     const onChange = vi.fn();
     render(<CompanionPicker value={["Anna"]} onChange={onChange} />);
-    await userEvent.click(screen.getByRole("button", { name: /Anna entfernen/i }));
+    // The global react-i18next mock doesn't interpolate `t(key, options)`, so
+    // the rendered aria-label can't be queried by translated text here.
+    // A per-name test id identifies the correct chip's remove button even
+    // when several chips are rendered side by side.
+    await userEvent.click(screen.getByTestId("companion-remove-Anna"));
     expect(onChange).toHaveBeenCalledWith([]);
+  });
+
+  it("targets the correct chip's remove button when several are rendered", async () => {
+    const onChange = vi.fn();
+    render(<CompanionPicker value={["Anna", "Jonas"]} onChange={onChange} />);
+    await userEvent.click(screen.getByTestId("companion-remove-Jonas"));
+    expect(onChange).toHaveBeenCalledWith(["Anna"]);
   });
 
   // A failed suggestion fetch must not block typing.
