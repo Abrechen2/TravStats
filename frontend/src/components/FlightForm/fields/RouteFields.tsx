@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AirportAutocomplete from "../../AirportAutocomplete";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { Airport } from "../../../lib/api";
@@ -33,22 +33,42 @@ interface RouteFieldsProps {
  *  a usable signal on its own (round 2 review finding: gating on it made the
  *  hint fire mid-search for edits that were about to succeed). Resolves
  *  immediately, in the same render, the moment `value` becomes non-null
- *  again — a hint about a now-fixed problem must not linger. */
+ *  again — a hint about a now-fixed problem must not linger.
+ *
+ *  Round 3 finding: blur ALSO fires before a dropdown pick resolves, not
+ *  just before an abandoned edit — a plain click on a dropdown option moves
+ *  focus off the input first (see AirportAutocomplete's own dropdown-option
+ *  onMouseDown guard, added for the same reason), so a blur that's about to
+ *  be followed by a resolving onChange is indistinguishable from a genuine
+ *  abandon AT THE MOMENT blur fires. `handleBlur` therefore does not decide
+ *  synchronously — it defers the decision by one macrotask and re-checks
+ *  the LATEST value (via `valueRef`, not the `value` this closure captured)
+ *  at that point. A macrotask (not a microtask) is deliberate: it is
+ *  guaranteed to run after ANY microtask already queued by the moment blur
+ *  fired — including a same-gesture pick's resolving `onChange` — so a
+ *  same-tick pick always wins the race, regardless of which was scheduled
+ *  first. */
 function useSettledUnresolved(value: Airport | null): {
   settledUnresolved: boolean;
   handleFocus: () => void;
   handleBlur: () => void;
 } {
   const [settledUnresolved, setSettledUnresolved] = useState(false);
+  const valueRef = useRef(value);
 
   useEffect(() => {
+    valueRef.current = value;
     if (value) setSettledUnresolved(false);
   }, [value]);
 
   return {
     settledUnresolved,
     handleFocus: () => setSettledUnresolved(false),
-    handleBlur: () => setSettledUnresolved(!value),
+    handleBlur: () => {
+      setTimeout(() => {
+        if (!valueRef.current) setSettledUnresolved(true);
+      }, 0);
+    },
   };
 }
 
