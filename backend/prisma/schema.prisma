@@ -49,6 +49,7 @@ model User {
   cruises              Cruise[]
   apiTokens            ApiToken[]
   pairingCodes         PairingCode[]
+  companions           Companion[]
 
   @@map("users")
 }
@@ -263,6 +264,7 @@ model Flight {
   trip           Trip?                 @relation(fields: [tripId], references: [id], onDelete: SetNull)
   booking        Booking?              @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   pendingUpdates PendingFlightUpdate[]
+  companionLinks FlightCompanion[]
 
   @@index([userId])
   @@index([departureTime])
@@ -722,6 +724,7 @@ model Trip {
   journalEntries TripJournalEntry[]
   photos         TripPhoto[]
   immichAlbums   TripImmichAlbum[]
+  companionLinks TripCompanion[]
 
   @@index([userId])
   @@index([userId, status])
@@ -905,6 +908,7 @@ model Cruise {
   booking       Booking?     @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   stops         CruiseStop[]
   legs          CruiseLeg[]
+  companionLinks CruiseCompanion[]
 
   @@index([userId])
   @@index([startDate])
@@ -1029,4 +1033,62 @@ model Aircraft {
 
   @@index([name])
   @@map("aircraft")
+}
+
+model Companion {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  canonicalName String   @map("canonical_name")
+  displayName   String   @map("display_name")
+  searchName    String   @map("search_name")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flights FlightCompanion[]
+  trips   TripCompanion[]
+  cruises CruiseCompanion[]
+
+  @@unique([userId, canonicalName])
+  @@index([userId, searchName])
+  @@map("companions")
+}
+
+model FlightCompanion {
+  flightId    String @map("flight_id")
+  companionId String @map("companion_id")
+  position    Int
+
+  flight    Flight    @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  @@id([flightId, companionId])
+  @@index([companionId])
+  @@map("flight_companions")
+}
+
+model TripCompanion {
+  tripId      String @map("trip_id")
+  companionId String @map("companion_id")
+  position    Int
+
+  trip      Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  @@id([tripId, companionId])
+  @@index([companionId])
+  @@map("trip_companions")
+}
+
+model CruiseCompanion {
+  cruiseId    String @map("cruise_id")
+  companionId String @map("companion_id")
+  position    Int
+
+  cruise    Cruise    @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  @@id([cruiseId, companionId])
+  @@index([companionId])
+  @@map("cruise_companions")
 }
