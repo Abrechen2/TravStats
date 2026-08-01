@@ -81,8 +81,7 @@
     "eclipse": "Totale Sonnenfinsternis 2026-08-12 — Zentrallinie",
     "rocket_launch": "Starship IFT-X, Boca Chica",
     "aurora": "Polarlicht 2026-11-15, 65°N",
-    "tags": "z.B. bucket-list, jahrestag",
-    "companions": "z.B. Max, Anna"
+    "tags": "z.B. bucket-list, jahrestag"
   },
   "actions": {
     "save": "Speichern",
