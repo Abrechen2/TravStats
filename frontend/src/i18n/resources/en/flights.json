@@ -286,7 +286,10 @@
     "tripNone": "Not assigned to a trip",
     "tripHint": "Links this flight to a manually-created trip. Trips are created in the Flights tab.",
     "tripAssignedToast": "Trip assignment updated",
-    "tripAssignFailed": "Trip assignment failed — other changes were saved"
+    "tripAssignFailed": "Trip assignment failed — other changes were saved",
+    "routeFrom": "From",
+    "routeTo": "To",
+    "routeUnresolvedHint": "Entry not recognised. The saved selection will not be changed."
   },
   "quickActions": {
     "showOnMap": "Show on map",

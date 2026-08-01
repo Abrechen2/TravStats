@@ -59,9 +59,14 @@ vi.mock("../../lib/api", () => ({
   companionsApi: { list: vi.fn().mockResolvedValue([]) },
 }));
 // See file header: AirportAutocomplete's own search UI isn't under test
-// here. The stub renders one button per side (labelled by the placeholder
-// RouteFields passes in, which differ for departure vs. arrival) so a click
-// simulates "the user picked this airport" without driving real search.
+// here. The stub renders two buttons per side (labelled by the placeholder
+// RouteFields passes in, which differ for departure vs. arrival): one
+// simulates "the user picked this airport" (real onChange(airport)), the
+// other simulates the real component's own onChange(null) — what it does
+// when the user types text that doesn't match a real airport (an abandoned
+// edit). Reproducing that null-on-abandon contract is enough to test how
+// FlightEditModal/RouteFields react to it, without re-testing
+// AirportAutocomplete's own search/matching logic.
 vi.mock("../../components/AirportAutocomplete", () => ({
   default: ({
     value,
@@ -72,9 +77,14 @@ vi.mock("../../components/AirportAutocomplete", () => ({
     onChange: (a: Airport | null) => void;
     placeholder?: string;
   }) => (
-    <button type="button" aria-label={placeholder} onClick={() => onChange(mocks.nextAirport)}>
-      {value?.iata ?? "none"}
-    </button>
+    <div>
+      <button type="button" aria-label={placeholder} onClick={() => onChange(mocks.nextAirport)}>
+        {value?.iata ?? "none"}
+      </button>
+      <button type="button" aria-label={`${placeholder}-clear`} onClick={() => onChange(null)}>
+        clear
+      </button>
+    </div>
   ),
 }));
 
@@ -146,7 +156,9 @@ describe("FlightEditModal route editing (Task 4)", () => {
     await waitForHydration();
 
     // Switch the departure airport from Tokyo to London.
-    await userEvent.click(screen.getByRole("button", { name: "flights:form.placeholders.departureAirport" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "flights:form.placeholders.departureAirport" })
+    );
 
     // The re-resolved zone (Europe/London) must land on the wall-clock inputs
     // too — the hydration effect re-derives them from the SAME stored UTC
@@ -191,7 +203,9 @@ describe("FlightEditModal route editing (Task 4)", () => {
         })
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "flights:form.placeholders.departureAirport" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "flights:form.placeholders.departureAirport" })
+    );
 
     // Give the pending effect a tick to start (and NOT finish).
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -213,5 +227,32 @@ describe("FlightEditModal route editing (Task 4)", () => {
       FLIGHT.departureTime
     );
     expect(payload.depTimezone).toBe("Asia/Tokyo");
+  });
+
+  // Review follow-up #2: an abandoned typed edit (AirportAutocomplete's own
+  // onChange(null) when the typed text doesn't resolve) must be visible, not
+  // silent — before this fix, departureAirport just went null and the save
+  // quietly kept the flight's stored airport with no indication anything was
+  // dropped.
+  it("shows a hint instead of silently dropping an abandoned typed edit, and still saves with the stored airport kept", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<FlightEditModal flight={FLIGHT} isOpen onClose={() => {}} onSave={onSave} />);
+    await waitForHydration();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "flights:form.placeholders.departureAirport-clear" })
+    );
+
+    // The abandoned edit must be visible — not a blocking error, just a hint.
+    expect(await screen.findByText("flights:edit.routeUnresolvedHint")).toBeInTheDocument();
+
+    // Not a blocking validation: saving must still work.
+    await userEvent.click(await screen.findByRole("button", { name: /speichern|save/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+
+    const [, payload] = onSave.mock.calls[onSave.mock.calls.length - 1];
+    // Not a data-integrity bug: the field is simply omitted, so the server
+    // keeps the flight's currently stored departure untouched.
+    expect(payload.departure).toBeUndefined();
   });
 });
