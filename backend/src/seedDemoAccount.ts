@@ -21,11 +21,13 @@
  *   - Achievements recomputed at the end
  */
 
+import { randomUUID } from "crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import { hashPassword } from "./utils/password";
 import { checkAndUpdateAchievements } from "./utils/achievements";
 import { calculateCo2Kg, toSeatClass } from "./services/co2Calculator";
+import { linkRowsFor, resolveCompanions } from "./services/companionService";
 
 type AirportRow = {
   id: number;
@@ -515,7 +517,15 @@ export async function loadPools(): Promise<{
   return { airports, ships, ports };
 }
 
-type FlightSeed = Omit<Prisma.FlightCreateManyInput, "userId" | "id">;
+// `companions` is narrowed back to `string[]` (Prisma's CreateManyInput
+// widens scalar-list fields to `FlightCreatecompanionsInput | string[]`) so
+// callers can read it directly when resolving companion links after the
+// bulk insert. `id` is client-generated up front (see buildFlightRow) so
+// links can be created without a round trip to re-fetch the inserted rows.
+type FlightSeed = Omit<Prisma.FlightCreateManyInput, "userId" | "id" | "companions"> & {
+  id: string;
+  companions: string[];
+};
 
 function buildFlightRow(
   dep: AirportRow,
@@ -548,6 +558,7 @@ function buildFlightRow(
   const flightNum = String(100 + r(8900));
 
   return {
+    id: randomUUID(),
     airline: airline.name,
     operatingAirline,
     flightNumber: airline.prefix + flightNum,
@@ -693,7 +704,33 @@ async function seedFlights(userId: string, airports: Map<string, AirportRow>): P
   await prisma.flight.createMany({
     data: rows.map((r) => ({ ...r, userId })),
   });
+  await linkFlightCompanions(userId, rows);
   console.log(`   → created ${rows.length} flights`);
+}
+
+// Dual write, same as the live create/update/merge routes: resolve each
+// flight's raw companion names to Companion entities and write the join
+// rows too. Without this a freshly seeded instance shows companion chips
+// (from the legacy array) but an empty suggestion list until something else
+// happens to run the backfill -- reads as a bug in the feature, not a seed
+// gap. Ids are client-generated in buildFlightRow so this can run straight
+// off the in-memory rows, no re-fetch needed.
+async function linkFlightCompanions(userId: string, rows: FlightSeed[]): Promise<void> {
+  const linkRows: Prisma.FlightCompanionCreateManyInput[] = [];
+  for (const row of rows) {
+    if (row.companions.length === 0) continue;
+    const resolved = await resolveCompanions(userId, row.companions);
+    linkRows.push(
+      ...linkRowsFor(resolved.map((c) => c.id)).map((link) => ({
+        flightId: row.id,
+        companionId: link.companionId,
+        position: link.position,
+      })),
+    );
+  }
+  if (linkRows.length > 0) {
+    await prisma.flightCompanion.createMany({ data: linkRows, skipDuplicates: true });
+  }
 }
 
 export async function seedCruises(
@@ -769,6 +806,22 @@ export async function seedCruises(
         parserConfidence: null,
       },
     });
+
+    // Dual write, same as the live create/update routes: resolve the
+    // template's raw companion names to Companion entities and write the
+    // join rows too, otherwise a freshly seeded instance shows companion
+    // chips but an empty suggestion list.
+    if (tpl.companions.length > 0) {
+      const resolved = await resolveCompanions(userId, tpl.companions);
+      await prisma.cruiseCompanion.createMany({
+        data: linkRowsFor(resolved.map((c) => c.id)).map((link) => ({
+          cruiseId: cruise.id,
+          companionId: link.companionId,
+          position: link.position,
+        })),
+        skipDuplicates: true,
+      });
+    }
 
     // Create stops. Renumber consecutively; sea days are `isAtSea=true,
     // portId=null` — matches the Zod union.

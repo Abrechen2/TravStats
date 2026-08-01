@@ -38,6 +38,7 @@ import shipsRoutes from './routes/ships';
 import airlinesRoutes from './routes/airlines';
 import aircraftRoutes from './routes/aircraft';
 import cruisesRouter from './routes/cruises';
+import companionRoutes from './routes/companions';
 import openapiRoutes from './routes/openapi';
 import importRoutes from './routes/import';
 import pairingRoutes from './routes/pairing';
@@ -260,6 +261,7 @@ app.use('/api/v1/ships', shipsRoutes);
 app.use('/api/v1/airlines', airlinesRoutes);
 app.use('/api/v1/aircraft', aircraftRoutes);
 app.use('/api/v1/cruises', cruisesRouter);
+app.use('/api/v1/companions', companionRoutes);
 app.use('/api/v1/import', importRoutes);
 app.use('/api/v1/pairing', pairingRoutes);
 app.use('/api/v1/app-settings', appSettingsRoutes);
@@ -430,6 +432,25 @@ if (process.env.NODE_ENV !== 'test') {
       }
     } catch (error) {
       logger.warn({ operation: "server_start_backfill_booking_prices_error", message: "Failed to backfill booking prices", error });
+    }
+
+    // Convert legacy free-text companion arrays on flights/trips/cruises into
+    // Companion entities + link rows (idempotent — see backfillCompanions.ts)
+    try {
+      const { backfillCompanions } = await import("./scripts/backfillCompanions");
+      const n = await backfillCompanions();
+      if (n > 0) {
+        logger.info({
+          operation: "server_start_backfill_companions",
+          message: `Linked ${n} companion rows`,
+        });
+      }
+    } catch (error) {
+      logger.warn({
+        operation: "server_start_backfill_companions_error",
+        message: "Failed to backfill companions",
+        error,
+      });
     }
 
     // Normalize aircraft type names in existing flights (idempotent)

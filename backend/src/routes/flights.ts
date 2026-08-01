@@ -33,6 +33,7 @@ import { calculateNextApiCheckAt } from '../utils/smartCheckSchedule';
 import { buildFlightMergePatch } from '../utils/flightMerge';
 import batchRouter from './flightsBatch';
 import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from '../shared/statusDerivation';
+import { resolveCompanions, linkRowsFor } from '../services/companionService';
 
 const router = Router();
 
@@ -337,11 +338,41 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
             return;
           }
           const { patch, mergedFields } = buildFlightMergePatch(existingFull, data);
+
+          // Companions are resolved to Companion entities up front — same
+          // reasoning as the create/update handlers, resolveCompanions uses
+          // the top-level client and cannot join a passed `tx`. Only resolve
+          // (and only touch companionLinks below) when the merge actually
+          // adopted companions (mergedFields includes "companions", i.e. the
+          // existing flight had none). If the merge left companions alone,
+          // `resolvedMergeCompanions` stays undefined and the existing links
+          // are left completely untouched, preserving fill-if-empty merge
+          // semantics.
+          let resolvedMergeCompanions: { id: string; displayName: string }[] | undefined;
+          if (mergedFields.includes('companions')) {
+            resolvedMergeCompanions = await resolveCompanions(userId, data.companions ?? []);
+            patch.companions = resolvedMergeCompanions.map((c) => c.displayName);
+          }
+
           const merged = mergedFields.length === 0
             ? existingFull
-            : await prisma.flight.update({
-                where: { id: existing.id },
-                data: { ...patch, lastModifiedBy: 'user' },
+            : await prisma.$transaction(async (tx) => {
+                if (resolvedMergeCompanions !== undefined) {
+                  await tx.flightCompanion.deleteMany({ where: { flightId: existing.id } });
+                  if (resolvedMergeCompanions.length > 0) {
+                    await tx.flightCompanion.createMany({
+                      data: linkRowsFor(resolvedMergeCompanions.map((c) => c.id)).map((row) => ({
+                        ...row,
+                        flightId: existing.id,
+                      })),
+                      skipDuplicates: true,
+                    });
+                  }
+                }
+                return tx.flight.update({
+                  where: { id: existing.id },
+                  data: { ...patch, lastModifiedBy: 'user' },
+                });
               });
           res.status(200).json({
             flight: merged,
@@ -377,103 +408,128 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
       },
     });
 
-    const flight = await prisma.flight.create({
-      data: {
-        userId,
-        airline: data.airline,
-        airlineIata,
-        airlineIcao,
-        operatingAirline: data.operatingAirline,
-        operatingAirlineIata: data.operatingAirlineIata,
-        operatingAirlineIcao: data.operatingAirlineIcao,
-        isCodeshare: data.isCodeshare,
-        flightNumber: data.flightNumber,
-        callsign: data.callsign,
-        aircraft: data.aircraft ? normalizeAircraft(data.aircraft) : null,
-        aircraftRegistration: data.aircraftRegistration,
-        aircraftModeS: data.aircraftModeS,
-        // Use enriched departure data (fills in missing IATA/ICAO/names)
-        depIcao: enriched.departure.icao,
-        depIata: enriched.departure.iata,
-        depName: enriched.departure.name,
-        depLat: enriched.departure.lat,
-        depLon: enriched.departure.lon,
-        // Use enriched arrival data (fills in missing IATA/ICAO/names)
-        arrIcao: enriched.arrival.icao,
-        arrIata: enriched.arrival.iata,
-        arrName: enriched.arrival.name,
-        arrLat: enriched.arrival.lat,
-        arrLon: enriched.arrival.lon,
-        departureTime: departureUtc,
-        arrivalTime: arrivalUtc,
-        actualDeparture: actualDepartureUtc,
-        actualArrival: actualArrivalUtc,
-        // Default to 'UTC' (the canonical contract). Bulk-import callers can
-        // override with 'DATE_ONLY' or 'UNKNOWN' when the time component is
-        // a placeholder so downstream display/aggregation knows to estimate.
-        depTimeSemantics: data.depTimeSemantics ?? 'UTC',
-        arrTimeSemantics: data.arrTimeSemantics ?? 'UTC',
-        delayMinutes:
-          actualDepartureUtc && departureUtc
-            ? Math.round((actualDepartureUtc.getTime() - departureUtc.getTime()) / 60000)
-            : null,
-        co2Kg: calculateCo2Kg({
+    // Resolve companion names to Companion entities up front (find-or-create
+    // is idempotent via companionService, so it's safe to run outside the
+    // transaction below). The flight row and its links are written together
+    // inside a transaction so a failure never leaves the legacy `companions`
+    // array and the `companionLinks` table disagreeing.
+    const companionNames = data.companions ?? [];
+    const resolvedCompanions = await resolveCompanions(userId, companionNames);
+
+    const flight = await prisma.$transaction(async (tx) => {
+      const created = await tx.flight.create({
+        data: {
+          userId,
+          airline: data.airline,
+          airlineIata,
+          airlineIcao,
+          operatingAirline: data.operatingAirline,
+          operatingAirlineIata: data.operatingAirlineIata,
+          operatingAirlineIcao: data.operatingAirlineIcao,
+          isCodeshare: data.isCodeshare,
+          flightNumber: data.flightNumber,
+          callsign: data.callsign,
+          aircraft: data.aircraft ? normalizeAircraft(data.aircraft) : null,
+          aircraftRegistration: data.aircraftRegistration,
+          aircraftModeS: data.aircraftModeS,
+          // Use enriched departure data (fills in missing IATA/ICAO/names)
+          depIcao: enriched.departure.icao,
+          depIata: enriched.departure.iata,
+          depName: enriched.departure.name,
           depLat: enriched.departure.lat,
           depLon: enriched.departure.lon,
+          // Use enriched arrival data (fills in missing IATA/ICAO/names)
+          arrIcao: enriched.arrival.icao,
+          arrIata: enriched.arrival.iata,
+          arrName: enriched.arrival.name,
           arrLat: enriched.arrival.lat,
           arrLon: enriched.arrival.lon,
-          seatClass: toSeatClass(data.seatClass),
-        }),
-        // Haversine route distance — see flightsBatch.ts for context.
-        routeDistance: haversineKm(
-          enriched.departure.lat,
-          enriched.departure.lon,
-          enriched.arrival.lat,
-          enriched.arrival.lon,
-        ),
-        status: effectiveStatus,
-        notes: data.notes,
-        price: data.price,
-        taxes: data.taxes,
-        fees: data.fees,
-        currency: data.currency,
-        category: data.category,
-        tags: data.tags ?? [],
-        companions: data.companions ?? [],
-        receiptUrl: data.receiptUrl,
-        // Boarding pass / email import fields
-        seatNumber: data.seatNumber,
-        boardingGroup: data.boardingGroup,
-        gate: data.gate,
-        terminal: data.terminal,
-        bookingReference: data.bookingReference,
-        ticketNumber: data.ticketNumber,
-        baggageAllowance: data.baggageAllowance,
-        frequentFlyerNumber: data.frequentFlyerNumber,
-        bookingClassLetter: data.bookingClassLetter,
-        coPassengers: data.coPassengers ?? [],
-        // Data source tracking
-        dataSource: data.dataSource ?? 'manual',
-        lastModifiedBy: 'user',
-        nextApiCheckAt: calculateNextApiCheckAt(
-          departureUtc,
-          arrivalUtc,
-          effectiveStatus,
-          data.flightNumber,
-        ),
-        // Special flights (Sonder-Flüge) — non-null specialType marks
-        // this flight as a sub-type. See schemas/flight.ts for the union.
-        specialType: data.specialType ?? null,
-        eventLat: data.eventLat ?? null,
-        eventLon: data.eventLon ?? null,
-        eventLabel: data.eventLabel ?? null,
-        patternLat: data.patternLat ?? null,
-        patternLon: data.patternLon ?? null,
-        specialData:
-          data.specialData === null || data.specialData === undefined
-            ? Prisma.JsonNull
-            : (data.specialData as unknown as Prisma.InputJsonValue),
-      },
+          departureTime: departureUtc,
+          arrivalTime: arrivalUtc,
+          actualDeparture: actualDepartureUtc,
+          actualArrival: actualArrivalUtc,
+          // Default to 'UTC' (the canonical contract). Bulk-import callers can
+          // override with 'DATE_ONLY' or 'UNKNOWN' when the time component is
+          // a placeholder so downstream display/aggregation knows to estimate.
+          depTimeSemantics: data.depTimeSemantics ?? 'UTC',
+          arrTimeSemantics: data.arrTimeSemantics ?? 'UTC',
+          delayMinutes:
+            actualDepartureUtc && departureUtc
+              ? Math.round((actualDepartureUtc.getTime() - departureUtc.getTime()) / 60000)
+              : null,
+          co2Kg: calculateCo2Kg({
+            depLat: enriched.departure.lat,
+            depLon: enriched.departure.lon,
+            arrLat: enriched.arrival.lat,
+            arrLon: enriched.arrival.lon,
+            seatClass: toSeatClass(data.seatClass),
+          }),
+          // Haversine route distance — see flightsBatch.ts for context.
+          routeDistance: haversineKm(
+            enriched.departure.lat,
+            enriched.departure.lon,
+            enriched.arrival.lat,
+            enriched.arrival.lon,
+          ),
+          status: effectiveStatus,
+          notes: data.notes,
+          price: data.price,
+          taxes: data.taxes,
+          fees: data.fees,
+          currency: data.currency,
+          category: data.category,
+          tags: data.tags ?? [],
+          // Dual write: resolved display names keep this legacy array in
+          // agreement with `companionLinks` below (trimmed, blanks dropped,
+          // newest spelling wins) — the previous image still reads this column.
+          companions: resolvedCompanions.map((c) => c.displayName),
+          receiptUrl: data.receiptUrl,
+          // Boarding pass / email import fields
+          seatNumber: data.seatNumber,
+          boardingGroup: data.boardingGroup,
+          gate: data.gate,
+          terminal: data.terminal,
+          bookingReference: data.bookingReference,
+          ticketNumber: data.ticketNumber,
+          baggageAllowance: data.baggageAllowance,
+          frequentFlyerNumber: data.frequentFlyerNumber,
+          bookingClassLetter: data.bookingClassLetter,
+          coPassengers: data.coPassengers ?? [],
+          // Data source tracking
+          dataSource: data.dataSource ?? 'manual',
+          lastModifiedBy: 'user',
+          nextApiCheckAt: calculateNextApiCheckAt(
+            departureUtc,
+            arrivalUtc,
+            effectiveStatus,
+            data.flightNumber,
+          ),
+          // Special flights (Sonder-Flüge) — non-null specialType marks
+          // this flight as a sub-type. See schemas/flight.ts for the union.
+          specialType: data.specialType ?? null,
+          eventLat: data.eventLat ?? null,
+          eventLon: data.eventLon ?? null,
+          eventLabel: data.eventLabel ?? null,
+          patternLat: data.patternLat ?? null,
+          patternLon: data.patternLon ?? null,
+          specialData:
+            data.specialData === null || data.specialData === undefined
+              ? Prisma.JsonNull
+              : (data.specialData as unknown as Prisma.InputJsonValue),
+        },
+      });
+
+      if (resolvedCompanions.length > 0) {
+        await tx.flightCompanion.createMany({
+          data: linkRowsFor(resolvedCompanions.map((c) => c.id)).map((row) => ({
+            ...row,
+            flightId: created.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      return created;
     });
 
     // Check achievements after creating a flight and return newly unlocked ones
@@ -945,7 +1001,20 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.category !== undefined) updateData.category = data.category;
     if (data.seatClass !== undefined) updateData.seatClass = data.seatClass;
     if (data.tags !== undefined) updateData.tags = data.tags;
-    if (data.companions !== undefined) updateData.companions = data.companions;
+    // Replace rather than append — an update always carries the FULL
+    // companion list for the flight, so stale links must go. Resolution
+    // itself (find-or-create against Companion) is idempotent and safe to
+    // run here, outside any transaction — same reasoning as the create
+    // handler. The actual link replacement is deferred and run together
+    // with the `flight.update` call below inside one `prisma.$transaction`,
+    // so a failure between the two never leaves the legacy array and
+    // `companionLinks` disagreeing (undefined here means "untouched": the
+    // companions field was not part of this update at all).
+    let resolvedCompanionsForUpdate: { id: string; displayName: string }[] | undefined;
+    if (data.companions !== undefined) {
+      resolvedCompanionsForUpdate = await resolveCompanions(userId, data.companions);
+      updateData.companions = resolvedCompanionsForUpdate.map((c) => c.displayName);
+    }
     if (data.receiptUrl !== undefined) updateData.receiptUrl = data.receiptUrl;
 
     // Special flights (Sonder-Flüge) — explicit `null` clears, `undefined` leaves untouched
@@ -1107,9 +1176,24 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       );
     }
 
-    const flight = await prisma.flight.update({
-      where: { id, userId },
-      data: updateData,
+    const flight = await prisma.$transaction(async (tx) => {
+      if (resolvedCompanionsForUpdate !== undefined) {
+        await tx.flightCompanion.deleteMany({ where: { flightId: existingFlight.id } });
+        if (resolvedCompanionsForUpdate.length > 0) {
+          await tx.flightCompanion.createMany({
+            data: linkRowsFor(resolvedCompanionsForUpdate.map((c) => c.id)).map((row) => ({
+              ...row,
+              flightId: existingFlight.id,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      return tx.flight.update({
+        where: { id, userId },
+        data: updateData,
+      });
     });
 
     // Check achievements if status changed to flown and return newly unlocked ones.

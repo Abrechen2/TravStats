@@ -1,0 +1,7 @@
+{
+  "picker": {
+    "label": "Begleitpersonen",
+    "placeholder": "Namen eingeben und Enter drücken …",
+    "remove": "{{name}} entfernen"
+  }
+}

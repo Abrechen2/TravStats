@@ -17,6 +17,7 @@ import {
   TRIP_COLORS,
 } from "../schemas/trip";
 import logger from "../utils/logger";
+import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { detectTrips } from "../services/tripDetectionService";
 import { recomputeTripStatus } from "../services/tripStatusService";
 import {
@@ -309,33 +310,58 @@ router.post("/trips", authenticate, requireWriteScope, async (req: AuthRequest, 
       color = TRIP_COLORS[count % TRIP_COLORS.length];
     }
 
-    const trip = await prisma.trip.create({
-      data: {
-        userId,
-        name: body.name,
-        description: body.description,
-        color,
-        startDate: body.startDate,
-        endDate: body.endDate,
-        // Status derivation (spec 2026-07-17-status-from-dates) needs linked
-        // flights/cruises, which cannot exist yet — a trip must exist before
-        // anything can reference its id. So creation genuinely has no
-        // segments to derive from; the client-sent hint (or the schema
-        // default) is kept verbatim here, and recomputeTripStatus() takes
-        // over the moment segments get linked (assign-flights, bookings
-        // link, PNR auto-trip creation, trip detection).
-        status: body.status,
-        category: body.category,
-        tags: body.tags,
-        companions: body.companions,
-        notes: body.notes,
-        summary: body.summary,
-        originLabel: body.originLabel,
-        destinationLabel: body.destinationLabel,
-        coverImageUrl: body.coverImageUrl,
-        icon: body.icon,
-        countries: body.countries,
-      },
+    // Resolve companion names to Companion entities up front (find-or-create
+    // is idempotent via companionService, so it's safe to run outside the
+    // transaction below). The trip row and its links are written together
+    // inside a transaction so a failure never leaves the legacy `companions`
+    // array and the `companionLinks` table disagreeing.
+    const companionNames = body.companions ?? [];
+    const resolvedCompanions = await resolveCompanions(userId, companionNames);
+
+    const trip = await prisma.$transaction(async (tx) => {
+      const created = await tx.trip.create({
+        data: {
+          userId,
+          name: body.name,
+          description: body.description,
+          color,
+          startDate: body.startDate,
+          endDate: body.endDate,
+          // Status derivation (spec 2026-07-17-status-from-dates) needs linked
+          // flights/cruises, which cannot exist yet — a trip must exist before
+          // anything can reference its id. So creation genuinely has no
+          // segments to derive from; the client-sent hint (or the schema
+          // default) is kept verbatim here, and recomputeTripStatus() takes
+          // over the moment segments get linked (assign-flights, bookings
+          // link, PNR auto-trip creation, trip detection).
+          status: body.status,
+          category: body.category,
+          tags: body.tags,
+          // Dual write: resolved display names keep this legacy array in
+          // agreement with `companionLinks` below (trimmed, blanks dropped,
+          // newest spelling wins) — the previous image still reads this column.
+          companions: resolvedCompanions.map((c) => c.displayName),
+          notes: body.notes,
+          summary: body.summary,
+          originLabel: body.originLabel,
+          destinationLabel: body.destinationLabel,
+          coverImageUrl: body.coverImageUrl,
+          icon: body.icon,
+          countries: body.countries,
+        },
+      });
+
+      if (resolvedCompanions.length > 0) {
+        await tx.tripCompanion.createMany({
+          data: linkRowsFor(resolvedCompanions.map((c) => c.id)).map((row) => ({
+            ...row,
+            tripId: created.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      return created;
     });
 
     logger.info({ tripId: trip.id, userId }, "[Trips] Created trip");
@@ -367,25 +393,56 @@ router.patch("/trips/:id", authenticate, requireWriteScope, async (req: AuthRequ
       });
     }
 
-    const trip = await prisma.trip.update({
-      where: { id: req.params.id },
-      data: {
-        ...(body.name !== undefined && { name: body.name }),
-        ...(body.description !== undefined && { description: body.description }),
-        ...(body.color !== undefined && { color: body.color }),
-        ...(body.startDate !== undefined && { startDate: body.startDate }),
-        ...(body.endDate !== undefined && { endDate: body.endDate }),
-        ...(body.category !== undefined && { category: body.category }),
-        ...(body.tags !== undefined && { tags: body.tags }),
-        ...(body.companions !== undefined && { companions: body.companions }),
-        ...(body.notes !== undefined && { notes: body.notes }),
-        ...(body.summary !== undefined && { summary: body.summary }),
-        ...(body.originLabel !== undefined && { originLabel: body.originLabel }),
-        ...(body.destinationLabel !== undefined && { destinationLabel: body.destinationLabel }),
-        ...(body.coverImageUrl !== undefined && { coverImageUrl: body.coverImageUrl }),
-        ...(body.icon !== undefined && { icon: body.icon }),
-        ...(body.countries !== undefined && { countries: body.countries }),
-      },
+    // Replace rather than append — an update always carries the FULL
+    // companion list for the trip, so stale links must go. Resolution
+    // itself (find-or-create against Companion) is idempotent and safe to
+    // run here, outside any transaction — same reasoning as the create
+    // handler. The actual link replacement is deferred and run together
+    // with the `trip.update` call below inside one `prisma.$transaction`,
+    // so a failure between the two never leaves the legacy array and
+    // `companionLinks` disagreeing (undefined here means "untouched": the
+    // companions field was not part of this update at all).
+    let resolvedCompanionsForUpdate: { id: string; displayName: string }[] | undefined;
+    if (body.companions !== undefined) {
+      resolvedCompanionsForUpdate = await resolveCompanions(userId, body.companions);
+    }
+
+    const trip = await prisma.$transaction(async (tx) => {
+      if (resolvedCompanionsForUpdate !== undefined) {
+        await tx.tripCompanion.deleteMany({ where: { tripId: existing.id } });
+        if (resolvedCompanionsForUpdate.length > 0) {
+          await tx.tripCompanion.createMany({
+            data: linkRowsFor(resolvedCompanionsForUpdate.map((c) => c.id)).map((row) => ({
+              ...row,
+              tripId: existing.id,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      return tx.trip.update({
+        where: { id: req.params.id },
+        data: {
+          ...(body.name !== undefined && { name: body.name }),
+          ...(body.description !== undefined && { description: body.description }),
+          ...(body.color !== undefined && { color: body.color }),
+          ...(body.startDate !== undefined && { startDate: body.startDate }),
+          ...(body.endDate !== undefined && { endDate: body.endDate }),
+          ...(body.category !== undefined && { category: body.category }),
+          ...(body.tags !== undefined && { tags: body.tags }),
+          ...(resolvedCompanionsForUpdate !== undefined && {
+            companions: resolvedCompanionsForUpdate.map((c) => c.displayName),
+          }),
+          ...(body.notes !== undefined && { notes: body.notes }),
+          ...(body.summary !== undefined && { summary: body.summary }),
+          ...(body.originLabel !== undefined && { originLabel: body.originLabel }),
+          ...(body.destinationLabel !== undefined && { destinationLabel: body.destinationLabel }),
+          ...(body.coverImageUrl !== undefined && { coverImageUrl: body.coverImageUrl }),
+          ...(body.icon !== undefined && { icon: body.icon }),
+          ...(body.countries !== undefined && { countries: body.countries }),
+        },
+      });
     });
 
     res.json({ trip });
