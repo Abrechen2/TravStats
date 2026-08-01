@@ -305,6 +305,87 @@ describe("FlightEditModal", () => {
     expect(updates.ticketNumber).toBe("2202236084346");
   });
 
+  // Phase 2 Task 2 — the three fields the parser fills and no form ever
+  // showed. The untouched-save assertion is the load-bearing one: these
+  // arrive pre-filled, and a form that silently blanks a field it merely
+  // displayed would destroy data on every save.
+  it("renders the three parser-filled booking fields and an untouched save submits them unchanged", async () => {
+    const parsedFlight: Flight = {
+      ...mockFlight,
+      bookingClassLetter: "Y",
+      baggageAllowance: "23 kg",
+      frequentFlyerNumber: "992223334",
+    };
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { container, getByText } = render(
+      <FlightEditModal flight={parsedFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+    const byPlaceholder = (key: string): HTMLInputElement =>
+      container.querySelector(
+        `input[placeholder="flights:form.placeholders.${key}"]`
+      ) as HTMLInputElement;
+
+    expect(byPlaceholder("bookingClassLetter").value).toBe("Y");
+    expect(byPlaceholder("baggageAllowance").value).toBe("23 kg");
+    expect(byPlaceholder("frequentFlyerNumber").value).toBe("992223334");
+
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.bookingClassLetter).toBe("Y");
+    expect(updates.baggageAllowance).toBe("23 kg");
+    expect(updates.frequentFlyerNumber).toBe("992223334");
+  });
+
+  it("submits an edited baggage allowance, and omits the three fields when absent and untouched", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { container, getByText } = render(
+      <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+    const baggageInput = container.querySelector(
+      'input[placeholder="flights:form.placeholders.baggageAllowance"]'
+    ) as HTMLInputElement;
+    expect(baggageInput.value).toBe("");
+
+    fireEvent.change(baggageInput, { target: { value: "2 x 32 kg" } });
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.baggageAllowance).toBe("2 x 32 kg");
+    // The other two were never filled and never touched — they must be
+    // omitted, not sent as empty strings.
+    expect(updates.bookingClassLetter).toBeUndefined();
+    expect(updates.frequentFlyerNumber).toBeUndefined();
+  });
+
+  // Phase 2 Task 3 characterization — pins the price round trip BEFORE the
+  // cost fields move into the shared CostFields. Must pass unedited before
+  // and after the swap.
+  it("submits a typed price as a number, and no price at all when the field is empty", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { container, getByText } = render(
+      <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+    const priceInput = container.querySelector(
+      'input[placeholder="flights:form.placeholders.price"]'
+    ) as HTMLInputElement;
+
+    fireEvent.change(priceInput, { target: { value: "199.99" } });
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0][1].price).toBe(199.99);
+
+    onSave.mockClear();
+    fireEvent.change(priceInput, { target: { value: "" } });
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    // An empty price is OMITTED — the modal's empty-means-0 internal state
+    // must never leak a stored 0 into the flight.
+    expect(onSave.mock.calls[0][1].price).toBeUndefined();
+  });
+
   // Task 12 — the comma-separated companions text input is replaced by the
   // shared CompanionPicker.
   it("renders the existing companions as removable chips instead of a CSV text field", () => {
