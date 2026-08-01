@@ -6,9 +6,8 @@ set -euo pipefail
 
 slot="${1:-}"
 case "$slot" in
-  immich) wt=".claude/worktrees/immich-albums" ;;
   poi)    wt=".claude/worktrees/hotels" ;;
-  *) echo "usage: $0 <immich|poi>" >&2; exit 2 ;;
+  *) echo "usage: $0 <poi>" >&2; exit 2 ;;
 esac
 
 [[ -d "$wt" ]] || { echo "worktree missing: $wt" >&2; exit 1; }

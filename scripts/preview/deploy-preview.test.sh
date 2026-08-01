@@ -19,7 +19,7 @@ out=$(DRY_RUN=1 bash "$SCRIPT" beta 2>&1; echo "rc=$?")
 check "missing tag rejected" "yes" "$([[ "$out" == *"rc=2"* ]] && echo yes || echo no)"
 
 # 3. each known slot maps to its hostname
-for pair in "beta:beta.travstats.de" "immich:immich-beta.travstats.de" "poi:poi-beta.travstats.de"; do
+for pair in "beta:beta.travstats.de" "poi:poi-beta.travstats.de"; do
   slot="${pair%%:*}"; host="${pair##*:}"
   out=$(DRY_RUN=1 bash "$SCRIPT" "$slot" 9.9.9 2>&1)
   check "slot $slot -> $host" "yes" "$([[ "$out" == *"$host"* ]] && echo yes || echo no)"

@@ -10,7 +10,7 @@ set -euo pipefail
 
 NODE1="${NODE1:-192.168.178.171}"
 slot="${1:-}"
-case "$slot" in beta|immich|poi) ;; *) echo "usage: $0 <beta|immich|poi>" >&2; exit 2 ;; esac
+case "$slot" in beta|poi) ;; *) echo "usage: $0 <beta|poi>" >&2; exit 2 ;; esac
 
 ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=no "root@${NODE1}" \
   "pct exec 134 -- bash -c '
