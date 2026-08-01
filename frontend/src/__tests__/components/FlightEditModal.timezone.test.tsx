@@ -61,7 +61,19 @@ const FLIGHT: Flight = {
 };
 
 // 2026-08-14T12:35:00.000Z rendered in Asia/Tokyo (UTC+9, no DST).
-const HYDRATED_DEPARTURE_INPUT = "2026-08-14T21:35";
+// DEVIATION (Task 3, disclosed — see task-3-report.md): the departure input
+// used to be a single combined datetime-local field, so this constant and
+// the waitFor probe below checked one selector against one combined string.
+// Task 3 split the edit modal's inputs into separate date + time controls
+// (matching the create form) — a real `type="time"` input can only ever
+// hold "HH:mm", so no selector can produce the old combined string anymore.
+// This split is only the WAIT/SYNC probe (still asserting the exact same
+// hydrated Tokyo-local wall clock, just via two ids instead of one) — the
+// actual safety assertion below (the fromZonedTime round-trip against
+// payload.departureLocal/depTimezone) is completely unchanged and is what
+// actually catches a lost pairing.
+const HYDRATED_DEPARTURE_DATE = "2026-08-14";
+const HYDRATED_DEPARTURE_TIME = "21:35";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -78,12 +90,15 @@ describe("FlightEditModal timezone round trip", () => {
     render(<FlightEditModal flight={FLIGHT} isOpen onClose={() => {}} onSave={onSave} />);
 
     // Wait for the airport timezones to resolve AND the inputs to be
-    // rehydrated as airport-local (the departure input flips from the
-    // browser-local seed to the Tokyo-local wall clock). Saving before this
+    // rehydrated as airport-local (the departure inputs flip from the
+    // browser-local seed to the Tokyo-local wall clock, date AND time
+    // together — see FlightEditModal's hydration effect). Saving before this
     // point exercises the browser-local fallback branch instead.
     await waitFor(() => {
-      const input = document.querySelector("#editDepartureTime") as HTMLInputElement;
-      expect(input.value).toBe(HYDRATED_DEPARTURE_INPUT);
+      const dateInput = document.querySelector("#editDepartureDate") as HTMLInputElement;
+      const timeInput = document.querySelector("#editDepartureTime") as HTMLInputElement;
+      expect(dateInput.value).toBe(HYDRATED_DEPARTURE_DATE);
+      expect(timeInput.value).toBe(HYDRATED_DEPARTURE_TIME);
     });
 
     await userEvent.click(await screen.findByRole("button", { name: /speichern|save/i }));

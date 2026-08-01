@@ -62,6 +62,31 @@ export interface FlightSubmitOptions {
   hasMoreFlights?: boolean;
 }
 
+// Resolve a historical date string (YYYY / YYYY-MM / YYYY-MM-DD) plus an
+// optional HH:mm time into the canonical local-wall-clock submit shape.
+// Year-only  -> YYYY-01-01T00:00
+// Year+Month -> YYYY-MM-01T00:00
+// Year+Month+Day -> YYYY-MM-DDT<time|12:00>
+// Everything else falls through to the original YYYY-MM-DDT<time> path.
+//
+// Module-level (not a hook-local closure) and exported so every submit path
+// that recombines a split date+time pair (e.g. FlightEditModal) reuses this
+// exact implementation instead of writing a second one — two
+// implementations of this is precisely how the create and edit forms
+// drifted apart before the edit form's inputs were split to match.
+export function buildLocalString(date: string, time: string): string {
+  if (/^\d{4}$/.test(date)) {
+    return `${date}-01-01T00:00`;
+  }
+  if (/^\d{4}-\d{2}$/.test(date)) {
+    return `${date}-01T00:00`;
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return `${date}T${time || "12:00"}`;
+  }
+  return `${date}T${time}`;
+}
+
 export function useFlightForm(
   onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<void>,
   onCancel: () => void,
@@ -367,25 +392,6 @@ export function useFlightForm(
         : !!(departure && arrival && departureDate && arrivalDate),
     [departure, arrival, departureDate, arrivalDate, status]
   );
-
-  // Resolve a historical date string (YYYY / YYYY-MM / YYYY-MM-DD) plus an
-  // optional HH:mm time into the canonical local-wall-clock submit shape.
-  // Year-only  -> YYYY-01-01T00:00
-  // Year+Month -> YYYY-MM-01T00:00
-  // Year+Month+Day -> YYYY-MM-DDT<time|12:00>
-  // Everything else falls through to the original YYYY-MM-DDT<time> path.
-  const buildLocalString = (date: string, time: string): string => {
-    if (/^\d{4}$/.test(date)) {
-      return `${date}-01-01T00:00`;
-    }
-    if (/^\d{4}-\d{2}$/.test(date)) {
-      return `${date}-01T00:00`;
-    }
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return `${date}T${time || "12:00"}`;
-    }
-    return `${date}T${time}`;
-  };
 
   // Derive which date-precision shape a historical departure date has.
   const historicalDateShape = (
