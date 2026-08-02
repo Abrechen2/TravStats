@@ -159,9 +159,12 @@ export function useFlightForm(
   const [gate, setGate] = useState("");
   const [seatNumber, setSeatNumber] = useState("");
   const [boardingGroup, setBoardingGroup] = useState("");
-  const [seatClass, setSeatClass] = useState<"economy" | "premium_economy" | "business" | "first">(
-    "economy"
-  );
+  // "" is the explicit "(optional)" choice — submitted as null, stored as
+  // NULL. The initial value still comes from the user's settings defaults
+  // (see the effect below), so the common path is unchanged.
+  const [seatClass, setSeatClass] = useState<
+    "" | "economy" | "premium_economy" | "business" | "first"
+  >("economy");
   const [status, setStatus] = useState<"scheduled" | "flown" | "cancelled" | "historical">("flown");
   const [notes, setNotes] = useState("");
   const [price, setPrice] = useState<number | undefined>(undefined);
@@ -169,7 +172,7 @@ export function useFlightForm(
   const [taxes, setTaxes] = useState<number | undefined>(undefined);
   const [fees, setFees] = useState<number | undefined>(undefined);
   const [receiptUrl, setReceiptUrl] = useState("");
-  const [category, setCategory] = useState<"business" | "private" | "vacation">("business");
+  const [category, setCategory] = useState<"" | "business" | "private" | "vacation">("business");
   const [tags, setTags] = useState<string[]>([]);
   const [companions, setCompanions] = useState<string[]>([]);
   const [bookingReference, setBookingReference] = useState("");
@@ -467,7 +470,10 @@ export function useFlightForm(
       aircraft: aircraft || undefined,
       aircraftRegistration: trackAircraft ? lookupAircraftRegistration || undefined : undefined,
       aircraftModeS: trackAircraft ? lookupAircraftModeS || undefined : undefined,
-      seatClass: seatClass || undefined,
+      // "" = the explicit "(optional)" choice. null on the wire, NULL in the
+      // DB — undefined would let the server's column default decide instead
+      // of the user.
+      seatClass: seatClass || null,
       seatNumber: seatNumber || undefined,
       terminal: terminal || undefined,
       gate: gate || undefined,
@@ -508,7 +514,7 @@ export function useFlightForm(
       taxes,
       fees,
       receiptUrl: receiptUrl || undefined,
-      category,
+      category: category || null,
       tags: tags.length ? tags : undefined,
       companions: companions.length ? companions : undefined,
       // `|| undefined` matters here: since #199 these are editable inputs,
