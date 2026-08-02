@@ -288,6 +288,23 @@ export default function FlightEditModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    // Scheduled times are REQUIRED on a non-historical flight — unlike the
+    // clearable optional fields, blanking one of these four cannot mean
+    // "delete": a flight without scheduled times is not a meaningful state.
+    // Without this check the submit silently omitted the pair and the old
+    // instant survived — the save looked accepted while ignoring the edit.
+    if (
+      formData.status !== "historical" &&
+      (!formData.departureDate ||
+        !formData.departureTime ||
+        !formData.arrivalDate ||
+        !formData.arrivalTime)
+    ) {
+      setError(t("errors:missingTimes"));
+      return;
+    }
+
     setLoading(true);
 
     try {
