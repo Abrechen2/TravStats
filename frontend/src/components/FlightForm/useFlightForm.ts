@@ -76,7 +76,18 @@ export interface FlightSubmitOptions {
 // exact implementation instead of writing a second one — two
 // implementations of this is precisely how the create and edit forms
 // drifted apart before the edit form's inputs were split to match.
-export function buildLocalString(date: string, time: string): string {
+// `anchorDateOnly` is what separates "I only know the day" from "I cleared
+// the time". A historical flight legitimately carries a day without a clock
+// reading, and noon is its documented midpoint (the row is stamped DATE_ONLY
+// alongside). On the ordinary path a blank time means the user emptied the
+// field, and inventing noon there wrote a departure nobody entered — and,
+// via actual-vs-scheduled, a delay nobody suffered. Callers on that path get
+// `null` and must treat it as incomplete input, not as a value.
+export function buildLocalString(
+  date: string,
+  time: string,
+  opts: { anchorDateOnly?: boolean } = {},
+): string | null {
   if (/^\d{4}$/.test(date)) {
     return `${date}-01-01T00:00`;
   }
@@ -84,7 +95,8 @@ export function buildLocalString(date: string, time: string): string {
     return `${date}-01T00:00`;
   }
   if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return `${date}T${time || "12:00"}`;
+    if (time) return `${date}T${time}`;
+    return opts.anchorDateOnly ? `${date}T12:00` : null;
   }
   return `${date}T${time}`;
 }
@@ -406,13 +418,38 @@ export function useFlightForm(
     setShowFlightReview(true);
   };
 
-  // Live validation
+  // Live validation. A historical row is allowed to carry a day without a
+  // clock reading; an ordinary one is not. Blank scheduled times used to slip
+  // through here and get backfilled with noon on the way out, so the flight
+  // recorded a departure the user never typed. A half-filled actual pair
+  // (date, no time) is blocked for the same reason — it fabricated an actual
+  // departure and, with it, a delay.
+  const actualPairIncomplete =
+    (!!actualDepartureDate && !actualDepartureTime) || (!!actualArrivalDate && !actualArrivalTime);
+
   const canSubmit = useMemo(
     () =>
       status === "historical"
         ? !!(departure && arrival)
-        : !!(departure && arrival && departureDate && arrivalDate),
-    [departure, arrival, departureDate, arrivalDate, status]
+        : !!(
+            departure &&
+            arrival &&
+            departureDate &&
+            departureTime &&
+            arrivalDate &&
+            arrivalTime &&
+            !actualPairIncomplete
+          ),
+    [
+      departure,
+      arrival,
+      departureDate,
+      departureTime,
+      arrivalDate,
+      arrivalTime,
+      actualPairIncomplete,
+      status,
+    ]
   );
 
   // Pick the IANA timezone for a side. Airports cached in the DB carry an
@@ -444,6 +481,9 @@ export function useFlightForm(
       status === "historical" && depShape === "year_month_day" ? departureDate : arrivalDate;
     const effectiveArrivalTime =
       status === "historical" && depShape === "year_month_day" ? departureTime : arrivalTime;
+
+    // Only a historical row may anchor a bare day to noon; see buildLocalString.
+    const anchorDateOnly = status === "historical";
 
     return {
       departure: {
@@ -482,10 +522,13 @@ export function useFlightForm(
       // Server converts {departureLocal, depTimezone} -> real UTC via fromZonedTime.
       // No browser-side `new Date(...).toISOString()` — that would leak the
       // browser's local TZ into the payload.
-      departureLocal: departureDate ? buildLocalString(departureDate, departureTime) : undefined,
+      departureLocal: departureDate
+        ? (buildLocalString(departureDate, departureTime, { anchorDateOnly }) ?? undefined)
+        : undefined,
       depTimezone: departureDate ? depTz : undefined,
       arrivalLocal: effectiveArrivalDate
-        ? buildLocalString(effectiveArrivalDate, effectiveArrivalTime)
+        ? (buildLocalString(effectiveArrivalDate, effectiveArrivalTime, { anchorDateOnly }) ??
+          undefined)
         : undefined,
       arrTimezone: effectiveArrivalDate ? arrTz : undefined,
       // Actual departure/arrival (#200) — same undefined-when-empty contract
@@ -495,12 +538,15 @@ export function useFlightForm(
       // airport timezone as its scheduled counterpart (depTz/arrTz) since
       // actual departure happens at the departure airport and actual arrival
       // at the arrival airport, same as the scheduled times.
+      // Never anchored: an actual time is a recorded observation. A date
+      // without a clock reading is incomplete input (canSubmit blocks it),
+      // not a midpoint to guess at.
       actualDepartureLocal: actualDepartureDate
-        ? buildLocalString(actualDepartureDate, actualDepartureTime)
+        ? (buildLocalString(actualDepartureDate, actualDepartureTime) ?? undefined)
         : undefined,
       actualDepartureTz: actualDepartureDate ? depTz : undefined,
       actualArrivalLocal: actualArrivalDate
-        ? buildLocalString(actualArrivalDate, actualArrivalTime)
+        ? (buildLocalString(actualArrivalDate, actualArrivalTime) ?? undefined)
         : undefined,
       actualArrivalTz: actualArrivalDate ? arrTz : undefined,
       depTimeSemantics,
@@ -614,6 +660,13 @@ export function useFlightForm(
       setError(t("errors:missingAirports"));
       return;
     }
+    // canSubmit only greys out the button; Enter in any input still submits
+    // the form. The time rules have to hold here too, or the guard is
+    // decorative — that is how a blank required time reached the wire as noon.
+    if (!canSubmit) {
+      setError(t("errors:missingTimes"));
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -654,6 +707,13 @@ export function useFlightForm(
     e.preventDefault();
     if (!departure || !arrival) {
       setError(t("errors:missingAirports"));
+      return;
+    }
+    // canSubmit only greys out the button; Enter in any input still submits
+    // the form. The time rules have to hold here too, or the guard is
+    // decorative — that is how a blank required time reached the wire as noon.
+    if (!canSubmit) {
+      setError(t("errors:missingTimes"));
       return;
     }
     setLoading(true);

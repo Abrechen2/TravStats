@@ -305,6 +305,18 @@ export default function FlightEditModal({
       return;
     }
 
+    // An actual time is a recorded observation, so a date without its clock
+    // reading is incomplete rather than "clear it". Left unguarded this shape
+    // reached buildLocalString and came back as noon, which the server then
+    // used to recompute delayMinutes — a four-hour delay out of a blank field.
+    if (
+      (formData.actualDepartureDate && !formData.actualDepartureTime) ||
+      (formData.actualArrivalDate && !formData.actualArrivalTime)
+    ) {
+      setError(t("errors:missingTimes"));
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -374,12 +386,20 @@ export default function FlightEditModal({
         receiptUrl: formData.receiptUrl || null,
         // Recombine with the SAME buildLocalString the create form uses —
         // no second implementation of date+time recombination.
+        // Only a historical row may anchor a bare day to noon — see
+        // buildLocalString. On the ordinary path a blank time is incomplete
+        // input, and the submit guard above refuses it rather than letting a
+        // fabricated midday depart.
         departureLocal: formData.departureDate
-          ? buildLocalString(formData.departureDate, formData.departureTime)
+          ? (buildLocalString(formData.departureDate, formData.departureTime, {
+              anchorDateOnly: formData.status === "historical",
+            }) ?? undefined)
           : undefined,
         depTimezone: formData.departureDate ? submitDepTz : undefined,
         arrivalLocal: formData.arrivalDate
-          ? buildLocalString(formData.arrivalDate, formData.arrivalTime)
+          ? (buildLocalString(formData.arrivalDate, formData.arrivalTime, {
+              anchorDateOnly: formData.status === "historical",
+            }) ?? undefined)
           : undefined,
         arrTimezone: formData.arrivalDate ? submitArrTz : undefined,
         depTimeSemantics: sendSemantics,

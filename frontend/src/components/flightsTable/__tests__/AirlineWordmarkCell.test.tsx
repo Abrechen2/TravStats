@@ -23,14 +23,23 @@ it("resolves the logo from the stored airline NAME when no structured code exist
   expect(img.src).toContain("/api/v1/airline-logos/LH?variant=logo");
 });
 
-it("renders the logo with no plate behind it", () => {
+it("renders the logo on a neutral plate so a transparent mark stays visible", () => {
   const { container } = render(<AirlineWordmarkCell flight={flight} />);
   const img = container.querySelector("img");
   expect(img).toBeTruthy();
-  // The tile arrives with its own background. Anything we paint behind it is a
-  // second background — which is what shipped broken in 2.5.0-beta.1 and .2.
-  const wrapper = img!.parentElement!;
-  expect(wrapper.style.background).toBe("");
+  // Not every tier ships a tile with its own background: kiwi's Lufthansa mark
+  // is 94% transparent dark navy, and the Daisycon tail net returns transparent
+  // wordmarks. Bare on the dark UI those are invisible. The plate is a
+  // BACKGROUND, so an opaque tile covers it completely — unlike 2.5.0-beta.1,
+  // which painted it in the airline's own brand colour and hid the mark.
+  expect(img!.className).toContain("bg-white/90");
+});
+
+it("keeps the plate off the text fallback", () => {
+  render(<AirlineWordmarkCell flight={flight} />);
+  fireEvent.error(document.querySelector("img")!);
+  const text = screen.getByText("Lufthansa");
+  expect(text.className).not.toContain("bg-white");
 });
 
 it("does not fetch a manifest", async () => {

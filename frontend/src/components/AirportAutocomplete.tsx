@@ -11,6 +11,23 @@ interface AirportAutocompleteProps {
   required?: boolean;
 }
 
+/**
+ * What the input shows once an airport is picked. It used to be the bare code
+ * ("FRA"), which tells you nothing about which field holds which airport at a
+ * glance — the dropdown row already spells the name out, then the selection
+ * threw it away. Codes stay in front because they are what people type.
+ *
+ * Exported so tests and any second call site build the identical string: the
+ * change handler compares the typed text against this to decide whether the
+ * user has abandoned the selection, and a mismatch there silently clears the
+ * field on the next keystroke.
+ */
+export function airportInputLabel(airport: Pick<Airport, "iata" | "icao" | "name">): string {
+  const code = airport.iata || airport.icao;
+  if (!airport.name) return code ?? "";
+  return code ? `${code} — ${airport.name}` : airport.name;
+}
+
 export default function AirportAutocomplete({
   value,
   onChange,
@@ -49,7 +66,7 @@ export default function AirportAutocomplete({
   // Update display when value changes
   useEffect(() => {
     if (value) {
-      const display = value.iata || value.icao || value.name;
+      const display = airportInputLabel(value);
       setQuery(display);
     } else {
       // Only clear query if input is NOT focused (to avoid clearing while user is typing)
@@ -123,8 +140,7 @@ export default function AirportAutocomplete({
 
   const handleSelect = (airport: Airport) => {
     onChange(airport);
-    const display = airport.iata || airport.icao || airport.name;
-    setQuery(display);
+    setQuery(airportInputLabel(airport));
     setIsOpen(false);
   };
 
@@ -132,8 +148,10 @@ export default function AirportAutocomplete({
     const newQuery = e.target.value;
     setQuery(newQuery);
 
-    // Clear selection if user types
-    if (value && newQuery !== (value.iata || value.icao || value.name)) {
+    // Clear the selection once the text stops matching what we put there.
+    // This MUST use the same label builder as the two setQuery calls above —
+    // when they disagreed, every selection was dropped on the next keystroke.
+    if (value && newQuery !== airportInputLabel(value)) {
       onChange(null);
     }
   };

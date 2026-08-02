@@ -227,6 +227,17 @@ export interface Trip {
     | "depLon"
     | "arrLat"
     | "arrLon"
+    // Needed to render each end in ITS airport's zone. Without them the trip
+    // timeline fell back to the viewer's clock and disagreed with the flights
+    // table by the whole UTC offset.
+    | "depTimezone"
+    | "arrTimezone"
+    | "depTimeSemantics"
+    | "arrTimeSemantics"
+    // Trip cost counts flights that carry a price but no booking.
+    | "price"
+    | "currency"
+    | "bookingId"
   >[];
   cruises?: Array<{
     id: string;

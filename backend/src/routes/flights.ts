@@ -478,6 +478,12 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
           fees: data.fees,
           currency: data.currency,
           category: data.category,
+          // Persist the cabin, do not merely price its CO2. This column was
+          // missing here while `toSeatClass(data.seatClass)` fed calculateCo2Kg
+          // above, so a flight created as First Class stored a first-class CO2
+          // figure against a blank seat class. The update path always wrote it,
+          // which is why every round-trip test stayed green.
+          seatClass: data.seatClass,
           tags: data.tags ?? [],
           // Dual write: resolved display names keep this legacy array in
           // agreement with `companionLinks` below (trimmed, blanks dropped,
