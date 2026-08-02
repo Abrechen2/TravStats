@@ -301,20 +301,19 @@ export default function FlightEditModal({
 
       // Historical flights carry their precision in the date SHAPE (see the
       // HistoricalDateFields block) — mirror the create form's semantics
-      // derivation, but only send it when it actually changed, so a no-op
-      // save stays a no-op on the semantics column too.
+      // derivation. ALWAYS sent alongside departureLocal for historical
+      // flights, never conditionally: the server treats a departureLocal
+      // without explicit semantics as a real time edit and flips the column
+      // to UTC (the implicit branch flights.test.ts pins) — which the
+      // browser UAT caught silently downgrading DATE_ONLY on a year change.
       const histShape =
         formData.status === "historical" ? historicalDateShape(formData.departureDate) : "unknown";
-      const nextSemantics: FlightInput["depTimeSemantics"] =
+      const sendSemantics: FlightInput["depTimeSemantics"] =
         histShape === "year_month_day"
           ? "DATE_ONLY"
           : histShape !== "unknown"
             ? "UNKNOWN"
             : undefined;
-      const sendSemantics =
-        nextSemantics !== undefined && nextSemantics !== flight.depTimeSemantics
-          ? nextSemantics
-          : undefined;
 
       const updates: Partial<FlightInput> = {
         // Server needs lat/lon to recompute status/CO2/distance.
