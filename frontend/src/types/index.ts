@@ -297,7 +297,8 @@ export interface FlightInput {
   notes?: string;
   // Extended fields
   seatNumber?: string;
-  seatClass?: "economy" | "premium_economy" | "business" | "first";
+  /** `null` clears the stored value on update; `undefined` leaves it alone. */
+  seatClass?: "economy" | "premium_economy" | "business" | "first" | null;
   boardingGroup?: string;
   gate?: string;
   terminal?: string;
@@ -308,7 +309,8 @@ export interface FlightInput {
   currency?: string;
   taxes?: number;
   fees?: number;
-  category?: "business" | "private" | "vacation";
+  /** `null` clears the stored value on update; `undefined` leaves it alone. */
+  category?: "business" | "private" | "vacation" | null;
   tags?: string[];
   companions?: string[];
   receiptUrl?: string;

@@ -500,4 +500,111 @@ describe("FlightEditModal", () => {
       expect(screen.getByText("flights:form.tagsHint")).toBeInTheDocument();
     });
   });
+
+  // The "(optional)" choice for category and seat class must CLEAR the stored
+  // value — an explicit null on the wire, never undefined (which the server
+  // reads as "don't change" and which made the clear a silent no-op).
+  describe("clearing optional classifications", () => {
+    it("submits null for category and seatClass when '(optional)' is chosen", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const classified: Flight = {
+        ...mockFlight,
+        category: "business",
+        seatClass: "first",
+      };
+      const { getByText } = render(
+        <FlightEditModal flight={classified} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+      );
+
+      const selects = Array.from(document.querySelectorAll("select"));
+      const categorySelect = selects.find((s) =>
+        Array.from(s.options).some((o) => o.value === "vacation")
+      ) as HTMLSelectElement;
+      const seatClassSelect = selects.find((s) =>
+        Array.from(s.options).some((o) => o.value === "premium_economy")
+      ) as HTMLSelectElement;
+
+      fireEvent.change(categorySelect, { target: { value: "" } });
+      fireEvent.change(seatClassSelect, { target: { value: "" } });
+      fireEvent.click(getByText("flights:edit.saveChanges"));
+
+      await waitFor(() => expect(onSave).toHaveBeenCalled());
+      const [, updates] = onSave.mock.calls[0];
+      expect(updates.category).toBeNull();
+      expect(updates.seatClass).toBeNull();
+    });
+  });
+
+  // Historical flights use the shared HistoricalDateFields — the edit modal
+  // must expose the DAY of a DATE_ONLY flight instead of hiding it and
+  // rewriting it to 01 on any touch (the old year+month-only block's bug).
+  describe("historical date precision", () => {
+    const dateOnlyFlight: Flight = {
+      ...mockFlight,
+      status: "historical",
+      departureTime: "1998-07-15T12:00:00.000Z",
+      arrivalTime: "1998-07-15T12:00:00.000Z",
+      depTimeSemantics: "DATE_ONLY",
+      arrTimeSemantics: "DATE_ONLY",
+    };
+    const yearMonthFlight: Flight = {
+      ...mockFlight,
+      status: "historical",
+      departureTime: "1998-07-01T00:00:00.000Z",
+      arrivalTime: "1998-07-01T00:00:00.000Z",
+      depTimeSemantics: "UNKNOWN",
+      arrTimeSemantics: "UNKNOWN",
+    };
+
+    it("shows the known day of a DATE_ONLY flight in a day picker", () => {
+      render(
+        <FlightEditModal flight={dateOnlyFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+      );
+      const day = document.querySelector("#editHistoricalDay") as HTMLSelectElement;
+      expect(day).toBeTruthy();
+      expect(day.value).toBe("15");
+    });
+
+    it("changing the year keeps the known day instead of rewriting it to 01", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const { getByText } = render(
+        <FlightEditModal flight={dateOnlyFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+      );
+
+      const year = document.querySelector("#editHistoricalYear") as HTMLInputElement;
+      fireEvent.change(year, { target: { value: "1999" } });
+      fireEvent.click(getByText("flights:edit.saveChanges"));
+
+      await waitFor(() => expect(onSave).toHaveBeenCalled());
+      const [, updates] = onSave.mock.calls[0];
+      expect(updates.departureLocal).toBe("1999-07-15T12:00");
+      // Semantics unchanged (still DATE_ONLY) — so it is NOT resent.
+      expect(updates.depTimeSemantics).toBeUndefined();
+    });
+
+    it("hides the stored day-01 of an UNKNOWN flight and adding a real day upgrades to DATE_ONLY", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const { getByText } = render(
+        <FlightEditModal
+          flight={yearMonthFlight}
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={onSave}
+        />
+      );
+
+      const day = document.querySelector("#editHistoricalDay") as HTMLSelectElement;
+      // UNKNOWN semantics: the stored -01 is precision padding, not a day.
+      expect(day.value).toBe("");
+
+      fireEvent.change(day, { target: { value: "20" } });
+      fireEvent.click(getByText("flights:edit.saveChanges"));
+
+      await waitFor(() => expect(onSave).toHaveBeenCalled());
+      const [, updates] = onSave.mock.calls[0];
+      expect(updates.departureLocal).toBe("1998-07-20T12:00");
+      expect(updates.depTimeSemantics).toBe("DATE_ONLY");
+      expect(updates.arrTimeSemantics).toBe("DATE_ONLY");
+    });
+  });
 });
