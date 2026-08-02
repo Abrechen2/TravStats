@@ -3,6 +3,9 @@ import { formatInTimeZone } from "date-fns-tz";
 import type { Flight } from "../types";
 import TimesFields from "./FlightForm/fields/TimesFields";
 import RouteFields from "./FlightForm/fields/RouteFields";
+import HistoricalDateFields, {
+  historicalDateShape,
+} from "./FlightForm/fields/HistoricalDateFields";
 import CatalogueCombobox, {
   searchAirlineOptions,
   searchAircraftOptions,
@@ -85,10 +88,21 @@ export default function FlightEditModal({
   onClose,
   onSave,
 }: FlightEditModalProps): JSX.Element | null {
-  const { t, i18n } = useTranslation(["flights", "common", "errors"]);
+  const { t } = useTranslation(["flights", "common", "errors"]);
   const { features, display } = useSettingsStore();
 
+  // For a historical flight the date field holds a SHAPE string ("YYYY",
+  // "YYYY-MM" or "YYYY-MM-DD") — the same convention the create form uses,
+  // expanded by buildLocalString on submit. UNKNOWN semantics means the day
+  // was never real (year or year+month precision), so the stored day-01 is
+  // dropped from display; any other semantics keeps the full date, so a
+  // DATE_ONLY flight's known day survives an edit instead of being rewritten
+  // to 01 like the old year+month-only block did.
+  const historicalShapeFor = (fullDate: string, semantics?: string): string =>
+    semantics === "UNKNOWN" ? fullDate.slice(0, 7) : fullDate;
+
   const buildFormData = (f: Flight) => {
+    const isHistorical = f.status === "historical";
     const dep = splitLocalDatetime(f.departureTime);
     const arr = splitLocalDatetime(f.arrivalTime);
     // Actual departure/arrival (#200) — same browser-local seed as
@@ -121,10 +135,14 @@ export default function FlightEditModal({
       notes: f.notes || "",
       tags: f.tags?.join(", ") || "",
       receiptUrl: f.receiptUrl || "",
-      departureDate: dep.date,
-      departureTime: dep.time,
-      arrivalDate: arr.date,
-      arrivalTime: arr.time,
+      // Historical: shape string, empty time (buildLocalString anchors the
+      // expanded date itself — 00:00 for partial shapes, 12:00 for full).
+      departureDate: isHistorical
+        ? historicalShapeFor(dep.date, f.depTimeSemantics)
+        : dep.date,
+      departureTime: isHistorical ? "" : dep.time,
+      arrivalDate: isHistorical ? historicalShapeFor(dep.date, f.depTimeSemantics) : arr.date,
+      arrivalTime: isHistorical ? "" : arr.time,
       actualDepartureDate: actualDep.date,
       actualDepartureTime: actualDep.time,
       actualArrivalDate: actualArr.date,
@@ -238,6 +256,7 @@ export default function FlightEditModal({
   // another on the next submit. See FlightEditModal.timezone.test.tsx.
   useEffect(() => {
     if (!hydrated) return;
+    const isHistorical = flight.status === "historical";
     const dep = splitZonedDatetime(flight.departureTime, depTz);
     const arr = splitZonedDatetime(flight.arrivalTime, arrTz);
     // Actual departure/arrival (#200) join the SAME update for the same
@@ -248,10 +267,17 @@ export default function FlightEditModal({
     const actualArr = splitZonedDatetime(flight.actualArrival ?? null, arrTz);
     setFormData((prev) => ({
       ...prev,
-      departureDate: dep.date,
-      departureTime: dep.time,
-      arrivalDate: arr.date,
-      arrivalTime: arr.time,
+      // Historical flights re-derive the SHAPE string (see buildFormData) —
+      // now against the airport-local calendar date, which fixes the
+      // month-boundary shift the browser-local seed can have.
+      departureDate: isHistorical
+        ? historicalShapeFor(dep.date, flight.depTimeSemantics)
+        : dep.date,
+      departureTime: isHistorical ? "" : dep.time,
+      arrivalDate: isHistorical
+        ? historicalShapeFor(dep.date, flight.depTimeSemantics)
+        : arr.date,
+      arrivalTime: isHistorical ? "" : arr.time,
       actualDepartureDate: actualDep.date,
       actualDepartureTime: actualDep.time,
       actualArrivalDate: actualArr.date,
@@ -273,6 +299,23 @@ export default function FlightEditModal({
       const submitDepTz = hydrated ? depTz : browserTz;
       const submitArrTz = hydrated ? arrTz : browserTz;
 
+      // Historical flights carry their precision in the date SHAPE (see the
+      // HistoricalDateFields block) — mirror the create form's semantics
+      // derivation, but only send it when it actually changed, so a no-op
+      // save stays a no-op on the semantics column too.
+      const histShape =
+        formData.status === "historical" ? historicalDateShape(formData.departureDate) : "unknown";
+      const nextSemantics: FlightInput["depTimeSemantics"] =
+        histShape === "year_month_day"
+          ? "DATE_ONLY"
+          : histShape !== "unknown"
+            ? "UNKNOWN"
+            : undefined;
+      const sendSemantics =
+        nextSemantics !== undefined && nextSemantics !== flight.depTimeSemantics
+          ? nextSemantics
+          : undefined;
+
       const updates: Partial<FlightInput> = {
         // Server needs lat/lon to recompute status/CO2/distance.
         departure: departureAirport ?? undefined,
@@ -282,8 +325,11 @@ export default function FlightEditModal({
         flightNumber: formData.flightNumber || undefined,
         aircraft: formData.aircraft || undefined,
         status: formData.status as FlightInput["status"],
-        category: (formData.category || undefined) as FlightInput["category"],
-        seatClass: (formData.seatClass || undefined) as FlightInput["seatClass"],
+        // "" (the "(optional)" choice) maps to null — an explicit CLEAR on the
+        // wire. `undefined` would omit the field and the server would keep the
+        // old value while the UI showed it removed.
+        category: (formData.category || null) as FlightInput["category"],
+        seatClass: (formData.seatClass || null) as FlightInput["seatClass"],
         seatNumber: formData.seatNumber || undefined,
         gate: formData.gate || undefined,
         terminal: formData.terminal || undefined,
@@ -316,6 +362,8 @@ export default function FlightEditModal({
           ? buildLocalString(formData.arrivalDate, formData.arrivalTime)
           : undefined,
         arrTimezone: formData.arrivalDate ? submitArrTz : undefined,
+        depTimeSemantics: sendSemantics,
+        arrTimeSemantics: sendSemantics,
         // Actual departure/arrival (#200) — same undefined-when-empty
         // contract as the scheduled pair: an untouched/cleared field must
         // never submit "" or null, only omit the key entirely.
@@ -422,87 +470,24 @@ export default function FlightEditModal({
             onArrivalChange={setArrivalAirport}
           />
 
-          {/* Date & Time — year/month for historical, split date+time for others */}
+          {/* Date & Time — year/month/day for historical (shared with the
+              create form via HistoricalDateFields, so a DATE_ONLY flight's
+              known day is editable instead of being rewritten to 01),
+              split date+time for others */}
           {formData.status === "historical" ? (
-            (() => {
-              // departureDate is always day=1 for historical rows
-              // ("YYYY-MM-01"), matching the prior toLocalDatetime-based
-              // representation this replaces — only year and month are
-              // user-editable here.
-              const yearStr = formData.departureDate ? formData.departureDate.slice(0, 4) : "";
-              const monthPadded =
-                formData.departureDate.length >= 7 ? formData.departureDate.slice(5, 7) : "";
-              const monthValue = monthPadded ? String(parseInt(monthPadded, 10)) : "";
-
-              // Clearing the month (like the original behaviour) resets to
-              // January rather than dropping back to year-only — the year
-              // and month pickers here don't support a bare "YYYY" shape.
-              const applyYearMonth = (y: string, m: string): void => {
-                if (!y) {
-                  setFormData((prev) => ({
-                    ...prev,
-                    departureDate: "",
-                    departureTime: "",
-                    arrivalDate: "",
-                    arrivalTime: "",
-                  }));
-                  return;
-                }
-                const next = `${y}-${m || "01"}-01`;
+            <HistoricalDateFields
+              value={formData.departureDate}
+              onChange={(next) =>
                 setFormData((prev) => ({
                   ...prev,
                   departureDate: next,
-                  departureTime: "00:00",
                   arrivalDate: next,
-                  arrivalTime: "00:00",
-                }));
-              };
-
-              return (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="label" htmlFor="editHistoricalYear">
-                      {t("flights:historicalYear")}
-                    </label>
-                    <input
-                      id="editHistoricalYear"
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={4}
-                      placeholder={t("flights:historicalYearPlaceholder")}
-                      value={yearStr}
-                      onChange={(e) => {
-                        const y = e.target.value.replace(/\D/g, "").slice(0, 4);
-                        applyYearMonth(y, monthPadded);
-                      }}
-                      className="input"
-                    />
-                  </div>
-                  <div>
-                    <label className="label" htmlFor="editHistoricalMonth">
-                      {t("flights:historicalMonth")}
-                    </label>
-                    <select
-                      id="editHistoricalMonth"
-                      value={monthValue}
-                      onChange={(e) => {
-                        const y = yearStr || String(new Date().getFullYear());
-                        applyYearMonth(y, e.target.value ? e.target.value.padStart(2, "0") : "");
-                      }}
-                      className="input"
-                    >
-                      <option value="">{t("flights:historicalMonthNone")}</option>
-                      {Array.from({ length: 12 }, (_, i) => (
-                        <option key={i + 1} value={String(i + 1)}>
-                          {new Date(2000, i).toLocaleDateString(i18n.language, { month: "long" })}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              );
-            })()
+                  departureTime: "",
+                  arrivalTime: "",
+                }))
+              }
+              idPrefix="edit"
+            />
           ) : (
             <TimesFields
               value={{

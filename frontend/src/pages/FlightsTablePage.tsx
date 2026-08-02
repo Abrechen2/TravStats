@@ -161,7 +161,7 @@ export default function FlightsTablePage(): JSX.Element {
     }
   };
 
-  const handleUpdate = async (id: string, updates: Partial<Flight>) => {
+  const handleUpdate = async (id: string, updates: Partial<FlightInput>) => {
     try {
       await flightsApi.update(id, updates);
       addToast("success", t("flights:table.toast.updated"));
