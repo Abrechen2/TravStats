@@ -1,13 +1,15 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Airport, airportsApi } from "../../lib/api";
 import { flightsApi } from "../../lib/api/flights";
+import { tripsApi } from "../../lib/api/trips";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useToastStore } from "../../store/toastStore";
 import { storeHistoricalFlightTime, estimateFlightTimes } from "../../lib/timeEstimation";
-import type { FlightInput, ParsedBooking, UserAchievement } from "../../types";
+import type { Flight, FlightInput, ParsedBooking, UserAchievement } from "../../types";
 import type { TimeEstimationWarning } from "./FlightCompleteStep";
+import { historicalDateShape } from "./fields/HistoricalDateFields";
 
 export interface FlightLookupResult {
   flightNumber: string;
@@ -62,8 +64,36 @@ export interface FlightSubmitOptions {
   hasMoreFlights?: boolean;
 }
 
+// Resolve a historical date string (YYYY / YYYY-MM / YYYY-MM-DD) plus an
+// optional HH:mm time into the canonical local-wall-clock submit shape.
+// Year-only  -> YYYY-01-01T00:00
+// Year+Month -> YYYY-MM-01T00:00
+// Year+Month+Day -> YYYY-MM-DDT<time|12:00>
+// Everything else falls through to the original YYYY-MM-DDT<time> path.
+//
+// Module-level (not a hook-local closure) and exported so every submit path
+// that recombines a split date+time pair (e.g. FlightEditModal) reuses this
+// exact implementation instead of writing a second one — two
+// implementations of this is precisely how the create and edit forms
+// drifted apart before the edit form's inputs were split to match.
+export function buildLocalString(date: string, time: string): string {
+  if (/^\d{4}$/.test(date)) {
+    return `${date}-01-01T00:00`;
+  }
+  if (/^\d{4}-\d{2}$/.test(date)) {
+    return `${date}-01T00:00`;
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return `${date}T${time || "12:00"}`;
+  }
+  return `${date}T${time}`;
+}
+
 export function useFlightForm(
-  onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<void>,
+  // Returning the created Flight is what makes the post-create trip
+  // assignment possible; `void` keeps older callers valid (they simply get
+  // no assignment).
+  onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<Flight | void>,
   onCancel: () => void,
   onBatchComplete?: (newAchievements?: UserAchievement[]) => void
 ) {
@@ -103,6 +133,15 @@ export function useFlightForm(
   const [departureTime, setDepartureTime] = useState("12:00");
   const [arrivalDate, setArrivalDate] = useState("");
   const [arrivalTime, setArrivalTime] = useState("14:00");
+  // Actual departure/arrival (#200) — empty by default: a freshly created
+  // flight has no recorded actual time until the user (or live tracking,
+  // out of scope here) fills it in. Kept empty rather than defaulted like
+  // departureTime/arrivalTime above, since "no value yet" must stay
+  // distinguishable from "midday" — see buildFlightPayload below.
+  const [actualDepartureDate, setActualDepartureDate] = useState("");
+  const [actualDepartureTime, setActualDepartureTime] = useState("");
+  const [actualArrivalDate, setActualArrivalDate] = useState("");
+  const [actualArrivalTime, setActualArrivalTime] = useState("");
   const [airline, setAirline] = useState("");
   const [operatingAirline, setOperatingAirline] = useState("");
   const [aircraft, setAircraft] = useState("");
@@ -119,14 +158,21 @@ export function useFlightForm(
   const [terminal, setTerminal] = useState("");
   const [gate, setGate] = useState("");
   const [seatNumber, setSeatNumber] = useState("");
-  const [seatClass, setSeatClass] = useState<"economy" | "premium_economy" | "business" | "first">(
-    "economy"
-  );
+  const [boardingGroup, setBoardingGroup] = useState("");
+  // "" is the explicit "(optional)" choice — submitted as null, stored as
+  // NULL. The initial value still comes from the user's settings defaults
+  // (see the effect below), so the common path is unchanged.
+  const [seatClass, setSeatClass] = useState<
+    "" | "economy" | "premium_economy" | "business" | "first"
+  >("economy");
   const [status, setStatus] = useState<"scheduled" | "flown" | "cancelled" | "historical">("flown");
   const [notes, setNotes] = useState("");
   const [price, setPrice] = useState<number | undefined>(undefined);
   const [currency, setCurrency] = useState<string>("EUR");
-  const [category, setCategory] = useState<"business" | "private" | "vacation">("business");
+  const [taxes, setTaxes] = useState<number | undefined>(undefined);
+  const [fees, setFees] = useState<number | undefined>(undefined);
+  const [receiptUrl, setReceiptUrl] = useState("");
+  const [category, setCategory] = useState<"" | "business" | "private" | "vacation">("business");
   const [tags, setTags] = useState<string[]>([]);
   const [companions, setCompanions] = useState<string[]>([]);
   const [bookingReference, setBookingReference] = useState("");
@@ -135,6 +181,7 @@ export function useFlightForm(
   const [frequentFlyerNumber, setFrequentFlyerNumber] = useState<string | undefined>(undefined);
   const [bookingClassLetter, setBookingClassLetter] = useState<string | undefined>(undefined);
   const [coPassengers, setCoPassengers] = useState<string[]>([]);
+  const [tripId, setTripId] = useState("");
 
   // Initialize defaults from settings
   useEffect(() => {
@@ -368,35 +415,6 @@ export function useFlightForm(
     [departure, arrival, departureDate, arrivalDate, status]
   );
 
-  // Resolve a historical date string (YYYY / YYYY-MM / YYYY-MM-DD) plus an
-  // optional HH:mm time into the canonical local-wall-clock submit shape.
-  // Year-only  -> YYYY-01-01T00:00
-  // Year+Month -> YYYY-MM-01T00:00
-  // Year+Month+Day -> YYYY-MM-DDT<time|12:00>
-  // Everything else falls through to the original YYYY-MM-DDT<time> path.
-  const buildLocalString = (date: string, time: string): string => {
-    if (/^\d{4}$/.test(date)) {
-      return `${date}-01-01T00:00`;
-    }
-    if (/^\d{4}-\d{2}$/.test(date)) {
-      return `${date}-01T00:00`;
-    }
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return `${date}T${time || "12:00"}`;
-    }
-    return `${date}T${time}`;
-  };
-
-  // Derive which date-precision shape a historical departure date has.
-  const historicalDateShape = (
-    date: string
-  ): "year" | "year_month" | "year_month_day" | "unknown" => {
-    if (/^\d{4}$/.test(date)) return "year";
-    if (/^\d{4}-\d{2}$/.test(date)) return "year_month";
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return "year_month_day";
-    return "unknown";
-  };
-
   // Pick the IANA timezone for a side. Airports cached in the DB carry an
   // IANA timezone; fall back to the user's display timezone if the airport
   // record happens to be incomplete. Settings always has a string default
@@ -452,10 +470,15 @@ export function useFlightForm(
       aircraft: aircraft || undefined,
       aircraftRegistration: trackAircraft ? lookupAircraftRegistration || undefined : undefined,
       aircraftModeS: trackAircraft ? lookupAircraftModeS || undefined : undefined,
-      seatClass: seatClass || undefined,
+      // "" = the explicit "(optional)" choice. null on the wire, NULL in the
+      // DB — undefined would let the server's column default decide instead
+      // of the user.
+      seatClass: seatClass || null,
       seatNumber: seatNumber || undefined,
       terminal: terminal || undefined,
       gate: gate || undefined,
+      // Omitted when empty — "" would overwrite a parser-provided value.
+      boardingGroup: boardingGroup || undefined,
       // Server converts {departureLocal, depTimezone} -> real UTC via fromZonedTime.
       // No browser-side `new Date(...).toISOString()` — that would leak the
       // browser's local TZ into the payload.
@@ -465,6 +488,21 @@ export function useFlightForm(
         ? buildLocalString(effectiveArrivalDate, effectiveArrivalTime)
         : undefined,
       arrTimezone: effectiveArrivalDate ? arrTz : undefined,
+      // Actual departure/arrival (#200) — same undefined-when-empty contract
+      // as the scheduled pair above: leaving these blank must never emit an
+      // empty string or null, only omit the field entirely (a flight with no
+      // recorded actual time must stay that way). Paired with the SAME
+      // airport timezone as its scheduled counterpart (depTz/arrTz) since
+      // actual departure happens at the departure airport and actual arrival
+      // at the arrival airport, same as the scheduled times.
+      actualDepartureLocal: actualDepartureDate
+        ? buildLocalString(actualDepartureDate, actualDepartureTime)
+        : undefined,
+      actualDepartureTz: actualDepartureDate ? depTz : undefined,
+      actualArrivalLocal: actualArrivalDate
+        ? buildLocalString(actualArrivalDate, actualArrivalTime)
+        : undefined,
+      actualArrivalTz: actualArrivalDate ? arrTz : undefined,
       depTimeSemantics,
       arrTimeSemantics,
       status,
@@ -473,12 +511,18 @@ export function useFlightForm(
       ticketNumber: ticketNumber || undefined,
       price,
       currency,
-      category,
+      taxes,
+      fees,
+      receiptUrl: receiptUrl || undefined,
+      category: category || null,
       tags: tags.length ? tags : undefined,
       companions: companions.length ? companions : undefined,
-      baggageAllowance,
-      frequentFlyerNumber,
-      bookingClassLetter,
+      // `|| undefined` matters here: since #199 these are editable inputs,
+      // and a blanked field must be OMITTED — an empty string would
+      // overwrite a parser-provided value with nothing on the server.
+      baggageAllowance: baggageAllowance || undefined,
+      frequentFlyerNumber: frequentFlyerNumber || undefined,
+      bookingClassLetter: bookingClassLetter || undefined,
       coPassengers: coPassengers.length ? coPassengers : undefined,
     };
   };
@@ -520,6 +564,11 @@ export function useFlightForm(
     setGate("");
     setSeatNumber("");
     setNotes("");
+    // Price/taxes/fees stay (same PNR money, like the booking reference),
+    // but the receipt is cleared: it is an uploaded FILE tied to the
+    // outbound flight, and two flights referencing one stored file would
+    // break the first flight's receipt when the other deletes it.
+    setReceiptUrl("");
     setOperatingAirline("");
     setLookupCallsign("");
     setLookupAircraftRegistration("");
@@ -544,6 +593,21 @@ export function useFlightForm(
     setTimeEstimationWarning(null);
   };
 
+  /** Post-create trip assignment (#199) — a SECOND call on the Trip
+   *  relation's own endpoint, strictly after a successful create, mirroring
+   *  the edit modal's save-then-assign ordering. A failure here must not
+   *  fail the submit: the flight exists either way, so the user gets a
+   *  toast instead of a rolled-back-looking error. */
+  const maybeAssignTrip = async (created: Flight | void): Promise<void> => {
+    if (!tripId || !created?.id) return;
+    try {
+      await tripsApi.assignFlights(tripId, { flightIds: [created.id], action: "add" });
+    } catch (err) {
+      logger.warn("Failed to assign the new flight to the selected trip:", err);
+      useToastStore.getState().addToast("error", t("flights:edit.tripAssignFailed"));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!departure || !arrival) {
@@ -555,7 +619,7 @@ export function useFlightForm(
     try {
       storeHistoricalData();
       setTimeEstimationWarning(null);
-      await onSubmit(buildFlightPayload());
+      await maybeAssignTrip(await onSubmit(buildFlightPayload()));
     } catch (err: unknown) {
       const errorObj = err as {
         response?: {
@@ -597,7 +661,7 @@ export function useFlightForm(
     try {
       storeHistoricalData();
       setTimeEstimationWarning(null);
-      await onSubmit(buildFlightPayload(), { hasMoreFlights: true });
+      await maybeAssignTrip(await onSubmit(buildFlightPayload(), { hasMoreFlights: true }));
       prepareReturnFlightForm();
       useToastStore.getState().addToast("info", t("flights:form.returnFlightHint"));
     } catch (err: unknown) {
@@ -636,7 +700,7 @@ export function useFlightForm(
     try {
       storeHistoricalData();
       setTimeEstimationWarning(null);
-      await onSubmit(buildFlightPayload(), { force: true });
+      await maybeAssignTrip(await onSubmit(buildFlightPayload(), { force: true }));
     } catch (err: unknown) {
       const errorObj = err as {
         response?: { data?: { error?: string; details?: { field: string; message: string }[] } };
@@ -669,7 +733,7 @@ export function useFlightForm(
     try {
       storeHistoricalData();
       setTimeEstimationWarning(null);
-      await onSubmit(buildFlightPayload(), { merge: true });
+      await maybeAssignTrip(await onSubmit(buildFlightPayload(), { merge: true }));
     } catch (err: unknown) {
       const errorObj = err as {
         response?: { data?: { error?: string; details?: { field: string; message: string }[] } };
@@ -689,6 +753,7 @@ export function useFlightForm(
     setBaggageAllowance(sourceFlight?.baggageAllowance);
     setFrequentFlyerNumber(sourceFlight?.frequentFlyerNumber);
     setBookingClassLetter(sourceFlight?.bookingClassLetter);
+    setBoardingGroup(sourceFlight?.boardingGroup ?? "");
     setCoPassengers(sourceFlight?.coPassengers ?? []);
 
     const enrichedFlight: FlightInput = {
@@ -777,22 +842,35 @@ export function useFlightForm(
     departureTime,
     arrivalDate,
     arrivalTime,
+    actualDepartureDate,
+    actualDepartureTime,
+    actualArrivalDate,
+    actualArrivalTime,
     airline,
     operatingAirline,
     aircraft,
     terminal,
     gate,
     seatNumber,
+    boardingGroup,
     seatClass,
     status,
     notes,
     bookingReference,
     ticketNumber,
+    bookingClassLetter,
+    baggageAllowance,
+    frequentFlyerNumber,
     price,
     currency,
+    taxes,
+    fees,
+    receiptUrl,
+    tripId,
     category,
     tags,
     companions,
+    coPassengers,
     canSubmit,
     // Setters
     setLoading,
@@ -815,19 +893,31 @@ export function useFlightForm(
     setDepartureTime,
     setArrivalDate,
     setArrivalTime,
+    setActualDepartureDate,
+    setActualDepartureTime,
+    setActualArrivalDate,
+    setActualArrivalTime,
     setAirline,
     setOperatingAirline,
     setAircraft,
     setTerminal,
     setGate,
     setSeatNumber,
+    setBoardingGroup,
     setSeatClass,
     setStatus,
     setNotes,
     setBookingReference,
     setTicketNumber,
+    setBookingClassLetter,
+    setBaggageAllowance,
+    setFrequentFlyerNumber,
     setPrice,
     setCurrency,
+    setTaxes,
+    setFees,
+    setReceiptUrl,
+    setTripId,
     setCategory,
     setTags,
     setCompanions,

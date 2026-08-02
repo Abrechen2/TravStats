@@ -183,12 +183,14 @@ export function FlightsTab(): JSX.Element {
   }, []);
 
   const handleAddSubmit = useCallback(
-    async (flight: FlightInput, opts?: FlightSubmitOptions): Promise<void> => {
+    async (flight: FlightInput, opts?: FlightSubmitOptions): Promise<Flight> => {
       try {
-        await flightsApi.create(flight, opts);
+        const created = await flightsApi.create(flight, opts);
         addToast("success", t("flights:table.toast.updated"));
         setShowAddFlight(false);
         await refreshAll();
+        // Flows back into the form's post-create trip assignment (#199).
+        return created;
       } catch (err: unknown) {
         logger.error("FlightsTab: add failed", err);
         throw err;
@@ -198,7 +200,7 @@ export function FlightsTab(): JSX.Element {
   );
 
   const handleFlightSave = useCallback(
-    async (id: string, updates: Partial<Flight>): Promise<void> => {
+    async (id: string, updates: Partial<FlightInput>): Promise<void> => {
       await flightsApi.update(id, updates);
       await refreshAll();
       setEditingFlight(null);
