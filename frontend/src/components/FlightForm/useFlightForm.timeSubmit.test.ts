@@ -122,7 +122,12 @@ describe("useFlightForm departure/arrival time submit (Task 3b characterization)
     expect(payload.arrTimezone).toBe("America/New_York");
   });
 
-  it("falls back to the 12:00 placeholder when a date is filled but the time is left empty", async () => {
+  // This case used to assert the opposite — that a blank time became 12:00.
+  // A beta UAT showed what that meant in the wild: the form accepted an empty
+  // required time, sent noon, and the flight recorded a departure nobody had
+  // entered. On the ordinary (non-historical) path an empty scheduled time is
+  // incomplete input, so the form must refuse to submit at all.
+  it("refuses to submit an empty required time instead of inventing noon", async () => {
     const { result } = renderHook(() => useFlightForm(onSubmit, vi.fn()));
 
     act(() => {
@@ -134,15 +139,38 @@ describe("useFlightForm departure/arrival time submit (Task 3b characterization)
       result.current.setArrivalTime("");
     });
 
+    expect(result.current.canSubmit).toBe(false);
+
     await act(async () => {
       await result.current.handleSubmit(submitEvent());
     });
 
-    expect(onSubmit).toHaveBeenCalledTimes(1);
-    const payload = onSubmit.mock.calls[0][0];
-    expect(payload.departureLocal).toBe("2026-08-14T12:00");
-    expect(payload.depTimezone).toBe("Asia/Tokyo");
-    expect(payload.arrivalLocal).toBe("2026-08-14T12:00");
-    expect(payload.arrTimezone).toBe("America/New_York");
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  // Same fabrication, reached through the actual-times pair: a recorded
+  // actual departure is an observation, and noon is not one. Left unguarded
+  // the server recomputed delayMinutes from the invented time.
+  it("refuses a half-filled actual-time pair rather than fabricating one", async () => {
+    const { result } = renderHook(() => useFlightForm(onSubmit, vi.fn()));
+
+    act(() => {
+      result.current.setDeparture(makeAirport("HND", "Asia/Tokyo"));
+      result.current.setArrival(makeAirport("JFK", "America/New_York"));
+      result.current.setDepartureDate("2026-08-14");
+      result.current.setDepartureTime("08:00");
+      result.current.setArrivalDate("2026-08-14");
+      result.current.setArrivalTime("09:00");
+      result.current.setActualDepartureDate("2026-08-14");
+      result.current.setActualDepartureTime("");
+    });
+
+    expect(result.current.canSubmit).toBe(false);
+
+    await act(async () => {
+      await result.current.handleSubmit(submitEvent());
+    });
+
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 });
