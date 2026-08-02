@@ -39,14 +39,14 @@ const router = Router();
 
 // Interface for flight update data
 interface FlightUpdateData {
-  airline?: string;
+  airline?: string | null;
   airlineIata?: string | null;
   airlineIcao?: string | null;
   operatingAirline?: string | null;
   operatingAirlineIata?: string | null;
   operatingAirlineIcao?: string | null;
   isCodeshare?: boolean | null;
-  flightNumber?: string;
+  flightNumber?: string | null;
   callsign?: string | null;
   aircraft?: string | null;
   aircraftRegistration?: string | null;
@@ -93,15 +93,15 @@ interface FlightUpdateData {
   specialData?: Prisma.InputJsonValue | Prisma.NullTypes.JsonNull;
   // Boarding pass / email import fields — written on POST, must also be
   // updatable via PUT. Their absence here was a silent-drop bug.
-  seatNumber?: string;
-  boardingGroup?: string;
-  gate?: string;
-  terminal?: string;
-  bookingReference?: string;
-  ticketNumber?: string;
-  baggageAllowance?: string;
-  frequentFlyerNumber?: string;
-  bookingClassLetter?: string;
+  seatNumber?: string | null;
+  boardingGroup?: string | null;
+  gate?: string | null;
+  terminal?: string | null;
+  bookingReference?: string | null;
+  ticketNumber?: string | null;
+  baggageAllowance?: string | null;
+  frequentFlyerNumber?: string | null;
+  bookingClassLetter?: string | null;
   coPassengers?: string[];
   dataSource?: string;
 }
@@ -970,7 +970,16 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     }
 
     const updateData: FlightUpdateData = {};
-    if (data.airline) updateData.airline = data.airline;
+    // `!== undefined`, not truthy: an explicit null CLEARS the airline. The
+    // resolved IATA/ICAO codes must go with it — leaving them standing would
+    // keep logos and stats pointing at an airline the row no longer names.
+    if (data.airline !== undefined) {
+      updateData.airline = data.airline;
+      if (data.airline === null && data.airlineIata === undefined && data.airlineIcao === undefined) {
+        updateData.airlineIata = null;
+        updateData.airlineIcao = null;
+      }
+    }
     
     // Resolve airline codes if name provided but IATA/ICAO missing
     let airlineIata = data.airlineIata;
@@ -984,11 +993,23 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     }
     if (airlineIata !== undefined) updateData.airlineIata = airlineIata;
     if (airlineIcao !== undefined) updateData.airlineIcao = airlineIcao;
-    if (data.operatingAirline !== undefined) updateData.operatingAirline = data.operatingAirline;
+    if (data.operatingAirline !== undefined) {
+      updateData.operatingAirline = data.operatingAirline;
+      // Same cascade as airline above: a cleared operating airline must not
+      // leave its resolved codes behind.
+      if (
+        data.operatingAirline === null &&
+        data.operatingAirlineIata === undefined &&
+        data.operatingAirlineIcao === undefined
+      ) {
+        updateData.operatingAirlineIata = null;
+        updateData.operatingAirlineIcao = null;
+      }
+    }
     if (data.operatingAirlineIata !== undefined) updateData.operatingAirlineIata = data.operatingAirlineIata;
     if (data.operatingAirlineIcao !== undefined) updateData.operatingAirlineIcao = data.operatingAirlineIcao;
     if (data.isCodeshare !== undefined) updateData.isCodeshare = data.isCodeshare;
-    if (data.flightNumber) updateData.flightNumber = data.flightNumber;
+    if (data.flightNumber !== undefined) updateData.flightNumber = data.flightNumber;
     if (data.callsign !== undefined) updateData.callsign = data.callsign;
     if (data.aircraft !== undefined) updateData.aircraft = data.aircraft ? normalizeAircraft(data.aircraft) : data.aircraft;
     if (data.aircraftRegistration !== undefined) updateData.aircraftRegistration = data.aircraftRegistration;

@@ -319,38 +319,42 @@ export default function FlightEditModal({
         // Server needs lat/lon to recompute status/CO2/distance.
         departure: departureAirport ?? undefined,
         arrival: arrivalAirport ?? undefined,
-        airline: formData.airline || undefined,
-        operatingAirline: formData.operatingAirline || undefined,
-        flightNumber: formData.flightNumber || undefined,
-        aircraft: formData.aircraft || undefined,
+        // For every text/number field below: "" (a blanked input) maps to
+        // null — an explicit CLEAR on the wire. undefined would omit the
+        // field and the server would keep the old value while the UI showed
+        // it removed. Same contract the category/seatClass fix established.
+        airline: formData.airline || null,
+        operatingAirline: formData.operatingAirline || null,
+        flightNumber: formData.flightNumber || null,
+        aircraft: formData.aircraft || null,
         status: formData.status as FlightInput["status"],
         // "" (the "(optional)" choice) maps to null — an explicit CLEAR on the
         // wire. `undefined` would omit the field and the server would keep the
         // old value while the UI showed it removed.
         category: (formData.category || null) as FlightInput["category"],
         seatClass: (formData.seatClass || null) as FlightInput["seatClass"],
-        seatNumber: formData.seatNumber || undefined,
-        gate: formData.gate || undefined,
-        terminal: formData.terminal || undefined,
-        boardingGroup: formData.boardingGroup || undefined,
-        bookingReference: formData.bookingReference || undefined,
-        ticketNumber: formData.ticketNumber || undefined,
-        bookingClassLetter: formData.bookingClassLetter || undefined,
-        baggageAllowance: formData.baggageAllowance || undefined,
-        frequentFlyerNumber: formData.frequentFlyerNumber || undefined,
+        seatNumber: formData.seatNumber || null,
+        gate: formData.gate || null,
+        terminal: formData.terminal || null,
+        boardingGroup: formData.boardingGroup || null,
+        bookingReference: formData.bookingReference || null,
+        ticketNumber: formData.ticketNumber || null,
+        bookingClassLetter: formData.bookingClassLetter || null,
+        baggageAllowance: formData.baggageAllowance || null,
+        frequentFlyerNumber: formData.frequentFlyerNumber || null,
         companions: formData.companions,
-        price: formData.price > 0 ? formData.price : undefined,
+        price: formData.price > 0 ? formData.price : null,
         currency: formData.currency as FlightInput["currency"],
-        taxes: formData.taxes > 0 ? formData.taxes : undefined,
-        fees: formData.fees > 0 ? formData.fees : undefined,
-        notes: formData.notes || undefined,
+        taxes: formData.taxes > 0 ? formData.taxes : null,
+        fees: formData.fees > 0 ? formData.fees : null,
+        notes: formData.notes || null,
         tags: formData.tags
           ? formData.tags
               .split(",")
               .map((tag) => tag.trim())
               .filter(Boolean)
           : [],
-        receiptUrl: formData.receiptUrl || undefined,
+        receiptUrl: formData.receiptUrl || null,
         // Recombine with the SAME buildLocalString the create form uses —
         // no second implementation of date+time recombination.
         departureLocal: formData.departureDate

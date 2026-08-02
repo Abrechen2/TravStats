@@ -264,6 +264,98 @@ describe('Flights API', () => {
       expect(untouched.body.flight.seatClass).toBeNull();
     });
 
+    // The whole clear-family: every optional text/number field the edit
+    // modal renders must be clearable with an explicit null. Before the
+    // schema turned nullable, the frontend could only omit a blanked field
+    // and the PUT silently kept the old value.
+    it('clears every optional detail field with an explicit null, cascading airline codes', async () => {
+      const created = await request(app)
+        .post('/api/v1/flights')
+        .set('Cookie', authCookie)
+        .send({
+          airline: 'Lufthansa',
+          airlineIata: 'LH',
+          airlineIcao: 'DLH',
+          operatingAirline: 'Eurowings',
+          flightNumber: 'LH900',
+          aircraft: 'A320',
+          departure: { icao: 'EDDF', iata: 'FRA', lat: 50.0379, lon: 8.5622 },
+          arrival: { icao: 'EGLL', iata: 'LHR', lat: 51.47, lon: -0.4543 },
+          departureLocal: '2025-05-01T10:00',
+          depTimezone: 'Europe/Berlin',
+          arrivalLocal: '2025-05-01T11:00',
+          arrTimezone: 'Europe/London',
+          status: 'scheduled',
+          seatNumber: '1A',
+          boardingGroup: '1',
+          gate: 'A1',
+          terminal: '1',
+          bookingReference: 'REF1',
+          ticketNumber: 'TKT1',
+          baggageAllowance: '23kg',
+          frequentFlyerNumber: 'FF1',
+          bookingClassLetter: 'Y',
+          notes: 'note',
+          price: 100,
+          taxes: 10,
+          fees: 5,
+        })
+        .expect(201);
+
+      const flightId = created.body.flight.id;
+
+      const cleared = await request(app)
+        .put(`/api/v1/flights/${flightId}`)
+        .set('Cookie', authCookie)
+        .send({
+          airline: null,
+          operatingAirline: null,
+          flightNumber: null,
+          aircraft: null,
+          seatNumber: null,
+          boardingGroup: null,
+          gate: null,
+          terminal: null,
+          bookingReference: null,
+          ticketNumber: null,
+          baggageAllowance: null,
+          frequentFlyerNumber: null,
+          bookingClassLetter: null,
+          notes: null,
+          price: null,
+          taxes: null,
+          fees: null,
+        })
+        .expect(200);
+
+      const f = cleared.body.flight;
+      for (const field of [
+        'airline',
+        'operatingAirline',
+        'flightNumber',
+        'aircraft',
+        'seatNumber',
+        'boardingGroup',
+        'gate',
+        'terminal',
+        'bookingReference',
+        'ticketNumber',
+        'baggageAllowance',
+        'frequentFlyerNumber',
+        'bookingClassLetter',
+        'notes',
+        'price',
+        'taxes',
+        'fees',
+      ]) {
+        expect(f[field]).toBeNull();
+      }
+      // Clearing the airline must not leave its resolved codes behind —
+      // logos and stats key off them.
+      expect(f.airlineIata).toBeNull();
+      expect(f.airlineIcao).toBeNull();
+    });
+
     // The category column used to carry @default("private"): a POST that
     // omitted the field silently classified the flight as private while the
     // UI's own default suggested business — two systems, two opinions. With

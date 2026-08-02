@@ -303,9 +303,13 @@ export default function SpecialFlightModal({
     | "status"
   > => ({
     ...resolveTimesAndStatus(),
-    notes: notes.trim() || undefined,
-    tags: tagsCsv ? csvToArray(tagsCsv) : undefined,
-    companions: companions.length ? companions : undefined,
+    // This builder feeds BOTH create and update. null (not undefined) for a
+    // blanked field, and always-real arrays: on update, undefined means
+    // "keep the old value" server-side, which made clearing the notes, the
+    // tags or the last companion a silent no-op in edit mode.
+    notes: notes.trim() || null,
+    tags: tagsCsv ? csvToArray(tagsCsv) : [],
+    companions,
   });
 
   const buildSightseeingInput = (): FlightInput | null => {
@@ -318,7 +322,7 @@ export default function SpecialFlightModal({
       specialType: "sightseeing",
       departure: departureAirport,
       arrival: departureAirport,
-      aircraft: aircraft.trim() || undefined,
+      aircraft: aircraft.trim() || null,
     };
   };
 
@@ -358,9 +362,9 @@ export default function SpecialFlightModal({
       specialType: eventSubtypeToSpecialType(eventSubtype),
       departure: departureAirport,
       arrival: arrivalAirport ?? departureAirport,
-      eventLat: eventLat === "" ? undefined : latNum,
-      eventLon: eventLon === "" ? undefined : lonNum,
-      eventLabel: eventLabel.trim() || undefined,
+      eventLat: eventLat === "" ? null : latNum,
+      eventLon: eventLon === "" ? null : lonNum,
+      eventLabel: eventLabel.trim() || null,
     };
   };
 

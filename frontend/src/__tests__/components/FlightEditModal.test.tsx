@@ -260,7 +260,10 @@ describe("FlightEditModal", () => {
     expect(updates.aircraft).toBe("Airbus A330-900");
   });
 
-  it("submits a cleared airline as undefined (field omitted), not as an empty string", async () => {
+  // CONTRACT CHANGE 2026-08-02: a cleared field submits an explicit null
+  // (clear on the wire), no longer undefined — undefined told the server to
+  // keep the old value, which made clearing a silent no-op.
+  it("submits a cleared airline as null (explicit clear), not as an empty string", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     const { container, getByText } = render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
@@ -275,7 +278,7 @@ describe("FlightEditModal", () => {
 
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     const [, updates] = onSave.mock.calls[0];
-    expect(updates.airline).toBeUndefined();
+    expect(updates.airline).toBeNull();
   });
 
   // Phase 2 Task 2 characterization — pins the typed booking-reference and
@@ -338,7 +341,7 @@ describe("FlightEditModal", () => {
     expect(updates.frequentFlyerNumber).toBe("992223334");
   });
 
-  it("submits an edited baggage allowance, and omits the three fields when absent and untouched", async () => {
+  it("submits an edited baggage allowance; absent untouched fields submit null (idempotent clear)", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     const { container, getByText } = render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
@@ -354,16 +357,17 @@ describe("FlightEditModal", () => {
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     const [, updates] = onSave.mock.calls[0];
     expect(updates.baggageAllowance).toBe("2 x 32 kg");
-    // The other two were never filled and never touched — they must be
-    // omitted, not sent as empty strings.
-    expect(updates.bookingClassLetter).toBeUndefined();
-    expect(updates.frequentFlyerNumber).toBeUndefined();
+    // The other two were never filled and never touched — they submit null,
+    // never "": for a field that is already NULL in the DB that is an
+    // idempotent clear, while an empty string would overwrite NULL with "".
+    expect(updates.bookingClassLetter).toBeNull();
+    expect(updates.frequentFlyerNumber).toBeNull();
   });
 
   // Phase 2 Task 3 characterization — pins the price round trip BEFORE the
   // cost fields move into the shared CostFields. Must pass unedited before
   // and after the swap.
-  it("submits a typed price as a number, and no price at all when the field is empty", async () => {
+  it("submits a typed price as a number, and null when the field is empty", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     const { container, getByText } = render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
@@ -381,9 +385,9 @@ describe("FlightEditModal", () => {
     fireEvent.change(priceInput, { target: { value: "" } });
     fireEvent.click(getByText("flights:edit.saveChanges"));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
-    // An empty price is OMITTED — the modal's empty-means-0 internal state
-    // must never leak a stored 0 into the flight.
-    expect(onSave.mock.calls[0][1].price).toBeUndefined();
+    // An empty price submits null — an explicit clear. The modal's
+    // empty-means-0 internal state must still never leak a stored 0.
+    expect(onSave.mock.calls[0][1].price).toBeNull();
   });
 
   // Task 12 — the comma-separated companions text input is replaced by the
@@ -533,6 +537,54 @@ describe("FlightEditModal", () => {
       expect(updates.category).toBeNull();
       expect(updates.seatClass).toBeNull();
     });
+  });
+
+  // The same wire contract for the text and number fields: blanked input →
+  // explicit null. undefined would be read server-side as "don't change".
+  it("submits null for blanked text and cost fields", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const filled: Flight = {
+      ...mockFlight,
+      aircraft: "A320",
+      seatNumber: "1A",
+      gate: "A1",
+      terminal: "1",
+      boardingGroup: "2",
+      bookingReference: "REF1",
+      ticketNumber: "TKT1",
+      notes: "note",
+      price: 100,
+    };
+    const { getByText } = render(
+      <FlightEditModal flight={filled} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+
+    for (const placeholder of [
+      "flights:form.placeholders.aircraft",
+      "flights:form.placeholders.seat",
+      "flights:form.placeholders.gate",
+      "flights:form.placeholders.terminal",
+      "flights:form.placeholders.boardingGroup",
+      "flights:form.placeholders.bookingReference",
+      "flights:form.placeholders.ticketNumber",
+      "flights:form.placeholders.notes",
+    ]) {
+      fireEvent.change(screen.getByPlaceholderText(placeholder), { target: { value: "" } });
+    }
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.aircraft).toBeNull();
+    expect(updates.seatNumber).toBeNull();
+    expect(updates.gate).toBeNull();
+    expect(updates.terminal).toBeNull();
+    expect(updates.boardingGroup).toBeNull();
+    expect(updates.bookingReference).toBeNull();
+    expect(updates.ticketNumber).toBeNull();
+    expect(updates.notes).toBeNull();
+    // Price was hydrated to 100 but not touched — it must survive.
+    expect(updates.price).toBe(100);
   });
 
   // Historical flights use the shared HistoricalDateFields — the edit modal
