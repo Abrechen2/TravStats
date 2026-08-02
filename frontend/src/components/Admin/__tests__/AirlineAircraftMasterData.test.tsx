@@ -21,14 +21,20 @@ vi.mock("../../../hooks/useTranslation", () => ({
   }),
 }));
 
-const { search, create } = vi.hoisted(() => ({
+const { search, create, airportSearch, airportCreate } = vi.hoisted(() => ({
   search: vi.fn(),
   create: vi.fn(),
+  airportSearch: vi.fn(),
+  airportCreate: vi.fn(),
 }));
 
 vi.mock("../../../lib/api/catalogue", () => ({
   airlinesApi: { search, create },
   aircraftApi: { search: vi.fn().mockResolvedValue([]), create: vi.fn() },
+}));
+
+vi.mock("../../../lib/api/airports", () => ({
+  airportsApi: { search: airportSearch, create: airportCreate },
 }));
 
 const addToast = vi.fn();
@@ -68,11 +74,87 @@ describe("AirlineAircraftMasterData", () => {
     expect(within(airlineSection).getByRole("button", { name: "Hinzufügen" })).toBeInTheDocument();
   });
 
+  // #191 — the airports section, completing the flight master-data page.
+  it("renders the airports section, searches on input, and creates via the form", async () => {
+    const user = (await import("@testing-library/user-event")).default;
+    airportSearch.mockResolvedValue([
+      {
+        id: 7,
+        iata: "UET",
+        icao: "EDHE",
+        name: "Uetersen",
+        city: "Uetersen",
+        country: "DE",
+        lat: 53.6,
+        lon: 9.7,
+        isUserAdded: true,
+      },
+    ]);
+    airportCreate.mockResolvedValue({
+      id: 8,
+      name: "Testfeld",
+      lat: 48.1,
+      lon: 11.2,
+      isUserAdded: true,
+    });
+    render(<AirlineAircraftMasterData />);
+    await screen.findByText("Lufthansa");
+
+    const section = screen
+      .getByRole("heading", { name: /Flughäfen/ })
+      .closest("section") as HTMLElement;
+
+    // Search needs ≥2 chars, then lists the hit with the user-added badge.
+    await user.type(
+      within(section).getByPlaceholderText("Flughafen, IATA oder ICAO suchen …"),
+      "ue"
+    );
+    expect(await within(section).findByText("Uetersen")).toBeInTheDocument();
+    expect(within(section).getByText("Benutzerdefiniert")).toBeInTheDocument();
+    await waitFor(() => expect(airportSearch).toHaveBeenCalledWith("ue"));
+
+    // Create: name + coordinates are enough (codeless private airfield).
+    await user.type(within(section).getByPlaceholderText("Name"), "Testfeld");
+    await user.type(within(section).getByPlaceholderText("Breite"), "48.1");
+    await user.type(within(section).getByPlaceholderText("Länge"), "11.2");
+    await user.click(within(section).getByRole("button", { name: "Hinzufügen" }));
+
+    await waitFor(() =>
+      expect(airportCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "Testfeld", lat: 48.1, lon: 11.2 })
+      )
+    );
+    expect(addToast).toHaveBeenCalledWith("success", "Flughafen angelegt.");
+  });
+
+  it("rejects non-numeric coordinates before hitting the API", async () => {
+    const user = (await import("@testing-library/user-event")).default;
+    airportSearch.mockResolvedValue([]);
+    render(<AirlineAircraftMasterData />);
+    await screen.findByText("Lufthansa");
+
+    const section = screen
+      .getByRole("heading", { name: /Flughäfen/ })
+      .closest("section") as HTMLElement;
+    await user.type(within(section).getByPlaceholderText("Name"), "Testfeld");
+    await user.type(within(section).getByPlaceholderText("Breite"), "abc");
+    await user.type(within(section).getByPlaceholderText("Länge"), "11.2");
+    await user.click(within(section).getByRole("button", { name: "Hinzufügen" }));
+
+    expect(airportCreate).not.toHaveBeenCalled();
+    expect(addToast).toHaveBeenCalledWith(
+      "error",
+      expect.stringContaining("Koordinaten müssen Zahlen sein")
+    );
+  });
+
   it("renders the aircraft section with its own add form", async () => {
     render(<AirlineAircraftMasterData />);
     await screen.findByText("Lufthansa");
 
-    expect(screen.getByRole("heading", { name: /Flugzeugtypen/ })).toBeInTheDocument();
-    expect(screen.getByText("Keine Treffer.")).toBeInTheDocument();
+    const section = screen
+      .getByRole("heading", { name: /Flugzeugtypen/ })
+      .closest("section") as HTMLElement;
+    expect(within(section).getByText("Keine Treffer.")).toBeInTheDocument();
   });
 });

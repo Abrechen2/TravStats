@@ -394,6 +394,8 @@ export interface Airport {
   timezone?: string;
   /** True if the airport is permanently closed (e.g. Berlin Tegel TXL). */
   isClosed?: boolean;
+  /** Manually added via the admin master-data page (#191); survives re-seeds. */
+  isUserAdded?: boolean;
 }
 
 // ==================== Template Interfaces ====================
