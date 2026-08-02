@@ -587,6 +587,43 @@ describe("FlightEditModal", () => {
     expect(updates.price).toBe(100);
   });
 
+  // Scheduled times are required — blanking one must produce a visible
+  // error, not a save that silently keeps the old instant while looking
+  // accepted. (The optional fields clear with null; these four cannot mean
+  // "delete", so validation is the honest response.)
+  describe("scheduled times are required", () => {
+    it("blanking the departure time blocks the save and shows an error", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const { getByText } = render(
+        <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+      );
+
+      const timeInput = document.querySelector("#editDepartureTime") as HTMLInputElement;
+      fireEvent.change(timeInput, { target: { value: "" } });
+      fireEvent.click(getByText("flights:edit.saveChanges"));
+
+      expect(await screen.findByText("errors:missingTimes")).toBeInTheDocument();
+      expect(onSave).not.toHaveBeenCalled();
+    });
+
+    it("a historical flight saves without any time fields", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const historical: Flight = {
+        ...mockFlight,
+        status: "historical",
+        depTimeSemantics: "UNKNOWN",
+        arrTimeSemantics: "UNKNOWN",
+      };
+      const { getByText } = render(
+        <FlightEditModal flight={historical} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+      );
+
+      fireEvent.click(getByText("flights:edit.saveChanges"));
+
+      await waitFor(() => expect(onSave).toHaveBeenCalled());
+    });
+  });
+
   // Historical flights use the shared HistoricalDateFields — the edit modal
   // must expose the DAY of a DATE_ONLY flight instead of hiding it and
   // rewriting it to 01 on any touch (the old year+month-only block's bug).
