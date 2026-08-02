@@ -163,6 +163,19 @@ Flight payloads are additionally built outside any form by:
 `DashboardLayout` and `FlightsTab` import only `type { FlightSubmitOptions }`
 from `useFlightForm`; the hook itself is used solely by `SimplifiedFlightFormV2`.
 
+> **Correction (2026-08-02, found by the phase 2 gate's grep proof).** This
+> inventory missed a form. `components/FlightReviewModal.tsx` (772 lines,
+> mounted from `SimplifiedFlightFormV2.tsx:249`) is a THIRD flight form — the
+> parser-review step — and it renders its own airport pickers, booking
+> reference, ticket number, price, taxes and fees inputs, none of them from
+> `FlightForm/fields/`. Both passes that built this list read past it, so
+> "unification" as scoped by phases 1 and 2 covers two of three forms.
+> Absorbing the third is not a mechanical swap: its inputs carry parser
+> decoration the shared components do not model — a per-field source border
+> (`getFieldBorderClass`: template/llm/empty), the inferred-value badge, and
+> the confidence colouring. That needs its own spec pass, and the decision to
+> take it on is separate from shipping these two phases.
+
 ### The API contract is already what the unified form needs
 
 Both POST and PUT take `departure` / `arrival` **objects** with required
