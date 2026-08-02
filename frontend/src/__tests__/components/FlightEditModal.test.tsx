@@ -578,8 +578,10 @@ describe("FlightEditModal", () => {
       await waitFor(() => expect(onSave).toHaveBeenCalled());
       const [, updates] = onSave.mock.calls[0];
       expect(updates.departureLocal).toBe("1999-07-15T12:00");
-      // Semantics unchanged (still DATE_ONLY) — so it is NOT resent.
-      expect(updates.depTimeSemantics).toBeUndefined();
+      // Semantics ALWAYS accompanies a historical departureLocal — without
+      // it the server's implicit branch flips the column to UTC (browser
+      // UAT finding, 2026-08-02).
+      expect(updates.depTimeSemantics).toBe("DATE_ONLY");
     });
 
     it("hides the stored day-01 of an UNKNOWN flight and adding a real day upgrades to DATE_ONLY", async () => {
