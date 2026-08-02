@@ -356,6 +356,41 @@ describe('Flights API', () => {
       expect(f.airlineIcao).toBeNull();
     });
 
+    it('clears a recorded actual departure/arrival with null, and resets the delay', async () => {
+      const created = await request(app)
+        .post('/api/v1/flights')
+        .set('Cookie', authCookie)
+        .send({
+          airline: 'Lufthansa',
+          flightNumber: 'LH901',
+          departure: { icao: 'EDDF', iata: 'FRA', lat: 50.0379, lon: 8.5622 },
+          arrival: { icao: 'EGLL', iata: 'LHR', lat: 51.47, lon: -0.4543 },
+          departureLocal: '2025-05-02T10:00',
+          depTimezone: 'Europe/Berlin',
+          arrivalLocal: '2025-05-02T11:00',
+          arrTimezone: 'Europe/London',
+          status: 'flown',
+          actualDepartureLocal: '2025-05-02T10:25',
+          actualDepartureTz: 'Europe/Berlin',
+          actualArrivalLocal: '2025-05-02T11:20',
+          actualArrivalTz: 'Europe/London',
+        })
+        .expect(201);
+
+      expect(created.body.flight.actualDeparture).not.toBeNull();
+      expect(created.body.flight.delayMinutes).toBe(25);
+
+      const cleared = await request(app)
+        .put(`/api/v1/flights/${created.body.flight.id}`)
+        .set('Cookie', authCookie)
+        .send({ actualDepartureLocal: null, actualArrivalLocal: null })
+        .expect(200);
+
+      expect(cleared.body.flight.actualDeparture).toBeNull();
+      expect(cleared.body.flight.actualArrival).toBeNull();
+      expect(cleared.body.flight.delayMinutes).toBeNull();
+    });
+
     // The category column used to carry @default("private"): a POST that
     // omitted the field silently classified the flight as private while the
     // UI's own default suggested business — two systems, two opinions. With
