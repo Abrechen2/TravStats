@@ -153,3 +153,8 @@ roadmap.local.yaml
 # NOT match). The archived hand-written roadmap carries the same real
 # hosts/IPs as roadmap.local.yaml, so it needs the same explicit rule.
 ROADMAP.local.md.archive
+
+# Real boarding passes for local parser testing — personal data (name, PNR,
+# FF number in the barcode). NEVER in this public repo; the private companion
+# repo TravStats-local is the place if they need to be versioned at all.
+test-samples/boarding-passes/
