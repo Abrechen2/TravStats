@@ -53,7 +53,7 @@
     }
   },
   "airlineAircraftMasterData": {
-    "menuLabel": "Airlines & Aircraft",
+    "menuLabel": "Airlines, Aircraft & Airports",
     "userAdded": "User-added",
     "airline": {
       "title": "Airlines",
@@ -78,6 +78,22 @@
       "created": "Aircraft type added.",
       "createFailed": "Failed to add aircraft type.",
       "missingFields": "Name is required."
+    },
+    "airport": {
+      "title": "Airports",
+      "description": "Catalogue from the OurAirports CSV plus custom entries — for airfields the catalogue is missing (e.g. private airstrips). Newly added airports survive re-seeds; the timezone is derived from the coordinates.",
+      "name": "Name",
+      "city": "City",
+      "country": "Country",
+      "lat": "Latitude",
+      "lon": "Longitude",
+      "add": "Add",
+      "searchPlaceholder": "Search airport, IATA or ICAO …",
+      "empty": "No matches.",
+      "created": "Airport created.",
+      "createFailed": "Could not create the airport.",
+      "missingFields": "Name and coordinates are required.",
+      "invalidCoords": "Coordinates must be numbers (lat −90…90, lon −180…180)."
     }
   },
   "instanceLabel": "Instance",
@@ -133,7 +149,9 @@
         "label": "WebDAV URL",
         "help": "Full URL up to your user root, e.g. https://cloud.example.com/remote.php/dav/files/abrechen2/"
       },
-      "username": { "label": "Username" },
+      "username": {
+        "label": "Username"
+      },
       "password": {
         "label": "Password",
         "help": "Stored encrypted at rest (AES-GCM). For Nextcloud use an app password.",

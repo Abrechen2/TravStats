@@ -14,4 +14,21 @@ export const airportsApi = {
     const { data } = await api.get<Airport>(`/airports/${code}`);
     return data;
   },
+
+  /** Manual airport creation (#191) — admin master-data page. The timezone
+   *  is derived server-side from the coordinates; isUserAdded rows survive
+   *  CSV re-seeds. */
+  create: async (input: {
+    name: string;
+    iata?: string;
+    icao?: string;
+    city?: string;
+    country?: string;
+    lat: number;
+    lon: number;
+    altitude?: number;
+  }): Promise<Airport> => {
+    const { data } = await api.post<{ success: boolean; data: Airport }>("/airports", input);
+    return data.data;
+  },
 };

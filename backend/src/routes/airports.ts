@@ -8,6 +8,11 @@ import {
 } from '../services/airportLookup';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { airportSearchBurstLimiter, airportSearchLimiter } from '../middleware/rateLimit';
+import { createAirportSchema } from '../schemas/airportData';
+import { deriveTimezone } from '../services/airportLookup';
+import { invalidateAirportCache } from '../services/airportCache';
+import { AppError } from '../middleware/errorHandler';
+import logger from '../utils/logger';
 
 const enrichAirportSchema = z.object({
   iata: z.string().length(3).toUpperCase().optional(),
@@ -141,6 +146,58 @@ router.post('/enrich', authenticate, async (req: AuthRequest, res: Response, nex
     res.json(enriched);
   } catch (error) {
     next(error);
+  }
+});
+
+// Manual airport creation (#191) — the flight-side mirror of the ship/port
+// create endpoints: authenticated (not admin-gated, same as ships/ports),
+// flagged isUserAdded so the CSV re-seed never overwrites the row, timezone
+// derived from the coordinates via geo-tz.
+router.post('/', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const parsed = createAirportSchema.safeParse(req.body);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    const data = parsed.data;
+
+    if (!data.iata && !data.icao && !data.name) {
+      throw new AppError('An airport needs at least a name', 400);
+    }
+
+    // Reject code collisions against ACTIVE airports — the composite
+    // (code, isClosed) uniqueness would raise anyway, but a 409 with a clear
+    // message beats a P2002 surfacing as a 500.
+    if (data.iata) {
+      const clash = await prisma.airport.findFirst({ where: { iata: data.iata, isClosed: false } });
+      if (clash) throw new AppError(`An active airport with IATA ${data.iata} already exists`, 409);
+    }
+    if (data.icao) {
+      const clash = await prisma.airport.findFirst({ where: { icao: data.icao, isClosed: false } });
+      if (clash) throw new AppError(`An active airport with ICAO ${data.icao} already exists`, 409);
+    }
+
+    const airport = await prisma.airport.create({
+      data: {
+        name: data.name,
+        iata: data.iata ?? null,
+        icao: data.icao ?? null,
+        city: data.city ?? null,
+        country: data.country ?? null,
+        lat: data.lat,
+        lon: data.lon,
+        altitude: data.altitude ?? null,
+        timezone: deriveTimezone(data.lat, data.lon),
+        isUserAdded: true,
+      },
+    });
+
+    // The negative-result cache may hold "no such airport" for these codes.
+    if (airport.iata) invalidateAirportCache(airport.iata);
+    if (airport.icao) invalidateAirportCache(airport.icao);
+
+    logger.info({ operation: 'airport_create_manual', airportId: airport.id, userId: req.userId });
+    res.status(201).json({ success: true, data: airport });
+  } catch (err) {
+    next(err);
   }
 });
 

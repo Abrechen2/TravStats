@@ -136,6 +136,10 @@ model Airport {
   /// flights — the UI just marks them visually.
   isClosed Boolean @default(false) @map("is_closed")
 
+  /// Manually added via the admin master-data page (#191). Same invariant as
+  /// Ship/Port/Airline/Aircraft: the CSV re-seed never overwrites these rows.
+  isUserAdded Boolean @default(false) @map("is_user_added")
+
   // Composite uniqueness on (code, isClosed) lets the same IATA or ICAO
   // exist twice — once for the active airport and once for its closed
   // predecessor (e.g. Munich Airport EDDM/MUC + Munich-Riem EDDM/MUC).
