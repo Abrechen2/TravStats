@@ -277,9 +277,10 @@ export interface FlightInput {
   depTimezone?: string | null;
   arrivalLocal?: string;
   arrTimezone?: string | null;
-  actualDepartureLocal?: string;
+  /** null clears a stored actual time on update (delay resets with it). */
+  actualDepartureLocal?: string | null;
   actualDepartureTz?: string;
-  actualArrivalLocal?: string;
+  actualArrivalLocal?: string | null;
   actualArrivalTz?: string;
   // Match Flight's broader enum so Partial<Flight> assigns into
   // Partial<FlightInput> without a cast. The backend schema only accepts
