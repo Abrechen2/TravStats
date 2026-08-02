@@ -16,7 +16,11 @@ import { normalizeHistory } from '../utils/homeAirport';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
 import { tzAwareDurationMinutes, type FlightTimeSemantics } from '../utils/timezone';
-import { normalizeAirline, mergeAirlineCounts } from '../utils/airlineNormalize';
+import {
+  normalizeAirline,
+  mergeAirlineCounts,
+  resolveAirlineCodes,
+} from '../utils/airlineNormalize';
 import {
   resolveWindow,
   bucketSeries,
@@ -981,6 +985,8 @@ interface AirlineRankingItem {
   airline: string;
   count: number;
   percentage: number;
+  /** IATA code via strict exact lookup; omitted when nothing matches. */
+  iata?: string;
 }
 
 interface AirlineRankingResponse {
@@ -1011,11 +1017,15 @@ router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFuncti
     }
 
     const airlines: AirlineRankingItem[] = Array.from(merged.entries())
-      .map(([airline, count]) => ({
-        airline,
-        count,
-        percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
-      }))
+      .map(([airline, count]) => {
+        const iata = resolveAirlineCodes(airline)?.iata;
+        return {
+          airline,
+          count,
+          percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
+          ...(iata ? { iata } : {}),
+        };
+      })
       .sort((a, b) => b.count - a.count);
 
     const response: AirlineRankingResponse = { airlines, total };
