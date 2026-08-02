@@ -190,7 +190,11 @@ model Flight {
   currency           String?   @default("EUR") @map("currency")
   taxes              Float?    @map("taxes")
   fees               Float?    @map("fees")
-  category           String?   @default("private") @map("category") // business, private, vacation
+  // No column default: category is genuinely optional. The old
+  // @default("private") silently classified every API import that omitted
+  // the field, while the UI suggested "business" — two systems, two
+  // opinions, neither of them the user's (dropped 2026-08-02).
+  category           String?   @map("category") // business, private, vacation
   tags               String[]  @default([]) @map("tags")
   companions         String[]  @default([]) @map("companions") // User-defined travel group (set manually, vs. coPassengers = auto-parsed from email)
   receiptUrl         String?   @map("receipt_url")

@@ -178,4 +178,84 @@ describe("CruiseEditModal", () => {
     const payload = calls[calls.length - 1][0];
     expect(payload.companions).toEqual(["Marie"]);
   });
+
+  // Clearing must be an explicit null on the wire — undefined tells the
+  // server "keep the old value", which made blanking any optional detail
+  // field a silent no-op in edit mode (same defect family the flight edit
+  // modal had; fixed for cruises 2026-08-02).
+  it("submits null, not undefined, for blanked optional fields in edit mode", async () => {
+    const filled: Cruise = {
+      ...baseCruise,
+      cruiseLine: "AIDA",
+      routeName: "Kanaren",
+      cabinNumber: "8123",
+      cabinType: "balcony",
+      deck: 8,
+      bookingReference: "ABC123",
+      price: 1999.99,
+      notes: "to be removed",
+    };
+    vi.mocked(cruiseApi.update).mockResolvedValue(baseCruise);
+    render(<CruiseEditModal mode="edit" cruise={filled} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    // Blank every optional text/number field and reset the cabin-type select.
+    for (const label of [
+      "field.line",
+      "field.routeName",
+      "field.cabin",
+      "field.deck",
+      "field.bookingReference",
+      "field.price",
+      "field.notes",
+    ]) {
+      await userEvent.clear(screen.getByLabelText(label));
+    }
+    await userEvent.selectOptions(screen.getByLabelText("field.cabinType"), "");
+
+    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+
+    await waitFor(() => expect(cruiseApi.update).toHaveBeenCalled());
+    const clearCalls = vi.mocked(cruiseApi.update).mock.calls;
+    const payload = clearCalls[clearCalls.length - 1][1];
+    expect(payload.cruiseLine).toBeNull();
+    expect(payload.routeName).toBeNull();
+    expect(payload.cabinNumber).toBeNull();
+    expect(payload.cabinType).toBeNull();
+    expect(payload.deck).toBeNull();
+    expect(payload.bookingReference).toBeNull();
+    expect(payload.price).toBeNull();
+    expect(payload.notes).toBeNull();
+  });
+
+  it("submits an empty stops array when the user removed every stop", async () => {
+    const withStop: Cruise = {
+      ...baseCruise,
+      stops: [
+        {
+          id: "stop-1",
+          cruiseId: "cruise-1",
+          dayNumber: 1,
+          isAtSea: true,
+          portId: null,
+          port: null,
+          unresolvedPortName: null,
+          date: null,
+          arrivalTime: null,
+          departureTime: null,
+          excursionNote: null,
+        },
+      ],
+    };
+    vi.mocked(cruiseApi.update).mockResolvedValue(baseCruise);
+    render(<CruiseEditModal mode="edit" cruise={withStop} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "stops.remove" }));
+    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+
+    await waitFor(() => expect(cruiseApi.update).toHaveBeenCalled());
+    const stopCalls = vi.mocked(cruiseApi.update).mock.calls;
+    const payload = stopCalls[stopCalls.length - 1][1];
+    // [] deletes all stops server-side; undefined would silently keep them.
+    expect(payload.stops).toEqual([]);
+  });
 });

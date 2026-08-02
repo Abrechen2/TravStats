@@ -161,7 +161,7 @@ export default function FlightsTablePage(): JSX.Element {
     }
   };
 
-  const handleUpdate = async (id: string, updates: Partial<Flight>) => {
+  const handleUpdate = async (id: string, updates: Partial<FlightInput>) => {
     try {
       await flightsApi.update(id, updates);
       addToast("success", t("flights:table.toast.updated"));
@@ -177,7 +177,7 @@ export default function FlightsTablePage(): JSX.Element {
   const handleAddFlight = async (
     flight: FlightInput,
     opts: { force?: boolean; merge?: boolean; hasMoreFlights?: boolean } = {}
-  ): Promise<void> => {
+  ): Promise<Flight> => {
     try {
       const result = (await flightsApi.create(flight, {
         force: opts.force,
@@ -195,6 +195,9 @@ export default function FlightsTablePage(): JSX.Element {
         setShowAddFlight(false);
       }
       void loadFlights();
+      // The created flight flows back so the form can run its post-create
+      // trip assignment (#199).
+      return result;
     } catch (error) {
       logger.error("Failed to add flight:", error);
       throw error;

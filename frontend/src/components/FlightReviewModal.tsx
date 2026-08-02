@@ -432,7 +432,8 @@ export default function FlightReviewModal({
               <input
                 type="text"
                 value={flightNumber}
-                onChange={(e) => setFlightNumber(e.target.value)}
+                onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
+                maxLength={10}
                 className={`w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("flightNumber", initialData.fieldSources)}`}
                 placeholder={t("flights:form.placeholders.flightNumber")}
                 required
@@ -588,7 +589,8 @@ export default function FlightReviewModal({
               <input
                 type="text"
                 value={seat}
-                onChange={(e) => setSeat(e.target.value)}
+                onChange={(e) => setSeat(e.target.value.toUpperCase())}
+                maxLength={10}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.seat")}
               />

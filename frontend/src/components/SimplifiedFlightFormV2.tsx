@@ -18,10 +18,12 @@ import FlightSelectStep from "./FlightForm/FlightSelectStep";
 import FlightCompleteStep from "./FlightForm/FlightCompleteStep";
 import { useFlightForm, type FlightSubmitOptions } from "./FlightForm/useFlightForm";
 
-import type { FlightInput, UserAchievement } from "../types";
+import type { Flight, FlightInput, UserAchievement } from "../types";
 
 interface SimplifiedFlightFormProps {
-  onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<void>;
+  /** Returning the created Flight enables the post-create trip assignment
+   *  (#199); returning void is still valid and simply skips it. */
+  onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<Flight | void>;
   onCancel: () => void;
   onBatchComplete?: (newAchievements?: UserAchievement[]) => void;
   // When provided, a "Sonder-Flug" card is shown in the lookup step. The
@@ -127,6 +129,14 @@ export default function SimplifiedFlightFormV2({
               setDepartureTime={form.setDepartureTime}
               setArrivalDate={form.setArrivalDate}
               setArrivalTime={form.setArrivalTime}
+              actualDepartureDate={form.actualDepartureDate}
+              actualDepartureTime={form.actualDepartureTime}
+              actualArrivalDate={form.actualArrivalDate}
+              actualArrivalTime={form.actualArrivalTime}
+              setActualDepartureDate={form.setActualDepartureDate}
+              setActualDepartureTime={form.setActualDepartureTime}
+              setActualArrivalDate={form.setActualArrivalDate}
+              setActualArrivalTime={form.setActualArrivalTime}
               airline={form.airline}
               operatingAirline={form.operatingAirline}
               flightNumber={form.flightNumber}
@@ -144,19 +154,40 @@ export default function SimplifiedFlightFormV2({
               setTerminal={form.setTerminal}
               setGate={form.setGate}
               setSeatNumber={form.setSeatNumber}
+              boardingGroup={form.boardingGroup}
+              setBoardingGroup={form.setBoardingGroup}
               setSeatClass={form.setSeatClass}
               setStatus={form.setStatus}
               setCategory={form.setCategory}
               bookingReference={form.bookingReference}
               ticketNumber={form.ticketNumber}
+              bookingClassLetter={form.bookingClassLetter}
+              baggageAllowance={form.baggageAllowance}
+              frequentFlyerNumber={form.frequentFlyerNumber}
               setBookingReference={form.setBookingReference}
               setTicketNumber={form.setTicketNumber}
-              price={form.price}
-              currency={form.currency}
-              setPrice={form.setPrice}
-              setCurrency={form.setCurrency}
+              setBookingClassLetter={form.setBookingClassLetter}
+              setBaggageAllowance={form.setBaggageAllowance}
+              setFrequentFlyerNumber={form.setFrequentFlyerNumber}
+              cost={{
+                price: form.price,
+                currency: form.currency,
+                taxes: form.taxes,
+                fees: form.fees,
+                receiptUrl: form.receiptUrl,
+              }}
+              onCostChange={(v) => {
+                form.setPrice(v.price);
+                form.setCurrency(v.currency);
+                form.setTaxes(v.taxes);
+                form.setFees(v.fees);
+                form.setReceiptUrl(v.receiptUrl);
+              }}
+              tripId={form.tripId}
+              setTripId={form.setTripId}
               tags={form.tags}
               companions={form.companions}
+              coPassengers={form.coPassengers}
               setTags={form.setTags}
               setCompanions={form.setCompanions}
               notes={form.notes}
