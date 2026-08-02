@@ -65,6 +65,37 @@ describe('Flights API', () => {
       expect(response.body.flight.airline).toBe('Lufthansa');
     });
 
+    // The create handler fed seatClass to the CO2 calculator but never wrote
+    // the column, so a first-class flight stored first-class emissions against
+    // a blank cabin. Only the update path persisted it.
+    it('persists the seat class it was given, not just its CO2 weight', async () => {
+      const response = await request(app)
+        .post('/api/v1/flights')
+        .set('Cookie', authCookie)
+        .send({
+          airline: 'Lufthansa',
+          flightNumber: 'LH777',
+          departure: { icao: 'EDDF', iata: 'FRA', lat: 50.0379, lon: 8.5622 },
+          arrival: { icao: 'KJFK', iata: 'JFK', lat: 40.6413, lon: -73.7781 },
+          departureLocal: '2025-03-01T10:00',
+          depTimezone: 'Europe/Berlin',
+          arrivalLocal: '2025-03-01T13:00',
+          arrTimezone: 'America/New_York',
+          seatClass: 'first',
+          status: 'scheduled',
+        })
+        .expect(201);
+
+      expect(response.body.flight.seatClass).toBe('first');
+
+      // GET /:id answers with the flight unwrapped, not under a `flight` key.
+      const reloaded = await request(app)
+        .get(`/api/v1/flights/${response.body.flight.id}`)
+        .set('Cookie', authCookie)
+        .expect(200);
+      expect(reloaded.body.seatClass).toBe('first');
+    });
+
     it('should reject unauthenticated request', async () => {
       await request(app)
         .post('/api/v1/flights')
