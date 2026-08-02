@@ -709,7 +709,7 @@ model Trip {
   // All optional / defaulted so legacy rows stay valid.
   startDate        DateTime? @map("start_date")
   endDate          DateTime? @map("end_date")
-  status           String    @default("completed") // planned | in_progress | completed
+  status           String    @default("planned") // planned | in_progress | completed
   category         String?   // vacation | business | weekend | family | other
   tags             String[]  @default([])
   companions       String[]  @default([])

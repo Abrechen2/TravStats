@@ -18,6 +18,7 @@ import {
 } from "../schemas/trip";
 import logger from "../utils/logger";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
+import { deriveTripStatus } from "../shared/statusDerivation";
 import { detectTrips } from "../services/tripDetectionService";
 import { recomputeTripStatus } from "../services/tripStatusService";
 import {
@@ -327,14 +328,22 @@ router.post("/trips", authenticate, requireWriteScope, async (req: AuthRequest, 
           color,
           startDate: body.startDate,
           endDate: body.endDate,
-          // Status derivation (spec 2026-07-17-status-from-dates) needs linked
-          // flights/cruises, which cannot exist yet — a trip must exist before
-          // anything can reference its id. So creation genuinely has no
-          // segments to derive from; the client-sent hint (or the schema
-          // default) is kept verbatim here, and recomputeTripStatus() takes
-          // over the moment segments get linked (assign-flights, bookings
-          // link, PNR auto-trip creation, trip detection).
-          status: body.status,
+          // Status derivation (spec 2026-07-17-status-from-dates) normally
+          // reads linked flights/cruises, which cannot exist yet — a trip must
+          // exist before anything can reference its id. Falling through to the
+          // column default meant every hand-made trip was born "completed",
+          // including one starting next week; the dates the user had just
+          // typed were never consulted. So when no segments exist, derive from
+          // the trip's OWN bounds. recomputeTripStatus() still takes over the
+          // moment segments get linked (assign-flights, bookings link, PNR
+          // auto-trip creation, trip detection).
+          status:
+            body.status ??
+            deriveTripStatus({
+              earliestStart: body.startDate ?? null,
+              latestEnd: body.endDate ?? null,
+            }) ??
+            undefined,
           category: body.category,
           tags: body.tags,
           // Dual write: resolved display names keep this legacy array in
