@@ -40,12 +40,17 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
 
     // No search term → simple structured listing (optionally region-scoped).
     if (!q || q.length === 0) {
-      const ports = await prisma.port.findMany({
-        where: region ? { region } : {},
-        take: limit,
-        orderBy: { name: "asc" },
-      });
-      res.json({ success: true, data: ports });
+      // `total` rides along so list UIs can say "100 of 12059" instead of
+      // looking like a catalogue that ends mid-alphabet.
+      const [ports, total] = await Promise.all([
+        prisma.port.findMany({
+          where: region ? { region } : {},
+          take: limit,
+          orderBy: { name: "asc" },
+        }),
+        prisma.port.count({ where: region ? { region } : {} }),
+      ]);
+      res.json({ success: true, data: ports, total });
       return;
     }
 
@@ -76,7 +81,13 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       LIMIT ${limit}
     `);
 
-    res.json({ success: true, data: ports });
+    // Same total for the search branch — the raw-SQL WHERE is reused verbatim.
+    const [{ count }] = await prisma.$queryRaw<Array<{ count: bigint }>>(Prisma.sql`
+      SELECT count(*) AS count FROM ports
+      WHERE (${Prisma.join(likeConditions, " OR ")})
+        ${region ? Prisma.sql`AND region = ${region}` : Prisma.empty}
+    `);
+    res.json({ success: true, data: ports, total: Number(count) });
   } catch (err) {
     next(err);
   }

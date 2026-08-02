@@ -16,6 +16,7 @@ export default function ShipsSection(): JSX.Element {
   const [ships, setShips] = useState<Ship[]>([]);
   const [query, setQuery] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
 
   const [newName, setNewName] = useState("");
   const [newLine, setNewLine] = useState("");
@@ -28,8 +29,11 @@ export default function ShipsSection(): JSX.Element {
     void (async () => {
       setLoading(true);
       try {
-        const list = await shipsApi.search(query);
-        if (!cancelled) setShips(list);
+        const list = await shipsApi.list(query);
+        if (!cancelled) {
+          setShips(list.items);
+          setTotal(list.total);
+        }
       } catch (err) {
         logger.warn("Failed to load ships", err);
       } finally {
@@ -144,7 +148,7 @@ export default function ShipsSection(): JSX.Element {
           className="divide-y max-h-[28rem] overflow-y-auto"
           style={{ borderColor: "var(--color-border)" }}
         >
-          {ships.slice(0, 50).map((s) => (
+          {ships.map((s) => (
             <li key={s.id} className="flex items-center justify-between py-2 text-sm">
               <div>
                 <span className="font-medium text-(--text-primary)">{s.name}</span>
@@ -169,6 +173,11 @@ export default function ShipsSection(): JSX.Element {
             </li>
           ))}
         </ul>
+      )}
+      {total > ships.length && (
+        <p className="mt-2 text-xs text-(--text-muted)">
+          {t("admin:masterData.showingOf", { shown: ships.length, total })}
+        </p>
       )}
     </section>
   );

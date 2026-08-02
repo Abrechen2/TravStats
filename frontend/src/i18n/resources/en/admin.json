@@ -687,5 +687,10 @@
       "permissionsTitle": "User Permissions:",
       "permissions": "Controls whether users can set their own keys. Global keys are the fallback for users without their own keys."
     }
+  },
+  "masterData": {
+    "showingOf": "Showing {{shown}} of {{total}} entries — refine the search to see more.",
+    "typeToSearch": "Type at least two characters to search the catalogue.",
+    "refineSearch": "More matches than shown — refine the search."
   }
 }

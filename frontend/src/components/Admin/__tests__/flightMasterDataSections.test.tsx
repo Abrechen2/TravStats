@@ -21,16 +21,21 @@ vi.mock("../../../hooks/useTranslation", () => ({
   }),
 }));
 
-const { search, create, airportSearch, airportCreate } = vi.hoisted(() => ({
+const { search, list, create, airportSearch, airportCreate } = vi.hoisted(() => ({
   search: vi.fn(),
+  list: vi.fn(),
   create: vi.fn(),
   airportSearch: vi.fn(),
   airportCreate: vi.fn(),
 }));
 
 vi.mock("../../../lib/api/catalogue", () => ({
-  airlinesApi: { search, create },
-  aircraftApi: { search: vi.fn().mockResolvedValue([]), create: vi.fn() },
+  airlinesApi: { search, list, create },
+  aircraftApi: {
+    search: vi.fn().mockResolvedValue([]),
+    list: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    create: vi.fn(),
+  },
 }));
 
 vi.mock("../../../lib/api/airports", () => ({
@@ -50,9 +55,9 @@ import AirportsSection from "../masterData/AirportsSection";
 describe("flight master-data sections", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    search.mockResolvedValue([
-      { id: 1, iata: "LH", icao: "DLH", name: "Lufthansa", callsign: "LUFTHANSA", country: "Germany", active: true, isUserAdded: false },
-    ]);
+    const lufthansa = { id: 1, iata: "LH", icao: "DLH", name: "Lufthansa", callsign: "LUFTHANSA", country: "Germany", active: true, isUserAdded: false };
+    search.mockResolvedValue([lufthansa]);
+    list.mockResolvedValue({ items: [lufthansa], total: 1 });
   });
 
   it("renders the airline returned by airlinesApi.search", async () => {
@@ -60,7 +65,7 @@ describe("flight master-data sections", () => {
 
     expect(await screen.findByText("Lufthansa")).toBeInTheDocument();
     expect(screen.getByText("LH")).toBeInTheDocument();
-    await waitFor(() => expect(search).toHaveBeenCalledWith(""));
+    await waitFor(() => expect(list).toHaveBeenCalledWith(""));
   });
 
   it("renders the add-airline form inputs", async () => {

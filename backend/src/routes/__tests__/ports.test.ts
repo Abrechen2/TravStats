@@ -36,6 +36,9 @@ describe("Ports API", () => {
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body.data)).toBe(true);
       expect(res.body.data.length).toBeGreaterThanOrEqual(50);
+      // The catalogue total rides along so the admin list can say "100 of
+      // 12059" instead of looking like it ends mid-alphabet.
+      expect(res.body.total).toBeGreaterThanOrEqual(res.body.data.length);
     });
 
     it("filters by q (case-insensitive substring)", async () => {

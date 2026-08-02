@@ -12,6 +12,7 @@ export default function AircraftSection(): JSX.Element {
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
   const [query, setQuery] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
 
   const [newName, setNewName] = useState("");
   const [newIcao, setNewIcao] = useState("");
@@ -23,8 +24,11 @@ export default function AircraftSection(): JSX.Element {
       void (async () => {
         setLoading(true);
         try {
-          const list = await aircraftApi.search(query);
-          if (!cancelled) setAircraft(list);
+          const list = await aircraftApi.list(query);
+          if (!cancelled) {
+            setAircraft(list.items);
+            setTotal(list.total);
+          }
         } catch (err) {
           logger.warn("Failed to load aircraft", err);
         } finally {
@@ -123,7 +127,7 @@ export default function AircraftSection(): JSX.Element {
           className="divide-y max-h-[28rem] overflow-y-auto"
           style={{ borderColor: "var(--color-border)" }}
         >
-          {aircraft.slice(0, 50).map((ac) => (
+          {aircraft.map((ac) => (
             <li key={ac.id} className="flex items-center justify-between py-2 text-sm">
               <div>
                 <span className="font-medium text-(--text-primary)">{ac.name}</span>
@@ -146,6 +150,11 @@ export default function AircraftSection(): JSX.Element {
             </li>
           ))}
         </ul>
+      )}
+      {total > aircraft.length && (
+        <p className="mt-2 text-xs text-(--text-muted)">
+          {t("admin:masterData.showingOf", { shown: aircraft.length, total })}
+        </p>
       )}
     </section>
   );
