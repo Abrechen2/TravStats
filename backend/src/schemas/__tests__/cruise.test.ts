@@ -101,14 +101,21 @@ describe('cruise schemas', () => {
     }
   });
 
-  it('accepts routeName and drops the empty string to undefined (#133)', () => {
+  // CONTRACT CHANGE 2026-08-02: "" collapses to null (an explicit clear on
+  // update), no longer to undefined — undefined told the update handler to
+  // keep the old value, which made blanking the field a silent no-op.
+  it('accepts routeName; the empty string collapses to null, absent stays undefined (#133)', () => {
     const withName = createCruiseSchema.safeParse({ ...minimalValid, routeName: 'Kanaren mit Marokko' });
     expect(withName.success).toBe(true);
     if (withName.success) expect(withName.data.routeName).toBe('Kanaren mit Marokko');
 
     const empty = createCruiseSchema.safeParse({ ...minimalValid, routeName: '' });
     expect(empty.success).toBe(true);
-    if (empty.success) expect(empty.data.routeName).toBeUndefined();
+    if (empty.success) expect(empty.data.routeName).toBeNull();
+
+    const absent = createCruiseSchema.safeParse({ ...minimalValid });
+    expect(absent.success).toBe(true);
+    if (absent.success) expect(absent.data.routeName).toBeUndefined();
   });
 
   it('still rejects a genuinely unparseable datetime', () => {
