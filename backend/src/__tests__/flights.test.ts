@@ -263,5 +263,29 @@ describe('Flights API', () => {
       expect(untouched.body.flight.category).toBeNull();
       expect(untouched.body.flight.seatClass).toBeNull();
     });
+
+    // The category column used to carry @default("private"): a POST that
+    // omitted the field silently classified the flight as private while the
+    // UI's own default suggested business — two systems, two opinions. With
+    // the default dropped (migration 20260802063748), omitted means NULL.
+    it('stores NULL for a created flight that omits category', async () => {
+      const created = await request(app)
+        .post('/api/v1/flights')
+        .set('Cookie', authCookie)
+        .send({
+          airline: 'Lufthansa',
+          flightNumber: 'LH790',
+          departure: { icao: 'EDDF', iata: 'FRA', lat: 50.0379, lon: 8.5622 },
+          arrival: { icao: 'EGLL', iata: 'LHR', lat: 51.47, lon: -0.4543 },
+          departureLocal: '2025-04-02T10:00',
+          depTimezone: 'Europe/Berlin',
+          arrivalLocal: '2025-04-02T11:00',
+          arrTimezone: 'Europe/London',
+          status: 'scheduled',
+        })
+        .expect(201);
+
+      expect(created.body.flight.category).toBeNull();
+    });
   });
 });

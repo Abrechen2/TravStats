@@ -86,9 +86,11 @@ export interface FlightCompleteStepProps {
   gate: string;
   seatNumber: string;
   boardingGroup: string;
-  seatClass: "economy" | "premium_economy" | "business" | "first";
+  /** "" is the explicit "(optional)" choice — stored as NULL. */
+  seatClass: "" | "economy" | "premium_economy" | "business" | "first";
   status: "scheduled" | "flown" | "cancelled" | "historical";
-  category: "business" | "private" | "vacation";
+  /** "" is the explicit "(optional)" choice — stored as NULL. */
+  category: "" | "business" | "private" | "vacation";
   setAirline: (v: string) => void;
   setOperatingAirline: (v: string) => void;
   setFlightNumber: (v: string) => void;
@@ -97,9 +99,9 @@ export interface FlightCompleteStepProps {
   setGate: (v: string) => void;
   setSeatNumber: (v: string) => void;
   setBoardingGroup: (v: string) => void;
-  setSeatClass: (v: "economy" | "premium_economy" | "business" | "first") => void;
+  setSeatClass: (v: "" | "economy" | "premium_economy" | "business" | "first") => void;
   setStatus: (v: "scheduled" | "flown" | "cancelled" | "historical") => void;
-  setCategory: (v: "business" | "private" | "vacation") => void;
+  setCategory: (v: "" | "business" | "private" | "vacation") => void;
   // Booking (#197 — same fields the edit modal offers; #199 added the three
   // parser-filled ones that were previously rendered by neither form)
   bookingReference: string;
@@ -209,7 +211,7 @@ export default function FlightCompleteStep({
   sizedInputClass,
   setTimeEstimationWarning,
 }: FlightCompleteStepProps): JSX.Element {
-  const { t } = useTranslation(["flights"]);
+  const { t } = useTranslation(["flights", "common"]);
   const addToast = useToastStore((s) => s.addToast);
   const { features } = useSettingsStore();
 
@@ -537,10 +539,13 @@ export default function FlightCompleteStep({
           <select
             value={seatClass}
             onChange={(e) =>
-              setSeatClass(e.target.value as "economy" | "premium_economy" | "business" | "first")
+              setSeatClass(
+                e.target.value as "" | "economy" | "premium_economy" | "business" | "first"
+              )
             }
             className={`input ${sizedInputClass}`}
           >
+            <option value="">{t("common:labels.optional")}</option>
             <option value="economy">{t("flights:seatClass.economy")}</option>
             <option value="premium_economy">{t("flights:seatClass.premium_economy")}</option>
             <option value="business">{t("flights:seatClass.business")}</option>
@@ -551,9 +556,12 @@ export default function FlightCompleteStep({
           <label className={`label ${textClass}`}>{t("flights:form.category")}</label>
           <select
             value={category}
-            onChange={(e) => setCategory(e.target.value as "business" | "private" | "vacation")}
+            onChange={(e) =>
+              setCategory(e.target.value as "" | "business" | "private" | "vacation")
+            }
             className={`input ${sizedInputClass}`}
           >
+            <option value="">{t("common:labels.optional")}</option>
             <option value="business">{t("flights:category.business")}</option>
             <option value="private">{t("flights:category.private")}</option>
             <option value="vacation">{t("flights:category.vacation")}</option>
