@@ -403,7 +403,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **session-boot** (5506 symbols, 14297 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **TravStats** (5733 symbols, 14633 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -419,7 +419,7 @@ This project is indexed by GitNexus as **session-boot** (5506 symbols, 14297 rel
 
 1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
 2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
-3. `READ gitnexus://repo/session-boot/process/{processName}` — trace the full execution flow step by step
+3. `READ gitnexus://repo/TravStats/process/{processName}` — trace the full execution flow step by step
 4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
 
 ## When Refactoring
@@ -458,10 +458,10 @@ This project is indexed by GitNexus as **session-boot** (5506 symbols, 14297 rel
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/session-boot/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/session-boot/clusters` | All functional areas |
-| `gitnexus://repo/session-boot/processes` | All execution flows |
-| `gitnexus://repo/session-boot/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/TravStats/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/TravStats/clusters` | All functional areas |
+| `gitnexus://repo/TravStats/processes` | All execution flows |
+| `gitnexus://repo/TravStats/process/{name}` | Step-by-step execution trace |
 
 ## Self-Check Before Finishing
 
