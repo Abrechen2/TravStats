@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { fromZonedTime } from "date-fns-tz";
 import type { Flight } from "../../types";
@@ -141,6 +141,49 @@ describe("FlightEditModal actual departure/arrival (#200)", () => {
     expect(payload.actualDepartureTz).toBe("Asia/Tokyo");
     // Arrival was never touched — still omitted entirely.
     expect(payload.actualArrivalLocal).toBeUndefined();
+    expect(payload.actualArrivalTz).toBeUndefined();
+  });
+
+  // Three-way contract, third leg: blanking a RECORDED actual time submits
+  // null — an explicit clear (the server resets delayMinutes with it).
+  // Omitting the key instead would silently keep the stored actual time,
+  // the same silent-keep family every other field was cured of on
+  // 2026-08-02. The never-had case above stays an omit, so a no-op save
+  // still emits no actual* keys at all.
+  it("blanking a recorded actual departure/arrival submits null (explicit clear)", async () => {
+    const flight: Flight = {
+      ...BASE_FLIGHT,
+      actualDeparture: "2026-08-14T13:05:00.000Z",
+      actualArrival: "2026-08-14T17:20:00.000Z",
+    };
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<FlightEditModal flight={flight} isOpen onClose={() => {}} onSave={onSave} />);
+    await waitForHydration();
+
+    await waitFor(() => {
+      const actualDepDate = document.querySelector("#editActualDepartureDate") as HTMLInputElement;
+      expect(actualDepDate.value).not.toBe("");
+    });
+
+    for (const id of [
+      "#editActualDepartureDate",
+      "#editActualDepartureTime",
+      "#editActualArrivalDate",
+      "#editActualArrivalTime",
+    ]) {
+      const input = document.querySelector(id) as HTMLInputElement;
+      fireEvent.change(input, { target: { value: "" } });
+    }
+
+    await userEvent.click(await screen.findByRole("button", { name: /speichern|save/i }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, payload] = onSave.mock.calls[onSave.mock.calls.length - 1];
+    expect(payload.actualDepartureLocal).toBeNull();
+    expect(payload.actualArrivalLocal).toBeNull();
+    // No timezone accompanies a clear — the paired-timezone rule only
+    // applies when a local string is present.
+    expect(payload.actualDepartureTz).toBeUndefined();
     expect(payload.actualArrivalTz).toBeUndefined();
   });
 });

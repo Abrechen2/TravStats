@@ -367,16 +367,24 @@ export default function FlightEditModal({
         arrTimezone: formData.arrivalDate ? submitArrTz : undefined,
         depTimeSemantics: sendSemantics,
         arrTimeSemantics: sendSemantics,
-        // Actual departure/arrival (#200) — same undefined-when-empty
-        // contract as the scheduled pair: an untouched/cleared field must
-        // never submit "" or null, only omit the key entirely.
+        // Actual departure/arrival (#200) — three-way contract: a filled
+        // field submits its value; an empty field on a flight that HAS a
+        // stored actual time submits null (the user cleared it — delay
+        // resets with it server-side); an empty field on a flight that
+        // never had one omits the key entirely, so the no-op save stays a
+        // no-op. Blank-means-omit alone made clearing a recorded actual
+        // time impossible — the same silent-keep family as the text fields.
         actualDepartureLocal: formData.actualDepartureDate
           ? buildLocalString(formData.actualDepartureDate, formData.actualDepartureTime)
-          : undefined,
+          : flight.actualDeparture
+            ? null
+            : undefined,
         actualDepartureTz: formData.actualDepartureDate ? submitDepTz : undefined,
         actualArrivalLocal: formData.actualArrivalDate
           ? buildLocalString(formData.actualArrivalDate, formData.actualArrivalTime)
-          : undefined,
+          : flight.actualArrival
+            ? null
+            : undefined,
         actualArrivalTz: formData.actualArrivalDate ? submitArrTz : undefined,
       };
 
