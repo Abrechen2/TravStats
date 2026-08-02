@@ -261,10 +261,10 @@ boarding group read out of a booking mail was dropped on the way in.
 ### Task 7: Gate
 
 - [x] **Step 1:** `cd frontend` then `npx tsc --noEmit`, `npm run lint`, `npx vitest --run`, `npx vite build` — each on its own line.
-- [ ] **Step 2:** `cd backend && npx jest src/__tests__/flights` — the contract must be unchanged.
+- [x] **Step 2:** `cd backend && npx jest src/__tests__/flights` — the contract must be unchanged.
 - [x] **Step 3:** Report `FlightEditModal.tsx` and `FlightCompleteStep.tsx` line counts. `FlightEditModal.tsx` must be under 800. If it is not, say so plainly rather than reporting success.
 - [x] **Step 4:** Grep-prove that no field input of any covered group survives outside `fields/`.
-- [ ] **Step 5: Browser.** Dev servers with `VITE_API_URL` in the SHELL and `CORS_ORIGIN` set to the frontend origin — `FRONTEND_URL` alone does not open cross-origin dev. Then: add a flight with a trip, a cost and a receipt in one pass; edit it and change an airline via the catalogue; confirm the parsed co-passengers row appears on a parsed flight. Confirm the console stays clean.
+- [x] **Step 5: Browser.** Dev servers with `VITE_API_URL` in the SHELL and `CORS_ORIGIN` set to the frontend origin — `FRONTEND_URL` alone does not open cross-origin dev. Then: add a flight with a trip, a cost and a receipt in one pass; edit it and change an airline via the catalogue; confirm the parsed co-passengers row appears on a parsed flight. Confirm the console stays clean.
 - [x] **Step 6:** Report the numbers from each gate rather than asserting success.
 
 ---
@@ -332,3 +332,39 @@ user was in. The create form's rule now applies in both, pinned by four tests in
   defaults to `economy`/`business`). So a flight can be edited to have no
   category but never created without one. Which side is right is a product
   decision, not a refactor — left untouched.
+
+---
+
+## UAT result (2026-08-02, headless Chromium against the live dev stack)
+
+The browser pass the gates above left open has now been run — real UI, every
+outcome verified in Postgres, not on screen. Environment: embedded Postgres
+5433 (fresh migrate + demo seed + airports catalogue with geo-tz backfilled
+timezones), backend :8000, Vite :3000, Playwright Chromium.
+
+| # | Scenario | Result |
+|---|---|---|
+| 1 | Login admin | PASS |
+| 2 | Create flight: FRA→JFK via autocomplete, split date/time, airline via catalogue, price 199.99, trip assigned | PASS — stored `2026-09-10T08:30Z` (10:30 FRA local: tz math correct) |
+| 3 | Open edit, save untouched | PASS — `departure_time`/`arrival_time` byte-identical |
+| 4 | Change departure airport to MUC | PASS — `route_distance` 6189 → 6481 km |
+| 5 | Clear category + seat class via "(optional)" | PASS — both NULL in DB (needs the 2026-08-02 nullable fix) |
+| 6 | Historical DATE_ONLY flight (1998-07-15): edit shows day 15; change year to 1999 | PASS — day PRESERVED (`1999-07-15`), semantics stays DATE_ONLY |
+| 7 | Console | clean throughout |
+
+**15/15.** Two of those scenarios FAILED on the code as merged from the
+branch and were fixed in this session — the spec's warning that green tests
+are not sufficient evidence held up exactly:
+
+1. Clearing category/seatClass was a silent no-op (commit `febbf5c6`).
+2. Editing a historical flight's year downgraded `dep_time_semantics`
+   DATE_ONLY → UTC, because the modal omitted the semantics when unchanged
+   and the server's implicit branch treats a bare `departureLocal` as a real
+   time edit (commit `cae58486`). Every unit test passed while this was
+   broken; only the DB check after a browser run showed it.
+
+Backend suite on a fully seeded DB: **177 suites, 1522 tests, all passing**
+(the 10 suites that failed earlier needed the ships/ports/airlines/aircraft/
+achievements/airports catalogues present — environmental, not code; airports
+additionally need their `timezone` column backfilled, which prod fills
+lazily via the lookup path).
