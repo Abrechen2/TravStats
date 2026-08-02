@@ -443,4 +443,61 @@ describe("FlightEditModal", () => {
     const [, updates] = onSave.mock.calls[0];
     expect(updates.companions).toEqual(["Anna", "Jonas"]);
   });
+
+  // Gate follow-up — the four fields that stayed rendered inline in BOTH
+  // forms (flight number, seat, boarding group, tags) were never made to
+  // agree on input handling, so the same keystrokes produced different
+  // stored values depending on which form the user happened to be in. The
+  // create form's rule wins in every case, because it is the one that has
+  // been shaping parser output since before the split existed:
+  // FlightCompleteStep uppercases flight number and seat, caps the flight
+  // number at 10 and the boarding group at 20, and explains the comma
+  // separation under the tags input.
+  describe("input handling matches the create form", () => {
+    it("uppercases a typed flight number and caps it at 10 characters", async () => {
+      render(
+        <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+      );
+      const input = screen.getByPlaceholderText(
+        "flights:form.placeholders.flightNumber"
+      ) as HTMLInputElement;
+
+      fireEvent.change(input, { target: { value: "lh456" } });
+
+      expect(input.value).toBe("LH456");
+      expect(input.maxLength).toBe(10);
+    });
+
+    it("uppercases a typed seat number", () => {
+      render(
+        <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+      );
+      const input = screen.getByPlaceholderText(
+        "flights:form.placeholders.seat"
+      ) as HTMLInputElement;
+
+      fireEvent.change(input, { target: { value: "12a" } });
+
+      expect(input.value).toBe("12A");
+    });
+
+    it("caps the boarding group at 20 characters", () => {
+      render(
+        <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+      );
+      const input = screen.getByPlaceholderText(
+        "flights:form.placeholders.boardingGroup"
+      ) as HTMLInputElement;
+
+      expect(input.maxLength).toBe(20);
+    });
+
+    it("explains the comma separation under the tags input", () => {
+      render(
+        <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+      );
+
+      expect(screen.getByText("flights:form.tagsHint")).toBeInTheDocument();
+    });
+  });
 });
