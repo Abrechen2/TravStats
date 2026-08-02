@@ -577,9 +577,10 @@ export default function FlightEditModal({
               <input
                 type="text"
                 value={formData.flightNumber}
-                onChange={(e) => update("flightNumber", e.target.value)}
+                onChange={(e) => update("flightNumber", e.target.value.toUpperCase())}
                 className="input"
                 placeholder={t("flights:form.placeholders.flightNumber")}
+                maxLength={10}
               />
             </div>
           </div>
@@ -645,7 +646,7 @@ export default function FlightEditModal({
               <input
                 type="text"
                 value={formData.seatNumber}
-                onChange={(e) => update("seatNumber", e.target.value)}
+                onChange={(e) => update("seatNumber", e.target.value.toUpperCase())}
                 className="input"
                 placeholder={t("flights:form.placeholders.seat")}
               />
@@ -678,6 +679,7 @@ export default function FlightEditModal({
                 onChange={(e) => update("boardingGroup", e.target.value)}
                 className="input"
                 placeholder={t("flights:form.placeholders.boardingGroup")}
+                maxLength={20}
               />
             </div>
           </div>
@@ -736,6 +738,9 @@ export default function FlightEditModal({
               className="input"
               placeholder={t("flights:form.placeholders.tags")}
             />
+            <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+              {t("flights:form.tagsHint")}
+            </p>
           </div>
 
           {/* Notes */}
