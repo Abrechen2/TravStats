@@ -1,11 +1,14 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PortPicker } from "../../../components/Cruise/PortPicker";
 import { portsApi } from "../../../lib/api";
 
 vi.mock("../../../lib/api", () => ({
-  portsApi: { search: vi.fn(), create: vi.fn() },
+  // geocode MUST be part of the mock: without it the component's fallback
+  // call hits undefined, throws, and the tests silently exercise the error
+  // path instead of the one they claim to cover.
+  portsApi: { search: vi.fn(), geocode: vi.fn(), create: vi.fn() },
 }));
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -17,6 +20,11 @@ vi.mock("../../../hooks/useTranslation", () => ({
 }));
 
 describe("PortPicker", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(portsApi.geocode).mockResolvedValue([]);
+  });
+
   it("searches as user types and shows results", async () => {
     vi.mocked(portsApi.search).mockResolvedValue([
       {
@@ -90,5 +98,93 @@ describe("PortPicker", () => {
       )
     );
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ id: 77 }));
+  });
+
+  // The resolution chain the roadmap's "Taranto" item complained about,
+  // pinned at the component level (backend counterpart: ports.test.ts).
+  it("never calls the geocoder when the local catalog has a hit (offline-first)", async () => {
+    vi.mocked(portsApi.search).mockResolvedValue([
+      {
+        id: 7635,
+        name: "Taranto",
+        city: null,
+        country: "Italy",
+        unlocode: "ITTAR",
+        lat: 40.47,
+        lon: 17.23,
+        timezone: "Europe/Rome",
+        region: "mediterranean",
+        isUserAdded: false,
+      },
+    ]);
+    render(<PortPicker value={null} onChange={vi.fn()} />);
+    await userEvent.type(screen.getByRole("combobox"), "Taranto");
+    await screen.findByRole("button", { name: /Taranto/ });
+
+    expect(portsApi.geocode).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a search failure instead of pretending the catalog is empty", async () => {
+    vi.mocked(portsApi.search).mockRejectedValue(new Error("network down"));
+    render(<PortPicker value={null} onChange={vi.fn()} />);
+
+    await userEvent.type(screen.getByRole("combobox"), "Taranto");
+
+    expect(await screen.findByText("picker.searchError")).toBeInTheDocument();
+  });
+
+  it("falls back to the geocoder on an empty local result and persists a picked candidate", async () => {
+    vi.mocked(portsApi.search).mockResolvedValue([]);
+    vi.mocked(portsApi.geocode).mockResolvedValue([
+      {
+        name: "Portoferraio",
+        city: "Portoferraio",
+        country: "Italia",
+        lat: 42.81,
+        lon: 10.31,
+        source: "geocoder",
+      },
+    ]);
+    vi.mocked(portsApi.create).mockResolvedValue({
+      id: 99001,
+      name: "Portoferraio",
+      city: "Portoferraio",
+      country: "Italia",
+      unlocode: null,
+      lat: 42.81,
+      lon: 10.31,
+      timezone: null,
+      region: null,
+      isUserAdded: true,
+    });
+    const onChange = vi.fn();
+    render(<PortPicker value={null} onChange={onChange} />);
+
+    await userEvent.type(screen.getByRole("combobox"), "Portoferraio");
+
+    // Labelled as geocoder results, not passed off as catalog hits.
+    expect(await screen.findByText("picker.via_geocoder")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /Portoferraio/ }));
+    await waitFor(() =>
+      expect(portsApi.create).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "Portoferraio", lat: 42.81, lon: 10.31 })
+      )
+    );
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ id: 99001 }));
+  });
+
+  it("shows an error when persisting a geocoder candidate fails", async () => {
+    vi.mocked(portsApi.search).mockResolvedValue([]);
+    vi.mocked(portsApi.geocode).mockResolvedValue([
+      { name: "Portoferraio", city: null, country: null, lat: 42.81, lon: 10.31, source: "geocoder" },
+    ]);
+    vi.mocked(portsApi.create).mockRejectedValue(new Error("500"));
+    render(<PortPicker value={null} onChange={vi.fn()} />);
+
+    await userEvent.type(screen.getByRole("combobox"), "Portoferraio");
+    await userEvent.click(await screen.findByRole("button", { name: /Portoferraio/ }));
+
+    expect(await screen.findByText("picker.createPortError")).toBeInTheDocument();
   });
 });
