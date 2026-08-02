@@ -23,8 +23,11 @@ import ImmichGlobalSettings from "../components/Admin/ImmichGlobalSettings";
 import ParserSettingsTab from "../components/Admin/ParserSettings";
 import LoggingManager from "../components/Admin/LoggingManager";
 import SmtpManager from "../components/Admin/SmtpManager";
-import CruiseMasterData from "../components/Admin/CruiseMasterData";
-import AirlineAircraftMasterData from "../components/Admin/AirlineAircraftMasterData";
+import ShipsSection from "../components/Admin/masterData/ShipsSection";
+import PortsSection from "../components/Admin/masterData/PortsSection";
+import AirlinesSection from "../components/Admin/masterData/AirlinesSection";
+import AircraftSection from "../components/Admin/masterData/AircraftSection";
+import AirportsSection from "../components/Admin/masterData/AirportsSection";
 import { useTranslation } from "../hooks/useTranslation";
 import { copyToClipboard } from "../lib/clipboard";
 import { normalizeSectionId } from "../lib/sectionAliases";
@@ -59,8 +62,11 @@ type ActiveSection =
   | "backups"
   | "externalServices"
   | "smtp"
-  | "cruiseMasterData"
-  | "airlineAircraftMasterData";
+  | "shipsMasterData"
+  | "portsMasterData"
+  | "airlinesMasterData"
+  | "aircraftMasterData"
+  | "airportsMasterData";
 
 type TabId = "general" | "flight" | "cruise";
 
@@ -69,10 +75,12 @@ type TabId = "general" | "flight" | "cruise";
 // model, OCR/regex defaults) is cross-domain — the cruise parser depends on
 // the same Ollama endpoint as flights — so it lives under "general", not
 // "flight" (where cruise-only users never found it; see issue #129).
-// cruiseMasterData (ship + port management) lives under the cruise tab.
-// airlineAircraftMasterData (airline + aircraft catalogue management) is the
-// first flight-specific section, so the "flight" tab (dropped when it went
-// empty, see the comment on the tabConfig below) is back.
+// Master data is one sub-section per catalogue — ships and ports under the
+// cruise tab, airlines / aircraft / airports under the flight tab. They used
+// to be two combined pages ("Schiffe & Häfen", "Airlines & Flugzeuge") that
+// stacked every catalogue on one screen; the lists are long enough that
+// finding anything meant scrolling past the one above it. Old deep links
+// still resolve — see sectionAliases.
 const TAB_FOR_SECTION: Record<ActiveSection, TabId> = {
   system: "general",
   instance: "general",
@@ -83,8 +91,11 @@ const TAB_FOR_SECTION: Record<ActiveSection, TabId> = {
   backups: "general",
   smtp: "general",
   parsers: "general",
-  cruiseMasterData: "cruise",
-  airlineAircraftMasterData: "flight",
+  shipsMasterData: "cruise",
+  portsMasterData: "cruise",
+  airlinesMasterData: "flight",
+  aircraftMasterData: "flight",
+  airportsMasterData: "flight",
 };
 
 // ==================== Admin Page Component ====================
@@ -518,12 +529,24 @@ export default function AdminPage(): JSX.Element {
     { id: "backups", label: t("admin:tabs.backups") },
     { id: "smtp", label: t("admin:tabs.smtp") },
     {
-      id: "cruiseMasterData",
-      label: t("admin:cruiseMasterData.menuLabel") || "Schiffe & Häfen",
+      id: "shipsMasterData",
+      label: t("admin:cruiseMasterData.ship.menuLabel") || "Schiffe",
     },
     {
-      id: "airlineAircraftMasterData",
-      label: t("admin:airlineAircraftMasterData.menuLabel") || "Airlines & Flugzeuge",
+      id: "portsMasterData",
+      label: t("admin:cruiseMasterData.port.menuLabel") || "Häfen",
+    },
+    {
+      id: "airlinesMasterData",
+      label: t("admin:airlineAircraftMasterData.airline.menuLabel") || "Airlines",
+    },
+    {
+      id: "aircraftMasterData",
+      label: t("admin:airlineAircraftMasterData.aircraft.menuLabel") || "Flugzeuge",
+    },
+    {
+      id: "airportsMasterData",
+      label: t("admin:airlineAircraftMasterData.airport.menuLabel") || "Flughäfen",
     },
   ];
 
@@ -686,9 +709,15 @@ export default function AdminPage(): JSX.Element {
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
-          {activeSection === "cruiseMasterData" && <CruiseMasterData />}
+          {activeSection === "shipsMasterData" && <ShipsSection />}
 
-          {activeSection === "airlineAircraftMasterData" && <AirlineAircraftMasterData />}
+          {activeSection === "portsMasterData" && <PortsSection />}
+
+          {activeSection === "airlinesMasterData" && <AirlinesSection />}
+
+          {activeSection === "aircraftMasterData" && <AircraftSection />}
+
+          {activeSection === "airportsMasterData" && <AirportsSection />}
 
           {activeSection === "system" && systemInfo && (
             <SystemInfoTab

@@ -12,6 +12,10 @@
 const SECTION_ALIASES: Readonly<Record<string, string>> = {
   apiKeys: "externalServices",
   apikeys: "externalServices",
+  // Master data was two combined pages before each catalogue became its own
+  // sub-section. Land old links on the first catalogue of the same tab.
+  cruiseMasterData: "shipsMasterData",
+  airlineAircraftMasterData: "airlinesMasterData",
 };
 
 export function normalizeSectionId(raw: string | null): string | null {
