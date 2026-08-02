@@ -44,6 +44,7 @@ const receiptUrlValidator = z
       message: `Receipt URL must be a local upload (/api/v1/uploads/) or from a trusted domain: ${ALLOWED_RECEIPT_DOMAINS.join(', ')}`,
     }
   )
+  .nullable()
   .optional();
 
 export const airportSchema = z.object({
@@ -54,7 +55,14 @@ export const airportSchema = z.object({
   lon: z.number().min(-180).max(180),
 });
 
-const emptyStringToUndefined = z.string().optional().transform((v) => (v === "" ? undefined : v));
+// "" and null both mean "clear" on the wire; undefined means "don't change"
+// on update. Collapsing "" to undefined made clearing impossible from the
+// edit forms — a blanked field turned into "keep the old value".
+const emptyStringToNull = z
+  .string()
+  .nullable()
+  .optional()
+  .transform((v) => (v === "" ? null : v));
 
 // Local wall-clock datetime — `YYYY-MM-DDTHH:mm` or with seconds. Deliberately
 // no timezone suffix: timezone is conveyed in the paired *Timezone field so
@@ -91,14 +99,18 @@ export function normalizeFlightNumber(v: string | undefined | null): string | un
 
 const normalizedFlightNumber = z
   .string()
+  .nullable()
   .optional()
-  .transform((v) => normalizeFlightNumber(v));
+  // Preserve an explicit null (= clear the stored number); only normalise
+  // actual strings. normalizeFlightNumber would collapse null to undefined,
+  // which the update handler reads as "don't change".
+  .transform((v) => (v === null ? null : normalizeFlightNumber(v)));
 
 const baseFlightSchema = z.object({
-  airline: emptyStringToUndefined,
+  airline: emptyStringToNull,
   airlineIata: z.string().max(4).nullable().optional(),
   airlineIcao: z.string().max(5).nullable().optional(),
-  operatingAirline: emptyStringToUndefined,
+  operatingAirline: emptyStringToNull,
   operatingAirlineIata: z.string().max(4).nullable().optional(),
   operatingAirlineIcao: z.string().max(5).nullable().optional(),
   isCodeshare: z.boolean().nullable().optional(),
@@ -157,8 +169,9 @@ const baseFlightSchema = z.object({
       } while (out !== prev);
       return out;
     })
+    .nullable()
     .optional(),
-  price: z.number().min(0).optional(),
+  price: z.number().min(0).nullable().optional(),
   // Any ISO 4217 alpha-3 code — validated only for shape, not against a
   // hard-coded allow-list, so users worldwide can record costs in their
   // local currency (INR, JPY, AUD, …). Intl.NumberFormat handles
@@ -167,9 +180,13 @@ const baseFlightSchema = z.object({
     .string()
     .regex(/^[A-Z]{3}$/, 'Must be a 3-letter ISO 4217 code (e.g. EUR, USD, INR)')
     .optional(),
-  taxes: z.number().min(0).optional(),
-  fees: z.number().min(0).optional(),
-  category: z.enum(['business', 'private', 'vacation']).optional(),
+  taxes: z.number().min(0).nullable().optional(),
+  fees: z.number().min(0).nullable().optional(),
+  // Nullable like seatClass below: the edit form offers a "(optional)" choice,
+  // and clearing must be expressible on the wire. `undefined` means "don't
+  // change" on update, `null` means "clear" — without the nullable, the clear
+  // silently kept the old value while the UI showed it removed.
+  category: z.enum(['business', 'private', 'vacation']).nullable().optional(),
   seatClass: z.enum(['economy', 'premium_economy', 'business', 'first']).nullable().optional(),
   tags: z.array(z.string().max(40)).optional(),
   companions: z.array(z.string().max(100)).max(50).optional().default([]),
@@ -190,15 +207,15 @@ const baseFlightSchema = z.object({
     'imported_roundtrip',
   ]).optional(),
   // Boarding pass / email import fields
-  seatNumber: z.string().max(10).optional(),
-  boardingGroup: z.string().max(20).optional(),
-  gate: z.string().max(20).optional(),
-  terminal: z.string().max(20).optional(),
-  bookingReference: z.string().max(20).optional(),
-  ticketNumber: z.string().max(30).optional(),
-  baggageAllowance: z.string().max(50).optional(),
-  frequentFlyerNumber: z.string().max(30).optional(),
-  bookingClassLetter: z.string().max(5).optional(),
+  seatNumber: z.string().max(10).nullable().optional(),
+  boardingGroup: z.string().max(20).nullable().optional(),
+  gate: z.string().max(20).nullable().optional(),
+  terminal: z.string().max(20).nullable().optional(),
+  bookingReference: z.string().max(20).nullable().optional(),
+  ticketNumber: z.string().max(30).nullable().optional(),
+  baggageAllowance: z.string().max(50).nullable().optional(),
+  frequentFlyerNumber: z.string().max(30).nullable().optional(),
+  bookingClassLetter: z.string().max(5).nullable().optional(),
   coPassengers: z.array(z.string().max(100)).max(50).optional(),
   // AeroDataBox extended fields (v1.5 importers)
   runwayDepartureTime: z.coerce.date().nullable().optional(),
