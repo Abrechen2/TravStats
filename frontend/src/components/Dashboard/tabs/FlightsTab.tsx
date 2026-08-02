@@ -200,7 +200,7 @@ export function FlightsTab(): JSX.Element {
   );
 
   const handleFlightSave = useCallback(
-    async (id: string, updates: Partial<Flight>): Promise<void> => {
+    async (id: string, updates: Partial<FlightInput>): Promise<void> => {
       await flightsApi.update(id, updates);
       await refreshAll();
       setEditingFlight(null);

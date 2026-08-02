@@ -1143,7 +1143,10 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       depLon,
       arrLat,
       arrLon,
-      seatClass: toSeatClass(data.seatClass ?? existingFlight.seatClass),
+      // `!== undefined`, not `??`: an explicit null means the user CLEARED the
+      // seat class, so CO₂ must recompute with the default multiplier — `??`
+      // would resurrect the old class for exactly that case.
+      seatClass: toSeatClass(data.seatClass !== undefined ? data.seatClass : existingFlight.seatClass),
     });
     updateData.routeDistance = haversineKm(depLat, depLon, arrLat, arrLon);
 

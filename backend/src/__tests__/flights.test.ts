@@ -213,4 +213,55 @@ describe('Flights API', () => {
       expect(updated.body.flight.depTimeSemantics).toBe('DATE_ONLY');
     });
   });
+
+  describe('PUT /api/v1/flights/:id clearing optional classifications', () => {
+    // The edit form offers "(optional)" for category and seat class. Clearing
+    // must be expressible on the wire: null clears, undefined leaves alone.
+    // Before category became nullable, the frontend could only OMIT the field,
+    // which the handler reads as "don't change" — the UI showed the value
+    // removed while the DB kept it.
+    it('clears category and seatClass with an explicit null, and recomputes CO2', async () => {
+      const created = await request(app)
+        .post('/api/v1/flights')
+        .set('Cookie', authCookie)
+        .send({
+          airline: 'Lufthansa',
+          flightNumber: 'LH789',
+          departure: { icao: 'EDDF', iata: 'FRA', lat: 50.0379, lon: 8.5622 },
+          arrival: { icao: 'KJFK', iata: 'JFK', lat: 40.6413, lon: -73.7781 },
+          departureLocal: '2025-04-01T10:00',
+          depTimezone: 'Europe/Berlin',
+          arrivalLocal: '2025-04-01T13:30',
+          arrTimezone: 'America/New_York',
+          status: 'scheduled',
+          category: 'business',
+          seatClass: 'first',
+        })
+        .expect(201);
+
+      const flightId = created.body.flight.id;
+      const co2WithFirst = created.body.flight.co2Kg;
+
+      const cleared = await request(app)
+        .put(`/api/v1/flights/${flightId}`)
+        .set('Cookie', authCookie)
+        .send({ category: null, seatClass: null })
+        .expect(200);
+
+      expect(cleared.body.flight.category).toBeNull();
+      expect(cleared.body.flight.seatClass).toBeNull();
+      // CO2 must recompute with the default multiplier, not resurrect 'first'.
+      expect(cleared.body.flight.co2Kg).toBeLessThan(co2WithFirst);
+
+      // And an update that OMITS both fields must leave the nulls alone.
+      const untouched = await request(app)
+        .put(`/api/v1/flights/${flightId}`)
+        .set('Cookie', authCookie)
+        .send({ notes: 'unrelated edit' })
+        .expect(200);
+
+      expect(untouched.body.flight.category).toBeNull();
+      expect(untouched.body.flight.seatClass).toBeNull();
+    });
+  });
 });

@@ -9,6 +9,7 @@ import { useToastStore } from "../../store/toastStore";
 import { storeHistoricalFlightTime, estimateFlightTimes } from "../../lib/timeEstimation";
 import type { Flight, FlightInput, ParsedBooking, UserAchievement } from "../../types";
 import type { TimeEstimationWarning } from "./FlightCompleteStep";
+import { historicalDateShape } from "./fields/HistoricalDateFields";
 
 export interface FlightLookupResult {
   flightNumber: string;
@@ -410,16 +411,6 @@ export function useFlightForm(
         : !!(departure && arrival && departureDate && arrivalDate),
     [departure, arrival, departureDate, arrivalDate, status]
   );
-
-  // Derive which date-precision shape a historical departure date has.
-  const historicalDateShape = (
-    date: string
-  ): "year" | "year_month" | "year_month_day" | "unknown" => {
-    if (/^\d{4}$/.test(date)) return "year";
-    if (/^\d{4}-\d{2}$/.test(date)) return "year_month";
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return "year_month_day";
-    return "unknown";
-  };
 
   // Pick the IANA timezone for a side. Airports cached in the DB carry an
   // IANA timezone; fall back to the user's display timezone if the airport

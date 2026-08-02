@@ -1,6 +1,7 @@
 import HelpIcon from "../Help/HelpIcon";
 import AirportAutocomplete from "../AirportAutocomplete";
 import CompanionsField from "./fields/CompanionsField";
+import HistoricalDateFields from "./fields/HistoricalDateFields";
 import TimesFields, { type ActualTimesFieldsValue } from "./fields/TimesFields";
 import CatalogueCombobox, {
   searchAirlineOptions,
@@ -208,7 +209,7 @@ export default function FlightCompleteStep({
   sizedInputClass,
   setTimeEstimationWarning,
 }: FlightCompleteStepProps): JSX.Element {
-  const { t, i18n } = useTranslation(["flights"]);
+  const { t } = useTranslation(["flights"]);
   const addToast = useToastStore((s) => s.addToast);
   const { features } = useSettingsStore();
 
@@ -370,137 +371,18 @@ export default function FlightCompleteStep({
         )}
       </div>
 
-      {/* Date & Time — full inputs for normal flights, year/month for historical */}
+      {/* Date & Time — full inputs for normal flights, year/month/day for
+          historical. Shared with the edit modal via HistoricalDateFields. */}
       {status === "historical" ? (
-        (() => {
-          // Four valid storage shapes, in order of completeness:
-          //   ""           -> nothing entered yet
-          //   "YYYY"       -> year known, month unknown
-          //   "YYYY-MM"    -> year + month known, day unknown (NEW)
-          //   "YYYY-MM-DD" -> year + month + real day known
-          // The legacy "YYYY-MM-01" shape is read as year+month+day=1 and
-          // will display Day=1 in the new UI, which is honest about the data.
-          const yearMatch = departureDate.match(/^(\d{1,4})/);
-          const monthMatch = departureDate.match(/^\d{4}-(\d{2})/);
-          const dayMatch = departureDate.match(/^\d{4}-\d{2}-(\d{2})$/);
-          const yearStr = yearMatch?.[1] ?? "";
-          const monthPadded = monthMatch?.[1] ?? "";
-          const monthValue = monthPadded ? String(parseInt(monthPadded, 10)) : "";
-          const dayPadded = dayMatch?.[1] ?? "";
-          const dayValue = dayPadded ? String(parseInt(dayPadded, 10)) : "";
-
-          // Returns how many days are in (year, month) where month is 1-12.
-          // new Date(year, month, 0) gives the last day of the prior month
-          // when month is treated as 1-based (JS idiom).
-          const daysInMonth = (year: number, month: number): number =>
-            new Date(year, month, 0).getDate();
-
-          const numYear = yearStr ? parseInt(yearStr, 10) : new Date().getFullYear();
-          const numMonth = monthValue ? parseInt(monthValue, 10) : 0;
-          const maxDay = numMonth > 0 ? daysInMonth(numYear, numMonth) : 31;
-
-          return (
-            <div className="grid gap-4" style={{ gridTemplateColumns: "1.5fr 2fr 1.2fr" }}>
-              <div>
-                <label className={`label ${textClass}`}>{t("flights:historicalYear")}</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={4}
-                  placeholder={t("flights:historicalYearPlaceholder")}
-                  value={yearStr}
-                  onChange={(e) => {
-                    const y = e.target.value.replace(/\D/g, "").slice(0, 4);
-                    if (!y) {
-                      setDepartureDate("");
-                      setArrivalDate("");
-                      return;
-                    }
-                    let next: string;
-                    if (!monthPadded) {
-                      // No month selected — store year-only
-                      next = y;
-                    } else if (!dayPadded) {
-                      // Month known, no day — store YYYY-MM
-                      next = `${y}-${monthPadded}`;
-                    } else {
-                      // Year + month + day: clamp day to the new month's max
-                      const newMax = daysInMonth(parseInt(y, 10), parseInt(monthPadded, 10));
-                      const clampedDay = Math.min(parseInt(dayPadded, 10), newMax);
-                      next = `${y}-${monthPadded}-${String(clampedDay).padStart(2, "0")}`;
-                    }
-                    setDepartureDate(next);
-                    setArrivalDate(next);
-                  }}
-                  className={`input ${sizedInputClass}`}
-                />
-              </div>
-              <div>
-                <label className={`label ${textClass}`}>{t("flights:historicalMonth")}</label>
-                <select
-                  value={monthValue}
-                  onChange={(e) => {
-                    const m = e.target.value;
-                    const y = yearStr || String(new Date().getFullYear());
-                    let next: string;
-                    if (!m) {
-                      // Month cleared — drop back to year-only (also clears day)
-                      next = yearStr ? yearStr : "";
-                    } else if (!dayPadded) {
-                      // Month selected, no day — store YYYY-MM (NOT YYYY-MM-01)
-                      next = `${y}-${m.padStart(2, "0")}`;
-                    } else {
-                      // Month changed while day is set — clamp day if needed
-                      const newMax = daysInMonth(parseInt(y, 10), parseInt(m, 10));
-                      const clampedDay = Math.min(parseInt(dayPadded, 10), newMax);
-                      next = `${y}-${m.padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
-                    }
-                    setDepartureDate(next);
-                    setArrivalDate(next);
-                  }}
-                  className={`input ${sizedInputClass}`}
-                >
-                  <option value="">{t("flights:historicalMonthNone")}</option>
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <option key={i + 1} value={String(i + 1)}>
-                      {new Date(2000, i).toLocaleDateString(i18n.language, { month: "long" })}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className={`label ${textClass}`}>{t("flights:historicalDay")}</label>
-                <select
-                  value={dayValue}
-                  disabled={!monthValue}
-                  onChange={(e) => {
-                    const d = e.target.value;
-                    const y = yearStr || String(new Date().getFullYear());
-                    const m = monthPadded;
-                    let next: string;
-                    if (!d) {
-                      // Day cleared — transition back to YYYY-MM
-                      next = `${y}-${m}`;
-                    } else {
-                      next = `${y}-${m}-${d.padStart(2, "0")}`;
-                    }
-                    setDepartureDate(next);
-                    setArrivalDate(next);
-                  }}
-                  className={`input ${sizedInputClass} disabled:opacity-40 disabled:cursor-not-allowed`}
-                >
-                  <option value="">{t("flights:historicalDayNone")}</option>
-                  {Array.from({ length: maxDay }, (_, i) => (
-                    <option key={i + 1} value={String(i + 1)}>
-                      {i + 1}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          );
-        })()
+        <HistoricalDateFields
+          value={departureDate}
+          onChange={(next) => {
+            setDepartureDate(next);
+            setArrivalDate(next);
+          }}
+          labelClassName={textClass}
+          inputClassName={sizedInputClass}
+        />
       ) : (
         <TimesFields
           value={{

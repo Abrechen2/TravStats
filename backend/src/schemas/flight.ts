@@ -169,7 +169,11 @@ const baseFlightSchema = z.object({
     .optional(),
   taxes: z.number().min(0).optional(),
   fees: z.number().min(0).optional(),
-  category: z.enum(['business', 'private', 'vacation']).optional(),
+  // Nullable like seatClass below: the edit form offers a "(optional)" choice,
+  // and clearing must be expressible on the wire. `undefined` means "don't
+  // change" on update, `null` means "clear" — without the nullable, the clear
+  // silently kept the old value while the UI showed it removed.
+  category: z.enum(['business', 'private', 'vacation']).nullable().optional(),
   seatClass: z.enum(['economy', 'premium_economy', 'business', 'first']).nullable().optional(),
   tags: z.array(z.string().max(40)).optional(),
   companions: z.array(z.string().max(100)).max(50).optional().default([]),
