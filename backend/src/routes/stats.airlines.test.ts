@@ -48,11 +48,13 @@ describe('GET /api/v1/stats/airlines', () => {
       airline: 'Lufthansa',
       count: 6,
       percentage: 60.0,
+      iata: 'LH',
     });
     expect(res.body.airlines[1]).toEqual({
       airline: 'Ryanair',
       count: 4,
       percentage: 40.0,
+      iata: 'FR',
     });
   });
 
@@ -65,5 +67,27 @@ describe('GET /api/v1/stats/airlines', () => {
     const res = await request(app).get('/api/v1/stats/airlines');
     expect(res.status).toBe(200);
     expect(res.body.airlines[0].airline).toBe('Unknown');
+  });
+
+  it('carries the resolved IATA code when the catalogue knows the airline', async () => {
+    mockCount.mockResolvedValue(1);
+    mockGroupBy.mockResolvedValue([
+      { airline: 'Lufthansa', _count: 1 },
+    ]);
+
+    const res = await request(app).get('/api/v1/stats/airlines');
+    expect(res.status).toBe(200);
+    expect(res.body.airlines[0].iata).toBe('LH');
+  });
+
+  it('omits iata when the airline cannot be resolved', async () => {
+    mockCount.mockResolvedValue(1);
+    mockGroupBy.mockResolvedValue([
+      { airline: 'Definitely Not An Airline', _count: 1 },
+    ]);
+
+    const res = await request(app).get('/api/v1/stats/airlines');
+    expect(res.status).toBe(200);
+    expect(res.body.airlines[0].iata).toBeUndefined();
   });
 });
