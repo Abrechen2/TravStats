@@ -16,6 +16,7 @@ export default function AirlinesSection(): JSX.Element {
   const [airlines, setAirlines] = useState<Airline[]>([]);
   const [query, setQuery] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
 
   const [newName, setNewName] = useState("");
   const [newIata, setNewIata] = useState("");
@@ -30,8 +31,11 @@ export default function AirlinesSection(): JSX.Element {
       void (async () => {
         setLoading(true);
         try {
-          const list = await airlinesApi.search(query);
-          if (!cancelled) setAirlines(list);
+          const list = await airlinesApi.list(query);
+          if (!cancelled) {
+            setAirlines(list.items);
+            setTotal(list.total);
+          }
         } catch (err) {
           logger.warn("Failed to load airlines", err);
         } finally {
@@ -159,7 +163,7 @@ export default function AirlinesSection(): JSX.Element {
           className="divide-y max-h-[28rem] overflow-y-auto"
           style={{ borderColor: "var(--color-border)" }}
         >
-          {airlines.slice(0, 50).map((a) => (
+          {airlines.map((a) => (
             <li key={a.id} className="flex items-center justify-between py-2 text-sm">
               <div>
                 <span className="font-medium text-(--text-primary)">{a.name}</span>
@@ -184,6 +188,11 @@ export default function AirlinesSection(): JSX.Element {
             </li>
           ))}
         </ul>
+      )}
+      {total > airlines.length && (
+        <p className="mt-2 text-xs text-(--text-muted)">
+          {t("admin:masterData.showingOf", { shown: airlines.length, total })}
+        </p>
       )}
     </section>
   );

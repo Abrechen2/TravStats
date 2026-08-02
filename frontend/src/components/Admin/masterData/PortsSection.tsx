@@ -12,6 +12,7 @@ export default function PortsSection(): JSX.Element {
   const [ports, setPorts] = useState<Port[]>([]);
   const [query, setQuery] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
 
   const [newName, setNewName] = useState("");
   const [newCity, setNewCity] = useState("");
@@ -26,8 +27,11 @@ export default function PortsSection(): JSX.Element {
     void (async () => {
       setLoading(true);
       try {
-        const list = await portsApi.search(query);
-        if (!cancelled) setPorts(list);
+        const list = await portsApi.list(query);
+        if (!cancelled) {
+          setPorts(list.items);
+          setTotal(list.total);
+        }
       } catch (err) {
         logger.warn("Failed to load ports", err);
       } finally {
@@ -166,7 +170,7 @@ export default function PortsSection(): JSX.Element {
           className="divide-y max-h-[28rem] overflow-y-auto"
           style={{ borderColor: "var(--color-border)" }}
         >
-          {ports.slice(0, 50).map((p) => (
+          {ports.map((p) => (
             <li key={p.id} className="flex items-center justify-between py-2 text-sm">
               <div>
                 <span className="font-medium text-(--text-primary)">{p.name}</span>
@@ -193,6 +197,11 @@ export default function PortsSection(): JSX.Element {
             </li>
           ))}
         </ul>
+      )}
+      {total > ports.length && (
+        <p className="mt-2 text-xs text-(--text-muted)">
+          {t("admin:masterData.showingOf", { shown: ports.length, total })}
+        </p>
       )}
     </section>
   );

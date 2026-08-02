@@ -189,6 +189,10 @@ export default function AirportsSection(): JSX.Element {
 
       {loading ? (
         <p className="text-sm text-(--text-muted)">{t("common:loading.default")}</p>
+      ) : query.trim().length < 2 ? (
+        // Search-only over ~18k rows — an idle section must say "type to
+        // search", not "no matches" (which reads like an empty catalogue).
+        <p className="text-sm text-(--text-muted)">{t("admin:masterData.typeToSearch")}</p>
       ) : airports.length === 0 ? (
         <p className="text-sm text-(--text-muted)">
           {t("admin:airlineAircraftMasterData.airport.empty")}
@@ -224,6 +228,11 @@ export default function AirportsSection(): JSX.Element {
             </li>
           ))}
         </ul>
+      )}
+      {/* The search endpoint caps partial matches at ~10 — from that size on,
+          a broad query ("san") is almost certainly truncated. */}
+      {airports.length >= 10 && (
+        <p className="mt-2 text-xs text-(--text-muted)">{t("admin:masterData.refineSearch")}</p>
       )}
     </section>
   );

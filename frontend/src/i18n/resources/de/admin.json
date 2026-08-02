@@ -687,5 +687,10 @@
       "permissionsTitle": "Benutzer-Berechtigungen:",
       "permissions": "Steuert ob Benutzer eigene Schlüssel setzen können. Globale Schlüssel sind Fallback für Benutzer ohne eigene Schlüssel."
     }
+  },
+  "masterData": {
+    "showingOf": "{{shown}} von {{total}} Einträgen angezeigt — Suche verfeinern, um weitere zu sehen.",
+    "typeToSearch": "Mindestens zwei Zeichen eingeben, um den Katalog zu durchsuchen.",
+    "refineSearch": "Mehr Treffer als angezeigt — Suche verfeinern."
   }
 }
