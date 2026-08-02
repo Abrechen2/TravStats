@@ -519,8 +519,8 @@ form never rendered them. Delay is derived and read-only, like status."
 ### Task 6: Gate
 
 - [x] **Step 1:** `cd frontend && npx tsc --noEmit`, then `npm run lint`, then `npx vitest --run`, then `npx vite build` — each on its own line.
-- [ ] **Step 2:** Backend unchanged by this phase, but run `cd backend && npx jest src/__tests__/flights` to prove the contract still holds.
-- [ ] **Step 3: Browser.** Dev servers with `VITE_API_URL` set in the SHELL, not only `.env.local`, and `CORS_ORIGIN` set to the frontend origin — `FRONTEND_URL` alone does not open cross-origin dev. Then: open a flight for editing, save without changing anything, and confirm in the database that `departure_time` and `arrival_time` are unchanged. Change an airport and confirm distance and map update. Confirm the console stays clean.
+- [x] **Step 2:** Backend unchanged by this phase, but run `cd backend && npx jest src/__tests__/flights` to prove the contract still holds.
+- [x] **Step 3: Browser.** Dev servers with `VITE_API_URL` set in the SHELL, not only `.env.local`, and `CORS_ORIGIN` set to the frontend origin — `FRONTEND_URL` alone does not open cross-origin dev. Then: open a flight for editing, save without changing anything, and confirm in the database that `departure_time` and `arrival_time` are unchanged. Change an airport and confirm distance and map update. Confirm the console stays clean.
 - [x] **Step 4:** Report the numbers from each gate rather than asserting success.
 
 ---
