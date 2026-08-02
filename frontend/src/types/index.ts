@@ -254,16 +254,18 @@ export interface TripPhoto {
 }
 
 export interface FlightInput {
-  airline?: string;
+  /** For the nullable fields in this interface: `null` clears the stored
+   *  value on update; `undefined` leaves it alone. */
+  airline?: string | null;
   airlineIata?: string;
   airlineIcao?: string;
-  operatingAirline?: string;
+  operatingAirline?: string | null;
   operatingAirlineIata?: string;
   operatingAirlineIcao?: string;
   isCodeshare?: boolean;
-  flightNumber?: string;
+  flightNumber?: string | null;
   callsign?: string;
-  aircraft?: string;
+  aircraft?: string | null;
   aircraftRegistration?: string;
   aircraftModeS?: string;
   departure: Airport;
@@ -294,29 +296,29 @@ export interface FlightInput {
     | "live_update"
     | "api_lookup"
     | "bulk_import";
-  notes?: string;
+  notes?: string | null;
   // Extended fields
-  seatNumber?: string;
+  seatNumber?: string | null;
   /** `null` clears the stored value on update; `undefined` leaves it alone. */
   seatClass?: "economy" | "premium_economy" | "business" | "first" | null;
-  boardingGroup?: string;
-  gate?: string;
-  terminal?: string;
-  bookingReference?: string;
-  ticketNumber?: string;
-  price?: number;
+  boardingGroup?: string | null;
+  gate?: string | null;
+  terminal?: string | null;
+  bookingReference?: string | null;
+  ticketNumber?: string | null;
+  price?: number | null;
   /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
   currency?: string;
-  taxes?: number;
-  fees?: number;
+  taxes?: number | null;
+  fees?: number | null;
   /** `null` clears the stored value on update; `undefined` leaves it alone. */
   category?: "business" | "private" | "vacation" | null;
   tags?: string[];
   companions?: string[];
-  receiptUrl?: string;
-  baggageAllowance?: string;
-  frequentFlyerNumber?: string;
-  bookingClassLetter?: string;
+  receiptUrl?: string | null;
+  baggageAllowance?: string | null;
+  frequentFlyerNumber?: string | null;
+  bookingClassLetter?: string | null;
   coPassengers?: string[];
   // Sonder-Flug (special flights) — see Flight interface
   specialType?:
