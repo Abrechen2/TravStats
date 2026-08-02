@@ -3,7 +3,9 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { differenceInCalendarDays } from "date-fns";
 import { tripsApi } from "../lib/api";
 import { logger } from "../lib/logger";
-import { sumByCurrency } from "../lib/bookingCost";
+import { sumByCurrency, tripCostSources } from "../lib/bookingCost";
+import { formatDateTimeInTimezone } from "../lib/dateUtils";
+import { useSettingsStore } from "../store/settingsStore";
 import { computeRailStates } from "../lib/timelineRail";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
@@ -518,6 +520,8 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
   const [editingJournal, setEditingJournal] = useState<TripJournalEntry | null>(null);
   const [viewingJournal, setViewingJournal] = useState<TripJournalEntry | null>(null);
   const [editingStop, setEditingStop] = useState<TripStop | null>(null);
+  // Only a fallback: a flight whose airport record lacks an IANA zone.
+  const userTz = useSettingsStore((s) => s.display?.timezone) || "UTC";
 
   const events = useMemo<TimelineEvent[]>(() => {
     const out: TimelineEvent[] = [];
@@ -528,9 +532,14 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
         kind: "flight",
         date: f.departureTime,
         title: `${f.depIata ?? "???"} → ${f.arrIata ?? "???"}`,
+        // Airport-local, not the viewer's clock. `toLocaleString()` rendered a
+        // JFK arrival in Europe/Berlin, so the same flight read 13:45 in the
+        // flights table and 19:45 here — six hours apart from the boarding
+        // pass. Each end is formatted against its own airport's zone, with the
+        // stored time semantics so a DATE_ONLY historical row keeps its date.
         subtitle: f.arrivalTime
-          ? `${new Date(f.departureTime).toLocaleString()} → ${new Date(f.arrivalTime).toLocaleString()}`
-          : new Date(f.departureTime).toLocaleString(),
+          ? `${formatDateTimeInTimezone(f.departureTime, f.depTimezone || userTz, f.depTimeSemantics)} → ${formatDateTimeInTimezone(f.arrivalTime, f.arrTimezone || userTz, f.arrTimeSemantics)}`
+          : formatDateTimeInTimezone(f.departureTime, f.depTimezone || userTz, f.depTimeSemantics),
       });
     }
     for (const c of trip.cruises ?? []) {
@@ -1169,7 +1178,7 @@ function TripStatsRow({
   const cruiseEnabled = isEnabled("cruise");
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
   const cruiseCount = trip._count?.cruises ?? trip.cruises?.length ?? 0;
-  const costTotals = sumByCurrency(trip.bookings ?? []);
+  const costTotals = sumByCurrency(tripCostSources(trip.bookings ?? [], trip.flights ?? []));
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">

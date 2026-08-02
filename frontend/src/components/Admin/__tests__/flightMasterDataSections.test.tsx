@@ -43,9 +43,11 @@ vi.mock("../../../store/toastStore", () => ({
     selector({ addToast }),
 }));
 
-import AirlineAircraftMasterData from "../AirlineAircraftMasterData";
+import AirlinesSection from "../masterData/AirlinesSection";
+import AircraftSection from "../masterData/AircraftSection";
+import AirportsSection from "../masterData/AirportsSection";
 
-describe("AirlineAircraftMasterData", () => {
+describe("flight master-data sections", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     search.mockResolvedValue([
@@ -54,7 +56,7 @@ describe("AirlineAircraftMasterData", () => {
   });
 
   it("renders the airline returned by airlinesApi.search", async () => {
-    render(<AirlineAircraftMasterData />);
+    render(<AirlinesSection />);
 
     expect(await screen.findByText("Lufthansa")).toBeInTheDocument();
     expect(screen.getByText("LH")).toBeInTheDocument();
@@ -62,7 +64,7 @@ describe("AirlineAircraftMasterData", () => {
   });
 
   it("renders the add-airline form inputs", async () => {
-    render(<AirlineAircraftMasterData />);
+    render(<AirlinesSection />);
     await screen.findByText("Lufthansa");
 
     const airlineSection = screen
@@ -97,12 +99,11 @@ describe("AirlineAircraftMasterData", () => {
       lon: 11.2,
       isUserAdded: true,
     });
-    render(<AirlineAircraftMasterData />);
-    await screen.findByText("Lufthansa");
+    render(<AirportsSection />);
 
-    const section = screen
-      .getByRole("heading", { name: /Flughäfen/ })
-      .closest("section") as HTMLElement;
+    const section = (await screen.findByRole("heading", { name: /Flughäfen/ })).closest(
+      "section"
+    ) as HTMLElement;
 
     // Search needs ≥2 chars, then lists the hit with the user-added badge.
     await user.type(
@@ -130,12 +131,11 @@ describe("AirlineAircraftMasterData", () => {
   it("rejects non-numeric coordinates before hitting the API", async () => {
     const user = (await import("@testing-library/user-event")).default;
     airportSearch.mockResolvedValue([]);
-    render(<AirlineAircraftMasterData />);
-    await screen.findByText("Lufthansa");
+    render(<AirportsSection />);
 
-    const section = screen
-      .getByRole("heading", { name: /Flughäfen/ })
-      .closest("section") as HTMLElement;
+    const section = (await screen.findByRole("heading", { name: /Flughäfen/ })).closest(
+      "section"
+    ) as HTMLElement;
     await user.type(within(section).getByPlaceholderText("Name"), "Testfeld");
     await user.type(within(section).getByPlaceholderText("Breite"), "abc");
     await user.type(within(section).getByPlaceholderText("Länge"), "11.2");
@@ -148,13 +148,24 @@ describe("AirlineAircraftMasterData", () => {
     );
   });
 
-  it("renders the aircraft section with its own add form", async () => {
-    render(<AirlineAircraftMasterData />);
+  // The catalogues run to thousands of rows. Before the split they rendered
+  // into an unbounded list, so the page just grew and the section below was
+  // pushed off-screen — the list has to scroll inside its own box.
+  it("keeps each catalogue list scrollable inside a bounded box", async () => {
+    render(<AirlinesSection />);
     await screen.findByText("Lufthansa");
 
-    const section = screen
-      .getByRole("heading", { name: /Flugzeugtypen/ })
-      .closest("section") as HTMLElement;
-    expect(within(section).getByText("Keine Treffer.")).toBeInTheDocument();
+    const list = screen.getByRole("list");
+    expect(list.className).toContain("overflow-y-auto");
+    expect(list.className).toMatch(/max-h-/);
+  });
+
+  it("renders the aircraft section with its own add form", async () => {
+    render(<AircraftSection />);
+
+    const section = (await screen.findByRole("heading", { name: /Flugzeugtypen/ })).closest(
+      "section"
+    ) as HTMLElement;
+    await waitFor(() => expect(within(section).getByText("Keine Treffer.")).toBeInTheDocument());
   });
 });
