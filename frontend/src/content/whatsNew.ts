@@ -28,6 +28,36 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW_ENTRIES: WhatsNewEntry[] = [
   {
+    version: "2.5.0",
+    highlights: [
+      {
+        icon: "🛫",
+        titleKey: "entries.v250.flightsTable.title",
+        bodyKey: "entries.v250.flightsTable.body",
+      },
+      {
+        icon: "📸",
+        titleKey: "entries.v250.immich.title",
+        bodyKey: "entries.v250.immich.body",
+      },
+      {
+        icon: "👥",
+        titleKey: "entries.v250.companions.title",
+        bodyKey: "entries.v250.companions.body",
+      },
+      {
+        icon: "⏱️",
+        titleKey: "entries.v250.flightForm.title",
+        bodyKey: "entries.v250.flightForm.body",
+      },
+      {
+        icon: "🔄",
+        titleKey: "entries.v250.status.title",
+        bodyKey: "entries.v250.status.body",
+      },
+    ],
+  },
+  {
     version: "2.4.0",
     highlights: [
       {

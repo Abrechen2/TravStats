@@ -3,6 +3,28 @@
   "subtitle": "A short overview of the most important changes.",
   "dismiss": "Got it",
   "entries": {
+    "v250": {
+      "flightsTable": {
+        "title": "The flight table reads like a departures board",
+        "body": "Every row now carries the airline as a brand tile, departure and arrival share one time column, country flags mark the route, and the actions are icons instead of text buttons. A dot on the row tells you where the data came from."
+      },
+      "immich": {
+        "title": "Trip photos from your own Immich",
+        "body": "You can link Immich albums straight to a trip — either linked only, which keeps the images on your server and uses no storage here, or as a real import. The gallery groups by album, any picture can become the cover, and a re-sync picks up stragglers."
+      },
+      "companions": {
+        "title": "Companions are real records now",
+        "body": "Travel companions are no longer free text on a single record. You create them once and reuse them everywhere — in flights, trips, cruises and special flights, through the same picker. Your existing entries are migrated automatically on startup."
+      },
+      "flightForm": {
+        "title": "One flight form, scheduled and actual times",
+        "body": "Adding and editing finally use the same form. New: scheduled and actual times with the delay calculated for you, boarding group, trip assignment, cost and receipt — and airline and aircraft type come from the catalogue. A field you clear stays cleared instead of quietly keeping the old value."
+      },
+      "status": {
+        "title": "Status follows from the dates",
+        "body": "Whether something is planned, under way or done is now derived from its dates and refreshed hourly — for flights, cruises and trips alike. The manual status picker is gone as a result; the only state you still set yourself is \"cancelled\"."
+      }
+    },
     "v230": {
       "stats": {
         "title": "Anonymous usage statistics",
