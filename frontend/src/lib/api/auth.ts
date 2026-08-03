@@ -31,6 +31,12 @@ export const authApi = {
     await api.post("/auth/logout");
   },
 
+  /** Validates the HttpOnly session cookie. Rejects with 401 when it is gone. */
+  me: async (): Promise<{ user: User }> => {
+    const { data } = await api.get<{ user: User }>("/auth/me");
+    return data;
+  },
+
   changePassword: async (
     oldPassword: string,
     newPassword: string

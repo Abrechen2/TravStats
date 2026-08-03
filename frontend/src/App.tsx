@@ -13,6 +13,7 @@ import i18n from "./i18n/config";
 import { useTranslation } from "./hooks/useTranslation";
 import { useEnabledDomains } from "./hooks/useEnabledDomains";
 import { useWhatsNew } from "./hooks/useWhatsNew";
+import { useSessionValidation } from "./hooks/useSessionValidation";
 import WhatsNewModal from "./components/WhatsNewModal";
 import UsageStatsConsentCard from "./components/UsageStatsConsentCard";
 
@@ -65,7 +66,13 @@ function AppContent() {
   const location = useLocation();
   const { t } = useTranslation("common");
   const { isEnabled } = useEnabledDomains();
-  const { entry, shouldShow, dismiss } = useWhatsNew(isAuthenticated);
+  // A persisted user is only a CLAIM until the server confirms the cookie.
+  // Nothing authenticated may be fetched or rendered before it does — hence
+  // every authenticated effect below is gated on `sessionChecked`, not just
+  // the render.
+  const { sessionChecked } = useSessionValidation();
+  const sessionConfirmed = isAuthenticated && sessionChecked;
+  const { entry, shouldShow, dismiss } = useWhatsNew(sessionConfirmed);
   const [setupChecked, setSetupChecked] = useState(false);
   const [showSeedingModal, setShowSeedingModal] = useState(false);
   const [consentPending, setConsentPending] = useState(false);
@@ -73,7 +80,7 @@ function AppContent() {
   // Usage-stats consent is instance-wide: only offer it to admins, and only while
   // it is still undecided. Fetch failures must never surface the card.
   useEffect(() => {
-    if (!isAuthenticated || !user?.isAdmin) return;
+    if (!sessionConfirmed || !user?.isAdmin) return;
     let cancelled = false;
     void usageStatsApi
       .get()
@@ -86,7 +93,7 @@ function AppContent() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, user?.isAdmin]);
+  }, [sessionConfirmed, user?.isAdmin]);
 
   // Sync language from settings store to i18n
   useEffect(() => {
@@ -122,14 +129,14 @@ function AppContent() {
 
   // Load remote settings only after setup check is complete and user is logged in
   useEffect(() => {
-    if (setupChecked && user) {
+    if (setupChecked && sessionConfirmed) {
       loadRemoteSettings();
     }
-  }, [setupChecked, user, loadRemoteSettings]);
+  }, [setupChecked, sessionConfirmed, loadRemoteSettings]);
 
   // Check if airport seeding is running after login
   useEffect(() => {
-    if (user) {
+    if (sessionConfirmed) {
       // Check if airport seeding is running
       const checkSeedingStatus = async () => {
         try {
@@ -150,7 +157,7 @@ function AppContent() {
       const timeout = setTimeout(checkSeedingStatus, 500);
       return () => clearTimeout(timeout);
     }
-  }, [user]);
+  }, [sessionConfirmed]);
 
   // Modal schließen und Flag setzen
   const handleCloseSeedingModal = () => {
@@ -158,8 +165,9 @@ function AppContent() {
     localStorage.setItem("airport-seeding-modal-seen", "true");
   };
 
-  // Show loading while checking setup status or waiting for auth store hydration
-  if (!setupChecked || !_hasHydrated) {
+  // Show loading while checking setup status, waiting for auth store hydration,
+  // or verifying a persisted session against the server.
+  if (!setupChecked || !_hasHydrated || !sessionChecked) {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
