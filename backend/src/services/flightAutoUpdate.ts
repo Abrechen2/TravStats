@@ -404,12 +404,23 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           flight.arrivalTime,
         );
 
-        // Always recalculate nextApiCheckAt after a check attempt
+        // Always recalculate nextApiCheckAt after a check attempt.
+        // The tracking flags come from the response we JUST received, falling
+        // back to the stored row: the API knows the aircraft is airborne before
+        // that fact is ever written to the database (proposed changes land in a
+        // PendingUpdate, not on the flight). Scheduling off the stale row alone
+        // is what ended polling before delayed flights had landed.
+        const observedDeparture = apiData?.actualDeparture ?? flight.actualDeparture;
+        const observedArrival = apiData?.actualArrival ?? flight.actualArrival;
         const nextCheck = recalculateNextApiCheckAt(
           flight.departureTime,
           flight.arrivalTime,
           flight.status,
           flight.flightNumber,
+          {
+            hasActualDeparture: Boolean(observedDeparture),
+            hasActualArrival: Boolean(observedArrival),
+          },
         );
         await prismaClient.flight.update({
           where: { id: flight.id },
