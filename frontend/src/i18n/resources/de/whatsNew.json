@@ -3,6 +3,28 @@
   "subtitle": "Ein kurzer Überblick über die wichtigsten Änderungen.",
   "dismiss": "Verstanden",
   "entries": {
+    "v250": {
+      "flightsTable": {
+        "title": "Flugtabelle wie eine Abflugtafel",
+        "body": "Jede Zeile trägt die Airline jetzt als Marken-Kachel, Abflug und Ankunft stehen in einer gemeinsamen Zeitspalte, Länderflaggen markieren die Route, und die Aktionen sind Symbole statt Textknöpfe. Ein Punkt an der Zeile verrät, woher die Daten stammen."
+      },
+      "immich": {
+        "title": "Reisefotos aus deinem Immich",
+        "body": "Du kannst Immich-Alben direkt mit einer Reise verknüpfen — entweder nur verlinkt, dann bleiben die Bilder auf deinem Server und belegen hier keinen Speicher, oder als echter Import. Die Galerie gruppiert nach Album, jedes Bild lässt sich als Titelbild setzen, und ein erneuter Abgleich holt Nachzügler."
+      },
+      "companions": {
+        "title": "Begleiter sind jetzt echte Einträge",
+        "body": "Mitreisende werden nicht mehr als freier Text am einzelnen Eintrag gespeichert, sondern einmal angelegt und überall wiederverwendet — in Flug, Reise, Kreuzfahrt und Sonderflug über denselben Auswahldialog. Deine bisherigen Angaben werden beim Start automatisch übernommen."
+      },
+      "flightForm": {
+        "title": "Ein Flugformular, Soll- und Ist-Zeiten",
+        "body": "Anlegen und Bearbeiten benutzen endlich dieselbe Maske. Neu sind geplante und tatsächliche Zeiten mit automatisch berechneter Verspätung, Boarding-Gruppe, Reisezuordnung, Kosten und Beleg — Airline und Flugzeugtyp kommen aus dem Katalog. Und ein geleertes Feld bleibt geleert, statt still den alten Wert zu behalten."
+      },
+      "status": {
+        "title": "Der Status ergibt sich aus den Daten",
+        "body": "Ob etwas geplant, unterwegs oder erledigt ist, wird jetzt aus den Datumsangaben abgeleitet und stündlich nachgezogen — für Flüge, Kreuzfahrten und Reisen gleichermaßen. Die manuelle Status-Auswahl entfällt deshalb; selbst setzen musst du nur noch \"storniert\"."
+      }
+    },
     "v230": {
       "stats": {
         "title": "Anonyme Nutzungsstatistik",
