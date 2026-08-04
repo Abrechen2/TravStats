@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { prisma } from '../db';
 import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
 import { checkAndUpdateAchievements } from '../utils/achievements';
+import { resolveRank } from '../utils/achievementRank';
 
 const router = Router();
 
@@ -80,6 +81,10 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       return acc;
     }, {} as Record<string, { total: number; unlocked: number }>);
 
+    // Rank rides on unlocked points only — see utils/achievementRank.ts. The
+    // `rank` value is a stable slug, not display copy: clients localize it.
+    const { rank, nextRankPoints } = resolveRank(totalPoints);
+
     res.json({
       achievements: achievementsWithProgress,
       summary: {
@@ -87,6 +92,8 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
         unlockedAchievements: unlocked.length,
         totalPoints,
         categories,
+        rank,
+        nextRankPoints,
       },
     });
   } catch (error) {
