@@ -350,6 +350,28 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
       }
     }
 
+    // The CSV carries no timezone, so every row this importer writes lands with
+    // `timezone: null` and stays that way until the next process start, which is
+    // the only other place the backfill runs. That made the admin re-seed —
+    // the documented recovery for a truncated catalogue — restore the ROWS but
+    // not the data that makes displayed times airport-local: it reported
+    // "completed" while every freshly imported airport still resolved to UTC.
+    // Backfilling here, before the status flips, makes "completed" mean the
+    // catalogue is actually usable.
+    let timezonesFilled = 0;
+    try {
+      const { backfillAirportTimezones } = await import('./airportLookup');
+      timezonesFilled = await backfillAirportTimezones();
+    } catch (error) {
+      // A failed backfill must not fail the import — the rows are still worth
+      // having, and the next boot retries. Loud in the log, not fatal.
+      logger.error({
+        operation: 'seed_airports_timezone_backfill_failed',
+        message: 'Airport import finished but the timezone backfill failed',
+        error: { message: error instanceof Error ? error.message : 'Unknown error' },
+      });
+    }
+
     // Final update
     const totalCount = await prisma.airport.count();
     await updateSeedingStatus(statusId, {
@@ -362,7 +384,7 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
     logger.info({
       operation: 'seed_airports_complete',
       message: 'Airport import completed',
-      context: { imported, updated, skipped, total: imported + updated, totalCount },
+      context: { imported, updated, skipped, total: imported + updated, totalCount, timezonesFilled },
     });
 
     seedingInProgress = false;
