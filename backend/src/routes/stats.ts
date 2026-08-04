@@ -272,6 +272,84 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
   }
 });
 
+interface HeroStats {
+  distanceKm: number;
+  flights: number;
+  countries: number;
+  airports: number;
+  co2Kg: number;
+  flightTimeMinutes: number;
+}
+
+// GET /api/v1/stats/hero — single composed aggregate for the Companion app's
+// Start-board hero widget. Reuses the SAME functions that back /summary,
+// /airports and /fun (computeSummary, calculateAirportStats, calculateFunStats)
+// instead of duplicating their queries. All-time only for the MVP — no
+// date-range params yet. The airport+fun flight select is fetched ONCE and
+// shared between calculateAirportStats and calculateFunStats since both use
+// the identical select already used by /airports and /fun.
+router.get('/hero', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.userId!;
+
+    const flightsWhere: Prisma.FlightWhereInput = {
+      userId,
+      status: { in: ['flown', 'historical'] },
+    };
+
+    const [summary, flights] = await Promise.all([
+      computeSummary(buildWhere(userId, undefined, undefined)),
+      prisma.flight.findMany({
+        where: flightsWhere,
+        select: {
+          id: true,
+          depLat: true,
+          depLon: true,
+          arrLat: true,
+          arrLon: true,
+          depIata: true,
+          depIcao: true,
+          arrIata: true,
+          arrIcao: true,
+          airline: true,
+          aircraft: true,
+          departureTime: true,
+          arrivalTime: true,
+          status: true,
+          price: true,
+          taxes: true,
+          fees: true,
+          category: true,
+          seatClass: true,
+          createdAt: true,
+        },
+      }),
+    ]);
+
+    // homeAirportHistory=[] is deliberate: this endpoint only reads
+    // countryCount/airportCount, which don't depend on home-airport history —
+    // only the unused farthestFromHome field does. Skips /airports's extra
+    // userSettings.findUnique lookup.
+    const [airportStats, funStats] = await Promise.all([
+      calculateAirportStats(flights, []),
+      calculateFunStats(flights),
+    ]);
+
+    const hero: HeroStats = {
+      distanceKm: summary.totalDistance,
+      flights: summary.totalFlights,
+      countries: airportStats.countryCount,
+      airports: airportStats.airportCount,
+      co2Kg: funStats.co2FootprintKg,
+      flightTimeMinutes: summary.totalFlightTime,
+    };
+
+    res.json(hero);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Build a UTC-timezone map for a set of flight rows (mirrors computeSummary).
 async function buildTzMap(
   rows: Array<{ depIata: string | null; depIcao: string | null; arrIata: string | null; arrIcao: string | null }>,
