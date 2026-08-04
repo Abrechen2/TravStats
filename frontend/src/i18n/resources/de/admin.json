@@ -8,11 +8,11 @@
     "invitations": "Einladungen",
     "system": "System-Info",
     "instance": "Instanz",
-    "externalServices": "Externe Dienste",
+    "externalServices": "Externe Dienste (Instanz)",
     "parsers": "Parser",
     "training": "Training Config",
     "logging": "Logging",
-    "backups": "Backups",
+    "backups": "Instanz-Backups",
     "smtp": "E-Mail / SMTP"
   },
   "tabs2": {
@@ -692,5 +692,6 @@
     "showingOf": "{{shown}} von {{total}} Einträgen angezeigt — Suche verfeinern, um weitere zu sehen.",
     "typeToSearch": "Mindestens zwei Zeichen eingeben, um den Katalog zu durchsuchen.",
     "refineSearch": "Mehr Treffer als angezeigt — Suche verfeinern."
-  }
+  },
+  "scopeHint": "Gilt für die gesamte Instanz — für alle Benutzer."
 }

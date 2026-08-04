@@ -221,7 +221,7 @@
     "analyticsOptIn": "Analytics Opt-in (anonymisiert)"
   },
   "backup": {
-    "title": "Backup & Sync",
+    "title": "Meine Daten & Sync",
     "description": "Regelmäßige Sicherungen und Cloud-Sync steuern.",
     "adminNote": "Backup-Einstellungen werden im Admin-Panel verwaltet.",
     "userNote": "Backups werden vom Administrator verwaltet.",
@@ -347,11 +347,6 @@
       "noteLabel": "Hinweis",
       "note": "Nur das LLM-basierte Parsen (Ollama) ist vollständig getestet. Template- und Regex-Parser sind experimentell."
     }
-  },
-  "admin": {
-    "title": "Administration",
-    "description": "Verwalte Benutzer, Einladungen und Systemeinstellungen",
-    "openAdminPanel": "Admin-Panel öffnen"
   },
   "features": {
     "title": "Funktionen",
@@ -481,7 +476,7 @@
     "saveFailed": "Fehler beim Speichern der Anreicherungs-Einstellungen"
   },
   "externalServices": {
-    "title": "Externe Dienste"
+    "title": "Meine externen Dienste"
   },
   "apiKeys": {
     "title": "API-Schlüssel",
@@ -737,5 +732,6 @@
       "revoke": "Token konnte nicht widerrufen werden",
       "labelRequired": "Beschreibung ist erforderlich"
     }
-  }
+  },
+  "scopeHint": "Gilt nur für dein Konto."
 }

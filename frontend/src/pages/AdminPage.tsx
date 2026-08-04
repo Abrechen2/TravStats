@@ -674,6 +674,13 @@ export default function AdminPage(): JSX.Element {
             >
               {t("admin:title")}
             </h1>
+            {/* The counterpart of the scope line in user settings. Everything on
+                this surface is instance-wide; saying so is what distinguishes
+                "Externe Dienste (Instanz)" here from "Meine externen Dienste"
+                over there. */}
+            <p className="mt-1 text-xs normal-case" style={{ color: "var(--text-muted)" }}>
+              {t("admin:scopeHint")}
+            </p>
           </div>
           <nav className="space-y-0.5 px-2 mt-2">
             {sections.map((section) => (
