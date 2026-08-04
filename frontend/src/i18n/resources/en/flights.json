@@ -189,6 +189,7 @@
     "time": "Time",
     "timeDep": "dep",
     "timeArr": "arr",
+    "timeUtcFallback": "No timezone is on file for this airport — the clock shown is UTC, not local time.",
     "status": "Status",
     "flightTime": "Flight Time (h)",
     "aircraft": "Aircraft",

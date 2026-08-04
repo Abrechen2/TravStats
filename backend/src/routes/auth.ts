@@ -198,13 +198,17 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
     // Set HttpOnly cookie for security (XSS protection)
     res.cookie('auth_token', token, getAuthCookieOptions(req));
 
-    // Start airport seeding if needed (only on first login, if no airports exist)
+    // Start airport seeding if the catalogue is empty OR was left truncated by
+    // an interrupted run. Keying this on `count === 0` meant a partial seed
+    // never got a second chance, and the missing airports resolved no timezone
+    // and no country for the life of the instance.
     try {
-      const airportCount = await prisma.airport.count();
+      const { isAirportCatalogueHealthy } = await import('../services/airportSeedingService');
+      const catalogueHealthy = await isAirportCatalogueHealthy();
       const seedAirportsEnv = process.env.SEED_AIRPORTS;
       const shouldSeedAirports = seedAirportsEnv !== 'false';
 
-      if (shouldSeedAirports && airportCount === 0) {
+      if (shouldSeedAirports && !catalogueHealthy) {
         // Check if seeding is already running
         const existingStatus = await prisma.airportSeedingStatus.findFirst({
           where: {
