@@ -27,13 +27,32 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
       ? dayShift(flight.departureTime, flight.arrivalTime, depTz, arrTz)
       : 0;
 
-  const row = (label: string, iso: string | null | undefined, tz: string, showTime: boolean, marker?: number) => (
+  const row = (
+    label: string,
+    iso: string | null | undefined,
+    tz: string,
+    showTime: boolean,
+    tzKnown: boolean,
+    marker?: number,
+  ) => (
     <div className="flex items-baseline gap-2 whitespace-nowrap text-[12.5px]" style={{ fontVariantNumeric: "tabular-nums" }}>
       <span className="w-4 text-[10px]" style={{ color: "var(--text-muted)" }}>{label}</span>
       {iso ? (
         <>
           <span style={{ color: "var(--text-primary)" }}>{dateFmt(iso, tz, i18n.language)}</span>
           {showTime && <span style={{ color: "var(--text-muted)" }}>{timeFmt(iso, tz)}</span>}
+          {/* Without an airport timezone the clock above is UTC. Rendering it
+              bare made it indistinguishable from a real local time, so a
+              missing catalogue entry read as a confident wrong answer. */}
+          {showTime && !tzKnown && (
+            <span
+              className="text-[9px] font-semibold tracking-wide"
+              style={{ color: "var(--text-muted)", opacity: 0.8 }}
+              title={t("flights:table.timeUtcFallback")}
+            >
+              UTC
+            </span>
+          )}
           {marker !== undefined && marker >= 1 && (
             <span className="text-[10px] font-semibold" style={{ color: "var(--accent)" }}>+{marker}</span>
           )}
@@ -46,8 +65,8 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
 
   return (
     <div className="flex flex-col gap-0.5">
-      {row(t("flights:table.timeDep"), flight.departureTime, depTz, !depDateOnly)}
-      {row(t("flights:table.timeArr"), flight.arrivalTime, arrTz, !arrDateOnly, shift)}
+      {row(t("flights:table.timeDep"), flight.departureTime, depTz, !depDateOnly, !!flight.depTimezone)}
+      {row(t("flights:table.timeArr"), flight.arrivalTime, arrTz, !arrDateOnly, !!flight.arrTimezone, shift)}
     </div>
   );
 }

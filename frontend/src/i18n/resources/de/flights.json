@@ -189,6 +189,7 @@
     "time": "Zeit",
     "timeDep": "ab",
     "timeArr": "an",
+    "timeUtcFallback": "Für diesen Flughafen ist keine Zeitzone hinterlegt — die Uhrzeit ist UTC, nicht Ortszeit.",
     "status": "Status",
     "flightTime": "Flugzeit (h)",
     "aircraft": "Flugzeug",

@@ -217,3 +217,20 @@ export const PARSER_SETTINGS = {
 export const CLEANUP = {
   RECEIPT_RETENTION_DAYS: 90, // days before cleaning up orphaned receipts
 } as const;
+
+// ========== AIRPORT CATALOGUE ==========
+export const AIRPORT_CATALOGUE = {
+  /**
+   * Below this row count the catalogue is treated as never having finished
+   * seeding, and the OurAirports import is (re-)started.
+   *
+   * A complete import lands ~18,000 rows. The guards used to ask only whether
+   * ANY airport existed, so a run interrupted partway left a fragment that
+   * counted as "seeded" and was never retried — measured in the wild at 57
+   * rows. Every airport outside the fragment then resolves no timezone and no
+   * country, which silently degrades displayed times, "countries visited" and
+   * the country achievements. 1,000 sits far below any complete import and far
+   * above any plausible fragment.
+   */
+  MIN_HEALTHY_COUNT: 1000,
+} as const;
