@@ -8,11 +8,11 @@
     "invitations": "Invitations",
     "system": "System Info",
     "instance": "Instance",
-    "externalServices": "External services",
+    "externalServices": "External services (instance)",
     "parsers": "Parsers",
     "training": "Training Config",
     "logging": "Logging",
-    "backups": "Backups",
+    "backups": "Instance backups",
     "smtp": "Email / SMTP"
   },
   "tabs2": {
@@ -692,5 +692,6 @@
     "showingOf": "Showing {{shown}} of {{total}} entries — refine the search to see more.",
     "typeToSearch": "Type at least two characters to search the catalogue.",
     "refineSearch": "More matches than shown — refine the search."
-  }
+  },
+  "scopeHint": "Applies to the whole instance — for every user."
 }

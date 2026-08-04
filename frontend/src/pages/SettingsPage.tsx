@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
 import PageTransition from "../components/PageTransition";
@@ -22,7 +22,6 @@ import EnrichmentSection from "../components/Settings/EnrichmentSection";
 import ApiKeysSection from "../components/Settings/ApiKeysSection";
 import ApiTokensSection from "../components/Settings/ApiTokensSection";
 import DevicesSection from "../components/Settings/DevicesSection";
-import AdminSection from "../components/Settings/AdminSection";
 import AboutSection from "../components/Settings/AboutSection";
 import ImportSection from "../components/Settings/ImportSection";
 import FeaturesSection from "../components/Settings/FeaturesSection";
@@ -119,7 +118,12 @@ export default function SettingsPage(): JSX.Element {
       },
       { id: "devices", label: t("settings:devices.title") || "Devices" },
       { id: "apitokens", label: t("settings:apiTokens.title") || "API Tokens" },
-      ...(user?.isAdmin ? [{ id: "admin", label: t("settings:admin.title") || "Admin" }] : []),
+      // No "Admin" entry here. It used to be a section whose entire content was
+      // a button to /admin, which told the user that Admin is a SUBSECTION of
+      // Settings while the navigation says it is a PEER. That contradiction is
+      // what made the settings/admin boundary feel arbitrary. Admin is reachable
+      // from the top-level navigation, and the scope line below says which
+      // surface owns what.
       { id: "about", label: "About" },
     ];
     const flight: SectionRef[] = [
@@ -134,7 +138,7 @@ export default function SettingsPage(): JSX.Element {
       },
     ];
     return { general, flight, cruise: cruiseTab };
-  }, [t, user?.isAdmin]);
+  }, [t]);
 
   // The NAV list — the model minus everything the beta gate hides. Rendering
   // reads this; validation and deep-linking never do.
@@ -182,6 +186,19 @@ export default function SettingsPage(): JSX.Element {
   );
 
   const initialSection = normalizeSectionId(searchParams.get("section"));
+
+  // /settings?section=admin used to open a section whose only content was a
+  // link to /admin. The section is gone, but the bookmarks are not — send them
+  // to the destination that button pointed at rather than dropping the user on
+  // "profile". A non-admin has nothing to be sent to and falls through to the
+  // normal validation below.
+  //
+  // Declarative on purpose. An imperative navigate() in an effect loses the
+  // race against the URL-sync effect further down: that one calls
+  // setSearchParams on whatever location is current, which promptly rewrites
+  // /admin back to /settings. Rendering <Navigate> instead — and skipping the
+  // sync while it is pending — keeps the two out of each other's way.
+  const redirectToAdmin = initialSection === "admin" && Boolean(user?.isAdmin);
 
   // MODEL for the active tab — drives initial state, drift correction and the
   // deep-link effects. NOT the nav (see navSectionsByTab above).
@@ -251,6 +268,7 @@ export default function SettingsPage(): JSX.Element {
   // the full rationale). One effect here is the canonical pattern —
   // other multi-domain pages should mirror it.
   useEffect(() => {
+    if (redirectToAdmin) return;
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
@@ -263,6 +281,8 @@ export default function SettingsPage(): JSX.Element {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, activeSection]);
+
+  if (redirectToAdmin) return <Navigate to="/admin" replace />;
 
   return (
     <PageTransition>
@@ -280,9 +300,20 @@ export default function SettingsPage(): JSX.Element {
           style={{ background: "var(--bg-base)", borderBottom: "1px solid var(--color-border)" }}
         >
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-            <h1 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
-              {t("settings:title", { defaultValue: "Einstellungen" })}
-            </h1>
+            {/* Scope line. The settings/admin boundary is real (per-user vs
+                instance-wide) but was never stated anywhere, so two sections
+                that exist on both surfaces read as duplicates and users kept
+                opening the wrong one. Saying it once here covers every current
+                AND future section, which relabelling individual entries does
+                not. */}
+            <div className="flex flex-col gap-0.5">
+              <h1 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+                {t("settings:title", { defaultValue: "Einstellungen" })}
+              </h1>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                {t("settings:scopeHint")}
+              </p>
+            </div>
             <div
               role="tablist"
               aria-label={t("settings:title", { defaultValue: "Einstellungen" })}
@@ -490,7 +521,6 @@ export default function SettingsPage(): JSX.Element {
             {activeSection === "devices" && <DevicesSection />}
             {activeSection === "apitokens" && <ApiTokensSection />}
             {activeSection === "import" && <ImportSection />}
-            {activeSection === "admin" && user?.isAdmin && <AdminSection />}
             {activeSection === "about" && <AboutSection />}
 
             {/* Auto-save strip. It reports what actually happened: a hint while

@@ -221,7 +221,7 @@
     "analyticsOptIn": "Analytics opt-in (anonymous)"
   },
   "backup": {
-    "title": "Backup & Sync",
+    "title": "My data & sync",
     "description": "Control regular backups and cloud sync.",
     "adminNote": "Backup settings are managed in the Admin panel.",
     "userNote": "Backups are managed by the administrator.",
@@ -347,11 +347,6 @@
       "noteLabel": "Note",
       "note": "Only LLM-based parsing (Ollama) is fully tested. Template and regex parsers are experimental."
     }
-  },
-  "admin": {
-    "title": "Administration",
-    "description": "Manage users, invitations, and system settings",
-    "openAdminPanel": "Open Admin Panel"
   },
   "features": {
     "title": "Features",
@@ -481,7 +476,7 @@
     "saveFailed": "Failed to save enrichment settings"
   },
   "externalServices": {
-    "title": "External services"
+    "title": "My external services"
   },
   "apiKeys": {
     "title": "API Keys",
@@ -737,5 +732,6 @@
       "revoke": "Failed to revoke token",
       "labelRequired": "Label is required"
     }
-  }
+  },
+  "scopeHint": "Applies to your account only."
 }
