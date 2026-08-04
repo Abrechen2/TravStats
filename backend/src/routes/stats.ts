@@ -16,7 +16,11 @@ import { normalizeHistory } from '../utils/homeAirport';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
 import { tzAwareDurationMinutes, type FlightTimeSemantics } from '../utils/timezone';
-import { normalizeAirline, mergeAirlineCounts } from '../utils/airlineNormalize';
+import {
+  normalizeAirline,
+  mergeAirlineCounts,
+  resolveAirlineCodes,
+} from '../utils/airlineNormalize';
 import {
   resolveWindow,
   bucketSeries,
@@ -981,6 +985,8 @@ interface AirlineRankingItem {
   airline: string;
   count: number;
   percentage: number;
+  /** IATA code via strict exact lookup; omitted when nothing matches. */
+  iata?: string;
 }
 
 interface AirlineRankingResponse {
@@ -1011,11 +1017,15 @@ router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFuncti
     }
 
     const airlines: AirlineRankingItem[] = Array.from(merged.entries())
-      .map(([airline, count]) => ({
-        airline,
-        count,
-        percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
-      }))
+      .map(([airline, count]) => {
+        const iata = resolveAirlineCodes(airline)?.iata;
+        return {
+          airline,
+          count,
+          percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
+          ...(iata ? { iata } : {}),
+        };
+      })
       .sort((a, b) => b.count - a.count);
 
     const response: AirlineRankingResponse = { airlines, total };
@@ -1202,6 +1212,56 @@ router.get(
       next(error);
     }
   }
+);
+
+// ─── Aircraft type ranking ──────────────────────────────────────────────────
+
+interface AircraftTypeItem {
+  aircraft: string;
+  count: number;
+  percentage: number;
+}
+
+interface AircraftTypesResponse {
+  aircraftTypes: AircraftTypeItem[];
+  total: number;
+}
+
+// GET /api/v1/stats/aircraft-types — ranking by aircraft TYPE ("Airbus A320neo").
+// Distinct from /stats/aircraft, which ranks tail numbers and only sees
+// registration-bearing (AeroDataBox-enriched) rows. `total` is the user's total
+// flight count so this shares a denominator with /stats/airlines; flights with
+// no `aircraft` value produce no row, so percentages need not sum to 100.
+router.get(
+  '/aircraft-types',
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+
+      const [total, typeCounts] = await Promise.all([
+        prisma.flight.count({ where: { userId } }),
+        prisma.flight.groupBy({
+          by: ['aircraft'],
+          where: { userId, aircraft: { not: null } },
+          _count: true,
+        }),
+      ]);
+
+      const aircraftTypes: AircraftTypeItem[] = typeCounts
+        .map((row) => ({
+          aircraft: row.aircraft!,
+          count: row._count,
+          percentage:
+            total > 0 ? Math.round((row._count / total) * 1000) / 10 : 0,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      const response: AircraftTypesResponse = { aircraftTypes, total };
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  },
 );
 
 // ─── Aircraft (tail number) ─────────────────────────────────────────────────
