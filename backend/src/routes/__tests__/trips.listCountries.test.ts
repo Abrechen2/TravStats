@@ -132,6 +132,70 @@ describe("trip countries are derived on the list, not only on the detail", () =>
     }
   });
 
+  it("derives countries for a CRUISE-ONLY trip from the ports it called at", async () => {
+    // A cruise-only trip carries no flights at all, so a flight-only
+    // derivation left it reading "?" for a voyage that plainly visited
+    // several countries — measured on the RC against production data.
+    const ports = await Promise.all(
+      [
+        { name: "UAT Port IT", country: "Italy", unlocode: "ZZUA1" },
+        { name: "UAT Port GR", country: "Greece", unlocode: "ZZUA2" },
+        { name: "UAT Port HR", country: "Croatia", unlocode: "ZZUA3" },
+      ].map((p) =>
+        prisma.port.upsert({
+          where: { unlocode: p.unlocode },
+          update: { country: p.country },
+          create: { ...p, lat: 0, lon: 0 },
+          select: { id: true },
+        }),
+      ),
+    );
+
+    const trip = await prisma.trip.create({
+      data: { userId, name: "Cruise only", status: "completed" },
+    });
+    const cruise = await prisma.cruise.create({
+      data: {
+        userId,
+        tripId: trip.id,
+        status: "flown",
+        startDate: new Date("2026-05-01"),
+        endDate: new Date("2026-05-08"),
+        departurePortId: ports[0].id,
+        arrivalPortId: ports[0].id,
+      },
+    });
+    await prisma.cruiseStop.createMany({
+      data: [
+        { cruiseId: cruise.id, portId: ports[1].id, dayNumber: 1, isAtSea: false },
+        { cruiseId: cruise.id, portId: ports[2].id, dayNumber: 2, isAtSea: false },
+        { cruiseId: cruise.id, portId: null, dayNumber: 3, isAtSea: true },
+      ],
+    });
+
+    try {
+      const res = await request(app)
+        .get("/api/v1/trips")
+        .set("Cookie", authCookie)
+        .expect(200);
+      const listed = res.body.trips.find((t: { id: string }) => t.id === trip.id);
+      // Departure/arrival port + both calls, deduplicated and sorted.
+      // The sea day contributes nothing, as it should.
+      expect(listed.countries).toEqual(["Croatia", "Greece", "Italy"]);
+
+      const detail = await request(app)
+        .get(`/api/v1/trips/${trip.id}`)
+        .set("Cookie", authCookie)
+        .expect(200);
+      expect(detail.body.trip.countries).toEqual(listed.countries);
+    } finally {
+      await prisma.cruiseStop.deleteMany({ where: { cruiseId: cruise.id } });
+      await prisma.cruise.delete({ where: { id: cruise.id } });
+      await prisma.trip.delete({ where: { id: trip.id } });
+      await prisma.port.deleteMany({ where: { unlocode: { in: ["ZZUA1", "ZZUA2", "ZZUA3"] } } });
+    }
+  });
+
   it("returns an empty list for a trip with no flights rather than failing", async () => {
     const empty = await prisma.trip.create({
       data: { userId, name: "No segments", status: "planned" },
