@@ -102,8 +102,8 @@ describe("trip countries are derived on the list, not only on the detail", () =>
 
     const trip = res.body.trips.find((t: { id: string }) => t.id === tripId);
     expect(trip).toBeDefined();
-    // Deduplicated (Germany appears at both ends) and sorted.
-    expect(trip.countries).toEqual(["Germany", "Spain"]);
+    // Deduplicated (Germany appears at both ends), folded to ISO, sorted.
+    expect(trip.countries).toEqual(["DE", "ES"]);
   });
 
   it("agrees with the detail endpoint — the bug was the two disagreeing", async () => {
@@ -179,9 +179,9 @@ describe("trip countries are derived on the list, not only on the detail", () =>
         .set("Cookie", authCookie)
         .expect(200);
       const listed = res.body.trips.find((t: { id: string }) => t.id === trip.id);
-      // Departure/arrival port + both calls, deduplicated and sorted.
-      // The sea day contributes nothing, as it should.
-      expect(listed.countries).toEqual(["Croatia", "Greece", "Italy"]);
+      // Departure/arrival port + both calls, folded to ISO, deduplicated and
+      // sorted. The sea day contributes nothing, as it should.
+      expect(listed.countries).toEqual(["GR", "HR", "IT"]);
 
       const detail = await request(app)
         .get(`/api/v1/trips/${trip.id}`)
@@ -193,6 +193,100 @@ describe("trip countries are derived on the list, not only on the detail", () =>
       await prisma.cruise.delete({ where: { id: cruise.id } });
       await prisma.trip.delete({ where: { id: trip.id } });
       await prisma.port.deleteMany({ where: { unlocode: { in: ["ZZUA1", "ZZUA2", "ZZUA3"] } } });
+    }
+  });
+
+  it("counts a country once when a flight AND a cruise both reach it", async () => {
+    // The catalogues speak different languages: the airport says "DE", the port
+    // says "Germany". Without folding, this trip would carry both and report
+    // one country too many — the same defect the cross-domain stats KPI had.
+    const port = await prisma.port.upsert({
+      where: { unlocode: "ZZUA4" },
+      update: { country: "Germany" },
+      create: { name: "UAT Port DE", country: "Germany", unlocode: "ZZUA4", lat: 0, lon: 0 },
+      select: { id: true },
+    });
+
+    const trip = await prisma.trip.create({
+      data: { userId, name: "Flight and cruise", status: "completed" },
+    });
+    const flight = await prisma.flight.create({
+      data: {
+        userId,
+        tripId: trip.id,
+        depIata: "XQA", // Germany
+        arrIata: "XQB", // Spain
+        departureTime: new Date("2026-06-01T08:00:00.000Z"),
+        status: "flown",
+        depLat: 0,
+        depLon: 0,
+        arrLat: 0,
+        arrLon: 0,
+      },
+      select: { id: true },
+    });
+    const cruise = await prisma.cruise.create({
+      data: {
+        userId,
+        tripId: trip.id,
+        status: "flown",
+        startDate: new Date("2026-06-05"),
+        endDate: new Date("2026-06-12"),
+        departurePortId: port.id, // Germany again, spelled the other way
+        arrivalPortId: port.id,
+      },
+      select: { id: true },
+    });
+
+    try {
+      const res = await request(app)
+        .get("/api/v1/trips")
+        .set("Cookie", authCookie)
+        .expect(200);
+      const listed = res.body.trips.find((t: { id: string }) => t.id === trip.id);
+      // DE once, not "DE" plus "Germany".
+      expect(listed.countries).toEqual(["DE", "ES"]);
+    } finally {
+      await prisma.cruise.delete({ where: { id: cruise.id } });
+      await prisma.flight.delete({ where: { id: flight.id } });
+      await prisma.trip.delete({ where: { id: trip.id } });
+      await prisma.port.deleteMany({ where: { unlocode: "ZZUA4" } });
+    }
+  });
+
+  it("keeps a country the catalogues do not recognise instead of dropping it", async () => {
+    const port = await prisma.port.upsert({
+      where: { unlocode: "ZZUA5" },
+      update: { country: "Freedonia" },
+      create: { name: "UAT Port XX", country: "Freedonia", unlocode: "ZZUA5", lat: 0, lon: 0 },
+      select: { id: true },
+    });
+    const trip = await prisma.trip.create({
+      data: { userId, name: "Unknown country", status: "completed" },
+    });
+    const cruise = await prisma.cruise.create({
+      data: {
+        userId,
+        tripId: trip.id,
+        status: "flown",
+        startDate: new Date("2026-07-01"),
+        endDate: new Date("2026-07-08"),
+        departurePortId: port.id,
+        arrivalPortId: port.id,
+      },
+      select: { id: true },
+    });
+    try {
+      const res = await request(app)
+        .get("/api/v1/trips")
+        .set("Cookie", authCookie)
+        .expect(200);
+      const listed = res.body.trips.find((t: { id: string }) => t.id === trip.id);
+      expect(listed.countries).toEqual(["Freedonia"]);
+    } finally {
+      await prisma.cruise.delete({ where: { id: cruise.id } });
+      await prisma.trip.delete({ where: { id: trip.id } });
+      await prisma.port.deleteMany({ where: { unlocode: "ZZUA5" } });
     }
   });
 
