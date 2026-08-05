@@ -22,7 +22,12 @@ import { ImportTileShell, ImportFilePicker, ImportErrorBlock } from "./ImportTil
 import type { LodgingImportPreviewRow, LodgingImportSummary } from "../../types/lodgingImport";
 
 interface Props {
-  onImported: () => void | Promise<void>;
+  /**
+   * Optional: the tile lives in the central import hub (Settings → Import),
+   * where there is no list to refresh. It stays a prop so a domain page that
+   * embeds the tile next to its own list can still reload after a commit.
+   */
+  onImported?: () => void | Promise<void>;
 }
 
 /**
@@ -146,7 +151,7 @@ export function LodgingCsvImportTile({ onImported }: Props): JSX.Element {
             const toast = describeLodgingCommitResult(result, t);
             addToast(toast.type, toast.message);
             reset();
-            await onImported();
+            await onImported?.();
           }}
         />
       )}
