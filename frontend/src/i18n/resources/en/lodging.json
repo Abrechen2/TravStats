@@ -96,7 +96,8 @@
     "companions": "Companions",
     "programName": "Program name",
     "membershipNumber": "Membership number",
-    "tier": "Tier"
+    "tier": "Tier",
+    "ratingOverallDerived": "Average of room, breakfast and service"
   },
   "type": {
     "hotel": "Hotel",
@@ -120,7 +121,8 @@
   "form": {
     "createTitle": "New lodging",
     "editTitle": "Edit lodging",
-    "saveError": "Could not save lodging"
+    "saveError": "Could not save lodging",
+    "searchLabel": "Search accommodation"
   },
   "fx": {
     "source": "ECB",

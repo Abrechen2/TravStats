@@ -1,5 +1,7 @@
 import type { JSX } from "react";
 import { StarRatingInput } from "./StarRatingInput";
+import { StarRating } from "./StarRating";
+import { averageStayRating } from "../../lib/lodgingFormat";
 
 export interface StayRatings {
   ratingRoom: number | null;
@@ -12,14 +14,34 @@ interface StayEditorRatingsSectionProps {
   ratings: StayRatings;
   onChange: (patch: Partial<StayRatings>) => void;
   labels: { room: string; breakfast: string; service: string; overall: string };
+  /** Copy under the overall value explaining that it is computed, not typed. */
+  derivedHint: string;
 }
 
-/** The four 1–5 half-star pickers (room/breakfast/service/overall) — extracted so StayEditor.tsx stays focused. */
+/**
+ * The three 1–5 half-star pickers (room/breakfast/service) plus the OVERALL
+ * rating, which is DERIVED from them rather than typed.
+ *
+ * Alex asked for this (Discord 2026-07-12). The overall score used to be a
+ * fourth identical picker, so a stay could carry 5/5/5 with an overall of 2
+ * and nothing in the product would notice. It now follows the three, is
+ * recomputed on every change, and `ratingOverall` in `ratings` is only the
+ * value the editor will persist — this component never writes it back through
+ * `onChange`, which is why the patch type still allows it but nothing here
+ * sends it.
+ */
 export function StayEditorRatingsSection({
   ratings,
   onChange,
   labels,
+  derivedHint,
 }: StayEditorRatingsSectionProps): JSX.Element {
+  const overall = averageStayRating(
+    ratings.ratingRoom,
+    ratings.ratingBreakfast,
+    ratings.ratingService
+  );
+
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       <StarRatingInput
@@ -40,12 +62,18 @@ export function StayEditorRatingsSection({
         value={ratings.ratingService}
         onChange={(v) => onChange({ ratingService: v })}
       />
-      <StarRatingInput
-        fieldKey="overall"
-        label={labels.overall}
-        value={ratings.ratingOverall}
-        onChange={(v) => onChange({ ratingOverall: v })}
-      />
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-[var(--text-muted)]">{labels.overall}</span>
+        <span data-testid="stay-editor-overall">
+          <StarRating value={overall} className="text-lg leading-none" />
+        </span>
+        <span
+          data-testid="stay-editor-overall-hint"
+          className="text-[10px] text-[var(--text-muted)]"
+        >
+          {derivedHint}
+        </span>
+      </div>
     </div>
   );
 }

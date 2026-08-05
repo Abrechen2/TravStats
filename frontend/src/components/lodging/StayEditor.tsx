@@ -9,6 +9,7 @@ import ReceiptUpload from "../ReceiptUpload";
 import { AmenityChipsInput } from "./AmenityChipsInput";
 import { StayEditorRatingsSection } from "./StayEditorRatingsSection";
 import { StayEditorPriceSection } from "./StayEditorPriceSection";
+import { averageStayRating, derivePricePerNight } from "../../lib/lodgingFormat";
 import { MembershipManager } from "./MembershipManager";
 import type {
   LodgingStay,
@@ -84,10 +85,8 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
   const [ratingRoom, setRatingRoom] = useState<number | null>(stay?.ratingRoom ?? null);
   const [ratingBreakfast, setRatingBreakfast] = useState<number | null>(stay?.ratingBreakfast ?? null);
   const [ratingService, setRatingService] = useState<number | null>(stay?.ratingService ?? null);
-  const [ratingOverall, setRatingOverall] = useState<number | null>(stay?.ratingOverall ?? null);
 
   const [totalPrice, setTotalPrice] = useState<string>(stay?.totalPrice?.toString() ?? "");
-  const [pricePerNight, setPricePerNight] = useState<string>(stay?.pricePerNight?.toString() ?? "");
   const [currency, setCurrency] = useState<LodgingCurrency>(stay?.currency ?? "EUR");
   const [isAwardStay, setIsAwardStay] = useState<boolean>(stay?.isAwardStay ?? false);
 
@@ -129,6 +128,18 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
     };
   }, []);
 
+  // Both figures Alex asked to stop being typed (Discord 2026-07-12). Derived
+  // on every render rather than held in state, so the value shown and the
+  // value saved can never drift apart — a state copy would need an effect to
+  // stay in sync, and that effect is exactly where such bugs live.
+  const parsedTotalPrice = totalPrice.trim() ? Number.parseFloat(totalPrice) : null;
+  const derivedRatingOverall = averageStayRating(ratingRoom, ratingBreakfast, ratingService);
+  const derivedPricePerNight = derivePricePerNight(
+    Number.isFinite(parsedTotalPrice) ? parsedTotalPrice : null,
+    checkIn,
+    checkOut
+  );
+
   const submit = async (): Promise<void> => {
     if (!checkIn || !checkOut) {
       setError(t("lodging:stayEditor.datesRequired"));
@@ -155,9 +166,12 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
         roomNumber: roomNumber.trim() || null,
         roomCategory: roomCategory.trim() || null,
         board,
-        pricePerNight: pricePerNight.trim() ? Number.parseFloat(pricePerNight) : null,
+        // Derived, not typed — still PERSISTED, because importers, the stats
+        // service and the API all read the stored column; only the way the
+        // user supplies it changed.
+        pricePerNight: derivedPricePerNight,
         currency,
-        totalPrice: totalPrice.trim() ? Number.parseFloat(totalPrice) : null,
+        totalPrice: Number.isFinite(parsedTotalPrice) ? parsedTotalPrice : null,
         // MUST reach the payload unconditionally (including `false`, to let
         // an edit turn an award stay back off) — without this, the four
         // POINTS_PRO_* achievements (Task 11) are permanently unreachable.
@@ -165,7 +179,9 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
         ratingRoom,
         ratingBreakfast,
         ratingService,
-        ratingOverall,
+        // Same rule as pricePerNight: computed here, stored as before, so
+        // every consumer of `ratingOverall` keeps working unchanged.
+        ratingOverall: derivedRatingOverall,
         roomAmenities,
         bookingReference: bookingReference.trim() || null,
         membershipId: membershipId || null,
@@ -289,12 +305,16 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
 
           <Section title={t("lodging:stayEditor.ratingsSection")}>
             <StayEditorRatingsSection
-              ratings={{ ratingRoom, ratingBreakfast, ratingService, ratingOverall }}
+              ratings={{
+                ratingRoom,
+                ratingBreakfast,
+                ratingService,
+                ratingOverall: derivedRatingOverall,
+              }}
               onChange={(patch): void => {
                 if ("ratingRoom" in patch) setRatingRoom(patch.ratingRoom ?? null);
                 if ("ratingBreakfast" in patch) setRatingBreakfast(patch.ratingBreakfast ?? null);
                 if ("ratingService" in patch) setRatingService(patch.ratingService ?? null);
-                if ("ratingOverall" in patch) setRatingOverall(patch.ratingOverall ?? null);
               }}
               labels={{
                 room: t("lodging:field.ratingRoom"),
@@ -302,6 +322,7 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
                 service: t("lodging:field.ratingService"),
                 overall: t("lodging:field.ratingOverall"),
               }}
+              derivedHint={t("lodging:field.ratingOverallDerived")}
             />
           </Section>
 
@@ -309,8 +330,8 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
             <StayEditorPriceSection
               totalPrice={totalPrice}
               onTotalPriceChange={setTotalPrice}
-              pricePerNight={pricePerNight}
-              onPricePerNightChange={setPricePerNight}
+              pricePerNight={derivedPricePerNight}
+              pricePerNightLabel={t("lodging:field.pricePerNight")}
               currency={currency}
               onCurrencyChange={setCurrency}
               isAwardStay={isAwardStay}
