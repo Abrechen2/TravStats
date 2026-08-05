@@ -15,7 +15,8 @@ import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from '../ut
 import { normalizeHistory } from '../utils/homeAirport';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
-import { tzAwareDurationMinutes, type FlightTimeSemantics } from '../utils/timezone';
+import { tzAwareDurationMinutes, localYearOf, type FlightTimeSemantics } from '../utils/timezone';
+import { isoCountryCode } from '../utils/continents';
 import {
   normalizeAirline,
   mergeAirlineCounts,
@@ -1115,14 +1116,48 @@ router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFuncti
 
 // ─── Country Distribution ─────────────────────────────────────────────────────
 
+/**
+ * Fold a set of country names/codes into sorted, deduplicated ISO alpha-2.
+ * Unresolvable entries are dropped: they cannot be deduplicated against the
+ * other catalogue, so keeping them would reintroduce the double count this
+ * exists to remove.
+ */
+function isoCodes(values: Iterable<string>): string[] {
+  const out = new Set<string>();
+  for (const v of values) {
+    const iso = isoCountryCode(v);
+    if (iso) out.add(iso);
+  }
+  return [...out].sort();
+}
+
 interface CountryStat {
   country: string;
   count: number;
 }
 
 interface CountryStatsResponse {
+  /** Display vocabulary, ranked by flight count. Rendered as-is. */
   countries: CountryStat[];
   total: number;
+  /**
+   * Counting vocabulary: lifetime departure countries as ISO alpha-2, with
+   * `Unknown` and the catalogue's placeholders dropped. The cross-domain KPI
+   * unions this with the port catalogue's equivalent; keeping unresolvable
+   * entries would mean counting things that cannot be deduplicated.
+   */
+  countriesIso: string[];
+  /**
+   * Departure countries keyed by year, same ISO vocabulary. The cross-domain
+   * overview used to render the lifetime set for whichever year was selected
+   * and stack a year-over-year delta on top of it that could only ever read
+   * zero — a comparison that could not exist, presented as data.
+   *
+   * The year is the one on the clock at the DEPARTURE airport (see
+   * localYearOf), not the UTC instant. A flight without a departure time
+   * still counts towards `countries` but belongs to no year.
+   */
+  byYear: Record<string, string[]>;
 }
 
 // GET /api/v1/stats/countries — departure country distribution
@@ -1132,7 +1167,7 @@ router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunct
 
     const flights = await prisma.flight.findMany({
       where: { userId },
-      select: { depIata: true, depIcao: true },
+      select: { depIata: true, depIcao: true, departureTime: true },
     });
 
     const airportCodes = new Set<string>();
@@ -1144,17 +1179,40 @@ router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunct
     const airportMap = await getCachedAirports([...airportCodes]);
 
     const countryCounts = new Map<string, number>();
+    const countriesByYear = new Map<number, Set<string>>();
     for (const f of flights) {
       const code = f.depIata ?? f.depIcao;
-      const country = code ? (airportMap.get(code)?.country ?? 'Unknown') : 'Unknown';
+      const airport = code ? airportMap.get(code) : undefined;
+      const country = airport?.country ?? 'Unknown';
       countryCounts.set(country, (countryCounts.get(country) ?? 0) + 1);
+
+      // An undated flight cannot be attributed to a year. It stays in the
+      // lifetime tally rather than being guessed into the current one.
+      if (!f.departureTime) continue;
+      // The timezone lives on the airport, not the flight — same source the
+      // flight list uses to derive depTimezone.
+      const year = localYearOf(f.departureTime, airport?.timezone ?? null);
+      if (!Number.isFinite(year)) continue;
+      const bucket = countriesByYear.get(year) ?? new Set<string>();
+      bucket.add(country);
+      countriesByYear.set(year, bucket);
     }
 
     const countries: CountryStat[] = [...countryCounts.entries()]
       .map(([country, count]) => ({ country, count }))
       .sort((a, b) => b.count - a.count);
 
-    const response: CountryStatsResponse = { countries, total: flights.length };
+    const byYear: Record<string, string[]> = {};
+    for (const [year, set] of countriesByYear) {
+      byYear[String(year)] = isoCodes(set);
+    }
+
+    const response: CountryStatsResponse = {
+      countries,
+      total: flights.length,
+      countriesIso: isoCodes(countryCounts.keys()),
+      byYear,
+    };
     res.json(response);
   } catch (error) {
     next(error);
@@ -1266,7 +1324,25 @@ router.get(
         // client-side)
         regions: Array.from(stats.regions).sort(),
         regionVisitCounts: stats.regionVisitCounts,
+        // Display vocabulary: English names, rendered as-is in the cruise
+        // tab's country tag cloud. Do NOT switch these to codes.
         countries: Array.from(stats.countries).sort(),
+        // Counting vocabulary: ISO alpha-2, so the cross-domain KPI can union
+        // these with the airport catalogue's codes without counting "Germany"
+        // and "DE" as two countries. Ports whose name does not resolve are
+        // dropped from the COUNT rather than counted under their raw name —
+        // an unresolvable name cannot be deduplicated against anything.
+        countriesIso: isoCodes(stats.countries),
+        // Year-scoped counterpart — see the CruiseStats doc comment. Keyed by
+        // the cruise's start year so the overview's "countries visited" tile
+        // can answer for a selected year instead of showing the lifetime set
+        // with a delta on top that could only ever read zero.
+        countriesByYear: Object.fromEntries(
+          [...stats.countriesByYear.entries()].map(([year, set]) => [
+            String(year),
+            isoCodes(set),
+          ]),
+        ),
         // Distance metrics (added 2026-04-25 with the schematic-routes
         // pipeline; long-overdue exposure to the stats UI)
         totalDistanceKm: Math.round(stats.totalDistanceKm),

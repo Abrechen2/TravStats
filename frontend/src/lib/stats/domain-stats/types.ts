@@ -33,6 +33,14 @@ export type DomainStats =
       totalDistanceKm?: number;
       totalDurationHours?: number;
       countries: string[];
+      /**
+       * Countries keyed by year — the year-scoped counterpart to `countries`.
+       * Optional so a domain adapter can be added without it; `aggregate`
+       * then falls back to the lifetime set for that domain rather than
+       * contributing nothing, because silently under-reporting a KPI is
+       * harder to spot than over-reporting it.
+       */
+      countriesByYear?: Record<number, string[]>;
       yearlyEvents: Record<number, number>;
       yearlyActiveDays: Record<number, number>;
       monthlyActiveDays: Record<string, number>;

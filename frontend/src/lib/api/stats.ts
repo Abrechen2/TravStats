@@ -118,7 +118,15 @@ export interface CruiseStatsResponse {
   // Regions + countries
   regions: string[];
   regionVisitCounts: Record<string, number>;
+  /** Display vocabulary: English names, rendered in the cruise tab's tag
+   *  cloud. */
   countries: string[];
+  /** Counting vocabulary: the same set as ISO alpha-2, for unioning with the
+   *  airport catalogue. Optional so an older backend still parses. */
+  countriesIso?: string[];
+  /** Countries keyed by the cruise's start year, ISO vocabulary. Optional so
+   *  an older backend still parses. */
+  countriesByYear?: Record<string, string[]>;
   // Distance metrics
   totalDistanceKm: number;
   longestLegKm: number;
