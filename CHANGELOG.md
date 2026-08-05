@@ -4,6 +4,114 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.5.0] - 2026-08-05
+
+Large minor release. Trips can pull in your Immich photo albums, travel
+companions become real records instead of loose text, airlines and aircraft
+get a proper catalogue behind the scenes, the flight list is rebuilt as a
+departures board, adding and editing a flight finally use the same form, and
+status stops being something you set by hand. Seventeen reported issues close
+with it.
+
+### Added
+- **Immich photo albums on a trip** (#154). Link an album from your own Immich
+  server in one of two modes: *linked*, where the images stream through an
+  access-checked proxy and take no storage here at all, or *imported*, where
+  the originals are copied in as ordinary trip photos. The gallery groups by
+  album, any picture can become the trip's cover, and a re-sync collects
+  stragglers. The album picker has a search filter (#181), and an
+  administrator can configure one instance-wide connection (#182).
+- **Travel companions are real entries.** Co-passengers used to be free text
+  on each record. They are now created once and reused everywhere — flights,
+  trips, cruises and special flights all share the same picker. Existing
+  entries are migrated on first boot.
+- **Airline and aircraft master data** (#189, #191). Both get a catalogue with
+  the same admin treatment ships and ports already had, seeded from OpenFlights
+  and searchable from the flight form. Airports join the same page.
+- **Airline logos as brand tiles.** The flight list shows each airline as a
+  logo tile, resolved through a four-tier chain with a keyless default, cached
+  on disk and refreshed nightly.
+- **The flight list is a departures board.** Departure and arrival share one
+  time column, country flags mark the route, actions are icons, and a dot on
+  the row says where the data came from.
+- **One flight form, with scheduled and actual times** (#199, #200). Adding and
+  editing use the same mask. New: scheduled vs. actual times with a derived
+  delay, boarding group, trip assignment, cost and receipt.
+- **Status is derived from the dates** — for flights, cruises and trips alike,
+  re-derived hourly. Only "cancelled" is still set by hand.
+- **Grouped navigation and a central import hub.** The desktop bar gains
+  Logbuch/Support/System submenus; every import route now starts in one place.
+- **Prices belong to a booking.** A multi-leg booking carries one price instead
+  of a repeated per-segment total, editable from the trip page, with
+  per-currency totals ("EUR 300 + USD 480") rather than naive summing.
+- **The trip timeline rail is coloured by progress** (#184) instead of graying
+  out entries.
+- Aircraft statistics rank types rather than tail numbers, the airline ranking
+  carries its IATA code, and the achievements summary carries a rank.
+
+### Fixed
+- **Settings marked "auto-saved" that were not** (#198). Flight defaults now
+  actually persist — and clearing a field clears it, in every form.
+- **An expired session showed the dashboard and a shower of 401s** instead of
+  the login page.
+- **A flight more than 30 minutes late lost its arrival permanently.** It now
+  keeps chasing it.
+- **A half-imported airport catalogue rendered UTC as if it were local time.**
+  Re-seeding now leaves a usable catalogue behind rather than just rows, and a
+  closed airfield is never picked as the nearest airport.
+- **"Countries visited" ignored the selected year** and carried a
+  year-over-year comparison that could only ever read zero. It is year-scoped
+  now, and a country reached both by air and by sea counts once, not twice.
+- **A blank time was silently stored as noon**, producing invented delays; a
+  recorded cabin class was priced but never saved.
+- **The uploaded-photos box no longer lingers** once an album is linked (#179).
+- Trip aggregates use airport-local times and see manually added flights.
+- **A trip's card and its own page disagreed.** The card read "?" countries and
+  no total where the trip's page read five countries and a price. The country
+  fallback had only been taught to the detail endpoint, and the card's total was
+  hidden behind the cost-tracking toggle — which since #192 governs the
+  taxes/fees breakdown, not whether a price is shown — while also ignoring
+  prices entered on a flight rather than a booking. Both surfaces now answer
+  from the same sources, and a trip made only of cruises takes its countries
+  from the ports it called at instead of showing "?".
+- **The cruise tab counted one country too many.** The port catalogue lists both
+  "United States" and "United States of America", so counting names counted the
+  same country twice. The tally folds them; the country list below still shows
+  the names as recorded.
+- **The built-in demo account is now marked as one.** Created through the Docker
+  demo-user switch it was not, so its sample flights and cruises counted towards
+  the instance-wide statistics as though they were real travel. Existing
+  installs are corrected on startup.
+- **Aircraft types are written consistently.** A library built up over years
+  could hold "Airbus A350-900", "B737-800" and "A320neo" side by side in the
+  same column; only newly entered flights were ever normalised. Stored types are
+  brought to the catalogue's spelling on startup, and a type the catalogue does
+  not know is left exactly as you typed it.
+- **Cruise regions are translated, all of them.** Ten regions had German names
+  hardcoded while the port catalogue ships fifty-four, so a German page showed
+  "Mittelmeer" and "Ostsee" next to "North Sea" and "Iberian Atlantic" — and an
+  English page got the German names for those ten. All fifty-four now exist in
+  both languages.
+
+### Security
+- react-router 6 → 7, closing the open-redirect advisories, plus every other
+  open dependency alert in the app and in the Discord tool.
+- Secrets shorter than 16 bytes were returned as ciphertext by a length
+  heuristic; upload-cleanup paths were hardened; API-key material no longer
+  reaches log messages.
+
+### Upgrade notes
+- **Seven database migrations** run automatically on first boot of this
+  version. Take your usual backup first.
+- The Docker image now vendors the airline logo set and the OpenFlights seed
+  data; no configuration change is required.
+- A one-shot backfill migrates existing companion text and booking prices at
+  startup.
+- Two further one-off repairs run at startup alongside the migrations: stored
+  aircraft types are normalised to the catalogue's spelling, and an existing
+  demo account is flagged as a demo account. Both are safe to re-run and skip
+  what they do not recognise.
+
 ## [2.4.0] - 2026-07-11
 
 Minor release. Six reported bugs, an overhaul of how the map is coloured, and a
@@ -38,6 +146,13 @@ switch that keeps unfinished features out of sight until they are ready.
 - **The settings domain switch moved into the sidebar.** As a top-right pill
   row it was easy to miss; on desktop it now sits directly above the section
   list it scopes. On phones it stays in the top bar.
+- **Booking reference and ticket number when adding a flight manually** (#197).
+  Both fields only appeared in the edit dialog after a flight was saved. The
+  manual add form now offers them directly, and the booking reference is
+  uppercased on entry so manually added flights group into the same booking
+  as imported ones.
+- **The What's New dialog covers 2.4.0.** A short in-app summary of this
+  release's changes (in German and English), shown once after updating.
 
 ### Fixed
 - **Cruise port names with non-English characters render correctly** (#185).
@@ -82,6 +197,28 @@ switch that keeps unfinished features out of sight until they are ready.
   rendered near-white on the amber accent; several admin and cruise buttons
   hardcoded white. All of them now use the same dark text as the standard
   primary button.
+- **Every button in the app follows the same system.** A dozen controls still
+  carried hardcoded blues, greens and oranges from before the design system
+  existed — the admin API-key and parser saves, the airport-seeding dialog, the
+  pending-update card and editor, the flight review submit, the duplicate
+  warning and the delete-demo-user button — so on those surfaces the loudest
+  control was the off-brand one. They now use the shared primary, secondary and
+  danger classes and follow the accent colour. Two were also wrong on the
+  merits, not just off-palette: the pending-update card highlighted **Edit**
+  while **Apply** — the action the card exists for — sat in green beside it, and
+  the duplicate warning painted the risky "add anyway" escape hatch louder than
+  the recommended merge. In both, the recommended action is now the primary one.
+  Deleting the demo user and rejecting a pending update are destructive, and now
+  look it.
+- **An update now actually reaches the browser.** The app shell (`index.html`)
+  was served without any caching instructions, so browsers were free to reuse
+  their copy for hours without asking the server. That stale copy still points
+  at the previous build's JavaScript files: either they are still in the
+  browser's cache and you keep running the old frontend against the new backend,
+  or they have been evicted, the request 404s and the page stays blank. The
+  shell is now revalidated on every load, while the versioned assets keep their
+  long cache. If you have ever had to hard-refresh TravStats after an update,
+  this was why.
 - **Cruise direction arrows no longer pile up on shared shipping lanes.**
   Different cruises routed onto the same lane each placed their own arrows,
   stacking into unreadable clusters. Overlapping arrows are now hidden and

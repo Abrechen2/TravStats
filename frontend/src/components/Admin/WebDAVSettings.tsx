@@ -111,22 +111,22 @@ export default function WebDAVSettings(): JSX.Element {
   return (
     <form onSubmit={handleSave} className="max-w-2xl space-y-6 p-6">
       <div>
-        <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+        <h3 className="text-lg font-semibold text-(--text-primary)">
           {t("admin:webdav.title")}
         </h3>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">{t("admin:webdav.subtitle")}</p>
+        <p className="mt-1 text-sm text-(--text-muted)">{t("admin:webdav.subtitle")}</p>
       </div>
 
-      <label className="flex items-start gap-3 text-sm text-[var(--text-primary)]">
+      <label className="flex items-start gap-3 text-sm text-(--text-primary)">
         <input
           type="checkbox"
           checked={form.enabled}
           onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
-          className="mt-1 h-4 w-4 rounded border-[var(--border)]"
+          className="mt-1 h-4 w-4 rounded-sm border-(--border)"
         />
         <span>
           <span className="font-medium">{t("admin:webdav.fields.enabled.label")}</span>
-          <span className="block text-xs text-[var(--text-muted)]">
+          <span className="block text-xs text-(--text-muted)">
             {t("admin:webdav.fields.enabled.help")}
           </span>
         </span>
@@ -134,7 +134,7 @@ export default function WebDAVSettings(): JSX.Element {
 
       <fieldset disabled={!form.enabled} className="space-y-6 disabled:opacity-50">
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+          <label className="mb-1 block text-sm font-medium text-(--text-primary)">
             {t("admin:webdav.fields.url.label")}
           </label>
           <input
@@ -143,16 +143,16 @@ export default function WebDAVSettings(): JSX.Element {
             value={form.url}
             onChange={(e) => setForm({ ...form, url: e.target.value })}
             placeholder="https://cloud.example.com/remote.php/dav/files/username/"
-            className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
           />
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
+          <p className="mt-1 text-xs text-(--text-muted)">
             {t("admin:webdav.fields.url.help")}
           </p>
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+            <label className="mb-1 block text-sm font-medium text-(--text-primary)">
               {t("admin:webdav.fields.username.label")}
             </label>
             <input
@@ -160,11 +160,11 @@ export default function WebDAVSettings(): JSX.Element {
               maxLength={200}
               value={form.username}
               onChange={(e) => setForm({ ...form, username: e.target.value })}
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+            <label className="mb-1 block text-sm font-medium text-(--text-primary)">
               {t("admin:webdav.fields.password.label")}
             </label>
             <input
@@ -177,16 +177,16 @@ export default function WebDAVSettings(): JSX.Element {
                   ? t("admin:webdav.fields.password.placeholderKeep")
                   : t("admin:webdav.fields.password.placeholderSet")
               }
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
             />
-            <p className="mt-1 text-xs text-[var(--text-muted)]">
+            <p className="mt-1 text-xs text-(--text-muted)">
               {t("admin:webdav.fields.password.help")}
             </p>
           </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+          <label className="mb-1 block text-sm font-medium text-(--text-primary)">
             {t("admin:webdav.fields.backupPath.label")}
           </label>
           <input
@@ -194,9 +194,9 @@ export default function WebDAVSettings(): JSX.Element {
             maxLength={200}
             value={form.backupPath}
             onChange={(e) => setForm({ ...form, backupPath: e.target.value })}
-            className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
           />
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
+          <p className="mt-1 text-xs text-(--text-muted)">
             {t("admin:webdav.fields.backupPath.help")}
           </p>
         </div>
@@ -206,7 +206,7 @@ export default function WebDAVSettings(): JSX.Element {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-base)] hover:opacity-90 disabled:opacity-50"
+          className="rounded-lg bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base) hover:opacity-90 disabled:opacity-50"
         >
           {saving ? t("common:buttons.saving") : t("common:buttons.save")}
         </button>
@@ -214,7 +214,7 @@ export default function WebDAVSettings(): JSX.Element {
           type="button"
           onClick={handleTest}
           disabled={testing || !form.enabled}
-          className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-primary)] disabled:opacity-50"
+          className="rounded-lg border border-(--border) px-4 py-2 text-sm text-(--text-primary) disabled:opacity-50"
         >
           {testing ? t("admin:webdav.testing") : t("admin:webdav.test")}
         </button>

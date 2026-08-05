@@ -233,7 +233,7 @@ export function UnifiedActivityPanel({
                 handleItemClick(item);
               }
             }}
-            className="activity-row hover:bg-white/[0.04]"
+            className="activity-row hover:bg-white/4"
             style={{
               padding: "10px 16px",
               borderBottom: "1px solid var(--color-border)",

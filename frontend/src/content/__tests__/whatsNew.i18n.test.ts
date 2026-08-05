@@ -43,8 +43,8 @@ describe("whatsNew content", () => {
   });
 
   it("still matches on a later patch than the entry targets", () => {
+    // 2.3.7 sits between the 2.3.0 and 2.4.0 entries — the older one applies.
     expect(findEntryForVersion("2.3.7")?.version).toBe("2.3.0");
-    expect(findEntryForVersion("9.9.9")?.version).toBe("2.3.0");
   });
 
   it("does not match an entry from the future", () => {

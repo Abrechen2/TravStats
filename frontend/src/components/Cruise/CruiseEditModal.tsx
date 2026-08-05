@@ -13,6 +13,8 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { ShipPicker } from "./ShipPicker";
 import { PortPicker } from "./PortPicker";
 import { CruiseStopsEditor } from "./CruiseStopsEditor";
+import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
+import CompanionPicker from "../CompanionPicker";
 
 type Mode = "create" | "edit";
 
@@ -23,7 +25,6 @@ interface Props {
   onSaved: (saved: Cruise) => void | Promise<void>;
 }
 
-const STATUSES: CruiseStatus[] = ["scheduled", "flown", "cancelled", "historical"];
 const CABIN_TYPES: CabinType[] = ["inside", "oceanview", "balcony", "suite"];
 const CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
 
@@ -65,7 +66,7 @@ const splitCsv = (v: string): string[] =>
     .filter((x) => x.length > 0);
 
 const INPUT_CLASS =
-  "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-3 text-base text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none";
+  "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden";
 
 // color-scheme: dark tells the browser to render native picker widgets
 // (calendar icon, spinners) in dark mode colors. Without it, date /
@@ -114,9 +115,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
   const [currency, setCurrency] = useState<string>(cruise?.currency ?? "EUR");
 
   const [tagsInput, setTagsInput] = useState<string>((cruise?.tags ?? []).join(", "));
-  const [companionsInput, setCompanionsInput] = useState<string>(
-    (cruise?.companions ?? []).join(", ")
-  );
+  const [companions, setCompanions] = useState<string[]>(cruise?.companions ?? []);
   const [notes, setNotes] = useState<string>(cruise?.notes ?? "");
 
   const [saving, setSaving] = useState(false);
@@ -133,26 +132,32 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
     try {
       const input: CruiseInput = {
         shipId: ship?.id ?? null,
-        cruiseLine: cruiseLine || undefined,
-        routeName: routeName || undefined,
+        // null = explicit clear; undefined would tell the server "keep the
+        // old value" and make blanking any of these a silent no-op in edit
+        // mode (same defect family the flight edit modal had).
+        cruiseLine: cruiseLine || null,
+        routeName: routeName || null,
         departurePortId: departurePort?.id ?? null,
         arrivalPortId: arrivalPort?.id ?? null,
         startDate: fromDateInput(startDate),
         endDate: fromDateInput(endDate),
         status,
         color,
-        cabinNumber: cabinNumber || undefined,
-        cabinType: (cabinType || undefined) as CabinType | undefined,
-        deck: deck ? Number.parseInt(deck, 10) : undefined,
-        bookingReference: bookingReference || undefined,
-        price: price ? Number.parseFloat(price) : undefined,
+        cabinNumber: cabinNumber || null,
+        cabinType: (cabinType || null) as CabinType | null,
+        deck: deck ? Number.parseInt(deck, 10) : null,
+        bookingReference: bookingReference || null,
+        price: price ? Number.parseFloat(price) : null,
         currency: (currency || "EUR") as CruiseInput["currency"],
         tags: splitCsv(tagsInput),
-        companions: splitCsv(companionsInput),
-        notes: notes || undefined,
+        companions,
+        notes: notes || null,
         // Strip the UI-only `port` object from each stop before sending —
-        // the backend only wants portId/isAtSea/times/note.
-        stops: stops.length > 0 ? stops.map(({ port: _port, ...rest }) => rest) : undefined,
+        // the backend only wants portId/isAtSea/times/note. Always sent,
+        // including as []: omitting the field when the user removed every
+        // stop would silently keep the old stops (the server reads absence
+        // as "don't touch").
+        stops: stops.map(({ port: _port, ...rest }) => rest),
       };
       const saved =
         mode === "create"
@@ -177,10 +182,10 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
       role="dialog"
       aria-modal="true"
     >
-      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--bg-base)] shadow-xl">
+      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-auto rounded-lg border border-border bg-(--bg-base) shadow-xl">
         {/* Header */}
-        <div className="sticky top-0 z-10 border-b border-[var(--color-border)] bg-[var(--bg-base)] px-6 py-4">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">{headerTitle}</h2>
+        <div className="sticky top-0 z-10 border-b border-border bg-(--bg-base) px-6 py-4">
+          <h2 className="text-xl font-semibold text-(--text-primary)">{headerTitle}</h2>
         </div>
 
         <>
@@ -219,18 +224,26 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                   onChange={(e): void => setEndDate(e.target.value)}
                 />
               </div>
-              <select
-                aria-label={t("field.status")}
-                className={`mt-3 ${INPUT_CLASS}`}
-                value={status}
-                onChange={(e): void => setStatus(e.target.value as CruiseStatus)}
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {t(`status.${s}`)}
-                  </option>
-                ))}
-              </select>
+              {/* #status-from-dates: cruise write paths derive scheduled/
+                  in_progress/flown from the dates — a select just let the UI
+                  set a value the backend would immediately overwrite. Only
+                  "cancelled" stays user-controlled, via the checkbox below. */}
+              <div className="mt-3">
+                <span
+                  className="inline-block rounded-full px-2 py-1 text-xs font-semibold"
+                  style={cruiseStatusPillStyle(status)}
+                >
+                  {t(`status.${status}`, { defaultValue: status })}
+                </span>
+              </div>
+              <label className="mt-2 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={status === "cancelled"}
+                  onChange={(e): void => setStatus(e.target.checked ? "cancelled" : "scheduled")}
+                />
+                {t("status.cancelledCheckbox")}
+              </label>
             </Section>
 
             <Section title={t("detail.mapColor")}>
@@ -269,7 +282,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                   aria-label={t("field.color")}
                   value={color ?? "#000000"}
                   onChange={(e): void => setColor(e.target.value)}
-                  className="h-7 w-9 cursor-pointer rounded border border-[var(--color-border)] bg-transparent p-0"
+                  className="h-7 w-9 cursor-pointer rounded-sm border border-border bg-transparent p-0"
                 />
               </div>
             </Section>
@@ -369,13 +382,10 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 onChange={(e): void => setTagsInput(e.target.value)}
                 placeholder={t("field.tags")}
               />
-              <input
-                aria-label={t("field.companions")}
-                className={`mt-3 ${INPUT_CLASS}`}
-                value={companionsInput}
-                onChange={(e): void => setCompanionsInput(e.target.value)}
-                placeholder={t("field.companions")}
-              />
+              <div className="mt-3">
+                <label className="label">{t("field.companions")}</label>
+                <CompanionPicker value={companions} onChange={setCompanions} />
+              </div>
               <textarea
                 aria-label={t("field.notes")}
                 rows={3}
@@ -387,19 +397,19 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
             </Section>
 
             {error !== null && (
-              <div className="mb-3 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-3 py-2 text-sm text-[var(--danger)]">
+              <div className="mb-3 rounded-md border border-(--danger)/50 bg-(--danger)/10 px-3 py-2 text-sm text-(--danger)">
                 {error}
               </div>
             )}
           </div>
 
           {/* Footer with action buttons — only on manual step */}
-          <div className="sticky bottom-0 flex justify-end gap-2 border-t border-[var(--color-border)] bg-[var(--bg-base)] px-6 py-4">
+          <div className="sticky bottom-0 flex justify-end gap-2 border-t border-border bg-(--bg-base) px-6 py-4">
             <button
               type="button"
               onClick={onClose}
               disabled={saving}
-              className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50"
+              className="rounded-md border border-border px-4 py-2 text-sm text-(--text-muted) hover:bg-(--bg-surface) disabled:opacity-50"
             >
               {t("form.cancel")}
             </button>
@@ -409,7 +419,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 void submit();
               }}
               disabled={saving}
-              className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-base)] hover:bg-[var(--accent-dim)] disabled:opacity-50"
+              className="rounded-md bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base) hover:bg-(--accent-dim) disabled:opacity-50"
             >
               {saving ? t("form.saving") : t("form.save")}
             </button>
@@ -424,9 +434,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <details
       open
-      className="mb-4 rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)]/50 p-3"
+      className="mb-4 rounded-md border border-border bg-(--bg-surface)/50 p-3"
     >
-      <summary className="cursor-pointer text-sm font-medium text-[var(--text-primary)]">
+      <summary className="cursor-pointer text-sm font-medium text-(--text-primary)">
         {title}
       </summary>
       <div className="mt-3">{children}</div>

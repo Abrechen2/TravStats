@@ -43,11 +43,16 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       ];
     }
 
-    const ships = await prisma.ship.findMany({
-      where,
-      take: limit,
-      orderBy: { name: "asc" },
-    });
+    // `total` rides along so list UIs can say "100 of N" instead of looking
+    // like a catalogue that ends mid-alphabet.
+    const [ships, total] = await Promise.all([
+      prisma.ship.findMany({
+        where,
+        take: limit,
+        orderBy: { name: "asc" },
+      }),
+      prisma.ship.count({ where }),
+    ]);
 
     if (q && q.length > 0) {
       ships.sort((a, b) => {
@@ -57,7 +62,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       });
     }
 
-    res.json({ success: true, data: ships });
+    res.json({ success: true, data: ships, total });
   } catch (err) {
     next(err);
   }

@@ -20,8 +20,11 @@ export * from "./template";
 export * from "./suggestions";
 export * from "./diagnosticExport";
 export * from "./cruise";
+export * from "./catalogue";
 export * from "./version";
+export * from "./immich";
 export * from "./usageStats";
+export * from "./companions";
 // Named export (not `export *`) to avoid re-exporting Trip/Booking,
 // which are already exported from ../../types/index.ts
 export { tripsApi } from "./trips";
@@ -31,3 +34,4 @@ export type {
   AssignFlightsInput,
   CreateBookingInput,
 } from "./trips";
+// UpdateBookingInput lives in ../../types (see the note above re: Booking).

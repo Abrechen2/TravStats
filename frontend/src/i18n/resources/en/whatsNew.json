@@ -3,6 +3,28 @@
   "subtitle": "A short overview of the most important changes.",
   "dismiss": "Got it",
   "entries": {
+    "v250": {
+      "flightsTable": {
+        "title": "The flight table reads like a departures board",
+        "body": "Every row now carries the airline as a brand tile, departure and arrival share one time column, country flags mark the route, and the actions are icons instead of text buttons. A dot on the row tells you where the data came from."
+      },
+      "immich": {
+        "title": "Trip photos from your own Immich",
+        "body": "You can link Immich albums straight to a trip — either linked only, which keeps the images on your server and uses no storage here, or as a real import. The gallery groups by album, any picture can become the cover, and a re-sync picks up stragglers."
+      },
+      "companions": {
+        "title": "Companions are real records now",
+        "body": "Travel companions are no longer free text on a single record. You create them once and reuse them everywhere — in flights, trips, cruises and special flights, through the same picker. Your existing entries are migrated automatically on startup."
+      },
+      "flightForm": {
+        "title": "One flight form, scheduled and actual times",
+        "body": "Adding and editing finally use the same form. New: scheduled and actual times with the delay calculated for you, boarding group, trip assignment, cost and receipt — and airline and aircraft type come from the catalogue. A field you clear stays cleared instead of quietly keeping the old value."
+      },
+      "status": {
+        "title": "Status follows from the dates",
+        "body": "Whether something is planned, under way or done is now derived from its dates and refreshed hourly — for flights, cruises and trips alike. The manual status picker is gone as a result; the only state you still set yourself is \"cancelled\"."
+      }
+    },
     "v230": {
       "stats": {
         "title": "Anonymous usage statistics",
@@ -11,6 +33,28 @@
       "whatsNew": {
         "title": "This dialog",
         "body": "After every update you will see a one-time summary of what changed."
+      }
+    },
+    "v240": {
+      "colorModes": {
+        "title": "Map colors that listen to you",
+        "body": "Flight and cruise coloring are now proper modes: status, frequency, per journey, or a single custom color. The color picker finally works everywhere — and the legend always matches what the map actually shows."
+      },
+      "airlines": {
+        "title": "Airlines by name",
+        "body": "Instead of cryptic codes like \"DLH\" you now see \"Lufthansa\" — in the table, the list and the calendar. Flights that only carry an ICAO code now resolve correctly too."
+      },
+      "map": {
+        "title": "The map, your way",
+        "body": "New: flat 2D routes along the true great circle as an alternative to 3D arcs. Also: place names with special characters, consistent dot sizes for airports and ports, and direction arrows that sit right on long legs."
+      },
+      "fixes": {
+        "title": "Reported bugs fixed",
+        "body": "Profile picture and birthday now survive a reload, \"Compare with\" in statistics is remembered, and booking and ticket numbers can be entered right when adding a flight manually."
+      },
+      "polish": {
+        "title": "A tidier interface",
+        "body": "The map menu remembers whether it was open, the year selector is readable again, buttons have better contrast — and unfinished features stay hidden by default until they are ready."
       }
     }
   }

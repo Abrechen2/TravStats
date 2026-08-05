@@ -181,31 +181,31 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
   return (
     <div className="relative">
       {label !== undefined && (
-        <span className="mb-1 block text-xs text-[var(--text-muted)]">{label}</span>
+        <span className="mb-1 block text-xs text-(--text-muted)">{label}</span>
       )}
       <input
         role="combobox"
         aria-expanded={results.length > 0}
         aria-autocomplete="list"
         aria-label={label ?? t("picker.port_placeholder")}
-        className="w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none"
+        className="w-full rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden"
         placeholder={t("picker.port_placeholder")}
         value={query}
         onChange={(e): void => setQuery(e.target.value)}
       />
       {results.length > 0 && (
-        <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] shadow-lg">
+        <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-(--bg-surface) shadow-lg">
           {results.map((r) => {
             const location = formatLocation(r);
             return (
               <li key={r.id}>
                 <button
                   type="button"
-                  className="w-full px-3 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
+                  className="w-full px-3 py-2 text-left text-sm text-(--text-primary) hover:bg-(--bg-elevated)"
                   onClick={(): void => handleSelect(r)}
                 >
                   {r.name}
-                  {location && <span className="text-[var(--text-muted)]"> — {location}</span>}
+                  {location && <span className="text-(--text-muted)"> — {location}</span>}
                 </button>
               </li>
             );
@@ -214,8 +214,8 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
       )}
       {/* Geocoder fallback — only shown when the local catalog had no match. */}
       {results.length === 0 && geocoded.length > 0 && (
-        <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] shadow-lg">
-          <li className="px-3 py-1 text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+        <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-(--bg-surface) shadow-lg">
+          <li className="px-3 py-1 text-[10px] uppercase tracking-wide text-(--text-muted)">
             {t("picker.via_geocoder")}
           </li>
           {geocoded.map((g, i) => {
@@ -225,13 +225,13 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
                 <button
                   type="button"
                   disabled={saving}
-                  className="w-full px-3 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] disabled:opacity-50"
+                  className="w-full px-3 py-2 text-left text-sm text-(--text-primary) hover:bg-(--bg-elevated) disabled:opacity-50"
                   onClick={(): void => {
                     void handleSelectGeocoded(g);
                   }}
                 >
                   {g.name}
-                  {location && <span className="text-[var(--text-muted)]"> — {location}</span>}
+                  {location && <span className="text-(--text-muted)"> — {location}</span>}
                 </button>
               </li>
             );
@@ -239,13 +239,13 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
         </ul>
       )}
       {searchError && (
-        <p className="mt-1 text-xs text-[var(--danger)]">{t("picker.searchError")}</p>
+        <p className="mt-1 text-xs text-(--danger)">{t("picker.searchError")}</p>
       )}
-      {/* Shared error slot: covers both the geocoded-select failure (no
-          "add custom" sub-form open) and the custom-port save failure below —
-          previously this only rendered inside the `showAdd` block, so a
-          `handleSelectGeocoded` failure set `error` but never displayed it. */}
-      {error !== null && !showAdd && <p className="mt-1 text-xs text-[var(--danger)]">{error}</p>}
+      {/* Create/persist errors — rendered HERE, not only inside the add-custom
+          form: a failed geocoder-candidate save (handleSelectGeocoded) sets
+          this too, and until 2026-08-02 it had no render site on that path,
+          so the failure was invisible. */}
+      {error !== null && !showAdd && <p className="mt-1 text-xs text-(--danger)">{error}</p>}
       {query.length >= 2 &&
         query !== value?.name &&
         !exactMatch &&
@@ -254,7 +254,7 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
         !showAdd && (
           <button
             type="button"
-            className="mt-2 text-xs text-[var(--accent)] hover:underline"
+            className="mt-2 text-xs text-(--accent) hover:underline"
             onClick={(): void => {
               setNewName(query);
               setShowAdd(true);
@@ -264,22 +264,22 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
           </button>
         )}
       {showAdd && (
-        <div className="mt-2 space-y-2 rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-3">
+        <div className="mt-2 space-y-2 rounded-md border border-border bg-(--bg-surface) p-3">
           <input
-            className="w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+            className="w-full rounded-md border border-border bg-(--bg-elevated) px-2 py-1 text-sm text-(--text-primary) placeholder:text-(--text-muted)"
             value={newName}
             onChange={(e): void => setNewName(e.target.value)}
             placeholder={t("field.port_name")}
           />
           <div className="grid grid-cols-2 gap-2">
             <input
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+              className="rounded-md border border-border bg-(--bg-elevated) px-2 py-1 text-sm text-(--text-primary) placeholder:text-(--text-muted)"
               value={newCity}
               onChange={(e): void => setNewCity(e.target.value)}
               placeholder={t("field.city")}
             />
             <input
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+              className="rounded-md border border-border bg-(--bg-elevated) px-2 py-1 text-sm text-(--text-primary) placeholder:text-(--text-muted)"
               value={newCountry}
               onChange={(e): void => setNewCountry(e.target.value)}
               placeholder={t("field.country")}
@@ -296,13 +296,13 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
               <button
                 type="button"
                 onClick={handleClearNewPosition}
-                className="mt-1 text-xs text-[var(--text-muted)] hover:underline"
+                className="mt-1 text-xs text-(--text-muted) hover:underline"
               >
                 {t("location:clear")}
               </button>
             )}
           </div>
-          {error !== null && <p className="text-xs text-[var(--danger)]">{error}</p>}
+          {error !== null && <p className="text-xs text-(--danger)">{error}</p>}
           <div className="flex justify-end gap-2">
             <button
               type="button"
@@ -310,7 +310,7 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
                 setShowAdd(false);
                 setError(null);
               }}
-              className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              className="text-xs text-(--text-muted) hover:text-(--text-primary)"
             >
               {t("picker.cancel")}
             </button>
@@ -320,7 +320,7 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
               onClick={(): void => {
                 void save();
               }}
-              className="rounded-md bg-[var(--accent)] px-2 py-1 text-xs font-medium text-neutral-900 hover:bg-[var(--accent-dim)] disabled:opacity-50"
+              className="rounded-md bg-(--accent) px-2 py-1 text-xs font-medium text-neutral-900 hover:bg-(--accent-dim) disabled:opacity-50"
             >
               {t("picker.add_custom_port")}
             </button>

@@ -8,11 +8,11 @@
     "invitations": "Invitations",
     "system": "System Info",
     "instance": "Instance",
-    "apiKeys": "API Keys",
+    "externalServices": "External services (instance)",
     "parsers": "Parsers",
     "training": "Training Config",
     "logging": "Logging",
-    "backups": "Backups",
+    "backups": "Instance backups",
     "smtp": "Email / SMTP"
   },
   "tabs2": {
@@ -34,7 +34,8 @@
       "empty": "No results.",
       "created": "Ship added.",
       "createFailed": "Failed to add ship.",
-      "missingFields": "Name and cruise line are required."
+      "missingFields": "Name and cruise line are required.",
+      "menuLabel": "Ships"
     },
     "port": {
       "title": "Ports",
@@ -49,7 +50,55 @@
       "empty": "No results.",
       "created": "Port added.",
       "createFailed": "Failed to add port.",
-      "missingFields": "Name, latitude and longitude are required."
+      "missingFields": "Name, latitude and longitude are required.",
+      "menuLabel": "Ports"
+    }
+  },
+  "airlineAircraftMasterData": {
+    "menuLabel": "Airlines, Aircraft & Airports",
+    "userAdded": "User-added",
+    "airline": {
+      "title": "Airlines",
+      "description": "Catalog from the seed CSV plus user-added entries. User-added airlines are marked and kept across re-seeds.",
+      "name": "Name",
+      "callsign": "Callsign",
+      "country": "Country",
+      "add": "Add",
+      "searchPlaceholder": "Search airline, IATA or ICAO …",
+      "empty": "No results.",
+      "created": "Airline added.",
+      "createFailed": "Failed to add airline.",
+      "missingFields": "Name is required.",
+      "menuLabel": "Airlines"
+    },
+    "aircraft": {
+      "title": "Aircraft types",
+      "description": "Catalog from the seed CSV plus user-added entries. User-added aircraft types are marked and kept across re-seeds.",
+      "name": "Name",
+      "add": "Add",
+      "searchPlaceholder": "Search aircraft type or ICAO …",
+      "empty": "No results.",
+      "created": "Aircraft type added.",
+      "createFailed": "Failed to add aircraft type.",
+      "missingFields": "Name is required.",
+      "menuLabel": "Aircraft"
+    },
+    "airport": {
+      "title": "Airports",
+      "description": "Catalogue from the OurAirports CSV plus custom entries — for airfields the catalogue is missing (e.g. private airstrips). Newly added airports survive re-seeds; the timezone is derived from the coordinates.",
+      "name": "Name",
+      "city": "City",
+      "country": "Country",
+      "lat": "Latitude",
+      "lon": "Longitude",
+      "add": "Add",
+      "searchPlaceholder": "Search airport, IATA or ICAO …",
+      "empty": "No matches.",
+      "created": "Airport created.",
+      "createFailed": "Could not create the airport.",
+      "missingFields": "Name and coordinates are required.",
+      "invalidCoords": "Coordinates must be numbers (lat −90…90, lon −180…180).",
+      "menuLabel": "Airports"
     }
   },
   "instanceLabel": "Instance",
@@ -105,7 +154,9 @@
         "label": "WebDAV URL",
         "help": "Full URL up to your user root, e.g. https://cloud.example.com/remote.php/dav/files/abrechen2/"
       },
-      "username": { "label": "Username" },
+      "username": {
+        "label": "Username"
+      },
       "password": {
         "label": "Password",
         "help": "Stored encrypted at rest (AES-GCM). For Nextcloud use an app password.",
@@ -310,6 +361,14 @@
       "formatTitle": "Format:",
       "format": "JSON file that can be easily imported or analyzed"
     }
+  },
+  "airlineLogos": {
+    "title": "Airline logos",
+    "description": "Check the stored logos against their sources and refresh the stale ones. This also runs nightly.",
+    "action": "Refresh logos",
+    "running": "Checking …",
+    "result": "Refreshed {{refreshed}} of {{checked}} logos",
+    "failed": "Refresh failed"
   },
   "export": {
     "button": "📥 Export Data",
@@ -614,6 +673,10 @@
       "password": "Password",
       "or": "OR (use basic auth instead)"
     },
+    "logostream": {
+      "label": "Airline logos (logostream.dev)",
+      "description": "Provides airline logos as icon, wordmark and dark-mode variants. Without a key only the basic full logos (Daisycon) are shown."
+    },
     "help": {
       "title": "Global API Keys",
       "description": "These keys are shared with all users and enable access to external AI and flight data services.",
@@ -624,5 +687,11 @@
       "permissionsTitle": "User Permissions:",
       "permissions": "Controls whether users can set their own keys. Global keys are the fallback for users without their own keys."
     }
-  }
+  },
+  "masterData": {
+    "showingOf": "Showing {{shown}} of {{total}} entries — refine the search to see more.",
+    "typeToSearch": "Type at least two characters to search the catalogue.",
+    "refineSearch": "More matches than shown — refine the search."
+  },
+  "scopeHint": "Applies to the whole instance — for every user."
 }

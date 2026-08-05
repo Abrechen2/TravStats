@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import type { Trip, TripCategory, TripStatus } from "../../types";
+import type { Trip, TripCategory } from "../../types";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { TRIP_COLORS as PALETTE } from "../../lib/tripColors";
+import CompanionPicker from "../CompanionPicker";
 
 interface TripModalProps {
   trip: Trip | null; // null = create mode
@@ -11,7 +12,6 @@ interface TripModalProps {
   onSaved: () => void;
 }
 
-const STATUSES: TripStatus[] = ["planned", "in_progress", "completed"];
 const CATEGORIES: TripCategory[] = ["vacation", "business", "weekend", "family", "other"];
 
 const CATEGORY_ICON: Record<TripCategory, string> = {
@@ -64,14 +64,13 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
   const [name, setName] = useState(trip?.name ?? "");
   const [description, setDescription] = useState(trip?.description ?? "");
   const [color, setColor] = useState(trip?.color ?? PALETTE[0]);
-  const [status, setStatus] = useState<TripStatus>(trip?.status ?? "completed");
   const [category, setCategory] = useState<TripCategory | "">(trip?.category ?? "");
   const [startDate, setStartDate] = useState(toDateInput(trip?.startDate ?? null));
   const [endDate, setEndDate] = useState(toDateInput(trip?.endDate ?? null));
   const [originLabel, setOriginLabel] = useState(trip?.originLabel ?? "");
   const [destinationLabel, setDestinationLabel] = useState(trip?.destinationLabel ?? "");
   const [tagsCsv, setTagsCsv] = useState(csvFromArray(trip?.tags ?? []));
-  const [companionsCsv, setCompanionsCsv] = useState(csvFromArray(trip?.companions ?? []));
+  const [companions, setCompanions] = useState<string[]>(trip?.companions ?? []);
   const [notes, setNotes] = useState(trip?.notes ?? "");
   // Cover is upload-only. The chosen file is buffered and uploaded on save,
   // so it works even while creating a brand-new trip (before an id exists).
@@ -113,14 +112,13 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
     setName(trip.name);
     setDescription(trip.description ?? "");
     setColor(trip.color);
-    setStatus(trip.status);
     setCategory(trip.category ?? "");
     setStartDate(toDateInput(trip.startDate));
     setEndDate(toDateInput(trip.endDate));
     setOriginLabel(trip.originLabel ?? "");
     setDestinationLabel(trip.destinationLabel ?? "");
     setTagsCsv(csvFromArray(trip.tags));
-    setCompanionsCsv(csvFromArray(trip.companions));
+    setCompanions(trip.companions);
     setNotes(trip.notes ?? "");
     setCoverUrl(trip.coverImageUrl ?? "");
     setCoverFile(null);
@@ -141,14 +139,13 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           name: name.trim(),
           description: description.trim() || null,
           color,
-          status,
           category: category === "" ? null : category,
           startDate: fromDateInput(startDate),
           endDate: fromDateInput(endDate),
           originLabel: originLabel.trim() || null,
           destinationLabel: destinationLabel.trim() || null,
           tags: arrayFromCsv(tagsCsv),
-          companions: arrayFromCsv(companionsCsv),
+          companions,
           notes: notes.trim() || null,
           ...(removeCover ? { coverImageUrl: null } : {}),
         });
@@ -157,14 +154,13 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           name: name.trim(),
           description: description.trim() || undefined,
           color,
-          status,
           category: category === "" ? undefined : category,
           startDate: fromDateInput(startDate) ?? undefined,
           endDate: fromDateInput(endDate) ?? undefined,
           originLabel: originLabel.trim() || undefined,
           destinationLabel: destinationLabel.trim() || undefined,
           tags: arrayFromCsv(tagsCsv),
-          companions: arrayFromCsv(companionsCsv),
+          companions,
           notes: notes.trim() || undefined,
         });
       }
@@ -260,37 +256,24 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
                 />
               </Field>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Field label={t("trips:modal.statusLabel")}>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as TripStatus)}
-                    className="w-full rounded-lg px-3 py-2 text-sm"
-                    style={inputStyle}
-                  >
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {t(`trips:status.${s}`)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label={t("trips:modal.categoryLabel")}>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value as TripCategory | "")}
-                    className="w-full rounded-lg px-3 py-2 text-sm"
-                    style={inputStyle}
-                  >
-                    <option value="">—</option>
-                    {CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {CATEGORY_ICON[c]} {t(`trips:category.${c}`)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
+              {/* #status-from-dates: trip status now derives from linked
+                  segment dates (deriveTripStatus) — there is no manual
+                  control here, and no "cancelled" concept for trips. */}
+              <Field label={t("trips:modal.categoryLabel")}>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as TripCategory | "")}
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={inputStyle}
+                >
+                  <option value="">—</option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {CATEGORY_ICON[c]} {t(`trips:category.${c}`)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
 
               <div className="grid grid-cols-2 gap-3">
                 <Field label={t("trips:modal.startDateLabel")}>
@@ -350,15 +333,8 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           {tab === "people" && (
             <>
               <Field label={t("trips:modal.companionsLabel")}>
-                <input
-                  value={companionsCsv}
-                  onChange={(e) => setCompanionsCsv(e.target.value)}
-                  placeholder="Marie, Tom"
-                  className="w-full rounded-lg px-3 py-2 text-sm"
-                  style={inputStyle}
-                />
+                <CompanionPicker value={companions} onChange={setCompanions} />
               </Field>
-              <CompanionPreview values={arrayFromCsv(companionsCsv)} />
 
               <Field label={t("trips:modal.tagsLabel")}>
                 <input
@@ -474,7 +450,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
             onClick={() => void handleSave()}
             disabled={!name.trim() || saving}
             type="button"
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--accent)] text-[var(--bg-base)] disabled:opacity-50"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-(--accent) text-(--bg-base) disabled:opacity-50"
           >
             {saving ? "…" : t("trips:modal.save")}
           </button>
@@ -551,28 +527,6 @@ function CoverPreview({ url, accent, title, onClick }: CoverPreviewProps): JSX.E
       >
         {title}
       </div>
-    </div>
-  );
-}
-
-function CompanionPreview({ values }: { values: string[] }): JSX.Element | null {
-  if (values.length === 0) return null;
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {values.map((v) => (
-        <span
-          key={v}
-          className="px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5"
-          style={{
-            background: "var(--bg-elevated)",
-            border: "1px solid var(--color-border)",
-            color: "var(--text-primary)",
-          }}
-        >
-          <span aria-hidden>👤</span>
-          {v}
-        </span>
-      ))}
     </div>
   );
 }

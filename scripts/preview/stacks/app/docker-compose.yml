@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgis/postgis:15-3.4
+    container_name: preview-${SLOT}-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: flights
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: flights
+      TZ: UTC
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flights -d flights"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: ghcr.io/abrechen2/travstats:${IMAGE_TAG}
+    container_name: preview-${SLOT}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://flights:${POSTGRES_PASSWORD}@db:5432/flights
+      TZ: UTC
+      APP_VERSION: ${IMAGE_TAG}
+      CREATE_DEMO_USER: "false"
+      SEED_AIRPORTS: "false"
+      # LLM parsing is disabled on the previews: pve-node1 is a shared,
+      # Ceph/KVM-loaded cluster node, and an Ollama parse measured 0.3 tok/s
+      # there — every call timed out and fell back to the regex templates
+      # anyway (2026-07-09). Templates handle known airlines instantly. If the
+      # previews ever move to dedicated hardware, re-enable this and restore
+      # the shared Ollama stack (scripts/preview/stacks/ollama/).
+      USE_LLM_PARSER: "false"
+      FRONTEND_URL: https://${PUBLIC_HOST}
+      ALLOW_REGISTRATION: "false"
+    ports:
+      - "127.0.0.1:${HOST_PORT}:80"
+    networks:
+      - default
+      - preview-net
+
+volumes:
+  pgdata:
+
+networks:
+  preview-net:
+    external: true

@@ -124,7 +124,7 @@ export default function ParseLogStats(): JSX.Element {
           onClick={() => {
             void handleExport();
           }}
-          className="px-3 py-1.5 text-sm rounded transition-colors"
+          className="px-3 py-1.5 text-sm rounded-sm transition-colors"
           style={{ background: "var(--bg-elevated)", color: "var(--text-primary)" }}
         >
           {t("training:parseLogs.exportBtn")}
@@ -135,7 +135,7 @@ export default function ParseLogStats(): JSX.Element {
             void handlePromote();
           }}
           disabled={promoting}
-          className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+          className="btn-primary px-3 py-1.5 text-sm"
         >
           {promoting ? t("training:parseLogs.promoting") : t("training:parseLogs.promoteBtn")}
         </button>

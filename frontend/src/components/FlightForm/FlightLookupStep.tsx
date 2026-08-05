@@ -87,7 +87,7 @@ export default function FlightLookupStep({
         }}
       >
         <div className="flex items-start gap-4">
-          <div className="flex flex-col items-start gap-2 flex-shrink-0">
+          <div className="flex flex-col items-start gap-2 shrink-0">
             <span
               className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold shadow-md"
               style={{ background: "var(--accent)", color: "#0d1117" }}
@@ -118,7 +118,7 @@ export default function FlightLookupStep({
           </div>
 
           {/* Button Bereich */}
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <button
               type="button"
               onClick={() => setShowEmailUploader(true)}
@@ -249,7 +249,7 @@ export default function FlightLookupStep({
         <Suspense
           fallback={
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-[var(--bg-surface)] rounded-lg p-8">
+              <div className="bg-(--bg-surface) rounded-lg p-8">
                 <GlobeLoader size={160} label={t("flights:form.loadingScanner")} />
               </div>
             </div>

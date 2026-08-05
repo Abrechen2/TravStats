@@ -28,7 +28,7 @@ export default function StatsAirportsSection({
           {t("stats:airportStats.title")}
         </h2>
         <div
-          className="rounded-lg shadow p-6 text-center"
+          className="rounded-lg shadow-sm p-6 text-center"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <p style={{ color: "var(--text-muted)" }}>{t("stats:loading")}</p>
@@ -289,9 +289,9 @@ export default function StatsAirportsSection({
                         {count} ({percent}%)
                       </span>
                     </div>
-                    <div className="h-1.5 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
+                    <div className="h-1.5 rounded-full bg-(--bg-elevated) overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-[var(--accent)]"
+                        className="h-full rounded-full bg-(--accent)"
                         style={{ width: `${percent}%` }}
                       />
                     </div>

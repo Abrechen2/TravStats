@@ -16,8 +16,13 @@ import { calculateLodgingStats, type LodgingStayData, type LodgingRecord } from 
 import { normalizeHistory } from '../utils/homeAirport';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
-import { tzAwareDurationMinutes, type FlightTimeSemantics } from '../utils/timezone';
-import { normalizeAirline, mergeAirlineCounts } from '../utils/airlineNormalize';
+import { tzAwareDurationMinutes, localYearOf, type FlightTimeSemantics } from '../utils/timezone';
+import { isoCountryCode } from '../utils/continents';
+import {
+  normalizeAirline,
+  mergeAirlineCounts,
+  resolveAirlineCodes,
+} from '../utils/airlineNormalize';
 import {
   resolveWindow,
   bucketSeries,
@@ -25,6 +30,7 @@ import {
   trimZeroEdges,
   type DatedRow,
 } from '../utils/stats/timeseries';
+import { computeDedupedTotalCost } from '../utils/stats/dedupedCost';
 
 const router = Router();
 
@@ -100,7 +106,7 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
   // counts use the original where so that planned and cancelled flights are visible.
   const geoWhere: Prisma.FlightWhereInput = { ...where, status: { in: ['flown', 'historical'] } };
 
-  const [flownFlights, totalFlights, statusCounts, airlineCounts, categoryCounts, costAgg] = await Promise.all([
+  const [flownFlights, totalFlights, statusCounts, airlineCounts, categoryCounts, costFlights] = await Promise.all([
     prisma.flight.findMany({
       where: geoWhere,
       select: {
@@ -134,12 +140,14 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
       where,
       _count: true,
     }),
-    prisma.flight.aggregate({
+    prisma.flight.findMany({
       where,
-      _sum: {
+      select: {
         price: true,
         taxes: true,
         fees: true,
+        bookingId: true,
+        booking: { select: { price: true } },
       },
     }),
   ]);
@@ -215,12 +223,10 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
     return acc;
   }, {} as Record<string, number>);
 
-  const costParts = [
-    costAgg._sum.price,
-    costAgg._sum.taxes,
-    costAgg._sum.fees,
-  ].filter((v): v is number => typeof v === 'number');
-  const totalCost = costParts.length > 0 ? costParts.reduce((a, b) => a + b, 0) : 0;
+  // Booking-aware: a booking's price counts once, not once per segment —
+  // and grouped segments (price nulled by the import) still contribute
+  // their booking's total (spec 2026-07-17-cost-booking-price §4).
+  const totalCost = computeDedupedTotalCost(costFlights);
 
   return {
     totalFlights,
@@ -229,7 +235,7 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
     avgDistance: Math.round(avgDistance),
     byStatus,
     byAirline,
-    totalCost: Math.round(totalCost * 100) / 100,
+    totalCost,
     byCategory,
   };
 }
@@ -263,6 +269,84 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
       const summary = await computeSummary(buildWhere(userId, fromDate, toDate, year));
       res.json(summary);
     }
+  } catch (error) {
+    next(error);
+  }
+});
+
+interface HeroStats {
+  distanceKm: number;
+  flights: number;
+  countries: number;
+  airports: number;
+  co2Kg: number;
+  flightTimeMinutes: number;
+}
+
+// GET /api/v1/stats/hero — single composed aggregate for the Companion app's
+// Start-board hero widget. Reuses the SAME functions that back /summary,
+// /airports and /fun (computeSummary, calculateAirportStats, calculateFunStats)
+// instead of duplicating their queries. All-time only for the MVP — no
+// date-range params yet. The airport+fun flight select is fetched ONCE and
+// shared between calculateAirportStats and calculateFunStats since both use
+// the identical select already used by /airports and /fun.
+router.get('/hero', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.userId!;
+
+    const flightsWhere: Prisma.FlightWhereInput = {
+      userId,
+      status: { in: ['flown', 'historical'] },
+    };
+
+    const [summary, flights] = await Promise.all([
+      computeSummary(buildWhere(userId, undefined, undefined)),
+      prisma.flight.findMany({
+        where: flightsWhere,
+        select: {
+          id: true,
+          depLat: true,
+          depLon: true,
+          arrLat: true,
+          arrLon: true,
+          depIata: true,
+          depIcao: true,
+          arrIata: true,
+          arrIcao: true,
+          airline: true,
+          aircraft: true,
+          departureTime: true,
+          arrivalTime: true,
+          status: true,
+          price: true,
+          taxes: true,
+          fees: true,
+          category: true,
+          seatClass: true,
+          createdAt: true,
+        },
+      }),
+    ]);
+
+    // homeAirportHistory=[] is deliberate: this endpoint only reads
+    // countryCount/airportCount, which don't depend on home-airport history —
+    // only the unused farthestFromHome field does. Skips /airports's extra
+    // userSettings.findUnique lookup.
+    const [airportStats, funStats] = await Promise.all([
+      calculateAirportStats(flights, []),
+      calculateFunStats(flights),
+    ]);
+
+    const hero: HeroStats = {
+      distanceKm: summary.totalDistance,
+      flights: summary.totalFlights,
+      countries: airportStats.countryCount,
+      airports: airportStats.airportCount,
+      co2Kg: funStats.co2FootprintKg,
+      flightTimeMinutes: summary.totalFlightTime,
+    };
+
+    res.json(hero);
   } catch (error) {
     next(error);
   }
@@ -981,6 +1065,8 @@ interface AirlineRankingItem {
   airline: string;
   count: number;
   percentage: number;
+  /** IATA code via strict exact lookup; omitted when nothing matches. */
+  iata?: string;
 }
 
 interface AirlineRankingResponse {
@@ -1011,11 +1097,15 @@ router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFuncti
     }
 
     const airlines: AirlineRankingItem[] = Array.from(merged.entries())
-      .map(([airline, count]) => ({
-        airline,
-        count,
-        percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
-      }))
+      .map(([airline, count]) => {
+        const iata = resolveAirlineCodes(airline)?.iata;
+        return {
+          airline,
+          count,
+          percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
+          ...(iata ? { iata } : {}),
+        };
+      })
       .sort((a, b) => b.count - a.count);
 
     const response: AirlineRankingResponse = { airlines, total };
@@ -1027,14 +1117,48 @@ router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFuncti
 
 // ─── Country Distribution ─────────────────────────────────────────────────────
 
+/**
+ * Fold a set of country names/codes into sorted, deduplicated ISO alpha-2.
+ * Unresolvable entries are dropped: they cannot be deduplicated against the
+ * other catalogue, so keeping them would reintroduce the double count this
+ * exists to remove.
+ */
+function isoCodes(values: Iterable<string>): string[] {
+  const out = new Set<string>();
+  for (const v of values) {
+    const iso = isoCountryCode(v);
+    if (iso) out.add(iso);
+  }
+  return [...out].sort();
+}
+
 interface CountryStat {
   country: string;
   count: number;
 }
 
 interface CountryStatsResponse {
+  /** Display vocabulary, ranked by flight count. Rendered as-is. */
   countries: CountryStat[];
   total: number;
+  /**
+   * Counting vocabulary: lifetime departure countries as ISO alpha-2, with
+   * `Unknown` and the catalogue's placeholders dropped. The cross-domain KPI
+   * unions this with the port catalogue's equivalent; keeping unresolvable
+   * entries would mean counting things that cannot be deduplicated.
+   */
+  countriesIso: string[];
+  /**
+   * Departure countries keyed by year, same ISO vocabulary. The cross-domain
+   * overview used to render the lifetime set for whichever year was selected
+   * and stack a year-over-year delta on top of it that could only ever read
+   * zero — a comparison that could not exist, presented as data.
+   *
+   * The year is the one on the clock at the DEPARTURE airport (see
+   * localYearOf), not the UTC instant. A flight without a departure time
+   * still counts towards `countries` but belongs to no year.
+   */
+  byYear: Record<string, string[]>;
 }
 
 // GET /api/v1/stats/countries — departure country distribution
@@ -1044,7 +1168,7 @@ router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunct
 
     const flights = await prisma.flight.findMany({
       where: { userId },
-      select: { depIata: true, depIcao: true },
+      select: { depIata: true, depIcao: true, departureTime: true },
     });
 
     const airportCodes = new Set<string>();
@@ -1056,17 +1180,40 @@ router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunct
     const airportMap = await getCachedAirports([...airportCodes]);
 
     const countryCounts = new Map<string, number>();
+    const countriesByYear = new Map<number, Set<string>>();
     for (const f of flights) {
       const code = f.depIata ?? f.depIcao;
-      const country = code ? (airportMap.get(code)?.country ?? 'Unknown') : 'Unknown';
+      const airport = code ? airportMap.get(code) : undefined;
+      const country = airport?.country ?? 'Unknown';
       countryCounts.set(country, (countryCounts.get(country) ?? 0) + 1);
+
+      // An undated flight cannot be attributed to a year. It stays in the
+      // lifetime tally rather than being guessed into the current one.
+      if (!f.departureTime) continue;
+      // The timezone lives on the airport, not the flight — same source the
+      // flight list uses to derive depTimezone.
+      const year = localYearOf(f.departureTime, airport?.timezone ?? null);
+      if (!Number.isFinite(year)) continue;
+      const bucket = countriesByYear.get(year) ?? new Set<string>();
+      bucket.add(country);
+      countriesByYear.set(year, bucket);
     }
 
     const countries: CountryStat[] = [...countryCounts.entries()]
       .map(([country, count]) => ({ country, count }))
       .sort((a, b) => b.count - a.count);
 
-    const response: CountryStatsResponse = { countries, total: flights.length };
+    const byYear: Record<string, string[]> = {};
+    for (const [year, set] of countriesByYear) {
+      byYear[String(year)] = isoCodes(set);
+    }
+
+    const response: CountryStatsResponse = {
+      countries,
+      total: flights.length,
+      countriesIso: isoCodes(countryCounts.keys()),
+      byYear,
+    };
     res.json(response);
   } catch (error) {
     next(error);
@@ -1178,7 +1325,25 @@ router.get(
         // client-side)
         regions: Array.from(stats.regions).sort(),
         regionVisitCounts: stats.regionVisitCounts,
+        // Display vocabulary: English names, rendered as-is in the cruise
+        // tab's country tag cloud. Do NOT switch these to codes.
         countries: Array.from(stats.countries).sort(),
+        // Counting vocabulary: ISO alpha-2, so the cross-domain KPI can union
+        // these with the airport catalogue's codes without counting "Germany"
+        // and "DE" as two countries. Ports whose name does not resolve are
+        // dropped from the COUNT rather than counted under their raw name —
+        // an unresolvable name cannot be deduplicated against anything.
+        countriesIso: isoCodes(stats.countries),
+        // Year-scoped counterpart — see the CruiseStats doc comment. Keyed by
+        // the cruise's start year so the overview's "countries visited" tile
+        // can answer for a selected year instead of showing the lifetime set
+        // with a delta on top that could only ever read zero.
+        countriesByYear: Object.fromEntries(
+          [...stats.countriesByYear.entries()].map(([year, set]) => [
+            String(year),
+            isoCodes(set),
+          ]),
+        ),
         // Distance metrics (added 2026-04-25 with the schematic-routes
         // pipeline; long-overdue exposure to the stats UI)
         totalDistanceKm: Math.round(stats.totalDistanceKm),
@@ -1289,6 +1454,56 @@ router.get(
           countries: Array.from(stats.countries).sort(),
         },
       });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// ─── Aircraft type ranking ──────────────────────────────────────────────────
+
+interface AircraftTypeItem {
+  aircraft: string;
+  count: number;
+  percentage: number;
+}
+
+interface AircraftTypesResponse {
+  aircraftTypes: AircraftTypeItem[];
+  total: number;
+}
+
+// GET /api/v1/stats/aircraft-types — ranking by aircraft TYPE ("Airbus A320neo").
+// Distinct from /stats/aircraft, which ranks tail numbers and only sees
+// registration-bearing (AeroDataBox-enriched) rows. `total` is the user's total
+// flight count so this shares a denominator with /stats/airlines; flights with
+// no `aircraft` value produce no row, so percentages need not sum to 100.
+router.get(
+  '/aircraft-types',
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+
+      const [total, typeCounts] = await Promise.all([
+        prisma.flight.count({ where: { userId } }),
+        prisma.flight.groupBy({
+          by: ['aircraft'],
+          where: { userId, aircraft: { not: null } },
+          _count: true,
+        }),
+      ]);
+
+      const aircraftTypes: AircraftTypeItem[] = typeCounts
+        .map((row) => ({
+          aircraft: row.aircraft!,
+          count: row._count,
+          percentage:
+            total > 0 ? Math.round((row._count / total) * 1000) / 10 : 0,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      const response: AircraftTypesResponse = { aircraftTypes, total };
+      res.json(response);
     } catch (error) {
       next(error);
     }

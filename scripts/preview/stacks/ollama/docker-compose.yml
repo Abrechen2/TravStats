@@ -1,0 +1,23 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: preview-ollama
+    restart: unless-stopped
+    environment:
+      OLLAMA_KEEP_ALIVE: "24h"
+    volumes:
+      - ollama-models:/root/.ollama
+    networks:
+      - preview-net
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  ollama-models:
+
+networks:
+  preview-net:
+    external: true

@@ -35,14 +35,14 @@ export default function AboutSection(): JSX.Element {
       <div className="flex items-baseline gap-3 mb-1 flex-wrap">
         <SectionTitle title="About TravStats" />
         <span
-          className="text-sm font-mono px-2 py-0.5 rounded"
+          className="text-sm font-mono px-2 py-0.5 rounded-sm"
           style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}
         >
           v{appVersion}
         </span>
         {showBuild && (
           <span
-            className="text-xs font-mono px-2 py-0.5 rounded"
+            className="text-xs font-mono px-2 py-0.5 rounded-sm"
             style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}
             title={t("settings:about.buildVersionHint")}
           >

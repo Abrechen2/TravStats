@@ -1,5 +1,6 @@
 import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
+import AirlineLogoRefreshButton from "./AirlineLogoRefreshButton";
 
 // ==================== SystemInfo Interfaces ====================
 
@@ -52,27 +53,27 @@ export default function SystemInfo({
     <div className="space-y-6">
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-          <div className="text-[var(--text-muted)] text-sm mb-1">{t("admin:instanceLabel")}</div>
-          <div className="text-2xl font-bold text-[var(--text-primary)]">
+        <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+          <div className="text-(--text-muted) text-sm mb-1">{t("admin:instanceLabel")}</div>
+          <div className="text-2xl font-bold text-(--text-primary)">
             {systemInfo.instanceName}
           </div>
         </div>
-        <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-          <div className="text-[var(--text-muted)] text-sm mb-1">{t("admin:totalUsers")}</div>
-          <div className="text-2xl font-bold text-[var(--text-primary)]">
+        <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+          <div className="text-(--text-muted) text-sm mb-1">{t("admin:totalUsers")}</div>
+          <div className="text-2xl font-bold text-(--text-primary)">
             {systemInfo.userCount} / {systemInfo.maxUsers}
           </div>
         </div>
-        <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-          <div className="text-[var(--text-muted)] text-sm mb-1">{t("admin:activeUsers")}</div>
-          <div className="text-2xl font-bold text-[var(--text-primary)]">
+        <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+          <div className="text-(--text-muted) text-sm mb-1">{t("admin:activeUsers")}</div>
+          <div className="text-2xl font-bold text-(--text-primary)">
             {systemInfo.activeUserCount}
           </div>
         </div>
-        <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-          <div className="text-[var(--text-muted)] text-sm mb-1">{t("admin:totalFlights")}</div>
-          <div className="text-2xl font-bold text-[var(--text-primary)]">
+        <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+          <div className="text-(--text-muted) text-sm mb-1">{t("admin:totalFlights")}</div>
+          <div className="text-2xl font-bold text-(--text-primary)">
             {systemInfo.flightCount}
           </div>
         </div>
@@ -112,7 +113,7 @@ export default function SystemInfo({
                 onDeleteDemoUser(demoUser.id);
               }
             }}
-            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition text-sm font-medium"
+            className="btn-danger text-sm"
           >
             {t("admin:demoWarning.button")}
           </button>
@@ -120,24 +121,24 @@ export default function SystemInfo({
       )}
 
       {/* Configuration */}
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-(--text-primary) mb-4">
           {t("admin:systemInfo.configuration")}
         </h2>
         <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <dt className="text-sm text-[var(--text-muted)]">
+            <dt className="text-sm text-(--text-muted)">
               {t("admin:systemInfo.registration")}
             </dt>
-            <dd className="text-lg font-medium text-[var(--text-primary)]">
+            <dd className="text-lg font-medium text-(--text-primary)">
               {systemInfo.registrationEnabled
                 ? t("admin:systemInfo.enabled")
                 : t("admin:systemInfo.disabled")}
             </dd>
           </div>
           <div>
-            <dt className="text-sm text-[var(--text-muted)]">{t("admin:systemInfo.version")}</dt>
-            <dd className="text-lg font-medium text-[var(--text-primary)]">
+            <dt className="text-sm text-(--text-muted)">{t("admin:systemInfo.version")}</dt>
+            <dd className="text-lg font-medium text-(--text-primary)">
               {systemInfo.version}
               {/*
                 On a promoted `:latest` the image is a byte-identical retag of
@@ -161,14 +162,14 @@ export default function SystemInfo({
       </div>
 
       {/* Actions */}
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-(--text-primary) mb-4">
           {t("admin:systemInfo.dataManagement")}
         </h2>
         <button onClick={onExportData} className="btn-primary px-4 py-2">
           {t("admin:systemInfo.exportButton")}
         </button>
-        <p className="text-sm text-[var(--text-muted)] mt-2">
+        <p className="text-sm text-(--text-muted) mt-2">
           {t("admin:systemInfo.exportDescription")}
         </p>
         <InlineHelp
@@ -198,6 +199,7 @@ export default function SystemInfo({
             </div>
           }
         />
+        <AirlineLogoRefreshButton />
       </div>
     </div>
   );

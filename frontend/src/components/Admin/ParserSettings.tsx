@@ -99,17 +99,17 @@ export default function ParserSettings({
       {/* Header with Save Button */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+          <h2 className="text-xl font-semibold text-(--text-primary)">
             {t("admin:parserSettings.title")}
           </h2>
-          <p className="text-sm text-[var(--text-muted)] mt-1">
+          <p className="text-sm text-(--text-muted) mt-1">
             {t("admin:parserSettings.description")}
           </p>
         </div>
         <button
           onClick={onSave}
           disabled={savingParsers}
-          className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition font-medium"
+          className="btn-primary"
         >
           {savingParsers ? t("common:buttons.saving") : t("admin:saveSettings")}
         </button>
@@ -138,15 +138,15 @@ export default function ParserSettings({
       />
 
       {/* Parser Info */}
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
+      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-(--text-primary) mb-2">
           {t("admin:parserSettings.defaultSettings")}
         </h3>
-        <p className="text-sm text-[var(--text-muted)] mb-4">
+        <p className="text-sm text-(--text-muted) mb-4">
           {t("admin:parserSettings.defaultSettingsDescription")}
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center gap-2 p-3 bg-[var(--bg-base)] rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-(--bg-base) rounded-lg">
             <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
               <path
                 fillRule="evenodd"
@@ -155,11 +155,11 @@ export default function ParserSettings({
               />
             </svg>
             <div>
-              <p className="text-sm font-medium text-[var(--text-primary)]">Tesseract OCR</p>
-              <p className="text-xs text-[var(--text-muted)]">Boarding pass image parsing</p>
+              <p className="text-sm font-medium text-(--text-primary)">Tesseract OCR</p>
+              <p className="text-xs text-(--text-muted)">Boarding pass image parsing</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 p-3 bg-[var(--bg-base)] rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-(--bg-base) rounded-lg">
             <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
               <path
                 fillRule="evenodd"
@@ -168,17 +168,17 @@ export default function ParserSettings({
               />
             </svg>
             <div>
-              <p className="text-sm font-medium text-[var(--text-primary)]">Regex Templates</p>
-              <p className="text-xs text-[var(--text-muted)]">Email booking parsing</p>
+              <p className="text-sm font-medium text-(--text-primary)">Regex Templates</p>
+              <p className="text-xs text-(--text-muted)">Email booking parsing</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Ollama LLM Parser */}
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
+      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+          <h3 className="text-lg font-semibold text-(--text-primary)">
             {t("admin:parserSettings.ollama.title")}
           </h3>
           {ollamaTestState.status !== "idle" && (
@@ -211,13 +211,13 @@ export default function ParserSettings({
             </span>
           )}
         </div>
-        <p className="text-sm text-[var(--text-muted)] mb-4">
+        <p className="text-sm text-(--text-muted) mb-4">
           {t("admin:parserSettings.ollama.description")}
         </p>
         <div className="space-y-3">
           {/* URL input */}
           <div>
-            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+            <label className="block text-xs font-medium text-(--text-muted) mb-1">
               {t("admin:parserSettings.ollama.urlLabel")}
             </label>
             <input
@@ -227,13 +227,13 @@ export default function ParserSettings({
                 onParserSettingsChange({ ...parserSettings, ollamaUrl: e.target.value || null })
               }
               placeholder={t("admin:parserSettings.ollama.urlPlaceholder")}
-              className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-lg bg-[var(--bg-base)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:outline-hidden focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
           {/* Model selector — dropdown of available models */}
           <div>
-            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+            <label className="block text-xs font-medium text-(--text-muted) mb-1">
               {t("admin:parserSettings.ollama.modelLabel")}
             </label>
             {models.length > 0 ? (
@@ -242,7 +242,7 @@ export default function ParserSettings({
                 onChange={(e) =>
                   onParserSettingsChange({ ...parserSettings, ollamaModel: e.target.value || null })
                 }
-                className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-lg bg-[var(--bg-base)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:outline-hidden focus:ring-1 focus:ring-blue-500"
               >
                 <option value="">-- Select model --</option>
                 {models.map((m) => (
@@ -265,18 +265,18 @@ export default function ParserSettings({
                       ? "No models found — enter name or pull below"
                       : t("admin:parserSettings.ollama.modelPlaceholder")
                 }
-                className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-lg bg-[var(--bg-base)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:outline-hidden focus:ring-1 focus:ring-blue-500"
               />
             )}
             {modelsLoading && (
-              <p className="text-xs text-[var(--text-muted)] mt-1">Loading available models...</p>
+              <p className="text-xs text-(--text-muted) mt-1">Loading available models...</p>
             )}
           </div>
 
           {/* Pull model section */}
           {parserSettings.ollamaUrl && (
-            <div className="border border-dashed border-[var(--color-border)] rounded-lg p-3">
-              <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+            <div className="border border-dashed border-border rounded-lg p-3">
+              <label className="block text-xs font-medium text-(--text-muted) mb-1">
                 Download a model
               </label>
               <div className="flex gap-2">
@@ -285,7 +285,7 @@ export default function ParserSettings({
                   value={pullModel}
                   onChange={(e) => setPullModel(e.target.value)}
                   placeholder="e.g. gemma3:12b, llama3.1:8b"
-                  className="flex-1 px-3 py-2 text-sm border border-[var(--color-border)] rounded-lg bg-[var(--bg-base)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="flex-1 px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                   disabled={pulling}
                 />
                 <button
@@ -305,7 +305,7 @@ export default function ParserSettings({
           )}
 
           {ollamaTestState.message && (
-            <p className="text-xs text-[var(--text-muted)] mt-1">{ollamaTestState.message}</p>
+            <p className="text-xs text-(--text-muted) mt-1">{ollamaTestState.message}</p>
           )}
           <button
             onClick={onTestOllama}
@@ -314,7 +314,7 @@ export default function ParserSettings({
               !parserSettings.ollamaUrl ||
               !parserSettings.ollamaModel
             }
-            className="mt-1 px-3 py-1.5 text-sm border border-[var(--color-border)] rounded-lg hover:bg-[var(--bg-base)] disabled:opacity-50 transition"
+            className="mt-1 px-3 py-1.5 text-sm border border-border rounded-lg hover:bg-(--bg-base) disabled:opacity-50 transition"
           >
             {ollamaTestState.status === "loading"
               ? t("admin:parserSettings.ollama.testing")
@@ -324,8 +324,8 @@ export default function ParserSettings({
       </div>
 
       {/* User API Key Permissions */}
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">User Permissions</h3>
+      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-(--text-primary) mb-2">User Permissions</h3>
         <div className="flex items-center gap-3">
           <input
             type="checkbox"
@@ -334,9 +334,9 @@ export default function ParserSettings({
             onChange={(e) =>
               onParserSettingsChange({ ...parserSettings, allowUserApiKeys: e.target.checked })
             }
-            className="w-4 h-4 rounded border-[var(--color-border)]"
+            className="w-4 h-4 rounded-sm border-border"
           />
-          <label htmlFor="allowUserApiKeys" className="text-sm text-[var(--text-primary)]">
+          <label htmlFor="allowUserApiKeys" className="text-sm text-(--text-primary)">
             Allow users to add their own flight data API keys (Airlabs, Aviationstack, OpenSky)
           </label>
         </div>

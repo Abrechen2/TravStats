@@ -16,6 +16,7 @@ const flightStats = {
   totalDistanceKm: 12_000,
   totalDurationHours: 24,
   countries: ["DE", "US", "JP"],
+  countriesByYear: { 2023: ["DE", "JP"], 2024: ["DE", "US"] },
   yearlyEvents: { 2023: 4, 2024: 6 },
   yearlyActiveDays: { 2023: 4, 2024: 6 },
   monthlyActiveDays: { "2023-06": 2, "2024-03": 3 },
@@ -33,6 +34,7 @@ const cruiseStats = {
   totalEvents: 3,
   totalDistanceKm: 5_000,
   countries: ["IT", "ES", "DE"],
+  countriesByYear: { 2024: ["IT", "DE"], 2025: ["ES"] },
   yearlyEvents: { 2024: 2, 2025: 1 },
   yearlyActiveDays: { 2024: 14, 2025: 7 },
   monthlyActiveDays: { "2024-06": 14, "2025-03": 7 },
@@ -71,6 +73,46 @@ describe("aggregate", () => {
   it("countries are unioned across domains (DE overlaps, JP+US+IT+ES unique)", () => {
     const lifetime = aggregate(baseMap, { flight: true, cruise: true }, null);
     expect(lifetime.countriesCount).toBe(5);
+  });
+
+  // Until 2.5.0 the country count ignored the selected year entirely — it
+  // returned the lifetime set for every year, which made the tile's
+  // year-over-year delta structurally always zero.
+  describe("year-scoped countries", () => {
+    it("counts only the selected year's countries, not the lifetime set", () => {
+      // 2024: flights DE+US, cruises IT+DE -> DE, US, IT = 3 (lifetime is 5)
+      const result = aggregate(baseMap, { flight: true, cruise: true }, 2024);
+      expect(result.countriesCount).toBe(3);
+    });
+
+    it("produces a different count per year, so the delta can be real", () => {
+      const y2023 = aggregate(baseMap, { flight: true, cruise: true }, 2023);
+      const y2025 = aggregate(baseMap, { flight: true, cruise: true }, 2025);
+      expect(y2023.countriesCount).toBe(2); // DE, JP
+      expect(y2025.countriesCount).toBe(1); // ES
+      expect(y2023.countriesCount).not.toBe(y2025.countriesCount);
+    });
+
+    it("still unions across domains within the year", () => {
+      const flightOnly = aggregate(baseMap, { flight: true, cruise: false }, 2024);
+      expect(flightOnly.countriesCount).toBe(2); // DE, US
+    });
+
+    it("returns 0 for a year the domain has no countries for", () => {
+      const result = aggregate(baseMap, { flight: true, cruise: true }, 1999);
+      expect(result.countriesCount).toBe(0);
+    });
+
+    it("falls back to the lifetime set when a domain predates the year index", () => {
+      // A domain adapter that has not been taught countriesByYear yet must
+      // not silently contribute zero — that would UNDER-report the count
+      // rather than over-report it, which is the harder bug to notice.
+      const legacy: DomainStatsMap = {
+        flight: { ...flightStats, countriesByYear: undefined },
+      };
+      const result = aggregate(legacy, { flight: true }, 2024);
+      expect(result.countriesCount).toBe(3); // DE, US, JP — the lifetime set
+    });
   });
 
   it("year-scoped activeDays sum yearlyActiveDays per domain (no double-count)", () => {

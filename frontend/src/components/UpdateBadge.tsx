@@ -104,7 +104,7 @@ export default function UpdateBadge(): JSX.Element | null {
         ref={triggerRef}
         type="button"
         onClick={() => setPopoverOpen((v) => !v)}
-        className="update-badge-blink ml-2 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide"
+        className="update-badge-blink ml-2 inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide"
         style={{
           color: "#1f1300",
           background: "var(--warning, #f5c542)",
@@ -119,7 +119,7 @@ export default function UpdateBadge(): JSX.Element | null {
         createPortal(
           <div
             ref={popoverRef}
-            className="fixed z-[10000] rounded-lg shadow-xl"
+            className="fixed z-10000 rounded-lg shadow-xl"
             style={{
               ...popoverStyle,
               background: "var(--bg-surface)",
@@ -147,7 +147,7 @@ export default function UpdateBadge(): JSX.Element | null {
               </div>
 
               <div
-                className="text-xs whitespace-pre-wrap break-words rounded p-2 max-h-56 overflow-y-auto"
+                className="text-xs whitespace-pre-wrap wrap-break-word rounded-sm p-2 max-h-56 overflow-y-auto"
                 style={{
                   background: "var(--bg-base)",
                   border: "1px solid var(--color-border)",
@@ -181,7 +181,7 @@ export default function UpdateBadge(): JSX.Element | null {
                   <button
                     type="button"
                     onClick={() => setPopoverOpen(false)}
-                    className="text-xs px-2 py-1 rounded"
+                    className="text-xs px-2 py-1 rounded-sm"
                     style={{
                       border: "1px solid var(--color-border)",
                       color: "var(--text-primary)",

@@ -245,7 +245,7 @@
     "analyticsOptIn": "Analytics opt-in (anonymous)"
   },
   "backup": {
-    "title": "Backup & Sync",
+    "title": "My data & sync",
     "description": "Control regular backups and cloud sync.",
     "adminNote": "Backup settings are managed in the Admin panel.",
     "userNote": "Backups are managed by the administrator.",
@@ -372,11 +372,6 @@
       "note": "Only LLM-based parsing (Ollama) is fully tested. Template and regex parsers are experimental."
     }
   },
-  "admin": {
-    "title": "Administration",
-    "description": "Manage users, invitations, and system settings",
-    "openAdminPanel": "Open Admin Panel"
-  },
   "features": {
     "title": "Features",
     "costTracking": "Cost Tracking",
@@ -390,9 +385,10 @@
       "cost": "Shows the tax and fee fields on the flight forms and enables the business cost statistics. Price and currency are always available regardless — only the breakdown is optional, to keep the form lean."
     }
   },
-  "autoSaved": {
-    "title": "Auto-saved",
-    "description": "All settings are saved locally and are immediately active."
+  "autoSave": {
+    "idle": "Changes are saved automatically",
+    "saving": "Saving …",
+    "saved": "Saved"
   },
   "scrollToTop": "Scroll to top",
   "sectionPicker": "Section",
@@ -503,6 +499,9 @@
     "saved": "Enrichment settings saved successfully",
     "saveFailed": "Failed to save enrichment settings"
   },
+  "externalServices": {
+    "title": "My external services"
+  },
   "apiKeys": {
     "title": "API Keys",
     "description": "Manage API keys for external services. Keys shared by the administrator are automatically used.",
@@ -609,7 +608,8 @@
   },
   "import": {
     "title": "Import",
-    "description": "Migrate your flight history from another logbook, or re-import a TravStats Excel export.",
+    "description": "Import existing data from other services — grouped per area.",
+    "openHub": "Import",
     "tile": {
       "fr24": {
         "title": "From Flightradar24",
@@ -620,12 +620,6 @@
         "title": "From any logbook (CSV)",
         "description": "Upload a flat per-flight CSV — after upload, a mapping wizard opens so you can match each column to a TravStats field.",
         "uploadLabel": "Choose CSV file"
-      },
-      "roundTrip": {
-        "title": "Re-import TravStats Excel",
-        "description": "Round-trip XLSX/CSV/JSON exported from TravStats. Existing rows are updated by ID; new rows are created.",
-        "uploadLabel": "Choose .xlsx / .csv / .json",
-        "successSummary": "Updated: {{updated}} · Created: {{created}}"
       }
     },
     "preview": {
@@ -762,5 +756,6 @@
       "revoke": "Failed to revoke token",
       "labelRequired": "Label is required"
     }
-  }
+  },
+  "scopeHint": "Applies to your account only."
 }

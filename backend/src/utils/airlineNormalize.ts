@@ -13,7 +13,8 @@
  * data. Unknown names return null and the row keeps its IATA/ICAO empty.
  */
 
-import { AIRLINES, type Airline } from '../data/airlines';
+import { getAirlineCatalogSync, type CachedAirline } from '../services/airlineCatalogCache';
+import { AIRLINES } from '../data/airlines';
 
 /**
  * Lowercased variant → canonical display name. Only add entries known to
@@ -65,23 +66,49 @@ const NAME_TO_IATA: Record<string, string> = {
 };
 
 /**
- * Build a lookup map from lowercase canonical name → Airline. Built once
- * at module load, NOT per call.
+ * Build lowercase-name / IATA / ICAO lookup maps from a catalogue snapshot.
  */
-const NAME_LOOKUP: Map<string, Airline> = new Map(
-  AIRLINES.map((a) => [a.name.toLowerCase(), a]),
+function buildLookups(catalog: CachedAirline[]) {
+  const byName = new Map<string, CachedAirline>();
+  const byIata = new Map<string, CachedAirline>();
+  const byIcao = new Map<string, CachedAirline>();
+  for (const a of catalog) {
+    byName.set(a.name.toLowerCase(), a);
+    byIata.set(a.iata.toUpperCase(), a);
+    if (a.icao) byIcao.set(a.icao.toUpperCase(), a);
+  }
+  return { byName, byIata, byIcao };
+}
+
+// Cold-start fallback (curated ~147), built once at module load. Used until the
+// DB cache is preloaded — so resolveAirlineCodes is correct even in a script or
+// test that never called preloadAirlineCatalog(), and never silently returns
+// null for a known carrier while the boot-time preload is still pending.
+const FALLBACK_LOOKUPS = buildLookups(
+  AIRLINES.map((a) => ({ iata: a.iata, icao: a.icao ?? null, name: a.name })),
 );
 
+let warmSource: CachedAirline[] | null = null;
+let warmLookups: ReturnType<typeof buildLookups> | null = null;
+
 /**
- * Build IATA → Airline and ICAO → Airline lookups for direct-code input
- * (e.g. user typed "IB" or "IBE" instead of "Iberia").
+ * Return the current lookup maps: the warm DB-backed catalogue once
+ * `preloadAirlineCatalog()` has run, otherwise the curated cold-start
+ * fallback. The warm maps are memoized and only rebuilt when the cache
+ * snapshot's array identity changes (a fresh preload or admin reseed via
+ * `invalidateAirlineCatalogCache` + reload) — not on every call, since
+ * callers like `flightsBatch.ts` resolve twice per flight in a
+ * transaction loop.
  */
-const IATA_LOOKUP: Map<string, Airline> = new Map(
-  AIRLINES.map((a) => [a.iata.toUpperCase(), a]),
-);
-const ICAO_LOOKUP: Map<string, Airline> = new Map(
-  AIRLINES.filter((a) => a.icao).map((a) => [a.icao!.toUpperCase(), a]),
-);
+function currentLookups(): ReturnType<typeof buildLookups> {
+  const catalog = getAirlineCatalogSync();
+  if (catalog.length === 0) return FALLBACK_LOOKUPS;
+  if (catalog !== warmSource) {
+    warmSource = catalog;
+    warmLookups = buildLookups(catalog);
+  }
+  return warmLookups as ReturnType<typeof buildLookups>;
+}
 
 /**
  * Normalize an airline name to its canonical display form. Returns the
@@ -110,27 +137,29 @@ export function resolveAirlineCodes(
   const upper = trimmed.toUpperCase();
   const lower = trimmed.toLowerCase();
 
+  const { byName, byIata, byIcao } = currentLookups();
+
   // 1. Direct IATA code
   if (upper.length === 2) {
-    const hit = IATA_LOOKUP.get(upper);
-    if (hit) return { iata: hit.iata, icao: hit.icao, name: hit.name };
+    const hit = byIata.get(upper);
+    if (hit) return { iata: hit.iata, icao: hit.icao ?? undefined, name: hit.name };
   }
 
   // 2. Direct ICAO code
   if (upper.length === 3) {
-    const hit = ICAO_LOOKUP.get(upper);
-    if (hit) return { iata: hit.iata, icao: hit.icao, name: hit.name };
+    const hit = byIcao.get(upper);
+    if (hit) return { iata: hit.iata, icao: hit.icao ?? undefined, name: hit.name };
   }
 
   // 3. Canonical name (case-insensitive)
-  const byName = NAME_LOOKUP.get(lower);
-  if (byName) return { iata: byName.iata, icao: byName.icao, name: byName.name };
+  const nameHit = byName.get(lower);
+  if (nameHit) return { iata: nameHit.iata, icao: nameHit.icao ?? undefined, name: nameHit.name };
 
   // 4. Explicit alias
   const aliasIata = NAME_TO_IATA[lower];
   if (aliasIata) {
-    const hit = IATA_LOOKUP.get(aliasIata);
-    if (hit) return { iata: hit.iata, icao: hit.icao, name: hit.name };
+    const hit = byIata.get(aliasIata);
+    if (hit) return { iata: hit.iata, icao: hit.icao ?? undefined, name: hit.name };
   }
 
   return null;

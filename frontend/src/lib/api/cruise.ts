@@ -106,6 +106,13 @@ export const portsApi = {
     const { data } = await api.get<Envelope<Port[]>>("/ports", { params });
     return data.data;
   },
+  /** Like search, but keeps the server-side total for truncation hints. */
+  list: async (q: string): Promise<{ items: Port[]; total: number }> => {
+    const params: Record<string, string> = {};
+    if (q) params.q = q;
+    const { data } = await api.get<Envelope<Port[]> & { total?: number }>("/ports", { params });
+    return { items: data.data, total: data.total ?? data.data.length };
+  },
   /**
    * External geocoder fallback for ports missing from the local catalog.
    * Returns [] on error — callers treat it as a soft enhancement.
@@ -131,6 +138,13 @@ export const portsApi = {
 };
 
 export const shipsApi = {
+  /** Like search, but keeps the server-side total for truncation hints. */
+  list: async (q: string): Promise<{ items: Ship[]; total: number }> => {
+    const params: Record<string, string> = {};
+    if (q) params.q = q;
+    const { data } = await api.get<Envelope<Ship[]> & { total?: number }>("/ships", { params });
+    return { items: data.data, total: data.total ?? data.data.length };
+  },
   search: async (q: string, cruiseLine?: string): Promise<Ship[]> => {
     const params: Record<string, string> = {};
     if (q) params.q = q;

@@ -561,8 +561,8 @@ export default function AdvancedStatsPage(): JSX.Element {
               onClick={(): void => setFilter("all")}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 filter === "all"
-                  ? "border-[var(--accent)] text-[var(--accent)]"
-                  : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  ? "border-(--accent) text-(--accent)"
+                  : "border-transparent text-(--text-secondary) hover:text-(--text-primary)"
               }`}
             >
               {t("stats:filter.all")}
@@ -576,8 +576,8 @@ export default function AdvancedStatsPage(): JSX.Element {
                   onClick={(): void => setFilter(k)}
                   className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                     filter === k
-                      ? "border-[var(--accent)] text-[var(--accent)]"
-                      : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                      ? "border-(--accent) text-(--accent)"
+                      : "border-transparent text-(--text-secondary) hover:text-(--text-primary)"
                   }`}
                 >
                   <span className="mr-1.5" aria-hidden>
@@ -787,18 +787,18 @@ export default function AdvancedStatsPage(): JSX.Element {
               <StatsSeatSection seatStats={seatStats} />
 
               {/* Airline Loyalty Ranking */}
-              <div className="mt-8 bg-[var(--bg-elevated)] rounded-xl shadow p-6">
+              <div className="mt-8 bg-(--bg-elevated) rounded-xl shadow-sm p-6">
                 <AirlineRankingCard />
               </div>
 
               {/* Aircraft (Hulls) Ranking — only shows when at least one
                   flight has a tail number on file (AeroDataBox-enriched). */}
-              <div className="mt-6 bg-[var(--bg-elevated)] rounded-xl shadow p-6">
+              <div className="mt-6 bg-(--bg-elevated) rounded-xl shadow-sm p-6">
                 <AircraftRankingCard />
               </div>
 
               {/* Country Distribution */}
-              <div className="mt-6 bg-[var(--bg-elevated)] rounded-xl shadow p-6">
+              <div className="mt-6 bg-(--bg-elevated) rounded-xl shadow-sm p-6">
                 <CountryDistributionCard />
               </div>
             </>

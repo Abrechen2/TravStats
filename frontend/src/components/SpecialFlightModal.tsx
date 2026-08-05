@@ -127,7 +127,7 @@ export default function SpecialFlightModal({
   const [arrivalTime, setArrivalTime] = useState("");
   const [notes, setNotes] = useState("");
   const [tagsCsv, setTagsCsv] = useState("");
-  const [companionsCsv, setCompanionsCsv] = useState("");
+  const [companions, setCompanions] = useState<string[]>([]);
 
   // Sightseeing-only
   const [aircraft, setAircraft] = useState("");
@@ -159,7 +159,7 @@ export default function SpecialFlightModal({
     setArrivalTime(toLocalDatetime(flight.arrivalTime));
     setNotes(flight.notes ?? "");
     setTagsCsv((flight.tags ?? []).join(", "));
-    setCompanionsCsv((flight.companions ?? []).join(", "));
+    setCompanions(flight.companions ?? []);
     setAircraft(flight.aircraft ?? "");
     setEventSubtype(classifyEventSubtype(flight.specialType));
     setEventLat(flight.eventLat != null ? String(flight.eventLat) : "");
@@ -196,7 +196,7 @@ export default function SpecialFlightModal({
     setArrivalTime("");
     setNotes("");
     setTagsCsv("");
-    setCompanionsCsv("");
+    setCompanions([]);
     setAircraft("");
     setEventSubtype("eclipse");
     setEventLat("");
@@ -303,9 +303,13 @@ export default function SpecialFlightModal({
     | "status"
   > => ({
     ...resolveTimesAndStatus(),
-    notes: notes.trim() || undefined,
-    tags: tagsCsv ? csvToArray(tagsCsv) : undefined,
-    companions: companionsCsv ? csvToArray(companionsCsv) : undefined,
+    // This builder feeds BOTH create and update. null (not undefined) for a
+    // blanked field, and always-real arrays: on update, undefined means
+    // "keep the old value" server-side, which made clearing the notes, the
+    // tags or the last companion a silent no-op in edit mode.
+    notes: notes.trim() || null,
+    tags: tagsCsv ? csvToArray(tagsCsv) : [],
+    companions,
   });
 
   const buildSightseeingInput = (): FlightInput | null => {
@@ -318,7 +322,7 @@ export default function SpecialFlightModal({
       specialType: "sightseeing",
       departure: departureAirport,
       arrival: departureAirport,
-      aircraft: aircraft.trim() || undefined,
+      aircraft: aircraft.trim() || null,
     };
   };
 
@@ -358,9 +362,9 @@ export default function SpecialFlightModal({
       specialType: eventSubtypeToSpecialType(eventSubtype),
       departure: departureAirport,
       arrival: arrivalAirport ?? departureAirport,
-      eventLat: eventLat === "" ? undefined : latNum,
-      eventLon: eventLon === "" ? undefined : lonNum,
-      eventLabel: eventLabel.trim() || undefined,
+      eventLat: eventLat === "" ? null : latNum,
+      eventLon: eventLon === "" ? null : lonNum,
+      eventLabel: eventLabel.trim() || null,
     };
   };
 
@@ -445,7 +449,7 @@ export default function SpecialFlightModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-100 p-4">
       <div
         className="rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
         style={{ background: "var(--bg-surface)" }}
@@ -491,7 +495,7 @@ export default function SpecialFlightModal({
           {error && (
             <div
               role="alert"
-              className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"
+              className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-sm"
             >
               {error}
             </div>
@@ -562,15 +566,15 @@ export default function SpecialFlightModal({
                 onNotesChange={setNotes}
                 tagsCsv={tagsCsv}
                 onTagsCsvChange={setTagsCsv}
-                companionsCsv={companionsCsv}
-                onCompanionsCsvChange={setCompanionsCsv}
+                companions={companions}
+                onCompanionsChange={setCompanions}
               />
 
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="px-4 py-2 rounded border"
+                  className="px-4 py-2 rounded-sm border"
                   style={{
                     borderColor: "var(--color-border)",
                     color: "var(--text-muted)",
@@ -582,7 +586,7 @@ export default function SpecialFlightModal({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-4 py-2 rounded font-medium disabled:opacity-50"
+                  className="px-4 py-2 rounded-sm font-medium disabled:opacity-50"
                   style={{
                     background: "var(--accent)",
                     color: "#fff",

@@ -18,10 +18,12 @@ import FlightSelectStep from "./FlightForm/FlightSelectStep";
 import FlightCompleteStep from "./FlightForm/FlightCompleteStep";
 import { useFlightForm, type FlightSubmitOptions } from "./FlightForm/useFlightForm";
 
-import type { FlightInput, UserAchievement } from "../types";
+import type { Flight, FlightInput, UserAchievement } from "../types";
 
 interface SimplifiedFlightFormProps {
-  onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<void>;
+  /** Returning the created Flight enables the post-create trip assignment
+   *  (#199); returning void is still valid and simply skips it. */
+  onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<Flight | void>;
   onCancel: () => void;
   onBatchComplete?: (newAchievements?: UserAchievement[]) => void;
   // When provided, a "Sonder-Flug" card is shown in the lookup step. The
@@ -40,15 +42,15 @@ export default function SimplifiedFlightFormV2({
   const form = useFlightForm(onSubmit, onCancel, onBatchComplete);
 
   // Theme classes (dark-only — see TravStatsWeb/brand/BRAND.md §1.1)
-  const bgClass = "bg-[var(--bg-surface)]";
+  const bgClass = "bg-(--bg-surface)";
   const textClass = "text-white";
-  const mutedTextClass = "text-[var(--text-muted)]";
-  const borderClass = "border-[var(--color-border)]";
+  const mutedTextClass = "text-(--text-muted)";
+  const borderClass = "border-border";
   const sizedInputClass =
-    "bg-[var(--bg-surface)] border-[var(--color-border)] text-white placeholder-[var(--text-muted)] text-base py-3";
+    "bg-(--bg-surface) border-border text-white placeholder-(--text-muted) text-base py-3";
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-100 p-4">
       <div className={`${bgClass} rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto`}>
         {/* Header */}
         <div className={`sticky top-0 ${bgClass} border-b ${borderClass} px-6 py-4`}>
@@ -61,13 +63,13 @@ export default function SimplifiedFlightFormV2({
         </div>
 
         {form.error && (
-          <div className="mx-6 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <div className="mx-6 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-sm">
             {form.error}
           </div>
         )}
 
         {form.step === "complete" && (!form.departure || !form.arrival) && (
-          <div className="mx-6 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <div className="mx-6 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-sm">
             {t("errors:missingAirports")}
           </div>
         )}
@@ -127,6 +129,14 @@ export default function SimplifiedFlightFormV2({
               setDepartureTime={form.setDepartureTime}
               setArrivalDate={form.setArrivalDate}
               setArrivalTime={form.setArrivalTime}
+              actualDepartureDate={form.actualDepartureDate}
+              actualDepartureTime={form.actualDepartureTime}
+              actualArrivalDate={form.actualArrivalDate}
+              actualArrivalTime={form.actualArrivalTime}
+              setActualDepartureDate={form.setActualDepartureDate}
+              setActualDepartureTime={form.setActualDepartureTime}
+              setActualArrivalDate={form.setActualArrivalDate}
+              setActualArrivalTime={form.setActualArrivalTime}
               airline={form.airline}
               operatingAirline={form.operatingAirline}
               flightNumber={form.flightNumber}
@@ -144,23 +154,42 @@ export default function SimplifiedFlightFormV2({
               setTerminal={form.setTerminal}
               setGate={form.setGate}
               setSeatNumber={form.setSeatNumber}
+              boardingGroup={form.boardingGroup}
+              setBoardingGroup={form.setBoardingGroup}
               setSeatClass={form.setSeatClass}
               setStatus={form.setStatus}
               setCategory={form.setCategory}
               bookingReference={form.bookingReference}
               ticketNumber={form.ticketNumber}
+              bookingClassLetter={form.bookingClassLetter}
+              baggageAllowance={form.baggageAllowance}
+              frequentFlyerNumber={form.frequentFlyerNumber}
               setBookingReference={form.setBookingReference}
               setTicketNumber={form.setTicketNumber}
-              price={form.price}
-              currency={form.currency}
-              setPrice={form.setPrice}
-              setCurrency={form.setCurrency}
+              setBookingClassLetter={form.setBookingClassLetter}
+              setBaggageAllowance={form.setBaggageAllowance}
+              setFrequentFlyerNumber={form.setFrequentFlyerNumber}
+              cost={{
+                price: form.price,
+                currency: form.currency,
+                taxes: form.taxes,
+                fees: form.fees,
+                receiptUrl: form.receiptUrl,
+              }}
+              onCostChange={(v) => {
+                form.setPrice(v.price);
+                form.setCurrency(v.currency);
+                form.setTaxes(v.taxes);
+                form.setFees(v.fees);
+                form.setReceiptUrl(v.receiptUrl);
+              }}
+              tripId={form.tripId}
+              setTripId={form.setTripId}
               tags={form.tags}
               companions={form.companions}
-              companionInput={form.companionInput}
+              coPassengers={form.coPassengers}
               setTags={form.setTags}
               setCompanions={form.setCompanions}
-              setCompanionInput={form.setCompanionInput}
               notes={form.notes}
               setNotes={form.setNotes}
               textClass={textClass}
@@ -236,38 +265,38 @@ export default function SimplifiedFlightFormV2({
       {/* Duplicate Flight Dialog */}
       {form.duplicateFlight && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-[var(--bg-elevated)] border border-[var(--color-border)] rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">
+          <div className="bg-(--bg-elevated) border border-border rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <h3 className="text-lg font-bold text-(--text-primary) mb-2">
               {t("flights:form.duplicate.title")}
             </h3>
-            <p className="text-[var(--text-secondary)] mb-4">
+            <p className="text-(--text-secondary) mb-4">
               {t("flights:form.duplicate.message", {
                 flightNumber: form.duplicateFlight.flightNumber,
                 route: `${form.duplicateFlight.depIata ?? "?"} → ${form.duplicateFlight.arrIata ?? "?"}`,
               })}
             </p>
-            <p className="text-xs text-[var(--text-muted)] mb-4">
+            <p className="text-xs text-(--text-muted) mb-4">
               {t("flights:form.duplicate.mergeHint")}
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
               <button
                 type="button"
                 onClick={() => form.setDuplicateFlight(null)}
-                className="flex-1 px-4 py-2 border border-[var(--color-border)] rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] transition-colors"
+                className="btn-secondary flex-1"
               >
                 {t("flights:form.duplicate.cancel")}
               </button>
               <button
                 type="button"
                 onClick={() => void form.handleMergeSubmit()}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                className="btn-primary flex-1"
               >
                 {t("flights:form.duplicate.merge")}
               </button>
               <button
                 type="button"
                 onClick={() => void form.handleForceSubmit()}
-                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                className="btn-secondary flex-1"
               >
                 {t("flights:form.duplicate.addAnyway")}
               </button>

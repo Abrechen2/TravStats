@@ -105,6 +105,11 @@
   "navigation": {
     "title": "Navigation"
   },
+  "nav": {
+    "logbook": "Logbuch",
+    "support": "Support",
+    "system": "System"
+  },
   "welcome": "Willkommen, {{username}}!",
   "pendingUpdates": "Ausstehende Updates",
   "map": {

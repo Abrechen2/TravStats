@@ -154,14 +154,14 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
               <>
                 <button
                   onClick={() => setShowCleanup(true)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-(--accent) hover:text-(--accent)"
                   style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
                 >
                   {t("trips:cleanup.button")}
                 </button>
                 <button
                   onClick={() => setMergeMode(true)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-(--accent) hover:text-(--accent)"
                   style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
                 >
                   ⇶ {t("trips:merge.button")}
@@ -170,7 +170,7 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
             )}
             <button
               onClick={() => setShowCreateModal(true)}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed transition-colors hover:border-(--accent) hover:text-(--accent)"
               style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
             >
               ＋ {t("trips:createTrip")}
@@ -299,7 +299,7 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
             {statusFilter === "all" && categoryFilter === "all" && search === "" && (
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="rounded-xl border border-dashed flex flex-col items-center justify-center min-h-[280px] gap-2 transition-colors hover:border-[var(--accent)]/50"
+                className="rounded-xl border border-dashed flex flex-col items-center justify-center min-h-[280px] gap-2 transition-colors hover:border-(--accent)/50"
                 style={{
                   borderColor: "var(--color-border)",
                   background: "var(--bg-muted)",

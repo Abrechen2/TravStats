@@ -19,6 +19,7 @@ import { adaptCruise } from "./cruiseStatsAdapter";
 import { adaptLodging } from "./lodgingStatsAdapter";
 import { adaptPoi } from "./poiStatsAdapter";
 import type { DomainStats, DomainStatsMap } from "./types";
+import { toYearKeyed } from "./yearKeyed";
 
 export interface UseDomainStatsResult {
   stats: DomainStatsMap;
@@ -77,7 +78,10 @@ async function loadDomain(domain: DomainKey, flights: Flight[]): Promise<DomainS
       const countryResp = await statsApi.getCountryStats();
       return adaptFlight({
         flights,
-        countries: countryResp.countries.map((c) => c.country),
+        // ISO codes when the backend offers them — see the note in
+        // cruiseStatsAdapter on why the counting field is not the display one.
+        countries: countryResp.countriesIso ?? countryResp.countries.map((c) => c.country),
+        countriesByYear: toYearKeyed(countryResp.byYear),
       });
     }
     case "cruise": {

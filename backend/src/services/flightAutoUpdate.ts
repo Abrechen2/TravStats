@@ -12,7 +12,7 @@ import logger from '../utils/logger';
 import { recalculateNextApiCheckAt } from '../utils/smartCheckSchedule';
 import { applyPendingUpdate } from './pendingUpdateService';
 import type { FlightDataSnapshot } from './pendingUpdateService';
-import { transitionPastCruises } from './cruiseStatusTransition';
+import { sweepStatuses } from './statusSweep';
 
 const prismaClient = prisma as PrismaClient;
 
@@ -404,12 +404,23 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           flight.arrivalTime,
         );
 
-        // Always recalculate nextApiCheckAt after a check attempt
+        // Always recalculate nextApiCheckAt after a check attempt.
+        // The tracking flags come from the response we JUST received, falling
+        // back to the stored row: the API knows the aircraft is airborne before
+        // that fact is ever written to the database (proposed changes land in a
+        // PendingUpdate, not on the flight). Scheduling off the stale row alone
+        // is what ended polling before delayed flights had landed.
+        const observedDeparture = apiData?.actualDeparture ?? flight.actualDeparture;
+        const observedArrival = apiData?.actualArrival ?? flight.actualArrival;
         const nextCheck = recalculateNextApiCheckAt(
           flight.departureTime,
           flight.arrivalTime,
           flight.status,
           flight.flightNumber,
+          {
+            hasActualDeparture: Boolean(observedDeparture),
+            hasActualArrival: Boolean(observedArrival),
+          },
         );
         await prismaClient.flight.update({
           where: { id: flight.id },
@@ -536,99 +547,15 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
 }
 
 /**
- * Hours past scheduled arrival after which a flight that still has status
- * "scheduled" is assumed to have flown. 6h comfortably covers realistic delays
- * (even IRROPS rarely push a flight past +4h) while preventing stale entries
- * from accumulating in the scheduler's API-check queue for days.
- * User can always edit the record by hand afterwards.
- */
-const ZOMBIE_SCHEDULED_CUTOFF_HOURS = 6;
-
-/**
- * Safety-net cutoff based on departureTime. Catches flights whose arrivalTime
- * was never set, OR whose arrivalTime was corrupted into the future by a
- * misbehaving API response. Longest current commercial flight is ~19h (SIN→JFK),
- * so 30h gives ~11h of slack for delays and still flips within a day.
- */
-const ZOMBIE_DEPARTURE_CUTOFF_HOURS = 30;
-
-/**
- * Auto-transition "zombie" scheduled flights whose arrival time is far in the past
- * but which were never updated by an API. Prevents the list view from showing
- * flights as permanently "scheduled" after they've clearly already happened.
- *
- * The transition is conservative:
- *   - Only touches flights where arrivalTime + 48h < now
- *   - Only flips status scheduled -> flown
- *   - Leaves a marker in lastModifiedBy = "zombie_auto_flown" so users can see
- *     the change was a fallback guess (not an API confirmation) and edit if needed
- */
-export async function transitionZombieFlights(): Promise<number> {
-  const arrivalCutoff = new Date(
-    Date.now() - ZOMBIE_SCHEDULED_CUTOFF_HOURS * 60 * 60 * 1000,
-  );
-  const departureCutoff = new Date(
-    Date.now() - ZOMBIE_DEPARTURE_CUTOFF_HOURS * 60 * 60 * 1000,
-  );
-
-  try {
-    // Two triggers, either flips the flight:
-    //  (1) arrivalTime + 6h < now  — the common happy path
-    //  (2) departureTime + 30h < now — safety net when arrivalTime is null
-    //      or was pushed into the future by a buggy API response
-    const result = await prismaClient.flight.updateMany({
-      where: {
-        status: 'scheduled',
-        OR: [
-          { arrivalTime: { not: null, lt: arrivalCutoff } },
-          { departureTime: { not: null, lt: departureCutoff } },
-        ],
-      },
-      data: {
-        status: 'flown',
-        lastModifiedBy: 'zombie_auto_flown',
-        nextApiCheckAt: null,
-      },
-    });
-
-    if (result.count > 0) {
-      logger.info({
-        operation: 'zombie_flights_transitioned',
-        message: `Auto-flipped ${result.count} stale scheduled flights to flown`,
-        context: {
-          arrivalCutoffHours: ZOMBIE_SCHEDULED_CUTOFF_HOURS,
-          departureCutoffHours: ZOMBIE_DEPARTURE_CUTOFF_HOURS,
-          count: result.count,
-        },
-      });
-    }
-
-    return result.count;
-  } catch (error) {
-    logger.error({
-      operation: 'zombie_flights_transition_error',
-      message: 'Failed to transition zombie flights',
-      error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-    });
-    return 0;
-  }
-}
-
-/**
  * Check and update flights for all users with auto-update enabled
  */
 export async function checkAndUpdateAllFlights(): Promise<number> {
   try {
-    // Clean up zombie flights before the API sweep — reduces wasted API calls
-    // on flights that already departed but are stuck in "scheduled".
-    await transitionZombieFlights();
-
-    // Same housekeeping for cruises: scheduled cruises whose end date has
-    // long passed flip to completed (no API involved, pure date check).
-    await transitionPastCruises();
+    // Converge stored statuses with the dates before the API sweep — reduces
+    // wasted API calls on flights/cruises that already departed but are stuck
+    // in "scheduled" (replaces the retired transitionZombieFlights /
+    // transitionPastCruises one-way flips; see services/statusSweep.ts).
+    await sweepStatuses();
 
     // Get all users with auto-update enabled
     const users = await prismaClient.userSettings.findMany({

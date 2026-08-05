@@ -205,7 +205,7 @@ export function FlightPanel({
           >
             {/* Header */}
             <div
-              className="flex items-center justify-between px-4 py-3 flex-shrink-0"
+              className="flex items-center justify-between px-4 py-3 shrink-0"
               style={{ borderBottom: "1px solid var(--color-border)" }}
             >
               <h2 className="text-sm font-semibold flex items-center gap-2">
@@ -244,7 +244,7 @@ export function FlightPanel({
 
             {/* Tab bar */}
             <div
-              className="flex flex-shrink-0"
+              className="flex shrink-0"
               style={{ borderBottom: "1px solid var(--color-border)" }}
             >
               {(["flights", "trips"] as PanelTab[]).map((id) => (
@@ -266,7 +266,7 @@ export function FlightPanel({
             {/* Sort selector (only for flights tab, not detail views) */}
             {tab === "flights" && !detailMode && (
               <div
-                className="flex items-center gap-1 px-3 py-1.5 flex-shrink-0"
+                className="flex items-center gap-1 px-3 py-1.5 shrink-0"
                 style={{ borderBottom: "1px solid var(--color-border)" }}
               >
                 {(
@@ -282,7 +282,7 @@ export function FlightPanel({
                     key={opt.value}
                     type="button"
                     onClick={() => setSortMode(opt.value)}
-                    className="text-[10px] px-1.5 py-0.5 rounded transition-colors"
+                    className="text-[10px] px-1.5 py-0.5 rounded-sm transition-colors"
                     style={{
                       background: sortMode === opt.value ? "var(--accent)" : "transparent",
                       color: sortMode === opt.value ? "white" : "var(--text-muted)",
@@ -359,7 +359,7 @@ export function FlightPanel({
                     >
                       {/* Color dot */}
                       <span
-                        className="mt-0.5 flex-shrink-0 w-3 h-3 rounded-full"
+                        className="mt-0.5 shrink-0 w-3 h-3 rounded-full"
                         style={{ background: trip.color }}
                       />
                       <div className="flex-1 min-w-0">
@@ -386,7 +386,7 @@ export function FlightPanel({
                         )}
                       </div>
                       <span
-                        className="text-xs flex-shrink-0 mt-0.5"
+                        className="text-xs shrink-0 mt-0.5"
                         style={{ color: "var(--text-muted)" }}
                       >
                         ›
@@ -400,7 +400,7 @@ export function FlightPanel({
             {/* Footer */}
             {tab === "flights" && (
               <div
-                className="p-3 flex-shrink-0"
+                className="p-3 shrink-0"
                 style={{ borderTop: "1px solid var(--color-border)" }}
               >
                 <button type="button" onClick={onAddFlight} className="btn-primary w-full text-sm">

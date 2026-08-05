@@ -21,7 +21,7 @@ import {
   useDashboardFilterStore,
 } from "../../../store/dashboardFilterStore";
 import { useFlightSelectionStore } from "../../../store/flightSelectionStore";
-import type { Flight, GeoJSONFeature, Trip } from "../../../types";
+import type { Flight, FlightInput, GeoJSONFeature, Trip } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
 import type { Lodging } from "../../../types/lodging";
 import type { AllMode } from "../../../types/dashboard";
@@ -197,7 +197,7 @@ export function AllTab(): JSX.Element {
   );
 
   const handleFlightSave = useCallback(
-    async (id: string, updates: Partial<Flight>): Promise<void> => {
+    async (id: string, updates: Partial<FlightInput>): Promise<void> => {
       await flightsApi.update(id, updates);
       // Refresh GeoJSON so the map reflects the edit; full-flight lookup
       // will catch up on the next mount.

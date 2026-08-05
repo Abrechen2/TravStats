@@ -48,7 +48,7 @@ export default function CruisePreferencesSection({
             onChange={(e): void => onSetCruise({ defaultLine: e.target.value })}
             placeholder={t("settings:cruisePreferences.defaultLinePlaceholder")}
           />
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
+          <p className="mt-1 text-xs text-(--text-muted)">
             {t("settings:cruisePreferences.defaultLineHint")}
           </p>
         </div>
@@ -87,13 +87,13 @@ export default function CruisePreferencesSection({
             type="checkbox"
             checked={cruise.showCruiseArcs}
             onChange={(e): void => onSetCruise({ showCruiseArcs: e.target.checked })}
-            className="accent-[var(--accent)]"
+            className="accent-(--accent)"
           />
-          <span className="text-sm text-[var(--text-primary)]">
+          <span className="text-sm text-(--text-primary)">
             {t("settings:cruisePreferences.showArcs")}
           </span>
         </label>
-        <p className="mt-1 ml-6 text-xs text-[var(--text-muted)]">
+        <p className="mt-1 ml-6 text-xs text-(--text-muted)">
           {t("settings:cruisePreferences.showArcsHint")}
         </p>
       </div>

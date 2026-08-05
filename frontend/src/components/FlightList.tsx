@@ -28,15 +28,15 @@ export default function FlightList({
 
   const getStatusBadge = (status: string): JSX.Element => {
     const colors = {
-      scheduled: "border border-[var(--color-border)] text-[var(--text-muted)]",
-      flown: "text-[var(--success)]",
-      cancelled: "text-[var(--danger)]",
+      scheduled: "border border-border text-(--text-muted)",
+      flown: "text-(--success)",
+      cancelled: "text-(--danger)",
     };
     const statusLabel = t(`flights:status.${status}`, { defaultValue: status });
 
     return (
       <span
-        className={`px-2 py-1 rounded text-xs font-medium ${colors[status as keyof typeof colors]}`}
+        className={`px-2 py-1 rounded-sm text-xs font-medium ${colors[status as keyof typeof colors]}`}
       >
         {statusLabel}
       </span>
@@ -46,13 +46,13 @@ export default function FlightList({
   const getCategoryBadge = (category?: string): JSX.Element | null => {
     if (!category) return null;
     const colors = {
-      business: "text-[var(--accent)]",
-      private: "text-[var(--success)]",
-      vacation: "text-[var(--warning)]",
+      business: "text-(--accent)",
+      private: "text-(--success)",
+      vacation: "text-(--warning)",
     };
     const categoryKey = category as "business" | "private" | "vacation";
     return (
-      <span className={`px-2 py-1 rounded text-xs font-medium ${colors[categoryKey]}`}>
+      <span className={`px-2 py-1 rounded-sm text-xs font-medium ${colors[categoryKey]}`}>
         {t(`flights:category.${categoryKey}`)}
       </span>
     );
@@ -98,8 +98,8 @@ export default function FlightList({
             key={flight.id}
             className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
               selectedFlightId === flight.id
-                ? "border-[var(--accent)] bg-[var(--bg-elevated)]"
-                : "border-[var(--color-border)] hover:border-[var(--text-muted)] bg-[var(--bg-surface)]"
+                ? "border-(--accent) bg-(--bg-elevated)"
+                : "border-border hover:border-(--text-muted) bg-(--bg-surface)"
             }`}
             onClick={() => onFlightClick(flight.id)}
           >
@@ -138,7 +138,7 @@ export default function FlightList({
                   {flight.co2Kg != null && (
                     <span
                       data-testid="co2-chip"
-                      className="px-2 py-0.5 rounded text-xs font-medium"
+                      className="px-2 py-0.5 rounded-sm text-xs font-medium"
                       style={{
                         background: "rgba(63,185,80,0.15)",
                         color: "var(--success)",

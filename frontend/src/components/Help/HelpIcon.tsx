@@ -217,7 +217,7 @@ export default function HelpIcon({
   const tooltipContent = (isHovered || isExpanded) && (
     <div
       ref={tooltipRef}
-      className="fixed z-[9999] pointer-events-auto"
+      className="fixed z-9999 pointer-events-auto"
       style={tooltipStyle}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
@@ -227,14 +227,14 @@ export default function HelpIcon({
       }}
     >
       <div
-        className="text-xs rounded-lg shadow-xl p-3 max-w-sm sm:max-w-md break-words"
+        className="text-xs rounded-lg shadow-xl p-3 max-w-sm sm:max-w-md wrap-break-word"
         style={{
           background: "var(--bg-elevated)",
           color: "var(--text-primary)",
           border: "1px solid var(--color-border)",
         }}
       >
-        <p className="whitespace-normal break-words">{content}</p>
+        <p className="whitespace-normal wrap-break-word">{content}</p>
         {expandedContent && !isExpanded && (
           <p className="mt-2 text-xs italic" style={{ color: "var(--accent)" }}>
             {t("help.clickForMore")}
@@ -242,7 +242,7 @@ export default function HelpIcon({
         )}
         {expandedContent && isExpanded && (
           <div className="mt-2 pt-2 border-t" style={{ borderColor: "var(--color-border)" }}>
-            <p className="whitespace-normal break-words" style={{ color: "var(--text-muted)" }}>
+            <p className="whitespace-normal wrap-break-word" style={{ color: "var(--text-muted)" }}>
               {expandedContent}
             </p>
           </div>

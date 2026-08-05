@@ -18,3 +18,12 @@
 *.ttf binary
 *.otf binary
 *.eot binary
+
+# Machine-generated catalogues are written with LF by their generator
+# (scripts/generate-airline-catalog.ts) and byte-compared against fresh
+# generator output by the drift-guard test
+# (backend/src/__tests__/dataIntegrity.airlineCatalog.test.ts). With
+# core.autocrlf=true these files check out as CRLF on Windows, so the
+# byte compare (LF generator vs CRLF on disk) failed. Pin LF so the guard
+# is platform-stable.
+frontend/src/lib/generated/*.ts text eol=lf

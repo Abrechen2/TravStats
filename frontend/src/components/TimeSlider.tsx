@@ -53,12 +53,12 @@ export function TimeSlider({
   return (
     <div
       style={{ background: "rgba(22,27,34,0.85)" }}
-      className="flex items-center gap-3 px-4 py-2 rounded-lg border border-[var(--border-default)] text-sm"
+      className="flex items-center gap-3 px-4 py-2 rounded-lg border border-(--border-default) text-sm"
     >
       <button
         aria-label={playing ? "Pause" : "Play"}
         onClick={onTogglePlay}
-        className="p-1 rounded hover:bg-[var(--bg-elevated)]"
+        className="p-1 rounded-sm hover:bg-(--bg-elevated)"
       >
         {playing ? "⏸" : "▶"}
       </button>
@@ -69,9 +69,9 @@ export function TimeSlider({
         max={max}
         value={current}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-48 accent-[var(--accent-primary)]"
+        className="w-48 accent-(--accent-primary)"
       />
-      <span className="text-[var(--text-muted)] min-w-[90px]">{displayDate}</span>
+      <span className="text-(--text-muted) min-w-[90px]">{displayDate}</span>
     </div>
   );
 }

@@ -108,7 +108,7 @@ export function AirportTooltip({
         </span>
         {stats.icao && (
           <span
-            className="font-mono text-xs px-1 rounded"
+            className="font-mono text-xs px-1 rounded-sm"
             style={{ background: "rgba(240,169,71,0.12)", color: "rgba(240,169,71,0.7)" }}
           >
             {stats.icao}
@@ -152,7 +152,7 @@ export function AirportTooltip({
                   {iata} ↔ {dest}
                 </span>
                 <span
-                  className="ml-3 px-1.5 py-0.5 rounded text-xs font-medium"
+                  className="ml-3 px-1.5 py-0.5 rounded-sm text-xs font-medium"
                   style={{
                     background: "rgba(240,169,71,0.15)",
                     color: "rgb(240,169,71)",
@@ -182,7 +182,7 @@ export function AirportTooltip({
         <button
           type="button"
           onClick={onClose}
-          className="text-xs px-2 py-1 rounded transition-colors"
+          className="text-xs px-2 py-1 rounded-sm transition-colors"
           style={{ background: "var(--bg-elevated)", color: "var(--text-primary)" }}
         >
           ✕

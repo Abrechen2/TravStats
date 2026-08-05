@@ -345,8 +345,7 @@ export default function AchievementsPage(): JSX.Element {
             <div className="flex gap-4 mb-6">
               <button
                 onClick={handleCheckAchievements}
-                className="px-6 py-3 rounded-lg font-semibold transition-all"
-                style={{ background: "var(--success)", color: "#0d1117" }}
+                className="btn-primary px-6 py-3 rounded-lg font-semibold transition-all"
               >
                 {t("achievements:checkNew")}
               </button>
@@ -542,7 +541,7 @@ export default function AchievementsPage(): JSX.Element {
                                   {isMystery ? "❔" : achievement.icon}
                                 </div>
                                 <div
-                                  className="text-xs font-bold uppercase px-2 py-1 rounded"
+                                  className="text-xs font-bold uppercase px-2 py-1 rounded-sm"
                                   style={{
                                     color: achievement.isUnlocked
                                       ? tierTextColorValues[achievement.tier]

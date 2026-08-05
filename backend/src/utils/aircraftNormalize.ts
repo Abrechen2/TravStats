@@ -1,20 +1,10 @@
 import { AIRCRAFT_TYPES } from '../data/aircraftTypes';
+import { getAircraftCatalogSync } from '../services/aircraftCatalogCache';
 
 /**
- * Build lookup maps from the canonical aircraft types list.
- *
- * Maps ICAO code → canonical name (e.g. "A319" → "Airbus A319")
- * and known aliases → canonical name.
+ * Hand-curated aliases that appear in imported flight data.
+ * Key = lowercased alias, Value = canonical name from the aircraft catalogue.
  */
-const byIcao = new Map<string, string>();
-const byAlias = new Map<string, string>();
-
-for (const t of AIRCRAFT_TYPES) {
-  byIcao.set(t.icao.toUpperCase(), t.name);
-}
-
-// Hand-curated aliases that appear in imported flight data.
-// Key = lowercased alias, Value = canonical name from AIRCRAFT_TYPES.
 const ALIASES: Record<string, string> = {
   // Short Airbus codes
   'a318': 'Airbus A318',
@@ -33,6 +23,21 @@ const ALIASES: Record<string, string> = {
   'a350-1000': 'Airbus A350-1000',
   'a380': 'Airbus A380-800',
   'a380-800': 'Airbus A380-800',
+
+  // Bare Airbus short forms, same measurement as the Boeing block below.
+  // A321LR keeps its own name rather than collapsing onto A321neo: it is the
+  // long-range variant, and the point of normalising is one spelling per
+  // aircraft, not one aircraft per family.
+  'a220-100': 'Airbus A220-100',
+  'a220-300': 'Airbus A220-300',
+  'a320neo': 'Airbus A320neo',
+  'a321neo': 'Airbus A321neo',
+  'a321lr': 'Airbus A321LR',
+  'a330-900': 'Airbus A330-900neo',
+  'a330-900neo': 'Airbus A330-900neo',
+  // Sharklets are a wingtip option, not a variant — the aircraft is an A320.
+  'airbus a320 (sharklets)': 'Airbus A320',
+  'a320 (sharklets)': 'Airbus A320',
 
   // Short Boeing codes
   'b737': 'Boeing 737-800',
@@ -53,6 +58,25 @@ const ALIASES: Record<string, string> = {
   'b787-8': 'Boeing 787-8',
   'b787-9': 'Boeing 787-9',
   'b787-10': 'Boeing 787-10',
+
+  // Short forms measured in a real 335-flight library, where the SAME aircraft
+  // appeared in two spellings at once ("B737-800" beside "Boeing 737-800").
+  // Each expansion keeps the variant suffix: mapping "B767-300ER" onto the
+  // catalogue's plain "Boeing 767-300" would make the column consistent by
+  // throwing away the extended-range distinction, which is worse than leaving
+  // it alone. So the target is the manufacturer-prefixed name, using the
+  // catalogue's own spelling where it carries that exact variant.
+  'b737-800': 'Boeing 737-800',
+  'b737-900': 'Boeing 737-900',
+  'b737-900er': 'Boeing 737-900ER',
+  'b737 max 8': 'Boeing 737 MAX 8',
+  'b737max8': 'Boeing 737 MAX 8',
+  // Ryanair's 197-seat high-density MAX 8. A real variant, not a typo.
+  'b737 max 8-200': 'Boeing 737 MAX 8-200',
+  'b767-300er': 'Boeing 767-300ER',
+  'b767-400': 'Boeing 767-400',
+  'b767-400er': 'Boeing 767-400ER',
+  'b777-200er': 'Boeing 777-200ER',
 
   // Full-name variants without subtype
   'boeing 737': 'Boeing 737-800',
@@ -78,6 +102,9 @@ const ALIASES: Record<string, string> = {
   'e175': 'Embraer E175',
   'e190': 'Embraer E190',
   'e195': 'Embraer E195',
+  // E2 is the re-engined generation — a different aircraft, not a spelling of E195.
+  'e190-e2': 'Embraer E190-E2',
+  'e195-e2': 'Embraer E195-E2',
   'erj-145': 'Embraer ERJ-145',
 
   // CRJ
@@ -98,8 +125,19 @@ const ALIASES: Record<string, string> = {
   'dh8d': 'De Havilland Dash 8-400',
 };
 
+const byAlias = new Map<string, string>();
 for (const [alias, canonical] of Object.entries(ALIASES)) {
   byAlias.set(alias, canonical);
+}
+
+// Cold-start fallback (curated list), used until the DB cache is preloaded —
+// so normalizeAircraft is correct even in a script or test that never called
+// preloadAircraftCatalog(), and never silently stops normalizing while the
+// boot-time preload is still pending. AIRCRAFT_TYPES is already
+// `{ icao, name }[]`, matching the cache's shape, so no mapping is needed.
+function currentCatalog(): { icao: string; name: string }[] {
+  const cat = getAircraftCatalogSync();
+  return cat.length === 0 ? AIRCRAFT_TYPES : cat;
 }
 
 /**
@@ -107,7 +145,7 @@ for (const [alias, canonical] of Object.entries(ALIASES)) {
  *
  * Tries (in order):
  * 1. Exact alias match (case-insensitive)
- * 2. ICAO code match (e.g. "A319" → "Airbus A319")
+ * 2. ICAO code match against the current catalogue (e.g. "A319" → "Airbus A319")
  * 3. If the input is already a canonical name → return as-is
  * 4. Otherwise return the input trimmed but unchanged
  */
@@ -121,12 +159,16 @@ export function normalizeAircraft(input: string): string {
   const aliased = byAlias.get(lower);
   if (aliased) return aliased;
 
+  const catalog = currentCatalog();
+  const upper = trimmed.toUpperCase();
+
   // 2. ICAO code match
-  const icaoMatch = byIcao.get(trimmed.toUpperCase());
-  if (icaoMatch) return icaoMatch;
+  for (const t of catalog) {
+    if (t.icao.toUpperCase() === upper) return t.name;
+  }
 
   // 3. Already canonical? (exact match in the name list)
-  for (const t of AIRCRAFT_TYPES) {
+  for (const t of catalog) {
     if (t.name.toLowerCase() === lower) return t.name;
   }
 

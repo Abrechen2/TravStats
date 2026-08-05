@@ -146,14 +146,14 @@ export default function BoardingPassScanner({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-(--bg-surface) rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-[var(--bg-surface)] border-b border-[var(--color-border)] px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-(--bg-surface) border-b border-border px-6 py-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-white">{t("flights:scanner.title")}</h2>
           <button
             onClick={onClose}
             disabled={scanning}
-            className="p-2 text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] rounded-lg transition-colors"
+            className="p-2 text-(--text-muted) hover:bg-(--bg-elevated) rounded-lg transition-colors"
             aria-label={t("common:buttons.close")}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -184,7 +184,7 @@ export default function BoardingPassScanner({
           {!scanning && !preview && (
             <div>
               <div
-                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors border-[var(--color-border)] hover:border-[var(--text-muted)] bg-[var(--bg-elevated)]"
+                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors border-border hover:border-(--text-muted) bg-(--bg-elevated)"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <input
@@ -202,11 +202,11 @@ export default function BoardingPassScanner({
                     <p className="text-lg font-medium text-white">
                       {t("flights:scanner.uploadTitle")}
                     </p>
-                    <p className="text-sm mt-1 text-[var(--text-muted)]">
+                    <p className="text-sm mt-1 text-(--text-muted)">
                       {t("flights:scanner.clickToSelect")}
                     </p>
                   </div>
-                  <p className="text-xs text-[var(--text-muted)]">
+                  <p className="text-xs text-(--text-muted)">
                     {t("flights:scanner.supportedFormats")}
                   </p>
                 </div>
@@ -231,11 +231,11 @@ export default function BoardingPassScanner({
           {preview && (
             <div className="space-y-4">
               {/* Image Preview */}
-              <div className="border-2 border-dashed border-[var(--color-border)] rounded-lg p-2">
+              <div className="border-2 border-dashed border-border rounded-lg p-2">
                 <img
                   src={preview}
                   alt={t("flights:scanner.previewAlt")}
-                  className="max-w-full max-h-64 mx-auto object-contain rounded"
+                  className="max-w-full max-h-64 mx-auto object-contain rounded-sm"
                 />
               </div>
 
@@ -252,7 +252,7 @@ export default function BoardingPassScanner({
                             ? "bg-red-900/20 border border-red-800"
                             : step.status === "loading"
                               ? "bg-blue-900/20 border border-blue-800"
-                              : "bg-[var(--bg-elevated)] border border-[var(--color-border)]"
+                              : "bg-(--bg-elevated) border border-border"
                       }`}
                     >
                       <span className="text-2xl" aria-hidden="true">
@@ -267,7 +267,7 @@ export default function BoardingPassScanner({
                                 ? "text-red-200"
                                 : step.status === "loading"
                                   ? "text-blue-200"
-                                  : "text-[var(--text-muted)]"
+                                  : "text-(--text-muted)"
                           }`}
                         >
                           {step.label}

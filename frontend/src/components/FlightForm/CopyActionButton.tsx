@@ -23,7 +23,7 @@ export default function CopyActionButton({
       disabled={disabled}
       title={title}
       aria-label={title}
-      className="inline-flex items-center justify-center w-5 h-5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+      className="inline-flex items-center justify-center w-5 h-5 rounded-sm text-(--text-muted) hover:text-(--text-primary) hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
     >
       {icon === "arrow-down" ? (
         <svg

@@ -95,7 +95,7 @@ export function PreviewModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="preview-modal-title"
@@ -267,7 +267,7 @@ function RowsView({ rows, checked, toggle, isSubmitting, t }: RowsViewProps): JS
                     <span
                       key={f}
                       title={t(`settings:import.preview.errorBadge.${f}`)}
-                      className="inline-flex items-center rounded px-2 py-0.5 text-xs"
+                      className="inline-flex items-center rounded-sm px-2 py-0.5 text-xs"
                       style={{
                         background: "rgba(239, 68, 68, 0.18)",
                         color: "rgb(252, 165, 165)",
@@ -280,7 +280,7 @@ function RowsView({ rows, checked, toggle, isSubmitting, t }: RowsViewProps): JS
                     <span
                       key={f}
                       title={t(`settings:import.preview.warningBadge.${f}`)}
-                      className="inline-flex items-center rounded px-2 py-0.5 text-xs"
+                      className="inline-flex items-center rounded-sm px-2 py-0.5 text-xs"
                       style={{
                         background: "rgba(245, 158, 11, 0.18)",
                         color: "rgb(252, 211, 77)",
@@ -291,7 +291,7 @@ function RowsView({ rows, checked, toggle, isSubmitting, t }: RowsViewProps): JS
                   ))}
                   {isDup && (
                     <span
-                      className="inline-flex items-center rounded px-2 py-0.5 text-xs"
+                      className="inline-flex items-center rounded-sm px-2 py-0.5 text-xs"
                       style={{
                         background: "rgba(245, 158, 11, 0.12)",
                         color: "rgb(252, 211, 77)",

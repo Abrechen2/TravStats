@@ -177,7 +177,7 @@ function FragmentRow({
           >
             {showTip && (
               <div
-                className="absolute z-10 left-1/2 bottom-[110%] -translate-x-1/2 whitespace-nowrap pointer-events-none rounded px-2 py-1 text-xs"
+                className="absolute z-10 left-1/2 bottom-[110%] -translate-x-1/2 whitespace-nowrap pointer-events-none rounded-sm px-2 py-1 text-xs"
                 style={{
                   background: "var(--bg-elevated)",
                   border: "1px solid var(--color-border)",

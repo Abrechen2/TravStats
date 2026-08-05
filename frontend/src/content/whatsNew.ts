@@ -28,6 +28,66 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW_ENTRIES: WhatsNewEntry[] = [
   {
+    version: "2.5.0",
+    highlights: [
+      {
+        icon: "🛫",
+        titleKey: "entries.v250.flightsTable.title",
+        bodyKey: "entries.v250.flightsTable.body",
+      },
+      {
+        icon: "📸",
+        titleKey: "entries.v250.immich.title",
+        bodyKey: "entries.v250.immich.body",
+      },
+      {
+        icon: "👥",
+        titleKey: "entries.v250.companions.title",
+        bodyKey: "entries.v250.companions.body",
+      },
+      {
+        icon: "⏱️",
+        titleKey: "entries.v250.flightForm.title",
+        bodyKey: "entries.v250.flightForm.body",
+      },
+      {
+        icon: "🔄",
+        titleKey: "entries.v250.status.title",
+        bodyKey: "entries.v250.status.body",
+      },
+    ],
+  },
+  {
+    version: "2.4.0",
+    highlights: [
+      {
+        icon: "🎨",
+        titleKey: "entries.v240.colorModes.title",
+        bodyKey: "entries.v240.colorModes.body",
+      },
+      {
+        icon: "✈️",
+        titleKey: "entries.v240.airlines.title",
+        bodyKey: "entries.v240.airlines.body",
+      },
+      {
+        icon: "🗺️",
+        titleKey: "entries.v240.map.title",
+        bodyKey: "entries.v240.map.body",
+      },
+      {
+        icon: "🐛",
+        titleKey: "entries.v240.fixes.title",
+        bodyKey: "entries.v240.fixes.body",
+      },
+      {
+        icon: "🧹",
+        titleKey: "entries.v240.polish.title",
+        bodyKey: "entries.v240.polish.body",
+      },
+    ],
+  },
+  {
     version: "2.3.0",
     highlights: [
       {

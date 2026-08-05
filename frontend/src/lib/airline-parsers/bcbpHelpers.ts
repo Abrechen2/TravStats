@@ -8,6 +8,7 @@
  */
 
 import { logger } from "../logger";
+import { resolveAirlineDisplay } from "../airlineUtils";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -122,41 +123,11 @@ export function mapCompartmentToSeatClass(
 }
 
 /**
- * Get airline name from IATA code (common airlines)
+ * Get airline name from an IATA code, resolved against the shared
+ * `AIRLINE_CATALOG` (`../airlineUtils`) instead of a hand-typed table.
+ * Falls back to the raw code when the catalogue has no match, matching
+ * the previous behavior of the hardcoded map.
  */
 export function getAirlineName(iataCode: string): string {
-  const airlines: Record<string, string> = {
-    LH: "Lufthansa",
-    EN: "AirDolomiti",
-    BA: "British Airways",
-    AF: "Air France",
-    KL: "KLM",
-    LX: "Swiss",
-    OS: "Austrian Airlines",
-    SN: "Brussels Airlines",
-    SK: "SAS Scandinavian Airlines",
-    AY: "Finnair",
-    TP: "TAP Air Portugal",
-    IB: "Iberia",
-    VY: "Vueling",
-    FR: "Ryanair",
-    U2: "easyJet",
-    W6: "Wizz Air",
-    EW: "Eurowings",
-    UA: "United Airlines",
-    AA: "American Airlines",
-    DL: "Delta Air Lines",
-    WN: "Southwest Airlines",
-    B6: "JetBlue",
-    AC: "Air Canada",
-    EK: "Emirates",
-    QR: "Qatar Airways",
-    TK: "Turkish Airlines",
-    SQ: "Singapore Airlines",
-    CX: "Cathay Pacific",
-    NH: "ANA",
-    JL: "Japan Airlines",
-  };
-
-  return airlines[iataCode] || iataCode;
+  return resolveAirlineDisplay({ airlineIata: iataCode }) ?? iataCode;
 }
