@@ -4,10 +4,82 @@ import { prisma } from '../../db';
 import { adminExportLimiter, adminReseedLimiter } from '../../middleware/rateLimit';
 import { getInstanceSettings } from '../../services/instanceSettingsService';
 import { startAirportSeeding, getSeedingStatus } from '../../services/airportSeedingService';
+import { sweepStaleLogos } from '../../jobs/airlineLogoRefreshScheduler';
 import logger from '../../utils/logger';
 import { appVersion, buildVersion } from '../../utils/version';
 
 const router = Router();
+
+// In-memory status. Deliberately not a DB row: a sweep is cheap, idempotent and
+// safe to lose across a restart — unlike the airport seed, which is not.
+interface LogoRefreshStatus {
+  running: boolean;
+  checked: number | null;
+  refreshed: number | null;
+  finishedAt: string | null;
+}
+let logoRefreshStatus: LogoRefreshStatus = {
+  running: false, checked: null, refreshed: null, finishedAt: null,
+};
+
+// Test-only seam: the "second sweep while one is running" test mocks
+// sweepStaleLogos to never resolve, which would otherwise leave
+// logoRefreshStatus.running = true for the rest of the suite.
+export function __resetLogoRefreshStatusForTests(): void {
+  logoRefreshStatus = { running: false, checked: null, refreshed: null, finishedAt: null };
+}
+
+// POST /admin/airline-logos/refresh — re-check every stored logo against the
+// resolution chain now, instead of waiting for tonight's sweep. Returns at once;
+// poll GET /admin/airline-logos/refresh-status.
+router.post('/airline-logos/refresh', adminReseedLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    if (logoRefreshStatus.running) {
+      res.status(409).json({ error: 'A logo refresh is already running' });
+      return;
+    }
+    logoRefreshStatus = { running: true, checked: null, refreshed: null, finishedAt: null };
+    logger.info({
+      operation: 'admin_airline_logo_refresh',
+      message: 'Airline logo refresh triggered via admin endpoint',
+      context: { triggeredBy: req.userId, viaPAT: !!req.apiToken },
+    });
+
+    // Fire and forget — the sweep can take minutes on a warm cache.
+    void sweepStaleLogos()
+      .then((result) => {
+        logoRefreshStatus = {
+          running: false,
+          checked: result.checked,
+          refreshed: result.refreshed,
+          finishedAt: new Date().toISOString(),
+        };
+      })
+      .catch((error: unknown) => {
+        logger.error({
+          operation: 'admin_airline_logo_refresh_failed',
+          message: 'Airline logo refresh failed',
+          error: { message: error instanceof Error ? error.message : 'unknown error' },
+        });
+        logoRefreshStatus = {
+          running: false, checked: null, refreshed: null,
+          finishedAt: new Date().toISOString(),
+        };
+      });
+
+    res.status(202).json({ message: 'Logo refresh started' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/airline-logos/refresh-status', async (_req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    res.json(logoRefreshStatus);
+  } catch (error) {
+    next(error);
+  }
+});
 
 // POST /admin/airports/reseed — force a re-run of the OurAirports importer
 // against the existing DB. Idempotent for active airports (composite-key
@@ -32,6 +104,42 @@ router.get('/airports/seeding-status', async (_req: AuthRequest, res: Response, 
   try {
     const status = await getSeedingStatus();
     res.json(status);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /admin/airlines/reseed — force a re-run of the OpenFlights airline
+// importer against the existing DB. Idempotent (composite-key upsert on
+// IATA); user-added rows are never overwritten. Runs synchronously and
+// refreshes the in-memory airline catalog cache before responding.
+router.post('/airlines/reseed', adminReseedLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { seedAirlinesFromData } = await import('../../seedAirlinesFromData');
+    const { invalidateAirlineCatalogCache, preloadAirlineCatalog } = await import('../../services/airlineCatalogCache');
+    const inserted = await seedAirlinesFromData();
+    invalidateAirlineCatalogCache();
+    await preloadAirlineCatalog();
+    logger.info({ operation: 'admin_airline_reseed', context: { inserted, triggeredBy: req.userId } });
+    res.json({ inserted });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /admin/aircraft/reseed — force a re-run of the OpenFlights aircraft
+// importer against the existing DB. Idempotent (unique ICAO); user-added
+// rows are never overwritten. Runs synchronously and refreshes the
+// in-memory aircraft catalog cache before responding.
+router.post('/aircraft/reseed', adminReseedLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { seedAircraftFromData } = await import('../../seedAircraftFromData');
+    const { invalidateAircraftCatalogCache, preloadAircraftCatalog } = await import('../../services/aircraftCatalogCache');
+    const inserted = await seedAircraftFromData();
+    invalidateAircraftCatalogCache();
+    await preloadAircraftCatalog();
+    logger.info({ operation: 'admin_aircraft_reseed', context: { inserted, triggeredBy: req.userId } });
+    res.json({ inserted });
   } catch (error) {
     next(error);
   }

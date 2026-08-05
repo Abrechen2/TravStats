@@ -110,11 +110,11 @@ export default function AchievementPopup({
 
   return (
     <div
-      className={`fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[200] p-4 ${isExiting ? "animate-fadeOut" : "animate-fadeIn"}`}
+      className={`fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-200 p-4 ${isExiting ? "animate-fadeOut" : "animate-fadeIn"}`}
     >
       <div
         className={`
-        bg-[var(--bg-surface)]
+        bg-(--bg-surface)
         rounded-2xl max-w-md w-full p-8 shadow-2xl
         ${tierGlow[tier]}
         ${isExiting ? "scale-95 opacity-0" : "scale-100 opacity-100"}
@@ -162,7 +162,7 @@ export default function AchievementPopup({
         <div
           className={`
           w-32 h-32 mx-auto mb-6
-          bg-gradient-to-br ${tierColors[tier]}
+          bg-linear-to-br ${tierColors[tier]}
           rounded-full
           flex items-center justify-center
           shadow-xl ${tierGlow[tier]}
@@ -194,7 +194,7 @@ export default function AchievementPopup({
             <span
               className={`
               px-4 py-2 rounded-full text-sm font-bold uppercase
-              bg-gradient-to-r ${tierColors[tier]}
+              bg-linear-to-r ${tierColors[tier]}
               text-white shadow-lg
             `}
             >
@@ -225,10 +225,10 @@ export default function AchievementPopup({
                     key={idx}
                     className={`h-1.5 rounded-full transition-all ${
                       idx === currentIndex
-                        ? "w-8 bg-gradient-to-r " + tierColors[tier]
+                        ? "w-8 bg-linear-to-r " + tierColors[tier]
                         : idx < currentIndex
-                          ? "w-1.5 bg-[var(--text-muted)]"
-                          : "w-1.5 bg-[var(--color-border)]"
+                          ? "w-1.5 bg-(--text-muted)"
+                          : "w-1.5 bg-border"
                     }`}
                   />
                 ))}
@@ -242,13 +242,13 @@ export default function AchievementPopup({
               <>
                 <button
                   onClick={handleClose}
-                  className="flex-1 px-4 py-2 rounded-lg font-medium bg-[var(--bg-elevated)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)]"
+                  className="flex-1 px-4 py-2 rounded-lg font-medium bg-(--bg-elevated) hover:bg-(--bg-muted) text-(--text-primary)"
                 >
                   {t("achievements:popup.closeAll")}
                 </button>
                 <button
                   onClick={handleNext}
-                  className={`flex-1 px-4 py-2 rounded-lg font-medium bg-gradient-to-r ${tierColors[tier]} text-white shadow-lg hover:shadow-xl transition-all`}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium bg-linear-to-r ${tierColors[tier]} text-white shadow-lg hover:shadow-xl transition-all`}
                 >
                   {t("achievements:popup.next")} →
                 </button>
@@ -256,7 +256,7 @@ export default function AchievementPopup({
             ) : (
               <button
                 onClick={handleClose}
-                className={`w-full px-4 py-2 rounded-lg font-medium bg-gradient-to-r ${tierColors[tier]} text-white shadow-lg hover:shadow-xl transition-all`}
+                className={`w-full px-4 py-2 rounded-lg font-medium bg-linear-to-r ${tierColors[tier]} text-white shadow-lg hover:shadow-xl transition-all`}
               >
                 {t("achievements:popup.awesome")} 🎉
               </button>

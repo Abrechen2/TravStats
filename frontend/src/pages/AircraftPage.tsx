@@ -54,14 +54,14 @@ export default function AircraftPage(): JSX.Element {
           </Link>
           {loading && <p className="text-sm text-gray-500">{t("common:loading.default")}</p>}
           {!loading && notFound && (
-            <div className="bg-[var(--bg-elevated)] rounded-xl shadow p-6">
+            <div className="bg-(--bg-elevated) rounded-xl shadow-sm p-6">
               <h1 className="text-2xl font-bold mb-2">{registration}</h1>
               <p className="text-sm text-gray-500">{t("aircraft:notFound")}</p>
             </div>
           )}
           {!loading && profile && (
             <>
-              <div className="bg-[var(--bg-elevated)] rounded-xl shadow p-6 mb-6">
+              <div className="bg-(--bg-elevated) rounded-xl shadow-sm p-6 mb-6">
                 <h1 className="text-3xl font-bold font-mono mb-1">{profile.registration}</h1>
                 <p className="text-gray-600 dark:text-gray-300">
                   {profile.aircraft || t("aircraft:unknownType")}
@@ -90,7 +90,7 @@ export default function AircraftPage(): JSX.Element {
                 </div>
               </div>
 
-              <div className="bg-[var(--bg-elevated)] rounded-xl shadow p-6">
+              <div className="bg-(--bg-elevated) rounded-xl shadow-sm p-6">
                 <h2 className="text-xl font-semibold mb-4">{t("aircraft:flights.title")}</h2>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">

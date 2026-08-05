@@ -3,6 +3,28 @@
   "subtitle": "Ein kurzer Überblick über die wichtigsten Änderungen.",
   "dismiss": "Verstanden",
   "entries": {
+    "v250": {
+      "flightsTable": {
+        "title": "Flugtabelle wie eine Abflugtafel",
+        "body": "Jede Zeile trägt die Airline jetzt als Marken-Kachel, Abflug und Ankunft stehen in einer gemeinsamen Zeitspalte, Länderflaggen markieren die Route, und die Aktionen sind Symbole statt Textknöpfe. Ein Punkt an der Zeile verrät, woher die Daten stammen."
+      },
+      "immich": {
+        "title": "Reisefotos aus deinem Immich",
+        "body": "Du kannst Immich-Alben direkt mit einer Reise verknüpfen — entweder nur verlinkt, dann bleiben die Bilder auf deinem Server und belegen hier keinen Speicher, oder als echter Import. Die Galerie gruppiert nach Album, jedes Bild lässt sich als Titelbild setzen, und ein erneuter Abgleich holt Nachzügler."
+      },
+      "companions": {
+        "title": "Begleiter sind jetzt echte Einträge",
+        "body": "Mitreisende werden nicht mehr als freier Text am einzelnen Eintrag gespeichert, sondern einmal angelegt und überall wiederverwendet — in Flug, Reise, Kreuzfahrt und Sonderflug über denselben Auswahldialog. Deine bisherigen Angaben werden beim Start automatisch übernommen."
+      },
+      "flightForm": {
+        "title": "Ein Flugformular, Soll- und Ist-Zeiten",
+        "body": "Anlegen und Bearbeiten benutzen endlich dieselbe Maske. Neu sind geplante und tatsächliche Zeiten mit automatisch berechneter Verspätung, Boarding-Gruppe, Reisezuordnung, Kosten und Beleg — Airline und Flugzeugtyp kommen aus dem Katalog. Und ein geleertes Feld bleibt geleert, statt still den alten Wert zu behalten."
+      },
+      "status": {
+        "title": "Der Status ergibt sich aus den Daten",
+        "body": "Ob etwas geplant, unterwegs oder erledigt ist, wird jetzt aus den Datumsangaben abgeleitet und stündlich nachgezogen — für Flüge, Kreuzfahrten und Reisen gleichermaßen. Die manuelle Status-Auswahl entfällt deshalb; selbst setzen musst du nur noch \"storniert\"."
+      }
+    },
     "v230": {
       "stats": {
         "title": "Anonyme Nutzungsstatistik",
@@ -11,6 +33,28 @@
       "whatsNew": {
         "title": "Dieses Fenster",
         "body": "Nach jedem Update siehst du hier einmalig, was sich geändert hat."
+      }
+    },
+    "v240": {
+      "colorModes": {
+        "title": "Kartenfarben, die dir gehorchen",
+        "body": "Flug- und Kreuzfahrt-Färbung sind jetzt echte Modi: Status, Frequenz bzw. Pro Reise oder eine eigene Farbe. Der Farbwähler wirkt endlich überall — und die Legende zeigt immer genau das, was auf der Karte zu sehen ist."
+      },
+      "airlines": {
+        "title": "Airlines mit Klarnamen",
+        "body": "Statt kryptischer Codes wie \"DLH\" siehst du jetzt \"Lufthansa\" — in Tabelle, Liste und Kalender. Auch Flüge, bei denen nur der ICAO-Code hinterlegt ist, werden korrekt aufgelöst."
+      },
+      "map": {
+        "title": "Karte nach deinem Geschmack",
+        "body": "Neu: flache 2D-Routen entlang der echten Großkreislinie als Alternative zu 3D-Bögen. Außerdem: Ortsnamen mit Umlauten (Travemünde!), einheitliche Punktgrößen für Flughäfen und Häfen, und Richtungspfeile, die auf langen Strecken sitzen."
+      },
+      "fixes": {
+        "title": "Gemeldete Fehler behoben",
+        "body": "Profilbild und Geburtstag überleben jetzt den Neuladen, \"Vergleiche mit\" in der Statistik wird gemerkt, und Buchungs- sowie Ticketnummer lassen sich direkt beim manuellen Anlegen eines Fluges eintragen."
+      },
+      "polish": {
+        "title": "Aufgeräumte Oberfläche",
+        "body": "Das Karten-Menü merkt sich, ob es offen war, die Jahresauswahl ist wieder lesbar, Buttons haben mehr Kontrast — und unfertige Funktionen sind standardmäßig ausgeblendet, bis sie so weit sind."
       }
     }
   }

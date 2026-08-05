@@ -59,10 +59,10 @@ export default function LoggingManager({
       {/* Header with Quick Actions */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+          <h2 className="text-xl font-semibold text-(--text-primary)">
             {t("admin:logging.title")}
           </h2>
-          <p className="text-sm text-[var(--text-muted)] mt-1">{t("admin:logging.description")}</p>
+          <p className="text-sm text-(--text-muted) mt-1">{t("admin:logging.description")}</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -115,7 +115,7 @@ export default function LoggingManager({
         >
           <div className="flex items-start gap-3">
             <svg
-              className="w-5 h-5 flex-shrink-0 mt-0.5"
+              className="w-5 h-5 shrink-0 mt-0.5"
               style={{ color: "var(--color-amber)" }}
               fill="currentColor"
               viewBox="0 0 20 20"
@@ -141,27 +141,27 @@ export default function LoggingManager({
       {/* Statistics */}
       {logStats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-            <div className="text-[var(--text-muted)] text-sm mb-1">
+          <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+            <div className="text-(--text-muted) text-sm mb-1">
               {t("admin:logging.stats.totalFiles")}
             </div>
-            <div className="text-2xl font-bold text-[var(--text-primary)]">
+            <div className="text-2xl font-bold text-(--text-primary)">
               {logStats.fileCount}
             </div>
           </div>
-          <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-            <div className="text-[var(--text-muted)] text-sm mb-1">
+          <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+            <div className="text-(--text-muted) text-sm mb-1">
               {t("admin:logging.stats.totalSize")}
             </div>
-            <div className="text-2xl font-bold text-[var(--text-primary)]">
+            <div className="text-2xl font-bold text-(--text-primary)">
               {(logStats.totalSize / 1024 / 1024).toFixed(2)} MB
             </div>
           </div>
-          <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-            <div className="text-[var(--text-muted)] text-sm mb-1">
+          <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+            <div className="text-(--text-muted) text-sm mb-1">
               {t("admin:logging.stats.oldestLog")}
             </div>
-            <div className="text-sm font-medium text-[var(--text-primary)]">
+            <div className="text-sm font-medium text-(--text-primary)">
               {(() => {
                 try {
                   return logStats.oldestLog
@@ -173,11 +173,11 @@ export default function LoggingManager({
               })()}
             </div>
           </div>
-          <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-            <div className="text-[var(--text-muted)] text-sm mb-1">
+          <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+            <div className="text-(--text-muted) text-sm mb-1">
               {t("admin:logging.stats.newestLog")}
             </div>
-            <div className="text-sm font-medium text-[var(--text-primary)]">
+            <div className="text-sm font-medium text-(--text-primary)">
               {(() => {
                 try {
                   return logStats.newestLog
@@ -193,13 +193,13 @@ export default function LoggingManager({
       )}
 
       {/* Logging Configuration */}
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-(--text-primary) mb-4">
           {t("admin:logging.configSection")}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+            <label className="block text-sm font-medium text-(--text-primary) mb-2">
               {t("admin:logging.level.label")}
             </label>
             <select
@@ -207,7 +207,7 @@ export default function LoggingManager({
               onChange={(e) =>
                 onLoggingConfigChange({ ...loggingConfig, logLevel: e.target.value })
               }
-              className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-lg text-[var(--text-primary)]"
+              className="w-full px-3 py-2 bg-(--bg-surface) border border-border rounded-lg text-(--text-primary)"
             >
               <option value="error">{t("admin:logging.level.error")}</option>
               <option value="warn">{t("admin:logging.level.warn")}</option>
@@ -215,10 +215,10 @@ export default function LoggingManager({
               <option value="debug">{t("admin:logging.level.debug")}</option>
               <option value="trace">{t("admin:logging.level.trace")}</option>
             </select>
-            <p className="text-xs text-[var(--text-muted)] mt-1">{t("admin:logging.level.hint")}</p>
+            <p className="text-xs text-(--text-muted) mt-1">{t("admin:logging.level.hint")}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+            <label className="block text-sm font-medium text-(--text-primary) mb-2">
               {t("admin:logging.retention.label")}
             </label>
             <input
@@ -232,9 +232,9 @@ export default function LoggingManager({
                   logRetentionDays: parseInt(e.target.value),
                 })
               }
-              className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-lg text-[var(--text-primary)]"
+              className="w-full px-3 py-2 bg-(--bg-surface) border border-border rounded-lg text-(--text-primary)"
             />
-            <p className="text-xs text-[var(--text-muted)] mt-1">
+            <p className="text-xs text-(--text-muted) mt-1">
               {t("admin:logging.retention.hint")}
             </p>
           </div>
@@ -250,10 +250,10 @@ export default function LoggingManager({
               className="checkbox mt-1"
             />
             <div>
-              <span className="font-medium text-[var(--text-primary)]">
+              <span className="font-medium text-(--text-primary)">
                 {t("admin:logging.categories.http.label")}
               </span>
-              <p className="text-sm text-[var(--text-muted)]">
+              <p className="text-sm text-(--text-muted)">
                 {t("admin:logging.categories.http.hint")}
               </p>
             </div>
@@ -268,10 +268,10 @@ export default function LoggingManager({
               className="checkbox mt-1"
             />
             <div>
-              <span className="font-medium text-[var(--text-primary)]">
+              <span className="font-medium text-(--text-primary)">
                 {t("admin:logging.categories.database.label")}
               </span>
-              <p className="text-sm text-[var(--text-muted)]">
+              <p className="text-sm text-(--text-muted)">
                 {t("admin:logging.categories.database.hint")}
               </p>
             </div>
@@ -286,10 +286,10 @@ export default function LoggingManager({
               className="checkbox mt-1"
             />
             <div>
-              <span className="font-medium text-[var(--text-primary)]">
+              <span className="font-medium text-(--text-primary)">
                 {t("admin:logging.categories.parser.label")}
               </span>
-              <p className="text-sm text-[var(--text-muted)]">
+              <p className="text-sm text-(--text-muted)">
                 {t("admin:logging.categories.parser.hint")}
               </p>
             </div>
@@ -298,9 +298,9 @@ export default function LoggingManager({
       </div>
 
       {/* Log Files */}
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
+      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+          <h3 className="text-lg font-semibold text-(--text-primary)">
             {t("admin:logging.files.title")}
           </h3>
           <button
@@ -312,25 +312,25 @@ export default function LoggingManager({
           </button>
         </div>
         {logFiles.length === 0 ? (
-          <p className="text-[var(--text-muted)] text-sm">{t("admin:logging.files.empty")}</p>
+          <p className="text-(--text-muted) text-sm">{t("admin:logging.files.empty")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-[var(--bg-base)]">
+              <thead className="bg-(--bg-base)">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
                     {t("admin:logging.files.colFilename")}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
                     {t("admin:logging.files.colCategory")}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
                     {t("admin:logging.files.colSize")}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
                     {t("admin:logging.files.colModified")}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
                     {t("admin:logging.files.colActions")}
                   </th>
                 </tr>
@@ -338,7 +338,7 @@ export default function LoggingManager({
               <tbody className="divide-y" style={{ borderColor: "var(--color-border)" }}>
                 {logFiles.map((file) => (
                   <tr key={file.filename}>
-                    <td className="px-4 py-3 text-sm font-mono text-[var(--text-primary)]">
+                    <td className="px-4 py-3 text-sm font-mono text-(--text-primary)">
                       {file.filename}
                     </td>
                     <td className="px-4 py-3 text-sm">
@@ -353,10 +353,10 @@ export default function LoggingManager({
                         {file.category}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-[var(--text-primary)]">
+                    <td className="px-4 py-3 text-sm text-(--text-primary)">
                       {(file.size / 1024).toFixed(2)} KB
                     </td>
-                    <td className="px-4 py-3 text-sm text-[var(--text-primary)]">
+                    <td className="px-4 py-3 text-sm text-(--text-primary)">
                       {format(new Date(file.modified), "MMM d, HH:mm")}
                     </td>
                     <td className="px-4 py-3 text-sm space-x-2">

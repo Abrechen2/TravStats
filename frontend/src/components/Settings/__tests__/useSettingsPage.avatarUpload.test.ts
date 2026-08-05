@@ -32,6 +32,8 @@ vi.mock("../../../hooks/useTranslation", () => ({
 }));
 
 vi.mock("../../../store/settingsStore", () => ({
+  // The hook subscribes to `snapshotOf` as its auto-save dependency (#198).
+  snapshotOf: () => "",
   useSettingsStore: () => ({
     profile: { username: "u", email: "e@example.com" },
     display: {},

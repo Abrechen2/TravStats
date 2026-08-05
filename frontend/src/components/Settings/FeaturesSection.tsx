@@ -39,8 +39,8 @@ export default function FeaturesSection(): JSX.Element {
         <button
           onClick={() => setFeatures({ enableCostTracking: !features.enableCostTracking })}
           aria-label={t("settings:features.costTracking")}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-            features.enableCostTracking ? "bg-[var(--accent)]" : "bg-gray-600"
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-hidden ${
+            features.enableCostTracking ? "bg-(--accent)" : "bg-gray-600"
           }`}
           role="switch"
           aria-checked={features.enableCostTracking}
@@ -69,8 +69,8 @@ export default function FeaturesSection(): JSX.Element {
             setFeatures({ trackAircraftRegistration: !features.trackAircraftRegistration })
           }
           aria-label={t("settings:features.trackAircraft")}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-            features.trackAircraftRegistration ? "bg-[var(--accent)]" : "bg-gray-600"
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-hidden ${
+            features.trackAircraftRegistration ? "bg-(--accent)" : "bg-gray-600"
           }`}
           role="switch"
           aria-checked={features.trackAircraftRegistration}

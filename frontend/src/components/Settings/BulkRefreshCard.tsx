@@ -108,20 +108,20 @@ export default function BulkRefreshCard(): JSX.Element | null {
     demoBlocked || running || !hasProvider || remaining === null || remaining === 0;
 
   return (
-    <div className="border border-[var(--color-border)] rounded-lg p-4 space-y-3">
+    <div className="border border-border rounded-lg p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
-          <h3 className="font-semibold text-[var(--text-primary)]">
+          <h3 className="font-semibold text-(--text-primary)">
             {t("settings:apiKeys.bulkRefresh.title")}
           </h3>
-          <p className="text-sm text-[var(--text-muted)] mt-1">
+          <p className="text-sm text-(--text-muted) mt-1">
             {t("settings:apiKeys.bulkRefresh.description")}
           </p>
         </div>
       </div>
 
       {demoBlocked && (
-        <div className="text-sm p-2 rounded-md bg-[var(--bg-elevated)] text-[var(--text-muted)]">
+        <div className="text-sm p-2 rounded-md bg-(--bg-elevated) text-(--text-muted)">
           {t("settings:apiKeys.bulkRefresh.demoBlocked")}
         </div>
       )}
@@ -137,7 +137,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
       )}
 
       {remaining !== null && remaining > 0 && (
-        <div className="text-sm text-[var(--text-primary)]">
+        <div className="text-sm text-(--text-primary)">
           {t("settings:apiKeys.bulkRefresh.remainingPrefix")}{" "}
           <span className="font-semibold">{remaining}</span>{" "}
           {t("settings:apiKeys.bulkRefresh.remainingSuffix")}
@@ -145,11 +145,11 @@ export default function BulkRefreshCard(): JSX.Element | null {
       )}
 
       {quota && (quota.remaining !== null || quota.limit !== null) && (
-        <div className="text-xs text-[var(--text-muted)]">
+        <div className="text-xs text-(--text-muted)">
           {t("settings:apiKeys.bulkRefresh.quotaLabelADB")}:{" "}
-          <span className="font-semibold text-[var(--text-primary)]">{quota.remaining ?? "?"}</span>
+          <span className="font-semibold text-(--text-primary)">{quota.remaining ?? "?"}</span>
           {quota.limit !== null && (
-            <span className="text-[var(--text-muted)]"> / {quota.limit}</span>
+            <span className="text-(--text-muted)"> / {quota.limit}</span>
           )}{" "}
           {t("settings:apiKeys.bulkRefresh.quotaSuffixADB")}
         </div>
@@ -176,11 +176,11 @@ export default function BulkRefreshCard(): JSX.Element | null {
       </div>
 
       {lastSummary && (
-        <div className="text-sm p-3 rounded-md bg-[var(--bg-elevated)] border border-[var(--color-border)]">
-          <div className="font-medium text-[var(--text-primary)] mb-1">
+        <div className="text-sm p-3 rounded-md bg-(--bg-elevated) border border-border">
+          <div className="font-medium text-(--text-primary) mb-1">
             {t("settings:apiKeys.bulkRefresh.summaryTitle")}
           </div>
-          <ul className="space-y-0.5 text-[var(--text-muted)]">
+          <ul className="space-y-0.5 text-(--text-muted)">
             <li>
               {t("settings:apiKeys.bulkRefresh.summaryScanned", { count: lastSummary.scanned })}
             </li>
@@ -197,7 +197,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
             )}
           </ul>
           {lastSummary.remaining > 0 && (
-            <div className="mt-2 text-xs text-[var(--text-muted)]">
+            <div className="mt-2 text-xs text-(--text-muted)">
               {t("settings:apiKeys.bulkRefresh.summaryRetryHint", {
                 count: lastSummary.remaining,
               })}
@@ -219,16 +219,16 @@ export default function BulkRefreshCard(): JSX.Element | null {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
+            <h2 className="text-lg font-semibold text-(--text-primary) mb-2">
               {t("settings:apiKeys.bulkRefresh.confirmTitle")}
             </h2>
-            <p className="text-sm text-[var(--text-muted)] mb-3">
+            <p className="text-sm text-(--text-muted) mb-3">
               {t("settings:apiKeys.bulkRefresh.confirmBody", {
                 count: estimatedCalls,
               })}
             </p>
             {quota && quota.remaining !== null && (
-              <p className="text-sm text-[var(--text-primary)] mb-3">
+              <p className="text-sm text-(--text-primary) mb-3">
                 {t("settings:apiKeys.bulkRefresh.confirmQuotaCurrent", {
                   remaining: quota.remaining,
                   limit: quota.limit ?? "?",
@@ -240,14 +240,14 @@ export default function BulkRefreshCard(): JSX.Element | null {
                 )}
               </p>
             )}
-            <p className="text-xs text-[var(--text-muted)] mb-4">
+            <p className="text-xs text-(--text-muted) mb-4">
               {t("settings:apiKeys.bulkRefresh.confirmHistoricalNote")}
             </p>
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setConfirmOpen(false)}
-                className="px-3 py-1.5 text-sm rounded-md border border-[var(--color-border)] text-[var(--text-primary)] hover:bg-[var(--bg-base)]"
+                className="px-3 py-1.5 text-sm rounded-md border border-border text-(--text-primary) hover:bg-(--bg-base)"
               >
                 {t("common:buttons.cancel")}
               </button>

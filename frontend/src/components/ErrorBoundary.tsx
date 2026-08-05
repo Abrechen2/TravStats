@@ -53,7 +53,7 @@ export default class ErrorBoundary extends Component<Props, State> {
           </p>
           <button
             onClick={() => this.setState({ hasError: false, error: undefined })}
-            className="mt-3 px-4 py-2 rounded text-white"
+            className="mt-3 px-4 py-2 rounded-sm text-white"
             style={{ background: "var(--danger)" }}
           >
             {i18n.t("common:errorBoundary.tryAgain")}

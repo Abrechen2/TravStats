@@ -24,6 +24,7 @@ import { logger } from "../../lib/logger";
 import { ShipPicker } from "./ShipPicker";
 import { PortPicker } from "./PortPicker";
 import { CruiseStopsEditor } from "./CruiseStopsEditor";
+import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import AirportAutocomplete from "../AirportAutocomplete";
 
 interface CruiseImportPreviewModalProps {
@@ -32,14 +33,13 @@ interface CruiseImportPreviewModalProps {
   onSaved: () => void | Promise<void>;
 }
 
-const STATUSES: CruiseStatus[] = ["scheduled", "flown", "cancelled", "historical"];
 const CABIN_TYPES: CabinType[] = ["inside", "oceanview", "balcony", "suite"];
 const CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
 const SEAT_CLASSES = ["economy", "premium_economy", "business", "first"] as const;
 type SeatClass = (typeof SEAT_CLASSES)[number];
 
 const INPUT =
-  "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-2 py-1.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent)] focus:outline-none";
+  "w-full rounded-md border border-border bg-(--bg-surface) px-2 py-1.5 text-sm text-(--text-primary) focus:border-(--accent) focus:outline-hidden";
 
 const dateOnly = (iso: string | null | undefined): string => (iso ? iso.slice(0, 10) : "");
 const toIsoNoon = (d: string): string | undefined => (d ? `${d}T12:00:00.000Z` : undefined);
@@ -146,12 +146,12 @@ export function CruiseImportPreviewModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-[var(--bg-surface)] p-6">
-        <h2 className="mb-1 text-xl font-semibold text-[var(--text-primary)]">
+    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 p-4">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-(--bg-surface) p-6">
+        <h2 className="mb-1 text-xl font-semibold text-(--text-primary)">
           {t("cruise:import.previewTitle", { count: entries.length })}
         </h2>
-        <p className="mb-4 text-sm text-[var(--text-muted)]">{t("cruise:import.editHint")}</p>
+        <p className="mb-4 text-sm text-(--text-muted)">{t("cruise:import.editHint")}</p>
 
         <div className="space-y-4">
           {entries.map((entry, idx) => (
@@ -165,8 +165,8 @@ export function CruiseImportPreviewModal({
         </div>
 
         {showTripToggle && (
-          <div className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--bg-base)] p-3">
-            <label className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
+          <div className="mt-4 rounded-lg border border-border bg-(--bg-base) p-3">
+            <label className="flex items-center gap-2 text-sm text-(--text-primary)">
               <input
                 type="checkbox"
                 checked={groupAsTrip}
@@ -186,7 +186,7 @@ export function CruiseImportPreviewModal({
         )}
 
         <div className="mt-6 flex items-center justify-between gap-3">
-          <span className="text-xs text-[var(--text-muted)]">
+          <span className="text-xs text-(--text-muted)">
             {totalFlights > 0 && t("cruise:import.flightCount", { count: totalFlights })}
           </span>
           <div className="flex gap-3">
@@ -194,7 +194,7 @@ export function CruiseImportPreviewModal({
               type="button"
               onClick={onCancel}
               disabled={saving}
-              className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-50"
+              className="rounded-md border border-border px-4 py-2 text-sm text-(--text-muted) hover:text-(--text-primary) disabled:opacity-50"
             >
               {t("common:buttons.cancel")}
             </button>
@@ -225,7 +225,7 @@ function Field({
   const { t } = useTranslation("cruise");
   return (
     <div>
-      <label className="mb-1 flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
+      <label className="mb-1 flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-(--text-muted)">
         {label}
         {missing && (
           <span className="text-[10px] normal-case text-red-300">({t("import.missing")})</span>
@@ -384,24 +384,24 @@ function CruiseImportEntryEditor({
   const seaDays = stops.length - portStops;
 
   return (
-    <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-[var(--bg-base)] p-4">
+    <div className="space-y-3 rounded-lg border border-border bg-(--bg-base) p-4">
       {/* Ship */}
       <div>
-        <label className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
+        <label className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-(--text-muted)">
           {t("field.ship")}
           {ship ? (
-            <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] normal-case text-emerald-300">
+            <span className="rounded-sm bg-emerald-500/15 px-1.5 py-0.5 text-[10px] normal-case text-emerald-300">
               ✓ {t("import.shipMatched")}
             </span>
           ) : overrideName ? (
             <span
-              className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] normal-case text-amber-300"
+              className="rounded-sm bg-amber-500/15 px-1.5 py-0.5 text-[10px] normal-case text-amber-300"
               title={t("import.shipUnmatchedHint")}
             >
               ⚠ {t("import.shipUnmatched")}
             </span>
           ) : (
-            <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] normal-case text-red-300">
+            <span className="rounded-sm bg-red-500/15 px-1.5 py-0.5 text-[10px] normal-case text-red-300">
               {t("import.missing")}
             </span>
           )}
@@ -444,18 +444,27 @@ function CruiseImportEntryEditor({
             className={INPUT}
           />
         </Field>
+        {/* #status-from-dates: cruise write paths derive scheduled/in_progress/
+            flown from the dates — a select just let the UI set a value the
+            backend would immediately overwrite. Only "cancelled" stays
+            user-controlled, via the checkbox below. Mirrors CruiseEditModal. */}
         <Field label={t("field.status")}>
-          <select
-            value={status}
-            onChange={(e): void => setStatus(e.target.value as CruiseStatus)}
-            className={INPUT}
-          >
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {t(`status.${s}`)}
-              </option>
-            ))}
-          </select>
+          <div>
+            <span
+              className="inline-block rounded-full px-2 py-1 text-xs font-semibold"
+              style={cruiseStatusPillStyle(status)}
+            >
+              {t(`status.${status}`, { defaultValue: status })}
+            </span>
+          </div>
+          <label className="mt-2 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={status === "cancelled"}
+              onChange={(e): void => setStatus(e.target.checked ? "cancelled" : "scheduled")}
+            />
+            {t("status.cancelledCheckbox")}
+          </label>
         </Field>
       </div>
 
@@ -544,7 +553,7 @@ function CruiseImportEntryEditor({
 
       {/* Unmatched-port warning */}
       {entry.unmatchedPorts.length > 0 && (
-        <div className="rounded border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-300">
+        <div className="rounded-sm border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-300">
           <strong>{t("import.unmatchedTitle")}:</strong>{" "}
           {entry.unmatchedPorts
             .map((p) => `${t("stops.day")} ${p.dayNumber}: ${p.portName}`)
@@ -558,7 +567,7 @@ function CruiseImportEntryEditor({
         <button
           type="button"
           onClick={(): void => setShowStops((s) => !s)}
-          className="flex w-full items-center justify-between rounded-md border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--text-primary)] hover:border-[var(--accent)]"
+          className="flex w-full items-center justify-between rounded-md border border-border px-3 py-2 text-sm text-(--text-primary) hover:border-(--accent)"
         >
           <span>
             {t("import.stopsEdit")} · {portStops} {t("field.ports", { count: portStops })},{" "}
@@ -575,10 +584,10 @@ function CruiseImportEntryEditor({
 
       {/* Fly & cruise flights */}
       {flights.length > 0 && (
-        <div className="rounded-md border border-[var(--color-border)] p-3">
-          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
+        <div className="rounded-md border border-border p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-(--text-primary)">
             ✈ {t("import.flightsTitle")}
-            <span className="rounded bg-[var(--accent-soft)] px-1.5 py-0.5 text-[10px] text-[var(--accent)]">
+            <span className="rounded-sm bg-(--accent-soft) px-1.5 py-0.5 text-[10px] text-(--accent)">
               {t("import.flightTentative")}
             </span>
           </div>
@@ -604,9 +613,9 @@ function FlightCard({
   const airportsMissing = flight.include && (!flight.depAirport || !flight.arrAirport);
 
   return (
-    <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-3">
+    <div className="rounded-md border border-border bg-(--bg-surface) p-3">
       <div className="mb-2 flex items-center justify-between">
-        <label className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
+        <label className="flex items-center gap-2 text-sm text-(--text-primary)">
           <input
             type="checkbox"
             checked={flight.include}

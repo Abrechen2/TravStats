@@ -11,7 +11,7 @@ export interface AircraftType {
 
 export const AIRCRAFT_TYPES: AircraftType[] = [
   // Airbus
-  { icao: "A20N", name: "Airbus A220-100" },
+  { icao: "BCS1", name: "Airbus A220-100" },
   { icao: "A223", name: "Airbus A220-300" },
   { icao: "A306", name: "Airbus A300-600" },
   { icao: "A310", name: "Airbus A310" },
@@ -22,7 +22,6 @@ export const AIRCRAFT_TYPES: AircraftType[] = [
   { icao: "A20N", name: "Airbus A320neo" },
   { icao: "A321", name: "Airbus A321" },
   { icao: "A21N", name: "Airbus A321neo" },
-  { icao: "A321XLR", name: "Airbus A321XLR" },
   { icao: "A332", name: "Airbus A330-200" },
   { icao: "A333", name: "Airbus A330-300" },
   { icao: "A338", name: "Airbus A330-800neo" },
@@ -95,7 +94,7 @@ export const AIRCRAFT_TYPES: AircraftType[] = [
 
   // COMAC
   { icao: "C919", name: "COMAC C919" },
-  { icao: "ARJ21", name: "COMAC ARJ21" },
+  { icao: "AJ27", name: "COMAC ARJ21" },
 
   // Fokker
   { icao: "F70", name: "Fokker 70" },

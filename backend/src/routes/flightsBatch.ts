@@ -11,6 +11,9 @@ import { calculateCo2Kg, haversineKm, toSeatClass } from "../services/co2Calcula
 import { resolveAirlineCodes } from "../utils/airlineNormalize";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
+import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from "../shared/statusDerivation";
+import { recomputeTripStatus } from "../services/tripStatusService";
+import { resolveCompanions, linkRowsFor } from "../services/companionService";
 
 function toUtcDate(local: string | null | undefined, tz: string | null | undefined): Date | null {
   if (!local || !tz) return null;
@@ -49,7 +52,12 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
       }
     }
 
-    // Step 1: Enrich airports OUTSIDE the transaction (async I/O, not DB ops)
+    // Step 1: Enrich airports OUTSIDE the transaction (async I/O, not DB ops).
+    // Companion names are resolved to Companion entities here too (find-or-create
+    // is idempotent via companionService, so it's safe to run outside the
+    // transaction) — the row write and the link write still happen together
+    // inside the transaction below, so a failure never leaves the legacy
+    // `companions` array and the `companionLinks` table disagreeing.
     const enrichedDataList = await Promise.all(
       parsedFlights.map(async (data) => {
         const enriched = await enrichFlightAirports({
@@ -68,19 +76,35 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
             lon: data.arrival.lon,
           },
         });
-        return { data, enriched };
+        const resolvedCompanions = await resolveCompanions(userId, data.companions ?? []);
+        return { data, enriched, resolvedCompanions };
       })
     );
 
     // Step 2: All DB writes inside a single transaction — if any step fails, all are rolled back
+    // Trip ids auto-created below for shared-PNR groups — status derivation
+    // (spec 2026-07-17-status-from-dates) needs to read the flights it just
+    // linked, so recomputeTripStatus() runs AFTER the transaction commits
+    // (reading inside an open tx would see the pre-link, tripId=null rows).
+    const createdTripIds: string[] = [];
     const createdFlights = await prisma.$transaction(async (tx) => {
       // Create all flights
       const flights = [];
-      for (const { data, enriched } of enrichedDataList) {
+      for (const { data, enriched, resolvedCompanions } of enrichedDataList) {
         const departureUtc = toUtcDate(data.departureLocal, data.depTimezone);
         const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
         const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
         const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
+        // The status field is a client-sent HINT, not the source of truth
+        // (spec 2026-07-17-status-from-dates) — same rule as the single-create
+        // route in flights.ts.
+        const effectiveStatus = (FLIGHT_PASSTHROUGH as readonly string[]).includes(data.status ?? "")
+          ? data.status!
+          : deriveFlightStatus({
+              departureTime: departureUtc,
+              arrivalTime: arrivalUtc,
+              current: data.status ?? "scheduled",
+            });
         // Auto-resolve IATA/ICAO from a free-text airline name (issue #106B).
         // Importers (Generic-CSV, FR24, AI-agent) often only supply a name —
         // without codes downstream features like airline filters and codeshare
@@ -140,7 +164,7 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
               enriched.arrival.lat,
               enriched.arrival.lon,
             ),
-            status: data.status,
+            status: effectiveStatus,
             notes: data.notes,
             price: data.price,
             taxes: data.taxes,
@@ -148,7 +172,10 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
             currency: data.currency,
             category: data.category,
             tags: data.tags ?? [],
-            companions: data.companions ?? [],
+            // Dual write: resolved display names keep this legacy array in
+            // agreement with `companionLinks` below (trimmed, blanks dropped,
+            // newest spelling wins) — same rule as the single-create route.
+            companions: resolvedCompanions.map((c) => c.displayName),
             receiptUrl: data.receiptUrl,
             seatNumber: data.seatNumber,
             boardingGroup: data.boardingGroup,
@@ -168,11 +195,22 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
             nextApiCheckAt: calculateNextApiCheckAt(
               departureUtc,
               arrivalUtc,
-              data.status ?? "scheduled",
+              effectiveStatus,
               data.flightNumber,
             ),
           },
         });
+
+        if (resolvedCompanions.length > 0) {
+          await tx.flightCompanion.createMany({
+            data: linkRowsFor(resolvedCompanions.map((c) => c.id)).map((row) => ({
+              ...row,
+              flightId: flight.id,
+            })),
+            skipDuplicates: true,
+          });
+        }
+
         flights.push(flight);
       }
 
@@ -205,14 +243,36 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
         const name = `${origin} – ${dest} · ${month}`;
 
         const trip = await tx.trip.create({ data: { userId, name, color } });
+        createdTripIds.push(trip.id);
+
+        // Identical non-null total on every segment = the repeated booking
+        // total from the email. Move it to the booking; segments become
+        // priceless (the price belongs to the booking — spec 2026-07-17).
+        const firstPrice = groupFlights[0]?.price ?? null;
+        const firstCurrency = groupFlights[0]?.currency ?? "EUR";
+        const identicalTotal =
+          firstPrice != null &&
+          groupFlights.every(
+            (f) => f.price === firstPrice && (f.currency ?? "EUR") === firstCurrency
+          );
+
         const booking = await tx.booking.create({
-          data: { userId, tripId: trip.id, pnr },
+          data: {
+            userId,
+            tripId: trip.id,
+            pnr,
+            ...(identicalTotal ? { price: firstPrice, currency: firstCurrency } : {}),
+          },
         });
 
         const flightIds = groupFlights.map((f) => f.id);
         await tx.flight.updateMany({
           where: { id: { in: flightIds } },
-          data: { tripId: trip.id, bookingId: booking.id },
+          data: {
+            tripId: trip.id,
+            bookingId: booking.id,
+            ...(identicalTotal ? { price: null } : {}),
+          },
         });
 
         logger.info(
@@ -221,8 +281,21 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
         );
       }
 
-      return flights;
+      // Re-read: the grouping updateMany made the in-memory rows stale
+      // (old price, missing tripId/bookingId) — the response must show the
+      // final state (Codex review finding, spec §1).
+      const fresh = await tx.flight.findMany({
+        where: { id: { in: flights.map((f) => f.id) } },
+      });
+      const byId = new Map(fresh.map((f) => [f.id, f]));
+      return flights.map((f) => byId.get(f.id) ?? f);
     });
+
+    // Now that the transaction has committed, derive each auto-created
+    // trip's status from its just-linked flights (spec 2026-07-17).
+    for (const tripId of createdTripIds) {
+      await recomputeTripStatus(tripId);
+    }
 
     // Check achievements after batch creation (outside transaction — non-critical)
     let newAchievements: Awaited<ReturnType<typeof checkAndUpdateAchievements>> = [];

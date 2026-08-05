@@ -11,6 +11,23 @@ interface AirportAutocompleteProps {
   required?: boolean;
 }
 
+/**
+ * What the input shows once an airport is picked. It used to be the bare code
+ * ("FRA"), which tells you nothing about which field holds which airport at a
+ * glance — the dropdown row already spells the name out, then the selection
+ * threw it away. Codes stay in front because they are what people type.
+ *
+ * Exported so tests and any second call site build the identical string: the
+ * change handler compares the typed text against this to decide whether the
+ * user has abandoned the selection, and a mismatch there silently clears the
+ * field on the next keystroke.
+ */
+export function airportInputLabel(airport: Pick<Airport, "iata" | "icao" | "name">): string {
+  const code = airport.iata || airport.icao;
+  if (!airport.name) return code ?? "";
+  return code ? `${code} — ${airport.name}` : airport.name;
+}
+
 export default function AirportAutocomplete({
   value,
   onChange,
@@ -49,7 +66,7 @@ export default function AirportAutocomplete({
   // Update display when value changes
   useEffect(() => {
     if (value) {
-      const display = value.iata || value.icao || value.name;
+      const display = airportInputLabel(value);
       setQuery(display);
     } else {
       // Only clear query if input is NOT focused (to avoid clearing while user is typing)
@@ -123,8 +140,7 @@ export default function AirportAutocomplete({
 
   const handleSelect = (airport: Airport) => {
     onChange(airport);
-    const display = airport.iata || airport.icao || airport.name;
-    setQuery(display);
+    setQuery(airportInputLabel(airport));
     setIsOpen(false);
   };
 
@@ -132,8 +148,10 @@ export default function AirportAutocomplete({
     const newQuery = e.target.value;
     setQuery(newQuery);
 
-    // Clear selection if user types
-    if (value && newQuery !== (value.iata || value.icao || value.name)) {
+    // Clear the selection once the text stops matching what we put there.
+    // This MUST use the same label builder as the two setQuery calls above —
+    // when they disagreed, every selection was dropped on the next keystroke.
+    if (value && newQuery !== airportInputLabel(value)) {
       onChange(null);
     }
   };
@@ -183,8 +201,19 @@ export default function AirportAutocomplete({
               <button
                 key={airport.id}
                 type="button"
+                // Prevents the browser's default mousedown action (shifting
+                // focus to this button), which would otherwise blur the
+                // text input a beat BEFORE this button's own click fires
+                // handleSelect — an observable, if usually harmless, focus
+                // flicker away from the field the user is editing for every
+                // single mouse pick. Keeping focus on the input means the
+                // click completes with no intervening blur at all — for a
+                // mouse pick specifically; keyboard selection (Tab focuses
+                // this button directly, no mousedown involved) and the
+                // click-outside-close handler are untouched by this.
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleSelect(airport)}
-                className="w-full px-4 py-2 text-left focus:outline-none border-b last:border-0"
+                className="w-full px-4 py-2 text-left focus:outline-hidden border-b last:border-0"
                 style={{ borderColor: "var(--color-border)" }}
                 title={
                   airport.isClosed ? t("flights:airportAutocomplete.closedTooltip") : undefined
@@ -211,7 +240,7 @@ export default function AirportAutocomplete({
                       <span className="ml-2">{airport.name}</span>
                       {airport.isClosed && (
                         <span
-                          className="ml-2 px-1.5 py-0.5 text-xs rounded"
+                          className="ml-2 px-1.5 py-0.5 text-xs rounded-sm"
                           style={{
                             background: "rgba(220, 38, 38, 0.15)",
                             color: "var(--text-muted)",

@@ -220,6 +220,13 @@ export async function seedAirportsFromCSV(options: SeedAirportsOptions = {}) {
         ? await prisma.airport.findFirst({ where: { iata, isClosed } })
         : await prisma.airport.findFirst({ where: { icao, isClosed } });
 
+      // Same invariant as the ship/port seeds: a manually added airport
+      // (#191) is never overwritten by a CSV re-seed.
+      if (existing?.isUserAdded) {
+        skipped++;
+        continue;
+      }
+
       const data = {
         name: airport.name,
         city: airport.municipality || null,

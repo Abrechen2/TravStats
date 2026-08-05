@@ -64,7 +64,7 @@ export default function UsageStatsSettings(): JSX.Element {
           checked={status.consent === "granted"}
           disabled={busy}
           onChange={(e) => void toggle(e.target.checked)}
-          className="mt-1 h-4 w-4 rounded border-[var(--border)]"
+          className="mt-1 h-4 w-4 rounded-sm border-(--border)"
         />
         <span className="font-medium">
           {status.consent === "granted"

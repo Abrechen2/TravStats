@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
 import PageTransition from "../components/PageTransition";
@@ -22,14 +22,15 @@ import EnrichmentSection from "../components/Settings/EnrichmentSection";
 import ApiKeysSection from "../components/Settings/ApiKeysSection";
 import ApiTokensSection from "../components/Settings/ApiTokensSection";
 import DevicesSection from "../components/Settings/DevicesSection";
-import AdminSection from "../components/Settings/AdminSection";
 import AboutSection from "../components/Settings/AboutSection";
 import ImportSection from "../components/Settings/ImportSection";
 import FeaturesSection from "../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../components/Settings/CruisePreferencesSection";
 import LodgingPreferencesSection from "../components/Settings/LodgingPreferencesSection";
 import GeocoderSettingsCard from "../components/Settings/GeocoderSettingsCard";
+import ImmichConnectionCard from "../components/Settings/ImmichConnectionCard";
 import PasswordModal from "../components/Settings/PasswordModal";
+import { normalizeSectionId } from "../lib/sectionAliases";
 
 type TabId = "general" | "flight" | "cruise" | "lodging";
 
@@ -50,6 +51,7 @@ export default function SettingsPage(): JSX.Element {
     defaults,
     cruise,
     baseCurrency,
+    autoSaveState,
     setProfile,
     setDisplay,
     setUnits,
@@ -114,10 +116,18 @@ export default function SettingsPage(): JSX.Element {
       { id: "backup", label: t("settings:backup.title") || "Backup" },
       { id: "import", label: t("settings:import.title") || "Import" },
       { id: "autoupdate", label: t("settings:autoUpdate.title") || "Auto-Update" },
-      { id: "apikeys", label: t("settings:apiKeys.title") || "API Keys" },
+      {
+        id: "externalServices",
+        label: t("settings:externalServices.title") || "External services",
+      },
       { id: "devices", label: t("settings:devices.title") || "Devices" },
       { id: "apitokens", label: t("settings:apiTokens.title") || "API Tokens" },
-      ...(user?.isAdmin ? [{ id: "admin", label: t("settings:admin.title") || "Admin" }] : []),
+      // No "Admin" entry here. It used to be a section whose entire content was
+      // a button to /admin, which told the user that Admin is a SUBSECTION of
+      // Settings while the navigation says it is a PEER. That contradiction is
+      // what made the settings/admin boundary feel arbitrary. Admin is reachable
+      // from the top-level navigation, and the scope line below says which
+      // surface owns what.
       { id: "about", label: "About" },
     ];
     const flight: SectionRef[] = [
@@ -138,7 +148,9 @@ export default function SettingsPage(): JSX.Element {
       },
     ];
     return { general, flight, cruise: cruiseTab, lodging: lodgingTab };
-  }, [t, user?.isAdmin]);
+    // No `user?.isAdmin` dep any more — main dropped the conditional Admin
+    // section from `general`, so nothing in this memo reads it.
+  }, [t]);
 
   // The NAV list — the model minus everything the beta gate hides. Rendering
   // reads this; validation and deep-linking never do.
@@ -192,7 +204,20 @@ export default function SettingsPage(): JSX.Element {
       : null
   );
 
-  const initialSection = searchParams.get("section");
+  const initialSection = normalizeSectionId(searchParams.get("section"));
+
+  // /settings?section=admin used to open a section whose only content was a
+  // link to /admin. The section is gone, but the bookmarks are not — send them
+  // to the destination that button pointed at rather than dropping the user on
+  // "profile". A non-admin has nothing to be sent to and falls through to the
+  // normal validation below.
+  //
+  // Declarative on purpose. An imperative navigate() in an effect loses the
+  // race against the URL-sync effect further down: that one calls
+  // setSearchParams on whatever location is current, which promptly rewrites
+  // /admin back to /settings. Rendering <Navigate> instead — and skipping the
+  // sync while it is pending — keeps the two out of each other's way.
+  const redirectToAdmin = initialSection === "admin" && Boolean(user?.isAdmin);
 
   // MODEL for the active tab — drives initial state, drift correction and the
   // deep-link effects. NOT the nav (see navSectionsByTab above).
@@ -222,7 +247,7 @@ export default function SettingsPage(): JSX.Element {
   // before the tab refactor. Translate a matching hash to the correct tab
   // + section once on mount.
   useEffect(() => {
-    const hash = window.location.hash.slice(1);
+    const hash = normalizeSectionId(window.location.hash.slice(1));
     if (!hash) return;
     for (const tab of ["general", "flight", "cruise", "lodging"] as TabId[]) {
       if (sectionsByTab[tab].some((s) => s.id === hash)) {
@@ -262,6 +287,7 @@ export default function SettingsPage(): JSX.Element {
   // the full rationale). One effect here is the canonical pattern —
   // other multi-domain pages should mirror it.
   useEffect(() => {
+    if (redirectToAdmin) return;
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
@@ -274,6 +300,8 @@ export default function SettingsPage(): JSX.Element {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, activeSection]);
+
+  if (redirectToAdmin) return <Navigate to="/admin" replace />;
 
   return (
     <PageTransition>
@@ -291,9 +319,20 @@ export default function SettingsPage(): JSX.Element {
           style={{ background: "var(--bg-base)", borderBottom: "1px solid var(--color-border)" }}
         >
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-            <h1 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
-              {t("settings:title", { defaultValue: "Einstellungen" })}
-            </h1>
+            {/* Scope line. The settings/admin boundary is real (per-user vs
+                instance-wide) but was never stated anywhere, so two sections
+                that exist on both surfaces read as duplicates and users kept
+                opening the wrong one. Saying it once here covers every current
+                AND future section, which relabelling individual entries does
+                not. */}
+            <div className="flex flex-col gap-0.5">
+              <h1 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+                {t("settings:title", { defaultValue: "Einstellungen" })}
+              </h1>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                {t("settings:scopeHint")}
+              </p>
+            </div>
             <div
               role="tablist"
               aria-label={t("settings:title", { defaultValue: "Einstellungen" })}
@@ -362,7 +401,7 @@ export default function SettingsPage(): JSX.Element {
         <div className="flex md:h-[calc(100vh-3.5rem-3.75rem)]">
           {/* Desktop sidebar — scoped to the current tab's sections */}
           <aside
-            className="w-52 flex-shrink-0 flex-col py-4 overflow-y-auto hidden md:flex"
+            className="w-52 shrink-0 flex-col py-4 overflow-y-auto hidden md:flex"
             style={{
               background: "var(--bg-surface)",
               borderRight: "1px solid var(--color-border)",
@@ -493,14 +532,17 @@ export default function SettingsPage(): JSX.Element {
                 onSave={saveHistoricalEnrichmentSettings}
               />
             )}
-            {activeSection === "apikeys" && (
-              <ApiKeysSection
-                apiKeysStatus={apiKeysStatus}
-                apiKeys={apiKeys}
-                loadingApiKeys={loadingApiKeys}
-                onSetApiKeys={setApiKeys}
-                onSave={saveApiKeys}
-              />
+            {activeSection === "externalServices" && (
+              <>
+                <ApiKeysSection
+                  apiKeysStatus={apiKeysStatus}
+                  apiKeys={apiKeys}
+                  loadingApiKeys={loadingApiKeys}
+                  onSetApiKeys={setApiKeys}
+                  onSave={saveApiKeys}
+                />
+                <ImmichConnectionCard />
+              </>
             )}
             {/* Intentionally NOT gated: the nav entry is hidden behind the
                 beta flag, but the section itself must still render for anyone
@@ -509,41 +551,55 @@ export default function SettingsPage(): JSX.Element {
             {activeSection === "devices" && <DevicesSection />}
             {activeSection === "apitokens" && <ApiTokensSection />}
             {activeSection === "import" && <ImportSection />}
-            {activeSection === "admin" && user?.isAdmin && <AdminSection />}
             {activeSection === "about" && <AboutSection />}
 
-            {/* Auto-saved notice — compact strip; the verbose two-line
-                version was visually heavy on small viewports where the
-                whole settings page already scrolls. Single row with the
-                scroll-to-top action collapsed to an icon button. */}
+            {/* Auto-save strip. It reports what actually happened: a hint while
+                idle, "saving" during the write, a green confirmation for a few
+                seconds after one lands. It used to be a permanent green
+                checkmark reading "Auto-saved", which is why a flight default
+                silently failing to persist looked like a success (issue #198). */}
             <div
               className="rounded-md px-3 py-1.5 text-xs flex items-center justify-between gap-3"
               style={{
-                background: "rgba(63,185,80,0.08)",
-                border: "1px solid rgba(63,185,80,0.2)",
+                background:
+                  autoSaveState === "saved" ? "rgba(63,185,80,0.08)" : "var(--bg-elevated)",
+                border:
+                  autoSaveState === "saved"
+                    ? "1px solid rgba(63,185,80,0.2)"
+                    : "1px solid var(--color-border)",
               }}
               role="status"
+              aria-live="polite"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ color: "var(--success)" }}
-                  aria-hidden="true"
+                {autoSaveState === "saved" ? (
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ color: "var(--success)" }}
+                    aria-hidden="true"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : null}
+                <span
+                  className="font-medium"
+                  style={{
+                    color:
+                      autoSaveState === "saved" ? "var(--success)" : "var(--text-muted)",
+                  }}
                 >
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span className="font-medium" style={{ color: "var(--success)" }}>
-                  {t("settings:autoSaved.title")}
-                </span>
-                <span className="truncate" style={{ color: "var(--text-muted)" }}>
-                  {t("settings:autoSaved.description")}
+                  {autoSaveState === "saved"
+                    ? t("settings:autoSave.saved")
+                    : autoSaveState === "saving"
+                      ? t("settings:autoSave.saving")
+                      : t("settings:autoSave.idle")}
                 </span>
               </div>
               <button
@@ -551,7 +607,7 @@ export default function SettingsPage(): JSX.Element {
                 onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
                 aria-label={t("settings:scrollToTop")}
                 title={t("settings:scrollToTop")}
-                className="flex items-center justify-center w-7 h-7 rounded transition-colors"
+                className="flex items-center justify-center w-7 h-7 rounded-sm transition-colors"
                 style={{ color: "var(--text-muted)" }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = "var(--text-primary)";

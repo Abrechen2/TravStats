@@ -66,6 +66,20 @@ export interface CruiseStats {
   seaDaysStreak: number;
   regions: Set<string>;
   countries: Set<string>;
+  /**
+   * Countries keyed by the cruise's START year — the year-scoped counterpart
+   * to `countries`. The overview's "countries visited" tile used to render
+   * the lifetime set no matter which year was selected (34 for 2026, 34 for
+   * 2017 with three cruises), and put a year-over-year delta badge on top of
+   * it that could only ever read "0 (0%)". A comparison that cannot exist was
+   * being presented as data.
+   *
+   * The year comes from `startDate` in UTC, not local time: cruise dates are
+   * stored date-only and UTC-pinned, so `getFullYear()` would move a
+   * 1 January departure into the previous year for every user west of UTC.
+   * A cruise without a start date contributes to `countries` but to no year.
+   */
+  countriesByYear: Map<number, Set<string>>;
   hasBalconyCabin: boolean;
   hasSuiteCabin: boolean;
   maxDeck: number;
@@ -111,6 +125,7 @@ export function calculateCruiseStats(
   const cruiseLines = new Set<string>();
   const regions = new Set<string>();
   const countries = new Set<string>();
+  const countriesByYear = new Map<number, Set<string>>();
   const lineCounts = new Map<string, number>();
 
   let seaDays = 0;
@@ -140,6 +155,16 @@ export function calculateCruiseStats(
     if (cruise.cabinType === 'balcony' || cruise.cabinType === 'suite') hasBalconyCabin = true;
     if (cruise.cabinType === 'suite') hasSuiteCabin = true;
     if (cruise.deck !== null && cruise.deck > maxDeck) maxDeck = cruise.deck;
+
+    // Year bucket for this cruise's ports. UTC on purpose — see the
+    // countriesByYear doc comment. An undated cruise gets no bucket at all
+    // rather than a guessed one.
+    const startYear = cruise.startDate ? cruise.startDate.getUTCFullYear() : null;
+    let yearCountries: Set<string> | null = null;
+    if (startYear !== null) {
+      yearCountries = countriesByYear.get(startYear) ?? new Set<string>();
+      countriesByYear.set(startYear, yearCountries);
+    }
 
     // Effective itinerary: departure port → sorted stops → arrival port.
     // Mirrors buildEffectivePortSequence (shared/cruise/portSequence) —
@@ -188,7 +213,10 @@ export function calculateCruiseStats(
           portIds.add(stop.port.id);
           cruisePortCount += 1;
           totalPortCalls += 1;
-          if (stop.port.country) countries.add(stop.port.country);
+          if (stop.port.country) {
+            countries.add(stop.port.country);
+            yearCountries?.add(stop.port.country);
+          }
           if (stop.port.region) {
             regions.add(stop.port.region);
             regionVisitCounts[stop.port.region] =
@@ -271,6 +299,7 @@ export function calculateCruiseStats(
     seaDaysStreak,
     regions,
     countries,
+    countriesByYear,
     hasBalconyCabin,
     hasSuiteCabin,
     maxDeck,

@@ -19,12 +19,18 @@ import CreateLinkInviteModal from "../components/Admin/CreateLinkInviteModal";
 import CreateEmailInviteModal from "../components/Admin/CreateEmailInviteModal";
 import InviteSuccessModal from "../components/Admin/InviteSuccessModal";
 import GlobalApiKeysManager from "../components/Admin/GlobalApiKeysManager";
+import ImmichGlobalSettings from "../components/Admin/ImmichGlobalSettings";
 import ParserSettingsTab from "../components/Admin/ParserSettings";
 import LoggingManager from "../components/Admin/LoggingManager";
 import SmtpManager from "../components/Admin/SmtpManager";
-import CruiseMasterData from "../components/Admin/CruiseMasterData";
+import ShipsSection from "../components/Admin/masterData/ShipsSection";
+import PortsSection from "../components/Admin/masterData/PortsSection";
+import AirlinesSection from "../components/Admin/masterData/AirlinesSection";
+import AircraftSection from "../components/Admin/masterData/AircraftSection";
+import AirportsSection from "../components/Admin/masterData/AirportsSection";
 import { useTranslation } from "../hooks/useTranslation";
 import { copyToClipboard } from "../lib/clipboard";
+import { normalizeSectionId } from "../lib/sectionAliases";
 
 import type { SystemInfoData, AdminUser } from "../components/Admin/SystemInfo";
 import type { Invitation } from "../components/Admin/InvitationManagement";
@@ -54,9 +60,13 @@ type ActiveSection =
   | "parsers"
   | "logging"
   | "backups"
-  | "apiKeys"
+  | "externalServices"
   | "smtp"
-  | "cruiseMasterData";
+  | "shipsMasterData"
+  | "portsMasterData"
+  | "airlinesMasterData"
+  | "aircraftMasterData"
+  | "airportsMasterData";
 
 type TabId = "general" | "flight" | "cruise";
 
@@ -65,18 +75,27 @@ type TabId = "general" | "flight" | "cruise";
 // model, OCR/regex defaults) is cross-domain — the cruise parser depends on
 // the same Ollama endpoint as flights — so it lives under "general", not
 // "flight" (where cruise-only users never found it; see issue #129).
-// cruiseMasterData (ship + port management) lives under the cruise tab.
+// Master data is one sub-section per catalogue — ships and ports under the
+// cruise tab, airlines / aircraft / airports under the flight tab. They used
+// to be two combined pages ("Schiffe & Häfen", "Airlines & Flugzeuge") that
+// stacked every catalogue on one screen; the lists are long enough that
+// finding anything meant scrolling past the one above it. Old deep links
+// still resolve — see sectionAliases.
 const TAB_FOR_SECTION: Record<ActiveSection, TabId> = {
   system: "general",
   instance: "general",
   users: "general",
   invitations: "general",
-  apiKeys: "general",
+  externalServices: "general",
   logging: "general",
   backups: "general",
   smtp: "general",
   parsers: "general",
-  cruiseMasterData: "cruise",
+  shipsMasterData: "cruise",
+  portsMasterData: "cruise",
+  airlinesMasterData: "flight",
+  aircraftMasterData: "flight",
+  airportsMasterData: "flight",
 };
 
 // ==================== Admin Page Component ====================
@@ -99,11 +118,17 @@ export default function AdminPage(): JSX.Element {
   // hook. Filtered by enabledDomains, URL param "tab", activeTab resets
   // to "general" if its domain gets disabled mid-session.
   // The admin "Flug" tab was dropped once its only section (parser config)
-  // moved to "Allgemein" — an empty domain tab is worse UX than none. Flight
-  // admin settings can re-add a tab here if a flight-specific section appears.
+  // moved to "Allgemein" — an empty domain tab is worse UX than none. It's
+  // back now that airlineAircraftMasterData gives it a real section again.
   const { tabs, activeTab, setActiveTab } = useDomainTabs<TabId>({
     tabConfig: [
       { id: "general", label: t("admin:tabs2.general") || "Allgemein" },
+      {
+        id: "flight",
+        label: t("admin:tabs2.flight") || "Flug",
+        icon: DOMAINS.flight.icon,
+        requiresDomain: "flight",
+      },
       {
         id: "cruise",
         label: t("admin:tabs2.cruise") || "Kreuzfahrt",
@@ -123,7 +148,9 @@ export default function AdminPage(): JSX.Element {
       : null
   );
 
-  const initialSectionParam = searchParams.get("section") as ActiveSection | null;
+  const initialSectionParam = normalizeSectionId(
+    searchParams.get("section")
+  ) as ActiveSection | null;
   const [activeSection, setActiveSection] = useState<ActiveSection>(
     initialSectionParam && TAB_FOR_SECTION[initialSectionParam] === activeTab
       ? initialSectionParam
@@ -159,7 +186,7 @@ export default function AdminPage(): JSX.Element {
   useEffect(() => {
     if (activeSection === "logging") {
       loadLoggingData();
-    } else if (activeSection === "apiKeys") {
+    } else if (activeSection === "externalServices") {
       if (!globalApiKeys) {
         loadGlobalApiKeys();
       }
@@ -496,14 +523,30 @@ export default function AdminPage(): JSX.Element {
     { id: "instance", label: t("admin:tabs.instance") },
     { id: "users", label: t("admin:tabs.users"), badge: users.length },
     { id: "invitations", label: t("admin:tabs.invitations") },
-    { id: "apiKeys", label: t("admin:tabs.apiKeys") },
+    { id: "externalServices", label: t("admin:tabs.externalServices") },
     { id: "parsers", label: t("admin:tabs.parsers") },
     { id: "logging", label: t("admin:tabs.logging") },
     { id: "backups", label: t("admin:tabs.backups") },
     { id: "smtp", label: t("admin:tabs.smtp") },
     {
-      id: "cruiseMasterData",
-      label: t("admin:cruiseMasterData.menuLabel") || "Schiffe & Häfen",
+      id: "shipsMasterData",
+      label: t("admin:cruiseMasterData.ship.menuLabel") || "Schiffe",
+    },
+    {
+      id: "portsMasterData",
+      label: t("admin:cruiseMasterData.port.menuLabel") || "Häfen",
+    },
+    {
+      id: "airlinesMasterData",
+      label: t("admin:airlineAircraftMasterData.airline.menuLabel") || "Airlines",
+    },
+    {
+      id: "aircraftMasterData",
+      label: t("admin:airlineAircraftMasterData.aircraft.menuLabel") || "Flugzeuge",
+    },
+    {
+      id: "airportsMasterData",
+      label: t("admin:airlineAircraftMasterData.airport.menuLabel") || "Flughäfen",
     },
   ];
 
@@ -574,8 +617,8 @@ export default function AdminPage(): JSX.Element {
               onClick={(): void => setActiveTab(tab.id)}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
-                  ? "border-[var(--accent)] text-[var(--accent)]"
-                  : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  ? "border-(--accent) text-(--accent)"
+                  : "border-transparent text-(--text-secondary) hover:text-(--text-primary)"
               }`}
             >
               {tab.icon && (
@@ -618,7 +661,7 @@ export default function AdminPage(): JSX.Element {
       <div className="flex md:h-[calc(100vh-3.5rem-2.75rem)]">
         {/* Sidebar */}
         <aside
-          className="w-52 flex-shrink-0 flex-col py-4 overflow-y-auto hidden md:flex"
+          className="w-52 shrink-0 flex-col py-4 overflow-y-auto hidden md:flex"
           style={{
             background: "var(--bg-surface)",
             borderRight: "1px solid var(--color-border)",
@@ -631,6 +674,13 @@ export default function AdminPage(): JSX.Element {
             >
               {t("admin:title")}
             </h1>
+            {/* The counterpart of the scope line in user settings. Everything on
+                this surface is instance-wide; saying so is what distinguishes
+                "Externe Dienste (Instanz)" here from "Meine externen Dienste"
+                over there. */}
+            <p className="mt-1 text-xs normal-case" style={{ color: "var(--text-muted)" }}>
+              {t("admin:scopeHint")}
+            </p>
           </div>
           <nav className="space-y-0.5 px-2 mt-2">
             {sections.map((section) => (
@@ -666,7 +716,15 @@ export default function AdminPage(): JSX.Element {
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
-          {activeSection === "cruiseMasterData" && <CruiseMasterData />}
+          {activeSection === "shipsMasterData" && <ShipsSection />}
+
+          {activeSection === "portsMasterData" && <PortsSection />}
+
+          {activeSection === "airlinesMasterData" && <AirlinesSection />}
+
+          {activeSection === "aircraftMasterData" && <AircraftSection />}
+
+          {activeSection === "airportsMasterData" && <AirportsSection />}
 
           {activeSection === "system" && systemInfo && (
             <SystemInfoTab
@@ -726,28 +784,27 @@ export default function AdminPage(): JSX.Element {
             </>
           )}
 
-          {activeSection === "apiKeys" && (
-            <GlobalApiKeysManager
-              globalApiKeys={globalApiKeys}
-              parserSettings={
-                parserSettings
-                  ? {
-                      allowUserApiKeys: parserSettings.allowUserApiKeys,
-                    }
-                  : null
-              }
-              saving={savingGlobalApiKeys || savingParsers}
-              onSave={handleSaveGlobalApiKeys}
-              onGlobalApiKeysChange={setGlobalApiKeys}
-              onParserSettingsChange={(apiKeySettings: ParserApiKeySettings) => {
-                if (parserSettings) {
-                  setParserSettings({
-                    ...parserSettings,
-                    allowUserApiKeys: apiKeySettings.allowUserApiKeys,
-                  });
+          {activeSection === "externalServices" && (
+            <>
+              <GlobalApiKeysManager
+                globalApiKeys={globalApiKeys}
+                parserSettings={
+                  parserSettings ? { allowUserApiKeys: parserSettings.allowUserApiKeys } : null
                 }
-              }}
-            />
+                saving={savingGlobalApiKeys || savingParsers}
+                onSave={handleSaveGlobalApiKeys}
+                onGlobalApiKeysChange={setGlobalApiKeys}
+                onParserSettingsChange={(apiKeySettings: ParserApiKeySettings) => {
+                  if (parserSettings) {
+                    setParserSettings({
+                      ...parserSettings,
+                      allowUserApiKeys: apiKeySettings.allowUserApiKeys,
+                    });
+                  }
+                }}
+              />
+              <ImmichGlobalSettings />
+            </>
           )}
 
           {activeSection === "parsers" && parserSettings && (

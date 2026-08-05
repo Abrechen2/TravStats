@@ -245,7 +245,7 @@
     "analyticsOptIn": "Analytics Opt-in (anonymisiert)"
   },
   "backup": {
-    "title": "Backup & Sync",
+    "title": "Meine Daten & Sync",
     "description": "Regelmäßige Sicherungen und Cloud-Sync steuern.",
     "adminNote": "Backup-Einstellungen werden im Admin-Panel verwaltet.",
     "userNote": "Backups werden vom Administrator verwaltet.",
@@ -372,11 +372,6 @@
       "note": "Nur das LLM-basierte Parsen (Ollama) ist vollständig getestet. Template- und Regex-Parser sind experimentell."
     }
   },
-  "admin": {
-    "title": "Administration",
-    "description": "Verwalte Benutzer, Einladungen und Systemeinstellungen",
-    "openAdminPanel": "Admin-Panel öffnen"
-  },
   "features": {
     "title": "Funktionen",
     "costTracking": "Kostenerfassung",
@@ -390,9 +385,10 @@
       "cost": "Blendet die Steuer- und Gebührenfelder in den Flugformularen ein und aktiviert die Business-Statistiken. Preis und Währung sind unabhängig davon immer verfügbar — nur die Aufschlüsselung ist optional, damit die Maske schlank bleibt."
     }
   },
-  "autoSaved": {
-    "title": "Automatisch gespeichert",
-    "description": "Alle Einstellungen werden lokal gespeichert und sind sofort aktiv."
+  "autoSave": {
+    "idle": "Änderungen werden automatisch gespeichert",
+    "saving": "Wird gespeichert …",
+    "saved": "Gespeichert"
   },
   "scrollToTop": "Nach oben",
   "sectionPicker": "Bereich",
@@ -503,6 +499,9 @@
     "saved": "Anreicherungs-Einstellungen gespeichert",
     "saveFailed": "Fehler beim Speichern der Anreicherungs-Einstellungen"
   },
+  "externalServices": {
+    "title": "Meine externen Dienste"
+  },
   "apiKeys": {
     "title": "API-Schlüssel",
     "description": "Verwalte API-Schlüssel für externe Dienste. Vom Administrator geteilte Schlüssel werden automatisch verwendet.",
@@ -609,7 +608,8 @@
   },
   "import": {
     "title": "Import",
-    "description": "Migriere deine Flughistorie aus einem anderen Logbuch oder importiere einen TravStats-Excel-Export erneut.",
+    "description": "Bestehende Daten aus anderen Diensten importieren — pro Bereich gebündelt.",
+    "openHub": "Importieren",
     "tile": {
       "fr24": {
         "title": "Von Flightradar24",
@@ -620,12 +620,6 @@
         "title": "Aus beliebigem Logbuch (CSV)",
         "description": "Lade eine flache Flug-CSV — nach dem Upload öffnet sich ein Mapping-Wizard, mit dem du jede Spalte einem TravStats-Feld zuordnest.",
         "uploadLabel": "CSV-Datei auswählen"
-      },
-      "roundTrip": {
-        "title": "TravStats-Excel reimportieren",
-        "description": "XLSX/CSV/JSON aus einem TravStats-Export zurückladen. Bestehende Zeilen werden per ID aktualisiert, neue Zeilen angelegt.",
-        "uploadLabel": ".xlsx / .csv / .json auswählen",
-        "successSummary": "Aktualisiert: {{updated}} · Neu: {{created}}"
       }
     },
     "preview": {
@@ -762,5 +756,6 @@
       "revoke": "Token konnte nicht widerrufen werden",
       "labelRequired": "Beschreibung ist erforderlich"
     }
-  }
+  },
+  "scopeHint": "Gilt nur für dein Konto."
 }

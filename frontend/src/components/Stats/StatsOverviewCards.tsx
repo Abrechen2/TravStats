@@ -18,7 +18,7 @@ export default function StatsOverviewCards({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <div
-        className="rounded-lg shadow p-6"
+        className="rounded-lg shadow-sm p-6"
         style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
       >
         <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
@@ -29,7 +29,7 @@ export default function StatsOverviewCards({
         </p>
       </div>
       <div
-        className="rounded-lg shadow p-6"
+        className="rounded-lg shadow-sm p-6"
         style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
       >
         <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
@@ -40,7 +40,7 @@ export default function StatsOverviewCards({
         </p>
       </div>
       <div
-        className="rounded-lg shadow p-6"
+        className="rounded-lg shadow-sm p-6"
         style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
       >
         <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
@@ -51,7 +51,7 @@ export default function StatsOverviewCards({
         </p>
       </div>
       <div
-        className="rounded-lg shadow p-6"
+        className="rounded-lg shadow-sm p-6"
         style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
       >
         <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>

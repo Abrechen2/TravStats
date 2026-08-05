@@ -31,7 +31,7 @@ export default function DomainImportButton({
         onClick={() => setOpen(true)}
         className={
           className ??
-          "flex items-center gap-2 whitespace-nowrap rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] hover:border-[var(--accent)]"
+          "flex items-center gap-2 whitespace-nowrap rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary) hover:border-(--accent)"
         }
       >
         <span>📥</span>

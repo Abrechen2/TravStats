@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
 import https from 'https';
+import { AIRPORT_CATALOGUE } from '../config/constants';
 
 interface CSVAirport {
   id: string;
@@ -349,6 +350,28 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
       }
     }
 
+    // The CSV carries no timezone, so every row this importer writes lands with
+    // `timezone: null` and stays that way until the next process start, which is
+    // the only other place the backfill runs. That made the admin re-seed —
+    // the documented recovery for a truncated catalogue — restore the ROWS but
+    // not the data that makes displayed times airport-local: it reported
+    // "completed" while every freshly imported airport still resolved to UTC.
+    // Backfilling here, before the status flips, makes "completed" mean the
+    // catalogue is actually usable.
+    let timezonesFilled = 0;
+    try {
+      const { backfillAirportTimezones } = await import('./airportLookup');
+      timezonesFilled = await backfillAirportTimezones();
+    } catch (error) {
+      // A failed backfill must not fail the import — the rows are still worth
+      // having, and the next boot retries. Loud in the log, not fatal.
+      logger.error({
+        operation: 'seed_airports_timezone_backfill_failed',
+        message: 'Airport import finished but the timezone backfill failed',
+        error: { message: error instanceof Error ? error.message : 'Unknown error' },
+      });
+    }
+
     // Final update
     const totalCount = await prisma.airport.count();
     await updateSeedingStatus(statusId, {
@@ -361,7 +384,7 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
     logger.info({
       operation: 'seed_airports_complete',
       message: 'Airport import completed',
-      context: { imported, updated, skipped, total: imported + updated, totalCount },
+      context: { imported, updated, skipped, total: imported + updated, totalCount, timezonesFilled },
     });
 
     seedingInProgress = false;
@@ -389,6 +412,21 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
 }
 
 /**
+ * Whether the airport catalogue looks like a finished import.
+ *
+ * The guards here used to ask only whether ANY airport row existed. A seed
+ * interrupted partway therefore counted as done and was never retried, and
+ * every airport missing from the fragment silently resolved no timezone and
+ * no country — wrong times and undercounted countries, with nothing to
+ * indicate a broken catalogue. Asking for a plausible row count instead makes
+ * the truncated state self-healing on the next login.
+ */
+export async function isAirportCatalogueHealthy(): Promise<boolean> {
+  const count = await prisma.airport.count();
+  return count >= AIRPORT_CATALOGUE.MIN_HEALTHY_COUNT;
+}
+
+/**
  * Start airport seeding asynchronously
  * Returns the status ID
  */
@@ -409,12 +447,14 @@ export async function startAirportSeeding(options?: { force?: boolean }): Promis
     seedingInProgress = false;
   }
 
-  // Check if airports already exist. `force` lets admins re-seed an
-  // existing DB — the inner loop is idempotent (composite-key upsert by
-  // `(iata, isClosed)`) so re-running merely fills in any missing closed
-  // airports without touching the active set.
+  // Check whether the catalogue already looks complete. `force` lets admins
+  // re-seed an existing DB — the inner loop is idempotent (composite-key
+  // upsert by `(iata, isClosed)`) so re-running merely fills in any missing
+  // closed airports without touching the active set. A truncated catalogue
+  // (interrupted seed) falls through and seeds again rather than being
+  // recorded as complete.
   const airportCount = await prisma.airport.count();
-  if (airportCount > 0 && !options?.force) {
+  if (airportCount >= AIRPORT_CATALOGUE.MIN_HEALTHY_COUNT && !options?.force) {
     // Create a completed status if airports already exist
     try {
       const status = await prisma.airportSeedingStatus.create({
@@ -495,9 +535,11 @@ export async function getSeedingStatus(): Promise<{
   processedAirports?: number;
   error?: string;
 } | null> {
-  // Check if airports already exist (seeding not needed)
+  // Check whether the catalogue already looks complete (seeding not needed).
+  // A truncated one must not report "completed" — that is the status the
+  // admin UI uses to decide whether a re-seed is worth offering.
   const airportCount = await prisma.airport.count();
-  if (airportCount > 0) {
+  if (airportCount >= AIRPORT_CATALOGUE.MIN_HEALTHY_COUNT) {
     // Check if there's a completed status
     const completed = await prisma.airportSeedingStatus.findFirst({
       where: { status: 'completed' },

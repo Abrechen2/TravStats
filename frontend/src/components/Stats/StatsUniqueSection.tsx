@@ -233,7 +233,7 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
         </div>
       ) : (
         <div
-          className="rounded-lg shadow p-6 text-center"
+          className="rounded-lg shadow-sm p-6 text-center"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <p className="" style={{ color: "var(--text-muted)" }}>

@@ -296,6 +296,40 @@ registry.registerPath({
   },
 });
 
+/* ─────────────────────────── companions ─────────────────────────────── */
+
+const companionResponse = registry.register(
+  "Companion",
+  z
+    .object({
+      id: z.string().uuid(),
+      name: z.string(),
+      usageCount: z.number().int().describe("Flights + trips + cruises this companion is linked to"),
+    })
+    .openapi("Companion")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/companions",
+  summary: "List your companions",
+  description:
+    "Returns the authenticated user's saved companions, most used first. " +
+    "Feeds the companion picker in the flight, trip and cruise forms.",
+  tags: ["Companions"],
+  responses: {
+    200: {
+      description: "Companions",
+      content: {
+        "application/json": {
+          schema: z.object({ companions: z.array(companionResponse) }),
+        },
+      },
+    },
+    401: { description: "Missing or invalid token", content: errorContent },
+  },
+});
+
 /* ──────────────────────────── airports ──────────────────────────────── */
 
 registry.registerPath({
@@ -352,6 +386,37 @@ registry.registerPath({
     200: {
       description: "Stats",
       content: { "application/json": { schema: statsResponse } },
+    },
+  },
+});
+
+const heroStatsResponse = registry.register(
+  "HeroStats",
+  z
+    .object({
+      distanceKm: z.number().describe("Total distance flown, in km"),
+      flights: z.number(),
+      countries: z.number(),
+      airports: z.number(),
+      co2Kg: z.number(),
+      flightTimeMinutes: z.number().describe("Total flight time, in minutes"),
+    })
+    .openapi("HeroStats")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/hero",
+  summary: "Composed hero aggregate",
+  description:
+    "Single aggregate combining totals from /stats/summary, /stats/airports " +
+    "and /stats/fun, for dashboard hero widgets. All-time only (no date-range " +
+    "filtering yet).",
+  tags: ["Stats"],
+  responses: {
+    200: {
+      description: "Hero stats",
+      content: { "application/json": { schema: heroStatsResponse } },
     },
   },
 });

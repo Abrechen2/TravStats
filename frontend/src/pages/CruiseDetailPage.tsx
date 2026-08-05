@@ -68,7 +68,7 @@ export default function CruiseDetailPage(): JSX.Element {
     return (
       <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
         <NavigationBar />
-        <div className="p-6 text-[var(--text-muted)]">{t("detail.loading")}</div>
+        <div className="p-6 text-(--text-muted)">{t("detail.loading")}</div>
       </div>
     );
   }
@@ -79,11 +79,11 @@ export default function CruiseDetailPage(): JSX.Element {
         <div className="mx-auto max-w-3xl p-6">
           <button
             onClick={() => navigate("/cruises")}
-            className="text-sm text-[var(--accent)] hover:underline"
+            className="text-sm text-(--accent) hover:underline"
           >
             ← {t("list.title")}
           </button>
-          <div className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]">
+          <div className="mt-4 rounded-md border border-(--danger)/50 bg-(--danger)/10 p-4 text-sm text-(--danger)">
             {t("detail.notFound")}
           </div>
         </div>
@@ -119,13 +119,13 @@ export default function CruiseDetailPage(): JSX.Element {
       <div className="mx-auto max-w-6xl px-4 py-6">
         <button
           onClick={() => navigate("/cruises")}
-          className="mb-3 text-sm text-[var(--accent)] hover:underline"
+          className="mb-3 text-sm text-(--accent) hover:underline"
         >
           ← {t("list.title")}
         </button>
 
         {/* Ship-header strip */}
-        <div className="mb-6 flex flex-col gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--bg-surface)] p-4 md:flex-row md:items-center md:justify-between">
+        <div className="mb-6 flex flex-col gap-3 rounded-lg border border-border bg-(--bg-surface) p-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
             <div
               aria-hidden
@@ -138,25 +138,25 @@ export default function CruiseDetailPage(): JSX.Element {
               🚢
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-[var(--text-primary)]">
+              <h1 className="text-xl font-semibold text-(--text-primary)">
                 {cruise.ship?.name ?? cruise.shipNameOverride ?? "—"}
               </h1>
-              <p className="text-sm text-[var(--text-muted)]">
+              <p className="text-sm text-(--text-muted)">
                 {cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? "—"}
               </p>
               {cruise.routeName && (
-                <p className="text-sm font-medium text-[var(--text-primary)]">{cruise.routeName}</p>
+                <p className="text-sm font-medium text-(--text-primary)">{cruise.routeName}</p>
               )}
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
-            <span className="rounded-md border border-[var(--color-border)] bg-[var(--bg-base)] px-2 py-1">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-(--text-muted)">
+            <span className="rounded-md border border-border bg-(--bg-base) px-2 py-1">
               {fmtDate(cruise.startDate)} – {fmtDate(cruise.endDate)}
             </span>
-            <span className="rounded-md border border-[var(--color-border)] bg-[var(--bg-base)] px-2 py-1">
+            <span className="rounded-md border border-border bg-(--bg-base) px-2 py-1">
               {portsCount} {t("field.ports", { count: portsCount })}
             </span>
-            <span className="rounded-md border border-[var(--color-border)] bg-[var(--bg-base)] px-2 py-1">
+            <span className="rounded-md border border-border bg-(--bg-base) px-2 py-1">
               {seaDays} {t("field.sea_days", { count: seaDays })}
             </span>
             <span
@@ -168,14 +168,14 @@ export default function CruiseDetailPage(): JSX.Element {
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="rounded-md bg-[var(--accent)] px-3 py-1 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)]"
+              className="rounded-md bg-(--accent) px-3 py-1 text-sm font-medium text-neutral-900 hover:bg-(--accent-dim)"
             >
               {t("detail.edit")}
             </button>
             <button
               type="button"
               onClick={() => setConfirmingDelete(true)}
-              className="rounded-md border border-[var(--danger)]/50 px-3 py-1 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger)]/10"
+              className="rounded-md border border-(--danger)/50 px-3 py-1 text-sm font-medium text-(--danger) hover:bg-(--danger)/10"
             >
               {t("detail.delete")}
             </button>
@@ -185,29 +185,29 @@ export default function CruiseDetailPage(): JSX.Element {
         {/* Two-column body */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
           <div className="md:col-span-3">
-            <h2 className="mb-2 text-sm font-semibold text-[var(--text-muted)]">
+            <h2 className="mb-2 text-sm font-semibold text-(--text-muted)">
               {t("detail.route")}
             </h2>
             {events.length > 0 ? (
               <TripTimeline events={events} />
             ) : (
-              <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-4 py-6 text-center text-sm text-[var(--text-muted)]">
+              <div className="rounded-md border border-border bg-(--bg-surface) px-4 py-6 text-center text-sm text-(--text-muted)">
                 {t("detail.stopsEmpty")}
               </div>
             )}
           </div>
 
           <aside className="space-y-3 md:col-span-2">
-            <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-3">
-              <p className="mb-2 text-xs uppercase text-[var(--text-muted)]">{t("detail.route")}</p>
+            <div className="rounded-md border border-border bg-(--bg-surface) p-3">
+              <p className="mb-2 text-xs uppercase text-(--text-muted)">{t("detail.route")}</p>
               <CruiseRouteMap cruise={cruise} />
             </div>
 
-            <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+            <div className="rounded-md border border-border bg-(--bg-surface) p-4">
+              <h3 className="text-sm font-semibold text-(--text-primary)">
                 {t("detail.cabin")}
               </h3>
-              <dl className="mt-2 space-y-1 text-xs text-[var(--text-muted)]">
+              <dl className="mt-2 space-y-1 text-xs text-(--text-muted)">
                 <div className="flex justify-between">
                   <dt>{t("field.cabin")}</dt>
                   <dd>{cruise.cabinNumber ?? "—"}</dd>
@@ -227,11 +227,11 @@ export default function CruiseDetailPage(): JSX.Element {
               </dl>
             </div>
 
-            <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+            <div className="rounded-md border border-border bg-(--bg-surface) p-4">
+              <h3 className="text-sm font-semibold text-(--text-primary)">
                 {t("detail.costs")}
               </h3>
-              <dl className="mt-2 space-y-1 text-xs text-[var(--text-muted)]">
+              <dl className="mt-2 space-y-1 text-xs text-(--text-muted)">
                 <div className="flex justify-between">
                   <dt>{t("field.bookingReference")}</dt>
                   <dd>{cruise.bookingReference ?? "—"}</dd>
@@ -247,8 +247,8 @@ export default function CruiseDetailPage(): JSX.Element {
               </dl>
             </div>
 
-            <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+            <div className="rounded-md border border-border bg-(--bg-surface) p-4">
+              <h3 className="text-sm font-semibold text-(--text-primary)">
                 {t("detail.meta")}
               </h3>
               {cruise.tags.length > 0 && (
@@ -256,7 +256,7 @@ export default function CruiseDetailPage(): JSX.Element {
                   {cruise.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-md border border-[var(--color-border)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
+                      className="rounded-md border border-border px-2 py-0.5 text-xs text-(--text-muted)"
                     >
                       {tag}
                     </span>
@@ -264,13 +264,13 @@ export default function CruiseDetailPage(): JSX.Element {
                 </div>
               )}
               {cruise.companions.length > 0 && (
-                <p className="mt-2 text-xs text-[var(--text-muted)]">
-                  <span className="text-[var(--text-muted)]">{t("field.companions")}:</span>{" "}
+                <p className="mt-2 text-xs text-(--text-muted)">
+                  <span className="text-(--text-muted)">{t("field.companions")}:</span>{" "}
                   {cruise.companions.join(", ")}
                 </p>
               )}
               {cruise.notes !== null && cruise.notes.length > 0 && (
-                <p className="mt-2 whitespace-pre-wrap text-xs text-[var(--text-muted)]">
+                <p className="mt-2 whitespace-pre-wrap text-xs text-(--text-muted)">
                   {cruise.notes}
                 </p>
               )}
@@ -296,11 +296,11 @@ export default function CruiseDetailPage(): JSX.Element {
             role="dialog"
             aria-modal="true"
           >
-            <div className="w-full max-w-md rounded-lg border border-[var(--color-border)] bg-[var(--bg-elevated)] p-6 shadow-xl">
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+            <div className="w-full max-w-md rounded-lg border border-border bg-(--bg-elevated) p-6 shadow-xl">
+              <h3 className="text-lg font-semibold text-(--text-primary)">
                 {t("detail.deleteConfirmTitle")}
               </h3>
-              <p className="mt-2 text-sm text-[var(--text-muted)]">
+              <p className="mt-2 text-sm text-(--text-muted)">
                 {t("detail.deleteConfirmMessage")}
               </p>
               <div className="mt-5 flex justify-end gap-2">
@@ -308,7 +308,7 @@ export default function CruiseDetailPage(): JSX.Element {
                   type="button"
                   onClick={() => setConfirmingDelete(false)}
                   disabled={deleting}
-                  className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50"
+                  className="rounded-md border border-border px-4 py-2 text-sm text-(--text-muted) hover:bg-(--bg-surface) disabled:opacity-50"
                 >
                   {t("detail.deleteCancel")}
                 </button>
@@ -316,7 +316,7 @@ export default function CruiseDetailPage(): JSX.Element {
                   type="button"
                   onClick={() => void handleDelete()}
                   disabled={deleting}
-                  className="rounded-md bg-[var(--danger)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                  className="rounded-md bg-(--danger) px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
                 >
                   {t("detail.deleteConfirm")}
                 </button>

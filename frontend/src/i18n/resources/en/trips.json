@@ -56,7 +56,7 @@
     "originLabel": "Origin",
     "destinationLabel": "Destination",
     "tagsLabel": "Tags (comma separated)",
-    "companionsLabel": "Companions (comma separated)",
+    "companionsLabel": "Companions",
     "coverLabel": "Cover image",
     "notesLabel": "Notes (Markdown)",
     "notesPlaceholder": "Longer notes about the journey…",
@@ -213,6 +213,15 @@
     "notesLabel": "Notes",
     "save": "Save",
     "cancel": "Cancel"
+  },
+  "bookingEdit": {
+    "title": "Edit booking",
+    "pnr": "PNR",
+    "price": "Total price",
+    "currency": "Currency",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saved": "Booking updated"
   },
   "toasts": {
     "created": "Journey created",

@@ -32,6 +32,12 @@ export const FILE_LIMITS = {
   PDF_MAX_SIZE: 20 * 1024 * 1024, // 20 MB
   TRIP_PHOTO_MAX_SIZE: 15 * 1024 * 1024, // 15 MB per photo
   TRIP_PHOTO_MAX_COUNT: 20, // per upload request
+  // Per-asset ceiling for Immich album import. Deliberately far above
+  // TRIP_PHOTO_MAX_SIZE: imported originals (RAWs, long videos-as-images,
+  // panoramas) are legitimately large, but a single asset must not be able to
+  // fill the data volume. An asset over this is skipped and counted as a
+  // failed asset, never aborting the whole import.
+  IMMICH_MAX_ASSET_BYTES: 100 * 1024 * 1024, // 100 MB per imported asset
   // Matches the client-side check in useSettingsPage.ts (handleAvatarUpload)
   // — the client check alone is not a security control, this is the real cap.
   PROFILE_PICTURE_MAX_SIZE: 5 * 1024 * 1024, // 5 MB
@@ -114,6 +120,14 @@ export const RATE_LIMITS = {
   // Cheap to build but meant for human bug-report workflows, not scripts.
   DIAGNOSTIC_EXPORT_WINDOW_MS: 60 * 60 * 1000, // 1 hour
   DIAGNOSTIC_EXPORT_MAX: 10, // 10 per hour per user
+
+  // Immich: a single gallery render can request hundreds of tiles, so the
+  // proxy budget is deliberately generous. Imports are the opposite — rare,
+  // heavy, and worth throttling hard.
+  IMMICH_PROXY_WINDOW_MS: 60 * 1000,
+  IMMICH_PROXY_MAX: 600,
+  IMMICH_IMPORT_WINDOW_MS: 15 * 60 * 1000,
+  IMMICH_IMPORT_MAX: 20,
 } as const;
 
 // ========== DATABASE & QUERY LIMITS ==========
@@ -202,4 +216,21 @@ export const PARSER_SETTINGS = {
 // ========== FILE CLEANUP ==========
 export const CLEANUP = {
   RECEIPT_RETENTION_DAYS: 90, // days before cleaning up orphaned receipts
+} as const;
+
+// ========== AIRPORT CATALOGUE ==========
+export const AIRPORT_CATALOGUE = {
+  /**
+   * Below this row count the catalogue is treated as never having finished
+   * seeding, and the OurAirports import is (re-)started.
+   *
+   * A complete import lands ~18,000 rows. The guards used to ask only whether
+   * ANY airport existed, so a run interrupted partway left a fragment that
+   * counted as "seeded" and was never retried — measured in the wild at 57
+   * rows. Every airport outside the fragment then resolves no timezone and no
+   * country, which silently degrades displayed times, "countries visited" and
+   * the country achievements. 1,000 sits far below any complete import and far
+   * above any plausible fragment.
+   */
+  MIN_HEALTHY_COUNT: 1000,
 } as const;

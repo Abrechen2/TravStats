@@ -46,12 +46,21 @@ const DATE_FIELDS = [
   { existing: "actualArrival", local: "actualArrivalLocal", tz: "actualArrivalTz" },
 ] as const;
 
-const ARRAY_FIELDS = ["tags", "companions", "coPassengers"] as const;
+const ARRAY_FIELDS = ["tags", "coPassengers"] as const;
+
+// "companions" is handled by name (not via ARRAY_FIELDS) below. It follows
+// the exact same fill-if-empty rule as the generic array fields, but is
+// pinned explicitly on purpose: companions are also materialised as
+// FlightCompanion join rows written by the routes layer, so a future change
+// to the generic array handling (e.g. switching it to a union) must not be
+// able to silently change companion semantics too and overwrite curated
+// links or union parser output into them.
+const COMPANIONS_FIELD = "companions" as const;
 
 type StringField = (typeof STRING_FIELDS)[number];
 type NumberField = (typeof NUMBER_FIELDS)[number];
 type DateField = (typeof DATE_FIELDS)[number]["existing"];
-type ArrayField = (typeof ARRAY_FIELDS)[number];
+type ArrayField = (typeof ARRAY_FIELDS)[number] | typeof COMPANIONS_FIELD;
 
 export type MergeableField = StringField | NumberField | DateField | ArrayField;
 
@@ -122,6 +131,19 @@ export function buildFlightMergePatch(
     if (!Array.isArray(incomingArr) || incomingArr.length === 0) continue;
     (patch as Record<string, unknown>)[field] = [...incomingArr];
     mergedFields.push(field);
+  }
+
+  // companions: fill-if-empty, same rule as the generic ARRAY_FIELDS above,
+  // spelled out on purpose — see the comment on COMPANIONS_FIELD.
+  {
+    const existingCompanions = existing[COMPANIONS_FIELD];
+    const incomingCompanions = incoming[COMPANIONS_FIELD];
+    const existingIsEmpty = !Array.isArray(existingCompanions) || existingCompanions.length === 0;
+    const incomingHasValue = Array.isArray(incomingCompanions) && incomingCompanions.length > 0;
+    if (existingIsEmpty && incomingHasValue) {
+      (patch as Record<string, unknown>)[COMPANIONS_FIELD] = [...incomingCompanions];
+      mergedFields.push(COMPANIONS_FIELD);
+    }
   }
 
   // Recompute delayMinutes only if actualDeparture got merged AND we now

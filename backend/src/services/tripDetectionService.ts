@@ -46,6 +46,7 @@ import { TRIP_COLORS } from "../schemas/trip";
 import { calculateDistance } from "../utils/geo";
 import { type HomeAirportEntry, getHomeAirportAt, normalizeHistory } from "../utils/homeAirport";
 import logger from "../utils/logger";
+import { recomputeTripStatus } from "./tripStatusService";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const PNR_MAX_SPAN_DAYS = 30;
@@ -583,6 +584,15 @@ async function commitProposals(
     },
     { timeout: 30_000, maxWait: 5_000 },
   );
+
+  // Now that the transaction has committed, derive each newly-created
+  // trip's status from its just-linked flights (spec 2026-07-17-status-
+  // from-dates) — reading inside the still-open tx would see pre-link
+  // (tripId=null) rows since the trip creation and the linking updateMany
+  // both happened in that same transaction.
+  for (const c of created) {
+    await recomputeTripStatus(c.tripId);
+  }
 
   return { proposed: proposals, created, orphansRemoved: 0 };
 }

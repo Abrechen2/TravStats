@@ -22,7 +22,7 @@ export default function StatsSeatSection({ seatStats }: StatsSeatSectionProps): 
 
       {hasData ? (
         <div
-          className="rounded-lg shadow p-6"
+          className="rounded-lg shadow-sm p-6"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -91,17 +91,17 @@ export default function StatsSeatSection({ seatStats }: StatsSeatSectionProps): 
                 {
                   label: t("stats:seats.front"),
                   count: seatStats.frontCount,
-                  color: "bg-[var(--accent)]",
+                  color: "bg-(--accent)",
                 },
                 {
                   label: t("stats:seats.middleZone"),
                   count: seatStats.middleZoneCount,
-                  color: "bg-[var(--accent-dim)]",
+                  color: "bg-(--accent-dim)",
                 },
                 {
                   label: t("stats:seats.back"),
                   count: seatStats.backCount,
-                  color: "bg-[var(--accent-soft)]",
+                  color: "bg-(--accent-soft)",
                 },
               ].map((item) => {
                 const total =
@@ -209,7 +209,7 @@ export default function StatsSeatSection({ seatStats }: StatsSeatSectionProps): 
         </div>
       ) : (
         <div
-          className="rounded-lg shadow p-6 text-center"
+          className="rounded-lg shadow-sm p-6 text-center"
           style={{
             background: "var(--bg-surface)",
             border: "1px solid var(--color-border)",

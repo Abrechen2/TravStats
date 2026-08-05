@@ -9,6 +9,9 @@ import { checkAndUpdateAchievements } from '../utils/achievements';
 import { buildEffectivePortSequence } from '../shared/cruise/portSequence';
 import { computeSchematicRoute } from '../services/schematicRouter';
 import { recomputeLegsForCruise } from '../services/cruiseDistance/cruiseLegService';
+import { deriveCruiseStatus, CRUISE_PASSTHROUGH } from '../shared/statusDerivation';
+import { recomputeTripStatus } from '../services/tripStatusService';
+import { resolveCompanions, linkRowsFor } from '../services/companionService';
 import logger from '../utils/logger';
 
 interface GeometryFeature {
@@ -276,19 +279,55 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
     const parsed = createCruiseSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    const { stops, startDate, endDate, tripId, bookingId, ...rest } = parsed.data;
+    const { stops, startDate, endDate, tripId, bookingId, status, companions, ...rest } =
+      parsed.data;
+
+    const startDateUtc = startDate ? new Date(startDate) : null;
+    const endDateUtc = endDate ? new Date(endDate) : null;
+
+    // The status field is a client-sent HINT, not the source of truth (spec
+    // 2026-07-17-status-from-dates) — passthrough statuses (cancelled,
+    // historical) are assigned verbatim, everything else (including the
+    // schema's 'scheduled' default) is derived from the dates being written.
+    const effectiveStatus = (CRUISE_PASSTHROUGH as readonly string[]).includes(status)
+      ? status
+      : deriveCruiseStatus({ startDate: startDateUtc, endDate: endDateUtc, current: status });
+
+    // Resolve companion names to Companion entities up front (find-or-create
+    // is idempotent via companionService, so it's safe to run outside the
+    // transaction below — it cannot participate in a passed `tx` anyway). The
+    // cruise row and its links are written together inside the transaction so
+    // a failure never leaves the legacy `companions` array and the
+    // `companionLinks` table disagreeing. Mirrors routes/trips.ts.
+    const companionNames = companions ?? [];
+    const resolvedCompanions = await resolveCompanions(userId, companionNames);
 
     const cruise = await prisma.$transaction(async (tx) => {
       const created = await tx.cruise.create({
         data: {
           userId,
           ...rest,
-          startDate: startDate ? new Date(startDate) : null,
-          endDate: endDate ? new Date(endDate) : null,
+          status: effectiveStatus,
+          startDate: startDateUtc,
+          endDate: endDateUtc,
           tripId: tripId ?? null,
           bookingId: bookingId ?? null,
+          // Dual write: resolved display names keep this legacy array in
+          // agreement with `companionLinks` below (trimmed, blanks dropped,
+          // newest spelling wins) — the previous image still reads this column.
+          companions: resolvedCompanions.map((c) => c.displayName),
         },
       });
+
+      if (resolvedCompanions.length > 0) {
+        await tx.cruiseCompanion.createMany({
+          data: linkRowsFor(resolvedCompanions.map((c) => c.id)).map((row) => ({
+            ...row,
+            cruiseId: created.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
 
       if (stops && stops.length > 0) {
         await tx.cruiseStop.createMany({
@@ -310,12 +349,27 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
       return tx.cruise.findUniqueOrThrow({ where: { id: created.id }, include: CRUISE_INCLUDE });
     });
 
-    checkAndUpdateAchievements(userId).catch((err) => {
+    // Status derivation (spec 2026-07-17-status-from-dates) needs to read
+    // the cruise it just linked, so recomputeTripStatus() runs AFTER the
+    // transaction commits — same after-commit idiom as flightsBatch.ts.
+    if (cruise.tripId) {
+      await recomputeTripStatus(cruise.tripId);
+    }
+
+    // Await the recalc (was fire-and-forget). Its $transaction on
+    // user_achievement rows must commit before the response returns — a
+    // leaked, un-awaited transaction outlived the request and deadlocked
+    // (40P01) against the next mutation or the test teardown cascade, and
+    // could silently drop an achievement update on a rapid double-mutation
+    // for one user. Mirrors the awaited try/catch in flights.ts.
+    try {
+      await checkAndUpdateAchievements(userId);
+    } catch (achErr) {
       logger.error({
         operation: 'cruise_achievement_check_failed',
-        error: err instanceof Error ? err.message : err,
+        error: achErr instanceof Error ? achErr.message : achErr,
       });
-    });
+    }
 
     logger.info({ operation: 'cruise_create', cruiseId: cruise.id, userId });
     res.status(201).json({ success: true, data: cruise });
@@ -333,16 +387,80 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
     const parsed = updateCruiseSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    const { stops, startDate, endDate, ...rest } = parsed.data;
+    const { stops, startDate, endDate, status: requestedStatus, companions, ...rest } =
+      parsed.data;
+
+    const nextStartDate =
+      startDate === undefined ? undefined : startDate ? new Date(startDate) : null;
+    const nextEndDate = endDate === undefined ? undefined : endDate ? new Date(endDate) : null;
+
+    // The status field is a client-sent HINT, not the source of truth (spec
+    // 2026-07-17-status-from-dates). Derive from the FINAL start/end values —
+    // an update may move dates without sending status, or send status
+    // without moving dates — merged with the existing row's stored dates.
+    const isRequestedPassthrough =
+      requestedStatus !== undefined &&
+      (CRUISE_PASSTHROUGH as readonly string[]).includes(requestedStatus);
+    const currentIsPassthrough = (CRUISE_PASSTHROUGH as readonly string[]).includes(
+      existing.status,
+    );
+    let effectiveStatus: string | undefined;
+    if (isRequestedPassthrough) {
+      // Passthrough statuses are always assigned verbatim.
+      effectiveStatus = requestedStatus;
+    } else if (requestedStatus === undefined && currentIsPassthrough) {
+      // Stored status is passthrough and no status field arrived — leave it
+      // alone. A bare date edit must never pull a cancelled/historical
+      // cruise back into the derived scheduled/in_progress/flown lifecycle.
+      effectiveStatus = undefined;
+    } else {
+      const finalStart = nextStartDate !== undefined ? nextStartDate : existing.startDate;
+      const finalEnd = nextEndDate !== undefined ? nextEndDate : existing.endDate;
+      effectiveStatus = deriveCruiseStatus({
+        startDate: finalStart,
+        endDate: finalEnd,
+        current: requestedStatus ?? existing.status,
+      });
+    }
+
+    // Replace rather than append — an update always carries the FULL
+    // companion list for the cruise, so stale links must go. Resolution
+    // itself (find-or-create against Companion) is idempotent and safe to
+    // run here, outside any transaction — same reasoning as the create
+    // handler. The actual link replacement is deferred and run together
+    // with the `cruise.update` call below inside one `prisma.$transaction`,
+    // so a failure between the two never leaves the legacy array and
+    // `companionLinks` disagreeing (undefined here means "untouched": the
+    // companions field was not part of this update at all).
+    let resolvedCompanionsForUpdate: { id: string; displayName: string }[] | undefined;
+    if (companions !== undefined) {
+      resolvedCompanionsForUpdate = await resolveCompanions(userId, companions);
+    }
 
     const updated = await prisma.$transaction(async (tx) => {
+      if (resolvedCompanionsForUpdate !== undefined) {
+        await tx.cruiseCompanion.deleteMany({ where: { cruiseId: existing.id } });
+        if (resolvedCompanionsForUpdate.length > 0) {
+          await tx.cruiseCompanion.createMany({
+            data: linkRowsFor(resolvedCompanionsForUpdate.map((c) => c.id)).map((row) => ({
+              ...row,
+              cruiseId: existing.id,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
       await tx.cruise.update({
         where: { id: existing.id },
         data: {
           ...rest,
-          startDate:
-            startDate === undefined ? undefined : startDate ? new Date(startDate) : null,
-          endDate: endDate === undefined ? undefined : endDate ? new Date(endDate) : null,
+          status: effectiveStatus,
+          startDate: nextStartDate,
+          endDate: nextEndDate,
+          ...(resolvedCompanionsForUpdate !== undefined && {
+            companions: resolvedCompanionsForUpdate.map((c) => c.displayName),
+          }),
         },
       });
 
@@ -376,12 +494,34 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
       return tx.cruise.findUniqueOrThrow({ where: { id: existing.id }, include: CRUISE_INCLUDE });
     });
 
-    checkAndUpdateAchievements(userId).catch((err) => {
+    // Status derivation (spec 2026-07-17-status-from-dates) needs to read
+    // the FINAL linked cruise, so recomputeTripStatus() runs AFTER the
+    // transaction commits. Covers both a plain date/status edit on an
+    // already-linked cruise AND a tripId move — recompute whichever of the
+    // old/new trip the cruise was or is now linked to (both, if it moved).
+    const oldTripId = existing.tripId;
+    const newTripId = 'tripId' in rest ? (rest.tripId ?? null) : oldTripId;
+    const tripIdsToRecompute = new Set<string>();
+    if (oldTripId) tripIdsToRecompute.add(oldTripId);
+    if (newTripId) tripIdsToRecompute.add(newTripId);
+    for (const id of tripIdsToRecompute) {
+      await recomputeTripStatus(id);
+    }
+
+    // Await the recalc (was fire-and-forget). Its $transaction on
+    // user_achievement rows must commit before the response returns — a
+    // leaked, un-awaited transaction outlived the request and deadlocked
+    // (40P01) against the next mutation or the test teardown cascade, and
+    // could silently drop an achievement update on a rapid double-mutation
+    // for one user. Mirrors the awaited try/catch in flights.ts.
+    try {
+      await checkAndUpdateAchievements(userId);
+    } catch (achErr) {
       logger.error({
         operation: 'cruise_achievement_check_failed',
-        error: err instanceof Error ? err.message : err,
+        error: achErr instanceof Error ? achErr.message : achErr,
       });
-    });
+    }
 
     res.json({ success: true, data: updated });
   } catch (err) {

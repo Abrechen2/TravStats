@@ -11,6 +11,41 @@ import logger from './logger';
 export type FlightTimeSemantics = 'UTC' | 'DATE_ONLY' | 'LEGACY_FAKE_UTC' | 'UNKNOWN';
 
 /**
+ * Calendar date (YYYY-MM-DD) of an instant as seen in `timezone`.
+ * Falls back to the UTC date when no timezone is known — stored times are
+ * local wall-clock encoded as fake-UTC, so that fallback lands on the right
+ * day for same-timezone flights.
+ */
+export function toLocalDateString(date: Date, timezone: string | null): string {
+  if (!timezone) {
+    return date.toISOString().split('T')[0];
+  }
+  try {
+    // en-CA formats as YYYY-MM-DD.
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
+  } catch {
+    return date.toISOString().split('T')[0];
+  }
+}
+
+/**
+ * Calendar YEAR of an instant as seen in `timezone`.
+ *
+ * "Which countries did I visit in 2025" has to be answered on the clock at
+ * the airport, not on the UTC instant and not in the viewer's browser: a
+ * 22:30 departure from New York on 31 December is already 1 January in UTC,
+ * and filing it under the following year would be wrong for the traveller.
+ */
+export function localYearOf(date: Date, timezone: string | null): number {
+  return Number.parseInt(toLocalDateString(date, timezone).slice(0, 4), 10);
+}
+
+/**
  * Convert a legacy "fake-UTC" timestamp (wall-clock encoded as UTC) into a
  * real UTC instant by re-interpreting the stored components as the airport's
  * local time and applying the airport timezone offset.

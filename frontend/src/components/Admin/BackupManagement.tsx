@@ -63,7 +63,7 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.El
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
+      <div className="bg-(--bg-surface) rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
         <h2 className="text-2xl font-bold mb-4" style={{ color: "var(--danger)" }}>
           ⚠️ {t("admin:backup.restore.title")}
         </h2>
@@ -129,7 +129,7 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.El
               placeholder={t("admin:backup.restore.targetDatabaseUrlPlaceholder")}
               className="input"
             />
-            <p className="text-sm text-[var(--text-muted)] mt-1">
+            <p className="text-sm text-(--text-muted) mt-1">
               {t("admin:backup.restore.targetDatabaseUrlHelp")}
             </p>
           </div>
@@ -392,10 +392,10 @@ export default function BackupManagement(): JSX.Element {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-[var(--text-primary)]">
+          <h2 className="text-2xl font-bold text-(--text-primary)">
             {t("admin:backup.title")}
           </h2>
-          <p className="text-sm text-[var(--text-muted)] mt-1">{t("admin:backup.description")}</p>
+          <p className="text-sm text-(--text-muted) mt-1">{t("admin:backup.description")}</p>
         </div>
         <button
           onClick={handleCreateBackup}
@@ -434,13 +434,13 @@ export default function BackupManagement(): JSX.Element {
       />
 
       {/* Backup Schedule Settings */}
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6 mb-6">
+      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+            <h3 className="text-lg font-semibold text-(--text-primary)">
               {t("admin:backup.schedule.title")}
             </h3>
-            <p className="text-sm text-[var(--text-muted)] mt-1">
+            <p className="text-sm text-(--text-muted) mt-1">
               {t("admin:backup.schedule.description")}
             </p>
           </div>
@@ -460,15 +460,15 @@ export default function BackupManagement(): JSX.Element {
               onChange={(e) =>
                 setBackupSettings({ ...backupSettings, backupEnabled: e.target.checked })
               }
-              className="w-4 h-4 rounded"
+              className="w-4 h-4 rounded-sm"
             />
-            <span className="text-sm font-medium text-[var(--text-primary)]">
+            <span className="text-sm font-medium text-(--text-primary)">
               {t("admin:backup.schedule.enableAutoBackup")}
             </span>
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+              <label className="block text-sm font-medium text-(--text-primary) mb-1">
                 {t("admin:backup.schedule.interval")}
               </label>
               <select
@@ -488,7 +488,7 @@ export default function BackupManagement(): JSX.Element {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+              <label className="block text-sm font-medium text-(--text-primary) mb-1">
                 {t("admin:backup.schedule.retentionDays")}
               </label>
               <input
@@ -521,44 +521,44 @@ export default function BackupManagement(): JSX.Element {
         </div>
       )}
 
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow overflow-x-auto">
+      <div className="bg-(--bg-surface) rounded-lg shadow-sm overflow-x-auto">
         <table className="min-w-full divide-y" style={{ borderColor: "var(--color-border)" }}>
-          <thead className="bg-[var(--bg-base)]">
+          <thead className="bg-(--bg-base)">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
                 {t("admin:backup.table.date")}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
                 {t("admin:backup.table.status")}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
                 {t("admin:backup.table.size")}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
                 {t("admin:backup.table.type")}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
                 {t("admin:backup.table.cloud")}
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-right text-xs font-medium text-(--text-muted) uppercase tracking-wider">
                 {t("common:labels.actions")}
               </th>
             </tr>
           </thead>
           <tbody
-            className="bg-[var(--bg-surface)] divide-y"
+            className="bg-(--bg-surface) divide-y"
             style={{ borderColor: "var(--color-border)" }}
           >
             {backups.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-[var(--text-muted)]">
+                <td colSpan={6} className="px-6 py-4 text-center text-(--text-muted)">
                   {t("admin:backup.noBackups")}
                 </td>
               </tr>
             ) : (
               backups.map((backup) => (
                 <tr key={backup.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--text-primary)]">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-primary)">
                     {formatDate(backup.completedAt || backup.startedAt)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -566,19 +566,19 @@ export default function BackupManagement(): JSX.Element {
                       {getStatusText(backup.status)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--text-muted)]">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-muted)">
                     {backup.status === "completed" ? formatSize(backup.size) : "-"}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--text-muted)]">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-muted)">
                     {backup.type === "full"
                       ? t("admin:backup.type.full")
                       : t("admin:backup.type.partial")}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--text-muted)]">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-muted)">
                     {backup.syncedToCloud ? (
                       <span style={{ color: "var(--success)" }}>✓</span>
                     ) : (
-                      <span className="text-[var(--text-muted)]">-</span>
+                      <span className="text-(--text-muted)">-</span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

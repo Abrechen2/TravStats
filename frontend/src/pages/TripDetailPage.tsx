@@ -4,16 +4,21 @@ import { differenceInCalendarDays } from "date-fns";
 import { tripsApi } from "../lib/api";
 import { formatDateInTimezone } from "../lib/dateUtils";
 import { logger } from "../lib/logger";
+import { sumByCurrency, tripCostSources } from "../lib/bookingCost";
+import { formatDateTimeInTimezone } from "../lib/dateUtils";
+import { useSettingsStore } from "../store/settingsStore";
+import { computeRailStates } from "../lib/timelineRail";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useTranslation } from "../hooks/useTranslation";
-import type { Trip, TripJournalEntry, TripStatus, TripStop } from "../types";
+import type { Booking, Trip, TripJournalEntry, TripStatus, TripStop } from "../types";
 import PageTransition from "../components/PageTransition";
 import NavigationBar from "../components/NavigationBar";
 import TripModal from "../components/Trips/TripModal";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
 import JournalViewModal from "../components/Trips/JournalViewModal";
 import StopModal from "../components/Trips/StopModal";
+import BookingEditModal from "../components/Trips/BookingEditModal";
 import TripMap from "../components/Trips/TripMap";
 import TripGallery from "../components/Trips/TripGallery";
 import TripSummaryPanel from "../components/Trips/TripSummaryPanel";
@@ -120,9 +125,7 @@ export default function TripDetailPage(): JSX.Element {
         style={{ background: "var(--bg-base)", color: "var(--text-muted)" }}
       >
         <NavigationBar />
-        <div className="flex items-center justify-center py-20">
-          {t("common:loading.default")}
-        </div>
+        <div className="flex items-center justify-center py-20">{t("common:loading.default")}</div>
       </div>
     );
   }
@@ -182,10 +185,13 @@ export default function TripDetailPage(): JSX.Element {
             <TripGallery
               tripId={shownTrip.id}
               photos={shownTrip.photos ?? []}
+              immichAlbums={shownTrip.immichAlbums ?? []}
               onChange={() => void load()}
             />
           )}
-          {tab === "logistics" && <LogisticsTab trip={shownTrip} t={t} />}
+          {tab === "logistics" && (
+            <LogisticsTab trip={shownTrip} t={t} onChanged={() => void load()} />
+          )}
         </div>
       </div>
 
@@ -307,7 +313,7 @@ function TripHero({ trip, locale, t, onEdit, onDelete }: TripHeroProps): JSX.Ele
           🗑
         </button>
       </div>
-      <div className="absolute bottom-0 left-0 right-0 max-w-7xl mx-auto px-4 pb-5 z-[1]">
+      <div className="absolute bottom-0 left-0 right-0 max-w-7xl mx-auto px-4 pb-5 z-1">
         <Link
           to="/trips"
           className="inline-flex items-center gap-1 text-xs mb-3"
@@ -376,7 +382,7 @@ function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
             <button
               key={key}
               onClick={() => onChange(key)}
-              className="px-4 py-3.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 hover:text-[var(--text-primary)]"
+              className="px-4 py-3.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 hover:text-(--text-primary)"
               style={{
                 color: isActive ? "var(--accent)" : "var(--text-secondary)",
                 borderColor: isActive ? "var(--accent)" : "transparent",
@@ -449,7 +455,7 @@ function OverviewTab({
                 {trip.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-2 py-0.5 rounded text-xs"
+                    className="px-2 py-0.5 rounded-sm text-xs"
                     style={{
                       background: "var(--bg-muted)",
                       color: "var(--text-muted)",
@@ -467,7 +473,7 @@ function OverviewTab({
                 {trip.countries.map((cc) => (
                   <span
                     key={cc}
-                    className="px-2 py-0.5 rounded"
+                    className="px-2 py-0.5 rounded-sm"
                     style={{
                       background: "var(--bg-muted)",
                       color: "var(--text-muted)",
@@ -544,6 +550,8 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
   const [editingJournal, setEditingJournal] = useState<TripJournalEntry | null>(null);
   const [viewingJournal, setViewingJournal] = useState<TripJournalEntry | null>(null);
   const [editingStop, setEditingStop] = useState<TripStop | null>(null);
+  // Only a fallback: a flight whose airport record lacks an IANA zone.
+  const userTz = useSettingsStore((s) => s.display?.timezone) || "UTC";
 
   const events = useMemo<TimelineEvent[]>(() => {
     const out: TimelineEvent[] = [];
@@ -554,9 +562,14 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
         kind: "flight",
         date: f.departureTime,
         title: `${f.depIata ?? "???"} → ${f.arrIata ?? "???"}`,
+        // Airport-local, not the viewer's clock. `toLocaleString()` rendered a
+        // JFK arrival in Europe/Berlin, so the same flight read 13:45 in the
+        // flights table and 19:45 here — six hours apart from the boarding
+        // pass. Each end is formatted against its own airport's zone, with the
+        // stored time semantics so a DATE_ONLY historical row keeps its date.
         subtitle: f.arrivalTime
-          ? `${new Date(f.departureTime).toLocaleString()} → ${new Date(f.arrivalTime).toLocaleString()}`
-          : new Date(f.departureTime).toLocaleString(),
+          ? `${formatDateTimeInTimezone(f.departureTime, f.depTimezone || userTz, f.depTimeSemantics)} → ${formatDateTimeInTimezone(f.arrivalTime, f.arrTimezone || userTz, f.arrTimeSemantics)}`
+          : formatDateTimeInTimezone(f.departureTime, f.depTimezone || userTz, f.depTimeSemantics),
       });
     }
     for (const c of trip.cruises ?? []) {
@@ -603,6 +616,15 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
     return out.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [trip]);
 
+  // Past/upcoming is shown on the rail (line + dots), not by graying out
+  // entries — see #184. Recomputed per render; a page-lifetime "now" is fine.
+  const railStates = useMemo(() => {
+    return computeRailStates(
+      events.map((ev) => ev.date),
+      Date.now()
+    );
+  }, [events]);
+
   const empty = events.length === 0;
 
   const handleDeleteJournal = async (entry: TripJournalEntry): Promise<void> => {
@@ -635,7 +657,7 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
         <button
           type="button"
           onClick={() => setAdding("journal")}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-(--accent) hover:text-(--accent)"
           style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
         >
           {t("trips:detail.timeline.addJournal")}
@@ -643,7 +665,7 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
         <button
           type="button"
           onClick={() => setAdding("stop")}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-(--accent) hover:text-(--accent)"
           style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
         >
           {t("trips:detail.timeline.addStop")}
@@ -653,91 +675,92 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
       {empty ? (
         <Placeholder text={t("trips:detail.timeline.noEvents")} />
       ) : (
-        <ol
-          className="relative pl-7"
-          style={{ listStyle: "none", margin: 0 }}
-        >
+        <ol className="relative pl-7" style={{ listStyle: "none", margin: 0 }}>
           {events.map((ev, i) => {
             const isFirst = i === 0;
             const isLast = i === events.length - 1;
+            const rail = railStates[i];
             return (
-            <li
-              key={ev.id}
-              className="relative"
-              style={{ marginBottom: isLast ? 0 : 12 }}
-            >
-              {/*
+              <li key={ev.id} className="relative" style={{ marginBottom: isLast ? 0 : 12 }}>
+                {/*
                 Connector line drawn as two half-segments per item so it runs
                 exactly dot-to-dot with no stub above the first or below the
                 last dot (regardless of card height). `bottom: -12` bridges the
                 12px marginBottom gap to the next item's top edge.
               */}
-              {!isFirst && (
-                <span
-                  aria-hidden
-                  className="absolute"
-                  style={{
-                    left: -18,
-                    top: 0,
-                    bottom: "50%",
-                    width: 2,
-                    transform: "translateX(-50%)",
-                    background: "var(--color-border)",
-                  }}
-                />
-              )}
-              {!isLast && (
-                <span
-                  aria-hidden
-                  className="absolute"
-                  style={{
-                    left: -18,
-                    top: "50%",
-                    bottom: -12,
-                    width: 2,
-                    transform: "translateX(-50%)",
-                    background: "var(--color-border)",
-                  }}
-                />
-              )}
-              {/*
+                {!isFirst && (
+                  <span
+                    aria-hidden
+                    data-testid="timeline-rail-top"
+                    data-filled={rail.topFilled}
+                    className="absolute"
+                    style={{
+                      left: -18,
+                      top: 0,
+                      bottom: "50%",
+                      width: 2,
+                      transform: "translateX(-50%)",
+                      background: rail.topFilled ? "var(--accent)" : "var(--color-border)",
+                    }}
+                  />
+                )}
+                {!isLast && (
+                  <span
+                    aria-hidden
+                    data-testid="timeline-rail-bottom"
+                    data-filled={rail.bottomFilled}
+                    className="absolute"
+                    style={{
+                      left: -18,
+                      top: "50%",
+                      bottom: -12,
+                      width: 2,
+                      transform: "translateX(-50%)",
+                      background: rail.bottomFilled ? "var(--accent)" : "var(--color-border)",
+                    }}
+                  />
+                )}
+                {/*
                 Dot: filled, vertically centered on the card (the li tightly
                 wraps its card, so top:50% is the card's centre) and horizontally
                 centered on the connector line. The base-coloured ring masks the
-                line where it passes behind the dot.
+                line where it passes behind the dot. Past events keep their
+                domain colour; upcoming ones stay neutral (#184).
               */}
-              <span
-                aria-hidden
-                className="absolute w-3 h-3 rounded-full"
-                style={{
-                  left: -18,
-                  top: "50%",
-                  transform: "translate(-50%, -50%)",
-                  background: dotColor(ev),
-                  boxShadow: "0 0 0 3px var(--bg-base)",
-                }}
-              />
-              {ev.kind === "flight" && <FlightCard ev={ev} />}
-              {ev.kind === "cruise" && <CruiseCard ev={ev} />}
-              {(ev.kind === "lodging-checkin" || ev.kind === "lodging-checkout") && (
-                <LodgingCheckCard ev={ev} t={t} />
-              )}
-              {ev.kind === "stop" && (
-                <StopCard
-                  ev={ev}
-                  onEdit={() => setEditingStop(ev.stop)}
-                  onDelete={() => void handleDeleteStop(ev.stop)}
+                <span
+                  aria-hidden
+                  data-testid="timeline-rail-dot"
+                  data-past={rail.dotPast}
+                  className="absolute w-3 h-3 rounded-full"
+                  style={{
+                    left: -18,
+                    top: "50%",
+                    transform: "translate(-50%, -50%)",
+                    background: rail.dotPast ? dotColor(ev) : "var(--color-border)",
+                    boxShadow: "0 0 0 3px var(--bg-base)",
+                  }}
                 />
-              )}
-              {ev.kind === "journal" && (
-                <JournalCard
-                  ev={ev}
-                  onView={() => setViewingJournal(ev.entry)}
-                  onEdit={() => setEditingJournal(ev.entry)}
-                  onDelete={() => void handleDeleteJournal(ev.entry)}
-                />
-              )}
-            </li>
+                {ev.kind === "flight" && <FlightCard ev={ev} />}
+                {ev.kind === "cruise" && <CruiseCard ev={ev} />}
+                {(ev.kind === "lodging-checkin" || ev.kind === "lodging-checkout") && (
+                  <LodgingCheckCard ev={ev} t={t} />
+                )}
+                {ev.kind === "stop" && (
+                  <StopCard
+                    ev={ev}
+                    onEdit={() => setEditingStop(ev.stop)}
+                    onDelete={() => void handleDeleteStop(ev.stop)}
+                  />
+                )}
+                {ev.kind === "journal" && (
+                  <JournalCard
+                    ev={ev}
+                    onView={() => setViewingJournal(ev.entry)}
+                    onEdit={() => setEditingJournal(ev.entry)}
+                    onDelete={() => void handleDeleteJournal(ev.entry)}
+                  />
+                )}
+              </li>
             );
           })}
         </ol>
@@ -1001,7 +1024,7 @@ function RowActions({
         <button
           type="button"
           onClick={onView}
-          className="text-[11px] px-1.5 py-0.5 rounded"
+          className="text-[11px] px-1.5 py-0.5 rounded-sm"
           style={{ color: "var(--text-muted)" }}
           aria-label="view"
           title="view"
@@ -1012,7 +1035,7 @@ function RowActions({
       <button
         type="button"
         onClick={onEdit}
-        className="text-[11px] px-1.5 py-0.5 rounded"
+        className="text-[11px] px-1.5 py-0.5 rounded-sm"
         style={{ color: "var(--text-muted)" }}
         aria-label="edit"
         title="edit"
@@ -1022,7 +1045,7 @@ function RowActions({
       <button
         type="button"
         onClick={onDelete}
-        className="text-[11px] px-1.5 py-0.5 rounded"
+        className="text-[11px] px-1.5 py-0.5 rounded-sm"
         style={{ color: "var(--danger, #f87171)" }}
         aria-label="delete"
         title="delete"
@@ -1043,16 +1066,18 @@ function truncate(text: string, n: number): string {
 function LogisticsTab({
   trip,
   t,
+  onChanged,
 }: {
   trip: Trip;
   t: ReturnType<typeof useTranslation>["t"];
+  onChanged: () => void;
 }): JSX.Element {
   const flights = trip.flights ?? [];
   const cruises = trip.cruises ?? [];
   const bookings = trip.bookings ?? [];
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
 
-  const totalCost = bookings.reduce((sum, b) => sum + (b.price ?? 0), 0);
-  const currency = bookings.find((b) => b.currency)?.currency ?? "EUR";
+  const costTotals = sumByCurrency(bookings);
 
   if (flights.length === 0 && cruises.length === 0 && bookings.length === 0) {
     return <Placeholder text={t("trips:detail.noLinks")} />;
@@ -1155,11 +1180,11 @@ function LogisticsTab({
         >
           <PanelHeader>
             {t("trips:detail.logistics.bookings")} ({bookings.length})
-            {totalCost > 0 && (
+            {costTotals.length > 0 && (
               <span className="ml-2 text-xs font-normal" style={{ color: "var(--text-muted)" }}>
                 · {t("trips:detail.logistics.totalBooked")}:{" "}
                 <strong style={{ color: "var(--text-primary)" }}>
-                  {currency} {Math.round(totalCost)}
+                  {costTotals.map((c) => `${c.currency} ${Math.round(c.total)}`).join(" + ")}
                 </strong>
               </span>
             )}
@@ -1172,6 +1197,7 @@ function LogisticsTab({
               >
                 <th className="text-left px-4 py-2">PNR</th>
                 <th className="text-right px-4 py-2">Preis</th>
+                <th className="text-right px-4 py-2"></th>
               </tr>
             </thead>
             <tbody>
@@ -1181,11 +1207,44 @@ function LogisticsTab({
                   <td className="px-4 py-2.5 text-right">
                     {b.price != null ? `${b.currency ?? "EUR"} ${b.price.toFixed(2)}` : "—"}
                   </td>
+                  <td className="px-4 py-2.5 text-right">
+                    <button
+                      type="button"
+                      onClick={() => setEditingBooking(b)}
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-sm hover:bg-(--bg-muted) hover:text-[#388bfd]"
+                      style={{ color: "var(--text-muted)" }}
+                      aria-label={t("trips:bookingEdit.title")}
+                      title={t("trips:bookingEdit.title")}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.8}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                      </svg>
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {editingBooking && (
+        <BookingEditModal
+          booking={editingBooking}
+          onClose={() => setEditingBooking(null)}
+          onSaved={() => {
+            setEditingBooking(null);
+            onChanged();
+          }}
+        />
       )}
     </div>
   );
@@ -1208,8 +1267,7 @@ function TripStatsRow({
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
   const cruiseCount = trip._count?.cruises ?? trip.cruises?.length ?? 0;
   const lodgingCount = trip._count?.lodgingStays ?? trip.lodgingStays?.length ?? 0;
-  const totalCost = trip.bookings?.reduce((sum, b) => sum + (b.price ?? 0), 0) ?? 0;
-  const currency = trip.bookings?.find((b) => b.currency)?.currency ?? "EUR";
+  const costTotals = sumByCurrency(tripCostSources(trip.bookings ?? [], trip.flights ?? []));
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -1219,7 +1277,11 @@ function TripStatsRow({
       <StatTile value={trip.countries.length} label={t("trips:detail.stats.countries")} />
       <StatTile value={trip.companions.length} label={t("trips:detail.stats.companions")} />
       <StatTile
-        value={totalCost > 0 ? `${currency} ${Math.round(totalCost)}` : "—"}
+        value={
+          costTotals.length > 0
+            ? costTotals.map((c) => `${c.currency} ${Math.round(c.total)}`).join(" + ")
+            : "—"
+        }
         label={t("trips:totalCost")}
       />
       <StatTile value={trip.tags.length} label={t("trips:detail.stats.tags")} />

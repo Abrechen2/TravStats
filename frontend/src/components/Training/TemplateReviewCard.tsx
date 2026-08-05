@@ -91,7 +91,7 @@ export default function TemplateReviewCard({
         {template.status !== "active" && (
           <button
             onClick={handleActivate}
-            className="rounded px-3 py-1 text-sm text-white"
+            className="rounded-sm px-3 py-1 text-sm text-white"
             style={{ background: "var(--success)" }}
           >
             {t("training:activate")}
@@ -100,7 +100,7 @@ export default function TemplateReviewCard({
         {template.status === "active" && (
           <button
             onClick={handleDisable}
-            className="rounded px-3 py-1 text-sm"
+            className="rounded-sm px-3 py-1 text-sm"
             style={{
               background: "var(--bg-elevated)",
               color: "var(--text-muted)",

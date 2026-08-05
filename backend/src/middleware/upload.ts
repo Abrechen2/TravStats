@@ -226,6 +226,10 @@ export const uploadEmailFile = multer({
   },
 });
 
+export function getEmailUploadDir(): string {
+  return EMAIL_UPLOAD_DIR;
+}
+
 // =============== Trip photos (iter 7) ===============
 
 const TRIP_PHOTO_DIR = path.join(__dirname, '../../uploads/trip-photos');

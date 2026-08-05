@@ -29,8 +29,8 @@ describe("resolveAirlineDisplay", () => {
   });
 
   it("renders an unknown code raw, never empty or 'undefined'", () => {
-    expect(resolveAirlineDisplay({ airline: "ZZZ" })).toBe("ZZZ");
-    expect(resolveAirlineDisplay({ airline: "ZZ" })).toBe("ZZ");
+    expect(resolveAirlineDisplay({ airline: "QQQ" })).toBe("QQQ");
+    expect(resolveAirlineDisplay({ airline: "Q0" })).toBe("Q0");
   });
 
   it("falls back to the flight number prefix when airline is empty", () => {
@@ -64,7 +64,28 @@ describe("resolveAirlineIata", () => {
   });
 
   it("returns undefined for an unknown code", () => {
-    expect(resolveAirlineIata({ airline: "ZZZ" })).toBeUndefined();
+    expect(resolveAirlineIata({ airline: "QQQ" })).toBeUndefined();
+  });
+
+  it("resolves a full airline name via the catalogue", () => {
+    expect(resolveAirlineIata({ airline: "Lufthansa" })).toBe("LH");
+    expect(resolveAirlineIata({ airline: "  lufthansa " })).toBe("LH");
+  });
+
+  it("derives a catalogue-known IATA prefix from the flight number", () => {
+    expect(resolveAirlineIata({ flightNumber: "LH2462" })).toBe("LH");
+  });
+
+  it("does not derive from a flight number with an unknown prefix", () => {
+    expect(resolveAirlineIata({ flightNumber: "Q0999" })).toBeUndefined();
+  });
+
+  it("does not let the flight number override a structured code", () => {
+    expect(resolveAirlineIata({ airlineIata: "EW", flightNumber: "LH123" })).toBe("EW");
+  });
+
+  it("returns undefined for an unknown airline name", () => {
+    expect(resolveAirlineIata({ airline: "Some Unknown Carrier" })).toBeUndefined();
   });
 });
 
@@ -74,6 +95,6 @@ describe("getAirlineFromFlightNumber", () => {
   });
 
   it("returns null for an unknown prefix", () => {
-    expect(getAirlineFromFlightNumber("ZZ123")).toBeNull();
+    expect(getAirlineFromFlightNumber("Q0123")).toBeNull();
   });
 });

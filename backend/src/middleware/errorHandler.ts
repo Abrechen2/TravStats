@@ -107,6 +107,16 @@ export const errorHandler = async (
     });
   }
 
+  // Prisma unique-constraint violations → 409. Without this mapping a
+  // duplicate iata/icao/unlocode create falls through to the generic branch
+  // and leaks Prisma's raw multi-line error text to the client as a 500.
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+    return res.status(409).json({
+      error: 'Ein Eintrag mit diesem Wert existiert bereits.',
+      code: 'DUPLICATE',
+    });
+  }
+
   // Custom API errors
   const statusCode = (err as ApiError).statusCode || 500;
   const message = err.message || 'Internal server error';

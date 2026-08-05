@@ -142,7 +142,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   }, [mapLoaded, bboxPoints]);
 
   return (
-    <div className="relative h-64 w-full overflow-hidden rounded-md border border-[var(--color-border)]">
+    <div className="relative h-64 w-full overflow-hidden rounded-md border border-border">
       <MapGL
         ref={mapRef}
         reuseMaps

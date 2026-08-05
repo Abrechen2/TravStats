@@ -53,6 +53,7 @@ model User {
   lodgingStays         LodgingStay[]
   lodgingMemberships   LodgingMembership[]
   lodgingImportBatches LodgingImportBatch[]
+  companions           Companion[]
 
   @@map("users")
 }
@@ -139,6 +140,10 @@ model Airport {
   /// flights — the UI just marks them visually.
   isClosed Boolean @default(false) @map("is_closed")
 
+  /// Manually added via the admin master-data page (#191). Same invariant as
+  /// Ship/Port/Airline/Aircraft: the CSV re-seed never overwrites these rows.
+  isUserAdded Boolean @default(false) @map("is_user_added")
+
   // Composite uniqueness on (code, isClosed) lets the same IATA or ICAO
   // exist twice — once for the active airport and once for its closed
   // predecessor (e.g. Munich Airport EDDM/MUC + Munich-Riem EDDM/MUC).
@@ -193,7 +198,11 @@ model Flight {
   currency           String?   @default("EUR") @map("currency")
   taxes              Float?    @map("taxes")
   fees               Float?    @map("fees")
-  category           String?   @default("private") @map("category") // business, private, vacation
+  // No column default: category is genuinely optional. The old
+  // @default("private") silently classified every API import that omitted
+  // the field, while the UI suggested "business" — two systems, two
+  // opinions, neither of them the user's (dropped 2026-08-02).
+  category           String?   @map("category") // business, private, vacation
   tags               String[]  @default([]) @map("tags")
   companions         String[]  @default([]) @map("companions") // User-defined travel group (set manually, vs. coPassengers = auto-parsed from email)
   receiptUrl         String?   @map("receipt_url")
@@ -267,6 +276,7 @@ model Flight {
   trip           Trip?                 @relation(fields: [tripId], references: [id], onDelete: SetNull)
   booking        Booking?              @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   pendingUpdates PendingFlightUpdate[]
+  companionLinks FlightCompanion[]
 
   @@index([userId])
   @@index([departureTime])
@@ -342,6 +352,11 @@ model UserSettings {
   openskyClientSecret String? @map("opensky_client_secret")
   openskyUsername     String? @map("opensky_username")
   openskyPassword     String? @map("opensky_password")
+
+  // Immich connection (base URL plain, API key encrypted at application level)
+  immichBaseUrl     String? @map("immich_base_url")
+  immichApiKey      String? @map("immich_api_key")
+  immichDefaultMode String  @default("link") @map("immich_default_mode")
 
   // Auto-update settings
   autoUpdateEnabled          Boolean @default(false) @map("auto_update_enabled")
@@ -426,10 +441,15 @@ model AdminSettings {
   globalAirlabsApiKey       String? @map("global_airlabs_api_key")
   globalAviationstackApiKey String? @map("global_aviationstack_api_key")
   globalAerodataboxApiKey   String? @map("global_aerodatabox_api_key")
+  globalLogostreamApiKey    String? @map("global_logostream_api_key")
   globalOpenskyClientId     String? @map("global_opensky_client_id")
   globalOpenskyClientSecret String? @map("global_opensky_client_secret")
   globalOpenskyUsername     String? @map("global_opensky_username")
   globalOpenskyPassword     String? @map("global_opensky_password")
+
+  // Global Immich connection (base URL plain, API key encrypted)
+  globalImmichBaseUrl String? @map("global_immich_base_url")
+  globalImmichApiKey  String? @map("global_immich_api_key")
 
   // User permissions
   allowUserApiKeys       Boolean @default(true) @map("allow_user_api_keys")
@@ -703,7 +723,7 @@ model Trip {
   // All optional / defaulted so legacy rows stay valid.
   startDate        DateTime? @map("start_date")
   endDate          DateTime? @map("end_date")
-  status           String    @default("completed") // planned | in_progress | completed
+  status           String    @default("planned") // planned | in_progress | completed
   category         String?   // vacation | business | weekend | family | other
   tags             String[]  @default([])
   companions       String[]  @default([])
@@ -726,6 +746,8 @@ model Trip {
   journalEntries TripJournalEntry[]
   photos         TripPhoto[]
   lodgingStays   LodgingStay[]
+  immichAlbums   TripImmichAlbum[]
+  companionLinks TripCompanion[]
 
   @@index([userId])
   @@index([userId, status])
@@ -743,11 +765,62 @@ model TripPhoto {
   sortIdx   Int       @default(0) @map("sort_idx")
   createdAt DateTime  @default(now()) @map("created_at")
 
-  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  // Immich provenance — set only for photos imported from a linked album.
+  immichAssetId     String? @map("immich_asset_id")
+  immichAlbumLinkId String? @map("immich_album_link_id")
 
+  // EXIF coordinates (Phase C map layer). Populated on Immich import;
+  // best-effort for manual uploads.
+  lat Float?
+  lon Float?
+
+  trip        Trip             @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  immichAlbum TripImmichAlbum? @relation(fields: [immichAlbumLinkId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, immichAssetId])
   @@index([tripId])
   @@index([tripId, sortIdx])
+  @@index([immichAlbumLinkId])
   @@map("trip_photos")
+}
+
+model TripImmichAlbum {
+  id               String    @id @default(uuid())
+  tripId           String    @map("trip_id")
+  immichAlbumId    String    @map("immich_album_id")
+  albumName        String    @map("album_name")
+  assetCount       Int       @default(0) @map("asset_count")
+  thumbnailAssetId String?   @map("thumbnail_asset_id")
+  mode             String    @default("link")
+  sortIdx          Int       @default(0) @map("sort_idx")
+  lastSyncedAt     DateTime? @map("last_synced_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  trip      Trip             @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  photos    TripPhoto[]
+  importJob ImmichImportJob?
+
+  @@unique([tripId, immichAlbumId])
+  @@index([tripId])
+  @@map("trip_immich_albums")
+}
+
+model ImmichImportJob {
+  id              String    @id @default(uuid())
+  albumLinkId     String    @unique @map("album_link_id")
+  status          String    @default("pending") // pending | running | completed | failed
+  totalAssets     Int       @default(0) @map("total_assets")
+  processedAssets Int       @default(0) @map("processed_assets")
+  failedAssets    Int       @default(0) @map("failed_assets")
+  error           String?
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  albumLink TripImmichAlbum @relation(fields: [albumLinkId], references: [id], onDelete: Cascade)
+
+  @@map("immich_import_jobs")
 }
 
 model TripStop {
@@ -859,6 +932,7 @@ model Cruise {
   booking       Booking?     @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   stops         CruiseStop[]
   legs          CruiseLeg[]
+  companionLinks CruiseCompanion[]
 
   @@index([userId])
   @@index([startDate])
@@ -1094,4 +1168,87 @@ model LodgingImportBatch {
 
   @@index([userId])
   @@map("lodging_import_batches")
+}
+
+model Airline {
+  id          Int     @id @default(autoincrement())
+  iata        String? @unique
+  icao        String?
+  name        String
+  callsign    String?
+  country     String?
+  active      Boolean @default(true)
+  isUserAdded Boolean @default(false) @map("is_user_added")
+
+  @@index([name])
+  @@index([icao])
+  @@map("airlines")
+}
+
+model Aircraft {
+  id          Int     @id @default(autoincrement())
+  icao        String? @unique
+  name        String
+  isUserAdded Boolean @default(false) @map("is_user_added")
+
+  @@index([name])
+  @@map("aircraft")
+}
+
+model Companion {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  canonicalName String   @map("canonical_name")
+  displayName   String   @map("display_name")
+  searchName    String   @map("search_name")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flights FlightCompanion[]
+  trips   TripCompanion[]
+  cruises CruiseCompanion[]
+
+  @@unique([userId, canonicalName])
+  @@index([userId, searchName])
+  @@map("companions")
+}
+
+model FlightCompanion {
+  flightId    String @map("flight_id")
+  companionId String @map("companion_id")
+  position    Int
+
+  flight    Flight    @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  @@id([flightId, companionId])
+  @@index([companionId])
+  @@map("flight_companions")
+}
+
+model TripCompanion {
+  tripId      String @map("trip_id")
+  companionId String @map("companion_id")
+  position    Int
+
+  trip      Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  @@id([tripId, companionId])
+  @@index([companionId])
+  @@map("trip_companions")
+}
+
+model CruiseCompanion {
+  cruiseId    String @map("cruise_id")
+  companionId String @map("companion_id")
+  position    Int
+
+  cruise    Cruise    @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  @@id([cruiseId, companionId])
+  @@index([companionId])
+  @@map("cruise_companions")
 }

@@ -1,79 +1,271 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-/* ─── Design Tokens ──────────────────────────────────────── */
+@custom-variant dark (&:is(.dark *));
 
-/* TravStats is dark-only — see TravStatsWeb/brand/BRAND.md §1.1.
+@theme {
+  --font-display: Syne, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-sans: Inter, sans-serif;
+
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-border: var(--color-border);
+
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-accent-glow: var(--accent-glow);
+
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+
+  --background-image-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+
+  --shadow-glow-accent: 0 0 20px var(--accent-glow);
+  --shadow-glow-sm: 0 0 8px var(--accent-glow);
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility scrollbar-none {
+  /* Hide the scrollbar while keeping the element scrollable (used by the
+     map control panel so its scroll area reads as a clean surface). */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge/IE */
+  &::-webkit-scrollbar {
+    display: none; /* Chrome / Safari / WebKit */
+  }
+}
+
+@utility map-pulse-ring {
+  /* Pulsing ring drawn over the selected globe marker. Centred on its
+     container's origin (positioned at the marker's screen point). */
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  border: 2px solid var(--pulse-color, #f0a947);
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation: map-pulse 1.8s cubic-bezier(0, 0.55, 0.45, 1) infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    opacity: 0.3;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@utility btn {
+  /* ─── Buttons ──────────────────────────────────────────── */
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-200
+           focus:outline-hidden focus:ring-2 focus:ring-offset-2;
+}
+
+@utility btn-primary {
+  @apply btn font-semibold;
+  background-color: var(--accent);
+  color: #0d1117;
+  box-shadow: 0 0 0 0 var(--accent-glow);
+  transition:
+    background-color 0.2s,
+    box-shadow 0.2s;
+  &:hover {
+    background-color: var(--accent-dim);
+    box-shadow: 0 0 16px var(--accent-glow);
+  }
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+}
+
+@utility btn-secondary {
+  @apply btn;
+  --tw-ring-color: var(--accent);
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--color-border);
+  &:hover {
+    background-color: var(--bg-muted);
+    border-color: var(--text-muted);
+  }
+}
+
+@utility btn-danger {
+  @apply btn;
+  --tw-ring-color: var(--danger);
+  background-color: var(--danger);
+  color: #ffffff;
+  &:hover {
+    filter: brightness(0.85);
+  }
+}
+
+@utility input {
+  /* ─── Inputs ───────────────────────────────────────────── */
+  @apply w-full px-3 py-2 rounded-lg focus:outline-hidden focus:ring-2 transition-all duration-200;
+  background-color: var(--bg-muted);
+  border: 1px solid var(--color-border);
+  color: var(--text-primary);
+  --tw-ring-color: var(--accent);
+  &::placeholder {
+    color: var(--text-muted);
+  }
+  &:focus {
+    border-color: var(--accent);
+  }
+}
+
+@utility checkbox {
+  /* ─── Checkboxes ───────────────────────────────────────── */
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 0.2rem;
+  background-color: var(--bg-muted);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+  &:checked {
+    background-color: var(--accent);
+    border-color: var(--accent);
+  }
+  &:checked::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 4px;
+    width: 4px;
+    height: 8px;
+    border: 2px solid #0d1117;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg);
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+@utility label {
+  /* ─── Labels ───────────────────────────────────────────── */
+  @apply block text-sm font-medium mb-1;
+  color: var(--text-muted);
+}
+
+@utility card {
+  /* ─── Cards ────────────────────────────────────────────── */
+  @apply rounded-xl p-6;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--color-border);
+}
+
+@utility accent-bar {
+  /* ─── Accent divider ───────────────────────────────────── */
+  @apply h-px w-full;
+  background: linear-gradient(90deg, var(--accent) 0%, transparent 100%);
+  opacity: 0.4;
+}
+
+@layer utilities {
+  /* ─── Design Tokens ──────────────────────────────────────── */
+
+  /* TravStats is dark-only — see TravStatsWeb/brand/BRAND.md §1.1.
    Dark values live directly under :root; there is no light variant.
    The legacy `html.dark` class is preserved as a no-op so any third-
    party CSS scoped to it still applies, but it is not required. */
-:root {
-  color-scheme: dark;
+  :root {
+    color-scheme: dark;
 
-  /* Surfaces */
-  --bg-base: #0d1117;
-  --bg-surface: #161b22;
-  --bg-elevated: #1c2128;
-  --bg-muted: #21262d;
-  --color-border: #30363d;
-  --text-primary: #e6edf3;
-  --text-muted: #8b949e;
-  /* `--text-secondary` is the readable-but-dimmed shade for inactive
+    /* Surfaces */
+    --bg-base: #0d1117;
+    --bg-surface: #161b22;
+    --bg-elevated: #1c2128;
+    --bg-muted: #21262d;
+    --color-border: #30363d;
+    --text-primary: #e6edf3;
+    --text-muted: #8b949e;
+    /* `--text-secondary` is the readable-but-dimmed shade for inactive
      tabs, section nav, deselected buttons. Brighter than --text-muted
      (which is reserved for genuinely-de-emphasised content like
      captions, scrollbars, borders) so contrast against --bg-base /
      --bg-surface stays comfortably above WCAG AA. */
-  --text-secondary: #a8b3bf;
+    --text-secondary: #a8b3bf;
 
-  /* Brand — amber. Same hex as --domain-flight by design (BRAND.md §3). */
-  --accent: #f0a947;
-  --accent-dim: #c8842a;
-  --accent-glow: rgba(240, 169, 71, 0.18);
-  --accent-soft: rgba(240, 169, 71, 0.1);
+    /* Brand — amber. Same hex as --domain-flight by design (BRAND.md §3). */
+    --accent: #f0a947;
+    --accent-dim: #c8842a;
+    --accent-glow: rgba(240, 169, 71, 0.18);
+    --accent-soft: rgba(240, 169, 71, 0.1);
 
-  /* Per-domain accents (BRAND.md §3) — keep in sync with TravStatsWeb tokens.css */
-  --domain-flight: #f0a947;
-  --domain-flight-soft: rgba(240, 169, 71, 0.1);
-  --domain-flight-locked: rgba(240, 169, 71, 0.18);
+    /* Per-domain accents (BRAND.md §3) — keep in sync with TravStatsWeb tokens.css */
+    --domain-flight: #f0a947;
+    --domain-flight-soft: rgba(240, 169, 71, 0.1);
+    --domain-flight-locked: rgba(240, 169, 71, 0.18);
 
-  --domain-cruise: #6fa0d6;
-  --domain-cruise-soft: rgba(111, 160, 214, 0.1);
-  --domain-cruise-locked: rgba(111, 160, 214, 0.18);
+    --domain-cruise: #6fa0d6;
+    --domain-cruise-soft: rgba(111, 160, 214, 0.1);
+    --domain-cruise-locked: rgba(111, 160, 214, 0.18);
 
-  --domain-lodging: #d4778f;
-  --domain-lodging-soft: rgba(212, 119, 143, 0.1);
-  --domain-lodging-locked: rgba(212, 119, 143, 0.18);
+    --domain-lodging: #d4778f;
+    --domain-lodging-soft: rgba(212, 119, 143, 0.1);
+    --domain-lodging-locked: rgba(212, 119, 143, 0.18);
 
-  --domain-poi: #5ec2b2;
-  --domain-poi-soft: rgba(94, 194, 178, 0.1);
-  --domain-poi-locked: rgba(94, 194, 178, 0.18);
+    --domain-poi: #5ec2b2;
+    --domain-poi-soft: rgba(94, 194, 178, 0.1);
+    --domain-poi-locked: rgba(94, 194, 178, 0.18);
 
-  --domain-train: #8faa5f;
-  --domain-train-soft: rgba(143, 170, 95, 0.1);
-  --domain-train-locked: rgba(143, 170, 95, 0.18);
+    --domain-train: #8faa5f;
+    --domain-train-soft: rgba(143, 170, 95, 0.1);
+    --domain-train-locked: rgba(143, 170, 95, 0.18);
 
-  --domain-hike: #78966a;
-  --domain-hike-soft: rgba(120, 150, 106, 0.1);
-  --domain-hike-locked: rgba(120, 150, 106, 0.18);
+    --domain-hike: #78966a;
+    --domain-hike-soft: rgba(120, 150, 106, 0.1);
+    --domain-hike-locked: rgba(120, 150, 106, 0.18);
 
-  --domain-bike: #9fbe63;
-  --domain-bike-soft: rgba(159, 190, 99, 0.1);
-  --domain-bike-locked: rgba(159, 190, 99, 0.18);
+    --domain-bike: #9fbe63;
+    --domain-bike-soft: rgba(159, 190, 99, 0.1);
+    --domain-bike-locked: rgba(159, 190, 99, 0.18);
 
-  --domain-road: #a89984;
-  --domain-road-soft: rgba(168, 153, 132, 0.1);
-  --domain-road-locked: rgba(168, 153, 132, 0.18);
+    --domain-road: #a89984;
+    --domain-road-soft: rgba(168, 153, 132, 0.1);
+    --domain-road-locked: rgba(168, 153, 132, 0.18);
 
-  --domain-ferry: #4aa6b0;
-  --domain-ferry-soft: rgba(74, 166, 176, 0.1);
-  --domain-ferry-locked: rgba(74, 166, 176, 0.18);
+    --domain-ferry: #4aa6b0;
+    --domain-ferry-soft: rgba(74, 166, 176, 0.1);
+    --domain-ferry-locked: rgba(74, 166, 176, 0.18);
 
-  /* State colours */
-  --danger-stamp: #e65a4f;
-  --danger: #f85149;
-  --success: #3fb950;
-  --warning: #d29922;
+    /* State colours */
+    --danger-stamp: #e65a4f;
+    --danger: #f85149;
+    --success: #3fb950;
+    --warning: #d29922;
+  }
 }
 
 @layer base {
@@ -103,18 +295,6 @@
 }
 
 @layer components {
-  /* Hide the scrollbar while keeping the element scrollable (used by the
-     map control panel so its scroll area reads as a clean surface). */
-  .scrollbar-none {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* legacy Edge/IE */
-  }
-  .scrollbar-none::-webkit-scrollbar {
-    display: none; /* Chrome / Safari / WebKit */
-  }
-
-  /* Pulsing ring drawn over the selected globe marker. Centred on its
-     container's origin (positioned at the marker's screen point). */
   @keyframes map-pulse {
     0% {
       transform: translate(-50%, -50%) scale(0.35);
@@ -127,144 +307,6 @@
       transform: translate(-50%, -50%) scale(2.6);
       opacity: 0;
     }
-  }
-  .map-pulse-ring {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 44px;
-    height: 44px;
-    border-radius: 9999px;
-    border: 2px solid var(--pulse-color, #f0a947);
-    pointer-events: none;
-    will-change: transform, opacity;
-    animation: map-pulse 1.8s cubic-bezier(0, 0.55, 0.45, 1) infinite;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .map-pulse-ring {
-      animation: none;
-      opacity: 0.3;
-      transform: translate(-50%, -50%) scale(1);
-    }
-  }
-
-  /* ─── Buttons ──────────────────────────────────────────── */
-  .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200
-           focus:outline-none focus:ring-2 focus:ring-offset-2;
-  }
-
-  .btn-primary {
-    @apply btn font-semibold;
-    background-color: var(--accent);
-    color: #0d1117;
-    box-shadow: 0 0 0 0 var(--accent-glow);
-    transition:
-      background-color 0.2s,
-      box-shadow 0.2s;
-  }
-  .btn-primary:hover {
-    background-color: var(--accent-dim);
-    box-shadow: 0 0 16px var(--accent-glow);
-  }
-  .btn-primary:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-    box-shadow: none;
-  }
-
-  .btn-secondary {
-    @apply btn;
-    --tw-ring-color: var(--accent);
-    background-color: var(--bg-elevated);
-    color: var(--text-primary);
-    border: 1px solid var(--color-border);
-  }
-  .btn-secondary:hover {
-    background-color: var(--bg-muted);
-    border-color: var(--text-muted);
-  }
-
-  .btn-danger {
-    @apply btn;
-    --tw-ring-color: var(--danger);
-    background-color: var(--danger);
-    color: #ffffff;
-  }
-  .btn-danger:hover {
-    filter: brightness(0.85);
-  }
-
-  /* ─── Inputs ───────────────────────────────────────────── */
-  .input {
-    @apply w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 transition-all duration-200;
-    background-color: var(--bg-muted);
-    border: 1px solid var(--color-border);
-    color: var(--text-primary);
-    --tw-ring-color: var(--accent);
-  }
-  .input::placeholder {
-    color: var(--text-muted);
-  }
-  .input:focus {
-    border-color: var(--accent);
-  }
-
-  /* ─── Checkboxes ───────────────────────────────────────── */
-  .checkbox {
-    appearance: none;
-    -webkit-appearance: none;
-    width: 1rem;
-    height: 1rem;
-    border-radius: 0.2rem;
-    background-color: var(--bg-muted);
-    border: 1px solid var(--color-border);
-    cursor: pointer;
-    flex-shrink: 0;
-    position: relative;
-    transition:
-      background-color 0.15s,
-      border-color 0.15s;
-  }
-  .checkbox:checked {
-    background-color: var(--accent);
-    border-color: var(--accent);
-  }
-  .checkbox:checked::after {
-    content: "";
-    position: absolute;
-    top: 1px;
-    left: 4px;
-    width: 4px;
-    height: 8px;
-    border: 2px solid #0d1117;
-    border-top: none;
-    border-left: none;
-    transform: rotate(45deg);
-  }
-  .checkbox:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  /* ─── Labels ───────────────────────────────────────────── */
-  .label {
-    @apply block text-sm font-medium mb-1;
-    color: var(--text-muted);
-  }
-
-  /* ─── Cards ────────────────────────────────────────────── */
-  .card {
-    @apply rounded-xl p-6;
-    background-color: var(--bg-surface);
-    border: 1px solid var(--color-border);
-  }
-
-  /* ─── Accent divider ───────────────────────────────────── */
-  .accent-bar {
-    @apply h-px w-full;
-    background: linear-gradient(90deg, var(--accent) 0%, transparent 100%);
-    opacity: 0.4;
   }
 }
 
@@ -322,6 +364,11 @@
 }
 .nav-icon-btn:hover {
   background-color: var(--bg-elevated);
+}
+
+[role="menu"] [role="menuitem"]:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
 }
 
 /* ─── Map Theme Tokens ───────────────────────────────────── */

@@ -16,15 +16,18 @@ export default function NotFoundPage(): JSX.Element {
     <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
       <NavigationBar />
       <div className="mx-auto flex max-w-3xl flex-col items-center gap-3 p-6 py-24 text-center">
-        <div className="text-6xl font-bold text-[var(--accent)]">404</div>
-        <h1 className="text-xl font-semibold text-[var(--text-primary)]">
+        <div className="text-6xl font-bold text-(--accent)">404</div>
+        <h1 className="text-xl font-semibold text-(--text-primary)">
           {t("notFound.title")}
         </h1>
-        <p className="text-sm text-[var(--text-muted)]">{t("notFound.message")}</p>
+        <p className="text-sm text-(--text-muted)">{t("notFound.message")}</p>
         <button
           type="button"
-          onClick={(): void => navigate("/dashboard")}
-          className="mt-2 rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--accent)] hover:border-[var(--accent)]"
+          onClick={(): void => {
+            // react-router 7 widened navigate() to void | Promise<void>.
+            void navigate("/dashboard");
+          }}
+          className="mt-2 rounded-md border border-border px-4 py-2 text-sm text-(--accent) hover:border-(--accent)"
         >
           {t("notFound.back")}
         </button>

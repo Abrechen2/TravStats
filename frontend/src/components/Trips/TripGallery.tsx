@@ -1,12 +1,17 @@
 import { useRef, useState } from "react";
+import type { LinkedAlbum } from "../../types/immich";
 import type { TripPhoto } from "../../types";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
+import PhotoLightbox, { type LightboxItem } from "./PhotoLightbox";
+import ImmichAlbumPicker from "./ImmichAlbumPicker";
+import ImmichAlbumSection from "./ImmichAlbumSection";
 
 interface TripGalleryProps {
   tripId: string;
   photos: TripPhoto[];
+  immichAlbums: LinkedAlbum[];
   onChange: () => void;
 }
 
@@ -14,14 +19,28 @@ const ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
 
 /**
  * Gallery tab content (Phase-1 iteration 7). Multi-image upload, grid
- * preview, click-to-enlarge lightbox, hover delete + caption edit.
+ * preview, click-to-enlarge lightbox, hover delete + caption edit — plus
+ * one section per linked Immich album (Phase-A Immich integration).
  */
-export default function TripGallery({ tripId, photos, onChange }: TripGalleryProps): JSX.Element {
-  const { t } = useTranslation(["trips", "common"]);
+export default function TripGallery({
+  tripId,
+  photos,
+  immichAlbums,
+  onChange,
+}: TripGalleryProps): JSX.Element {
+  const { t } = useTranslation(["trips", "common", "immich"]);
   const addToast = useToastStore((s) => s.addToast);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [lightbox, setLightbox] = useState<TripPhoto | null>(null);
+  const [lightbox, setLightbox] = useState<{ index: number } | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
+
+  const uploadedItems: LightboxItem[] = photos.map((p) => ({
+    id: p.id,
+    previewUrl: p.url,
+    caption: p.caption,
+    source: { kind: "photo" },
+  }));
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const files = Array.from(e.target.files ?? []);
@@ -57,56 +76,97 @@ export default function TripGallery({ tripId, photos, onChange }: TripGalleryPro
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <h3 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
-          {t("trips:gallery.title")}{" "}
-          <span className="text-xs font-normal" style={{ color: "var(--text-muted)" }}>
-            · {photos.length}
-          </span>
+          {t("trips:gallery.title")}
         </h3>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={ACCEPT}
-          multiple
-          className="hidden"
-          onChange={(e) => void handleFileSelect(e)}
-        />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="px-3 py-1.5 rounded-md text-xs font-medium bg-[var(--accent)] text-[var(--bg-base)] disabled:opacity-50"
-        >
-          {uploading ? t("common:loading.default") : t("trips:gallery.uploadButton")}
-        </button>
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPT}
+            multiple
+            className="hidden"
+            onChange={(e) => void handleFileSelect(e)}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="px-3 py-1.5 rounded-md text-xs font-medium bg-(--accent) text-(--bg-base) disabled:opacity-50"
+          >
+            {uploading ? t("common:loading.default") : t("trips:gallery.uploadButton")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowPicker(true)}
+            className="px-3 py-1.5 rounded-md text-xs font-medium border"
+            style={{ borderColor: "var(--color-border)", color: "var(--text-primary)" }}
+          >
+            {t("immich:albums.link")}
+          </button>
+        </div>
       </div>
 
-      {photos.length === 0 ? (
-        <div
-          className="rounded-xl p-8 text-center text-sm"
-          style={{
-            background: "var(--bg-elevated)",
-            border: "1px dashed var(--color-border)",
-            color: "var(--text-muted)",
-          }}
-        >
-          {t("trips:gallery.empty")}
-        </div>
-      ) : (
-        <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
-          {photos.map((p) => (
-            <PhotoTile
-              key={p.id}
-              photo={p}
-              onClick={() => setLightbox(p)}
-              onDelete={() => void handleDelete(p)}
-            />
-          ))}
-        </div>
+      {(photos.length > 0 || immichAlbums.length === 0) && (
+        <section>
+          <h4
+            className="text-sm font-semibold mb-2"
+            style={{ color: "var(--text-secondary, var(--text-primary))" }}
+          >
+            {t("immich:gallery.uploaded")}{" "}
+            <span className="text-xs font-normal" style={{ color: "var(--text-muted)" }}>
+              · {photos.length}
+            </span>
+          </h4>
+
+          {photos.length === 0 ? (
+            <div
+              className="rounded-xl p-8 text-center text-sm"
+              style={{
+                background: "var(--bg-elevated)",
+                border: "1px dashed var(--color-border)",
+                color: "var(--text-muted)",
+              }}
+            >
+              {t("trips:gallery.empty")}
+            </div>
+          ) : (
+            <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
+              {photos.map((p, i) => (
+                <PhotoTile
+                  key={p.id}
+                  photo={p}
+                  onClick={() => setLightbox({ index: i })}
+                  onDelete={() => void handleDelete(p)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
       )}
 
-      {lightbox && <Lightbox photo={lightbox} onClose={() => setLightbox(null)} />}
+      {immichAlbums.map((album) => (
+        <ImmichAlbumSection key={album.id} tripId={tripId} album={album} onChanged={onChange} />
+      ))}
+
+      {lightbox && (
+        <PhotoLightbox
+          tripId={tripId}
+          items={uploadedItems}
+          startIndex={lightbox.index}
+          onClose={() => setLightbox(null)}
+          onCoverChanged={() => onChange()}
+        />
+      )}
+
+      {showPicker && (
+        <ImmichAlbumPicker
+          tripId={tripId}
+          onClose={() => setShowPicker(false)}
+          onLinked={() => onChange()}
+        />
+      )}
     </div>
   );
 }
@@ -153,51 +213,6 @@ function PhotoTile({ photo, onClick, onDelete }: PhotoTileProps): JSX.Element {
             background: "linear-gradient(transparent, rgba(13,17,23,0.85))",
             color: "#fff",
           }}
-        >
-          {photo.caption}
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface LightboxProps {
-  photo: TripPhoto;
-  onClose: () => void;
-}
-
-function Lightbox({ photo, onClose }: LightboxProps): JSX.Element {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.92)" }}
-      onClick={onClose}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
-      }}
-      role="dialog"
-      aria-modal="true"
-      tabIndex={-1}
-    >
-      <img
-        src={photo.url}
-        alt={photo.caption ?? ""}
-        className="max-w-full max-h-full object-contain rounded-lg"
-        onClick={(e) => e.stopPropagation()}
-      />
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute top-4 right-4 w-10 h-10 rounded-full text-white text-lg"
-        style={{ background: "rgba(255,255,255,0.1)" }}
-        aria-label="Close"
-      >
-        ✕
-      </button>
-      {photo.caption && (
-        <div
-          className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-sm max-w-[80%]"
-          style={{ background: "rgba(13,17,23,0.85)", color: "#fff" }}
         >
           {photo.caption}
         </div>

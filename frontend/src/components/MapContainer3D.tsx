@@ -207,7 +207,7 @@ export default function MapContainer3D({
   return (
     <div
       data-map-theme={mapTheme}
-      className="relative h-full w-full rounded-lg shadow overflow-hidden bg-[var(--bg-surface)] flex items-center justify-center"
+      className="relative h-full w-full rounded-lg shadow-sm overflow-hidden bg-(--bg-surface) flex items-center justify-center"
       style={{ touchAction: "pan-x pan-y pinch-zoom" }}
     >
       <div className="h-full w-full" style={{ touchAction: "pan-x pan-y pinch-zoom" }}>

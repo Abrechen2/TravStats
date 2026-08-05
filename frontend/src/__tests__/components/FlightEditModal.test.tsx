@@ -1,7 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, fireEvent, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import FlightEditModal from "../../components/FlightEditModal";
 import type { Flight } from "../../types";
+
+const mocks = vi.hoisted(() => ({ companionsList: vi.fn() }));
 
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
@@ -13,6 +16,9 @@ vi.mock("../../store/settingsStore", () => ({
   useSettingsStore: () => ({
     features: { enableCostTracking: false },
   }),
+}));
+vi.mock("../../lib/api", () => ({
+  companionsApi: { list: mocks.companionsList },
 }));
 
 const mockFlight: Flight = {
@@ -31,24 +37,35 @@ const mockFlight: Flight = {
 };
 
 describe("FlightEditModal", () => {
-  it("renders departure and arrival time inputs when modal is open", () => {
+  beforeEach(() => {
+    mocks.companionsList.mockReset().mockResolvedValue([]);
+  });
+
+  it("renders separate date and time inputs for both departure and arrival when modal is open", () => {
     render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
+    // Four distinct controls, not two combined datetime-local fields.
+    expect(document.querySelector("#editDepartureDate")).toBeTruthy();
     expect(document.querySelector("#editDepartureTime")).toBeTruthy();
+    expect(document.querySelector("#editArrivalDate")).toBeTruthy();
     expect(document.querySelector("#editArrivalTime")).toBeTruthy();
+    expect(document.querySelector('#editDepartureDate[type="date"]')).toBeTruthy();
+    expect(document.querySelector('#editDepartureTime[type="time"]')).toBeTruthy();
   });
 
-  it("pre-fills departure time from flight data", () => {
+  it("pre-fills departure date and time from flight data", () => {
     render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
-    const input = document.querySelector("#editDepartureTime") as HTMLInputElement;
-    // Value is formatted in local timezone — just verify it's not empty
-    expect(input?.value).toBeTruthy();
+    const dateInput = document.querySelector("#editDepartureDate") as HTMLInputElement;
+    const timeInput = document.querySelector("#editDepartureTime") as HTMLInputElement;
+    // Values are formatted in local timezone — just verify they're not empty.
+    expect(dateInput?.value).toBeTruthy();
+    expect(timeInput?.value).toBeTruthy();
   });
 
-  it("shows year/month picker instead of datetime for historical flights", () => {
+  it("shows year/month picker instead of date/time inputs for historical flights", () => {
     const historicalFlight: Flight = {
       ...mockFlight,
       status: "historical",
@@ -58,10 +75,80 @@ describe("FlightEditModal", () => {
     render(
       <FlightEditModal flight={historicalFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
-    // datetime-local inputs should not be present
+    // date/time inputs should not be present
+    expect(document.querySelector("#editDepartureDate")).toBeFalsy();
     expect(document.querySelector("#editDepartureTime")).toBeFalsy();
+    expect(document.querySelector("#editArrivalDate")).toBeFalsy();
+    expect(document.querySelector("#editArrivalTime")).toBeFalsy();
     // year number input should be present
     expect(document.querySelector('input[type="text"][inputmode="numeric"]')).toBeTruthy();
+  });
+
+  // Task 3 follow-up: clearing/setting the historical year used to touch only
+  // the departure fields and leave the arrival ones stale (an asymmetry bug
+  // pre-dating the date/time split). The split's rewrite made both directions
+  // symmetric — this pins that behaviour so it can't silently regress back to
+  // the old asymmetry.
+  it("clearing the historical year clears departure AND arrival date+time together", async () => {
+    const historicalFlight: Flight = {
+      ...mockFlight,
+      status: "historical",
+      // Noon UTC on two different dates so the split-vs-not-split difference
+      // is unambiguous regardless of the test runner's local timezone.
+      departureTime: "2020-03-15T12:00:00.000Z",
+      arrivalTime: "2020-03-20T12:00:00.000Z",
+    };
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { getByText } = render(
+      <FlightEditModal flight={historicalFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+
+    const yearInput = document.querySelector("#editHistoricalYear") as HTMLInputElement;
+    expect(yearInput.value).toBe("2020");
+
+    fireEvent.change(yearInput, { target: { value: "" } });
+    expect(yearInput.value).toBe("");
+
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    // Old (asymmetric) behaviour left arrivalLocal/arrTimezone populated —
+    // asserting all four are gone is what catches a regression back to it.
+    expect(updates.departureLocal).toBeUndefined();
+    expect(updates.depTimezone).toBeUndefined();
+    expect(updates.arrivalLocal).toBeUndefined();
+    expect(updates.arrTimezone).toBeUndefined();
+  });
+
+  it("setting the historical year (with no prior date) sets departure AND arrival together", async () => {
+    const historicalFlight: Flight = {
+      ...mockFlight,
+      status: "historical",
+      departureTime: null,
+      arrivalTime: null,
+    };
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { getByText } = render(
+      <FlightEditModal flight={historicalFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+
+    const yearInput = document.querySelector("#editHistoricalYear") as HTMLInputElement;
+    expect(yearInput.value).toBe("");
+
+    fireEvent.change(yearInput, { target: { value: "2019" } });
+    expect(yearInput.value).toBe("2019");
+
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    // Both sides land on the same year-01-01 shape — proving arrival was set
+    // in the same action as departure, not left behind.
+    expect(updates.departureLocal).toBe("2019-01-01T00:00");
+    expect(updates.arrivalLocal).toBe("2019-01-01T00:00");
+    expect(updates.depTimezone).toBeTruthy();
+    expect(updates.arrTimezone).toBeTruthy();
   });
 
   it("always shows price + currency but hides taxes/fees when enableCostTracking is false (#192)", () => {
@@ -75,5 +162,540 @@ describe("FlightEditModal", () => {
     expect((numberInputs[0] as HTMLInputElement).placeholder).toBe(
       "flights:form.placeholders.price"
     );
+  });
+
+  it("has no status select — status is a read-only pill plus a cancelled checkbox (#status-from-dates)", () => {
+    const { container } = render(
+      <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+    );
+    // The old status <select> had flown/scheduled/cancelled/historical options.
+    // "flown" only ever appeared as a status option value, so its absence proves
+    // the combobox is gone.
+    expect(container.querySelector('option[value="flown"]')).toBeFalsy();
+    // The pill renders the raw i18n key under the globally-mocked t(key) => key.
+    expect(container.textContent).toContain("flights:status.flown");
+    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(checkbox).toBeTruthy();
+    expect(checkbox.checked).toBe(false);
+  });
+
+  it("renders the historical pill in amber, not red — historical is archival data, not an error", () => {
+    const historicalFlight: Flight = { ...mockFlight, status: "historical" };
+    const { container } = render(
+      <FlightEditModal flight={historicalFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+    );
+    const pill = container.querySelector(".rounded-full") as HTMLElement;
+    expect(pill).toBeTruthy();
+    expect(pill.style.color).toBe("rgb(251, 191, 36)");
+  });
+
+  it("renders the duplicated pill in amber, not red", () => {
+    const duplicatedFlight: Flight = { ...mockFlight, status: "duplicated" };
+    const { container } = render(
+      <FlightEditModal flight={duplicatedFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+    );
+    const pill = container.querySelector(".rounded-full") as HTMLElement;
+    expect(pill).toBeTruthy();
+    expect(pill.style.color).toBe("rgb(251, 191, 36)");
+  });
+
+  it("checking the cancelled checkbox submits status \"cancelled\"", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { container, getByText } = render(
+      <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(true);
+
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.status).toBe("cancelled");
+  });
+
+  it('unchecking the cancelled checkbox on an already-cancelled flight submits status "scheduled" (backend re-derives)', async () => {
+    const cancelledFlight: Flight = { ...mockFlight, status: "cancelled" };
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { container, getByText } = render(
+      <FlightEditModal flight={cancelledFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(false);
+
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.status).toBe("scheduled");
+  });
+
+  // Phase 2 Task 1 characterization — pins the typed-text round trip for the
+  // three catalogue-bound fields BEFORE they move onto a catalogue picker.
+  // Must pass unedited before and after the swap: the picker changes how a
+  // value can be chosen, never what a typed value submits as.
+  it("submits the typed airline, operating airline and aircraft verbatim", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { container, getByText } = render(
+      <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+    const byPlaceholder = (key: string): HTMLInputElement =>
+      container.querySelector(
+        `input[placeholder="flights:form.placeholders.${key}"]`
+      ) as HTMLInputElement;
+
+    fireEvent.change(byPlaceholder("airline"), { target: { value: "Condor" } });
+    fireEvent.change(byPlaceholder("operatingAirline"), { target: { value: "Marabu" } });
+    fireEvent.change(byPlaceholder("aircraft"), { target: { value: "Airbus A330-900" } });
+
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.airline).toBe("Condor");
+    expect(updates.operatingAirline).toBe("Marabu");
+    expect(updates.aircraft).toBe("Airbus A330-900");
+  });
+
+  // CONTRACT CHANGE 2026-08-02: a cleared field submits an explicit null
+  // (clear on the wire), no longer undefined — undefined told the server to
+  // keep the old value, which made clearing a silent no-op.
+  it("submits a cleared airline as null (explicit clear), not as an empty string", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { container, getByText } = render(
+      <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+    const airlineInput = container.querySelector(
+      'input[placeholder="flights:form.placeholders.airline"]'
+    ) as HTMLInputElement;
+    expect(airlineInput.value).toBe("LH");
+
+    fireEvent.change(airlineInput, { target: { value: "" } });
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.airline).toBeNull();
+  });
+
+  // Phase 2 Task 2 characterization — pins the typed booking-reference and
+  // ticket-number round trip BEFORE both move into the shared BookingFields.
+  // Must pass unedited before and after the swap. The typed reference is
+  // deliberately already uppercase: the create form uppercases on input and
+  // the swap aligns the edit form onto that behaviour, so a lowercase fixture
+  // would pin the asymmetry this phase exists to remove.
+  it("submits the typed booking reference and ticket number verbatim", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { container, getByText } = render(
+      <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+    const byPlaceholder = (key: string): HTMLInputElement =>
+      container.querySelector(
+        `input[placeholder="flights:form.placeholders.${key}"]`
+      ) as HTMLInputElement;
+
+    fireEvent.change(byPlaceholder("bookingReference"), { target: { value: "9RFAA7" } });
+    fireEvent.change(byPlaceholder("ticketNumber"), { target: { value: "2202236084346" } });
+
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.bookingReference).toBe("9RFAA7");
+    expect(updates.ticketNumber).toBe("2202236084346");
+  });
+
+  // Phase 2 Task 2 — the three fields the parser fills and no form ever
+  // showed. The untouched-save assertion is the load-bearing one: these
+  // arrive pre-filled, and a form that silently blanks a field it merely
+  // displayed would destroy data on every save.
+  it("renders the three parser-filled booking fields and an untouched save submits them unchanged", async () => {
+    const parsedFlight: Flight = {
+      ...mockFlight,
+      bookingClassLetter: "Y",
+      baggageAllowance: "23 kg",
+      frequentFlyerNumber: "992223334",
+    };
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { container, getByText } = render(
+      <FlightEditModal flight={parsedFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+    const byPlaceholder = (key: string): HTMLInputElement =>
+      container.querySelector(
+        `input[placeholder="flights:form.placeholders.${key}"]`
+      ) as HTMLInputElement;
+
+    expect(byPlaceholder("bookingClassLetter").value).toBe("Y");
+    expect(byPlaceholder("baggageAllowance").value).toBe("23 kg");
+    expect(byPlaceholder("frequentFlyerNumber").value).toBe("992223334");
+
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.bookingClassLetter).toBe("Y");
+    expect(updates.baggageAllowance).toBe("23 kg");
+    expect(updates.frequentFlyerNumber).toBe("992223334");
+  });
+
+  it("submits an edited baggage allowance; absent untouched fields submit null (idempotent clear)", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { container, getByText } = render(
+      <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+    const baggageInput = container.querySelector(
+      'input[placeholder="flights:form.placeholders.baggageAllowance"]'
+    ) as HTMLInputElement;
+    expect(baggageInput.value).toBe("");
+
+    fireEvent.change(baggageInput, { target: { value: "2 x 32 kg" } });
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.baggageAllowance).toBe("2 x 32 kg");
+    // The other two were never filled and never touched — they submit null,
+    // never "": for a field that is already NULL in the DB that is an
+    // idempotent clear, while an empty string would overwrite NULL with "".
+    expect(updates.bookingClassLetter).toBeNull();
+    expect(updates.frequentFlyerNumber).toBeNull();
+  });
+
+  // Phase 2 Task 3 characterization — pins the price round trip BEFORE the
+  // cost fields move into the shared CostFields. Must pass unedited before
+  // and after the swap.
+  it("submits a typed price as a number, and null when the field is empty", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { container, getByText } = render(
+      <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+    const priceInput = container.querySelector(
+      'input[placeholder="flights:form.placeholders.price"]'
+    ) as HTMLInputElement;
+
+    fireEvent.change(priceInput, { target: { value: "199.99" } });
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0][1].price).toBe(199.99);
+
+    onSave.mockClear();
+    fireEvent.change(priceInput, { target: { value: "" } });
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    // An empty price submits null — an explicit clear. The modal's
+    // empty-means-0 internal state must still never leak a stored 0.
+    expect(onSave.mock.calls[0][1].price).toBeNull();
+  });
+
+  // Task 12 — the comma-separated companions text input is replaced by the
+  // shared CompanionPicker.
+  it("renders the existing companions as removable chips instead of a CSV text field", () => {
+    const flightWithCompanions: Flight = { ...mockFlight, companions: ["Anna", "Jonas"] };
+    render(
+      <FlightEditModal
+        flight={flightWithCompanions}
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId("companion-remove-Anna")).toBeInTheDocument();
+    expect(screen.getByTestId("companion-remove-Jonas")).toBeInTheDocument();
+  });
+
+  // Phase 2 Task 5 — the parsed co-passengers surface beside the picker,
+  // and taking them over flows into the SUBMITTED companions.
+  it("shows parsed co-passengers and take-over copies them into the saved companions", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const parsedFlight: Flight = {
+      ...mockFlight,
+      companions: ["Anna"],
+      coPassengers: ["Jonas Weber"],
+    };
+    const { getByText } = render(
+      <FlightEditModal flight={parsedFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+
+    expect(screen.getByTestId("co-passengers-row").textContent).toContain("Jonas Weber");
+    fireEvent.click(screen.getByTestId("co-passengers-take-over"));
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.companions).toEqual(["Anna", "Jonas Weber"]);
+  });
+
+  it("submits companions as a string[] built from the picker chips", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const flightWithCompanions: Flight = { ...mockFlight, companions: ["Anna"] };
+    const { getByText } = render(
+      <FlightEditModal
+        flight={flightWithCompanions}
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />
+    );
+
+    await userEvent.type(screen.getByRole("combobox", { name: "picker.label" }), "Jonas{Enter}");
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.companions).toEqual(["Anna", "Jonas"]);
+  });
+
+  // Gate follow-up — the four fields that stayed rendered inline in BOTH
+  // forms (flight number, seat, boarding group, tags) were never made to
+  // agree on input handling, so the same keystrokes produced different
+  // stored values depending on which form the user happened to be in. The
+  // create form's rule wins in every case, because it is the one that has
+  // been shaping parser output since before the split existed:
+  // FlightCompleteStep uppercases flight number and seat, caps the flight
+  // number at 10 and the boarding group at 20, and explains the comma
+  // separation under the tags input.
+  describe("input handling matches the create form", () => {
+    it("uppercases a typed flight number and caps it at 10 characters", async () => {
+      render(
+        <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+      );
+      const input = screen.getByPlaceholderText(
+        "flights:form.placeholders.flightNumber"
+      ) as HTMLInputElement;
+
+      fireEvent.change(input, { target: { value: "lh456" } });
+
+      expect(input.value).toBe("LH456");
+      expect(input.maxLength).toBe(10);
+    });
+
+    it("uppercases a typed seat number", () => {
+      render(
+        <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+      );
+      const input = screen.getByPlaceholderText(
+        "flights:form.placeholders.seat"
+      ) as HTMLInputElement;
+
+      fireEvent.change(input, { target: { value: "12a" } });
+
+      expect(input.value).toBe("12A");
+    });
+
+    it("caps the boarding group at 20 characters", () => {
+      render(
+        <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+      );
+      const input = screen.getByPlaceholderText(
+        "flights:form.placeholders.boardingGroup"
+      ) as HTMLInputElement;
+
+      expect(input.maxLength).toBe(20);
+    });
+
+    it("explains the comma separation under the tags input", () => {
+      render(
+        <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+      );
+
+      expect(screen.getByText("flights:form.tagsHint")).toBeInTheDocument();
+    });
+  });
+
+  // The "(optional)" choice for category and seat class must CLEAR the stored
+  // value — an explicit null on the wire, never undefined (which the server
+  // reads as "don't change" and which made the clear a silent no-op).
+  describe("clearing optional classifications", () => {
+    it("submits null for category and seatClass when '(optional)' is chosen", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const classified: Flight = {
+        ...mockFlight,
+        category: "business",
+        seatClass: "first",
+      };
+      const { getByText } = render(
+        <FlightEditModal flight={classified} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+      );
+
+      const selects = Array.from(document.querySelectorAll("select"));
+      const categorySelect = selects.find((s) =>
+        Array.from(s.options).some((o) => o.value === "vacation")
+      ) as HTMLSelectElement;
+      const seatClassSelect = selects.find((s) =>
+        Array.from(s.options).some((o) => o.value === "premium_economy")
+      ) as HTMLSelectElement;
+
+      fireEvent.change(categorySelect, { target: { value: "" } });
+      fireEvent.change(seatClassSelect, { target: { value: "" } });
+      fireEvent.click(getByText("flights:edit.saveChanges"));
+
+      await waitFor(() => expect(onSave).toHaveBeenCalled());
+      const [, updates] = onSave.mock.calls[0];
+      expect(updates.category).toBeNull();
+      expect(updates.seatClass).toBeNull();
+    });
+  });
+
+  // The same wire contract for the text and number fields: blanked input →
+  // explicit null. undefined would be read server-side as "don't change".
+  it("submits null for blanked text and cost fields", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const filled: Flight = {
+      ...mockFlight,
+      aircraft: "A320",
+      seatNumber: "1A",
+      gate: "A1",
+      terminal: "1",
+      boardingGroup: "2",
+      bookingReference: "REF1",
+      ticketNumber: "TKT1",
+      notes: "note",
+      price: 100,
+    };
+    const { getByText } = render(
+      <FlightEditModal flight={filled} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+    );
+
+    for (const placeholder of [
+      "flights:form.placeholders.aircraft",
+      "flights:form.placeholders.seat",
+      "flights:form.placeholders.gate",
+      "flights:form.placeholders.terminal",
+      "flights:form.placeholders.boardingGroup",
+      "flights:form.placeholders.bookingReference",
+      "flights:form.placeholders.ticketNumber",
+      "flights:form.placeholders.notes",
+    ]) {
+      fireEvent.change(screen.getByPlaceholderText(placeholder), { target: { value: "" } });
+    }
+    fireEvent.click(getByText("flights:edit.saveChanges"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates.aircraft).toBeNull();
+    expect(updates.seatNumber).toBeNull();
+    expect(updates.gate).toBeNull();
+    expect(updates.terminal).toBeNull();
+    expect(updates.boardingGroup).toBeNull();
+    expect(updates.bookingReference).toBeNull();
+    expect(updates.ticketNumber).toBeNull();
+    expect(updates.notes).toBeNull();
+    // Price was hydrated to 100 but not touched — it must survive.
+    expect(updates.price).toBe(100);
+  });
+
+  // Scheduled times are required — blanking one must produce a visible
+  // error, not a save that silently keeps the old instant while looking
+  // accepted. (The optional fields clear with null; these four cannot mean
+  // "delete", so validation is the honest response.)
+  describe("scheduled times are required", () => {
+    it("blanking the departure time blocks the save and shows an error", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const { getByText } = render(
+        <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+      );
+
+      const timeInput = document.querySelector("#editDepartureTime") as HTMLInputElement;
+      fireEvent.change(timeInput, { target: { value: "" } });
+      fireEvent.click(getByText("flights:edit.saveChanges"));
+
+      expect(await screen.findByText("errors:missingTimes")).toBeInTheDocument();
+      expect(onSave).not.toHaveBeenCalled();
+    });
+
+    it("a historical flight saves without any time fields", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const historical: Flight = {
+        ...mockFlight,
+        status: "historical",
+        depTimeSemantics: "UNKNOWN",
+        arrTimeSemantics: "UNKNOWN",
+      };
+      const { getByText } = render(
+        <FlightEditModal flight={historical} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+      );
+
+      fireEvent.click(getByText("flights:edit.saveChanges"));
+
+      await waitFor(() => expect(onSave).toHaveBeenCalled());
+    });
+  });
+
+  // Historical flights use the shared HistoricalDateFields — the edit modal
+  // must expose the DAY of a DATE_ONLY flight instead of hiding it and
+  // rewriting it to 01 on any touch (the old year+month-only block's bug).
+  describe("historical date precision", () => {
+    const dateOnlyFlight: Flight = {
+      ...mockFlight,
+      status: "historical",
+      departureTime: "1998-07-15T12:00:00.000Z",
+      arrivalTime: "1998-07-15T12:00:00.000Z",
+      depTimeSemantics: "DATE_ONLY",
+      arrTimeSemantics: "DATE_ONLY",
+    };
+    const yearMonthFlight: Flight = {
+      ...mockFlight,
+      status: "historical",
+      departureTime: "1998-07-01T00:00:00.000Z",
+      arrivalTime: "1998-07-01T00:00:00.000Z",
+      depTimeSemantics: "UNKNOWN",
+      arrTimeSemantics: "UNKNOWN",
+    };
+
+    it("shows the known day of a DATE_ONLY flight in a day picker", () => {
+      render(
+        <FlightEditModal flight={dateOnlyFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+      );
+      const day = document.querySelector("#editHistoricalDay") as HTMLSelectElement;
+      expect(day).toBeTruthy();
+      expect(day.value).toBe("15");
+    });
+
+    it("changing the year keeps the known day instead of rewriting it to 01", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const { getByText } = render(
+        <FlightEditModal flight={dateOnlyFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
+      );
+
+      const year = document.querySelector("#editHistoricalYear") as HTMLInputElement;
+      fireEvent.change(year, { target: { value: "1999" } });
+      fireEvent.click(getByText("flights:edit.saveChanges"));
+
+      await waitFor(() => expect(onSave).toHaveBeenCalled());
+      const [, updates] = onSave.mock.calls[0];
+      expect(updates.departureLocal).toBe("1999-07-15T12:00");
+      // Semantics ALWAYS accompanies a historical departureLocal — without
+      // it the server's implicit branch flips the column to UTC (browser
+      // UAT finding, 2026-08-02).
+      expect(updates.depTimeSemantics).toBe("DATE_ONLY");
+    });
+
+    it("hides the stored day-01 of an UNKNOWN flight and adding a real day upgrades to DATE_ONLY", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const { getByText } = render(
+        <FlightEditModal
+          flight={yearMonthFlight}
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={onSave}
+        />
+      );
+
+      const day = document.querySelector("#editHistoricalDay") as HTMLSelectElement;
+      // UNKNOWN semantics: the stored -01 is precision padding, not a day.
+      expect(day.value).toBe("");
+
+      fireEvent.change(day, { target: { value: "20" } });
+      fireEvent.click(getByText("flights:edit.saveChanges"));
+
+      await waitFor(() => expect(onSave).toHaveBeenCalled());
+      const [, updates] = onSave.mock.calls[0];
+      expect(updates.departureLocal).toBe("1998-07-20T12:00");
+      expect(updates.depTimeSemantics).toBe("DATE_ONLY");
+      expect(updates.arrTimeSemantics).toBe("DATE_ONLY");
+    });
   });
 });

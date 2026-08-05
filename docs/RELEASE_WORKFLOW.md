@@ -24,6 +24,7 @@ promoted to prod. Prod only ever runs **final** tags — an RC never touches pro
 |---|---|---|---|---|
 | **Local Dev** | dev machine | `8000` / `3000` | dev DB `:5433` (`flights_dev`) | Build, TDD, rehearse migrations |
 | **Beta** | CT106 (pve-node3) | `192.168.178.123:3010`, `trav.abrechen2.de` | `travstats-db-beta` | Forward dev line + external app testers; own persistent data, rolling |
+| **Preview** | CT134 (pve-node1, DMZ) | `beta.travstats.de`, `immich-beta.…`, `poi-beta.…` | own, per slot | Public demo instances for external testers; demo data only, never a prod dump |
 | **RC Server** | CT107 (pve-node3) `ct107-travstats-rc` | `192.168.178.187:3010` | `travstats-db-rc` | **Prod-data mirror** — validate the imminent release before promote; re-cloned each round |
 | **Prod** | CT100 (pve-node3, HA) | `192.168.178.120:3010` | `travstats-db` (`flights`) | Real users; **final tags only**, on promote |
 | **Web** | CT133 | `travstats.de` | — | Marketing/Wiki, `version.ts` kept in lockstep |
@@ -113,9 +114,12 @@ and `cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run`.
 
 **[3] RC Server (the staging gate)** — the dedicated **prod-mirror** CT (NOT the
 CT106 Beta).
-1. **Clone Prod DB → RC-Server DB** so the RC runs against real data
-   (`scripts/stage-rc-from-prod.sh`; `CT_RC`/`DB_RC_CONTAINER` env target the RC
-   Server, not CT106).
+1. **Clone Prod DB → RC-Server DB** so the RC runs against real data —
+   `scripts/stage-rc-from-prod.sh`, no arguments needed. Its defaults target the
+   RC Server, and it **refuses outright** to restore onto the CT106 Beta or onto
+   Prod, whatever `CT_RC`/`DB_RC_CONTAINER` are set to. (Until 2026-08-05 those
+   defaults still pointed at CT106 from the days when the beta box doubled as the
+   RC target, so a correct run depended on the caller remembering the overrides.)
 2. Deploy `:X.Y.Z-rc.N` to the RC Server; the container entrypoint runs
    `prisma migrate deploy`, lifting the prod data additively onto the new schema.
 3. UAT against realistic data. **If a migration breaks here, it did NOT break prod.**

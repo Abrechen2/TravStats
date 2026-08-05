@@ -142,3 +142,19 @@ brand-smoke-shots/
 # Private memory archive + backups (owner-local, never committed)
 memory-archive/
 memory-backup-*.tar.gz
+
+# Internal roadmap board — the curated data layer and the generated page.
+# The *.md rule above does NOT cover .yaml, so this must be explicit:
+# without it the internal roadmap would be published to the public repo.
+roadmap.local.yaml
+.roadmap/
+# Nor does the *.md rule cover a renamed *.md.archive (glob `*.md` only
+# matches names ending in ".md" — verified with `git check-ignore`, it did
+# NOT match). The archived hand-written roadmap carries the same real
+# hosts/IPs as roadmap.local.yaml, so it needs the same explicit rule.
+ROADMAP.local.md.archive
+
+# Real boarding passes for local parser testing — personal data (name, PNR,
+# FF number in the barcode). NEVER in this public repo; the private companion
+# repo TravStats-local is the place if they need to be versioned at all.
+test-samples/boarding-passes/
