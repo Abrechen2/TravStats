@@ -10,6 +10,7 @@ import { AmenityChipsInput } from "./AmenityChipsInput";
 import { StayEditorRatingsSection } from "./StayEditorRatingsSection";
 import { StayEditorPriceSection } from "./StayEditorPriceSection";
 import { averageStayRating, derivePricePerNight } from "../../lib/lodgingFormat";
+import { deriveLodgingStatus } from "../../shared/statusDerivation";
 import { MembershipManager } from "./MembershipManager";
 import type {
   LodgingStay,
@@ -32,7 +33,6 @@ interface StayEditorProps {
 }
 
 const BOARD_TYPES: BoardType[] = ["none", "breakfast", "half", "full", "all_inclusive"];
-const STAY_STATUSES: StayStatus[] = ["scheduled", "completed", "cancelled"];
 
 const INPUT_CLASS =
   "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none";
@@ -77,7 +77,11 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
 
   const [checkIn, setCheckIn] = useState<string>(toDateInput(stay?.checkIn));
   const [checkOut, setCheckOut] = useState<string>(toDateInput(stay?.checkOut));
-  const [status, setStatus] = useState<StayStatus>(stay?.status ?? "completed");
+  // Cancellation is the ONLY status the user decides, so it is the only one
+  // held in state. Keeping a full `status` here is what let the editor save a
+  // stale "completed" default while the UI displayed the correctly derived
+  // value — the state and the derivation were two answers to one question.
+  const [isCancelled, setIsCancelled] = useState<boolean>(stay?.status === "cancelled");
   const [roomNumber, setRoomNumber] = useState<string>(stay?.roomNumber ?? "");
   const [roomCategory, setRoomCategory] = useState<string>(stay?.roomCategory ?? "");
   const [board, setBoard] = useState<BoardType>(stay?.board ?? "none");
@@ -132,6 +136,16 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
   // on every render rather than held in state, so the value shown and the
   // value saved can never drift apart — a state copy would need an effect to
   // stay in sync, and that effect is exactly where such bugs live.
+  // What the backend will store for these dates. Shown next to the cancelled
+  // checkbox so the derived state is visible rather than a surprise after save.
+  const derivedStatus = deriveLodgingStatus({
+    checkIn: checkIn ? new Date(checkIn) : null,
+    checkOut: checkOut ? new Date(checkOut) : null,
+    current: "scheduled",
+  }) as StayStatus;
+  // The single value the save path sends — no second source to drift from.
+  const effectiveStatus: StayStatus = isCancelled ? "cancelled" : derivedStatus;
+
   const parsedTotalPrice = totalPrice.trim() ? Number.parseFloat(totalPrice) : null;
   const derivedRatingOverall = averageStayRating(ratingRoom, ratingBreakfast, ratingService);
   const derivedPricePerNight = derivePricePerNight(
@@ -157,7 +171,7 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
       const input: StayInput = {
         checkIn: fromDateInput(checkIn),
         checkOut: fromDateInput(checkOut),
-        status,
+        status: effectiveStatus,
         // `null` (not `undefined`) for every clearable field below — an
         // omitted key means "leave it alone" to the backend PATCH handler,
         // while an explicit `null` means "delete this value" (finding 4).
@@ -245,18 +259,32 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
                 onChange={(e): void => setCheckOut(e.target.value)}
               />
             </div>
-            <select
-              aria-label={t("lodging:field.status")}
-              className={`mt-3 ${INPUT_CLASS}`}
-              value={status}
-              onChange={(e): void => setStatus(e.target.value as StayStatus)}
-            >
-              {STAY_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {t(`lodging:stayStatus.${s}`)}
-                </option>
-              ))}
-            </select>
+            {/* Status follows the dates (Alex, Discord 2026-07-12) — the same
+                rule 2.5.0 applied to flights, cruises and trips. Only the
+                cancellation is a human decision, so only it is a control. The
+                derived value is shown so the user can see what will be stored
+                rather than having to guess. */}
+            <div className="mt-3 flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
+                <input
+                  type="checkbox"
+                  data-testid="stay-cancelled-toggle"
+                  checked={isCancelled}
+                  onChange={(e): void => setIsCancelled(e.target.checked)}
+                />
+                {t("lodging:stayStatus.cancelled")}
+              </label>
+              {!isCancelled && (
+                <span
+                  data-testid="stay-derived-status"
+                  className="text-xs text-[var(--text-muted)]"
+                >
+                  {t(`lodging:stayStatus.${derivedStatus}`)}
+                  {" · "}
+                  {t("lodging:stayStatus.derivedHint")}
+                </span>
+              )}
+            </div>
             <div className="mt-3 grid grid-cols-2 gap-3">
               <input
                 aria-label={t("lodging:field.room")}
