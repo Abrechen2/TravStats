@@ -3,7 +3,46 @@ import {
   continentForCoordinates,
   continentForCountry,
   getContinent,
+  isoCountryCode,
 } from "../continents";
+
+// The cross-domain "countries visited" KPI counts a Set across both catalogues.
+// Airports carry ISO codes, ports carry English names, so without folding them
+// into one vocabulary every country reached both by air and by sea was counted
+// twice.
+describe("isoCountryCode", () => {
+  it("folds an English port-catalogue name onto the airport catalogue's code", () => {
+    expect(isoCountryCode("Germany")).toBe("DE");
+    expect(isoCountryCode("Spain")).toBe("ES");
+    expect(isoCountryCode("United States")).toBe("US");
+  });
+
+  it("passes an ISO code through, normalising its case", () => {
+    expect(isoCountryCode("DE")).toBe("DE");
+    expect(isoCountryCode("de")).toBe("DE");
+  });
+
+  it("makes the two vocabularies collide on purpose", () => {
+    expect(isoCountryCode("Germany")).toBe(isoCountryCode("DE"));
+  });
+
+  it("ignores accents, punctuation and case, so Türkiye and Turkey agree", () => {
+    expect(isoCountryCode("Türkiye")).toBe("TR");
+    expect(isoCountryCode("Turkey")).toBe("TR");
+  });
+
+  it("returns null for the catalogue's placeholder codes rather than inventing a country", () => {
+    expect(isoCountryCode("ZZ")).toBeNull();
+    expect(isoCountryCode("XZ")).toBeNull();
+  });
+
+  it("returns null for empty, missing and unrecognised input", () => {
+    expect(isoCountryCode(null)).toBeNull();
+    expect(isoCountryCode(undefined)).toBeNull();
+    expect(isoCountryCode("  ")).toBeNull();
+    expect(isoCountryCode("Unknown")).toBeNull();
+  });
+});
 
 describe("continent resolution", () => {
   describe("the three bugs this module was written to kill", () => {
