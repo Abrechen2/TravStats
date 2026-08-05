@@ -77,6 +77,33 @@ async function airportFactsFor(
   );
 }
 
+/**
+ * Countries of a trip: the stored list when it has one, otherwise derived from
+ * the countries its flights touch.
+ *
+ * `trips.countries` is a column nobody writes, and `overflownCountries` is
+ * empty for manually created flights, so without the fallback the tile reads
+ * zero for a trip that plainly visited five countries. 2.5.0 added that
+ * fallback to GET /trips/:id only — and the LIST endpoint is what feeds the
+ * trip cards, so every card on the Reisen overview kept showing "?" next to a
+ * detail page showing five. Both call this now; a third caller must too.
+ */
+function tripCountries(
+  stored: string[],
+  flights: Array<{ depIata: string | null; arrIata: string | null }>,
+  facts: Map<string, { country: string | null; timezone: string | null }>,
+): string[] {
+  if (stored.length) return stored;
+  return [
+    ...new Set(
+      flights
+        .flatMap((f) => [f.depIata, f.arrIata])
+        .map((code) => (code ? facts.get(code)?.country : null))
+        .filter((c): c is string => !!c),
+    ),
+  ].sort();
+}
+
 const router = Router();
 
 const reviewProposalSchema = z.object({
@@ -192,7 +219,16 @@ router.get(
           },
         },
       });
-      res.json({ trips });
+      // One batched airport lookup across EVERY trip's flights, not one per
+      // trip: the cards need the same country derivation the detail page does,
+      // and doing it per trip would turn one page load into N queries.
+      const facts = await airportFactsFor(trips.flatMap((t) => t.flights));
+      res.json({
+        trips: trips.map((t) => ({
+          ...t,
+          countries: tripCountries(t.countries, t.flights, facts),
+        })),
+      });
     } catch (error) {
       next(error);
     }
@@ -416,16 +452,7 @@ router.get(
         depTimezone: (f.depIata && facts.get(f.depIata)?.timezone) || null,
         arrTimezone: (f.arrIata && facts.get(f.arrIata)?.timezone) || null,
       }));
-      const countries = trip.countries.length
-        ? trip.countries
-        : [
-            ...new Set(
-              trip.flights
-                .flatMap((f) => [f.depIata, f.arrIata])
-                .map((code) => (code ? facts.get(code)?.country : null))
-                .filter((c): c is string => !!c),
-            ),
-          ].sort();
+      const countries = tripCountries(trip.countries, trip.flights, facts);
       res.json({ trip: { ...trip, photos, flights, countries } });
     } catch (error) {
       next(error);

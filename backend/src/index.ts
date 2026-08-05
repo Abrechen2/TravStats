@@ -422,6 +422,18 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({ operation: 'server_start_backfill_airline_codes_error', message: 'Failed to backfill airline codes', error });
     }
 
+    // Normalise stored aircraft types to the catalogue's canonical names
+    // (idempotent). normalizeAircraft only ever ran on the write path, so
+    // older libraries mix "Airbus A350-900", "B737-800" and "A320neo" in one
+    // column. Unrecognised types are left untouched.
+    try {
+      const { backfillAircraftNames } = await import("./scripts/backfillAircraftNames");
+      const n = await backfillAircraftNames();
+      if (n > 0) logger.info({ operation: 'server_start_backfill_aircraft_names', message: `Normalised ${n} flights` });
+    } catch (error) {
+      logger.warn({ operation: 'server_start_backfill_aircraft_names_error', message: 'Failed to normalise aircraft names', error });
+    }
+
     // Backfill booking-level prices (idempotent — heals bookings created
     // priceless by pre-2.5 imports; spec 2026-07-17-cost-booking-price)
     try {

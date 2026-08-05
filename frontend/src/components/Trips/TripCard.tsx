@@ -2,8 +2,7 @@ import { differenceInCalendarDays } from "date-fns";
 import type { Trip, TripCategory, TripStatus } from "../../types";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useSettingsStore } from "../../store/settingsStore";
-import { sumByCurrency } from "../../lib/bookingCost";
+import { sumByCurrency, tripCostSources } from "../../lib/bookingCost";
 
 interface TripCardProps {
   trip: Trip;
@@ -37,7 +36,6 @@ const CATEGORY_ICON: Record<TripCategory, string> = {
  */
 export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardProps): JSX.Element {
   const { t, i18n } = useTranslation(["trips"]);
-  const { features } = useSettingsStore();
 
   const start = trip.startDate ? new Date(trip.startDate) : firstFlightDate(trip);
   const end = trip.endDate ? new Date(trip.endDate) : lastFlightDate(trip);
@@ -50,7 +48,10 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
   const cruiseCount = isEnabled("cruise") ? (trip._count?.cruises ?? trip.cruises?.length ?? 0) : 0;
 
-  const costTotals = sumByCurrency(trip.bookings ?? []);
+  // Same sources as the trip detail page: bookings PLUS any flight carrying its
+  // own price and no booking. Summing bookings alone made a hand-entered flight
+  // price vanish from the card while the detail page counted it.
+  const costTotals = sumByCurrency(tripCostSources(trip.bookings ?? [], trip.flights ?? []));
 
   const distanceKm = estimateFlightDistanceKm(trip);
 
@@ -204,9 +205,14 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
             }
             label={t("trips:detail.stats.countries")}
           />
+          {/* NOT gated on features.enableCostTracking. Since #192 that toggle
+              gates the taxes/fees breakdown and the business statistics, not
+              whether a price is visible at all — and the trip DETAIL page has
+              always rendered this total ungated. With the gate here, the same
+              trip read "EUR 2832" on its detail page and "—" on its card. */}
           <Stat
             value={
-              features.enableCostTracking && costTotals.length > 0
+              costTotals.length > 0
                 ? costTotals
                     .map((c) => formatCurrency(c.total, c.currency, i18n.language))
                     .join(" + ")
