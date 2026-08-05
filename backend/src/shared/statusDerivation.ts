@@ -24,6 +24,8 @@ export const FLIGHT_DEPARTURE_SLACK_HOURS = 30;
 export const CRUISE_SLACK_HOURS = 48;
 export const FLIGHT_PASSTHROUGH = ["cancelled", "historical", "duplicated"] as const;
 export const CRUISE_PASSTHROUGH = ["cancelled", "historical"] as const;
+/** Lodging has no historical/duplicated concept — only a cancellation survives derivation. */
+export const LODGING_PASSTHROUGH = ["cancelled"] as const;
 
 const H = 60 * 60 * 1000;
 
@@ -70,6 +72,49 @@ export function deriveCruiseStatus(input: {
   }
   // start only: no in_progress without an end — flown once start+slack is past
   return startDate != null && nowMs - startDate.getTime() > slack ? "flown" : "scheduled";
+}
+
+/**
+ * Lodging stays: the three-way split Alex asked for (Discord 2026-07-12) —
+ * "Check-In und Check-Out vergangen = abgeschlossen, Check-In vergangen aber
+ * Check-Out Zukunft = laufend, Check-In und Check-Out Zukunft = geplant".
+ *
+ * Deliberately NO slack band, unlike flights (6h/30h) and cruises (48h). Those
+ * constants exist because an arrival/end time is an ESTIMATE that live data may
+ * still revise, and because the retired one-way flips they replaced used those
+ * cutoffs. A hotel check-out is a calendar fact the user typed; there is no
+ * second source to disagree with it, and no legacy writer whose data this must
+ * avoid fighting. This makes the deriver the same shape as `deriveTripStatus`,
+ * which is also a plain date range and also carries no slack.
+ *
+ * Both dates are stored UTC-pinned at midnight, so "check-out today" resolves
+ * to completed from 00:00 onward — which matches a morning check-out and is the
+ * behaviour a same-day arrival/departure pair needs to avoid being stuck
+ * "in progress" for a stay that is over.
+ *
+ * MIRRORED in `frontend/src/shared/statusDerivation.ts` (same convention as
+ * shared/domains.ts) because the stay editor shows the user which status their
+ * dates will produce. Change the rules here and there together.
+ */
+export function deriveLodgingStatus(input: {
+  checkIn: Date | null;
+  checkOut: Date | null;
+  current: string;
+  now?: Date;
+}): string {
+  const { checkIn, checkOut, current } = input;
+  if ((LODGING_PASSTHROUGH as readonly string[]).includes(current)) return current;
+  if (checkIn == null && checkOut == null) return current;
+  const nowMs = (input.now ?? new Date()).getTime();
+  // A one-ended stay still has a defensible position on the timeline: treat the
+  // missing end as the known start and vice versa, exactly as deriveTripStatus
+  // does, rather than falling back to the stored value and leaving a dated row
+  // permanently unconverged.
+  const start = checkIn ?? checkOut!;
+  const end = checkOut ?? checkIn!;
+  if (nowMs < start.getTime()) return "scheduled";
+  if (nowMs >= end.getTime()) return "completed";
+  return "in_progress";
 }
 
 /**

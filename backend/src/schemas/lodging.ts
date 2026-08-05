@@ -9,7 +9,12 @@ export const BOARD_TYPES = [
   "full",
   "all_inclusive",
 ] as const;
-export const STAY_STATUSES = ["scheduled", "completed", "cancelled"] as const;
+// `in_progress` joined the vocabulary when lodging status became derived from
+// the dates (Alex, 2026-07-12) — a stay whose check-in has passed but whose
+// check-out has not is "laufend", the same three-way split cruises already use.
+// The wire still ACCEPTS all four so an importer or an older client is never
+// rejected, but only "cancelled" survives derivation; see deriveLodgingStatus.
+export const STAY_STATUSES = ["scheduled", "in_progress", "completed", "cancelled"] as const;
 export const CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
 
 // Accept partial datetimes and coerce them to full ISO 8601, mirroring schemas/cruise.ts.

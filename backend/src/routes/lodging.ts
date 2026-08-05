@@ -9,6 +9,7 @@ import * as fx from "../services/fx/frankfurter";
 import * as geo from "../services/geo/nominatim";
 import { resolveUpdatedCoordinates } from "./lodgingGeocode";
 import { checkAndUpdateAchievements } from "../utils/achievements";
+import { deriveLodgingStatus } from "../shared/statusDerivation";
 import {
   createLodgingSchema,
   updateLodgingSchema,
@@ -439,7 +440,21 @@ router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunc
     const fxFields = resolveFxFields(fxOutcome);
 
     const stay = await prisma.lodgingStay.create({
-      data: { ...input, ...fxFields, lodgingId: lodging.id, userId },
+      data: {
+        ...input,
+        ...fxFields,
+        // Status follows the dates (see deriveLodgingStatus). Whatever the
+        // client sent is only consulted for the one value derivation honours,
+        // "cancelled" — so an old client, an importer or a stale form can no
+        // longer store a status the dates contradict.
+        status: deriveLodgingStatus({
+          checkIn: new Date(input.checkIn),
+          checkOut: new Date(input.checkOut),
+          current: input.status,
+        }),
+        lodgingId: lodging.id,
+        userId,
+      },
     });
 
     recheckAchievements(userId);
@@ -519,7 +534,20 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
 
     const updated = await prisma.lodgingStay.update({
       where: { id: stay.id },
-      data: { ...input, ...fxFields },
+      data: {
+        ...input,
+        ...fxFields,
+        // Derived from the EFFECTIVE (merged) dates, not from `input`, so a
+        // PATCH that moves only one date still re-derives against the range
+        // that will actually be stored. `current` is likewise the effective
+        // status — a body omitting `status` must not lose an existing
+        // cancellation, which is the one value derivation passes through.
+        status: deriveLodgingStatus({
+          checkIn: effectiveCheckIn,
+          checkOut: effectiveCheckOut,
+          current: input.status ?? stay.status,
+        }),
+      },
     });
 
     recheckAchievements(userId);

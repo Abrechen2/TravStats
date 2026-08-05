@@ -339,6 +339,91 @@ describe("StayEditor", () => {
     expect(vi.mocked(createStay).mock.calls[0][1].pricePerNight).toBe(200);
   });
 
+  // Alex's sixth ask, the one that spans every domain: status follows the
+  // dates, and only "cancelled" stays a manual choice.
+  it("offers no status dropdown — only a cancelled checkbox", () => {
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    expect(screen.getByTestId("stay-cancelled-toggle")).toBeInTheDocument();
+    expect(screen.queryByLabelText("lodging:field.status")).not.toBeInTheDocument();
+  });
+
+  it("shows the status the dates imply, and sends it on save", async () => {
+    vi.mocked(createStay).mockResolvedValue({ ...baseStay, id: "new-stay" });
+
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    // A stay that ended in the past.
+    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+      target: { value: "2020-05-01" },
+    });
+    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+      target: { value: "2020-05-04" },
+    });
+    expect(screen.getByTestId("stay-derived-status").textContent).toContain(
+      "lodging:stayStatus.completed"
+    );
+
+    // Move it into the future and the derived value follows.
+    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+      target: { value: "2099-05-01" },
+    });
+    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+      target: { value: "2099-05-04" },
+    });
+    expect(screen.getByTestId("stay-derived-status").textContent).toContain(
+      "lodging:stayStatus.scheduled"
+    );
+
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    await waitFor(() => expect(createStay).toHaveBeenCalled());
+    expect(vi.mocked(createStay).mock.calls[0][1].status).toBe("scheduled");
+  });
+
+  it("ticking cancelled overrides the derived status and hides the derived readout", async () => {
+    vi.mocked(createStay).mockResolvedValue({ ...baseStay, id: "new-stay" });
+
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+      target: { value: "2020-05-01" },
+    });
+    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+      target: { value: "2020-05-04" },
+    });
+
+    await userEvent.click(screen.getByTestId("stay-cancelled-toggle"));
+    expect(screen.queryByTestId("stay-derived-status")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    await waitFor(() => expect(createStay).toHaveBeenCalled());
+    expect(vi.mocked(createStay).mock.calls[0][1].status).toBe("cancelled");
+  });
+
+  it("un-ticking cancelled falls back to the derived status, not to a stale value", async () => {
+    vi.mocked(createStay).mockResolvedValue({ ...baseStay, id: "new-stay" });
+
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+      target: { value: "2020-05-01" },
+    });
+    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+      target: { value: "2020-05-04" },
+    });
+
+    const toggle = screen.getByTestId("stay-cancelled-toggle");
+    await userEvent.click(toggle);
+    await userEvent.click(toggle);
+
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    await waitFor(() => expect(createStay).toHaveBeenCalled());
+    expect(vi.mocked(createStay).mock.calls[0][1].status).toBe("completed");
+  });
+
   it("sends a null pricePerNight for a same-day stay instead of dividing by zero", async () => {
     vi.mocked(createStay).mockResolvedValue({ ...baseStay, id: "new-stay" });
 

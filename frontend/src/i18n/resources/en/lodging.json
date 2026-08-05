@@ -116,7 +116,9 @@
   "stayStatus": {
     "scheduled": "Scheduled",
     "completed": "Completed",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "in_progress": "In progress",
+    "derivedHint": "derived from the dates"
   },
   "form": {
     "createTitle": "New lodging",

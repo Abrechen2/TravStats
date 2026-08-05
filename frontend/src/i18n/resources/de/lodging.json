@@ -116,7 +116,9 @@
   "stayStatus": {
     "scheduled": "Geplant",
     "completed": "Abgeschlossen",
-    "cancelled": "Storniert"
+    "cancelled": "Storniert",
+    "in_progress": "Laufend",
+    "derivedHint": "ergibt sich aus den Daten"
   },
   "form": {
     "createTitle": "Neue Unterkunft",

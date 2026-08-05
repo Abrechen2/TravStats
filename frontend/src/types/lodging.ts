@@ -10,7 +10,12 @@
 
 export type LodgingType = "hotel" | "campsite" | "guesthouse" | "apartment" | "hostel";
 export type BoardType = "none" | "breakfast" | "half" | "full" | "all_inclusive";
-export type StayStatus = "scheduled" | "completed" | "cancelled";
+/**
+ * `in_progress` ("laufend") joined when lodging status became derived from the
+ * dates — a stay whose check-in has passed but whose check-out has not. Mirrors
+ * `STAY_STATUSES` in backend/src/schemas/lodging.ts.
+ */
+export type StayStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
 export type LodgingCurrency = "EUR" | "USD" | "GBP" | "CHF";
 
 export interface LodgingChain {
