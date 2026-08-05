@@ -173,4 +173,93 @@ describe("StopModal", () => {
     expect(payload.lat).toBe(52.516);
     expect(payload.lon).toBe(13.3777);
   });
+
+  // #175: "Currently there is only a date field. And so there is no chance to
+  // order more POIs on the same day correct."
+  it("sends the entered time as part of the stop's start date", async () => {
+    vi.mocked(tripsApi.createStop).mockResolvedValue({ ...baseStop, id: "new-stop" });
+
+    render(<StopModal tripId="trip-1" stop={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    fireEvent.change(screen.getByPlaceholderText("trips:stopModal.titlePlaceholder"), {
+      target: { value: "Louvre" },
+    });
+    fireEvent.change(screen.getByLabelText("trips:stopModal.startDateLabel"), {
+      target: { value: "2026-05-01" },
+    });
+    fireEvent.change(screen.getByLabelText("trips:stopModal.startTimeLabel"), {
+      target: { value: "14:30" },
+    });
+    await userEvent.click(screen.getByText("trips:stopModal.save"));
+
+    await waitFor(() => expect(tripsApi.createStop).toHaveBeenCalled());
+    // The wall clock the user typed, pinned to UTC so it round-trips for every
+    // viewer — see the time model in lib/tripTimeline.ts.
+    expect(vi.mocked(tripsApi.createStop).mock.calls[0][1].startDate).toBe(
+      "2026-05-01T14:30:00.000Z"
+    );
+  });
+
+  it("keeps a stop date-only when no time is entered", async () => {
+    vi.mocked(tripsApi.createStop).mockResolvedValue({ ...baseStop, id: "new-stop" });
+
+    render(<StopModal tripId="trip-1" stop={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    fireEvent.change(screen.getByPlaceholderText("trips:stopModal.titlePlaceholder"), {
+      target: { value: "Irgendwo" },
+    });
+    fireEvent.change(screen.getByLabelText("trips:stopModal.startDateLabel"), {
+      target: { value: "2026-05-01" },
+    });
+    await userEvent.click(screen.getByText("trips:stopModal.save"));
+
+    await waitFor(() => expect(tripsApi.createStop).toHaveBeenCalled());
+    // Midnight UTC is the date-only convention; the time field must not be
+    // mandatory just because it now exists.
+    expect(vi.mocked(tripsApi.createStop).mock.calls[0][1].startDate).toBe(
+      "2026-05-01T00:00:00.000Z"
+    );
+  });
+
+  it("seeds both fields from a stored time and round-trips it unchanged", async () => {
+    vi.mocked(tripsApi.updateStop).mockResolvedValue({ ...baseStop });
+
+    render(
+      <StopModal
+        tripId="trip-1"
+        stop={{ ...baseStop, startDate: "2026-05-01T09:15:00.000Z" }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+
+    expect(
+      (screen.getByLabelText("trips:stopModal.startDateLabel") as HTMLInputElement).value
+    ).toBe("2026-05-01");
+    expect(
+      (screen.getByLabelText("trips:stopModal.startTimeLabel") as HTMLInputElement).value
+    ).toBe("09:15");
+
+    // Saving without touching anything must not shift the time.
+    await userEvent.click(screen.getByText("trips:stopModal.save"));
+    await waitFor(() => expect(tripsApi.updateStop).toHaveBeenCalled());
+    expect(vi.mocked(tripsApi.updateStop).mock.calls[0][2].startDate).toBe(
+      "2026-05-01T09:15:00.000Z"
+    );
+  });
+
+  it("shows an empty time field for a stored date-only stop, not 00:00", async () => {
+    render(
+      <StopModal
+        tripId="trip-1"
+        stop={{ ...baseStop, startDate: "2026-05-01T00:00:00.000Z" }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+
+    expect(
+      (screen.getByLabelText("trips:stopModal.startTimeLabel") as HTMLInputElement).value
+    ).toBe("");
+  });
 });

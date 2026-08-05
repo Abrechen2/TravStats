@@ -212,7 +212,10 @@
     "endDateLabel": "End",
     "notesLabel": "Notes",
     "save": "Save",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "startTimeLabel": "Start time",
+    "endTimeLabel": "End time",
+    "timeHint": "Time is optional — it orders several entries on the same day. Diary entries always come last in a day."
   },
   "bookingEdit": {
     "title": "Edit booking",
