@@ -92,16 +92,57 @@ function tripCountries(
   stored: string[],
   flights: Array<{ depIata: string | null; arrIata: string | null }>,
   facts: Map<string, { country: string | null; timezone: string | null }>,
+  cruiseCountries: string[] = [],
 ): string[] {
   if (stored.length) return stored;
   return [
-    ...new Set(
-      flights
+    ...new Set([
+      ...flights
         .flatMap((f) => [f.depIata, f.arrIata])
         .map((code) => (code ? facts.get(code)?.country : null))
         .filter((c): c is string => !!c),
-    ),
+      // Cruise-only trips carry no flights at all, so a flight-only derivation
+      // left them reading "?" for a voyage that plainly called at six
+      // countries. Their countries come from the ports they visited.
+      ...cruiseCountries,
+    ]),
   ].sort();
+}
+
+/**
+ * Countries reached by each trip's cruises, keyed by trip id.
+ *
+ * One query for every trip on the page rather than one per trip. Covers the
+ * itinerary the way the cruise stats do: the port calls, plus the voyage's own
+ * departure and arrival ports, which are not always repeated as stops.
+ */
+async function cruiseCountriesByTrip(tripIds: string[]): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  if (tripIds.length === 0) return out;
+
+  const cruises = await prisma.cruise.findMany({
+    where: { tripId: { in: tripIds } },
+    select: {
+      tripId: true,
+      departurePort: { select: { country: true } },
+      arrivalPort: { select: { country: true } },
+      stops: { select: { port: { select: { country: true } } } },
+    },
+  });
+
+  for (const c of cruises) {
+    if (!c.tripId) continue;
+    const acc = out.get(c.tripId) ?? [];
+    for (const country of [
+      c.departurePort?.country,
+      c.arrivalPort?.country,
+      ...c.stops.map((s) => s.port?.country),
+    ]) {
+      if (country) acc.push(country);
+    }
+    out.set(c.tripId, acc);
+  }
+  return out;
 }
 
 const router = Router();
@@ -222,11 +263,19 @@ router.get(
       // One batched airport lookup across EVERY trip's flights, not one per
       // trip: the cards need the same country derivation the detail page does,
       // and doing it per trip would turn one page load into N queries.
-      const facts = await airportFactsFor(trips.flatMap((t) => t.flights));
+      const [facts, cruiseCountries] = await Promise.all([
+        airportFactsFor(trips.flatMap((t) => t.flights)),
+        cruiseCountriesByTrip(trips.map((t) => t.id)),
+      ]);
       res.json({
         trips: trips.map((t) => ({
           ...t,
-          countries: tripCountries(t.countries, t.flights, facts),
+          countries: tripCountries(
+            t.countries,
+            t.flights,
+            facts,
+            cruiseCountries.get(t.id) ?? [],
+          ),
         })),
       });
     } catch (error) {
@@ -452,7 +501,13 @@ router.get(
         depTimezone: (f.depIata && facts.get(f.depIata)?.timezone) || null,
         arrTimezone: (f.arrIata && facts.get(f.arrIata)?.timezone) || null,
       }));
-      const countries = tripCountries(trip.countries, trip.flights, facts);
+      const cruiseCountries = await cruiseCountriesByTrip([trip.id]);
+      const countries = tripCountries(
+        trip.countries,
+        trip.flights,
+        facts,
+        cruiseCountries.get(trip.id) ?? [],
+      );
       res.json({ trip: { ...trip, photos, flights, countries } });
     } catch (error) {
       next(error);
