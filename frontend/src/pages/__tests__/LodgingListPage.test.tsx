@@ -368,4 +368,31 @@ describe("LodgingListPage", () => {
     // the error alert state supersedes the empty state.
     expect(screen.queryByText("lodging:list.empty")).not.toBeInTheDocument();
   });
+
+  // Bulk import is central (Settings → Import); this page only links there.
+  // The CSV tile used to render below the list, which is the arrangement the
+  // 2.5.0 import hub replaced everywhere else.
+  it("links to the central import hub instead of embedding the CSV tile", async () => {
+    listLodgingsMock.mockResolvedValue([]);
+    renderListPage();
+
+    const hubLink = await screen.findByRole("link", { name: /settings:import\.openHub/ });
+    expect(hubLink).toHaveAttribute("href", "/settings?section=import");
+    expect(screen.queryByText("lodging:import.csv.title")).not.toBeInTheDocument();
+  });
+
+  // Two buttons that both read "…importieren" sat side by side after the tile
+  // moved out — the same indistinguishable-labels problem reported in Discord
+  // on 2026-08-03. The email/PDF trigger must not echo the hub link.
+  it("gives the single-booking import trigger a label distinct from the hub link", async () => {
+    listLodgingsMock.mockResolvedValue([]);
+    renderListPage();
+
+    expect(
+      await screen.findByRole("button", { name: /import:lodging\.triggerLabel/ })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /import:lodging\.panelTitle/ })
+    ).not.toBeInTheDocument();
+  });
 });

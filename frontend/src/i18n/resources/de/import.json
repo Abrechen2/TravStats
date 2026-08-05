@@ -33,6 +33,7 @@
   },
   "lodging": {
     "panelTitle": "Unterkunft importieren",
-    "panelHint": "Buchungs-E-Mail oder PDF einlesen, manuell hinzufügen — alles an einer Stelle."
+    "panelHint": "Buchungs-E-Mail oder PDF einlesen, manuell hinzufügen — alles an einer Stelle.",
+    "triggerLabel": "Buchung einlesen"
   }
 }
