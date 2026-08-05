@@ -26,7 +26,12 @@ describe("backfillMissingCoordinates", () => {
     await prisma.$disconnect();
   });
 
-  it("fills coordinates only for rows that lack them and have address material", async () => {
+  // The policy CHANGED on 2026-08-05: a row used to be skipped unless it had a
+  // city or an address, which silently excluded exactly what a parsed booking
+  // confirmation produces — a hotel name and nothing else. That is why an
+  // e-mail import came out with no pin. Every row now gets an attempt, because
+  // `name` is NOT NULL and "Schlosshotel Kronberg" is perfectly geocodable.
+  it("attempts every row that lacks coordinates, including a name-only one", async () => {
     geocodeAddress.mockResolvedValue({ lat: 52.5, lon: 13.4 });
 
     const needsCoords = await prisma.lodging.create({
@@ -40,15 +45,23 @@ describe("backfillMissingCoordinates", () => {
     const hasCoords = await prisma.lodging.create({
       data: { userId, name: "Has Coords", city: "Berlin", lat: 1, lon: 2 },
     });
-    const noAddress = await prisma.lodging.create({
-      data: { userId, name: "No Address" },
+    const nameOnly = await prisma.lodging.create({
+      data: { userId, name: "Schlosshotel Kronberg" },
     });
 
     const result = await backfillMissingCoordinates(userId);
 
-    expect(result.attempted).toBe(1);
-    expect(result.filled).toBe(1);
-    expect(geocodeAddress).toHaveBeenCalledTimes(1);
+    // Two attempts: the city row and the name-only row. The row that already
+    // has a pin is still skipped — the geocoder is never asked for nothing.
+    expect(result.attempted).toBe(2);
+    expect(result.filled).toBe(2);
+    expect(geocodeAddress).toHaveBeenCalledTimes(2);
+
+    // The name reaches the geocoder — without it the query would be empty and
+    // the lookup would never run.
+    expect(geocodeAddress).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Schlosshotel Kronberg" }),
+    );
 
     expect(
       (await prisma.lodging.findUnique({ where: { id: needsCoords.id } }))?.lat,
@@ -57,8 +70,8 @@ describe("backfillMissingCoordinates", () => {
       (await prisma.lodging.findUnique({ where: { id: hasCoords.id } }))?.lat,
     ).toBeCloseTo(1, 3);
     expect(
-      (await prisma.lodging.findUnique({ where: { id: noAddress.id } }))?.lat,
-    ).toBeNull();
+      (await prisma.lodging.findUnique({ where: { id: nameOnly.id } }))?.lat,
+    ).toBeCloseTo(52.5, 3);
   });
 
   it("leaves a row pin-less when the geocoder finds nothing — and never throws", async () => {
