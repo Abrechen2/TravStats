@@ -49,7 +49,7 @@ jobs:
           # Need history on both sides of the change to diff against.
           fetch-depth: 0
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
