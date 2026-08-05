@@ -447,17 +447,33 @@ async function wipeDemoUser(userId: string): Promise<void> {
   await prisma.analyticsEvent.deleteMany({ where: { userId } });
 }
 
-async function ensureUser(): Promise<string> {
+export async function ensureUser(): Promise<string> {
   const existing = await prisma.user.findUnique({
     where: { username: DEMO_USERNAME },
   });
   if (existing) {
     await wipeDemoUser(existing.id);
+    // Heal a row seeded before the flag was set here — see below. Without this
+    // the repair only reaches installs that delete the demo user first.
+    if (!existing.isDemo) {
+      await prisma.user.update({ where: { id: existing.id }, data: { isDemo: true } });
+    }
     return existing.id;
   }
   const passwordHash = await hashPassword(DEMO_PASSWORD);
   const user = await prisma.user.create({
-    data: { username: DEMO_USERNAME, passwordHash, mustChangePassword: false },
+    data: {
+      username: DEMO_USERNAME,
+      passwordHash,
+      mustChangePassword: false,
+      // This seeder is the one the Docker entrypoint runs (CREATE_DEMO_USER),
+      // and it did NOT set the flag, while the other demo seeder
+      // (seedDemoUser) always has. Measured on a production install: the demo
+      // account existed with is_demo = false, so its 160 sample flights and 22
+      // sample cruises counted as real data in the instance-wide statistics,
+      // and the demo guards in routes/flights.ts did not apply to it either.
+      isDemo: true,
+    },
   });
   return user.id;
 }
