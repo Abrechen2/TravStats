@@ -212,7 +212,10 @@
     "endDateLabel": "Ende",
     "notesLabel": "Notizen",
     "save": "Speichern",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "startTimeLabel": "Startzeit",
+    "endTimeLabel": "Endzeit",
+    "timeHint": "Zeit optional — sie ordnet mehrere Einträge am selben Tag. Tagebuch-Einträge stehen immer am Tagesende."
   },
   "bookingEdit": {
     "title": "Buchung bearbeiten",

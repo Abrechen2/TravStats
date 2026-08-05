@@ -22,6 +22,7 @@ import BookingEditModal from "../components/Trips/BookingEditModal";
 import TripMap from "../components/Trips/TripMap";
 import TripGallery from "../components/Trips/TripGallery";
 import TripSummaryPanel from "../components/Trips/TripSummaryPanel";
+import { compareTimelineEvents, formatTimelineDate } from "../lib/tripTimeline";
 
 type TabKey = "overview" | "timeline" | "map" | "gallery" | "logistics";
 const TABS: TabKey[] = ["overview", "timeline", "map", "gallery", "logistics"];
@@ -178,7 +179,12 @@ export default function TripDetailPage(): JSX.Element {
             <OverviewTab trip={shownTrip} t={t} onChanged={() => void load()} />
           )}
           {tab === "timeline" && (
-            <TimelineTab trip={shownTrip} onChanged={() => void load()} t={t} />
+            <TimelineTab
+              trip={shownTrip}
+              onChanged={() => void load()}
+              t={t}
+              language={i18n.language}
+            />
           )}
           {tab === "map" && <TripMap trip={shownTrip} />}
           {tab === "gallery" && (
@@ -542,9 +548,11 @@ interface TimelineTabProps {
   trip: Trip;
   onChanged: () => void;
   t: ReturnType<typeof useTranslation>["t"];
+  /** Drives the UTC date/time formatting of stop cards — see lib/tripTimeline.ts. */
+  language: string | undefined;
 }
 
-function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
+function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
   const [adding, setAdding] = useState<null | "journal" | "stop">(null);
   const [editingJournal, setEditingJournal] = useState<TripJournalEntry | null>(null);
@@ -613,7 +621,10 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
         stay: s,
       });
     }
-    return out.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    // #175: ordered by time of day, with a day's diary entry last. See
+    // compareTimelineEvents — the tie-break rules and the reason they exist
+    // live there, not here.
+    return out.sort(compareTimelineEvents);
   }, [trip]);
 
   // Past/upcoming is shown on the rail (line + dots), not by graying out
@@ -741,13 +752,14 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
                   }}
                 />
                 {ev.kind === "flight" && <FlightCard ev={ev} />}
-                {ev.kind === "cruise" && <CruiseCard ev={ev} />}
+                {ev.kind === "cruise" && <CruiseCard ev={ev} language={language} />}
                 {(ev.kind === "lodging-checkin" || ev.kind === "lodging-checkout") && (
-                  <LodgingCheckCard ev={ev} t={t} />
+                  <LodgingCheckCard ev={ev} t={t} language={language} />
                 )}
                 {ev.kind === "stop" && (
                   <StopCard
                     ev={ev}
+                    language={language}
                     onEdit={() => setEditingStop(ev.stop)}
                     onDelete={() => void handleDeleteStop(ev.stop)}
                   />
@@ -755,6 +767,7 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
                 {ev.kind === "journal" && (
                   <JournalCard
                     ev={ev}
+                    language={language}
                     onView={() => setViewingJournal(ev.entry)}
                     onEdit={() => setEditingJournal(ev.entry)}
                     onDelete={() => void handleDeleteJournal(ev.entry)}
@@ -836,6 +849,7 @@ function EventCard({
   subtitle,
   meta,
   date,
+  dateLabel,
   actions,
 }: {
   icon: string;
@@ -845,6 +859,14 @@ function EventCard({
   subtitle?: string | null;
   meta?: string;
   date: string;
+  /**
+   * Overrides the rendered date text. Stops pass a UTC-formatted label with
+   * their time of day (#175) — their `date` is a WALL CLOCK, not an instant.
+   * Everything else keeps `toLocaleDateString()`, deliberately: a flight's
+   * `departureTime` IS a real instant, and forcing it to UTC here could show
+   * the wrong calendar day for a departure near midnight local.
+   */
+  dateLabel?: string;
   actions?: React.ReactNode;
 }): JSX.Element {
   return (
@@ -880,7 +902,7 @@ function EventCard({
           style={{ color: "var(--text-muted)" }}
           dateTime={date}
         >
-          {new Date(date).toLocaleDateString()}
+          {dateLabel ?? new Date(date).toLocaleDateString()}
         </time>
         {actions}
       </div>
@@ -901,7 +923,13 @@ function FlightCard({ ev }: { ev: Extract<TimelineEvent, { kind: "flight" }> }):
   );
 }
 
-function CruiseCard({ ev }: { ev: Extract<TimelineEvent, { kind: "cruise" }> }): JSX.Element {
+function CruiseCard({
+  ev,
+  language,
+}: {
+  ev: Extract<TimelineEvent, { kind: "cruise" }>;
+  language: string | undefined;
+}): JSX.Element {
   return (
     <EventCard
       icon="⚓"
@@ -910,6 +938,11 @@ function CruiseCard({ ev }: { ev: Extract<TimelineEvent, { kind: "cruise" }> }):
       title={ev.title}
       subtitle={ev.subtitle}
       date={ev.date}
+      // A cruise start date is a UTC-pinned calendar day, like a stop and a
+      // diary entry — same formatting, so one timeline never shows two date
+      // styles side by side. Only FlightCard keeps local formatting, because
+      // a departure time is a genuine instant.
+      dateLabel={formatTimelineDate(ev.date, language)}
     />
   );
 }
@@ -924,9 +957,11 @@ function CruiseCard({ ev }: { ev: Extract<TimelineEvent, { kind: "cruise" }> }):
 function LodgingCheckCard({
   ev,
   t,
+  language,
 }: {
   ev: Extract<TimelineEvent, { kind: "lodging-checkin" | "lodging-checkout" }>;
   t: ReturnType<typeof useTranslation>["t"];
+  language: string | undefined;
 }): JSX.Element {
   const { stay } = ev;
   const isCheckIn = ev.kind === "lodging-checkin";
@@ -947,6 +982,7 @@ function LodgingCheckCard({
         title={title}
         subtitle={subtitle}
         date={ev.date}
+        dateLabel={formatTimelineDate(ev.date, language)}
       />
     </Link>
   );
@@ -954,10 +990,12 @@ function LodgingCheckCard({
 
 function StopCard({
   ev,
+  language,
   onEdit,
   onDelete,
 }: {
   ev: Extract<TimelineEvent, { kind: "stop" }>;
+  language: string | undefined;
   onEdit: () => void;
   onDelete: () => void;
 }): JSX.Element {
@@ -976,6 +1014,7 @@ function StopCard({
       subtitle={subtitle}
       meta={s.notes ?? undefined}
       date={ev.date}
+      dateLabel={formatTimelineDate(ev.date, language)}
       actions={<RowActions onEdit={onEdit} onDelete={onDelete} />}
     />
   );
@@ -983,11 +1022,13 @@ function StopCard({
 
 function JournalCard({
   ev,
+  language,
   onView,
   onEdit,
   onDelete,
 }: {
   ev: Extract<TimelineEvent, { kind: "journal" }>;
+  language: string | undefined;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -1004,6 +1045,7 @@ function JournalCard({
       subtitle={meta ?? null}
       meta={e.title ? truncate(e.body, 200) : undefined}
       date={ev.date}
+      dateLabel={formatTimelineDate(ev.date, language)}
       actions={<RowActions onView={onView} onEdit={onEdit} onDelete={onDelete} />}
     />
   );
