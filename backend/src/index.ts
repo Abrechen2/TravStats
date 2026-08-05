@@ -490,6 +490,21 @@ if (process.env.NODE_ENV !== 'test') {
       });
     }
 
+    // Retry the lodging locations no synchronous attempt could resolve.
+    // NOT awaited: Nominatim allows 1 req/s, so this can run for minutes and
+    // must never hold up boot. It swallows its own errors; the `.catch` is the
+    // independent backstop that keeps an unhandled rejection from killing the
+    // process (same discipline as the import route's fire-and-forget).
+    void import("./services/lodging/geocodeBackfill")
+      .then(({ backfillAllLodgingLocations }) => backfillAllLodgingLocations())
+      .catch((error: unknown) => {
+        logger.warn({
+          operation: "server_start_backfill_lodging_locations_error",
+          message: "Failed to backfill lodging locations",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+
     // Normalize aircraft type names in existing flights (idempotent)
     try {
       const { normalizeAircraft } = await import('./utils/aircraftNormalize');

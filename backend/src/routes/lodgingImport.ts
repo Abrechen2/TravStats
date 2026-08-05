@@ -15,7 +15,7 @@ import {
   listLodgingImportBatches,
   revertLodgingImportBatch,
 } from "../services/lodging/lodgingImportBatches";
-import { backfillMissingCoordinates } from "../services/lodging/geocodeBackfill";
+import { backfillLodgingLocations } from "../services/lodging/geocodeBackfill";
 import { suggestLodgingCsvMapping } from "../services/lodging/mappingSuggestion";
 
 // Mounted at /api/v1/lodging-import — deliberately NOT under
@@ -65,12 +65,14 @@ router.post("/commit", async (req: AuthRequest, res: Response, next: NextFunctio
     // Fire-and-forget: the rows are already committed and usable. Geocoding is
     // 1 req/s (Nominatim) — awaiting it here would stall the response for
     // minutes on a large import. A row without coordinates is valid; it just
-    // has no pin until this pass reaches it. `backfillMissingCoordinates`
+    // has no pin until this pass reaches it. Runs BOTH directions: an imported
+    // row may arrive with an address and no pin, or (a Google-Maps export) with
+    // a pin and no address. `backfillLodgingLocations`
     // never throws (it swallows and logs internally), but this `.catch` is a
     // second, independent backstop — an unhandled rejection on a
     // fire-and-forget promise crashes the whole Node process, so this path
     // must never rely on the callee's own discipline alone.
-    void backfillMissingCoordinates(userId, result.batchId).catch((error: unknown) => {
+    void backfillLodgingLocations(userId, result.batchId).catch((error: unknown) => {
       logger.error({
         operation: "lodging_geocode_backfill_unhandled",
         batchId: result.batchId,
