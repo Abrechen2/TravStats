@@ -66,6 +66,31 @@ with it.
   recorded cabin class was priced but never saved.
 - **The uploaded-photos box no longer lingers** once an album is linked (#179).
 - Trip aggregates use airport-local times and see manually added flights.
+- **A trip's card and its own page disagreed.** The card read "?" countries and
+  no total where the trip's page read five countries and a price. The country
+  fallback had only been taught to the detail endpoint, and the card's total was
+  hidden behind the cost-tracking toggle — which since #192 governs the
+  taxes/fees breakdown, not whether a price is shown — while also ignoring
+  prices entered on a flight rather than a booking. Both surfaces now answer
+  from the same sources.
+- **The cruise tab counted one country too many.** The port catalogue lists both
+  "United States" and "United States of America", so counting names counted the
+  same country twice. The tally folds them; the country list below still shows
+  the names as recorded.
+- **The built-in demo account is now marked as one.** Created through the Docker
+  demo-user switch it was not, so its sample flights and cruises counted towards
+  the instance-wide statistics as though they were real travel. Existing
+  installs are corrected on startup.
+- **Aircraft types are written consistently.** A library built up over years
+  could hold "Airbus A350-900", "B737-800" and "A320neo" side by side in the
+  same column; only newly entered flights were ever normalised. Stored types are
+  brought to the catalogue's spelling on startup, and a type the catalogue does
+  not know is left exactly as you typed it.
+- **Cruise regions are translated, all of them.** Ten regions had German names
+  hardcoded while the port catalogue ships fifty-four, so a German page showed
+  "Mittelmeer" and "Ostsee" next to "North Sea" and "Iberian Atlantic" — and an
+  English page got the German names for those ten. All fifty-four now exist in
+  both languages.
 
 ### Security
 - react-router 6 → 7, closing the open-redirect advisories, plus every other
@@ -81,6 +106,10 @@ with it.
   data; no configuration change is required.
 - A one-shot backfill migrates existing companion text and booking prices at
   startup.
+- Two further one-off repairs run at startup alongside the migrations: stored
+  aircraft types are normalised to the catalogue's spelling, and an existing
+  demo account is flagged as a demo account. Both are safe to re-run and skip
+  what they do not recognise.
 
 ## [2.4.0] - 2026-07-11
 
