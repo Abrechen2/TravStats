@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   averageRatingsByCategory,
+  averageStayRating,
+  derivePricePerNight,
   formatStayPriceDisplay,
   hasAnyPrice,
   nightsBetween,
@@ -31,6 +33,45 @@ describe("formatStayPriceDisplay", () => {
     expect(result.fxReadout).toContain("EZB");
     expect(result.fxReadout).toContain("12.05.24");
     expect(result.original).not.toMatch(/null|NaN|undefined/);
+  });
+
+  // Reported by Alex, Discord 2026-07-12: the hotel detail page "converts EUR
+  // to EUR and shows the ECB rate". `convertToBase` short-circuits an
+  // identical pair to {rate: 1}, which is a COMPLETE and honest snapshot — so
+  // the guard for a missing snapshot never fired and the reader was shown an
+  // exchange rate for a conversion that never happened.
+  it("renders no FX readout when the stay currency already IS the base currency", () => {
+    const result = formatStayPriceDisplay(
+      makeSnapshot({
+        totalPrice: 120,
+        currency: "EUR",
+        totalPriceBase: 120,
+        fxRate: 1,
+        fxBaseCurrency: "EUR",
+      }),
+      "de",
+      "EZB"
+    );
+
+    expect(result.fxReadout).toBeNull();
+    // The price itself must still render — this suppresses the conversion
+    // line, not the amount.
+    expect(result.original).toContain("120");
+    expect(result.original).not.toContain("→");
+  });
+
+  it("still renders the readout when the currencies genuinely differ at rate ~1", () => {
+    // A real conversion that happens to sit near parity is NOT the same case
+    // and must keep its readout — the guard is on the currency pair, never on
+    // the rate value.
+    const result = formatStayPriceDisplay(
+      makeSnapshot({ currency: "CHF", fxRate: 1, fxBaseCurrency: "EUR" }),
+      "de",
+      "EZB"
+    );
+
+    expect(result.fxReadout).not.toBeNull();
+    expect(result.fxReadout).toContain("→");
   });
 
   it("renders the original price alone — no null/NaN/dangling arrow — when the FX snapshot is null", () => {
@@ -205,5 +246,55 @@ describe("averageRatingsByCategory", () => {
     const result = averageRatingsByCategory([{ ratingRoom: 4, ratingBreakfast: null, ratingService: null }]);
     expect(result.breakfast).toBeNull();
     expect(result.service).toBeNull();
+  });
+});
+
+describe("averageStayRating", () => {
+  it("averages the three category ratings", () => {
+    expect(averageStayRating(4, 5, 3)).toBe(4);
+  });
+
+  it("rounds to the nearest half star, the granularity the picker offers", () => {
+    // 4 + 5 + 3.5 = 12.5 / 3 = 4.1667 → 4 (nearest 0.5), never 4.1667
+    expect(averageStayRating(4, 5, 3.5)).toBe(4);
+    // 5 + 4.5 + 4.5 = 14 / 3 = 4.6667 → 4.5
+    expect(averageStayRating(5, 4.5, 4.5)).toBe(4.5);
+  });
+
+  it("averages only the categories actually rated", () => {
+    // Someone who rated the room alone still gets an overall — the average is
+    // over what was given, not over three slots padded with zeros.
+    expect(averageStayRating(4, null, null)).toBe(4);
+    expect(averageStayRating(5, 4, null)).toBe(4.5);
+  });
+
+  it("is null when nothing is rated — never 0, which would read as a rating", () => {
+    expect(averageStayRating(null, null, null)).toBeNull();
+  });
+});
+
+describe("derivePricePerNight", () => {
+  it("divides the total by the number of nights", () => {
+    expect(derivePricePerNight(600, "2024-05-01", "2024-05-04")).toBe(200);
+  });
+
+  it("rounds to cents", () => {
+    expect(derivePricePerNight(100, "2024-05-01", "2024-05-04")).toBe(33.33);
+  });
+
+  it("is null without a total price", () => {
+    expect(derivePricePerNight(null, "2024-05-01", "2024-05-04")).toBeNull();
+  });
+
+  it("is null for a same-day stay rather than dividing by zero", () => {
+    expect(derivePricePerNight(120, "2024-05-01", "2024-05-01")).toBeNull();
+  });
+
+  it("is null for an inverted range rather than returning a negative rate", () => {
+    expect(derivePricePerNight(120, "2024-05-04", "2024-05-01")).toBeNull();
+  });
+
+  it("is null when the dates are unparseable", () => {
+    expect(derivePricePerNight(120, "", "")).toBeNull();
   });
 });

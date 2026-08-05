@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 import { useLodgingFxPreview } from "../../hooks/useLodgingFxPreview";
 import { formatStayPriceDisplay } from "../../lib/lodgingFormat";
+import { formatCurrency } from "../../lib/units";
 import type { LodgingCurrency } from "../../types/lodging";
 
 const CURRENCIES: LodgingCurrency[] = ["EUR", "USD", "GBP", "CHF"];
@@ -8,8 +9,10 @@ const CURRENCIES: LodgingCurrency[] = ["EUR", "USD", "GBP", "CHF"];
 interface StayEditorPriceSectionProps {
   totalPrice: string;
   onTotalPriceChange: (v: string) => void;
-  pricePerNight: string;
-  onPricePerNightChange: (v: string) => void;
+  /** Derived from total ÷ nights — displayed, never typed. Null when unknown. */
+  pricePerNight: number | null;
+  /** Label for the derived per-night figure. */
+  pricePerNightLabel: string;
   currency: LodgingCurrency;
   onCurrencyChange: (v: LodgingCurrency) => void;
   isAwardStay: boolean;
@@ -37,7 +40,7 @@ export function StayEditorPriceSection({
   totalPrice,
   onTotalPriceChange,
   pricePerNight,
-  onPricePerNightChange,
+  pricePerNightLabel,
   currency,
   onCurrencyChange,
   isAwardStay,
@@ -82,16 +85,19 @@ export function StayEditorPriceSection({
           onChange={(e): void => onTotalPriceChange(e.target.value)}
           placeholder={t("lodging:field.totalPrice")}
         />
-        <input
-          type="number"
-          min={0}
-          step={0.01}
-          aria-label={t("lodging:field.pricePerNight")}
-          className={inputClassName}
-          value={pricePerNight}
-          onChange={(e): void => onPricePerNightChange(e.target.value)}
-          placeholder={t("lodging:field.pricePerNight")}
-        />
+        {/* Derived, not typed (Alex, 2026-07-12): a hand-entered per-night
+            price is a second number that can silently contradict the total.
+            Rendered as a read-only figure so the user sees the arithmetic
+            happen rather than having to repeat it. */}
+        <div
+          data-testid="stay-editor-price-per-night"
+          className="flex flex-col justify-center rounded-md border border-(--color-border) bg-(--bg-base) px-3 py-1"
+        >
+          <span className="text-[10px] text-(--text-muted)">{pricePerNightLabel}</span>
+          <span className="text-sm text-(--text-primary)">
+            {pricePerNight !== null ? formatCurrency(pricePerNight, currency) : "—"}
+          </span>
+        </div>
         <select
           aria-label={t("lodging:field.currency")}
           className={inputClassName}

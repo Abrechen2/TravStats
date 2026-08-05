@@ -130,6 +130,28 @@ export function LodgingFormModal({
         <h3 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h3>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {/* FIRST field, and named "Unterkunft suchen" (Alex, Discord
+              2026-07-12). It sat below the name field, but a search hit fills
+              the name anyway — so by the time anyone reached it they had
+              already typed the hotel name by hand. Searching first makes the
+              fields below a review step instead of duplicate typing. */}
+          <div className="flex flex-col gap-1 sm:col-span-2">
+            <LocationInput
+              value={position}
+              onChange={handleLocationChange}
+              label={t("lodging:form.searchLabel")}
+              idPrefix="lodging-form-location"
+            />
+            {position !== null && (
+              <button
+                type="button"
+                onClick={handleClearPosition}
+                className="self-start text-xs text-[var(--text-muted)] hover:underline"
+              >
+                {t("location:clear")}
+              </button>
+            )}
+          </div>
           <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)] sm:col-span-2">
             {t("lodging:field.name")}
             <input
@@ -167,18 +189,6 @@ export function LodgingFormModal({
               className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
             />
           </label>
-          <div className="flex flex-col gap-1 sm:col-span-2">
-            <LocationInput value={position} onChange={handleLocationChange} />
-            {position !== null && (
-              <button
-                type="button"
-                onClick={handleClearPosition}
-                className="self-start text-xs text-[var(--text-muted)] hover:underline"
-              >
-                {t("location:clear")}
-              </button>
-            )}
-          </div>
           <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)] sm:col-span-2">
             {t("lodging:field.address")}
             <input
