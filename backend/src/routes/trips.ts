@@ -23,6 +23,7 @@ import {
 import logger from "../utils/logger";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { deriveTripStatus } from "../shared/statusDerivation";
+import { isoCountryCode } from "../utils/continents";
 
 import { detectTrips } from "../services/tripDetectionService";
 import { recomputeTripStatus } from "../services/tripStatusService";
@@ -94,19 +95,26 @@ function tripCountries(
   facts: Map<string, { country: string | null; timezone: string | null }>,
   cruiseCountries: string[] = [],
 ): string[] {
+  // A list the user filled in themselves is theirs — returned untouched.
   if (stored.length) return stored;
-  return [
-    ...new Set([
-      ...flights
-        .flatMap((f) => [f.depIata, f.arrIata])
-        .map((code) => (code ? facts.get(code)?.country : null))
-        .filter((c): c is string => !!c),
-      // Cruise-only trips carry no flights at all, so a flight-only derivation
-      // left them reading "?" for a voyage that plainly called at six
-      // countries. Their countries come from the ports they visited.
-      ...cruiseCountries,
-    ]),
-  ].sort();
+
+  const derived = [
+    ...flights
+      .flatMap((f) => [f.depIata, f.arrIata])
+      .map((code) => (code ? facts.get(code)?.country : null))
+      .filter((c): c is string => !!c),
+    // Cruise-only trips carry no flights at all, so a flight-only derivation
+    // left them reading "?" for a voyage that plainly called at six countries.
+    // Their countries come from the ports they visited.
+    ...cruiseCountries,
+  ];
+
+  // The two catalogues speak different languages — airports store ISO alpha-2,
+  // ports store English names — so a trip with BOTH a flight and a cruise to
+  // Germany would otherwise carry "DE" and "Germany" and count it twice. Fold
+  // to one vocabulary, and keep anything unresolvable under its own name so a
+  // country is never silently dropped from the list.
+  return [...new Set(derived.map((c) => isoCountryCode(c) ?? c))].sort();
 }
 
 /**
