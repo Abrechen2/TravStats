@@ -275,4 +275,91 @@ describe("StayEditor", () => {
     expect(errorSpy).not.toHaveBeenCalled();
     errorSpy.mockRestore();
   });
+
+  // Alex, Discord 2026-07-12: the overall score should follow the three
+  // category scores instead of being typed a fourth time.
+  it("derives ratingOverall from the three category ratings and persists it", async () => {
+    vi.mocked(createStay).mockResolvedValue({ ...baseStay, id: "new-stay" });
+
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+      target: { value: "2026-07-11" },
+    });
+    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+      target: { value: "2026-07-12" },
+    });
+
+    // 5 + 4 + 3 = 12 / 3 = 4
+    await userEvent.click(screen.getByTestId("star-room-5"));
+    await userEvent.click(screen.getByTestId("star-breakfast-4"));
+    await userEvent.click(screen.getByTestId("star-service-3"));
+
+    // Shown before saving, so the user can see what will be stored.
+    expect(screen.getByTestId("stay-editor-overall").textContent).toContain("4");
+
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    await waitFor(() => expect(createStay).toHaveBeenCalled());
+    expect(vi.mocked(createStay).mock.calls[0][1].ratingOverall).toBe(4);
+  });
+
+  it("offers no overall-rating picker — the value is read-only", () => {
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    // The three category pickers exist…
+    expect(screen.getByTestId("star-room-5")).toBeInTheDocument();
+    // …but the fourth one is gone; nothing can set the overall by hand.
+    expect(screen.queryByTestId("star-overall-5")).not.toBeInTheDocument();
+  });
+
+  // Same message: price per night was a second hand-typed number that could
+  // silently contradict the total.
+  it("derives pricePerNight from total ÷ nights and persists it", async () => {
+    vi.mocked(createStay).mockResolvedValue({ ...baseStay, id: "new-stay" });
+
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+      target: { value: "2026-07-11" },
+    });
+    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+      target: { value: "2026-07-14" },
+    });
+    fireEvent.change(screen.getByLabelText("lodging:field.totalPrice"), {
+      target: { value: "600" },
+    });
+
+    // 600 over three nights — visible before saving.
+    expect(screen.getByTestId("stay-editor-price-per-night").textContent).toContain("200");
+
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    await waitFor(() => expect(createStay).toHaveBeenCalled());
+    expect(vi.mocked(createStay).mock.calls[0][1].pricePerNight).toBe(200);
+  });
+
+  it("sends a null pricePerNight for a same-day stay instead of dividing by zero", async () => {
+    vi.mocked(createStay).mockResolvedValue({ ...baseStay, id: "new-stay" });
+
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+      target: { value: "2026-07-11" },
+    });
+    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+      target: { value: "2026-07-11" },
+    });
+    fireEvent.change(screen.getByLabelText("lodging:field.totalPrice"), {
+      target: { value: "120" },
+    });
+
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    await waitFor(() => expect(createStay).toHaveBeenCalled());
+    const payload = vi.mocked(createStay).mock.calls[0][1];
+    expect(payload.pricePerNight).toBeNull();
+    // The total itself is untouched — only the derived rate is unknowable.
+    expect(payload.totalPrice).toBe(120);
+  });
 });

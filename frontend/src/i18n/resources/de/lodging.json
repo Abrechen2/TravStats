@@ -96,7 +96,8 @@
     "companions": "Mitreisende",
     "programName": "Programmname",
     "membershipNumber": "Mitgliedsnummer",
-    "tier": "Status-Stufe"
+    "tier": "Status-Stufe",
+    "ratingOverallDerived": "Ø aus Zimmer, Frühstück und Service"
   },
   "type": {
     "hotel": "Hotel",
@@ -120,7 +121,8 @@
   "form": {
     "createTitle": "Neue Unterkunft",
     "editTitle": "Unterkunft bearbeiten",
-    "saveError": "Unterkunft konnte nicht gespeichert werden"
+    "saveError": "Unterkunft konnte nicht gespeichert werden",
+    "searchLabel": "Unterkunft suchen"
   },
   "fx": {
     "source": "EZB",

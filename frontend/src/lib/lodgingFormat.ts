@@ -99,6 +99,17 @@ export function formatStayPriceDisplay(
     return { original, fxReadout: null };
   }
 
+  // A stay already priced in the base currency has a COMPLETE snapshot —
+  // `convertToBase` short-circuits an identical pair to {baseAmount: amount,
+  // rate: 1}, which is honest data and stays stored, because aggregations read
+  // `totalPriceBase`. It is only the READOUT that must not appear: "120 € →
+  // 120 € · EZB 1,0000" shows the reader an exchange rate for a conversion
+  // that never happened (reported 2026-07-12). The guard is on the currency
+  // PAIR, never on `fxRate === 1` — CHF→EUR can legitimately sit at parity.
+  if (stay.currency === fxBaseCurrency) {
+    return { original, fxReadout: null };
+  }
+
   const base = formatCurrency(totalPriceBase, fxBaseCurrency);
   const rate = formatRate(fxRate, locale);
   const date = formatShortDate(fxRateDate, locale);
@@ -107,6 +118,50 @@ export function formatStayPriceDisplay(
     original,
     fxReadout: `${original} → ${base} · ${fxSourceLabel} ${rate} · ${date}`,
   };
+}
+
+/**
+ * The overall stay rating, derived from the three individual ones.
+ *
+ * Requested by Alex (Discord 2026-07-12): the overall score should FOLLOW the
+ * room/breakfast/service scores rather than be typed a fourth time. Averaging
+ * only the scores actually given is deliberate — someone who rates the room
+ * alone still gets an overall, instead of being forced to fill all three.
+ * Returns null when nothing is rated, which is what "unrated" means everywhere
+ * else in this module.
+ *
+ * Rounded to the nearest half star, because that is the granularity
+ * `StarRatingInput` offers; an unrounded 3.6667 would render as a rating the
+ * user could never have picked.
+ */
+export function averageStayRating(
+  room: number | null,
+  breakfast: number | null,
+  service: number | null
+): number | null {
+  const given = [room, breakfast, service].filter((v): v is number => v !== null);
+  if (given.length === 0) return null;
+  const mean = given.reduce((sum, v) => sum + v, 0) / given.length;
+  return Math.round(mean * 2) / 2;
+}
+
+/**
+ * Price per night, derived from the total price and the stay's length.
+ *
+ * Also Alex, same message: it was a second hand-typed number that could
+ * silently contradict the total. Returns null when there is no total, or when
+ * the date range yields no whole night (a same-day or inverted range) — a
+ * division by zero must surface as "unknown", never as Infinity.
+ */
+export function derivePricePerNight(
+  totalPrice: number | null,
+  checkIn: string,
+  checkOut: string
+): number | null {
+  if (totalPrice === null) return null;
+  const nights = nightsBetween(checkIn, checkOut);
+  if (nights <= 0) return null;
+  return Math.round((totalPrice / nights) * 100) / 100;
 }
 
 /** Whole nights between check-in and check-out. Never negative (a malformed/inverted range clamps to 0). */
