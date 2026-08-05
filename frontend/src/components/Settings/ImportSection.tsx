@@ -5,12 +5,14 @@ import { AVAILABLE_DOMAINS, DOMAINS, type DomainKey } from "../../shared/domains
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { Fr24ImportTile } from "../import/Fr24ImportTile";
 import { GenericCsvImportTile } from "../import/GenericCsvImportTile";
+import { LodgingCsvImportTile } from "../import/LodgingCsvImportTile";
 
 /** Central import hub: one settings area, bulk importers grouped per domain.
  *  Single-record email/PDF parsing deliberately stays in the add dialogs.
  *  A future domain gets a group by adding its tiles here — nothing else. */
 const BULK_IMPORTERS: Partial<Record<DomainKey, JSX.Element[]>> = {
   flight: [<Fr24ImportTile key="fr24" />, <GenericCsvImportTile key="csv" />],
+  lodging: [<LodgingCsvImportTile key="lodging-csv" />],
 };
 
 export default function ImportSection(): JSX.Element {

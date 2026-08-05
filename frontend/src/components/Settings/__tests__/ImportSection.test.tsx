@@ -11,6 +11,9 @@ vi.mock("../../import/Fr24ImportTile", () => ({
 vi.mock("../../import/GenericCsvImportTile", () => ({
   GenericCsvImportTile: () => <div data-testid="tile-csv" />,
 }));
+vi.mock("../../import/LodgingCsvImportTile", () => ({
+  LodgingCsvImportTile: () => <div data-testid="tile-lodging-csv" />,
+}));
 vi.unmock("../../../store/settingsStore");
 
 import ImportSection from "../ImportSection";
@@ -43,5 +46,22 @@ describe("ImportSection — central import hub", () => {
     render(<ImportSection />);
     expect(screen.queryByTestId("tile-fr24")).toBeNull();
     expect(screen.queryByText("common:domain.flight")).toBeNull();
+  });
+
+  // The lodging CSV importer used to live on the Unterkünfte list page, which
+  // contradicted the rule this hub exists to enforce: bulk import is central,
+  // domain pages only link here. It moved on the main→dev/hotels merge.
+  it("renders the lodging group with its CSV tile", () => {
+    useSettingsStore.setState({ enabledDomains: ["flight", "lodging"] });
+    render(<ImportSection />);
+    expect(screen.getByText("common:domain.lodging")).toBeTruthy();
+    expect(screen.getByTestId("tile-lodging-csv")).toBeTruthy();
+  });
+
+  it("hides the lodging group when the lodging domain is disabled", () => {
+    useSettingsStore.setState({ enabledDomains: ["flight"] });
+    render(<ImportSection />);
+    expect(screen.queryByTestId("tile-lodging-csv")).toBeNull();
+    expect(screen.queryByText("common:domain.lodging")).toBeNull();
   });
 });

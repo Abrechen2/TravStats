@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import NavigationBar from "../components/NavigationBar";
 import { LodgingStatStrip } from "../components/Dashboard/tabs/lodging/LodgingStatStrip";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
@@ -9,7 +9,6 @@ import { StarRating } from "../components/lodging/StarRating";
 import { ChainNameLink } from "../components/lodging/ChainNameLink";
 import DomainImportButton from "../components/import/DomainImportButton";
 import { useLodgingImportAdapter } from "../components/import/adapters/lodgingAdapter";
-import { LodgingCsvImportTile } from "../components/import/LodgingCsvImportTile";
 import { useTranslation } from "../hooks/useTranslation";
 import { getLodgingStats, listLodgings } from "../lib/api/lodging";
 import { formatCurrency } from "../lib/units";
@@ -28,7 +27,7 @@ const TYPES: LodgingType[] = ["hotel", "campsite", "guesthouse", "apartment", "h
 const SORT_KEYS: SortKey[] = ["name", "nights", "rating", "spend"];
 
 export default function LodgingListPage(): JSX.Element {
-  const { t } = useTranslation(["lodging", "common"]);
+  const { t } = useTranslation(["lodging", "common", "settings", "import"]);
   const navigate = useNavigate();
   // `totalSpendBase` is computed by the backend in the user's actual base
   // currency (`UserSettings.baseCurrency`) — NOT `units.currency`, which is an
@@ -48,9 +47,11 @@ export default function LodgingListPage(): JSX.Element {
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<boolean>(false);
   const [showAdd, setShowAdd] = useState<boolean>(false);
-  // Bumped every time `reloadAll` runs (i.e. after either import entry point
+  // Bumped every time `reloadAll` runs (i.e. after the email/PDF import
   // commits, or after a batch revert) — the only signal `LodgingImportBatchList`
   // needs to re-fetch its own list without this page reaching into its state.
+  // A CSV import committed in the central hub is NOT covered: the user is on a
+  // different page then, and this one re-mounts (and re-fetches) on return.
   const [batchListRefreshToken, setBatchListRefreshToken] = useState<number>(0);
 
   const [search, setSearch] = useState<string>("");
@@ -245,7 +246,21 @@ export default function LodgingListPage(): JSX.Element {
             {t("lodging:list.title")}
           </h1>
           <div className="flex flex-wrap items-center gap-2">
-            <DomainImportButton adapter={importAdapter} onItemsCreated={reloadAll} />
+            <Link
+              to="/settings?section=import"
+              className="flex items-center gap-2 whitespace-nowrap rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary) hover:border-(--accent)"
+            >
+              <span aria-hidden="true">📥</span>
+              <span>{t("settings:import.openHub")}</span>
+            </Link>
+            {/* Deliberately NOT the panel title ("Unterkunft importieren"):
+                sitting next to the hub link above, two near-identical import
+                labels are exactly the confusion Alex reported on 2026-08-03.
+                This button parses ONE booking email/PDF; the link goes to the
+                bulk hub. The labels have to say which is which. */}
+            <DomainImportButton adapter={importAdapter} onItemsCreated={reloadAll} icon="✉️">
+              {t("import:lodging.triggerLabel")}
+            </DomainImportButton>
             <button
               type="button"
               onClick={() => setShowAdd(true)}
@@ -339,11 +354,11 @@ export default function LodgingListPage(): JSX.Element {
           </div>
         )}
 
-        {/* One-time migration tool (spec §3.1), not the everyday import
-            path — kept below the list rather than in the header actions. */}
-        <div className="mt-6 max-w-md">
-          <LodgingCsvImportTile onImported={reloadAll} />
-        </div>
+        {/* The CSV tile used to sit here. It now lives in the central import
+            hub (Settings → Import), which is where every domain's BULK
+            importers belong — the header links there. Single-record email/PDF
+            parsing stays on this page as `DomainImportButton`, per the hub's
+            own rule. */}
 
         {/* "Bisherige Importe" (Task 18b) — lets the user see and, if
             needed, revert a past import batch. Reverting deletes only what
