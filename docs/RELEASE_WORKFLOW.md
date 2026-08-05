@@ -114,9 +114,12 @@ and `cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run`.
 
 **[3] RC Server (the staging gate)** — the dedicated **prod-mirror** CT (NOT the
 CT106 Beta).
-1. **Clone Prod DB → RC-Server DB** so the RC runs against real data
-   (`scripts/stage-rc-from-prod.sh`; `CT_RC`/`DB_RC_CONTAINER` env target the RC
-   Server, not CT106).
+1. **Clone Prod DB → RC-Server DB** so the RC runs against real data —
+   `scripts/stage-rc-from-prod.sh`, no arguments needed. Its defaults target the
+   RC Server, and it **refuses outright** to restore onto the CT106 Beta or onto
+   Prod, whatever `CT_RC`/`DB_RC_CONTAINER` are set to. (Until 2026-08-05 those
+   defaults still pointed at CT106 from the days when the beta box doubled as the
+   RC target, so a correct run depended on the caller remembering the overrides.)
 2. Deploy `:X.Y.Z-rc.N` to the RC Server; the container entrypoint runs
    `prisma migrate deploy`, lifting the prod data additively onto the new schema.
 3. UAT against realistic data. **If a migration breaks here, it did NOT break prod.**
