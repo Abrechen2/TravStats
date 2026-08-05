@@ -15,6 +15,11 @@ export interface Coordinates {
 }
 
 export interface GeocodeParts {
+  /**
+   * The place's own name ("Hotel Adlon Kempinski"). Used as the search subject
+   * only when there is no street address — see `buildQuery`.
+   */
+  name?: string | null;
   address?: string | null;
   city?: string | null;
   country?: string | null;
@@ -30,6 +35,22 @@ interface NominatimRow {
   lon?: unknown;
 }
 
+/** The subset of Nominatim's reverse `address` object this app fills in from. */
+interface NominatimAddress {
+  road?: unknown;
+  house_number?: unknown;
+  city?: unknown;
+  town?: unknown;
+  village?: unknown;
+  municipality?: unknown;
+  country?: unknown;
+}
+
+interface NominatimReverseRow {
+  display_name?: unknown;
+  address?: NominatimAddress;
+}
+
 // Geocoding results for a given normalized query are stable for the process
 // lifetime, so an unbounded cache is safe and small in practice. The key
 // includes the resolved base URL so switching an instance's Nominatim
@@ -37,14 +58,37 @@ interface NominatimRow {
 // result out of the cache.
 const cache = new Map<string, Coordinates | null>();
 
+// Same reasoning as `cache`, for the opposite direction. Kept separate rather
+// than sharing one map because the value shapes differ and a shared map would
+// need a discriminator for no benefit.
+const reverseCache = new Map<string, GeocodeParts | null>();
+
 // Serializes every outbound request onto a single chain so concurrent saves
 // cannot burst past Nominatim's 1 req/s limit — the throttle is process-wide,
 // not per-call, because `queue` is reassigned to the tail of every request.
 let queue: Promise<unknown> = Promise.resolve();
 let lastRequestAt = 0;
 
+/**
+ * The search subject is the STREET ADDRESS when there is one, and the place's
+ * NAME otherwise.
+ *
+ * The name used to be ignored entirely, which broke exactly the input method
+ * that depends on it: a parsed booking confirmation carries "Hotel Adlon
+ * Kempinski" and a city but rarely a street, so the query collapsed to
+ * "Berlin" — the city centre, not the hotel — or, with no city either, to the
+ * empty string, which skips the lookup altogether. That is the "Email einlesen
+ * hat die Koordinaten nicht aufgelöst" report of 2026-08-05.
+ *
+ * The name is deliberately NOT appended when a street address exists: a
+ * precise address is the better search subject, and a generic name
+ * ("Ferienwohnung", "Zuhause") would only add noise to a query that already
+ * works.
+ */
 function buildQuery(parts: GeocodeParts): string {
-  return [parts.address, parts.city, parts.country]
+  const address = parts.address?.trim();
+  const subject = address || parts.name?.trim();
+  return [subject, parts.city, parts.country]
     .map((p) => p?.trim())
     .filter((p): p is string => !!p)
     .join(", ");
@@ -143,6 +187,126 @@ export async function geocodeAddress(
   });
   queue = task.catch(() => undefined);
   return task;
+}
+
+function str(v: unknown): string | null {
+  return typeof v === "string" && v.trim() !== "" ? v.trim() : null;
+}
+
+async function fetchAddress(
+  lat: number,
+  lon: number,
+  baseUrl: string,
+): Promise<GeocodeParts | null> {
+  const url =
+    `${baseUrl}/reverse?lat=${encodeURIComponent(String(lat))}` +
+    `&lon=${encodeURIComponent(String(lon))}&format=json&zoom=18&addressdetails=1`;
+  const res = await fetch(url, {
+    headers: { "User-Agent": USER_AGENT },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    logger.warn({ lat, lon, status: res.status }, "reverse geocoding non-OK");
+    return null;
+  }
+  const row = (await res.json()) as NominatimReverseRow;
+  const a = row?.address;
+  if (!a) {
+    logger.warn({ lat, lon }, "reverse geocoding returned no address block");
+    return null;
+  }
+  // Nominatim names the settlement differently by place type, so all four
+  // spellings have to be consulted — a hotel in a village returns `village`
+  // and no `city`, and dropping that would leave the field empty for exactly
+  // the addresses hardest to type by hand.
+  const city = str(a.city) ?? str(a.town) ?? str(a.village) ?? str(a.municipality);
+  const road = str(a.road);
+  const houseNumber = str(a.house_number);
+  const address = road ? [road, houseNumber].filter(Boolean).join(" ") : null;
+  const parts: GeocodeParts = { address, city, country: str(a.country) };
+  // All three empty is indistinguishable from "no answer" to every caller, so
+  // report it as one rather than handing back a hollow object.
+  if (!parts.address && !parts.city && !parts.country) return null;
+  return parts;
+}
+
+/**
+ * The opposite direction: coordinates -> address parts.
+ *
+ * Needed because a pin dropped on the map or a pasted coordinate pair is a
+ * perfectly good way to enter a lodging, and used to leave address/city/country
+ * empty forever — the location was found but never COMPLETED. Shares the same
+ * process-wide queue, throttle and never-throws contract as `geocodeAddress`,
+ * because it hits the same 1 req/s Nominatim budget.
+ */
+export async function reverseGeocode(
+  lat: number,
+  lon: number,
+): Promise<GeocodeParts | null> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+
+  let nominatimUrl = DEFAULT_NOMINATIM_URL;
+  try {
+    const settings = await resolveGeocoderUrls();
+    nominatimUrl = settings.nominatimUrl;
+  } catch (error) {
+    nominatimUrl = process.env.NOMINATIM_URL ?? DEFAULT_NOMINATIM_URL;
+    logger.warn(
+      { error },
+      "failed to resolve geocoder settings, falling back to ENV/default URL",
+    );
+  }
+
+  const baseUrl = nominatimUrl.replace(/\/+$/, "");
+  // Rounded to ~11 m: a pin nudged by a few metres is the same address, and
+  // without rounding the cache would miss on every drag.
+  const key = `${baseUrl}|${lat.toFixed(4)},${lon.toFixed(4)}`;
+  const cached = reverseCache.get(key);
+  if (cached !== undefined) return cached;
+
+  const task = queue.then(async () => {
+    await throttle();
+    try {
+      const parts = await fetchAddress(lat, lon, baseUrl);
+      reverseCache.set(key, parts);
+      return parts;
+    } catch (error) {
+      // Transient (timeout, network blip) — deliberately NOT cached, so the
+      // next save retries instead of being told "no address" for the process
+      // lifetime.
+      logger.warn({ error, lat, lon }, "reverse geocoding failed");
+      return null;
+    }
+  });
+  queue = task.catch(() => undefined);
+  return task;
+}
+
+/**
+ * Fill ONLY the address fields the caller left empty, from the coordinates.
+ *
+ * Never overwrites something the user typed — a hand-entered "Hotel Adlon,
+ * Berlin" must survive even when Nominatim would phrase it differently. Returns
+ * `null` when there is nothing to add, so callers can skip the write entirely.
+ */
+export async function completeAddressFromCoordinates(
+  input: ResolveCoordinatesInput,
+): Promise<GeocodeParts | null> {
+  const { lat, lon } = input;
+  if (lat == null || lon == null) return null;
+  const missing =
+    !input.address?.trim() || !input.city?.trim() || !input.country?.trim();
+  if (!missing) return null;
+
+  const resolved = await reverseGeocode(lat, lon);
+  if (resolved === null) return null;
+
+  const filled: GeocodeParts = {};
+  if (!input.address?.trim() && resolved.address) filled.address = resolved.address;
+  if (!input.city?.trim() && resolved.city) filled.city = resolved.city;
+  if (!input.country?.trim() && resolved.country) filled.country = resolved.country;
+  return Object.keys(filled).length > 0 ? filled : null;
 }
 
 /**

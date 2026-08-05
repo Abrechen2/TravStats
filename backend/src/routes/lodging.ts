@@ -6,8 +6,7 @@ import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth
 import { fxPreviewLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import * as fx from "../services/fx/frankfurter";
-import * as geo from "../services/geo/nominatim";
-import { resolveUpdatedCoordinates } from "./lodgingGeocode";
+import { resolveLocation } from "./lodgingGeocode";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { deriveLodgingStatus } from "../shared/statusDerivation";
 import {
@@ -358,15 +357,15 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     const parsed = createLodgingSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    // Geocode the address the user typed in (never blocks the save — a
-    // failed/empty lookup or explicit coords resolve to `null`, meaning
-    // "leave coordinates as parsed", not "clear them").
-    const coords = await geo.resolveCoordinates(parsed.data);
+    // Both directions — see resolveLocation in lodgingGeocode.ts. A typed
+    // address gets coordinates, a dropped pin gets its address filled in.
+    // Never blocks the save: every failure path resolves to "no change".
+    const location = await resolveLocation(parsed.data);
 
     // dataSource is provenance metadata, never client-set (finding 1) —
     // a lodging created through this endpoint was hand-entered by the user.
     const lodging = await prisma.lodging.create({
-      data: { ...parsed.data, ...(coords ?? {}), userId, dataSource: "manual" },
+      data: { ...parsed.data, ...location, userId, dataSource: "manual" },
       include: LODGING_INCLUDE,
     });
     logger.info({ operation: "lodging_create", lodgingId: lodging.id, userId });
@@ -389,14 +388,15 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
     const input = parsed.data;
 
-    // See lodgingGeocode.ts — geocodes only when address/city/country
-    // changed; `null` means "leave coordinates untouched", never "clear
-    // them", so a failed/no-op geocode can't wipe a previously-good pin.
-    const coords = await resolveUpdatedCoordinates(input, existing);
+    // See resolveLocation in lodgingGeocode.ts: geocodes when the address
+    // changed OR the row still has no pin, and reverse-fills any address
+    // field left empty. An absent key means "leave that column untouched",
+    // never "clear it", so a failed lookup can't wipe good data.
+    const location = await resolveLocation(input, existing);
 
     const lodging = await prisma.lodging.update({
       where: { id: existing.id },
-      data: { ...input, ...(coords ?? {}) },
+      data: { ...input, ...location },
       include: LODGING_INCLUDE,
     });
     const baseCurrency = await getBaseCurrency(userId);

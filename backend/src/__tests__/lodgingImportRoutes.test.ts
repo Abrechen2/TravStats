@@ -17,6 +17,14 @@ const backfillSpy = jest.fn(async () => ({ attempted: 0, filled: 0 }));
 jest.mock("../services/lodging/geocodeBackfill", () => ({
   MAX_BACKFILL_ROWS: 500,
   backfillMissingCoordinates: () => backfillSpy(),
+  completeMissingAddresses: () => backfillSpy(),
+  // What the commit route actually fires since location resolution runs in
+  // BOTH directions. Leaving it out made every commit 500 — the route called
+  // an undefined mock export.
+  backfillLodgingLocations: async () => ({
+    coordinates: await backfillSpy(),
+    addresses: { attempted: 0, filled: 0 },
+  }),
 }));
 
 jest.mock("../services/lodging/mappingSuggestion", () => {
