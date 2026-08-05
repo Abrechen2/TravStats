@@ -733,8 +733,17 @@ export interface CountryStat {
 }
 
 export interface CountryStatsResponse {
+  /** Display vocabulary, ranked by flight count. */
   countries: CountryStat[];
   total: number;
+  /** Counting vocabulary: lifetime departure countries as ISO alpha-2, so the
+   *  cross-domain KPI can union them with the port catalogue without counting
+   *  "Germany" and "DE" twice. Optional — an older backend omits it. */
+  countriesIso?: string[];
+  /** Departure countries keyed by year (the year on the clock at the
+   *  departure airport), same ISO vocabulary. Optional so an older backend
+   *  still parses. */
+  byYear?: Record<string, string[]>;
 }
 
 export * from "./cruise";

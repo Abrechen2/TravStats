@@ -342,4 +342,124 @@ describe('unresolved stops count as port calls', () => {
     expect(s.cruisePortsUnique).toBe(1); // only the matched Kiel
     expect(s.seaDays).toBe(1);
   });
+
+});
+
+// The "countries visited" KPI used to render the LIFETIME country set no
+// matter which year was selected, and a delta badge on top of it that was
+// structurally always zero. These pin the year-keyed index that replaced it.
+describe('countriesByYear', () => {
+    it('buckets each cruise\'s countries under its start year', () => {
+      const cruises: CruiseData[] = [
+        {
+          id: 'c1',
+          shipId: 1,
+          cruiseLine: null,
+          cabinType: null,
+          deck: null,
+          startDate: new Date('2026-06-01'),
+          endDate: new Date('2026-06-08'),
+          stops: [
+            { portId: 1, port: port(1, 'mediterranean', 'Spain'), dayNumber: 1, isAtSea: false },
+            { portId: 2, port: port(2, 'mediterranean', 'France'), dayNumber: 2, isAtSea: false },
+          ],
+        },
+        {
+          id: 'c2',
+          shipId: 2,
+          cruiseLine: null,
+          cabinType: null,
+          deck: null,
+          startDate: new Date('2026-08-01'),
+          endDate: new Date('2026-08-08'),
+          stops: [
+            { portId: 3, port: port(3, 'caribbean', 'Bahamas'), dayNumber: 1, isAtSea: false },
+          ],
+        },
+      ];
+      const s = calculateCruiseStats(cruises);
+      expect([...(s.countriesByYear.get(2026) ?? [])].sort()).toEqual([
+        'Bahamas',
+        'France',
+        'Spain',
+      ]);
+    });
+
+    it('keeps years apart instead of unioning them', () => {
+      const cruises: CruiseData[] = [
+        {
+          id: 'a',
+          shipId: 1,
+          cruiseLine: null,
+          cabinType: null,
+          deck: null,
+          startDate: new Date('2024-05-01'),
+          endDate: new Date('2024-05-08'),
+          stops: [
+            { portId: 1, port: port(1, 'baltic', 'Norway'), dayNumber: 1, isAtSea: false },
+          ],
+        },
+        {
+          id: 'b',
+          shipId: 1,
+          cruiseLine: null,
+          cabinType: null,
+          deck: null,
+          startDate: new Date('2026-05-01'),
+          endDate: new Date('2026-05-08'),
+          stops: [
+            { portId: 2, port: port(2, 'caribbean', 'Aruba'), dayNumber: 1, isAtSea: false },
+          ],
+        },
+      ];
+      const s = calculateCruiseStats(cruises);
+      expect([...(s.countriesByYear.get(2024) ?? [])]).toEqual(['Norway']);
+      expect([...(s.countriesByYear.get(2026) ?? [])]).toEqual(['Aruba']);
+      // The lifetime set still carries both — the tile falls back to it when
+      // no year is selected.
+      expect([...s.countries].sort()).toEqual(['Aruba', 'Norway']);
+    });
+
+    it('leaves a cruise without a start date out of every year bucket but keeps it lifetime', () => {
+      const cruises: CruiseData[] = [
+        {
+          id: 'undated',
+          shipId: null,
+          cruiseLine: null,
+          cabinType: null,
+          deck: null,
+          startDate: null,
+          endDate: null,
+          stops: [
+            { portId: 1, port: port(1, 'baltic', 'Estonia'), dayNumber: 1, isAtSea: false },
+          ],
+        },
+      ];
+      const s = calculateCruiseStats(cruises);
+      expect(s.countriesByYear.size).toBe(0);
+      expect([...s.countries]).toEqual(['Estonia']);
+    });
+
+    it('reads the start year in UTC, so a date-only start does not slip a year in a western timezone', () => {
+      // Cruise dates are stored date-only, UTC-pinned (see the cruise-input
+      // fix). Deriving the year with local getFullYear() would move a
+      // 1 January start into the previous year for anyone west of UTC.
+      const cruises: CruiseData[] = [
+        {
+          id: 'newyear',
+          shipId: null,
+          cruiseLine: null,
+          cabinType: null,
+          deck: null,
+          startDate: new Date('2026-01-01T00:00:00.000Z'),
+          endDate: new Date('2026-01-08T00:00:00.000Z'),
+          stops: [
+            { portId: 1, port: port(1, 'caribbean', 'Barbados'), dayNumber: 1, isAtSea: false },
+          ],
+        },
+      ];
+      const s = calculateCruiseStats(cruises);
+      expect([...(s.countriesByYear.get(2026) ?? [])]).toEqual(['Barbados']);
+      expect(s.countriesByYear.has(2025)).toBe(false);
+    });
 });

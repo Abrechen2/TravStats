@@ -115,6 +115,24 @@ describe("adaptFlight", () => {
     expect(stats.summary.headlineKpis[0].label).toBe("Distanz");
     expect(stats.summary.topItems?.items[0].label).toBe("Lufthansa");
   });
+
+  it("passes the year-keyed country index through to the domain contract", () => {
+    const stats = adaptFlight({
+      flights: [makeFlight({})],
+      countries: ["DE", "US"],
+      countriesByYear: { 2024: ["DE"], 2026: ["US"] },
+    });
+    if (!stats.hasData) throw new Error("expected data");
+    expect(stats.countriesByYear).toEqual({ 2024: ["DE"], 2026: ["US"] });
+  });
+
+  it("leaves the index undefined when the backend did not send one", () => {
+    // Must stay undefined rather than {} — aggregate() reads that difference
+    // to decide between "no index, use lifetime" and "zero countries".
+    const stats = adaptFlight({ flights: [makeFlight({})], countries: ["DE"] });
+    if (!stats.hasData) throw new Error("expected data");
+    expect(stats.countriesByYear).toBeUndefined();
+  });
 });
 
 describe("adaptCruise", () => {
@@ -145,6 +163,47 @@ describe("adaptCruise", () => {
     expect(stats.dailyActiveDays["2024-06-02"]).toBe(1);
     expect(stats.dailyActiveDays["2024-06-03"]).toBe(1);
     expect(stats.summary.badges?.find((b) => b.label === "Polar-Region")).toBeDefined();
+  });
+
+  it("counts in ISO codes while the cruise tab keeps the display names", () => {
+    // "Germany" and the airport catalogue's "DE" are the same country. Before
+    // this the cross-domain tile counted them as two.
+    const stats = adaptCruise({
+      stats: {
+        ...baseStats,
+        cruisesCount: 1,
+        countries: ["Germany", "Spain"],
+        countriesIso: ["DE", "ES"],
+        cruiseLines: ["AIDA"],
+      },
+      cruises: [makeCruise({ startDate: "2024-06-01", endDate: "2024-06-03" })],
+    });
+    if (!stats.hasData) throw new Error("expected data");
+    expect(stats.countries).toEqual(["DE", "ES"]);
+  });
+
+  it("falls back to the names when an older backend sends no ISO list", () => {
+    const stats = adaptCruise({
+      stats: { ...baseStats, cruisesCount: 1, countries: ["Germany"], cruiseLines: ["AIDA"] },
+      cruises: [makeCruise({ startDate: "2024-06-01", endDate: "2024-06-03" })],
+    });
+    if (!stats.hasData) throw new Error("expected data");
+    expect(stats.countries).toEqual(["Germany"]);
+  });
+
+  it("converts the cruise year index from JSON string keys to numbers", () => {
+    const stats = adaptCruise({
+      stats: {
+        ...baseStats,
+        cruisesCount: 1,
+        countries: ["IT", "ES"],
+        countriesByYear: { "2024": ["IT"], "2026": ["ES"] },
+        cruiseLines: ["AIDA"],
+      },
+      cruises: [makeCruise({ startDate: "2024-06-01", endDate: "2024-06-03" })],
+    });
+    if (!stats.hasData) throw new Error("expected data");
+    expect(stats.countriesByYear).toEqual({ 2024: ["IT"], 2026: ["ES"] });
   });
 
   it("splits day-buckets correctly across year boundary", () => {
