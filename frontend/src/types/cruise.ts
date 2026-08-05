@@ -39,7 +39,7 @@ export interface CruiseStop {
   unresolvedPortName: string | null;
 }
 
-export type CruiseStatus = "scheduled" | "flown" | "cancelled" | "historical";
+export type CruiseStatus = "scheduled" | "in_progress" | "flown" | "cancelled" | "historical";
 export type CabinType = "inside" | "oceanview" | "balcony" | "suite";
 
 export interface Cruise {
@@ -94,9 +94,11 @@ export interface CruiseStopInput {
 
 export interface CruiseInput {
   shipId?: number | null;
-  shipNameOverride?: string;
-  cruiseLine?: string;
-  routeName?: string;
+  /** For the string/number fields below: `null` clears the stored value on
+   *  update; `undefined` leaves it alone. */
+  shipNameOverride?: string | null;
+  cruiseLine?: string | null;
+  routeName?: string | null;
   departurePortId?: number | null;
   arrivalPortId?: number | null;
   startDate?: string | null;
@@ -104,13 +106,13 @@ export interface CruiseInput {
   status?: CruiseStatus;
   /** Optional user-selectable map color (hex). Null = auto-derived from id. */
   color?: string | null;
-  cabinNumber?: string;
-  cabinType?: CabinType;
-  deck?: number;
-  bookingReference?: string;
-  price?: number;
+  cabinNumber?: string | null;
+  cabinType?: CabinType | null;
+  deck?: number | null;
+  bookingReference?: string | null;
+  price?: number | null;
   currency?: "EUR" | "USD" | "GBP" | "CHF";
-  notes?: string;
+  notes?: string | null;
   tags?: string[];
   companions?: string[];
   tripId?: string | null;

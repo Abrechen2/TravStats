@@ -37,7 +37,7 @@ export function ImportTileShell({
       <h3 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
         {title}
       </h3>
-      <p className="flex-grow text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
+      <p className="grow text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
         {description}
       </p>
       <div className="flex flex-wrap items-center gap-2">{picker}</div>

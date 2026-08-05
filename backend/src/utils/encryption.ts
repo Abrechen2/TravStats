@@ -147,16 +147,22 @@ export function isEncrypted(text: string): boolean {
   }
 
   try {
-    // Encrypted strings are base64 and have a minimum length
-    // salt (64) + iv (16) + tag (16) + minimum ciphertext (16) = 112 bytes = ~150 base64 chars
+    // AES-256-GCM ciphertext is the SAME length as its plaintext, so the
+    // honest minimum is salt (64) + iv (16) + tag (16) + at least 1 byte of
+    // ciphertext = 97 bytes, which base64-encodes to ~132 chars. A secret of
+    // any length >= 1 therefore lands here; the old `+ 16` bound (112 bytes)
+    // silently classified every secret shorter than 16 bytes as plaintext,
+    // so `decryptApiKey` returned the ciphertext verbatim (smoke-test S2).
+    // The `< 100` fast-reject stays safe: no ciphertext we produce is < 132
+    // chars, so it never rejects a real encrypted value.
     if (text.length < 100) {
       return false;
     }
 
     // Try to decode as base64
     const decoded = Buffer.from(text, 'base64');
-    // Check if it has the expected structure (salt + iv + tag + data)
-    return decoded.length >= SALT_LENGTH + IV_LENGTH + TAG_LENGTH + 16;
+    // Check if it has the expected structure (salt + iv + tag + >= 1 byte data)
+    return decoded.length >= SALT_LENGTH + IV_LENGTH + TAG_LENGTH + 1;
   } catch {
     return false;
   }

@@ -14,7 +14,9 @@ import { sortCruises, type CruiseSortKey, type SortOrder } from "../components/C
 type StatusFilter = CruiseStatus | "all";
 type YearFilter = number | "all";
 
-const STATUSES: CruiseStatus[] = ["scheduled", "flown", "cancelled", "historical"];
+// #status-from-dates: in_progress included so the filter dropdown can
+// discover cruises currently under way, not just scheduled/flown/cancelled.
+const STATUSES: CruiseStatus[] = ["scheduled", "in_progress", "flown", "cancelled", "historical"];
 
 export default function CruisesPage(): JSX.Element {
   const { t } = useTranslation(["cruise", "common"]);
@@ -132,13 +134,13 @@ export default function CruisesPage(): JSX.Element {
               value={search}
               onChange={(e): void => setSearch(e.target.value)}
               placeholder={t("filter.searchPlaceholder")}
-              className="w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none md:max-w-xs"
+              className="w-full rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden md:max-w-xs"
             />
             <select
               value={statusFilter}
               onChange={(e): void => setStatusFilter(e.target.value as StatusFilter)}
               aria-label={t("filter.status")}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              className="rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary)"
             >
               <option value="all">{t("filter.allStatuses")}</option>
               {STATUSES.map((s) => (
@@ -155,7 +157,7 @@ export default function CruisesPage(): JSX.Element {
                 )
               }
               aria-label={t("filter.year")}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              className="rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary)"
             >
               <option value="all">{t("filter.allYears")}</option>
               {availableYears.map((y) => (
@@ -168,13 +170,13 @@ export default function CruisesPage(): JSX.Element {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="rounded-md border border-[var(--color-border)] px-3 py-2 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                className="rounded-md border border-border px-3 py-2 text-xs text-(--text-muted) hover:text-(--text-primary)"
               >
                 {t("filter.reset")}
               </button>
             )}
           </div>
-          <div className="text-xs text-[var(--text-muted)]">
+          <div className="text-xs text-(--text-muted)">
             {t("filter.showing", { count: filtered.length })}
           </div>
         </div>
@@ -182,7 +184,7 @@ export default function CruisesPage(): JSX.Element {
 
       <div className="mx-auto max-w-6xl px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold text-[var(--text-primary)]">{t("list.title")}</h1>
+          <h1 className="text-2xl font-semibold text-(--text-primary)">{t("list.title")}</h1>
           <button
             type="button"
             onClick={() => setShowAdd(true)}
@@ -194,27 +196,27 @@ export default function CruisesPage(): JSX.Element {
         </div>
 
         {loading ? (
-          <div className="text-[var(--text-muted)]">{t("list.loading")}</div>
+          <div className="text-(--text-muted)">{t("list.loading")}</div>
         ) : filtered.length === 0 ? (
-          <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-4 py-8 text-center text-[var(--text-muted)]">
+          <div className="rounded-md border border-border bg-(--bg-surface) px-4 py-8 text-center text-(--text-muted)">
             {t("list.empty")}
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-md border border-[var(--color-border)]">
+          <div className="overflow-x-auto rounded-md border border-border">
             <table className="w-full text-sm min-w-[640px]">
-              <thead className="bg-[var(--bg-surface)] text-[var(--text-muted)]">
+              <thead className="bg-(--bg-surface) text-(--text-muted)">
                 <tr>
                   <th className="px-3 py-2 text-left">
                     <button
                       type="button"
                       onClick={() => handleSort("ship")}
-                      className="inline-flex items-center gap-1 hover:text-[var(--text-primary)]"
+                      className="inline-flex items-center gap-1 hover:text-(--text-primary)"
                       aria-label={t("list.sortBy", { col: t("list.columns.ship") })}
                     >
                       {t("list.columns.ship")}
                       <span
                         aria-hidden
-                        className={sortBy === "ship" ? "text-[var(--accent)]" : "opacity-0"}
+                        className={sortBy === "ship" ? "text-(--accent)" : "opacity-0"}
                       >
                         {sortBy === "ship" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
                       </span>
@@ -224,13 +226,13 @@ export default function CruisesPage(): JSX.Element {
                     <button
                       type="button"
                       onClick={() => handleSort("line")}
-                      className="inline-flex items-center gap-1 hover:text-[var(--text-primary)]"
+                      className="inline-flex items-center gap-1 hover:text-(--text-primary)"
                       aria-label={t("list.sortBy", { col: t("list.columns.line") })}
                     >
                       {t("list.columns.line")}
                       <span
                         aria-hidden
-                        className={sortBy === "line" ? "text-[var(--accent)]" : "opacity-0"}
+                        className={sortBy === "line" ? "text-(--accent)" : "opacity-0"}
                       >
                         {sortBy === "line" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
                       </span>
@@ -240,13 +242,13 @@ export default function CruisesPage(): JSX.Element {
                     <button
                       type="button"
                       onClick={() => handleSort("date")}
-                      className="inline-flex items-center gap-1 hover:text-[var(--text-primary)]"
+                      className="inline-flex items-center gap-1 hover:text-(--text-primary)"
                       aria-label={t("list.sortBy", { col: t("list.columns.dates") })}
                     >
                       {t("list.columns.dates")}
                       <span
                         aria-hidden
-                        className={sortBy === "date" ? "text-[var(--accent)]" : "opacity-0"}
+                        className={sortBy === "date" ? "text-(--accent)" : "opacity-0"}
                       >
                         {sortBy === "date" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
                       </span>
@@ -256,13 +258,13 @@ export default function CruisesPage(): JSX.Element {
                     <button
                       type="button"
                       onClick={() => handleSort("ports")}
-                      className="inline-flex items-center justify-end gap-1 hover:text-[var(--text-primary)]"
+                      className="inline-flex items-center justify-end gap-1 hover:text-(--text-primary)"
                       aria-label={t("list.sortBy", { col: t("list.columns.ports") })}
                     >
                       {t("list.columns.ports")}
                       <span
                         aria-hidden
-                        className={sortBy === "ports" ? "text-[var(--accent)]" : "opacity-0"}
+                        className={sortBy === "ports" ? "text-(--accent)" : "opacity-0"}
                       >
                         {sortBy === "ports" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
                       </span>
@@ -272,13 +274,13 @@ export default function CruisesPage(): JSX.Element {
                     <button
                       type="button"
                       onClick={() => handleSort("status")}
-                      className="inline-flex items-center gap-1 hover:text-[var(--text-primary)]"
+                      className="inline-flex items-center gap-1 hover:text-(--text-primary)"
                       aria-label={t("list.sortBy", { col: t("list.columns.status") })}
                     >
                       {t("list.columns.status")}
                       <span
                         aria-hidden
-                        className={sortBy === "status" ? "text-[var(--accent)]" : "opacity-0"}
+                        className={sortBy === "status" ? "text-(--accent)" : "opacity-0"}
                       >
                         {sortBy === "status" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
                       </span>
@@ -289,13 +291,13 @@ export default function CruisesPage(): JSX.Element {
                     <button
                       type="button"
                       onClick={() => handleSort("price")}
-                      className="inline-flex items-center justify-end gap-1 hover:text-[var(--text-primary)]"
+                      className="inline-flex items-center justify-end gap-1 hover:text-(--text-primary)"
                       aria-label={t("list.sortBy", { col: t("list.columns.price") })}
                     >
                       {t("list.columns.price")}
                       <span
                         aria-hidden
-                        className={sortBy === "price" ? "text-[var(--accent)]" : "opacity-0"}
+                        className={sortBy === "price" ? "text-(--accent)" : "opacity-0"}
                       >
                         {sortBy === "price" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
                       </span>

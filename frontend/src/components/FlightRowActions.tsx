@@ -31,32 +31,36 @@ export default function FlightRowActions({
 
   return (
     <div className="flex items-center justify-end gap-2">
+      {/* Edit button */}
       <button
         onClick={() => onEdit(flight)}
-        className="px-3 py-1 text-xs font-medium rounded"
-        style={{
-          background: "rgba(56,139,253,0.15)",
-          color: "#388bfd",
-        }}
+        className="inline-flex items-center justify-center w-7 h-7 rounded-sm hover:bg-(--bg-muted) hover:text-[#388bfd]"
+        style={{ color: "var(--text-muted)" }}
+        aria-label={t("common:buttons.edit")}
+        title={t("common:buttons.edit")}
       >
-        {t("common:buttons.edit")}
+        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+        </svg>
       </button>
+
+      {/* Duplicate button with dropdown */}
       <div className="relative" data-duplicate-menu>
         <button
           onClick={() => onToggleDuplicateMenu(menuOpen ? null : flight.id)}
-          className="px-3 py-1 text-xs font-medium rounded"
-          style={{
-            background: "rgba(139,148,158,0.15)",
-            color: "var(--text-muted)",
-          }}
+          className="inline-flex items-center justify-center w-7 h-7 rounded-sm hover:bg-(--bg-muted) hover:text-(--text-primary)"
+          style={{ color: "var(--text-muted)" }}
           aria-label={t("flights:table.duplicate.label")}
           title={t("flights:table.duplicate.label")}
         >
-          {t("flights:table.duplicate.label")}
+          <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
         </button>
         {menuOpen && (
           <div
-            className="absolute right-0 mt-1 rounded shadow-lg z-20 min-w-[180px]"
+            className="absolute right-0 mt-1 rounded-sm shadow-lg z-20 min-w-[180px]"
             style={{
               background: "var(--bg-surface)",
               border: "1px solid var(--color-border)",
@@ -64,14 +68,14 @@ export default function FlightRowActions({
           >
             <button
               onClick={() => onDuplicate(flight, "same")}
-              className="block w-full text-left px-3 py-2 text-xs hover:bg-[var(--bg-elevated)]"
+              className="block w-full text-left px-3 py-2 text-xs hover:bg-(--bg-elevated)"
               style={{ color: "var(--text-primary)" }}
             >
               {t("flights:table.duplicate.same")}
             </button>
             <button
               onClick={() => onDuplicate(flight, "return")}
-              className="block w-full text-left px-3 py-2 text-xs hover:bg-[var(--bg-elevated)]"
+              className="block w-full text-left px-3 py-2 text-xs hover:bg-(--bg-elevated)"
               style={{ color: "var(--text-primary)" }}
             >
               {t("flights:table.duplicate.return")}
@@ -79,15 +83,18 @@ export default function FlightRowActions({
           </div>
         )}
       </div>
+
+      {/* Delete button */}
       <button
         onClick={() => onDelete(flight.id)}
-        className="px-3 py-1 text-xs font-medium rounded"
-        style={{
-          background: "rgba(248,81,73,0.15)",
-          color: "var(--danger)",
-        }}
+        className="inline-flex items-center justify-center w-7 h-7 rounded-sm hover:bg-(--bg-muted) hover:text-(--danger)"
+        style={{ color: "var(--text-muted)" }}
+        aria-label={t("common:buttons.delete")}
+        title={t("common:buttons.delete")}
       >
-        {t("common:buttons.delete")}
+        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+        </svg>
       </button>
     </div>
   );

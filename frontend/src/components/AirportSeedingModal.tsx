@@ -61,10 +61,10 @@ export default function AirportSeedingModal({
         ></div>
 
         {/* Modal */}
-        <div className="inline-block align-bottom bg-[var(--bg-surface)] rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="bg-[var(--bg-surface)] px-4 pt-5 pb-4 sm:p-6">
+        <div className="inline-block align-bottom bg-(--bg-surface) rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          <div className="bg-(--bg-surface) px-4 pt-5 pb-4 sm:p-6">
             <div className="sm:flex sm:items-start">
-              <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+              <div className="mx-auto shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
                 <svg className="h-6 w-6 text-blue-600 animate-spin" fill="none" viewBox="0 0 24 24">
                   <circle
                     className="opacity-25"
@@ -82,23 +82,23 @@ export default function AirportSeedingModal({
                 </svg>
               </div>
               <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                <h3 className="text-lg leading-6 font-medium text-[var(--text-primary)]">
+                <h3 className="text-lg leading-6 font-medium text-(--text-primary)">
                   {t("setup:airportSeeding.modal.title")}
                 </h3>
                 <div className="mt-2">
-                  <p className="text-sm text-[var(--text-muted)]">
+                  <p className="text-sm text-(--text-muted)">
                     {t("setup:airportSeeding.modal.description")}
                   </p>
 
                   {status.status === "running" && (
                     <div className="mt-4 space-y-2">
-                      <div className="w-full bg-[var(--bg-muted)] rounded-full h-2">
+                      <div className="w-full bg-(--bg-muted) rounded-full h-2">
                         <div
                           className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                           style={{ width: `${progressPercent}%` }}
                         ></div>
                       </div>
-                      <div className="flex justify-between text-xs text-[var(--text-muted)]">
+                      <div className="flex justify-between text-xs text-(--text-muted)">
                         <span>
                           {t("setup:airportSeeding.modal.progress", { percent: progressPercent })}
                         </span>
@@ -118,11 +118,11 @@ export default function AirportSeedingModal({
               </div>
             </div>
           </div>
-          <div className="bg-[var(--bg-base)] px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+          <div className="bg-(--bg-base) px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
             <button
               type="button"
               onClick={onClose}
-              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+              className="btn-primary w-full justify-center sm:ml-3 sm:w-auto"
             >
               {t("setup:airportSeeding.modal.understood")}
             </button>

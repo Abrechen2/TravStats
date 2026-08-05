@@ -70,7 +70,7 @@ export default function JournalViewModal({
               📝
             </span>
             <div className="min-w-0">
-              <h2 className="text-lg font-semibold break-words">{heading}</h2>
+              <h2 className="text-lg font-semibold wrap-break-word">{heading}</h2>
               {entry.title?.trim() && dateLabel && (
                 <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
                   {dateLabel}
@@ -106,7 +106,7 @@ export default function JournalViewModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--accent)] text-[var(--bg-base)]"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-(--accent) text-(--bg-base)"
           >
             {t("trips:journalView.close")}
           </button>

@@ -1,6 +1,6 @@
 import { calculateDistance } from '../geo';
 import { getCachedAirports } from '../../services/airportCache';
-import { tzAwareDurationMinutes, type FlightTimeSemantics } from '../timezone';
+import { tzAwareDurationMinutes, toLocalDateString, type FlightTimeSemantics } from '../timezone';
 import logger from '../logger';
 import { getContinent } from '../continents';
 import type { AirportData } from '../../services/airportLookup';
@@ -566,26 +566,7 @@ function toLocalMinutes(date: Date, timezone: string): number {
   }
 }
 
-/**
- * Convert a Date to a local date string (YYYY-MM-DD) in the given timezone.
- * Falls back to the Date's UTC date if timezone is null.
- * Since stored times are local wall-clock as fake-UTC, the fallback is fine
- * for same-timezone flights.
- */
-function toLocalDateString(date: Date, timezone: string | null): string {
-  if (!timezone) {
-    return date.toISOString().split('T')[0];
-  }
-  try {
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(date);
-    return parts; // en-CA gives YYYY-MM-DD format
-  } catch {
-    return date.toISOString().split('T')[0];
-  }
-}
+// toLocalDateString now lives in utils/timezone alongside localYearOf — it
+// had been copied here, and a second copy was about to be written for the
+// year-scoped country index.
 

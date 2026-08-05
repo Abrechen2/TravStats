@@ -47,6 +47,9 @@ jest.mock("../middleware/upload", () => {
   return {
     // Disk storage so `file.path` exists — the route reads via `fs.readFileSync(filePath)`.
     uploadEmailFile: multer({ dest: os.tmpdir() }),
+    // The route rebuilds the cleanup path as join(getEmailUploadDir(), basename(file.filename));
+    // point it at the same dir the mock multer writes to so the path resolves.
+    getEmailUploadDir: () => os.tmpdir(),
   };
 });
 jest.mock("../utils/fileValidation", () => ({

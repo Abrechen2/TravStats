@@ -52,26 +52,26 @@ export default function UserManagement({
           </div>
         }
       />
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow overflow-x-auto">
+      <div className="bg-(--bg-surface) rounded-lg shadow-sm overflow-x-auto">
         <table className="w-full min-w-[720px]">
-          <thead className="bg-[var(--bg-base)]">
+          <thead className="bg-(--bg-base)">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
                 {t("admin:users.table.username")}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
                 {t("admin:users.table.flights")}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
                 {t("admin:users.table.achievements")}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
                 {t("admin:users.table.role")}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
                 {t("admin:users.table.status")}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
                 {t("admin:users.table.actions")}
               </th>
             </tr>
@@ -80,17 +80,17 @@ export default function UserManagement({
             {users.map((user) => (
               <tr key={user.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-[var(--text-primary)]">
+                  <div className="text-sm font-medium text-(--text-primary)">
                     {user.username}
                   </div>
-                  <div className="text-xs text-[var(--text-muted)]">
+                  <div className="text-xs text-(--text-muted)">
                     {format(new Date(user.createdAt), "MMM d, yyyy")}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--text-primary)]">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-primary)">
                   {user._count.flights}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--text-primary)]">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-primary)">
                   {user._count.userAchievements}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -106,7 +106,7 @@ export default function UserManagement({
                       {t("admin:users.role.admin")}
                     </span>
                   ) : (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-[var(--bg-elevated)] text-[var(--text-primary)]">
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-(--bg-elevated) text-(--text-primary)">
                       {t("admin:users.role.user")}
                     </span>
                   )}

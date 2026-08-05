@@ -14,7 +14,8 @@ export type ApiProvider =
   | 'airlabs'
   | 'aviationstack'
   | 'aerodatabox'
-  | 'opensky';
+  | 'opensky'
+  | 'logostream';
 
 export interface OpenSkyCredentials {
   clientId?: string;
@@ -96,6 +97,11 @@ export async function getApiKey(
         case 'aerodatabox':
           globalKey = adminSettings.globalAerodataboxApiKey;
           break;
+        // No user-level key for logostream — logos are instance-wide assets,
+        // so resolution is global → env only.
+        case 'logostream':
+          globalKey = adminSettings.globalLogostreamApiKey;
+          break;
       }
 
       if (globalKey) {
@@ -118,6 +124,8 @@ export async function getApiKey(
         return process.env.AVIATIONSTACK_API_KEY || null;
       case 'aerodatabox':
         return process.env.AERODATABOX_API_KEY || null;
+      case 'logostream':
+        return process.env.LOGOSTREAM_API_KEY || null;
       default:
         return null;
     }

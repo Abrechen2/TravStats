@@ -104,8 +104,8 @@ export function TripFilterBar({ trips, value, onChange }: TripFilterBarProps): J
           onClick={() => onChange(f)}
           className={`px-3 py-1 rounded-full text-xs border transition-colors ${
             value === f
-              ? "bg-[var(--accent)]/20 border-[var(--accent)]/50 text-[var(--accent)]"
-              : "border-[var(--color-border)] text-[var(--text-muted)]"
+              ? "bg-(--accent)/20 border-(--accent)/50 text-(--accent)"
+              : "border-border text-(--text-muted)"
           }`}
         >
           {t(`trips:filter.${f}`)}
@@ -132,7 +132,7 @@ export function TripFilterBar({ trips, value, onChange }: TripFilterBarProps): J
           onClick={() => setOpen((prev) => !prev)}
           aria-haspopup="dialog"
           aria-expanded={open}
-          className="px-3 py-1 rounded-full text-xs border transition-colors border-[var(--color-border)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+          className="px-3 py-1 rounded-full text-xs border transition-colors border-border text-(--text-muted) hover:text-(--text-primary)"
         >
           🏷 {t("trips:filter.pick")} ▾
         </button>
@@ -181,7 +181,7 @@ export function TripFilterBar({ trips, value, onChange }: TripFilterBarProps): J
                     <button
                       key={trip.id}
                       onClick={() => selectTrip(trip.id)}
-                      className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 transition-colors hover:bg-[var(--bg-muted)]"
+                      className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 transition-colors hover:bg-(--bg-muted)"
                       style={{
                         color: value === trip.id ? "var(--accent)" : "var(--text-primary)",
                       }}

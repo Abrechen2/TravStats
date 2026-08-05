@@ -9,6 +9,7 @@ import flightRoutes from './routes/flights';
 import flightLookupRoutes from './routes/flightLookup';
 import statsRoutes from './routes/stats';
 import airportRoutes from './routes/airports';
+import airlineLogoRoutes from './routes/airlineLogos';
 import achievementRoutes from './routes/achievements';
 import settingsRoutes from './routes/settings';
 import analyticsRoutes from './routes/analytics';
@@ -27,15 +28,21 @@ import templateStatusRoutes from './routes/templateStatus';
 import parserTemplatesRoutes from './routes/parserTemplates';
 import trainingRoutes from './routes/training';
 import tripsRoutes from './routes/trips';
+import immichTripRoutes from './routes/immich/tripAlbums';
+import immichAssetProxyRoutes from './routes/immich/assetProxy';
+import immichTripCoverRoutes from './routes/immich/tripCover';
 import passwordResetRoutes from './routes/passwordReset';
 import suggestionsRoutes from './routes/suggestions';
 import portsRoutes from './routes/ports';
 import shipsRoutes from './routes/ships';
+import airlinesRoutes from './routes/airlines';
+import aircraftRoutes from './routes/aircraft';
 import cruisesRouter from './routes/cruises';
 import lodgingRouter from './routes/lodging';
 import lodgingChainsRouter from './routes/lodgingChains';
 import lodgingMembershipsRouter from './routes/lodgingMemberships';
 import lodgingImportRoutes from './routes/lodgingImport';
+import companionRoutes from './routes/companions';
 import openapiRoutes from './routes/openapi';
 import importRoutes from './routes/import';
 import pairingRoutes from './routes/pairing';
@@ -51,6 +58,8 @@ import { templateRegistry } from './services/parsers/templates/registry';
 import { seedPortsFromCSV } from './seedPortsFromCSV';
 import { seedShipsFromCSV } from './seedShipsFromCSV';
 import { seedLodgingChainsFromCSV } from './seedLodgingChainsFromCSV';
+import { seedAirlinesFromData } from './seedAirlinesFromData';
+import { seedAircraftFromData } from './seedAircraftFromData';
 
 // Load environment variables
 dotenv.config();
@@ -232,6 +241,7 @@ app.use('/api/v1/flights', flightRoutes);
 app.use('/api/v1/flight-lookup', flightLookupRoutes);
 app.use('/api/v1/stats', statsRoutes);
 app.use('/api/v1/airports', airportRoutes);
+app.use('/api/v1/airline-logos', airlineLogoRoutes);
 app.use('/api/v1/achievements', achievementRoutes);
 app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
@@ -248,14 +258,20 @@ app.use('/api/v1/pending-updates', pendingUpdatesRoutes);
 app.use('/api/v1/template-status', templateStatusRoutes);
 app.use('/api/v1/training', trainingRoutes);
 app.use('/api/v1', tripsRoutes);
+app.use('/api/v1', immichTripRoutes);
+app.use('/api/v1', immichAssetProxyRoutes);
+app.use('/api/v1', immichTripCoverRoutes);
 app.use('/api/v1/suggestions', suggestionsRoutes);
 app.use('/api/v1/ports', portsRoutes);
 app.use('/api/v1/ships', shipsRoutes);
+app.use('/api/v1/airlines', airlinesRoutes);
+app.use('/api/v1/aircraft', aircraftRoutes);
 app.use('/api/v1/cruises', cruisesRouter);
 app.use('/api/v1/lodging', lodgingRouter);
 app.use('/api/v1/lodging-chains', lodgingChainsRouter);
 app.use('/api/v1/lodging-memberships', lodgingMembershipsRouter);
 app.use('/api/v1/lodging-import', lodgingImportRoutes);
+app.use('/api/v1/companions', companionRoutes);
 app.use('/api/v1/import', importRoutes);
 app.use('/api/v1/pairing', pairingRoutes);
 app.use('/api/v1/app-settings', appSettingsRoutes);
@@ -302,6 +318,10 @@ process.on('SIGINT', async () => {
   stopReminderScheduler();
   const { stopUsageStatsScheduler } = await import('./jobs/usageStatsScheduler');
   stopUsageStatsScheduler();
+  const { stopAirlineLogoRefreshScheduler } = await import('./jobs/airlineLogoRefreshScheduler');
+  stopAirlineLogoRefreshScheduler();
+  const { stopStatusSweepScheduler } = await import('./jobs/statusSweepScheduler');
+  stopStatusSweepScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -316,6 +336,10 @@ process.on('SIGTERM', async () => {
   stopReminderScheduler();
   const { stopUsageStatsScheduler } = await import('./jobs/usageStatsScheduler');
   stopUsageStatsScheduler();
+  const { stopAirlineLogoRefreshScheduler } = await import('./jobs/airlineLogoRefreshScheduler');
+  stopAirlineLogoRefreshScheduler();
+  const { stopStatusSweepScheduler } = await import('./jobs/statusSweepScheduler');
+  stopStatusSweepScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -380,6 +404,89 @@ if (process.env.NODE_ENV !== 'test') {
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
         },
+      });
+    }
+
+    try {
+      await seedAirlinesFromData();
+      logger.info({ operation: 'server_start_seed_airlines', message: 'Airlines seeded' });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_seed_airlines_error',
+        message: 'Failed to seed airlines',
+        error: { message: error instanceof Error ? error.message : 'Unknown error' },
+      });
+    }
+
+    try {
+      await seedAircraftFromData();
+      logger.info({ operation: 'server_start_seed_aircraft', message: 'Aircraft seeded' });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_seed_aircraft_error',
+        message: 'Failed to seed aircraft',
+        error: { message: error instanceof Error ? error.message : 'Unknown error' },
+      });
+    }
+
+    try {
+      const { preloadAirlineCatalog } = await import("./services/airlineCatalogCache");
+      const { preloadAircraftCatalog } = await import("./services/aircraftCatalogCache");
+      await preloadAirlineCatalog();
+      await preloadAircraftCatalog();
+      logger.info({ operation: 'server_start_catalog_preload', message: 'Airline+aircraft caches preloaded' });
+    } catch (error) {
+      logger.warn({ operation: 'server_start_catalog_preload_error', message: 'Failed to preload catalogues', error });
+    }
+
+    try {
+      const { backfillAirlineCodes } = await import("./scripts/backfillAirlineCodes");
+      const n = await backfillAirlineCodes();
+      if (n > 0) logger.info({ operation: 'server_start_backfill_airline_codes', message: `Backfilled ${n} flights` });
+    } catch (error) {
+      logger.warn({ operation: 'server_start_backfill_airline_codes_error', message: 'Failed to backfill airline codes', error });
+    }
+
+    // Normalise stored aircraft types to the catalogue's canonical names
+    // (idempotent). normalizeAircraft only ever ran on the write path, so
+    // older libraries mix "Airbus A350-900", "B737-800" and "A320neo" in one
+    // column. Unrecognised types are left untouched.
+    try {
+      const { backfillAircraftNames } = await import("./scripts/backfillAircraftNames");
+      const n = await backfillAircraftNames();
+      if (n > 0) logger.info({ operation: 'server_start_backfill_aircraft_names', message: `Normalised ${n} flights` });
+    } catch (error) {
+      logger.warn({ operation: 'server_start_backfill_aircraft_names_error', message: 'Failed to normalise aircraft names', error });
+    }
+
+    // Backfill booking-level prices (idempotent — heals bookings created
+    // priceless by pre-2.5 imports; spec 2026-07-17-cost-booking-price)
+    try {
+      const { backfillBookingPrices } = await import("./scripts/backfillBookingPrices");
+      const healed = await backfillBookingPrices();
+      if (healed > 0) {
+        logger.info({ operation: "server_start_backfill_booking_prices", message: `Healed ${healed} bookings` });
+      }
+    } catch (error) {
+      logger.warn({ operation: "server_start_backfill_booking_prices_error", message: "Failed to backfill booking prices", error });
+    }
+
+    // Convert legacy free-text companion arrays on flights/trips/cruises into
+    // Companion entities + link rows (idempotent — see backfillCompanions.ts)
+    try {
+      const { backfillCompanions } = await import("./scripts/backfillCompanions");
+      const n = await backfillCompanions();
+      if (n > 0) {
+        logger.info({
+          operation: "server_start_backfill_companions",
+          message: `Linked ${n} companion rows`,
+        });
+      }
+    } catch (error) {
+      logger.warn({
+        operation: "server_start_backfill_companions_error",
+        message: "Failed to backfill companions",
+        error,
       });
     }
 
@@ -455,6 +562,16 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({ operation: 'server_start_timezone_backfill_error', message: 'Failed to backfill airport timezones', error });
     }
 
+    // Converge stored temporal statuses with the dates on boot (idempotent —
+    // same logic as the hourly sweep, see services/statusSweep.ts).
+    try {
+      const { sweepStatuses } = await import('./services/statusSweep');
+      const counts = await sweepStatuses();
+      logger.info({ operation: 'server_start_status_sweep', context: counts });
+    } catch (error) {
+      logger.warn({ operation: 'server_start_status_sweep_error', message: 'Failed to run boot status sweep', error });
+    }
+
     // Re-evaluate achievements for every user. The engine only runs on a flight/cruise
     // write, so a user who adds nothing would keep a badge that a scoring fix has since
     // invalidated (the continent mapping used to call the Arctic "Antarctica" and count a
@@ -520,6 +637,42 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({
         operation: 'server_start_historical_enrichment_scheduler_error',
         message: 'Failed to start historical enrichment scheduler',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+
+    // Start airline logo refresh scheduler
+    try {
+      const { startAirlineLogoRefreshScheduler } = await import('./jobs/airlineLogoRefreshScheduler');
+      startAirlineLogoRefreshScheduler();
+      logger.info({
+        operation: 'server_start_airline_logo_refresh_scheduler',
+        message: 'Airline logo refresh scheduler started',
+      });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_airline_logo_refresh_scheduler_error',
+        message: 'Failed to start airline logo refresh scheduler',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+
+    // Start hourly status sweep scheduler
+    try {
+      const { startStatusSweepScheduler } = await import('./jobs/statusSweepScheduler');
+      startStatusSweepScheduler();
+      logger.info({
+        operation: 'server_start_status_sweep_scheduler',
+        message: 'Status sweep scheduler started',
+      });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_status_sweep_scheduler_error',
+        message: 'Failed to start status sweep scheduler',
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
         },

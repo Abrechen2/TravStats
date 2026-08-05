@@ -9,9 +9,9 @@ interface InlineHelpProps {
 }
 
 const categoryColors = {
-  basic: "border-[var(--color-border)]",
-  advanced: "border-[var(--accent)]",
-  expert: "border-[var(--warning)]",
+  basic: "border-border",
+  advanced: "border-(--accent)",
+  expert: "border-(--warning)",
 };
 
 const categoryIcons = {

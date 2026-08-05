@@ -334,13 +334,13 @@ export default function FlightReviewModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-(--bg-surface) rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-[var(--bg-surface)] border-b px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-(--bg-surface) border-b px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-[var(--text-primary)]">{title}</h2>
+            <h2 className="text-xl font-bold text-(--text-primary)">{title}</h2>
             {showProgress && (
-              <p className="text-sm text-[var(--text-muted)] mt-1">
+              <p className="text-sm text-(--text-muted) mt-1">
                 {t("flights:review.flightIndex", { index: flightIndex! + 1, total: totalFlights })}
               </p>
             )}
@@ -349,7 +349,7 @@ export default function FlightReviewModal({
                 data-testid="parser-info-row"
                 className="flex items-center gap-2 mt-1.5 flex-wrap"
               >
-                <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
+                <span className="text-xs text-(--text-muted) flex items-center gap-1">
                   <span aria-hidden="true">🤖</span>
                   <span>{initialData.parserTemplate ?? t("flights:review.unknownParser")}</span>
                 </span>
@@ -364,7 +364,7 @@ export default function FlightReviewModal({
                   <button
                     type="button"
                     onClick={() => setShowSourceText((v) => !v)}
-                    className="text-xs px-2 py-0.5 rounded border border-[var(--color-border)] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] transition-colors"
+                    className="text-xs px-2 py-0.5 rounded-sm border border-border text-(--text-muted) hover:bg-(--bg-elevated) transition-colors"
                   >
                     {showSourceText
                       ? t("flights:review.hideSourceText")
@@ -376,7 +376,7 @@ export default function FlightReviewModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] rounded-lg transition-colors"
+            className="p-2 text-(--text-muted) hover:bg-(--bg-elevated) rounded-lg transition-colors"
             aria-label={t("common:buttons.close")}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -392,8 +392,8 @@ export default function FlightReviewModal({
 
         {/* Source text panel */}
         {showSourceText && originalData?.text && (
-          <div className="border-b border-[var(--color-border)] bg-[var(--bg-elevated)] px-6 py-3">
-            <pre className="whitespace-pre-wrap font-mono text-xs text-[var(--text-secondary)] max-h-48 overflow-y-auto leading-relaxed">
+          <div className="border-b border-border bg-(--bg-elevated) px-6 py-3">
+            <pre className="whitespace-pre-wrap font-mono text-xs text-(--text-secondary) max-h-48 overflow-y-auto leading-relaxed">
               {filterEmailText(originalData.text)}
             </pre>
           </div>
@@ -422,7 +422,7 @@ export default function FlightReviewModal({
           {/* Flight Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+              <label className="block text-sm font-medium text-(--text-primary) mb-2">
                 {t("flights:form.flightNumber")} *
                 <InferredBadge
                   show={isInferred("flightNumber", initialData.inferredFields)}
@@ -432,15 +432,16 @@ export default function FlightReviewModal({
               <input
                 type="text"
                 value={flightNumber}
-                onChange={(e) => setFlightNumber(e.target.value)}
-                className={`w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("flightNumber", initialData.fieldSources)}`}
+                onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
+                maxLength={10}
+                className={`w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("flightNumber", initialData.fieldSources)}`}
                 placeholder={t("flights:form.placeholders.flightNumber")}
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+              <label className="block text-sm font-medium text-(--text-primary) mb-2">
                 {t("flights:form.airline")}
                 <InferredBadge
                   show={isInferred("airline", initialData.inferredFields)}
@@ -451,7 +452,7 @@ export default function FlightReviewModal({
                 type="text"
                 value={airline}
                 onChange={(e) => setAirline(e.target.value)}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.airline")}
                 list="airline-suggestions-review"
               />
@@ -495,7 +496,7 @@ export default function FlightReviewModal({
           {/* Times */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+              <label className="block text-sm font-medium text-(--text-primary) mb-2">
                 {t("flights:form.departureTime")} *
                 <InferredBadge
                   show={isInferred("departureTime", initialData.inferredFields)}
@@ -506,13 +507,13 @@ export default function FlightReviewModal({
                 type="datetime-local"
                 value={departureTime}
                 onChange={(e) => setDepartureTime(e.target.value)}
-                className={`w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("departureTime", initialData.fieldSources)}`}
+                className={`w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("departureTime", initialData.fieldSources)}`}
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+              <label className="block text-sm font-medium text-(--text-primary) mb-2">
                 {t("flights:form.arrivalTime")} *
                 <InferredBadge
                   show={isInferred("arrivalTime", initialData.inferredFields)}
@@ -523,7 +524,7 @@ export default function FlightReviewModal({
                 type="datetime-local"
                 value={arrivalTime}
                 onChange={(e) => setArrivalTime(e.target.value)}
-                className={`w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("arrivalTime", initialData.fieldSources)}`}
+                className={`w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("arrivalTime", initialData.fieldSources)}`}
                 required
               />
             </div>
@@ -532,7 +533,7 @@ export default function FlightReviewModal({
           {/* Aircraft and Class */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+              <label className="block text-sm font-medium text-(--text-primary) mb-2">
                 {t("flights:form.aircraft")}
                 <InferredBadge
                   show={isInferred("aircraft", initialData.inferredFields)}
@@ -543,7 +544,7 @@ export default function FlightReviewModal({
                 type="text"
                 value={aircraft}
                 onChange={(e) => setAircraft(e.target.value)}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.aircraft")}
                 list="aircraft-suggestions-review"
               />
@@ -555,7 +556,7 @@ export default function FlightReviewModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+              <label className="block text-sm font-medium text-(--text-primary) mb-2">
                 {t("flights:form.seatClass")}
                 <InferredBadge
                   show={isInferred("seatClass", initialData.inferredFields)}
@@ -569,7 +570,7 @@ export default function FlightReviewModal({
                     e.target.value as "economy" | "premium_economy" | "business" | "first"
                   )
                 }
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
               >
                 <option value="economy">{t("flights:seatClass.economy")}</option>
                 <option value="premium_economy">{t("flights:seatClass.premium_economy")}</option>
@@ -582,40 +583,41 @@ export default function FlightReviewModal({
           {/* Seat Details */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+              <label className="block text-sm font-medium text-(--text-primary) mb-2">
                 {t("flights:form.seat")}
               </label>
               <input
                 type="text"
                 value={seat}
-                onChange={(e) => setSeat(e.target.value)}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => setSeat(e.target.value.toUpperCase())}
+                maxLength={10}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.seat")}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+              <label className="block text-sm font-medium text-(--text-primary) mb-2">
                 {t("flights:form.terminal")}
               </label>
               <input
                 type="text"
                 value={terminal}
                 onChange={(e) => setTerminal(e.target.value)}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.terminal")}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+              <label className="block text-sm font-medium text-(--text-primary) mb-2">
                 {t("flights:form.gate")}
               </label>
               <input
                 type="text"
                 value={gate}
                 onChange={(e) => setGate(e.target.value)}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.gate")}
               />
             </div>
@@ -624,7 +626,7 @@ export default function FlightReviewModal({
           {/* Booking Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+              <label className="block text-sm font-medium text-(--text-primary) mb-2">
                 {t("flights:form.bookingReference")}
                 <InferredBadge
                   show={isInferred("bookingReference", initialData.inferredFields, ["pnr"])}
@@ -635,21 +637,21 @@ export default function FlightReviewModal({
                 type="text"
                 value={bookingReference}
                 onChange={(e) => setBookingReference(e.target.value.toUpperCase())}
-                className={`w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("pnr", initialData.fieldSources)}`}
+                className={`w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("pnr", initialData.fieldSources)}`}
                 placeholder={t("flights:form.placeholders.bookingReference")}
                 maxLength={6}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+              <label className="block text-sm font-medium text-(--text-primary) mb-2">
                 {t("flights:form.boardingGroup")}
               </label>
               <input
                 type="text"
                 value={boardingGroup}
                 onChange={(e) => setBoardingGroup(e.target.value)}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.boardingGroup")}
                 maxLength={3}
               />
@@ -658,14 +660,14 @@ export default function FlightReviewModal({
 
           {/* Ticket Number */}
           <div>
-            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+            <label className="block text-sm font-medium text-(--text-primary) mb-2">
               {t("flights:form.ticketNumber")}
             </label>
             <input
               type="text"
               value={ticketNumber}
               onChange={(e) => setTicketNumber(e.target.value)}
-              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
               placeholder={t("flights:form.placeholders.ticketNumber")}
               maxLength={13}
             />
@@ -674,12 +676,12 @@ export default function FlightReviewModal({
           {/* Cost Breakdown — price + currency always available, matching the
               cruise forms (#192); taxes/fees stay behind cost tracking. */}
           <div className="border rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
+            <h3 className="text-sm font-semibold text-(--text-primary) mb-3">
               {t("flights:review.costsTitle")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                <label className="block text-sm font-medium text-(--text-primary) mb-2">
                   {t("common:labels.price")}
                 </label>
                 <input
@@ -689,26 +691,26 @@ export default function FlightReviewModal({
                   onChange={(e) =>
                     setPrice(e.target.value ? parseFloat(e.target.value) : undefined)
                   }
-                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
                   placeholder={t("flights:form.placeholders.price")}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                <label className="block text-sm font-medium text-(--text-primary) mb-2">
                   {t("flights:form.currency")}
                 </label>
                 <CurrencyInput
                   value={currency}
                   onChange={setCurrency}
-                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               {features.enableCostTracking && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                    <label className="block text-sm font-medium text-(--text-primary) mb-2">
                       {t("common:labels.taxes")}
                     </label>
                     <input
@@ -718,13 +720,13 @@ export default function FlightReviewModal({
                       onChange={(e) =>
                         setTaxes(e.target.value ? parseFloat(e.target.value) : undefined)
                       }
-                      className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
                       placeholder={t("flights:form.placeholders.taxes")}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                    <label className="block text-sm font-medium text-(--text-primary) mb-2">
                       {t("common:labels.fees")}
                     </label>
                     <input
@@ -734,7 +736,7 @@ export default function FlightReviewModal({
                       onChange={(e) =>
                         setFees(e.target.value ? parseFloat(e.target.value) : undefined)
                       }
-                      className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
                       placeholder={t("flights:form.placeholders.fees")}
                     />
                   </div>
@@ -748,14 +750,14 @@ export default function FlightReviewModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-[var(--bg-muted)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-elevated)] transition-colors font-semibold"
+              className="flex-1 px-4 py-2 bg-(--bg-muted) text-(--text-primary) rounded-lg hover:bg-(--bg-elevated) transition-colors font-semibold"
               disabled={loading}
             >
               {showProgress ? t("common:buttons.cancel") : t("flights:review.discard")}
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary flex-1"
               disabled={loading || airportLoading || !departureAirport || !arrivalAirport}
             >
               {loading

@@ -22,8 +22,8 @@ const BASE_OPTIONS: ReadonlyArray<{ key: SpecialTypeFilter; labelKey: string }> 
 export default function SpecialFlightFilter({ value, onChange }: Props): JSX.Element {
   const { t } = useTranslation(["specialFlights"]);
 
-  const activeClass = "bg-[var(--accent)]/20 border-[var(--accent)]/50 text-[var(--accent)]";
-  const idleClass = "border-[var(--color-border)] text-[var(--text-muted)]";
+  const activeClass = "bg-(--accent)/20 border-(--accent)/50 text-(--accent)";
+  const idleClass = "border-border text-(--text-muted)";
 
   return (
     <div

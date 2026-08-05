@@ -129,7 +129,7 @@ export default function TripCleanupModal({
               {candidates.map((c) => (
                 <label
                   key={c.id}
-                  className="flex items-center gap-3 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-[var(--bg-muted)]"
+                  className="flex items-center gap-3 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-(--bg-muted)"
                 >
                   <input
                     type="checkbox"

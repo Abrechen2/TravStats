@@ -76,16 +76,16 @@ export function CruiseAddChooser({ onClose, onSaved }: CruiseAddChooserProps): J
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg bg-[var(--bg-surface)]">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg bg-(--bg-surface)">
         {/* Header */}
-        <div className="sticky top-0 flex items-start justify-between gap-4 border-b border-[var(--color-border)] bg-[var(--bg-surface)] px-6 py-4">
-          <h2 className="text-2xl font-bold text-[var(--text-primary)]">{t("cruise:add.title")}</h2>
+        <div className="sticky top-0 flex items-start justify-between gap-4 border-b border-border bg-(--bg-surface) px-6 py-4">
+          <h2 className="text-2xl font-bold text-(--text-primary)">{t("cruise:add.title")}</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label={t("common:buttons.close")}
-            className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
+            className="rounded-sm p-1 text-(--text-muted) hover:bg-(--bg-elevated) hover:text-(--text-primary)"
           >
             ✕
           </button>
@@ -106,7 +106,7 @@ export function CruiseAddChooser({ onClose, onSaved }: CruiseAddChooserProps): J
                 }}
               >
                 <div className="flex items-start gap-4">
-                  <div className="flex flex-shrink-0 flex-col items-start gap-2">
+                  <div className="flex shrink-0 flex-col items-start gap-2">
                     <span
                       className="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold shadow-md"
                       style={{ background: "var(--accent)", color: "#0d1117" }}
@@ -118,14 +118,14 @@ export function CruiseAddChooser({ onClose, onSaved }: CruiseAddChooserProps): J
                     </div>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="mb-2 text-2xl font-bold text-[var(--text-primary)]">
+                    <h3 className="mb-2 text-2xl font-bold text-(--text-primary)">
                       {t("cruise:add.import.title")}
                     </h3>
-                    <p className="mb-4 text-base font-medium text-[var(--text-muted)]">
+                    <p className="mb-4 text-base font-medium text-(--text-muted)">
                       {t("cruise:add.import.hint")}
                     </p>
                   </div>
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <button
                       type="button"
                       onClick={() => setView("import")}
@@ -151,10 +151,10 @@ export function CruiseAddChooser({ onClose, onSaved }: CruiseAddChooserProps): J
                       ✍️
                     </span>
                     <div>
-                      <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                      <h3 className="text-lg font-semibold text-(--text-primary)">
                         {t("cruise:add.manual.title")}
                       </h3>
-                      <p className="text-sm text-[var(--text-muted)]">
+                      <p className="text-sm text-(--text-muted)">
                         {t("cruise:add.manual.hint")}
                       </p>
                     </div>
@@ -176,13 +176,13 @@ export function CruiseAddChooser({ onClose, onSaved }: CruiseAddChooserProps): J
               <button
                 type="button"
                 onClick={() => setView("chooser")}
-                className="text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                className="text-sm text-(--text-muted) hover:text-(--text-primary)"
               >
                 ← {t("cruise:add.back")}
               </button>
               <Suspense
                 fallback={
-                  <div className="p-6 text-center text-[var(--text-muted)]">
+                  <div className="p-6 text-center text-(--text-muted)">
                     {t("common:loading.default")}
                   </div>
                 }

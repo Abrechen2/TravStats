@@ -97,9 +97,11 @@
   },
   "status": {
     "scheduled": "Scheduled",
+    "in_progress": "Under way",
     "flown": "Completed",
     "cancelled": "Cancelled",
-    "historical": "Historical"
+    "historical": "Historical",
+    "cancelledCheckbox": "Cancelled"
   },
   "stops": {
     "title": "Itinerary",

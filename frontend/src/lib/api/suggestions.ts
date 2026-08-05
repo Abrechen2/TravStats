@@ -5,8 +5,10 @@ interface SuggestionsResponse {
 }
 
 export const suggestionsApi = {
-  airlines: async (): Promise<string[]> => {
-    const { data } = await api.get<SuggestionsResponse>("/suggestions/airlines");
+  airlines: async (q?: string): Promise<string[]> => {
+    const params: Record<string, string> = {};
+    if (q) params.q = q;
+    const { data } = await api.get<SuggestionsResponse>("/suggestions/airlines", { params });
     return data.suggestions;
   },
 

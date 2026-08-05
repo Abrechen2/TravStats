@@ -213,6 +213,26 @@ function fold(value: string): string {
 }
 
 /**
+ * Resolve an ISO alpha-2 code or an English country name to an ISO alpha-2 code.
+ *
+ * The two catalogues speak different languages: airports carry a code, ports carry an
+ * English name. Anything that counts DISTINCT countries across both has to fold them
+ * into one vocabulary first, or "Germany" and "DE" count as two countries — which is
+ * exactly what the cross-domain "countries visited" KPI did, inflating its total by one
+ * for every country reached both by air and by sea.
+ *
+ * Returns null for an unrecognised name and for the catalogue's placeholder codes.
+ */
+export function isoCountryCode(country: string | null | undefined): string | null {
+  if (!country) return null;
+  const raw = country.trim();
+  if (!raw) return null;
+  const iso = raw.length === 2 ? raw.toUpperCase() : (NAME_TO_ISO[fold(raw)] ?? null);
+  if (!iso || iso === "ZZ" || iso === "XZ") return null;
+  return iso;
+}
+
+/**
  * Resolve an ISO alpha-2 code or an English country name to a continent.
  *
  * Returns null for a transcontinental country (the caller must use the coordinates) and

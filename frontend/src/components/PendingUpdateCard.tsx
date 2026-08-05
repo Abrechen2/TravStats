@@ -97,11 +97,11 @@ export default function PendingUpdateCard({
       case "rejected":
         return "bg-red-100 text-red-800";
       case "expired":
-        return "bg-[var(--bg-elevated)] text-[var(--text-primary)]";
+        return "bg-(--bg-elevated) text-(--text-primary)";
       case "edited":
         return "bg-blue-100 text-blue-800";
       default:
-        return "bg-[var(--bg-elevated)] text-[var(--text-primary)]";
+        return "bg-(--bg-elevated) text-(--text-primary)";
     }
   };
 
@@ -141,20 +141,20 @@ export default function PendingUpdateCard({
   return (
     <>
       <div
-        className={`bg-[var(--bg-surface)] rounded-lg shadow-sm border-2 ${
+        className={`bg-(--bg-surface) rounded-lg shadow-xs border-2 ${
           isSelected ? "border-blue-500" : "border-transparent"
         } transition-all hover:shadow-md`}
       >
         {/* Header */}
-        <div className="p-4 border-b border-[var(--color-border)]">
+        <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span
-                className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(update.status)}`}
+                className={`px-2 py-1 rounded-sm text-xs font-medium ${getStatusColor(update.status)}`}
               >
                 {getStatusLabel(update.status)}
               </span>
-              <span className="text-xs text-[var(--text-muted)]">
+              <span className="text-xs text-(--text-muted)">
                 {getApiSourceLabel(update.apiSource)}
               </span>
               {update.metadata?.isHistoricalEnrichment && (
@@ -178,17 +178,17 @@ export default function PendingUpdateCard({
               )}
             </div>
             {update.status === "pending" && (
-              <span className="text-xs text-[var(--text-muted)]">
+              <span className="text-xs text-(--text-muted)">
                 {t("pendingUpdates:expiresIn")} {timeUntilExpiry()}
               </span>
             )}
           </div>
           {update.flight && (
             <div>
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+              <h3 className="text-lg font-semibold text-(--text-primary)">
                 {update.flight.airline || "Unknown"} {update.flight.flightNumber || ""}
               </h3>
-              <p className="text-sm text-[var(--text-muted)]">
+              <p className="text-sm text-(--text-muted)">
                 {update.flight.depIata} → {update.flight.arrIata}
               </p>
             </div>
@@ -206,19 +206,19 @@ export default function PendingUpdateCard({
         {/* Changes Preview */}
         <div className="p-4">
           <div className="mb-3">
-            <h4 className="text-sm font-medium text-[var(--text-primary)] mb-2">
+            <h4 className="text-sm font-medium text-(--text-primary) mb-2">
               {t("pendingUpdates:changes.title")}
             </h4>
             <div className="space-y-1">
               {changesToShow.slice(0, 3).map((change, index) => (
                 <div key={index} className="text-sm">
-                  <span className="font-medium text-[var(--text-primary)]">{change.field}:</span>{" "}
+                  <span className="font-medium text-(--text-primary)">{change.field}:</span>{" "}
                   <span className="text-red-600 line-through">{change.oldValue || "-"}</span> →{" "}
                   <span className="text-green-600">{change.newValue || "-"}</span>
                 </div>
               ))}
               {changesToShow.length > 3 && (
-                <div className="text-sm text-[var(--text-muted)]">
+                <div className="text-sm text-(--text-muted)">
                   +{changesToShow.length - 3} {t("pendingUpdates:changes.more")}
                 </div>
               )}
@@ -226,8 +226,8 @@ export default function PendingUpdateCard({
           </div>
 
           {update.statisticsImpact && (
-            <div className="mt-3 p-3 bg-[var(--bg-base)] rounded">
-              <div className="text-xs text-[var(--text-muted)] mb-1">
+            <div className="mt-3 p-3 bg-(--bg-base) rounded-sm">
+              <div className="text-xs text-(--text-muted) mb-1">
                 {t("pendingUpdates:statisticsImpact")}
               </div>
               <div className="text-sm">
@@ -253,34 +253,25 @@ export default function PendingUpdateCard({
 
         {/* Actions */}
         {update.status === "pending" || update.status === "edited" ? (
-          <div className="p-4 border-t border-[var(--color-border)] flex gap-2">
-            <button
-              onClick={() => setShowEditor(true)}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
+          <div className="p-4 border-t border-border flex gap-2">
+            <button onClick={() => setShowEditor(true)} className="btn-secondary flex-1">
               {t("pendingUpdates:actions.edit")}
             </button>
-            <button
-              onClick={onApply}
-              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
+            <button onClick={onApply} className="btn-primary flex-1">
               {t("pendingUpdates:actions.apply")}
             </button>
-            <button
-              onClick={onReject}
-              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
+            <button onClick={onReject} className="btn-danger flex-1">
               {t("pendingUpdates:actions.reject")}
             </button>
             <button
               onClick={() => setShowDetails(!showDetails)}
-              className="px-4 py-2 bg-[var(--bg-muted)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-elevated)] transition-colors"
+              className="px-4 py-2 bg-(--bg-muted) text-(--text-primary) rounded-lg hover:bg-(--bg-elevated) transition-colors"
             >
               {showDetails ? "−" : "+"}
             </button>
           </div>
         ) : (
-          <div className="p-4 border-t border-[var(--color-border)] text-sm text-[var(--text-muted)]">
+          <div className="p-4 border-t border-border text-sm text-(--text-muted)">
             {update.status === "applied" && update.appliedAt && (
               <div>
                 {t("pendingUpdates:appliedAt")} {new Date(update.appliedAt).toLocaleString()}
@@ -296,7 +287,7 @@ export default function PendingUpdateCard({
 
         {/* Details */}
         {showDetails && (
-          <div className="p-4 border-t border-[var(--color-border)]">
+          <div className="p-4 border-t border-border">
             <ChangeDiffView
               original={update.originalData}
               proposed={dataToShow}

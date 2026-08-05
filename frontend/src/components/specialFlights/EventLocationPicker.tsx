@@ -305,7 +305,7 @@ export function EventLocationPicker({
                   role="option"
                   aria-selected={false}
                   onClick={() => handleSelectResult(hit)}
-                  className="block w-full text-left px-3 py-2 text-sm hover:bg-[var(--bg-elevated)] transition-colors"
+                  className="block w-full text-left px-3 py-2 text-sm hover:bg-(--bg-elevated) transition-colors"
                   style={{ color: "var(--text-primary)" }}
                 >
                   {formatPlaceLabel(hit)}

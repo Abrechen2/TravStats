@@ -65,7 +65,7 @@ export default function CrossDomainYearFilter({
           {t("stats:overviewFilter.compareWith")}
         </label>
         <select
-          className="text-xs rounded border px-2 py-1 font-mono"
+          className="text-xs rounded-sm border px-2 py-1 font-mono"
           style={{
             background: "var(--bg-elevated)",
             borderColor: "var(--color-border)",

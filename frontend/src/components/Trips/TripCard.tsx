@@ -2,7 +2,7 @@ import { differenceInCalendarDays } from "date-fns";
 import type { Trip, TripCategory, TripStatus } from "../../types";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useSettingsStore } from "../../store/settingsStore";
+import { sumByCurrency, tripCostSources } from "../../lib/bookingCost";
 
 interface TripCardProps {
   trip: Trip;
@@ -36,7 +36,6 @@ const CATEGORY_ICON: Record<TripCategory, string> = {
  */
 export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardProps): JSX.Element {
   const { t, i18n } = useTranslation(["trips"]);
-  const { features } = useSettingsStore();
 
   const start = trip.startDate ? new Date(trip.startDate) : firstFlightDate(trip);
   const end = trip.endDate ? new Date(trip.endDate) : lastFlightDate(trip);
@@ -49,8 +48,10 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
   const cruiseCount = isEnabled("cruise") ? (trip._count?.cruises ?? trip.cruises?.length ?? 0) : 0;
 
-  const totalCost = trip.bookings?.reduce((sum, b) => sum + (b.price ?? 0), 0) ?? 0;
-  const currency = trip.bookings?.find((b) => b.currency)?.currency ?? "EUR";
+  // Same sources as the trip detail page: bookings PLUS any flight carrying its
+  // own price and no booking. Summing bookings alone made a hand-entered flight
+  // price vanish from the card while the detail page counted it.
+  const costTotals = sumByCurrency(tripCostSources(trip.bookings ?? [], trip.flights ?? []));
 
   const distanceKm = estimateFlightDistanceKm(trip);
 
@@ -204,10 +205,17 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
             }
             label={t("trips:detail.stats.countries")}
           />
+          {/* NOT gated on features.enableCostTracking. Since #192 that toggle
+              gates the taxes/fees breakdown and the business statistics, not
+              whether a price is visible at all — and the trip DETAIL page has
+              always rendered this total ungated. With the gate here, the same
+              trip read "EUR 2832" on its detail page and "—" on its card. */}
           <Stat
             value={
-              features.enableCostTracking && totalCost > 0
-                ? formatCurrency(totalCost, currency, i18n.language)
+              costTotals.length > 0
+                ? costTotals
+                    .map((c) => formatCurrency(c.total, c.currency, i18n.language))
+                    .join(" + ")
                 : "—"
             }
             label={t("trips:totalCost")}
@@ -223,14 +231,14 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
       >
         <button
           onClick={() => onOpen(trip)}
-          className="px-2.5 py-1 rounded text-xs font-medium"
+          className="px-2.5 py-1 rounded-sm text-xs font-medium"
           style={{ background: "var(--bg-muted)", color: "var(--accent)" }}
         >
           → {t("trips:openTrip")}
         </button>
         <button
           onClick={() => onEdit(trip)}
-          className="px-2.5 py-1 rounded text-xs font-medium"
+          className="px-2.5 py-1 rounded-sm text-xs font-medium"
           style={{ background: "var(--bg-muted)", color: "var(--color-success, #4ade80)" }}
           aria-label={t("trips:editTrip")}
           title={t("trips:editTrip")}
@@ -239,7 +247,7 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
         </button>
         <button
           onClick={() => onDelete(trip)}
-          className="px-2.5 py-1 rounded text-xs font-medium ml-auto"
+          className="px-2.5 py-1 rounded-sm text-xs font-medium ml-auto"
           style={{ background: "var(--bg-muted)", color: "var(--color-error, #f87171)" }}
           aria-label={t("trips:deleteTrip")}
           title={t("trips:deleteTrip")}

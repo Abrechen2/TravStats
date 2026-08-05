@@ -55,14 +55,14 @@ export function TripDetailsSidebar({
       <button
         type="button"
         onClick={onBack}
-        className="flex items-center gap-1 px-3 py-2 text-xs font-medium transition-colors flex-shrink-0"
+        className="flex items-center gap-1 px-3 py-2 text-xs font-medium transition-colors shrink-0"
         style={{ color: "var(--accent)", borderBottom: "1px solid var(--color-border)" }}
       >
         ← {t("common:buttons.back")}
       </button>
 
       <div
-        className="px-3 py-3 flex-shrink-0"
+        className="px-3 py-3 shrink-0"
         style={{ borderBottom: "1px solid var(--color-border)" }}
       >
         <div className="flex items-start justify-between gap-2">
@@ -77,7 +77,7 @@ export function TripDetailsSidebar({
                   onClick={onEditTrip}
                   aria-label={t("trips:editTrip")}
                   title={t("trips:editTrip")}
-                  className="p-1 rounded transition-colors hover:bg-[var(--bg-muted)]"
+                  className="p-1 rounded-sm transition-colors hover:bg-(--bg-muted)"
                   style={{ color: "var(--text-muted)" }}
                 >
                   <svg
@@ -101,7 +101,7 @@ export function TripDetailsSidebar({
                   onClick={onDeleteTrip}
                   aria-label={t("trips:deleteTrip")}
                   title={t("trips:deleteTrip")}
-                  className="p-1 rounded transition-colors hover:bg-[var(--bg-muted)]"
+                  className="p-1 rounded-sm transition-colors hover:bg-(--bg-muted)"
                   style={{ color: "var(--text-muted)" }}
                 >
                   <svg
@@ -133,7 +133,7 @@ export function TripDetailsSidebar({
       </div>
 
       <div
-        className="px-3 py-2 text-xs font-medium uppercase tracking-wider flex-shrink-0"
+        className="px-3 py-2 text-xs font-medium uppercase tracking-wider shrink-0"
         style={{ color: "var(--text-muted)", borderBottom: "1px solid var(--color-border)" }}
       >
         Legs
@@ -180,7 +180,7 @@ export function TripDetailsSidebar({
             >
               <div className="flex items-center gap-2">
                 <span
-                  className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
+                  className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
                   style={{ background: tripColor, color: "white" }}
                 >
                   {i + 1}
@@ -202,7 +202,7 @@ export function TripDetailsSidebar({
                         onClick={() => onEditFlight(f)}
                         aria-label={t("common:buttons.edit")}
                         title={t("common:buttons.edit")}
-                        className="p-1 rounded transition-colors hover:bg-[var(--bg-muted)]"
+                        className="p-1 rounded-sm transition-colors hover:bg-(--bg-muted)"
                         style={{ color: "var(--text-muted)" }}
                       >
                         <svg
@@ -226,7 +226,7 @@ export function TripDetailsSidebar({
                         onClick={() => onDuplicateFlight(f)}
                         aria-label={t("common:buttons.duplicate")}
                         title={t("common:buttons.duplicate")}
-                        className="p-1 rounded transition-colors hover:bg-[var(--bg-muted)]"
+                        className="p-1 rounded-sm transition-colors hover:bg-(--bg-muted)"
                         style={{ color: "var(--text-muted)" }}
                       >
                         <svg
@@ -250,7 +250,7 @@ export function TripDetailsSidebar({
                         onClick={() => onRemoveFlightFromTrip(f.id)}
                         aria-label={t("trips:removeFromTrip")}
                         title={t("trips:removeFromTrip")}
-                        className="p-1 rounded transition-colors hover:bg-[var(--bg-muted)]"
+                        className="p-1 rounded-sm transition-colors hover:bg-(--bg-muted)"
                         style={{ color: "var(--text-muted)" }}
                       >
                         <svg

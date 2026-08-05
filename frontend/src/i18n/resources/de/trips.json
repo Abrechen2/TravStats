@@ -56,7 +56,7 @@
     "originLabel": "Herkunft",
     "destinationLabel": "Ziel",
     "tagsLabel": "Tags (kommagetrennt)",
-    "companionsLabel": "Mitreisende (kommagetrennt)",
+    "companionsLabel": "Mitreisende",
     "coverLabel": "Coverbild",
     "notesLabel": "Notizen (Markdown)",
     "notesPlaceholder": "Längere Notizen über die Reise …",
@@ -213,6 +213,15 @@
     "notesLabel": "Notizen",
     "save": "Speichern",
     "cancel": "Abbrechen"
+  },
+  "bookingEdit": {
+    "title": "Buchung bearbeiten",
+    "pnr": "PNR",
+    "price": "Gesamtpreis",
+    "currency": "Währung",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "saved": "Buchung aktualisiert"
   },
   "toasts": {
     "created": "Reise erstellt",

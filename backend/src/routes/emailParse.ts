@@ -7,7 +7,7 @@ import { resolveCruiseEntities, hydrateResolvedCruises } from '../services/cruis
 import { parseLodgingBookingText } from '../services/lodging/lodgingBookingParser';
 import { bookingsToCandidates } from '../services/lodging/lodgingCandidates';
 import { extractEmailFromFile } from '../services/emailExtractor';
-import { uploadEmailFile } from '../middleware/upload';
+import { uploadEmailFile, getEmailUploadDir } from '../middleware/upload';
 import { z } from 'zod';
 import logger from '../utils/logger';
 import fs from 'fs';
@@ -164,7 +164,11 @@ router.post(
       const domainValue = domainParse.data;
 
       const userId = req.userId;
-      filePath = file.path;
+      // Rebuild from the trusted upload dir + basename of multer's generated
+      // filename, never the raw file.path. multer already generates the
+      // filename server-side, so this is defense-in-depth and it clears the
+      // CodeQL js/path-injection taint on the fs.unlinkSync cleanups below.
+      filePath = path.join(getEmailUploadDir(), path.basename(file.filename));
 
       // Validate file using magic numbers
       const ext = path.extname(file.originalname).toLowerCase();

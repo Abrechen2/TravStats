@@ -88,7 +88,7 @@ export default function ReceiptUpload({
       <label className="label">{t("flights:receipt.label")}</label>
 
       {currentReceiptUrl && !uploading ? (
-        <div className="flex items-center gap-3 p-3 bg-[var(--bg-base)] rounded-lg">
+        <div className="flex items-center gap-3 p-3 bg-(--bg-base) rounded-lg">
           <div className="flex-1">
             <a
               href={
@@ -135,10 +135,10 @@ export default function ReceiptUpload({
 
           {uploading ? (
             <div className="space-y-2">
-              <p className="text-sm text-[var(--text-muted)]">
+              <p className="text-sm text-(--text-muted)">
                 {t("flights:receipt.uploading", { progress: uploadProgress })}
               </p>
-              <div className="w-full bg-[var(--bg-muted)] rounded-full h-2">
+              <div className="w-full bg-(--bg-muted) rounded-full h-2">
                 <div
                   className="h-2 rounded-full transition-all duration-300"
                   style={{ width: `${uploadProgress}%`, background: "var(--accent)" }}
@@ -148,7 +148,7 @@ export default function ReceiptUpload({
           ) : (
             <>
               <svg
-                className="mx-auto h-12 w-12 text-[var(--text-muted)]"
+                className="mx-auto h-12 w-12 text-(--text-muted)"
                 stroke="currentColor"
                 fill="none"
                 viewBox="0 0 48 48"
@@ -168,11 +168,11 @@ export default function ReceiptUpload({
                 >
                   {t("flights:receipt.uploadFile")}
                 </button>
-                <p className="text-sm text-[var(--text-muted)] mt-1">
+                <p className="text-sm text-(--text-muted) mt-1">
                   {t("flights:receipt.dragAndDrop")}
                 </p>
               </div>
-              <p className="text-xs text-[var(--text-muted)] mt-2">
+              <p className="text-xs text-(--text-muted) mt-2">
                 {t("flights:receipt.fileFormats")}
               </p>
             </>

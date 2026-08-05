@@ -6,7 +6,9 @@ import { useEffect, RefObject } from "react";
  * @param handler - Callback function to execute when click outside is detected
  */
 export function useClickOutside<T extends HTMLElement = HTMLElement>(
-  ref: RefObject<T>,
+  // React 19's useRef<T>(null) yields RefObject<T | null>, so accept the
+  // nullable form. The listener already guards `!ref.current`.
+  ref: RefObject<T | null>,
   handler: (event: MouseEvent | TouchEvent) => void
 ): void {
   useEffect(() => {

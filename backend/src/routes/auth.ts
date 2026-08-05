@@ -198,13 +198,17 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
     // Set HttpOnly cookie for security (XSS protection)
     res.cookie('auth_token', token, getAuthCookieOptions(req));
 
-    // Start airport seeding if needed (only on first login, if no airports exist)
+    // Start airport seeding if the catalogue is empty OR was left truncated by
+    // an interrupted run. Keying this on `count === 0` meant a partial seed
+    // never got a second chance, and the missing airports resolved no timezone
+    // and no country for the life of the instance.
     try {
-      const airportCount = await prisma.airport.count();
+      const { isAirportCatalogueHealthy } = await import('../services/airportSeedingService');
+      const catalogueHealthy = await isAirportCatalogueHealthy();
       const seedAirportsEnv = process.env.SEED_AIRPORTS;
       const shouldSeedAirports = seedAirportsEnv !== 'false';
 
-      if (shouldSeedAirports && airportCount === 0) {
+      if (shouldSeedAirports && !catalogueHealthy) {
         // Check if seeding is already running
         const existingStatus = await prisma.airportSeedingStatus.findFirst({
           where: {
@@ -259,6 +263,31 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
         isAdmin: user.isAdmin,
       },
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Current session. The client holds its "logged in" state in localStorage, which
+// has no expiry, while the auth cookie expires after 7 days — so on boot it must
+// ask the server whether the session is still real before rendering anything
+// protected. Returns the same user shape as login.
+router.get('/me', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.userId) {
+      throw new AppError('No token provided', 401);
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { id: true, username: true, isAdmin: true },
+    });
+
+    if (!user) {
+      throw new AppError('Invalid token - user not found', 401);
+    }
+
+    res.json({ user });
   } catch (error) {
     next(error);
   }

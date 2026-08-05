@@ -3,6 +3,8 @@ import { statsApi, type CruiseStatsResponse } from "../../lib/api/stats";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 
+type TFunction = (key: string, options?: Record<string, unknown>) => string;
+
 /**
  * Cruise-domain stats section shown under the StatsPage cruise tab.
  * Fetches `/api/v1/stats/cruise` (which runs `calculateCruiseStats` on the
@@ -79,7 +81,7 @@ export default function CruiseStatsSection(): JSX.Element {
         <p className="mb-2 text-3xl" aria-hidden>
           🚢
         </p>
-        <p className="font-medium text-[var(--text-primary)]">
+        <p className="font-medium text-(--text-primary)">
           {t("stats:cruiseSection.emptyTitle")}
         </p>
         <p className="mt-1 text-sm">{t("stats:cruiseSection.emptyHint")}</p>
@@ -119,7 +121,14 @@ export default function CruiseStatsSection(): JSX.Element {
     { label: t("stats:cruiseSection.maxDeck"), value: stats.maxDeck > 0 ? stats.maxDeck : "—" },
     { label: t("stats:cruiseSection.totalDays"), value: stats.totalCruiseDays },
     { label: t("stats:cruiseSection.revisitRate"), value: `${revisitRatePct}%` },
-    { label: t("stats:cruiseSection.countries"), value: stats.countries.length },
+    // Count the ISO-folded set, not the raw names: the port catalogue carries
+    // both "United States" and "United States of America", so counting names
+    // reported one country too many — and disagreed with the cross-domain tile
+    // on the Gesamt page, which folds. The tag cloud below still shows names.
+    {
+      label: t("stats:cruiseSection.countries"),
+      value: (stats.countriesIso ?? stats.countries).length,
+    },
   ];
 
   return (
@@ -134,6 +143,7 @@ export default function CruiseStatsSection(): JSX.Element {
             regionVisitCounts={stats.regionVisitCounts}
             title={t("stats:cruiseSection.regionsHeading")}
             emptyHint={t("stats:cruiseSection.noRegions")}
+            t={t}
           />
         </div>
         <SeaDayDonut
@@ -154,7 +164,7 @@ export default function CruiseStatsSection(): JSX.Element {
       {stats.regions.length > 0 && (
         <TagCloud
           title={t("stats:cruiseSection.regionsLabel")}
-          items={stats.regions.map(prettyRegion)}
+          items={stats.regions.map((r) => prettyRegion(r, t))}
         />
       )}
       {stats.countries.length > 0 && (
@@ -196,7 +206,7 @@ function KpiGrid({
       {kpis.map((kpi) => (
         <div
           key={kpi.label}
-          className="rounded-lg shadow p-4"
+          className="rounded-lg shadow-sm p-4"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <h3 className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
@@ -218,10 +228,12 @@ function RegionBars({
   regionVisitCounts,
   title,
   emptyHint,
+  t,
 }: {
   regionVisitCounts: Record<string, number>;
   title: string;
   emptyHint: string;
+  t: TFunction;
 }): JSX.Element {
   const sorted = Object.entries(regionVisitCounts).sort((a, b) => b[1] - a[1]);
   const max = sorted[0]?.[1] ?? 0;
@@ -245,9 +257,9 @@ function RegionBars({
               <span
                 className="w-32 shrink-0 truncate"
                 style={{ color: "var(--text-primary)" }}
-                title={prettyRegion(region)}
+                title={prettyRegion(region, t)}
               >
-                {prettyRegion(region)}
+                {prettyRegion(region, t)}
               </span>
               <div
                 className="flex-1 h-3 rounded-full overflow-hidden"
@@ -362,27 +374,27 @@ function Flag({ label, emoji }: { label: string; emoji: string }): JSX.Element {
   );
 }
 
-const REGION_LABELS: Record<string, string> = {
-  mediterranean: "Mittelmeer",
-  caribbean: "Karibik",
-  baltic: "Ostsee",
-  norwegian_fjords: "Norwegische Fjorde",
-  alaska: "Alaska",
-  polar: "Polar",
-  antarctic: "Antarktis",
-  asia: "Asien",
-  pacific: "Pazifik",
-  atlantic: "Atlantik",
-};
-
-function prettyRegion(slug: string): string {
-  return (
-    REGION_LABELS[slug] ??
-    slug
-      .split(/[_\s]+/)
-      .map((word) => (word.length > 0 ? word[0].toUpperCase() + word.slice(1) : ""))
-      .join(" ")
-  );
+/**
+ * Region slug -> display label, via i18n.
+ *
+ * This used to read from a hardcoded German map of TEN slugs while the port
+ * catalogue uses FIFTY-FOUR. Everything unmapped fell through to the
+ * title-case fallback, so a German UI showed "Mittelmeer" and "Ostsee" next to
+ * "North Sea", "Aegean" and "Iberian Atlantic" — which read like mixed data but
+ * was simply an incomplete map. The German labels were also hardcoded, so an
+ * English UI got German names for the ten that WERE mapped.
+ *
+ * The fallback stays: a slug the catalogue gains before the translations do
+ * renders readably instead of blank.
+ */
+function prettyRegion(slug: string, t: TFunction): string {
+  const translated = t(`stats:cruiseSection.regions.${slug}`);
+  // i18next echoes the key back when it has no entry.
+  if (translated && !translated.endsWith(`.${slug}`)) return translated;
+  return slug
+    .split(/[_\s]+/)
+    .map((word) => (word.length > 0 ? word[0].toUpperCase() + word.slice(1) : ""))
+    .join(" ");
 }
 
 function formatNumber(n: number): string {

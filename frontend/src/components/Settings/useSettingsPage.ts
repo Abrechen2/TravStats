@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useSettingsStore } from "../../store/settingsStore";
+import { useSettingsStore, snapshotOf } from "../../store/settingsStore";
 import { useAuthStore } from "../../store/authStore";
 import { settingsApi, authApi, backupApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
@@ -49,7 +49,15 @@ export function useSettingsPage() {
     hasPendingChanges,
   } = useSettingsStore();
 
+  // Serialization of exactly the slices the save path transmits. Used as the
+  // auto-save effect's dependency so no slice can be silently left unwatched —
+  // see the comment on `snapshotOf` and issue #198.
+  const saveSnapshot = useSettingsStore(snapshotOf);
+
   const addToast = useToastStore((state) => state.addToast);
+
+  /** What the auto-save banner is allowed to claim right now. */
+  const [autoSaveState, setAutoSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
   // Profile
   const [savingProfile, setSavingProfile] = useState(false);
@@ -150,19 +158,24 @@ export function useSettingsPage() {
 
   // Debounced auto-save for the settings the UI presents as auto-saving.
   //
-  // `profile` belongs in here (issue #186). Without it, typing a birthdate
-  // updated the store but scheduled no write: the user saw the page's
-  // "auto-saved" toast (fired by a neighbouring effect) and the avatar persist
-  // itself through its own endpoint, then lost the date on the next visit.
+  // The dependency is `saveSnapshot` — the serialization of exactly the slices
+  // `saveRemoteSettings` transmits — and NOT a hand-written list of slices.
+  // That list is what issue #198 was: it named `units` and `profile` while the
+  // save path sent seven slices, so editing a flight default, a display option,
+  // a feature toggle or a notification updated the store and scheduled no write.
+  // The page kept claiming "auto-saved" and the value died on the next reload.
+  // Deriving the dependency from the payload's own definition means a slice
+  // added to the save path is watched the moment it is added.
   //
   // The mount run is skipped deliberately. Mounting the page is not an edit,
   // and firing a save on the first render PUT whatever the store happened to
   // hold at that instant — `{ birthdate: null }` while the real value was still
-  // in flight from `loadRemoteSettings`, overwriting a stored date with null.
+  // in flight from `loadRemoteSettings`, overwriting a stored date with null
+  // (issue #186).
   //
-  // `remoteSnapshot` covers the second half of that: hydration changes `profile`
-  // and would otherwise re-trigger this effect and echo the server's own values
-  // straight back at it on every page load.
+  // `remoteSnapshot` covers the second half of that: hydration changes the
+  // store and would otherwise re-trigger this effect and echo the server's own
+  // values straight back at it on every page load.
   const isInitialSave = useRef(true);
   useEffect(() => {
     if (isInitialSave.current) {
@@ -171,10 +184,25 @@ export function useSettingsPage() {
     }
     if (!hasPendingChanges()) return;
     const saveSettings = async () => {
+      // Re-check at FIRE time, not just schedule time. Hydration
+      // (`loadRemoteSettings`) mutates the settings slices and updates the
+      // `remoteSnapshot` baseline in separate `set()` calls; a save scheduled
+      // in the transient window between them must not actually run once the
+      // baseline has caught up. React 18 happened to clear this timeout via a
+      // follow-up re-render; React 19's effect timing does not, which re-exposed
+      // the issue-#186 hydration echo. A genuine edit still differs from the
+      // (now-settled) snapshot, so it still saves.
+      if (!hasPendingChanges()) {
+        setAutoSaveState("idle");
+        return;
+      }
+      setAutoSaveState("saving");
       try {
         await saveRemoteSettings();
+        setAutoSaveState("saved");
       } catch (error) {
         logger.error("Failed to save settings:", error);
+        setAutoSaveState("idle");
         addToast("error", t("settings:errors.saveFailed") || "Failed to save settings");
       }
     };
@@ -183,7 +211,17 @@ export function useSettingsPage() {
     // `t` and `addToast` are intentionally omitted: `t` is unstable across
     // renders and would re-fire this effect on every render, which before the
     // debounce was tripping the settings rate limit.
-  }, [units, profile, saveRemoteSettings, hasPendingChanges]);
+  }, [saveSnapshot, saveRemoteSettings, hasPendingChanges]);
+
+  // The "saved" confirmation is transient — it states that a write just landed,
+  // not that the page is generally auto-saving. Issue #198 also reported the
+  // banner as permanently green with a checkmark, which is why the loss of a
+  // flight default looked like a success.
+  useEffect(() => {
+    if (autoSaveState !== "saved") return;
+    const timeoutId = setTimeout(() => setAutoSaveState("idle"), 2500);
+    return () => clearTimeout(timeoutId);
+  }, [autoSaveState]);
 
   useEffect(() => {
     if (user?.isAdmin) {
@@ -381,6 +419,7 @@ export function useSettingsPage() {
     defaults,
     cruise,
     baseCurrency,
+    autoSaveState,
     setProfile,
     setDisplay,
     setUnits,

@@ -193,8 +193,16 @@ const detectInitialDateFormat = (): DateFormat => {
  * here is not written by the save path and must not be listed here either —
  * otherwise a purely local change (e.g. the beta gate) would look like a
  * pending write forever.
+ *
+ * Exported because the settings page's debounced auto-save subscribes to it as
+ * its effect dependency (issue #198). Listing the slices by hand there meant the
+ * effect watched `units` and `profile` while the save path sent seven slices, so
+ * editing a flight default, a display option, a feature toggle or a notification
+ * updated the store and scheduled no write at all. Deriving the dependency from
+ * the same function that defines the payload makes that class of bug impossible:
+ * a slice added to the save path is watched the moment it is added here.
  */
-const snapshotOf = (state: SettingsState): string =>
+export const snapshotOf = (state: SettingsState): string =>
   JSON.stringify([
     state.profile,
     state.display,

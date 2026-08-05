@@ -341,11 +341,16 @@ ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
 
 ```bash
 ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 "pct exec 134 -- bash -c '
-  curl -sf --max-time 20 --retry 10 --retry-delay 3 http://127.0.0.1:3010/health && echo && \
+  curl -sf --max-time 180 --retry 20 --retry-all-errors --retry-delay 3 http://127.0.0.1:3010/health && echo && \
   (curl -s --max-time 3 http://127.0.0.1:5432 >/dev/null 2>&1 && echo DB_EXPOSED || echo DB_CLOSED)'"
 ```
 
 Expected: a healthy JSON body, then `DB_CLOSED`.
+
+`curl --max-time` bounds the WHOLE retry sequence, not each attempt. A fresh
+database runs Prisma migrations on first boot, so `/health` can take 30-60 s to
+answer; a short `--max-time` reports a false failure. `--retry-all-errors` is
+required too — without it curl does not retry connection refusals.
 
 - [ ] **Step 6: Commit**
 
@@ -461,7 +466,7 @@ ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=no "root@${NODE1}" \
 
 echo -n "health: "
 ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=no "root@${NODE1}" \
-  "pct exec $CTID -- curl -sf --max-time 30 --retry 10 --retry-delay 3 http://127.0.0.1:$port/health" \
+  "pct exec $CTID -- curl -sf --max-time 180 --retry 20 --retry-all-errors --retry-delay 3 http://127.0.0.1:$port/health" \
   || { echo "UNHEALTHY" >&2; exit 4; }
 echo
 
@@ -584,7 +589,7 @@ bash scripts/preview/build-preview-image.sh poi
 
 Expected: each ends with `pushed ghcr.io/abrechen2/travstats:preview-<slot> (<sha>)`.
 
-If a build fails because the worktree's dependencies were never installed, run `npm run install:all` inside that worktree first — the `dev/immich-albums` and `dev/hotels` worktrees were set up but never had `install:all` run.
+The Dockerfile runs `npm ci` in its own build stages, so the worktree needs no local `node_modules` — do not run `install:all` first. There is no `.dockerignore` in this repo; the build context is the whole worktree, which is small only because those worktrees were never `npm install`ed. If one of them has a `node_modules/`, expect a slow context upload.
 
 - [ ] **Step 5: Deploy both slots**
 
@@ -994,3 +999,175 @@ Ask the owner before touching CT121. If approved: issue a scoped token (`Zone �
 - [ ] **Step 5: Delete the dead `sublarr-wiki` tunnel (optional cleanup)**
 
 Tunnel `38121002-2c8c-4f81-af5d-3a3d90565dc9` is `down` and points at CT131, which no longer exists. Removing it and correcting `CCProxmox/CLAUDE.md` (which still lists CT101 and CT131) is out of scope here but noted in spec §14.
+
+---
+
+### Task 11: Demo Immich in the DMZ (scope added 2026-07-09)
+
+The `immich` slot runs the Immich-album integration, but the DMZ cannot reach any Immich server: the owner's lives on the LAN, and asking testers to paste a real Immich API key into a public pre-release instance is not acceptable. So the preview gets its own throwaway Immich with sample photos.
+
+Incidental benefit: `immichResolver.ts` fetches a user-supplied URL server-side — a classic SSRF vector. From the DMZ it reaches nothing internal.
+
+**Files:**
+- Create: `scripts/preview/stacks/immich-demo/docker-compose.yml`
+- Create: `scripts/preview/seed-immich-demo.sh`
+
+**Interfaces:**
+- Consumes: `preview-net` (Task 1), the `immich` app stack (Task 5).
+- Produces: `immich-demo-server` reachable at `http://immich-demo-server:2283` on `preview-net`; an API key stored as the `immich` slot's admin-global config.
+
+- [ ] **Step 1: Rebuild the `immich` slot at the branch tip**
+
+The deployed image is `preview-immich-9fc71971`; the branch is at `070471a4`, which is where the import pipeline landed. Without it there is nothing to demo.
+
+```bash
+bash scripts/preview/build-preview-image.sh immich
+bash scripts/preview/deploy-preview.sh immich preview-immich
+```
+
+Verify the version moved (note: this workstation's AdGuard DNS may still cache NXDOMAIN for the new hostnames; resolve via 1.1.1.1 and `curl --resolve` if so):
+
+```bash
+curl -s https://immich-beta.travstats.de/health
+```
+
+Expected: `"version":"preview-immich-070471a4"`, or newer if the branch advanced again — record whatever you actually built.
+
+- [ ] **Step 2: Write the Immich compose file**
+
+Create `scripts/preview/stacks/immich-demo/docker-compose.yml`. Images are taken from Immich's official `docker/docker-compose.yml` as of 2026-07-09. `immich-machine-learning` is deliberately omitted — it costs roughly 1.5 GB of RAM and only powers smart search, which this demo does not exercise.
+
+```yaml
+services:
+  immich-demo-server:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich-demo-server
+    restart: unless-stopped
+    environment:
+      DB_HOSTNAME: immich-demo-db
+      DB_USERNAME: postgres
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: immich-demo-redis
+      IMMICH_MACHINE_LEARNING_ENABLED: "false"
+      TZ: UTC
+    volumes:
+      - immich-upload:/data
+    depends_on:
+      - immich-demo-redis
+      - immich-demo-db
+    networks:
+      - default
+      - preview-net
+
+  immich-demo-redis:
+    image: docker.io/valkey/valkey:9
+    container_name: immich-demo-redis
+    restart: unless-stopped
+
+  immich-demo-db:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+    container_name: immich-demo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: immich
+    volumes:
+      - immich-pgdata:/var/lib/postgresql/data
+
+volumes:
+  immich-upload:
+  immich-pgdata:
+
+networks:
+  preview-net:
+    external: true
+```
+
+No `ports:` block anywhere. Immich must be reachable only from `preview-net` — never from the container host, never from the internet.
+
+- [ ] **Step 3: Deploy it**
+
+Generate the DB password on the container; never print it.
+
+```bash
+ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 "pct exec 134 -- bash -s" <<'SH'
+set -e
+mkdir -p /opt/preview/immich-demo
+umask 077
+printf 'DB_PASSWORD=%s\n' "$(openssl rand -hex 24)" > /opt/preview/immich-demo/.env
+chmod 600 /opt/preview/immich-demo/.env
+echo "env written"
+SH
+
+scp -i ~/.ssh/id_ed25519 scripts/preview/stacks/immich-demo/docker-compose.yml \
+  root@192.168.178.171:/tmp/immich-demo.yml
+ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
+  "pct push 134 /tmp/immich-demo.yml /opt/preview/immich-demo/docker-compose.yml && \
+   pct exec 134 -- bash -c 'cd /opt/preview/immich-demo && docker compose pull -q && docker compose up -d'"
+```
+
+Then wait for it to answer — first boot runs migrations and takes a minute or two:
+
+```bash
+ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
+  "pct exec 134 -- docker exec preview-immich sh -c 'wget -qO- --timeout=10 http://immich-demo-server:2283/api/server/ping'"
+```
+
+Expected: `{"res":"pong"}`. The TravStats app image has **no curl** — use `wget -qO-` inside it.
+
+- [ ] **Step 4: Write the seed script**
+
+Create `scripts/preview/seed-immich-demo.sh`: it creates the admin account, mints an API key, and stores both in `/opt/preview/immich-demo/CREDENTIALS.txt` (mode 0600) on CT134.
+
+Immich's API changes between releases. **Before relying on any endpoint below, check it against the running instance's live spec** at `http://immich-demo-server:2283/api/spec-json` (reachable from inside `preview-immich`). If an endpoint or field name differs, follow the spec, not this brief, and say so in your report.
+
+The endpoints this task assumes:
+- `POST /api/auth/admin-sign-up` — body `{email, password, name}`; succeeds only on a virgin instance
+- `POST /api/auth/login` — body `{email, password}`; returns `accessToken`
+- `POST /api/api-keys` — body `{name, permissions}`; returns `secret`
+
+Use `bash -s` with a heredoc for the remote side. Nested `ssh "pct exec … bash -c '…'"` mangles quoting — this has already cost two false negatives in this plan.
+
+- [ ] **Step 5: Upload sample photos and create albums**
+
+Fetch two or three freely usable images (`https://picsum.photos/1200/800` serves them), upload via `POST /api/assets` with the `x-api-key` header, create two albums via `POST /api/albums`, and add the assets to them.
+
+Confirm:
+
+```bash
+ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 \
+  "pct exec 134 -- docker exec preview-immich sh -c \
+    'wget -qO- --header=\"x-api-key: <KEY>\" http://immich-demo-server:2283/api/albums'"
+```
+
+Expected: a JSON array with two albums, each reporting a non-zero `assetCount`.
+
+- [ ] **Step 6: Point the TravStats `immich` slot at it**
+
+Read `backend/src/routes/admin/immich.ts` and `backend/src/services/immich/immichResolver.ts` in the `dev/immich-albums` worktree (`D:/TravStats_Projekt/TravStats/.claude/worktrees/immich-albums`) to learn the admin-global config endpoint and its payload shape.
+
+Configure the running `preview-immich` instance to use `http://immich-demo-server:2283` and the API key from Step 4 at the **admin-global** tier — not per-user — so every tester inherits a working connection without supplying a key.
+
+Verify through the app's own connection tester (the branch adds `immichTester.ts`), not by curling Immich directly. The claim under test is "TravStats can reach Immich", not "you can reach Immich".
+
+- [ ] **Step 7: Confirm Immich stayed private**
+
+```bash
+ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 "pct exec 134 -- bash -c '
+  (curl -s --max-time 3 http://127.0.0.1:2283/ >/dev/null 2>&1 && echo HOST_EXPOSED || echo INTERNAL_ONLY)
+  docker inspect immich-demo-server --format "{{json .HostConfig.PortBindings}}"
+'"
+```
+
+Expected: `INTERNAL_ONLY` and `{}`.
+
+If either check fails, stop and report BLOCKED. An Immich instance exposed beside a public pre-release app is a data-handling defect, not a rough edge.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add scripts/preview/stacks/immich-demo/docker-compose.yml scripts/preview/seed-immich-demo.sh
+git commit -m "feat(preview): demo Immich stack so the immich slot is testable"
+```

@@ -32,6 +32,7 @@ import {
 import { type AppearanceDomain } from "./map/controlPanelKit";
 import type { LabelsMode } from "./map/labelPriority";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
+import { loadGlobeChrome, saveGlobeChrome } from "./map/globeChrome";
 import { useFlightColorStore } from "../store/flightColorStore";
 
 // Base marker radius (px) a size preset scales. off → 0 (hidden).
@@ -316,11 +317,17 @@ export default function GlobeView({
     const stored = loadMapAppearance().styleId;
     return stored && STYLE_OPTIONS.some((s) => s.id === stored) ? (stored as StyleId) : "dark";
   });
-  const [autoRotate, setAutoRotate] = useState(false);
+  // Globe-only chrome — persisted in its own blob (globeChrome.v1), NOT in
+  // the shared mapAppearance: these switches have no 2D meaning. They were
+  // the only map settings that reset on reload before the 2026-08-03 audit.
+  const [autoRotate, setAutoRotate] = useState(() => loadGlobeChrome().autoRotate ?? false);
   // Day/night terminator overlay. `nightTick` recomputes the night grid on a
   // slow interval so the shade drifts with real time (60 s is far finer than
   // the terminator visibly moves at globe zoom).
-  const [showNight, setShowNight] = useState(true);
+  const [showNight, setShowNight] = useState(() => loadGlobeChrome().showNight ?? true);
+  useEffect(() => {
+    saveGlobeChrome({ autoRotate, showNight });
+  }, [autoRotate, showNight]);
   // Marker-label reveal: off / key markers only (greedy screen-space
   // collision, the default) / all (ignore overlap). Persisted.
   const [labelsMode, setLabelsMode] = useState<LabelsMode>(
@@ -1626,7 +1633,7 @@ export default function GlobeView({
             <button
               type="button"
               onClick={dismissCoachmark}
-              className="w-full cursor-pointer rounded px-3 py-2 text-[12px] font-medium transition-colors"
+              className="w-full cursor-pointer rounded-sm px-3 py-2 text-[12px] font-medium transition-colors"
               style={{
                 background: "rgba(240,169,71,0.22)",
                 border: "1px solid rgba(240,169,71,0.55)",

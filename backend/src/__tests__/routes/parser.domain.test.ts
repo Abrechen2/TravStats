@@ -4,6 +4,31 @@ import { prisma } from '../../db';
 import { hashPassword } from '../../utils/password';
 import { generateToken } from '../../utils/jwt';
 
+// This suite asserts ROUTING/SCHEMA behaviour only (the route must not 501, Zod
+// rejects unknown domains, the response shape) — NOT LLM output. The flight and
+// cruise email paths otherwise call the real Ollama LLM (OLLAMA_URL, gemma3:12b on
+// the Mac mini); a 12b inference legitimately exceeds the 30s per-test cap, which
+// made this suite a flaky gate blocker. Mock the two parser entry points so the
+// routes resolve instantly with an empty result instead of driving live external
+// infra. Everything else in each module stays real (requireActual).
+jest.mock('../../services/bookingParser', () => ({
+  ...jest.requireActual('../../services/bookingParser'),
+  parseBookingEmail: jest.fn().mockResolvedValue({
+    flights: [],
+    parserUsed: 'regex',
+    ollamaAvailable: false,
+  }),
+}));
+
+jest.mock('../../services/cruiseBookingParser', () => ({
+  ...jest.requireActual('../../services/cruiseBookingParser'),
+  parseCruiseBookingText: jest.fn().mockResolvedValue({
+    cruises: [],
+    parserUsed: 'ollama',
+    ollamaAvailable: false,
+  }),
+}));
+
 describe('parser domain param', () => {
   let token: string;
   let userId: string;
@@ -45,7 +70,7 @@ describe('parser domain param', () => {
       expect(res.body.domain).toBe('cruise');
       expect(Array.isArray(res.body.cruises)).toBe(true);
     }
-  }, 30000);
+  });
 
   it('rejects unknown (non-enum) domain on /parse-email at schema layer', async () => {
     const res = await request(app)
@@ -69,7 +94,7 @@ describe('parser domain param', () => {
     if (res.status === 400 && typeof res.body?.error === 'string') {
       expect(res.body.error.toLowerCase()).not.toContain('domain');
     }
-  }, 30000);
+  });
 
   // -----------------------------------------------------------------------
   // /parse-pdf
@@ -132,7 +157,7 @@ describe('parser domain param', () => {
       .attach('email', Buffer.from('dummy'), 'x.eml')
       .field('domain', 'cruise');
     expect(res.status).not.toBe(501);
-  }, 30000);
+  });
 
   it('rejects unknown (non-enum) domain on /parse-email-file at schema layer', async () => {
     const res = await request(app)

@@ -397,7 +397,15 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
 
 /**
  * Find nearest airport by coordinates
- * Returns the closest airport within maxDistance km
+ * Returns the closest OPEN airport within maxDistance km
+ *
+ * Closed airfields are excluded, never merely down-ranked. Proximity alone is
+ * a poor authority signal: OurAirports carries decommissioned strips and
+ * heliports that sit closer to a coarse coordinate than the international
+ * airport it actually denotes — a 1-decimal JFK coordinate lands nearer the
+ * closed Rockaway Airport (NOLF) than JFK itself, and a 1-decimal LAX one
+ * nearer the closed Hughes heliport (US-11178). A closed field is never a
+ * valid answer, so returning nothing beats returning a plausible wrong one.
  */
 export async function findNearestAirport(
   lat: number,
@@ -410,6 +418,7 @@ export async function findNearestAirport(
 
   const airports = await prisma.airport.findMany({
     where: {
+      isClosed: false,
       lat: {
         gte: lat - latRange,
         lte: lat + latRange,
