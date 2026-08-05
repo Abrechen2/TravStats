@@ -72,7 +72,8 @@ with it.
   hidden behind the cost-tracking toggle — which since #192 governs the
   taxes/fees breakdown, not whether a price is shown — while also ignoring
   prices entered on a flight rather than a booking. Both surfaces now answer
-  from the same sources.
+  from the same sources, and a trip made only of cruises takes its countries
+  from the ports it called at instead of showing "?".
 - **The cruise tab counted one country too many.** The port catalogue lists both
   "United States" and "United States of America", so counting names counted the
   same country twice. The tally folds them; the country list below still shows
