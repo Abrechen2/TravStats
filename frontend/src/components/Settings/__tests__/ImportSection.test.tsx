@@ -20,6 +20,15 @@ vi.mock("../../import/LodgingCsvImportTile", () => ({
     <button data-testid="tile-lodging-csv" onClick={() => onImported?.()} />
   ),
 }));
+// Exposes the tile's `onImported` so a test can fire it — the parse flow
+// itself (drop file → parse → review → commit) is covered by its own suites.
+vi.mock("../../import/ParseImportTile", () => ({
+  ParseImportTile: ({ onImported }: { onImported?: () => void }) => (
+    <div data-testid="import-tile-parse">
+      <button data-testid="parse-imported-probe" onClick={() => onImported?.()} />
+    </div>
+  ),
+}));
 // The log fetches on mount — render a marker that reports the reload key it
 // was handed, so a missed refresh signal is visible instead of silent.
 vi.mock("../../import/ImportLogSection", () => ({
@@ -140,5 +149,27 @@ describe("ImportSection — every enabled domain, every route (#238)", () => {
     render(<ImportSection />);
     expect(screen.queryByText("common:domain.cruise")).toBeNull();
     expect(screen.getAllByTestId("import-tile-parse")).toHaveLength(1);
+  });
+});
+
+/**
+ * The parse route writes an import batch for lodging, so it has to reach the
+ * log exactly like the CSV route does. This was wrong once already on the CSV
+ * tile, and the new parse tile reintroduced it — hence a test on the WIRING,
+ * not just on the rendering.
+ */
+describe("ImportSection — a parse import reaches the log too", () => {
+  beforeEach(() => {
+    useSettingsStore.setState({ enabledDomains: ["lodging"] });
+  });
+
+  it("bumps the log's reload key when the lodging e-mail/PDF route creates something", async () => {
+    const user = userEvent.setup();
+    render(<ImportSection />);
+    const before = screen.getByTestId("import-log").textContent;
+
+    await user.click(screen.getByTestId("parse-imported-probe"));
+
+    expect(screen.getByTestId("import-log").textContent).not.toBe(before);
   });
 });
