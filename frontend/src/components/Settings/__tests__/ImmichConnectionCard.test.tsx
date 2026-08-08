@@ -77,6 +77,11 @@ describe("ImmichConnectionCard", () => {
     expect(screen.queryByDisplayValue(/secret/i)).not.toBeInTheDocument();
   });
 
+  it("names the permissions the key needs, so nobody has to grant everything (#154)", async () => {
+    render(<ImmichConnectionCard />);
+    expect(await screen.findByText("apiKeyScopes")).toBeInTheDocument();
+  });
+
   it("saves the URL, key and default mode together", async () => {
     const user = userEvent.setup();
     render(<ImmichConnectionCard />);

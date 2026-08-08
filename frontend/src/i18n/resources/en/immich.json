@@ -5,6 +5,7 @@
   "baseUrlPlaceholder": "https://immich.example.com",
   "apiKey": "API key",
   "apiKeyPlaceholder": "Create one in Immich under Account → API Keys",
+  "apiKeyScopes": "Required permissions: album.read, asset.read, asset.view, asset.download, user.read. album.read alone is not enough — an album's pictures sit behind the asset permissions. Read-only; TravStats needs nothing beyond that.",
   "apiKeyStored": "A key is stored",
   "clearKey": "Remove key",
   "save": "Save",
