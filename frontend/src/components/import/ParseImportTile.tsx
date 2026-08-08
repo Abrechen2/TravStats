@@ -23,6 +23,14 @@ interface ParseImportTileProps {
    * therefore starts the route rather than re-implementing it.
    */
   to?: string;
+  /**
+   * Fired after the parse flow actually created something. The lodging e-mail /
+   * PDF route writes an import BATCH, so the hub's log has to hear about it —
+   * it only fetches on mount, and swallowing this event left a fresh import
+   * sitting under a log still reading "no imports yet" (the same defect the
+   * CSV tile had, reintroduced here).
+   */
+  onImported?: () => void;
 }
 
 /**
@@ -39,6 +47,7 @@ export function ParseImportTile({
   actionLabel,
   adapter,
   to,
+  onImported,
 }: ParseImportTileProps): JSX.Element {
   const [open, setOpen] = useState(false);
 
@@ -68,7 +77,10 @@ export function ParseImportTile({
         <DomainImportPanel
           open={open}
           onClose={() => setOpen(false)}
-          onItemsCreated={() => setOpen(false)}
+          onItemsCreated={() => {
+            setOpen(false);
+            onImported?.();
+          }}
           adapter={adapter}
         />
       )}
