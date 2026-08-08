@@ -1131,7 +1131,8 @@ model LodgingChain {
   isUserAdded    Boolean  @default(false) @map("is_user_added")
   createdAt      DateTime @default(now()) @map("created_at")
 
-  lodgings Lodging[]
+  lodgings    Lodging[]
+  memberships LodgingMembershipChain[]
 
   @@map("lodging_chains")
 }
@@ -1145,12 +1146,42 @@ model LodgingMembership {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stays LodgingStay[]
+  user   User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stays  LodgingStay[]
+  chains LodgingMembershipChain[]
 
   @@unique([userId, programName])
   @@index([userId])
   @@map("lodging_memberships")
+}
+
+/// Which chains a membership covers, linked BY ID.
+///
+/// The chain page used to find "your membership for this chain" by comparing
+/// `LodgingChain.loyaltyProgram` to `LodgingMembership.programName` as
+/// strings. Loyalty programmes get rebranded — NH Rewards -> NH DISCOVERY
+/// (2022) -> Minor DISCOVERY — so that join broke on the day either side was
+/// corrected: a user whose card says "Minor DISCOVERY" saw nothing on the NH
+/// page, and the membership form had to LOCK the programme name to keep the
+/// comparison alive. An id link survives every rename, and one membership can
+/// legitimately cover several brands (Minor DISCOVERY: NH, NH Collection,
+/// nhow, Anantara, Tivoli).
+///
+/// `LodgingChain.loyaltyProgram` survives as a SUGGESTION only — it seeds
+/// which chains to pre-select and what to prefill the name with. It is no
+/// longer load-bearing, so a stale catalogue value costs a checkbox, not a
+/// missing membership.
+model LodgingMembershipChain {
+  membershipId String   @map("membership_id")
+  chainId      Int      @map("chain_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  membership LodgingMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  chain      LodgingChain      @relation(fields: [chainId], references: [id], onDelete: Cascade)
+
+  @@id([membershipId, chainId])
+  @@index([chainId])
+  @@map("lodging_membership_chains")
 }
 
 /// One import run (CSV file, e-mail or PDF). Every row it created carries its

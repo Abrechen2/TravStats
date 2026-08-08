@@ -120,14 +120,21 @@ export const lodgingQuerySchema = z.object({
   sort: z.enum(["nights", "rating", "spend", "name", "checkIn"]).optional(),
 });
 
-// Memberships are program-based, NOT chain-based (Task 2b schema hardening): several
-// chains share one loyalty program (Sheraton/Westin/Ritz-Carlton -> Marriott Bonvoy),
-// so a membership must not be pinned to a single chainId. There is intentionally no
-// chainId field here — see backend/prisma/schema.prisma `LodgingMembership`.
+// A membership is still PROGRAM-shaped — one card, one programme name, several
+// chains (Sheraton/Westin/Ritz-Carlton -> Marriott Bonvoy). What changed is how
+// the chains are attached: `chainIds` is an explicit list of ids, never a single
+// `chainId` and no longer a string match on the programme name. Loyalty
+// programmes get rebranded, so the name is the user's own free text and the ids
+// carry the link (see `LodgingMembershipChain` in schema.prisma).
+//
+// An ABSENT `chainIds` means "leave the links as they are" — only an array
+// present in the body replaces them, so a PATCH that just fixes a tier can
+// never silently unlink every chain.
 const baseMembershipSchema = z.object({
   programName: z.string().trim().min(1).max(120),
   membershipNumber: z.string().max(60).optional(),
   tier: z.string().max(40).optional(),
+  chainIds: z.array(z.number().int().positive()).max(100).optional(),
 });
 export const createMembershipSchema = baseMembershipSchema;
 export const updateMembershipSchema = baseMembershipSchema

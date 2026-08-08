@@ -118,25 +118,49 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
       avgRating: deriveOverallRating(rawLodgings.flatMap((l) => l.stays)),
     };
 
-    // A membership is matched on the PROGRAM, never the chain id — several
-    // chains can share one program (Sheraton/Westin/Ritz-Carlton -> Marriott
-    // Bonvoy). A chain with no `loyaltyProgram` set simply has no membership
-    // and no siblings.
-    const membership = chain.loyaltyProgram
-      ? await prisma.lodgingMembership.findFirst({
-          where: { userId, programName: chain.loyaltyProgram },
-        })
+    // The caller's membership for this chain, resolved through the LINK table.
+    // It used to be `programName === chain.loyaltyProgram`, a string compare on
+    // a marketing name that gets rebranded (NH Rewards -> NH DISCOVERY -> Minor
+    // DISCOVERY): correcting either side made the membership vanish from this
+    // page, which is why the form had to lock the name. Ids survive renames.
+    const link = await prisma.lodgingMembershipChain.findFirst({
+      where: { chainId: chain.id, membership: { userId } },
+      include: {
+        membership: {
+          include: { chains: { include: { chain: { select: { id: true, name: true } } } } },
+        },
+      },
+    });
+    const membership = link
+      ? {
+          ...link.membership,
+          chainIds: link.membership.chains.map((c) => c.chainId),
+          chains: link.membership.chains.map((c) => c.chain),
+        }
       : null;
-    const siblingChains = chain.loyaltyProgram
+
+    // What the CATALOGUE suggests this membership should cover — this chain
+    // plus every chain seeded with the same programme. A suggestion only: it
+    // pre-ticks the boxes when creating a membership and is never consulted
+    // again afterwards, so a stale catalogue value costs a checkbox, not a
+    // missing membership.
+    const suggestedChains = chain.loyaltyProgram
       ? await prisma.lodgingChain.findMany({
-          where: { loyaltyProgram: chain.loyaltyProgram, id: { not: chain.id } },
+          where: { loyaltyProgram: chain.loyaltyProgram },
           orderBy: { name: "asc" },
+          select: { id: true, name: true },
         })
-      : [];
+      : [{ id: chain.id, name: chain.name }];
+
+    // Which OTHER chains this membership actually covers — from the membership
+    // when there is one, from the catalogue suggestion when there is not.
+    const siblingChains = (
+      membership ? membership.chains : suggestedChains
+    ).filter((c) => c.id !== chain.id);
 
     res.json({
       success: true,
-      data: { chain, lodgings, stats, membership, siblingChains },
+      data: { chain, lodgings, stats, membership, siblingChains, suggestedChains },
     });
   } catch (err) {
     next(err);
