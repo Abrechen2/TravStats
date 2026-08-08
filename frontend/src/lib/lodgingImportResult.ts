@@ -8,9 +8,10 @@
 // (a diagnostic string, not meant for the user).
 //
 // Also builds the toast for `LodgingImportRevertResult` (Task 18b), used by
-// `LodgingImportBatchList`.
+// `ImportLogSection`.
 
 import type { LodgingImportCommitResult, LodgingImportRevertResult } from "../types/lodgingImport";
+import type { LodgingRowError } from "./importers/lodgingCsv";
 
 export interface LodgingCommitToast {
   type: "success" | "warning";
@@ -62,6 +63,48 @@ export function describeLodgingCommitResult(
       reasons,
     }),
   };
+}
+
+/**
+ * Turns dropped CSV rows into ONE sentence the user can act on.
+ *
+ * The dead end this replaces: a stays sheet whose every row failed showed
+ * "not a single row of this file could be read" and nothing else — while
+ * the actual reason sat unused in `rowErrors`. The user had no way to tell
+ * a wrong column mapping from a date format we refuse, so the honest fix is
+ * to name the DOMINANT reason, how often it hit, and one offending value.
+ *
+ * `surviving` decides the tone, not the error count: rows that made it
+ * through mean this is a warning about a few skipped rows; zero surviving
+ * rows means the import is over before it started and must say so.
+ */
+export function describeLodgingRowErrors(
+  rowErrors: LodgingRowError[],
+  surviving: number,
+  t: Translate
+): string | null {
+  if (rowErrors.length === 0) return null;
+  if (surviving > 0) return t("lodging:import.errors.skippedRows", { count: rowErrors.length });
+
+  const counts = new Map<string, number>();
+  for (const error of rowErrors) counts.set(error.code, (counts.get(error.code) ?? 0) + 1);
+
+  const reason = Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([code, count]) => t(`lodging:import.errors.rowReasons.${code}`, { count }))
+    .join(", ");
+
+  // The first row carrying a sample — spreadsheet-numbered, so it matches
+  // what the user sees in Excel: row 1 is the header, data starts at row 2.
+  const withSample = rowErrors.find((e) => e.sample);
+  const sample = withSample
+    ? t("lodging:import.errors.rowSample", {
+        sample: withSample.sample,
+        row: withSample.rowIndex + 2,
+      })
+    : "";
+
+  return t("lodging:import.errors.noRowsReason", { reason: `${reason}${sample}` });
 }
 
 /**

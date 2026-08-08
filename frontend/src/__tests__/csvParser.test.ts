@@ -67,4 +67,46 @@ describe("parseCsv", () => {
     expect(parseCsv("")).toEqual([]);
     expect(parseCsv("   ")).toEqual([]);
   });
+
+  /**
+   * German Excel writes CSV with a SEMICOLON separator by default (the comma
+   * is the decimal mark in that locale), and "Save as → Text (tab delimited)"
+   * writes tabs. Both used to parse as ONE giant column: the mapping wizard
+   * then offered a single nonsense header, every date cell came back empty
+   * and the lodging importer dropped every row with "not a single row could
+   * be read" — the file was fine, the parser was not.
+   *
+   * Detection reads the HEADER ROW ONLY and is deliberately conservative: a
+   * header containing even one comma keeps the comma behaviour, byte for
+   * byte. So no file that parses correctly today can change meaning — only
+   * files that are currently unreadable start working.
+   */
+  describe("delimiter detection", () => {
+    it("parses a semicolon-separated document (German Excel default)", () => {
+      const out = parseCsv("Hotel;Anreise;Abreise\nNH München;07.03.2026;09.03.2026");
+      expect(out).toEqual([
+        { Hotel: "NH München", Anreise: "07.03.2026", Abreise: "09.03.2026" },
+      ]);
+    });
+
+    it("parses a tab-separated document", () => {
+      const out = parseCsv("Hotel\tAnreise\nNH München\t07.03.2026");
+      expect(out).toEqual([{ Hotel: "NH München", Anreise: "07.03.2026" }]);
+    });
+
+    it("keeps the comma delimiter when the header has one, even if cells hold semicolons", () => {
+      const out = parseCsv("a,b\n1;2,3");
+      expect(out).toEqual([{ a: "1;2", b: "3" }]);
+    });
+
+    it("honours quoting under a detected delimiter", () => {
+      const out = parseCsv('a;b\n"hallo; welt";2');
+      expect(out).toEqual([{ a: "hallo; welt", b: "2" }]);
+    });
+
+    it("treats a single-column file as comma-delimited", () => {
+      const out = parseCsv("Hotel\nNH München");
+      expect(out).toEqual([{ Hotel: "NH München" }]);
+    });
+  });
 });

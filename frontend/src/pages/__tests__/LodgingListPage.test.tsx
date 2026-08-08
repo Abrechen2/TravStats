@@ -41,10 +41,10 @@ vi.mock("../../components/lodging/LodgingFormModal", () => ({
   LodgingFormModal: () => null,
 }));
 
-// LodgingImportBatchList fetches on mount — stub it to an empty list so
-// every test in this file stays deterministic and doesn't hit the real
-// (unmocked) network. Task 18b's own behaviour is covered by
-// LodgingImportBatchList.test.tsx.
+// The import log used to render (and fetch) on this page; it now lives in
+// the central import hub. The stub stays so this file never hits the real
+// (unmocked) network through any remaining lodging-import client. The log's
+// own behaviour is covered by ImportLogSection.test.tsx.
 vi.mock("../../lib/api/lodgingImport", () => ({
   listLodgingImportBatches: vi.fn().mockResolvedValue([]),
   revertLodgingImportBatch: vi.fn(),
