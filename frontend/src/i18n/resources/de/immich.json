@@ -39,6 +39,7 @@
     "unlinkTitle": "Album trennen",
     "unlinkKeepCopies": "Kopien behalten",
     "unlinkDeleteCopies": "Kopien löschen",
+    "groupByDay": "Nach Tagen gruppieren",
     "resync": "Neu synchronisieren",
     "resyncing": "Synchronisiere … {{done}}/{{total}}",
     "badgeLink": "live",

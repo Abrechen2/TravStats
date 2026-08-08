@@ -39,6 +39,7 @@
     "unlinkTitle": "Unlink album",
     "unlinkKeepCopies": "Keep copies",
     "unlinkDeleteCopies": "Delete copies",
+    "groupByDay": "Group by day",
     "resync": "Re-sync",
     "resyncing": "Syncing… {{done}}/{{total}}",
     "badgeLink": "live",

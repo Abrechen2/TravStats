@@ -74,6 +74,52 @@ describe("ImmichAlbumSection", () => {
     expect(screen.queryByRole("button", { name: "albums.resync" })).not.toBeInTheDocument();
   });
 
+  /* ── Day grouping (#154) ────────────────────────────────────────────────
+     Alex asked for the photos to follow the journey and to be divided into
+     days by a header, with the grouping optional. */
+
+  const DATED = [
+    { id: "d1", url: "/1.jpg", previewUrl: "/1.jpg", takenAt: "2026-05-01T12:00:00.000Z", lat: null, lon: null },
+    { id: "d2", url: "/2.jpg", previewUrl: "/2.jpg", takenAt: "2026-05-01T15:00:00.000Z", lat: null, lon: null },
+    { id: "d3", url: "/3.jpg", previewUrl: "/3.jpg", takenAt: "2026-05-02T12:00:00.000Z", lat: null, lon: null },
+  ];
+
+  it("divides the album into days with a header between the pictures", async () => {
+    getAlbumAssets.mockResolvedValue({ assets: DATED });
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(3));
+    // Two capture days -> two headers, and every picture still on screen.
+    expect(screen.getAllByTestId("gallery-day-header")).toHaveLength(2);
+  });
+
+  it("lets the grouping be turned off, showing one plain grid again", async () => {
+    getAlbumAssets.mockResolvedValue({ assets: DATED });
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getAllByTestId("gallery-day-header")).toHaveLength(2));
+    await userEvent.click(screen.getByRole("button", { name: "albums.groupByDay" }));
+
+    expect(screen.queryByTestId("gallery-day-header")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("img")).toHaveLength(3);
+  });
+
+  it("shows no day header at all when the album carries no capture dates", async () => {
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(2));
+    expect(screen.queryByTestId("gallery-day-header")).not.toBeInTheDocument();
+  });
+
+  it("hides the grouping toggle when there is nothing to group by", async () => {
+    // ASSETS carry takenAt: null. A toggle that cannot change anything is the
+    // "button that does nothing" Alex complained about before.
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(2));
+    expect(screen.queryByRole("button", { name: "albums.groupByDay" })).not.toBeInTheDocument();
+  });
+
   it("shows a copy badge and a re-sync button for import mode", async () => {
     render(<ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />);
 
