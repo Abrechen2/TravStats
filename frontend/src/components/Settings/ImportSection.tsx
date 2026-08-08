@@ -60,6 +60,7 @@ export default function ImportSection(): JSX.Element {
           description={t("settings:import.tile.parse.cruise.description")}
           actionLabel={t("settings:import.tile.parse.cruise.action")}
           adapter={cruiseAdapter}
+          onImported={handleImported}
         />
       ),
       lodging: (
@@ -69,6 +70,7 @@ export default function ImportSection(): JSX.Element {
           description={t("settings:import.tile.parse.lodging.description")}
           actionLabel={t("settings:import.tile.parse.lodging.action")}
           adapter={lodgingAdapter}
+          onImported={handleImported}
         />
       ),
     }),
