@@ -8,6 +8,7 @@ import { writeState } from "./state.js";
 import { runServe } from "./reactionRole.js";
 import { runRead } from "./readChannel.js";
 import { runReply } from "./replyThread.js";
+import { resolveReplyInput } from "./replyArgs.js";
 import {
   runAnnounce,
   readRepoVersion,
@@ -90,26 +91,24 @@ async function main(): Promise<void> {
   }
 
   if (command === "reply") {
-    const threadQuery = process.argv[3];
-    // Multi-line messages do not survive shell/npm arg-passing reliably, so a
-    // `--file <path>` reads the message verbatim from a UTF-8 file (preferred
-    // for anything with newlines). Otherwise join the remaining CLI args.
-    const fileIdx = process.argv.indexOf("--file");
-    let message: string;
-    if (fileIdx !== -1 && process.argv[fileIdx + 1]) {
-      message = readFileSync(process.argv[fileIdx + 1], "utf8").replace(/\s+$/, "");
-    } else {
-      message = process.argv
-        .slice(4)
-        .filter((a) => a !== "--dry-run")
-        .join(" ");
-    }
-    if (!threadQuery || !message) {
-      log('Usage: tsx src/index.ts reply <thread-id-or-title> (<message…> | --file <path>) [--dry-run]');
+    // Anything with a newline must come from a file — see replyArgs.ts for the
+    // incident that rule exists for.
+    const input = resolveReplyInput(process.argv);
+    if (input.kind === "error") {
+      log(input.reason);
       process.exitCode = 1;
       return;
     }
-    await runReply(client, token, guildId, threadQuery, message, dryRun);
+    const message =
+      input.kind === "file"
+        ? readFileSync(input.path, "utf8").replace(/\s+$/, "")
+        : input.message;
+    if (!message) {
+      log("The message file is empty — nothing to post.");
+      process.exitCode = 1;
+      return;
+    }
+    await runReply(client, token, guildId, input.channel, message, dryRun);
     return; // runReply owns login + destroy
   }
 
