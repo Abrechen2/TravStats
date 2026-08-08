@@ -19,7 +19,10 @@ with it.
   access-checked proxy and take no storage here at all, or *imported*, where
   the originals are copied in as ordinary trip photos. The gallery groups by
   album, any picture can become the trip's cover, and a re-sync collects
-  stragglers. The album picker has a search filter (#181), and an
+  stragglers. Photos run oldest first and divide into days, so an album reads
+  the way the journey did, and the grouping can be switched off. The key field
+  names the read-only permissions it needs, so nobody has to hand over a
+  full-access key. The album picker has a search filter (#181), and an
   administrator can configure one instance-wide connection (#182).
 - **Travel companions are real entries.** Co-passengers used to be free text
   on each record. They are now created once and reused everywhere — flights,
@@ -36,7 +39,9 @@ with it.
   the row says where the data came from.
 - **One flight form, with scheduled and actual times** (#199, #200). Adding and
   editing use the same mask. New: scheduled vs. actual times with a derived
-  delay, boarding group, trip assignment, cost and receipt.
+  delay — the recorded time sits beside the scheduled one in the flight list,
+  red when later and green when earlier — plus boarding group, trip
+  assignment, cost and receipt.
 - **Status is derived from the dates** — for flights, cruises and trips alike,
   re-derived hourly. Only "cancelled" is still set by hand.
 - **Grouped navigation and a central import hub.** The desktop bar gains
@@ -64,6 +69,11 @@ with it.
   now, and a country reached both by air and by sea counts once, not twice.
 - **A blank time was silently stored as noon**, producing invented delays; a
   recorded cabin class was priced but never saved.
+- **A diary entry's preview printed its own markup** (#231). The timeline card
+  showed `**bold**` with the asterisks intact while the same entry rendered
+  properly once opened. The preview now renders, with headings and lists
+  flattened to fit a two-line card; the headline above it is stripped to plain
+  text instead.
 - **The uploaded-photos box no longer lingers** once an album is linked (#179).
 - Trip aggregates use airport-local times and see manually added flights.
 - **A trip's card and its own page disagreed.** The card read "?" countries and
