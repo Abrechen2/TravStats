@@ -103,6 +103,11 @@ describe("ImmichGlobalSettings", () => {
     expect(key).toHaveAttribute("autoComplete", "off");
   });
 
+  it("names the permissions the key needs, so nobody has to grant everything (#154)", async () => {
+    render(<ImmichGlobalSettings />);
+    expect(await screen.findByText("apiKeyScopes")).toBeInTheDocument();
+  });
+
   it("saving an untouched key sends the mask back, never a new secret", async () => {
     // The backend's `looksMasked()` treats an echoed mask as "unchanged". The
     // card must therefore send the mask verbatim rather than an empty string,
