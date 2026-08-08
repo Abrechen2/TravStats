@@ -86,7 +86,7 @@ export interface FlightSubmitOptions {
 export function buildLocalString(
   date: string,
   time: string,
-  opts: { anchorDateOnly?: boolean } = {},
+  opts: { anchorDateOnly?: boolean } = {}
 ): string | null {
   if (/^\d{4}$/.test(date)) {
     return `${date}-01-01T00:00`;
@@ -107,7 +107,14 @@ export function useFlightForm(
   // no assignment).
   onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<Flight | void>,
   onCancel: () => void,
-  onBatchComplete?: (newAchievements?: UserAchievement[]) => void
+  onBatchComplete?: (newAchievements?: UserAchievement[]) => void,
+  /**
+   * Opens straight into the e-mail/PDF uploader instead of the lookup step.
+   * Used by the central import hub (#238): the hub carries the flight parse
+   * route, but the multi-flight review loop lives here — so the hub sends the
+   * user in rather than growing a second copy of it.
+   */
+  options?: { openEmailImport?: boolean }
 ) {
   const { t } = useTranslation(["flights", "errors"]);
   const settings = useSettingsStore();
@@ -117,7 +124,7 @@ export function useFlightForm(
   const [error, setError] = useState("");
   const [duplicateFlight, setDuplicateFlight] = useState<DuplicateFlight | null>(null);
   const [showScanner, setShowScanner] = useState(false);
-  const [showEmailUploader, setShowEmailUploader] = useState(false);
+  const [showEmailUploader, setShowEmailUploader] = useState(options?.openEmailImport ?? false);
   const [step, setStep] = useState<"input" | "lookup" | "select" | "complete">("input");
   const [timeEstimationWarning, setTimeEstimationWarning] = useState<TimeEstimationWarning | null>(
     null
