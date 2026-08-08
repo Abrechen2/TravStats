@@ -5,6 +5,7 @@
   "baseUrlPlaceholder": "https://immich.example.com",
   "apiKey": "API-Schlüssel",
   "apiKeyPlaceholder": "In Immich unter Konto → API-Schlüssel erstellen",
+  "apiKeyScopes": "Benötigte Berechtigungen: album.read, asset.read, asset.view, asset.download, user.read. album.read allein genügt nicht — die Bilder eines Albums hängen an den Asset-Rechten. Lesend, mehr braucht TravStats nicht.",
   "apiKeyStored": "Ein Schlüssel ist gespeichert",
   "clearKey": "Schlüssel entfernen",
   "save": "Speichern",
