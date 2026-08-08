@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { LodgingImportBatchList } from "../LodgingImportBatchList";
+import { ImportLogSection } from "../ImportLogSection";
 import { listLodgingImportBatches, revertLodgingImportBatch } from "../../../lib/api/lodgingImport";
 import { logger } from "../../../lib/logger";
 import type { LodgingImportBatchSummary } from "../../../types/lodgingImport";
@@ -66,12 +66,12 @@ function renderList(
 ) {
   const onReverted = props?.onReverted ?? vi.fn();
   const utils = render(
-    <LodgingImportBatchList onReverted={onReverted} reloadKey={props?.reloadKey} />
+    <ImportLogSection onReverted={onReverted} reloadKey={props?.reloadKey} />
   );
   return { ...utils, onReverted };
 }
 
-describe("LodgingImportBatchList", () => {
+describe("ImportLogSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -99,7 +99,19 @@ describe("LodgingImportBatchList", () => {
     renderList();
 
     expect(await screen.findByText("lodging:import.batches.empty")).toBeInTheDocument();
-    expect(screen.getByText("lodging:import.batches.title")).toBeInTheDocument();
+    expect(screen.getByText("settings:import.log.title")).toBeInTheDocument();
+    // The log must SAY what it does and does not cover — an unqualified
+    // "import log" listing only lodging runs would read as "no flight
+    // imports happened", which is not what the data means.
+    expect(screen.getByText("settings:import.log.scopeHint")).toBeInTheDocument();
+  });
+
+  it("labels each entry with the domain it belongs to", async () => {
+    vi.mocked(listLodgingImportBatches).mockResolvedValue([csvBatch]);
+
+    renderList();
+
+    expect(await screen.findByText("common:domain.lodging")).toBeInTheDocument();
   });
 
   it("shows a translated error and logs when the batch fetch fails", async () => {
@@ -226,10 +238,10 @@ describe("LodgingImportBatchList", () => {
   it("re-fetches when reloadKey changes (a new import landed elsewhere on the page)", async () => {
     vi.mocked(listLodgingImportBatches).mockResolvedValue([csvBatch]);
 
-    const { rerender } = render(<LodgingImportBatchList onReverted={vi.fn()} reloadKey={1} />);
+    const { rerender } = render(<ImportLogSection onReverted={vi.fn()} reloadKey={1} />);
     await waitFor(() => expect(listLodgingImportBatches).toHaveBeenCalledTimes(1));
 
-    rerender(<LodgingImportBatchList onReverted={vi.fn()} reloadKey={2} />);
+    rerender(<ImportLogSection onReverted={vi.fn()} reloadKey={2} />);
     await waitFor(() => expect(listLodgingImportBatches).toHaveBeenCalledTimes(2));
   });
 });

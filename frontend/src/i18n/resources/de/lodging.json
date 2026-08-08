@@ -242,6 +242,13 @@
     "errors": {
       "emptyCsv": "Diese CSV-Datei enthält keine Zeilen.",
       "noRows": "Aus dieser Datei konnte keine einzige Zeile übernommen werden.",
+      "noRowsReason": "Aus dieser Datei konnte keine einzige Zeile gelesen werden — {{reason}}. Bitte Spalten-Zuordnung und das Format dieser Spalte prüfen.",
+      "rowReasons": {
+        "missing_name": "{{count}}× kein Hotelname",
+        "unreadable_date": "{{count}}× Datum unlesbar (erwartet: 2026-03-07, 07.03.2026 oder 07.03.26)",
+        "unreadable_number": "{{count}}× Zahl unlesbar"
+      },
+      "rowSample": " (z. B. „{{sample}}“ in Zeile {{row}})",
       "skippedRows": "{{count}} Zeile(n) wurden wegen ungültiger Werte übersprungen.",
       "parseFailed": "Diese CSV-Datei konnte nicht gelesen werden.",
       "previewFailed": "Die Vorschau konnte nicht geladen werden."

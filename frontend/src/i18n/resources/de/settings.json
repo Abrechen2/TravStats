@@ -610,6 +610,10 @@
     "title": "Import",
     "description": "Bestehende Daten aus anderen Diensten importieren — pro Bereich gebündelt.",
     "openHub": "Importieren",
+    "log": {
+      "title": "Import-Logbuch",
+      "scopeHint": "Jeder Massen-Import als Ganzes — neueste zuerst. Rückgängig machen lässt sich derzeit nur der Import von Unterkünften; Flug-Importe werden hier noch nicht protokolliert."
+    },
     "tile": {
       "fr24": {
         "title": "Von Flightradar24",

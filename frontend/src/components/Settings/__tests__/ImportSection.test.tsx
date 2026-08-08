@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -11,8 +12,19 @@ vi.mock("../../import/Fr24ImportTile", () => ({
 vi.mock("../../import/GenericCsvImportTile", () => ({
   GenericCsvImportTile: () => <div data-testid="tile-csv" />,
 }));
+// Keeps the `onImported` callback reachable from a test: the hub is the only
+// place that can tell the log a fresh import landed.
 vi.mock("../../import/LodgingCsvImportTile", () => ({
-  LodgingCsvImportTile: () => <div data-testid="tile-lodging-csv" />,
+  LodgingCsvImportTile: ({ onImported }: { onImported?: () => void }) => (
+    <button data-testid="tile-lodging-csv" onClick={() => onImported?.()} />
+  ),
+}));
+// The log fetches on mount — render a marker that reports the reload key it
+// was handed, so a missed refresh signal is visible instead of silent.
+vi.mock("../../import/ImportLogSection", () => ({
+  ImportLogSection: ({ reloadKey }: { reloadKey?: unknown }) => (
+    <div data-testid="import-log">{String(reloadKey)}</div>
+  ),
 }));
 vi.unmock("../../../store/settingsStore");
 
@@ -63,5 +75,32 @@ describe("ImportSection — central import hub", () => {
     render(<ImportSection />);
     expect(screen.queryByTestId("tile-lodging-csv")).toBeNull();
     expect(screen.queryByText("common:domain.lodging")).toBeNull();
+  });
+});
+
+/**
+ * The log and the importers now sit on the SAME page. A commit therefore has
+ * to reach the log, which only fetches on mount — without this signal the
+ * hub showed a fresh import under a log still reading "no imports yet"
+ * (found in the browser, with every unit test green).
+ */
+describe("ImportSection — the log learns about a fresh import", () => {
+  beforeEach(() => {
+    useSettingsStore.setState({ enabledDomains: ["flight", "lodging"] });
+  });
+
+  it("renders the import log", () => {
+    render(<ImportSection />);
+    expect(screen.getByTestId("import-log")).toBeTruthy();
+  });
+
+  it("bumps the log's reload key when a lodging import commits", async () => {
+    const user = userEvent.setup();
+    render(<ImportSection />);
+    const before = screen.getByTestId("import-log").textContent;
+
+    await user.click(screen.getByTestId("tile-lodging-csv"));
+
+    expect(screen.getByTestId("import-log").textContent).not.toBe(before);
   });
 });

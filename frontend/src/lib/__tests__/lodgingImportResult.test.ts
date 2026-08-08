@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { describeLodgingCommitResult, describeLodgingRevertResult } from "../lodgingImportResult";
+import {
+  describeLodgingCommitResult,
+  describeLodgingRevertResult,
+  describeLodgingRowErrors,
+} from "../lodgingImportResult";
 import type {
   LodgingImportCommitResult,
   LodgingImportRevertResult,
@@ -440,5 +444,91 @@ describe("describeLodgingRevertResult", () => {
     expect(toast.type).toBe("success");
     expect(toast.message).toContain("0 hotel");
     expect(toast.message).toContain("0 stay");
+  });
+});
+
+/**
+ * `describeLodgingRowErrors` exists because of a real dead end: a stays CSV
+ * whose every row was dropped produced "not a single row could be read" and
+ * nothing else — no reason, no offending value, no way forward. The reason
+ * was known all along (it sat in `rowErrors`); it just never reached the
+ * user. These tests pin that it does now, and that the sentence names the
+ * DOMINANT reason with a sample the user can compare against their file.
+ */
+function makeMockRowErrorTranslate() {
+  const translations: Record<string, string> = {
+    "lodging:import.errors.noRows": "Not a single row of this file could be read.",
+    "lodging:import.errors.noRowsReason":
+      "Not a single row of this file could be read — {{reason}}.",
+    "lodging:import.errors.skippedRows": "{{count}} row(s) were skipped because of invalid values.",
+    "lodging:import.errors.rowReasons.missing_name": "{{count}}× no hotel name",
+    "lodging:import.errors.rowReasons.unreadable_date": "{{count}}× unreadable date",
+    "lodging:import.errors.rowReasons.unreadable_number": "{{count}}× unreadable number",
+    "lodging:import.errors.rowSample": ' (e.g. "{{sample}}" in row {{row}})',
+  };
+
+  return (key: string, options?: Record<string, unknown>): string => {
+    let result = translations[key] ?? key;
+    if (options) {
+      Object.entries(options).forEach(([k, v]) => {
+        result = result.split(`{{${k}}}`).join(String(v));
+      });
+    }
+    return result;
+  };
+}
+
+describe("describeLodgingRowErrors", () => {
+  it("returns null when nothing went wrong", () => {
+    const t = makeMockRowErrorTranslate();
+    expect(describeLodgingRowErrors([], 3, t)).toBeNull();
+  });
+
+  it("names the dominant reason and a sample when EVERY row was dropped", () => {
+    const t = makeMockRowErrorTranslate();
+    const message = describeLodgingRowErrors(
+      [
+        { rowIndex: 0, code: "unreadable_date", message: "…", sample: "03/07/2026" },
+        { rowIndex: 1, code: "unreadable_date", message: "…", sample: "04/07/2026" },
+      ],
+      0,
+      t
+    );
+
+    expect(message).toContain("Not a single row");
+    expect(message).toContain("2× unreadable date");
+    // The sample points at the FIRST offending row, counted like a
+    // spreadsheet: row 1 is the header, so data row index 0 is row 2.
+    expect(message).toContain('"03/07/2026" in row 2');
+  });
+
+  it("lists every reason, most frequent first", () => {
+    const t = makeMockRowErrorTranslate();
+    const message = describeLodgingRowErrors(
+      [
+        { rowIndex: 0, code: "missing_name", message: "…" },
+        { rowIndex: 1, code: "unreadable_date", message: "…", sample: "x" },
+        { rowIndex: 2, code: "unreadable_date", message: "…", sample: "y" },
+      ],
+      0,
+      t
+    );
+
+    expect(message).not.toBeNull();
+    expect(message?.indexOf("2× unreadable date")).toBeLessThan(
+      message?.indexOf("1× no hotel name") ?? -1
+    );
+  });
+
+  it("keeps the softer skipped-rows wording when some rows survived", () => {
+    const t = makeMockRowErrorTranslate();
+    const message = describeLodgingRowErrors(
+      [{ rowIndex: 4, code: "unreadable_number", message: "…", sample: "N/A" }],
+      12,
+      t
+    );
+
+    expect(message).toContain("1 row(s) were skipped");
+    expect(message).not.toContain("Not a single row");
   });
 });
