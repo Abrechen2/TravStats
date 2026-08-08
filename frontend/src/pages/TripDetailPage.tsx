@@ -7,6 +7,7 @@ import { sumByCurrency, tripCostSources } from "../lib/bookingCost";
 import { formatDateTimeInTimezone } from "../lib/dateUtils";
 import { useSettingsStore } from "../store/settingsStore";
 import { computeRailStates } from "../lib/timelineRail";
+import { stripMarkdown } from "../lib/markdownPreview";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useTranslation } from "../hooks/useTranslation";
@@ -16,6 +17,7 @@ import NavigationBar from "../components/NavigationBar";
 import TripModal from "../components/Trips/TripModal";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
 import JournalViewModal from "../components/Trips/JournalViewModal";
+import JournalPreview from "../components/Trips/JournalPreview";
 import StopModal from "../components/Trips/StopModal";
 import BookingEditModal from "../components/Trips/BookingEditModal";
 import TripMap from "../components/Trips/TripMap";
@@ -794,7 +796,7 @@ function EventCard({
   iconColor: string;
   title: string;
   subtitle?: string | null;
-  meta?: string;
+  meta?: React.ReactNode;
   date: string;
   actions?: React.ReactNode;
 }): JSX.Element {
@@ -906,7 +908,9 @@ function JournalCard({
   onDelete: () => void;
 }): JSX.Element {
   const e = ev.entry;
-  const headline = e.title ?? truncate(e.body, 50);
+  // The headline is a single short line, so Markdown is stripped rather than
+  // rendered there; the body below it renders (issue #231).
+  const headline = e.title ?? truncate(stripMarkdown(e.body), 50);
   const meta = [e.weather, e.mood].filter(Boolean).join(" · ") || undefined;
   return (
     <EventCard
@@ -915,7 +919,7 @@ function JournalCard({
       iconColor="#60a5fa"
       title={headline}
       subtitle={meta ?? null}
-      meta={e.title ? truncate(e.body, 200) : undefined}
+      meta={e.title ? <JournalPreview body={e.body} /> : undefined}
       date={ev.date}
       actions={<RowActions onView={onView} onEdit={onEdit} onDelete={onDelete} />}
     />
