@@ -54,7 +54,13 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
     actualIso?: string | null,
     marker?: number,
   ) => (
-    <div className="flex items-baseline gap-2 whitespace-nowrap text-[12.5px]" style={{ fontVariantNumeric: "tabular-nums" }}>
+    // Monospace, not just tabular-nums: the digits already lined up, but the
+    // weekday abbreviations ("Mi" vs "Fr") differ in width in a proportional
+    // face, which shifted the whole row and broke the column.
+    <div
+      className="flex items-baseline gap-2 whitespace-nowrap font-mono text-[12.5px]"
+      style={{ fontVariantNumeric: "tabular-nums" }}
+    >
       <span className="w-4 text-[10px]" style={{ color: "var(--text-muted)" }}>{label}</span>
       {iso ? (
         <>
