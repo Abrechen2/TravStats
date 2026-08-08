@@ -624,6 +624,23 @@
         "title": "From any logbook (CSV)",
         "description": "Upload a flat per-flight CSV — after upload, a mapping wizard opens so you can match each column to a TravStats field.",
         "uploadLabel": "Choose CSV file"
+      },
+      "parse": {
+        "flight": {
+          "title": "From e-mail or PDF",
+          "description": "Read an airline booking confirmation — the usual route. Opens in the flight dialog, where the review of several flights happens.",
+          "action": "Open flight import"
+        },
+        "cruise": {
+          "title": "From e-mail or PDF",
+          "description": "Read a cruise line booking confirmation (AIDA, TUI and generic) — with a preview before committing.",
+          "action": "Read e-mail or PDF"
+        },
+        "lodging": {
+          "title": "From e-mail or PDF",
+          "description": "Read a hotel confirmation, e.g. from Booking.com — with a preview before committing.",
+          "action": "Read e-mail or PDF"
+        }
       }
     },
     "preview": {
@@ -697,7 +714,8 @@
     },
     "toast": {
       "movedFromDashboard": "The flight import has moved here — under Settings → Import."
-    }
+    },
+    "noRoutes": "No import route for this area yet."
   },
   "devices": {
     "title": "Devices",

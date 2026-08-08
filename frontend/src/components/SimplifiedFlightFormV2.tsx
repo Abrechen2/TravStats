@@ -29,6 +29,8 @@ interface SimplifiedFlightFormProps {
   // When provided, a "Sonder-Flug" card is shown in the lookup step. The
   // parent handles closing this form and opening SpecialFlightModal.
   onPickSpecialFlight?: () => void;
+  /** Open straight into the e-mail/PDF uploader (entered from the import hub). */
+  openEmailImport?: boolean;
 }
 
 export default function SimplifiedFlightFormV2({
@@ -36,10 +38,11 @@ export default function SimplifiedFlightFormV2({
   onCancel,
   onBatchComplete,
   onPickSpecialFlight,
+  openEmailImport,
 }: SimplifiedFlightFormProps): JSX.Element {
   const { t } = useTranslation(["flights", "errors", "common"]);
 
-  const form = useFlightForm(onSubmit, onCancel, onBatchComplete);
+  const form = useFlightForm(onSubmit, onCancel, onBatchComplete, { openEmailImport });
 
   // Theme classes (dark-only — see TravStatsWeb/brand/BRAND.md §1.1)
   const bgClass = "bg-(--bg-surface)";
