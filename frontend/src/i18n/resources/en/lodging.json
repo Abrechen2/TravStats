@@ -156,6 +156,7 @@
   "membership": {
     "title": "Loyalty programs",
     "add": "Add program",
+    "coversChains": "Covers these chains",
     "empty": "No loyalty programs added yet",
     "loadError": "Could not load loyalty programs",
     "saveError": "Could not save loyalty program",
@@ -169,7 +170,7 @@
     "sharedWith": "\"{{program}}\" — shared with {{chains}}",
     "hotelsTitle": "Your hotels in this chain",
     "hotelsEmpty": "No hotels of this chain recorded yet.",
-    "noMembershipYet": "No loyalty membership recorded for this program yet.",
+    "noMembershipYet": "No loyalty membership recorded for this chain yet.",
     "stats": {
       "hotels": "Hotels",
       "stays": "Stays",

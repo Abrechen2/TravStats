@@ -34,6 +34,7 @@ function makeDetail(overrides: Partial<LodgingChainDetail> = {}): LodgingChainDe
     stats: { hotelCount: 0, stayCount: 0, nights: 0, totalSpendBase: 0, avgRating: null },
     membership: null,
     siblingChains: [],
+    suggestedChains: [{ id: 1, name: "Sheraton" }],
     ...overrides,
   };
 }
@@ -46,7 +47,7 @@ async function renderChainDetail(detail: LodgingChainDetail): Promise<void> {
       <Routes>
         <Route path="/lodging/chains/:id" element={<LodgingChainDetailPage />} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
   await waitFor(() => expect(getChainDetailMock).toHaveBeenCalledWith(detail.chain.id));
   await screen.findByText(detail.chain.name);
@@ -99,7 +100,7 @@ describe("LodgingChainDetailPage", () => {
     expect(screen.getByText("lodging:chainDetail.hotelsEmpty")).toBeInTheDocument();
   });
 
-  it("scopes the membership block to the chain's program and mentions sibling chains", async () => {
+  it("scopes the membership block to this chain and mentions the chains it also covers", async () => {
     const detail = makeDetail({
       membership: {
         id: "m1",
@@ -107,23 +108,19 @@ describe("LodgingChainDetailPage", () => {
         programName: "Marriott Bonvoy",
         membershipNumber: "12345",
         tier: "Gold",
+        chainIds: [1, 2],
+        chains: [
+          { id: 1, name: "Sheraton" },
+          { id: 2, name: "Westin" },
+        ],
         createdAt: "2024-01-01T00:00:00.000Z",
         updatedAt: "2024-01-01T00:00:00.000Z",
       },
-      siblingChains: [
-        {
-          id: 2,
-          name: "Westin",
-          brandColor: null,
-          loyaltyProgram: "Marriott Bonvoy",
-          isUserAdded: false,
-          createdAt: "2024-01-01T00:00:00.000Z",
-        },
-      ],
+      siblingChains: [{ id: 2, name: "Westin" }],
     });
     await renderChainDetail(detail);
 
-    // The membership shown is the shared PROGRAM, not a chain-specific one.
+    // One card, several brands — the membership is not chain-specific.
     expect(await screen.findByText("Gold")).toBeInTheDocument();
     expect(screen.getByText("#12345")).toBeInTheDocument();
     // The global test i18n mock doesn't interpolate `t()` args, so the
@@ -141,6 +138,8 @@ describe("LodgingChainDetailPage", () => {
         programName: "Marriott Bonvoy",
         membershipNumber: null,
         tier: null,
+        chainIds: [1],
+        chains: [{ id: 1, name: "Sheraton" }],
         createdAt: "2024-01-01T00:00:00.000Z",
         updatedAt: "2024-01-01T00:00:00.000Z",
       },
@@ -157,15 +156,22 @@ describe("LodgingChainDetailPage", () => {
     expect(await screen.findByText("lodging:membership.add")).toBeInTheDocument();
   });
 
-  it("shows no membership block for a chain with no loyalty program", async () => {
+  /**
+   * A chain the catalogue has no programme for STILL offers the membership
+   * block. The old page hid it, which treated a gap in our seed data as proof
+   * the user has no card for that chain — and left them no way to record one.
+   * Now the catalogue only supplies a suggestion, so its absence costs a
+   * prefill, not the feature.
+   */
+  it("still offers the membership block for a chain with no catalogue programme", async () => {
     const detail = makeDetail({
       chain: { ...makeDetail().chain, loyaltyProgram: null },
     });
     await renderChainDetail(detail);
     expect(screen.getByTestId("chain-loyalty-program")).toHaveTextContent(
-      "lodging:chainDetail.noLoyaltyProgram",
+      "lodging:chainDetail.noLoyaltyProgram"
     );
-    expect(screen.queryByTestId("membership-manager")).not.toBeInTheDocument();
+    expect(screen.getByTestId("membership-manager")).toBeInTheDocument();
   });
 
   it("shows a not-found message for a chain id the API rejects", async () => {
@@ -175,7 +181,7 @@ describe("LodgingChainDetailPage", () => {
         <Routes>
           <Route path="/lodging/chains/:id" element={<LodgingChainDetailPage />} />
         </Routes>
-      </MemoryRouter>,
+      </MemoryRouter>
     );
     expect(await screen.findByText("lodging:chainDetail.notFound")).toBeInTheDocument();
   });

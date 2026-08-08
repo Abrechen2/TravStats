@@ -10,10 +10,12 @@ import logger from "../utils/logger";
 // Bonvoy Gold card"). Unlike LodgingChain, this is never shared: every read
 // and write is scoped to the caller.
 //
-// Memberships are PROGRAM-based, not chain-based (several chains — Sheraton,
-// Westin, Ritz-Carlton — share one loyalty program, Marriott Bonvoy), so
-// there is intentionally no `chainId` anywhere in this router. See
-// `schemas/lodging.ts` and the `LodgingMembership` model in schema.prisma.
+// A membership covers SEVERAL chains (Sheraton, Westin, Ritz-Carlton -> Marriott
+// Bonvoy), attached as an explicit `chainIds` list. It is deliberately not a
+// single `chainId`, and no longer a string match between the chain catalogue's
+// `loyaltyProgram` and this row's `programName`: programmes get rebranded, and
+// that comparison broke the moment either side was corrected. See
+// `LodgingMembershipChain` in schema.prisma.
 
 const router = Router();
 router.use(authenticate);
@@ -32,14 +34,54 @@ function isUniqueConstraintError(
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
 
+// Every membership is returned with its chains flattened to ids + names, so no
+// consumer has to know the join table exists.
+const MEMBERSHIP_INCLUDE = {
+  chains: { include: { chain: { select: { id: true, name: true } } } },
+} as const;
+
+type MembershipWithChains = Prisma.LodgingMembershipGetPayload<{
+  include: typeof MEMBERSHIP_INCLUDE;
+}>;
+
+function serialize(membership: MembershipWithChains) {
+  const { chains, ...rest } = membership;
+  return {
+    ...rest,
+    chainIds: chains.map((link) => link.chainId),
+    chains: chains.map((link) => link.chain),
+  };
+}
+
+/**
+ * Rejects a chain id that does not exist BEFORE the write, so a typo comes back
+ * as a 400 naming the problem rather than a raw foreign-key 500. Returns the
+ * de-duplicated list actually to be linked.
+ */
+async function resolveChainIds(chainIds: number[]): Promise<number[]> {
+  const unique = Array.from(new Set(chainIds));
+  if (unique.length === 0) return [];
+  const found = await prisma.lodgingChain.findMany({
+    where: { id: { in: unique } },
+    select: { id: true },
+  });
+  if (found.length !== unique.length) {
+    const known = new Set(found.map((c) => c.id));
+    const missing = unique.filter((id) => !known.has(id));
+    throw new AppError(`Unknown chain id(s): ${missing.join(", ")}`, 400);
+  }
+  return unique;
+}
+
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
     const memberships = await prisma.lodgingMembership.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
+      include: MEMBERSHIP_INCLUDE,
     });
-    res.json({ success: true, data: memberships });
+    res.json({ success: true, data: memberships.map(serialize) });
   } catch (err) {
     next(err);
   }
@@ -51,16 +93,25 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     const parsed = createMembershipSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
+    const { chainIds, ...fields } = parsed.data;
+    const linkIds = await resolveChainIds(chainIds ?? []);
+
     try {
       const membership = await prisma.lodgingMembership.create({
-        data: { ...parsed.data, userId },
+        data: {
+          ...fields,
+          userId,
+          chains: { create: linkIds.map((chainId) => ({ chainId })) },
+        },
+        include: MEMBERSHIP_INCLUDE,
       });
       logger.info({
         operation: "lodging_membership_create",
         membershipId: membership.id,
+        chainCount: linkIds.length,
         userId,
       });
-      res.status(201).json({ success: true, data: membership });
+      res.status(201).json({ success: true, data: serialize(membership) });
     } catch (createError) {
       if (!isUniqueConstraintError(createError)) throw createError;
       // `@@unique([userId, programName])` — one membership per program per
@@ -89,12 +140,29 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     const parsed = updateMembershipSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
+    const { chainIds, ...fields } = parsed.data;
+    // Absent `chainIds` leaves the links untouched; an array REPLACES them (an
+    // empty array is a deliberate "covers no chain"), so editing a tier can
+    // never unlink a membership as a side effect.
+    const linkIds = chainIds === undefined ? null : await resolveChainIds(chainIds);
+
     try {
-      const membership = await prisma.lodgingMembership.update({
-        where: { id: existing.id },
-        data: parsed.data,
+      const membership = await prisma.$transaction(async (tx) => {
+        await tx.lodgingMembership.update({ where: { id: existing.id }, data: fields });
+        if (linkIds !== null) {
+          await tx.lodgingMembershipChain.deleteMany({ where: { membershipId: existing.id } });
+          if (linkIds.length > 0) {
+            await tx.lodgingMembershipChain.createMany({
+              data: linkIds.map((chainId) => ({ membershipId: existing.id, chainId })),
+            });
+          }
+        }
+        return tx.lodgingMembership.findUniqueOrThrow({
+          where: { id: existing.id },
+          include: MEMBERSHIP_INCLUDE,
+        });
       });
-      res.json({ success: true, data: membership });
+      res.json({ success: true, data: serialize(membership) });
     } catch (updateError) {
       if (!isUniqueConstraintError(updateError)) throw updateError;
       throw new AppError("A membership for this program already exists", 409);
@@ -114,7 +182,9 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
     // LodgingStay.membershipId -> onDelete: SetNull (schema.prisma) — the DB
     // clears the FK on any stay referencing this membership by itself; the
     // stay row is never touched otherwise, so no manual cleanup is needed
-    // here.
+    // here. The chain LINKS cascade away with the row (LodgingMembershipChain
+    // -> onDelete: Cascade); the chains themselves are catalogue rows and are
+    // never touched.
     await prisma.lodgingMembership.delete({ where: { id: existing.id } });
     res.status(204).send();
   } catch (err) {

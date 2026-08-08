@@ -8,24 +8,27 @@ import {
   deleteMembership,
 } from "../../lib/api/lodging";
 import { logger } from "../../lib/logger";
-import type { LodgingMembership, MembershipInput } from "../../types/lodging";
+import type { LodgingChainRef, LodgingMembership, MembershipInput } from "../../types/lodging";
 
 interface MembershipManagerProps {
   /** Fired after every successful load/create/update/delete with the fresh list. */
   onChanged?: (memberships: LodgingMembership[]) => void;
   /**
-   * Scopes the manager to a single loyalty program — used by the chain
-   * detail page, which cares about exactly ONE program (the chain's
-   * `loyaltyProgram`), not the caller's whole membership list. When set:
-   *  - only the membership(s) matching this program name are shown
-   *    (there is at most one, enforced by the backend's
-   *    `@@unique([userId, programName])`);
-   *  - the "add" flow pre-fills and locks the program-name field to this
-   *    value, since the chain page — not the user — determines the program;
-   *  - the "add" button is hidden once a matching membership exists (one
-   *    membership per program per user, so there's nothing left to add).
+   * Scopes the manager to ONE chain — the chain detail page, which cares only
+   * about the membership covering the chain being viewed. When set:
+   *  - only the membership LINKED to this chain is shown (at most one);
+   *  - creating pre-ticks `suggestedChains` and prefills the programme name
+   *    with `suggestedProgramName`, both merely suggestions the user may
+   *    change: the name is their own card's wording, not a catalogue value;
+   *  - the "add" button hides once a membership covers this chain.
    */
-  filterProgramName?: string;
+  scopeChain?: {
+    id: number;
+    /** Chains to pre-tick when creating: this chain plus its catalogue siblings. */
+    suggestedChains: LodgingChainRef[];
+    /** Prefill for the programme name — the catalogue's guess, freely editable. */
+    suggestedProgramName?: string | null;
+  };
   /** Extra note rendered under the title — e.g. "shared with Westin, Ritz-Carlton" when the program spans multiple chains. */
   sharedWithLabel?: string;
 }
@@ -38,10 +41,16 @@ function httpStatus(err: unknown): number | undefined {
 }
 
 /**
- * CRUD list for the user's loyalty memberships. Memberships are
- * PROGRAM-based (`programName`), never chain-based — several chains share
- * one program (Sheraton/Westin/Ritz-Carlton → Marriott Bonvoy), so there is
- * deliberately no chain picker here (see `schemas/lodging.ts`).
+ * CRUD list for the user's loyalty memberships. One membership covers SEVERAL
+ * chains (Sheraton/Westin/Ritz-Carlton → Marriott Bonvoy), attached here as
+ * explicit chain links the user ticks.
+ *
+ * The programme name is the USER's text and is always editable. It used to be
+ * locked whenever the manager was scoped to a chain, because the chain page
+ * found the membership by comparing that name to the catalogue's
+ * `loyaltyProgram` — so any correction made the membership disappear from the
+ * page. The link is by id now, which is what makes editing safe: "NH Rewards"
+ * can be renamed to "Minor DISCOVERY" and still shows up on the NH page.
  *
  * The backend enforces one membership per program per user and returns 409
  * on a duplicate (`routes/lodgingMemberships.ts`) — that must surface as a
@@ -49,7 +58,7 @@ function httpStatus(err: unknown): number | undefined {
  */
 export function MembershipManager({
   onChanged,
-  filterProgramName,
+  scopeChain,
   sharedWithLabel,
 }: MembershipManagerProps): JSX.Element {
   const { t } = useTranslation(["lodging", "common"]);
@@ -61,6 +70,7 @@ export function MembershipManager({
   const [programName, setProgramName] = useState<string>("");
   const [membershipNumber, setMembershipNumber] = useState<string>("");
   const [tier, setTier] = useState<string>("");
+  const [chainIds, setChainIds] = useState<number[]>([]);
   const [saving, setSaving] = useState<boolean>(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -86,20 +96,37 @@ export function MembershipManager({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // The list this component actually renders — every membership when
-  // unscoped, or just the (at most one) membership for `filterProgramName`
-  // on the chain detail page.
+  // The list this component actually renders — every membership when unscoped,
+  // or just the (at most one) membership covering `scopeChain` on the chain
+  // detail page. Matched on the chain ID, never on the programme name.
   const visibleMemberships =
-    filterProgramName !== undefined
-      ? memberships.filter((m) => m.programName === filterProgramName)
+    scopeChain !== undefined
+      ? memberships.filter((m) => m.chainIds.includes(scopeChain.id))
       : memberships;
-  const hasFilteredMembership = filterProgramName !== undefined && visibleMemberships.length > 0;
+  const hasFilteredMembership = scopeChain !== undefined && visibleMemberships.length > 0;
+
+  // Every chain tickable in the form: the suggestion for this chain plus what
+  // the membership being edited already covers, so a link to a chain outside
+  // the suggestion stays visible instead of being dropped on the next save.
+  const editingMembership =
+    editingId !== null && editingId !== "new"
+      ? memberships.find((m) => m.id === editingId)
+      : undefined;
+  const chainChoices: LodgingChainRef[] = (() => {
+    const byId = new Map<number, LodgingChainRef>();
+    for (const c of scopeChain?.suggestedChains ?? []) byId.set(c.id, c);
+    for (const c of editingMembership?.chains ?? []) byId.set(c.id, c);
+    return Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name));
+  })();
 
   const startCreate = (): void => {
     setEditingId("new");
-    setProgramName(filterProgramName ?? "");
+    setProgramName(scopeChain?.suggestedProgramName ?? "");
     setMembershipNumber("");
     setTier("");
+    // Pre-ticked from the catalogue, and only a suggestion — the user unticks
+    // whatever their card does not actually cover.
+    setChainIds((scopeChain?.suggestedChains ?? []).map((c) => c.id));
     setFormError(null);
   };
 
@@ -108,7 +135,14 @@ export function MembershipManager({
     setProgramName(m.programName);
     setMembershipNumber(m.membershipNumber ?? "");
     setTier(m.tier ?? "");
+    setChainIds(m.chainIds);
     setFormError(null);
+  };
+
+  const toggleChain = (chainId: number): void => {
+    setChainIds((prev) =>
+      prev.includes(chainId) ? prev.filter((id) => id !== chainId) : [...prev, chainId]
+    );
   };
 
   const cancelEdit = (): void => {
@@ -117,7 +151,9 @@ export function MembershipManager({
   };
 
   const messageForSaveError = (err: unknown): string =>
-    httpStatus(err) === 409 ? t("lodging:membership.duplicateError") : t("lodging:membership.saveError");
+    httpStatus(err) === 409
+      ? t("lodging:membership.duplicateError")
+      : t("lodging:membership.saveError");
 
   const submit = async (): Promise<void> => {
     const trimmedName = programName.trim();
@@ -129,6 +165,10 @@ export function MembershipManager({
         programName: trimmedName,
         membershipNumber: membershipNumber.trim() || undefined,
         tier: tier.trim() || undefined,
+        // Always sent from this form: it renders every choice, so what is
+        // ticked IS the complete set. (Callers that omit the key keep their
+        // existing links — see `MembershipInput`.)
+        chainIds,
       };
       if (editingId === "new") {
         await createMembership(input);
@@ -161,12 +201,15 @@ export function MembershipManager({
     <div className="space-y-3" data-testid="membership-manager">
       <div className="flex items-center justify-between">
         <div>
+          {/* Always the section title. It used to print the scoped programme
+              name, which now belongs to the membership row (and to the chain
+              page's own header) — printing it here as well said the same
+              thing twice and, once the name became editable, twice with two
+              different values while editing. */}
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-            {filterProgramName ?? t("lodging:membership.title")}
+            {t("lodging:membership.title")}
           </h3>
-          {sharedWithLabel && (
-            <p className="text-xs text-[var(--text-muted)]">{sharedWithLabel}</p>
-          )}
+          {sharedWithLabel && <p className="text-xs text-[var(--text-muted)]">{sharedWithLabel}</p>}
         </div>
         {editingId === null && !hasFilteredMembership && (
           <button
@@ -197,7 +240,9 @@ export function MembershipManager({
                 <span className="font-medium text-[var(--text-primary)]">{m.programName}</span>
                 {m.tier && <span className="ml-2 text-xs text-[var(--text-muted)]">{m.tier}</span>}
                 {m.membershipNumber && (
-                  <span className="ml-2 text-xs text-[var(--text-muted)]">#{m.membershipNumber}</span>
+                  <span className="ml-2 text-xs text-[var(--text-muted)]">
+                    #{m.membershipNumber}
+                  </span>
                 )}
               </div>
               <div className="flex gap-2">
@@ -229,8 +274,7 @@ export function MembershipManager({
             placeholder={t("lodging:field.programName")}
             value={programName}
             onChange={(e) => setProgramName(e.target.value)}
-            disabled={filterProgramName !== undefined}
-            className="w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] disabled:opacity-70"
+            className="w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
           />
           <div className="grid grid-cols-2 gap-2">
             <input
@@ -248,6 +292,30 @@ export function MembershipManager({
               className="rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
             />
           </div>
+          {chainChoices.length > 0 && (
+            <fieldset data-testid="membership-chain-choices" className="mt-1">
+              <legend className="mb-1 text-xs text-[var(--text-muted)]">
+                {t("lodging:membership.coversChains")}
+              </legend>
+              <div className="flex flex-col gap-1">
+                {chainChoices.map((c) => (
+                  <label
+                    key={c.id}
+                    className="flex items-center gap-2 text-xs text-[var(--text-primary)]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={chainIds.includes(c.id)}
+                      onChange={() => toggleChain(c.id)}
+                      className="accent-[var(--accent)]"
+                    />
+                    {c.name}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          )}
+
           {formError !== null && (
             <p data-testid="membership-form-error" className="text-xs text-[var(--danger)]">
               {formError}
