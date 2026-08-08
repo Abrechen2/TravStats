@@ -1,11 +1,25 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { failureKey, immichApi, immichFailureKind } from "../../lib/api/immich";
 import { useToastStore } from "../../store/toastStore";
+import { groupByDay } from "../../lib/galleryGrouping";
+import { useLocale } from "../../hooks/useLocale";
 import type { ImmichGalleryAsset, LinkedAlbum } from "../../types/immich";
 import PhotoLightbox, { type LightboxItem } from "./PhotoLightbox";
 
 const JOB_POLL_MS = 1500;
+
+/** Viewing preference, not instance state — it belongs in the browser. */
+const GROUP_PREF_KEY = "travstats.gallery.groupByDay";
+
+function readGroupPref(): boolean {
+  try {
+    return localStorage.getItem(GROUP_PREF_KEY) !== "false";
+  } catch {
+    // Private mode / blocked storage must not take the gallery down.
+    return true;
+  }
+}
 
 interface Props {
   tripId: string;
@@ -21,6 +35,7 @@ interface Props {
  */
 export default function ImmichAlbumSection({ tripId, album, onChanged }: Props): JSX.Element {
   const { t } = useTranslation("immich");
+  const locale = useLocale();
   const addToast = useToastStore((s) => s.addToast);
 
   const [assets, setAssets] = useState<ImmichGalleryAsset[]>([]);
@@ -29,6 +44,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
   // point of capture rather than being force-fit into "unreachable" here.
   const [failure, setFailure] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [groupByDayEnabled, setGroupByDayEnabled] = useState<boolean>(readGroupPref);
   const [confirmingUnlink, setConfirmingUnlink] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
@@ -168,6 +184,31 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
     source: album.mode === "import" ? { kind: "photo" } : { kind: "immich", linkId: album.id },
   }));
 
+  // The backend hands these over chronologically; grouping only cuts where the
+  // day changes. Undated photos collect in a trailing group with no header.
+  const dayGroups = useMemo(() => groupByDay(assets), [assets]);
+  const hasDates = dayGroups.some((g) => g.day !== null);
+  const showGroups = groupByDayEnabled && hasDates;
+
+  const dayLabel = (day: string): string =>
+    new Date(`${day}T00:00:00`).toLocaleDateString(locale, {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+  const tile = (asset: ImmichGalleryAsset, index: number): JSX.Element => (
+    <button key={asset.id} type="button" onClick={() => setLightboxIndex(index)}>
+      <img
+        src={asset.url}
+        alt={album.albumName}
+        loading="lazy"
+        className="aspect-square w-full rounded-sm object-cover"
+      />
+    </button>
+  );
+
   return (
     <section className="mt-6">
       <header className="mb-2 flex items-center gap-3">
@@ -180,6 +221,24 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
         </span>
 
         <div className="ml-auto flex items-center gap-2">
+          {hasDates && (
+            <button
+              type="button"
+              aria-pressed={showGroups}
+              className="text-xs underline"
+              onClick={() => {
+                const next = !groupByDayEnabled;
+                setGroupByDayEnabled(next);
+                try {
+                  localStorage.setItem(GROUP_PREF_KEY, String(next));
+                } catch {
+                  // A rejected write only costs the preference, not the view.
+                }
+              }}
+            >
+              {t("albums.groupByDay")}
+            </button>
+          )}
           {album.mode === "import" && (
             <button
               type="button"
@@ -224,18 +283,29 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-2 md:grid-cols-5">
-          {assets.map((asset, index) => (
-            <button key={asset.id} type="button" onClick={() => setLightboxIndex(index)}>
-              <img
-                src={asset.url}
-                alt={album.albumName}
-                loading="lazy"
-                className="aspect-square w-full rounded-sm object-cover"
-              />
-            </button>
-          ))}
-        </div>
+        showGroups ? (
+          <div className="space-y-4">
+            {dayGroups.map((group) => (
+              <div key={group.day ?? "undated"}>
+                {group.day && (
+                  <h4
+                    data-testid="gallery-day-header"
+                    className="mb-1.5 text-xs font-semibold text-slate-400"
+                  >
+                    {dayLabel(group.day)}
+                  </h4>
+                )}
+                <div className="grid grid-cols-3 gap-2 md:grid-cols-5">
+                  {group.assets.map((asset) => tile(asset, asset.index))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2 md:grid-cols-5">
+            {assets.map((asset, index) => tile(asset, index))}
+          </div>
+        )
       )}
 
       {lightboxIndex !== null && (
