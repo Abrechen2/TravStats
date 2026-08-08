@@ -23,6 +23,13 @@ export interface ColumnMappingWizardProps<F extends string> {
   initialMapping?: Partial<Record<F, string>>;
   onSubmit: (mapping: Partial<Record<F, string>>) => void;
   onCancel: () => void;
+  /**
+   * A rejection from the LAST submit, rendered in the footer. The wizard
+   * stays open when a mapping produces no importable row, so a message shown
+   * only on the page behind it is invisible: the user presses "continue",
+   * nothing appears to happen, and the reason sits under the modal.
+   */
+  submitError?: string | null;
 }
 
 function normalize(s: string): string {
@@ -66,6 +73,7 @@ export function ColumnMappingWizard<F extends string>({
   initialMapping,
   onSubmit,
   onCancel,
+  submitError,
 }: ColumnMappingWizardProps<F>): JSX.Element {
   const { t } = useTranslation("settings");
 
@@ -247,7 +255,11 @@ export function ColumnMappingWizard<F extends string>({
           style={{ borderColor: "var(--color-border)" }}
         >
           <p className="text-sm" aria-live="polite">
-            {missingRequired.length > 0 ? (
+            {submitError ? (
+              <span data-testid="wizard-submit-error" style={{ color: "rgb(252, 165, 165)" }}>
+                {submitError}
+              </span>
+            ) : missingRequired.length > 0 ? (
               <span style={{ color: "rgb(252, 165, 165)" }}>
                 {t("settings:import.preview.wizard.missingFields", {
                   fields: missingRequired.map((f) => f.label).join(", "),

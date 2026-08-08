@@ -242,6 +242,13 @@
     "errors": {
       "emptyCsv": "This CSV file has no rows.",
       "noRows": "No row in this file could be turned into an import candidate.",
+      "noRowsReason": "No row in this file could be read — {{reason}}. Check the column mapping and the format of that column.",
+      "rowReasons": {
+        "missing_name": "{{count}}× no hotel name",
+        "unreadable_date": "{{count}}× unreadable date (expected 2026-03-07, 07.03.2026 or 07.03.26)",
+        "unreadable_number": "{{count}}× unreadable number"
+      },
+      "rowSample": " (e.g. \"{{sample}}\" in row {{row}})",
       "skippedRows": "{{count}} row(s) were skipped due to invalid values.",
       "parseFailed": "This CSV file could not be read.",
       "previewFailed": "The import preview could not be loaded."

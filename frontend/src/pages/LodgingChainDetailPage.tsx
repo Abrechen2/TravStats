@@ -111,78 +111,36 @@ export default function LodgingChainDetailPage(): JSX.Element {
           ← {t("lodging:list.title")}
         </button>
 
-        {/* Header: chain name + brand-colour accent + loyalty program */}
-        <div
-          className="mb-6 rounded-lg border border-[var(--color-border)] bg-[var(--bg-surface)] p-4"
-          style={{ borderLeft: `4px solid ${accent}` }}
-        >
-          <h1 className="text-xl font-semibold text-[var(--text-primary)]">{chain.name}</h1>
-          <p data-testid="chain-loyalty-program" className="text-sm text-[var(--text-muted)]">
-            {chain.loyaltyProgram ?? t("lodging:chainDetail.noLoyaltyProgram")}
-          </p>
+        {/* Header: chain name + brand-colour mark + loyalty program.
+            The brand colour is a MARK, never a border-left stripe on a boxed
+            panel: that shape is this app's error/danger idiom (see the
+            not-found block above), and four of the ten seeded chains are
+            red-branded — so a perfectly healthy NH page read as an alert
+            (collaborator report, 2026-08-07). */}
+        <div className="mb-6 flex items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-base font-bold text-white"
+            style={{ background: accent }}
+          >
+            {chainInitials(chain.name)}
+          </span>
+          <div>
+            <h1 className="text-2xl font-display font-bold text-[var(--text-primary)]">
+              {chain.name}
+            </h1>
+            <p data-testid="chain-loyalty-program" className="text-sm text-[var(--text-muted)]">
+              {chain.loyaltyProgram ?? t("lodging:chainDetail.noLoyaltyProgram")}
+            </p>
+          </div>
         </div>
 
+        {/* Stats and membership share the top row; the hotels table below gets
+            the FULL width — it is the reason to visit this page, and it was
+            being clipped by an aside that is mostly empty space. */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
           <div className="md:col-span-3">
             <ChainStatsRow stats={stats} baseCurrency={baseCurrency} t={t} />
-
-            <h2 className="mb-2 mt-4 text-sm font-semibold text-[var(--text-muted)]">
-              {t("lodging:chainDetail.hotelsTitle")}
-            </h2>
-            {lodgings.length > 0 ? (
-              <div className="overflow-x-auto rounded-md border border-[var(--color-border)]">
-                <table className="w-full text-sm min-w-[520px]">
-                  <thead className="bg-[var(--bg-surface)] text-[var(--text-muted)]">
-                    <tr>
-                      <th className="px-3 py-2 text-left">{t("lodging:list.columns.name")}</th>
-                      <th className="px-3 py-2 text-left">{t("lodging:list.columns.location")}</th>
-                      <th className="px-3 py-2 text-right">{t("lodging:list.columns.stays")}</th>
-                      <th className="px-3 py-2 text-right">{t("lodging:list.columns.nights")}</th>
-                      <th className="px-3 py-2 text-left">{t("lodging:list.columns.rating")}</th>
-                      <th className="px-3 py-2 text-right">{t("lodging:list.columns.spend")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lodgings.map((l) => (
-                      <tr
-                        key={l.id}
-                        onClick={() => navigate(`/lodging/${l.id}`)}
-                        className="cursor-pointer border-t border-[var(--color-border)] hover:bg-[var(--bg-surface)]"
-                      >
-                        <td className="px-3 py-2">
-                          <span aria-hidden className="mr-2">
-                            {lodgingTypeIcon(l.type)}
-                          </span>
-                          <span className="font-medium text-[var(--text-primary)]">{l.name}</span>
-                        </td>
-                        <td className="px-3 py-2 text-[var(--text-muted)]">
-                          {l.city || l.country ? (
-                            <span className="inline-flex items-center gap-1.5">
-                              <span>{l.city || l.country}</span>
-                              <FlagImg country={resolveCountryCode(l.country)} height={12} />
-                            </span>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-right">{l.stayCount}</td>
-                        <td className="px-3 py-2 text-right">{l.nights}</td>
-                        <td className="px-3 py-2">
-                          <StarRating value={l.overallRating} />
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <ChainHotelSpendCell lodging={l} baseCurrency={baseCurrency} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-4 py-8 text-center text-[var(--text-muted)]">
-                {t("lodging:chainDetail.hotelsEmpty")}
-              </div>
-            )}
           </div>
 
           <aside className="md:col-span-2">
@@ -205,9 +163,79 @@ export default function LodgingChainDetailPage(): JSX.Element {
             )}
           </aside>
         </div>
+
+        <h2 className="mb-2 mt-6 text-sm font-semibold text-[var(--text-muted)]">
+          {t("lodging:chainDetail.hotelsTitle")}
+        </h2>
+        {lodgings.length > 0 ? (
+          <div className="overflow-x-auto rounded-md border border-[var(--color-border)]">
+            <table className="w-full text-sm min-w-[520px]">
+              <thead className="bg-[var(--bg-surface)] text-[var(--text-muted)]">
+                <tr>
+                  <th className="px-3 py-2 text-left">{t("lodging:list.columns.name")}</th>
+                  <th className="px-3 py-2 text-left">{t("lodging:list.columns.location")}</th>
+                  <th className="px-3 py-2 text-right">{t("lodging:list.columns.stays")}</th>
+                  <th className="px-3 py-2 text-right">{t("lodging:list.columns.nights")}</th>
+                  <th className="px-3 py-2 text-left">{t("lodging:list.columns.rating")}</th>
+                  <th className="px-3 py-2 text-right">{t("lodging:list.columns.spend")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lodgings.map((l) => (
+                  <tr
+                    key={l.id}
+                    onClick={() => navigate(`/lodging/${l.id}`)}
+                    className="cursor-pointer border-t border-[var(--color-border)] hover:bg-[var(--bg-surface)]"
+                  >
+                    <td className="px-3 py-2">
+                      <span aria-hidden className="mr-2">
+                        {lodgingTypeIcon(l.type)}
+                      </span>
+                      <span className="font-medium text-[var(--text-primary)]">{l.name}</span>
+                    </td>
+                    <td className="px-3 py-2 text-[var(--text-muted)]">
+                      {l.city || l.country ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span>{l.city || l.country}</span>
+                          <FlagImg country={resolveCountryCode(l.country)} height={12} />
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-right">{l.stayCount}</td>
+                    <td className="px-3 py-2 text-right">{l.nights}</td>
+                    <td className="px-3 py-2">
+                      <StarRating value={l.overallRating} />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <ChainHotelSpendCell lodging={l} baseCurrency={baseCurrency} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-4 py-8 text-center text-[var(--text-muted)]">
+            {t("lodging:chainDetail.hotelsEmpty")}
+          </div>
+        )}
       </div>
     </div>
   );
+}
+
+/**
+ * Up to two initials for the brand mark ("NH Hotels" → "NH", "Meliá" → "M").
+ * Word-based rather than the first two characters, so a two-word chain reads
+ * as its acronym instead of a syllable.
+ */
+function chainInitials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  const letters = words.slice(0, 2).map((w) => Array.from(w)[0]);
+  return letters.join("").toUpperCase();
 }
 
 function ChainStatsRow({

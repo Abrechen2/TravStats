@@ -15,7 +15,10 @@ import {
   previewLodgingImport,
   suggestLodgingCsvMapping,
 } from "../../lib/api/lodgingImport";
-import { describeLodgingCommitResult } from "../../lib/lodgingImportResult";
+import {
+  describeLodgingCommitResult,
+  describeLodgingRowErrors,
+} from "../../lib/lodgingImportResult";
 import { LodgingImportPreviewModal } from "../lodging/LodgingImportPreviewModal";
 import { ColumnMappingWizard } from "./ColumnMappingWizard";
 import { ImportTileShell, ImportFilePicker, ImportErrorBlock } from "./ImportTileShell";
@@ -49,6 +52,9 @@ export function LodgingCsvImportTile({ onImported }: Props): JSX.Element {
     summary: LodgingImportSummary;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Shown INSIDE the wizard: a rejected mapping leaves it open, so a message
+  // rendered only on the page behind it never reaches the user.
+  const [mappingError, setMappingError] = useState<string | null>(null);
 
   const fields = useMemo(
     () => buildLodgingMappingFields((f: LodgingCsvField) => t(`lodging:import.fields.${f}`)),
@@ -88,18 +94,21 @@ export function LodgingCsvImportTile({ onImported }: Props): JSX.Element {
       if (!records) return;
       const built = buildLodgingCandidates(records, mapping);
       if (built.candidates.length === 0) {
-        setError(t("lodging:import.errors.noRows"));
+        // A dead end that only says "nothing could be read" leaves the user
+        // guessing which of their columns is wrong — name the reason and an
+        // offending value instead, in the wizard they are still looking at.
+        const message =
+          describeLodgingRowErrors(built.rowErrors, 0, t) ?? t("lodging:import.errors.noRows");
+        setMappingError(message);
+        setError(message);
         return;
       }
+      setMappingError(null);
       try {
         const result = await previewLodgingImport(built.candidates);
         setPreview(result);
-        if (built.rowErrors.length > 0) {
-          // Never silently dropped (spec §5) — surfaced with a count.
-          setError(t("lodging:import.errors.skippedRows", { count: built.rowErrors.length }));
-        } else {
-          setError(null);
-        }
+        // Never silently dropped (spec §5) — surfaced with a count.
+        setError(describeLodgingRowErrors(built.rowErrors, built.candidates.length, t));
       } catch (err) {
         logger.error("LodgingCsvImportTile: preview request failed", err);
         setError(t("lodging:import.errors.previewFailed"));
@@ -116,6 +125,7 @@ export function LodgingCsvImportTile({ onImported }: Props): JSX.Element {
     setSuggested({});
     setPreview(null);
     setError(null);
+    setMappingError(null);
   }, []);
 
   return (
@@ -139,6 +149,7 @@ export function LodgingCsvImportTile({ onImported }: Props): JSX.Element {
           initialMapping={suggested}
           onSubmit={(mapping) => void handleMappingSubmit(mapping)}
           onCancel={reset}
+          submitError={mappingError}
         />
       )}
       {preview && (

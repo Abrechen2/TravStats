@@ -5,26 +5,36 @@ import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
 import { listLodgingImportBatches, revertLodgingImportBatch } from "../../lib/api/lodgingImport";
 import { describeLodgingRevertResult } from "../../lib/lodgingImportResult";
+import { DOMAINS } from "../../shared/domains";
 import type { LodgingImportBatchSummary } from "../../types/lodgingImport";
 
 interface Props {
-  /** Runs after a successful revert so the surrounding page (list + stats) refreshes too. */
-  onReverted: () => void | Promise<void>;
+  /** Runs after a successful revert so a surrounding page (list + stats) can refresh too. */
+  onReverted?: () => void | Promise<void>;
   /** Bump this whenever a new import lands elsewhere on the page — triggers a re-fetch here. */
   reloadKey?: unknown;
 }
 
 /**
- * "Bisherige Importe" — closes the final-review plan gap (Task 18b):
- * `listLodgingImportBatches` / `revertLodgingImportBatch` were implemented,
- * client-wrapped and tested, but nothing rendered them. A revert deletes
- * only what that batch created — a batch-created lodging that still has
- * foreign stays (hand-added, or attached by a later batch) survives,
- * detached (`detachedLodgings`). The confirm dialog and the result toast
- * both exist to make that distinction visible, never to hide it.
+ * The import log — every bulk import run, newest first, each revertible as a
+ * unit. It lives in the CENTRAL import hub (Settings → Import) rather than on
+ * a domain page, which is the same rule 2.5.0 established for the importers
+ * themselves: one place to import, one place to see what was imported.
+ *
+ * DELIBERATELY HONEST ABOUT ITS SCOPE: only lodging writes import batches
+ * today, so every entry carries a domain label and the empty state says which
+ * imports can be undone. The flight tiles (FR24, generic CSV) create no batch
+ * rows and are not revertible — a log that silently showed nothing for them
+ * would read as "no flight imports happened". When a domain gains batches, it
+ * adds its source here and its entries appear with their own label.
+ *
+ * A revert deletes only what that batch created — a batch-created lodging that
+ * still has foreign stays (hand-added, or attached by a later batch) survives,
+ * detached (`detachedLodgings`). The confirm dialog and the result toast both
+ * exist to make that distinction visible, never to hide it.
  */
-export function LodgingImportBatchList({ onReverted, reloadKey }: Props): JSX.Element {
-  const { t } = useTranslation(["lodging", "common"]);
+export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element {
+  const { t } = useTranslation(["lodging", "settings", "common"]);
   const addToast = useToastStore((s) => s.addToast);
 
   const [batches, setBatches] = useState<LodgingImportBatchSummary[]>([]);
@@ -40,7 +50,7 @@ export function LodgingImportBatchList({ onReverted, reloadKey }: Props): JSX.El
       const data = await listLodgingImportBatches();
       setBatches(data);
     } catch (err: unknown) {
-      logger.error("LodgingImportBatchList: failed to load import batches", err);
+      logger.error("ImportLogSection: failed to load import batches", err);
       setLoadError(true);
     } finally {
       setLoading(false);
@@ -64,9 +74,9 @@ export function LodgingImportBatchList({ onReverted, reloadKey }: Props): JSX.El
         addToast(toast.type, toast.message);
         setConfirmingId(null);
         await load();
-        await onReverted();
+        await onReverted?.();
       } catch (err: unknown) {
-        logger.error("LodgingImportBatchList: revert failed", err);
+        logger.error("ImportLogSection: revert failed", err);
         addToast("error", t("lodging:import.batches.revertError"));
       } finally {
         setReverting(false);
@@ -79,12 +89,15 @@ export function LodgingImportBatchList({ onReverted, reloadKey }: Props): JSX.El
 
   return (
     <div
-      className="mt-4 max-w-md rounded-lg p-4"
+      className="mt-6 rounded-lg p-4"
       style={{ background: "var(--bg-elevated)", border: "1px solid var(--color-border)" }}
     >
       <h3 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
-        {t("lodging:import.batches.title")}
+        {t("settings:import.log.title")}
       </h3>
+      <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
+        {t("settings:import.log.scopeHint")}
+      </p>
 
       {loading ? (
         <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
@@ -109,7 +122,21 @@ export function LodgingImportBatchList({ onReverted, reloadKey }: Props): JSX.El
               className="flex items-center justify-between gap-3 rounded-md border border-[var(--color-border)] px-3 py-2 text-sm"
             >
               <div>
-                <div className="font-medium" style={{ color: "var(--text-primary)" }}>
+                <div
+                  className="flex items-center gap-2 font-medium"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {/* Which domain this run belongs to — today always lodging,
+                      but never left implicit: an unlabelled log would claim to
+                      cover imports it cannot see. */}
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                    <span
+                      aria-hidden="true"
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{ background: DOMAINS.lodging.color }}
+                    />
+                    {t(`common:${DOMAINS.lodging.i18nKey}`)}
+                  </span>
                   <span>{t(`lodging:import.batches.source.${batch.source}`)}</span>
                   {batch.fileName && <span> · {batch.fileName}</span>}
                 </div>

@@ -169,6 +169,68 @@ describe("buildLodgingCandidates", () => {
     expect(result.candidates[0].stay?.currency).toBe("EUR");
   });
 
+  /**
+   * A German Excel column formatted "TT.MM.JJ" exports as "07.03.26". The
+   * four-digit-year requirement rejected every such row, so a whole stays
+   * sheet died with "not a single row could be read". Two digits are
+   * unambiguous ENOUGH here (69 → 2069, 70 → 1970, the POSIX pivot) because
+   * the alternative is refusing a file whose meaning a human reads at a
+   * glance. The slash format stays refused — DD/MM vs MM/DD is a genuine
+   * coin flip, and a wrong-but-plausible date is worse than a rejected row.
+   */
+  it("accepts a two-digit year in the German dot format", () => {
+    const csv = ["Hotel,Anreise,Abreise", "NH Ludwigsburg,07.03.26,09.03.26"].join("\n");
+    const mapping: LodgingCsvMapping = { name: "Hotel", checkIn: "Anreise", checkOut: "Abreise" };
+
+    const result = buildLodgingCandidates(parseCsv(csv), mapping);
+
+    expect(result.rowErrors).toEqual([]);
+    expect(result.candidates[0].stay?.checkIn).toBe("2026-03-07");
+    expect(result.candidates[0].stay?.checkOut).toBe("2026-03-09");
+  });
+
+  it("reads a last-century two-digit year above the pivot as 19xx", () => {
+    const csv = ["Hotel,Anreise,Abreise", "Old Inn,24.12.98,26.12.98"].join("\n");
+    const mapping: LodgingCsvMapping = { name: "Hotel", checkIn: "Anreise", checkOut: "Abreise" };
+
+    const result = buildLodgingCandidates(parseCsv(csv), mapping);
+
+    expect(result.candidates[0].stay?.checkIn).toBe("1998-12-24");
+  });
+
+  it("still refuses a slash-separated date, which is genuinely ambiguous", () => {
+    const csv = ["Hotel,Anreise,Abreise", "Ambiguous Hotel,03/07/2026,05/07/2026"].join("\n");
+    const mapping: LodgingCsvMapping = { name: "Hotel", checkIn: "Anreise", checkOut: "Abreise" };
+
+    const result = buildLodgingCandidates(parseCsv(csv), mapping);
+
+    expect(result.candidates).toHaveLength(0);
+    expect(result.rowErrors[0].message).toContain("date");
+  });
+
+  it("reads a stays sheet exported by German Excel (semicolons + two-digit years)", () => {
+    const csv = [
+      "Hotel;Anreise;Abreise;Bew. Zimmer",
+      "NH München;07.03.26;09.03.26;4",
+      "Novotel Wien;12.04.26;14.04.26;5",
+    ].join("\r\n");
+    const mapping: LodgingCsvMapping = {
+      name: "Hotel",
+      checkIn: "Anreise",
+      checkOut: "Abreise",
+      ratingRoom: "Bew. Zimmer",
+    };
+
+    const result = buildLodgingCandidates(parseCsv(csv), mapping);
+
+    expect(result.shape).toBe("stays");
+    expect(result.rowErrors).toEqual([]);
+    expect(result.candidates).toHaveLength(2);
+    expect(result.candidates[0].lodgingName).toBe("NH München");
+    expect(result.candidates[0].stay?.checkIn).toBe("2026-03-07");
+    expect(result.candidates[1].stay?.ratingRoom).toBe(5);
+  });
+
   it("reports an unparseable date as a row error instead of dropping the row silently", () => {
     const csv = ["Hotel,Anreise,Abreise", "Broken Hotel,not-a-date,31.03.2026"].join("\n");
     const mapping: LodgingCsvMapping = { name: "Hotel", checkIn: "Anreise", checkOut: "Abreise" };
@@ -248,7 +310,12 @@ describe("buildLodgingCandidates: garbage coordinates never fabricate 0,0", () =
     expect(result.candidates[0].lodging?.lat).toBeNull();
     expect(result.candidates[0].lodging?.lon).toBeCloseTo(13.3807, 4);
     expect(result.rowErrors).toEqual([
-      { rowIndex: 0, message: expect.stringContaining("latitude") },
+      {
+        rowIndex: 0,
+        code: "unreadable_number",
+        message: expect.stringContaining("latitude"),
+        sample: "unbekannt",
+      },
     ]);
   });
 
@@ -283,7 +350,12 @@ describe("buildLodgingCandidates: totalPrice garbage vs. genuine 0 vs. locale fo
       expect(result.candidates).toHaveLength(1);
       expect(result.candidates[0].stay?.totalPrice).toBeNull();
       expect(result.rowErrors).toEqual([
-        { rowIndex: 0, message: expect.stringContaining("price") },
+        {
+          rowIndex: 0,
+          code: "unreadable_number",
+          message: expect.stringContaining("price"),
+          sample: raw,
+        },
       ]);
     }
   );

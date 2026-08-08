@@ -146,11 +146,27 @@ export function detectCsvShape(mapping: LodgingCsvMapping): LodgingCsvShape {
   return "places";
 }
 
+/**
+ * Why a row could not be read. A CODE, not prose: the UI translates it and
+ * counts it, so "not a single row could be read" can name the actual reason
+ * instead of leaving the user to guess which of their columns is wrong.
+ * `message` stays alongside for logs and tests — it is never shown as-is.
+ */
+export type LodgingRowErrorCode = "missing_name" | "unreadable_date" | "unreadable_number";
+
+export interface LodgingRowError {
+  rowIndex: number;
+  code: LodgingRowErrorCode;
+  message: string;
+  /** The offending cell verbatim, so the user can spot the format at a glance. */
+  sample?: string;
+}
+
 export interface LodgingCsvParseResult {
   candidates: LodgingImportCandidate[];
   shape: LodgingCsvShape;
   /** Rows that could not be turned into a candidate at all, with a reason. */
-  rowErrors: { rowIndex: number; message: string }[];
+  rowErrors: LodgingRowError[];
 }
 
 function cell(record: Record<string, string>, header: string | undefined): string {
@@ -176,9 +192,22 @@ function isRealCalendarDay(iso: string): boolean {
 }
 
 /**
+ * Expands a two-digit year with the POSIX pivot: 00–69 → 2000s, 70–99 →
+ * 1900s. German Excel writes "07.03.26" whenever the source column is
+ * formatted "TT.MM.JJ", and rejecting that killed entire stays sheets —
+ * every row dropped, no row imported. Two digits are unambiguous ENOUGH
+ * for a travel logbook; the alternative was refusing a file whose meaning
+ * a human reads at a glance.
+ */
+function expandTwoDigitYear(yy: string): string {
+  const n = Number.parseInt(yy, 10);
+  return String(n <= 69 ? 2000 + n : 1900 + n);
+}
+
+/**
  * Accepts ISO ("2026-03-30") and unambiguous German dot-format
- * ("30.03.2026") only. A slash-separated date (DD/MM vs MM/DD) is
- * genuinely ambiguous between locales — rather than guess, this returns
+ * ("30.03.2026", "07.03.26") only. A slash-separated date (DD/MM vs MM/DD)
+ * is genuinely ambiguous between locales — rather than guess, this returns
  * null so the row becomes a row error the user is asked about (spec: "a
  * wrong-but-plausible date is worse than one the user is asked about").
  */
@@ -189,9 +218,10 @@ function toIsoDay(raw: string): string | null {
     const candidate = `${iso[1]}-${iso[2]}-${iso[3]}`;
     return isRealCalendarDay(candidate) ? candidate : null;
   }
-  const de = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  const de = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/);
   if (de) {
-    const candidate = `${de[3]}-${de[2].padStart(2, "0")}-${de[1].padStart(2, "0")}`;
+    const year = de[3].length === 2 ? expandTwoDigitYear(de[3]) : de[3];
+    const candidate = `${year}-${de[2].padStart(2, "0")}-${de[1].padStart(2, "0")}`;
     return isRealCalendarDay(candidate) ? candidate : null;
   }
   return null;
@@ -291,6 +321,9 @@ function toCurrency(raw: string): LodgingCurrency | null {
   return (CURRENCIES as readonly string[]).includes(v) ? (v as (typeof CURRENCIES)[number]) : null;
 }
 
+/** A row error before it knows which row it belongs to. */
+type PendingRowError = Omit<LodgingRowError, "rowIndex">;
+
 interface FieldBuildResult<T> {
   fields: T;
   /**
@@ -299,7 +332,11 @@ interface FieldBuildResult<T> {
    * never a fabricated 0, and the row is still built; the caller decides
    * whether/how to surface these (never drops the row for them).
    */
-  errors: string[];
+  errors: PendingRowError[];
+}
+
+function numberError(field: string, sample: string): PendingRowError {
+  return { code: "unreadable_number", message: `Row has an unreadable ${field} value`, sample };
 }
 
 function buildLodgingFields(
@@ -307,21 +344,21 @@ function buildLodgingFields(
   m: LodgingCsvMapping,
   name: string
 ): FieldBuildResult<LodgingCandidateFields> {
-  const errors: string[] = [];
+  const errors: PendingRowError[] = [];
   const placeId = cell(record, m.googlePlaceId);
 
   const starsCell = parseNumericCell(cell(record, m.stars));
-  if (starsCell.unparseable) errors.push("Row has an unreadable stars value");
+  if (starsCell.unparseable) errors.push(numberError("stars", cell(record, m.stars)));
   const stars =
     starsCell.value !== null && starsCell.value >= 1 && starsCell.value <= 5
       ? Math.round(starsCell.value)
       : null;
 
   const latCell = parseNumericCell(cell(record, m.lat));
-  if (latCell.unparseable) errors.push("Row has an unreadable latitude value");
+  if (latCell.unparseable) errors.push(numberError("latitude", cell(record, m.lat)));
 
   const lonCell = parseNumericCell(cell(record, m.lon));
-  if (lonCell.unparseable) errors.push("Row has an unreadable longitude value");
+  if (lonCell.unparseable) errors.push(numberError("longitude", cell(record, m.lon)));
 
   return {
     fields: {
@@ -349,19 +386,22 @@ function buildStayFields(
   checkIn: string,
   checkOut: string
 ): FieldBuildResult<StayCandidateFields> {
-  const errors: string[] = [];
+  const errors: PendingRowError[] = [];
 
   const priceCell = parseNumericCell(cell(record, m.totalPrice));
-  if (priceCell.unparseable) errors.push("Row has an unreadable price value");
+  if (priceCell.unparseable) errors.push(numberError("price", cell(record, m.totalPrice)));
 
   const ratingRoomCell = toRating(cell(record, m.ratingRoom));
-  if (ratingRoomCell.unparseable) errors.push("Row has an unreadable room rating value");
+  if (ratingRoomCell.unparseable)
+    errors.push(numberError("room rating", cell(record, m.ratingRoom)));
 
   const ratingBreakfastCell = toRating(cell(record, m.ratingBreakfast));
-  if (ratingBreakfastCell.unparseable) errors.push("Row has an unreadable breakfast rating value");
+  if (ratingBreakfastCell.unparseable)
+    errors.push(numberError("breakfast rating", cell(record, m.ratingBreakfast)));
 
   const ratingOverallCell = toRating(cell(record, m.ratingOverall));
-  if (ratingOverallCell.unparseable) errors.push("Row has an unreadable overall rating value");
+  if (ratingOverallCell.unparseable)
+    errors.push(numberError("overall rating", cell(record, m.ratingOverall)));
 
   return {
     fields: {
@@ -392,12 +432,12 @@ export function buildLodgingCandidates(
 ): LodgingCsvParseResult {
   const shape = detectCsvShape(mapping);
   const candidates: LodgingImportCandidate[] = [];
-  const rowErrors: { rowIndex: number; message: string }[] = [];
+  const rowErrors: LodgingRowError[] = [];
 
   records.forEach((record, rowIndex) => {
     const name = cell(record, mapping.name);
     if (!name) {
-      rowErrors.push({ rowIndex, message: "Row has no hotel name" });
+      rowErrors.push({ rowIndex, code: "missing_name", message: "Row has no hotel name" });
       return;
     }
 
@@ -405,16 +445,21 @@ export function buildLodgingCandidates(
     // they're collected here and appended to rowErrors alongside the
     // row-dropping errors above, so one garbage cell surfaces as a warning
     // rather than silently vanishing OR taking the whole row down.
-    const fieldErrors: string[] = [];
+    const fieldErrors: PendingRowError[] = [];
 
     let stay: StayCandidateFields | null = null;
     if (shape !== "places") {
-      const checkIn = toIsoDay(cell(record, mapping.checkIn));
-      const checkOut = toIsoDay(cell(record, mapping.checkOut));
+      const rawCheckIn = cell(record, mapping.checkIn);
+      const rawCheckOut = cell(record, mapping.checkOut);
+      const checkIn = toIsoDay(rawCheckIn);
+      const checkOut = toIsoDay(rawCheckOut);
       if (!checkIn || !checkOut) {
         rowErrors.push({
           rowIndex,
+          code: "unreadable_date",
           message: "Row has an unreadable check-in/check-out date",
+          // The cell the user has to look at — the FIRST one that failed.
+          sample: (checkIn ? rawCheckOut : rawCheckIn) || undefined,
         });
         return;
       }
@@ -432,7 +477,7 @@ export function buildLodgingCandidates(
       fieldErrors.push(...lodgingResult.errors);
     }
 
-    fieldErrors.forEach((message) => rowErrors.push({ rowIndex, message }));
+    fieldErrors.forEach((error) => rowErrors.push({ rowIndex, ...error }));
 
     candidates.push({
       sourceRowIndex: rowIndex,
