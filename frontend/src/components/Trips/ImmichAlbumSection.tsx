@@ -222,22 +222,36 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
 
         <div className="ml-auto flex items-center gap-2">
           {hasDates && (
-            <button
-              type="button"
-              aria-pressed={showGroups}
-              className="text-xs underline"
-              onClick={() => {
-                const next = !groupByDayEnabled;
-                setGroupByDayEnabled(next);
-                try {
-                  localStorage.setItem(GROUP_PREF_KEY, String(next));
-                } catch {
-                  // A rejected write only costs the preference, not the view.
-                }
-              }}
-            >
-              {t("albums.groupByDay")}
-            </button>
+            <label className="flex items-center gap-2 text-xs text-slate-400">
+              <span>{t("albums.groupByDay")}</span>
+              {/* Same switch pattern as the active-domains setting — a text
+                  link read as navigation and never showed whether grouping
+                  was on. */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={showGroups}
+                aria-label={t("albums.groupByDay")}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-hidden shrink-0 ${
+                  showGroups ? "bg-(--accent)" : "bg-gray-600"
+                }`}
+                onClick={() => {
+                  const next = !groupByDayEnabled;
+                  setGroupByDayEnabled(next);
+                  try {
+                    localStorage.setItem(GROUP_PREF_KEY, String(next));
+                  } catch {
+                    // A rejected write only costs the preference, not the view.
+                  }
+                }}
+              >
+                <span
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                    showGroups ? "translate-x-5" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </label>
           )}
           {album.mode === "import" && (
             <button
@@ -290,7 +304,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
                 {group.day && (
                   <h4
                     data-testid="gallery-day-header"
-                    className="mb-1.5 text-xs font-semibold text-slate-400"
+                    className="mb-1.5 text-sm font-semibold text-slate-300"
                   >
                     {dayLabel(group.day)}
                   </h4>

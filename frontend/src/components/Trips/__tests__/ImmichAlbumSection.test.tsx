@@ -58,6 +58,10 @@ const ASSETS = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // The day-grouping preference lives in localStorage, which jsdom keeps
+  // across tests in a file — without this, a test that switches grouping OFF
+  // silently decides the starting state of every test after it.
+  localStorage.clear();
   getAlbumAssets.mockResolvedValue({ assets: ASSETS });
   unlinkAlbum.mockResolvedValue(undefined);
   resyncAlbum.mockResolvedValue({ job: { status: "running" } });
@@ -98,10 +102,27 @@ describe("ImmichAlbumSection", () => {
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
 
     await waitFor(() => expect(screen.getAllByTestId("gallery-day-header")).toHaveLength(2));
-    await userEvent.click(screen.getByRole("button", { name: "albums.groupByDay" }));
+    await userEvent.click(screen.getByRole("switch", { name: "albums.groupByDay" }));
 
     expect(screen.queryByTestId("gallery-day-header")).not.toBeInTheDocument();
     expect(screen.getAllByRole("img")).toHaveLength(3);
+  });
+
+  it("offers the grouping as a switch that reports its state, not a text link", async () => {
+    // Alex on the rc.4 UAT: it was an underlined text link, which reads as
+    // navigation and never says whether grouping is currently on. The active-
+    // domains setting already establishes the switch pattern.
+    getAlbumAssets.mockResolvedValue({ assets: DATED });
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+
+    const sw = await screen.findByRole("switch", { name: "albums.groupByDay" });
+    expect(sw).toHaveAttribute("aria-checked", "true");
+
+    await userEvent.click(sw);
+    expect(screen.getByRole("switch", { name: "albums.groupByDay" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
   });
 
   it("shows no day header at all when the album carries no capture dates", async () => {
@@ -117,7 +138,7 @@ describe("ImmichAlbumSection", () => {
     render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
 
     await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(2));
-    expect(screen.queryByRole("button", { name: "albums.groupByDay" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "albums.groupByDay" })).not.toBeInTheDocument();
   });
 
   it("shows a copy badge and a re-sync button for import mode", async () => {
