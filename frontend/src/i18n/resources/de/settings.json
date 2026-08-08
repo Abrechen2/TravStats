@@ -624,6 +624,23 @@
         "title": "Aus beliebigem Logbuch (CSV)",
         "description": "Lade eine flache Flug-CSV — nach dem Upload öffnet sich ein Mapping-Wizard, mit dem du jede Spalte einem TravStats-Feld zuordnest.",
         "uploadLabel": "CSV-Datei auswählen"
+      },
+      "parse": {
+        "flight": {
+          "title": "Aus E-Mail oder PDF",
+          "description": "Buchungsbestätigung einer Airline einlesen — der übliche Weg. Öffnet sich im Flug-Dialog, weil dort die Prüfung mehrerer Flüge stattfindet.",
+          "action": "Flug-Import öffnen"
+        },
+        "cruise": {
+          "title": "Aus E-Mail oder PDF",
+          "description": "Buchungsbestätigung einer Reederei einlesen (AIDA, TUI und generisch) — mit Vorschau vor dem Übernehmen.",
+          "action": "E-Mail oder PDF einlesen"
+        },
+        "lodging": {
+          "title": "Aus E-Mail oder PDF",
+          "description": "Hotelbestätigung einlesen, z. B. von Booking.com — mit Vorschau vor dem Übernehmen.",
+          "action": "E-Mail oder PDF einlesen"
+        }
       }
     },
     "preview": {
@@ -697,7 +714,8 @@
     },
     "toast": {
       "movedFromDashboard": "Der Flug-Import ist jetzt hier — unter Einstellungen → Import."
-    }
+    },
+    "noRoutes": "Für diesen Bereich gibt es noch keinen Importweg."
   },
   "devices": {
     "title": "Geräte",
