@@ -156,6 +156,7 @@
   "membership": {
     "title": "Bonusprogramme",
     "add": "Programm hinzufügen",
+    "coversChains": "Gilt für diese Ketten",
     "empty": "Noch keine Bonusprogramme hinterlegt",
     "loadError": "Bonusprogramme konnten nicht geladen werden",
     "saveError": "Bonusprogramm konnte nicht gespeichert werden",
@@ -169,7 +170,7 @@
     "sharedWith": "„{{program}}“ — geteilt mit {{chains}}",
     "hotelsTitle": "Deine Hotels dieser Kette",
     "hotelsEmpty": "Noch keine Hotels dieser Kette erfasst.",
-    "noMembershipYet": "Noch kein Bonusprogramm-Eintrag für dieses Programm.",
+    "noMembershipYet": "Noch kein Bonusprogramm für diese Kette hinterlegt.",
     "stats": {
       "hotels": "Hotels",
       "stays": "Aufenthalte",

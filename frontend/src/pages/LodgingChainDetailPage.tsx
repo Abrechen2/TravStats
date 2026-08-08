@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import NavigationBar from "../components/NavigationBar";
@@ -20,11 +20,12 @@ import type { Lodging, LodgingChainDetail } from "../types/lodging";
  * or the dashboard's chains view — and land here to see every hotel of that
  * chain the caller has stayed at, plus their loyalty membership for it.
  *
- * Memberships are PROGRAM-based, not chain-based (`LodgingChain.loyaltyProgram`
- * is the bridge — see routes/lodgingChains.ts and MembershipManager's own
- * doc comment), so the membership block below is scoped to the chain's
- * program via `MembershipManager`'s `filterProgramName`, never to the
- * chain's id.
+ * The membership block is scoped to THIS CHAIN's id (`scopeChain`). It used to
+ * be scoped to `chain.loyaltyProgram` as a string, which meant a rebranded
+ * programme — NH Rewards -> NH DISCOVERY -> Minor DISCOVERY — silently emptied
+ * this block, and the programme-name field had to be locked to keep the match
+ * alive. The catalogue value survives as a SUGGESTION: it prefills the name and
+ * pre-ticks which chains the membership covers, nothing more.
  */
 export default function LodgingChainDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -62,6 +63,27 @@ export default function LodgingChainDetailPage(): JSX.Element {
     };
   }, [id]);
 
+  /**
+   * Re-reads the chain after a membership was created, edited or deleted. The
+   * page header and the "no membership yet" note come from this payload, so
+   * without it they kept showing the pre-save state — the catalogue's stale
+   * programme name — until a manual reload.
+   *
+   * Deliberately does NOT touch `loading`: the loading branch replaces the
+   * whole tree, which would unmount `MembershipManager`, whose mount-time load
+   * fires `onChanged` again — an endless refetch loop.
+   */
+  const refreshDetail = useCallback(async (): Promise<void> => {
+    if (!id) return;
+    const chainId = Number.parseInt(id, 10);
+    if (Number.isNaN(chainId)) return;
+    try {
+      setDetail(await getChainDetail(chainId));
+    } catch (err: unknown) {
+      logger.error("LodgingChainDetailPage: failed to refresh chain", err);
+    }
+  }, [id]);
+
   if (loading) {
     return (
       <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
@@ -90,12 +112,16 @@ export default function LodgingChainDetailPage(): JSX.Element {
     );
   }
 
-  const { chain, lodgings, stats, membership, siblingChains } = detail;
+  const { chain, lodgings, stats, membership, siblingChains, suggestedChains } = detail;
+  // What the user calls this programme wins over what the catalogue guesses —
+  // the catalogue is a starting point and goes stale (it still said "NH
+  // Rewards" two rebrands later).
+  const programLabel = membership?.programName ?? chain.loyaltyProgram;
   const accent = chain.brandColor ?? DOMAINS.lodging.color;
   const sharedWithLabel =
-    chain.loyaltyProgram && siblingChains.length > 0
+    programLabel && siblingChains.length > 0
       ? t("lodging:chainDetail.sharedWith", {
-          program: chain.loyaltyProgram,
+          program: programLabel,
           chains: siblingChains.map((c) => c.name).join(", "),
         })
       : undefined;
@@ -130,7 +156,7 @@ export default function LodgingChainDetailPage(): JSX.Element {
               {chain.name}
             </h1>
             <p data-testid="chain-loyalty-program" className="text-sm text-[var(--text-muted)]">
-              {chain.loyaltyProgram ?? t("lodging:chainDetail.noLoyaltyProgram")}
+              {programLabel ?? t("lodging:chainDetail.noLoyaltyProgram")}
             </p>
           </div>
         </div>
@@ -144,19 +170,21 @@ export default function LodgingChainDetailPage(): JSX.Element {
           </div>
 
           <aside className="md:col-span-2">
-            {chain.loyaltyProgram ? (
-              <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
-                <MembershipManager
-                  filterProgramName={chain.loyaltyProgram}
-                  sharedWithLabel={sharedWithLabel}
-                />
-              </div>
-            ) : (
-              <div className="rounded-md border border-dashed border-[var(--color-border)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-muted)]">
-                {t("lodging:chainDetail.noLoyaltyProgram")}
-              </div>
-            )}
-            {membership === null && chain.loyaltyProgram && (
+            {/* Always offered, even for a chain the catalogue has no programme
+                for: a chain without a seeded programme is a gap in OUR data,
+                not proof the user has no card for it. */}
+            <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
+              <MembershipManager
+                scopeChain={{
+                  id: chain.id,
+                  suggestedChains,
+                  suggestedProgramName: chain.loyaltyProgram,
+                }}
+                sharedWithLabel={sharedWithLabel}
+                onChanged={() => void refreshDetail()}
+              />
+            </div>
+            {membership === null && (
               <p className="mt-2 text-xs text-[var(--text-muted)]">
                 {t("lodging:chainDetail.noMembershipYet")}
               </p>

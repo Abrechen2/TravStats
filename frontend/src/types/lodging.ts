@@ -27,12 +27,22 @@ export interface LodgingChain {
   createdAt: string;
 }
 
+/** A chain as it appears on a membership — id + name only, no catalogue detail. */
+export interface LodgingChainRef {
+  id: number;
+  name: string;
+}
+
 export interface LodgingMembership {
   id: string;
   userId: string;
+  /** The user's own wording, e.g. "Minor DISCOVERY". Free text, never locked to a catalogue value. */
   programName: string;
   membershipNumber: string | null;
   tier: string | null;
+  /** Chains this membership covers, linked by id (see `LodgingMembershipChain` in schema.prisma). */
+  chainIds: number[];
+  chains: LodgingChainRef[];
   createdAt: string;
   updatedAt: string;
 }
@@ -182,6 +192,12 @@ export interface MembershipInput {
   programName?: string;
   membershipNumber?: string;
   tier?: string;
+  /**
+   * Chains this membership covers. OMIT to leave the existing links alone; an
+   * array replaces them wholesale (`[]` means "covers no chain"), so a PATCH
+   * that only fixes a tier cannot unlink anything by accident.
+   */
+  chainIds?: number[];
 }
 
 /**
@@ -202,9 +218,10 @@ export interface FxPreview {
 
 /**
  * Shape of `GET /api/v1/lodging-chains/:id` (routes/lodgingChains.ts). The
- * membership is matched on `chain.loyaltyProgram`, never `chain.id` — see
- * the module comment there and on `LodgingMembership` for why (several
- * chains, e.g. Sheraton/Westin/Ritz-Carlton, share one program).
+ * membership is found through the LINK table (`LodgingMembershipChain`), not
+ * by comparing `chain.loyaltyProgram` to the membership's `programName` —
+ * loyalty programmes get rebranded, and that string join broke the moment
+ * either side was corrected.
  */
 export interface LodgingChainStats {
   hotelCount: number;
@@ -219,10 +236,19 @@ export interface LodgingChainDetail {
   /** The caller's own lodgings in this chain, with the same derived aggregates as the `/lodging` list. */
   lodgings: Lodging[];
   stats: LodgingChainStats;
-  /** The caller's membership for `chain.loyaltyProgram`, if any — null when the chain has no program or the user has no membership for it. */
+  /** The caller's membership LINKED to this chain, if any. */
   membership: LodgingMembership | null;
-  /** Other chains sharing the same `loyaltyProgram` (excludes this chain itself). */
-  siblingChains: LodgingChain[];
+  /**
+   * The other chains this membership covers — taken from the membership when
+   * there is one, otherwise from the catalogue suggestion. Excludes this chain.
+   */
+  siblingChains: LodgingChainRef[];
+  /**
+   * What the CATALOGUE suggests a membership here should cover: this chain plus
+   * every chain seeded with the same `loyaltyProgram`. Pre-ticks the boxes when
+   * creating; never consulted afterwards.
+   */
+  suggestedChains: LodgingChainRef[];
 }
 
 export interface LodgingListQuery {

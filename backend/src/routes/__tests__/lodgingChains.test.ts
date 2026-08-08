@@ -219,8 +219,16 @@ describe("Lodging Chains API", () => {
           ratingOverall: 4,
         },
       });
+      // Linked by ID, not by a name that happens to equal the chain's
+      // `loyaltyProgram` — that string join is gone (see LodgingMembershipChain).
+      // Linked to BOTH chains, which is what makes the sibling a sibling here.
       const membership = await prisma.lodgingMembership.create({
-        data: { userId, programName: "Marriott Bonvoy Detail Test", tier: "Gold" },
+        data: {
+          userId,
+          programName: "Marriott Bonvoy Detail Test",
+          tier: "Gold",
+          chains: { create: [{ chainId: chain.id }, { chainId: sibling.id }] },
+        },
       });
 
       const res = await request(app)
