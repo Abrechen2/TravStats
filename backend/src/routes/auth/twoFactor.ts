@@ -1,9 +1,12 @@
+import crypto from "crypto";
 import { Router, Response, NextFunction } from "express";
 import { prisma } from "../../db";
 import { authenticate, AuthRequest } from "../../middleware/auth";
 import { authLimiter } from "../../middleware/rateLimit";
 import { AppError } from "../../middleware/errorHandler";
-import { activateTwoFactorSchema } from "../../schemas/twoFactor";
+import { getAuthCookieOptions } from "../auth";
+import { generateToken } from "../../utils/jwt";
+import { activateTwoFactorSchema, verifyTwoFactorSchema } from "../../schemas/twoFactor";
 import {
   generateSecret,
   buildOtpauthUrl,
@@ -14,6 +17,7 @@ import {
 import {
   generateRecoveryCodes,
   countUnusedRecoveryCodes,
+  consumeRecoveryCode,
 } from "../../services/twoFactor/recoveryCodeService";
 import logger from "../../utils/logger";
 
@@ -120,5 +124,83 @@ router.post(
     }
   }
 );
+
+/**
+ * Redeem the login challenge. Deliberately NOT behind `authenticate` — there is
+ * no session yet; the `twofa_token` cookie is the credential, and it is good for
+ * ONE successful login or MAX_VERIFY_ATTEMPTS failures, whichever comes first.
+ */
+const MAX_VERIFY_ATTEMPTS = 5;
+/** Attempts per challenge hash. In memory: a challenge lives five minutes, and
+ *  this instance runs one Node process per container. */
+const attemptsByChallenge = new Map<string, number>();
+
+router.post("/verify", authLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const payload = verifyTwoFactorSchema.parse(req.body);
+    const challenge = req.cookies?.twofa_token;
+    if (typeof challenge !== "string" || challenge.length === 0) {
+      throw new AppError("No two-factor challenge in progress", 401);
+    }
+
+    const hashed = crypto.createHash("sha256").update(challenge).digest("hex");
+    const user = await prisma.user.findUnique({ where: { twoFactorToken: hashed } });
+    if (!user || !user.twoFactorTokenExpiry || user.twoFactorTokenExpiry < new Date()) {
+      throw new AppError("Two-factor challenge expired", 401);
+    }
+    if (!user.twoFactorSecret) {
+      throw new AppError("Two-factor is not enabled for this account", 401);
+    }
+
+    const accepted = payload.code
+      ? verifyCode(decryptSecret(user.twoFactorSecret), payload.code)
+      : await consumeRecoveryCode(user.id, payload.recoveryCode!);
+
+    if (!accepted) {
+      // A wrong code costs an attempt but not the whole challenge — a typo must
+      // not force the password to be retyped. After MAX_VERIFY_ATTEMPTS the
+      // challenge is destroyed, so the five-minute window is not an unlimited
+      // guessing budget.
+      const attempts = (attemptsByChallenge.get(hashed) ?? 0) + 1;
+      attemptsByChallenge.set(hashed, attempts);
+      logger.warn({ operation: "two_factor_verify_failed", userId: user.id, attempts });
+
+      if (attempts >= MAX_VERIFY_ATTEMPTS) {
+        attemptsByChallenge.delete(hashed);
+        await prisma.user.updateMany({
+          where: { id: user.id, twoFactorToken: hashed },
+          data: { twoFactorToken: null, twoFactorTokenExpiry: null },
+        });
+      }
+      throw new AppError("That code is not right", 401);
+    }
+    attemptsByChallenge.delete(hashed);
+
+    // Burn the challenge CONDITIONALLY: `updateMany` scoped to the token value
+    // means two requests racing on one challenge produce exactly one winner, the
+    // same guarantee consumeRecoveryCode relies on. A plain update would let both
+    // proceed and mint two sessions from one challenge.
+    const burned = await prisma.user.updateMany({
+      where: { id: user.id, twoFactorToken: hashed },
+      data: { twoFactorToken: null, twoFactorTokenExpiry: null },
+    });
+    if (burned.count !== 1) throw new AppError("Two-factor challenge expired", 401);
+    res.clearCookie("twofa_token", { path: "/" });
+    res.cookie("auth_token", generateToken(user.id), getAuthCookieOptions(req));
+
+    logger.info({ operation: "two_factor_verify_ok", userId: user.id });
+    res.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        isAdmin: user.isAdmin,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default router;
