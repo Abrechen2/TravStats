@@ -150,6 +150,37 @@ cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run
 Deployment details (server IP, SSH commands, compose paths) live in
 **`CLAUDE.local.md`** (gitignored, created locally).
 
+## Where a finding goes — issue or board item
+
+This repository is public. A GitHub issue is therefore a **published statement**,
+and the tracker is what a stranger reads to judge whether the project is alive
+and honest. That makes the tracker worth keeping signal-only.
+
+The deciding question is **not** who found it. It is:
+
+> Does a person running TravStats need to know this?
+
+| Finding | Where |
+|---|---|
+| Anything a user can hit, see, or must act on — a wrong number on screen, data at risk, a broken import | **GitHub issue**, however it was found. Owner, tester, or a routine prod check makes no difference. |
+| Internal engineering and tooling — our own scripts, test-suite noise, log hygiene with no user-visible effect, chores like wiring a check into CI | **Leitstand item**, no GitHub issue |
+| Exploitable **and** still open | **GitHub private security advisory** (draft), never a public issue; publish it once the fix ships |
+| Infrastructure, hosts, scope decisions, pentest notes | stays out of both — `CLAUDE.local.md`, `ROADMAP.local.md`, `TravStats-local` on Forgejo |
+
+An internal finding becomes an item in `roadmap.local.yaml` with
+`source: { type: audit }` (found by a sweep) or `{ type: owner }` (a decision or
+a wish). Those carry a **title**, because they have no live anchor to read one
+from — the schema enforces it, and it enforces the mirror rule too: a `github`
+item must NOT carry a title, since its title is read live.
+
+Why not a second, private tracker (Forgejo issues) for internal findings: a
+board item has no issue number, so it can never be mis-referenced. A bare `#12`
+in a commit message resolves on GitHub — to GitHub's issue 12, a different one.
+Two trackers turn every internal reference into a wrong link rather than a
+missing one. The board also measures `github` items live and would have to
+hand-copy the state of anything else, which is the drift the board exists to
+prevent.
+
 ## Commit Requirement
 
 **Every change must be committed before the session ends.**
@@ -403,7 +434,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **TravStats** (5587 symbols, 14240 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **TravStats** (5818 symbols, 14800 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -419,7 +450,7 @@ This project is indexed by GitNexus as **TravStats** (5587 symbols, 14240 relati
 
 1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
 2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
-3. `READ gitnexus://repo/TravStats/process/{processName}` — trace the full execution flow step by step
+3. `READ gitnexus://repo/hotels/process/{processName}` — trace the full execution flow step by step
 4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
 
 ## When Refactoring
@@ -458,10 +489,10 @@ This project is indexed by GitNexus as **TravStats** (5587 symbols, 14240 relati
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/TravStats/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/TravStats/clusters` | All functional areas |
-| `gitnexus://repo/TravStats/processes` | All execution flows |
-| `gitnexus://repo/TravStats/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/hotels/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/hotels/clusters` | All functional areas |
+| `gitnexus://repo/hotels/processes` | All execution flows |
+| `gitnexus://repo/hotels/process/{name}` | Step-by-step execution trace |
 
 ## Self-Check Before Finishing
 
@@ -501,3 +532,35 @@ To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
+
+---
+
+## Git-Remotes — Forgejo und GitHub (seit 2026-08-01)
+
+Dieses Repository hat **zwei Remotes**:
+
+| Remote | Ziel | Rolle |
+|--------|------|-------|
+| `origin` | GitHub | Massgeblich fuer Oeffentliches — PRs, Actions, Dependabot, GHCR |
+| `forgejo` | `ssh://git@192.168.178.254:2222/dennis/TravStats.git` | Private Vollsicherung im Haus, inkl. aller lokalen Branches |
+
+**Regel beim Pushen:**
+
+```bash
+git push origin <branch>    # oeffentlich, wie bisher
+git push forgejo --all      # zusaetzlich IMMER - alle lokalen Branches
+git push forgejo --tags
+```
+
+Der zweite Befehl ist der entscheidende. Am 1. August 2026 existierten
+15 Branches ueber vier Repositories ausschliesslich lokal, obwohl alle ein
+GitHub-Remote hatten.
+
+**Dateien, die `.gitignore` hier ausschliesst** (`CLAUDE.md`, `AGENTS.md`,
+Roadmaps, Pentest-Notizen), liegen im Begleitrepo **`TravStats-local`** auf
+Forgejo. Git kennt keine Ignore-Regeln pro Remote, deshalb der Umweg.
+
+**Secrets gehoeren in keines von beiden** — dafuer ist Infisical zustaendig
+(CT 141, `192.168.178.145`).
+
+Vollstaendiges Konzept: `D:\Projekte\CC\docs\git-konzept.md`

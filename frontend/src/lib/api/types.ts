@@ -130,6 +130,10 @@ export interface UserSettings {
   historicalEnrichment?: HistoricalEnrichmentSettings;
   enabledDomains?: DomainKey[];
   whatsNewSeenVersion?: string;
+  /** ISO 4217 alpha-3 code. The user's real base currency (see `UserSettings.baseCurrency`
+   * on the backend) — used to convert/aggregate money figures like lodging spend. Distinct
+   * from `units.currency`, a separate display preference. */
+  baseCurrency?: string;
   /**
    * Instance-level beta gate — READ-ONLY. Served by GET /settings for
    * convenience; PUT /settings ignores it (Zod strips it server-side). Only
@@ -394,6 +398,8 @@ export interface Airport {
   timezone?: string;
   /** True if the airport is permanently closed (e.g. Berlin Tegel TXL). */
   isClosed?: boolean;
+  /** Manually added via the admin master-data page (#191); survives re-seeds. */
+  isUserAdded?: boolean;
 }
 
 // ==================== Template Interfaces ====================

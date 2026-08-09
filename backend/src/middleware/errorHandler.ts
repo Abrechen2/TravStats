@@ -49,9 +49,33 @@ export const errorHandler = async (
 
   const debugEnabled = await isDebugEnabled().catch(() => false);
   const errorCategory = categorizeError(err as ApiError | ZodError);
+  const statusCode = err instanceof ZodError ? 400 : (err as ApiError).statusCode || 500;
+
+  // The level follows the status code, which was already being computed and
+  // then ignored (#245). A 4xx describes a CLIENT mistake — a bad payload, a
+  // missing session — not a fault of this server. Logging those at error level
+  // meant the error log could not answer "is anything broken?": on production
+  // its entire HTTP content was five 401s and two 400s, and it had never held
+  // a single 5xx. It also let anyone who could reach the port grow the error
+  // log indefinitely without credentials, writing their IP, user agent and
+  // query string into it each time.
+  //
+  // An error with no status code stays at error level: an uncategorised throw
+  // is a server fault until proven otherwise, and defaulting it to warn would
+  // hide precisely what this log exists for.
+  //
+  // Everything else about the entry is unchanged — same category, same
+  // operation, same context fields — so existing log tooling keeps working.
+  //
+  // The level is chosen by CALLING the chosen method on `logger`, never by
+  // detaching one into a variable: pino's methods rely on `this`, so
+  // `const f = logger.warn; f(...)` throws "Cannot read properties of
+  // undefined (reading Symbol(pino.msgPrefix))" at runtime. A unit test that
+  // mocks the logger with plain jest.fn()s cannot see that — see
+  // errorHandler.logLevel.test.ts, which runs against the REAL logger.
 
   // Structured AI-friendly error logging
-  logger.error({
+  const logEntry = {
     category: 'error',
     operation: 'error_handler',
     message: err.message,
@@ -66,7 +90,7 @@ export const errorHandler = async (
       username: req.user?.username,
       requestId: req.requestId,
       errorCategory,
-      statusCode: err instanceof ZodError ? 400 : (err as ApiError).statusCode || 500,
+      statusCode,
     },
     error: {
       name: err.name,
@@ -82,7 +106,13 @@ export const errorHandler = async (
         })),
       }),
     },
-  });
+  };
+
+  if (statusCode >= 500) {
+    logger.error(logEntry);
+  } else {
+    logger.warn(logEntry);
+  }
 
   // Zod validation errors
   if (err instanceof ZodError) {
@@ -117,8 +147,9 @@ export const errorHandler = async (
     });
   }
 
-  // Custom API errors
-  const statusCode = (err as ApiError).statusCode || 500;
+  // Custom API errors. `statusCode` is the one computed at the top for the log
+  // level — by this point the ZodError branch has already returned, so the two
+  // expressions were identical and the second was a duplicate.
   const message = err.message || 'Internal server error';
 
   res.status(statusCode).json({

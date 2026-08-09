@@ -56,10 +56,22 @@ export function aggregate(
     perDomainEvents[domain] = events;
     totalEvents += events;
 
-    // Country union: lifetime has the full set; year-scoped uses the
-    // same set as a best-effort proxy until the backend exposes a
-    // year-keyed country index. Documented as a known approximation.
-    stats.countries.forEach((c) => countries.add(c));
+    // Country union. Lifetime takes the full set; a selected year takes that
+    // year's slice from the backend's year-keyed index.
+    //
+    // This used to use the lifetime set for BOTH, which made the tile read
+    // "34 countries" under a "Year 2017" header and left its year-over-year
+    // delta badge structurally pinned at 0 (0%) — a comparison that could
+    // not exist, rendered as if it were data.
+    //
+    // A domain without the index (older adapter, stub domain) falls back to
+    // its lifetime set instead of contributing nothing: over-reporting is
+    // visible, under-reporting silently loses countries.
+    if (year === null || stats.countriesByYear === undefined) {
+      stats.countries.forEach((c) => countries.add(c));
+    } else {
+      (stats.countriesByYear[year] ?? []).forEach((c) => countries.add(c));
+    }
   }
 
   return {

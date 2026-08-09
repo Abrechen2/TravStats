@@ -24,6 +24,21 @@ const ALIASES: Record<string, string> = {
   'a380': 'Airbus A380-800',
   'a380-800': 'Airbus A380-800',
 
+  // Bare Airbus short forms, same measurement as the Boeing block below.
+  // A321LR keeps its own name rather than collapsing onto A321neo: it is the
+  // long-range variant, and the point of normalising is one spelling per
+  // aircraft, not one aircraft per family.
+  'a220-100': 'Airbus A220-100',
+  'a220-300': 'Airbus A220-300',
+  'a320neo': 'Airbus A320neo',
+  'a321neo': 'Airbus A321neo',
+  'a321lr': 'Airbus A321LR',
+  'a330-900': 'Airbus A330-900neo',
+  'a330-900neo': 'Airbus A330-900neo',
+  // Sharklets are a wingtip option, not a variant — the aircraft is an A320.
+  'airbus a320 (sharklets)': 'Airbus A320',
+  'a320 (sharklets)': 'Airbus A320',
+
   // Short Boeing codes
   'b737': 'Boeing 737-800',
   'b738': 'Boeing 737-800',
@@ -43,6 +58,25 @@ const ALIASES: Record<string, string> = {
   'b787-8': 'Boeing 787-8',
   'b787-9': 'Boeing 787-9',
   'b787-10': 'Boeing 787-10',
+
+  // Short forms measured in a real 335-flight library, where the SAME aircraft
+  // appeared in two spellings at once ("B737-800" beside "Boeing 737-800").
+  // Each expansion keeps the variant suffix: mapping "B767-300ER" onto the
+  // catalogue's plain "Boeing 767-300" would make the column consistent by
+  // throwing away the extended-range distinction, which is worse than leaving
+  // it alone. So the target is the manufacturer-prefixed name, using the
+  // catalogue's own spelling where it carries that exact variant.
+  'b737-800': 'Boeing 737-800',
+  'b737-900': 'Boeing 737-900',
+  'b737-900er': 'Boeing 737-900ER',
+  'b737 max 8': 'Boeing 737 MAX 8',
+  'b737max8': 'Boeing 737 MAX 8',
+  // Ryanair's 197-seat high-density MAX 8. A real variant, not a typo.
+  'b737 max 8-200': 'Boeing 737 MAX 8-200',
+  'b767-300er': 'Boeing 767-300ER',
+  'b767-400': 'Boeing 767-400',
+  'b767-400er': 'Boeing 767-400ER',
+  'b777-200er': 'Boeing 777-200ER',
 
   // Full-name variants without subtype
   'boeing 737': 'Boeing 737-800',
@@ -68,6 +102,9 @@ const ALIASES: Record<string, string> = {
   'e175': 'Embraer E175',
   'e190': 'Embraer E190',
   'e195': 'Embraer E195',
+  // E2 is the re-engined generation — a different aircraft, not a spelling of E195.
+  'e190-e2': 'Embraer E190-E2',
+  'e195-e2': 'Embraer E195-E2',
   'erj-145': 'Embraer ERJ-145',
 
   // CRJ

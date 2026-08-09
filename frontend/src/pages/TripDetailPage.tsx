@@ -2,9 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { differenceInCalendarDays } from "date-fns";
 import { tripsApi } from "../lib/api";
+import { formatDateInTimezone } from "../lib/dateUtils";
 import { logger } from "../lib/logger";
-import { sumByCurrency } from "../lib/bookingCost";
+import { sumByCurrency, tripCostSources } from "../lib/bookingCost";
+import { formatDateTimeInTimezone } from "../lib/dateUtils";
+import { useSettingsStore } from "../store/settingsStore";
 import { computeRailStates } from "../lib/timelineRail";
+import { stripMarkdown } from "../lib/markdownPreview";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useTranslation } from "../hooks/useTranslation";
@@ -14,11 +18,13 @@ import NavigationBar from "../components/NavigationBar";
 import TripModal from "../components/Trips/TripModal";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
 import JournalViewModal from "../components/Trips/JournalViewModal";
+import JournalPreview from "../components/Trips/JournalPreview";
 import StopModal from "../components/Trips/StopModal";
 import BookingEditModal from "../components/Trips/BookingEditModal";
 import TripMap from "../components/Trips/TripMap";
 import TripGallery from "../components/Trips/TripGallery";
 import TripSummaryPanel from "../components/Trips/TripSummaryPanel";
+import { compareTimelineEvents, formatTimelineDate } from "../lib/tripTimeline";
 
 type TabKey = "overview" | "timeline" | "map" | "gallery" | "logistics";
 const TABS: TabKey[] = ["overview", "timeline", "map", "gallery", "logistics"];
@@ -55,23 +61,34 @@ export default function TripDetailPage(): JSX.Element {
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Domain-gating: when the cruise domain is disabled, every tab gets a
-  // trip copy with the cruise segments stripped, so timeline, map, and
-  // logistics stay cruise-free without per-tab checks. A counter banner
+  // Domain-gating: when the cruise/lodging domain is disabled, every tab
+  // gets a trip copy with those segments stripped, so timeline, map, and
+  // logistics stay domain-free without per-tab checks. A counter banner
   // below the tab bar tells the user the segments are hidden, not lost.
   const { isEnabled } = useEnabledDomains();
   const cruiseEnabled = isEnabled("cruise");
+  const lodgingEnabled = isEnabled("lodging");
   const displayTrip = useMemo<Trip | null>(() => {
-    if (trip === null || cruiseEnabled) return trip;
+    if (trip === null || (cruiseEnabled && lodgingEnabled)) return trip;
     return {
       ...trip,
-      cruises: [],
-      _count: trip._count ? { ...trip._count, cruises: 0 } : trip._count,
+      cruises: cruiseEnabled ? trip.cruises : [],
+      lodgingStays: lodgingEnabled ? trip.lodgingStays : [],
+      _count: trip._count
+        ? {
+            ...trip._count,
+            ...(cruiseEnabled ? {} : { cruises: 0 }),
+            ...(lodgingEnabled ? {} : { lodgingStays: 0 }),
+          }
+        : trip._count,
     };
-  }, [trip, cruiseEnabled]);
+  }, [trip, cruiseEnabled, lodgingEnabled]);
   const hiddenCruiseCount = cruiseEnabled
     ? 0
     : (trip?._count?.cruises ?? trip?.cruises?.length ?? 0);
+  const hiddenLodgingCount = lodgingEnabled
+    ? 0
+    : (trip?._count?.lodgingStays ?? trip?.lodgingStays?.length ?? 0);
 
   const load = async (): Promise<void> => {
     if (!id) return;
@@ -148,11 +165,28 @@ export default function TripDetailPage(): JSX.Element {
               ⚓ {t("trips:detail.hiddenCruises", { count: hiddenCruiseCount })}
             </div>
           )}
+          {hiddenLodgingCount > 0 && (
+            <div
+              className="mb-4 rounded-lg px-4 py-2.5 text-xs"
+              style={{
+                background: "var(--bg-surface)",
+                border: "1px solid var(--color-border)",
+                color: "var(--text-muted)",
+              }}
+            >
+              🏨 {t("trips:detail.hiddenLodging", { count: hiddenLodgingCount })}
+            </div>
+          )}
           {tab === "overview" && (
             <OverviewTab trip={shownTrip} t={t} onChanged={() => void load()} />
           )}
           {tab === "timeline" && (
-            <TimelineTab trip={shownTrip} onChanged={() => void load()} t={t} />
+            <TimelineTab
+              trip={shownTrip}
+              onChanged={() => void load()}
+              t={t}
+              language={i18n.language}
+            />
           )}
           {tab === "map" && <TripMap trip={shownTrip} />}
           {tab === "gallery" && (
@@ -493,6 +527,12 @@ type TimelineEvent =
       kind: "journal";
       date: string;
       entry: TripJournalEntry;
+    }
+  | {
+      id: string;
+      kind: "lodging-checkin" | "lodging-checkout";
+      date: string;
+      stay: NonNullable<Trip["lodgingStays"]>[number];
     };
 
 const STOP_DOMAIN_ICON: Record<string, string> = {
@@ -510,14 +550,18 @@ interface TimelineTabProps {
   trip: Trip;
   onChanged: () => void;
   t: ReturnType<typeof useTranslation>["t"];
+  /** Drives the UTC date/time formatting of stop cards — see lib/tripTimeline.ts. */
+  language: string | undefined;
 }
 
-function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
+function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
   const [adding, setAdding] = useState<null | "journal" | "stop">(null);
   const [editingJournal, setEditingJournal] = useState<TripJournalEntry | null>(null);
   const [viewingJournal, setViewingJournal] = useState<TripJournalEntry | null>(null);
   const [editingStop, setEditingStop] = useState<TripStop | null>(null);
+  // Only a fallback: a flight whose airport record lacks an IANA zone.
+  const userTz = useSettingsStore((s) => s.display?.timezone) || "UTC";
 
   const events = useMemo<TimelineEvent[]>(() => {
     const out: TimelineEvent[] = [];
@@ -528,9 +572,14 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
         kind: "flight",
         date: f.departureTime,
         title: `${f.depIata ?? "???"} → ${f.arrIata ?? "???"}`,
+        // Airport-local, not the viewer's clock. `toLocaleString()` rendered a
+        // JFK arrival in Europe/Berlin, so the same flight read 13:45 in the
+        // flights table and 19:45 here — six hours apart from the boarding
+        // pass. Each end is formatted against its own airport's zone, with the
+        // stored time semantics so a DATE_ONLY historical row keeps its date.
         subtitle: f.arrivalTime
-          ? `${new Date(f.departureTime).toLocaleString()} → ${new Date(f.arrivalTime).toLocaleString()}`
-          : new Date(f.departureTime).toLocaleString(),
+          ? `${formatDateTimeInTimezone(f.departureTime, f.depTimezone || userTz, f.depTimeSemantics)} → ${formatDateTimeInTimezone(f.arrivalTime, f.arrTimezone || userTz, f.arrTimeSemantics)}`
+          : formatDateTimeInTimezone(f.departureTime, f.depTimezone || userTz, f.depTimeSemantics),
       });
     }
     for (const c of trip.cruises ?? []) {
@@ -561,7 +610,23 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
         entry: e,
       });
     }
-    return out.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    // Each linked stay renders as TWO timeline entries — a check-in and a
+    // check-out — mirroring how TripStop entries already work, so the
+    // hotel is actually visible in the trip's chronology instead of
+    // disappearing once it's assigned (the spec gap this closes).
+    for (const s of trip.lodgingStays ?? []) {
+      out.push({ id: `lodging-checkin-${s.id}`, kind: "lodging-checkin", date: s.checkIn, stay: s });
+      out.push({
+        id: `lodging-checkout-${s.id}`,
+        kind: "lodging-checkout",
+        date: s.checkOut,
+        stay: s,
+      });
+    }
+    // #175: ordered by time of day, with a day's diary entry last. See
+    // compareTimelineEvents — the tie-break rules and the reason they exist
+    // live there, not here.
+    return out.sort(compareTimelineEvents);
   }, [trip]);
 
   // Past/upcoming is shown on the rail (line + dots), not by graying out
@@ -689,10 +754,14 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
                   }}
                 />
                 {ev.kind === "flight" && <FlightCard ev={ev} />}
-                {ev.kind === "cruise" && <CruiseCard ev={ev} />}
+                {ev.kind === "cruise" && <CruiseCard ev={ev} language={language} />}
+                {(ev.kind === "lodging-checkin" || ev.kind === "lodging-checkout") && (
+                  <LodgingCheckCard ev={ev} t={t} language={language} />
+                )}
                 {ev.kind === "stop" && (
                   <StopCard
                     ev={ev}
+                    language={language}
                     onEdit={() => setEditingStop(ev.stop)}
                     onDelete={() => void handleDeleteStop(ev.stop)}
                   />
@@ -700,6 +769,7 @@ function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
                 {ev.kind === "journal" && (
                   <JournalCard
                     ev={ev}
+                    language={language}
                     onView={() => setViewingJournal(ev.entry)}
                     onEdit={() => setEditingJournal(ev.entry)}
                     onDelete={() => void handleDeleteJournal(ev.entry)}
@@ -767,6 +837,9 @@ function dotColor(ev: TimelineEvent): string {
       return "var(--domain-poi, #5ec2b2)";
     case "journal":
       return "#60a5fa";
+    case "lodging-checkin":
+    case "lodging-checkout":
+      return "var(--domain-lodging, #d4778f)";
   }
 }
 
@@ -778,6 +851,7 @@ function EventCard({
   subtitle,
   meta,
   date,
+  dateLabel,
   actions,
 }: {
   icon: string;
@@ -785,8 +859,16 @@ function EventCard({
   iconColor: string;
   title: string;
   subtitle?: string | null;
-  meta?: string;
+  meta?: React.ReactNode;
   date: string;
+  /**
+   * Overrides the rendered date text. Stops pass a UTC-formatted label with
+   * their time of day (#175) — their `date` is a WALL CLOCK, not an instant.
+   * Everything else keeps `toLocaleDateString()`, deliberately: a flight's
+   * `departureTime` IS a real instant, and forcing it to UTC here could show
+   * the wrong calendar day for a departure near midnight local.
+   */
+  dateLabel?: string;
   actions?: React.ReactNode;
 }): JSX.Element {
   return (
@@ -822,7 +904,7 @@ function EventCard({
           style={{ color: "var(--text-muted)" }}
           dateTime={date}
         >
-          {new Date(date).toLocaleDateString()}
+          {dateLabel ?? new Date(date).toLocaleDateString()}
         </time>
         {actions}
       </div>
@@ -843,7 +925,13 @@ function FlightCard({ ev }: { ev: Extract<TimelineEvent, { kind: "flight" }> }):
   );
 }
 
-function CruiseCard({ ev }: { ev: Extract<TimelineEvent, { kind: "cruise" }> }): JSX.Element {
+function CruiseCard({
+  ev,
+  language,
+}: {
+  ev: Extract<TimelineEvent, { kind: "cruise" }>;
+  language: string | undefined;
+}): JSX.Element {
   return (
     <EventCard
       icon="⚓"
@@ -852,16 +940,64 @@ function CruiseCard({ ev }: { ev: Extract<TimelineEvent, { kind: "cruise" }> }):
       title={ev.title}
       subtitle={ev.subtitle}
       date={ev.date}
+      // A cruise start date is a UTC-pinned calendar day, like a stop and a
+      // diary entry — same formatting, so one timeline never shows two date
+      // styles side by side. Only FlightCard keeps local formatting, because
+      // a departure time is a genuine instant.
+      dateLabel={formatTimelineDate(ev.date, language)}
     />
+  );
+}
+
+/**
+ * Renders one half (check-in OR check-out) of a linked LodgingStay as a
+ * timeline entry. Uses the lodging domain colour (`DOMAINS.lodging.color`,
+ * `#d4778f` via the `--domain-lodging` CSS var) and the hotel icon, and
+ * clicking it navigates to that hotel's own detail page — the whole point
+ * being that a hotel linked to a trip is no longer a dead end.
+ */
+function LodgingCheckCard({
+  ev,
+  t,
+  language,
+}: {
+  ev: Extract<TimelineEvent, { kind: "lodging-checkin" | "lodging-checkout" }>;
+  t: ReturnType<typeof useTranslation>["t"];
+  language: string | undefined;
+}): JSX.Element {
+  const { stay } = ev;
+  const isCheckIn = ev.kind === "lodging-checkin";
+  const title = t(
+    isCheckIn ? "trips:detail.timeline.lodgingCheckIn" : "trips:detail.timeline.lodgingCheckOut",
+    { name: stay.lodging.name },
+  );
+  // Check-in/out are stored as the calendar day at UTC midnight and we capture no
+  // time of day. Rendering them in local time would print a meaningless "02:00" and,
+  // west of UTC, shift the day backwards.
+  const subtitle = formatDateInTimezone(ev.date, "UTC");
+  return (
+    <Link to={`/lodging/${stay.lodgingId}`} className="block">
+      <EventCard
+        icon="🏨"
+        bg="rgba(212,119,143,0.15)"
+        iconColor="var(--domain-lodging, #d4778f)"
+        title={title}
+        subtitle={subtitle}
+        date={ev.date}
+        dateLabel={formatTimelineDate(ev.date, language)}
+      />
+    </Link>
   );
 }
 
 function StopCard({
   ev,
+  language,
   onEdit,
   onDelete,
 }: {
   ev: Extract<TimelineEvent, { kind: "stop" }>;
+  language: string | undefined;
   onEdit: () => void;
   onDelete: () => void;
 }): JSX.Element {
@@ -880,6 +1016,7 @@ function StopCard({
       subtitle={subtitle}
       meta={s.notes ?? undefined}
       date={ev.date}
+      dateLabel={formatTimelineDate(ev.date, language)}
       actions={<RowActions onEdit={onEdit} onDelete={onDelete} />}
     />
   );
@@ -887,17 +1024,21 @@ function StopCard({
 
 function JournalCard({
   ev,
+  language,
   onView,
   onEdit,
   onDelete,
 }: {
   ev: Extract<TimelineEvent, { kind: "journal" }>;
+  language: string | undefined;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }): JSX.Element {
   const e = ev.entry;
-  const headline = e.title ?? truncate(e.body, 50);
+  // The headline is a single short line, so Markdown is stripped rather than
+  // rendered there; the body below it renders (issue #231).
+  const headline = e.title ?? truncate(stripMarkdown(e.body), 50);
   const meta = [e.weather, e.mood].filter(Boolean).join(" · ") || undefined;
   return (
     <EventCard
@@ -906,8 +1047,9 @@ function JournalCard({
       iconColor="#60a5fa"
       title={headline}
       subtitle={meta ?? null}
-      meta={e.title ? truncate(e.body, 200) : undefined}
+      meta={e.title ? <JournalPreview body={e.body} /> : undefined}
       date={ev.date}
+      dateLabel={formatTimelineDate(ev.date, language)}
       actions={<RowActions onView={onView} onEdit={onEdit} onDelete={onDelete} />}
     />
   );
@@ -1163,18 +1305,30 @@ function TripStatsRow({
   trip: Trip;
   t: ReturnType<typeof useTranslation>["t"];
 }): JSX.Element {
-  // Domain-gating: the cruise tile disappears entirely when the cruise
+  // Domain-gating: the cruise/lodging tile disappears entirely when that
   // domain is disabled (a "0" tile would still advertise the domain).
   const { isEnabled } = useEnabledDomains();
   const cruiseEnabled = isEnabled("cruise");
+  const lodgingEnabled = isEnabled("lodging");
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
   const cruiseCount = trip._count?.cruises ?? trip.cruises?.length ?? 0;
-  const costTotals = sumByCurrency(trip.bookings ?? []);
+  const lodgingCount = trip._count?.lodgingStays ?? trip.lodgingStays?.length ?? 0;
+  // Cruises and lodging stays count towards the total exactly as flights do —
+  // but only while their domain is on, matching the tiles above.
+  const costTotals = sumByCurrency(
+    tripCostSources(
+      trip.bookings ?? [],
+      trip.flights ?? [],
+      cruiseEnabled ? (trip.cruises ?? []) : [],
+      lodgingEnabled ? (trip.lodgingStays ?? []) : []
+    )
+  );
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
       <StatTile value={flightCount} label={t("trips:detail.stats.flights")} />
       {cruiseEnabled && <StatTile value={cruiseCount} label={t("trips:detail.stats.cruises")} />}
+      {lodgingEnabled && <StatTile value={lodgingCount} label={t("trips:detail.stats.lodging")} />}
       <StatTile value={trip.countries.length} label={t("trips:detail.stats.countries")} />
       <StatTile value={trip.companions.length} label={t("trips:detail.stats.companions")} />
       <StatTile

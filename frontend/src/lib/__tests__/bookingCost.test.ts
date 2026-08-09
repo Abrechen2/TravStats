@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sumByCurrency } from "../bookingCost";
+import { sumByCurrency, tripCostSources } from "../bookingCost";
 
 describe("sumByCurrency", () => {
   it("sums a single currency", () => {
@@ -33,5 +33,97 @@ describe("sumByCurrency", () => {
 
   it("returns [] for no priced bookings", () => {
     expect(sumByCurrency([])).toEqual([]);
+  });
+});
+
+describe("tripCostSources", () => {
+  it("takes bookings plus the flights that have none", () => {
+    const sources = tripCostSources(
+      [{ price: 300, currency: "EUR" }],
+      [
+        { price: 250, currency: "EUR", bookingId: null },
+        { price: 999, currency: "EUR", bookingId: "b1" },
+      ]
+    );
+    expect(sumByCurrency(sources)).toEqual([{ currency: "EUR", total: 550 }]);
+  });
+
+  // A cruise-only trip totalled to "—" although its cruises carried prices:
+  // the cost model knew about bookings and flights, never about cruises.
+  it("counts a cruise that carries its own price", () => {
+    const sources = tripCostSources(
+      [],
+      [],
+      [{ price: 1290, currency: "EUR", bookingId: null }]
+    );
+    expect(sumByCurrency(sources)).toEqual([{ currency: "EUR", total: 1290 }]);
+  });
+
+  it("skips a cruise whose price already sits on its booking", () => {
+    const sources = tripCostSources(
+      [{ price: 1290, currency: "EUR" }],
+      [],
+      [{ price: 1290, currency: "EUR", bookingId: "b1" }]
+    );
+    expect(sumByCurrency(sources)).toEqual([{ currency: "EUR", total: 1290 }]);
+  });
+
+  it("keeps a cruise in a foreign currency separate", () => {
+    const sources = tripCostSources(
+      [{ price: 300, currency: "EUR" }],
+      [],
+      [{ price: 480, currency: "USD", bookingId: null }]
+    );
+    expect(sumByCurrency(sources)).toEqual([
+      { currency: "EUR", total: 300 },
+      { currency: "USD", total: 480 },
+    ]);
+  });
+
+  // A hotel-only trip totalled to "—" for the same reason a cruise-only one
+  // did: a stay prices itself as `totalPrice`, which the cost model never read.
+  it("counts a lodging stay that carries its own price", () => {
+    const sources = tripCostSources([], [], [], [{ totalPrice: 420, currency: "EUR", bookingId: null }]);
+    expect(sumByCurrency(sources)).toEqual([{ currency: "EUR", total: 420 }]);
+  });
+
+  it("skips a stay whose price already sits on its booking", () => {
+    const sources = tripCostSources(
+      [{ price: 420, currency: "EUR" }],
+      [],
+      [],
+      [{ totalPrice: 420, currency: "EUR", bookingId: "b1" }]
+    );
+    expect(sumByCurrency(sources)).toEqual([{ currency: "EUR", total: 420 }]);
+  });
+
+  it("keeps a stay in a foreign currency separate", () => {
+    const sources = tripCostSources(
+      [{ price: 300, currency: "EUR" }],
+      [],
+      [],
+      [{ totalPrice: 250, currency: "CHF", bookingId: null }]
+    );
+    expect(sumByCurrency(sources)).toEqual([
+      { currency: "EUR", total: 300 },
+      { currency: "CHF", total: 250 },
+    ]);
+  });
+
+  // The FX snapshot on a stay is a second opinion about the same money, never
+  // an addition — only the raw amount may reach the total.
+  it("ignores a stay with no price at all", () => {
+    const sources = tripCostSources([], [], [], [{ totalPrice: null, currency: "EUR", bookingId: null }]);
+    expect(sumByCurrency(sources)).toEqual([]);
+  });
+
+  it("adds flights, cruises and stays together in one currency", () => {
+    const sources = tripCostSources(
+      [{ price: 100, currency: "EUR" }],
+      [{ price: 200, currency: "EUR", bookingId: null }],
+      [{ price: 300, currency: "EUR", bookingId: null }],
+      [{ totalPrice: 400, currency: "EUR", bookingId: null }]
+    );
+    expect(sumByCurrency(sources)).toEqual([{ currency: "EUR", total: 1000 }]);
   });
 });

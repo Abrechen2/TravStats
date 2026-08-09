@@ -4,6 +4,7 @@ import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { TRIP_COLORS as PALETTE } from "../../lib/tripColors";
+import CompanionPicker from "../CompanionPicker";
 
 interface TripModalProps {
   trip: Trip | null; // null = create mode
@@ -69,7 +70,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
   const [originLabel, setOriginLabel] = useState(trip?.originLabel ?? "");
   const [destinationLabel, setDestinationLabel] = useState(trip?.destinationLabel ?? "");
   const [tagsCsv, setTagsCsv] = useState(csvFromArray(trip?.tags ?? []));
-  const [companionsCsv, setCompanionsCsv] = useState(csvFromArray(trip?.companions ?? []));
+  const [companions, setCompanions] = useState<string[]>(trip?.companions ?? []);
   const [notes, setNotes] = useState(trip?.notes ?? "");
   // Cover is upload-only. The chosen file is buffered and uploaded on save,
   // so it works even while creating a brand-new trip (before an id exists).
@@ -117,7 +118,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
     setOriginLabel(trip.originLabel ?? "");
     setDestinationLabel(trip.destinationLabel ?? "");
     setTagsCsv(csvFromArray(trip.tags));
-    setCompanionsCsv(csvFromArray(trip.companions));
+    setCompanions(trip.companions);
     setNotes(trip.notes ?? "");
     setCoverUrl(trip.coverImageUrl ?? "");
     setCoverFile(null);
@@ -144,7 +145,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           originLabel: originLabel.trim() || null,
           destinationLabel: destinationLabel.trim() || null,
           tags: arrayFromCsv(tagsCsv),
-          companions: arrayFromCsv(companionsCsv),
+          companions,
           notes: notes.trim() || null,
           ...(removeCover ? { coverImageUrl: null } : {}),
         });
@@ -159,7 +160,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           originLabel: originLabel.trim() || undefined,
           destinationLabel: destinationLabel.trim() || undefined,
           tags: arrayFromCsv(tagsCsv),
-          companions: arrayFromCsv(companionsCsv),
+          companions,
           notes: notes.trim() || undefined,
         });
       }
@@ -332,15 +333,8 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           {tab === "people" && (
             <>
               <Field label={t("trips:modal.companionsLabel")}>
-                <input
-                  value={companionsCsv}
-                  onChange={(e) => setCompanionsCsv(e.target.value)}
-                  placeholder="Marie, Tom"
-                  className="w-full rounded-lg px-3 py-2 text-sm"
-                  style={inputStyle}
-                />
+                <CompanionPicker value={companions} onChange={setCompanions} />
               </Field>
-              <CompanionPreview values={arrayFromCsv(companionsCsv)} />
 
               <Field label={t("trips:modal.tagsLabel")}>
                 <input
@@ -533,28 +527,6 @@ function CoverPreview({ url, accent, title, onClick }: CoverPreviewProps): JSX.E
       >
         {title}
       </div>
-    </div>
-  );
-}
-
-function CompanionPreview({ values }: { values: string[] }): JSX.Element | null {
-  if (values.length === 0) return null;
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {values.map((v) => (
-        <span
-          key={v}
-          className="px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5"
-          style={{
-            background: "var(--bg-elevated)",
-            border: "1px solid var(--color-border)",
-            color: "var(--text-primary)",
-          }}
-        >
-          <span aria-hidden>👤</span>
-          {v}
-        </span>
-      ))}
     </div>
   );
 }

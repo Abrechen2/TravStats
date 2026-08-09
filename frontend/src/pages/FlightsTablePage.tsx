@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { flightsApi, tripsApi } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
 import type { Flight, FlightFilters, FlightInput, Trip } from "../types";
@@ -66,6 +66,30 @@ export default function FlightsTablePage(): JSX.Element {
   const [showAddFlight, setShowAddFlight] = useState(false);
   const [showSpecialModal, setShowSpecialModal] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
+
+  // `?import=email` — the central import hub's flight tile lands here (#238).
+  // The hub carries the route; the multi-flight review loop stays in the form,
+  // where it already lives, instead of being copied into settings.
+  //
+  // The intent is held in STATE, not read from the URL at mount time: the same
+  // effect strips the param (so a reload does not reopen the dialog), and both
+  // updates land in one render — reading the param directly would hand the
+  // freshly-opened form `false` and drop the user on the lookup step.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [emailImportRequested, setEmailImportRequested] = useState(false);
+  useEffect(() => {
+    if (searchParams.get("import") !== "email") return;
+    setEmailImportRequested(true);
+    setShowAddFlight(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete("import");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const closeAddFlight = (): void => {
+    setShowAddFlight(false);
+    setEmailImportRequested(false);
+  };
 
   useEffect(() => {
     loadFlights();
@@ -161,7 +185,7 @@ export default function FlightsTablePage(): JSX.Element {
     }
   };
 
-  const handleUpdate = async (id: string, updates: Partial<Flight>) => {
+  const handleUpdate = async (id: string, updates: Partial<FlightInput>) => {
     try {
       await flightsApi.update(id, updates);
       addToast("success", t("flights:table.toast.updated"));
@@ -177,7 +201,7 @@ export default function FlightsTablePage(): JSX.Element {
   const handleAddFlight = async (
     flight: FlightInput,
     opts: { force?: boolean; merge?: boolean; hasMoreFlights?: boolean } = {}
-  ): Promise<void> => {
+  ): Promise<Flight> => {
     try {
       const result = (await flightsApi.create(flight, {
         force: opts.force,
@@ -195,6 +219,9 @@ export default function FlightsTablePage(): JSX.Element {
         setShowAddFlight(false);
       }
       void loadFlights();
+      // The created flight flows back so the form can run its post-create
+      // trip assignment (#199).
+      return result;
     } catch (error) {
       logger.error("Failed to add flight:", error);
       throw error;
@@ -645,10 +672,11 @@ export default function FlightsTablePage(): JSX.Element {
         {/* Add Flight Modal */}
         {showAddFlight && (
           <SimplifiedFlightFormV2
+            openEmailImport={emailImportRequested}
             onSubmit={handleAddFlight}
-            onCancel={() => setShowAddFlight(false)}
+            onCancel={closeAddFlight}
             onPickSpecialFlight={() => {
-              setShowAddFlight(false);
+              closeAddFlight();
               setShowSpecialModal(true);
             }}
           />

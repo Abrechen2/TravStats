@@ -143,8 +143,8 @@
     "flight_desc": "Import bookings, routes on the map, airline/airport achievements.",
     "cruise": "Cruises",
     "cruise_desc": "Ships, ports, sea days, cruise-line achievements.",
-    "hotel": "Hotels",
-    "hotel_desc": "Overnight stays, chain loyalty, countries/cities.",
+    "lodging": "Lodging",
+    "lodging_desc": "Overnight stays, chain loyalty, countries/cities.",
     "poi": "Places",
     "poi_desc": "Landmarks, restaurants, concerts, any place."
   },

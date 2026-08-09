@@ -1,12 +1,12 @@
 {
   "title": "Willkommen zur {{appName}} Einrichtung",
-  "subtitle": "Erstellen Sie Ihr Admin-Konto, um zu beginnen",
+  "subtitle": "Erstelle dein Admin-Konto, um zu beginnen",
   "privacy": {
     "title": "Datenschutz & Sicherheit",
     "items": {
-      "dataStays": "Alle Daten bleiben auf Ihrem Server - nichts wird an externe Dienste gesendet",
-      "firstUserAdmin": "Der erste Benutzer, den Sie erstellen, wird der Administrator sein",
-      "inviteLater": "Sie können später Familie und Freunde über das Admin-Panel einladen",
+      "dataStays": "Alle Daten bleiben auf deinem Server - nichts wird an externe Dienste gesendet",
+      "firstUserAdmin": "Der erste Benutzer, den du erstellst, wird der Administrator sein",
+      "inviteLater": "Du kannst später Familie und Freunde über das Admin-Panel einladen",
       "designedFor": "Entworfen für kleine Gruppen (1-10 Konten)"
     }
   },
@@ -39,12 +39,12 @@
     },
     "password": {
       "label": "Passwort",
-      "placeholder": "Geben Sie ein sicheres Passwort ein",
+      "placeholder": "Gib ein sicheres Passwort ein",
       "help": "Mindestens 8 Zeichen"
     },
     "confirmPassword": {
       "label": "Passwort bestätigen",
-      "placeholder": "Bestätigen Sie Ihr Passwort"
+      "placeholder": "Bestätige dein Passwort"
     },
     "submit": {
       "create": "Admin-Konto erstellen",
@@ -62,16 +62,16 @@
     "redirecting": "Weiterleitung zur Anmeldeseite..."
   },
   "errors": {
-    "failed": "Fehler beim Erstellen des Admin-Kontos. Bitte versuchen Sie es erneut."
+    "failed": "Fehler beim Erstellen des Admin-Kontos. Bitte versuche es erneut."
   },
   "instanceSettingsLater": "Instanz-Name, öffentliche URL, User-Cap, Registrierungs-Modus und alle API-Keys werden später im Admin-Bereich konfiguriert.",
-  "loginPrompt": "Bitte melden Sie sich mit Ihrem neuen Admin-Konto an",
+  "loginPrompt": "Bitte melde dich mit deinem neuen Admin-Konto an",
   "footer": {
     "title": "Was passiert als Nächstes?",
     "steps": {
-      "one": "Melden Sie sich mit Ihrem Admin-Konto an",
-      "two": "Laden Sie Familie und Freunde über das Admin-Panel ein",
-      "three": "Beginnen Sie, Ihre Flüge zu verfolgen!"
+      "one": "Melde dich mit deinem Admin-Konto an",
+      "two": "Lade Familie und Freunde über das Admin-Panel ein",
+      "three": "Fang an, deine Flüge zu erfassen!"
     }
   },
   "tips": {
@@ -79,15 +79,15 @@
     "items": {
       "localNetwork": {
         "label": "Lokaler Netzwerkzugriff",
-        "value": "Greifen Sie von anderen Geräten in Ihrem lokalen Netzwerk mit http://IHRE_IP:3000 auf Ihre Instanz zu"
+        "value": "Greif von anderen Geräten in deinem lokalen Netzwerk mit http://DEINE_IP:3000 auf deine Instanz zu"
       },
       "vpn": {
         "label": "Fernzugriff",
-        "value": "Verwenden Sie ein VPN oder Reverse Proxy (nginx) für sicheren Fernzugriff"
+        "value": "Verwende ein VPN oder einen Reverse Proxy (nginx) für sicheren Fernzugriff"
       },
       "backups": {
         "label": "Backups",
-        "value": "Richten Sie automatisierte Backups mit {{command}} ein"
+        "value": "Richte automatische Backups mit {{command}} ein"
       }
     }
   },
@@ -102,12 +102,12 @@
       "preparing": "Airport-Datenbank wird vorbereitet...",
       "limitedFeatures": "Einige Funktionen sind während des ersten Starts eingeschränkt",
       "errorOccurred": "Ein Fehler ist aufgetreten",
-      "pleaseWait": "Bitte warten Sie einen Moment...",
+      "pleaseWait": "Bitte warte einen Moment ...",
       "progress": "{{percent}}% abgeschlossen"
     },
     "modal": {
       "title": "Airport-Datenbank wird geladen",
-      "description": "Wir laden gerade die Flughafendatenbank für Sie. Dies kann einige Minuten dauern. Sie können die Anwendung bereits verwenden, während der Import im Hintergrund läuft.",
+      "description": "Wir laden gerade die Flughafendatenbank für dich. Das kann einige Minuten dauern. Du kannst die Anwendung schon benutzen, während der Import im Hintergrund läuft.",
       "progress": "{{percent}}% abgeschlossen",
       "airportsCount": "{{processed}} / {{total}} Flughäfen",
       "understood": "Verstanden"

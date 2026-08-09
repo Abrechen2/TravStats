@@ -6,7 +6,8 @@
   "tabs": {
     "general": "Allgemein",
     "flight": "Flug",
-    "cruise": "Kreuzfahrt"
+    "cruise": "Kreuzfahrt",
+    "lodging": "Unterkünfte"
   },
   "errors": {
     "saveFailed": "Einstellungen konnten nicht gespeichert werden"
@@ -22,6 +23,36 @@
     "showArcs": "Kreuzfahrt-Routen auf der Karte anzeigen",
     "showArcsHint": "Bezier-Linien zwischen Start- und Zielhafen im Dashboard-Map."
   },
+  "lodgingPreferences": {
+    "title": "Unterkunfts-Präferenzen",
+    "description": "Basiswährung für Übernachtungs-Statistiken und Ausgabensummen.",
+    "baseCurrency": "Basiswährung",
+    "baseCurrencyHint": "Alle Übernachtungen werden zum EZB-Kurs des jeweiligen Check-in-Tages in diese Währung umgerechnet. Bereits gespeicherte Aufenthalte behalten ihren ursprünglichen Umrechnungskurs — eine Änderung wirkt sich nur auf künftige Berechnungen aus.",
+    "geocoder": {
+      "title": "Geocoder",
+      "description": "Nur für Admins: Adresssuche und Koordinaten-Auflösung dieser Instanz konfigurieren.",
+      "photonUrlLabel": "Photon-URL (Adresssuche)",
+      "photonUrlHint": "Wird für die Live-Suche während der Eingabe genutzt (z. B. in der Unterkunft- oder Reise-Standortauswahl). Leer lassen für den öffentlichen Standarddienst photon.komoot.io.",
+      "nominatimUrlLabel": "Nominatim-URL (Koordinaten-Auflösung)",
+      "nominatimUrlHint": "Wird für einmalige Geocoding-Anfragen genutzt. Leer lassen für den öffentlichen Standarddienst nominatim.openstreetmap.org.",
+      "saveSuccess": "Geocoder-Einstellungen gespeichert.",
+      "saveError": "Geocoder-Einstellungen konnten nicht gespeichert werden.",
+      "loadError": "Geocoder-Einstellungen konnten nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "testButton": "Verbindung testen",
+      "testing": "Teste Verbindung …",
+      "testSuccess": "Verbindung erfolgreich — {{count}} Treffer für „Berlin“.",
+      "testEmpty": "Verbindung erfolgreich, aber keine Treffer für „Berlin“.",
+      "testError": "Verbindung fehlgeschlagen. Bitte URL und Erreichbarkeit prüfen."
+    }
+  },
+  "memberships": {
+    "title": "Bonusprogramme",
+    "description": "Alle deine Programme an einem Ort — mit den Ketten und einzelnen Hotels, für die sie gelten.",
+    "coversNothing": "noch keiner Kette zugeordnet",
+    "editHotels": "Einzelne Hotels",
+    "noIndependentHotels": "Keine eigenständigen Hotels ohne Kette vorhanden."
+  },
   "about": {
     "buildLabel": "Build",
     "buildVersionHint": "Version, die beim Bauen des Container-Images eingebacken wurde. Weicht von der angezeigten Version nur ab, wenn ein promoteter RC läuft.",
@@ -36,6 +67,8 @@
     "changePassword": "Passwort ändern",
     "uploadAvatar": "Profilbild hochladen",
     "chooseFile": "Datei auswählen",
+    "firstName": "Vorname",
+    "lastName": "Nachname",
     "username": "Benutzername",
     "email": "E-Mail-Adresse",
     "birthdate": "Geburtstag",
@@ -44,7 +77,7 @@
     "deletionRequested": "Löschanfrage vorgemerkt",
     "dangerZone": "Gefahrenbereich",
     "dangerZoneDescription": "Diese Aktion kann nicht rückgängig gemacht werden.",
-    "invalidFileType": "Bitte wählen Sie eine Bilddatei aus",
+    "invalidFileType": "Bitte wähle eine Bilddatei aus",
     "fileTooLarge": "Bilddatei ist zu groß (max. 5MB)",
     "uploadSuccess": "Profilbild erfolgreich hochgeladen",
     "removeAvatar": "Profilbild entfernen",
@@ -61,7 +94,8 @@
       "avatar": "PNG oder JPG, max. 5 MB. Wird lokal in der Datenbank gespeichert, nicht an externe Dienste gesendet.",
       "passwordTitle": "Passwort ändern:",
       "password": "Öffnet ein separates Modal, in dem das aktuelle Passwort zur Verifizierung eingegeben werden muss, bevor ein neues gesetzt wird."
-    }
+    },
+    "editProfile": "Profil bearbeiten"
   },
   "homeAirport": {
     "title": "Heimatflughafen",
@@ -221,7 +255,7 @@
     "analyticsOptIn": "Analytics Opt-in (anonymisiert)"
   },
   "backup": {
-    "title": "Backup & Sync",
+    "title": "Meine Daten & Sync",
     "description": "Regelmäßige Sicherungen und Cloud-Sync steuern.",
     "adminNote": "Backup-Einstellungen werden im Admin-Panel verwaltet.",
     "userNote": "Backups werden vom Administrator verwaltet.",
@@ -267,8 +301,8 @@
     "confirmPassword": "Neues Passwort bestätigen",
     "submit": "Passwort ändern",
     "changing": "Passwort wird geändert...",
-    "error": "Fehler beim Ändern des Passworts. Bitte überprüfen Sie Ihr aktuelles Passwort.",
-    "required": "Bitte füllen Sie alle Felder aus.",
+    "error": "Fehler beim Ändern des Passworts. Bitte überprüfe dein aktuelles Passwort.",
+    "required": "Bitte füll alle Felder aus.",
     "tooShort": "Das neue Passwort muss mindestens 8 Zeichen lang sein.",
     "mismatch": "Die neuen Passwörter stimmen nicht überein.",
     "sameAsOld": "Das neue Passwort muss sich vom aktuellen unterscheiden.",
@@ -348,11 +382,6 @@
       "note": "Nur das LLM-basierte Parsen (Ollama) ist vollständig getestet. Template- und Regex-Parser sind experimentell."
     }
   },
-  "admin": {
-    "title": "Administration",
-    "description": "Verwalte Benutzer, Einladungen und Systemeinstellungen",
-    "openAdminPanel": "Admin-Panel öffnen"
-  },
   "features": {
     "title": "Funktionen",
     "costTracking": "Kostenerfassung",
@@ -375,7 +404,7 @@
   "sectionPicker": "Bereich",
   "parser": {
     "title": "Parser-Konfiguration",
-    "description": "Konfigurieren Sie, wie Bordkarten und E-Mails geparst werden. Der Auto-Modus wählt automatisch den besten verfügbaren Parser aus.",
+    "description": "Konfiguriere, wie Bordkarten und E-Mails geparst werden. Der Auto-Modus wählt automatisch den besten verfügbaren Parser aus.",
     "saveSettings": "Einstellungen speichern",
     "saved": "Parser-Einstellungen erfolgreich gespeichert!",
     "saveFailed": "Fehler beim Speichern der Einstellungen",
@@ -412,8 +441,8 @@
       },
       "bestPractices": {
         "title": "Best Practices:",
-        "auto": "Verwenden Sie \"Auto\" für die beste Balance zwischen Genauigkeit und Kosten",
-        "ollama": "Ollama ist ideal, wenn Sie eine GPU haben und lokale Verarbeitung bevorzugen",
+        "auto": "Verwende \"Auto\" für die beste Balance zwischen Genauigkeit und Kosten",
+        "ollama": "Ollama ist ideal, wenn du eine GPU hast und lokale Verarbeitung bevorzugst",
         "cloud": "Cloud-Parser sind am genauesten, aber erfordern API-Keys und verursachen Kosten",
         "trained": "Trainierte Ollama-Modelle (über Training-Page) verbessern die Genauigkeit erheblich"
       }
@@ -424,22 +453,22 @@
     "description": "Automatisch aktuelle Flugdaten von APIs während aktiver Flüge abrufen. Updates werden im Bereich für ausstehende Updates gespeichert zur Überprüfung.",
     "info": {
       "title": "Wie funktionieren automatische Updates?",
-      "description": "Wenn aktiviert, werden während aktiver Flüge regelmäßig aktuelle Flugdaten von APIs abgerufen. Alle gefundenen Änderungen werden im Bereich für ausstehende Updates gespeichert, damit Sie sie überprüfen und genehmigen können, bevor sie auf Ihre Flüge angewendet werden.",
+      "description": "Wenn aktiviert, werden während aktiver Flüge regelmäßig aktuelle Flugdaten von APIs abgerufen. Alle gefundenen Änderungen werden im Bereich für ausstehende Updates gespeichert, damit du sie überprüfen und genehmigen kannst, bevor sie auf deine Flüge angewendet werden.",
       "benefits": {
         "title": "Vorteile:",
-        "realTime": "Echtzeit-Updates: Erhalten Sie aktuelle Flugdaten automatisch während Ihrer Flüge",
+        "realTime": "Echtzeit-Updates: Du bekommst aktuelle Flugdaten automatisch während deiner Flüge",
         "automatic": "Automatisierung: Keine manuelle Suche nach Flugänderungen mehr nötig",
         "review": "Kontrolle: Alle Änderungen werden zur Überprüfung gespeichert, bevor sie angewendet werden",
         "accurate": "Genauigkeit: Nutzt mehrere APIs für zuverlässige und präzise Flugdaten",
-        "timeSaving": "Zeitersparnis: Sparen Sie Zeit durch automatische Aktualisierung Ihrer Flugstatistiken"
+        "timeSaving": "Zeitersparnis: Deine Flugstatistiken aktualisieren sich automatisch"
       },
       "howItWorks": {
         "title": "So funktioniert's:",
-        "description": "Das System prüft in konfigurierbaren Intervallen (Standard: 15 Minuten) während aktiver Flugzeiten nach Updates. Gefundene Änderungen wie Verspätungen, Gate-Wechsel oder Flugstatus werden im Bereich 'Ausstehende Updates' gespeichert. Sie können diese Änderungen einzeln überprüfen und genehmigen oder ablehnen."
+        "description": "Das System prüft in konfigurierbaren Intervallen (Standard: 15 Minuten) während aktiver Flugzeiten nach Updates. Gefundene Änderungen wie Verspätungen, Gate-Wechsel oder Flugstatus werden im Bereich 'Ausstehende Updates' gespeichert. Du kannst diese Änderungen einzeln überprüfen und genehmigen oder ablehnen."
       },
       "requirement": {
         "title": "Wichtiger Hinweis:",
-        "description": "Diese Funktion funktioniert nur bei vorab eingetragenen Flügen, z.B. durch den E-Mail-Import oder manuelle Eingabe. Automatische Updates werden nur für Flüge durchgeführt, die bereits in Ihrer Flugliste vorhanden sind."
+        "description": "Diese Funktion funktioniert nur bei vorab eingetragenen Flügen, z.B. durch den E-Mail-Import oder manuelle Eingabe. Automatische Updates werden nur für Flüge durchgeführt, die bereits in deiner Flugliste stehen."
       }
     },
     "viewPending": "Ausstehende Updates anzeigen",
@@ -481,7 +510,7 @@
     "saveFailed": "Fehler beim Speichern der Anreicherungs-Einstellungen"
   },
   "externalServices": {
-    "title": "Externe Dienste"
+    "title": "Meine externen Dienste"
   },
   "apiKeys": {
     "title": "API-Schlüssel",
@@ -591,6 +620,10 @@
     "title": "Import",
     "description": "Bestehende Daten aus anderen Diensten importieren — pro Bereich gebündelt.",
     "openHub": "Importieren",
+    "log": {
+      "title": "Import-Logbuch",
+      "scopeHint": "Jeder Massen-Import als Ganzes — neueste zuerst. Rückgängig machen lässt sich derzeit nur der Import von Unterkünften; Flug-Importe werden hier noch nicht protokolliert."
+    },
     "tile": {
       "fr24": {
         "title": "Von Flightradar24",
@@ -601,6 +634,23 @@
         "title": "Aus beliebigem Logbuch (CSV)",
         "description": "Lade eine flache Flug-CSV — nach dem Upload öffnet sich ein Mapping-Wizard, mit dem du jede Spalte einem TravStats-Feld zuordnest.",
         "uploadLabel": "CSV-Datei auswählen"
+      },
+      "parse": {
+        "flight": {
+          "title": "Aus E-Mail oder PDF",
+          "description": "Buchungsbestätigung einer Airline einlesen — der übliche Weg. Öffnet sich im Flug-Dialog, weil dort die Prüfung mehrerer Flüge stattfindet.",
+          "action": "Flug-Import öffnen"
+        },
+        "cruise": {
+          "title": "Aus E-Mail oder PDF",
+          "description": "Buchungsbestätigung einer Reederei einlesen (AIDA, TUI und generisch) — mit Vorschau vor dem Übernehmen.",
+          "action": "E-Mail oder PDF einlesen"
+        },
+        "lodging": {
+          "title": "Aus E-Mail oder PDF",
+          "description": "Hotelbestätigung einlesen, z. B. von Booking.com — mit Vorschau vor dem Übernehmen.",
+          "action": "E-Mail oder PDF einlesen"
+        }
       }
     },
     "preview": {
@@ -674,7 +724,8 @@
     },
     "toast": {
       "movedFromDashboard": "Der Flug-Import ist jetzt hier — unter Einstellungen → Import."
-    }
+    },
+    "noRoutes": "Für diesen Bereich gibt es noch keinen Importweg."
   },
   "devices": {
     "title": "Geräte",
@@ -737,5 +788,6 @@
       "revoke": "Token konnte nicht widerrufen werden",
       "labelRequired": "Beschreibung ist erforderlich"
     }
-  }
+  },
+  "scopeHint": "Gilt nur für dein Konto."
 }

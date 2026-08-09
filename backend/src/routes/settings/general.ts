@@ -11,6 +11,7 @@ import {
   defaultSettings,
 } from './types';
 import { DOMAIN_KEYS, type DomainKey } from '../../shared/domains';
+import { CURRENCIES } from '../../schemas/lodging';
 import { getInstanceSettings } from '../../services/instanceSettingsService';
 
 const router = Router();
@@ -22,6 +23,14 @@ const emptyToUndef = (v: unknown): unknown => (v === '' ? undefined : v);
 const settingsSchema = z.object({
   profile: z.object({
     username: z.string().optional(),
+    // Real name (#241). Unlike everything else in this block these two do NOT
+    // go into the settings JSON — they are columns on `User`, because the
+    // header reads them from /auth/me. Empty string means "clear it", which is
+    // why they are nullable and not run through `emptyToUndef`: dropping the
+    // key would make a cleared field silently keep its old value, the exact
+    // defect #198 was about.
+    firstName: z.string().max(100).nullable().optional(),
+    lastName: z.string().max(100).nullable().optional(),
     email: z.preprocess(emptyToUndef, z.string().email().optional()),
     // Self-hosted app behind an arbitrary domain/reverse proxy can't reliably
     // know its own public origin, so a same-origin path (e.g. the value
@@ -104,6 +113,10 @@ const settingsSchema = z.object({
   boardingPassParserStrategy: z.enum(['parser-only', 'parser-with-api', 'api-only']).nullable().optional(),
   enabledDomains: z.array(z.enum(DOMAIN_KEYS as unknown as [DomainKey, ...DomainKey[]])).optional(),
   whatsNewSeenVersion: z.string().max(32).optional(),
+  // Lodging-domain preference: single currency used to aggregate stay costs that
+  // were originally billed in whatever currency the hotel uses. Reuses the
+  // canonical currency list from schemas/lodging.ts to avoid a second source of truth.
+  baseCurrency: z.enum(CURRENCIES).optional(),
 }).partial();
 
 export const settingsUpdateSchema = settingsSchema;
@@ -116,7 +129,10 @@ export const settingsUpdateSchema = settingsSchema;
  * boot without a second request. It is read-only here: the write path is the
  * admin-guarded PUT /api/v1/admin/instance-settings.
  */
-function buildSettingsResponse(betaFeaturesEnabled: boolean, record: {
+function buildSettingsResponse(betaFeaturesEnabled: boolean, name: {
+  firstName: string | null;
+  lastName: string | null;
+}, record: {
   data: Prisma.JsonValue;
   autoUpdateEnabled: boolean;
   autoUpdateRequireApproval: boolean;
@@ -128,6 +144,7 @@ function buildSettingsResponse(betaFeaturesEnabled: boolean, record: {
   historicalEnrichmentMinConfidence: number | null;
   historicalEnrichmentMaxPerDay: number | null;
   enabledDomains: string[];
+  baseCurrency: string;
 }): SettingsResponse {
   const baseData = (typeof record.data === 'object' && record.data !== null
     ? record.data
@@ -135,6 +152,13 @@ function buildSettingsResponse(betaFeaturesEnabled: boolean, record: {
 
   return {
     ...baseData,
+    // The name is not in the blob — it is read from the user row and merged in
+    // here, so the settings page and the header cannot drift apart (#241).
+    profile: {
+      ...(baseData.profile ?? {}),
+      firstName: name.firstName,
+      lastName: name.lastName,
+    },
     autoUpdate: {
       enabled: record.autoUpdateEnabled ?? false,
       requireApproval: record.autoUpdateRequireApproval ?? true,
@@ -149,6 +173,7 @@ function buildSettingsResponse(betaFeaturesEnabled: boolean, record: {
       maxPerDay: record.historicalEnrichmentMaxPerDay ?? 50,
     },
     enabledDomains: record.enabledDomains,
+    baseCurrency: record.baseCurrency,
     // Listed after the `...baseData` spread so a stale key that somehow made
     // it into the settings JSON can never shadow the authoritative value.
     betaFeaturesEnabled,
@@ -163,6 +188,11 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     const existing = await prisma.userSettings.findUnique({
       where: { userId },
     });
+    const nameRow = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true },
+    });
+    const name = { firstName: nameRow?.firstName ?? null, lastName: nameRow?.lastName ?? null };
 
     if (!existing) {
       const created = await prisma.userSettings.create({
@@ -183,12 +213,12 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
           historicalEnrichmentMaxPerDay: 50,
         },
       });
-      const response = buildSettingsResponse(betaFeaturesEnabled, created);
+      const response = buildSettingsResponse(betaFeaturesEnabled, name, created);
       res.json(response);
       return;
     }
 
-    const response = buildSettingsResponse(betaFeaturesEnabled, existing);
+    const response = buildSettingsResponse(betaFeaturesEnabled, name, existing);
 
     logger.info({
       operation: 'get_settings_response',
@@ -210,7 +240,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     // never reaches the DB — the value below is always re-read from
     // AdminSettings, never taken from the request body.
     const payload = settingsSchema.parse(req.body);
-    const { enabledDomains, ...rest } = payload;
+    const { enabledDomains, baseCurrency, ...rest } = payload;
     const { betaFeaturesEnabled } = await getInstanceSettings();
     logger.info({ operation: 'settings_update', userId });
 
@@ -220,6 +250,21 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
 
     // Extract direct fields from payload since they're not part of JSON data
     const { boardingPassParserStrategy, autoUpdate: _autoUpdate, historicalEnrichment: _historicalEnrichment, ...payloadWithoutDirectFields } = rest;
+
+    // First and last name are columns on `User`, not settings JSON — strip them
+    // out of the profile block before it is merged, or a stale copy would sit
+    // in the blob and shadow the row the header actually reads (#241).
+    const { firstName, lastName, ...profileForBlob } = payloadWithoutDirectFields.profile ?? {};
+    if (payloadWithoutDirectFields.profile) {
+      payloadWithoutDirectFields.profile = profileForBlob;
+    }
+    // `undefined` = not mentioned, leave alone. An empty string = cleared.
+    const nameUpdate: { firstName?: string | null; lastName?: string | null } = {};
+    if (firstName !== undefined) nameUpdate.firstName = firstName === "" ? null : firstName;
+    if (lastName !== undefined) nameUpdate.lastName = lastName === "" ? null : lastName;
+    if (Object.keys(nameUpdate).length > 0) {
+      await prisma.user.update({ where: { id: userId }, data: nameUpdate });
+    }
 
     const merged: SettingsDataJson = {
       ...defaultSettings,
@@ -297,6 +342,11 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       updateData.enabledDomains = enabledDomains;
     }
 
+    // Handle base currency (lodging-domain aggregation currency)
+    if (baseCurrency !== undefined) {
+      updateData.baseCurrency = baseCurrency;
+    }
+
     const saved = await prisma.userSettings.upsert({
       where: { userId },
       update: updateData,
@@ -315,6 +365,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         // Initialize boarding pass parser strategy (null = auto)
         boardingPassParserStrategy: boardingPassParserStrategy ?? null,
         enabledDomains: enabledDomains ?? ['flight'],
+        baseCurrency: baseCurrency ?? 'EUR',
       },
     });
 
@@ -325,7 +376,15 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     });
 
     // Return response with autoUpdate and historicalEnrichment settings included
-    const response = buildSettingsResponse(betaFeaturesEnabled, saved);
+    const savedName = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true },
+    });
+    const response = buildSettingsResponse(
+      betaFeaturesEnabled,
+      { firstName: savedName?.firstName ?? null, lastName: savedName?.lastName ?? null },
+      saved
+    );
     res.json(response);
   } catch (error) {
     next(error);

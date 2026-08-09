@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lodging Domain (Hotels) — Mockup (Phase A + FX)</title>
+</head>
+<body>
+<style>
+  :root {
+    --bg:#0b0f16; --board:#0e131c; --surface:#151b24; --surface-2:#1b2330;
+    --border:#232c38; --border-soft:#1c242f;
+    --text:#e7edf4; --text-dim:#8c99aa; --text-faint:#5c6878;
+    --accent:#f0a947; --accent-ink:#1a1205;
+    --lodging:#d4778f; --lodging-bg:rgba(212,119,143,.12);
+    --star:#f2b950;
+    --fx:#6ab7d8; --fx-bg:rgba(106,183,216,.12);
+    --ok:#4ec98a; --ok-bg:rgba(78,201,138,.12);
+    --warn:#e0b24a; --warn-bg:rgba(224,178,74,.12);
+    --err:#f2708a; --err-bg:rgba(242,112,138,.10);
+    --radius:10px; --radius-sm:7px;
+    --mono:ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  .page{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh;padding:0 0 72px;}
+  .masthead{border-bottom:1px solid var(--border-soft);padding:18px 24px;display:flex;align-items:center;gap:14px;background:linear-gradient(180deg,#0d121b,var(--bg));flex-wrap:wrap;}
+  .logo{font-weight:800;letter-spacing:.04em;font-size:15px;} .logo b{color:var(--accent);}
+  .masthead .tag{margin-left:auto;font-size:12px;color:var(--text-dim);border:1px solid var(--border);border-radius:999px;padding:4px 11px;}
+  .masthead .basecur{font-size:12px;color:var(--fx);border:1px solid rgba(106,183,216,.35);background:var(--fx-bg);border-radius:999px;padding:4px 11px;display:inline-flex;gap:6px;align-items:center;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px;}
+  .lede{padding:34px 0 8px;} .lede h1{font-size:22px;margin:0 0 6px;letter-spacing:-.01em;text-wrap:balance;} .lede p{color:var(--text-dim);margin:0;max-width:64ch;}
+  .lede code{font-family:var(--mono);font-size:12.5px;background:var(--surface-2);padding:1px 6px;border-radius:5px;}
+  .screen{margin-top:40px;}
+  .cap{display:flex;align-items:baseline;gap:10px;margin:0 0 12px;}
+  .cap .num{font-family:var(--mono);font-size:12px;color:var(--lodging);border:1px solid var(--border);border-radius:6px;padding:1px 7px;}
+  .cap h2{font-size:15px;margin:0;font-weight:650;} .cap .note{color:var(--text-faint);font-size:13px;margin-left:auto;}
+  .frame{background:var(--board);border:1px solid var(--border);border-radius:14px;padding:22px;position:relative;overflow:hidden;}
+
+  .btn{font:inherit;font-size:13.5px;font-weight:600;border-radius:var(--radius-sm);padding:8px 14px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);display:inline-flex;align-items:center;gap:7px;white-space:nowrap;}
+  .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;}
+  .btn.lodging{border-color:rgba(212,119,143,.45);color:#f0b8c8;background:var(--lodging-bg);}
+  .btn.ghost{background:transparent;} .btn.sm{font-size:12.5px;padding:5px 10px;}
+  .pill{font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;}
+  .pill.lodging{background:var(--lodging-bg);color:#f0b8c8;} .pill.ok{background:var(--ok-bg);color:var(--ok);} .pill.warn{background:var(--warn-bg);color:var(--warn);} .pill.trip{background:rgba(240,169,71,.13);color:var(--accent);} .pill.fx{background:var(--fx-bg);color:var(--fx);}
+  .count{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .stars{color:var(--star);letter-spacing:1px;font-size:13px;}
+  .stars .off{color:#3a434f;}
+  .conv{color:var(--fx);font-size:11.5px;font-variant-numeric:tabular-nums;}
+
+  .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .toolbar h3{margin:0;font-size:17px;} .toolbar .search{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 11px;color:var(--text-dim);font-size:13px;min-width:200px;flex:1;}
+  .toolbar .actions{margin-left:auto;display:flex;gap:9px;flex-wrap:wrap;}
+  .stat-strip{display:flex;gap:22px;padding:12px 2px 16px;flex-wrap:wrap;border-bottom:1px solid var(--border-soft);margin-bottom:10px;}
+  .stat-strip .s{display:flex;flex-direction:column;} .stat-strip .s b{font-size:20px;font-variant-numeric:tabular-nums;} .stat-strip .s span{font-size:11.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;}
+  .stat-strip .s .sub{font-size:10.5px;color:var(--fx);text-transform:none;letter-spacing:0;margin-top:1px;}
+
+  .tbl-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:640px;}
+  th{text-align:left;color:var(--text-faint);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--border-soft);}
+  td{padding:11px 10px;border-bottom:1px solid var(--border-soft);}
+  tr:last-child td{border-bottom:0;}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .h-name{font-weight:600;} .h-sub{color:var(--text-faint);font-size:12px;}
+  .type-ic{margin-right:7px;}
+
+  .cols{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;}
+  @media (max-width:760px){.cols{grid-template-columns:1fr;}}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  .card .h{padding:13px 16px;border-bottom:1px solid var(--border-soft);font-weight:650;font-size:13.5px;display:flex;align-items:center;gap:9px;}
+  .card .b{padding:15px 16px;}
+  .hoteltop{display:flex;gap:14px;align-items:flex-start;margin-bottom:6px;}
+  .hoteltop .badge{width:46px;height:46px;border-radius:11px;background:var(--lodging-bg);display:grid;place-items:center;font-size:22px;flex:0 0 auto;}
+  .hoteltop h3{margin:0;font-size:18px;} .hoteltop .meta{color:var(--text-dim);font-size:13px;margin-top:3px;}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+  .chip{font-size:11.5px;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:6px;padding:3px 9px;color:var(--text-dim);}
+  .stay{border:1px solid var(--border-soft);border-radius:9px;padding:12px 14px;margin-top:10px;}
+  .stay .row1{display:flex;align-items:center;gap:10px;flex-wrap:wrap;} .stay .row1 .d{font-weight:600;font-size:13.5px;} .stay .row1 .n{color:var(--text-faint);font-size:12px;} .stay .row1 .right{margin-left:auto;display:flex;gap:8px;align-items:center;}
+  .stay .row2{display:flex;gap:16px;margin-top:8px;font-size:12.5px;color:var(--text-dim);flex-wrap:wrap;}
+  .stay .row2 b{color:var(--text);font-weight:600;}
+  .rate-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;} .rate-row .lbl{color:var(--text-dim);}
+  .kv{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;gap:12px;} .kv .k{color:var(--text-dim);}
+
+  .map{border-radius:10px;overflow:hidden;border:1px solid var(--border);}
+  .map-toolbar{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border-bottom:1px solid var(--border-soft);flex-wrap:wrap;} .map-toolbar .sub{color:var(--text-faint);font-size:12px;margin-left:auto;}
+  .map-canvas{position:relative;height:320px;background:radial-gradient(130% 130% at 55% 35%,#12202e,#0a141d 60%,#070d13);}
+  .pin{position:absolute;width:32px;height:32px;border-radius:9px;border:2px solid rgba(255,255,255,.85);box-shadow:0 3px 10px rgba(0,0,0,.55);display:grid;place-items:center;font-size:14px;transform:translate(-50%,-50%);background:var(--lodging);}
+  .pin::after{content:'';position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:rgba(255,255,255,.85);}
+  .map-mini{height:190px;}
+
+  .modal-stage{background:repeating-linear-gradient(45deg,rgba(255,255,255,.012) 0 12px,transparent 12px 24px),#070a10;border-radius:12px;padding:26px;display:grid;place-items:center;}
+  .modal{width:100%;max-width:560px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.55);overflow:hidden;}
+  .modal header{padding:15px 18px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:9px;} .modal header h3{margin:0;font-size:15px;}
+  .modal .body{padding:16px 18px;display:grid;grid-template-columns:1fr 1fr;gap:13px;max-height:460px;overflow-y:auto;}
+  .modal footer{padding:13px 18px;border-top:1px solid var(--border-soft);display:flex;align-items:center;gap:10px;}
+  .field{display:flex;flex-direction:column;gap:5px;} .field.full{grid-column:1/-1;}
+  .field label{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-faint);}
+  .input{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font:inherit;font-size:13.5px;}
+  .fx-readout{grid-column:1/-1;background:var(--fx-bg);border:1px solid rgba(106,183,216,.28);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px;font-size:13px;flex-wrap:wrap;}
+  .fx-readout .big{font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);} .fx-readout .meta{color:var(--fx);font-size:11.5px;font-variant-numeric:tabular-nums;margin-left:auto;}
+  .starpick{font-size:17px;color:var(--star);letter-spacing:2px;} .starpick .off{color:#3a434f;}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:var(--bg);flex-wrap:wrap;}
+  .seg button{font:inherit;font-size:11.5px;font-weight:600;padding:6px 10px;border:0;background:transparent;color:var(--text-dim);} .seg button.on{background:var(--lodging-bg);color:#f0b8c8;}
+
+  .imp-hd{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;} .imp-hd .file{font-family:var(--mono);font-size:12px;color:var(--text-dim);}
+  .match{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:9px;background:var(--ok-bg);border:1px solid rgba(78,201,138,.25);font-size:13px;margin-bottom:12px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media (max-width:620px){.grid2{grid-template-columns:1fr;}}
+  .fld{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:9px 11px;} .fld .k{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.03em;} .fld .v{font-size:13.5px;margin-top:2px;} .fld.miss{border-style:dashed;} .fld.miss .v{color:var(--warn);} .fld.fx{border-color:rgba(106,183,216,.3);}
+
+  .settings-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border-soft);border-radius:9px;background:var(--surface-2);margin-bottom:12px;flex-wrap:wrap;}
+  .settings-row .lbl b{font-size:13.5px;} .settings-row .lbl span{display:block;color:var(--text-faint);font-size:12px;margin-top:2px;}
+  .select{margin-left:auto;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 12px;color:var(--text);font:inherit;font-size:13.5px;}
+  .bar{height:9px;border-radius:5px;background:var(--surface-2);overflow:hidden;} .bar > i{display:block;height:100%;background:var(--lodging);}
+
+  .legend{margin-top:26px;color:var(--text-faint);font-size:12.5px;display:flex;gap:18px;flex-wrap:wrap;} .legend span{display:inline-flex;align-items:center;gap:6px;} .sw{width:12px;height:12px;border-radius:3px;display:inline-block;}
+  .newflag{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--fx);border:1px solid rgba(106,183,216,.4);border-radius:5px;padding:1px 6px;text-transform:uppercase;}
+</style>
+
+<div class="page">
+  <div class="masthead">
+    <div class="logo">TRAV<b>+</b>STATS</div>
+    <div class="basecur">💱 Basiswährung EUR</div>
+    <div class="tag">Mockup · Domain „Unterkünfte" · Phase A</div>
+  </div>
+  <div class="wrap">
+    <div class="lede">
+      <h1>Unterkünfte — Hotels (später Camping)</h1>
+      <p>Neue Domain <code>lodging</code>, gespiegelt an Cruise. Hotel = wiederverwendbarer Ort · Aufenthalte = die Events (standalone oder Trip-verknüpft). Neu in Phase A: <b style="color:var(--fx)">Basiswährung + FX</b> — Fremdwährungspreise werden mit dem historischen EZB-Kurs vom Anreisetag umgerechnet und als Snapshot gespeichert.</p>
+    </div>
+
+    <!-- 1 List -->
+    <div class="screen">
+      <div class="cap"><span class="num">01</span><h2>Hotel-Liste</h2><span class="note">suchen · filtern · sortieren</span></div>
+      <div class="frame">
+        <div class="toolbar">
+          <h3>Unterkünfte</h3>
+          <input class="search" value="Suche Hotel / Kette / Ort…" readonly />
+          <div class="actions">
+            <button class="btn ghost sm">Typ: Alle ▾</button>
+            <button class="btn ghost sm">Jahr: Alle ▾</button>
+            <button class="btn lodging">＋ Hotel</button>
+            <button class="btn">⬆ Import</button>
+          </div>
+        </div>
+        <div class="stat-strip">
+          <div class="s"><b>7</b><span>Hotels</span></div>
+          <div class="s"><b>11</b><span>Aufenthalte</span></div>
+          <div class="s"><b>21</b><span>Nächte</span></div>
+          <div class="s"><b>5</b><span>Ketten</span></div>
+          <div class="s"><b>2.553 €</b><span>Ausgaben</span><span class="sub">inkl. 840 CHF → 883 €</span></div>
+          <div class="s"><b>★ 4,1</b><span>Ø Bewertung</span></div>
+        </div>
+        <div class="tbl-scroll">
+        <table>
+          <tr><th>Hotel</th><th>Kette</th><th>Ort</th><th class="num">Aufenth.</th><th class="num">Nächte</th><th>Bewertung</th><th class="num">Ausgaben</th></tr>
+          <tr><td><span class="type-ic">🏨</span><span class="h-name">NH Ludwigsburg</span></td><td>NH Hotels</td><td>Ludwigsburg 🇩🇪</td><td class="num">2</td><td class="num">3</td><td><span class="stars">★★★★<span class="off">★</span></span> 4,3</td><td class="num">340 €</td></tr>
+          <tr><td><span class="type-ic">🏨</span><span class="h-name">Novotel Suites Berlin</span></td><td>Accor</td><td>Berlin 🇩🇪</td><td class="num">3</td><td class="num">5</td><td><span class="stars">★★★★<span class="off">★</span></span> 4,0</td><td class="num">690 €</td></tr>
+          <tr><td><span class="type-ic">🏨</span><span class="h-name">Vienna House Easy Landsberg</span></td><td>Wyndham</td><td>Landsberg 🇩🇪</td><td class="num">1</td><td class="num">2</td><td><span class="stars">★★★<span class="off">★★</span></span> 3,5</td><td class="num">180 €</td></tr>
+          <tr><td><span class="type-ic">🏨</span><span class="h-name">Engimatt City &amp; Garden</span></td><td class="h-sub">— unabhängig</td><td>Zürich 🇨🇭</td><td class="num">2</td><td class="num">4</td><td><span class="stars">★★★★<span class="off">★</span></span> 4,0</td><td class="num">840 CHF<br><span class="conv">≈ 883 €</span></td></tr>
+          <tr><td><span class="type-ic">🏨</span><span class="h-name">Hotel Stiegler B&amp;B</span></td><td class="h-sub">— unabhängig</td><td>Berchtesgaden 🇩🇪</td><td class="num">1</td><td class="num">2</td><td><span class="stars">★★★★<span style="color:var(--star)">⯪</span></span> 4,5</td><td class="num">190 €</td></tr>
+          <tr><td><span class="type-ic">🏨</span><span class="h-name">Bastion Hotel Zoetermeer</span></td><td>Bastion</td><td>Zoetermeer 🇳🇱</td><td class="num">1</td><td class="num">1</td><td><span class="stars">★★★<span class="off">★★</span></span> 3,8</td><td class="num">110 €</td></tr>
+          <tr><td><span class="type-ic">🏨</span><span class="h-name">Novina Sleep Inn</span></td><td>Novina</td><td>Herzogenaurach 🇩🇪</td><td class="num">1</td><td class="num">2</td><td><span class="stars">★★★★<span class="off">★</span></span> 4,0</td><td class="num">160 €</td></tr>
+        </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 Detail -->
+    <div class="screen">
+      <div class="cap"><span class="num">02</span><h2>Hotel-Detail mit Aufenthalten</h2><span class="note">Ort wird über Aufenthalte wiederverwendet</span></div>
+      <div class="frame">
+        <div class="cols">
+          <div>
+            <div class="hoteltop">
+              <div class="badge">🏨</div>
+              <div>
+                <h3>Engimatt City &amp; Garden</h3>
+                <div class="meta">— unabhängig · <span class="stars">★★★★</span> 4 Sterne · Engimattstr. 14, 8002 Zürich 🇨🇭</div>
+                <div class="meta">Ø Bewertung <b style="color:var(--star)">★ 4,0</b> · aus 2 Aufenthalten</div>
+              </div>
+            </div>
+            <div class="chips"><span class="chip">🌳 Garten</span><span class="chip">🅿️ Parkplatz</span><span class="chip">📶 WLAN</span><span class="chip">🍽️ Restaurant</span></div>
+
+            <div style="margin-top:16px;font-size:12px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;">Aufenthalte</div>
+            <div class="stay">
+              <div class="row1"><span class="d">12.–14.05.2024</span><span class="n">· 2 Nächte · Zimmer 21, Gartenzimmer</span><span class="right"><span class="pill trip">🧳 Reise: Zürich City</span><span class="stars">★★★★<span class="off">★</span></span></span></div>
+              <div class="row2"><span>Frühstück <b>★4</b></span><span>Service <b>★4</b></span><span>Zimmer <b>★4</b></span><span><b>210 CHF</b>/Nacht</span><span class="conv">420 CHF → 442 € · EZB 0,9895 · 12.05.24</span></div>
+            </div>
+            <div class="stay">
+              <div class="row1"><span class="d">03.–05.09.2023</span><span class="n">· 2 Nächte · Zimmer 14, Standard</span><span class="right"><span class="stars">★★★★<span class="off">★</span></span></span></div>
+              <div class="row2"><span>Frühstück <b>★4</b></span><span>Service <b>★4</b></span><span>Zimmer <b>★4</b></span><span><b>210 CHF</b>/Nacht</span><span class="conv">420 CHF → 441 € · EZB 0,9905 · 03.09.23</span></div>
+            </div>
+          </div>
+          <div style="display:grid;gap:14px;align-content:start;">
+            <div class="map map-mini"><div class="map-canvas map-mini"><div class="pin" style="left:50%;top:50%">🏨</div></div></div>
+            <div class="card"><div class="h">💱 Ausgaben <span class="newflag">FX</span></div><div class="b"><div class="kv"><span class="k">Original</span><span class="count">840 CHF</span></div><div class="kv"><span class="k">In Basiswährung</span><span class="count" style="color:var(--fx)">883 €</span></div><div class="kv"><span class="k">Ø / Nacht</span><span class="count">221 €</span></div></div></div>
+            <div class="card"><div class="h">★ Ø-Bewertung</div><div class="b"><div class="rate-row"><span class="lbl">Zimmer</span><span class="stars">★★★★<span class="off">★</span></span></div><div class="rate-row"><span class="lbl">Frühstück</span><span class="stars">★★★★<span class="off">★</span></span></div><div class="rate-row"><span class="lbl">Service</span><span class="stars">★★★★<span class="off">★</span></span></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 Stay editor -->
+    <div class="screen">
+      <div class="cap"><span class="num">03</span><h2>Aufenthalt bearbeiten</h2><span class="note">standalone oder Trip-verknüpft · FX automatisch</span></div>
+      <div class="modal-stage">
+        <div class="modal">
+          <header><span>🛏️</span><h3>Aufenthalt · Engimatt Zürich</h3></header>
+          <div class="body">
+            <div class="field"><label>Anreise</label><input class="input" value="12.05.2024  15:00" readonly /></div>
+            <div class="field"><label>Abreise</label><input class="input" value="14.05.2024  11:00" readonly /></div>
+            <div class="field"><label>Preis / Nacht</label><input class="input" value="210,00" readonly /></div>
+            <div class="field"><label>Währung</label><input class="input" value="CHF 🇨🇭" readonly /></div>
+            <div class="fx-readout">
+              <span class="pill fx">💱 Umrechnung</span>
+              <span><span class="big">420 CHF → 442,00 €</span> in Basiswährung</span>
+              <span class="meta">EZB-Kurs 0,9895 · Anreisetag 12.05.2024 · Snapshot</span>
+            </div>
+            <div class="field"><label>Zimmernummer</label><input class="input" value="21" readonly /></div>
+            <div class="field"><label>Zimmerkategorie</label><input class="input" value="Gartenzimmer" readonly /></div>
+            <div class="field full"><label>Verpflegung</label><div class="seg"><button>Keine</button><button class="on">Frühstück</button><button>Halbpension</button><button>Vollpension</button><button>All-inclusive</button></div></div>
+            <div class="field"><label>Bewertung Zimmer</label><div class="starpick">★★★★<span class="off">★</span></div></div>
+            <div class="field"><label>Bewertung Frühstück</label><div class="starpick">★★★★<span class="off">★</span></div></div>
+            <div class="field"><label>Bewertung Service</label><div class="starpick">★★★★<span class="off">★</span></div></div>
+            <div class="field"><label>Bewertung Gesamt</label><div class="starpick">★★★★<span class="off">★</span></div></div>
+            <div class="field"><label>Buchungsreferenz</label><input class="input" value="ENG-55021" readonly /></div>
+            <div class="field"><label>Reise verknüpfen</label><input class="input" value="Zürich City (Mai 2024)" readonly /></div>
+            <div class="field full"><label>Bestätigung</label><input class="input" value="📎 Engimatt_Zuerich.pdf" readonly /></div>
+          </div>
+          <footer><span class="pill lodging">2 Nächte</span><span class="pill fx">442 € Basis</span><span style="margin-left:auto"></span><button class="btn ghost">Abbrechen</button><button class="btn primary">Speichern</button></footer>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 Map -->
+    <div class="screen">
+      <div class="cap"><span class="num">04</span><h2>Hotels auf der Karte</h2><span class="note">Koordinaten aus Adresse (OSM-Geocoding, frei)</span></div>
+      <div class="frame">
+        <div class="map">
+          <div class="map-toolbar"><span class="pill lodging">📍 7 Hotels verortet</span><span class="sub count">Deutschland · Schweiz · Niederlande</span></div>
+          <div class="map-canvas">
+            <div class="pin" style="left:44%;top:70%">🏨</div>
+            <div class="pin" style="left:46%;top:64%">🏨</div>
+            <div class="pin" style="left:58%;top:38%">🏨</div>
+            <div class="pin" style="left:50%;top:56%">🏨</div>
+            <div class="pin" style="left:48%;top:78%">🏨</div>
+            <div class="pin" style="left:33%;top:44%">🏨</div>
+            <div class="pin" style="left:45%;top:60%">🏨</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5 Import preview -->
+    <div class="screen">
+      <div class="cap"><span class="num">05</span><h2>Import-Vorschau</h2><span class="note">Buchungsbestätigung → Parser → Dedup → Geocoding → FX <span class="newflag">Phase B</span></span></div>
+      <div class="frame">
+        <div class="imp-hd"><span>📧</span><span class="file">Buchungsbestätigung_ Engimatt Zürich (ENG-55021).msg</span><span class="pill warn" style="margin-left:auto">Confidence 0,86</span></div>
+        <div class="match"><span>✅</span><div><b>Bestehendes Hotel erkannt: „Engimatt City &amp; Garden"</b> — der neue Aufenthalt wird angehängt (kein Duplikat). Adresse per OSM geocodet 📍.</div></div>
+        <div class="grid2">
+          <div class="fld"><div class="k">Hotel</div><div class="v">Engimatt City &amp; Garden · unabhängig</div></div>
+          <div class="fld"><div class="k">Adresse → Koordinaten</div><div class="v">Engimattstr. 14 · 47.36, 8.53 ✓</div></div>
+          <div class="fld"><div class="k">Anreise → Abreise</div><div class="v">12.05.2024 → 14.05.2024 · 2 Nächte</div></div>
+          <div class="fld"><div class="k">Zimmer</div><div class="v">Gartenzimmer · Nr. 21</div></div>
+          <div class="fld"><div class="k">Preis</div><div class="v">210 CHF/Nacht · 420 CHF gesamt</div></div>
+          <div class="fld fx"><div class="k">💱 In Basiswährung</div><div class="v" style="color:var(--fx)">442,00 € · EZB 0,9895 · 12.05.2024</div></div>
+          <div class="fld miss"><div class="k">Bewertungen</div><div class="v">fehlen — später ergänzen</div></div>
+          <div class="fld miss"><div class="k">Verpflegung</div><div class="v">nicht erkannt</div></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px;"><span style="margin-left:auto"></span><button class="btn ghost">Verwerfen</button><button class="btn primary">Aufenthalt übernehmen</button></div>
+      </div>
+    </div>
+
+    <!-- 6 Currency + spend -->
+    <div class="screen">
+      <div class="cap"><span class="num">06</span><h2>Ausgaben &amp; Währung</h2><span class="note">Basiswährung-Einstellung · Aufschlüsselung je Währung <span class="newflag">neu · FX</span></span></div>
+      <div class="frame">
+        <div class="settings-row">
+          <div class="lbl"><b>💱 Basiswährung</b><span>Alle Cross-Währungs-Summen laufen gegen diese Währung. Originalbeträge bleiben immer erhalten.</span></div>
+          <select class="select"><option>EUR — Euro €</option><option>CHF — Schweizer Franken</option><option>USD — US-Dollar $</option><option>GBP — Pfund £</option></select>
+        </div>
+        <div class="cols">
+          <div class="card">
+            <div class="h">📊 Ausgaben je Währung</div>
+            <div class="b" style="display:grid;gap:14px;">
+              <div>
+                <div class="kv"><span class="k">🇪🇺 EUR (Original)</span><span class="count">1.670 €</span></div>
+                <div class="bar"><i style="width:65%"></i></div>
+              </div>
+              <div>
+                <div class="kv"><span class="k">🇨🇭 CHF (Original)</span><span class="count">840 CHF <span class="conv">→ 883 €</span></span></div>
+                <div class="bar"><i style="width:35%;background:var(--fx)"></i></div>
+              </div>
+              <div style="border-top:1px solid var(--border-soft);padding-top:10px;">
+                <div class="kv"><span class="k"><b>Gesamt in Basiswährung</b></span><span class="count" style="font-size:16px;color:var(--fx)"><b>2.553 €</b></span></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="h">ℹ️ Wie umgerechnet wird</div>
+            <div class="b" style="font-size:13px;color:var(--text-dim);line-height:1.65;">
+              Preise in Fremdwährung werden mit dem <b style="color:var(--fx)">EZB-Referenzkurs vom Anreisetag</b> umgerechnet (Quelle: Frankfurter.app, kostenlos, kein API-Key) und als <b>Snapshot</b> auf dem Aufenthalt gespeichert — der Wert wandert also nicht mit dem Tageskurs.
+              <div style="margin-top:12px;display:grid;gap:6px;">
+                <div class="kv"><span class="k">Beispiel</span><span class="count">420 CHF</span></div>
+                <div class="kv"><span class="k">EZB-Kurs 12.05.2024</span><span class="count">1 EUR = 0,9895 CHF</span></div>
+                <div class="kv"><span class="k">Gespeichert</span><span class="count" style="color:var(--fx)">442,00 €</span></div>
+              </div>
+              <div style="margin-top:12px;font-size:12px;color:var(--text-faint);">Kurs nicht abrufbar? Aufenthalt wird trotzdem gespeichert — nur mit Originalbetrag, Basiswert später nachrüstbar. FX blockiert nie ein Speichern.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><i class="sw" style="background:var(--lodging)"></i> Rosa = Domain „Unterkünfte"</span>
+      <span><i class="sw" style="background:var(--accent)"></i> Amber = primäre Aktion / Trip</span>
+      <span><i class="sw" style="background:var(--star)"></i> ★ 1–5 Bewertungen</span>
+      <span><i class="sw" style="background:var(--fx)"></i> Blau = Währung / FX (neu)</span>
+      <span><i class="sw" style="background:var(--ok)"></i> Dedup-Match / Geocode ok</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

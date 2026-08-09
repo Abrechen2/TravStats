@@ -1,6 +1,7 @@
 import {
   deriveFlightStatus,
   deriveCruiseStatus,
+  deriveLodgingStatus,
   deriveTripStatus,
 } from "../statusDerivation";
 
@@ -116,5 +117,61 @@ describe("deriveTripStatus", () => {
   it("start-only trips: past start counts as completed, future as planned", () => {
     expect(deriveTripStatus({ earliestStart: past(24), latestEnd: null, now })).toBe("completed");
     expect(deriveTripStatus({ earliestStart: future(24), latestEnd: null, now })).toBe("planned");
+  });
+});
+
+describe("deriveLodgingStatus", () => {
+  const derive = (checkIn: Date | null, checkOut: Date | null, current = "scheduled") =>
+    deriveLodgingStatus({ checkIn, checkOut, current, now });
+
+  // Alex, Discord 2026-07-12: only "cancelled" stays a manual choice.
+  it("passes cancelled through untouched, whatever the dates say", () => {
+    expect(derive(past(72), past(24), "cancelled")).toBe("cancelled");
+    expect(derive(future(24), future(72), "cancelled")).toBe("cancelled");
+  });
+
+  it("both dates in the future -> scheduled", () => {
+    expect(derive(future(24), future(72))).toBe("scheduled");
+  });
+
+  it("check-in past, check-out future -> in_progress", () => {
+    expect(derive(past(24), future(24))).toBe("in_progress");
+  });
+
+  it("both dates past -> completed", () => {
+    expect(derive(past(72), past(24))).toBe("completed");
+  });
+
+  it("derives the same result no matter what the stored status claims", () => {
+    // The stored column is a CACHE — a wrong value must never survive.
+    for (const stored of ["scheduled", "in_progress", "completed"]) {
+      expect(derive(past(72), past(24), stored)).toBe("completed");
+    }
+  });
+
+  it("keeps the stored status when the stay has no dates at all", () => {
+    expect(derive(null, null, "completed")).toBe("completed");
+  });
+
+  it("treats a one-ended stay by its known date rather than leaving it unconverged", () => {
+    expect(derive(past(24), null)).toBe("completed");
+    expect(derive(future(24), null)).toBe("scheduled");
+    expect(derive(null, past(24))).toBe("completed");
+    expect(derive(null, future(24))).toBe("scheduled");
+  });
+
+  // Dates are UTC-pinned to midnight, so "check-out is today" must already read
+  // completed — a morning check-out, and the only way a same-day stay avoids
+  // being stuck in_progress forever.
+  it("counts a stay as completed the moment check-out is reached, not after it", () => {
+    expect(deriveLodgingStatus({ checkIn: past(48), checkOut: now, current: "scheduled", now })).toBe(
+      "completed"
+    );
+  });
+
+  it("a same-day stay is never in_progress once its date has arrived", () => {
+    expect(deriveLodgingStatus({ checkIn: now, checkOut: now, current: "scheduled", now })).toBe(
+      "completed"
+    );
   });
 });

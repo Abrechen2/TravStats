@@ -40,6 +40,16 @@ describe("Airlines API", () => {
       ).toBe(true);
     });
 
+    it("carries the catalogue total so a capped list is visibly capped", async () => {
+      const res = await request(app).get("/api/v1/airlines").set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      // Default limit is 50; the seeded catalogue holds ~1125 airlines. The
+      // admin UI shows "50 of 1125" from this — without it the alphabetical
+      // first page reads like a catalogue that ends at C.
+      expect(res.body.data.length).toBeLessThanOrEqual(50);
+      expect(res.body.total).toBeGreaterThan(res.body.data.length);
+    });
+
     it("requires authentication", async () => {
       const res = await request(app).get("/api/v1/airlines");
       expect(res.status).toBe(401);

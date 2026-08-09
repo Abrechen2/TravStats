@@ -4,10 +4,21 @@ name: CI
 # The real quality gate is the local pre-/deploy hook (tsc + lint + tests
 # both sides). Re-running it here was duplicate work that produced red
 # badges without catching anything, so it was removed in May 2026.
+#
+# The check is scoped to the files a change actually touches. Running
+# prettier over all of frontend/src made the job fail on every single PR
+# (95 files under src have never been formatted, mostly since the Tailwind 4
+# migration), so a red badge said nothing about the change being reviewed. A
+# mass `prettier --write` was the alternative, but it collides with the
+# long-running lodging branch — and it would not have made the gate any more
+# informative about future changes than scoping it does.
 
 on:
   push:
-    branches: [Main]
+    # Lowercase: the default branch is `main`. This filter used to read
+    # `Main`, and GitHub branch filters are case-sensitive, so the push
+    # trigger never fired once.
+    branches: [main]
     paths:
       - "frontend/src/**"
       - "frontend/.prettierrc*"
@@ -34,6 +45,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Need history on both sides of the change to diff against.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v6
         with:
@@ -44,5 +58,52 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm ci
 
-      - name: Prettier check
-        run: cd frontend && npm run format:check
+      - name: Collect changed frontend files
+        id: changed
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags origin "$BASE_REF"
+            range="origin/$BASE_REF...HEAD"
+          elif [ "${{ github.event_name }}" = "push" ] && \
+               [ -n "${BEFORE_SHA:-}" ] && \
+               [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            range="$BEFORE_SHA..HEAD"
+          else
+            # workflow_dispatch, or a first push with no "before" commit:
+            # nothing meaningful to diff against, so check the last commit.
+            range="HEAD~1..HEAD"
+          fi
+          echo "Diffing $range"
+          # ACMR: skip deletions — prettier cannot check a file that is gone.
+          #
+          # Single `*`, not `**`: in a git pathspec (no :(glob) magic) `*`
+          # already crosses directory separators, while `src/**/*.tsx`
+          # requires at least one intermediate directory and therefore
+          # silently misses frontend/src/App.tsx and its siblings. Measured,
+          # not assumed — that miss is exactly the kind of quiet hole this
+          # job exists to close.
+          git diff --name-only --diff-filter=ACMR "$range" -- \
+            'frontend/src/*.ts' \
+            'frontend/src/*.tsx' \
+            'frontend/src/*.css' > changed.txt || true
+          # Guard against a file deleted later in the range.
+          : > files.txt
+          while IFS= read -r f; do
+            [ -f "$f" ] && printf '%s\n' "${f#frontend/}" >> files.txt
+          done < changed.txt
+          count=$(wc -l < files.txt | tr -d ' ')
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "Changed frontend files to check: $count"
+          cat files.txt
+
+      - name: Prettier check (changed files only)
+        if: steps.changed.outputs.count != '0'
+        run: cd frontend && xargs -a ../files.txt npx prettier --check
+
+      - name: Nothing to check
+        if: steps.changed.outputs.count == '0'
+        run: echo "No frontend source files changed — skipping Prettier."

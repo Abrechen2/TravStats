@@ -1,0 +1,297 @@
+{
+  "nav": {
+    "link": "Unterkünfte"
+  },
+  "list": {
+    "title": "Unterkünfte",
+    "loading": "Unterkünfte werden geladen …",
+    "loadError": "Unterkünfte konnten nicht geladen werden",
+    "empty": "Noch keine Unterkünfte erfasst",
+    "columns": {
+      "name": "Name",
+      "chain": "Kette",
+      "location": "Ort",
+      "stays": "Aufenthalte",
+      "nights": "Übernachtungen",
+      "rating": "Bewertung",
+      "spend": "Ausgaben"
+    },
+    "otherCurrencyHint": "Enthält weitere Beträge in einer älteren Basiswährung, die hier nicht mitgezählt sind."
+  },
+  "filter": {
+    "searchPlaceholder": "Suche nach Name oder Ort …",
+    "type": "Typ",
+    "allTypes": "Alle Typen",
+    "year": "Jahr",
+    "allYears": "Alle Jahre",
+    "country": "Land",
+    "allCountries": "Alle Länder",
+    "sort": "Sortierung",
+    "sortOptions": {
+      "name": "Name",
+      "nights": "Übernachtungen",
+      "rating": "Bewertung",
+      "spend": "Ausgaben"
+    },
+    "showing": "{{count}} angezeigt"
+  },
+  "add": {
+    "title": "Hotel hinzufügen"
+  },
+  "detail": {
+    "loading": "Unterkunft wird geladen …",
+    "notFound": "Unterkunft nicht gefunden",
+    "avgRating": "Ø Bewertung",
+    "stays": "Aufenthalte",
+    "staysEmpty": "Noch keine Aufenthalte erfasst",
+    "spend": "Ausgaben",
+    "spendOriginal": "Original",
+    "spendBase": "In Basiswährung",
+    "spendPerNight": "Pro Übernachtung",
+    "noLocation": "Kein Standort hinterlegt",
+    "deleteConfirmTitle": "Unterkunft löschen?",
+    "deleteConfirmMessage": "Diese Unterkunft mit {{count}} Aufenthalt(en) wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteSuccess": "Unterkunft gelöscht",
+    "deleteError": "Unterkunft konnte nicht gelöscht werden"
+  },
+  "field": {
+    "name": "Name",
+    "type": "Typ",
+    "stars": "Sterne",
+    "address": "Adresse",
+    "city": "Stadt",
+    "country": "Land",
+    "amenities": "Ausstattung",
+    "amenitiesPlaceholder": "z. B. WLAN, Pool, Parkplatz (kommagetrennt)",
+    "notes": "Notizen",
+    "independent": "Unabhängig",
+    "staysCount": "{{count}} Aufenthalte",
+    "staysCount_one": "{{count}} Aufenthalt",
+    "staysCount_other": "{{count}} Aufenthalte",
+    "nightsCount": "{{count}} Übernachtungen",
+    "nightsCount_one": "{{count}} Übernachtung",
+    "nightsCount_other": "{{count}} Übernachtungen",
+    "room": "Zimmer",
+    "board": "Verpflegung",
+    "awardStay": "Prämienübernachtung",
+    "ratingRoom": "Zimmer",
+    "ratingBreakfast": "Frühstück",
+    "ratingService": "Service",
+    "ratingOverall": "Gesamt",
+    "bookingReference": "Buchungsnummer",
+    "chain": "Kette",
+    "checkIn": "Anreise",
+    "checkOut": "Abreise",
+    "status": "Status",
+    "roomCategory": "Zimmerkategorie",
+    "currency": "Währung",
+    "totalPrice": "Gesamtpreis",
+    "pricePerNight": "Preis pro Nacht",
+    "roomAmenities": "Zimmerausstattung",
+    "roomAmenitiesPlaceholder": "z. B. Meerblick, Balkon (kommagetrennt)",
+    "membership": "Bonusprogramm",
+    "noMembership": "Kein Bonusprogramm",
+    "membershipDerive": "Automatisch (aus der Kette)",
+    "membershipNone": "Kein Programm genutzt",
+    "membershipSource": {
+      "override": "abweichend zugeordnet",
+      "chain": "aus der Kette",
+      "lodging": "diesem Hotel zugeordnet",
+      "none": "kein Programm"
+    },
+    "trip": "Reise",
+    "noTrip": "Keiner Reise zugeordnet",
+    "companions": "Mitreisende",
+    "programName": "Programmname",
+    "membershipNumber": "Mitgliedsnummer",
+    "tier": "Status-Stufe",
+    "ratingOverallDerived": "Ø aus Zimmer, Frühstück und Service"
+  },
+  "type": {
+    "hotel": "Hotel",
+    "campsite": "Campingplatz",
+    "guesthouse": "Gasthof",
+    "apartment": "Apartment",
+    "hostel": "Hostel"
+  },
+  "board": {
+    "none": "Ohne Verpflegung",
+    "breakfast": "Frühstück",
+    "half": "Halbpension",
+    "full": "Vollpension",
+    "all_inclusive": "All-inclusive"
+  },
+  "stayStatus": {
+    "scheduled": "Geplant",
+    "completed": "Abgeschlossen",
+    "cancelled": "Storniert",
+    "in_progress": "Laufend",
+    "derivedHint": "ergibt sich aus den Daten"
+  },
+  "form": {
+    "createTitle": "Neue Unterkunft",
+    "editTitle": "Unterkunft bearbeiten",
+    "saveError": "Unterkunft konnte nicht gespeichert werden",
+    "searchLabel": "Unterkunft suchen"
+  },
+  "fx": {
+    "source": "EZB",
+    "tooltip": "Umgerechnet zum EZB-Referenzkurs des Check-in-Tages"
+  },
+  "chainPicker": {
+    "placeholder": "Kette suchen …",
+    "clear": "✕ Entfernen",
+    "addMissing": "„{{name}}“ als neue Kette anlegen",
+    "confirmAdd": "„{{name}}“ wirklich als neue Kette anlegen?",
+    "matchedExisting": "Bereits vorhanden — „{{name}}“ zugeordnet",
+    "addError": "Kette konnte nicht angelegt werden"
+  },
+  "stayEditor": {
+    "addStay": "Aufenthalt hinzufügen",
+    "createTitle": "Neuer Aufenthalt",
+    "editTitle": "Aufenthalt bearbeiten",
+    "datesSection": "Termine",
+    "datesRequired": "Bitte An- und Abreisedatum angeben",
+    "ratingsSection": "Bewertungen",
+    "priceSection": "Preis",
+    "amenitiesSection": "Ausstattung & Notizen",
+    "loyaltySection": "Bonusprogramm",
+    "overrideMembership": "Abweichend zuordnen",
+    "receiptSection": "Beleg",
+    "notesSection": "Notizen",
+    "saveError": "Aufenthalt konnte nicht gespeichert werden"
+  },
+  "membership": {
+    "title": "Bonusprogramme",
+    "add": "Programm hinzufügen",
+    "coversChains": "Gilt für diese Ketten",
+    "empty": "Noch keine Bonusprogramme hinterlegt",
+    "loadError": "Bonusprogramme konnten nicht geladen werden",
+    "saveError": "Bonusprogramm konnte nicht gespeichert werden",
+    "duplicateError": "Dieses Programm ist bereits hinterlegt",
+    "deleteError": "Bonusprogramm konnte nicht gelöscht werden",
+    "extendExisting": "„{{name}}“ stattdessen um diese Kette erweitern"
+  },
+  "chainDetail": {
+    "loading": "Kette wird geladen …",
+    "notFound": "Kette nicht gefunden",
+    "noLoyaltyProgram": "Kein Bonusprogramm hinterlegt",
+    "sharedWith": "„{{program}}“ — geteilt mit {{chains}}",
+    "hotelsTitle": "Deine Hotels dieser Kette",
+    "hotelsEmpty": "Noch keine Hotels dieser Kette erfasst.",
+    "noMembershipYet": "Noch kein Bonusprogramm für diese Kette hinterlegt.",
+    "stats": {
+      "hotels": "Hotels",
+      "stays": "Aufenthalte",
+      "nights": "Übernachtungen",
+      "spend": "Ausgaben",
+      "rating": "Ø Bewertung"
+    }
+  },
+  "import": {
+    "preview": {
+      "title": "Vorschau ({{count}} Zeile(n))",
+      "newLabel": "neu",
+      "presentLabel": "bereits vorhanden",
+      "needsInputLabel": "brauchen dich",
+      "needsInputHint": "Bitte prüfe und entscheide diese Zeilen, bevor du übernimmst.",
+      "commit": "Übernehmen",
+      "commitError": "Import konnte nicht übernommen werden"
+    },
+    "matchedLodgingHint": "Diese Zeile wird mit einem vorhandenen Hotel verknüpft — Name und Ort können hier nicht geändert werden.",
+    "fields": {
+      "name": "Name",
+      "type": "Typ",
+      "chainName": "Kette",
+      "stars": "Sterne",
+      "address": "Adresse",
+      "city": "Ort",
+      "country": "Land",
+      "lat": "Breitengrad",
+      "lon": "Längengrad",
+      "googlePlaceId": "Google-Place-ID",
+      "checkIn": "Anreise",
+      "checkOut": "Abreise",
+      "roomCategory": "Zimmerkategorie",
+      "board": "Verpflegung",
+      "totalPrice": "Preis",
+      "currency": "Währung",
+      "ratingRoom": "Bewertung Zimmer",
+      "ratingBreakfast": "Bewertung Frühstück",
+      "ratingService": "Bewertung Service",
+      "ratingOverall": "Bewertung Gesamt",
+      "bookingReference": "Buchungsnummer",
+      "notes": "Notizen",
+      "hints": "Hinweise",
+      "action": "Aktion"
+    },
+    "actions": {
+      "choose": "— auswählen —",
+      "create": "Anlegen",
+      "skip": "Überspringen"
+    },
+    "flags": {
+      "missing_name": "Name fehlt",
+      "unresolvable_lodging_name": "Hotelname nicht zuordenbar",
+      "ambiguous_lodging_name": "Hotelname mehrdeutig",
+      "malformed_date": "Datum ungültig",
+      "invalid_date_range": "Zeitraum ungültig",
+      "missing_coordinates": "Keine Koordinaten"
+    },
+    "dedupeHints": {
+      "lodging_exact_ref": "Bereits importiert (gleiche Referenz)",
+      "lodging_name_city": "Passendes Hotel gefunden (Name + Ort)",
+      "stay_exact_ref": "Aufenthalt bereits vorhanden (gleiche Referenz)",
+      "stay_same_dates": "Aufenthalt bereits vorhanden (gleiche Daten)"
+    },
+    "noBookings": "In dieser E-Mail bzw. diesem PDF wurden keine Buchungsdaten gefunden.",
+    "csv": {
+      "title": "CSV-Import",
+      "description": "Unterkünfte und/oder Aufenthalte aus einer CSV-Datei importieren — z. B. ein Google-Maps-Export oder eine selbst gepflegte Tabelle. Einmaliges Migrationswerkzeug, kein laufender Import-Weg.",
+      "uploadLabel": "CSV-Datei wählen"
+    },
+    "errors": {
+      "emptyCsv": "Diese CSV-Datei enthält keine Zeilen.",
+      "noRows": "Aus dieser Datei konnte keine einzige Zeile übernommen werden.",
+      "noRowsReason": "Aus dieser Datei konnte keine einzige Zeile gelesen werden — {{reason}}. Bitte Spalten-Zuordnung und das Format dieser Spalte prüfen.",
+      "rowReasons": {
+        "missing_name": "{{count}}× kein Hotelname",
+        "unreadable_date": "{{count}}× Datum unlesbar (erwartet: 2026-03-07, 07.03.2026 oder 07.03.26)",
+        "unreadable_number": "{{count}}× Zahl unlesbar"
+      },
+      "rowSample": " (z. B. „{{sample}}“ in Zeile {{row}})",
+      "skippedRows": "{{count}} Zeile(n) wurden wegen ungültiger Werte übersprungen.",
+      "parseFailed": "Diese CSV-Datei konnte nicht gelesen werden.",
+      "previewFailed": "Die Vorschau konnte nicht geladen werden."
+    },
+    "commitResult": {
+      "success": "{{createdLodgings}} Hotel(s) und {{createdStays}} Aufenthalt(e) importiert, {{skipped}} übersprungen (bereits vorhanden).",
+      "partial": "{{createdLodgings}} Hotel(s) und {{createdStays}} Aufenthalt(e) importiert, {{skipped}} übersprungen (bereits vorhanden), {{failedCount}} Zeile(n) fehlgeschlagen: {{reasons}}",
+      "failureCodes": {
+        "ownership_mismatch": "gehört einem anderen Konto",
+        "missing_lodging_reference": "Hotel-Referenz fehlt",
+        "unexpected_error": "unerwarteter Fehler"
+      }
+    },
+    "batches": {
+      "title": "Bisherige Importe",
+      "loading": "Importe werden geladen …",
+      "empty": "Noch keine Importe.",
+      "loadError": "Die Import-Historie konnte nicht geladen werden.",
+      "source": {
+        "csv": "CSV",
+        "email": "E-Mail",
+        "pdf": "PDF"
+      },
+      "created": "{{lodgingCount}} Hotel(s) und {{stayCount}} Aufenthalt(e) angelegt",
+      "revert": "Import rückgängig machen",
+      "revertError": "Der Import konnte nicht rückgängig gemacht werden.",
+      "confirmTitle": "Import wirklich rückgängig machen?",
+      "confirmMessage": "Nur das, was dieser Import angelegt hat, wird gelöscht. Von Hand hinzugefügte oder durch einen späteren Import verknüpfte Aufenthalte bleiben erhalten — ihre Unterkunft bleibt bestehen.",
+      "revertResult": {
+        "success": "{{deletedLodgings}} Hotel(s) und {{deletedStays}} Aufenthalt(e) gelöscht.",
+        "withDetached": "{{deletedLodgings}} Hotel(s) und {{deletedStays}} Aufenthalt(e) gelöscht, {{detachedLodgings}} Hotel(s) behalten (haben weitere Aufenthalte)."
+      }
+    }
+  }
+}

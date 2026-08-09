@@ -13,13 +13,14 @@ import logger from '../utils/logger';
 import { seedsPartA } from './achievementSeeds/partA';
 import { seedsPartB } from './achievementSeeds/partB';
 import { seedsPartC } from './achievementSeeds/partC';
+import { seedsPartD } from './achievementSeeds/partD';
 
 export interface AchievementDefinition {
   code: string;
   name: string;
   description: string;
   category: string;
-  domain: 'flight' | 'cruise' | 'shared';
+  domain: 'flight' | 'cruise' | 'lodging' | 'shared';
   icon: string;
   tier: string;
   requirement: number;
@@ -32,6 +33,7 @@ export const achievements: AchievementDefinition[] = [
   ...seedsPartA,
   ...seedsPartB,
   ...seedsPartC,
+  ...seedsPartD,
 ];
 
 /**

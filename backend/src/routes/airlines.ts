@@ -42,12 +42,17 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
         }
       : {};
 
-    const airlines = await prisma.airline.findMany({
-      where,
-      take: limit,
-      orderBy: { name: "asc" },
-    });
-    res.json({ success: true, data: airlines });
+    // `total` rides along so list UIs can say "50 of 1125" instead of
+    // looking like a catalogue that ends mid-alphabet.
+    const [airlines, total] = await Promise.all([
+      prisma.airline.findMany({
+        where,
+        take: limit,
+        orderBy: { name: "asc" },
+      }),
+      prisma.airline.count({ where }),
+    ]);
+    res.json({ success: true, data: airlines, total });
   } catch (err) {
     next(err);
   }

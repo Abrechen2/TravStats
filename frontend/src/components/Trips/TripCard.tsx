@@ -2,8 +2,7 @@ import { differenceInCalendarDays } from "date-fns";
 import type { Trip, TripCategory, TripStatus } from "../../types";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useSettingsStore } from "../../store/settingsStore";
-import { sumByCurrency } from "../../lib/bookingCost";
+import { sumByCurrency, tripCostSources } from "../../lib/bookingCost";
 
 interface TripCardProps {
   trip: Trip;
@@ -37,7 +36,6 @@ const CATEGORY_ICON: Record<TripCategory, string> = {
  */
 export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardProps): JSX.Element {
   const { t, i18n } = useTranslation(["trips"]);
-  const { features } = useSettingsStore();
 
   const start = trip.startDate ? new Date(trip.startDate) : firstFlightDate(trip);
   const end = trip.endDate ? new Date(trip.endDate) : lastFlightDate(trip);
@@ -47,12 +45,25 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
   // Domain-gating: with the cruise domain disabled the card must not
   // advertise cruise segments — count them as absent.
   const { isEnabled } = useEnabledDomains();
+  const cruiseEnabled = isEnabled("cruise");
+  const lodgingEnabled = isEnabled("lodging");
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
-  const cruiseCount = isEnabled("cruise") ? (trip._count?.cruises ?? trip.cruises?.length ?? 0) : 0;
+  const cruiseCount = cruiseEnabled ? (trip._count?.cruises ?? trip.cruises?.length ?? 0) : 0;
 
-  const costTotals = sumByCurrency(trip.bookings ?? []);
+  // With the cruise domain switched off the card must not advertise cruises in
+  // any tile — not as a count, and not hidden inside the km or cost totals.
+  const cruises = cruiseEnabled ? (trip.cruises ?? []) : [];
+  const stays = lodgingEnabled ? (trip.lodgingStays ?? []) : [];
 
-  const distanceKm = estimateFlightDistanceKm(trip);
+  // Same sources as the trip detail page: bookings PLUS any flight, cruise or
+  // stay carrying its own price and no booking. Summing bookings alone made a
+  // hand-entered flight price vanish from the card while the detail page
+  // counted it, and left a cruise- or hotel-only trip at "—" on both.
+  const costTotals = sumByCurrency(
+    tripCostSources(trip.bookings ?? [], trip.flights ?? [], cruises, stays)
+  );
+
+  const distanceKm = estimateTripDistanceKm(trip.flights ?? [], cruises);
 
   const routeChain = buildRouteChain(trip);
 
@@ -204,9 +215,14 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
             }
             label={t("trips:detail.stats.countries")}
           />
+          {/* NOT gated on features.enableCostTracking. Since #192 that toggle
+              gates the taxes/fees breakdown and the business statistics, not
+              whether a price is visible at all — and the trip DETAIL page has
+              always rendered this total ungated. With the gate here, the same
+              trip read "EUR 2832" on its detail page and "—" on its card. */}
           <Stat
             value={
-              features.enableCostTracking && costTotals.length > 0
+              costTotals.length > 0
                 ? costTotals
                     .map((c) => formatCurrency(c.total, c.currency, i18n.language))
                     .join(" + ")
@@ -301,14 +317,28 @@ function buildRouteChain(trip: Trip): string[] {
   return chain;
 }
 
-function estimateFlightDistanceKm(trip: Trip): number {
-  if (!trip.flights) return 0;
+/**
+ * Kilometres travelled on this trip, across every domain it contains.
+ *
+ * Flights are estimated great-circle from the endpoint coordinates; cruises
+ * bring the distance the sea router already computed leg by leg, which the list
+ * endpoint ships pre-summed as `distanceKm`. A cruise whose legs were never
+ * computed contributes 0 rather than a straight-line guess between ports — a
+ * chord through land would be a worse answer than none.
+ */
+function estimateTripDistanceKm(
+  flights: NonNullable<Trip["flights"]>,
+  cruises: NonNullable<Trip["cruises"]>
+): number {
   let sum = 0;
-  for (const f of trip.flights) {
+  for (const f of flights) {
     if (f.depLat == null || f.depLon == null || f.arrLat == null || f.arrLon == null) {
       continue;
     }
     sum += haversineKm(f.depLat, f.depLon, f.arrLat, f.arrLon);
+  }
+  for (const c of cruises) {
+    if (c.distanceKm != null && c.distanceKm > 0) sum += c.distanceKm;
   }
   return Math.round(sum);
 }

@@ -1,13 +1,22 @@
 import HelpIcon from "../Help/HelpIcon";
 import AirportAutocomplete from "../AirportAutocomplete";
-import CopyActionButton from "./CopyActionButton";
+import CompanionsField from "./fields/CompanionsField";
+import HistoricalDateFields from "./fields/HistoricalDateFields";
+import TimesFields, { type ActualTimesFieldsValue } from "./fields/TimesFields";
+import CatalogueCombobox, {
+  searchAirlineOptions,
+  searchAircraftOptions,
+} from "./fields/CatalogueCombobox";
+import BookingFields from "./fields/BookingFields";
 import { useTranslation } from "../../hooks/useTranslation";
 import { calculateDistance } from "../../lib/geo";
 import type { Airport } from "../../lib/api";
-import { useSuggestions } from "../../hooks/useSuggestions";
 import { useToastStore } from "../../store/toastStore";
 import { estimateArrivalFromDeparture } from "../../lib/timeEstimation";
-import CurrencyInput from "../CurrencyInput";
+import CostFields, { type CostFieldsValue } from "./fields/CostFields";
+import TripSelectField from "./fields/TripSelectField";
+import StatusField from "./fields/StatusField";
+import { useSettingsStore } from "../../store/settingsStore";
 
 interface FlightLookupResult {
   flightNumber: string;
@@ -55,6 +64,19 @@ export interface FlightCompleteStepProps {
   setDepartureTime: (v: string) => void;
   setArrivalDate: (v: string) => void;
   setArrivalTime: (v: string) => void;
+  // Actual departure/arrival (#200) — optional so existing callers/tests that
+  // don't wire this in (e.g. FlightCompleteStep.timesFieldsWiring.test.tsx's
+  // baseProps()) keep compiling; SimplifiedFlightFormV2 always supplies all
+  // eight. When any setter is missing, the corresponding field just no-ops
+  // instead of crashing — see handleActualChange below.
+  actualDepartureDate?: string;
+  actualDepartureTime?: string;
+  actualArrivalDate?: string;
+  actualArrivalTime?: string;
+  setActualDepartureDate?: (v: string) => void;
+  setActualDepartureTime?: (v: string) => void;
+  setActualArrivalDate?: (v: string) => void;
+  setActualArrivalTime?: (v: string) => void;
   // Flight info
   airline: string;
   operatingAirline: string;
@@ -63,9 +85,12 @@ export interface FlightCompleteStepProps {
   terminal: string;
   gate: string;
   seatNumber: string;
-  seatClass: "economy" | "premium_economy" | "business" | "first";
+  boardingGroup: string;
+  /** "" is the explicit "(optional)" choice — stored as NULL. */
+  seatClass: "" | "economy" | "premium_economy" | "business" | "first";
   status: "scheduled" | "flown" | "cancelled" | "historical";
-  category: "business" | "private" | "vacation";
+  /** "" is the explicit "(optional)" choice — stored as NULL. */
+  category: "" | "business" | "private" | "vacation";
   setAirline: (v: string) => void;
   setOperatingAirline: (v: string) => void;
   setFlightNumber: (v: string) => void;
@@ -73,27 +98,37 @@ export interface FlightCompleteStepProps {
   setTerminal: (v: string) => void;
   setGate: (v: string) => void;
   setSeatNumber: (v: string) => void;
-  setSeatClass: (v: "economy" | "premium_economy" | "business" | "first") => void;
+  setBoardingGroup: (v: string) => void;
+  setSeatClass: (v: "" | "economy" | "premium_economy" | "business" | "first") => void;
   setStatus: (v: "scheduled" | "flown" | "cancelled" | "historical") => void;
-  setCategory: (v: "business" | "private" | "vacation") => void;
-  // Booking (#197 — same fields the edit modal offers)
+  setCategory: (v: "" | "business" | "private" | "vacation") => void;
+  // Booking (#197 — same fields the edit modal offers; #199 added the three
+  // parser-filled ones that were previously rendered by neither form)
   bookingReference: string;
   ticketNumber: string;
+  bookingClassLetter: string | undefined;
+  baggageAllowance: string | undefined;
+  frequentFlyerNumber: string | undefined;
   setBookingReference: (v: string) => void;
   setTicketNumber: (v: string) => void;
-  // Price
-  price: number | undefined;
-  /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
-  currency: string;
-  setPrice: (v: number | undefined) => void;
-  setCurrency: (v: string) => void;
+  setBookingClassLetter: (v: string) => void;
+  setBaggageAllowance: (v: string) => void;
+  setFrequentFlyerNumber: (v: string) => void;
+  // Cost (#192; #199 added taxes/fees/receipt to the create path). Grouped
+  // as one value object — this component just hands it to CostFields.
+  cost: CostFieldsValue;
+  onCostChange: (v: CostFieldsValue) => void;
+  // Trip (#199) — the assignment itself runs AFTER the create, in
+  // useFlightForm; this form only collects the choice.
+  tripId: string;
+  setTripId: (v: string) => void;
   // Tags & companions
   tags: string[];
   companions: string[];
-  companionInput: string;
+  /** Raw parser output, read-only in the UI — see CompanionsField. */
+  coPassengers: string[];
   setTags: (v: string[]) => void;
   setCompanions: React.Dispatch<React.SetStateAction<string[]>>;
-  setCompanionInput: (v: string) => void;
   // Notes
   notes: string;
   setNotes: (v: string) => void;
@@ -120,6 +155,14 @@ export default function FlightCompleteStep({
   setDepartureTime,
   setArrivalDate,
   setArrivalTime,
+  actualDepartureDate,
+  actualDepartureTime,
+  actualArrivalDate,
+  actualArrivalTime,
+  setActualDepartureDate,
+  setActualDepartureTime,
+  setActualArrivalDate,
+  setActualArrivalTime,
   airline,
   operatingAirline,
   flightNumber,
@@ -127,6 +170,7 @@ export default function FlightCompleteStep({
   terminal,
   gate,
   seatNumber,
+  boardingGroup,
   seatClass,
   status,
   category,
@@ -137,23 +181,29 @@ export default function FlightCompleteStep({
   setTerminal,
   setGate,
   setSeatNumber,
+  setBoardingGroup,
   setSeatClass,
   setStatus,
   setCategory,
   bookingReference,
   ticketNumber,
+  bookingClassLetter,
+  baggageAllowance,
+  frequentFlyerNumber,
   setBookingReference,
   setTicketNumber,
-  price,
-  currency,
-  setPrice,
-  setCurrency,
+  setBookingClassLetter,
+  setBaggageAllowance,
+  setFrequentFlyerNumber,
+  cost,
+  onCostChange,
+  tripId,
+  setTripId,
   tags,
   companions,
-  companionInput,
+  coPassengers,
   setTags,
   setCompanions,
-  setCompanionInput,
   notes,
   setNotes,
   textClass,
@@ -161,15 +211,30 @@ export default function FlightCompleteStep({
   sizedInputClass,
   setTimeEstimationWarning,
 }: FlightCompleteStepProps): JSX.Element {
-  const { t, i18n } = useTranslation(["flights"]);
-  // Debounced-search the live airline catalogue as the user types (#Task 26) —
-  // FlightEditModal/FlightReviewModal still call useSuggestions() unfiltered.
-  const { airlines: airlineSuggestions, aircraft: aircraftSuggestions } = useSuggestions(airline);
+  const { t } = useTranslation(["flights", "common"]);
   const addToast = useToastStore((s) => s.addToast);
+  const { features } = useSettingsStore();
 
   const canEstimateArrival = Boolean(
     departure && arrival && departureDate && departureTime && status !== "historical"
   );
+
+  // Actual departure/arrival (#200) — defaults to empty strings when the
+  // caller didn't wire the optional props in (see FlightCompleteStepProps),
+  // so <TimesFields> always gets a well-formed actualValue. The individual
+  // setter calls are optional-chained for the same reason.
+  const actualTimesValue: ActualTimesFieldsValue = {
+    actualDepDate: actualDepartureDate ?? "",
+    actualDepTime: actualDepartureTime ?? "",
+    actualArrDate: actualArrivalDate ?? "",
+    actualArrTime: actualArrivalTime ?? "",
+  };
+  const handleActualTimesChange = (next: ActualTimesFieldsValue): void => {
+    setActualDepartureDate?.(next.actualDepDate);
+    setActualDepartureTime?.(next.actualDepTime);
+    setActualArrivalDate?.(next.actualArrDate);
+    setActualArrivalTime?.(next.actualArrTime);
+  };
 
   const handleEstimateArrival = (): void => {
     if (!departure || !arrival || !departureDate || !departureTime) return;
@@ -189,18 +254,6 @@ export default function FlightCompleteStep({
       addToast("warning", t("flights:form.estimateTzUnknown"));
     }
   };
-
-  // "+1 Tag" hint under the arrival date (non-historical only)
-  const arrivalDayOffset =
-    status !== "historical" && departureDate && arrivalDate && arrivalDate > departureDate
-      ? (() => {
-          const [dy, dm, dd] = departureDate.split("-").map(Number);
-          const [ay, am, ad] = arrivalDate.split("-").map(Number);
-          const from = Date.UTC(dy, dm - 1, dd);
-          const to = Date.UTC(ay, am - 1, ad);
-          return Math.max(0, Math.round((to - from) / (24 * 60 * 60 * 1000)));
-        })()
-      : 0;
 
   return (
     <div className="space-y-6">
@@ -320,269 +373,92 @@ export default function FlightCompleteStep({
         )}
       </div>
 
-      {/* Date & Time — full inputs for normal flights, year/month for historical */}
+      {/* Date & Time — full inputs for normal flights, year/month/day for
+          historical. Shared with the edit modal via HistoricalDateFields. */}
       {status === "historical" ? (
-        (() => {
-          // Four valid storage shapes, in order of completeness:
-          //   ""           -> nothing entered yet
-          //   "YYYY"       -> year known, month unknown
-          //   "YYYY-MM"    -> year + month known, day unknown (NEW)
-          //   "YYYY-MM-DD" -> year + month + real day known
-          // The legacy "YYYY-MM-01" shape is read as year+month+day=1 and
-          // will display Day=1 in the new UI, which is honest about the data.
-          const yearMatch = departureDate.match(/^(\d{1,4})/);
-          const monthMatch = departureDate.match(/^\d{4}-(\d{2})/);
-          const dayMatch = departureDate.match(/^\d{4}-\d{2}-(\d{2})$/);
-          const yearStr = yearMatch?.[1] ?? "";
-          const monthPadded = monthMatch?.[1] ?? "";
-          const monthValue = monthPadded ? String(parseInt(monthPadded, 10)) : "";
-          const dayPadded = dayMatch?.[1] ?? "";
-          const dayValue = dayPadded ? String(parseInt(dayPadded, 10)) : "";
-
-          // Returns how many days are in (year, month) where month is 1-12.
-          // new Date(year, month, 0) gives the last day of the prior month
-          // when month is treated as 1-based (JS idiom).
-          const daysInMonth = (year: number, month: number): number =>
-            new Date(year, month, 0).getDate();
-
-          const numYear = yearStr ? parseInt(yearStr, 10) : new Date().getFullYear();
-          const numMonth = monthValue ? parseInt(monthValue, 10) : 0;
-          const maxDay = numMonth > 0 ? daysInMonth(numYear, numMonth) : 31;
-
-          return (
-            <div className="grid gap-4" style={{ gridTemplateColumns: "1.5fr 2fr 1.2fr" }}>
-              <div>
-                <label className={`label ${textClass}`}>{t("flights:historicalYear")}</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={4}
-                  placeholder={t("flights:historicalYearPlaceholder")}
-                  value={yearStr}
-                  onChange={(e) => {
-                    const y = e.target.value.replace(/\D/g, "").slice(0, 4);
-                    if (!y) {
-                      setDepartureDate("");
-                      setArrivalDate("");
-                      return;
-                    }
-                    let next: string;
-                    if (!monthPadded) {
-                      // No month selected — store year-only
-                      next = y;
-                    } else if (!dayPadded) {
-                      // Month known, no day — store YYYY-MM
-                      next = `${y}-${monthPadded}`;
-                    } else {
-                      // Year + month + day: clamp day to the new month's max
-                      const newMax = daysInMonth(parseInt(y, 10), parseInt(monthPadded, 10));
-                      const clampedDay = Math.min(parseInt(dayPadded, 10), newMax);
-                      next = `${y}-${monthPadded}-${String(clampedDay).padStart(2, "0")}`;
-                    }
-                    setDepartureDate(next);
-                    setArrivalDate(next);
-                  }}
-                  className={`input ${sizedInputClass}`}
-                />
-              </div>
-              <div>
-                <label className={`label ${textClass}`}>{t("flights:historicalMonth")}</label>
-                <select
-                  value={monthValue}
-                  onChange={(e) => {
-                    const m = e.target.value;
-                    const y = yearStr || String(new Date().getFullYear());
-                    let next: string;
-                    if (!m) {
-                      // Month cleared — drop back to year-only (also clears day)
-                      next = yearStr ? yearStr : "";
-                    } else if (!dayPadded) {
-                      // Month selected, no day — store YYYY-MM (NOT YYYY-MM-01)
-                      next = `${y}-${m.padStart(2, "0")}`;
-                    } else {
-                      // Month changed while day is set — clamp day if needed
-                      const newMax = daysInMonth(parseInt(y, 10), parseInt(m, 10));
-                      const clampedDay = Math.min(parseInt(dayPadded, 10), newMax);
-                      next = `${y}-${m.padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
-                    }
-                    setDepartureDate(next);
-                    setArrivalDate(next);
-                  }}
-                  className={`input ${sizedInputClass}`}
-                >
-                  <option value="">{t("flights:historicalMonthNone")}</option>
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <option key={i + 1} value={String(i + 1)}>
-                      {new Date(2000, i).toLocaleDateString(i18n.language, { month: "long" })}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className={`label ${textClass}`}>{t("flights:historicalDay")}</label>
-                <select
-                  value={dayValue}
-                  disabled={!monthValue}
-                  onChange={(e) => {
-                    const d = e.target.value;
-                    const y = yearStr || String(new Date().getFullYear());
-                    const m = monthPadded;
-                    let next: string;
-                    if (!d) {
-                      // Day cleared — transition back to YYYY-MM
-                      next = `${y}-${m}`;
-                    } else {
-                      next = `${y}-${m}-${d.padStart(2, "0")}`;
-                    }
-                    setDepartureDate(next);
-                    setArrivalDate(next);
-                  }}
-                  className={`input ${sizedInputClass} disabled:opacity-40 disabled:cursor-not-allowed`}
-                >
-                  <option value="">{t("flights:historicalDayNone")}</option>
-                  {Array.from({ length: maxDay }, (_, i) => (
-                    <option key={i + 1} value={String(i + 1)}>
-                      {i + 1}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          );
-        })()
+        <HistoricalDateFields
+          value={departureDate}
+          onChange={(next) => {
+            setDepartureDate(next);
+            setArrivalDate(next);
+          }}
+          labelClassName={textClass}
+          inputClassName={sizedInputClass}
+        />
       ) : (
-        <>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={`label ${textClass} flex items-center gap-2`}>
-                {t("flights:form.departureDate")}
-                <HelpIcon content={t("flights:form.help.departureDate")} position="top" />
-              </label>
-              <input
-                type="date"
-                value={departureDate}
-                onChange={(e) => {
-                  setDepartureDate(e.target.value);
-                  if (!arrivalDate || arrivalDate < e.target.value) {
-                    setArrivalDate(e.target.value);
-                  }
-                }}
-                className={`input ${sizedInputClass}`}
-                required
-              />
-            </div>
-            <div>
-              <label className={`label ${textClass} flex items-center gap-2`}>
-                {t("flights:form.departureTime")}
-                <HelpIcon
-                  content={t("flights:form.help.departureTime")}
-                  expandedContent={t("flights:form.help.departureTimeExpanded")}
-                  position="top"
-                />
-              </label>
-              <input
-                type="time"
-                value={departureTime}
-                onChange={(e) => setDepartureTime(e.target.value)}
-                className={`input ${sizedInputClass}`}
-              />
-            </div>
-          </div>
-
-          {/* Arrival Date & Time */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={`label ${textClass} flex items-center gap-2`}>
-                {t("flights:form.arrivalDate")} *
-                <HelpIcon content={t("flights:form.help.arrivalDate")} position="top" />
-                <CopyActionButton
-                  icon="arrow-down"
-                  title={t("flights:form.copyDepartureDate")}
-                  disabled={!departureDate}
-                  onClick={() => setArrivalDate(departureDate)}
-                />
-              </label>
-              <input
-                type="date"
-                value={arrivalDate}
-                onChange={(e) => setArrivalDate(e.target.value)}
-                className={`input ${sizedInputClass}`}
-                required
-              />
-              {arrivalDayOffset > 0 && (
-                <p className="text-xs mt-1 text-blue-300" data-testid="arrival-day-offset">
-                  {arrivalDayOffset === 1
-                    ? t("flights:form.arrivalNextDay")
-                    : t("flights:form.arrivalDayOffset", { count: arrivalDayOffset })}
-                </p>
-              )}
-            </div>
-            <div>
-              <label className={`label ${textClass} flex items-center gap-2`}>
-                {t("flights:form.arrivalTime")}
-                <HelpIcon
-                  content={t("flights:form.help.arrivalTime")}
-                  expandedContent={t("flights:form.help.arrivalTimeExpanded")}
-                  position="top"
-                />
-                <CopyActionButton
-                  icon="calculator"
-                  title={
-                    canEstimateArrival
-                      ? t("flights:form.estimateArrivalTime")
-                      : !departure || !arrival
-                        ? t("flights:form.estimateNoAirports")
-                        : t("flights:form.estimateNoDepartureTime")
-                  }
-                  disabled={!canEstimateArrival}
-                  onClick={handleEstimateArrival}
-                />
-              </label>
-              <input
-                type="time"
-                value={arrivalTime}
-                onChange={(e) => setArrivalTime(e.target.value)}
-                className={`input ${sizedInputClass}`}
-              />
-            </div>
-          </div>
-        </>
+        <TimesFields
+          value={{
+            depDate: departureDate,
+            depTime: departureTime,
+            arrDate: arrivalDate,
+            arrTime: arrivalTime,
+          }}
+          onChange={(next) => {
+            // Create-only extra, kept here rather than inside TimesFields
+            // (which the edit form also renders and must not gain this):
+            // when the user picks a NEW departure date and the arrival date
+            // hasn't caught up yet (empty or still before it), nudge arrival
+            // forward with it. `next.arrDate` still equals the pre-change
+            // arrival date whenever the user edited the departure date input
+            // specifically (TimesFields only touches the field that changed),
+            // so comparing it here is equivalent to the pre-swap inline
+            // `onChange` that did this same check against `arrivalDate`.
+            const depDateChanged = next.depDate !== departureDate;
+            const arrivalNeedsToCatchUp = !next.arrDate || next.arrDate < next.depDate;
+            setDepartureDate(next.depDate);
+            setDepartureTime(next.depTime);
+            setArrivalDate(depDateChanged && arrivalNeedsToCatchUp ? next.depDate : next.arrDate);
+            setArrivalTime(next.arrTime);
+          }}
+          onEstimateArrival={handleEstimateArrival}
+          canEstimateArrival={canEstimateArrival}
+          // Names the actual blocker when the calculator is disabled. Missing
+          // airports takes priority over a missing departure time — matches
+          // the pre-swap three-way tooltip this create form used to render
+          // inline before TimesFields only had the generic "no departure
+          // time" message (built for the edit form, which reaches this
+          // screen with airports already set).
+          estimateDisabledHint={
+            !departure || !arrival ? t("flights:form.estimateNoAirports") : undefined
+          }
+          help={{
+            depDate: { content: t("flights:form.help.departureDate") },
+            depTime: {
+              content: t("flights:form.help.departureTime"),
+              expandedContent: t("flights:form.help.departureTimeExpanded"),
+            },
+            arrDate: { content: t("flights:form.help.arrivalDate") },
+            arrTime: {
+              content: t("flights:form.help.arrivalTime"),
+              expandedContent: t("flights:form.help.arrivalTimeExpanded"),
+            },
+          }}
+          actualValue={actualTimesValue}
+          onActualChange={handleActualTimesChange}
+        />
       )}
 
       {/* Additional Fields */}
       <div className="grid grid-cols-4 gap-4">
         <div>
           <label className={`label ${textClass}`}>{t("flights:form.airline")}</label>
-          <input
-            type="text"
+          <CatalogueCombobox
             value={airline}
-            onChange={(e) => setAirline(e.target.value)}
-            className={`input ${sizedInputClass}`}
+            onChange={setAirline}
+            search={searchAirlineOptions}
             placeholder={t("flights:form.placeholders.airline")}
-            list="airline-suggestions"
+            inputClassName={sizedInputClass}
           />
-          <datalist id="airline-suggestions">
-            {airlineSuggestions.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
         </div>
         <div>
           <label className={`label ${textClass}`}>{t("flights:form.operatingAirline")}</label>
-          <input
-            type="text"
+          <CatalogueCombobox
             value={operatingAirline}
-            onChange={(e) => setOperatingAirline(e.target.value)}
-            className={`input ${sizedInputClass}`}
+            onChange={setOperatingAirline}
+            search={searchAirlineOptions}
             placeholder={t("flights:form.placeholders.operatingAirline")}
-            list="operating-airline-suggestions"
+            inputClassName={sizedInputClass}
           />
-          <datalist id="operating-airline-suggestions">
-            {airlineSuggestions.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
         </div>
         <div>
           <label className={`label ${textClass}`}>{t("flights:form.flightNumber")}</label>
@@ -595,70 +471,20 @@ export default function FlightCompleteStep({
             maxLength={10}
           />
         </div>
-        <div>
-          <label className={`label ${textClass}`}>{t("flights:form.status")}</label>
-          <div>
-            <span
-              className="px-2 py-1 text-xs font-semibold rounded-full inline-block"
-              style={
-                status === "flown"
-                  ? {
-                      background: "rgba(63,185,80,0.15)",
-                      color: "var(--success)",
-                    }
-                  : status === "scheduled"
-                    ? {
-                        background: "rgba(56,139,253,0.15)",
-                        color: "#388bfd",
-                      }
-                    : status === "historical"
-                      ? {
-                          // historical is archival data, not an error state —
-                          // amber matches the cruise pill palette
-                          // (cruiseStatusStyle.ts) instead of red. "duplicated"
-                          // never reaches this form step (only assigned by
-                          // lib/flightDuplicate.ts, which bypasses this UI), so
-                          // this component's status prop type excludes it.
-                          background: "rgba(251,191,36,0.15)",
-                          color: "#fbbf24",
-                        }
-                      : {
-                          background: "rgba(248,81,73,0.15)",
-                          color: "var(--danger)",
-                        }
-              }
-            >
-              {t(`flights:status.${status}`, { defaultValue: status })}
-            </span>
-          </div>
-          <label className="flex items-center gap-2 text-sm mt-2">
-            <input
-              type="checkbox"
-              checked={status === "cancelled"}
-              onChange={(e) => setStatus(e.target.checked ? "cancelled" : "scheduled")}
-            />
-            {t("flights:status.cancelledCheckbox")}
-          </label>
-        </div>
+        <StatusField status={status} onStatusChange={setStatus} labelClassName={textClass} />
       </div>
 
       {/* Equipment / Gate / Seat / Category */}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className={`label ${textClass}`}>{t("flights:form.aircraft")}</label>
-          <input
-            type="text"
+          <CatalogueCombobox
             value={aircraft}
-            onChange={(e) => setAircraft(e.target.value)}
-            className={`input ${sizedInputClass}`}
+            onChange={setAircraft}
+            search={searchAircraftOptions}
             placeholder={t("flights:form.placeholders.aircraft")}
-            list="aircraft-suggestions"
+            inputClassName={sizedInputClass}
           />
-          <datalist id="aircraft-suggestions">
-            {aircraftSuggestions.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -684,7 +510,7 @@ export default function FlightCompleteStep({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <div>
           <label className={`label ${textClass}`}>{t("flights:form.seat")}</label>
           <input
@@ -696,14 +522,30 @@ export default function FlightCompleteStep({
           />
         </div>
         <div>
+          {/* #199 — the edit modal had this all along; the create form
+              dropped a parser-provided boarding group on the way in. */}
+          <label className={`label ${textClass}`}>{t("flights:form.boardingGroup")}</label>
+          <input
+            type="text"
+            value={boardingGroup}
+            onChange={(e) => setBoardingGroup(e.target.value)}
+            className={`input ${sizedInputClass}`}
+            placeholder={t("flights:form.placeholders.boardingGroup")}
+            maxLength={20}
+          />
+        </div>
+        <div>
           <label className={`label ${textClass}`}>{t("flights:form.seatClass")}</label>
           <select
             value={seatClass}
             onChange={(e) =>
-              setSeatClass(e.target.value as "economy" | "premium_economy" | "business" | "first")
+              setSeatClass(
+                e.target.value as "" | "economy" | "premium_economy" | "business" | "first"
+              )
             }
             className={`input ${sizedInputClass}`}
           >
+            <option value="">{t("common:labels.optional")}</option>
             <option value="economy">{t("flights:seatClass.economy")}</option>
             <option value="premium_economy">{t("flights:seatClass.premium_economy")}</option>
             <option value="business">{t("flights:seatClass.business")}</option>
@@ -714,9 +556,12 @@ export default function FlightCompleteStep({
           <label className={`label ${textClass}`}>{t("flights:form.category")}</label>
           <select
             value={category}
-            onChange={(e) => setCategory(e.target.value as "business" | "private" | "vacation")}
+            onChange={(e) =>
+              setCategory(e.target.value as "" | "business" | "private" | "vacation")
+            }
             className={`input ${sizedInputClass}`}
           >
+            <option value="">{t("common:labels.optional")}</option>
             <option value="business">{t("flights:category.business")}</option>
             <option value="private">{t("flights:category.private")}</option>
             <option value="vacation">{t("flights:category.vacation")}</option>
@@ -724,61 +569,48 @@ export default function FlightCompleteStep({
         </div>
       </div>
 
-      {/* Price & Currency — always available, matching the cruise form (#192).
-          Only the tax/fee breakdown elsewhere stays behind cost tracking. */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2">
-          <label className={`label ${textClass} flex items-center gap-2`}>
-            {t("flights:form.price")}
-            <HelpIcon
-              content={t("flights:form.help.price")}
-              expandedContent={t("flights:form.help.price")}
-              position="top"
-            />
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={price ?? ""}
-            onChange={(e) => setPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
-            className={`input ${sizedInputClass}`}
-            placeholder={t("flights:form.placeholders.price")}
-          />
-        </div>
-        <div>
-          <label className={`label ${textClass}`}>{t("flights:form.currency")}</label>
-          <CurrencyInput
-            value={currency}
-            onChange={setCurrency}
-            className={`input ${sizedInputClass}`}
-          />
-        </div>
-      </div>
+      {/* Cost (#192, #199) — shared with the edit modal; the tax/fee
+          breakdown stays behind cost tracking (details in CostFields). */}
+      <CostFields
+        value={cost}
+        onChange={onCostChange}
+        showBreakdown={features.enableCostTracking}
+        priceHelp={{
+          content: t("flights:form.help.price"),
+          expandedContent: t("flights:form.help.price"),
+        }}
+        labelClassName={textClass}
+        inputClassName={sizedInputClass}
+      />
 
-      {/* Booking Reference / Ticket Number (#197) */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className={`label ${textClass}`}>{t("flights:form.bookingReference")}</label>
-          <input
-            type="text"
-            value={bookingReference}
-            onChange={(e) => setBookingReference(e.target.value.toUpperCase())}
-            className={`input ${sizedInputClass}`}
-            placeholder={t("flights:form.placeholders.bookingReference")}
-          />
-        </div>
-        <div>
-          <label className={`label ${textClass}`}>{t("flights:form.ticketNumber")}</label>
-          <input
-            type="text"
-            value={ticketNumber}
-            onChange={(e) => setTicketNumber(e.target.value)}
-            className={`input ${sizedInputClass}`}
-            placeholder={t("flights:form.placeholders.ticketNumber")}
-          />
-        </div>
-      </div>
+      {/* Booking (#197, #199) — shared with the edit modal */}
+      <BookingFields
+        value={{
+          bookingReference,
+          ticketNumber,
+          bookingClassLetter: bookingClassLetter ?? "",
+          baggageAllowance: baggageAllowance ?? "",
+          frequentFlyerNumber: frequentFlyerNumber ?? "",
+        }}
+        onChange={(v) => {
+          setBookingReference(v.bookingReference);
+          setTicketNumber(v.ticketNumber);
+          setBookingClassLetter(v.bookingClassLetter);
+          setBaggageAllowance(v.baggageAllowance);
+          setFrequentFlyerNumber(v.frequentFlyerNumber);
+        }}
+        labelClassName={textClass}
+        inputClassName={sizedInputClass}
+      />
+
+      {/* Trip (#199) — the assignment runs after the create, see
+          useFlightForm.maybeAssignTrip */}
+      <TripSelectField
+        value={tripId}
+        onChange={setTripId}
+        labelClassName={textClass}
+        inputClassName={sizedInputClass}
+      />
 
       {/* Tags */}
       <div>
@@ -808,45 +640,12 @@ export default function FlightCompleteStep({
       </div>
 
       {/* Travel Companions */}
-      <div>
-        <label className={`label ${textClass}`}>{t("flights:form.companions")}</label>
-        <div className="flex flex-wrap gap-2 mb-2">
-          {companions.map((companion, idx) => (
-            <span
-              key={idx}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
-            >
-              {companion}
-              <button
-                type="button"
-                onClick={() => setCompanions((prev) => prev.filter((_, i) => i !== idx))}
-                className="ml-1 hover:text-red-500 leading-none"
-                aria-label={`Remove ${companion}`}
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-        <input
-          type="text"
-          value={companionInput}
-          onChange={(e) => setCompanionInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === ",") {
-              e.preventDefault();
-              const name = companionInput.trim().replace(/,$/, "");
-              if (name && !companions.includes(name)) {
-                setCompanions((prev) => [...prev, name]);
-              }
-              setCompanionInput("");
-            }
-          }}
-          className={`input ${sizedInputClass}`}
-          placeholder={t("flights:form.placeholders.companions")}
-        />
-        <p className={`text-xs ${mutedTextClass} mt-1`}>{t("flights:form.companionsHint")}</p>
-      </div>
+      <CompanionsField
+        companions={companions}
+        onCompanionsChange={setCompanions}
+        coPassengers={coPassengers}
+        labelClassName={textClass}
+      />
 
       {/* Notes */}
       <div>

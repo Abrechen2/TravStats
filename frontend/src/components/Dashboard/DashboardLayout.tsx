@@ -12,12 +12,12 @@ import SpecialFlightModal from "../SpecialFlightModal";
 import { CruiseAddChooser } from "../Cruise/CruiseAddChooser";
 import { DomainTabStrip } from "./DomainTabStrip";
 import { AddDomainPicker, type AddableDomain } from "./AddDomainPicker";
-import type { FlightInput } from "../../types";
+import type { Flight, FlightInput } from "../../types";
 import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
 
 interface DashboardLayoutProps {
   children: ReactNode;
-  counts: { flight: number; cruise: number; poi: number };
+  counts: { flight: number; cruise: number; poi: number; lodging: number };
   /** Optional refetch hook called after a create-modal saves so the
    * outer page can refresh counts / per-tab data without a navigation. */
   onDataChanged?: () => void;
@@ -40,17 +40,20 @@ export function DashboardLayout({
     flight: isEnabled("flight"),
     cruise: isEnabled("cruise"),
     poi: isEnabled("poi"),
+    lodging: isEnabled("lodging"),
   };
 
   const handleFlightCreate = async (
     flight: FlightInput,
     opts?: FlightSubmitOptions
-  ): Promise<void> => {
+  ): Promise<Flight> => {
     try {
-      await flightsApi.create(flight, opts);
+      const created = await flightsApi.create(flight, opts);
       addToast("success", t("flights:table.toast.updated"));
       setAddingDomain(null);
       onDataChanged?.();
+      // Flows back into the form's post-create trip assignment (#199).
+      return created;
     } catch (error) {
       logger.error("Failed to add flight from dashboard:", error);
       throw error;
