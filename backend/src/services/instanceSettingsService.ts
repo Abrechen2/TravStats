@@ -26,6 +26,15 @@ export interface InstanceSettings {
   publicUrl: string | null;
   lanUrl: string | null;
   /**
+   * WebAuthn relying-party identity. `webauthnRpId` is a bare domain, never a
+   * URL, and a credential is bound to it forever. `webauthnOrigins` are the
+   * full origins the browser may be on; the first is the primary. Both are
+   * empty/null until an admin sets them, which is what makes passkeys report
+   * themselves as "not configured" rather than guessing from the Host header.
+   */
+  webauthnRpId: string | null;
+  webauthnOrigins: string[];
+  /**
    * Geocoder base URLs. Always resolved to a usable value (DB > ENV >
    * public default) — unlike `frontendUrl`/`publicUrl`/`lanUrl` there is no
    * "unset" state a caller needs to handle.
@@ -80,6 +89,8 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
       null,
     publicUrl: row.publicUrl ?? process.env.PUBLIC_URL ?? null,
     lanUrl: row.lanUrl ?? process.env.LAN_URL ?? null,
+    webauthnRpId: row.webauthnRpId ?? null,
+    webauthnOrigins: row.webauthnOrigins ?? [],
     photonUrl: row.photonUrl ?? process.env.PHOTON_URL ?? DEFAULT_PHOTON_URL,
     nominatimUrl:
       row.nominatimUrl ?? process.env.NOMINATIM_URL ?? DEFAULT_NOMINATIM_URL,
@@ -123,6 +134,14 @@ export async function updateInstanceSettings(
       }),
       ...(patch.lanUrl !== undefined && {
         lanUrl: patch.lanUrl || null,
+      }),
+      ...(patch.webauthnRpId !== undefined && {
+        webauthnRpId: patch.webauthnRpId || null,
+      }),
+      // An empty array is a meaningful value here (it turns passkeys off), so
+      // this cannot collapse to `|| null` the way the string fields do.
+      ...(patch.webauthnOrigins !== undefined && {
+        webauthnOrigins: patch.webauthnOrigins,
       }),
       ...(patch.photonUrl !== undefined && {
         photonUrl: patch.photonUrl || null,
