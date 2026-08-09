@@ -246,6 +246,13 @@ export interface Trip {
     endDate: string | null;
     status: string;
     shipId: number | null;
+    // Trip cost counts cruises that carry a price but no booking, exactly as it
+    // counts flights; `distanceKm` is the sum of the cruise's computed legs,
+    // 0 when the sea router never ran for it.
+    price?: number | null;
+    currency?: string | null;
+    bookingId?: string | null;
+    distanceKm?: number;
   }>;
   stops?: TripStop[];
   journalEntries?: TripJournalEntry[];
@@ -720,6 +727,10 @@ export interface AirlineRankingItem {
   airline: string;
   count: number;
   percentage: number;
+  /** IATA code resolved by the catalogue; absent when nothing matches. The API
+   *  has carried it since 2.5.0 — this side simply never declared it, so the
+   *  card could not render what the endpoint was already sending. */
+  iata?: string;
 }
 
 export interface AirlineRankingResponse {

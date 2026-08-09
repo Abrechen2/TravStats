@@ -1182,7 +1182,11 @@ function TripStatsRow({
   const cruiseEnabled = isEnabled("cruise");
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
   const cruiseCount = trip._count?.cruises ?? trip.cruises?.length ?? 0;
-  const costTotals = sumByCurrency(tripCostSources(trip.bookings ?? [], trip.flights ?? []));
+  // Cruises count towards the total exactly as flights do — but only while the
+  // domain is on, matching the cruise tile above.
+  const costTotals = sumByCurrency(
+    tripCostSources(trip.bookings ?? [], trip.flights ?? [], cruiseEnabled ? (trip.cruises ?? []) : [])
+  );
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">

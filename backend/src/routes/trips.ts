@@ -262,6 +262,13 @@ router.get(
               endDate: true,
               status: true,
               shipId: true,
+              // A cruise carrying its own price belongs in the trip total, on
+              // the same rule that applies to flights — without these a
+              // cruise-only trip read "— Gesamtkosten" while its cruises had
+              // prices on file.
+              price: true,
+              currency: true,
+              bookingId: true,
             },
             orderBy: { startDate: "asc" },
             take: 200,
@@ -271,13 +278,31 @@ router.get(
       // One batched airport lookup across EVERY trip's flights, not one per
       // trip: the cards need the same country derivation the detail page does,
       // and doing it per trip would turn one page load into N queries.
-      const [facts, cruiseCountries] = await Promise.all([
+      // Cruise distance lives on the legs the sea router computed, one row per
+      // port-to-port hop. One grouped query over every cruise on the page keeps
+      // this at a constant query count, like the airport lookup above.
+      const cruiseIds = trips.flatMap((t) => t.cruises.map((c) => c.id));
+      const [facts, cruiseCountries, legSums] = await Promise.all([
         airportFactsFor(trips.flatMap((t) => t.flights)),
         cruiseCountriesByTrip(trips.map((t) => t.id)),
+        cruiseIds.length > 0
+          ? prisma.cruiseLeg.groupBy({
+              by: ["cruiseId"],
+              where: { cruiseId: { in: cruiseIds } },
+              _sum: { distanceKm: true },
+            })
+          : Promise.resolve([]),
       ]);
+      const distanceByCruise = new Map(
+        legSums.map((row) => [row.cruiseId, row._sum.distanceKm ?? 0]),
+      );
       res.json({
         trips: trips.map((t) => ({
           ...t,
+          cruises: t.cruises.map((c) => ({
+            ...c,
+            distanceKm: Math.round(distanceByCruise.get(c.id) ?? 0),
+          })),
           countries: tripCountries(
             t.countries,
             t.flights,
