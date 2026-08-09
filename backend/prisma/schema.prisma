@@ -50,6 +50,7 @@ model User {
   twoFactorToken         String?   @unique @map("two_factor_token")
   twoFactorTokenExpiry   DateTime? @map("two_factor_token_expiry")
   twoFactorRecoveryCodes TwoFactorRecoveryCode[]
+  webauthnCredentials    WebAuthnCredential[]
   // True for users seeded by `seedDemoUser` (e.g. local dev `admin:admin123`).
   // Used to gate quota-burning admin actions like bulk historical refresh so
   // the dev demo can't drain a real RapidAPI key by accident.
@@ -158,6 +159,36 @@ model TwoFactorRecoveryCode {
 
   @@index([userId])
   @@map("two_factor_recovery_codes")
+}
+
+/// One registered passkey. A user may have several — phone, laptop, hardware
+/// key, password manager — and revoking one must not touch the others.
+model WebAuthnCredential {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Base64url credential ID as returned by the authenticator. Unique across the
+  /// instance: the login flow looks a credential up by this alone, before it
+  /// knows which user is signing in.
+  credentialId String    @unique @map("credential_id")
+  publicKey    String    @map("public_key")
+  /// Signature counter. A counter that goes backwards means the credential was
+  /// cloned. Note that many syncing authenticators (iCloud Keychain, Bitwarden)
+  /// legitimately keep it at 0 forever — only a DECREASE from a non-zero value
+  /// is evidence of anything.
+  counter      BigInt    @default(0)
+  transports   String[]  @default([])
+  /// What the user calls it ("MacBook", "Bitwarden"). Theirs to edit.
+  name         String
+  /// The RP ID this credential was minted under. Stored so the settings list can
+  /// show WHY a key does not work when the instance is reached under another
+  /// origin, instead of leaving the user guessing.
+  rpId         String    @map("rp_id")
+  lastUsedAt   DateTime? @map("last_used_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("webauthn_credentials")
 }
 
 model Airport {
@@ -527,6 +558,21 @@ model AdminSettings {
   // secondary hint for on-network clients.
   publicUrl         String? @map("public_url")
   lanUrl            String? @map("lan_url")
+
+  /// WebAuthn relying-party identity. Explicit rather than derived from the
+  /// request Host: a credential is bound to this value forever, so guessing it
+  /// from whichever origin happened to arrive would mint passkeys that stop
+  /// working the moment the user switches between LAN and tunnel.
+  ///
+  /// ONE rpId, because a registration ceremony can only name one. Several
+  /// ORIGINS may share it — an rpId may be a registrable parent domain, so
+  /// `example.com` covers `app.example.com` and `www.example.com`. What it can
+  /// never span is unrelated names, and a bare IP is not a valid rpId at all.
+  webauthnRpId      String?  @map("webauthn_rp_id")
+  /// Full origins (scheme + host + port) the browser may be on. A list, because
+  /// @simplewebauthn verifies against `expectedOrigin: string[]` and this
+  /// instance is routinely reached under more than one name.
+  webauthnOrigins   String[] @default([]) @map("webauthn_origins")
 
   // Geocoder endpoints — supersedes PHOTON_URL / NOMINATIM_URL ENV variables.
   // Defaults are the public instances (photon.komoot.io, OSM Nominatim); an
