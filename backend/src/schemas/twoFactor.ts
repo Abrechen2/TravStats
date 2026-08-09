@@ -18,6 +18,8 @@ export const verifyTwoFactorSchema = z
     recoveryCode: z.string().min(1).max(64).optional(),
   })
   .refine(
+    // This is an OR, not an XOR: a body carrying both fields passes too. That is
+    // deliberate — the route handler decides which one wins, not the schema.
     (value) => value.code !== undefined || value.recoveryCode !== undefined,
     "Provide either a code or a recovery code",
   );
