@@ -46,6 +46,13 @@
       "testError": "Verbindung fehlgeschlagen. Bitte URL und Erreichbarkeit prüfen."
     }
   },
+  "memberships": {
+    "title": "Bonusprogramme",
+    "description": "Alle deine Programme an einem Ort — mit den Ketten und einzelnen Hotels, für die sie gelten.",
+    "coversNothing": "noch keiner Kette zugeordnet",
+    "editHotels": "Einzelne Hotels",
+    "noIndependentHotels": "Keine eigenständigen Hotels ohne Kette vorhanden."
+  },
   "about": {
     "buildLabel": "Build",
     "buildVersionHint": "Version, die beim Bauen des Container-Images eingebacken wurde. Weicht von der angezeigten Version nur ab, wenn ein promoteter RC läuft.",

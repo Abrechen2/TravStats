@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
   listMemberships,
@@ -31,6 +31,20 @@ interface MembershipManagerProps {
   };
   /** Extra note rendered under the title — e.g. "shared with Westin, Ritz-Carlton" when the program spans multiple chains. */
   sharedWithLabel?: string;
+  /**
+   * Extra content rendered inside each row, below the programme name/tier
+   * line — e.g. the settings overview's coverage summary and hotel-coverage
+   * picker. Kept as a render prop rather than a second list so a card's name
+   * appears exactly once in the DOM; two separate lists both rendering the
+   * unscoped membership set would each print every programme name.
+   */
+  renderRowExtra?: (membership: LodgingMembership) => ReactNode;
+  /**
+   * Bump this (e.g. `n => n + 1`) to force a reload from outside — needed
+   * when `renderRowExtra` mutates a membership (like linking a hotel)
+   * through a call this component doesn't itself make.
+   */
+  reloadSignal?: number;
 }
 
 type EditingId = string | "new" | null;
@@ -60,6 +74,8 @@ export function MembershipManager({
   onChanged,
   scopeChain,
   sharedWithLabel,
+  renderRowExtra,
+  reloadSignal,
 }: MembershipManagerProps): JSX.Element {
   const { t } = useTranslation(["lodging", "common"]);
   const [memberships, setMemberships] = useState<LodgingMembership[]>([]);
@@ -98,6 +114,14 @@ export function MembershipManager({
     // reactive state this effect should re-run on.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    // `reloadSignal` starts `undefined`, so this never double-fires the
+    // mount-time load above; it only reloads on a genuine external bump.
+    if (reloadSignal === undefined) return;
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadSignal]);
 
   // The list this component actually renders — every membership when unscoped,
   // or just the (at most one) membership covering `scopeChain` on the chain
@@ -269,34 +293,37 @@ export function MembershipManager({
             <li
               key={m.id}
               data-testid={`membership-row-${m.id}`}
-              className="flex items-center justify-between rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm"
+              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm"
             >
-              <div>
-                <span className="font-medium text-[var(--text-primary)]">{m.programName}</span>
-                {m.tier && <span className="ml-2 text-xs text-[var(--text-muted)]">{m.tier}</span>}
-                {m.membershipNumber && (
-                  <span className="ml-2 text-xs text-[var(--text-muted)]">
-                    #{m.membershipNumber}
-                  </span>
-                )}
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-medium text-[var(--text-primary)]">{m.programName}</span>
+                  {m.tier && <span className="ml-2 text-xs text-[var(--text-muted)]">{m.tier}</span>}
+                  {m.membershipNumber && (
+                    <span className="ml-2 text-xs text-[var(--text-muted)]">
+                      #{m.membershipNumber}
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => startEdit(m)}
+                    className="text-xs text-[var(--accent)] hover:underline"
+                  >
+                    {t("common:buttons.edit")}
+                  </button>
+                  <button
+                    type="button"
+                    data-testid={`membership-delete-${m.id}`}
+                    onClick={() => void remove(m.id)}
+                    className="text-xs text-[var(--danger)] hover:underline"
+                  >
+                    {t("common:buttons.delete")}
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => startEdit(m)}
-                  className="text-xs text-[var(--accent)] hover:underline"
-                >
-                  {t("common:buttons.edit")}
-                </button>
-                <button
-                  type="button"
-                  data-testid={`membership-delete-${m.id}`}
-                  onClick={() => void remove(m.id)}
-                  className="text-xs text-[var(--danger)] hover:underline"
-                >
-                  {t("common:buttons.delete")}
-                </button>
-              </div>
+              {renderRowExtra?.(m)}
             </li>
           ))}
         </ul>
