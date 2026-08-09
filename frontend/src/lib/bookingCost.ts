@@ -34,11 +34,25 @@ export function sumByCurrency(bookings: BookingCostInput[]): CurrencyTotal[] {
 type PricedItem = BookingCostInput & { bookingId?: string | null };
 
 /**
- * Everything on a trip that carries a price: its bookings, plus the flights and
- * cruises that have none. A hand-entered flight price used to vanish from the
- * trip total because the cost model read bookings only — you typed 249.99 € on
- * the flight and the trip still said "—". A cruise price vanished the same way,
- * which left a cruise-only trip totalling to "—" outright.
+ * A lodging stay prices itself as `totalPrice`, not `price`, and carries an FX
+ * snapshot (`totalPriceBase`/`fxRate`) that the rest of the cost model has no
+ * concept of. Only the raw amount and its own currency feed the trip total —
+ * `sumByCurrency` never converts, so the base-currency figure would be a second
+ * opinion about the same money rather than an addition.
+ */
+export interface LodgingCostInput {
+  totalPrice?: number | null;
+  currency?: string | null;
+  bookingId?: string | null;
+}
+
+/**
+ * Everything on a trip that carries a price: its bookings, plus the flights,
+ * cruises and lodging stays that have none. A hand-entered flight price used to
+ * vanish from the trip total because the cost model read bookings only — you
+ * typed 249.99 € on the flight and the trip still said "—". A cruise price
+ * vanished the same way, which left a cruise-only trip totalling to "—"
+ * outright, and a hotel-only trip did the same until stays were folded in.
  *
  * Double counting is structurally impossible: import moves an identical
  * per-segment total onto the Booking and nulls the segments, so an item with a
@@ -48,8 +62,14 @@ type PricedItem = BookingCostInput & { bookingId?: string | null };
 export function tripCostSources(
   bookings: BookingCostInput[],
   flights: PricedItem[] = [],
-  cruises: PricedItem[] = []
+  cruises: PricedItem[] = [],
+  stays: LodgingCostInput[] = []
 ): BookingCostInput[] {
-  const unbooked = (items: PricedItem[]): PricedItem[] => items.filter((i) => !i.bookingId);
-  return [...bookings, ...unbooked(flights), ...unbooked(cruises)];
+  const unbooked = <T extends { bookingId?: string | null }>(items: T[]): T[] =>
+    items.filter((i) => !i.bookingId);
+  const stayPrices: PricedItem[] = unbooked(stays).map((s) => ({
+    price: s.totalPrice,
+    currency: s.currency,
+  }));
+  return [...bookings, ...unbooked(flights), ...unbooked(cruises), ...stayPrices];
 }

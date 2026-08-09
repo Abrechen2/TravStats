@@ -1313,10 +1313,15 @@ function TripStatsRow({
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
   const cruiseCount = trip._count?.cruises ?? trip.cruises?.length ?? 0;
   const lodgingCount = trip._count?.lodgingStays ?? trip.lodgingStays?.length ?? 0;
-  // Cruises count towards the total exactly as flights do — but only while the
-  // domain is on, matching the cruise tile above.
+  // Cruises and lodging stays count towards the total exactly as flights do —
+  // but only while their domain is on, matching the tiles above.
   const costTotals = sumByCurrency(
-    tripCostSources(trip.bookings ?? [], trip.flights ?? [], cruiseEnabled ? (trip.cruises ?? []) : [])
+    tripCostSources(
+      trip.bookings ?? [],
+      trip.flights ?? [],
+      cruiseEnabled ? (trip.cruises ?? []) : [],
+      lodgingEnabled ? (trip.lodgingStays ?? []) : []
+    )
   );
 
   return (
