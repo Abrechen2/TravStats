@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
 import PageTransition from "../components/PageTransition";
@@ -22,16 +22,18 @@ import EnrichmentSection from "../components/Settings/EnrichmentSection";
 import ApiKeysSection from "../components/Settings/ApiKeysSection";
 import ApiTokensSection from "../components/Settings/ApiTokensSection";
 import DevicesSection from "../components/Settings/DevicesSection";
-import AdminSection from "../components/Settings/AdminSection";
 import AboutSection from "../components/Settings/AboutSection";
 import ImportSection from "../components/Settings/ImportSection";
 import FeaturesSection from "../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../components/Settings/CruisePreferencesSection";
+import LodgingPreferencesSection from "../components/Settings/LodgingPreferencesSection";
+import MembershipsSection from "../components/Settings/MembershipsSection";
+import GeocoderSettingsCard from "../components/Settings/GeocoderSettingsCard";
 import ImmichConnectionCard from "../components/Settings/ImmichConnectionCard";
 import PasswordModal from "../components/Settings/PasswordModal";
 import { normalizeSectionId } from "../lib/sectionAliases";
 
-type TabId = "general" | "flight" | "cruise";
+type TabId = "general" | "flight" | "cruise" | "lodging";
 
 interface SectionRef {
   id: string;
@@ -49,12 +51,14 @@ export default function SettingsPage(): JSX.Element {
     units,
     defaults,
     cruise,
+    baseCurrency,
     autoSaveState,
     setProfile,
     setDisplay,
     setUnits,
     setDefaults,
     setCruise,
+    setBaseCurrency,
     savingProfile,
     uploadingProfilePicture,
     removingProfilePicture,
@@ -100,7 +104,7 @@ export default function SettingsPage(): JSX.Element {
   // pair a phone until the mobile app ships (see config/betaFeatures.ts).
   // Removing it from the model would bounce that URL back to "profile".
   //
-  // Sections are grouped into one of three tabs. The cruise group is empty
+  // Sections are grouped into one of four tabs. The cruise group is empty
   // for now; a placeholder is shown so users see the scaffold exists.
   const sectionsByTab = useMemo<Record<TabId, SectionRef[]>>(() => {
     const general: SectionRef[] = [
@@ -119,7 +123,12 @@ export default function SettingsPage(): JSX.Element {
       },
       { id: "devices", label: t("settings:devices.title") || "Devices" },
       { id: "apitokens", label: t("settings:apiTokens.title") || "API Tokens" },
-      ...(user?.isAdmin ? [{ id: "admin", label: t("settings:admin.title") || "Admin" }] : []),
+      // No "Admin" entry here. It used to be a section whose entire content was
+      // a button to /admin, which told the user that Admin is a SUBSECTION of
+      // Settings while the navigation says it is a PEER. That contradiction is
+      // what made the settings/admin boundary feel arbitrary. Admin is reachable
+      // from the top-level navigation, and the scope line below says which
+      // surface owns what.
       { id: "about", label: "About" },
     ];
     const flight: SectionRef[] = [
@@ -133,8 +142,20 @@ export default function SettingsPage(): JSX.Element {
         label: t("settings:cruisePreferences.title") || "Präferenzen",
       },
     ];
-    return { general, flight, cruise: cruiseTab };
-  }, [t, user?.isAdmin]);
+    const lodgingTab: SectionRef[] = [
+      {
+        id: "lodgingPreferences",
+        label: t("settings:lodgingPreferences.title") || "Präferenzen",
+      },
+      {
+        id: "lodgingMemberships",
+        label: t("settings:memberships.title") || "Bonusprogramme",
+      },
+    ];
+    return { general, flight, cruise: cruiseTab, lodging: lodgingTab };
+    // No `user?.isAdmin` dep any more — main dropped the conditional Admin
+    // section from `general`, so nothing in this memo reads it.
+  }, [t]);
 
   // The NAV list — the model minus everything the beta gate hides. Rendering
   // reads this; validation and deep-linking never do.
@@ -145,6 +166,7 @@ export default function SettingsPage(): JSX.Element {
       general: sectionsByTab.general.filter((s) => !isHidden(s.id)),
       flight: sectionsByTab.flight.filter((s) => !isHidden(s.id)),
       cruise: sectionsByTab.cruise.filter((s) => !isHidden(s.id)),
+      lodging: sectionsByTab.lodging.filter((s) => !isHidden(s.id)),
     };
   }, [sectionsByTab, isFeatureVisible]);
 
@@ -166,6 +188,12 @@ export default function SettingsPage(): JSX.Element {
         icon: DOMAINS.cruise.icon,
         requiresDomain: "cruise",
       },
+      {
+        id: "lodging",
+        label: t("settings:tabs.lodging") || "Unterkünfte",
+        icon: DOMAINS.lodging.icon,
+        requiresDomain: "lodging",
+      },
     ],
     defaultTab: "general",
   });
@@ -182,6 +210,19 @@ export default function SettingsPage(): JSX.Element {
   );
 
   const initialSection = normalizeSectionId(searchParams.get("section"));
+
+  // /settings?section=admin used to open a section whose only content was a
+  // link to /admin. The section is gone, but the bookmarks are not — send them
+  // to the destination that button pointed at rather than dropping the user on
+  // "profile". A non-admin has nothing to be sent to and falls through to the
+  // normal validation below.
+  //
+  // Declarative on purpose. An imperative navigate() in an effect loses the
+  // race against the URL-sync effect further down: that one calls
+  // setSearchParams on whatever location is current, which promptly rewrites
+  // /admin back to /settings. Rendering <Navigate> instead — and skipping the
+  // sync while it is pending — keeps the two out of each other's way.
+  const redirectToAdmin = initialSection === "admin" && Boolean(user?.isAdmin);
 
   // MODEL for the active tab — drives initial state, drift correction and the
   // deep-link effects. NOT the nav (see navSectionsByTab above).
@@ -213,7 +254,7 @@ export default function SettingsPage(): JSX.Element {
   useEffect(() => {
     const hash = normalizeSectionId(window.location.hash.slice(1));
     if (!hash) return;
-    for (const tab of ["general", "flight", "cruise"] as TabId[]) {
+    for (const tab of ["general", "flight", "cruise", "lodging"] as TabId[]) {
       if (sectionsByTab[tab].some((s) => s.id === hash)) {
         setActiveTab(tab);
         setActiveSection(hash);
@@ -235,7 +276,7 @@ export default function SettingsPage(): JSX.Element {
   useEffect(() => {
     if (!initialSection) return;
     if (sectionsByTab[activeTab].some((s) => s.id === initialSection)) return;
-    for (const tab of ["general", "flight", "cruise"] as TabId[]) {
+    for (const tab of ["general", "flight", "cruise", "lodging"] as TabId[]) {
       if (sectionsByTab[tab].some((s) => s.id === initialSection)) {
         setActiveTab(tab);
         setActiveSection(initialSection);
@@ -251,6 +292,7 @@ export default function SettingsPage(): JSX.Element {
   // the full rationale). One effect here is the canonical pattern —
   // other multi-domain pages should mirror it.
   useEffect(() => {
+    if (redirectToAdmin) return;
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
@@ -263,6 +305,8 @@ export default function SettingsPage(): JSX.Element {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, activeSection]);
+
+  if (redirectToAdmin) return <Navigate to="/admin" replace />;
 
   return (
     <PageTransition>
@@ -280,9 +324,20 @@ export default function SettingsPage(): JSX.Element {
           style={{ background: "var(--bg-base)", borderBottom: "1px solid var(--color-border)" }}
         >
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-            <h1 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
-              {t("settings:title", { defaultValue: "Einstellungen" })}
-            </h1>
+            {/* Scope line. The settings/admin boundary is real (per-user vs
+                instance-wide) but was never stated anywhere, so two sections
+                that exist on both surfaces read as duplicates and users kept
+                opening the wrong one. Saying it once here covers every current
+                AND future section, which relabelling individual entries does
+                not. */}
+            <div className="flex flex-col gap-0.5">
+              <h1 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+                {t("settings:title", { defaultValue: "Einstellungen" })}
+              </h1>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                {t("settings:scopeHint")}
+              </p>
+            </div>
             <div
               role="tablist"
               aria-label={t("settings:title", { defaultValue: "Einstellungen" })}
@@ -423,6 +478,18 @@ export default function SettingsPage(): JSX.Element {
             {activeSection === "cruisePreferences" && (
               <CruisePreferencesSection cruise={cruise} onSetCruise={setCruise} />
             )}
+            {activeSection === "lodgingPreferences" && (
+              <>
+                <LodgingPreferencesSection
+                  baseCurrency={baseCurrency}
+                  onSetBaseCurrency={setBaseCurrency}
+                />
+                {/* Admin-only; the card itself renders null for non-admins so
+                    the Präferenzen section stays unchanged for everyone else. */}
+                <GeocoderSettingsCard isAdmin={user?.isAdmin ?? false} />
+              </>
+            )}
+            {activeSection === "lodgingMemberships" && <MembershipsSection />}
 
             {activeSection === "profile" && (
               <ProfileSection
@@ -490,7 +557,6 @@ export default function SettingsPage(): JSX.Element {
             {activeSection === "devices" && <DevicesSection />}
             {activeSection === "apitokens" && <ApiTokensSection />}
             {activeSection === "import" && <ImportSection />}
-            {activeSection === "admin" && user?.isAdmin && <AdminSection />}
             {activeSection === "about" && <AboutSection />}
 
             {/* Auto-save strip. It reports what actually happened: a hint while

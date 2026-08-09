@@ -8,12 +8,15 @@ export interface FlightAdapterInput {
   flights: Flight[];
   /** ISO 3166-1 alpha-2 codes — comes from /stats/countries. */
   countries: string[];
+  /** Same source, keyed by the year on the clock at the departure airport.
+   *  Undefined when the backend predates the year index. */
+  countriesByYear?: Record<number, string[]>;
 }
 
 const NUMBER_FMT = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });
 
 export function adaptFlight(input: FlightAdapterInput): DomainStats {
-  const { flights, countries } = input;
+  const { flights, countries, countriesByYear } = input;
 
   if (flights.length === 0) {
     return { domain: "flight", hasData: false };
@@ -76,6 +79,7 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
     totalDistanceKm,
     totalDurationHours,
     countries,
+    countriesByYear,
     yearlyEvents,
     yearlyActiveDays,
     monthlyActiveDays,

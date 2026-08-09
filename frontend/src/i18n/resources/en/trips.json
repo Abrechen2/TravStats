@@ -56,7 +56,7 @@
     "originLabel": "Origin",
     "destinationLabel": "Destination",
     "tagsLabel": "Tags (comma separated)",
-    "companionsLabel": "Companions (comma separated)",
+    "companionsLabel": "Companions",
     "coverLabel": "Cover image",
     "notesLabel": "Notes (Markdown)",
     "notesPlaceholder": "Longer notes about the journey…",
@@ -124,6 +124,8 @@
     "noLinks": "No flights or cruises linked yet.",
     "hiddenCruises_one": "{{count}} cruise segment hidden — the cruise domain is disabled.",
     "hiddenCruises_other": "{{count}} cruise segments hidden — the cruise domain is disabled.",
+    "hiddenLodging_one": "{{count}} hotel stay hidden — the lodging domain is disabled.",
+    "hiddenLodging_other": "{{count}} hotel stays hidden — the lodging domain is disabled.",
     "flightsCount_one": "{{count}} Flight",
     "flightsCount_other": "{{count}} Flights",
     "cruisesCount_one": "{{count}} Cruise",
@@ -131,6 +133,7 @@
     "stats": {
       "flights": "Flights",
       "cruises": "Cruises",
+      "lodging": "Stays",
       "countries": "Countries",
       "companions": "Companions",
       "tags": "Tags"
@@ -161,6 +164,8 @@
       "addEntry": "+ Add entry",
       "addJournal": "📝 Journal entry",
       "addStop": "📍 Stop / place",
+      "lodgingCheckIn": "Check-in: {{name}}",
+      "lodgingCheckOut": "Check-out: {{name}}",
       "noEvents": "No events yet — add a journal entry or a stop.",
       "deletedJournal": "Entry deleted",
       "deletedStop": "Stop deleted",
@@ -205,11 +210,12 @@
     },
     "startDateLabel": "Start",
     "endDateLabel": "End",
-    "latLabel": "Latitude",
-    "lonLabel": "Longitude",
     "notesLabel": "Notes",
     "save": "Save",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "startTimeLabel": "Start time",
+    "endTimeLabel": "End time",
+    "timeHint": "Time is optional — it orders several entries on the same day. Diary entries always come last in a day."
   },
   "bookingEdit": {
     "title": "Edit booking",

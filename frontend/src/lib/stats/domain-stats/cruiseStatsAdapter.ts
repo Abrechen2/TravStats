@@ -2,6 +2,7 @@
 import type { CruiseStatsResponse } from "../../api/stats";
 import type { Cruise } from "../../../types/cruise";
 import type { DomainStats } from "./types";
+import { toYearKeyed } from "./yearKeyed";
 
 export interface CruiseAdapterInput {
   stats: CruiseStatsResponse;
@@ -100,7 +101,12 @@ export function adaptCruise(input: CruiseAdapterInput): DomainStats {
     // for cross-domain "duration" KPIs; the cruise tab itself uses the
     // richer day-by-day breakdown.
     totalDurationHours: stats.totalCruiseDays * 24,
-    countries: stats.countries,
+    // DomainStats.countries is a COUNTING field — only aggregate() reads it,
+    // and it unions across domains. Hand it the ISO codes so a country
+    // reached both by air and by sea counts once. The cruise tab's own tag
+    // cloud keeps reading CruiseStatsResponse.countries (the names) directly.
+    countries: stats.countriesIso ?? stats.countries,
+    countriesByYear: toYearKeyed(stats.countriesByYear),
     yearlyEvents,
     yearlyActiveDays,
     monthlyActiveDays,

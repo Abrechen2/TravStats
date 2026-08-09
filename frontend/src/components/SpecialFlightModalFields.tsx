@@ -7,6 +7,7 @@
  */
 import type { Airport } from "../lib/api";
 import AirportAutocomplete from "./AirportAutocomplete";
+import CompanionPicker from "./CompanionPicker";
 import { useTranslation } from "../hooks/useTranslation";
 import { EventLocationPicker, type EventLocationValue } from "./specialFlights/EventLocationPicker";
 
@@ -362,8 +363,8 @@ interface CommonTimeAndMetaFieldsProps {
   onNotesChange: (v: string) => void;
   tagsCsv: string;
   onTagsCsvChange: (v: string) => void;
-  companionsCsv: string;
-  onCompanionsCsvChange: (v: string) => void;
+  companions: string[];
+  onCompanionsChange: (v: string[]) => void;
 }
 
 export function CommonTimeAndMetaFields({
@@ -375,8 +376,8 @@ export function CommonTimeAndMetaFields({
   onNotesChange,
   tagsCsv,
   onTagsCsvChange,
-  companionsCsv,
-  onCompanionsCsvChange,
+  companions,
+  onCompanionsChange,
 }: CommonTimeAndMetaFieldsProps): JSX.Element {
   const { t } = useTranslation(["specialFlights"]);
   return (
@@ -438,17 +439,8 @@ export function CommonTimeAndMetaFields({
           />
         </div>
         <div>
-          <label className="label" htmlFor="special-companions">
-            {t("specialFlights:field.companions")}
-          </label>
-          <input
-            id="special-companions"
-            type="text"
-            className="input"
-            value={companionsCsv}
-            onChange={(e) => onCompanionsCsvChange(e.target.value)}
-            placeholder={t("specialFlights:placeholder.companions")}
-          />
+          <label className="label">{t("specialFlights:field.companions")}</label>
+          <CompanionPicker value={companions} onChange={onCompanionsChange} />
         </div>
       </div>
     </div>

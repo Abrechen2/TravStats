@@ -76,18 +76,9 @@ export function LogoMark({
       >
         TS
       </text>
-      <text
-        x="60"
-        y="118"
-        textAnchor="middle"
-        fontFamily="ui-monospace, monospace"
-        fontSize="7"
-        fill={color}
-        letterSpacing="2"
-        opacity="0.6"
-      >
-        V2.0
-      </text>
+      {/* No version string on the mark: the brand source of truth defines it as
+          a bare outline luggage tag, and a hardcoded "V2.0" was still riding
+          along on the 2.5 release. */}
     </svg>
   );
 }

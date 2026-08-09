@@ -4,6 +4,8 @@ import { emailParseLimiter } from '../middleware/rateLimit';
 import { parseBookingEmail } from '../services/bookingParser';
 import { parseCruiseBookingText } from '../services/cruiseBookingParser';
 import { resolveCruiseEntities, hydrateResolvedCruises } from '../services/cruiseEntityResolver';
+import { parseLodgingBookingText } from '../services/lodging/lodgingBookingParser';
+import { bookingsToCandidates } from '../services/lodging/lodgingCandidates';
 import { extractEmailFromFile } from '../services/emailExtractor';
 import { uploadEmailFile, getEmailUploadDir } from '../middleware/upload';
 import { z } from 'zod';
@@ -63,6 +65,24 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
         text: emailContent,
         subject: subject ?? undefined,
         domain: 'cruise',
+      });
+    }
+
+    if (parsed.domain === 'lodging') {
+      const combined = subject ? `${subject}\n\n${emailContent}` : emailContent;
+      const lodgingResult = await parseLodgingBookingText(combined);
+      logger.info(
+        { userId, parserUsed: lodgingResult.parserUsed, bookingCount: lodgingResult.bookings.length },
+        '[Email Parse] Lodging parsing complete',
+      );
+      return res.json({
+        domain: 'lodging',
+        candidates: bookingsToCandidates(lodgingResult.bookings),
+        parserUsed: lodgingResult.parserUsed,
+        ollamaAvailable: lodgingResult.ollamaAvailable,
+        fallbackReason: lodgingResult.fallbackReason,
+        text: emailContent,
+        subject: subject ?? undefined,
       });
     }
 
@@ -212,6 +232,34 @@ router.post(
           text: extracted.text,
           html: extracted.html ?? undefined,
           domain: 'cruise',
+        });
+      }
+
+      if (domainValue === 'lodging') {
+        const combined = extracted.subject
+          ? `${extracted.subject}\n\n${extracted.text}`
+          : extracted.text;
+        const lodgingResult = await parseLodgingBookingText(combined);
+
+        if (filePath && fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          logger.debug({ filePath }, '[Email Parse File] Temporary file deleted');
+        }
+
+        logger.info(
+          { userId, parserUsed: lodgingResult.parserUsed, bookingCount: lodgingResult.bookings.length },
+          '[Email Parse File] Lodging parsing complete',
+        );
+
+        return res.json({
+          domain: 'lodging',
+          candidates: bookingsToCandidates(lodgingResult.bookings),
+          parserUsed: lodgingResult.parserUsed,
+          ollamaAvailable: lodgingResult.ollamaAvailable,
+          fallbackReason: lodgingResult.fallbackReason,
+          subject: extracted.subject,
+          text: extracted.text,
+          html: extracted.html ?? undefined,
         });
       }
 

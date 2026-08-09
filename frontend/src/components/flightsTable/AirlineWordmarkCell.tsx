@@ -8,12 +8,20 @@ import { resolveAirlineDisplay, resolveAirlineIata } from "../../lib/airlineUtil
  * next to it (owner decision 2026-07-12) — it stays as the title tooltip and as
  * the text fallback when no logo resolves.
  *
- * The tile is rendered BARE. Every tier of the logo chain now returns an image
- * that carries its own background: kiwi's keyless brand tile does, and so does
- * a logostream wordmark. Painting anything behind it would be a second
- * background — which is precisely what 2.5.0-beta.1 shipped (a navy crane on a
- * navy plate: invisible) and what beta.2's luminance heuristic only half fixed.
- * There is nothing left for this component to decide.
+ * The tile sits on a neutral light plate. The premise this component used to
+ * carry — that every tier returns an image with its own background — does not
+ * hold: measured on 2.5.0-beta.3, kiwi's Lufthansa tile is 94% transparent
+ * with a dark navy crane, and carriers that fall through to Daisycon get a
+ * wide transparent wordmark. Bare on the dark UI both are invisible.
+ *
+ * A plate is safe precisely because it is a BACKGROUND: it shows only through
+ * transparent pixels and is fully covered by an opaque tile, so Air France and
+ * KLM render identically with and without it (verified side by side in the
+ * browser). That is the difference from the 2.5.0-beta.1 defect, which painted
+ * the plate in the airline's OWN brand colour and hid the mark on top of it.
+ *
+ * Note the plate is also AirlineLogo's default className; this cell dropped it
+ * by overriding className wholesale.
  */
 const TILE_PX = 44;
 
@@ -38,7 +46,7 @@ export default function AirlineWordmarkCell({ flight }: { flight: Flight }): JSX
         // max-w-none: Tailwind's preflight sets img { max-width: 100% }, and
         // Firefox's auto table layout computes this column narrower than
         // Chrome — the cap would shrink the tile to the cell width there.
-        className="rounded-sm object-contain max-w-none"
+        className="rounded-sm object-contain max-w-none bg-white/90"
         alt={name ?? "Airline logo"}
         fallback={fallback}
       />

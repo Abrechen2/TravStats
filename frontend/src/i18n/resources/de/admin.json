@@ -8,11 +8,11 @@
     "invitations": "Einladungen",
     "system": "System-Info",
     "instance": "Instanz",
-    "externalServices": "Externe Dienste",
+    "externalServices": "Externe Dienste (Instanz)",
     "parsers": "Parser",
     "training": "Training Config",
     "logging": "Logging",
-    "backups": "Backups",
+    "backups": "Instanz-Backups",
     "smtp": "E-Mail / SMTP"
   },
   "tabs2": {
@@ -34,7 +34,8 @@
       "empty": "Keine Treffer.",
       "created": "Schiff angelegt.",
       "createFailed": "Schiff konnte nicht angelegt werden.",
-      "missingFields": "Name und Reederei sind erforderlich."
+      "missingFields": "Name und Reederei sind erforderlich.",
+      "menuLabel": "Schiffe"
     },
     "port": {
       "title": "Häfen",
@@ -49,11 +50,12 @@
       "empty": "Keine Treffer.",
       "created": "Hafen angelegt.",
       "createFailed": "Hafen konnte nicht angelegt werden.",
-      "missingFields": "Name, Breite und Länge sind erforderlich."
+      "missingFields": "Name, Breite und Länge sind erforderlich.",
+      "menuLabel": "Häfen"
     }
   },
   "airlineAircraftMasterData": {
-    "menuLabel": "Airlines & Flugzeuge",
+    "menuLabel": "Airlines, Flugzeuge & Flughäfen",
     "userAdded": "Benutzerdefiniert",
     "airline": {
       "title": "Airlines",
@@ -66,7 +68,8 @@
       "empty": "Keine Treffer.",
       "created": "Airline angelegt.",
       "createFailed": "Airline konnte nicht angelegt werden.",
-      "missingFields": "Name ist erforderlich."
+      "missingFields": "Name ist erforderlich.",
+      "menuLabel": "Airlines"
     },
     "aircraft": {
       "title": "Flugzeugtypen",
@@ -77,7 +80,25 @@
       "empty": "Keine Treffer.",
       "created": "Flugzeugtyp angelegt.",
       "createFailed": "Flugzeugtyp konnte nicht angelegt werden.",
-      "missingFields": "Name ist erforderlich."
+      "missingFields": "Name ist erforderlich.",
+      "menuLabel": "Flugzeuge"
+    },
+    "airport": {
+      "title": "Flughäfen",
+      "description": "Katalog aus OurAirports-CSV plus benutzerdefinierte Einträge — für Flugplätze, die im Katalog fehlen (z. B. private Airfields). Neu angelegte Flughäfen bleiben bei Re-Seeds erhalten; die Zeitzone wird aus den Koordinaten abgeleitet.",
+      "name": "Name",
+      "city": "Stadt",
+      "country": "Land",
+      "lat": "Breite",
+      "lon": "Länge",
+      "add": "Hinzufügen",
+      "searchPlaceholder": "Flughafen, IATA oder ICAO suchen …",
+      "empty": "Keine Treffer.",
+      "created": "Flughafen angelegt.",
+      "createFailed": "Flughafen konnte nicht angelegt werden.",
+      "missingFields": "Name und Koordinaten sind erforderlich.",
+      "invalidCoords": "Koordinaten müssen Zahlen sein (Breite −90…90, Länge −180…180).",
+      "menuLabel": "Flughäfen"
     }
   },
   "instanceLabel": "Instanz",
@@ -133,7 +154,9 @@
         "label": "WebDAV-URL",
         "help": "Vollständige URL bis zum Benutzer-Root, z.B. https://cloud.example.com/remote.php/dav/files/abrechen2/"
       },
-      "username": { "label": "Benutzername" },
+      "username": {
+        "label": "Benutzername"
+      },
       "password": {
         "label": "Passwort",
         "help": "Verschlüsselt gespeichert (AES-GCM). Bei Nextcloud ein App-Passwort verwenden.",
@@ -157,7 +180,7 @@
   "users": {
     "title": "Benutzerverwaltung",
     "help": {
-      "description": "Verwalten Sie alle Benutzer Ihrer TravStats-Instanz. Benutzer anzeigen, Rollen ändern und Konten deaktivieren.",
+      "description": "Verwalte alle Benutzer deiner TravStats-Instanz. Benutzer anzeigen, Rollen ändern und Konten deaktivieren.",
       "adminTitle": "Admin:",
       "admin": "Vollzugriff auf alle Funktionen, einschließlich Admin-Panel",
       "userTitle": "Benutzer:",
@@ -222,7 +245,7 @@
   "invitations": {
     "title": "Einladungen verwalten",
     "help": {
-      "description": "Erstellen Sie Einladungslinks, um neue Benutzer zu Ihrer TravStats-Instanz einzuladen.",
+      "description": "Erstelle Einladungslinks, um neue Benutzer zu deiner TravStats-Instanz einzuladen.",
       "createTitle": "Einladung erstellen:",
       "create": "Generiert einen eindeutigen Link, der zum Registrieren verwendet werden kann",
       "expiryTitle": "Ablaufdatum:",
@@ -230,7 +253,7 @@
       "oneUseTitle": "Einmalige Nutzung:",
       "oneUse": "Jeder Link kann nur einmal verwendet werden",
       "emailTitle": "E-Mail (optional):",
-      "email": "Sie können eine E-Mail-Adresse zuordnen, um die Einladung zu verfolgen"
+      "email": "Du kannst eine E-Mail-Adresse zuordnen, um die Einladung zu verfolgen"
     },
     "invitationLinks": "Einladungslinks",
     "createButton": "+ Einladung erstellen",
@@ -307,7 +330,7 @@
   },
   "userLimitWarning": {
     "title": "⚠️ Benutzerlimit-Warnung",
-    "message": "Sie haben die empfohlene Benutzerobergrenze ({{maxUsers}} Benutzer) erreicht. Die Leistung kann bei mehr Benutzern beeinträchtigt werden."
+    "message": "Du hast die empfohlene Benutzerobergrenze ({{maxUsers}} Benutzer) erreicht. Die Leistung kann bei mehr Benutzern beeinträchtigt werden."
   },
   "demoWarning": {
     "title": "🔓 Demo-Konto aktiv",
@@ -328,7 +351,7 @@
     "exportDescription": "Alle Benutzerdaten für Backup-Zwecke exportieren (DSGVO-konform)",
     "exportHelp": {
       "title": "Daten-Export",
-      "description": "Exportieren Sie alle Benutzerdaten als JSON-Datei für Backup-Zwecke.",
+      "description": "Exportiere alle Benutzerdaten als JSON-Datei für Backup-Zwecke.",
       "fullExportTitle": "Vollständiger Export:",
       "fullExport": "Enthält alle Flüge, Achievements, Einstellungen und Benutzerdaten",
       "gdprTitle": "DSGVO-konform:",
@@ -349,7 +372,7 @@
   },
   "export": {
     "button": "📥 Daten exportieren",
-    "description": "Exportieren Sie alle Benutzerdaten als JSON-Datei.",
+    "description": "Exportiere alle Benutzerdaten als JSON-Datei.",
     "title": "Daten-Export",
     "help": {
       "title": "Was wird exportiert?",
@@ -408,7 +431,7 @@
     },
     "debugActive": {
       "title": "Debug-Modus aktiv",
-      "message": "Debug-Logging ist mit detaillierter Instrumentierung aktiviert. Dies kann die Leistung beeinträchtigen und große Log-Dateien erzeugen. Deaktivieren Sie dies nach der Fehlersuche."
+      "message": "Debug-Logging ist mit detaillierter Instrumentierung aktiviert. Dies kann die Leistung beeinträchtigen und große Log-Dateien erzeugen. Schalte das nach der Fehlersuche wieder aus."
     },
     "stats": {
       "totalFiles": "Gesamt Log-Dateien",
@@ -494,14 +517,14 @@
   },
   "backup": {
     "title": "Backup-Verwaltung",
-    "description": "Verwalten Sie Ihre Backups und stellen Sie sie bei Bedarf wieder her",
+    "description": "Verwalte deine Backups und stelle sie bei Bedarf wieder her",
     "loading": "Lade Backups...",
     "creating": "Erstelle Backup...",
     "running": "Backup läuft",
     "createNow": "Backup jetzt erstellen",
     "startedAt": "Gestartet um {{date}}",
     "noBackups": "Keine Backups vorhanden",
-    "deleteConfirm": "Möchten Sie das Backup vom {{date}} wirklich löschen?",
+    "deleteConfirm": "Möchtest du das Backup vom {{date}} wirklich löschen?",
     "type": {
       "full": "Vollständig",
       "partial": "Teilweise"
@@ -535,7 +558,7 @@
       "targetDatabaseUrl": "Ziel-Datenbank-URL (optional, für Migration)",
       "targetDatabaseUrlPlaceholder": "postgresql://user:pass@host:port/database",
       "targetDatabaseUrlHelp": "Leer lassen für aktuelle Instanz",
-      "confirmLabel": "Zur Bestätigung geben Sie \"{{text}}\" ein:",
+      "confirmLabel": "Gib zur Bestätigung \"{{text}}\" ein:",
       "confirmText": "Wiederherstellen",
       "confirmButton": "Wiederherstellen"
     },
@@ -664,5 +687,11 @@
       "permissionsTitle": "Benutzer-Berechtigungen:",
       "permissions": "Steuert ob Benutzer eigene Schlüssel setzen können. Globale Schlüssel sind Fallback für Benutzer ohne eigene Schlüssel."
     }
-  }
+  },
+  "masterData": {
+    "showingOf": "{{shown}} von {{total}} Einträgen angezeigt — Suche verfeinern, um weitere zu sehen.",
+    "typeToSearch": "Mindestens zwei Zeichen eingeben, um den Katalog zu durchsuchen.",
+    "refineSearch": "Mehr Treffer als angezeigt — Suche verfeinern."
+  },
+  "scopeHint": "Gilt für die gesamte Instanz — für alle Benutzer."
 }

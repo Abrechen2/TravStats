@@ -8,6 +8,12 @@ import {
 } from './achievementStats';
 import { checkAchievement } from './achievementChecks';
 import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from './cruiseStats';
+import {
+  calculateLodgingStats,
+  type LodgingStayData as LodgingStatsInput,
+  type LodgingRecord,
+} from './lodgingStats';
+import { computeFlyAndStayFlags, unionCountries, type TripDomainCounts } from './achievementStats';
 
 type UserAchievementWithRelation = UserAchievement & { achievement: Achievement };
 
@@ -45,7 +51,10 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
 
     // Get user's flights (flown+historical for geo/distance stats, all for planner/survivor)
     // + cruises (all statuses except cancelled; include stops+ports and trip for Fly & Sail)
-    const [flights, allFlights, cruises] = await Promise.all([
+    // + lodging stays (all statuses — calculateLodgingStats filters cancelled itself)
+    // + per-trip domain counts (flights/cruises/lodgingStays) for the
+    //   cross-domain Fly & Stay / Grand Tour flags.
+    const [flights, allFlights, cruises, lodgingStays, lodgings, trips, userSettings] = await Promise.all([
       prisma.flight.findMany({
         where: { userId, status: { in: ['flown', 'historical'] } },
         orderBy: { departureTime: 'asc' },
@@ -63,7 +72,27 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
           arrivalPort: true,
         },
       }),
+      prisma.lodgingStay.findMany({
+        where: { userId },
+        include: { lodging: true },
+      }),
+      // Every lodging the user HAS, including ones with no stay yet — Hotel
+      // Collector counts hotels the user added, not only hotels stayed at
+      // (owner decision, finding 1).
+      prisma.lodging.findMany({ where: { userId } }),
+      prisma.trip.findMany({
+        where: { userId },
+        select: {
+          _count: { select: { flights: true, cruises: true, lodgingStays: true } },
+        },
+      }),
+      prisma.userSettings.findUnique({ where: { userId }, select: { baseCurrency: true } }),
     ]);
+    // Same rule as routes/lodging.ts: a stay's FX snapshot is a permanent
+    // record of the base currency active WHEN IT WAS SAVED, so the spend-based
+    // achievement threshold must only count stays matching the CURRENT base
+    // currency — never silently mix currencies together (finding 2).
+    const lodgingBaseCurrency = userSettings?.baseCurrency ?? 'EUR';
 
     // Calculate user stats with error handling
     let stats;
@@ -181,6 +210,41 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
 
     const cruiseStats = calculateCruiseStats(cruiseStatsInput, userBirthday);
 
+    // Lodging stats (multi-domain V1) — computed separately from flight/cruise stats.
+    const lodgingStatsInput: LodgingStatsInput[] = lodgingStays.map((s) => ({
+      lodgingId: s.lodgingId,
+      type: s.lodging.type,
+      country: s.lodging.country,
+      city: s.lodging.city,
+      chainId: s.lodging.chainId,
+      checkIn: s.checkIn,
+      checkOut: s.checkOut,
+      status: s.status,
+      totalPriceBase: s.totalPriceBase,
+      fxBaseCurrency: s.fxBaseCurrency,
+      currency: s.currency,
+      totalPrice: s.totalPrice,
+      isAwardStay: s.isAwardStay,
+      ratingOverall: s.ratingOverall,
+    }));
+    const lodgingRecords: LodgingRecord[] = lodgings.map((l) => ({
+      id: l.id,
+      chainId: l.chainId,
+      type: l.type,
+      country: l.country,
+      city: l.city,
+    }));
+    const lodgingStats = calculateLodgingStats(lodgingStatsInput, lodgingBaseCurrency, lodgingRecords);
+
+    // Fly & Stay / Grand Tour — derived per-trip so a flight in one trip and
+    // a stay in an unrelated trip never counts (see computeFlyAndStayFlags).
+    const tripDomainCounts: TripDomainCounts[] = trips.map((t) => ({
+      flightCount: t._count.flights,
+      cruiseCount: t._count.cruises,
+      lodgingStayCount: t._count.lodgingStays,
+    }));
+    const { flyAndStay, grandTour } = computeFlyAndStayFlags(tripDomainCounts);
+
     // Fly & Sail — at least one trip contains BOTH a flight and a cruise
     const flyAndSail = cruises.some(
       (c) => c.trip && c.trip.flights.length > 0 && c.trip.cruises.length > 0,
@@ -200,7 +264,7 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       flightDates.some((fd) => Math.abs(fd.getTime() - cd.getTime()) <= SEVEN_DAYS_MS),
     );
 
-    // Union flight + cruise countries into the shared countries Set.
+    // Union flight + cruise + lodging countries into the shared countries Set.
     // Same for continents — map each cruise port to its continent via getContinent().
     // Ports store the country as an English NAME ("Germany"), airports as an ISO-3166
     // alpha-2 code ("DE"); getContinent accepts both.
@@ -215,6 +279,7 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
         }
       }
     }
+    const finalCountries = unionCountries(combinedCountries, lodgingStats.countries);
 
     const augmentedStats = {
       ...stats,
@@ -225,8 +290,8 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       scheduledMaxAdvanceDays,
       birthdayFlights,
       scheduled30d,
-      // Countries + continents now include cruise ports for shared achievements
-      countries: combinedCountries,
+      // Countries + continents now include cruise ports + lodging stays for shared achievements
+      countries: finalCountries,
       continents: combinedContinents,
       // Cruise stats
       cruisesCount: cruiseStats.cruisesCount,
@@ -253,6 +318,20 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       hasFlyAndSailTrip: flyAndSail,
       hasFlyAndSail7d: flyAndSail7d,
       cruiseCarnivalBrandsCovered: 0, // computed inside the checker
+      // Lodging stats
+      lodgingsCount: lodgingStats.lodgingsCount,
+      lodgingStaysCount: lodgingStats.staysCount,
+      lodgingNights: lodgingStats.totalNights,
+      lodgingChainsUnique: lodgingStats.chainsUnique,
+      lodgingCountries: lodgingStats.countries,
+      lodgingSpendBase: lodgingStats.spendBaseTotal,
+      lodgingAwardNights: lodgingStats.awardNights,
+      lodgingChainLoyaltyMax: lodgingStats.chainLoyaltyMax,
+      lodgingSameHotelRepeatMax: lodgingStats.sameHotelRepeatMax,
+      lodgingLongestStayNights: lodgingStats.longestStayNights,
+      // Cross-domain (lodging)
+      flyAndStay,
+      grandTour,
     };
 
     // Prepare all updates/creates to execute in a single transaction

@@ -56,7 +56,7 @@
     "originLabel": "Herkunft",
     "destinationLabel": "Ziel",
     "tagsLabel": "Tags (kommagetrennt)",
-    "companionsLabel": "Mitreisende (kommagetrennt)",
+    "companionsLabel": "Mitreisende",
     "coverLabel": "Coverbild",
     "notesLabel": "Notizen (Markdown)",
     "notesPlaceholder": "Längere Notizen über die Reise …",
@@ -124,6 +124,8 @@
     "noLinks": "Noch keine Flüge oder Kreuzfahrten verknüpft.",
     "hiddenCruises_one": "{{count}} Kreuzfahrt-Segment ausgeblendet — der Bereich Kreuzfahrten ist deaktiviert.",
     "hiddenCruises_other": "{{count}} Kreuzfahrt-Segmente ausgeblendet — der Bereich Kreuzfahrten ist deaktiviert.",
+    "hiddenLodging_one": "{{count}} Hotelaufenthalt ausgeblendet — der Bereich Unterkünfte ist deaktiviert.",
+    "hiddenLodging_other": "{{count}} Hotelaufenthalte ausgeblendet — der Bereich Unterkünfte ist deaktiviert.",
     "flightsCount_one": "{{count}} Flug",
     "flightsCount_other": "{{count}} Flüge",
     "cruisesCount_one": "{{count}} Kreuzfahrt",
@@ -131,6 +133,7 @@
     "stats": {
       "flights": "Flüge",
       "cruises": "Kreuzfahrten",
+      "lodging": "Aufenthalte",
       "countries": "Länder",
       "companions": "Reisende",
       "tags": "Tags"
@@ -161,6 +164,8 @@
       "addEntry": "+ Eintrag hinzufügen",
       "addJournal": "📝 Tagebuch-Eintrag",
       "addStop": "📍 Stopp / Ort",
+      "lodgingCheckIn": "Check-in: {{name}}",
+      "lodgingCheckOut": "Check-out: {{name}}",
       "noEvents": "Noch keine Ereignisse — füge einen Tagebuch-Eintrag oder einen Stopp hinzu.",
       "deletedJournal": "Eintrag gelöscht",
       "deletedStop": "Stopp gelöscht",
@@ -205,11 +210,12 @@
     },
     "startDateLabel": "Beginn",
     "endDateLabel": "Ende",
-    "latLabel": "Breitengrad",
-    "lonLabel": "Längengrad",
     "notesLabel": "Notizen",
     "save": "Speichern",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "startTimeLabel": "Startzeit",
+    "endTimeLabel": "Endzeit",
+    "timeHint": "Zeit optional — sie ordnet mehrere Einträge am selben Tag. Tagebuch-Einträge stehen immer am Tagesende."
   },
   "bookingEdit": {
     "title": "Buchung bearbeiten",

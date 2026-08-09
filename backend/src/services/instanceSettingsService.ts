@@ -13,6 +13,11 @@ import { prisma } from "../db";
 import { encryptApiKey, decryptApiKey } from "../utils/encryption";
 import logger from "../utils/logger";
 
+// Public geocoder instances used when neither the DB column nor the
+// matching ENV var is set. See `resolveGeocoderUrls()`.
+export const DEFAULT_PHOTON_URL = "https://photon.komoot.io";
+export const DEFAULT_NOMINATIM_URL = "https://nominatim.openstreetmap.org";
+
 export interface InstanceSettings {
   instanceName: string;
   maxUsers: number;
@@ -20,6 +25,13 @@ export interface InstanceSettings {
   frontendUrl: string | null;
   publicUrl: string | null;
   lanUrl: string | null;
+  /**
+   * Geocoder base URLs. Always resolved to a usable value (DB > ENV >
+   * public default) — unlike `frontendUrl`/`publicUrl`/`lanUrl` there is no
+   * "unset" state a caller needs to handle.
+   */
+  photonUrl: string;
+  nominatimUrl: string;
   /**
    * Instance-level beta gate — ON on RC/Beta servers, OFF on production.
    * Reveals features that are unfinished or not yet useful (registry:
@@ -68,20 +80,37 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
       null,
     publicUrl: row.publicUrl ?? process.env.PUBLIC_URL ?? null,
     lanUrl: row.lanUrl ?? process.env.LAN_URL ?? null,
+    photonUrl: row.photonUrl ?? process.env.PHOTON_URL ?? DEFAULT_PHOTON_URL,
+    nominatimUrl:
+      row.nominatimUrl ?? process.env.NOMINATIM_URL ?? DEFAULT_NOMINATIM_URL,
     // Non-nullable column (default false) — no ENV fallback on purpose: an
     // instance is either flagged beta by an admin or it is not.
     betaFeaturesEnabled: row.betaFeaturesEnabled,
   };
 }
 
+/**
+ * Patch input allows explicit `null` for `photonUrl`/`nominatimUrl` (meaning
+ * "clear the DB override, fall back to ENV/default") even though the
+ * resolved `InstanceSettings` output is always a non-null string.
+ */
+type InstanceSettingsPatch = Partial<
+  Omit<InstanceSettings, "photonUrl" | "nominatimUrl">
+> & {
+  photonUrl?: string | null;
+  nominatimUrl?: string | null;
+};
+
 export async function updateInstanceSettings(
-  patch: Partial<InstanceSettings>,
+  patch: InstanceSettingsPatch,
 ): Promise<InstanceSettings> {
   const row = await ensureAdminSettings();
   await prisma.adminSettings.update({
     where: { id: row.id },
     data: {
-      ...(patch.instanceName !== undefined && { instanceName: patch.instanceName || null }),
+      ...(patch.instanceName !== undefined && {
+        instanceName: patch.instanceName || null,
+      }),
       ...(patch.maxUsers !== undefined && { maxUsers: patch.maxUsers }),
       ...(patch.allowRegistration !== undefined && {
         allowRegistration: patch.allowRegistration,
@@ -95,13 +124,37 @@ export async function updateInstanceSettings(
       ...(patch.lanUrl !== undefined && {
         lanUrl: patch.lanUrl || null,
       }),
+      ...(patch.photonUrl !== undefined && {
+        photonUrl: patch.photonUrl || null,
+      }),
+      ...(patch.nominatimUrl !== undefined && {
+        nominatimUrl: patch.nominatimUrl || null,
+      }),
       ...(patch.betaFeaturesEnabled !== undefined && {
         betaFeaturesEnabled: patch.betaFeaturesEnabled,
       }),
     },
   });
-  logger.info({ operation: "instance_settings_updated", fields: Object.keys(patch) });
+  logger.info({
+    operation: "instance_settings_updated",
+    fields: Object.keys(patch),
+  });
   return getInstanceSettings();
+}
+
+/**
+ * Single source of truth for resolving geocoder endpoints — consumed by
+ * `services/geo/nominatim.ts` (one-shot reverse/forward geocode) and the
+ * Photon search service (Task 2). Delegates entirely to
+ * `getInstanceSettings()` so the DB > ENV > default resolution order never
+ * drifts between the two callers.
+ */
+export async function resolveGeocoderUrls(): Promise<{
+  photonUrl: string;
+  nominatimUrl: string;
+}> {
+  const { photonUrl, nominatimUrl } = await getInstanceSettings();
+  return { photonUrl, nominatimUrl };
 }
 
 /**
@@ -130,7 +183,9 @@ export async function getWebDAVSettings(): Promise<WebDAVSettings> {
   const row = await ensureAdminSettings();
 
   const dbPasswordEncrypted = row.webdavPasswordEncrypted;
-  const dbPassword = dbPasswordEncrypted ? decryptApiKey(dbPasswordEncrypted) : null;
+  const dbPassword = dbPasswordEncrypted
+    ? decryptApiKey(dbPasswordEncrypted)
+    : null;
 
   const envPassword = process.env.WEBDAV_PASSWORD || null;
 
@@ -148,7 +203,9 @@ export async function getWebDAVSettings(): Promise<WebDAVSettings> {
 }
 
 export async function updateWebDAVSettings(
-  patch: Partial<Omit<WebDAVSettings, "password">> & { password?: string | null },
+  patch: Partial<Omit<WebDAVSettings, "password">> & {
+    password?: string | null;
+  },
 ): Promise<WebDAVSettings> {
   const row = await ensureAdminSettings();
 
@@ -164,7 +221,9 @@ export async function updateWebDAVSettings(
     data: {
       ...(patch.enabled !== undefined && { webdavSyncEnabled: patch.enabled }),
       ...(patch.url !== undefined && { webdavUrl: patch.url || null }),
-      ...(patch.username !== undefined && { webdavUsername: patch.username || null }),
+      ...(patch.username !== undefined && {
+        webdavUsername: patch.username || null,
+      }),
       ...(nextPasswordEncrypted !== undefined && {
         webdavPasswordEncrypted: nextPasswordEncrypted,
       }),
@@ -173,6 +232,9 @@ export async function updateWebDAVSettings(
       }),
     },
   });
-  logger.info({ operation: "webdav_settings_updated", fields: Object.keys(patch) });
+  logger.info({
+    operation: "webdav_settings_updated",
+    fields: Object.keys(patch),
+  });
   return getWebDAVSettings();
 }

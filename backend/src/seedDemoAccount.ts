@@ -21,11 +21,13 @@
  *   - Achievements recomputed at the end
  */
 
+import { randomUUID } from "crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import { hashPassword } from "./utils/password";
 import { checkAndUpdateAchievements } from "./utils/achievements";
 import { calculateCo2Kg, toSeatClass } from "./services/co2Calculator";
+import { linkRowsFor, resolveCompanions } from "./services/companionService";
 
 type AirportRow = {
   id: number;
@@ -445,17 +447,33 @@ async function wipeDemoUser(userId: string): Promise<void> {
   await prisma.analyticsEvent.deleteMany({ where: { userId } });
 }
 
-async function ensureUser(): Promise<string> {
+export async function ensureUser(): Promise<string> {
   const existing = await prisma.user.findUnique({
     where: { username: DEMO_USERNAME },
   });
   if (existing) {
     await wipeDemoUser(existing.id);
+    // Heal a row seeded before the flag was set here — see below. Without this
+    // the repair only reaches installs that delete the demo user first.
+    if (!existing.isDemo) {
+      await prisma.user.update({ where: { id: existing.id }, data: { isDemo: true } });
+    }
     return existing.id;
   }
   const passwordHash = await hashPassword(DEMO_PASSWORD);
   const user = await prisma.user.create({
-    data: { username: DEMO_USERNAME, passwordHash, mustChangePassword: false },
+    data: {
+      username: DEMO_USERNAME,
+      passwordHash,
+      mustChangePassword: false,
+      // This seeder is the one the Docker entrypoint runs (CREATE_DEMO_USER),
+      // and it did NOT set the flag, while the other demo seeder
+      // (seedDemoUser) always has. Measured on a production install: the demo
+      // account existed with is_demo = false, so its 160 sample flights and 22
+      // sample cruises counted as real data in the instance-wide statistics,
+      // and the demo guards in routes/flights.ts did not apply to it either.
+      isDemo: true,
+    },
   });
   return user.id;
 }
@@ -515,7 +533,15 @@ export async function loadPools(): Promise<{
   return { airports, ships, ports };
 }
 
-type FlightSeed = Omit<Prisma.FlightCreateManyInput, "userId" | "id">;
+// `companions` is narrowed back to `string[]` (Prisma's CreateManyInput
+// widens scalar-list fields to `FlightCreatecompanionsInput | string[]`) so
+// callers can read it directly when resolving companion links after the
+// bulk insert. `id` is client-generated up front (see buildFlightRow) so
+// links can be created without a round trip to re-fetch the inserted rows.
+type FlightSeed = Omit<Prisma.FlightCreateManyInput, "userId" | "id" | "companions"> & {
+  id: string;
+  companions: string[];
+};
 
 function buildFlightRow(
   dep: AirportRow,
@@ -548,6 +574,7 @@ function buildFlightRow(
   const flightNum = String(100 + r(8900));
 
   return {
+    id: randomUUID(),
     airline: airline.name,
     operatingAirline,
     flightNumber: airline.prefix + flightNum,
@@ -693,7 +720,33 @@ async function seedFlights(userId: string, airports: Map<string, AirportRow>): P
   await prisma.flight.createMany({
     data: rows.map((r) => ({ ...r, userId })),
   });
+  await linkFlightCompanions(userId, rows);
   console.log(`   → created ${rows.length} flights`);
+}
+
+// Dual write, same as the live create/update/merge routes: resolve each
+// flight's raw companion names to Companion entities and write the join
+// rows too. Without this a freshly seeded instance shows companion chips
+// (from the legacy array) but an empty suggestion list until something else
+// happens to run the backfill -- reads as a bug in the feature, not a seed
+// gap. Ids are client-generated in buildFlightRow so this can run straight
+// off the in-memory rows, no re-fetch needed.
+async function linkFlightCompanions(userId: string, rows: FlightSeed[]): Promise<void> {
+  const linkRows: Prisma.FlightCompanionCreateManyInput[] = [];
+  for (const row of rows) {
+    if (row.companions.length === 0) continue;
+    const resolved = await resolveCompanions(userId, row.companions);
+    linkRows.push(
+      ...linkRowsFor(resolved.map((c) => c.id)).map((link) => ({
+        flightId: row.id,
+        companionId: link.companionId,
+        position: link.position,
+      })),
+    );
+  }
+  if (linkRows.length > 0) {
+    await prisma.flightCompanion.createMany({ data: linkRows, skipDuplicates: true });
+  }
 }
 
 export async function seedCruises(
@@ -769,6 +822,22 @@ export async function seedCruises(
         parserConfidence: null,
       },
     });
+
+    // Dual write, same as the live create/update routes: resolve the
+    // template's raw companion names to Companion entities and write the
+    // join rows too, otherwise a freshly seeded instance shows companion
+    // chips but an empty suggestion list.
+    if (tpl.companions.length > 0) {
+      const resolved = await resolveCompanions(userId, tpl.companions);
+      await prisma.cruiseCompanion.createMany({
+        data: linkRowsFor(resolved.map((c) => c.id)).map((link) => ({
+          cruiseId: cruise.id,
+          companionId: link.companionId,
+          position: link.position,
+        })),
+        skipDuplicates: true,
+      });
+    }
 
     // Create stops. Renumber consecutively; sea days are `isAtSea=true,
     // portId=null` — matches the Zod union.

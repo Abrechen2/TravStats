@@ -9,6 +9,9 @@ import DiagnosticExportModal from "./DiagnosticExportModal";
 import { LogoMark, LogoWordmark } from "./Brand/Logo";
 import UpdateBadge from "./UpdateBadge";
 import NavDropdown, { type ExternalLink } from "./Nav/NavDropdown";
+import UserMenu from "./Nav/UserMenu";
+import { displayName } from "../lib/userDisplay";
+import { useSettingsStore } from "../store/settingsStore";
 import { useNavItems, isPathActive, type NavLeaf } from "./Nav/useNavItems";
 
 function DesktopLeaf({ node, pathname }: { node: NavLeaf; pathname: string }): JSX.Element {
@@ -98,9 +101,12 @@ function MobileLeaf({
 
 export default function NavigationBar(): JSX.Element {
   const { user, logout } = useAuthStore();
+  // The avatar comes from the settings profile (the picture already had an
+  // upload path long before #241); the name comes from the auth payload.
+  const profilePicture = useSettingsStore((state) => state.profile.profilePicture);
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useTranslation(["dashboard", "common", "cruise", "trips"]);
+  const { t } = useTranslation(["dashboard", "common", "cruise", "trips", "lodging"]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pendingUpdatesCount, setPendingUpdatesCount] = useState(0);
   const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
@@ -284,12 +290,13 @@ export default function NavigationBar(): JSX.Element {
                   })()
                 )}
               </div>
-              <span className="hidden xl:inline text-sm" style={{ color: "var(--text-muted)" }}>
-                {user?.username}
-              </span>
-              <button onClick={handleLogout} className="btn-secondary px-3 py-1.5 text-sm">
-                {t("dashboard:logout")}
-              </button>
+              <UserMenu
+                user={user}
+                profilePicture={profilePicture}
+                onLogout={() => {
+                  handleLogout().catch(() => undefined);
+                }}
+              />
             </div>
           </div>
         </div>
@@ -456,8 +463,15 @@ export default function NavigationBar(): JSX.Element {
               </a>
             </div>
             <div className="text-sm mb-3" style={{ color: "var(--text-muted)" }}>
-              {user?.username}
+              {displayName(user)}
             </div>
+            <Link
+              to="/settings?tab=general&section=profile"
+              onClick={() => setMobileMenuOpen(false)}
+              className="btn-secondary w-full text-sm mb-2 block text-center"
+            >
+              {t("settings:profile.editProfile", { defaultValue: "Profil bearbeiten" })}
+            </Link>
             <button
               onClick={() => {
                 handleLogout().catch(() => undefined);

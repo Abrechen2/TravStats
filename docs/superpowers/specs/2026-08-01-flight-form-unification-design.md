@@ -135,3 +135,105 @@ Unifying means both appear in edit too.
 
 Green tests are not sufficient evidence here — three of the errors this audit
 found were invisible to the test suite and visible on screen.
+
+---
+
+## Verified inventory (2026-08-01, after the companion entity landed)
+
+Assembled twice independently — once by reading the repo directly, once by a cold
+Codex pass — and reconciled. Each side found things the other missed, and each
+side got something wrong. The list below is what survived checking.
+
+### Mount points and payload builders
+
+The create form is mounted from **three** places, not one:
+`pages/FlightsTablePage.tsx`, `components/Dashboard/DashboardLayout.tsx:89` and
+`components/Dashboard/tabs/FlightsTab.tsx:302`. (The cold pass claimed only the
+first; the other two were verified by reading the imports.)
+
+Flight payloads are additionally built outside any form by:
+- `lib/flightDuplicate.ts` — "duplicate same / return", swapping airports for the
+  return leg
+- `components/Cruise/CruiseImportPreviewModal.tsx` — the cruise import creates
+  flights through `flightsApi` with `FlightInput[]`
+- `components/SpecialFlightModal.tsx` — calls both create and update
+- `pages/FlightsTablePage.tsx` — owns `handleAddFlight` / `handleUpdate` and the
+  duplicate-row POST
+
+`DashboardLayout` and `FlightsTab` import only `type { FlightSubmitOptions }`
+from `useFlightForm`; the hook itself is used solely by `SimplifiedFlightFormV2`.
+
+> **Correction (2026-08-02, found by the phase 2 gate's grep proof).** This
+> inventory missed a form. `components/FlightReviewModal.tsx` (772 lines,
+> mounted from `SimplifiedFlightFormV2.tsx:249`) is a THIRD flight form — the
+> parser-review step — and it renders its own airport pickers, booking
+> reference, ticket number, price, taxes and fees inputs, none of them from
+> `FlightForm/fields/`. Both passes that built this list read past it, so
+> "unification" as scoped by phases 1 and 2 covers two of three forms.
+> Absorbing the third is not a mechanical swap: its inputs carry parser
+> decoration the shared components do not model — a per-field source border
+> (`getFieldBorderClass`: template/llm/empty), the inferred-value badge, and
+> the confidence colouring. That needs its own spec pass, and the decision to
+> take it on is separate from shipping these two phases.
+
+### The API contract is already what the unified form needs
+
+Both POST and PUT take `departure` / `arrival` **objects** with required
+`lat`/`lon` and optional `iata`/`icao`/`name`, and times as local wall-clock plus
+IANA zone: `departureLocal`+`depTimezone`, `arrivalLocal`+`arrTimezone`. The
+paired timezone is required whenever the local string is present. The server
+converts with `fromZonedTime`.
+
+**Both existing paths already emit exactly these field names.** An earlier
+reading of this file suggested edit sent `departureTimezone`/`arrivalTimezone`;
+that was wrong — those names belong to the local helper
+`estimateArrivalFromDeparture`, not to the payload. The unification therefore
+does NOT need a new conversion: create already composes the combined string from
+separate fields via `buildLocalString(date, time)`, which is precisely what edit
+will need after the split.
+
+PUT already accepts changed airports and recomputes status, CO₂, route distance,
+the next API-check time, and `delayMinutes`.
+
+### Where the two paths genuinely diverge
+
+1. Create emits `depTimeSemantics` / `arrTimeSemantics` from
+   `historicalDateShape()` for partial historical dates. Edit has no equivalent.
+2. Create assumes airport-local from the outset. Edit starts from a stored UTC
+   instant and preserves it only by pairing the displayed string with the
+   timezone basis used to display it.
+3. Edit's timezone source is the existing flight's airport codes. Once airports
+   become editable, the source becomes the user's selection — the zone must
+   follow the airport the user picks, not the one the flight was stored with.
+
+### More fields that exist but are rendered nowhere
+
+Beyond the four already known (`baggageAllowance`, `frequentFlyerNumber`,
+`bookingClassLetter`, `coPassengers`):
+
+- `actualDepartureLocal` / `actualArrivalLocal` are accepted by the API **and
+  already have DE and EN i18n keys** — issue #200's groundwork is further along
+  than assumed; only the controls are missing.
+- `airlineIata`, `airlineIcao`, `operatingAirlineIata`, `operatingAirlineIcao`,
+  `callsign`, `aircraftRegistration`, `aircraftModeS`, `depTimeSemantics`,
+  `arrTimeSemantics` are persisted and never exposed.
+
+### Tests that will break, by construction
+
+`__tests__/SimplifiedFlightFormV2.test.tsx`,
+`__tests__/components/FlightEditModal.test.tsx` (hard-codes the element ids
+`#editDepartureTime` / `#editArrivalTime` and asserts save payloads),
+`FlightForm/useFlightForm.bookingFields.test.ts`,
+`FlightForm/useFlightForm.dateShape.test.ts`,
+`FlightForm/FlightCompleteStep.status.test.tsx`,
+`__tests__/flightsApiCreate.test.ts`, `backend/src/__tests__/flights.test.ts`,
+and `e2e/flights.spec.ts`. No snapshot tests were found.
+
+### What this does to the risk estimate
+
+Lower than the spec first assumed. The riskiest part — the timezone mechanism —
+needs no new conversion logic, only the same one applied on both sides, plus one
+new rule: hydration must move the date field and the time field **together**, and
+submit must pair both with one basis. Splitting them apart is what produces a
+value that is half browser-local and half airport-local, which stays invisible
+wherever the two zones happen to agree.

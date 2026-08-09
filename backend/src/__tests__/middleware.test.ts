@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { Request, Response, NextFunction } from 'express';
-import { errorHandler, AppError } from '../middleware/errorHandler';
+import { errorHandler, AppError, type ApiError } from '../middleware/errorHandler';
 import { ZodError, z } from 'zod';
+import logger from '../utils/logger';
 
 // Mock logger
 jest.mock('../utils/logger', () => ({
@@ -29,6 +30,9 @@ describe('Middleware Tests', () => {
     let statusMock: any;
 
     beforeEach(() => {
+      // The level assertions below count calls on the shared logger mock, so
+      // it has to start each test empty.
+      jest.clearAllMocks();
       jsonMock = jest.fn();
       statusMock = jest.fn().mockReturnValue({ json: jsonMock });
 
@@ -48,6 +52,110 @@ describe('Middleware Tests', () => {
         json: jsonMock,
       };
       mockNext = jest.fn();
+    });
+
+    // Issue #245. The handler computed `statusCode` into the log context and
+    // then logged everything at error level regardless. A 4xx describes a
+    // CLIENT mistake, so the error log stopped answering "is anything broken?"
+    // — measured on prod, its entire HTTP content was five 401s and two 400s
+    // and it had never held a 5xx. It also meant anyone who could reach the
+    // port could append to the error log indefinitely, unauthenticated, each
+    // entry carrying their IP, user agent and query string.
+    describe('log level follows the status code (#245)', () => {
+      it('logs a 401 at warn, not error', async () => {
+        await errorHandler(
+          new AppError('Not authenticated', 401),
+          mockReq as Request,
+          mockRes as Response,
+          mockNext
+        );
+
+        expect(logger.warn).toHaveBeenCalled();
+        expect(logger.error).not.toHaveBeenCalled();
+      });
+
+      it('logs a 404 and a 429 at warn, not error', async () => {
+        await errorHandler(
+          new AppError('Not found', 404),
+          mockReq as Request,
+          mockRes as Response,
+          mockNext
+        );
+        await errorHandler(
+          new AppError('Too many requests', 429),
+          mockReq as Request,
+          mockRes as Response,
+          mockNext
+        );
+
+        expect(logger.error).not.toHaveBeenCalled();
+        expect(logger.warn).toHaveBeenCalledTimes(2);
+      });
+
+      it('logs a validation error at warn, not error', async () => {
+        const schema = z.object({ name: z.string() });
+        let zodError: ZodError | undefined;
+        try {
+          schema.parse({ name: 42 });
+        } catch (e) {
+          zodError = e as ZodError;
+        }
+
+        await errorHandler(
+          zodError as ZodError,
+          mockReq as Request,
+          mockRes as Response,
+          mockNext
+        );
+
+        expect(logger.warn).toHaveBeenCalled();
+        expect(logger.error).not.toHaveBeenCalled();
+      });
+
+      it('still logs a 500 at error', async () => {
+        await errorHandler(
+          new AppError('Internal error', 500),
+          mockReq as Request,
+          mockRes as Response,
+          mockNext
+        );
+
+        expect(logger.error).toHaveBeenCalled();
+        expect(logger.warn).not.toHaveBeenCalled();
+      });
+
+      it('logs an error carrying no status code at error, not warn', async () => {
+        // An uncategorised throw is a server fault until proven otherwise —
+        // defaulting it to warn would hide exactly what this log is for.
+        await errorHandler(
+          new Error('boom') as ApiError,
+          mockReq as Request,
+          mockRes as Response,
+          mockNext
+        );
+
+        expect(logger.error).toHaveBeenCalled();
+        expect(logger.warn).not.toHaveBeenCalled();
+      });
+
+      it('keeps the same fields on the downgraded entry, so log tooling still works', async () => {
+        await errorHandler(
+          new AppError('Not authenticated', 401),
+          mockReq as Request,
+          mockRes as Response,
+          mockNext
+        );
+
+        const entry = (logger.warn as jest.Mock).mock.calls[0][0] as {
+          category: string;
+          operation: string;
+          context: { statusCode: number; errorCategory: string; ip: string };
+        };
+        expect(entry.category).toBe('error');
+        expect(entry.operation).toBe('error_handler');
+        expect(entry.context.statusCode).toBe(401);
+        expect(entry.context.errorCategory).toBe('auth_error');
+      });
     });
 
     describe('AppError', () => {
@@ -176,6 +284,9 @@ describe('Middleware Tests', () => {
       });
     });
 
+    // This suite asserts CATEGORISATION. The 4xx cases moved from `error` to
+    // `warn` with #245 — the category each entry carries is unchanged, only
+    // the level it is written at.
     describe('Error Categorization', () => {
       it('should log different error categories', async () => {
         const logger = await import('../utils/logger');
@@ -187,7 +298,7 @@ describe('Middleware Tests', () => {
           mockRes as Response,
           mockNext
         );
-        expect(logger.default.error).toHaveBeenCalledWith(
+        expect(logger.default.warn).toHaveBeenCalledWith(
           expect.objectContaining({
             context: expect.objectContaining({
               errorCategory: 'auth_error',
@@ -202,7 +313,7 @@ describe('Middleware Tests', () => {
           mockRes as Response,
           mockNext
         );
-        expect(logger.default.error).toHaveBeenCalledWith(
+        expect(logger.default.warn).toHaveBeenCalledWith(
           expect.objectContaining({
             context: expect.objectContaining({
               errorCategory: 'forbidden_error',
@@ -217,7 +328,7 @@ describe('Middleware Tests', () => {
           mockRes as Response,
           mockNext
         );
-        expect(logger.default.error).toHaveBeenCalledWith(
+        expect(logger.default.warn).toHaveBeenCalledWith(
           expect.objectContaining({
             context: expect.objectContaining({
               errorCategory: 'not_found_error',
