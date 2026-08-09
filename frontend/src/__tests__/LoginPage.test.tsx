@@ -10,6 +10,14 @@ vi.mock("../lib/api", () => ({
     getSmtpStatus: vi.fn().mockResolvedValue({ smtpEnabled: false, adminContactEmail: null }),
     forgotPassword: vi.fn(),
   },
+  // The page asks on mount whether passkeys are possible. Default to "no" here
+  // so these cases keep testing the password form; the passkey button has its
+  // own suite.
+  passkeyApi: {
+    availability: vi.fn().mockResolvedValue({ available: false, reason: "notConfigured" }),
+    loginOptions: vi.fn(),
+    loginVerify: vi.fn(),
+  },
 }));
 vi.mock("../store/authStore");
 

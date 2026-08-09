@@ -16,6 +16,8 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
 vi.mock("qrcode.react", () => ({ QRCodeSVG: () => <svg data-testid="qr" /> }));
+// Passkeys are their own feature with their own suite; this one is about TOTP.
+vi.mock("../PasskeySection", () => ({ default: () => <div data-testid="passkeys" /> }));
 
 import SecuritySection from "../SecuritySection";
 
