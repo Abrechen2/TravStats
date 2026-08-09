@@ -789,5 +789,25 @@
       "labelRequired": "Beschreibung ist erforderlich"
     }
   },
+  "security": {
+    "title": "Sicherheit",
+    "description": "Schütze die Anmeldung zusätzlich mit einem Einmalcode aus einer Authenticator-App. Freiwillig — ohne Einrichtung ändert sich an deiner Anmeldung nichts.",
+    "enable": "Zwei-Faktor aktivieren",
+    "scanHint": "Scanne den QR-Code mit deiner Authenticator-App.",
+    "manualHint": "Falls du nicht scannen kannst, gib diesen Schlüssel von Hand ein:",
+    "codeLabel": "Code aus der App",
+    "activate": "Aktivieren",
+    "wrongCode": "Der Code stimmt nicht.",
+    "setupFailed": "Die Einrichtung konnte nicht gestartet werden.",
+    "saveCodes": "Bewahre diese Wiederherstellungscodes sicher auf. Die Anzeige erfolgt nur dieses eine Mal, und jeder Code funktioniert genau einmal.",
+    "enabled": "Zwei-Faktor ist aktiv. Noch {{count}} Wiederherstellungscodes übrig.",
+    "tokenWarning": "Hinweis: API-Tokens umgehen den zweiten Faktor. Wer ein Token besitzt, kommt ohne Code hinein — widerrufe nicht mehr benötigte Tokens unter „API-Tokens\".",
+    "regenerate": "Neue Wiederherstellungscodes",
+    "confirmRegenerate": "Codes neu erzeugen",
+    "disable": "Zwei-Faktor deaktivieren",
+    "confirmDisable": "Deaktivieren",
+    "passwordLabel": "Passwort zur Bestätigung",
+    "wrongPassword": "Das Passwort stimmt nicht."
+  },
   "scopeHint": "Gilt nur für dein Konto."
 }
