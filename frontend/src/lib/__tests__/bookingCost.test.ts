@@ -117,6 +117,58 @@ describe("tripCostSources", () => {
     expect(sumByCurrency(sources)).toEqual([]);
   });
 
+  // A stay priced only per night used to contribute NOTHING to the total —
+  // visibly priced on its own page, invisible in the trip sum.
+  it("falls back to per-night × nights when no total was typed", () => {
+    const sources = tripCostSources(
+      [],
+      [],
+      [],
+      [
+        {
+          totalPrice: null,
+          pricePerNight: 140,
+          checkIn: "2026-05-01T00:00:00.000Z",
+          checkOut: "2026-05-04T00:00:00.000Z",
+          currency: "EUR",
+          bookingId: null,
+        },
+      ]
+    );
+    expect(sumByCurrency(sources)).toEqual([{ currency: "EUR", total: 420 }]);
+  });
+
+  it("prefers the typed total over the per-night derivation", () => {
+    const sources = tripCostSources(
+      [],
+      [],
+      [],
+      [
+        {
+          // Deliberately different from 3 × 140: the typed figure wins, e.g. a
+          // package rate that is not nights × rack rate.
+          totalPrice: 399,
+          pricePerNight: 140,
+          checkIn: "2026-05-01T00:00:00.000Z",
+          checkOut: "2026-05-04T00:00:00.000Z",
+          currency: "EUR",
+          bookingId: null,
+        },
+      ]
+    );
+    expect(sumByCurrency(sources)).toEqual([{ currency: "EUR", total: 399 }]);
+  });
+
+  it("contributes nothing for a per-night price without dates", () => {
+    const sources = tripCostSources(
+      [],
+      [],
+      [],
+      [{ totalPrice: null, pricePerNight: 140, currency: "EUR", bookingId: null }]
+    );
+    expect(sumByCurrency(sources)).toEqual([]);
+  });
+
   it("adds flights, cruises and stays together in one currency", () => {
     const sources = tripCostSources(
       [{ price: 100, currency: "EUR" }],
