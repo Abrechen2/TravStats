@@ -4,6 +4,28 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.5.1] - 2026-08-09
+
+Patch release. Three fixes, no database changes.
+
+### Fixed
+- **The aeroplane between two airports flew nose-down.** The glyph in the flight
+  table's route column was rotated by a further 45 degrees although it already
+  points due east, so a page of flights read as a page of crashes. It flies level
+  now.
+- **An ordinary action wrote to the error log.** Adding a companion you already
+  have was implemented as "create the record, and put it right when that fails",
+  so normal use filled the error log with entries that described nothing wrong —
+  83 of them on a single start. It is one operation now, and the log stays quiet.
+- **A mistake in a request is no longer recorded as a fault of the server.** A
+  rejected form or an expired session was written at error level, exactly like a
+  crash, so the log could not answer whether anything was actually broken — and
+  anyone who could reach the port could make it grow without logging in. Genuine
+  server faults still log as errors; everything below them is a warning.
+
+### Upgrade notes
+- No database migrations in this release.
+
 ## [2.5.0] - 2026-08-09
 
 Large minor release. Trips can pull in your Immich photo albums, travel
