@@ -33,7 +33,9 @@ describe('GET /api/v1/stats/countries', () => {
     app.use('/api/v1/stats', statsRoutes);
   });
 
-  it('returns countries ranked by departure flight count', async () => {
+  // These fixtures carry no arrival airports, so each flight touches exactly
+  // one country — the ranking behaviour this asserts is unchanged by #233.
+  it('ranks countries by how many flights touched them', async () => {
     mockFindMany.mockResolvedValue([
       { depIata: 'FRA', depIcao: null },
       { depIata: 'MUC', depIcao: null },
@@ -176,5 +178,86 @@ describe('GET /api/v1/stats/countries', () => {
       const res = await request(app).get('/api/v1/stats/countries');
       expect(res.body.byYear['2026']).toEqual(['DE', 'GB']);
     });
+  });
+});
+
+describe('GET /api/v1/stats/countries — counts countries VISITED (#233)', () => {
+  let app: express.Express;
+
+  beforeEach(async () => {
+    jest.resetModules();
+    const { default: statsRoutes } = await import('./stats');
+    app = express();
+    app.use(express.json());
+    app.use('/api/v1/stats', statsRoutes);
+  });
+
+  it('counts the destination country too, not only the departure', async () => {
+    // The reported case: one flight FRA -> LHR reported "Länder besucht: 1"
+    // and the United Kingdom appeared nowhere. The KPI is labelled
+    // "countries VISITED"; landing somewhere is the clearest way to visit it.
+    mockFindMany.mockResolvedValue([
+      { depIata: 'FRA', depIcao: null, arrIata: 'LHR', arrIcao: null, departureTime: null },
+    ]);
+    mockGetCachedAirports.mockResolvedValue(
+      new Map([
+        ['FRA', { country: 'Germany' }],
+        ['LHR', { country: 'United Kingdom' }],
+      ])
+    );
+
+    const res = await request(app).get('/api/v1/stats/countries');
+    expect(res.status).toBe(200);
+    expect(res.body.countriesIso.sort()).toEqual(['DE', 'GB']);
+  });
+
+  it('counts a country once per flight even when both ends are in it', async () => {
+    // A domestic leg is one visit to Germany, not two.
+    mockFindMany.mockResolvedValue([
+      { depIata: 'FRA', depIcao: null, arrIata: 'MUC', arrIcao: null, departureTime: null },
+    ]);
+    mockGetCachedAirports.mockResolvedValue(
+      new Map([
+        ['FRA', { country: 'Germany' }],
+        ['MUC', { country: 'Germany' }],
+      ])
+    );
+
+    const res = await request(app).get('/api/v1/stats/countries');
+    const de = res.body.countries.find((c: { country: string }) => c.country === 'Germany');
+    expect(de.count).toBe(1);
+    expect(res.body.countriesIso).toEqual(['DE']);
+  });
+
+  it('puts BOTH endpoints in the flight year bucket', async () => {
+    mockFindMany.mockResolvedValue([
+      {
+        depIata: 'FRA',
+        depIcao: null,
+        arrIata: 'LHR',
+        arrIcao: null,
+        departureTime: new Date('2026-03-04T10:00:00.000Z'),
+      },
+    ]);
+    mockGetCachedAirports.mockResolvedValue(
+      new Map([
+        ['FRA', { country: 'Germany', timezone: 'Europe/Berlin' }],
+        ['LHR', { country: 'United Kingdom', timezone: 'Europe/London' }],
+      ])
+    );
+
+    const res = await request(app).get('/api/v1/stats/countries');
+    expect(res.body.byYear['2026'].sort()).toEqual(['DE', 'GB']);
+  });
+
+  it('still works when a flight has no arrival airport on file', async () => {
+    mockFindMany.mockResolvedValue([
+      { depIata: 'FRA', depIcao: null, arrIata: null, arrIcao: null, departureTime: null },
+    ]);
+    mockGetCachedAirports.mockResolvedValue(new Map([['FRA', { country: 'Germany' }]]));
+
+    const res = await request(app).get('/api/v1/stats/countries');
+    expect(res.status).toBe(200);
+    expect(res.body.countriesIso).toEqual(['DE']);
   });
 });
