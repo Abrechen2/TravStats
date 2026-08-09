@@ -44,7 +44,7 @@
   "license": "AGPL-3.0-only",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",
-    "@asteasolutions/zod-to-openapi": "^7.3.4",
+    "@asteasolutions/zod-to-openapi": "^9.1.0",
     "@kenjiuno/msgreader": "^1.28.0",
     "@prisma/client": "^5.7.0",
     "@simplewebauthn/server": "^13.3.2",
