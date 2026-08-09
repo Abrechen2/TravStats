@@ -42,8 +42,39 @@ type PricedItem = BookingCostInput & { bookingId?: string | null };
  */
 export interface LodgingCostInput {
   totalPrice?: number | null;
+  /** Fallback source when no total was typed. Both fields are hand-entered
+   *  today; the planned per-night derivation (total ÷ nights) will make
+   *  `totalPrice` the single source of truth and retire this arm. */
+  pricePerNight?: number | null;
+  checkIn?: string | Date | null;
+  checkOut?: string | Date | null;
   currency?: string | null;
   bookingId?: string | null;
+}
+
+/** Whole nights between check-in and check-out. Rounded, not floored: the
+ *  stamps are hotel-local calendar dates and a DST hour must not eat a night. */
+function nightsOf(stay: LodgingCostInput): number {
+  if (!stay.checkIn || !stay.checkOut) return 0;
+  const inMs = new Date(stay.checkIn).getTime();
+  const outMs = new Date(stay.checkOut).getTime();
+  if (Number.isNaN(inMs) || Number.isNaN(outMs)) return 0;
+  return Math.max(0, Math.round((outMs - inMs) / 86_400_000));
+}
+
+/**
+ * What a stay contributes to the trip total: the typed total when there is
+ * one, otherwise per-night × nights. A stay with only a per-night price used
+ * to contribute NOTHING — visibly priced on its own page, invisible in the
+ * trip sum.
+ */
+export function stayCost(stay: LodgingCostInput): number | null {
+  if (stay.totalPrice != null && stay.totalPrice > 0) return stay.totalPrice;
+  if (stay.pricePerNight != null && stay.pricePerNight > 0) {
+    const nights = nightsOf(stay);
+    if (nights > 0) return stay.pricePerNight * nights;
+  }
+  return null;
 }
 
 /**
@@ -68,7 +99,7 @@ export function tripCostSources(
   const unbooked = <T extends { bookingId?: string | null }>(items: T[]): T[] =>
     items.filter((i) => !i.bookingId);
   const stayPrices: PricedItem[] = unbooked(stays).map((s) => ({
-    price: s.totalPrice,
+    price: stayCost(s),
     currency: s.currency,
   }));
   return [...bookings, ...unbooked(flights), ...unbooked(cruises), ...stayPrices];

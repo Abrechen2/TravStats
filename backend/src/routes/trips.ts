@@ -284,6 +284,9 @@ router.get(
               checkOut: true,
               status: true,
               totalPrice: true,
+              // Fallback for the total when no totalPrice was typed:
+              // per-night × nights, derived on the card.
+              pricePerNight: true,
               currency: true,
               bookingId: true,
             },
