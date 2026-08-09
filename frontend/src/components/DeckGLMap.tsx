@@ -2,7 +2,8 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import MapGL, { useControl, type MapRef, type MapLayerMouseEvent } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { createMarkerTooltip } from "./map/markerTooltip";
-import { LightingEffect } from "@deck.gl/core";
+import { LightingEffect, type PickingInfo } from "@deck.gl/core";
+import { useDeckHoverCursor } from "../hooks/useDeckHoverCursor";
 import { useTranslation } from "../hooks/useTranslation";
 import { applyMapOverlays } from "./Globe/mapOverlays";
 import { FlatMapControlPanel } from "./map/FlatMapControlPanel";
@@ -79,9 +80,10 @@ interface DeckOverlayProps {
   layers: Layer[];
   effects: LightingEffect[];
   getTooltip: ReturnType<typeof createMarkerTooltip>;
+  onHover: (info: PickingInfo) => void;
 }
 
-function DeckGLOverlay({ layers, effects, getTooltip }: DeckOverlayProps): null {
+function DeckGLOverlay({ layers, effects, getTooltip, onHover }: DeckOverlayProps): null {
   const overlay = useControl<MapboxOverlay>(
     () =>
       new MapboxOverlay({
@@ -89,12 +91,14 @@ function DeckGLOverlay({ layers, effects, getTooltip }: DeckOverlayProps): null 
         effects,
         pickingRadius: 5,
         getTooltip,
+        onHover,
       }),
     { position: "top-left" }
   );
   // Push getTooltip on every render too so language switches propagate
-  // — MapboxOverlay caches the constructor's getTooltip otherwise.
-  overlay.setProps({ layers, effects, pickingRadius: 5, getTooltip });
+  // — MapboxOverlay caches the constructor's getTooltip otherwise. `onHover`
+  // rides along for the same reason.
+  overlay.setProps({ layers, effects, pickingRadius: 5, getTooltip, onHover });
   return null;
 }
 
@@ -181,6 +185,10 @@ export function DeckGLMap({
   const setCruiseColorMode = useCruiseColorStore((s) => s.setMode);
   const setCruiseColor = useCruiseColorStore((s) => s.setColor);
   const mapRef = useRef<MapRef>(null);
+
+  // Hand cursor over any pickable deck object — airports, ports, lodging pins
+  // (#247). Driven by picking, so it needs no per-layer wiring.
+  const { isHovering, onHover: onDeckHover } = useDeckHoverCursor();
 
   const [mapLoaded, setMapLoaded] = useState(false);
   // Flat-map appearance customisation (mirrors the globe's "Anpassung"
@@ -799,13 +807,14 @@ export function DeckGLMap({
         onMove={handleMapMove}
         onClick={handleNativeClick}
         interactiveLayerIds={nativeInteractiveIds}
-        cursor={nativeInteractiveIds ? "pointer" : undefined}
+        cursor={isHovering || nativeInteractiveIds ? "pointer" : undefined}
       >
         {webgl2Available && mapLoaded && (
           <DeckGLOverlay
             layers={[...layers, ...pulseLayers, ...planeLayers]}
             effects={effects}
             getTooltip={getTooltip}
+            onHover={onDeckHover}
           />
         )}
         {!webgl2Available && visMode === "routes" && (

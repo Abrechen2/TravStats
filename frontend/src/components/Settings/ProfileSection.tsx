@@ -9,6 +9,10 @@ interface ProfileSectionProps {
     email: string;
     profilePicture?: string;
     birthdate?: string | null;
+    // Real name (#241) — optional, and shown next to the username because one
+    // identifies you to the instance while the other is how you are addressed.
+    firstName?: string | null;
+    lastName?: string | null;
   };
   savingProfile: boolean;
   uploadingProfilePicture: boolean;
@@ -16,7 +20,13 @@ interface ProfileSectionProps {
   onSaveProfile: () => void;
   onAvatarUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onAvatarDelete: () => void;
-  onSetProfile: (partial: { username?: string; email?: string; birthdate?: string | null }) => void;
+  onSetProfile: (partial: {
+    username?: string;
+    email?: string;
+    birthdate?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+  }) => void;
   onShowPasswordModal: () => void;
 }
 
@@ -158,6 +168,26 @@ export default function ProfileSection({
             value={profile.username}
             onChange={(e) => onSetProfile({ username: e.target.value })}
             className="input"
+          />
+        </div>
+        <div>
+          <label className="label">{t("settings:profile.firstName")}</label>
+          <input
+            type="text"
+            value={profile.firstName ?? ""}
+            onChange={(e) => onSetProfile({ firstName: e.target.value })}
+            className="input"
+            autoComplete="given-name"
+          />
+        </div>
+        <div>
+          <label className="label">{t("settings:profile.lastName")}</label>
+          <input
+            type="text"
+            value={profile.lastName ?? ""}
+            onChange={(e) => onSetProfile({ lastName: e.target.value })}
+            className="input"
+            autoComplete="family-name"
           />
         </div>
         <div>
