@@ -77,7 +77,7 @@ function ensureStay(row: EditableRow): NonNullable<EditableRow["stay"]> {
  * building the payload, so a touch-then-clear on a places-only row is a
  * genuine no-op rather than a dead end.
  */
-function isEmptyStay(stay: NonNullable<EditableRow["stay"]>): boolean {
+export function isEmptyStay(stay: NonNullable<EditableRow["stay"]>): boolean {
   return (
     stay.checkIn === "" &&
     stay.checkOut === "" &&
@@ -87,6 +87,7 @@ function isEmptyStay(stay: NonNullable<EditableRow["stay"]>): boolean {
     stay.currency == null &&
     stay.ratingRoom == null &&
     stay.ratingBreakfast == null &&
+    stay.ratingService == null &&
     stay.ratingOverall == null &&
     stay.bookingReference == null &&
     stay.externalRef == null &&

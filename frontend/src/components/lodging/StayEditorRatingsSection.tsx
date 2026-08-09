@@ -1,7 +1,6 @@
 import type { JSX } from "react";
 import { StarRatingInput } from "./StarRatingInput";
 import { StarRating } from "./StarRating";
-import { averageStayRating } from "../../lib/lodgingFormat";
 
 export interface StayRatings {
   ratingRoom: number | null;
@@ -20,15 +19,19 @@ interface StayEditorRatingsSectionProps {
 
 /**
  * The three 1–5 half-star pickers (room/breakfast/service) plus the OVERALL
- * rating, which is DERIVED from them rather than typed.
+ * rating, which is DERIVED rather than typed.
  *
  * Alex asked for this (Discord 2026-07-12). The overall score used to be a
  * fourth identical picker, so a stay could carry 5/5/5 with an overall of 2
- * and nothing in the product would notice. It now follows the three, is
- * recomputed on every change, and `ratingOverall` in `ratings` is only the
- * value the editor will persist — this component never writes it back through
- * `onChange`, which is why the patch type still allows it but nothing here
- * sends it.
+ * and nothing in the product would notice. This component never writes it back
+ * through `onChange`, which is why the patch type still allows it but nothing
+ * here sends it.
+ *
+ * `ratings.ratingOverall` is DISPLAYED, not recomputed here. The parent already
+ * derives it through `shared/ratingDerivation.ts` — the same function the
+ * server runs on save — and a second derivation in this component was how the
+ * rule ended up living in the UI in the first place, correct only for stays
+ * typed into this form and silently absent from both import paths.
  */
 export function StayEditorRatingsSection({
   ratings,
@@ -36,12 +39,6 @@ export function StayEditorRatingsSection({
   labels,
   derivedHint,
 }: StayEditorRatingsSectionProps): JSX.Element {
-  const overall = averageStayRating(
-    ratings.ratingRoom,
-    ratings.ratingBreakfast,
-    ratings.ratingService
-  );
-
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       <StarRatingInput
@@ -65,7 +62,7 @@ export function StayEditorRatingsSection({
       <div className="flex flex-col gap-1">
         <span className="text-xs text-[var(--text-muted)]">{labels.overall}</span>
         <span data-testid="stay-editor-overall">
-          <StarRating value={overall} className="text-lg leading-none" />
+          <StarRating value={ratings.ratingOverall} className="text-lg leading-none" />
         </span>
         <span
           data-testid="stay-editor-overall-hint"
