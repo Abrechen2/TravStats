@@ -1,6 +1,6 @@
 import type { PickingInfo } from "@deck.gl/core";
 import { escapeHtml } from "../../lib/escapeHtml";
-import { flagImgHtml, countryName } from "../../lib/countryFlag";
+import { flagImgHtml, countryName, resolveCountryCode } from "../../lib/countryFlag";
 
 // Marker layer ids that should surface a hover tooltip with the rich
 // content (short label + full name + visit count + last visit date).
@@ -35,6 +35,11 @@ const ARC_LAYER_IDS = new Set<string>([
   "routes-path",
 ]);
 const CRUISE_PATH_LAYER_IDS = new Set<string>(["cruise-arcs"]);
+const LODGING_LAYER_IDS = new Set<string>([
+  // Flat-map lodging pins (lodgingPinsLayer.ts) — dot + name label.
+  "lodging-pins",
+  "lodging-pins-labels",
+]);
 
 interface AirportDatum {
   readonly iata?: string;
@@ -73,6 +78,21 @@ interface ArcTooltipDatum {
 
 interface CruisePathTooltipDatum {
   readonly cruiseLine?: string | null;
+}
+
+interface LodgingDatum {
+  readonly name?: string;
+  readonly city?: string | null;
+  /**
+   * Free text — an ISO code OR a full country name (`Lodging.country`).
+   * Resolved via `resolveCountryCode` before it reaches `flagImgHtml`/
+   * `countryName`, same as LodgingListPage/LodgingChainDetailPage.
+   */
+  readonly country?: string | null;
+  /** Total stays recorded at this lodging. */
+  readonly stayCount?: number;
+  /** Total nights recorded at this lodging. */
+  readonly nights?: number;
 }
 
 const SURFACE_STYLE: Record<string, string> = {
@@ -154,6 +174,13 @@ export function createMarkerTooltip(
       return { html, style: SURFACE_STYLE };
     }
 
+    if (LODGING_LAYER_IDS.has(layerId)) {
+      const datum = info.object as LodgingDatum | undefined | null;
+      if (!datum?.name) return null;
+      const html = renderLodgingHtml(datum, datum.name, t, locale);
+      return { html, style: SURFACE_STYLE };
+    }
+
     return null;
   };
 }
@@ -215,9 +242,7 @@ function renderPortHtml(d: PortDatum, heading: string, t: TFn, locale: string): 
     `<div style="display:flex;align-items:center;gap:8px;font-weight:600;">${flagOrAnchor}<span>${escapeHtml(heading)}</span></div>`
   );
   if (sub) {
-    lines.push(
-      `<div style="opacity:0.85;font-size:11px;margin-top:2px;">${escapeHtml(sub)}</div>`
-    );
+    lines.push(`<div style="opacity:0.85;font-size:11px;margin-top:2px;">${escapeHtml(sub)}</div>`);
   }
   if (place) {
     lines.push(
@@ -236,6 +261,41 @@ function renderPortHtml(d: PortDatum, heading: string, t: TFn, locale: string): 
       `<div style="opacity:0.75;font-size:10.5px;margin-top:3px;">${escapeHtml(
         t("map:tooltip.lastCall")
       )}: ${escapeHtml(formatDate(lastCall, locale))}</div>`
+    );
+  }
+  return lines.join("");
+}
+
+// Lodging domain rose (BRAND.md §3 / DOMAINS.lodging.color, shared/domains.ts)
+// as a literal hex — this module renders plain HTML strings, not deck.gl
+// props, so it can't reuse lodgingPinsLayer.ts's `hexToRgb`-derived tuple.
+const LODGING_ACCENT_HEX = "#d4778f";
+
+function renderLodgingHtml(d: LodgingDatum, heading: string, t: TFn, locale: string): string {
+  // `d.country` is free text (an ISO code or a full country name) — resolve
+  // it to an ISO code before handing it to flagImgHtml/countryName, which
+  // both require a strict 2-letter code and silently render nothing
+  // otherwise (see LodgingPinDatum's doc comment in lodgingPinsLayer.ts).
+  const countryCode = resolveCountryCode(d.country);
+  const place = [d.city, countryName(countryCode, locale)].filter(Boolean).join(", ");
+  const stayCount = typeof d.stayCount === "number" && d.stayCount > 0 ? d.stayCount : null;
+  const nights = typeof d.nights === "number" && d.nights > 0 ? d.nights : null;
+
+  const lines: string[] = [];
+  lines.push(
+    `<div style="display:flex;align-items:center;gap:8px;font-weight:600;">${flagImgHtml(countryCode, 16)}<span>${escapeHtml(heading)}</span></div>`
+  );
+  if (place) {
+    lines.push(
+      `<div style="opacity:0.62;font-size:10.5px;margin-top:2px;">${escapeHtml(place)}</div>`
+    );
+  }
+  if (stayCount !== null || nights !== null) {
+    const parts: string[] = [];
+    if (stayCount !== null) parts.push(t("lodging:field.staysCount", { count: stayCount }));
+    if (nights !== null) parts.push(t("lodging:field.nightsCount", { count: nights }));
+    lines.push(
+      `<div style="color:${LODGING_ACCENT_HEX};margin-top:2px;">${escapeHtml(parts.join(" · "))}</div>`
     );
   }
   return lines.join("");

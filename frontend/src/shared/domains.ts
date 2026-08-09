@@ -3,7 +3,7 @@
  * Keep in sync manually — both source files are small and stable.
  */
 
-export const DOMAIN_KEYS = ["flight", "cruise", "hotel", "poi"] as const;
+export const DOMAIN_KEYS = ["flight", "cruise", "lodging", "poi"] as const;
 export type DomainKey = (typeof DOMAIN_KEYS)[number];
 
 export interface DomainDescriptor {
@@ -36,13 +36,13 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     color: "#6fa0d6",
     routePrefix: "/cruises",
   },
-  hotel: {
-    key: "hotel",
-    available: false,
-    i18nKey: "domain.hotel",
+  lodging: {
+    key: "lodging",
+    available: true,
+    i18nKey: "domain.lodging",
     icon: "🏨",
-    color: "#b072d6",
-    routePrefix: "/hotels",
+    color: "#d4778f",
+    routePrefix: "/lodging",
   },
   poi: {
     key: "poi",

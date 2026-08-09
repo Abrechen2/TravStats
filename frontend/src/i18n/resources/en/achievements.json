@@ -38,6 +38,7 @@
     "allDomains": "All",
     "domainFlight": "Flight",
     "domainCruise": "Cruise",
+    "domainLodging": "Lodging",
     "domainShared": "Shared",
     "showUnlockedOnly": "Show unlocked only"
   },
@@ -644,6 +645,170 @@
     "NEW_YEARS_AT_SEA": {
       "name": "New Year's at Sea",
       "description": "Spend New Year on a cruise"
+    },
+    "FIRST_CHECKIN": {
+      "name": "Checked In",
+      "description": "Save your first stay"
+    },
+    "HOTEL_COLLECTOR_5": {
+      "name": "Hotel Collector",
+      "description": "Visit 5 different lodgings"
+    },
+    "HOTEL_COLLECTOR_10": {
+      "name": "Well-Traveled Guest",
+      "description": "Visit 10 different lodgings"
+    },
+    "HOTEL_COLLECTOR_25": {
+      "name": "Lodging Connoisseur",
+      "description": "Visit 25 different lodgings"
+    },
+    "HOTEL_COLLECTOR_50": {
+      "name": "Lodging Expert",
+      "description": "Visit 50 different lodgings"
+    },
+    "HOTEL_COLLECTOR_100": {
+      "name": "Hotel Legend",
+      "description": "Visit 100 different lodgings"
+    },
+    "HOTEL_COLLECTOR_200": {
+      "name": "Lodging World Champion",
+      "description": "Visit 200 different lodgings"
+    },
+    "FREQUENT_GUEST_10": {
+      "name": "Regular Guest",
+      "description": "10 stays total"
+    },
+    "FREQUENT_GUEST_25": {
+      "name": "Frequent Booker",
+      "description": "25 stays total"
+    },
+    "FREQUENT_GUEST_50": {
+      "name": "Check-in Pro",
+      "description": "50 stays total"
+    },
+    "FREQUENT_GUEST_100": {
+      "name": "Front Desk Legend",
+      "description": "100 stays total"
+    },
+    "LODGING_NIGHTS_10": {
+      "name": "First Nights",
+      "description": "10 nights total"
+    },
+    "LODGING_NIGHTS_50": {
+      "name": "Fifty Nights",
+      "description": "50 nights total"
+    },
+    "LODGING_NIGHTS_100": {
+      "name": "A Hundred Nights",
+      "description": "100 nights total"
+    },
+    "LODGING_NIGHTS_365": {
+      "name": "A Year on the Road",
+      "description": "365 nights total"
+    },
+    "LODGING_NIGHTS_1000": {
+      "name": "Nomad Legend",
+      "description": "1,000 nights total"
+    },
+    "LONG_STAY_7": {
+      "name": "First Week",
+      "description": "A stay of at least 7 nights"
+    },
+    "LONG_STAY_14": {
+      "name": "Two-Week Getaway",
+      "description": "A stay of at least 14 nights"
+    },
+    "LONG_STAY_30": {
+      "name": "Long-Term Guest",
+      "description": "A stay of at least 30 nights"
+    },
+    "LONG_STAY_60": {
+      "name": "Digital Nomad",
+      "description": "A stay of at least 60 nights"
+    },
+    "CHAIN_EXPLORER_3": {
+      "name": "Brand Explorer",
+      "description": "3 different hotel chains"
+    },
+    "CHAIN_EXPLORER_5": {
+      "name": "Chain Connoisseur",
+      "description": "5 different hotel chains"
+    },
+    "CHAIN_EXPLORER_10": {
+      "name": "Brand Diversity",
+      "description": "10 different hotel chains"
+    },
+    "CHAIN_EXPLORER_20": {
+      "name": "Chain Master",
+      "description": "20 different hotel chains"
+    },
+    "BRAND_LOYALTY_5": {
+      "name": "Loyal Guest",
+      "description": "5 stays with the same hotel chain"
+    },
+    "BRAND_LOYALTY_10": {
+      "name": "Brand Loyalty",
+      "description": "10 stays with the same hotel chain"
+    },
+    "BRAND_LOYALTY_25": {
+      "name": "Chain Loyalist",
+      "description": "25 stays with the same hotel chain"
+    },
+    "BORDER_CROSSER_3": {
+      "name": "Border Crosser",
+      "description": "Lodgings in 3 countries"
+    },
+    "BORDER_CROSSER_5": {
+      "name": "Country Collector",
+      "description": "Lodgings in 5 countries"
+    },
+    "BORDER_CROSSER_10": {
+      "name": "Continental Guest",
+      "description": "Lodgings in 10 countries"
+    },
+    "BORDER_CROSSER_25": {
+      "name": "Citizen of the World",
+      "description": "Lodgings in 25 countries"
+    },
+    "POINTS_PRO_5": {
+      "name": "Points Starter",
+      "description": "5 award nights via loyalty points"
+    },
+    "POINTS_PRO_25": {
+      "name": "Rewards Connoisseur",
+      "description": "25 award nights via loyalty points"
+    },
+    "POINTS_PRO_100": {
+      "name": "Points Pro",
+      "description": "100 award nights via loyalty points"
+    },
+    "POINTS_PRO_500": {
+      "name": "Bonus Legend",
+      "description": "500 award nights via loyalty points"
+    },
+    "RETURNER_2": {
+      "name": "Returning Guest",
+      "description": "2 stays at the same hotel"
+    },
+    "RETURNER_3": {
+      "name": "Familiar Face",
+      "description": "3 stays at the same hotel"
+    },
+    "RETURNER_5": {
+      "name": "Home Base Hotel",
+      "description": "5 stays at the same hotel"
+    },
+    "RETURNER_10": {
+      "name": "Second Home",
+      "description": "10 stays at the same hotel"
+    },
+    "FLY_AND_STAY": {
+      "name": "Fly & Stay",
+      "description": "Trip with a flight AND a stay"
+    },
+    "GRAND_TOUR": {
+      "name": "Grand Tour",
+      "description": "Trip with a flight, cruise, AND stay"
     }
   }
 }

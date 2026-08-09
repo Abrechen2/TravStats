@@ -225,7 +225,7 @@ router.get(
         orderBy: { createdAt: "desc" },
         take: 500, // safety cap — users are unlikely to have more than 500 trips
         include: {
-          _count: { select: { flights: true, cruises: true } },
+          _count: { select: { flights: true, cruises: true, lodgingStays: true } },
           bookings: {
             select: { id: true, pnr: true, price: true, currency: true },
           },
@@ -515,6 +515,11 @@ router.get(
           journalEntries: { orderBy: { date: "asc" } },
           photos: { orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }] },
           immichAlbums: { orderBy: { sortIdx: "asc" } },
+          // A LodgingStay linked to this trip (StayEditor's tripId picker) —
+          // the spec requires it to surface as check-in/check-out entries on
+          // the trip timeline (frontend/src/pages/TripDetailPage.tsx), which
+          // needs the lodging's name, so `lodging` is always included here.
+          lodgingStays: { include: { lodging: true }, orderBy: { checkIn: "asc" } },
         },
       });
       if (!trip) throw new AppError("Trip not found", 404);

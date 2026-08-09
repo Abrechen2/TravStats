@@ -232,9 +232,9 @@
     --domain-cruise-soft: rgba(111, 160, 214, 0.1);
     --domain-cruise-locked: rgba(111, 160, 214, 0.18);
 
-    --domain-hotel: #b072d6;
-    --domain-hotel-soft: rgba(176, 114, 214, 0.1);
-    --domain-hotel-locked: rgba(176, 114, 214, 0.18);
+    --domain-lodging: #d4778f;
+    --domain-lodging-soft: rgba(212, 119, 143, 0.1);
+    --domain-lodging-locked: rgba(212, 119, 143, 0.18);
 
     --domain-poi: #5ec2b2;
     --domain-poi-soft: rgba(94, 194, 178, 0.1);

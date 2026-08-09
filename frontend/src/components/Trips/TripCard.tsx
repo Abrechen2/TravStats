@@ -46,18 +46,22 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
   // advertise cruise segments — count them as absent.
   const { isEnabled } = useEnabledDomains();
   const cruiseEnabled = isEnabled("cruise");
+  const lodgingEnabled = isEnabled("lodging");
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
   const cruiseCount = cruiseEnabled ? (trip._count?.cruises ?? trip.cruises?.length ?? 0) : 0;
 
   // With the cruise domain switched off the card must not advertise cruises in
   // any tile — not as a count, and not hidden inside the km or cost totals.
   const cruises = cruiseEnabled ? (trip.cruises ?? []) : [];
+  const stays = lodgingEnabled ? (trip.lodgingStays ?? []) : [];
 
-  // Same sources as the trip detail page: bookings PLUS any flight or cruise
-  // carrying its own price and no booking. Summing bookings alone made a
+  // Same sources as the trip detail page: bookings PLUS any flight, cruise or
+  // stay carrying its own price and no booking. Summing bookings alone made a
   // hand-entered flight price vanish from the card while the detail page
-  // counted it, and left a cruise-only trip at "—" on both.
-  const costTotals = sumByCurrency(tripCostSources(trip.bookings ?? [], trip.flights ?? [], cruises));
+  // counted it, and left a cruise- or hotel-only trip at "—" on both.
+  const costTotals = sumByCurrency(
+    tripCostSources(trip.bookings ?? [], trip.flights ?? [], cruises, stays)
+  );
 
   const distanceKm = estimateTripDistanceKm(trip.flights ?? [], cruises);
 

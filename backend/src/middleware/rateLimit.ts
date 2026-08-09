@@ -94,6 +94,65 @@ export const portGeocodeLimiter = rateLimit({
 });
 
 /**
+ * Per-user/IP limit for the Photon place-search proxy (`/geo/search`).
+ *
+ * Photon (komoot's public instance, or a self-hosted one) has no documented
+ * hard rate limit the way Nominatim's usage policy does, but it is still a
+ * shared public resource sitting behind search-as-you-type — a spammy client
+ * could burn through it fast enough to get the instance's IP throttled or
+ * banned upstream. Mirrors `portGeocodeLimiter`'s shape (same per-caller
+ * keying + PAT-aware multiplier, same 30/min window) since the usage
+ * pattern — debounced typeahead — is identical.
+ */
+export const photonSearchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: patAwareMax(30),
+  message: 'Too many place searches in a short time — please slow down',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
+ * Per-user/IP limit for the FX preview proxy (`/lodging/fx-preview`).
+ *
+ * The route proxies to the free public Frankfurter/ECB API so the frontend
+ * can show a live rate preview without the app's CSP blocking a direct
+ * browser call. `fx.convertToBase` caches per (from, to, date), so repeated
+ * identical queries are free — but a caller can simply vary `date` to force
+ * unlimited uncached outbound calls, risking the instance's IP getting
+ * banned from the free upstream. Mirrors `portGeocodeLimiter`'s shape (same
+ * per-caller keying + PAT-aware multiplier, comparable 30/min window).
+ */
+export const fxPreviewLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: patAwareMax(30),
+  message: 'Too many FX preview requests in a short time — please slow down',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
+ * Per-user/IP limit for the lodging import endpoints (preview/commit/list/
+ * revert/suggest-mapping). `/suggest-mapping` calls an LLM; `/preview` and
+ * `/commit` do real DB scans (up to `MAX_LODGING_IMPORT_ROWS` rows); `/commit`
+ * also kicks off a background Nominatim geocode backfill — whose usage policy
+ * would get the instance's IP banned if abused. Mirrors `fxPreviewLimiter` /
+ * `portGeocodeLimiter`'s shape (per-caller keying + PAT-aware multiplier),
+ * with a 15-minute window since a real import run is a batch operation, not a
+ * typeahead.
+ */
+export const lodgingImportLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: patAwareMax(60),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many import requests, please try again later' },
+  keyGenerator: userOrIpKey,
+});
+
+/**
  * Rate limiter for flight creation
  * Allows 20 flight creations per hour per IP
  */
