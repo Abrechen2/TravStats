@@ -789,5 +789,25 @@
       "labelRequired": "Label is required"
     }
   },
+  "security": {
+    "title": "Security",
+    "description": "Protect your sign-in with a one-time code from an authenticator app. Entirely optional — without setup, nothing about your sign-in changes.",
+    "enable": "Enable two-factor",
+    "scanHint": "Scan the QR code with your authenticator app.",
+    "manualHint": "If you cannot scan, enter this key by hand:",
+    "codeLabel": "Code from the app",
+    "activate": "Activate",
+    "wrongCode": "That code is not right.",
+    "setupFailed": "Setup could not be started.",
+    "saveCodes": "Keep these recovery codes somewhere safe. They are shown this one time only and each works once.",
+    "enabled": "Two-factor is on. {{count}} recovery codes left.",
+    "tokenWarning": "Note: API tokens bypass the second factor. Anyone holding a token gets in without a code — revoke tokens you no longer need under \"API Tokens\".",
+    "regenerate": "New recovery codes",
+    "confirmRegenerate": "Regenerate codes",
+    "disable": "Disable two-factor",
+    "confirmDisable": "Disable",
+    "passwordLabel": "Password to confirm",
+    "wrongPassword": "That password is not right."
+  },
   "scopeHint": "Applies to your account only."
 }
