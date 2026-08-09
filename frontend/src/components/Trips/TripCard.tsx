@@ -45,15 +45,21 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
   // Domain-gating: with the cruise domain disabled the card must not
   // advertise cruise segments — count them as absent.
   const { isEnabled } = useEnabledDomains();
+  const cruiseEnabled = isEnabled("cruise");
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
-  const cruiseCount = isEnabled("cruise") ? (trip._count?.cruises ?? trip.cruises?.length ?? 0) : 0;
+  const cruiseCount = cruiseEnabled ? (trip._count?.cruises ?? trip.cruises?.length ?? 0) : 0;
 
-  // Same sources as the trip detail page: bookings PLUS any flight carrying its
-  // own price and no booking. Summing bookings alone made a hand-entered flight
-  // price vanish from the card while the detail page counted it.
-  const costTotals = sumByCurrency(tripCostSources(trip.bookings ?? [], trip.flights ?? []));
+  // With the cruise domain switched off the card must not advertise cruises in
+  // any tile — not as a count, and not hidden inside the km or cost totals.
+  const cruises = cruiseEnabled ? (trip.cruises ?? []) : [];
 
-  const distanceKm = estimateFlightDistanceKm(trip);
+  // Same sources as the trip detail page: bookings PLUS any flight or cruise
+  // carrying its own price and no booking. Summing bookings alone made a
+  // hand-entered flight price vanish from the card while the detail page
+  // counted it, and left a cruise-only trip at "—" on both.
+  const costTotals = sumByCurrency(tripCostSources(trip.bookings ?? [], trip.flights ?? [], cruises));
+
+  const distanceKm = estimateTripDistanceKm(trip.flights ?? [], cruises);
 
   const routeChain = buildRouteChain(trip);
 
@@ -307,14 +313,28 @@ function buildRouteChain(trip: Trip): string[] {
   return chain;
 }
 
-function estimateFlightDistanceKm(trip: Trip): number {
-  if (!trip.flights) return 0;
+/**
+ * Kilometres travelled on this trip, across every domain it contains.
+ *
+ * Flights are estimated great-circle from the endpoint coordinates; cruises
+ * bring the distance the sea router already computed leg by leg, which the list
+ * endpoint ships pre-summed as `distanceKm`. A cruise whose legs were never
+ * computed contributes 0 rather than a straight-line guess between ports — a
+ * chord through land would be a worse answer than none.
+ */
+function estimateTripDistanceKm(
+  flights: NonNullable<Trip["flights"]>,
+  cruises: NonNullable<Trip["cruises"]>
+): number {
   let sum = 0;
-  for (const f of trip.flights) {
+  for (const f of flights) {
     if (f.depLat == null || f.depLon == null || f.arrLat == null || f.arrLon == null) {
       continue;
     }
     sum += haversineKm(f.depLat, f.depLon, f.arrLat, f.arrLon);
+  }
+  for (const c of cruises) {
+    if (c.distanceKm != null && c.distanceKm > 0) sum += c.distanceKm;
   }
   return Math.round(sum);
 }

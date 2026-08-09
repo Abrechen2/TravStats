@@ -424,6 +424,56 @@ describe("GET /trips/:id/immich/albums/:linkId/assets", () => {
     });
   });
 
+  it("returns a link-mode album oldest first, so the pictures follow the journey", async () => {
+    // Immich returns its own order (newest first by default). Alex asked for
+    // chronological (#154): the album is a travel diary, not a feed.
+    findFirstLink.mockResolvedValue({
+      id: "link-1",
+      tripId: "trip-1",
+      immichAlbumId: "a1",
+      mode: "link",
+    });
+    const asset = (id: string, takenAt: string) => ({
+      id,
+      type: "IMAGE",
+      fileCreatedAt: takenAt,
+      originalFileName: `${id}.jpg`,
+      mimeType: "image/jpeg",
+      sizeBytes: 1,
+      lat: null,
+      lon: null,
+    });
+    listAlbumAssets.mockResolvedValue([
+      asset("late", "2026-05-03T09:00:00.000Z"),
+      asset("early", "2026-05-01T09:00:00.000Z"),
+      asset("middle", "2026-05-02T09:00:00.000Z"),
+    ]);
+
+    const res = await request(makeApp()).get("/api/v1/trips/trip-1/immich/albums/link-1/assets");
+
+    expect(res.body.assets.map((a: { id: string }) => a.id)).toEqual(["early", "middle", "late"]);
+  });
+
+  it("orders an import-mode album by capture date, falling back to link order", async () => {
+    findFirstLink.mockResolvedValue({
+      id: "link-1",
+      tripId: "trip-1",
+      immichAlbumId: "a1",
+      mode: "import",
+    });
+    findManyPhotos.mockResolvedValue([]);
+
+    await request(makeApp()).get("/api/v1/trips/trip-1/immich/albums/link-1/assets");
+
+    // A photo with no EXIF date must not jump to the front and must not drop
+    // out — it keeps its link position at the end.
+    expect(findManyPhotos).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ takenAt: { sort: "asc", nulls: "last" } }, { sortIdx: "asc" }],
+      }),
+    );
+  });
+
   it("skips VIDEO assets (out of scope for Phase A)", async () => {
     findFirstLink.mockResolvedValue({
       id: "link-1",

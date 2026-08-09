@@ -131,6 +131,7 @@ export default function ImmichConnectionCard(): JSX.Element {
         value={apiKey}
         onChange={(e) => setApiKey(e.target.value)}
       />
+      <p className="mt-1 text-xs text-slate-400">{t("apiKeyScopes")}</p>
       {status?.hasKey && (
         <div className="mb-3 mt-1 flex items-center gap-2 text-xs text-slate-400">
           <span>{t("apiKeyStored")}</span>

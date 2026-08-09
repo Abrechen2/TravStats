@@ -198,6 +198,9 @@ export default function ImmichGlobalSettings(): JSX.Element {
         <span className="text-xs" style={{ color: "var(--text-muted)" }}>
           {t("admin.apiKeyHint")}
         </span>
+        <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+          {t("apiKeyScopes")}
+        </span>
       </label>
 
       <div className="flex gap-2">

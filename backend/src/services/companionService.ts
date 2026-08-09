@@ -1,5 +1,3 @@
-import { Prisma } from '@prisma/client';
-
 import { prisma } from '../db';
 import { canonicalizeCompanionName, searchableCompanionName } from '../utils/companionName';
 
@@ -39,22 +37,24 @@ export async function resolveCompanions(
       searchName: searchableCompanionName(raw),
     };
 
-    try {
-      const created = await prisma.companion.create({ data });
-      resolved.push({ id: created.id, displayName: created.displayName });
-    } catch (error) {
-      // Unique violation: the companion already exists (or a parallel request
-      // just created it). Update the display name to the newest spelling.
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        const existing = await prisma.companion.update({
-          where: { userId_canonicalName: { userId, canonicalName: canonical } },
-          data: { displayName: raw, searchName: data.searchName },
-        });
-        resolved.push({ id: existing.id, displayName: existing.displayName });
-      } else {
-        throw error;
-      }
-    }
+    // An upsert, expressed as one. This used to be "create, and on a P2002
+    // update instead" — which produced the right data, but made the ordinary
+    // case (a companion the user already has) travel through an exception.
+    // The Prisma wrapper in db.ts logs every failed query at error level, so
+    // routine use wrote to the error log: 83 error lines on one 2.5.0
+    // production boot with nothing wrong (#244). Letting the database express
+    // the intent also closes the race between the old create and update.
+    //
+    // Unexpected failures still propagate — there is no catch here to swallow
+    // them, exactly as the old `else { throw error }` intended.
+    const companion = await prisma.companion.upsert({
+      where: { userId_canonicalName: { userId, canonicalName: canonical } },
+      create: data,
+      // The newest spelling wins as the display name; identity is the
+      // canonical form and never changes, so it is not updated here.
+      update: { displayName: raw, searchName: data.searchName },
+    });
+    resolved.push({ id: companion.id, displayName: companion.displayName });
   }
 
   // Dedupe by id, keeping the LAST occurrence: deleting-then-setting on a Map
