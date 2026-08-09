@@ -226,7 +226,8 @@
       "deactivate": "Deactivate",
       "activate": "Activate",
       "resetPassword": "Reset Password",
-      "delete": "Delete"
+      "delete": "Delete",
+      "resetTwoFactor": "Reset 2FA"
     },
     "deleteConfirm": {
       "title": "Delete user?",
@@ -258,6 +259,11 @@
       },
       "close": "Close",
       "success": "Password reset successfully."
+    },
+    "resetTwoFactorConfirm": {
+      "title": "Reset two-factor",
+      "message": "Turn off two-factor sign-in for “{{username}}”? Their next sign-in will need the password only. This is the way back into the account when both the phone AND the recovery codes are gone.",
+      "confirm": "Reset"
     }
   },
   "invitations": {
@@ -425,7 +431,9 @@
     "ollamaTestSuccess": "Ollama reachable – {{count}} model(s) found",
     "ollamaTestFailed": "Ollama connection failed",
     "enabled": "enabled",
-    "disabled": "disabled"
+    "disabled": "disabled",
+    "twoFactorReset": "Two-factor has been reset",
+    "twoFactorResetFailed": "Two-factor could not be reset"
   },
   "prompts": {
     "enterEmail": "Enter email (optional):",
