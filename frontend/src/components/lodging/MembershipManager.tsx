@@ -73,6 +73,9 @@ export function MembershipManager({
   const [chainIds, setChainIds] = useState<number[]>([]);
   const [saving, setSaving] = useState<boolean>(false);
   const [formError, setFormError] = useState<string | null>(null);
+  // The existing card a duplicate-name 409 clashed with, when one was found —
+  // offers "extend this card to cover the chain too" instead of a dead end.
+  const [clash, setClash] = useState<LodgingMembership | null>(null);
 
   const load = async (): Promise<void> => {
     setLoading(true);
@@ -128,6 +131,7 @@ export function MembershipManager({
     // whatever their card does not actually cover.
     setChainIds((scopeChain?.suggestedChains ?? []).map((c) => c.id));
     setFormError(null);
+    setClash(null);
   };
 
   const startEdit = (m: LodgingMembership): void => {
@@ -137,6 +141,7 @@ export function MembershipManager({
     setTier(m.tier ?? "");
     setChainIds(m.chainIds);
     setFormError(null);
+    setClash(null);
   };
 
   const toggleChain = (chainId: number): void => {
@@ -148,6 +153,7 @@ export function MembershipManager({
   const cancelEdit = (): void => {
     setEditingId(null);
     setFormError(null);
+    setClash(null);
   };
 
   const messageForSaveError = (err: unknown): string =>
@@ -158,8 +164,10 @@ export function MembershipManager({
   const submit = async (): Promise<void> => {
     const trimmedName = programName.trim();
     if (trimmedName.length === 0 || editingId === null) return;
+    const wasCreating = editingId === "new";
     setSaving(true);
     setFormError(null);
+    setClash(null);
     try {
       const input: MembershipInput = {
         programName: trimmedName,
@@ -170,7 +178,7 @@ export function MembershipManager({
         // existing links — see `MembershipInput`.)
         chainIds,
       };
-      if (editingId === "new") {
+      if (wasCreating) {
         await createMembership(input);
       } else {
         await updateMembership(editingId, input);
@@ -182,8 +190,34 @@ export function MembershipManager({
       // Axios error — always a clean, actionable sentence.
       logger.error("MembershipManager: save failed", err);
       setFormError(messageForSaveError(err));
+      // On a chain page, the name is taken by a card the user already has —
+      // creating is the wrong verb, extending that card to also cover this
+      // chain is what they meant. Find it so the offer can be rendered.
+      // (Unscoped `MembershipManager` lists every card already, so a
+      // duplicate there is self-explanatory and gets no offer.)
+      if (wasCreating && scopeChain !== undefined && httpStatus(err) === 409) {
+        const taken = memberships.find(
+          (m) => m.programName.trim().toLowerCase() === trimmedName.toLowerCase()
+        );
+        setClash(taken ?? null);
+      }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const extendClash = async (): Promise<void> => {
+    if (clash === null || scopeChain === undefined) return;
+    try {
+      const nextChainIds = Array.from(new Set([...clash.chainIds, scopeChain.id]));
+      await updateMembership(clash.id, { chainIds: nextChainIds });
+      setClash(null);
+      setFormError(null);
+      setEditingId(null);
+      await load();
+    } catch (err: unknown) {
+      logger.error("MembershipManager: extend-existing failed", err);
+      setFormError(t("lodging:membership.saveError"));
     }
   };
 
@@ -214,6 +248,7 @@ export function MembershipManager({
         {editingId === null && !hasFilteredMembership && (
           <button
             type="button"
+            data-testid="membership-add"
             onClick={startCreate}
             className="rounded-md border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--accent)] hover:bg-[var(--bg-surface)]"
           >
@@ -272,6 +307,7 @@ export function MembershipManager({
           <input
             aria-label={t("lodging:field.programName")}
             placeholder={t("lodging:field.programName")}
+            data-testid="membership-name-input"
             value={programName}
             onChange={(e) => setProgramName(e.target.value)}
             className="w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
@@ -321,6 +357,16 @@ export function MembershipManager({
               {formError}
             </p>
           )}
+          {clash && scopeChain && (
+            <button
+              type="button"
+              data-testid="membership-extend-existing"
+              onClick={() => void extendClash()}
+              className="text-xs text-[var(--accent)] hover:underline"
+            >
+              {t("lodging:membership.extendExisting", { name: clash.programName })}
+            </button>
+          )}
           <div className="flex justify-end gap-2">
             <button
               type="button"
@@ -332,6 +378,7 @@ export function MembershipManager({
             </button>
             <button
               type="button"
+              data-testid="membership-save"
               disabled={saving || programName.trim().length === 0}
               onClick={() => void submit()}
               className="rounded-md bg-[var(--accent)] px-2 py-1 text-xs font-medium text-neutral-900 hover:bg-[var(--accent-dim)] disabled:opacity-50"

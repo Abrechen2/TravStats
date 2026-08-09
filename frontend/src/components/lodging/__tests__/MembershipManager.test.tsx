@@ -232,6 +232,37 @@ describe("MembershipManager", () => {
     expect(vi.mocked(createMembership).mock.calls[0][0].chainIds).toEqual([1]);
   });
 
+  // Alex, 2026-08-08 (Discord): creating "GHA Discovery" on a second chain
+  // returned a clean 409 and dead-ended. The card he wants already exists;
+  // the action he wants is "cover this chain too" — not visible before.
+  it("offers to extend the existing card when the name is already taken", async () => {
+    const existing: LodgingMembership = {
+      ...existingMembership,
+      id: "m-existing",
+      programName: "GHA Discovery",
+      chainIds: [4],
+      chains: [{ id: 4, name: "GHA" }],
+    };
+    vi.mocked(listMemberships).mockResolvedValue([existing]);
+    vi.mocked(createMembership).mockRejectedValue({ response: { status: 409 } });
+    vi.mocked(updateMembership).mockResolvedValue({ ...existing, chainIds: [4, 9] });
+
+    render(
+      <MembershipManager scopeChain={{ id: 9, suggestedChains: [{ id: 9, name: "NH Hotels" }] }} />
+    );
+
+    await userEvent.click(await screen.findByTestId("membership-add"));
+    await userEvent.type(screen.getByTestId("membership-name-input"), "GHA Discovery");
+    await userEvent.click(screen.getByTestId("membership-save"));
+
+    const extend = await screen.findByTestId("membership-extend-existing");
+    await userEvent.click(extend);
+
+    await waitFor(() => expect(updateMembership).toHaveBeenCalled());
+    expect(vi.mocked(updateMembership).mock.calls[0][0]).toBe("m-existing");
+    expect(vi.mocked(updateMembership).mock.calls[0][1].chainIds).toEqual([4, 9]);
+  });
+
   it("updates an existing membership on edit+save", async () => {
     vi.mocked(updateMembership).mockResolvedValue({ ...existingMembership, tier: "Platinum" });
 
