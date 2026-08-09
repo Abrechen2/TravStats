@@ -169,7 +169,8 @@
     "loadError": "Bonusprogramme konnten nicht geladen werden",
     "saveError": "Bonusprogramm konnte nicht gespeichert werden",
     "duplicateError": "Dieses Programm ist bereits hinterlegt",
-    "deleteError": "Bonusprogramm konnte nicht gelöscht werden"
+    "deleteError": "Bonusprogramm konnte nicht gelöscht werden",
+    "extendExisting": "„{{name}}\" stattdessen um diese Kette erweitern"
   },
   "chainDetail": {
     "loading": "Kette wird geladen …",
