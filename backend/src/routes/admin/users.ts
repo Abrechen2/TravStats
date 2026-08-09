@@ -62,6 +62,10 @@ router.get('/users', async (req: AuthRequest, res: Response, next: NextFunction)
         isActive: true,
         invitedBy: true,
         createdAt: true,
+        // The timestamp, not a boolean: the UI only needs "is it on", but the
+        // moment it was enabled costs nothing extra and reads better in a
+        // support conversation than a bare flag.
+        twoFactorEnabledAt: true,
         _count: {
           select: {
             flights: true,

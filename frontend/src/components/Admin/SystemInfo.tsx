@@ -25,6 +25,8 @@ export interface AdminUser {
   isActive: boolean;
   invitedBy?: string;
   createdAt: string;
+  /** When the user switched TOTP on; null = off. Drives the reset-2FA action. */
+  twoFactorEnabledAt: string | null;
   _count: {
     flights: number;
     userAchievements: number;
