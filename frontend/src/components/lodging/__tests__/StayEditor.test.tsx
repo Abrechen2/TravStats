@@ -5,7 +5,7 @@ import { StayEditor } from "../StayEditor";
 import { createStay, updateStay, listMemberships, getFxPreview } from "../../../lib/api/lodging";
 import { tripsApi } from "../../../lib/api";
 import { logger } from "../../../lib/logger";
-import type { LodgingStay } from "../../../types/lodging";
+import type { LodgingStay, LodgingMembership } from "../../../types/lodging";
 
 // Mocked at the resolved-module level — StayEditor.tsx imports the same
 // "../../lib/api/lodging" file (this test lives 3 dirs under src, matching
@@ -55,6 +55,20 @@ const baseStay: LodgingStay = {
   parserTemplate: null,
   parserConfidence: null,
   dataSource: null,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+};
+
+const baseMembership: LodgingMembership = {
+  id: "m-0",
+  userId: "user-1",
+  programName: "Test Programme",
+  membershipNumber: null,
+  tier: null,
+  chainIds: [],
+  chains: [],
+  lodgingIds: [],
+  lodgings: [],
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
@@ -496,5 +510,86 @@ describe("StayEditor", () => {
     expect(payload.pricePerNight).toBeNull();
     // The total itself is untouched — only the derived rate is unknowable.
     expect(payload.totalPrice).toBe(120);
+  });
+
+  it("shows the card that covers the hotel's chain, without asking", async () => {
+    vi.mocked(listMemberships).mockResolvedValue([
+      {
+        ...baseMembership,
+        id: "m-1",
+        programName: "Minor DISCOVERY",
+        chainIds: [7],
+        lodgingIds: [],
+      },
+    ]);
+
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        lodgingChainId={7}
+        stay={baseStay}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByTestId("stay-editor-membership")).toHaveTextContent(
+      "Minor DISCOVERY"
+    );
+    // The mount that created chain-less orphan programmes is gone.
+    expect(screen.queryByText("lodging:stayEditor.manageMemberships")).not.toBeInTheDocument();
+  });
+
+  it("sends no override when the derived card is accepted as-is", async () => {
+    vi.mocked(listMemberships).mockResolvedValue([
+      { ...baseMembership, id: "m-1", chainIds: [7], lodgingIds: [] },
+    ]);
+    vi.mocked(updateStay).mockResolvedValue(baseStay);
+
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        lodgingChainId={7}
+        stay={baseStay}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+    await screen.findByTestId("stay-editor-membership");
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    await waitFor(() => expect(updateStay).toHaveBeenCalled());
+    const payload = vi.mocked(updateStay).mock.calls[0][2];
+    expect(payload.membershipId).toBeNull();
+    expect(payload.membershipOptOut).toBe(false);
+  });
+
+  it("records an explicit 'no programme' distinctly from 'derive it'", async () => {
+    vi.mocked(listMemberships).mockResolvedValue([
+      { ...baseMembership, id: "m-1", chainIds: [7], lodgingIds: [] },
+    ]);
+    vi.mocked(updateStay).mockResolvedValue(baseStay);
+
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        lodgingChainId={7}
+        stay={baseStay}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+    await screen.findByTestId("stay-editor-membership");
+    await userEvent.click(screen.getByTestId("stay-editor-membership-override-toggle"));
+    await userEvent.selectOptions(screen.getByTestId("stay-editor-membership-select"), "__none__");
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    await waitFor(() => expect(updateStay).toHaveBeenCalled());
+    const payload = vi.mocked(updateStay).mock.calls[0][2];
+    expect(payload.membershipOptOut).toBe(true);
+    expect(payload.membershipId).toBeNull();
   });
 });

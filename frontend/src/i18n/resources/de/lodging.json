@@ -91,6 +91,14 @@
     "roomAmenitiesPlaceholder": "z. B. Meerblick, Balkon (kommagetrennt)",
     "membership": "Bonusprogramm",
     "noMembership": "Kein Bonusprogramm",
+    "membershipDerive": "Automatisch (aus der Kette)",
+    "membershipNone": "Kein Programm genutzt",
+    "membershipSource": {
+      "override": "abweichend zugeordnet",
+      "chain": "aus der Kette",
+      "lodging": "diesem Hotel zugeordnet",
+      "none": "kein Programm"
+    },
     "trip": "Reise",
     "noTrip": "Keiner Reise zugeordnet",
     "companions": "Mitreisende",
@@ -148,7 +156,7 @@
     "priceSection": "Preis",
     "amenitiesSection": "Ausstattung & Notizen",
     "loyaltySection": "Bonusprogramm",
-    "manageMemberships": "Bonusprogramme verwalten",
+    "overrideMembership": "Abweichend zuordnen",
     "receiptSection": "Beleg",
     "notesSection": "Notizen",
     "saveError": "Aufenthalt konnte nicht gespeichert werden"

@@ -91,6 +91,14 @@
     "roomAmenitiesPlaceholder": "e.g. sea view, balcony (comma-separated)",
     "membership": "Loyalty program",
     "noMembership": "No loyalty program",
+    "membershipDerive": "Automatic (from the chain)",
+    "membershipNone": "No programme used",
+    "membershipSource": {
+      "override": "manually assigned",
+      "chain": "from the chain",
+      "lodging": "assigned to this hotel",
+      "none": "no programme"
+    },
     "trip": "Trip",
     "noTrip": "Not linked to a trip",
     "companions": "Companions",
@@ -148,7 +156,7 @@
     "priceSection": "Price",
     "amenitiesSection": "Amenities & notes",
     "loyaltySection": "Loyalty program",
-    "manageMemberships": "Manage loyalty programs",
+    "overrideMembership": "Assign a different one",
     "receiptSection": "Receipt",
     "notesSection": "Notes",
     "saveError": "Could not save stay"
