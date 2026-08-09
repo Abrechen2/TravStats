@@ -4,10 +4,14 @@ const CABIN_TYPES = ['inside', 'oceanview', 'balcony', 'suite'] as const;
 const STATUSES = ['scheduled', 'flown', 'cancelled', 'historical'] as const;
 const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF'] as const;
 
-const emptyToUndefined = z
+// "" and null both mean "clear" on the wire; undefined means "don't change"
+// on update. The old empty->undefined transform made clearing impossible:
+// the edit modal's blanked field collapsed into "keep the old value".
+const emptyToNull = z
   .string()
+  .nullable()
   .optional()
-  .transform((v) => (v === '' ? undefined : v));
+  .transform((v) => (v === '' ? null : v));
 
 // Accept partial datetimes and coerce them to full ISO 8601. The cruise
 // booking parser emits times like "2026-06-17T08:00" (no seconds/offset),
@@ -71,25 +75,26 @@ const stopSchema = z
 
 const baseCruiseSchema = z.object({
   shipId: z.number().int().positive().nullable().optional(),
-  shipNameOverride: emptyToUndefined,
-  cruiseLine: emptyToUndefined,
+  shipNameOverride: emptyToNull,
+  cruiseLine: emptyToNull,
   // Official itinerary / route name from the booking confirmation
   // (e.g. "Kanaren mit Marokko"), distinct from the trip's user label.
   routeName: z
     .string()
     .max(120)
+    .nullable()
     .optional()
-    .transform((v) => (v ? v : undefined)),
+    .transform((v) => (v ? v : v === undefined ? undefined : null)),
   departurePortId: z.number().int().positive().nullable().optional(),
   arrivalPortId: z.number().int().positive().nullable().optional(),
   startDate: isoDateTime,
   endDate: isoDateTime,
   status: z.enum(STATUSES).default('scheduled'),
-  cabinNumber: z.string().max(20).optional(),
-  cabinType: z.enum(CABIN_TYPES).optional(),
-  deck: z.number().int().min(1).max(30).optional(),
-  bookingReference: z.string().max(40).optional(),
-  price: z.number().min(0).optional(),
+  cabinNumber: z.string().max(20).nullable().optional(),
+  cabinType: z.enum(CABIN_TYPES).nullable().optional(),
+  deck: z.number().int().min(1).max(30).nullable().optional(),
+  bookingReference: z.string().max(40).nullable().optional(),
+  price: z.number().min(0).nullable().optional(),
   currency: z.enum(CURRENCIES).optional(),
   // Plain-text notes. The frontend renders these as React text (auto-escaped),
   // so no HTML sanitization happens or is needed here. The previous
@@ -97,7 +102,7 @@ const baseCruiseSchema = z.object({
   // bypassable, e.g. nested/unclosed tags) that gave false security confidence
   // without an HTML sink — removed rather than "improved". Bounded to guard
   // against unbounded storage, consistent with the other string fields.
-  notes: z.string().max(5000).optional(),
+  notes: z.string().max(5000).nullable().optional(),
   tags: z.array(z.string().max(40)).max(30).optional(),
   companions: z.array(z.string().max(100)).max(50).optional(),
   tripId: z.string().uuid().nullable().optional(),

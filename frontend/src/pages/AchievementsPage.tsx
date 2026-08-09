@@ -382,6 +382,14 @@ export default function AchievementsPage(): JSX.Element {
                             },
                           ]
                         : []),
+                      ...(enabled.includes("lodging" as DomainKey)
+                        ? [
+                            {
+                              id: "lodging",
+                              label: `🏨 ${t("achievements:filters.domainLodging")}`,
+                            },
+                          ]
+                        : []),
                       { id: "shared", label: t("achievements:filters.domainShared") },
                     ] as Array<{ id: "all" | "shared" | DomainKey; label: string }>
                   ).map((chip) => (

@@ -32,6 +32,7 @@ import {
 import { type AppearanceDomain } from "./map/controlPanelKit";
 import type { LabelsMode } from "./map/labelPriority";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
+import { loadGlobeChrome, saveGlobeChrome } from "./map/globeChrome";
 import { useFlightColorStore } from "../store/flightColorStore";
 
 // Base marker radius (px) a size preset scales. off → 0 (hidden).
@@ -267,9 +268,10 @@ function formatTooltipDate(iso: string, locale: string): string {
 
 interface DeckOverlayProps {
   layers: Layer[];
+  onHover: (info: PickingInfo) => void;
 }
 
-function DeckGLOverlay({ layers }: DeckOverlayProps): null {
+function DeckGLOverlay({ layers, onHover }: DeckOverlayProps): null {
   // `interleaved: true` shares MapLibre's WebGL context so deck.gl uses
   // MapLibre's globe projection matrices directly — without it, the
   // overlay falls back to mercator and the layers detach into a flat
@@ -294,9 +296,10 @@ function DeckGLOverlay({ layers }: DeckOverlayProps): null {
         layers,
         pickingRadius: 5,
         interleaved: true,
+        onHover,
       })
   );
-  overlay.setProps({ layers });
+  overlay.setProps({ layers, onHover });
   return null;
 }
 
@@ -316,11 +319,17 @@ export default function GlobeView({
     const stored = loadMapAppearance().styleId;
     return stored && STYLE_OPTIONS.some((s) => s.id === stored) ? (stored as StyleId) : "dark";
   });
-  const [autoRotate, setAutoRotate] = useState(false);
+  // Globe-only chrome — persisted in its own blob (globeChrome.v1), NOT in
+  // the shared mapAppearance: these switches have no 2D meaning. They were
+  // the only map settings that reset on reload before the 2026-08-03 audit.
+  const [autoRotate, setAutoRotate] = useState(() => loadGlobeChrome().autoRotate ?? false);
   // Day/night terminator overlay. `nightTick` recomputes the night grid on a
   // slow interval so the shade drifts with real time (60 s is far finer than
   // the terminator visibly moves at globe zoom).
-  const [showNight, setShowNight] = useState(true);
+  const [showNight, setShowNight] = useState(() => loadGlobeChrome().showNight ?? true);
+  useEffect(() => {
+    saveGlobeChrome({ autoRotate, showNight });
+  }, [autoRotate, showNight]);
   // Marker-label reveal: off / key markers only (greedy screen-space
   // collision, the default) / all (ignore overlap). Persisted.
   const [labelsMode, setLabelsMode] = useState<LabelsMode>(
@@ -421,6 +430,20 @@ export default function GlobeView({
   // Tooltip lives in a leaf component (HoverTooltip) so onHover updates at
   // 60–120 Hz don't re-render the whole GlobeView tree. Imperative API only.
   const tooltipRef = useRef<HoverTooltipApi | null>(null);
+
+  // Hand cursor over a pickable object (#247). Written straight onto MapLibre's
+  // canvas rather than through React state, for the same reason the tooltip
+  // above is imperative: this fires on every mouse move across the globe, and
+  // a state flip here would re-render the whole tree. Guarded by a ref so the
+  // DOM write only happens when the pointer actually crosses an edge.
+  const overCursorRef = useRef(false);
+  const handleDeckHover = useCallback((info: PickingInfo): void => {
+    const over = Boolean(info?.object);
+    if (over === overCursorRef.current) return;
+    overCursorRef.current = over;
+    const canvas = mapRef.current?.getMap().getCanvas();
+    if (canvas) canvas.style.cursor = over ? "pointer" : "";
+  }, []);
   // Map zoom — used as a level-of-detail signal for arc altitude. At
   // low zoom the standard altitude-based arcs look great; at high zoom
   // they become horizontal streaks across the screen because the
@@ -1446,7 +1469,7 @@ export default function GlobeView({
         touchPitch={false}
         style={{ width: "100%", height: "100%" }}
       >
-        {mapReady && <DeckGLOverlay layers={layers} />}
+        {mapReady && <DeckGLOverlay layers={layers} onHover={handleDeckHover} />}
       </MapGL>
 
       {/* Top-right stats overlay — driven by the same slider-filtered

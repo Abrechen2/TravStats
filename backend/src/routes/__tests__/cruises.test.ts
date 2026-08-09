@@ -273,6 +273,72 @@ describe('Cruises API', () => {
       expect(res.body.data.stops.length).toBe(1);
     });
 
+    it('deletes all stops when an empty stops array is sent', async () => {
+      const res = await request(app)
+        .patch(`/api/v1/cruises/${editableId}`)
+        .set('Cookie', authCookie)
+        .send({ stops: [] });
+      expect(res.status).toBe(200);
+      expect(res.body.data.stops.length).toBe(0);
+    });
+
+    // The edit modal offers clearing for every optional detail field. null
+    // clears, undefined leaves alone — same wire contract the flight PUT got
+    // on 2026-08-02; before the schema turned nullable, a blanked field
+    // collapsed to undefined and the "clear" silently kept the old value.
+    it('clears the optional detail fields with an explicit null', async () => {
+      const filled = await prisma.cruise.create({
+        data: {
+          userId,
+          status: 'scheduled',
+          cruiseLine: 'AIDA',
+          routeName: 'Kanaren',
+          cabinNumber: '8123',
+          cabinType: 'balcony',
+          deck: 8,
+          bookingReference: 'ABC123',
+          price: 1999.99,
+          notes: 'to be removed',
+        },
+      });
+
+      const cleared = await request(app)
+        .patch(`/api/v1/cruises/${filled.id}`)
+        .set('Cookie', authCookie)
+        .send({
+          cruiseLine: null,
+          routeName: null,
+          cabinNumber: null,
+          cabinType: null,
+          deck: null,
+          bookingReference: null,
+          price: null,
+          notes: null,
+        });
+      expect(cleared.status).toBe(200);
+      for (const field of [
+        'cruiseLine',
+        'routeName',
+        'cabinNumber',
+        'cabinType',
+        'deck',
+        'bookingReference',
+        'price',
+        'notes',
+      ]) {
+        expect(cleared.body.data[field]).toBeNull();
+      }
+
+      // And an unrelated update must leave the nulls alone.
+      const untouched = await request(app)
+        .patch(`/api/v1/cruises/${filled.id}`)
+        .set('Cookie', authCookie)
+        .send({ tags: ['x'] });
+      expect(untouched.status).toBe(200);
+      expect(untouched.body.data.cruiseLine).toBeNull();
+      expect(untouched.body.data.cabinType).toBeNull();
+    });
+
     it("404 on another user's cruise", async () => {
       const foreign = await prisma.cruise.create({ data: { userId: otherUserId, status: 'scheduled' } });
       const res = await request(app)

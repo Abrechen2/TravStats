@@ -398,8 +398,10 @@ describe("Cruise write paths derive temporal status from dates", () => {
       .send({ name: "Cruise-Trip Link — create" })
       .expect(201);
     const tripId = trip.body.trip.id as string;
-    // No segments yet — creation cannot derive, schema default is kept verbatim.
-    expect(trip.body.trip.status).toBe("completed");
+    // No segments AND no dates on the trip itself, so there is nothing to
+    // derive from and the column default applies. That default used to be
+    // "completed", which made every hand-made trip start out finished.
+    expect(trip.body.trip.status).toBe("planned");
 
     await request(app)
       .post("/api/v1/cruises")
@@ -427,7 +429,7 @@ describe("Cruise write paths derive temporal status from dates", () => {
       .send({ name: "Cruise-Trip Link — update" })
       .expect(201);
     const tripId = trip.body.trip.id as string;
-    expect(trip.body.trip.status).toBe("completed");
+    expect(trip.body.trip.status).toBe("planned");
 
     const cruise = await request(app)
       .post("/api/v1/cruises")
@@ -440,12 +442,13 @@ describe("Cruise write paths derive temporal status from dates", () => {
       })
       .expect(201);
 
-    // Trip has no segments yet — still unaffected.
+    // Trip has no segments yet — still the column default, unaffected by the
+    // cruise that exists but is not linked.
     const beforeLink = await request(app)
       .get(`/api/v1/trips/${tripId}`)
       .set("Cookie", authCookie)
       .expect(200);
-    expect(beforeLink.body.trip.status).toBe("completed");
+    expect(beforeLink.body.trip.status).toBe("planned");
 
     await request(app)
       .patch(`/api/v1/cruises/${cruise.body.data.id}`)
@@ -539,9 +542,9 @@ describe("Trip status derives from segment dates", () => {
       .send({ name: "Trip Status Derive — bookings link" })
       .expect(201);
     const tripId = created.body.trip.id as string;
-    // No segments exist yet — creation cannot derive, so the schema default
-    // ("completed") is kept verbatim.
-    expect(created.body.trip.status).toBe("completed");
+    // No segments and no dates, so the column default applies — "planned"
+    // now, not "completed": a trip nobody has flown yet is not finished.
+    expect(created.body.trip.status).toBe("planned");
 
     const flightId = await createFutureFlight("LH960");
 

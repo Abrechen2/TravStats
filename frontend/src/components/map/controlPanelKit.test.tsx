@@ -5,6 +5,7 @@ import {
   Slider,
   CruiseAppearanceSection,
   FlightAppearanceSection,
+  LodgingAppearanceSection,
   usePanelExpanded,
 } from "./controlPanelKit";
 import { DEFAULT_FLIGHT_COLOR_CONFIG, FLIGHT_COLOR_MODES } from "../../lib/flightColor";
@@ -268,5 +269,37 @@ describe("FlightAppearanceSection", () => {
     // palette, so anyone who preferred it can pick it back.
     fireEvent.click(screen.getByLabelText("rgb(80,200,255)"));
     expect(onColorChange).toHaveBeenCalledWith("frequency", [80, 200, 255]);
+  });
+});
+
+// The lodging section is rendered by the flat-map panel (lodging pins are
+// flat-map only, unlike flight/cruise) — a single marker-size slider, no
+// colour mode, no width, no arrows (a lodging pin has no route to draw).
+describe("LodgingAppearanceSection", () => {
+  const lodgingSectionProps = {
+    title: "Unterkünfte",
+    markerSize: 1,
+    onMarkerSizeChange: () => {},
+    sizeLabel: "Größe",
+  };
+
+  it("renders exactly one slider — the marker size", () => {
+    render(<LodgingAppearanceSection {...lodgingSectionProps} />);
+    expect(screen.getAllByRole("slider").length).toBe(1);
+    expect(screen.getByText("Unterkünfte")).toBeTruthy();
+  });
+
+  it("emits the size on change", () => {
+    const onMarkerSizeChange = vi.fn();
+    render(
+      <LodgingAppearanceSection {...lodgingSectionProps} onMarkerSizeChange={onMarkerSizeChange} />
+    );
+    fireEvent.change(screen.getByRole("slider"), { target: { value: "1.2" } });
+    expect(onMarkerSizeChange).toHaveBeenCalledWith(1.2);
+  });
+
+  it("shows 'Aus' at 0 — the same off-semantics as flight/cruise marker sliders", () => {
+    render(<LodgingAppearanceSection {...lodgingSectionProps} markerSize={0} />);
+    expect(screen.getByText("map:globe.panel.off")).toBeTruthy();
   });
 });

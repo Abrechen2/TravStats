@@ -39,6 +39,9 @@ vi.mock("../../../lib/api/flights", () => ({
 vi.mock("../../../lib/api/cruise", () => ({
   cruiseApi: { list: vi.fn().mockResolvedValue([]) },
 }));
+vi.mock("../../../lib/api/lodging", () => ({
+  listLodgings: vi.fn().mockResolvedValue([]),
+}));
 vi.mock("../../../lib/api/trips", () => ({
   tripsApi: { getAll: vi.fn().mockResolvedValue([]) },
 }));

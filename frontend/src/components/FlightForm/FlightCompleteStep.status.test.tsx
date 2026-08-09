@@ -11,15 +11,21 @@
  * the parent hook (useFlightForm) currently holds, never a stale local copy.
  */
 
-import { describe, it, expect, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import FlightCompleteStep, { type FlightCompleteStepProps } from "./FlightCompleteStep";
+
+const mocks = vi.hoisted(() => ({ companionsList: vi.fn() }));
 
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }));
 vi.mock("../../hooks/useSuggestions", () => ({
   useSuggestions: () => ({ airlines: [], aircraft: [] }),
+}));
+vi.mock("../../store/settingsStore", () => ({
+  useSettingsStore: () => ({ features: { enableCostTracking: false } }),
 }));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: vi.fn(() => vi.fn()),
@@ -29,6 +35,9 @@ vi.mock("../../lib/geo", () => ({
 }));
 vi.mock("../../lib/timeEstimation", () => ({
   estimateArrivalFromDeparture: vi.fn(),
+}));
+vi.mock("../../lib/api", () => ({
+  companionsApi: { list: mocks.companionsList },
 }));
 vi.mock("../Help/HelpIcon", () => ({ default: () => null }));
 vi.mock("../AirportAutocomplete", () => ({ default: () => null }));
@@ -60,6 +69,7 @@ function baseProps(
     terminal: "",
     gate: "",
     seatNumber: "",
+    boardingGroup: "",
     seatClass: "economy",
     status: "scheduled",
     category: "business",
@@ -70,23 +80,29 @@ function baseProps(
     setTerminal: vi.fn(),
     setGate: vi.fn(),
     setSeatNumber: vi.fn(),
+    setBoardingGroup: vi.fn(),
     setSeatClass: vi.fn(),
     setStatus: vi.fn(),
     setCategory: vi.fn(),
     bookingReference: "",
     ticketNumber: "",
+    bookingClassLetter: undefined,
+    baggageAllowance: undefined,
+    frequentFlyerNumber: undefined,
     setBookingReference: vi.fn(),
     setTicketNumber: vi.fn(),
-    price: undefined,
-    currency: "EUR",
-    setPrice: vi.fn(),
-    setCurrency: vi.fn(),
+    setBookingClassLetter: vi.fn(),
+    setBaggageAllowance: vi.fn(),
+    setFrequentFlyerNumber: vi.fn(),
+    cost: { price: undefined, currency: "EUR", taxes: undefined, fees: undefined, receiptUrl: "" },
+    onCostChange: vi.fn(),
+    tripId: "",
+    setTripId: vi.fn(),
     tags: [],
     companions: [],
-    companionInput: "",
+    coPassengers: [],
     setTags: vi.fn(),
     setCompanions: vi.fn(),
-    setCompanionInput: vi.fn(),
     notes: "",
     setNotes: vi.fn(),
     textClass: "",
@@ -96,6 +112,30 @@ function baseProps(
     ...overrides,
   };
 }
+
+beforeEach(() => {
+  mocks.companionsList.mockReset().mockResolvedValue([]);
+});
+
+describe("FlightCompleteStep companions field (Task 12)", () => {
+  it("renders the shared CompanionPicker instead of a plain comma-separated input", () => {
+    render(<FlightCompleteStep {...baseProps()} />);
+    expect(screen.getByRole("combobox", { name: "picker.label" })).toBeInTheDocument();
+  });
+
+  it("threads an existing companions array through as removable chips", () => {
+    render(<FlightCompleteStep {...baseProps({ companions: ["Anna", "Jonas"] })} />);
+    expect(screen.getByTestId("companion-remove-Anna")).toBeInTheDocument();
+    expect(screen.getByTestId("companion-remove-Jonas")).toBeInTheDocument();
+  });
+
+  it("calls setCompanions with the full string[] when a new companion is entered", async () => {
+    const setCompanions = vi.fn();
+    render(<FlightCompleteStep {...baseProps({ companions: ["Anna"], setCompanions })} />);
+    await userEvent.type(screen.getByRole("combobox", { name: "picker.label" }), "Jonas{Enter}");
+    expect(setCompanions).toHaveBeenCalledWith(["Anna", "Jonas"]);
+  });
+});
 
 describe("FlightCompleteStep status field", () => {
   it("has no status select — flown/scheduled/cancelled/historical options are gone", () => {

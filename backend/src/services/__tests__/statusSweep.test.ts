@@ -76,6 +76,41 @@ describe("sweepStatuses", () => {
     );
   });
 
+  // Lodging joined the sweep when its status became derived (Alex, 2026-07-12).
+  // No slack band here, unlike flights/cruises — see deriveLodgingStatus.
+  it("moves lodging stays through scheduled -> in_progress -> completed and leaves cancelled", async () => {
+    const lodging = await prisma.lodging.create({
+      data: { userId, name: "Sweep Hotel", type: "hotel" },
+    });
+    const stay = (over: Record<string, unknown>) =>
+      prisma.lodgingStay.create({
+        data: { userId, lodgingId: lodging.id, checkIn: past(24), checkOut: future(48), ...over },
+      });
+
+    const running = await stay({ status: "scheduled" });
+    const done = await stay({ status: "scheduled", checkIn: past(96), checkOut: past(24) });
+    const upcoming = await stay({
+      // Stored wrongly on purpose: the column is a CACHE, so a future-dated
+      // stay marked completed must be corrected, not trusted.
+      status: "completed",
+      checkIn: future(24),
+      checkOut: future(72),
+    });
+    const cancelled = await stay({ status: "cancelled", checkIn: past(96), checkOut: past(24) });
+
+    await sweepStatuses();
+
+    const read = async (id: string) =>
+      (await prisma.lodgingStay.findUnique({ where: { id } }))?.status;
+    expect(await read(running.id)).toBe("in_progress");
+    expect(await read(done.id)).toBe("completed");
+    expect(await read(upcoming.id)).toBe("scheduled");
+    expect(await read(cancelled.id)).toBe("cancelled");
+
+    await prisma.lodgingStay.deleteMany({ where: { lodgingId: lodging.id } });
+    await prisma.lodging.delete({ where: { id: lodging.id } });
+  });
+
   it("derives trip status from segment dates", async () => {
     const trip = await prisma.trip.create({ data: { userId, name: "SweepTrip", status: "completed" } });
     await flight({ tripId: trip.id, departureTime: past(24), arrivalTime: past(22) });

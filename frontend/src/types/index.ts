@@ -1,3 +1,4 @@
+import type { Lodging, LodgingStay } from "./lodging";
 import type { LinkedAlbum } from "./immich";
 
 export interface User {
@@ -214,7 +215,7 @@ export interface Trip {
   icon: string | null;
   countries: string[];
 
-  _count?: { flights: number; cruises?: number };
+  _count?: { flights: number; cruises?: number; lodgingStays?: number };
   bookings?: Booking[];
   flights?: Pick<
     Flight,
@@ -227,6 +228,17 @@ export interface Trip {
     | "depLon"
     | "arrLat"
     | "arrLon"
+    // Needed to render each end in ITS airport's zone. Without them the trip
+    // timeline fell back to the viewer's clock and disagreed with the flights
+    // table by the whole UTC offset.
+    | "depTimezone"
+    | "arrTimezone"
+    | "depTimeSemantics"
+    | "arrTimeSemantics"
+    // Trip cost counts flights that carry a price but no booking.
+    | "price"
+    | "currency"
+    | "bookingId"
   >[];
   cruises?: Array<{
     id: string;
@@ -235,10 +247,19 @@ export interface Trip {
     endDate: string | null;
     status: string;
     shipId: number | null;
+    // Trip cost counts cruises that carry a price but no booking, exactly as it
+    // counts flights; `distanceKm` is the sum of the cruise's computed legs,
+    // 0 when the sea router never ran for it.
+    price?: number | null;
+    currency?: string | null;
+    bookingId?: string | null;
+    distanceKm?: number;
   }>;
   stops?: TripStop[];
   journalEntries?: TripJournalEntry[];
   photos?: TripPhoto[];
+  /** A stay linked to this trip via `LodgingStay.tripId` — always includes its `lodging` (GET /trips/:id). */
+  lodgingStays?: (LodgingStay & { lodging: Lodging })[];
   immichAlbums?: LinkedAlbum[];
 }
 
@@ -254,16 +275,18 @@ export interface TripPhoto {
 }
 
 export interface FlightInput {
-  airline?: string;
+  /** For the nullable fields in this interface: `null` clears the stored
+   *  value on update; `undefined` leaves it alone. */
+  airline?: string | null;
   airlineIata?: string;
   airlineIcao?: string;
-  operatingAirline?: string;
+  operatingAirline?: string | null;
   operatingAirlineIata?: string;
   operatingAirlineIcao?: string;
   isCodeshare?: boolean;
-  flightNumber?: string;
+  flightNumber?: string | null;
   callsign?: string;
-  aircraft?: string;
+  aircraft?: string | null;
   aircraftRegistration?: string;
   aircraftModeS?: string;
   departure: Airport;
@@ -275,9 +298,10 @@ export interface FlightInput {
   depTimezone?: string | null;
   arrivalLocal?: string;
   arrTimezone?: string | null;
-  actualDepartureLocal?: string;
+  /** null clears a stored actual time on update (delay resets with it). */
+  actualDepartureLocal?: string | null;
   actualDepartureTz?: string;
-  actualArrivalLocal?: string;
+  actualArrivalLocal?: string | null;
   actualArrivalTz?: string;
   // Match Flight's broader enum so Partial<Flight> assigns into
   // Partial<FlightInput> without a cast. The backend schema only accepts
@@ -294,27 +318,29 @@ export interface FlightInput {
     | "live_update"
     | "api_lookup"
     | "bulk_import";
-  notes?: string;
+  notes?: string | null;
   // Extended fields
-  seatNumber?: string;
-  seatClass?: "economy" | "premium_economy" | "business" | "first";
-  boardingGroup?: string;
-  gate?: string;
-  terminal?: string;
-  bookingReference?: string;
-  ticketNumber?: string;
-  price?: number;
+  seatNumber?: string | null;
+  /** `null` clears the stored value on update; `undefined` leaves it alone. */
+  seatClass?: "economy" | "premium_economy" | "business" | "first" | null;
+  boardingGroup?: string | null;
+  gate?: string | null;
+  terminal?: string | null;
+  bookingReference?: string | null;
+  ticketNumber?: string | null;
+  price?: number | null;
   /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
   currency?: string;
-  taxes?: number;
-  fees?: number;
-  category?: "business" | "private" | "vacation";
+  taxes?: number | null;
+  fees?: number | null;
+  /** `null` clears the stored value on update; `undefined` leaves it alone. */
+  category?: "business" | "private" | "vacation" | null;
   tags?: string[];
   companions?: string[];
-  receiptUrl?: string;
-  baggageAllowance?: string;
-  frequentFlyerNumber?: string;
-  bookingClassLetter?: string;
+  receiptUrl?: string | null;
+  baggageAllowance?: string | null;
+  frequentFlyerNumber?: string | null;
+  bookingClassLetter?: string | null;
   coPassengers?: string[];
   // Sonder-Flug (special flights) — see Flight interface
   specialType?:
@@ -704,6 +730,10 @@ export interface AirlineRankingItem {
   airline: string;
   count: number;
   percentage: number;
+  /** IATA code resolved by the catalogue; absent when nothing matches. The API
+   *  has carried it since 2.5.0 — this side simply never declared it, so the
+   *  card could not render what the endpoint was already sending. */
+  iata?: string;
 }
 
 export interface AirlineRankingResponse {
@@ -717,8 +747,17 @@ export interface CountryStat {
 }
 
 export interface CountryStatsResponse {
+  /** Display vocabulary, ranked by flight count. */
   countries: CountryStat[];
   total: number;
+  /** Counting vocabulary: lifetime departure countries as ISO alpha-2, so the
+   *  cross-domain KPI can union them with the port catalogue without counting
+   *  "Germany" and "DE" twice. Optional — an older backend omits it. */
+  countriesIso?: string[];
+  /** Departure countries keyed by year (the year on the clock at the
+   *  departure airport), same ISO vocabulary. Optional so an older backend
+   *  still parses. */
+  byYear?: Record<string, string[]>;
 }
 
 export * from "./cruise";

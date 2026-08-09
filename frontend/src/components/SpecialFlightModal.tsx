@@ -127,7 +127,7 @@ export default function SpecialFlightModal({
   const [arrivalTime, setArrivalTime] = useState("");
   const [notes, setNotes] = useState("");
   const [tagsCsv, setTagsCsv] = useState("");
-  const [companionsCsv, setCompanionsCsv] = useState("");
+  const [companions, setCompanions] = useState<string[]>([]);
 
   // Sightseeing-only
   const [aircraft, setAircraft] = useState("");
@@ -159,7 +159,7 @@ export default function SpecialFlightModal({
     setArrivalTime(toLocalDatetime(flight.arrivalTime));
     setNotes(flight.notes ?? "");
     setTagsCsv((flight.tags ?? []).join(", "));
-    setCompanionsCsv((flight.companions ?? []).join(", "));
+    setCompanions(flight.companions ?? []);
     setAircraft(flight.aircraft ?? "");
     setEventSubtype(classifyEventSubtype(flight.specialType));
     setEventLat(flight.eventLat != null ? String(flight.eventLat) : "");
@@ -196,7 +196,7 @@ export default function SpecialFlightModal({
     setArrivalTime("");
     setNotes("");
     setTagsCsv("");
-    setCompanionsCsv("");
+    setCompanions([]);
     setAircraft("");
     setEventSubtype("eclipse");
     setEventLat("");
@@ -303,9 +303,13 @@ export default function SpecialFlightModal({
     | "status"
   > => ({
     ...resolveTimesAndStatus(),
-    notes: notes.trim() || undefined,
-    tags: tagsCsv ? csvToArray(tagsCsv) : undefined,
-    companions: companionsCsv ? csvToArray(companionsCsv) : undefined,
+    // This builder feeds BOTH create and update. null (not undefined) for a
+    // blanked field, and always-real arrays: on update, undefined means
+    // "keep the old value" server-side, which made clearing the notes, the
+    // tags or the last companion a silent no-op in edit mode.
+    notes: notes.trim() || null,
+    tags: tagsCsv ? csvToArray(tagsCsv) : [],
+    companions,
   });
 
   const buildSightseeingInput = (): FlightInput | null => {
@@ -318,7 +322,7 @@ export default function SpecialFlightModal({
       specialType: "sightseeing",
       departure: departureAirport,
       arrival: departureAirport,
-      aircraft: aircraft.trim() || undefined,
+      aircraft: aircraft.trim() || null,
     };
   };
 
@@ -358,9 +362,9 @@ export default function SpecialFlightModal({
       specialType: eventSubtypeToSpecialType(eventSubtype),
       departure: departureAirport,
       arrival: arrivalAirport ?? departureAirport,
-      eventLat: eventLat === "" ? undefined : latNum,
-      eventLon: eventLon === "" ? undefined : lonNum,
-      eventLabel: eventLabel.trim() || undefined,
+      eventLat: eventLat === "" ? null : latNum,
+      eventLon: eventLon === "" ? null : lonNum,
+      eventLabel: eventLabel.trim() || null,
     };
   };
 
@@ -562,8 +566,8 @@ export default function SpecialFlightModal({
                 onNotesChange={setNotes}
                 tagsCsv={tagsCsv}
                 onTagsCsvChange={setTagsCsv}
-                companionsCsv={companionsCsv}
-                onCompanionsCsvChange={setCompanionsCsv}
+                companions={companions}
+                onCompanionsChange={setCompanions}
               />
 
               <div className="flex justify-end gap-2 pt-2">

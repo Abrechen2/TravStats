@@ -2,7 +2,8 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import MapGL, { useControl, type MapRef, type MapLayerMouseEvent } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { createMarkerTooltip } from "./map/markerTooltip";
-import { LightingEffect } from "@deck.gl/core";
+import { LightingEffect, type PickingInfo } from "@deck.gl/core";
+import { useDeckHoverCursor } from "../hooks/useDeckHoverCursor";
 import { useTranslation } from "../hooks/useTranslation";
 import { applyMapOverlays } from "./Globe/mapOverlays";
 import { FlatMapControlPanel } from "./map/FlatMapControlPanel";
@@ -14,8 +15,10 @@ import { useFlightColorStore } from "../store/flightColorStore";
 import { FLAT_BASEMAPS, resolveFlatStyle, type FlatStyleId } from "./map/basemapStyles";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
+import type { Lodging } from "../types/lodging";
 import type { MapMode } from "./MapContainer3D";
 import { buildRouteData, createRoutesLayers } from "./layers/routesLayer";
+import { buildLodgingPins } from "./layers/lodgingPinsLayer";
 import { createHeatmapLayer } from "./layers/heatmapLayer";
 import { createTripsLayer, buildTripsData, getTimeRange } from "./layers/tripsLayer";
 import { createSpecialFlightsLayers } from "./layers/specialFlightsLayer";
@@ -77,9 +80,10 @@ interface DeckOverlayProps {
   layers: Layer[];
   effects: LightingEffect[];
   getTooltip: ReturnType<typeof createMarkerTooltip>;
+  onHover: (info: PickingInfo) => void;
 }
 
-function DeckGLOverlay({ layers, effects, getTooltip }: DeckOverlayProps): null {
+function DeckGLOverlay({ layers, effects, getTooltip, onHover }: DeckOverlayProps): null {
   const overlay = useControl<MapboxOverlay>(
     () =>
       new MapboxOverlay({
@@ -87,12 +91,14 @@ function DeckGLOverlay({ layers, effects, getTooltip }: DeckOverlayProps): null 
         effects,
         pickingRadius: 5,
         getTooltip,
+        onHover,
       }),
     { position: "top-left" }
   );
   // Push getTooltip on every render too so language switches propagate
-  // — MapboxOverlay caches the constructor's getTooltip otherwise.
-  overlay.setProps({ layers, effects, pickingRadius: 5, getTooltip });
+  // — MapboxOverlay caches the constructor's getTooltip otherwise. `onHover`
+  // rides along for the same reason.
+  overlay.setProps({ layers, effects, pickingRadius: 5, getTooltip, onHover });
   return null;
 }
 
@@ -110,6 +116,36 @@ interface DeckGLMapProps {
   extraLayers?: Layer[];
   /** Which domain appearance sections the control panel exposes. */
   appearanceDomains?: readonly AppearanceDomain[];
+  /**
+   * Lodging marker-size slider value + setter. Controlled from the PARENT
+   * (`MapContainer3D`), unlike the flight/cruise marker sizes which
+   * DeckGLMap owns as local state — MapContainer3D is what builds the
+   * lodging pin layer (via `buildLodgingPins`) and passes it in as part of
+   * `extraLayers`, so it needs to own the value to re-memo on it. DeckGLMap
+   * only needs it to render the slider in the flat-map control panel.
+   * Both default to a no-op 1× so callers that don't use the lodging
+   * domain (every tab except LodgingTab) are unaffected.
+   */
+  lodgingMarkerSize?: number;
+  onLodgingMarkerSizeChange?: (s: number) => void;
+  /**
+   * Lodging places (hotels/campsites) to render as pins + name labels.
+   * Built into a ScatterplotLayer + TextLayer HERE (not by the caller, via
+   * `buildLodgingPins`) — unlike the marker-size value above, the pin layer
+   * itself needs `zoom` and `labelsMode`, both of which are private state
+   * that only exists inside this component (mirrors exactly how
+   * `createCruisePortsLayer` is built here rather than by MapContainer3D).
+   * Undefined/empty means "no lodging layer at all".
+   */
+  lodgingsOverride?: readonly Lodging[];
+  /**
+   * Fired when a lodging pin is clicked — receives the lodging id. Wrapped
+   * internally so the click also sets `deckClickedRef` (see
+   * `handleLodgingClick`), the same guard `handleAirportClick`/
+   * `handleFlightClick` use to stop the native background-click handler
+   * from immediately clearing whatever the click just did.
+   */
+  onLodgingClick?: (lodgingId: string) => void;
 }
 
 export function DeckGLMap({
@@ -124,6 +160,10 @@ export function DeckGLMap({
   cruises = [],
   extraLayers,
   appearanceDomains = ["flight", "cruise"],
+  lodgingMarkerSize = 1,
+  onLodgingMarkerSizeChange,
+  lodgingsOverride,
+  onLodgingClick,
 }: DeckGLMapProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
@@ -145,6 +185,10 @@ export function DeckGLMap({
   const setCruiseColorMode = useCruiseColorStore((s) => s.setMode);
   const setCruiseColor = useCruiseColorStore((s) => s.setColor);
   const mapRef = useRef<MapRef>(null);
+
+  // Hand cursor over any pickable deck object — airports, ports, lodging pins
+  // (#247). Driven by picking, so it needs no per-layer wiring.
+  const { isHovering, onHover: onDeckHover } = useDeckHoverCursor();
 
   const [mapLoaded, setMapLoaded] = useState(false);
   // Flat-map appearance customisation (mirrors the globe's "Anpassung"
@@ -523,6 +567,18 @@ export function DeckGLMap({
     [clearSelection]
   );
 
+  // Mirrors handleAirportClick's guard exactly: set deckClickedRef BEFORE
+  // the native background-click handler runs, so a lodging pin click
+  // doesn't get immediately undone by the fallback clearSelection/
+  // clearCruiseSelection branch in handleNativeClick.
+  const handleLodgingClick = useCallback(
+    (lodgingId: string): void => {
+      deckClickedRef.current = true;
+      onLodgingClick?.(lodgingId);
+    },
+    [onLodgingClick]
+  );
+
   // Heavy data build extracted from the layer useMemo so selection changes
   // (which only need to re-style the existing arcs) don't re-aggregate
   // flights into routes. Deps are deliberately limited to fields that
@@ -629,7 +685,23 @@ export function DeckGLMap({
     ];
     const cruisePortsAbove: Layer[] = ports ?? [];
 
-    return [...cruisePathsBelow, ...base, ...cruisePortsAbove, ...(extraLayers ?? [])];
+    // Lodging pins are flat-map only, additive on top of everything else —
+    // built here (not by the caller) so the layer can read the SAME private
+    // zoom/labelsMode state the cruise-port labels use, and so a pin click
+    // can be wrapped with the deckClickedRef guard (see handleLodgingClick).
+    const lodgingLayers: Layer[] =
+      buildLodgingPins(lodgingsOverride ?? [], lodgingMarkerSize, zoom, {
+        onPinClick: handleLodgingClick,
+        labelsMode,
+      }) ?? [];
+
+    return [
+      ...cruisePathsBelow,
+      ...base,
+      ...cruisePortsAbove,
+      ...lodgingLayers,
+      ...(extraLayers ?? []),
+    ];
   }, [
     visMode,
     flights,
@@ -658,6 +730,9 @@ export function DeckGLMap({
     labelsMode,
     cruiseColorConfig,
     flightColorConfig,
+    lodgingsOverride,
+    lodgingMarkerSize,
+    handleLodgingClick,
   ]);
 
   // No 3D modes remain — lighting effect is unused but kept as empty array for
@@ -732,13 +807,14 @@ export function DeckGLMap({
         onMove={handleMapMove}
         onClick={handleNativeClick}
         interactiveLayerIds={nativeInteractiveIds}
-        cursor={nativeInteractiveIds ? "pointer" : undefined}
+        cursor={isHovering || nativeInteractiveIds ? "pointer" : undefined}
       >
         {webgl2Available && mapLoaded && (
           <DeckGLOverlay
             layers={[...layers, ...pulseLayers, ...planeLayers]}
             effects={effects}
             getTooltip={getTooltip}
+            onHover={onDeckHover}
           />
         )}
         {!webgl2Available && visMode === "routes" && (
@@ -793,6 +869,10 @@ export function DeckGLMap({
             onMarkerSizeChange: setCruiseMarkerSize,
             arrowScale: cruiseArrowScale,
             onArrowScaleChange: setCruiseArrowScale,
+          }}
+          lodgingAppearance={{
+            markerSize: lodgingMarkerSize,
+            onMarkerSizeChange: onLodgingMarkerSizeChange ?? (() => {}),
           }}
         />
       </div>

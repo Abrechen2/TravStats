@@ -14,6 +14,7 @@ import { ShipPicker } from "./ShipPicker";
 import { PortPicker } from "./PortPicker";
 import { CruiseStopsEditor } from "./CruiseStopsEditor";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
+import CompanionPicker from "../CompanionPicker";
 
 type Mode = "create" | "edit";
 
@@ -114,9 +115,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
   const [currency, setCurrency] = useState<string>(cruise?.currency ?? "EUR");
 
   const [tagsInput, setTagsInput] = useState<string>((cruise?.tags ?? []).join(", "));
-  const [companionsInput, setCompanionsInput] = useState<string>(
-    (cruise?.companions ?? []).join(", ")
-  );
+  const [companions, setCompanions] = useState<string[]>(cruise?.companions ?? []);
   const [notes, setNotes] = useState<string>(cruise?.notes ?? "");
 
   const [saving, setSaving] = useState(false);
@@ -133,26 +132,32 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
     try {
       const input: CruiseInput = {
         shipId: ship?.id ?? null,
-        cruiseLine: cruiseLine || undefined,
-        routeName: routeName || undefined,
+        // null = explicit clear; undefined would tell the server "keep the
+        // old value" and make blanking any of these a silent no-op in edit
+        // mode (same defect family the flight edit modal had).
+        cruiseLine: cruiseLine || null,
+        routeName: routeName || null,
         departurePortId: departurePort?.id ?? null,
         arrivalPortId: arrivalPort?.id ?? null,
         startDate: fromDateInput(startDate),
         endDate: fromDateInput(endDate),
         status,
         color,
-        cabinNumber: cabinNumber || undefined,
-        cabinType: (cabinType || undefined) as CabinType | undefined,
-        deck: deck ? Number.parseInt(deck, 10) : undefined,
-        bookingReference: bookingReference || undefined,
-        price: price ? Number.parseFloat(price) : undefined,
+        cabinNumber: cabinNumber || null,
+        cabinType: (cabinType || null) as CabinType | null,
+        deck: deck ? Number.parseInt(deck, 10) : null,
+        bookingReference: bookingReference || null,
+        price: price ? Number.parseFloat(price) : null,
         currency: (currency || "EUR") as CruiseInput["currency"],
         tags: splitCsv(tagsInput),
-        companions: splitCsv(companionsInput),
-        notes: notes || undefined,
+        companions,
+        notes: notes || null,
         // Strip the UI-only `port` object from each stop before sending —
-        // the backend only wants portId/isAtSea/times/note.
-        stops: stops.length > 0 ? stops.map(({ port: _port, ...rest }) => rest) : undefined,
+        // the backend only wants portId/isAtSea/times/note. Always sent,
+        // including as []: omitting the field when the user removed every
+        // stop would silently keep the old stops (the server reads absence
+        // as "don't touch").
+        stops: stops.map(({ port: _port, ...rest }) => rest),
       };
       const saved =
         mode === "create"
@@ -377,13 +382,10 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 onChange={(e): void => setTagsInput(e.target.value)}
                 placeholder={t("field.tags")}
               />
-              <input
-                aria-label={t("field.companions")}
-                className={`mt-3 ${INPUT_CLASS}`}
-                value={companionsInput}
-                onChange={(e): void => setCompanionsInput(e.target.value)}
-                placeholder={t("field.companions")}
-              />
+              <div className="mt-3">
+                <label className="label">{t("field.companions")}</label>
+                <CompanionPicker value={companions} onChange={setCompanions} />
+              </div>
               <textarea
                 aria-label={t("field.notes")}
                 rows={3}
