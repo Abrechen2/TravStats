@@ -9,6 +9,7 @@ import * as fx from "../services/fx/frankfurter";
 import { resolveLocation } from "./lodgingGeocode";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { deriveLodgingStatus } from "../shared/statusDerivation";
+import { deriveStayOverallRating } from "../shared/ratingDerivation";
 import {
   createLodgingSchema,
   updateLodgingSchema,
@@ -452,6 +453,17 @@ router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunc
           checkOut: new Date(input.checkOut),
           current: input.status,
         }),
+        // Likewise derived, not accepted: the overall score follows the three
+        // components wherever a stay is written — form, CSV, e-mail/PDF — so
+        // an importer cannot leave it null and a client cannot store one that
+        // contradicts them. `current` only carries a source-supplied overall
+        // through for a stay that has no component rating at all.
+        ratingOverall: deriveStayOverallRating({
+          room: input.ratingRoom ?? null,
+          breakfast: input.ratingBreakfast ?? null,
+          service: input.ratingService ?? null,
+          current: input.ratingOverall ?? null,
+        }),
         lodgingId: lodging.id,
         userId,
       },
@@ -532,6 +544,16 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
       fxFields = resolveFxFields(fxOutcome);
     }
 
+    // Same merge rule as the dates above, and the same explicit-null trap as
+    // the FX block: `undefined` means "not sent" and falls back to the stored
+    // value, while an explicit `null` is the user CLEARING that rating and
+    // must survive into the derivation. `??` would collapse the two and make
+    // a cleared component silently keep its old score.
+    const effectiveRating = (
+      sent: number | null | undefined,
+      stored: number | null,
+    ): number | null => (sent !== undefined ? sent : stored);
+
     const updated = await prisma.lodgingStay.update({
       where: { id: stay.id },
       data: {
@@ -546,6 +568,15 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
           checkIn: effectiveCheckIn,
           checkOut: effectiveCheckOut,
           current: input.status ?? stay.status,
+        }),
+        // Derived from the EFFECTIVE (merged) ratings for the same reason: a
+        // PATCH sending one component must score the row that will actually
+        // be stored, not the partial body.
+        ratingOverall: deriveStayOverallRating({
+          room: effectiveRating(input.ratingRoom, stay.ratingRoom),
+          breakfast: effectiveRating(input.ratingBreakfast, stay.ratingBreakfast),
+          service: effectiveRating(input.ratingService, stay.ratingService),
+          current: effectiveRating(input.ratingOverall, stay.ratingOverall),
         }),
       },
     });

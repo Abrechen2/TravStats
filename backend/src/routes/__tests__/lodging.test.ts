@@ -416,6 +416,76 @@ describe("Lodging API", () => {
     });
   });
 
+  describe("POST/PATCH /api/v1/lodging/:id/stays — overall rating is derived server-side", () => {
+    let ratingLodgingId: string;
+
+    beforeAll(async () => {
+      const l = await prisma.lodging.create({ data: { userId, name: "Rating Derivation Hotel" } });
+      ratingLodgingId = l.id;
+    });
+
+    const createStay = (body: Record<string, unknown>) =>
+      request(app)
+        .post(`/api/v1/lodging/${ratingLodgingId}/stays`)
+        .set("Cookie", authCookie)
+        .send({
+          checkIn: "2024-03-01T15:00:00.000Z",
+          checkOut: "2024-03-03T11:00:00.000Z",
+          ...body,
+        });
+
+    it("derives the overall from the components on create, even with none sent", async () => {
+      const res = await createStay({ ratingRoom: 4, ratingBreakfast: 5, ratingService: null });
+      expect(res.status).toBe(201);
+      expect(res.body.data.ratingOverall).toBe(4.5);
+    });
+
+    it("overrides a client-sent overall that contradicts the components", async () => {
+      const res = await createStay({
+        ratingRoom: 5,
+        ratingBreakfast: 5,
+        ratingService: 5,
+        ratingOverall: 2,
+      });
+      expect(res.status).toBe(201);
+      expect(res.body.data.ratingOverall).toBe(5);
+    });
+
+    it("keeps an overall sent without any component rating", async () => {
+      const res = await createStay({ ratingOverall: 4 });
+      expect(res.status).toBe(201);
+      expect(res.body.data.ratingOverall).toBe(4);
+    });
+
+    it("re-derives from the MERGED ratings when a PATCH changes only one component", async () => {
+      // The same merge trap the dates and the FX snapshot already have: a PATCH
+      // that sends one rating must derive against the row that will actually be
+      // stored, not against the partial body.
+      const created = await createStay({ ratingRoom: 3, ratingBreakfast: 3, ratingService: 3 });
+      expect(created.body.data.ratingOverall).toBe(3);
+
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${ratingLodgingId}/stays/${created.body.data.id}`)
+        .set("Cookie", authCookie)
+        .send({ ratingRoom: 5 });
+      expect(res.status).toBe(200);
+      // mean(5, 3, 3) = 3.666… -> 3.5
+      expect(res.body.data.ratingOverall).toBe(3.5);
+    });
+
+    it("re-derives when a PATCH clears a component to null", async () => {
+      const created = await createStay({ ratingRoom: 5, ratingBreakfast: 2, ratingService: null });
+      expect(created.body.data.ratingOverall).toBe(3.5);
+
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${ratingLodgingId}/stays/${created.body.data.id}`)
+        .set("Cookie", authCookie)
+        .send({ ratingBreakfast: null });
+      expect(res.status).toBe(200);
+      expect(res.body.data.ratingOverall).toBe(5);
+    });
+  });
+
   describe("POST/PATCH /api/v1/lodging — geocode on save (Task 5b)", () => {
     it("geocodes an address-only lodging on create", async () => {
       jest.spyOn(geo, "resolveCoordinates").mockResolvedValue({ lat: 47.3769, lon: 8.5417 });

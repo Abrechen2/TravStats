@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   averageRatingsByCategory,
-  averageStayRating,
   derivePricePerNight,
   formatStayPriceDisplay,
   hasAnyPrice,
@@ -249,29 +248,9 @@ describe("averageRatingsByCategory", () => {
   });
 });
 
-describe("averageStayRating", () => {
-  it("averages the three category ratings", () => {
-    expect(averageStayRating(4, 5, 3)).toBe(4);
-  });
-
-  it("rounds to the nearest half star, the granularity the picker offers", () => {
-    // 4 + 5 + 3.5 = 12.5 / 3 = 4.1667 → 4 (nearest 0.5), never 4.1667
-    expect(averageStayRating(4, 5, 3.5)).toBe(4);
-    // 5 + 4.5 + 4.5 = 14 / 3 = 4.6667 → 4.5
-    expect(averageStayRating(5, 4.5, 4.5)).toBe(4.5);
-  });
-
-  it("averages only the categories actually rated", () => {
-    // Someone who rated the room alone still gets an overall — the average is
-    // over what was given, not over three slots padded with zeros.
-    expect(averageStayRating(4, null, null)).toBe(4);
-    expect(averageStayRating(5, 4, null)).toBe(4.5);
-  });
-
-  it("is null when nothing is rated — never 0, which would read as a rating", () => {
-    expect(averageStayRating(null, null, null)).toBeNull();
-  });
-});
+// The averageStayRating cases moved with the function to
+// `src/shared/__tests__/ratingDerivation.test.ts`, where the same truth table
+// is asserted against the backend twin as well.
 
 describe("derivePricePerNight", () => {
   it("divides the total by the number of nights", () => {

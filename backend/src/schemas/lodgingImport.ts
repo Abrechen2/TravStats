@@ -75,6 +75,10 @@ export const stayCandidateFieldsSchema = z.object({
   currency: z.enum(CURRENCIES).nullable().optional(),
   ratingRoom: rating,
   ratingBreakfast: rating,
+  ratingService: rating,
+  // Accepted, but never stored as sent: `createStay` re-derives the overall
+  // from the three components and only falls back to this value for a stay
+  // that carries none of them (shared/ratingDerivation.ts).
   ratingOverall: rating,
   bookingReference: z.string().max(40).nullable().optional(),
   // "booking:<confirmation number>" — see LodgingStay.externalRef (Task 1).

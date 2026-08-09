@@ -619,4 +619,65 @@ describe("commitLodgingImport", () => {
     expect(result.failed[0].code).toBe("ownership_mismatch");
     expect(result.failed[0].error.toLowerCase()).not.toContain("prisma");
   });
+
+  describe("overall rating", () => {
+    const commitStay = async (
+      name: string,
+      stay: CommitRowInput["stay"],
+    ): Promise<{ ratingOverall: number | null; ratingService: number | null }> => {
+      const result = await commitLodgingImport(userId, "csv", "ratings.csv", [
+        { sourceRowIndex: 0, action: "create", lodging: { name }, stay },
+      ]);
+      expect(result.failed).toEqual([]);
+      const row = await prisma.lodgingStay.findFirst({
+        where: { batchId: result.batchId },
+      });
+      return {
+        ratingOverall: row?.ratingOverall ?? null,
+        ratingService: row?.ratingService ?? null,
+      };
+    };
+
+    it("derives the overall from an import that carries only components", async () => {
+      // The exact shape of Alex's real sheet: room + breakfast, no overall
+      // column. Before the deriver moved out of the editor these ~380 stays
+      // imported unrated and every hotel and chain average read "—".
+      const row = await commitStay("Hotel Derived Rating", {
+        checkIn: "2026-06-01",
+        checkOut: "2026-06-03",
+        ratingRoom: 4,
+        ratingBreakfast: 5,
+      });
+      expect(row.ratingOverall).toBe(4.5);
+    });
+
+    it("imports a service rating and counts it in the overall", async () => {
+      const row = await commitStay("Hotel Service Rating", {
+        checkIn: "2026-06-04",
+        checkOut: "2026-06-05",
+        ratingRoom: 5,
+        ratingBreakfast: 4,
+        ratingService: 3,
+      });
+      expect(row.ratingService).toBe(3);
+      expect(row.ratingOverall).toBe(4);
+    });
+
+    it("keeps a source overall when the import carries no component rating", async () => {
+      const row = await commitStay("Hotel Source Overall", {
+        checkIn: "2026-06-06",
+        checkOut: "2026-06-07",
+        ratingOverall: 4,
+      });
+      expect(row.ratingOverall).toBe(4);
+    });
+
+    it("leaves an unrated import unrated", async () => {
+      const row = await commitStay("Hotel No Rating", {
+        checkIn: "2026-06-08",
+        checkOut: "2026-06-09",
+      });
+      expect(row.ratingOverall).toBeNull();
+    });
+  });
 });

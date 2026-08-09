@@ -209,6 +209,7 @@
       "currency": "Currency",
       "ratingRoom": "Room rating",
       "ratingBreakfast": "Breakfast rating",
+      "ratingService": "Service rating",
       "ratingOverall": "Overall rating",
       "bookingReference": "Booking reference",
       "notes": "Notes",

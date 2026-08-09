@@ -40,6 +40,8 @@ export interface StayCandidateFields {
   currency?: LodgingCurrency | null;
   ratingRoom?: number | null;
   ratingBreakfast?: number | null;
+  ratingService?: number | null;
+  /** Sent as the source gave it; the backend re-derives it from the components. */
   ratingOverall?: number | null;
   bookingReference?: string | null;
   /** "booking:<confirmation number>" — see LodgingStay.externalRef. */

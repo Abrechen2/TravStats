@@ -9,7 +9,8 @@ import ReceiptUpload from "../ReceiptUpload";
 import { AmenityChipsInput } from "./AmenityChipsInput";
 import { StayEditorRatingsSection } from "./StayEditorRatingsSection";
 import { StayEditorPriceSection } from "./StayEditorPriceSection";
-import { averageStayRating, derivePricePerNight } from "../../lib/lodgingFormat";
+import { derivePricePerNight } from "../../lib/lodgingFormat";
+import { deriveStayOverallRating } from "../../shared/ratingDerivation";
 import { deriveLodgingStatus } from "../../shared/statusDerivation";
 import { MembershipManager } from "./MembershipManager";
 import type {
@@ -147,7 +148,17 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
   const effectiveStatus: StayStatus = isCancelled ? "cancelled" : derivedStatus;
 
   const parsedTotalPrice = totalPrice.trim() ? Number.parseFloat(totalPrice) : null;
-  const derivedRatingOverall = averageStayRating(ratingRoom, ratingBreakfast, ratingService);
+  // The SAME function the server runs on save (shared/ratingDerivation.ts), so
+  // the readout cannot promise a number the backend then stores differently.
+  // `current` carries an overall the stay already has with no components behind
+  // it — an import, or a row from before the components existed. Without it,
+  // merely opening such a stay and saving would wipe the user's own score.
+  const derivedRatingOverall = deriveStayOverallRating({
+    room: ratingRoom,
+    breakfast: ratingBreakfast,
+    service: ratingService,
+    current: stay?.ratingOverall ?? null,
+  });
   const derivedPricePerNight = derivePricePerNight(
     Number.isFinite(parsedTotalPrice) ? parsedTotalPrice : null,
     checkIn,

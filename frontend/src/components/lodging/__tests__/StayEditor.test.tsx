@@ -304,6 +304,55 @@ describe("StayEditor", () => {
     expect(vi.mocked(createStay).mock.calls[0][1].ratingOverall).toBe(4);
   });
 
+  it("keeps an imported overall that has no component ratings behind it", async () => {
+    // An import (or a legacy row) can carry an overall score with no room/
+    // breakfast/service behind it. Deriving from the components alone made
+    // the editor show "—" and send null, so merely opening such a stay and
+    // saving it wiped the user's own number.
+    const importedStay: LodgingStay = { ...baseStay, ratingOverall: 4 };
+    vi.mocked(updateStay).mockResolvedValue(importedStay);
+
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        stay={importedStay}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId("stay-editor-overall").textContent).toContain("4");
+
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    await waitFor(() => expect(updateStay).toHaveBeenCalled());
+    expect(vi.mocked(updateStay).mock.calls[0][2].ratingOverall).toBe(4);
+  });
+
+  it("lets a newly typed component rating override an imported overall", async () => {
+    const importedStay: LodgingStay = { ...baseStay, ratingOverall: 2 };
+    vi.mocked(updateStay).mockResolvedValue(importedStay);
+
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        stay={importedStay}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+
+    await userEvent.click(screen.getByTestId("star-room-5"));
+    expect(screen.getByTestId("stay-editor-overall").textContent).toContain("5");
+
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    await waitFor(() => expect(updateStay).toHaveBeenCalled());
+    expect(vi.mocked(updateStay).mock.calls[0][2].ratingOverall).toBe(5);
+  });
+
   it("offers no overall-rating picker — the value is read-only", () => {
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
 
