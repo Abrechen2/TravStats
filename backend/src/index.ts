@@ -434,6 +434,27 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({ operation: 'server_start_backfill_aircraft_names_error', message: 'Failed to normalise aircraft names', error });
     }
 
+    // Flag a demo account that a pre-2.5.0 version created unflagged
+    // (idempotent). Deliberately outside the demo seeder: that seeder runs only
+    // on a first install or with CREATE_DEMO_USER=true, i.e. never on the
+    // installs that carry the broken row.
+    try {
+      const { backfillDemoFlag } = await import("./scripts/backfillDemoFlag");
+      const n = await backfillDemoFlag();
+      if (n > 0) {
+        logger.info({
+          operation: "server_start_backfill_demo_flag",
+          message: "Flagged the built-in demo account as a demo account",
+        });
+      }
+    } catch (error) {
+      logger.warn({
+        operation: "server_start_backfill_demo_flag_error",
+        message: "Failed to flag the demo account",
+        error,
+      });
+    }
+
     // Backfill booking-level prices (idempotent — heals bookings created
     // priceless by pre-2.5 imports; spec 2026-07-17-cost-booking-price)
     try {
