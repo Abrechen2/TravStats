@@ -12,7 +12,7 @@ import { StayEditorPriceSection } from "./StayEditorPriceSection";
 import { derivePricePerNight } from "../../lib/lodgingFormat";
 import { deriveStayOverallRating } from "../../shared/ratingDerivation";
 import { deriveLodgingStatus } from "../../shared/statusDerivation";
-import { MembershipManager } from "./MembershipManager";
+import { deriveStayMembership } from "../../shared/membershipDerivation";
 import type {
   LodgingStay,
   StayInput,
@@ -28,6 +28,8 @@ type Mode = "create" | "edit";
 interface StayEditorProps {
   mode: Mode;
   lodgingId: string;
+  /** The hotel's chain, if any — used to derive the covering loyalty card. */
+  lodgingChainId?: number | null;
   stay?: LodgingStay | null;
   onClose: () => void;
   onSaved: (saved: LodgingStay) => void | Promise<void>;
@@ -72,7 +74,14 @@ const splitCsv = (v: string): string[] =>
  * `<Section>` blocks). Star pickers and the price/FX block are extracted
  * into their own files to keep this one under the project's file-size limit.
  */
-export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEditorProps): JSX.Element {
+export function StayEditor({
+  mode,
+  lodgingId,
+  lodgingChainId = null,
+  stay,
+  onClose,
+  onSaved,
+}: StayEditorProps): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "common"]);
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
 
@@ -98,13 +107,16 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
   const [roomAmenities, setRoomAmenities] = useState<string[]>(stay?.roomAmenities ?? []);
   const [bookingReference, setBookingReference] = useState<string>(stay?.bookingReference ?? "");
   const [membershipId, setMembershipId] = useState<string>(stay?.membershipId ?? "");
+  const [membershipOptOut, setMembershipOptOut] = useState<boolean>(stay?.membershipOptOut ?? false);
+  const [showMembershipOverride, setShowMembershipOverride] = useState<boolean>(
+    (stay?.membershipId ?? null) !== null || (stay?.membershipOptOut ?? false)
+  );
   const [tripId, setTripId] = useState<string>(stay?.tripId ?? "");
   const [receiptUrl, setReceiptUrl] = useState<string | null>(stay?.receiptUrl ?? null);
   const [companionsInput, setCompanionsInput] = useState<string>((stay?.companions ?? []).join(", "));
   const [notes, setNotes] = useState<string>(stay?.notes ?? "");
 
   const [memberships, setMemberships] = useState<LodgingMembership[]>([]);
-  const [showMembershipManager, setShowMembershipManager] = useState<boolean>(false);
   const [trips, setTrips] = useState<Trip[]>([]);
 
   const [saving, setSaving] = useState<boolean>(false);
@@ -165,6 +177,24 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
     checkOut
   );
 
+  // The SAME function the server resolves with (shared/membershipDerivation.ts).
+  // `membershipId` is an OVERRIDE, never the answer — a card attached to the
+  // hotel's chain covers this stay without the user restating it here.
+  const resolvedMembership = deriveStayMembership({
+    overrideId: membershipId || null,
+    optOut: membershipOptOut,
+    lodgingId,
+    lodgingChainId: lodgingChainId ?? null,
+    memberships: memberships.map((m) => ({
+      id: m.id,
+      createdAt: m.createdAt,
+      chainIds: m.chainIds,
+      lodgingIds: m.lodgingIds,
+    })),
+  });
+  const resolvedMembershipName =
+    memberships.find((m) => m.id === resolvedMembership.membershipId)?.programName ?? null;
+
   const submit = async (): Promise<void> => {
     if (!checkIn || !checkOut) {
       setError(t("lodging:stayEditor.datesRequired"));
@@ -209,7 +239,12 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
         ratingOverall: derivedRatingOverall,
         roomAmenities,
         bookingReference: bookingReference.trim() || null,
-        membershipId: membershipId || null,
+        // Only ever the override — never the derived value. Writing the
+        // resolved card back would give the rule a second stored copy, which
+        // is exactly how the overall-rating derivation drifted out of the
+        // import paths (9fcf5de1).
+        membershipId: membershipOptOut ? null : membershipId || null,
+        membershipOptOut,
         receiptUrl,
         tripId: tripId || null,
         companions: splitCsv(companionsInput),
@@ -400,32 +435,42 @@ export function StayEditor({ mode, lodgingId, stay, onClose, onSaved }: StayEdit
           </Section>
 
           <Section title={t("lodging:stayEditor.loyaltySection")}>
-            <div className="flex items-center gap-2">
+            <div data-testid="stay-editor-membership" className="text-sm">
+              <span className="text-[var(--text-primary)]">
+                {resolvedMembershipName ?? t("lodging:field.noMembership")}
+              </span>
+              <span className="ml-2 text-xs text-[var(--text-muted)]">
+                {t(`lodging:field.membershipSource.${resolvedMembership.source}`)}
+              </span>
+            </div>
+            <button
+              type="button"
+              data-testid="stay-editor-membership-override-toggle"
+              onClick={(): void => setShowMembershipOverride((v) => !v)}
+              className="mt-1 text-xs text-[var(--accent)] hover:underline"
+            >
+              {t("lodging:stayEditor.overrideMembership")}
+            </button>
+            {showMembershipOverride && (
               <select
+                data-testid="stay-editor-membership-select"
                 aria-label={t("lodging:field.membership")}
-                className={INPUT_CLASS}
-                value={membershipId}
-                onChange={(e): void => setMembershipId(e.target.value)}
+                className={`mt-2 ${INPUT_CLASS}`}
+                value={membershipOptOut ? "__none__" : membershipId}
+                onChange={(e): void => {
+                  const v = e.target.value;
+                  setMembershipOptOut(v === "__none__");
+                  setMembershipId(v === "__none__" ? "" : v);
+                }}
               >
-                <option value="">{t("lodging:field.noMembership")}</option>
+                <option value="">{t("lodging:field.membershipDerive")}</option>
+                <option value="__none__">{t("lodging:field.membershipNone")}</option>
                 {memberships.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.programName}
                   </option>
                 ))}
               </select>
-              <button
-                type="button"
-                onClick={(): void => setShowMembershipManager((v) => !v)}
-                className="whitespace-nowrap rounded-md border border-[var(--color-border)] px-3 py-2 text-xs text-[var(--accent)] hover:bg-[var(--bg-surface)]"
-              >
-                {t("lodging:stayEditor.manageMemberships")}
-              </button>
-            </div>
-            {showMembershipManager && (
-              <div className="mt-3">
-                <MembershipManager onChanged={setMemberships} />
-              </div>
             )}
             <select
               aria-label={t("lodging:field.trip")}
