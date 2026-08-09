@@ -180,7 +180,7 @@
   "logout": "Abmelden",
   "hint": {
     "title": "Willkommen bei den Statistiken!",
-    "message": "Hier finden Sie detaillierte Analysen Ihrer Flüge: Charts, Trends, Top-Routen und mehr. Scrollen Sie nach unten, um alle Statistiken zu sehen.",
+    "message": "Hier findest du detaillierte Analysen deiner Flüge: Charts, Trends, Top-Routen und mehr. Scroll nach unten, um alle Statistiken zu sehen.",
     "linkText": "Zurück zum Dashboard"
   },
   "overview": {
@@ -523,7 +523,7 @@
   "aircraftRanking": {
     "title": "Häufigste Flugzeuge (Hulls)",
     "noData": "Noch keine Flüge mit Kennung",
-    "hint": "Tragen Sie eine Flugnummer per Lookup ein, um Heckkennungen zu erfassen.",
+    "hint": "Trag eine Flugnummer per Lookup ein, um Heckkennungen zu erfassen.",
     "loading": "Lädt...",
     "topN": "Top {{n}} Flugzeuge"
   },

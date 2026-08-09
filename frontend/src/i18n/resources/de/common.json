@@ -85,7 +85,7 @@
   },
   "errorBoundary": {
     "title": "Ups! Etwas ist schiefgelaufen",
-    "message": "Die Anwendung hat einen unerwarteten Fehler festgestellt. Bitte laden Sie die Seite neu.",
+    "message": "Die Anwendung hat einen unerwarteten Fehler festgestellt. Bitte lade die Seite neu.",
     "refresh": "Seite neu laden",
     "fallbackTitle": "Etwas ist schiefgelaufen",
     "fallbackMessage": "Ein unerwarteter Fehler ist aufgetreten",
