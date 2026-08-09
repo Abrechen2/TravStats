@@ -33,6 +33,27 @@ describe('GET /api/v1/stats/aircraft-types', () => {
     app.use('/api/v1/stats', statsRoutes);
   });
 
+  // Shares a denominator with /stats/airlines, so it has to share that
+  // endpoint's status scope too — otherwise the two rankings on the same page
+  // are computed over different sets of flights.
+  it('counts only flown and historical flights', async () => {
+    mockCount.mockResolvedValue(3);
+    mockGroupBy.mockResolvedValue([{ aircraft: 'Airbus A320neo', _count: 3 }]);
+
+    const res = await request(app).get('/api/v1/stats/aircraft-types');
+    expect(res.status).toBe(200);
+
+    const flownAndHistorical = { in: ['flown', 'historical'] };
+    expect(mockCount).toHaveBeenCalledWith({
+      where: expect.objectContaining({ status: flownAndHistorical }),
+    });
+    expect(mockGroupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: flownAndHistorical }),
+      }),
+    );
+  });
+
   it('ranks aircraft types by flight count with percentages', async () => {
     mockCount.mockResolvedValue(10);
     mockGroupBy.mockResolvedValue([
