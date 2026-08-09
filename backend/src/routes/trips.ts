@@ -273,6 +273,23 @@ router.get(
             orderBy: { startDate: "asc" },
             take: 200,
           },
+          // Same rule, third domain: a stay carrying its own price belongs in
+          // the trip total. Without this the CARD excluded lodging from the
+          // sum while the detail page (full include below) counted it — the
+          // exact split the cruise select above was added to close.
+          lodgingStays: {
+            select: {
+              id: true,
+              checkIn: true,
+              checkOut: true,
+              status: true,
+              totalPrice: true,
+              currency: true,
+              bookingId: true,
+            },
+            orderBy: { checkIn: "asc" },
+            take: 200,
+          },
         },
       });
       // One batched airport lookup across EVERY trip's flights, not one per
