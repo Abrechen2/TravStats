@@ -158,9 +158,17 @@ export default function AirportAutocomplete({
 
   return (
     <div ref={wrapperRef} className="relative">
-      <label className="label">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
+      {/* Callers that render their own heading pass label="" — the flight
+          form's Von/Nach fields do, with `required`. Emitting the element
+          anyway gave those fields a SECOND label containing nothing but the
+          red asterisk, which a screen reader announces as a label whose whole
+          content is "*" (#239). No htmlFor was ever set here, so this element
+          is decorative and safe to omit entirely. */}
+      {label !== "" && (
+        <label className="label">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+      )}
       <input
         type="text"
         value={query}
