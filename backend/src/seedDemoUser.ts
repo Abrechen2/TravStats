@@ -1,5 +1,6 @@
 import { prisma } from './db';
 import { hashPassword } from './utils/password';
+import { deriveStayOverallRating } from './shared/ratingDerivation';
 
 // Weltweite Flughäfen für realistische Routen
 const airports = [
@@ -590,6 +591,235 @@ async function createDemoTrips(userId: string): Promise<void> {
   console.log(`   Created ${createdCount} trips`);
 }
 
+/**
+ * Demo lodging data: hotels, stays, one loyalty membership. Without this the
+ * lodging area of every preview/demo instance was EMPTY — testers had to type
+ * hotels by hand before they could judge the feature at all.
+ *
+ * Deliberate variety, one row per UI state worth demoing:
+ *  - chain hotel with membership (Hilton Tokyo → Hilton Honors)
+ *  - chain hotel whose stay OPTED OUT of the programme (Marriott NYC)
+ *  - independent hotel, priced per night only (exercises the total fallback)
+ *  - standalone stay on no trip at all
+ */
+async function createDemoLodging(userId: string): Promise<void> {
+  const existing = await prisma.lodging.count({ where: { userId } });
+  if (existing > 0) {
+    console.log(`   Found ${existing} existing lodgings (skipping)`);
+    return;
+  }
+
+  // Make the domain visible: without this the demo account hides the entire
+  // lodging area behind a settings toggle nobody knows about.
+  const settings = await prisma.userSettings.findUnique({ where: { userId } });
+  const domains = new Set([...(settings?.enabledDomains ?? ['flight']), 'lodging']);
+  await prisma.userSettings.upsert({
+    where: { userId },
+    update: { enabledDomains: [...domains] },
+    create: { userId, enabledDomains: [...domains], data: {} },
+  });
+
+  // Chain lookups — the catalog seed runs at boot; a missing chain just means
+  // the hotel is created chainless rather than the seed failing.
+  const hilton = await prisma.lodgingChain.findFirst({ where: { name: 'Hilton' } });
+  const marriott = await prisma.lodgingChain.findFirst({ where: { name: 'Marriott' } });
+
+  /** The stay should sit INSIDE its trip's flight window, so the timeline
+   *  reads as one journey rather than a hotel floating outside the flights. */
+  const tripWindow = async (
+    tripName: string,
+  ): Promise<{ tripId: string; from: Date; to: Date } | null> => {
+    const trip = await prisma.trip.findFirst({
+      where: { userId, name: tripName },
+      select: { id: true },
+    });
+    if (!trip) return null;
+    const flights = await prisma.flight.findMany({
+      where: { tripId: trip.id },
+      orderBy: { departureTime: 'asc' },
+      select: { departureTime: true, arrivalTime: true },
+    });
+    if (flights.length < 2) return null;
+    const first = flights[0];
+    const last = flights[flights.length - 1];
+    const from = first.arrivalTime ?? first.departureTime;
+    const to = last.departureTime;
+    if (!from || !to) return null;
+    return { tripId: trip.id, from: new Date(from), to: new Date(to) };
+  };
+
+  const day = 24 * 60 * 60 * 1000;
+  const dateOnly = (d: Date): Date => new Date(d.toISOString().slice(0, 10));
+  let stays = 0;
+
+  // 1. Chain hotel + membership, fully rated, total price typed.
+  const tokyo = await tripWindow('Tokyo · Japan');
+  if (tokyo) {
+    const hotel = await prisma.lodging.create({
+      data: {
+        userId,
+        name: 'Hilton Tokyo',
+        type: 'hotel',
+        chainId: hilton?.id ?? null,
+        city: 'Tokyo',
+        country: 'JP',
+        lat: 35.6926,
+        lon: 139.6921,
+        stars: 4,
+        dataSource: 'manual',
+      },
+    });
+    // The demo trips pair the EARLIEST matching outbound with the earliest
+    // return, which can be years apart — the stay clamps to a hotel-plausible
+    // length instead of spanning that whole window.
+    const checkIn = dateOnly(new Date(tokyo.from.getTime() + day));
+    const checkOut = dateOnly(new Date(checkIn.getTime() + 3 * day));
+    await prisma.lodgingStay.create({
+      data: {
+        userId,
+        lodgingId: hotel.id,
+        tripId: tokyo.tripId,
+        checkIn,
+        checkOut,
+        status: 'completed',
+        roomCategory: 'King Deluxe',
+        board: 'breakfast',
+        totalPrice: 1120,
+        currency: 'EUR',
+        ratingRoom: 5,
+        ratingBreakfast: 4,
+        ratingService: 5,
+        ratingOverall: deriveStayOverallRating({ room: 5, breakfast: 4, service: 5 }),
+      },
+    });
+    stays++;
+
+    if (hilton) {
+      const membership = await prisma.lodgingMembership.upsert({
+        where: { userId_programName: { userId, programName: 'Hilton Honors' } },
+        update: {},
+        create: {
+          userId,
+          programName: 'Hilton Honors',
+          membershipNumber: 'HH-847291035',
+          tier: 'Gold',
+        },
+      });
+      await prisma.lodgingMembershipChain.upsert({
+        where: { membershipId_chainId: { membershipId: membership.id, chainId: hilton.id } },
+        update: {},
+        create: { membershipId: membership.id, chainId: hilton.id },
+      });
+    }
+  }
+
+  // 2. Chain hotel whose stay opted OUT of the programme.
+  const nyc = await tripWindow('New York Business Trip');
+  if (nyc) {
+    const hotel = await prisma.lodging.create({
+      data: {
+        userId,
+        name: 'New York Marriott Marquis',
+        type: 'hotel',
+        chainId: marriott?.id ?? null,
+        city: 'New York',
+        country: 'US',
+        lat: 40.7589,
+        lon: -73.9861,
+        stars: 4,
+        dataSource: 'manual',
+      },
+    });
+    const checkIn = dateOnly(nyc.from);
+    const checkOut = dateOnly(new Date(checkIn.getTime() + 3 * day));
+    await prisma.lodgingStay.create({
+      data: {
+        userId,
+        lodgingId: hotel.id,
+        tripId: nyc.tripId,
+        checkIn,
+        checkOut,
+        status: 'completed',
+        board: 'none',
+        totalPrice: 780,
+        currency: 'USD',
+        membershipOptOut: true,
+        ratingRoom: 4,
+        ratingService: 3,
+        ratingOverall: deriveStayOverallRating({ room: 4, breakfast: null, service: 3 }),
+      },
+    });
+    stays++;
+  }
+
+  // 3. Independent hotel, per-night price only — no chain, no programme.
+  const barcelona = await tripWindow('Barcelona Wochenende');
+  if (barcelona) {
+    const hotel = await prisma.lodging.create({
+      data: {
+        userId,
+        name: 'Casa Mirador',
+        type: 'guesthouse',
+        city: 'Barcelona',
+        country: 'ES',
+        lat: 41.3874,
+        lon: 2.1686,
+        stars: 3,
+        dataSource: 'manual',
+      },
+    });
+    const checkIn = dateOnly(barcelona.from);
+    const checkOut = dateOnly(new Date(checkIn.getTime() + 2 * day));
+    await prisma.lodgingStay.create({
+      data: {
+        userId,
+        lodgingId: hotel.id,
+        tripId: barcelona.tripId,
+        checkIn,
+        checkOut,
+        status: 'completed',
+        board: 'breakfast',
+        pricePerNight: 95,
+        currency: 'EUR',
+        ratingRoom: 4,
+        ratingBreakfast: 5,
+        ratingOverall: deriveStayOverallRating({ room: 4, breakfast: 5, service: null }),
+      },
+    });
+    stays++;
+  }
+
+  // 4. A stay on no trip at all — the unassigned state.
+  const vienna = await prisma.lodging.create({
+    data: {
+      userId,
+      name: 'Pension Alpenblick',
+      type: 'guesthouse',
+      city: 'Vienna',
+      country: 'AT',
+      lat: 48.2082,
+      lon: 16.3738,
+      stars: 3,
+      dataSource: 'manual',
+    },
+  });
+  await prisma.lodgingStay.create({
+    data: {
+      userId,
+      lodgingId: vienna.id,
+      checkIn: new Date('2024-09-13'),
+      checkOut: new Date('2024-09-15'),
+      status: 'completed',
+      totalPrice: 210,
+      currency: 'EUR',
+    },
+  });
+  stays++;
+
+  const lodgings = await prisma.lodging.count({ where: { userId } });
+  console.log(`   ✅ Created ${lodgings} lodgings, ${stays} stays`);
+}
+
 export interface SeedDemoOptions {
   username?: string;
   password?: string;
@@ -803,6 +1033,10 @@ export async function seedDemoUser(options: SeedDemoOptions = {}) {
     // Create demo trips
     console.log('🗺  Creating demo trips...');
     await createDemoTrips(demoUser.id);
+
+    // Create demo lodging (after trips, so stays can sit inside trip windows)
+    console.log('🏨 Creating demo lodging...');
+    await createDemoLodging(demoUser.id);
 
     console.log('');
     console.log(`✅ User "${username}" setup complete!`);
