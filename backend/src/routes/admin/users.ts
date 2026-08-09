@@ -260,4 +260,45 @@ router.post(
   },
 );
 
+// POST /users/:id/disable-2fa — the way back in for a user who lost their phone
+// AND their recovery codes, without anyone needing a shell. Logged, because an
+// admin switching off someone else's protection should leave a trace.
+router.post(
+  '/users/:id/disable-2fa',
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: { id: true, username: true },
+      });
+      if (!user) throw new AppError('User not found', 404);
+
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id },
+          data: {
+            twoFactorSecret: null,
+            twoFactorPendingSecret: null,
+            twoFactorEnabledAt: null,
+            twoFactorToken: null,
+            twoFactorTokenExpiry: null,
+          },
+        }),
+        prisma.twoFactorRecoveryCode.deleteMany({ where: { userId: id } }),
+      ]);
+
+      logger.warn({
+        operation: 'admin_two_factor_disabled',
+        adminId: req.userId,
+        targetUserId: id,
+        targetUsername: user.username,
+      });
+      res.json({ disabled: true });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
 export default router;
