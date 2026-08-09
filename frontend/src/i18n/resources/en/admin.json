@@ -133,6 +133,24 @@
         "label": "Allow public registration",
         "help": "When enabled, new users can register without an invitation link (not recommended)."
       }
+    },
+    "passkeys": {
+      "title": "Passkeys (WebAuthn)",
+      "subtitle": "Lets users sign in with a fingerprint, face, PIN or password manager. Passkeys need HTTPS — browsers refuse them on a plain LAN address.",
+      "statusUsable": "Passkeys are usable on this instance.",
+      "status": {
+        "notConfigured": "Not set up yet — add at least one origin below.",
+        "insecureOrigin": "Not usable: the first origin is not HTTPS. Only localhost is exempt.",
+        "invalidRpId": "Not usable: the passkey domain is not a valid domain."
+      },
+      "rpId": {
+        "label": "Passkey domain",
+        "help": "The bare domain only — no https:// and no port. Leave empty to derive it from the first origin. NOTE: a passkey is bound to this value forever; changing it later breaks every passkey already registered."
+      },
+      "origins": {
+        "label": "Allowed origins",
+        "help": "One per line, with scheme and port if any. The first one is authoritative. Several only make sense when they share the same passkey domain (e.g. app.example.com and www.example.com)."
+      }
     }
   },
   "webdav": {

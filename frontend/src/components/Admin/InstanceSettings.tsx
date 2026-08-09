@@ -3,6 +3,7 @@ import { adminApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
+import type { PasskeyStatus } from "../../lib/api/admin";
 
 interface Settings {
   instanceName: string;
@@ -11,6 +12,35 @@ interface Settings {
   frontendUrl: string | null;
   publicUrl: string | null;
   lanUrl: string | null;
+  webauthnRpId: string | null;
+  /** Edited as one origin per line — the API takes an array. */
+  webauthnOrigins: string;
+}
+
+/**
+ * The first field-level validation message the server sent, as
+ * "field: reason", or null when this was not a validation failure. The shape
+ * comes from `errorHandler`'s ZodError branch.
+ */
+function validationDetail(err: unknown): string | null {
+  const body = (err as { response?: { data?: unknown } } | undefined)?.response?.data;
+  if (typeof body !== "object" || body === null) return null;
+  const details = (body as { details?: unknown }).details;
+  if (!Array.isArray(details) || details.length === 0) return null;
+  const first = details[0] as { field?: unknown; message?: unknown };
+  if (typeof first.message !== "string") return null;
+  return typeof first.field === "string" && first.field.length > 0
+    ? `${first.field}: ${first.message}`
+    : first.message;
+}
+
+/** "a\nb\n\nc" -> ["a", "b", "c"]. Blank lines are how people separate things
+ *  while typing, not entries they meant to save. */
+function parseOrigins(text: string): string[] {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
 }
 
 export default function InstanceSettings(): JSX.Element {
@@ -26,13 +56,16 @@ export default function InstanceSettings(): JSX.Element {
     frontendUrl: "",
     publicUrl: "",
     lanUrl: "",
+    webauthnRpId: "",
+    webauthnOrigins: "",
   });
+  const [passkeyStatus, setPasskeyStatus] = useState<PasskeyStatus | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     adminApi
       .getInstanceSettings()
-      .then(({ settings }) => {
+      .then(({ settings, passkeyStatus: status }) => {
         if (cancelled) return;
         setForm({
           instanceName: settings.instanceName,
@@ -41,7 +74,10 @@ export default function InstanceSettings(): JSX.Element {
           frontendUrl: settings.frontendUrl ?? "",
           publicUrl: settings.publicUrl ?? "",
           lanUrl: settings.lanUrl ?? "",
+          webauthnRpId: settings.webauthnRpId ?? "",
+          webauthnOrigins: (settings.webauthnOrigins ?? []).join("\n"),
         });
+        setPasskeyStatus(status);
         setLoaded(true);
       })
       .catch((err) => {
@@ -62,13 +98,15 @@ export default function InstanceSettings(): JSX.Element {
     e.preventDefault();
     setSaving(true);
     try {
-      const { settings } = await adminApi.updateInstanceSettings({
+      const { settings, passkeyStatus: status } = await adminApi.updateInstanceSettings({
         instanceName: form.instanceName.trim(),
         maxUsers: form.maxUsers,
         allowRegistration: form.allowRegistration,
         frontendUrl: (form.frontendUrl ?? "").trim(),
         publicUrl: (form.publicUrl ?? "").trim(),
         lanUrl: (form.lanUrl ?? "").trim(),
+        webauthnRpId: (form.webauthnRpId ?? "").trim(),
+        webauthnOrigins: parseOrigins(form.webauthnOrigins),
       });
       setForm({
         instanceName: settings.instanceName,
@@ -77,11 +115,18 @@ export default function InstanceSettings(): JSX.Element {
         frontendUrl: settings.frontendUrl ?? "",
         publicUrl: settings.publicUrl ?? "",
         lanUrl: settings.lanUrl ?? "",
+        webauthnRpId: settings.webauthnRpId ?? "",
+        webauthnOrigins: (settings.webauthnOrigins ?? []).join("\n"),
       });
+      setPasskeyStatus(status);
       addToast("success", t("admin:instance.saved"));
     } catch (err) {
       logger.error("Failed to save instance settings", err);
-      addToast("error", t("admin:instance.saveFailed"));
+      // This form has eight fields; "Failed to save" leaves the admin guessing
+      // which one the server rejected. Zod already names the field and the
+      // reason, so say that instead of throwing the detail away.
+      const detail = validationDetail(err);
+      addToast("error", detail ?? t("admin:instance.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -165,6 +210,71 @@ export default function InstanceSettings(): JSX.Element {
         <p className="mt-1 text-xs text-(--text-muted)">
           {t("admin:instance.fields.lanUrl.help")}
         </p>
+      </div>
+
+      {/* Passkeys. Separated by a rule because these two fields are not "more
+          URLs" — a credential is bound to the rpId forever, so changing it
+          later invalidates every passkey already registered. */}
+      <div className="border-t border-(--border) pt-6">
+        <h3 className="text-base font-semibold text-(--text-primary)">
+          {t("admin:instance.passkeys.title")}
+        </h3>
+        <p className="mt-1 text-sm text-(--text-muted)">
+          {t("admin:instance.passkeys.subtitle")}
+        </p>
+
+        {passkeyStatus && (
+          <p
+            className="mt-3 text-sm"
+            role="status"
+            style={{ color: passkeyStatus.usable ? "var(--success)" : "var(--text-muted)" }}
+          >
+            {passkeyStatus.usable
+              ? t("admin:instance.passkeys.statusUsable")
+              : t(`admin:instance.passkeys.status.${passkeyStatus.reason ?? "notConfigured"}`)}
+          </p>
+        )}
+
+        <div className="mt-4">
+          <label
+            htmlFor="webauthn-rp-id"
+            className="mb-1 block text-sm font-medium text-(--text-primary)"
+          >
+            {t("admin:instance.passkeys.rpId.label")}
+          </label>
+          <input
+            id="webauthn-rp-id"
+            type="text"
+            maxLength={253}
+            value={form.webauthnRpId ?? ""}
+            onChange={(e) => setForm({ ...form, webauthnRpId: e.target.value })}
+            placeholder="travstats.example.com"
+            className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
+          />
+          <p className="mt-1 text-xs text-(--text-muted)">
+            {t("admin:instance.passkeys.rpId.help")}
+          </p>
+        </div>
+
+        <div className="mt-4">
+          <label
+            htmlFor="webauthn-origins"
+            className="mb-1 block text-sm font-medium text-(--text-primary)"
+          >
+            {t("admin:instance.passkeys.origins.label")}
+          </label>
+          <textarea
+            id="webauthn-origins"
+            rows={3}
+            value={form.webauthnOrigins}
+            onChange={(e) => setForm({ ...form, webauthnOrigins: e.target.value })}
+            placeholder={"https://travstats.example.com\nhttps://www.travstats.example.com"}
+            className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm font-mono"
+          />
+          <p className="mt-1 text-xs text-(--text-muted)">
+            {t("admin:instance.passkeys.origins.help")}
+          </p>
+        </div>
       </div>
 
       <div>
