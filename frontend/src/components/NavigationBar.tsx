@@ -100,7 +100,7 @@ export default function NavigationBar(): JSX.Element {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useTranslation(["dashboard", "common", "cruise", "trips"]);
+  const { t } = useTranslation(["dashboard", "common", "cruise", "trips", "lodging"]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pendingUpdatesCount, setPendingUpdatesCount] = useState(0);
   const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);

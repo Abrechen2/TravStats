@@ -24,7 +24,7 @@ export type Rgb = [number, number, number];
 
 // Curated distinct hues for telling individual cruises apart (#150). Chosen to
 // avoid the four status colors (flight orange/coral, cruise blue/cyan) and
-// the domain colors (flight #f0a947, cruise #6fa0d6, hotel #b072d6, poi
+// the domain colors (flight #f0a947, cruise #6fa0d6, lodging #d4778f, poi
 // #5ec2b2). Dark-theme legible.
 export const CRUISE_DISTINCT_PALETTE: Rgb[] = [
   [232, 131, 116], // coral

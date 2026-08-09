@@ -11,6 +11,7 @@ import {
   defaultSettings,
 } from './types';
 import { DOMAIN_KEYS, type DomainKey } from '../../shared/domains';
+import { CURRENCIES } from '../../schemas/lodging';
 import { getInstanceSettings } from '../../services/instanceSettingsService';
 
 const router = Router();
@@ -104,6 +105,10 @@ const settingsSchema = z.object({
   boardingPassParserStrategy: z.enum(['parser-only', 'parser-with-api', 'api-only']).nullable().optional(),
   enabledDomains: z.array(z.enum(DOMAIN_KEYS as unknown as [DomainKey, ...DomainKey[]])).optional(),
   whatsNewSeenVersion: z.string().max(32).optional(),
+  // Lodging-domain preference: single currency used to aggregate stay costs that
+  // were originally billed in whatever currency the hotel uses. Reuses the
+  // canonical currency list from schemas/lodging.ts to avoid a second source of truth.
+  baseCurrency: z.enum(CURRENCIES).optional(),
 }).partial();
 
 export const settingsUpdateSchema = settingsSchema;
@@ -128,6 +133,7 @@ function buildSettingsResponse(betaFeaturesEnabled: boolean, record: {
   historicalEnrichmentMinConfidence: number | null;
   historicalEnrichmentMaxPerDay: number | null;
   enabledDomains: string[];
+  baseCurrency: string;
 }): SettingsResponse {
   const baseData = (typeof record.data === 'object' && record.data !== null
     ? record.data
@@ -149,6 +155,7 @@ function buildSettingsResponse(betaFeaturesEnabled: boolean, record: {
       maxPerDay: record.historicalEnrichmentMaxPerDay ?? 50,
     },
     enabledDomains: record.enabledDomains,
+    baseCurrency: record.baseCurrency,
     // Listed after the `...baseData` spread so a stale key that somehow made
     // it into the settings JSON can never shadow the authoritative value.
     betaFeaturesEnabled,
@@ -210,7 +217,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     // never reaches the DB — the value below is always re-read from
     // AdminSettings, never taken from the request body.
     const payload = settingsSchema.parse(req.body);
-    const { enabledDomains, ...rest } = payload;
+    const { enabledDomains, baseCurrency, ...rest } = payload;
     const { betaFeaturesEnabled } = await getInstanceSettings();
     logger.info({ operation: 'settings_update', userId });
 
@@ -297,6 +304,11 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       updateData.enabledDomains = enabledDomains;
     }
 
+    // Handle base currency (lodging-domain aggregation currency)
+    if (baseCurrency !== undefined) {
+      updateData.baseCurrency = baseCurrency;
+    }
+
     const saved = await prisma.userSettings.upsert({
       where: { userId },
       update: updateData,
@@ -315,6 +327,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         // Initialize boarding pass parser strategy (null = auto)
         boardingPassParserStrategy: boardingPassParserStrategy ?? null,
         enabledDomains: enabledDomains ?? ['flight'],
+        baseCurrency: baseCurrency ?? 'EUR',
       },
     });
 

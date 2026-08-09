@@ -66,6 +66,7 @@ export interface SettingsResponse extends SettingsDataJson {
   boardingPassParserStrategy: string | null;
   historicalEnrichment: HistoricalEnrichmentResponseSettings;
   enabledDomains: string[];
+  baseCurrency: string;
   /**
    * READ-ONLY mirror of the instance-level beta gate (AdminSettings row).
    * It is NOT part of the user's own settings and deliberately absent from
@@ -87,6 +88,7 @@ export interface UserSettingsUpdateData {
   historicalEnrichmentMaxPerDay?: number;
   boardingPassParserStrategy?: string | null;
   enabledDomains?: string[];
+  baseCurrency?: string;
 }
 
 export interface ParserSettingsUpdateData {

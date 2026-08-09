@@ -1,4 +1,4 @@
-export const DASHBOARD_TABS = ["all", "flight", "cruise", "poi"] as const;
+export const DASHBOARD_TABS = ["all", "flight", "cruise", "poi", "lodging"] as const;
 export type DashboardTab = (typeof DASHBOARD_TABS)[number];
 
 export const ALL_MODES = ["overview", "heatmap", "journey", "globe"] as const;
@@ -13,7 +13,10 @@ export type CruiseMode = (typeof CRUISE_MODES)[number];
 export const POI_MODES = ["markers", "heatmap"] as const;
 export type PoiMode = (typeof POI_MODES)[number];
 
-export type DashboardMode = AllMode | FlightMode | CruiseMode | PoiMode;
+export const LODGING_MODES = ["map", "nights", "chains"] as const;
+export type LodgingMode = (typeof LODGING_MODES)[number];
+
+export type DashboardMode = AllMode | FlightMode | CruiseMode | PoiMode | LodgingMode;
 
 interface TabRegistryEntry<M extends DashboardMode> {
   readonly modes: readonly M[];
@@ -25,6 +28,7 @@ export const TAB_MODE_REGISTRY = {
   flight: { modes: FLIGHT_MODES, default: "routes" },
   cruise: { modes: CRUISE_MODES, default: "sea-routes" },
   poi: { modes: POI_MODES, default: "markers" },
+  lodging: { modes: LODGING_MODES, default: "map" },
 } as const satisfies Record<DashboardTab, TabRegistryEntry<DashboardMode>>;
 
 export function isDashboardTab(value: unknown): value is DashboardTab {

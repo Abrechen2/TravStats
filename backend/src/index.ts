@@ -38,11 +38,16 @@ import shipsRoutes from './routes/ships';
 import airlinesRoutes from './routes/airlines';
 import aircraftRoutes from './routes/aircraft';
 import cruisesRouter from './routes/cruises';
+import lodgingRouter from './routes/lodging';
+import lodgingChainsRouter from './routes/lodgingChains';
+import lodgingMembershipsRouter from './routes/lodgingMemberships';
+import lodgingImportRoutes from './routes/lodgingImport';
 import companionRoutes from './routes/companions';
 import openapiRoutes from './routes/openapi';
 import importRoutes from './routes/import';
 import pairingRoutes from './routes/pairing';
 import appSettingsRoutes from './routes/appSettings';
+import geoRoutes from './routes/geo';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { prisma } from './db';
@@ -52,6 +57,7 @@ import { appVersion, buildVersion } from './utils/version';
 import { templateRegistry } from './services/parsers/templates/registry';
 import { seedPortsFromCSV } from './seedPortsFromCSV';
 import { seedShipsFromCSV } from './seedShipsFromCSV';
+import { seedLodgingChainsFromCSV } from './seedLodgingChainsFromCSV';
 import { seedAirlinesFromData } from './seedAirlinesFromData';
 import { seedAircraftFromData } from './seedAircraftFromData';
 
@@ -261,10 +267,15 @@ app.use('/api/v1/ships', shipsRoutes);
 app.use('/api/v1/airlines', airlinesRoutes);
 app.use('/api/v1/aircraft', aircraftRoutes);
 app.use('/api/v1/cruises', cruisesRouter);
+app.use('/api/v1/lodging', lodgingRouter);
+app.use('/api/v1/lodging-chains', lodgingChainsRouter);
+app.use('/api/v1/lodging-memberships', lodgingMembershipsRouter);
+app.use('/api/v1/lodging-import', lodgingImportRoutes);
 app.use('/api/v1/companions', companionRoutes);
 app.use('/api/v1/import', importRoutes);
 app.use('/api/v1/pairing', pairingRoutes);
 app.use('/api/v1/app-settings', appSettingsRoutes);
+app.use('/api/v1/geo', geoRoutes);
 
 // 404 handler for unmatched routes (must be before errorHandler)
 app.use(notFoundHandler);
@@ -382,6 +393,20 @@ if (process.env.NODE_ENV !== 'test') {
       });
     }
 
+    // Seed the lodging chain catalog — idempotent, preserves isUserAdded rows.
+    try {
+      await seedLodgingChainsFromCSV();
+      logger.info({ operation: 'server_start_seed_lodging_chains', message: 'Lodging chains seeded' });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_seed_lodging_chains_error',
+        message: 'Failed to seed lodging chains from CSV',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+
     try {
       await seedAirlinesFromData();
       logger.info({ operation: 'server_start_seed_airlines', message: 'Airlines seeded' });
@@ -485,6 +510,21 @@ if (process.env.NODE_ENV !== 'test') {
         error,
       });
     }
+
+    // Retry the lodging locations no synchronous attempt could resolve.
+    // NOT awaited: Nominatim allows 1 req/s, so this can run for minutes and
+    // must never hold up boot. It swallows its own errors; the `.catch` is the
+    // independent backstop that keeps an unhandled rejection from killing the
+    // process (same discipline as the import route's fire-and-forget).
+    void import("./services/lodging/geocodeBackfill")
+      .then(({ backfillAllLodgingLocations }) => backfillAllLodgingLocations())
+      .catch((error: unknown) => {
+        logger.warn({
+          operation: "server_start_backfill_lodging_locations_error",
+          message: "Failed to backfill lodging locations",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
 
     // Normalize aircraft type names in existing flights (idempotent)
     try {

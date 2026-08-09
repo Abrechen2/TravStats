@@ -25,6 +25,8 @@ import enSpecialFlights from "./resources/en/specialFlights.json";
 import enImmich from "./resources/en/immich.json";
 import enWhatsNew from "./resources/en/whatsNew.json";
 import enUsageStats from "./resources/en/usageStats.json";
+import enLodging from "./resources/en/lodging.json";
+import enLocation from "./resources/en/location.json";
 import enCompanions from "./resources/en/companions.json";
 
 import deCommon from "./resources/de/common.json";
@@ -49,6 +51,8 @@ import deSpecialFlights from "./resources/de/specialFlights.json";
 import deImmich from "./resources/de/immich.json";
 import deWhatsNew from "./resources/de/whatsNew.json";
 import deUsageStats from "./resources/de/usageStats.json";
+import deLodging from "./resources/de/lodging.json";
+import deLocation from "./resources/de/location.json";
 import deCompanions from "./resources/de/companions.json";
 
 // Get initial language: stored preference → browser language → fallback "en"
@@ -96,6 +100,8 @@ const resources = {
     immich: enImmich,
     whatsNew: enWhatsNew,
     usageStats: enUsageStats,
+    lodging: enLodging,
+    location: enLocation,
     companions: enCompanions,
   },
   de: {
@@ -121,6 +127,8 @@ const resources = {
     immich: deImmich,
     whatsNew: deWhatsNew,
     usageStats: deUsageStats,
+    lodging: deLodging,
+    location: deLocation,
     companions: deCompanions,
   },
 };
@@ -155,6 +163,8 @@ i18n.use(initReactI18next).init({
     "immich",
     "whatsNew",
     "usageStats",
+    "lodging",
+    "location",
     "companions",
   ],
   interpolation: {

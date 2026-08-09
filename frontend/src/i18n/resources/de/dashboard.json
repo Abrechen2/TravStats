@@ -47,13 +47,43 @@
     "exportFailed": "Export fehlgeschlagen",
     "importFailed": "Import fehlgeschlagen",
     "importPartial": "{{success}} von {{total}} Flügen importiert ({{errors}} Fehler)",
-    "loadCruises": "Kreuzfahrten konnten nicht geladen werden. Bitte später erneut versuchen."
+    "loadCruises": "Kreuzfahrten konnten nicht geladen werden. Bitte später erneut versuchen.",
+    "loadLodgings": "Unterkünfte konnten nicht geladen werden. Bitte später erneut versuchen."
   },
   "cruiseTab": {
     "loading": "Kreuzfahrten werden geladen …",
     "emptyTitle": "Noch keine Kreuzfahrten",
     "emptyBody": "Füge deine erste Kreuzfahrt über „+ Kreuzfahrt hinzufügen“ hinzu oder importiere eine Buchungs-E-Mail bzw. ein PDF auf der Kreuzfahrten-Seite.",
     "emptyCta": "Zur Kreuzfahrten-Seite"
+  },
+  "lodgingTab": {
+    "loading": "Unterkünfte werden geladen …",
+    "emptyTitle": "Noch keine Unterkünfte",
+    "emptyBody": "Lege deine erste Unterkunft über „+ Hotel“ auf der Unterkünfte-Seite an.",
+    "listTitle": "Unterkünfte",
+    "listEmpty": "Noch keine Unterkünfte erfasst",
+    "independentChain": "Unabhängig",
+    "stats": {
+      "hotels": "Unterkünfte",
+      "stays": "Aufenthalte",
+      "nights": "Übernachtungen",
+      "chains": "Ketten",
+      "spend": "Ausgaben",
+      "spendOtherCurrency": "inkl. {{orig}} → {{converted}}",
+      "rating": "Ø Bewertung",
+      "noRating": "Keine Bewertung"
+    },
+    "nightsChartTitle": "Übernachtungen im Zeitverlauf",
+    "nightsChartEmpty": "Noch keine Übernachtungen zum Anzeigen",
+    "chainsViewTitle": "Aufenthalte pro Kette",
+    "chainsViewEmpty": "Noch keine Ketten zum Anzeigen",
+    "currencyBreakdown": {
+      "title": "Ausgaben nach Währung",
+      "baseLabel": "In Basiswährung",
+      "empty": "Noch keine Ausgaben erfasst",
+      "hint": "Die Einzelbeträge werden in ihrer jeweiligen Originalwährung angezeigt und nicht addiert — der umgerechnete Gesamtbetrag oben kann daher von einer einfachen Summe abweichen.",
+      "otherBaseLabel": "Ältere Basiswährungen (vor einem Wechsel gespeichert, hier nicht mitgezählt)"
+    }
   },
   "success": {
     "flightAdded": "Flug erfolgreich hinzugefügt",
@@ -127,6 +157,7 @@
       "all": "Alle",
       "flight": "Flüge",
       "cruise": "Kreuzfahrten",
+      "lodging": "Unterkünfte",
       "poi": "POIs"
     }
   },
@@ -142,6 +173,7 @@
     "addPerTab": {
       "flight": "Flug hinzufügen",
       "cruise": "Kreuzfahrt hinzufügen",
+      "lodging": "Hotel hinzufügen",
       "poi": "POI hinzufügen"
     }
   },
@@ -169,7 +201,10 @@
     "sea-routes": "Seerouten",
     "itinerary": "Itinerar",
     "port-frequency": "Hafen-Frequenz",
-    "markers": "Marker"
+    "markers": "Marker",
+    "map": "Karte",
+    "nights": "Übernachtungen",
+    "chains": "Ketten"
   },
   "poi": {
     "title": "POIs kommen bald",
@@ -203,6 +238,7 @@
     "cruisePerCruise": "Kreuzfahrten (eine Farbe pro Reise)",
     "cruiseSolid": "Kreuzfahrten",
     "flightFrequency": "Flüge (Häufigkeit)",
-    "flightSolid": "Flüge"
+    "flightSolid": "Flüge",
+    "lodging": "Unterkünfte"
   }
 }
