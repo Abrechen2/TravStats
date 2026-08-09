@@ -10,6 +10,7 @@
   "noFlightNumber": "Bitte geben Sie eine Flugnummer ein",
   "noFlightsFound": "Keine Flüge gefunden. Bitte versuchen Sie ein anderes Datum oder geben Sie die Daten manuell ein.",
   "lookupUnavailable": "Flugsuche momentan nicht verfügbar. Bitte geben Sie die Daten manuell ein.",
+  "lookupNotConfigured": "Es ist noch kein Anbieter für Flugdaten eingerichtet — es wurde also gar nicht gesucht. Hinterlege einen API-Schlüssel in den Einstellungen oder trage den Flug manuell ein.",
   "lookupOutsideLiveWindow": "Diese Flugsuche ist mit den kostenlosen Anbietern nicht möglich. Kostenlos werden nur Live-Flüge (heute) abgedeckt. Für vergangene oder zukünftige Flüge bitte einen Aviationstack Basic+ Key in den Einstellungen hinterlegen — oder die Flugdaten manuell eintragen.",
   "noFlightDataForDate": "Keine Flugdaten für diesen Flug an diesem Datum gefunden. Bitte Flugnummer und Datum prüfen oder die Flugdaten manuell eintragen.",
   "noFlightDataApiGap": "Die Datenquelle hat für diesen Flug an diesem Datum keine Daten. Auch mit konfiguriertem API-Key kann es Lücken geben — bitte die Flugdaten manuell eintragen.",
