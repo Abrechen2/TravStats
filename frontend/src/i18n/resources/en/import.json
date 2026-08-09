@@ -30,5 +30,10 @@
   "flight": {
     "panelTitle": "Import flight",
     "panelHint": "Read in a booking email or PDF, or add manually — all in one place."
+  },
+  "lodging": {
+    "panelTitle": "Import lodging",
+    "panelHint": "Read in a booking email or PDF, or add manually — all in one place.",
+    "triggerLabel": "Read booking"
   }
 }

@@ -150,6 +150,28 @@ export interface UserStats {
    * user didn't link the entries via the same trip id. */
   hasFlyAndSail7d: boolean;
   cruiseCarnivalBrandsCovered: number; // how many Carnival brands out of the set
+  // Lodging stats (V1 multi-domain)
+  lodgingsCount: number;
+  /** Number of individual stays (bookings), as distinct from `lodgingsCount`
+   * (distinct lodgings) — a user can have many stays at the same hotel. */
+  lodgingStaysCount: number;
+  lodgingNights: number;
+  lodgingChainsUnique: number;
+  lodgingCountries: Set<string>;
+  lodgingSpendBase: number;
+  lodgingAwardNights: number;
+  lodgingChainLoyaltyMax: number;
+  lodgingSameHotelRepeatMax: number;
+  lodgingLongestStayNights: number;
+  // Cross-domain (lodging)
+  /** True when a single trip links at least one flight AND at least one
+   * lodging stay. Computed by `computeFlyAndStayFlags` from per-trip
+   * domain counts — see that function for why "user has flights
+   * somewhere + stays somewhere" is NOT the same test. */
+  flyAndStay: boolean;
+  /** True when a single trip links a flight, a cruise, AND a lodging
+   * stay. Strictly stronger than `flyAndStay`. */
+  grandTour: boolean;
 }
 
 // The coordinate-box implementation that used to live here called the Arctic
@@ -251,6 +273,19 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     hasFlyAndSailTrip: false,
     hasFlyAndSail7d: false,
     cruiseCarnivalBrandsCovered: 0,
+    // Lodging stats — filled in by caller via spread after calculateLodgingStats
+    lodgingsCount: 0,
+    lodgingStaysCount: 0,
+    lodgingNights: 0,
+    lodgingChainsUnique: 0,
+    lodgingCountries: new Set(),
+    lodgingSpendBase: 0,
+    lodgingAwardNights: 0,
+    lodgingChainLoyaltyMax: 0,
+    lodgingSameHotelRepeatMax: 0,
+    lodgingLongestStayNights: 0,
+    flyAndStay: false,
+    grandTour: false,
   };
 
   // Collect all unique airport codes from flights
@@ -580,4 +615,53 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
   }
 
   return stats;
+}
+
+/**
+ * Per-trip domain counts, as a caller would derive them from
+ * `prisma.trip.findMany({ include: { flights: true, cruises: true,
+ * lodgingStays: true } })` (or a `_count` select) — one entry per trip.
+ */
+export interface TripDomainCounts {
+  flightCount: number;
+  cruiseCount: number;
+  lodgingStayCount: number;
+}
+
+/**
+ * Derives the cross-domain `flyAndStay` / `grandTour` flags from
+ * per-trip domain counts.
+ *
+ * Both flags are per-TRIP conditions, not per-user: a user who has
+ * flights in one trip and a lodging stay in a completely separate trip
+ * must NOT satisfy `flyAndStay` — only a trip that itself links both a
+ * flight and a stay counts. This mirrors how `achievements.ts` already
+ * computes the cruise-side `hasFlyAndSailTrip` (`c.trip.flights.length >
+ * 0 && c.trip.cruises.length > 0`), extended with the lodging domain.
+ */
+export function computeFlyAndStayFlags(trips: TripDomainCounts[]): {
+  flyAndStay: boolean;
+  grandTour: boolean;
+} {
+  const flyAndStay = trips.some((t) => t.flightCount > 0 && t.lodgingStayCount > 0);
+  const grandTour = trips.some(
+    (t) => t.flightCount > 0 && t.cruiseCount > 0 && t.lodgingStayCount > 0,
+  );
+  return { flyAndStay, grandTour };
+}
+
+/**
+ * Unions "countries visited" sets from every domain (flights, cruises,
+ * lodging stays, …) into the single figure `UserStats.countries`
+ * exposes. Pulled out as its own function so the lodging domain's
+ * countries can be folded in the same way the cruise-port countries
+ * already are in `achievements.ts`, rather than each caller
+ * re-implementing the union by hand.
+ */
+export function unionCountries(...countrySets: Array<Set<string>>): Set<string> {
+  const union = new Set<string>();
+  for (const set of countrySets) {
+    for (const country of set) union.add(country);
+  }
+  return union;
 }

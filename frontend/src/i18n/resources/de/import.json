@@ -30,5 +30,10 @@
   "flight": {
     "panelTitle": "Flug importieren",
     "panelHint": "Buchungs-E-Mail oder PDF einlesen, manuell hinzufügen — alles an einer Stelle."
+  },
+  "lodging": {
+    "panelTitle": "Unterkunft importieren",
+    "panelHint": "Buchungs-E-Mail oder PDF einlesen, manuell hinzufügen — alles an einer Stelle.",
+    "triggerLabel": "Buchung einlesen"
   }
 }

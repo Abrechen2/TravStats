@@ -110,6 +110,15 @@ export interface SettingsState {
   apiKeys: ApiKeysStatus | null;
   enabledDomains: DomainKey[];
   /**
+   * The user's actual base currency (`UserSettings.baseCurrency`, ECB rate
+   * applied per stay's check-in day) — used by the backend to compute
+   * `spendBaseTotal` / `totalSpendBase` figures in the lodging domain. This is
+   * NOT `units.currency` (a separate, user-configurable *display* preference
+   * for flight-cost figures elsewhere) — the two are independent and must
+   * not be conflated when labeling a base-currency figure.
+   */
+  baseCurrency: string;
+  /**
    * Instance-level beta gate, mirrored read-only from `GET /settings`.
    * `null` = not loaded yet → consumers must treat it as OFF (see
    * `hooks/useBetaFeatures.ts`). There is deliberately no setter and it is
@@ -126,6 +135,14 @@ export interface SettingsState {
   setCruise: SettingsUpdater<CruiseSettings>;
   setApiKeys: (status: ApiKeysStatus) => void;
   setEnabledDomains: (keys: DomainKey[]) => void;
+  /**
+   * Updates the lodging base currency and persists it immediately (like
+   * `setEnabledDomains`) rather than waiting on the `units`-scoped debounce
+   * in `useSettingsPage` — that effect only watches `units` and would never
+   * fire for this field. Deliberately NOT part of `saveRemoteSettings`'s
+   * payload for the same reason.
+   */
+  setBaseCurrency: (currency: string) => void;
   loadApiKeysStatus: () => Promise<void>;
   resetSettings: () => void;
   loadRemoteSettings: () => Promise<void>;
@@ -208,6 +225,7 @@ const defaultSettings: Omit<
   | "setCruise"
   | "setApiKeys"
   | "setEnabledDomains"
+  | "setBaseCurrency"
   | "loadApiKeysStatus"
   | "resetSettings"
   | "loadRemoteSettings"
@@ -251,6 +269,7 @@ const defaultSettings: Omit<
   },
   apiKeys: null,
   enabledDomains: ["flight"],
+  baseCurrency: "EUR",
   betaFeaturesEnabled: null,
 };
 
@@ -287,6 +306,12 @@ export const useSettingsStore = create<SettingsState>()(
       setEnabledDomains: (keys) => {
         set({ enabledDomains: keys });
         void settingsApi.update({ enabledDomains: keys });
+      },
+      setBaseCurrency: (currency) => {
+        set({ baseCurrency: currency });
+        settingsApi.update({ baseCurrency: currency }).catch((error: unknown) => {
+          logger.warn("Failed to save base currency", error);
+        });
       },
       loadApiKeysStatus: async () => {
         try {
@@ -383,6 +408,11 @@ export const useSettingsStore = create<SettingsState>()(
                   (DOMAIN_KEYS as readonly string[]).includes(k as string)
                 );
                 newState.enabledDomains = filtered;
+              }
+              // baseCurrency is a plain top-level field (like enabledDomains),
+              // not part of any of the settings-group objects merged above.
+              if (typeof remote.baseCurrency === "string" && remote.baseCurrency.length > 0) {
+                newState.baseCurrency = remote.baseCurrency;
               }
               // Instance-level, read-only. Anything that isn't an explicit
               // `true`/`false` (missing field, older backend) stays `null` =

@@ -7,6 +7,7 @@ const TAB_ICON: Record<Exclude<DashboardTab, "all">, string> = {
   flight: "✈",
   cruise: "⚓",
   poi: "📍",
+  lodging: "🏨",
 };
 
 /**

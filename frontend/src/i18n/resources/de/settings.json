@@ -6,7 +6,8 @@
   "tabs": {
     "general": "Allgemein",
     "flight": "Flug",
-    "cruise": "Kreuzfahrt"
+    "cruise": "Kreuzfahrt",
+    "lodging": "Unterkünfte"
   },
   "errors": {
     "saveFailed": "Einstellungen konnten nicht gespeichert werden"
@@ -21,6 +22,36 @@
     "defaultCabinNone": "– keine Vorauswahl –",
     "showArcs": "Kreuzfahrt-Routen auf der Karte anzeigen",
     "showArcsHint": "Bezier-Linien zwischen Start- und Zielhafen im Dashboard-Map."
+  },
+  "lodgingPreferences": {
+    "title": "Unterkunfts-Präferenzen",
+    "description": "Basiswährung für Übernachtungs-Statistiken und Ausgabensummen.",
+    "baseCurrency": "Basiswährung",
+    "baseCurrencyHint": "Alle Übernachtungen werden zum EZB-Kurs des jeweiligen Check-in-Tages in diese Währung umgerechnet. Bereits gespeicherte Aufenthalte behalten ihren ursprünglichen Umrechnungskurs — eine Änderung wirkt sich nur auf künftige Berechnungen aus.",
+    "geocoder": {
+      "title": "Geocoder",
+      "description": "Nur für Admins: Adresssuche und Koordinaten-Auflösung dieser Instanz konfigurieren.",
+      "photonUrlLabel": "Photon-URL (Adresssuche)",
+      "photonUrlHint": "Wird für die Live-Suche während der Eingabe genutzt (z. B. in der Unterkunft- oder Reise-Standortauswahl). Leer lassen für den öffentlichen Standarddienst photon.komoot.io.",
+      "nominatimUrlLabel": "Nominatim-URL (Koordinaten-Auflösung)",
+      "nominatimUrlHint": "Wird für einmalige Geocoding-Anfragen genutzt. Leer lassen für den öffentlichen Standarddienst nominatim.openstreetmap.org.",
+      "saveSuccess": "Geocoder-Einstellungen gespeichert.",
+      "saveError": "Geocoder-Einstellungen konnten nicht gespeichert werden.",
+      "loadError": "Geocoder-Einstellungen konnten nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "testButton": "Verbindung testen",
+      "testing": "Teste Verbindung …",
+      "testSuccess": "Verbindung erfolgreich — {{count}} Treffer für „Berlin“.",
+      "testEmpty": "Verbindung erfolgreich, aber keine Treffer für „Berlin“.",
+      "testError": "Verbindung fehlgeschlagen. Bitte URL und Erreichbarkeit prüfen."
+    }
+  },
+  "memberships": {
+    "title": "Bonusprogramme",
+    "description": "Alle deine Programme an einem Ort — mit den Ketten und einzelnen Hotels, für die sie gelten.",
+    "coversNothing": "noch keiner Kette zugeordnet",
+    "editHotels": "Einzelne Hotels",
+    "noIndependentHotels": "Keine eigenständigen Hotels ohne Kette vorhanden."
   },
   "about": {
     "buildLabel": "Build",
@@ -586,6 +617,10 @@
     "title": "Import",
     "description": "Bestehende Daten aus anderen Diensten importieren — pro Bereich gebündelt.",
     "openHub": "Importieren",
+    "log": {
+      "title": "Import-Logbuch",
+      "scopeHint": "Jeder Massen-Import als Ganzes — neueste zuerst. Rückgängig machen lässt sich derzeit nur der Import von Unterkünften; Flug-Importe werden hier noch nicht protokolliert."
+    },
     "tile": {
       "fr24": {
         "title": "Von Flightradar24",
@@ -596,6 +631,23 @@
         "title": "Aus beliebigem Logbuch (CSV)",
         "description": "Lade eine flache Flug-CSV — nach dem Upload öffnet sich ein Mapping-Wizard, mit dem du jede Spalte einem TravStats-Feld zuordnest.",
         "uploadLabel": "CSV-Datei auswählen"
+      },
+      "parse": {
+        "flight": {
+          "title": "Aus E-Mail oder PDF",
+          "description": "Buchungsbestätigung einer Airline einlesen — der übliche Weg. Öffnet sich im Flug-Dialog, weil dort die Prüfung mehrerer Flüge stattfindet.",
+          "action": "Flug-Import öffnen"
+        },
+        "cruise": {
+          "title": "Aus E-Mail oder PDF",
+          "description": "Buchungsbestätigung einer Reederei einlesen (AIDA, TUI und generisch) — mit Vorschau vor dem Übernehmen.",
+          "action": "E-Mail oder PDF einlesen"
+        },
+        "lodging": {
+          "title": "Aus E-Mail oder PDF",
+          "description": "Hotelbestätigung einlesen, z. B. von Booking.com — mit Vorschau vor dem Übernehmen.",
+          "action": "E-Mail oder PDF einlesen"
+        }
       }
     },
     "preview": {
@@ -669,7 +721,8 @@
     },
     "toast": {
       "movedFromDashboard": "Der Flug-Import ist jetzt hier — unter Einstellungen → Import."
-    }
+    },
+    "noRoutes": "Für diesen Bereich gibt es noch keinen Importweg."
   },
   "devices": {
     "title": "Geräte",

@@ -3,6 +3,9 @@ import type { TripStop } from "../../types";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
+import { LocationInput } from "../location/LocationInput";
+import type { LocationCoordinates, LocationSelection } from "../location/LocationInput";
+import { joinDateTimeInput, splitDateTimeInput } from "../../lib/tripTimeline";
 
 interface StopModalProps {
   tripId: string;
@@ -14,17 +17,10 @@ interface StopModalProps {
 
 const STOP_DOMAINS = ["poi", "hotel", "train", "road", "ferry", "hike", "bike", "other"] as const;
 
-function toDateInput(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toISOString().slice(0, 10);
-}
-
-function fromDateInput(value: string): string | null {
-  if (!value) return null;
-  return new Date(value + "T00:00:00.000Z").toISOString();
-}
+// Date/time conversion lives in lib/tripTimeline.ts — read the time model at
+// the top of that file before touching anything here. The short version: a
+// stop's time is a wall clock at the PLACE, stored timezone-naive pinned to
+// UTC, so what the user types round-trips exactly for every viewer.
 
 export default function StopModal({
   tripId,
@@ -33,15 +29,19 @@ export default function StopModal({
   onClose,
   onSaved,
 }: StopModalProps): JSX.Element {
-  const { t } = useTranslation(["trips"]);
+  const { t } = useTranslation(["trips", "location"]);
   const addToast = useToastStore((s) => s.addToast);
 
   const [title, setTitle] = useState(stop?.title ?? "");
   const [domain, setDomain] = useState<string>(stop?.domain ?? "poi");
-  const [startDate, setStartDate] = useState(toDateInput(stop?.startDate ?? defaultDate ?? null));
-  const [endDate, setEndDate] = useState(toDateInput(stop?.endDate ?? null));
-  const [lat, setLat] = useState(stop?.lat?.toString() ?? "");
-  const [lon, setLon] = useState(stop?.lon?.toString() ?? "");
+  const initialStart = splitDateTimeInput(stop?.startDate ?? defaultDate ?? null);
+  const initialEnd = splitDateTimeInput(stop?.endDate ?? null);
+  const [startDate, setStartDate] = useState(initialStart.date);
+  const [startTime, setStartTime] = useState(initialStart.time);
+  const [endDate, setEndDate] = useState(initialEnd.date);
+  const [endTime, setEndTime] = useState(initialEnd.time);
+  const [lat, setLat] = useState<number | null>(stop?.lat ?? null);
+  const [lon, setLon] = useState<number | null>(stop?.lon ?? null);
   const [notes, setNotes] = useState(stop?.notes ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -49,44 +49,55 @@ export default function StopModal({
     if (!stop) return;
     setTitle(stop.title);
     setDomain(stop.domain ?? "poi");
-    setStartDate(toDateInput(stop.startDate));
-    setEndDate(toDateInput(stop.endDate));
-    setLat(stop.lat?.toString() ?? "");
-    setLon(stop.lon?.toString() ?? "");
+    const start = splitDateTimeInput(stop.startDate);
+    const end = splitDateTimeInput(stop.endDate);
+    setStartDate(start.date);
+    setStartTime(start.time);
+    setEndDate(end.date);
+    setEndTime(end.time);
     setNotes(stop.notes ?? "");
   }, [stop]);
 
-  const parseCoord = (raw: string): number | null => {
-    const trimmed = raw.trim();
-    if (!trimmed) return null;
-    const n = Number(trimmed);
-    return Number.isFinite(n) ? n : null;
+  const position: LocationCoordinates | null = lat !== null && lon !== null ? { lat, lon } : null;
+
+  // A selection always reports the picked position (search hit, coordinate
+  // paste, map drag/click, or the advanced raw-input panel). It only fills
+  // `title` while the user hasn't typed one yet — mirrors LodgingFormModal's
+  // `handleLocationChange` (Task 4) so a search selection never overwrites
+  // text the user already entered.
+  const handleLocationChange = (selection: LocationSelection): void => {
+    setLat(selection.lat);
+    setLon(selection.lon);
+    if (selection.name && title.trim().length === 0) setTitle(selection.name);
+  };
+
+  const handleClearPosition = (): void => {
+    setLat(null);
+    setLon(null);
   };
 
   const handleSave = async (): Promise<void> => {
     if (!title.trim()) return;
     setSaving(true);
     try {
-      const latNum = parseCoord(lat);
-      const lonNum = parseCoord(lon);
       if (stop) {
         await tripsApi.updateStop(tripId, stop.id, {
           title: title.trim(),
           domain,
-          startDate: fromDateInput(startDate),
-          endDate: fromDateInput(endDate),
-          lat: latNum,
-          lon: lonNum,
+          startDate: joinDateTimeInput(startDate, startTime),
+          endDate: joinDateTimeInput(endDate, endTime),
+          lat,
+          lon,
           notes: notes.trim() || null,
         });
       } else {
         await tripsApi.createStop(tripId, {
           title: title.trim(),
           domain,
-          startDate: fromDateInput(startDate) ?? undefined,
-          endDate: fromDateInput(endDate) ?? undefined,
-          lat: latNum ?? undefined,
-          lon: lonNum ?? undefined,
+          startDate: joinDateTimeInput(startDate, startTime) ?? undefined,
+          endDate: joinDateTimeInput(endDate, endTime) ?? undefined,
+          lat: lat ?? undefined,
+          lon: lon ?? undefined,
           notes: notes.trim() || undefined,
         });
       }
@@ -147,47 +158,67 @@ export default function StopModal({
               ))}
             </select>
           </Field>
+          {/* Time SITS NEXT TO the date rather than replacing it with a
+              datetime input (#175, Alex's own wording). A datetime-local field
+              is all-or-nothing, which would force a time on every stop that
+              only ever needed a day. Left blank, the stop stays date-only. */}
           <div className="grid grid-cols-2 gap-3">
             <Field label={t("trips:stopModal.startDateLabel")}>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full rounded-lg px-3 py-2 text-sm"
-                style={inputStyle}
-              />
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  aria-label={t("trips:stopModal.startDateLabel")}
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={inputStyle}
+                />
+                <input
+                  type="time"
+                  aria-label={t("trips:stopModal.startTimeLabel")}
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="w-28 shrink-0 rounded-lg px-3 py-2 text-sm"
+                  style={inputStyle}
+                />
+              </div>
             </Field>
             <Field label={t("trips:stopModal.endDateLabel")}>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full rounded-lg px-3 py-2 text-sm"
-                style={inputStyle}
-              />
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  aria-label={t("trips:stopModal.endDateLabel")}
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={inputStyle}
+                />
+                <input
+                  type="time"
+                  aria-label={t("trips:stopModal.endTimeLabel")}
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="w-28 shrink-0 rounded-lg px-3 py-2 text-sm"
+                  style={inputStyle}
+                />
+              </div>
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label={t("trips:stopModal.latLabel")}>
-              <input
-                value={lat}
-                onChange={(e) => setLat(e.target.value)}
-                placeholder="52.520"
-                inputMode="decimal"
-                className="w-full rounded-lg px-3 py-2 text-sm"
-                style={inputStyle}
-              />
-            </Field>
-            <Field label={t("trips:stopModal.lonLabel")}>
-              <input
-                value={lon}
-                onChange={(e) => setLon(e.target.value)}
-                placeholder="13.405"
-                inputMode="decimal"
-                className="w-full rounded-lg px-3 py-2 text-sm"
-                style={inputStyle}
-              />
-            </Field>
+          <p className="-mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
+            {t("trips:stopModal.timeHint")}
+          </p>
+          <div>
+            <LocationInput value={position} onChange={handleLocationChange} />
+            {position !== null && (
+              <button
+                type="button"
+                onClick={handleClearPosition}
+                className="mt-1 text-xs hover:underline"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {t("location:clear")}
+              </button>
+            )}
           </div>
           <Field label={t("trips:stopModal.notesLabel")}>
             <textarea

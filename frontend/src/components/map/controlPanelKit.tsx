@@ -339,7 +339,7 @@ export function Slider({
 // ── Per-domain appearance section ────────────────────────────────────
 /** The map domains that get their own appearance section. Extend when a
  *  new domain (hotels, …) grows an on-map route/marker representation. */
-export type AppearanceDomain = "flight" | "cruise";
+export type AppearanceDomain = "flight" | "cruise" | "lodging";
 
 // ── Colour-mode sections ─────────────────────────────────────────────
 // Both domains colour their routes by an explicit MODE — not by a single
@@ -746,6 +746,55 @@ export function CruiseAppearanceSection({
           format={(v) => (v <= 0 ? t("map:globe.panel.off") : `${v.toFixed(1)}×`)}
         />
       )}
+    </div>
+  );
+}
+
+// ── Lodging appearance section ───────────────────────────────────────
+// Lodging pins have no routes, no colour mode and no width — a lodging is a
+// single point, not a leg. So unlike Flight/CruiseAppearanceSection, this is
+// ONE control: the shared marker-size slider (#187's model, threaded through
+// `buildLodgingPins`'s `sizeScale` param). Kept as its own section (rather
+// than folded into a generic "marker size" row) so it follows the exact same
+// per-domain layout convention as Flüge/Kreuzfahrten — gated the same way by
+// `appearanceDomains`.
+
+/** Lodging-domain appearance state, shared verbatim by both panels. */
+export interface LodgingAppearanceState {
+  markerSize: number;
+  onMarkerSizeChange: (s: number) => void;
+}
+
+export interface LodgingAppearanceSectionProps extends LodgingAppearanceState {
+  /** Uppercase section header ("Unterkünfte"). */
+  title: string;
+  sizeLabel: string;
+}
+
+/**
+ * The lodging domain's appearance controls: just the marker-size slider
+ * (0 = hidden). No colour/width/arrow controls — lodging pins have no
+ * routes to colour or width, unlike flights/cruises.
+ */
+export function LodgingAppearanceSection({
+  title,
+  markerSize,
+  onMarkerSizeChange,
+  sizeLabel,
+}: LodgingAppearanceSectionProps): JSX.Element {
+  const { t } = useTranslation();
+  return (
+    <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
+      <SectionLabel>{title}</SectionLabel>
+      <Slider
+        label={sizeLabel}
+        value={markerSize}
+        min={0}
+        max={1.6}
+        step={0.1}
+        onChange={onMarkerSizeChange}
+        format={(v) => (v <= 0 ? t("map:globe.panel.off") : `${v.toFixed(1)}×`)}
+      />
     </div>
   );
 }

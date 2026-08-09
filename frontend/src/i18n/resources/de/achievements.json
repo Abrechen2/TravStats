@@ -38,6 +38,7 @@
     "allDomains": "Alle",
     "domainFlight": "Flug",
     "domainCruise": "Kreuzfahrt",
+    "domainLodging": "Unterkunft",
     "domainShared": "Übergreifend",
     "showUnlockedOnly": "Nur freigeschaltete anzeigen"
   },
@@ -644,6 +645,170 @@
     "NEW_YEARS_AT_SEA": {
       "name": "Silvester auf See",
       "description": "Silvester auf einer Kreuzfahrt verbracht"
+    },
+    "FIRST_CHECKIN": {
+      "name": "Eingecheckt",
+      "description": "Erste Unterkunft gespeichert"
+    },
+    "HOTEL_COLLECTOR_5": {
+      "name": "Hotel-Sammler",
+      "description": "5 verschiedene Unterkünfte besucht"
+    },
+    "HOTEL_COLLECTOR_10": {
+      "name": "Vielreisender Gast",
+      "description": "10 verschiedene Unterkünfte besucht"
+    },
+    "HOTEL_COLLECTOR_25": {
+      "name": "Unterkunfts-Kenner",
+      "description": "25 verschiedene Unterkünfte besucht"
+    },
+    "HOTEL_COLLECTOR_50": {
+      "name": "Herbergs-Experte",
+      "description": "50 verschiedene Unterkünfte besucht"
+    },
+    "HOTEL_COLLECTOR_100": {
+      "name": "Hotel-Legende",
+      "description": "100 verschiedene Unterkünfte besucht"
+    },
+    "HOTEL_COLLECTOR_200": {
+      "name": "Unterkunfts-Weltmeister",
+      "description": "200 verschiedene Unterkünfte besucht"
+    },
+    "FREQUENT_GUEST_10": {
+      "name": "Stammgast",
+      "description": "10 Aufenthalte insgesamt"
+    },
+    "FREQUENT_GUEST_25": {
+      "name": "Vielbucher",
+      "description": "25 Aufenthalte insgesamt"
+    },
+    "FREQUENT_GUEST_50": {
+      "name": "Check-in-Profi",
+      "description": "50 Aufenthalte insgesamt"
+    },
+    "FREQUENT_GUEST_100": {
+      "name": "Rezeptions-Legende",
+      "description": "100 Aufenthalte insgesamt"
+    },
+    "LODGING_NIGHTS_10": {
+      "name": "Erste Nächte",
+      "description": "10 Übernachtungen gesamt"
+    },
+    "LODGING_NIGHTS_50": {
+      "name": "Fünfzig Nächte",
+      "description": "50 Übernachtungen gesamt"
+    },
+    "LODGING_NIGHTS_100": {
+      "name": "Hundert Nächte",
+      "description": "100 Übernachtungen gesamt"
+    },
+    "LODGING_NIGHTS_365": {
+      "name": "Ein Jahr unterwegs",
+      "description": "365 Übernachtungen gesamt"
+    },
+    "LODGING_NIGHTS_1000": {
+      "name": "Nomaden-Legende",
+      "description": "1.000 Übernachtungen gesamt"
+    },
+    "LONG_STAY_7": {
+      "name": "Erste Woche",
+      "description": "Ein Aufenthalt von mindestens 7 Nächten"
+    },
+    "LONG_STAY_14": {
+      "name": "Zwei Wochen Auszeit",
+      "description": "Ein Aufenthalt von mindestens 14 Nächten"
+    },
+    "LONG_STAY_30": {
+      "name": "Langzeit-Gast",
+      "description": "Ein Aufenthalt von mindestens 30 Nächten"
+    },
+    "LONG_STAY_60": {
+      "name": "Digitaler Nomade",
+      "description": "Ein Aufenthalt von mindestens 60 Nächten"
+    },
+    "CHAIN_EXPLORER_3": {
+      "name": "Marken-Entdecker",
+      "description": "3 verschiedene Hotelketten"
+    },
+    "CHAIN_EXPLORER_5": {
+      "name": "Ketten-Kenner",
+      "description": "5 verschiedene Hotelketten"
+    },
+    "CHAIN_EXPLORER_10": {
+      "name": "Marken-Vielfalt",
+      "description": "10 verschiedene Hotelketten"
+    },
+    "CHAIN_EXPLORER_20": {
+      "name": "Ketten-Meister",
+      "description": "20 verschiedene Hotelketten"
+    },
+    "BRAND_LOYALTY_5": {
+      "name": "Treuer Gast",
+      "description": "5 Aufenthalte bei derselben Hotelkette"
+    },
+    "BRAND_LOYALTY_10": {
+      "name": "Markentreue",
+      "description": "10 Aufenthalte bei derselben Hotelkette"
+    },
+    "BRAND_LOYALTY_25": {
+      "name": "Kettenloyalist",
+      "description": "25 Aufenthalte bei derselben Hotelkette"
+    },
+    "BORDER_CROSSER_3": {
+      "name": "Grenzgänger",
+      "description": "Unterkünfte in 3 Ländern"
+    },
+    "BORDER_CROSSER_5": {
+      "name": "Länder-Sammler",
+      "description": "Unterkünfte in 5 Ländern"
+    },
+    "BORDER_CROSSER_10": {
+      "name": "Kontinental-Gast",
+      "description": "Unterkünfte in 10 Ländern"
+    },
+    "BORDER_CROSSER_25": {
+      "name": "Weltenbürger",
+      "description": "Unterkünfte in 25 Ländern"
+    },
+    "POINTS_PRO_5": {
+      "name": "Punkte-Einsteiger",
+      "description": "5 Freinächte über Prämienpunkte"
+    },
+    "POINTS_PRO_25": {
+      "name": "Prämien-Kenner",
+      "description": "25 Freinächte über Prämienpunkte"
+    },
+    "POINTS_PRO_100": {
+      "name": "Punkte-Profi",
+      "description": "100 Freinächte über Prämienpunkte"
+    },
+    "POINTS_PRO_500": {
+      "name": "Bonus-Legende",
+      "description": "500 Freinächte über Prämienpunkte"
+    },
+    "RETURNER_2": {
+      "name": "Wiederkehrer",
+      "description": "2 Aufenthalte im selben Hotel"
+    },
+    "RETURNER_3": {
+      "name": "Bekanntes Gesicht",
+      "description": "3 Aufenthalte im selben Hotel"
+    },
+    "RETURNER_5": {
+      "name": "Stammhotel",
+      "description": "5 Aufenthalte im selben Hotel"
+    },
+    "RETURNER_10": {
+      "name": "Zweites Zuhause",
+      "description": "10 Aufenthalte im selben Hotel"
+    },
+    "FLY_AND_STAY": {
+      "name": "Fly & Stay",
+      "description": "Trip mit Flug UND Unterkunft"
+    },
+    "GRAND_TOUR": {
+      "name": "Grand Tour",
+      "description": "Trip mit Flug, Kreuzfahrt UND Unterkunft"
     }
   }
 }

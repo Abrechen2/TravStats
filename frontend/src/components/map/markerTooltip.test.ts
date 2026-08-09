@@ -8,6 +8,8 @@ const t = (key: string, opts?: Record<string, unknown>): string => {
   if (key === "map:airportMarkers.visits") return "Besuche";
   if (key === "map:tooltip.lastCall") return "Letzter Anlauf";
   if (key === "map:globe.timesFlown") return `${opts?.count}× geflogen`;
+  if (key === "lodging:field.staysCount") return `${opts?.count} Aufenthalte`;
+  if (key === "lodging:field.nightsCount") return `${opts?.count} Übernachtungen`;
   return key;
 };
 
@@ -128,5 +130,62 @@ describe("createMarkerTooltip — cruise path", () => {
     const result = getTooltip(makeInfo("cruise-arcs", { cruiseLine: null }));
     expect(result).not.toBeNull();
     expect(result!.html).toContain("Cruise");
+  });
+});
+
+describe("createMarkerTooltip — lodging", () => {
+  const getTooltip = createMarkerTooltip(t, "de");
+
+  it("resolves a free-text country name to a flag, and shows the place line + stay/night counts", () => {
+    // Lodging.country is free text (a full name OR an ISO code — see
+    // resolveCountryCode in lib/countryFlag.tsx), unlike the airport/port
+    // datums which already carry a strict ISO code. "Deutschland" must
+    // still resolve to the DE flag.
+    const result = getTooltip(
+      makeInfo("lodging-pins", {
+        name: "Hotel Adlon Kempinski",
+        city: "Berlin",
+        country: "Deutschland",
+        stayCount: 3,
+        nights: 7,
+      })
+    );
+    expect(result).not.toBeNull();
+    expect(result!.html).toContain("flagcdn.com/de.svg");
+    expect(result!.html).toContain("Hotel Adlon Kempinski");
+    expect(result!.html).toContain("Berlin, Deutschland");
+    expect(result!.html).toContain("3 Aufenthalte");
+    expect(result!.html).toContain("7 Übernachtungen");
+  });
+
+  it("also resolves an already-valid ISO country code (not just a free-text name)", () => {
+    const result = getTooltip(
+      makeInfo("lodging-pins-labels", {
+        name: "Le Meurice",
+        city: "Paris",
+        country: "FR",
+        stayCount: 1,
+        nights: 2,
+      })
+    );
+    expect(result).not.toBeNull();
+    expect(result!.html).toContain("flagcdn.com/fr.svg");
+  });
+
+  it("degrades gracefully when city/country/counts are absent", () => {
+    const result = getTooltip(makeInfo("lodging-pins", { name: "Unnamed Guesthouse" }));
+    expect(result).not.toBeNull();
+    expect(result!.html).not.toContain("flagcdn.com");
+    expect(result!.html).not.toContain("undefined");
+    expect(result!.html).not.toContain("null");
+    expect(result!.html).toContain("Unnamed Guesthouse");
+  });
+
+  it("returns null when the lodging datum has no name", () => {
+    expect(getTooltip(makeInfo("lodging-pins", { city: "Berlin" }))).toBeNull();
+  });
+
+  it("returns null for an unrelated layer id", () => {
+    expect(getTooltip(makeInfo("some-other-layer", { name: "x" }))).toBeNull();
   });
 });
