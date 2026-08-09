@@ -39,12 +39,18 @@ export interface StayMembershipInput {
  * An overlap (two cards covering the same chain or hotel) resolves to the
  * OLDEST card, so the answer does not depend on query order and cannot change
  * between two requests. The settings list is where the user untangles it.
+ *
+ * Two cards can share the same `createdAt` (e.g. both created in one
+ * transaction), so `createdAt` alone is not a total order. Ties break on the
+ * lexicographically smaller `id` — arbitrary, but fixed, so the result still
+ * never depends on array order.
  */
 function oldest(candidates: MembershipCoverage[]): MembershipCoverage | null {
   if (candidates.length === 0) return null;
-  return candidates.reduce((best, c) =>
-    c.createdAt < best.createdAt ? c : best,
-  );
+  return candidates.reduce((best, c) => {
+    if (c.createdAt !== best.createdAt) return c.createdAt < best.createdAt ? c : best;
+    return c.id < best.id ? c : best;
+  });
 }
 
 export function deriveStayMembership(

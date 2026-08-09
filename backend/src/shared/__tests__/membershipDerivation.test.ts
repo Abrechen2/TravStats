@@ -84,6 +84,37 @@ describe("deriveStayMembership", () => {
     ).toBe("m-chain");
   });
 
+  it("breaks a createdAt tie on the lexicographically smaller id, regardless of array order", () => {
+    // Two cards created in the same transaction can share a timestamp. The
+    // result must not depend on which one happens to come first.
+    const tiedA: MembershipCoverage = {
+      id: "m-tied-a",
+      createdAt: "2026-03-01T00:00:00.000Z",
+      chainIds: [7],
+      lodgingIds: [],
+    };
+    const tiedB: MembershipCoverage = {
+      id: "m-tied-b",
+      createdAt: "2026-03-01T00:00:00.000Z",
+      chainIds: [7],
+      lodgingIds: [],
+    };
+    expect(
+      deriveStayMembership({
+        ...base,
+        lodgingChainId: 7,
+        memberships: [tiedA, tiedB],
+      }).membershipId,
+    ).toBe("m-tied-a");
+    expect(
+      deriveStayMembership({
+        ...base,
+        lodgingChainId: 7,
+        memberships: [tiedB, tiedA],
+      }).membershipId,
+    ).toBe("m-tied-a");
+  });
+
   it("is none when nothing covers the stay", () => {
     expect(
       deriveStayMembership({
