@@ -89,6 +89,7 @@ export const adminApi = {
       isActive: boolean;
       invitedBy?: string;
       createdAt: string;
+      twoFactorEnabledAt: string | null;
       _count: {
         flights: number;
         userAchievements: number;
@@ -103,6 +104,7 @@ export const adminApi = {
         isActive: boolean;
         invitedBy?: string;
         createdAt: string;
+        twoFactorEnabledAt: string | null;
         _count: {
           flights: number;
           userAchievements: number;
@@ -130,6 +132,12 @@ export const adminApi = {
         isActive: boolean;
       };
     }>(`/admin/users/${userId}/toggle-active`);
+    return data;
+  },
+
+  /** The way back in for a user who lost both phone and recovery codes. */
+  disableUserTwoFactor: async (userId: string): Promise<{ disabled: boolean }> => {
+    const { data } = await api.post<{ disabled: boolean }>(`/admin/users/${userId}/disable-2fa`);
     return data;
   },
 

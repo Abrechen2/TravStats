@@ -252,6 +252,16 @@ export default function AdminPage(): JSX.Element {
     }
   };
 
+  const handleResetTwoFactor = async (userId: string): Promise<void> => {
+    try {
+      await adminApi.disableUserTwoFactor(userId);
+      addToast("success", t("admin:toasts.twoFactorReset"));
+      await loadData();
+    } catch (error: unknown) {
+      addToast("error", getErrorMessage(error, t("admin:toasts.twoFactorResetFailed")));
+    }
+  };
+
   const handleDeleteUser = async (userId: string): Promise<void> => {
     try {
       await adminApi.deleteUser(userId);
@@ -740,6 +750,7 @@ export default function AdminPage(): JSX.Element {
               users={users}
               onToggleUserActive={handleToggleUserActive}
               onDeleteUser={handleDeleteUser}
+              onResetTwoFactor={handleResetTwoFactor}
             />
           )}
 

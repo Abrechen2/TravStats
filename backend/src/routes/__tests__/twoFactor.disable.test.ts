@@ -107,4 +107,17 @@ describe("turning two-factor off", () => {
   it("reports an unknown username instead of pretending it worked", async () => {
     expect(await disableTwoFactorForUsername("nobody-by-that-name")).toBe(false);
   });
+
+  // The admin users list drives the reset-2FA action in the UI: without this
+  // field the button cannot know when to appear.
+  it("shows in the admin users list who has two-factor on", async () => {
+    const adminId = await makeUser("disableAdmin", true);
+    const res = await request(app)
+      .get("/api/v1/admin/users")
+      .set("Cookie", `auth_token=${generateToken(adminId)}`);
+
+    expect(res.status).toBe(200);
+    const row = res.body.users.find((u: { username: string }) => u.username === "disableAdmin");
+    expect(row.twoFactorEnabledAt).not.toBeNull();
+  });
 });
