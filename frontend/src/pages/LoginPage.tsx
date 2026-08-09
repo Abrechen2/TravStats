@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { authApi } from "../lib/api";
+import { startAuthentication } from "@simplewebauthn/browser";
+import { authApi, passkeyApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { LogoLockup } from "../components/Brand/Logo";
@@ -17,6 +18,8 @@ export default function LoginPage(): JSX.Element {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [successMessage] = useState(state?.message || "");
+  const [passkeysAvailable, setPasskeysAvailable] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
 
@@ -38,6 +41,35 @@ export default function LoginPage(): JSX.Element {
       })
       .catch(() => setSmtpEnabled(false));
   }, []);
+
+  // Ask before drawing the button: on an insecure origin WebAuthn is impossible
+  // and a button that always throws is worse than no button.
+  useEffect(() => {
+    passkeyApi
+      .availability()
+      .then((r) => setPasskeysAvailable(r.available))
+      .catch(() => setPasskeysAvailable(false));
+  }, []);
+
+  const handlePasskeyLogin = async (): Promise<void> => {
+    setError("");
+    setPasskeyLoading(true);
+    try {
+      const options = await passkeyApi.loginOptions();
+      const response = await startAuthentication({ optionsJSON: options });
+      const result = await passkeyApi.loginVerify(response);
+      setAuth(result.user);
+      navigate("/");
+    } catch (err) {
+      // Cancelling the OS or password-manager dialog is a normal user action.
+      if (err instanceof Error && (err.name === "NotAllowedError" || err.name === "AbortError")) {
+        return;
+      }
+      setError(t("login.passkeyFailed"));
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -181,6 +213,26 @@ export default function LoginPage(): JSX.Element {
               {loading ? t("login.submitting") : t("login.submit")}
             </button>
           </form>
+
+          {passkeysAvailable && (
+            <div className="mt-4">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="h-px flex-1" style={{ background: "var(--color-border)" }} />
+                <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  {t("login.or")}
+                </span>
+                <span className="h-px flex-1" style={{ background: "var(--color-border)" }} />
+              </div>
+              <button
+                type="button"
+                disabled={passkeyLoading}
+                onClick={() => void handlePasskeyLogin()}
+                className="btn-secondary w-full py-2.5"
+              >
+                {passkeyLoading ? t("login.passkeySubmitting") : t("login.passkeySubmit")}
+              </button>
+            </div>
+          )}
 
           <div className="mt-5 flex flex-col items-center gap-2 text-sm">
             <span style={{ color: "var(--text-muted)" }}>

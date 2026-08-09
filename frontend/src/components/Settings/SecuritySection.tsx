@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import PasskeySection from "./PasskeySection";
 import { useTranslation } from "../../hooks/useTranslation";
 import { twoFactorApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
@@ -257,6 +258,11 @@ export default function SecuritySection(): JSX.Element {
           </div>
         </div>
       )}
+
+      {/* Passkeys sit under the TOTP block: same section, independent feature.
+          A passkey replaces the password rather than adding to it, so neither
+          switch depends on the other. */}
+      <PasskeySection />
     </SectionCard>
   );
 }
