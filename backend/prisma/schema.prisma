@@ -1054,10 +1054,11 @@ model Lodging {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  user  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chain LodgingChain?       @relation(fields: [chainId], references: [id], onDelete: SetNull)
-  batch LodgingImportBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
-  stays LodgingStay[]
+  user            User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chain           LodgingChain?              @relation(fields: [chainId], references: [id], onDelete: SetNull)
+  batch           LodgingImportBatch?        @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  stays           LodgingStay[]
+  membershipLinks LodgingMembershipLodging[]
 
   @@unique([userId, externalRef])
   @@index([userId])
@@ -1094,6 +1095,10 @@ model LodgingStay {
   roomAmenities    String[]  @default([]) @map("room_amenities")
   bookingReference String?   @map("booking_reference")
   membershipId     String?   @map("membership_id")
+  /// true = the user explicitly used NO programme for this stay. Distinct from
+  /// `membershipId = null`, which means "derive it from the hotel"
+  /// (shared/membershipDerivation.ts).
+  membershipOptOut Boolean   @default(false) @map("membership_opt_out")
   receiptUrl       String?   @map("receipt_url")
   companions       String[]  @default([])
   notes            String?
@@ -1146,9 +1151,10 @@ model LodgingMembership {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  user   User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stays  LodgingStay[]
-  chains LodgingMembershipChain[]
+  user     User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stays    LodgingStay[]
+  chains   LodgingMembershipChain[]
+  lodgings LodgingMembershipLodging[]
 
   @@unique([userId, programName])
   @@index([userId])
@@ -1182,6 +1188,31 @@ model LodgingMembershipChain {
   @@id([membershipId, chainId])
   @@index([chainId])
   @@map("lodging_membership_chains")
+}
+
+/// Which INDEPENDENT hotels a membership covers, linked BY ID.
+///
+/// Mirrors LodgingMembershipChain so that "what does this card cover" is one
+/// idea with one editor. It exists for a hotel that offers a programme without
+/// belonging to a chain.
+///
+/// There is deliberately NO constraint tying this to `lodging.chain_id IS
+/// NULL`. A chain link always WINS over one of these
+/// (shared/membershipDerivation.ts), so assigning a chain to the hotel later
+/// makes this row dormant rather than invalid. The alternative — enforcing the
+/// rule in the database — would force a choice between blocking a legitimate
+/// chain correction and silently deleting the user's link.
+model LodgingMembershipLodging {
+  membershipId String   @map("membership_id")
+  lodgingId    String   @map("lodging_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  membership LodgingMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  lodging    Lodging           @relation(fields: [lodgingId], references: [id], onDelete: Cascade)
+
+  @@id([membershipId, lodgingId])
+  @@index([lodgingId])
+  @@map("lodging_membership_lodgings")
 }
 
 /// One import run (CSV file, e-mail or PDF). Every row it created carries its
