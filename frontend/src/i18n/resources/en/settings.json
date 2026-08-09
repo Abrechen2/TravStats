@@ -67,6 +67,8 @@
     "changePassword": "Change Password",
     "uploadAvatar": "Upload profile picture",
     "chooseFile": "Choose file",
+    "firstName": "First name",
+    "lastName": "Last name",
     "username": "Username",
     "email": "Email Address",
     "birthdate": "Birthday",
@@ -92,7 +94,8 @@
       "avatar": "PNG or JPG, max. 5 MB. Stored locally in the database — never sent to an external service.",
       "passwordTitle": "Change password:",
       "password": "Opens a separate modal that requires the current password for verification before a new one can be set."
-    }
+    },
+    "editProfile": "Edit profile"
   },
   "homeAirport": {
     "title": "Home airport",
