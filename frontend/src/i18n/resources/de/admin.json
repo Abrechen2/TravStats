@@ -226,7 +226,8 @@
       "deactivate": "Deaktivieren",
       "activate": "Aktivieren",
       "resetPassword": "Passwort zurücksetzen",
-      "delete": "Löschen"
+      "delete": "Löschen",
+      "resetTwoFactor": "2FA zurücksetzen"
     },
     "deleteConfirm": {
       "title": "Benutzer löschen?",
@@ -258,6 +259,11 @@
       },
       "close": "Schließen",
       "success": "Passwort erfolgreich zurückgesetzt."
+    },
+    "resetTwoFactorConfirm": {
+      "title": "Zwei-Faktor zurücksetzen",
+      "message": "Zwei-Faktor-Anmeldung für „{{username}}“ ausschalten? Die nächste Anmeldung braucht dann nur noch das Passwort. Das ist der Weg zurück ins Konto, wenn Telefon UND Wiederherstellungscodes weg sind.",
+      "confirm": "Zurücksetzen"
     }
   },
   "invitations": {
@@ -425,7 +431,9 @@
     "ollamaTestSuccess": "Ollama erreichbar – {{count}} Modell(e) gefunden",
     "ollamaTestFailed": "Verbindung zu Ollama fehlgeschlagen",
     "enabled": "aktiviert",
-    "disabled": "deaktiviert"
+    "disabled": "deaktiviert",
+    "twoFactorReset": "Zwei-Faktor wurde zurückgesetzt",
+    "twoFactorResetFailed": "Zwei-Faktor konnte nicht zurückgesetzt werden"
   },
   "prompts": {
     "enterEmail": "E-Mail eingeben (optional):",

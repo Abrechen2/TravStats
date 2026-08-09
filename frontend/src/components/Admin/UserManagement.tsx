@@ -12,12 +12,14 @@ interface UserManagementProps {
   users: AdminUser[];
   onToggleUserActive: (userId: string) => void;
   onDeleteUser: (userId: string) => void;
+  onResetTwoFactor: (userId: string) => void;
 }
 
 export default function UserManagement({
   users,
   onToggleUserActive,
   onDeleteUser,
+  onResetTwoFactor,
 }: UserManagementProps): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
   const currentUserId = useAuthStore((s) => s.user?.id);
@@ -25,6 +27,10 @@ export default function UserManagement({
     null
   );
   const [deleteUserConfirm, setDeleteUserConfirm] = useState<{
+    id: string;
+    username: string;
+  } | null>(null);
+  const [resetTwoFactorConfirm, setResetTwoFactorConfirm] = useState<{
     id: string;
     username: string;
   } | null>(null);
@@ -138,6 +144,21 @@ export default function UserManagement({
                   >
                     {t("admin:users.actions.resetPassword")}
                   </button>
+                  {/* Only offered while 2FA is actually on — its presence IS
+                      the indicator, no extra badge column needed. */}
+                  {user.twoFactorEnabledAt !== null && (
+                    <>
+                      {" · "}
+                      <button
+                        onClick={() =>
+                          setResetTwoFactorConfirm({ id: user.id, username: user.username })
+                        }
+                        className="text-orange-500 hover:text-orange-400"
+                      >
+                        {t("admin:users.actions.resetTwoFactor")}
+                      </button>
+                    </>
+                  )}
                   {user.id !== currentUserId && (
                     <>
                       {" · "}
@@ -166,6 +187,23 @@ export default function UserManagement({
           />
         )}
       </AnimatePresence>
+      <ConfirmModal
+        isOpen={!!resetTwoFactorConfirm}
+        onClose={() => setResetTwoFactorConfirm(null)}
+        onConfirm={() => {
+          if (resetTwoFactorConfirm) {
+            onResetTwoFactor(resetTwoFactorConfirm.id);
+            setResetTwoFactorConfirm(null);
+          }
+        }}
+        title={t("admin:users.resetTwoFactorConfirm.title")}
+        message={t("admin:users.resetTwoFactorConfirm.message", {
+          username: resetTwoFactorConfirm?.username ?? "",
+        })}
+        confirmText={t("admin:users.resetTwoFactorConfirm.confirm")}
+        cancelText={t("common:buttons.cancel")}
+        confirmButtonClass="bg-orange-600 hover:bg-orange-700 focus:ring-orange-500 text-white"
+      />
       <ConfirmModal
         isOpen={!!deleteUserConfirm}
         onClose={() => setDeleteUserConfirm(null)}
