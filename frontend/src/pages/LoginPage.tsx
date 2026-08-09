@@ -45,7 +45,10 @@ export default function LoginPage(): JSX.Element {
     setLoading(true);
     try {
       const result = await authApi.login(username, password);
-      if ("requiresPasswordChange" in result && result.requiresPasswordChange) {
+      if ("requiresTwoFactor" in result && result.requiresTwoFactor) {
+        // The challenge rides in an HttpOnly cookie — nothing to hand over here.
+        navigate("/2fa");
+      } else if ("requiresPasswordChange" in result && result.requiresPasswordChange) {
         // changeToken is now delivered via HttpOnly cookie, not response body
         navigate("/change-password", { state: { requiresChange: true } });
       } else if ("user" in result) {

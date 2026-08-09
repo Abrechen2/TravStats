@@ -37,6 +37,19 @@ model User {
   mustChangePassword   Boolean                  @default(false) @map("must_change_password")
   changeToken          String?                  @unique @map("change_token")
   changeTokenExpiry    DateTime?                @map("change_token_expiry")
+  // Two-factor (TOTP). Opt-in per user — null everywhere means "not using it",
+  // which is the state every account starts in and most stay in.
+  // `twoFactorSecret` is ENCRYPTED at rest via utils/encryption.ts; the pending
+  // one holds a secret that has been shown as a QR code but not yet confirmed
+  // by a first correct code, so an abandoned setup never locks anyone out.
+  twoFactorSecret        String?   @map("two_factor_secret")
+  twoFactorPendingSecret String?   @map("two_factor_pending_secret")
+  twoFactorEnabledAt     DateTime? @map("two_factor_enabled_at")
+  // Short-lived login challenge, hashed like changeToken above: the password
+  // was right, the second factor is still outstanding.
+  twoFactorToken         String?   @unique @map("two_factor_token")
+  twoFactorTokenExpiry   DateTime? @map("two_factor_token_expiry")
+  twoFactorRecoveryCodes TwoFactorRecoveryCode[]
   // True for users seeded by `seedDemoUser` (e.g. local dev `admin:admin123`).
   // Used to gate quota-burning admin actions like bulk historical refresh so
   // the dev demo can't drain a real RapidAPI key by accident.
@@ -128,6 +141,23 @@ model PairingCode {
 
   @@index([userId])
   @@map("pairing_codes")
+}
+
+/// Single-use recovery codes, the way back in when the phone is gone.
+///
+/// Stored as bcrypt hashes for the same reason passwords are: a database dump
+/// must not hand over a working credential. `usedAt` rather than deletion so a
+/// user can see that a code was spent, and when.
+model TwoFactorRecoveryCode {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String    @map("code_hash")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("two_factor_recovery_codes")
 }
 
 model Airport {
