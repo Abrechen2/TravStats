@@ -4,10 +4,11 @@ import { hashPassword, comparePassword } from "../../utils/password";
 
 export const RECOVERY_CODE_COUNT = 10;
 
-// No vowels and no look-alikes: a code gets read off a printout and typed by
-// hand, so "0/O" and "1/l" cost support time, and removing vowels avoids
-// accidentally spelling something unfortunate.
-const ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+// Look-alikes cost support time when a code is read off a printout and typed
+// by hand, so "0/O", "1/l" and "i" are out. Vowels are out too, so a random
+// code can't accidentally spell something unfortunate; "y" stays — it isn't
+// a vowel in the sense that matters here and it isn't a look-alike either.
+export const ALPHABET = "bcdfghjkmnpqrstvwxyz23456789";
 
 function randomChunk(length: number): string {
   const bytes = crypto.randomBytes(length);
