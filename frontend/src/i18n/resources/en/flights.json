@@ -62,8 +62,8 @@
     "estimatedTimesHistorical_one": "Based on {{count}} historical flight of this route.",
     "estimatedTimesHistorical_other": "Based on {{count}} historical flights of this route.",
     "estimatedTimesCalculated": "Departure and arrival times were calculated from your previous flights.",
-    "estimatedTimesAutomatic": "Automatically estimated based on boarding time and flight distance.",
-    "estimatedTimesAssumption": "Assumption: Departure = Boarding + 30min, flight duration -> {{minutes}} minutes.",
+    "estimatedTimesAutomatic": "Automatically estimated from the departure time and the flight distance.",
+    "estimatedTimesAssumption": "Assumed flight duration: {{minutes}} minutes.",
     "reviewTimes": "Please review and correct the times if necessary.",
     "hideWarning": "Hide warning",
     "help": {
