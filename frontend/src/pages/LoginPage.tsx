@@ -44,10 +44,17 @@ export default function LoginPage(): JSX.Element {
 
   // Ask before drawing the button: on an insecure origin WebAuthn is impossible
   // and a button that always throws is worse than no button.
+  //
+  // BOTH conditions matter. The server only knows its CONFIGURED origins; this
+  // instance may also be reachable under a plain-http LAN address, where the
+  // config says "available" but THIS page cannot run WebAuthn. UAT on the beta
+  // box found exactly that: tunnel https configured, browsed via LAN http, and
+  // the button appeared without being able to work. isSecureContext is the
+  // browser's own verdict about the page we are actually on.
   useEffect(() => {
     passkeyApi
       .availability()
-      .then((r) => setPasskeysAvailable(r.available))
+      .then((r) => setPasskeysAvailable(r.available && window.isSecureContext !== false))
       .catch(() => setPasskeysAvailable(false));
   }, []);
 
