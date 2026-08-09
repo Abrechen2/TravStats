@@ -240,5 +240,8 @@
     "flightFrequency": "Flüge (Häufigkeit)",
     "flightSolid": "Flüge",
     "lodging": "Unterkünfte"
+  },
+  "userMenu": {
+    "label": "Konto-Menü"
   }
 }
