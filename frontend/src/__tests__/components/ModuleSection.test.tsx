@@ -29,16 +29,20 @@ describe("ModuleSection", () => {
     render(<ModuleSection />);
     expect(screen.getByText("domain.flight")).toBeInTheDocument();
     expect(screen.getByText("domain.cruise")).toBeInTheDocument();
-    expect(screen.getByText("domain.hotel")).toBeInTheDocument();
+    expect(screen.getByText("domain.lodging")).toBeInTheDocument();
     expect(screen.getByText("domain.poi")).toBeInTheDocument();
   });
 
   it("disables unavailable domains", () => {
     render(<ModuleSection />);
-    const hotelToggle = screen.getByRole("switch", { name: /domain\.hotel/ });
-    expect(hotelToggle).toBeDisabled();
     const poiToggle = screen.getByRole("switch", { name: /domain\.poi/ });
     expect(poiToggle).toBeDisabled();
+  });
+
+  it("does not disable the now-available lodging domain", () => {
+    render(<ModuleSection />);
+    const lodgingToggle = screen.getByRole("switch", { name: /domain\.lodging/ });
+    expect(lodgingToggle).not.toBeDisabled();
   });
 
   it("toggling an available domain updates the store", () => {

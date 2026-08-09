@@ -11,6 +11,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import {
   CruiseAppearanceSection,
   FlightAppearanceSection,
+  LodgingAppearanceSection,
   PanelHeader,
   SectionLabel,
   SegControl,
@@ -24,6 +25,7 @@ import {
   type AppearanceDomain,
   type CruiseAppearanceState,
   type FlightAppearanceState,
+  type LodgingAppearanceState,
 } from "./controlPanelKit";
 import { MapChromeSections } from "./MapChromeSections";
 import type { LabelsMode } from "./labelPriority";
@@ -48,6 +50,7 @@ export interface FlatMapControlPanelProps {
   appearanceDomains: readonly AppearanceDomain[];
   flightAppearance: FlightAppearanceState;
   cruiseAppearance: CruiseAppearanceState;
+  lodgingAppearance: LodgingAppearanceState;
 }
 
 export function FlatMapControlPanel({
@@ -63,6 +66,7 @@ export function FlatMapControlPanel({
   appearanceDomains,
   flightAppearance,
   cruiseAppearance,
+  lodgingAppearance,
 }: FlatMapControlPanelProps): JSX.Element {
   const { t } = useTranslation();
   const [expanded, toggleExpanded] = usePanelExpanded();
@@ -180,6 +184,13 @@ export function FlatMapControlPanel({
               widthLabel={t("map:globe.panel.width")}
               sizeLabel={t("map:globe.panel.size")}
               arrowLabel={t("map:globe.panel.arrows")}
+            />
+          )}
+          {appearanceDomains.includes("lodging") && (
+            <LodgingAppearanceSection
+              title={t("map:globe.panel.domainLodging")}
+              {...lodgingAppearance}
+              sizeLabel={t("map:globe.panel.size")}
             />
           )}
         </div>

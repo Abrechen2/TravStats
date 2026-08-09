@@ -1,51 +1,5 @@
 import { z } from 'zod';
-
-// Whitelist of allowed receipt URL domains (common cloud storage and document services)
-const ALLOWED_RECEIPT_DOMAINS = [
-  'dropbox.com',
-  'drive.google.com',
-  'docs.google.com',
-  'onedrive.live.com',
-  '1drv.ms',
-  'box.com',
-  'icloud.com',
-  's3.amazonaws.com',
-  'cloudinary.com',
-  'imgur.com',
-  // Add your own domain here if you host receipts
-];
-
-/**
- * Custom receipt URL validator
- * Ensures the URL is from a trusted domain or is a local upload
- */
-const receiptUrlValidator = z
-  .string()
-  .refine(
-    (url) => {
-      // Allow local uploads (starts with /api/v1/uploads/)
-      if (url.startsWith('/api/v1/uploads/')) {
-        return true;
-      }
-
-      // For external URLs, validate domain
-      try {
-        const parsedUrl = new URL(url);
-        const hostname = parsedUrl.hostname.toLowerCase();
-        // Check if hostname ends with any allowed domain
-        return ALLOWED_RECEIPT_DOMAINS.some(
-          (domain) => hostname === domain || hostname.endsWith(`.${domain}`)
-        );
-      } catch {
-        return false;
-      }
-    },
-    {
-      message: `Receipt URL must be a local upload (/api/v1/uploads/) or from a trusted domain: ${ALLOWED_RECEIPT_DOMAINS.join(', ')}`,
-    }
-  )
-  .nullable()
-  .optional();
+import { receiptUrlValidator } from './receiptUrl';
 
 export const airportSchema = z.object({
   icao: z.string().nullable().optional(),
@@ -190,7 +144,10 @@ const baseFlightSchema = z.object({
   seatClass: z.enum(['economy', 'premium_economy', 'business', 'first']).nullable().optional(),
   tags: z.array(z.string().max(40)).optional(),
   companions: z.array(z.string().max(100)).max(50).optional().default([]),
-  receiptUrl: receiptUrlValidator,
+  // `.nullable()` at the use site, not in the shared validator: the flight
+  // edit form must be able to CLEAR the receipt (null = clear, undefined =
+  // leave alone). schemas/lodging.ts does the same on its own use site.
+  receiptUrl: receiptUrlValidator.nullable(),
   // Provenance flag — primarily for bulk-import / AI-agent flows that want
   // to mark a row as 'bulk_import' so admins can later audit / re-process
   // them. Defaults to 'manual' in the route when omitted.

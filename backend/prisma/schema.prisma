@@ -13,6 +13,14 @@ model User {
   id                   String                   @id @default(uuid())
   username             String                   @unique
   passwordHash         String                   @map("password_hash")
+  // Real name, shown wherever the person is addressed rather than identified
+  // (#241). Columns on User rather than keys in the UserSettings JSON blob
+  // where profilePicture lives: the header renders the name on every page from
+  // the /auth/me payload, and reading it out of settings would make the header
+  // wait for a second fetch and flash the username first. Both optional — a
+  // logbook does not need your name.
+  firstName            String?                  @map("first_name")
+  lastName             String?                  @map("last_name")
   isAdmin              Boolean                  @default(false) @map("is_admin")
   isActive             Boolean                  @default(true) @map("is_active")
   invitedBy            String?                  @map("invited_by")
@@ -62,6 +70,10 @@ model User {
   cruises              Cruise[]
   apiTokens            ApiToken[]
   pairingCodes         PairingCode[]
+  lodgings             Lodging[]
+  lodgingStays         LodgingStay[]
+  lodgingMemberships   LodgingMembership[]
+  lodgingImportBatches LodgingImportBatch[]
   companions           Companion[]
 
   @@map("users")
@@ -409,6 +421,9 @@ model UserSettings {
   appPrefs          Json?     @map("app_prefs")
   appPrefsUpdatedAt DateTime? @map("app_prefs_updated_at")
 
+  // Base currency for lodging FX snapshots (§7.1) and cross-domain totals.
+  baseCurrency String @default("EUR") @map("base_currency")
+
   updatedAt DateTime @updatedAt @map("updated_at")
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -512,6 +527,13 @@ model AdminSettings {
   // secondary hint for on-network clients.
   publicUrl         String? @map("public_url")
   lanUrl            String? @map("lan_url")
+
+  // Geocoder endpoints — supersedes PHOTON_URL / NOMINATIM_URL ENV variables.
+  // Defaults are the public instances (photon.komoot.io, OSM Nominatim); an
+  // operator may point either at a self-hosted instance. Resolution order:
+  // this column -> ENV -> default (see `resolveGeocoderUrls()`).
+  photonUrl    String? @map("photon_url")
+  nominatimUrl String? @map("nominatim_url")
 
   // Instance-level beta gate. OFF on production, ON on RC/Beta servers.
   // Reveals unfinished / not-yet-useful features (see
@@ -761,6 +783,7 @@ model Trip {
   stops          TripStop[]
   journalEntries TripJournalEntry[]
   photos         TripPhoto[]
+  lodgingStays   LodgingStay[]
   immichAlbums   TripImmichAlbum[]
   companionLinks TripCompanion[]
 
@@ -893,10 +916,11 @@ model Booking {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trip    Trip?    @relation(fields: [tripId], references: [id], onDelete: SetNull)
-  flights Flight[]
-  cruises Cruise[]
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip         Trip?         @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  flights      Flight[]
+  cruises      Cruise[]
+  lodgingStays LodgingStay[]
 
   @@index([userId])
   @@index([userId, createdAt])
@@ -1046,6 +1070,204 @@ model Port {
   @@index([city])
   @@index([region])
   @@map("ports")
+}
+
+model Lodging {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  type          String   @default("hotel") // hotel | campsite | guesthouse | apartment | hostel
+  name          String
+  chainId       Int?     @map("chain_id")
+  address       String?
+  city          String?
+  country       String?
+  lat           Float?
+  lon           Float?
+  stars         Int?     // official 1–5
+  amenities     String[] @default([])
+  notes         String?
+  dataSource    String?  @map("data_source") // parser | manual | enriched
+  externalRef   String?  @map("external_ref") // e.g. "google:ChIJd8BlQ2Bo5kcRAFTLmuLK8bA"
+  batchId       String?  @map("batch_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user            User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chain           LodgingChain?              @relation(fields: [chainId], references: [id], onDelete: SetNull)
+  batch           LodgingImportBatch?        @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  stays           LodgingStay[]
+  membershipLinks LodgingMembershipLodging[]
+
+  @@unique([userId, externalRef])
+  @@index([userId])
+  @@index([userId, type])
+  @@index([chainId])
+  @@index([batchId])
+  @@map("lodgings")
+}
+
+model LodgingStay {
+  id               String    @id @default(uuid())
+  lodgingId        String    @map("lodging_id")
+  userId           String    @map("user_id")
+  tripId           String?   @map("trip_id")
+  bookingId        String?   @map("booking_id")
+  checkIn          DateTime  @map("check_in")  // hotel-local, do not normalize to UTC
+  checkOut         DateTime  @map("check_out")
+  status           String    @default("completed") // scheduled | completed | cancelled
+  roomNumber       String?   @map("room_number")
+  roomCategory     String?   @map("room_category")
+  board            String?   // none | breakfast | half | full | all_inclusive
+  pricePerNight    Float?    @map("price_per_night")
+  currency         String    @default("EUR")
+  totalPrice       Float?    @map("total_price")
+  totalPriceBase   Float?    @map("total_price_base")   // FX snapshot (§7.1)
+  fxRate           Float?    @map("fx_rate")
+  fxRateDate       DateTime? @map("fx_rate_date")
+  fxBaseCurrency   String?   @map("fx_base_currency")
+  isAwardStay      Boolean   @default(false) @map("is_award_stay")
+  ratingRoom       Float?    @map("rating_room")
+  ratingBreakfast  Float?    @map("rating_breakfast")
+  ratingService    Float?    @map("rating_service")
+  ratingOverall    Float?    @map("rating_overall")
+  roomAmenities    String[]  @default([]) @map("room_amenities")
+  bookingReference String?   @map("booking_reference")
+  membershipId     String?   @map("membership_id")
+  /// true = the user explicitly used NO programme for this stay. Distinct from
+  /// `membershipId = null`, which means "derive it from the hotel"
+  /// (shared/membershipDerivation.ts).
+  membershipOptOut Boolean   @default(false) @map("membership_opt_out")
+  receiptUrl       String?   @map("receipt_url")
+  companions       String[]  @default([])
+  notes            String?
+  parserTemplate   String?   @map("parser_template")
+  parserConfidence Int?      @map("parser_confidence")
+  dataSource       String?   @map("data_source")
+  externalRef      String?   @map("external_ref") // e.g. "booking:5087376273"
+  batchId          String?   @map("batch_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  lodging    Lodging             @relation(fields: [lodgingId], references: [id], onDelete: Cascade)
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip       Trip?               @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking    Booking?            @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  membership LodgingMembership?  @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  batch      LodgingImportBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, externalRef])
+  @@index([lodgingId])
+  @@index([userId, checkIn])
+  @@index([status])
+  @@index([tripId])
+  @@index([bookingId])
+  @@index([membershipId])
+  @@index([batchId])
+  @@map("lodging_stays")
+}
+
+model LodgingChain {
+  id             Int      @id @default(autoincrement())
+  name           String   @unique
+  brandColor     String?  @map("brand_color")
+  loyaltyProgram String?  @map("loyalty_program")
+  isUserAdded    Boolean  @default(false) @map("is_user_added")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  lodgings    Lodging[]
+  memberships LodgingMembershipChain[]
+
+  @@map("lodging_chains")
+}
+
+model LodgingMembership {
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  programName      String   @map("program_name")
+  membershipNumber String?  @map("membership_number")
+  tier             String?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user     User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stays    LodgingStay[]
+  chains   LodgingMembershipChain[]
+  lodgings LodgingMembershipLodging[]
+
+  @@unique([userId, programName])
+  @@index([userId])
+  @@map("lodging_memberships")
+}
+
+/// Which chains a membership covers, linked BY ID.
+///
+/// The chain page used to find "your membership for this chain" by comparing
+/// `LodgingChain.loyaltyProgram` to `LodgingMembership.programName` as
+/// strings. Loyalty programmes get rebranded — NH Rewards -> NH DISCOVERY
+/// (2022) -> Minor DISCOVERY — so that join broke on the day either side was
+/// corrected: a user whose card says "Minor DISCOVERY" saw nothing on the NH
+/// page, and the membership form had to LOCK the programme name to keep the
+/// comparison alive. An id link survives every rename, and one membership can
+/// legitimately cover several brands (Minor DISCOVERY: NH, NH Collection,
+/// nhow, Anantara, Tivoli).
+///
+/// `LodgingChain.loyaltyProgram` survives as a SUGGESTION only — it seeds
+/// which chains to pre-select and what to prefill the name with. It is no
+/// longer load-bearing, so a stale catalogue value costs a checkbox, not a
+/// missing membership.
+model LodgingMembershipChain {
+  membershipId String   @map("membership_id")
+  chainId      Int      @map("chain_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  membership LodgingMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  chain      LodgingChain      @relation(fields: [chainId], references: [id], onDelete: Cascade)
+
+  @@id([membershipId, chainId])
+  @@index([chainId])
+  @@map("lodging_membership_chains")
+}
+
+/// Which INDEPENDENT hotels a membership covers, linked BY ID.
+///
+/// Mirrors LodgingMembershipChain so that "what does this card cover" is one
+/// idea with one editor. It exists for a hotel that offers a programme without
+/// belonging to a chain.
+///
+/// There is deliberately NO constraint tying this to `lodging.chain_id IS
+/// NULL`. A chain link always WINS over one of these
+/// (shared/membershipDerivation.ts), so assigning a chain to the hotel later
+/// makes this row dormant rather than invalid. The alternative — enforcing the
+/// rule in the database — would force a choice between blocking a legitimate
+/// chain correction and silently deleting the user's link.
+model LodgingMembershipLodging {
+  membershipId String   @map("membership_id")
+  lodgingId    String   @map("lodging_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  membership LodgingMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  lodging    Lodging           @relation(fields: [lodgingId], references: [id], onDelete: Cascade)
+
+  @@id([membershipId, lodgingId])
+  @@index([lodgingId])
+  @@map("lodging_membership_lodgings")
+}
+
+/// One import run (CSV file, e-mail or PDF). Every row it created carries its
+/// id, so a 232-row import that turns out wrong is revertible as a unit.
+model LodgingImportBatch {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  source    String // csv | email | pdf
+  fileName  String?  @map("file_name")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lodgings Lodging[]
+  stays    LodgingStay[]
+
+  @@index([userId])
+  @@map("lodging_import_batches")
 }
 
 model Airline {

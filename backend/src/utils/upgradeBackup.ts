@@ -11,7 +11,8 @@ const LAST_VERSION_FILE = path.join(BACKUP_PATH, "last-version");
 export interface UpgradeBackupContext {
   previousVersion: string | null;
   currentVersion: string;
-  majorBumped: boolean;
+  /** True whenever an EXISTING install is about to run a different build — any version change, not just a major one (#246). */
+  shouldBackup: boolean;
   firstUpgradeFromPreMarker: boolean;
   backupCreated: string | null;
 }
@@ -63,11 +64,12 @@ export function parseMajor(version: string): number | null {
 
 /**
  * Triggered before `prisma migrate deploy` on every boot. Compares the
- * version that last ran on this data volume to the version we are
- * about to start. If the major number increased (e.g. 1.x -> 2.x) we
- * snapshot the database to /app/data/backups/pre-vX-upgrade-<ts>.sql
- * BEFORE any migration runs, so a failed upgrade leaves a recoverable
- * state right next to the running install.
+ * version that last ran on this data volume to the version we are about to
+ * start. If they differ on an install that already has data, we snapshot the
+ * database to /app/data/backups/pre-vX-upgrade-<ts>.sql BEFORE any migration
+ * runs, so a failed upgrade leaves a recoverable state right next to the
+ * running install. See `shouldBackupBeforeMigrating` for the exact rule —
+ * it is ANY version change, not only a major one (#246).
  *
  * Failure modes are deliberately soft: if the backup fails (Docker
  * socket unavailable, pg_dump missing, no disk space) we log a clear
@@ -99,49 +101,90 @@ async function hasExistingMigrations(): Promise<boolean> {
   }
 }
 
+/**
+ * Whether an installation about to start should snapshot its database first.
+ *
+ * This used to ask "did the MAJOR digit increase?", which is the wrong
+ * question: migrations do not care about the digit that moved. The 2.4.0 ->
+ * 2.5.0 upgrade applied SEVEN migrations and was skipped, so the release that
+ * most needed a snapshot ran without one (#246).
+ *
+ * The question that matters is "is an EXISTING installation about to run a
+ * different build than the one it last ran?" — any version change on a
+ * database that already has migrations. A patch release with no migrations
+ * then takes a redundant snapshot, which is cheap insurance next to a failed
+ * schema change with no way back.
+ *
+ * Pure and exported so the rule is testable without a database or a version
+ * file; `maybeRunPreMigrationBackup` supplies the IO.
+ */
+export function shouldBackupBeforeMigrating(input: {
+  previousVersion: string | null;
+  currentVersion: string;
+  hasExistingMigrations: boolean;
+}): { backup: boolean; reason: string } {
+  const { previousVersion, currentVersion, hasExistingMigrations } = input;
+
+  if (!hasExistingMigrations) {
+    // Nothing to lose yet.
+    return { backup: false, reason: "Fresh install (no migrations applied yet)" };
+  }
+
+  if (previousVersion === null) {
+    // The app shipped before the last-version marker existed, but the database
+    // carries data and new migrations are pending. This is the most important
+    // upgrade case and the one we can least afford to miss.
+    return {
+      backup: true,
+      reason: `First upgrade with a last-version marker (existing data, no marker file) -> ${currentVersion}`,
+    };
+  }
+
+  if (previousVersion === currentVersion) {
+    // A plain container restart. Snapshotting every restart would fill the
+    // disk with copies, none of which precedes a migration.
+    return { backup: false, reason: `Same version ${currentVersion}; not an upgrade` };
+  }
+
+  return {
+    backup: true,
+    reason: `Version change ${previousVersion} -> ${currentVersion} on an existing install`,
+  };
+}
+
 export async function maybeRunPreMigrationBackup(): Promise<UpgradeBackupContext> {
   const currentVersion = getCurrentVersion();
   const previousVersion = getLastDeployedVersion();
 
-  const prevMajor = previousVersion ? parseMajor(previousVersion) : null;
-  const currMajor = parseMajor(currentVersion);
-  const explicitMajorBump =
-    prevMajor !== null && currMajor !== null && currMajor > prevMajor;
+  const hasMigrations = await hasExistingMigrations();
+  const decision = shouldBackupBeforeMigrating({
+    previousVersion,
+    currentVersion,
+    hasExistingMigrations: hasMigrations,
+  });
 
-  // Pre-marker installs: app shipped before this last-version file was
-  // introduced. No file exists, but the DB carries existing data and
-  // we are about to run new migrations. Treat as a major bump even
-  // though we cannot prove it from the version file — the alternative
-  // is missing the most important upgrade case (1.x -> 2.x without an
-  // intermediate version that would have written the marker).
-  const firstUpgradeFromPreMarker =
-    previousVersion === null && (await hasExistingMigrations());
-
-  const majorBumped = explicitMajorBump || firstUpgradeFromPreMarker;
+  const firstUpgradeFromPreMarker = previousVersion === null && hasMigrations;
+  const shouldBackup = decision.backup;
 
   const ctx: UpgradeBackupContext = {
     previousVersion,
     currentVersion,
-    majorBumped,
+    shouldBackup,
     firstUpgradeFromPreMarker,
     backupCreated: null,
   };
 
-  if (!majorBumped) {
+  if (!shouldBackup) {
     logger.info({
       operation: "upgrade_backup_skip",
-      message: previousVersion
-        ? "No major-version bump detected; skipping pre-migration backup"
-        : "Fresh install detected; skipping pre-migration backup",
+      message: `${decision.reason}; skipping pre-migration backup`,
       previousVersion,
       currentVersion,
     });
     return ctx;
   }
 
-  const reason = firstUpgradeFromPreMarker
-    ? `First upgrade with a last-version marker (existing data, no marker file) -> ${currentVersion}`
-    : `Major version bump ${previousVersion} -> ${currentVersion}`;
+  const reason = decision.reason;
 
   logger.info({
     operation: "upgrade_backup_start",

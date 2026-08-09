@@ -77,7 +77,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filter, setFilterState] = useState<DomainKey | "all">(() => {
     const tab = searchParams.get("tab");
-    if (tab === "all" || tab === "flight" || tab === "cruise" || tab === "hotel" || tab === "poi") {
+    if (tab === "all" || tab === "flight" || tab === "cruise" || tab === "lodging" || tab === "poi") {
       return tab;
     }
     return "all";
@@ -100,7 +100,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   useEffect(() => {
     const tab = searchParams.get("tab");
     const next: DomainKey | "all" =
-      tab === "flight" || tab === "cruise" || tab === "hotel" || tab === "poi" ? tab : "all";
+      tab === "flight" || tab === "cruise" || tab === "lodging" || tab === "poi" ? tab : "all";
     if (next !== filter) setFilterState(next);
   }, [searchParams, filter]);
 

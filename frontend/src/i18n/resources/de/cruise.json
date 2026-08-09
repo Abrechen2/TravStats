@@ -122,7 +122,6 @@
     "add_custom_ship": "Neues Schiff anlegen",
     "add_custom_port": "Neuen Hafen anlegen",
     "cancel": "Abbrechen",
-    "invalidLatLon": "Ungültige Koordinaten — Breite ±90, Länge ±180",
     "createShipError": "Schiff konnte nicht angelegt werden",
     "createPortError": "Hafen konnte nicht angelegt werden",
     "via_geocoder": "Kartensuche (OpenStreetMap)",

@@ -892,7 +892,7 @@ export interface LookupWithHistoricalResult {
    *   the issue-#82 symptom). The flight just isn't covered by the API
    *   for that date; do not blame the user for a typo.
    */
-  unavailableReason?: 'no_provider' | 'no_match' | 'no_match_api_gap';
+  unavailableReason?: 'not_configured' | 'no_provider' | 'no_match' | 'no_match_api_gap';
 }
 
 /** Coerce `string | null | undefined` -> `string | undefined` (FlightData fields don't accept null). */
@@ -976,6 +976,35 @@ export async function lookupFlightWithHistorical(
   const dayDelta = requestedStr ? dayDiff(requestedStr, todayStr) : 0;
 
   const isOutsideLiveWindow = dayDelta !== 0;
+
+  // Nothing configured at all: no provider can answer ANY date, including
+  // today. Without this gate the cascade ran, found every provider disabled,
+  // and returned an ordinary empty result — so a fresh install was told
+  // "no flights found, try another date" when nothing had been searched
+  // (#232). "Not configured" and "not found" call for opposite actions:
+  // add a key in Settings, versus check the number and date.
+  //
+  // Checked before the outside-live-window gate below on purpose: with no
+  // provider whatsoever, "this date needs Aviationstack or AeroDataBox" is
+  // the wrong answer, because it implies the free providers are set up and
+  // merely limited.
+  const [anyAirlabs, anyAviationstack, anyAerodatabox, anyOpenSky] = await Promise.all([
+    getApiKey('airlabs', userId),
+    getApiKey('aviationstack', userId),
+    getApiKey('aerodatabox', userId),
+    getOpenSkyCredentials(userId),
+  ]);
+  if (!anyAirlabs && !anyAviationstack && !anyAerodatabox && !anyOpenSky) {
+    logger.info(
+      {
+        flightNumber: trimmed,
+        date: requestedStr,
+        operation: 'lookup_unavailable_not_configured',
+      },
+      `Lookup requested for ${trimmed} but no flight-data provider is configured`,
+    );
+    return { flights: [], unavailableReason: 'not_configured' };
+  }
 
   // Capability gate: any non-today request needs Aviationstack OR
   // AeroDataBox. Without one of them, the free providers can't deliver:

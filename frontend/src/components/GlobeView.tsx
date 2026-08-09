@@ -268,9 +268,10 @@ function formatTooltipDate(iso: string, locale: string): string {
 
 interface DeckOverlayProps {
   layers: Layer[];
+  onHover: (info: PickingInfo) => void;
 }
 
-function DeckGLOverlay({ layers }: DeckOverlayProps): null {
+function DeckGLOverlay({ layers, onHover }: DeckOverlayProps): null {
   // `interleaved: true` shares MapLibre's WebGL context so deck.gl uses
   // MapLibre's globe projection matrices directly — without it, the
   // overlay falls back to mercator and the layers detach into a flat
@@ -295,9 +296,10 @@ function DeckGLOverlay({ layers }: DeckOverlayProps): null {
         layers,
         pickingRadius: 5,
         interleaved: true,
+        onHover,
       })
   );
-  overlay.setProps({ layers });
+  overlay.setProps({ layers, onHover });
   return null;
 }
 
@@ -428,6 +430,20 @@ export default function GlobeView({
   // Tooltip lives in a leaf component (HoverTooltip) so onHover updates at
   // 60–120 Hz don't re-render the whole GlobeView tree. Imperative API only.
   const tooltipRef = useRef<HoverTooltipApi | null>(null);
+
+  // Hand cursor over a pickable object (#247). Written straight onto MapLibre's
+  // canvas rather than through React state, for the same reason the tooltip
+  // above is imperative: this fires on every mouse move across the globe, and
+  // a state flip here would re-render the whole tree. Guarded by a ref so the
+  // DOM write only happens when the pointer actually crosses an edge.
+  const overCursorRef = useRef(false);
+  const handleDeckHover = useCallback((info: PickingInfo): void => {
+    const over = Boolean(info?.object);
+    if (over === overCursorRef.current) return;
+    overCursorRef.current = over;
+    const canvas = mapRef.current?.getMap().getCanvas();
+    if (canvas) canvas.style.cursor = over ? "pointer" : "";
+  }, []);
   // Map zoom — used as a level-of-detail signal for arc altitude. At
   // low zoom the standard altitude-based arcs look great; at high zoom
   // they become horizontal streaks across the screen because the
@@ -1453,7 +1469,7 @@ export default function GlobeView({
         touchPitch={false}
         style={{ width: "100%", height: "100%" }}
       >
-        {mapReady && <DeckGLOverlay layers={layers} />}
+        {mapReady && <DeckGLOverlay layers={layers} onHover={handleDeckHover} />}
       </MapGL>
 
       {/* Top-right stats overlay — driven by the same slider-filtered

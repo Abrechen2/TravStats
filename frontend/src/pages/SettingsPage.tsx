@@ -26,11 +26,14 @@ import AboutSection from "../components/Settings/AboutSection";
 import ImportSection from "../components/Settings/ImportSection";
 import FeaturesSection from "../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../components/Settings/CruisePreferencesSection";
+import LodgingPreferencesSection from "../components/Settings/LodgingPreferencesSection";
+import MembershipsSection from "../components/Settings/MembershipsSection";
+import GeocoderSettingsCard from "../components/Settings/GeocoderSettingsCard";
 import ImmichConnectionCard from "../components/Settings/ImmichConnectionCard";
 import PasswordModal from "../components/Settings/PasswordModal";
 import { normalizeSectionId } from "../lib/sectionAliases";
 
-type TabId = "general" | "flight" | "cruise";
+type TabId = "general" | "flight" | "cruise" | "lodging";
 
 interface SectionRef {
   id: string;
@@ -48,12 +51,14 @@ export default function SettingsPage(): JSX.Element {
     units,
     defaults,
     cruise,
+    baseCurrency,
     autoSaveState,
     setProfile,
     setDisplay,
     setUnits,
     setDefaults,
     setCruise,
+    setBaseCurrency,
     savingProfile,
     uploadingProfilePicture,
     removingProfilePicture,
@@ -99,7 +104,7 @@ export default function SettingsPage(): JSX.Element {
   // pair a phone until the mobile app ships (see config/betaFeatures.ts).
   // Removing it from the model would bounce that URL back to "profile".
   //
-  // Sections are grouped into one of three tabs. The cruise group is empty
+  // Sections are grouped into one of four tabs. The cruise group is empty
   // for now; a placeholder is shown so users see the scaffold exists.
   const sectionsByTab = useMemo<Record<TabId, SectionRef[]>>(() => {
     const general: SectionRef[] = [
@@ -137,7 +142,19 @@ export default function SettingsPage(): JSX.Element {
         label: t("settings:cruisePreferences.title") || "Präferenzen",
       },
     ];
-    return { general, flight, cruise: cruiseTab };
+    const lodgingTab: SectionRef[] = [
+      {
+        id: "lodgingPreferences",
+        label: t("settings:lodgingPreferences.title") || "Präferenzen",
+      },
+      {
+        id: "lodgingMemberships",
+        label: t("settings:memberships.title") || "Bonusprogramme",
+      },
+    ];
+    return { general, flight, cruise: cruiseTab, lodging: lodgingTab };
+    // No `user?.isAdmin` dep any more — main dropped the conditional Admin
+    // section from `general`, so nothing in this memo reads it.
   }, [t]);
 
   // The NAV list — the model minus everything the beta gate hides. Rendering
@@ -149,6 +166,7 @@ export default function SettingsPage(): JSX.Element {
       general: sectionsByTab.general.filter((s) => !isHidden(s.id)),
       flight: sectionsByTab.flight.filter((s) => !isHidden(s.id)),
       cruise: sectionsByTab.cruise.filter((s) => !isHidden(s.id)),
+      lodging: sectionsByTab.lodging.filter((s) => !isHidden(s.id)),
     };
   }, [sectionsByTab, isFeatureVisible]);
 
@@ -169,6 +187,12 @@ export default function SettingsPage(): JSX.Element {
         label: t("settings:tabs.cruise") || "Kreuzfahrt",
         icon: DOMAINS.cruise.icon,
         requiresDomain: "cruise",
+      },
+      {
+        id: "lodging",
+        label: t("settings:tabs.lodging") || "Unterkünfte",
+        icon: DOMAINS.lodging.icon,
+        requiresDomain: "lodging",
       },
     ],
     defaultTab: "general",
@@ -230,7 +254,7 @@ export default function SettingsPage(): JSX.Element {
   useEffect(() => {
     const hash = normalizeSectionId(window.location.hash.slice(1));
     if (!hash) return;
-    for (const tab of ["general", "flight", "cruise"] as TabId[]) {
+    for (const tab of ["general", "flight", "cruise", "lodging"] as TabId[]) {
       if (sectionsByTab[tab].some((s) => s.id === hash)) {
         setActiveTab(tab);
         setActiveSection(hash);
@@ -252,7 +276,7 @@ export default function SettingsPage(): JSX.Element {
   useEffect(() => {
     if (!initialSection) return;
     if (sectionsByTab[activeTab].some((s) => s.id === initialSection)) return;
-    for (const tab of ["general", "flight", "cruise"] as TabId[]) {
+    for (const tab of ["general", "flight", "cruise", "lodging"] as TabId[]) {
       if (sectionsByTab[tab].some((s) => s.id === initialSection)) {
         setActiveTab(tab);
         setActiveSection(initialSection);
@@ -454,6 +478,18 @@ export default function SettingsPage(): JSX.Element {
             {activeSection === "cruisePreferences" && (
               <CruisePreferencesSection cruise={cruise} onSetCruise={setCruise} />
             )}
+            {activeSection === "lodgingPreferences" && (
+              <>
+                <LodgingPreferencesSection
+                  baseCurrency={baseCurrency}
+                  onSetBaseCurrency={setBaseCurrency}
+                />
+                {/* Admin-only; the card itself renders null for non-admins so
+                    the Präferenzen section stays unchanged for everyone else. */}
+                <GeocoderSettingsCard isAdmin={user?.isAdmin ?? false} />
+              </>
+            )}
+            {activeSection === "lodgingMemberships" && <MembershipsSection />}
 
             {activeSection === "profile" && (
               <ProfileSection

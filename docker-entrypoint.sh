@@ -302,12 +302,23 @@ else
     elif [ $MIGRATION_STATUS_EXIT -eq 0 ]; then
         echo "[entrypoint] ✅ No failed migrations found"
     else
-        echo "[entrypoint] ⚠️  Migration status check failed (exit code: $MIGRATION_STATUS_EXIT)"
-        echo "[entrypoint] This may indicate failed migrations - trying to resolve known problematic ones..."
-        # Try to resolve known problematic migrations as fallback
-        npx prisma migrate resolve --rolled-back 20250120000000_add_training_config 2>&1 || true
-        npx prisma migrate resolve --rolled-back 20251220000000_add_training_config 2>&1 || true
-        echo "[entrypoint] Continuing with migrations..."
+        # A non-zero exit from `migrate status` is the NORMAL result whenever
+        # migrations are pending — including a completely empty database on
+        # first boot. It does not mean anything failed, and the branch above
+        # already catches every case where the output actually says "failed".
+        #
+        # This branch used to roll back two known-problematic migrations
+        # regardless. On a fresh install there is no `_prisma_migrations`
+        # table yet, so both calls died with
+        #   Invariant violation: called markMigrationRolledBack on a database
+        #   without migrations table
+        # printing two red Rust stack traces on the very first start of every
+        # new installation, before anything had gone wrong at all (#234).
+        #
+        # Nothing is resolved here any more: with no "failed" in the status
+        # output there is, by definition, nothing to roll back.
+        echo "[entrypoint] Migration status exited $MIGRATION_STATUS_EXIT (normal when migrations are pending)"
+        echo "[entrypoint] No failed migrations reported - continuing with migrations..."
     fi
 
     set -e  # Re-enable exit on error

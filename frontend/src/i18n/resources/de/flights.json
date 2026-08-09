@@ -61,39 +61,39 @@
     "estimatedTimes": "Geschätzte Flugzeiten",
     "estimatedTimesHistorical_one": "Basierend auf {{count}} historischen Flug dieser Route.",
     "estimatedTimesHistorical_other": "Basierend auf {{count}} historischen Flügen dieser Route.",
-    "estimatedTimesCalculated": "Abflug- und Ankunftszeiten wurden aus Ihren früheren Flügen berechnet.",
-    "estimatedTimesAutomatic": "Automatisch geschätzt basierend auf Boarding-Zeit und Flugdistanz.",
-    "estimatedTimesAssumption": "Annahme: Abflug = Boarding + 30min, Flugdauer -> {{minutes}} Minuten.",
-    "reviewTimes": "Bitte überprüfen und korrigieren Sie die Zeiten bei Bedarf.",
+    "estimatedTimesCalculated": "Abflug- und Ankunftszeiten wurden aus deinen früheren Flügen berechnet.",
+    "estimatedTimesAutomatic": "Automatisch geschätzt aus Abflugzeit und Flugdistanz.",
+    "estimatedTimesAssumption": "Angenommene Flugdauer: {{minutes}} Minuten.",
+    "reviewTimes": "Bitte überprüfe die Zeiten und korrigiere sie bei Bedarf.",
     "hideWarning": "Warnung ausblenden",
     "help": {
-      "departureAirport": "Wählen Sie den Abflughafen aus. Sie können nach IATA-Code (z.B. FRA) oder Name suchen.",
-      "arrivalAirport": "Wählen Sie den Zielflughafen aus. Sie können nach IATA-Code (z.B. LHR) oder Name suchen.",
-      "departureDate": "Wählen Sie das Abflugdatum aus.",
-      "departureTime": "Geben Sie die Abflugzeit ein (lokale Zeit des Abflughafens).",
+      "departureAirport": "Wähle den Abflughafen aus. Du kannst nach IATA-Code (z. B. FRA) oder Name suchen.",
+      "arrivalAirport": "Wähle den Zielflughafen aus. Du kannst nach IATA-Code (z. B. LHR) oder Name suchen.",
+      "departureDate": "Wähle das Abflugdatum aus.",
+      "departureTime": "Gib die Abflugzeit ein (lokale Zeit des Abflughafens).",
       "departureTimeExpanded": "Die Zeit sollte in der lokalen Zeitzone des Abflughafens angegeben werden. Das System konvertiert automatisch bei Bedarf.",
-      "arrivalDate": "Wählen Sie das Ankunftsdatum aus.",
-      "arrivalTime": "Geben Sie die Ankunftszeit ein (lokale Zeit des Zielflughafens).",
+      "arrivalDate": "Wähle das Ankunftsdatum aus.",
+      "arrivalTime": "Gib die Ankunftszeit ein (lokale Zeit des Zielflughafens).",
       "arrivalTimeExpanded": "Die Zeit sollte in der lokalen Zeitzone des Zielflughafens angegeben werden. Das System konvertiert automatisch bei Bedarf.",
-      "price": "Der Preis wird zusammen mit der Währung gespeichert. Sie können später nach Preisen filtern und Statistiken anzeigen.",
-      "tags": "Fügen Sie Tags hinzu, um Flüge später zu kategorisieren und zu filtern (z.B. 'business', 'international').",
-      "tagsExpanded": "Tags werden durch Kommas getrennt. Sie können später nach Tags filtern und Statistiken nach Tags gruppieren. Beispiele: 'business', 'vacation', 'lufthansa', 'long-haul'.",
-      "flightNumber": "Geben Sie die Flugnummer ein (z. B. LH400). Die automatische Suche funktioniert für heutige Flüge. Für vergangene oder zukünftige Flüge ist ein Aviationstack Basic+ Key nötig — sonst bitte manuell eintragen.",
+      "price": "Der Preis wird zusammen mit der Währung gespeichert. Du kannst später nach Preisen filtern und Statistiken anzeigen.",
+      "tags": "Füge Tags hinzu, um Flüge später zu kategorisieren und zu filtern (z. B. 'business', 'international').",
+      "tagsExpanded": "Tags werden durch Kommas getrennt. Du kannst später nach Tags filtern und Statistiken nach Tags gruppieren. Beispiele: 'business', 'vacation', 'lufthansa', 'long-haul'.",
+      "flightNumber": "Gib die Flugnummer ein (z. B. LH400). Die automatische Suche funktioniert für heutige Flüge. Für vergangene oder zukünftige Flüge ist ein Aviationstack Basic+ Key nötig — sonst bitte manuell eintragen.",
       "flightNumberExpanded": "Die Flugsuche kaskadiert über mehrere APIs:\n• Aviationstack (mit Basic+ Key: vergangene und zukünftige Flüge)\n• AirLabs (heutige Flüge)\n• OpenSky (heutige Flüge, Login erforderlich)\n\nFehlt ein passender Provider für das gewählte Datum, müssen die Daten manuell eingetragen werden. Auch bei konfiguriertem Key kann es passieren, dass die API einen bestimmten Flug nicht kennt."
     },
     "steps": {
       "input": "Flugnummer für automatische Suche eingeben",
-      "select": "Wählen Sie Ihren Flug aus den Ergebnissen",
+      "select": "Wähle deinen Flug aus den Ergebnissen",
       "complete": "Flugdetails überprüfen und vervollständigen"
     },
     "boardingPass": {
-      "title": "Haben Sie einen Boarding Pass?",
-      "description": "Scannen Sie ihn für sofortiges Auto-Ausfüllen!",
+      "title": "Hast du einen Boarding Pass?",
+      "description": "Scanne ihn und alles füllt sich von selbst aus!",
       "scan": "Jetzt scannen"
     },
     "email": {
-      "title": "Haben Sie eine Buchungs-E-Mail?",
-      "description": "Importieren Sie Flüge direkt aus Bestätigungs-E-Mails!",
+      "title": "Hast du eine Buchungs-E-Mail?",
+      "description": "Importiere Flüge direkt aus Bestätigungs-E-Mails!",
       "import": "E-Mail importieren",
       "bestOption": "Beste Option",
       "bestOptionDescription": "Erfasst alle Daten am besten aus Bestätigungs-E-Mails",
@@ -105,10 +105,10 @@
       }
     },
     "simplified": {
-      "subtitle": "Geben Sie einfach Abflug- und Ankunftsflughafen ein – wir erledigen den Rest!",
+      "subtitle": "Gib einfach Abflug- und Ankunftsflughafen ein – den Rest erledigen wir!",
       "orEnterManually": "Oder manuell eingeben",
       "advancedOptions": "Erweiterte Optionen (optional)",
-      "proTip": "Tipp: Scannen Sie Ihren Boarding Pass oder wählen Sie einfach Flughäfen und Datum!",
+      "proTip": "Tipp: Scanne deinen Boarding Pass oder wähle einfach Flughäfen und Datum!",
       "addTag": "Tag hinzufügen",
       "lookupSearching": "🔄 Suche Fluginfos (Aviationstack)...",
       "lookupSuccess": "✈️ Daten automatisch ergänzt",
@@ -142,9 +142,9 @@
       "optional": "optional"
     },
     "validation": {
-      "selectAirportsAndDates": "Bitte wählen Sie beide Flughäfen und Daten aus",
-      "selectAirports": "Bitte wählen Sie Abflug- und Ankunftsflughafen aus",
-      "selectDate": "Bitte wählen Sie ein Abflugdatum aus",
+      "selectAirportsAndDates": "Bitte wähle beide Flughäfen und Daten aus",
+      "selectAirports": "Bitte wähle Abflug- und Ankunftsflughafen aus",
+      "selectDate": "Bitte wähle ein Abflugdatum aus",
       "invalidPrice": "Preis, Steuern und Gebühren müssen positive Zahlen sein"
     },
     "tagsHint": "Durch Kommas getrennte Tags zum Filtern.",
@@ -172,17 +172,17 @@
     "from": "Von",
     "to": "Nach",
     "aircraft": "Flugzeug",
-    "deleteConfirm": "Möchten Sie diesen Flug wirklich löschen?"
+    "deleteConfirm": "Möchtest du diesen Flug wirklich löschen?"
   },
   "table": {
     "title": "Flugliste",
     "backToMap": "Zurück zur Karte",
     "welcome": "Willkommen zur Flugtabelle!",
-    "description": "Hier sehen Sie alle Ihre Flüge in einer übersichtlichen Tabelle. Sie können sortieren, filtern und Flüge bearbeiten oder löschen.",
+    "description": "Hier siehst du alle deine Flüge in einer übersichtlichen Tabelle. Du kannst sortieren, filtern und Flüge bearbeiten oder löschen.",
     "backToDashboard": "Zurück zum Dashboard",
     "loading": "Flüge werden geladen...",
     "noFlights": "Keine Flüge gefunden",
-    "noFlightsHint": "Versuchen Sie, Ihre Filter anzupassen oder fügen Sie Ihren ersten Flug hinzu.",
+    "noFlightsHint": "Passe deine Filter an oder füge deinen ersten Flug hinzu.",
     "airline": "Airline",
     "flightNumber": "Flugnummer",
     "route": "Route",
@@ -197,7 +197,7 @@
     "actions": "Aktionen",
     "deleteConfirm": {
       "title": "Flug löschen?",
-      "message": "Möchten Sie diesen Flug wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
+      "message": "Möchtest du diesen Flug wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
       "confirm": "Ja, löschen",
       "cancel": "Abbrechen"
     },
@@ -315,7 +315,7 @@
     "noEnrichment": "Keine Ergänzung nötig",
     "loadError": "Fehler beim Laden des Bildes",
     "processError": "Fehler beim Verarbeiten des Bildes",
-    "ollamaUnavailable": "Ollama Vision ist nicht verfügbar. Bitte stellen Sie sicher, dass Ollama läuft und ein Vision-Model installiert ist (z.B. llava).",
+    "ollamaUnavailable": "Ollama Vision ist nicht verfügbar. Bitte stell sicher, dass Ollama läuft und ein Vision-Model installiert ist (z. B. llava).",
     "steps": {
       "load": "Bild wird geladen",
       "barcode": "Barcode extrahieren",
@@ -327,7 +327,7 @@
     },
     "info": {
       "title": "KI-gestützte Analyse mit Ollama Vision",
-      "step1": "Fotografieren Sie Ihren Boarding Pass (Barcode + Text)",
+      "step1": "Fotografiere deinen Boarding Pass (Barcode + Text)",
       "step2": "Ollama Vision extrahiert automatisch alle Flugdaten",
       "step3": "Optional: API-Abgleich für Zeiten & Terminal/Gate",
       "step4": "Funktioniert mit allen gängigen Boarding Pass Formaten"
@@ -348,7 +348,7 @@
   "airportAutocomplete": {
     "placeholder": "Suche nach IATA, Name oder Stadt...",
     "seeding": "Airport-Datenbank wird noch geladen...",
-    "seedingTitle": "Airport-Datenbank wird noch geladen. Bitte warten Sie, bis das Seeding abgeschlossen ist.",
+    "seedingTitle": "Airport-Datenbank wird noch geladen. Bitte warte, bis das Seeding abgeschlossen ist.",
     "searching": "Suche...",
     "searchingWorldwide": "🔍 Suche weltweit...",
     "noResults": "Keine Flughäfen gefunden",

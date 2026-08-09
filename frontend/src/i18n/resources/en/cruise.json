@@ -122,7 +122,6 @@
     "add_custom_ship": "Add custom ship",
     "add_custom_port": "Add custom port",
     "cancel": "Cancel",
-    "invalidLatLon": "Invalid coordinates — latitude ±90, longitude ±180",
     "createShipError": "Could not create the ship",
     "createPortError": "Could not create the port",
     "via_geocoder": "Map search (OpenStreetMap)",

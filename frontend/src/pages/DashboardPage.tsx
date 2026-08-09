@@ -6,6 +6,7 @@ import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { flightsApi } from "../lib/api/flights";
 import { cruiseApi } from "../lib/api/cruise";
+import { getLodgingStats } from "../lib/api/lodging";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
 import { useToastStore } from "../store/toastStore";
@@ -13,6 +14,7 @@ import { AllTab } from "../components/Dashboard/tabs/AllTab";
 import { FlightsTab } from "../components/Dashboard/tabs/FlightsTab";
 import { CruisesTab } from "../components/Dashboard/tabs/CruisesTab";
 import { PoiTab } from "../components/Dashboard/tabs/PoiTab";
+import { LodgingTab } from "../components/Dashboard/tabs/LodgingTab";
 
 const IMPORT_MOVED_FLAG = "tsv1_5_import_moved_seen";
 
@@ -41,7 +43,7 @@ export default function DashboardPage(): JSX.Element {
   const { tab } = useDashboardRoute();
   const { isEnabled } = useEnabledDomains();
   const { isFeatureVisible } = useBetaFeatures();
-  const [counts, setCounts] = useState({ flight: 0, cruise: 0, poi: 0 });
+  const [counts, setCounts] = useState({ flight: 0, cruise: 0, poi: 0, lodging: 0 });
   // Bumping this token re-runs the counts effect AND remounts the
   // active tab (via key prop) so per-tab data picks up the new entry
   // without needing a separate refetch wiring per tab.
@@ -53,12 +55,22 @@ export default function DashboardPage(): JSX.Element {
       try {
         const flightsPromise = flightsApi.getAll({ limit: 1, offset: 0 });
         const cruisesPromise = isEnabled("cruise") ? cruiseApi.list({}) : Promise.resolve([]);
-        const [flights, cruises] = await Promise.all([flightsPromise, cruisesPromise]);
+        // getLodgingStats().lodgingsCount is the exact count — cheaper than
+        // fetching the full lodging list just to read its length.
+        const lodgingPromise = isEnabled("lodging")
+          ? getLodgingStats()
+          : Promise.resolve(null);
+        const [flights, cruises, lodgingStats] = await Promise.all([
+          flightsPromise,
+          cruisesPromise,
+          lodgingPromise,
+        ]);
         if (cancelled) return;
         setCounts({
           flight: flights.total,
           cruise: cruises.length,
           poi: 0,
+          lodging: lodgingStats?.lodgingsCount ?? 0,
         });
       } catch (err) {
         logger.error("Failed to load dashboard counts:", err);
@@ -78,6 +90,7 @@ export default function DashboardPage(): JSX.Element {
       {/* POI is a placeholder panel — hidden with its tab-bar entry behind the
           beta gate, so /dashboard/poi renders nothing on a gated instance. */}
       {tab === "poi" && isFeatureVisible("poiDashboardTab") && <PoiTab key={refreshToken} />}
+      {tab === "lodging" && <LodgingTab key={refreshToken} />}
     </DashboardLayout>
   );
 }

@@ -180,7 +180,7 @@
   "users": {
     "title": "Benutzerverwaltung",
     "help": {
-      "description": "Verwalten Sie alle Benutzer Ihrer TravStats-Instanz. Benutzer anzeigen, Rollen ändern und Konten deaktivieren.",
+      "description": "Verwalte alle Benutzer deiner TravStats-Instanz. Benutzer anzeigen, Rollen ändern und Konten deaktivieren.",
       "adminTitle": "Admin:",
       "admin": "Vollzugriff auf alle Funktionen, einschließlich Admin-Panel",
       "userTitle": "Benutzer:",
@@ -245,7 +245,7 @@
   "invitations": {
     "title": "Einladungen verwalten",
     "help": {
-      "description": "Erstellen Sie Einladungslinks, um neue Benutzer zu Ihrer TravStats-Instanz einzuladen.",
+      "description": "Erstelle Einladungslinks, um neue Benutzer zu deiner TravStats-Instanz einzuladen.",
       "createTitle": "Einladung erstellen:",
       "create": "Generiert einen eindeutigen Link, der zum Registrieren verwendet werden kann",
       "expiryTitle": "Ablaufdatum:",
@@ -253,7 +253,7 @@
       "oneUseTitle": "Einmalige Nutzung:",
       "oneUse": "Jeder Link kann nur einmal verwendet werden",
       "emailTitle": "E-Mail (optional):",
-      "email": "Sie können eine E-Mail-Adresse zuordnen, um die Einladung zu verfolgen"
+      "email": "Du kannst eine E-Mail-Adresse zuordnen, um die Einladung zu verfolgen"
     },
     "invitationLinks": "Einladungslinks",
     "createButton": "+ Einladung erstellen",
@@ -330,7 +330,7 @@
   },
   "userLimitWarning": {
     "title": "⚠️ Benutzerlimit-Warnung",
-    "message": "Sie haben die empfohlene Benutzerobergrenze ({{maxUsers}} Benutzer) erreicht. Die Leistung kann bei mehr Benutzern beeinträchtigt werden."
+    "message": "Du hast die empfohlene Benutzerobergrenze ({{maxUsers}} Benutzer) erreicht. Die Leistung kann bei mehr Benutzern beeinträchtigt werden."
   },
   "demoWarning": {
     "title": "🔓 Demo-Konto aktiv",
@@ -351,7 +351,7 @@
     "exportDescription": "Alle Benutzerdaten für Backup-Zwecke exportieren (DSGVO-konform)",
     "exportHelp": {
       "title": "Daten-Export",
-      "description": "Exportieren Sie alle Benutzerdaten als JSON-Datei für Backup-Zwecke.",
+      "description": "Exportiere alle Benutzerdaten als JSON-Datei für Backup-Zwecke.",
       "fullExportTitle": "Vollständiger Export:",
       "fullExport": "Enthält alle Flüge, Achievements, Einstellungen und Benutzerdaten",
       "gdprTitle": "DSGVO-konform:",
@@ -372,7 +372,7 @@
   },
   "export": {
     "button": "📥 Daten exportieren",
-    "description": "Exportieren Sie alle Benutzerdaten als JSON-Datei.",
+    "description": "Exportiere alle Benutzerdaten als JSON-Datei.",
     "title": "Daten-Export",
     "help": {
       "title": "Was wird exportiert?",
@@ -431,7 +431,7 @@
     },
     "debugActive": {
       "title": "Debug-Modus aktiv",
-      "message": "Debug-Logging ist mit detaillierter Instrumentierung aktiviert. Dies kann die Leistung beeinträchtigen und große Log-Dateien erzeugen. Deaktivieren Sie dies nach der Fehlersuche."
+      "message": "Debug-Logging ist mit detaillierter Instrumentierung aktiviert. Dies kann die Leistung beeinträchtigen und große Log-Dateien erzeugen. Schalte das nach der Fehlersuche wieder aus."
     },
     "stats": {
       "totalFiles": "Gesamt Log-Dateien",
@@ -517,14 +517,14 @@
   },
   "backup": {
     "title": "Backup-Verwaltung",
-    "description": "Verwalten Sie Ihre Backups und stellen Sie sie bei Bedarf wieder her",
+    "description": "Verwalte deine Backups und stelle sie bei Bedarf wieder her",
     "loading": "Lade Backups...",
     "creating": "Erstelle Backup...",
     "running": "Backup läuft",
     "createNow": "Backup jetzt erstellen",
     "startedAt": "Gestartet um {{date}}",
     "noBackups": "Keine Backups vorhanden",
-    "deleteConfirm": "Möchten Sie das Backup vom {{date}} wirklich löschen?",
+    "deleteConfirm": "Möchtest du das Backup vom {{date}} wirklich löschen?",
     "type": {
       "full": "Vollständig",
       "partial": "Teilweise"
@@ -558,7 +558,7 @@
       "targetDatabaseUrl": "Ziel-Datenbank-URL (optional, für Migration)",
       "targetDatabaseUrlPlaceholder": "postgresql://user:pass@host:port/database",
       "targetDatabaseUrlHelp": "Leer lassen für aktuelle Instanz",
-      "confirmLabel": "Zur Bestätigung geben Sie \"{{text}}\" ein:",
+      "confirmLabel": "Gib zur Bestätigung \"{{text}}\" ein:",
       "confirmText": "Wiederherstellen",
       "confirmButton": "Wiederherstellen"
     },
