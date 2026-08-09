@@ -184,6 +184,22 @@ app.use(requestLoggerMiddleware);
 // in About even though the binary is the RC build. `buildVersion` is the
 // raw file contents for diagnostics.
 
+// Private by default: every API response is no-store unless its handler
+// deliberately opts into caching. UAT on the public beta found Cloudflare
+// serving GET /api/v1/auth/passkeys from a shared 4-hour edge cache — the
+// origin sent no Cache-Control, so the CDN cached a per-user response and could
+// hand one account's data to another. This closes it at the source, for every
+// deployment and every caching layer, not just this instance's Cloudflare rule.
+//
+// Mounted ABOVE the health routes so it covers EVERY /api response. Handlers
+// that legitimately cache (airline logos, the Immich asset proxy) call
+// res.setHeader('Cache-Control', 'private, max-age=…') AFTER this runs and thus
+// override it — and `private` already keeps those out of shared caches.
+app.use('/api', (_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+
 // Health check — mounted at both `/health` (legacy, used by the Dockerfile
 // HEALTHCHECK and the nginx upstream probe) and `/api/v1/health` (versioned,
 // matches the public-API URL convention documented for external callers).
