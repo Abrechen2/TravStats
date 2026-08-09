@@ -312,4 +312,85 @@ describe("Lodging Memberships API", () => {
       }
     });
   });
+
+  describe("hotel coverage on a membership", () => {
+    let ownHotelId: string;
+    let foreignHotelId: string;
+
+    beforeAll(async () => {
+      const own = await prisma.lodging.create({
+        data: { userId, name: "Coverage Own Hotel" },
+      });
+      ownHotelId = own.id;
+      const foreign = await prisma.lodging.create({
+        data: { userId: otherUserId, name: "Coverage Foreign Hotel" },
+      });
+      foreignHotelId = foreign.id;
+    });
+
+    it("creates a membership covering an independent hotel", async () => {
+      const res = await request(app)
+        .post("/api/v1/lodging-memberships")
+        .set("Cookie", authCookie)
+        .send({ programName: "Familotel Club", lodgingIds: [ownHotelId] });
+      expect(res.status).toBe(201);
+      expect(res.body.data.lodgingIds).toEqual([ownHotelId]);
+      expect(res.body.data.lodgings[0].name).toBe("Coverage Own Hotel");
+    });
+
+    it("refuses a hotel the caller does not own, without saying it exists", async () => {
+      // A foreign key would happily accept this id — it proves the row exists,
+      // never that the caller owns it.
+      const res = await request(app)
+        .post("/api/v1/lodging-memberships")
+        .set("Cookie", authCookie)
+        .send({ programName: "Foreign Coverage", lodgingIds: [foreignHotelId] });
+      expect(res.status).toBe(400);
+      const leaked = await prisma.lodgingMembership.findFirst({
+        where: { userId, programName: "Foreign Coverage" },
+      });
+      expect(leaked).toBeNull();
+    });
+
+    it("accepts a hotel that HAS a chain — the link is dormant, not rejected", async () => {
+      const chain = await prisma.lodgingChain.create({
+        data: { name: `Dormant Chain ${Date.now()}`, isUserAdded: true },
+      });
+      const chained = await prisma.lodging.create({
+        data: { userId, name: "Chained Coverage Hotel", chainId: chain.id },
+      });
+      const res = await request(app)
+        .post("/api/v1/lodging-memberships")
+        .set("Cookie", authCookie)
+        .send({ programName: "Dormant Card", lodgingIds: [chained.id] });
+      expect(res.status).toBe(201);
+      expect(res.body.data.lodgingIds).toEqual([chained.id]);
+    });
+
+    it("leaves hotel links alone when lodgingIds is absent from a PATCH", async () => {
+      const created = await request(app)
+        .post("/api/v1/lodging-memberships")
+        .set("Cookie", authCookie)
+        .send({ programName: "Keep My Hotels", lodgingIds: [ownHotelId] });
+      const res = await request(app)
+        .patch(`/api/v1/lodging-memberships/${created.body.data.id}`)
+        .set("Cookie", authCookie)
+        .send({ tier: "Gold" });
+      expect(res.status).toBe(200);
+      expect(res.body.data.lodgingIds).toEqual([ownHotelId]);
+    });
+
+    it("replaces hotel links when lodgingIds is present, and [] clears them", async () => {
+      const created = await request(app)
+        .post("/api/v1/lodging-memberships")
+        .set("Cookie", authCookie)
+        .send({ programName: "Replace My Hotels", lodgingIds: [ownHotelId] });
+      const res = await request(app)
+        .patch(`/api/v1/lodging-memberships/${created.body.data.id}`)
+        .set("Cookie", authCookie)
+        .send({ lodgingIds: [] });
+      expect(res.status).toBe(200);
+      expect(res.body.data.lodgingIds).toEqual([]);
+    });
+  });
 });
