@@ -169,7 +169,8 @@
     "loadError": "Could not load loyalty programs",
     "saveError": "Could not save loyalty program",
     "duplicateError": "This program is already on file",
-    "deleteError": "Could not delete loyalty program"
+    "deleteError": "Could not delete loyalty program",
+    "extendExisting": "Extend \"{{name}}\" to cover this chain instead"
   },
   "chainDetail": {
     "loading": "Loading chain …",
