@@ -1073,16 +1073,22 @@ interface AirlineRankingResponse {
   total: number;
 }
 
-// GET /api/v1/stats/airlines — loyalty ranking by flight count
+// GET /api/v1/stats/airlines — loyalty ranking by flight count.
+// Scoped to flown + historical like every other aggregate in this file. It used
+// to count every row, so a cancelled or still-scheduled booking inflated the
+// ranking — and the statistics page put this card a few hundred pixels below
+// the client-side breakdown, which has always used the narrower scope. Same
+// airline, two numbers, one screen.
 router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
+    const where: Prisma.FlightWhereInput = { userId, status: { in: ['flown', 'historical'] } };
 
     const [total, airlineCounts] = await Promise.all([
-      prisma.flight.count({ where: { userId } }),
+      prisma.flight.count({ where }),
       prisma.flight.groupBy({
         by: ['airline'],
-        where: { userId },
+        where,
         _count: true,
         orderBy: { _count: { airline: 'desc' } },
       }),
@@ -1384,19 +1390,21 @@ interface AircraftTypesResponse {
 // GET /api/v1/stats/aircraft-types — ranking by aircraft TYPE ("Airbus A320neo").
 // Distinct from /stats/aircraft, which ranks tail numbers and only sees
 // registration-bearing (AeroDataBox-enriched) rows. `total` is the user's total
-// flight count so this shares a denominator with /stats/airlines; flights with
-// no `aircraft` value produce no row, so percentages need not sum to 100.
+// flight count so this shares a denominator with /stats/airlines — and
+// therefore that endpoint's flown + historical scope; flights with no
+// `aircraft` value produce no row, so percentages need not sum to 100.
 router.get(
   '/aircraft-types',
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
+      const where: Prisma.FlightWhereInput = { userId, status: { in: ['flown', 'historical'] } };
 
       const [total, typeCounts] = await Promise.all([
-        prisma.flight.count({ where: { userId } }),
+        prisma.flight.count({ where }),
         prisma.flight.groupBy({
           by: ['aircraft'],
-          where: { userId, aircraft: { not: null } },
+          where: { ...where, aircraft: { not: null } },
           _count: true,
         }),
       ]);
@@ -1447,6 +1455,7 @@ router.get(
       const flights = await prisma.flight.findMany({
         where: {
           userId,
+          status: { in: ['flown', 'historical'] },
           aircraftRegistration: { not: null },
         },
         select: {

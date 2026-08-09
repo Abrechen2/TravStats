@@ -47,6 +47,12 @@ export default function AirlineRankingCard(): JSX.Element {
                 style={{ width: `${(row.count / maxCount) * 100}%`, background: "var(--accent)" }}
               />
             </div>
+            <span
+              className="w-8 text-xs font-mono shrink-0"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {row.iata ?? ""}
+            </span>
             <span className="w-28 text-sm truncate" title={row.airline}>
               {row.airline}
             </span>
