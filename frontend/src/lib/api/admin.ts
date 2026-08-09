@@ -9,6 +9,52 @@ import type {
   SmtpConfigResponse,
 } from "./types";
 
+export interface InstanceSettings {
+  instanceName: string;
+  maxUsers: number;
+  allowRegistration: boolean;
+  frontendUrl: string | null;
+  publicUrl: string | null;
+  lanUrl: string | null;
+  /** Bare domain a passkey is bound to — never a URL. Null until an admin sets it. */
+  webauthnRpId: string | null;
+  /** Full origins the browser may be on; the first is the primary. */
+  webauthnOrigins: string[];
+  // Geocoder base URLs — always resolved (DB > ENV > public default),
+  // unlike the nullable URL fields above. See `resolveGeocoderUrls()`.
+  photonUrl: string;
+  nominatimUrl: string;
+}
+
+/**
+ * Whether the SAVED configuration actually yields working passkeys. Derived by
+ * the server, never stored — the browser must not re-implement the
+ * secure-context rule and drift from it.
+ */
+export interface PasskeyStatus {
+  usable: boolean;
+  reason: string | null;
+}
+
+export interface InstanceSettingsResponse {
+  settings: InstanceSettings;
+  passkeyStatus: PasskeyStatus;
+}
+
+export interface InstanceSettingsPatch {
+  instanceName?: string;
+  maxUsers?: number;
+  allowRegistration?: boolean;
+  frontendUrl?: string;
+  publicUrl?: string;
+  lanUrl?: string;
+  webauthnRpId?: string;
+  webauthnOrigins?: string[];
+  // Empty string clears the DB override, reverting to ENV/default.
+  photonUrl?: string;
+  nominatimUrl?: string;
+}
+
 export const adminApi = {
   getSystemInfo: async (): Promise<{
     instanceName: string;
@@ -489,69 +535,15 @@ export const adminApi = {
     return data;
   },
 
-  getInstanceSettings: async (): Promise<{
-    settings: {
-      instanceName: string;
-      maxUsers: number;
-      allowRegistration: boolean;
-      frontendUrl: string | null;
-      publicUrl: string | null;
-      lanUrl: string | null;
-      // Geocoder base URLs — always resolved (DB > ENV > public default),
-      // unlike the nullable URL fields above. See `resolveGeocoderUrls()`.
-      photonUrl: string;
-      nominatimUrl: string;
-    };
-  }> => {
-    const { data } = await api.get<{
-      settings: {
-        instanceName: string;
-        maxUsers: number;
-        allowRegistration: boolean;
-        frontendUrl: string | null;
-        publicUrl: string | null;
-        lanUrl: string | null;
-        photonUrl: string;
-        nominatimUrl: string;
-      };
-    }>("/admin/instance-settings");
+  getInstanceSettings: async (): Promise<InstanceSettingsResponse> => {
+    const { data } = await api.get<InstanceSettingsResponse>("/admin/instance-settings");
     return data;
   },
 
-  updateInstanceSettings: async (patch: {
-    instanceName?: string;
-    maxUsers?: number;
-    allowRegistration?: boolean;
-    frontendUrl?: string;
-    publicUrl?: string;
-    lanUrl?: string;
-    // Empty string clears the DB override, reverting to ENV/default.
-    photonUrl?: string;
-    nominatimUrl?: string;
-  }): Promise<{
-    settings: {
-      instanceName: string;
-      maxUsers: number;
-      allowRegistration: boolean;
-      frontendUrl: string | null;
-      publicUrl: string | null;
-      lanUrl: string | null;
-      photonUrl: string;
-      nominatimUrl: string;
-    };
-  }> => {
-    const { data } = await api.put<{
-      settings: {
-        instanceName: string;
-        maxUsers: number;
-        allowRegistration: boolean;
-        frontendUrl: string | null;
-        publicUrl: string | null;
-        lanUrl: string | null;
-        photonUrl: string;
-        nominatimUrl: string;
-      };
-    }>("/admin/instance-settings", patch);
+  updateInstanceSettings: async (
+    patch: InstanceSettingsPatch
+  ): Promise<InstanceSettingsResponse> => {
+    const { data } = await api.put<InstanceSettingsResponse>("/admin/instance-settings", patch);
     return data;
   },
 
