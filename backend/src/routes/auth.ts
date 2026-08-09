@@ -170,6 +170,37 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
       throw new AppError('Invalid credentials', 401);
     }
 
+    // Two-factor: the password was right, so the session is withheld until the
+    // second factor arrives. Same shape as the mustChangePassword branch below —
+    // a challenge in an HttpOnly cookie, never in the response body.
+    //
+    // ORDER MATTERS. This block must sit ABOVE the mustChangePassword branch, not
+    // below it. An account carrying both flags would otherwise be handed a
+    // change_token on password alone, and POST /force-change-password consumes
+    // only that cookie — so an attacker who knows the password could set a new
+    // one and never meet the second factor. Two-factor first, always.
+    if (user.twoFactorEnabledAt) {
+      const plainChallenge = crypto.randomBytes(32).toString('hex');
+      const hashedChallenge = crypto.createHash('sha256').update(plainChallenge).digest('hex');
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          twoFactorToken: hashedChallenge,
+          twoFactorTokenExpiry: new Date(Date.now() + 5 * 60 * 1000), // 5 min
+        },
+      });
+
+      res.cookie('twofa_token', plainChallenge, {
+        httpOnly: true,
+        secure: getCookieSecure(req),
+        sameSite: 'strict',
+        maxAge: 5 * 60 * 1000,
+        path: '/',
+      });
+      return res.json({ requiresTwoFactor: true });
+    }
+
     // Check if user must change password before allowing login
     if (user.mustChangePassword) {
       const plainChangeToken = crypto.randomBytes(32).toString('hex');
