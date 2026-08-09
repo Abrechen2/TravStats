@@ -133,6 +133,24 @@
         "label": "Öffentliche Registrierung erlauben",
         "help": "Wenn aktiviert, können sich neue Benutzer ohne Einladungslink registrieren (nicht empfohlen)."
       }
+    },
+    "passkeys": {
+      "title": "Passkeys (WebAuthn)",
+      "subtitle": "Damit sich Nutzer per Fingerabdruck, Gesicht, PIN oder Passwortmanager anmelden können. Passkeys brauchen HTTPS — über eine reine LAN-Adresse verweigert der Browser sie.",
+      "statusUsable": "Passkeys sind auf dieser Instanz nutzbar.",
+      "status": {
+        "notConfigured": "Noch nicht eingerichtet — trag unten mindestens eine Origin ein.",
+        "insecureOrigin": "Nicht nutzbar: die erste Origin ist kein HTTPS. Nur localhost ist davon ausgenommen.",
+        "invalidRpId": "Nicht nutzbar: die Passkey-Domain ist keine gültige Domain."
+      },
+      "rpId": {
+        "label": "Passkey-Domain",
+        "help": "Nur die nackte Domain, ohne https:// und ohne Port. Leer lassen = aus der ersten Origin ableiten. ACHTUNG: Ein Passkey hängt für immer an diesem Wert — änderst du ihn später, funktioniert kein bereits angelegter Passkey mehr."
+      },
+      "origins": {
+        "label": "Erlaubte Origins",
+        "help": "Eine pro Zeile, mit Schema und ggf. Port. Die erste ist die maßgebliche. Mehrere sind nur sinnvoll, wenn sie sich dieselbe Passkey-Domain teilen (etwa app.example.com und www.example.com)."
+      }
     }
   },
   "webdav": {

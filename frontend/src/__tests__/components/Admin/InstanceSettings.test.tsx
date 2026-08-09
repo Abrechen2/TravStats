@@ -32,12 +32,16 @@ const serverSettings = {
   frontendUrl: null,
   publicUrl: "http://192.168.1.5:3010",
   lanUrl: null,
+  webauthnRpId: null,
+  webauthnOrigins: [],
 };
+
+const notConfigured = { usable: false, reason: "notConfigured" };
 
 describe("InstanceSettings (#190 — typing must not be reset by the load effect)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getInstanceSettings.mockResolvedValue({ settings: serverSettings });
+    getInstanceSettings.mockResolvedValue({ settings: serverSettings, passkeyStatus: notConfigured });
   });
 
   it("keeps a typed public URL instead of resetting it to the server value", async () => {
@@ -75,6 +79,7 @@ describe("InstanceSettings (#190 — typing must not be reset by the load effect
   it("still writes the edited value on save and reflects the server response", async () => {
     updateInstanceSettings.mockResolvedValue({
       settings: { ...serverSettings, publicUrl: "https://trav.example.de" },
+      passkeyStatus: notConfigured,
     });
     render(<InstanceSettings />);
     const input = (await screen.findByDisplayValue("http://192.168.1.5:3010")) as HTMLInputElement;

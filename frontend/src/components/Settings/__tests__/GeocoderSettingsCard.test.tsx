@@ -28,9 +28,18 @@ const SETTINGS_FIXTURE = {
   frontendUrl: null,
   publicUrl: null,
   lanUrl: null,
+  webauthnRpId: null,
+  webauthnOrigins: [],
   photonUrl: "https://photon.komoot.io",
   nominatimUrl: "https://nominatim.openstreetmap.org",
 };
+
+/** The endpoint answers with the settings PLUS a derived passkey status; this
+ *  card cares about neither, so wrap once rather than repeat it per case. */
+const resp = (settings: typeof SETTINGS_FIXTURE) => ({
+  settings,
+  passkeyStatus: { usable: false, reason: "notConfigured" },
+});
 
 describe("GeocoderSettingsCard", () => {
   beforeEach(() => {
@@ -68,7 +77,7 @@ describe("GeocoderSettingsCard", () => {
   });
 
   it("loads and shows the resolved URLs once the GET succeeds", async () => {
-    vi.mocked(adminApi.getInstanceSettings).mockResolvedValue({ settings: SETTINGS_FIXTURE });
+    vi.mocked(adminApi.getInstanceSettings).mockResolvedValue(resp(SETTINGS_FIXTURE));
 
     render(<GeocoderSettingsCard isAdmin={true} />);
 
@@ -90,7 +99,7 @@ describe("GeocoderSettingsCard", () => {
   // silently swallow any future ENV/default change.
   it("does not pin the resolved defaults into the DB when Save is clicked without any edits", async () => {
     const user = userEvent.setup();
-    vi.mocked(adminApi.getInstanceSettings).mockResolvedValue({ settings: SETTINGS_FIXTURE });
+    vi.mocked(adminApi.getInstanceSettings).mockResolvedValue(resp(SETTINGS_FIXTURE));
 
     render(<GeocoderSettingsCard isAdmin={true} />);
 
@@ -109,10 +118,10 @@ describe("GeocoderSettingsCard", () => {
 
   it("only sends the field that was actually edited (per-field dirty tracking)", async () => {
     const user = userEvent.setup();
-    vi.mocked(adminApi.getInstanceSettings).mockResolvedValue({ settings: SETTINGS_FIXTURE });
-    vi.mocked(adminApi.updateInstanceSettings).mockResolvedValue({
-      settings: { ...SETTINGS_FIXTURE, photonUrl: "https://photon.example.com" },
-    });
+    vi.mocked(adminApi.getInstanceSettings).mockResolvedValue(resp(SETTINGS_FIXTURE));
+    vi.mocked(adminApi.updateInstanceSettings).mockResolvedValue(
+      resp({ ...SETTINGS_FIXTURE, photonUrl: "https://photon.example.com" })
+    );
 
     render(<GeocoderSettingsCard isAdmin={true} />);
 
@@ -134,10 +143,10 @@ describe("GeocoderSettingsCard", () => {
 
   it("saves the entered URLs via PUT (roundtrip), including clearing to empty", async () => {
     const user = userEvent.setup();
-    vi.mocked(adminApi.getInstanceSettings).mockResolvedValue({ settings: SETTINGS_FIXTURE });
-    vi.mocked(adminApi.updateInstanceSettings).mockResolvedValue({
-      settings: { ...SETTINGS_FIXTURE, photonUrl: "https://photon.example.com", nominatimUrl: "" },
-    });
+    vi.mocked(adminApi.getInstanceSettings).mockResolvedValue(resp(SETTINGS_FIXTURE));
+    vi.mocked(adminApi.updateInstanceSettings).mockResolvedValue(
+      resp({ ...SETTINGS_FIXTURE, photonUrl: "https://photon.example.com", nominatimUrl: "" })
+    );
 
     render(<GeocoderSettingsCard isAdmin={true} />);
 
@@ -164,7 +173,7 @@ describe("GeocoderSettingsCard", () => {
 
   it("shows the hit count when the connection test succeeds", async () => {
     const user = userEvent.setup();
-    vi.mocked(adminApi.getInstanceSettings).mockResolvedValue({ settings: SETTINGS_FIXTURE });
+    vi.mocked(adminApi.getInstanceSettings).mockResolvedValue(resp(SETTINGS_FIXTURE));
     vi.mocked(searchPlaces).mockResolvedValue([
       { name: "Berlin", lat: 52.52, lon: 13.405 },
       { name: "Berlin, Connecticut", lat: 41.62, lon: -72.75 },
@@ -187,7 +196,7 @@ describe("GeocoderSettingsCard", () => {
   // color as a hit, not the red used for an actual connection failure.
   it("shows the empty-result message in a non-error color when the test succeeds with zero hits", async () => {
     const user = userEvent.setup();
-    vi.mocked(adminApi.getInstanceSettings).mockResolvedValue({ settings: SETTINGS_FIXTURE });
+    vi.mocked(adminApi.getInstanceSettings).mockResolvedValue(resp(SETTINGS_FIXTURE));
     vi.mocked(searchPlaces).mockResolvedValue([]);
 
     render(<GeocoderSettingsCard isAdmin={true} />);
@@ -201,7 +210,7 @@ describe("GeocoderSettingsCard", () => {
 
   it("shows a translated failure message (and logs) when the connection test fails", async () => {
     const user = userEvent.setup();
-    vi.mocked(adminApi.getInstanceSettings).mockResolvedValue({ settings: SETTINGS_FIXTURE });
+    vi.mocked(adminApi.getInstanceSettings).mockResolvedValue(resp(SETTINGS_FIXTURE));
     vi.mocked(searchPlaces).mockRejectedValue(new Error("geocoder is down"));
 
     render(<GeocoderSettingsCard isAdmin={true} />);
