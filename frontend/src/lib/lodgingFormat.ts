@@ -120,30 +120,12 @@ export function formatStayPriceDisplay(
   };
 }
 
-/**
- * The overall stay rating, derived from the three individual ones.
- *
- * Requested by Alex (Discord 2026-07-12): the overall score should FOLLOW the
- * room/breakfast/service scores rather than be typed a fourth time. Averaging
- * only the scores actually given is deliberate — someone who rates the room
- * alone still gets an overall, instead of being forced to fill all three.
- * Returns null when nothing is rated, which is what "unrated" means everywhere
- * else in this module.
- *
- * Rounded to the nearest half star, because that is the granularity
- * `StarRatingInput` offers; an unrounded 3.6667 would render as a rating the
- * user could never have picked.
- */
-export function averageStayRating(
-  room: number | null,
-  breakfast: number | null,
-  service: number | null
-): number | null {
-  const given = [room, breakfast, service].filter((v): v is number => v !== null);
-  if (given.length === 0) return null;
-  const mean = given.reduce((sum, v) => sum + v, 0) / given.length;
-  return Math.round(mean * 2) / 2;
-}
+// The overall stay rating used to be derived HERE, and only here — which is
+// why it was correct only for stays typed into the editor and null for every
+// imported one. It now lives in `shared/ratingDerivation.ts` next to its
+// backend twin, called by the editor and by all three server write paths.
+// Deliberately not re-exported from this module: a second entry point is how
+// the rule drifted out of the write paths in the first place.
 
 /**
  * Price per night, derived from the total price and the stay's length.

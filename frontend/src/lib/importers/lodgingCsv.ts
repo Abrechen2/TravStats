@@ -41,6 +41,7 @@ export const LODGING_CSV_FIELDS = [
   "currency",
   "ratingRoom",
   "ratingBreakfast",
+  "ratingService",
   "ratingOverall",
   "bookingReference",
   "notes",
@@ -84,6 +85,14 @@ export const LODGING_FIELD_ALIASES: Record<LodgingCsvField, string[]> = {
     "bewertungfruehstueck",
     "fruehstuecksbewertung",
   ],
+  ratingService: [
+    "ratingservice",
+    "bewservice",
+    "bewertungservice",
+    "servicebewertung",
+    "bewpersonal",
+    "bewertungpersonal",
+  ],
   ratingOverall: ["ratingoverall", "bewgesamt", "gesamtbewertung", "bewertung"],
   bookingReference: ["bookingreference", "buchungsnummer", "bestaetigungsnummer", "referenz"],
   notes: ["notes", "notiz", "notizen", "bemerkung", "kommentar", "comment"],
@@ -123,6 +132,7 @@ const STAY_ONLY: LodgingCsvField[] = [
   "currency",
   "ratingRoom",
   "ratingBreakfast",
+  "ratingService",
   "ratingOverall",
   "bookingReference",
 ];
@@ -399,6 +409,10 @@ function buildStayFields(
   if (ratingBreakfastCell.unparseable)
     errors.push(numberError("breakfast rating", cell(record, m.ratingBreakfast)));
 
+  const ratingServiceCell = toRating(cell(record, m.ratingService));
+  if (ratingServiceCell.unparseable)
+    errors.push(numberError("service rating", cell(record, m.ratingService)));
+
   const ratingOverallCell = toRating(cell(record, m.ratingOverall));
   if (ratingOverallCell.unparseable)
     errors.push(numberError("overall rating", cell(record, m.ratingOverall)));
@@ -415,6 +429,10 @@ function buildStayFields(
       currency: toCurrency(cell(record, m.currency)),
       ratingRoom: ratingRoomCell.value,
       ratingBreakfast: ratingBreakfastCell.value,
+      ratingService: ratingServiceCell.value,
+      // Passed through as the source gave it — the backend re-derives the
+      // overall from the components and only keeps this for a stay that
+      // carries none (shared/ratingDerivation.ts).
       ratingOverall: ratingOverallCell.value,
       bookingReference: cell(record, m.bookingReference) || null,
       // A CSV row never carries a booking-confirmation externalRef — that only

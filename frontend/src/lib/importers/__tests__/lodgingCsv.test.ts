@@ -54,6 +54,16 @@ describe("lodgingCsv heuristic", () => {
       ratingBreakfast: "Bew. Frühstück",
     });
   });
+
+  it("auto-maps a service-rating column", () => {
+    // ratingService exists on the stay, in the editor and in the average, but
+    // was missing from the import pipeline entirely — so a sheet scoring
+    // service could never bring that column in and the three-way average was
+    // permanently two-way for every imported stay.
+    const fields = buildLodgingMappingFields((f) => f);
+    const mapping = autoMapHeaders(fields, ["Hotel", "Anreise", "Abreise", "Bew. Service"]);
+    expect(mapping).toMatchObject({ ratingService: "Bew. Service" });
+  });
 });
 
 describe("detectCsvShape", () => {

@@ -209,6 +209,7 @@
       "currency": "Währung",
       "ratingRoom": "Bewertung Zimmer",
       "ratingBreakfast": "Bewertung Frühstück",
+      "ratingService": "Bewertung Service",
       "ratingOverall": "Bewertung Gesamt",
       "bookingReference": "Buchungsnummer",
       "notes": "Notizen",
