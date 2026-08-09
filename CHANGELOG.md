@@ -4,14 +4,35 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
-## [2.5.0] - 2026-08-05
+## [2.5.1] - 2026-08-09
+
+Patch release. Three fixes, no database changes.
+
+### Fixed
+- **The aeroplane between two airports flew nose-down.** The glyph in the flight
+  table's route column was rotated by a further 45 degrees although it already
+  points due east, so a page of flights read as a page of crashes. It flies level
+  now.
+- **An ordinary action wrote to the error log.** Adding a companion you already
+  have was implemented as "create the record, and put it right when that fails",
+  so normal use filled the error log with entries that described nothing wrong —
+  83 of them on a single start. It is one operation now, and the log stays quiet.
+- **A mistake in a request is no longer recorded as a fault of the server.** A
+  rejected form or an expired session was written at error level, exactly like a
+  crash, so the log could not answer whether anything was actually broken — and
+  anyone who could reach the port could make it grow without logging in. Genuine
+  server faults still log as errors; everything below them is a warning.
+
+### Upgrade notes
+- No database migrations in this release.
+
+## [2.5.0] - 2026-08-09
 
 Large minor release. Trips can pull in your Immich photo albums, travel
 companions become real records instead of loose text, airlines and aircraft
 get a proper catalogue behind the scenes, the flight list is rebuilt as a
 departures board, adding and editing a flight finally use the same form, and
-status stops being something you set by hand. Seventeen reported issues close
-with it.
+status stops being something you set by hand.
 
 ### Added
 - **Immich photo albums on a trip** (#154). Link an album from your own Immich
@@ -19,7 +40,10 @@ with it.
   access-checked proxy and take no storage here at all, or *imported*, where
   the originals are copied in as ordinary trip photos. The gallery groups by
   album, any picture can become the trip's cover, and a re-sync collects
-  stragglers. The album picker has a search filter (#181), and an
+  stragglers. Photos run oldest first and divide into days, so an album reads
+  the way the journey did, and the grouping can be switched off. The key field
+  names the read-only permissions it needs, so nobody has to hand over a
+  full-access key. The album picker has a search filter (#181), and an
   administrator can configure one instance-wide connection (#182).
 - **Travel companions are real entries.** Co-passengers used to be free text
   on each record. They are now created once and reused everywhere — flights,
@@ -36,7 +60,9 @@ with it.
   the row says where the data came from.
 - **One flight form, with scheduled and actual times** (#199, #200). Adding and
   editing use the same mask. New: scheduled vs. actual times with a derived
-  delay, boarding group, trip assignment, cost and receipt.
+  delay — the recorded time sits beside the scheduled one in the flight list,
+  red when later and green when earlier — plus boarding group, trip
+  assignment, cost and receipt.
 - **Status is derived from the dates** — for flights, cruises and trips alike,
   re-derived hourly. Only "cancelled" is still set by hand.
 - **Grouped navigation and a central import hub.** The desktop bar gains
@@ -64,6 +90,11 @@ with it.
   now, and a country reached both by air and by sea counts once, not twice.
 - **A blank time was silently stored as noon**, producing invented delays; a
   recorded cabin class was priced but never saved.
+- **A diary entry's preview printed its own markup** (#231). The timeline card
+  showed `**bold**` with the asterisks intact while the same entry rendered
+  properly once opened. The preview now renders, with headings and lists
+  flattened to fit a two-line card; the headline above it is stripped to plain
+  text instead.
 - **The uploaded-photos box no longer lingers** once an album is linked (#179).
 - Trip aggregates use airport-local times and see manually added flights.
 - **A trip's card and its own page disagreed.** The card read "?" countries and
@@ -92,6 +123,16 @@ with it.
   "Mittelmeer" and "Ostsee" next to "North Sea" and "Iberian Atlantic" — and an
   English page got the German names for those ten. All fifty-four now exist in
   both languages.
+- **Two airline rankings on the statistics page disagreed.** One counted only
+  the flights actually flown, the other counted every booking including
+  cancelled and still-scheduled ones, so the same airline appeared with two
+  different totals a few centimetres apart. Both now count flown and historical
+  flights, the way every other statistic does — and a cancelled flight no longer
+  adds its distance to an aircraft's lifetime total.
+- **Cruises counted towards neither the distance nor the cost of a trip.** A
+  trip made only of cruises showed no kilometres and no total although the
+  prices and the computed sea routes were on file. Cruises now count exactly as
+  flights do, on the trip card and on the trip's own page.
 
 ### Security
 - react-router 6 → 7, closing the open-redirect advisories, plus every other

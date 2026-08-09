@@ -296,7 +296,10 @@ router.get(
       if (link.mode === "import") {
         const photos = await prisma.tripPhoto.findMany({
           where: { immichAlbumLinkId: link.id },
-          orderBy: { sortIdx: "asc" },
+          // Chronological, because an album of a trip is read as a diary. A
+          // photo without an EXIF date has nothing to sort by, so it keeps its
+          // link position at the end rather than leading the album.
+          orderBy: [{ takenAt: { sort: "asc", nulls: "last" } }, { sortIdx: "asc" }],
           select: { id: true, tripId: true, takenAt: true, lat: true, lon: true },
         });
         const fileUrl = (photoId: string): string =>
@@ -325,6 +328,11 @@ router.get(
       res.json({
         assets: assets
           .filter((a: ImmichAsset) => a.type === "IMAGE")
+          // Immich answers in its own order; the gallery reads chronologically.
+          // mapAsset guarantees a fileCreatedAt (epoch 0 when absent), so this
+          // comparison never sees undefined.
+          .slice()
+          .sort((a: ImmichAsset, b: ImmichAsset) => a.fileCreatedAt.localeCompare(b.fileCreatedAt))
           .map((a: ImmichAsset) => ({
             id: a.id,
             url: proxyUrl(tripId, link.id, a.id, "thumbnail"),

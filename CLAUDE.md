@@ -150,6 +150,37 @@ cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run
 Deployment details (server IP, SSH commands, compose paths) live in
 **`CLAUDE.local.md`** (gitignored, created locally).
 
+## Where a finding goes — issue or board item
+
+This repository is public. A GitHub issue is therefore a **published statement**,
+and the tracker is what a stranger reads to judge whether the project is alive
+and honest. That makes the tracker worth keeping signal-only.
+
+The deciding question is **not** who found it. It is:
+
+> Does a person running TravStats need to know this?
+
+| Finding | Where |
+|---|---|
+| Anything a user can hit, see, or must act on — a wrong number on screen, data at risk, a broken import | **GitHub issue**, however it was found. Owner, tester, or a routine prod check makes no difference. |
+| Internal engineering and tooling — our own scripts, test-suite noise, log hygiene with no user-visible effect, chores like wiring a check into CI | **Leitstand item**, no GitHub issue |
+| Exploitable **and** still open | **GitHub private security advisory** (draft), never a public issue; publish it once the fix ships |
+| Infrastructure, hosts, scope decisions, pentest notes | stays out of both — `CLAUDE.local.md`, `ROADMAP.local.md`, `TravStats-local` on Forgejo |
+
+An internal finding becomes an item in `roadmap.local.yaml` with
+`source: { type: audit }` (found by a sweep) or `{ type: owner }` (a decision or
+a wish). Those carry a **title**, because they have no live anchor to read one
+from — the schema enforces it, and it enforces the mirror rule too: a `github`
+item must NOT carry a title, since its title is read live.
+
+Why not a second, private tracker (Forgejo issues) for internal findings: a
+board item has no issue number, so it can never be mis-referenced. A bare `#12`
+in a commit message resolves on GitHub — to GitHub's issue 12, a different one.
+Two trackers turn every internal reference into a wrong link rather than a
+missing one. The board also measures `github` items live and would have to
+hand-copy the state of anything else, which is the drift the board exists to
+prevent.
+
 ## Commit Requirement
 
 **Every change must be committed before the session ends.**
@@ -403,7 +434,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **TravStats** (5787 symbols, 14746 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **TravStats** (5818 symbols, 14800 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
