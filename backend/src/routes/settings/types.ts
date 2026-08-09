@@ -7,6 +7,10 @@ export interface SettingsDataJson {
     username?: string;
     email?: string;
     profilePicture?: string | null;
+    // Merged in from the `User` row rather than stored in this JSON — see
+    // buildSettingsResponse (#241).
+    firstName?: string | null;
+    lastName?: string | null;
   };
   display?: {
     theme?: string;
