@@ -102,6 +102,16 @@ with it.
   "Mittelmeer" and "Ostsee" next to "North Sea" and "Iberian Atlantic" — and an
   English page got the German names for those ten. All fifty-four now exist in
   both languages.
+- **Two airline rankings on the statistics page disagreed.** One counted only
+  the flights actually flown, the other counted every booking including
+  cancelled and still-scheduled ones, so the same airline appeared with two
+  different totals a few centimetres apart. Both now count flown and historical
+  flights, the way every other statistic does — and a cancelled flight no longer
+  adds its distance to an aircraft's lifetime total.
+- **Cruises counted towards neither the distance nor the cost of a trip.** A
+  trip made only of cruises showed no kilometres and no total although the
+  prices and the computed sea routes were on file. Cruises now count exactly as
+  flights do, on the trip card and on the trip's own page.
 
 ### Security
 - react-router 6 → 7, closing the open-redirect advisories, plus every other
