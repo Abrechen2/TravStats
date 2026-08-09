@@ -55,6 +55,20 @@ router.get('/:flightNumber', authenticate, flightLookupLimiter, async (req: Auth
       req.userId,
     );
 
+    // Distinct from 'no_provider' below: there is no provider AT ALL, so the
+    // action is "add a key", not "this date needs a paid tier". Reporting
+    // this as "no flights found" sent fresh installs hunting for a better
+    // date for a search that never ran (#232).
+    if (unavailableReason === 'not_configured') {
+      return res.status(200).json({
+        success: false,
+        count: 0,
+        error: 'LOOKUP_NOT_CONFIGURED',
+        message:
+          'No flight-data provider is configured, so no search was performed. Add an API key under Settings, or enter the flight manually.',
+      });
+    }
+
     if (unavailableReason === 'no_provider') {
       return res.status(200).json({
         success: false,
