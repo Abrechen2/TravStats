@@ -63,6 +63,7 @@ const baseStay: LodgingStay = {
   roomAmenities: [],
   bookingReference: "ENG-55021",
   membershipId: null,
+  membershipOptOut: false,
   receiptUrl: null,
   companions: [],
   notes: null,

@@ -83,6 +83,10 @@ const baseStaySchema = z.object({
   roomAmenities: z.array(z.string().max(60)).max(50).optional(),
   bookingReference: z.string().max(40).nullable().optional(),
   membershipId: z.string().uuid().nullable().optional(),
+  // "I used no programme for this stay" — deliberately distinct from
+  // membershipId = null, which means "derive it from the hotel's chain"
+  // (shared/membershipDerivation.ts).
+  membershipOptOut: z.boolean().optional(),
   receiptUrl: receiptUrlValidator.nullable(),
   companions: z.array(z.string().max(100)).max(50).optional(),
   notes: z
