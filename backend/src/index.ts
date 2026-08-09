@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth';
+import twoFactorRoutes from './routes/auth/twoFactor';
 import flightRoutes from './routes/flights';
 import flightLookupRoutes from './routes/flightLookup';
 import statsRoutes from './routes/stats';
@@ -235,6 +236,9 @@ app.get('/api/v1/parser-capabilities', async (_req, res, next) => {
 app.use('/api/v1', openapiRoutes);
 app.use('/api/v1/setup', setupRoutes);
 app.use('/api/v1/admin', adminRoutes);
+// Mounted BEFORE the generic /api/v1/auth routers so a future catch-all there
+// can never swallow the two-factor endpoints.
+app.use('/api/v1/auth/2fa', twoFactorRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/auth', passwordResetRoutes);
 app.use('/api/v1/flights', flightRoutes);
