@@ -21,6 +21,7 @@ import AutoUpdateSection from "../components/Settings/AutoUpdateSection";
 import EnrichmentSection from "../components/Settings/EnrichmentSection";
 import ApiKeysSection from "../components/Settings/ApiKeysSection";
 import ApiTokensSection from "../components/Settings/ApiTokensSection";
+import SecuritySection from "../components/Settings/SecuritySection";
 import DevicesSection from "../components/Settings/DevicesSection";
 import AboutSection from "../components/Settings/AboutSection";
 import ImportSection from "../components/Settings/ImportSection";
@@ -123,6 +124,7 @@ export default function SettingsPage(): JSX.Element {
       },
       { id: "devices", label: t("settings:devices.title") || "Devices" },
       { id: "apitokens", label: t("settings:apiTokens.title") || "API Tokens" },
+      { id: "security", label: t("settings:security.title") || "Security" },
       // No "Admin" entry here. It used to be a section whose entire content was
       // a button to /admin, which told the user that Admin is a SUBSECTION of
       // Settings while the navigation says it is a PEER. That contradiction is
@@ -556,6 +558,7 @@ export default function SettingsPage(): JSX.Element {
                 the only remaining way to pair a phone. */}
             {activeSection === "devices" && <DevicesSection />}
             {activeSection === "apitokens" && <ApiTokensSection />}
+            {activeSection === "security" && <SecuritySection />}
             {activeSection === "import" && <ImportSection />}
             {activeSection === "about" && <AboutSection />}
 
