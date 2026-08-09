@@ -67,6 +67,25 @@ describe("LoginPage — passkey sign-in", () => {
     );
   });
 
+  // The beta-UAT scenario: tunnel https CONFIGURED (server says available), but
+  // THIS page was reached over plain-http LAN. The browser cannot run WebAuthn
+  // there, so the button must not appear no matter what the config says.
+  it("hides the button on an insecure page even when the server says available", async () => {
+    passkeyApi.availability.mockResolvedValue({ available: true, reason: null });
+    const original = Object.getOwnPropertyDescriptor(window, "isSecureContext");
+    Object.defineProperty(window, "isSecureContext", { value: false, configurable: true });
+    try {
+      renderPage();
+      await waitFor(() => expect(passkeyApi.availability).toHaveBeenCalled());
+      expect(screen.queryByRole("button", { name: "login.passkeySubmit" })).toBeNull();
+    } finally {
+      // jsdom keeps isSecureContext on the prototype — when there was no own
+      // descriptor, restoring means DELETING our override, not re-defining.
+      if (original) Object.defineProperty(window, "isSecureContext", original);
+      else delete (window as { isSecureContext?: boolean }).isSecureContext;
+    }
+  });
+
   it("signs in without a username or password", async () => {
     passkeyApi.availability.mockResolvedValue({ available: true, reason: null });
     passkeyApi.loginOptions.mockResolvedValue({ challenge: "c" });

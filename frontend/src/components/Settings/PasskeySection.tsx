@@ -40,6 +40,16 @@ export default function PasskeySection(): JSX.Element {
     void (async () => {
       try {
         const status = await passkeyApi.availability();
+        // The server judges its CONFIGURED origins; the browser judges the page
+        // we are actually on. A plain-http LAN visit to an instance whose
+        // tunnel origin is https must see the explanation, not a broken button.
+        // Strict false, not falsy: every real browser defines the field; only
+        // test DOMs leave it undefined, and those must not hide the feature.
+        if (window.isSecureContext === false) {
+          setAvailable(false);
+          setReason("insecureOrigin");
+          return;
+        }
         setAvailable(status.available);
         setReason(status.reason);
         if (status.available) await refresh();
