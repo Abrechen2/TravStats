@@ -14,10 +14,10 @@
     "status": "Status",
     "reset": "Filter zurücksetzen",
     "help": {
-      "timePeriod": "Filtern Sie Flüge nach Jahr und/oder Monat. Wählen Sie ein Jahr und optional einen Monat aus.",
-      "timePeriodExpanded": "Der Zeitraum-Filter zeigt nur Flüge an, die im ausgewählten Zeitraum stattgefunden haben. Sie können nach Jahr allein oder nach Jahr und Monat filtern.",
-      "airlines": "Filtern Sie Flüge nach Airlines. Sie können mehrere Airlines gleichzeitig auswählen.",
-      "airlinesExpanded": "Wählen Sie eine oder mehrere Airlines aus, um nur Flüge dieser Airlines anzuzeigen. Klicken Sie auf 'Alle' oder 'Keine', um alle Airlines auszuwählen oder die Auswahl zu löschen."
+      "timePeriod": "Filtere Flüge nach Jahr und/oder Monat. Wähle ein Jahr und optional einen Monat aus.",
+      "timePeriodExpanded": "Der Zeitraum-Filter zeigt nur Flüge an, die im ausgewählten Zeitraum stattgefunden haben. Du kannst nach Jahr allein oder nach Jahr und Monat filtern.",
+      "airlines": "Filtere Flüge nach Airlines. Du kannst mehrere Airlines gleichzeitig auswählen.",
+      "airlinesExpanded": "Wähle eine oder mehrere Airlines aus, um nur Flüge dieser Airlines anzuzeigen. Klick auf 'Alle' oder 'Keine', um alle auszuwählen oder die Auswahl zu löschen."
     }
   },
   "airportMarkers": {
