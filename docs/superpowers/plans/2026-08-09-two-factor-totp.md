@@ -1007,7 +1007,29 @@ describe("login with two-factor", () => {
     expect(res.status).toBe(401);
   });
 
-  // The challenge is one attempt at one login, not a reusable pass.
+  // The bypass this ordering exists to prevent: an account carrying BOTH flags
+  // must be asked for the second factor, not handed a change_token on password
+  // alone. Without this test the branch order is one careless edit from silently
+  // reopening a full account takeover.
+  it("asks for the second factor even when a password change is also due", async () => {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { mustChangePassword: true },
+    });
+
+    const res = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ username: "twoFactorLogin", password: "password123" });
+
+    expect(res.body).toEqual({ requiresTwoFactor: true });
+    expect(res.body.requiresPasswordChange).toBeUndefined();
+
+    const cookies = cookiesOf(res).join(";");
+    expect(cookies).toContain("twofa_token=");
+    expect(cookies).not.toContain("change_token=");
+  });
+
+  // The challenge is one login or five failures, not a reusable pass.
   it("burns the challenge once it has been redeemed", async () => {
     const login = await request(app)
       .post("/api/v1/auth/login")
@@ -1521,7 +1543,49 @@ git commit -m "feat(2fa): disable paths — self, admin and command line"
 
 - [ ] **Step 1: Extend the API client**
 
-In `frontend/src/lib/api/auth.ts`, widen the union and add the call:
+Two pieces: the login union widens in `auth.ts`, and a `twoFactorApi` object is
+created for everything the settings section calls. Task 9 mocks
+`twoFactorApi` — without this it would mock a module that does not exist.
+
+Create `frontend/src/lib/api/twoFactor.ts`:
+
+```typescript
+import client from "./client";
+
+export interface TwoFactorStatus {
+  enabled: boolean;
+  recoveryCodesLeft: number;
+}
+
+export const twoFactorApi = {
+  async getTwoFactorStatus(): Promise<TwoFactorStatus> {
+    const { data } = await client.get<TwoFactorStatus>("/auth/2fa/status");
+    return data;
+  },
+  async setupTwoFactor(): Promise<{ secret: string; otpauthUrl: string }> {
+    const { data } = await client.post<{ secret: string; otpauthUrl: string }>("/auth/2fa/setup");
+    return data;
+  },
+  async activateTwoFactor(code: string): Promise<{ recoveryCodes: string[] }> {
+    const { data } = await client.post<{ recoveryCodes: string[] }>("/auth/2fa/activate", { code });
+    return data;
+  },
+  async disableTwoFactor(password: string): Promise<void> {
+    await client.post("/auth/2fa/disable", { password });
+  },
+  async regenerateRecoveryCodes(password: string): Promise<{ recoveryCodes: string[] }> {
+    const { data } = await client.post<{ recoveryCodes: string[] }>("/auth/2fa/recovery-codes", {
+      password,
+    });
+    return data;
+  },
+};
+```
+
+Export it from the api barrel (`frontend/src/lib/api/index.ts`) alongside the
+other domain clients, so `import { twoFactorApi } from "../../lib/api"` resolves.
+
+Then in `frontend/src/lib/api/auth.ts`, widen the union and add the call:
 
 ```typescript
 export type LoginResult =
