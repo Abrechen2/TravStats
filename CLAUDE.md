@@ -392,7 +392,21 @@ frontend/src/
   origins are a list because several may share one rpId, but a bare IP is not a
   valid rpId and plain http outside localhost is not a secure context at all —
   `passkeyUnavailableReason()` says which, and the UI explains instead of
-  drawing a button that always fails.
+  drawing a button that always fails. The passkey login button ALSO checks
+  `window.isSecureContext` — the server only knows its configured origins, so an
+  instance reached over plain-http LAN would otherwise show a button the browser
+  can never honour (found in beta UAT).
+- **Every `/api` response is `Cache-Control: no-store` by default** — one
+  middleware in `index.ts`, mounted above the health route. This is a security
+  boundary, not a perf tweak: beta UAT caught Cloudflare caching an
+  authenticated per-user GET (`/auth/passkeys`) in a shared edge cache and
+  serving it across sessions. Authenticated API responses carry no other
+  cache-control, so without this default a CDN or proxy is free to cross-serve
+  private data. Handlers that legitimately cache (airline logos, the Immich
+  asset proxy) set `Cache-Control: private, max-age=…` themselves and override
+  the default — `private` also keeps them out of shared caches. Never add a
+  blanket cacheable header to `/api`, and if a new endpoint must cache, use
+  `private`, never `public`.
 
 ## Code Style
 
