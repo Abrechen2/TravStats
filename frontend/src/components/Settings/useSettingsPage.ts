@@ -38,11 +38,13 @@ export function useSettingsPage() {
     units,
     defaults,
     cruise,
+    baseCurrency,
     setProfile,
     setDisplay,
     setUnits,
     setDefaults,
     setCruise,
+    setBaseCurrency,
     saveRemoteSettings,
     hasPendingChanges,
   } = useSettingsStore();
@@ -416,12 +418,14 @@ export function useSettingsPage() {
     units,
     defaults,
     cruise,
+    baseCurrency,
     autoSaveState,
     setProfile,
     setDisplay,
     setUnits,
     setDefaults,
     setCruise,
+    setBaseCurrency,
     // Derived
     hasParserAccess,
     // Profile

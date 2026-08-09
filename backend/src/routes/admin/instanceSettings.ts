@@ -36,6 +36,20 @@ const instancePatchSchema = z.object({
     .max(500)
     .refine((v) => v === '' || /^https?:\/\//.test(v), 'Must be a valid http(s) URL')
     .optional(),
+  // Geocoder endpoints (Photon search, Nominatim one-shot geocode). Empty
+  // string clears the DB override, reverting to ENV/default.
+  photonUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((v) => v === '' || /^https?:\/\//.test(v), 'Must be a valid http(s) URL')
+    .optional(),
+  nominatimUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((v) => v === '' || /^https?:\/\//.test(v), 'Must be a valid http(s) URL')
+    .optional(),
   // Instance-level beta gate. No admin UI on purpose — curl / PAT is the
   // intended way to flip it (ON for RC + Beta servers, OFF for production).
   // Every logged-in user reads the resulting value read-only via
@@ -67,6 +81,12 @@ router.put('/instance-settings', async (req: AuthRequest, res: Response, next: N
       }),
       ...(patch.lanUrl !== undefined && {
         lanUrl: patch.lanUrl === '' ? null : patch.lanUrl,
+      }),
+      ...(patch.photonUrl !== undefined && {
+        photonUrl: patch.photonUrl === '' ? null : patch.photonUrl,
+      }),
+      ...(patch.nominatimUrl !== undefined && {
+        nominatimUrl: patch.nominatimUrl === '' ? null : patch.nominatimUrl,
       }),
       ...(patch.betaFeaturesEnabled !== undefined && {
         betaFeaturesEnabled: patch.betaFeaturesEnabled,

@@ -5,7 +5,7 @@
   "deactivate": "Deaktivieren",
   "templateDerived": "Vorlage abgeleitet",
   "developerModeNotEnabled": "Developer Mode nicht aktiviert",
-  "enableDeveloperMode": "Bitte aktivieren Sie den Developer Mode in den Einstellungen.",
+  "enableDeveloperMode": "Bitte aktiviere den Developer Mode in den Einstellungen.",
   "goToSettings": "Zu den Einstellungen",
   "backToDashboard": "← Zurück zum Dashboard",
   "uploadAnnotation": "Upload & Annotation",
@@ -19,7 +19,7 @@
   "boardingPass": "Boarding Pass",
   "boardingPassFormats": ".png, .jpg, .jpeg",
   "uploadHelp": {
-    "description": "Laden Sie E-Mails oder Boarding Passes hoch, um Trainingsdaten zu erstellen.",
+    "description": "Lade E-Mails oder Boarding Passes hoch, um Trainingsdaten zu erstellen.",
     "emails": {
       "title": "E-Mails:",
       "formats": "Unterstützte Formate: .eml, .msg, .txt"
@@ -30,11 +30,11 @@
     },
     "annotation": {
       "title": "Annotation:",
-      "description": "Nach dem Upload müssen Sie die Flugdaten extrahieren und korrigieren"
+      "description": "Nach dem Upload musst du die Flugdaten extrahieren und korrigieren"
     },
     "minimum": {
       "title": "Mindestanzahl:",
-      "description": "Sie benötigen mindestens 5 annotierte Einträge, um ein Training zu starten"
+      "description": "Du brauchst mindestens 5 annotierte Einträge, um ein Training zu starten"
     }
   },
   "stats": {
@@ -54,7 +54,7 @@
   "actions": {
     "startTraining": "Training starten",
     "starting": "Starte...",
-    "startTrainingHelp": "Starten Sie das LoRA-Training mit allen ausstehenden Einträgen. Mindestens 5 Einträge sind erforderlich.",
+    "startTrainingHelp": "Starte das LoRA-Training mit allen ausstehenden Einträgen. Mindestens 5 Einträge sind erforderlich.",
     "startTrainingHelpExpanded": "Das Training verwendet LoRA (Low-Rank Adaptation) zum Fine-Tuning des Base-Modells. Je nach Hardware (CPU/GPU) kann das Training mehrere Stunden dauern. Der Fortschritt wird in Echtzeit angezeigt.",
     "readyForTraining": "Bereit für Training ({{count}} Einträge)",
     "minimumEntriesRequired": "Mindestens 5 Einträge benötigt (aktuell: {{count}})"
@@ -62,7 +62,7 @@
   "jobs": {
     "title": "Training Jobs",
     "titleHelp": "Übersicht aller Training-Jobs mit Status und Fortschritt.",
-    "titleHelpExpanded": "Jobs können verschiedene Status haben: pending (wartet), running (läuft), completed (erfolgreich), failed (fehlgeschlagen). Klicken Sie auf 'Details', um Logs und detaillierten Fortschritt zu sehen.",
+    "titleHelpExpanded": "Jobs können verschiedene Status haben: pending (wartet), running (läuft), completed (erfolgreich), failed (fehlgeschlagen). Klick auf 'Details', um Logs und detaillierten Fortschritt zu sehen.",
     "noJobs": "Noch keine Training Jobs",
     "hide": "Ausblenden",
     "details": "Details",
@@ -120,20 +120,20 @@
     "processing": "Wird verarbeitet...",
     "cancelTraining": {
       "title": "Training abbrechen?",
-      "message": "Möchten Sie das Training wirklich abbrechen?\n\nDer aktuelle Fortschritt geht verloren und kann nicht wiederhergestellt werden.",
+      "message": "Möchtest du das Training wirklich abbrechen?\n\nDer aktuelle Fortschritt geht verloren und kann nicht wiederhergestellt werden.",
       "confirm": "Ja, abbrechen",
       "cancel": "Nein, weiterlaufen lassen"
     },
     "deleteTrainingData": {
       "title": "Training-Daten löschen?",
-      "message": "Möchten Sie diesen Eintrag wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
+      "message": "Möchtest du diesen Eintrag wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
       "confirm": "Ja, löschen",
       "cancel": "Abbrechen"
     },
     "bulkDelete": {
       "title": "Mehrere Einträge löschen?",
-      "message": "Möchten Sie wirklich {{count}} Eintrag löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
-      "messagePlural": "Möchten Sie wirklich {{count}} Einträge löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
+      "message": "Möchtest du wirklich {{count}} Eintrag löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
+      "messagePlural": "Möchtest du wirklich {{count}} Einträge löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
       "confirm": "Ja, alle löschen",
       "cancel": "Abbrechen"
     }

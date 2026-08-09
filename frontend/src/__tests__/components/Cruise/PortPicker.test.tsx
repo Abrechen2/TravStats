@@ -1,8 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PortPicker } from "../../../components/Cruise/PortPicker";
 import { portsApi } from "../../../lib/api";
+import { logger } from "../../../lib/logger";
+import type {
+  LocationCoordinates,
+  LocationSelection,
+} from "../../../components/location/LocationInput";
 
 vi.mock("../../../lib/api", () => ({
   // geocode MUST be part of the mock: without it the component's fallback
@@ -11,12 +16,51 @@ vi.mock("../../../lib/api", () => ({
   portsApi: { search: vi.fn(), geocode: vi.fn(), create: vi.fn() },
 }));
 
+vi.mock("../../../lib/logger", () => ({
+  logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+}));
+
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
     i18n: { language: "en" },
     ready: true,
   }),
+}));
+
+// Task 4's established child-picker technique: the suite focuses on
+// PortPicker's own wiring (payload construction, name/city/country prefill
+// rules, error hygiene) rather than LocationInput's own search/map/paste
+// internals (those have their own Task 3 test suite). This mock is
+// intentionally FUNCTIONAL (not just `() => null`) so tests can exercise the
+// wiring contract end-to-end: it renders the received `value` (to assert
+// pin state) and a button that fires a full `LocationSelection` via
+// `onChange`.
+const MOCK_SELECTION: LocationSelection = {
+  lat: 12.345,
+  lon: -45.678,
+  name: "Geocoded Harbor",
+  city: "Nowhere",
+  country: "Atlantis",
+};
+
+vi.mock("../../../components/location/LocationInput", () => ({
+  LocationInput: ({
+    value,
+    onChange,
+  }: {
+    value: LocationCoordinates | null;
+    onChange: (selection: LocationSelection) => void;
+  }) => (
+    <div>
+      <span data-testid="port-picker-location-value">
+        {value ? `${value.lat},${value.lon}` : "null"}
+      </span>
+      <button type="button" onClick={() => onChange(MOCK_SELECTION)}>
+        mock-select-location
+      </button>
+    </div>
+  ),
 }));
 
 describe("PortPicker", () => {
@@ -48,7 +92,7 @@ describe("PortPicker", () => {
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
   });
 
-  it("shows add-custom button when no result matches and creates a port", async () => {
+  it("creates a custom port from a LocationInput selection (coords + city/country reach the payload)", async () => {
     vi.mocked(portsApi.search).mockResolvedValue([]);
     vi.mocked(portsApi.create).mockResolvedValue({
       id: 77,
@@ -70,18 +114,12 @@ describe("PortPicker", () => {
     const addBtn = await screen.findByRole("button", { name: /picker\.add_custom_port/ });
     await userEvent.click(addBtn);
 
-    // Ensure lat/lon inputs render.
-    const latInput = await screen.findByPlaceholderText(/lat/i);
-    const lonInput = await screen.findByPlaceholderText(/lon/i);
-    expect(latInput).toBeInTheDocument();
-    expect(lonInput).toBeInTheDocument();
+    // The compact LocationInput mock renders a "no position yet" value.
+    expect(screen.getByTestId("port-picker-location-value")).toHaveTextContent("null");
 
-    const cityInput = await screen.findByPlaceholderText(/city/i);
-    const countryInput = await screen.findByPlaceholderText(/country/i);
-    await userEvent.type(cityInput, "Nowhere");
-    await userEvent.type(countryInput, "Atlantis");
-    await userEvent.type(latInput, "12.345");
-    await userEvent.type(lonInput, "-45.678");
+    // Picking a location fills lat/lon AND city/country from the selection.
+    await userEvent.click(screen.getByText("mock-select-location"));
+    expect(screen.getByTestId("port-picker-location-value")).toHaveTextContent("12.345,-45.678");
 
     const saveButtons = screen.getAllByRole("button", { name: /picker\.add_custom_port/ });
     await userEvent.click(saveButtons[saveButtons.length - 1]);
@@ -89,6 +127,9 @@ describe("PortPicker", () => {
     await waitFor(() =>
       expect(portsApi.create).toHaveBeenCalledWith(
         expect.objectContaining({
+          // The name field was pre-seeded from the search query ("Custom
+          // Harbor") before the selection arrived, so the selection's own
+          // "Geocoded Harbor" name must NOT overwrite it.
           name: "Custom Harbor",
           city: "Nowhere",
           country: "Atlantis",
@@ -98,6 +139,80 @@ describe("PortPicker", () => {
       )
     );
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ id: 77 }));
+  });
+
+  it("prefills the custom port name from a LocationInput selection only when the name is empty", async () => {
+    vi.mocked(portsApi.search).mockResolvedValue([]);
+    render(<PortPicker value={null} onChange={vi.fn()} />);
+    await userEvent.type(screen.getByRole("combobox"), "zz");
+    await waitFor(() => expect(portsApi.search).toHaveBeenCalled(), { timeout: 2000 });
+
+    const addBtn = await screen.findByRole("button", { name: /picker\.add_custom_port/ });
+    await userEvent.click(addBtn);
+
+    // Clear the name (pre-seeded from the search query) so the selection can
+    // legitimately fill it.
+    const nameInput = screen.getByPlaceholderText("field.port_name") as HTMLInputElement;
+    fireEvent.change(nameInput, { target: { value: "" } });
+    expect(nameInput.value).toBe("");
+
+    await userEvent.click(screen.getByText("mock-select-location"));
+
+    expect(nameInput.value).toBe("Geocoded Harbor");
+  });
+
+  it("clears the pin via the clear affordance", async () => {
+    vi.mocked(portsApi.search).mockResolvedValue([]);
+    render(<PortPicker value={null} onChange={vi.fn()} />);
+    await userEvent.type(screen.getByRole("combobox"), "zz");
+    await waitFor(() => expect(portsApi.search).toHaveBeenCalled(), { timeout: 2000 });
+    await userEvent.click(await screen.findByRole("button", { name: /picker\.add_custom_port/ }));
+
+    await userEvent.click(screen.getByText("mock-select-location"));
+    expect(screen.getByTestId("port-picker-location-value")).toHaveTextContent("12.345,-45.678");
+
+    // The clear affordance only renders once a position is set.
+    const clearButton = screen.getByText("location:clear");
+    await userEvent.click(clearButton);
+
+    expect(screen.getByTestId("port-picker-location-value")).toHaveTextContent("null");
+    expect(screen.queryByText("location:clear")).not.toBeInTheDocument();
+  });
+
+  it("logs and surfaces a translated error when creating a custom port fails", async () => {
+    vi.mocked(portsApi.search).mockResolvedValue([]);
+    const createError = new Error("network down");
+    vi.mocked(portsApi.create).mockRejectedValue(createError);
+    render(<PortPicker value={null} onChange={vi.fn()} />);
+    await userEvent.type(screen.getByRole("combobox"), "Custom Harbor");
+    await waitFor(() => expect(portsApi.search).toHaveBeenCalled(), { timeout: 2000 });
+    await userEvent.click(await screen.findByRole("button", { name: /picker\.add_custom_port/ }));
+
+    await userEvent.click(screen.getByText("mock-select-location"));
+
+    const saveButtons = screen.getAllByRole("button", { name: /picker\.add_custom_port/ });
+    await userEvent.click(saveButtons[saveButtons.length - 1]);
+
+    await waitFor(() => expect(screen.getByText("picker.createPortError")).toBeInTheDocument());
+    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("PortPicker"), createError);
+  });
+
+  it("logs and surfaces a translated error when creating a port from a geocoded result fails", async () => {
+    vi.mocked(portsApi.search).mockResolvedValue([]);
+    const geocodeError = new Error("boom");
+    vi.mocked(portsApi.geocode).mockResolvedValue([
+      { name: "Sunken Port", city: null, country: null, lat: 1, lon: 2, source: "geocoder" },
+    ]);
+    vi.mocked(portsApi.create).mockRejectedValue(geocodeError);
+    render(<PortPicker value={null} onChange={vi.fn()} />);
+    await userEvent.type(screen.getByRole("combobox"), "Sunken");
+    await waitFor(() => expect(portsApi.geocode).toHaveBeenCalled(), { timeout: 2000 });
+
+    const geocodedButton = await screen.findByRole("button", { name: /Sunken Port/ });
+    await userEvent.click(geocodedButton);
+
+    await waitFor(() => expect(screen.getByText("picker.createPortError")).toBeInTheDocument());
+    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("PortPicker"), geocodeError);
   });
 
   // The resolution chain the roadmap's "Taranto" item complained about,

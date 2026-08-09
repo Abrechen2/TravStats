@@ -31,7 +31,7 @@ const H = 60 * 60 * 1000;
  */
 export async function sweepStatuses(
   now: Date = new Date()
-): Promise<{ flights: number; cruises: number; trips: number }> {
+): Promise<{ flights: number; cruises: number; lodging: number; trips: number }> {
   const arrivalCutoff = new Date(now.getTime() - FLIGHT_ARRIVAL_SLACK_HOURS * H);
   const departureCutoff = new Date(now.getTime() - FLIGHT_DEPARTURE_SLACK_HOURS * H);
   const cruiseCutoff = new Date(now.getTime() - CRUISE_SLACK_HOURS * H);
@@ -82,6 +82,34 @@ export async function sweepStatuses(
     data: { status: "scheduled" },
   });
 
+  // Lodging stays: the same three-way split as cruises, but with NO slack —
+  // a check-out is a calendar fact the user typed, not a revisable estimate,
+  // and no legacy one-way flip ever wrote this column, so there is no
+  // deliberate data for a hysteresis band to protect. Both dates are NOT NULL
+  // on this table, which is why these queries need no null branches.
+  const lodgingToInProgress = await prisma.lodgingStay.updateMany({
+    where: {
+      status: { in: ["scheduled", "completed"] },
+      checkIn: { lte: now },
+      checkOut: { gt: now },
+    },
+    data: { status: "in_progress" },
+  });
+  const lodgingToCompleted = await prisma.lodgingStay.updateMany({
+    where: {
+      status: { in: ["scheduled", "in_progress"] },
+      checkOut: { lte: now },
+    },
+    data: { status: "completed" },
+  });
+  const lodgingToScheduled = await prisma.lodgingStay.updateMany({
+    where: {
+      status: { in: ["in_progress", "completed"] },
+      checkIn: { gt: now },
+    },
+    data: { status: "scheduled" },
+  });
+
   // Trips: recompute from segment date bounds, update diffs only
   const trips = await prisma.trip.findMany({
     select: {
@@ -103,11 +131,13 @@ export async function sweepStatuses(
 
   const flights = staleFlights.count + futureFlown.count;
   const cruises = cruiseToInProgress.count + cruiseToFlown.count + cruiseToScheduled.count;
-  if (flights + cruises + tripFlips > 0) {
+  const lodging =
+    lodgingToInProgress.count + lodgingToCompleted.count + lodgingToScheduled.count;
+  if (flights + cruises + lodging + tripFlips > 0) {
     logger.info({
       operation: "status_sweep_done",
-      context: { flights, cruises, trips: tripFlips },
+      context: { flights, cruises, lodging, trips: tripFlips },
     });
   }
-  return { flights, cruises, trips: tripFlips };
+  return { flights, cruises, lodging, trips: tripFlips };
 }

@@ -123,11 +123,11 @@ describe("aggregate", () => {
   it("ignores hasData=false domain entries", () => {
     const map: DomainStatsMap = {
       ...baseMap,
-      hotel: { domain: "hotel", hasData: false },
+      lodging: { domain: "lodging", hasData: false },
     };
-    const result = aggregate(map, { flight: true, cruise: true, hotel: true }, null);
+    const result = aggregate(map, { flight: true, cruise: true, lodging: true }, null);
     expect(result.totalEvents).toBe(13);
-    expect(result.perDomainEvents.hotel).toBeUndefined();
+    expect(result.perDomainEvents.lodging).toBeUndefined();
   });
 });
 
@@ -180,7 +180,7 @@ describe("isWithData", () => {
   });
 
   it("rejects hasData=false", () => {
-    expect(isWithData({ domain: "hotel", hasData: false })).toBe(false);
+    expect(isWithData({ domain: "lodging", hasData: false })).toBe(false);
   });
 });
 

@@ -4,8 +4,9 @@
  * Used by the Event sub-type of SpecialFlightModal to replace the former
  * bare lat/lon number pair. Three synchronized surfaces share one position:
  *
- *   1. Top search input — debounced (400 ms) Nominatim query; dropdown with
- *      up to five hits. Selecting a hit sets lat/lon + centers the map.
+ *   1. Top search input — debounced (400 ms) place-search query (Photon, via
+ *      the same-origin proxy); dropdown with the backend's default hit
+ *      count. Selecting a hit sets lat/lon + centers the map.
  *   2. Mini-map (MapLibre GL) — draggable marker + click-to-move. Matches
  *      the light/dark palette used by the main DeckGL map so the widget
  *      visually belongs to the rest of the app.
@@ -15,12 +16,17 @@
  *
  * Controlled interface: parent owns the `{ lat, lon }` state and receives
  * updates via `onChange`. The picker keeps no position state of its own.
+ *
+ * Search transport: same-origin Photon proxy (`lib/api/geo.ts`'s
+ * `searchPlaces`, `GET /api/v1/geo/search`) — NOT a direct browser fetch to
+ * Nominatim/Photon, which our CSP (`connect-src 'self'`) blocks in
+ * production. This used to hit `lib/nominatim.ts` directly (removed).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Map, { Marker, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
-import { NominatimError, searchPlaces, type NominatimPlace } from "../../lib/nominatim";
+import { searchPlaces, type PlaceSearchResult } from "../../lib/api/geo";
 
 /** MapLibre styles — reuse the same CartoCDN basemaps as DeckGLMap so the
  *  mini-map blends visually with the main map. */
@@ -66,6 +72,17 @@ function inputToNum(raw: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+/** Dropdown label — Photon's normalized fields don't carry a single
+ *  pre-formatted `display_name` (that was a Nominatim-ism), so we join the
+ *  parts it does give us. Slightly less granular than raw Nominatim output
+ *  (no street-level detail beyond `address`), acceptable per the plan. */
+function formatPlaceLabel(hit: PlaceSearchResult): string {
+  const parts = [hit.name, hit.address, hit.city, hit.country].filter(
+    (part): part is string => !!part
+  );
+  return parts.join(", ");
+}
+
 export function EventLocationPicker({
   value,
   onChange,
@@ -74,57 +91,50 @@ export function EventLocationPicker({
   const { t } = useTranslation(["specialFlights"]);
 
   const mapRef = useRef<MapRef | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<number | null>(null);
+  // Monotonic request id — discards late-arriving responses from a keystroke
+  // that's since been superseded. (The old Nominatim fetch used an
+  // AbortController; the shared `lib/api/geo.ts` transport doesn't expose a
+  // cancellation signal, so this mirrors `useLocationSearch`'s pattern.)
+  const requestIdRef = useRef(0);
 
   const [query, setQuery] = useState<string>("");
-  const [results, setResults] = useState<NominatimPlace[]>([]);
+  const [results, setResults] = useState<PlaceSearchResult[]>([]);
   const [isDropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [isSearching, setSearching] = useState<boolean>(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState<boolean>(false);
   const [advancedOpen, setAdvancedOpen] = useState<boolean>(false);
 
   const hasPosition = value.lat !== null && value.lon !== null;
 
-  // ---- Nominatim search (debounced + abortable) --------------------------
+  // ---- Place search (debounced, same-origin Photon proxy) ----------------
   const runSearch = useCallback(async (q: string): Promise<void> => {
-    // Cancel any in-flight request before starting a new one — respects the
-    // "no parallel requests" clause of the Nominatim usage policy.
-    if (abortRef.current) {
-      abortRef.current.abort();
-    }
-    const controller = new AbortController();
-    abortRef.current = controller;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
 
     setSearching(true);
-    setSearchError(null);
+    setSearchError(false);
     try {
-      const hits = await searchPlaces(q, controller.signal);
-      // Late-arriving responses — ignore if a newer request has superseded us.
-      if (controller.signal.aborted) return;
+      const hits = await searchPlaces(q);
+      // Late-arriving response — ignore if a newer request has superseded us.
+      if (requestIdRef.current !== requestId) return;
       setResults(hits);
       setDropdownOpen(true);
     } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") {
-        return;
-      }
-      if (err instanceof NominatimError) {
-        setSearchError(err.message);
-      } else {
-        logger.warn("Unexpected error from Nominatim search:", err);
-        setSearchError("Unknown error");
-      }
+      if (requestIdRef.current !== requestId) return;
+      logger.warn("EventLocationPicker: place search failed:", err);
+      setSearchError(true);
       setResults([]);
       setDropdownOpen(true);
     } finally {
-      if (!controller.signal.aborted) {
+      if (requestIdRef.current === requestId) {
         setSearching(false);
       }
     }
   }, []);
 
-  // Debounce keystrokes before querying Nominatim. The timer is torn down on
-  // every keystroke and on unmount so we never stack multiple timers.
+  // Debounce keystrokes before querying. The timer is torn down on every
+  // keystroke and on unmount so we never stack multiple timers.
   useEffect(() => {
     if (debounceRef.current !== null) {
       clearTimeout(debounceRef.current);
@@ -133,9 +143,10 @@ export function EventLocationPicker({
 
     const trimmed = query.trim();
     if (trimmed.length < MIN_QUERY_CHARS) {
+      requestIdRef.current += 1; // invalidate any in-flight request
       setResults([]);
       setDropdownOpen(false);
-      setSearchError(null);
+      setSearchError(false);
       return;
     }
 
@@ -151,23 +162,14 @@ export function EventLocationPicker({
     };
   }, [query, runSearch]);
 
-  // Abort any pending request when the picker unmounts.
-  useEffect(() => {
-    return () => {
-      if (abortRef.current) {
-        abortRef.current.abort();
-      }
-    };
-  }, []);
-
   // ---- Handlers ----------------------------------------------------------
   const handleSelectResult = useCallback(
-    (hit: NominatimPlace): void => {
+    (hit: PlaceSearchResult): void => {
       onChange({ lat: hit.lat, lon: hit.lon });
       setQuery("");
       setResults([]);
       setDropdownOpen(false);
-      setSearchError(null);
+      setSearchError(false);
       const map = mapRef.current;
       // `flyTo` is provided by MapLibre — guard its presence so test harnesses
       // that stub the Map component don't blow up here.
@@ -201,7 +203,7 @@ export function EventLocationPicker({
     setQuery("");
     setResults([]);
     setDropdownOpen(false);
-    setSearchError(null);
+    setSearchError(false);
   }, [onChange]);
 
   const handleLatInput = useCallback(
@@ -296,9 +298,9 @@ export function EventLocationPicker({
             )}
             {!isSearching &&
               !searchError &&
-              results.map((hit) => (
+              results.map((hit, index) => (
                 <button
-                  key={`${hit.lat}-${hit.lon}-${hit.displayName}`}
+                  key={`${hit.lat}-${hit.lon}-${hit.name}-${index}`}
                   type="button"
                   role="option"
                   aria-selected={false}
@@ -306,7 +308,7 @@ export function EventLocationPicker({
                   className="block w-full text-left px-3 py-2 text-sm hover:bg-(--bg-elevated) transition-colors"
                   style={{ color: "var(--text-primary)" }}
                 >
-                  {hit.displayName}
+                  {formatPlaceLabel(hit)}
                 </button>
               ))}
           </div>

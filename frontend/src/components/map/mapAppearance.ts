@@ -65,6 +65,21 @@ export interface MapAppearance {
   cruiseMarkerSize?: number;
   /** Multiplier on cruise direction-arrow size (1 = default, 0 = arrows off). */
   cruiseArrowScale?: number;
+  // Lodging domain
+  /**
+   * Multiplier on the lodging-pin marker size (1 = default, 0 = hidden).
+   * Brand-new field (Task 8) — no legacy string-enum form ever existed for
+   * it (unlike `flightMarkerSize`/`cruiseMarkerSize`), so it needs no
+   * coercion in `normalizeAppearance`; a missing key just defaults to `1`
+   * at the read site, same convention as every other appearance field here.
+   * Owned by `MapContainer3D` (not `DeckGLMap`, unlike the flight/cruise
+   * marker sizes) purely so it persists here the same way every other
+   * appearance field does; it's threaded down into `DeckGLMap` as a
+   * controlled prop both to render the slider AND (since Task 9) to
+   * actually build the lodging pin layer (`buildLodgingPins`), which lives
+   * in `DeckGLMap` alongside the cruise-port layer it mirrors.
+   */
+  lodgingMarkerSize?: number;
   // Layers
   showTerrain?: boolean;
   showPlaceLabels?: boolean;

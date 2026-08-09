@@ -145,6 +145,8 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
         id: user.id,
         username: user.username,
         isAdmin: user.isAdmin,
+        firstName: user.firstName,
+        lastName: user.lastName,
       },
       message: isFirstUser ? 'Welcome! You are the admin of this instance.' : 'Account created successfully',
     });
@@ -261,6 +263,11 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
         id: user.id,
         username: user.username,
         isAdmin: user.isAdmin,
+        // The header greets by first name and falls back to the username
+        // (#241). Sending it with the login response means the greeting is
+        // right on the first paint instead of flashing the username.
+        firstName: user.firstName,
+        lastName: user.lastName,
       },
     });
   } catch (error) {
@@ -280,7 +287,13 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response, next: Ne
 
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { id: true, username: true, isAdmin: true },
+      select: {
+        id: true,
+        username: true,
+        isAdmin: true,
+        firstName: true,
+        lastName: true,
+      },
     });
 
     if (!user) {

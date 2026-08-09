@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { portsApi, type GeocodedPort } from "../../lib/api";
 import type { Port } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
+import { logger } from "../../lib/logger";
+import { LocationInput } from "../location/LocationInput";
+import type { LocationCoordinates, LocationSelection } from "../location/LocationInput";
 
 interface Props {
   value: Port | null;
@@ -19,7 +22,7 @@ interface Props {
  *   required lat/lon and optional city/country, then creating via `portsApi.create`.
  */
 export function PortPicker({ value, onChange, label }: Props): JSX.Element {
-  const { t } = useTranslation("cruise");
+  const { t } = useTranslation(["cruise", "location"]);
   const [query, setQuery] = useState<string>(value?.name ?? "");
   const [results, setResults] = useState<Port[]>([]);
   // External geocoder fallback: populated only when the local catalog has no
@@ -32,10 +35,32 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
   const [newName, setNewName] = useState<string>("");
   const [newCity, setNewCity] = useState<string>("");
   const [newCountry, setNewCountry] = useState<string>("");
-  const [newLat, setNewLat] = useState<string>("");
-  const [newLon, setNewLon] = useState<string>("");
+  const [newLat, setNewLat] = useState<number | null>(null);
+  const [newLon, setNewLon] = useState<number | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const newPosition: LocationCoordinates | null =
+    newLat !== null && newLon !== null ? { lat: newLat, lon: newLon } : null;
+
+  // Mirrors LodgingFormModal/StopModal's `handleLocationChange` (Tasks 4/5):
+  // a selection always reports the picked position; city/country only
+  // overwrite when the selection actually carries them; `name` is the most
+  // conservative — it only fills while the user hasn't typed one yet (the
+  // "add custom port" flow pre-seeds `newName` from the search query, so
+  // this mostly matters for the compact map/paste path).
+  const handleNewLocationChange = (selection: LocationSelection): void => {
+    setNewLat(selection.lat);
+    setNewLon(selection.lon);
+    if (selection.city) setNewCity(selection.city);
+    if (selection.country) setNewCountry(selection.country);
+    if (selection.name && newName.trim().length === 0) setNewName(selection.name);
+  };
+
+  const handleClearNewPosition = (): void => {
+    setNewLat(null);
+    setNewLon(null);
+  };
 
   useEffect(() => {
     // Don't search when the field merely shows the already-selected port —
@@ -114,7 +139,8 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
       setQuery(port.name);
       setResults([]);
       setGeocoded([]);
-    } catch {
+    } catch (err: unknown) {
+      logger.error("PortPicker: failed to create port from geocoded result", err);
       setError(t("picker.createPortError"));
     } finally {
       setSaving(false);
@@ -122,20 +148,7 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
   };
 
   const save = async (): Promise<void> => {
-    if (!newName) return;
-    const lat = Number.parseFloat(newLat);
-    const lon = Number.parseFloat(newLon);
-    if (
-      Number.isNaN(lat) ||
-      Number.isNaN(lon) ||
-      lat < -90 ||
-      lat > 90 ||
-      lon < -180 ||
-      lon > 180
-    ) {
-      setError(t("picker.invalidLatLon"));
-      return;
-    }
+    if (!newName || newLat === null || newLon === null) return;
     setSaving(true);
     setError(null);
     try {
@@ -143,8 +156,8 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
         name: newName,
         city: newCity || undefined,
         country: newCountry || undefined,
-        lat,
-        lon,
+        lat: newLat,
+        lon: newLon,
       });
       onChange(port);
       setQuery(port.name);
@@ -153,16 +166,17 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
       setNewName("");
       setNewCity("");
       setNewCountry("");
-      setNewLat("");
-      setNewLon("");
-    } catch {
+      setNewLat(null);
+      setNewLon(null);
+    } catch (err: unknown) {
+      logger.error("PortPicker: failed to create custom port", err);
       setError(t("picker.createPortError"));
     } finally {
       setSaving(false);
     }
   };
 
-  const canSave = Boolean(newName) && newLat !== "" && newLon !== "";
+  const canSave = Boolean(newName) && newPosition !== null;
 
   return (
     <div className="relative">
@@ -271,27 +285,22 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
               placeholder={t("field.country")}
             />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              type="number"
-              step="0.001"
-              min={-90}
-              max={90}
-              className="rounded-md border border-border bg-(--bg-elevated) px-2 py-1 text-sm text-(--text-primary) placeholder:text-(--text-muted)"
-              value={newLat}
-              onChange={(e): void => setNewLat(e.target.value)}
-              placeholder={t("field.lat")}
+          <div>
+            <LocationInput
+              value={newPosition}
+              onChange={handleNewLocationChange}
+              compact
+              idPrefix="port-picker-location"
             />
-            <input
-              type="number"
-              step="0.001"
-              min={-180}
-              max={180}
-              className="rounded-md border border-border bg-(--bg-elevated) px-2 py-1 text-sm text-(--text-primary) placeholder:text-(--text-muted)"
-              value={newLon}
-              onChange={(e): void => setNewLon(e.target.value)}
-              placeholder={t("field.lon")}
-            />
+            {newPosition !== null && (
+              <button
+                type="button"
+                onClick={handleClearNewPosition}
+                className="mt-1 text-xs text-(--text-muted) hover:underline"
+              >
+                {t("location:clear")}
+              </button>
+            )}
           </div>
           {error !== null && <p className="text-xs text-(--danger)">{error}</p>}
           <div className="flex justify-end gap-2">

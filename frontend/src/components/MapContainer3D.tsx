@@ -2,8 +2,10 @@ import React, { lazy, Suspense, useState, useMemo, useEffect } from "react";
 import { DeckGLMap } from "./DeckGLMap";
 import { GlobeLoader } from "./GlobeLoader";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
+import type { Lodging } from "../types/lodging";
 import type { Layer } from "@deck.gl/core";
 import type { AppearanceDomain } from "./map/controlPanelKit";
+import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 
 /**
  * The narrow set of map-rendering modes that MapContainer3D actually implements.
@@ -70,6 +72,26 @@ interface MapContainer3DProps {
    */
   cruisesOverride?: readonly Cruise[];
   /**
+   * Lodging places (hotels/campsites) to render as pins on the flat map.
+   * Unlike `cruisesOverride`, there is no internal fetch fallback —
+   * MapContainer3D has no lodging-domain equivalent of `showInternalCruises`
+   * yet, so the pin layer only ever renders what the caller passes here.
+   * Undefined (the default) means "no lodging layer at all", so tabs that
+   * don't pass it (flight/cruise tabs) are unaffected. Lodgings without
+   * both `lat` and `lon` are silently skipped by `buildLodgingPins`.
+   * Globe mode doesn't render this yet — pins are flat-map only for now.
+   */
+  lodgingsOverride?: Lodging[];
+  /**
+   * Fired when a lodging pin is clicked — receives the lodging id.
+   * Threaded straight through to DeckGLMap, which builds the actual pin
+   * layer (see its `onLodgingClick` doc comment for why the layer itself
+   * lives there and not here). Undefined means pins render but aren't
+   * clickable — the callers that don't pass `lodgingsOverride` don't have
+   * any pins to click anyway.
+   */
+  onLodgingClick?: (lodgingId: string) => void;
+  /**
    * Which domain appearance sections the map control panel exposes. The
    * Alle tab passes both; single-domain tabs pass just their own domain
    * so the panel only surfaces the relevant route/marker controls.
@@ -94,6 +116,8 @@ export default function MapContainer3D({
   showInternalCruises = true,
   hideInfoPill = false,
   cruisesOverride,
+  lodgingsOverride,
+  onLodgingClick,
   appearanceDomains = ["flight", "cruise"],
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
@@ -140,6 +164,22 @@ export default function MapContainer3D({
     () => (cruisesOverride !== undefined ? [...cruisesOverride] : internalCruises),
     [cruisesOverride, internalCruises]
   );
+
+  // Lodging marker-size slider (Task 8). Lives HERE rather than in
+  // DeckGLMap's local state (unlike the flight/cruise marker sizes) purely
+  // so it persists via `saveMapAppearance` the same way every other
+  // appearance field does — a merge-write that only touches this key.
+  // Threaded down into DeckGLMap both to render the slider AND (since
+  // Task 9) to actually build the lodging pin layer — DeckGLMap is what
+  // calls `buildLodgingPins` now (it needs the private zoom/labelsMode
+  // state that only exists there; see DeckGLMap's `lodgingsOverride` doc
+  // comment), this component just supplies the raw list + the size value.
+  const [lodgingMarkerSize, setLodgingMarkerSize] = useState<number>(
+    () => loadMapAppearance().lodgingMarkerSize ?? 1
+  );
+  useEffect(() => {
+    saveMapAppearance({ lodgingMarkerSize });
+  }, [lodgingMarkerSize]);
 
   const routeCount = useMemo(() => {
     if (visMode !== "routes") return null;
@@ -201,6 +241,10 @@ export default function MapContainer3D({
             onResetTrip={onResetTrip}
             extraLayers={extraLayers}
             appearanceDomains={appearanceDomains}
+            lodgingMarkerSize={lodgingMarkerSize}
+            onLodgingMarkerSizeChange={setLodgingMarkerSize}
+            lodgingsOverride={lodgingsOverride}
+            onLodgingClick={onLodgingClick}
           />
         )}
       </div>

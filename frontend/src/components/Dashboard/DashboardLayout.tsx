@@ -17,7 +17,7 @@ import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
 
 interface DashboardLayoutProps {
   children: ReactNode;
-  counts: { flight: number; cruise: number; poi: number };
+  counts: { flight: number; cruise: number; poi: number; lodging: number };
   /** Optional refetch hook called after a create-modal saves so the
    * outer page can refresh counts / per-tab data without a navigation. */
   onDataChanged?: () => void;
@@ -40,6 +40,7 @@ export function DashboardLayout({
     flight: isEnabled("flight"),
     cruise: isEnabled("cruise"),
     poi: isEnabled("poi"),
+    lodging: isEnabled("lodging"),
   };
 
   const handleFlightCreate = async (

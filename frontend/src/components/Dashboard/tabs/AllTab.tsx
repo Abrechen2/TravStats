@@ -7,9 +7,11 @@ import { useFlightLookup } from "../../../hooks/useFlightLookup";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { cruiseApi } from "../../../lib/api/cruise";
 import { flightsApi } from "../../../lib/api/flights";
+import { listLodgings } from "../../../lib/api/lodging";
 import { tripsApi } from "../../../lib/api/trips";
 import { buildCruiseLegend, type CruiseLegendRow } from "../../../lib/cruiseColor";
 import { buildFlightLegend, rgbCss, type FlightLegendRow } from "../../../lib/flightColor";
+import { buildLodgingLegend } from "../../../lib/lodgingColor";
 import { logger } from "../../../lib/logger";
 import { useCruiseColorStore } from "../../../store/cruiseColorStore";
 import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
@@ -21,6 +23,7 @@ import {
 import { useFlightSelectionStore } from "../../../store/flightSelectionStore";
 import type { Flight, FlightInput, GeoJSONFeature, Trip } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
+import type { Lodging } from "../../../types/lodging";
 import type { AllMode } from "../../../types/dashboard";
 import { ALL_MODES } from "../../../types/dashboard";
 import FlightEditModal from "../../FlightEditModal";
@@ -74,6 +77,7 @@ export function AllTab(): JSX.Element {
   const cruiseColorConfig = useCruiseColorStore((s) => s.config);
   const [flights, setFlights] = useState<GeoJSONFeature[]>([]);
   const [cruises, setCruises] = useState<Cruise[]>([]);
+  const [lodgings, setLodgings] = useState<Lodging[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -93,6 +97,7 @@ export function AllTab(): JSX.Element {
   const filterDomains = useDashboardFilterStore((s) => s.domains);
   const flightsVisible = filterDomains.includes("flight") && isEnabled("flight");
   const cruisesVisible = filterDomains.includes("cruise") && isEnabled("cruise");
+  const lodgingsVisible = filterDomains.includes("lodging") && isEnabled("lodging");
 
   // Filter flights by departureTime within the year/time range.
   // Flights without a departureTime stay visible (treat NaN as
@@ -124,6 +129,19 @@ export function AllTab(): JSX.Element {
       intervalOverlapsRange(c.startDate ?? "", c.endDate, filterTime.from, filterTime.to)
     );
   }, [cruises, cruisesVisible, filterTime.from, filterTime.to]);
+
+  // Lodgings filtered by stay overlap (mirrors LodgingTab's visibleLodgings):
+  // a lodging stays visible if ANY of its stays overlaps the selected range.
+  // Hidden entirely when the domain chip is off or the domain is disabled.
+  const visibleLodgings = useMemo<Lodging[]>(() => {
+    if (!lodgingsVisible) return [];
+    if (!filterTime.from && !filterTime.to) return lodgings;
+    return lodgings.filter((lodging) =>
+      lodging.stays.some((stay) =>
+        intervalOverlapsRange(stay.checkIn, stay.checkOut, filterTime.from, filterTime.to)
+      )
+    );
+  }, [lodgings, lodgingsVisible, filterTime.from, filterTime.to]);
 
   // Map click → selection store. DeckGLMap handles dim/highlight + tooltip.
   const handleFlightClick = useCallback(
@@ -169,6 +187,15 @@ export function AllTab(): JSX.Element {
     [navigate]
   );
 
+  // Lodging pin click → detail page, same route LodgingTab's map pins and
+  // the lodging list rows already navigate to.
+  const handleLodgingClick = useCallback(
+    (lodgingId: string): void => {
+      navigate(`/lodging/${lodgingId}`);
+    },
+    [navigate]
+  );
+
   const handleFlightSave = useCallback(
     async (id: string, updates: Partial<FlightInput>): Promise<void> => {
       await flightsApi.update(id, updates);
@@ -210,6 +237,23 @@ export function AllTab(): JSX.Element {
       })
       .catch((err: unknown) => {
         logger.error("AllTab: failed to load cruises", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isEnabled]);
+
+  // Lodgings — fetched only when the domain is enabled, same domain-gating
+  // contract as flights/cruises above (never fetched, not just hidden).
+  useEffect(() => {
+    if (!isEnabled("lodging")) return;
+    let cancelled = false;
+    listLodgings({})
+      .then((list) => {
+        if (!cancelled) setLodgings(list);
+      })
+      .catch((err: unknown) => {
+        logger.error("AllTab: failed to load lodgings", err);
       });
     return () => {
       cancelled = true;
@@ -336,10 +380,18 @@ export function AllTab(): JSX.Element {
     return legendRow(rgbCss(row.color), label, `cruise-${row.slot}`);
   });
 
+  // Lodging has exactly one row — no colour mode to switch — but it is
+  // still DERIVED from `buildLodgingLegend()`, the same function
+  // `layers/lodgingPinsLayer.ts` resolves its pin colour through, so the
+  // dot on the map and the swatch in the legend can never disagree.
+  const lodgingLegendRows = buildLodgingLegend().map((row) =>
+    legendRow(rgbCss(row.color), t("dashboard:legend.lodging"), `lodging-${row.slot}`)
+  );
+
   // Colour key as a compact table pinned bottom-right — out of the top band
   // so it never collides with the globe's time histogram or the top-left
   // controls. Renders only the visible domains' rows.
-  const legendTable = (flightsVisible || cruisesVisible) && (
+  const legendTable = (flightsVisible || cruisesVisible || lodgingsVisible) && (
     <div
       style={{
         position: "absolute",
@@ -360,6 +412,7 @@ export function AllTab(): JSX.Element {
     >
       {flightsVisible && flightLegendRows}
       {cruisesVisible && cruiseLegendRows}
+      {lodgingsVisible && lodgingLegendRows}
     </div>
   );
 
@@ -445,11 +498,14 @@ export function AllTab(): JSX.Element {
           visMode="routes"
           extraLayers={journeyLayers}
           showInternalCruises={false}
+          appearanceDomains={["flight", "cruise", "lodging"]}
           onFlightClick={handleFlightClick}
           onRouteClick={handleRouteClick}
           onFlightOpen={handlePanelFlightDetails}
           onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
           cruisesOverride={visibleCruises}
+          lodgingsOverride={visibleLodgings}
+          onLodgingClick={handleLodgingClick}
           hideInfoPill
         />
         {activityToggle}
@@ -466,11 +522,14 @@ export function AllTab(): JSX.Element {
       <MapContainer3D
         flights={visibleFlights}
         visMode={visMode}
+        appearanceDomains={["flight", "cruise", "lodging"]}
         onFlightClick={handleFlightClick}
         onRouteClick={handleRouteClick}
         onFlightOpen={handlePanelFlightDetails}
         onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
         cruisesOverride={visibleCruises}
+        lodgingsOverride={visibleLodgings}
+        onLodgingClick={handleLodgingClick}
         hideInfoPill
       />
       {activityToggle}
