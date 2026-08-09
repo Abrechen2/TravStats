@@ -16,6 +16,7 @@ const TAB_ICON: Record<DashboardTab, string> = {
   flight: "✈",
   cruise: "⚓",
   poi: "📍",
+  lodging: "🏨",
 };
 
 export function DomainTabStrip({

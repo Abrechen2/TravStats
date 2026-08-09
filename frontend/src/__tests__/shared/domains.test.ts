@@ -3,13 +3,13 @@ import { DOMAINS, AVAILABLE_DOMAINS, isValidDomain, DOMAIN_KEYS } from "../../sh
 
 describe("frontend domain registry", () => {
   it("lists all keys", () => {
-    expect(DOMAIN_KEYS).toEqual(["flight", "cruise", "hotel", "poi"]);
+    expect(DOMAIN_KEYS).toEqual(["flight", "cruise", "lodging", "poi"]);
   });
   it("exposes AVAILABLE_DOMAINS only with available=true", () => {
-    expect(AVAILABLE_DOMAINS).toEqual(["flight", "cruise"]);
+    expect(AVAILABLE_DOMAINS).toEqual(["flight", "cruise", "lodging"]);
     expect(DOMAINS.flight.available).toBe(true);
     expect(DOMAINS.cruise.available).toBe(true);
-    expect(DOMAINS.hotel.available).toBe(false);
+    expect(DOMAINS.lodging.available).toBe(true);
     expect(DOMAINS.poi.available).toBe(false);
   });
   it("isValidDomain", () => {

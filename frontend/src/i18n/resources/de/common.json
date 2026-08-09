@@ -85,7 +85,7 @@
   },
   "errorBoundary": {
     "title": "Ups! Etwas ist schiefgelaufen",
-    "message": "Die Anwendung hat einen unerwarteten Fehler festgestellt. Bitte laden Sie die Seite neu.",
+    "message": "Die Anwendung hat einen unerwarteten Fehler festgestellt. Bitte lade die Seite neu.",
     "refresh": "Seite neu laden",
     "fallbackTitle": "Etwas ist schiefgelaufen",
     "fallbackMessage": "Ein unerwarteter Fehler ist aufgetreten",
@@ -143,8 +143,8 @@
     "flight_desc": "Buchungen importieren, Routen auf der Karte, Airline/Airport-Achievements.",
     "cruise": "Kreuzfahrten",
     "cruise_desc": "Schiffe, Häfen, Seetage, Reederei-Achievements.",
-    "hotel": "Hotels",
-    "hotel_desc": "Übernachtungen, Ketten-Loyalty, Länder/Städte.",
+    "lodging": "Unterkünfte",
+    "lodging_desc": "Übernachtungen, Ketten-Loyalty, Länder/Städte.",
     "poi": "POI / Besuche",
     "poi_desc": "Sehenswürdigkeiten, Restaurants, Konzerte, beliebige Orte."
   },

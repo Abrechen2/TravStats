@@ -6,7 +6,8 @@
   "tabs": {
     "general": "General",
     "flight": "Flight",
-    "cruise": "Cruise"
+    "cruise": "Cruise",
+    "lodging": "Lodging"
   },
   "errors": {
     "saveFailed": "Failed to save settings"
@@ -22,6 +23,36 @@
     "showArcs": "Show cruise routes on the map",
     "showArcsHint": "Bezier lines between departure and arrival ports in the dashboard map."
   },
+  "lodgingPreferences": {
+    "title": "Lodging preferences",
+    "description": "Base currency for lodging stats and spend totals.",
+    "baseCurrency": "Base currency",
+    "baseCurrencyHint": "Every stay is converted into this currency at the ECB rate for its check-in day. Already-saved stays keep their original conversion rate — a change only affects future calculations.",
+    "geocoder": {
+      "title": "Geocoder",
+      "description": "Admins only: configure this instance's address search and coordinate resolution.",
+      "photonUrlLabel": "Photon URL (address search)",
+      "photonUrlHint": "Used for live search-as-you-type (e.g. the lodging or trip location picker). Leave empty to use the public default, photon.komoot.io.",
+      "nominatimUrlLabel": "Nominatim URL (coordinate resolution)",
+      "nominatimUrlHint": "Used for one-shot geocoding requests. Leave empty to use the public default, nominatim.openstreetmap.org.",
+      "saveSuccess": "Geocoder settings saved.",
+      "saveError": "Failed to save the geocoder settings.",
+      "loadError": "Failed to load the geocoder settings.",
+      "retry": "Retry",
+      "testButton": "Test connection",
+      "testing": "Testing connection …",
+      "testSuccess": "Connection successful — {{count}} hits for \"Berlin\".",
+      "testEmpty": "Connection successful, but no hits for \"Berlin\".",
+      "testError": "Connection failed. Please check the URL and reachability."
+    }
+  },
+  "memberships": {
+    "title": "Loyalty programmes",
+    "description": "Every programme in one place, with the chains and individual hotels it covers.",
+    "coversNothing": "not linked to a chain yet",
+    "editHotels": "Individual hotels",
+    "noIndependentHotels": "No independent, chain-less hotels available."
+  },
   "about": {
     "buildLabel": "Build",
     "buildVersionHint": "Version that was baked into the container image at build time. This only differs from the displayed version when a promoted RC is running.",
@@ -36,6 +67,8 @@
     "changePassword": "Change Password",
     "uploadAvatar": "Upload profile picture",
     "chooseFile": "Choose file",
+    "firstName": "First name",
+    "lastName": "Last name",
     "username": "Username",
     "email": "Email Address",
     "birthdate": "Birthday",
@@ -61,7 +94,8 @@
       "avatar": "PNG or JPG, max. 5 MB. Stored locally in the database — never sent to an external service.",
       "passwordTitle": "Change password:",
       "password": "Opens a separate modal that requires the current password for verification before a new one can be set."
-    }
+    },
+    "editProfile": "Edit profile"
   },
   "homeAirport": {
     "title": "Home airport",
@@ -586,6 +620,10 @@
     "title": "Import",
     "description": "Import existing data from other services — grouped per area.",
     "openHub": "Import",
+    "log": {
+      "title": "Import log",
+      "scopeHint": "Every bulk import as a whole, newest first. Only accommodation imports can currently be undone; flight imports are not logged here yet."
+    },
     "tile": {
       "fr24": {
         "title": "From Flightradar24",
@@ -596,6 +634,23 @@
         "title": "From any logbook (CSV)",
         "description": "Upload a flat per-flight CSV — after upload, a mapping wizard opens so you can match each column to a TravStats field.",
         "uploadLabel": "Choose CSV file"
+      },
+      "parse": {
+        "flight": {
+          "title": "From e-mail or PDF",
+          "description": "Read an airline booking confirmation — the usual route. Opens in the flight dialog, where the review of several flights happens.",
+          "action": "Open flight import"
+        },
+        "cruise": {
+          "title": "From e-mail or PDF",
+          "description": "Read a cruise line booking confirmation (AIDA, TUI and generic) — with a preview before committing.",
+          "action": "Read e-mail or PDF"
+        },
+        "lodging": {
+          "title": "From e-mail or PDF",
+          "description": "Read a hotel confirmation, e.g. from Booking.com — with a preview before committing.",
+          "action": "Read e-mail or PDF"
+        }
       }
     },
     "preview": {
@@ -669,7 +724,8 @@
     },
     "toast": {
       "movedFromDashboard": "The flight import has moved here — under Settings → Import."
-    }
+    },
+    "noRoutes": "No import route for this area yet."
   },
   "devices": {
     "title": "Devices",

@@ -39,8 +39,8 @@ describe("DomainSummaryCard", () => {
   it("renders placeholder when stats hasData=false", () => {
     render(
       <DomainSummaryCard
-        domain="hotel"
-        stats={{ domain: "hotel", hasData: false }}
+        domain="lodging"
+        stats={{ domain: "lodging", hasData: false }}
         selectedYear={null}
         compareYear={null}
         compareEnabled={false}

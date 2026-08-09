@@ -121,7 +121,7 @@ async function init() {
     // Step 2.6: Pre-migration backup on major-version bump
     console.log('2️⃣.6 Checking upgrade-backup trigger...');
     const upgradeCtx = await maybeRunPreMigrationBackup();
-    if (upgradeCtx.majorBumped) {
+    if (upgradeCtx.shouldBackup) {
       if (upgradeCtx.backupCreated) {
         console.log(`   ✅ Pre-upgrade backup created: ${upgradeCtx.backupCreated}\n`);
       } else {

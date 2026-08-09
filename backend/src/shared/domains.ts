@@ -3,7 +3,7 @@
  * See: docs/superpowers/specs/2026-04-19-multi-domain-foundation-design.md
  */
 
-export const DOMAIN_KEYS = ['flight', 'cruise', 'hotel', 'poi'] as const;
+export const DOMAIN_KEYS = ['flight', 'cruise', 'lodging', 'poi'] as const;
 export type DomainKey = typeof DOMAIN_KEYS[number];
 
 export interface DomainDescriptor {
@@ -35,13 +35,13 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     color: '#6fa0d6',
     routePrefix: '/cruises',
   },
-  hotel: {
-    key: 'hotel',
-    available: false,
-    i18nKey: 'domain.hotel',
+  lodging: {
+    key: 'lodging',
+    available: true,
+    i18nKey: 'domain.lodging',
     icon: '🏨',
-    color: '#b072d6',
-    routePrefix: '/hotels',
+    color: '#d4778f',
+    routePrefix: '/lodging',
   },
   poi: {
     key: 'poi',
@@ -62,9 +62,9 @@ export const AVAILABLE_DOMAINS: DomainKey[] = DOMAIN_KEYS.filter(
  * pass extraction). Strictly narrower than `AVAILABLE_DOMAINS` because
  * a domain can be live in the UI before a parser exists for it. Used
  * as the runtime allow-list for the `domain` field on every parse
- * endpoint — adding hotel parsing means adding `'hotel'` here once.
+ * endpoint — adding lodging parsing means adding `'lodging'` here once.
  */
-export const PARSER_SUPPORTED_DOMAINS = ['flight', 'cruise'] as const satisfies readonly DomainKey[];
+export const PARSER_SUPPORTED_DOMAINS = ['flight', 'cruise', 'lodging'] as const satisfies readonly DomainKey[];
 export type ParserSupportedDomain = (typeof PARSER_SUPPORTED_DOMAINS)[number];
 
 export function isValidDomain(value: string): value is DomainKey {

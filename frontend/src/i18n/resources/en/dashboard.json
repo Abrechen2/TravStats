@@ -47,13 +47,43 @@
     "exportFailed": "Export failed",
     "importFailed": "Import failed",
     "importPartial": "{{success}} of {{total}} flights imported ({{errors}} errors)",
-    "loadCruises": "Could not load cruises. Please try again later."
+    "loadCruises": "Could not load cruises. Please try again later.",
+    "loadLodgings": "Could not load lodgings. Please try again later."
   },
   "cruiseTab": {
     "loading": "Loading cruises …",
     "emptyTitle": "No cruises yet",
     "emptyBody": "Add your first cruise via “+ Add cruise” or import a booking email or PDF on the cruises page.",
     "emptyCta": "Go to cruises page"
+  },
+  "lodgingTab": {
+    "loading": "Loading lodgings …",
+    "emptyTitle": "No lodgings yet",
+    "emptyBody": "Add your first lodging via “+ Hotel” on the lodging page.",
+    "listTitle": "Lodgings",
+    "listEmpty": "No lodgings recorded yet",
+    "independentChain": "Independent",
+    "stats": {
+      "hotels": "Lodgings",
+      "stays": "Stays",
+      "nights": "Nights",
+      "chains": "Chains",
+      "spend": "Spend",
+      "spendOtherCurrency": "incl. {{orig}} → {{converted}}",
+      "rating": "Avg. rating",
+      "noRating": "No rating"
+    },
+    "nightsChartTitle": "Nights over time",
+    "nightsChartEmpty": "No nights to show yet",
+    "chainsViewTitle": "Stays per chain",
+    "chainsViewEmpty": "No chains to show yet",
+    "currencyBreakdown": {
+      "title": "Spend by currency",
+      "baseLabel": "In base currency",
+      "empty": "No spend recorded yet",
+      "hint": "Each amount is shown in its own original currency and is not summed — the converted total above can therefore differ from a simple sum.",
+      "otherBaseLabel": "Older base currencies (saved before a switch, not counted here)"
+    }
   },
   "success": {
     "flightAdded": "Flight added successfully",
@@ -127,6 +157,7 @@
       "all": "All",
       "flight": "Flights",
       "cruise": "Cruises",
+      "lodging": "Lodging",
       "poi": "POIs"
     }
   },
@@ -142,6 +173,7 @@
     "addPerTab": {
       "flight": "Add flight",
       "cruise": "Add cruise",
+      "lodging": "Add hotel",
       "poi": "Add POI"
     }
   },
@@ -169,7 +201,10 @@
     "sea-routes": "Sea routes",
     "itinerary": "Itinerary",
     "port-frequency": "Port frequency",
-    "markers": "Markers"
+    "markers": "Markers",
+    "map": "Map",
+    "nights": "Nights",
+    "chains": "Chains"
   },
   "poi": {
     "title": "POIs coming soon",
@@ -203,6 +238,10 @@
     "cruisePerCruise": "Cruises (one colour per cruise)",
     "cruiseSolid": "Cruises",
     "flightFrequency": "Flights (frequency)",
-    "flightSolid": "Flights"
+    "flightSolid": "Flights",
+    "lodging": "Lodging"
+  },
+  "userMenu": {
+    "label": "Account menu"
   }
 }

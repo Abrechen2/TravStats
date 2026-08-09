@@ -1,0 +1,297 @@
+{
+  "nav": {
+    "link": "Lodging"
+  },
+  "list": {
+    "title": "Lodging",
+    "loading": "Loading lodgings …",
+    "loadError": "Could not load lodgings",
+    "empty": "No lodgings recorded yet",
+    "columns": {
+      "name": "Name",
+      "chain": "Chain",
+      "location": "Location",
+      "stays": "Stays",
+      "nights": "Nights",
+      "rating": "Rating",
+      "spend": "Spend"
+    },
+    "otherCurrencyHint": "Includes further amounts in an older base currency, not counted here."
+  },
+  "filter": {
+    "searchPlaceholder": "Search by name or location …",
+    "type": "Type",
+    "allTypes": "All types",
+    "year": "Year",
+    "allYears": "All years",
+    "country": "Country",
+    "allCountries": "All countries",
+    "sort": "Sort",
+    "sortOptions": {
+      "name": "Name",
+      "nights": "Nights",
+      "rating": "Rating",
+      "spend": "Spend"
+    },
+    "showing": "{{count}} shown"
+  },
+  "add": {
+    "title": "Add hotel"
+  },
+  "detail": {
+    "loading": "Loading lodging …",
+    "notFound": "Lodging not found",
+    "avgRating": "Avg. rating",
+    "stays": "Stays",
+    "staysEmpty": "No stays recorded yet",
+    "spend": "Spend",
+    "spendOriginal": "Original",
+    "spendBase": "In base currency",
+    "spendPerNight": "Per night",
+    "noLocation": "No location on file",
+    "deleteConfirmTitle": "Delete lodging?",
+    "deleteConfirmMessage": "This lodging and its {{count}} stay(s) will be permanently deleted. This action cannot be undone.",
+    "deleteSuccess": "Lodging deleted",
+    "deleteError": "Could not delete lodging"
+  },
+  "field": {
+    "name": "Name",
+    "type": "Type",
+    "stars": "Stars",
+    "address": "Address",
+    "city": "City",
+    "country": "Country",
+    "amenities": "Amenities",
+    "amenitiesPlaceholder": "e.g. Wi-Fi, pool, parking (comma-separated)",
+    "notes": "Notes",
+    "independent": "Independent",
+    "staysCount": "{{count}} stays",
+    "staysCount_one": "{{count}} stay",
+    "staysCount_other": "{{count}} stays",
+    "nightsCount": "{{count}} nights",
+    "nightsCount_one": "{{count}} night",
+    "nightsCount_other": "{{count}} nights",
+    "room": "Room",
+    "board": "Board",
+    "awardStay": "Award stay",
+    "ratingRoom": "Room",
+    "ratingBreakfast": "Breakfast",
+    "ratingService": "Service",
+    "ratingOverall": "Overall",
+    "bookingReference": "Booking reference",
+    "chain": "Chain",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "status": "Status",
+    "roomCategory": "Room category",
+    "currency": "Currency",
+    "totalPrice": "Total price",
+    "pricePerNight": "Price per night",
+    "roomAmenities": "Room amenities",
+    "roomAmenitiesPlaceholder": "e.g. sea view, balcony (comma-separated)",
+    "membership": "Loyalty program",
+    "noMembership": "No loyalty program",
+    "membershipDerive": "Automatic (from the chain)",
+    "membershipNone": "No programme used",
+    "membershipSource": {
+      "override": "manually assigned",
+      "chain": "from the chain",
+      "lodging": "assigned to this hotel",
+      "none": "no programme"
+    },
+    "trip": "Trip",
+    "noTrip": "Not linked to a trip",
+    "companions": "Companions",
+    "programName": "Program name",
+    "membershipNumber": "Membership number",
+    "tier": "Tier",
+    "ratingOverallDerived": "Average of room, breakfast and service"
+  },
+  "type": {
+    "hotel": "Hotel",
+    "campsite": "Campsite",
+    "guesthouse": "Guesthouse",
+    "apartment": "Apartment",
+    "hostel": "Hostel"
+  },
+  "board": {
+    "none": "No board",
+    "breakfast": "Breakfast",
+    "half": "Half board",
+    "full": "Full board",
+    "all_inclusive": "All-inclusive"
+  },
+  "stayStatus": {
+    "scheduled": "Scheduled",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "in_progress": "In progress",
+    "derivedHint": "derived from the dates"
+  },
+  "form": {
+    "createTitle": "New lodging",
+    "editTitle": "Edit lodging",
+    "saveError": "Could not save lodging",
+    "searchLabel": "Search accommodation"
+  },
+  "fx": {
+    "source": "ECB",
+    "tooltip": "Converted at the ECB reference rate for the check-in day"
+  },
+  "chainPicker": {
+    "placeholder": "Search chain …",
+    "clear": "✕ Clear",
+    "addMissing": "Add “{{name}}” as a new chain",
+    "confirmAdd": "Really add “{{name}}” as a new chain?",
+    "matchedExisting": "Already exists — matched to “{{name}}”",
+    "addError": "Could not create chain"
+  },
+  "stayEditor": {
+    "addStay": "Add stay",
+    "createTitle": "New stay",
+    "editTitle": "Edit stay",
+    "datesSection": "Dates",
+    "datesRequired": "Please provide check-in and check-out dates",
+    "ratingsSection": "Ratings",
+    "priceSection": "Price",
+    "amenitiesSection": "Amenities & notes",
+    "loyaltySection": "Loyalty program",
+    "overrideMembership": "Assign a different one",
+    "receiptSection": "Receipt",
+    "notesSection": "Notes",
+    "saveError": "Could not save stay"
+  },
+  "membership": {
+    "title": "Loyalty programs",
+    "add": "Add program",
+    "coversChains": "Covers these chains",
+    "empty": "No loyalty programs added yet",
+    "loadError": "Could not load loyalty programs",
+    "saveError": "Could not save loyalty program",
+    "duplicateError": "This program is already on file",
+    "deleteError": "Could not delete loyalty program",
+    "extendExisting": "Extend \"{{name}}\" to cover this chain instead"
+  },
+  "chainDetail": {
+    "loading": "Loading chain …",
+    "notFound": "Chain not found",
+    "noLoyaltyProgram": "No loyalty program on file",
+    "sharedWith": "\"{{program}}\" — shared with {{chains}}",
+    "hotelsTitle": "Your hotels in this chain",
+    "hotelsEmpty": "No hotels of this chain recorded yet.",
+    "noMembershipYet": "No loyalty membership recorded for this chain yet.",
+    "stats": {
+      "hotels": "Hotels",
+      "stays": "Stays",
+      "nights": "Nights",
+      "spend": "Spend",
+      "rating": "Avg. rating"
+    }
+  },
+  "import": {
+    "preview": {
+      "title": "Preview ({{count}} row(s))",
+      "newLabel": "new",
+      "presentLabel": "already present",
+      "needsInputLabel": "need you",
+      "needsInputHint": "Please review and decide these rows before committing.",
+      "commit": "Commit",
+      "commitError": "Could not commit the import"
+    },
+    "matchedLodgingHint": "This row attaches to an existing hotel — name and city cannot be edited here.",
+    "fields": {
+      "name": "Name",
+      "type": "Type",
+      "chainName": "Chain",
+      "stars": "Stars",
+      "address": "Address",
+      "city": "City",
+      "country": "Country",
+      "lat": "Latitude",
+      "lon": "Longitude",
+      "googlePlaceId": "Google place ID",
+      "checkIn": "Check-in",
+      "checkOut": "Check-out",
+      "roomCategory": "Room category",
+      "board": "Board",
+      "totalPrice": "Price",
+      "currency": "Currency",
+      "ratingRoom": "Room rating",
+      "ratingBreakfast": "Breakfast rating",
+      "ratingService": "Service rating",
+      "ratingOverall": "Overall rating",
+      "bookingReference": "Booking reference",
+      "notes": "Notes",
+      "hints": "Hints",
+      "action": "Action"
+    },
+    "actions": {
+      "choose": "— choose —",
+      "create": "Create",
+      "skip": "Skip"
+    },
+    "flags": {
+      "missing_name": "Missing name",
+      "unresolvable_lodging_name": "Hotel name could not be matched",
+      "ambiguous_lodging_name": "Hotel name is ambiguous",
+      "malformed_date": "Malformed date",
+      "invalid_date_range": "Invalid date range",
+      "missing_coordinates": "Missing coordinates"
+    },
+    "dedupeHints": {
+      "lodging_exact_ref": "Already imported (exact reference match)",
+      "lodging_name_city": "Matching hotel found (name + city)",
+      "stay_exact_ref": "Stay already on file (exact reference match)",
+      "stay_same_dates": "Stay already on file (same dates)"
+    },
+    "noBookings": "No booking data was found in this email or PDF.",
+    "csv": {
+      "title": "CSV import",
+      "description": "Import lodgings and/or stays from a CSV file — e.g. a Google Maps export or a hand-maintained spreadsheet. A one-time migration tool, not the ongoing import path.",
+      "uploadLabel": "Choose CSV file"
+    },
+    "errors": {
+      "emptyCsv": "This CSV file has no rows.",
+      "noRows": "No row in this file could be turned into an import candidate.",
+      "noRowsReason": "No row in this file could be read — {{reason}}. Check the column mapping and the format of that column.",
+      "rowReasons": {
+        "missing_name": "{{count}}× no hotel name",
+        "unreadable_date": "{{count}}× unreadable date (expected 2026-03-07, 07.03.2026 or 07.03.26)",
+        "unreadable_number": "{{count}}× unreadable number"
+      },
+      "rowSample": " (e.g. \"{{sample}}\" in row {{row}})",
+      "skippedRows": "{{count}} row(s) were skipped due to invalid values.",
+      "parseFailed": "This CSV file could not be read.",
+      "previewFailed": "The import preview could not be loaded."
+    },
+    "commitResult": {
+      "success": "Imported {{createdLodgings}} hotel(s) and {{createdStays}} stay(s), skipped {{skipped}} (already present).",
+      "partial": "Imported {{createdLodgings}} hotel(s) and {{createdStays}} stay(s), skipped {{skipped}} (already present), {{failedCount}} row(s) failed: {{reasons}}",
+      "failureCodes": {
+        "ownership_mismatch": "belongs to another account",
+        "missing_lodging_reference": "missing hotel reference",
+        "unexpected_error": "unexpected error"
+      }
+    },
+    "batches": {
+      "title": "Previous imports",
+      "loading": "Loading imports …",
+      "empty": "No imports yet.",
+      "loadError": "Could not load the import history.",
+      "source": {
+        "csv": "CSV",
+        "email": "Email",
+        "pdf": "PDF"
+      },
+      "created": "{{lodgingCount}} hotel(s) and {{stayCount}} stay(s) created",
+      "revert": "Revert import",
+      "revertError": "Could not revert the import.",
+      "confirmTitle": "Really revert this import?",
+      "confirmMessage": "Only what this import created is deleted. Stays added by hand or attached by a later import are kept — their hotel stays too.",
+      "revertResult": {
+        "success": "Deleted {{deletedLodgings}} hotel(s) and {{deletedStays}} stay(s).",
+        "withDetached": "Deleted {{deletedLodgings}} hotel(s) and {{deletedStays}} stay(s), kept {{detachedLodgings}} hotel(s) (they have other stays)."
+      }
+    }
+  }
+}

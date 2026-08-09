@@ -2,20 +2,21 @@
 //
 // Each domain runs in its own try/catch so a single 500 (e.g. cruise
 // endpoint down) doesn't blank the entire overview — the failing
-// domain's slot stays empty, the rest renders. Hotel + POI are handled
-// by stub adapters today; promoting them to real domains only requires
-// flipping `available=true` in shared/domains.ts and replacing the stub
-// with a real adapter call here.
+// domain's slot stays empty, the rest renders. POI is still handled by a
+// stub adapter (`available: false` in shared/domains.ts); lodging has a
+// real adapter (`adaptLodging`) fed by `/stats/lodging` + the raw lodging
+// list.
 import { useEffect, useState } from "react";
 import type { Flight } from "../../../types";
 import { statsApi } from "../../api";
 import { cruiseApi } from "../../api/cruise";
+import { listLodgings, getLodgingStats } from "../../api/lodging";
 import { logger } from "../../logger";
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import type { DomainKey } from "../../../shared/domains";
 import { adaptFlight } from "./flightStatsAdapter";
 import { adaptCruise } from "./cruiseStatsAdapter";
-import { adaptHotel } from "./hotelStatsAdapter";
+import { adaptLodging } from "./lodgingStatsAdapter";
 import { adaptPoi } from "./poiStatsAdapter";
 import type { DomainStats, DomainStatsMap } from "./types";
 import { toYearKeyed } from "./yearKeyed";
@@ -90,8 +91,13 @@ async function loadDomain(domain: DomainKey, flights: Flight[]): Promise<DomainS
       ]);
       return adaptCruise({ stats: cruiseStats, cruises });
     }
-    case "hotel":
-      return adaptHotel();
+    case "lodging": {
+      const [lodgingStats, lodgings] = await Promise.all([
+        getLodgingStats(),
+        listLodgings({}),
+      ]);
+      return adaptLodging({ stats: lodgingStats, lodgings });
+    }
     case "poi":
       return adaptPoi();
   }

@@ -11,15 +11,57 @@
  *     to a literal ".
  *   - CRLF and LF line endings are both accepted; a trailing newline is
  *     ignored. UTF-8 BOM is stripped.
+ *   - The delimiter is comma, semicolon or tab, detected from the header
+ *     row (see `detectDelimiter`).
  *   - Output is `Array<Record<header, string>>`. Cells past the header
  *     length are dropped; missing trailing cells default to "".
  */
 
 const BOM = "﻿";
 
+/**
+ * Pick the delimiter from the HEADER ROW alone.
+ *
+ * German Excel writes `;` by default (comma is the decimal mark in that
+ * locale) and "Text (tab delimited)" writes `\t`. Parsed as comma, such a
+ * file collapses into ONE column: the import wizard offers a single nonsense
+ * header, every mapped cell reads back empty, and the importer rejects the
+ * whole file — the exact "not a single row could be read" dead end reported
+ * against the lodging stays import.
+ *
+ * Deliberately conservative: a header containing even ONE comma stays on
+ * comma. Files that parse correctly today therefore cannot change meaning —
+ * only files that are currently unreadable start working. Quoted header
+ * cells are skipped so a `"Name, Ort";Land` header still detects `;`.
+ */
+function detectDelimiter(text: string): string {
+  const counts = { ",": 0, ";": 0, "\t": 0 };
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') i += 1;
+        else inQuotes = false;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      inQuotes = true;
+      continue;
+    }
+    // Header row only — the first unquoted line terminator ends the scan.
+    if (ch === "\n" || ch === "\r") break;
+    if (ch === "," || ch === ";" || ch === "\t") counts[ch] += 1;
+  }
+  if (counts[","] > 0) return ",";
+  if (counts[";"] > 0 || counts["\t"] > 0) return counts[";"] >= counts["\t"] ? ";" : "\t";
+  return ",";
+}
+
 export function parseCsv(content: string): Record<string, string>[] {
   const text = content.startsWith(BOM) ? content.slice(1) : content;
-  const rows = tokenize(text);
+  const rows = tokenize(text, detectDelimiter(text));
   if (rows.length === 0) return [];
 
   // First non-empty row = header
@@ -48,7 +90,7 @@ export function parseCsv(content: string): Record<string, string>[] {
  * machine so we don't need a regex-based hack for quoted cells with
  * embedded delimiters or newlines.
  */
-function tokenize(text: string): string[][] {
+function tokenize(text: string, delimiter: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = "";
@@ -85,7 +127,7 @@ function tokenize(text: string): string[][] {
       inQuotes = true;
       continue;
     }
-    if (ch === ",") {
+    if (ch === delimiter) {
       pushCell();
       continue;
     }
