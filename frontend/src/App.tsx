@@ -39,6 +39,7 @@ const PendingUpdatesPage = lazy(() => import("./pages/PendingUpdatesPage"));
 const AircraftPage = lazy(() => import("./pages/AircraftPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const ForceChangePasswordPage = lazy(() => import("./pages/ForceChangePasswordPage"));
+const TwoFactorChallengePage = lazy(() => import("./pages/TwoFactorChallengePage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 function LoadingFallback(): JSX.Element {
@@ -251,6 +252,7 @@ function AppContent() {
               />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/change-password" element={<ForceChangePasswordPage />} />
+              <Route path="/2fa" element={<TwoFactorChallengePage />} />
 
               {/* Protected routes */}
               <Route path="/" element={<Navigate to="/dashboard" replace />} />

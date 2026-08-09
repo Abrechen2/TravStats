@@ -2,7 +2,10 @@ import type { User } from "../../types";
 
 import { api } from "./client";
 
-export type LoginResult = { user: User } | { requiresPasswordChange: true };
+export type LoginResult =
+  | { user: User }
+  | { requiresPasswordChange: true }
+  | { requiresTwoFactor: true };
 
 // Auth API
 export const authApi = {
@@ -24,6 +27,18 @@ export const authApi = {
       username,
       password,
     });
+    return data;
+  },
+
+  /**
+   * Redeem the login challenge. The `twofa_token` cookie set by `login` is the
+   * credential here — there is no session yet, so this call carries no auth
+   * header and relies on `withCredentials` like every other call.
+   */
+  verifyTwoFactor: async (
+    body: { code: string } | { recoveryCode: string }
+  ): Promise<{ user: User }> => {
+    const { data } = await api.post<{ user: User }>("/auth/2fa/verify", body);
     return data;
   },
 
