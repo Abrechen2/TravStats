@@ -371,6 +371,28 @@ frontend/src/
   user's own typo) is deliberately distinct from `protocol` (Immich answered but
   the payload/version was unexpected) so a URL typo does not send the user
   debugging their server version.
+- **Two-factor and passkeys are two DIFFERENT trades** — read this before
+  touching either. TOTP (`routes/auth/twoFactor.ts`) is a second factor *on top
+  of* the password: the login handler answers a correct password with
+  `{requiresTwoFactor: true}` plus a `twofa_token` cookie. That branch must stay
+  **ABOVE** the `mustChangePassword` branch in `routes/auth.ts` — an account with
+  both flags would otherwise get a `change_token` on the password alone, and
+  `force-change-password` consumes only that cookie, which is a full account
+  takeover. A test pins the ordering; do not "tidy" it.
+  A passkey (`routes/auth/passkeys.ts`) is the opposite trade: it *replaces* the
+  password AND satisfies two-factor by itself, so `login/verify` issues the
+  session directly and never consults `twoFactorEnabledAt`. That is only sound
+  because both ceremonies demand `userVerification: "required"` and pass
+  `requireUserVerification: true` — the assertion proves possession *plus* a
+  local gesture. **Relaxing that to `"preferred"` silently converts the passkey
+  route into a 2FA bypass.** Sign-in is username-less on purpose (no
+  `allowCredentials`), which is what lets a syncing password manager offer its
+  discoverable credential. A credential is bound to ONE rpId forever, so the
+  rpId is an explicit admin setting and never guessed from the `Host` header;
+  origins are a list because several may share one rpId, but a bare IP is not a
+  valid rpId and plain http outside localhost is not a secure context at all —
+  `passkeyUnavailableReason()` says which, and the UI explains instead of
+  drawing a button that always fails.
 
 ## Code Style
 
