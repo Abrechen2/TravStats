@@ -2,10 +2,16 @@ import { prisma } from "../../../db";
 import { hashPassword } from "../../../utils/password";
 import {
   RECOVERY_CODE_COUNT,
+  ALPHABET,
   generateRecoveryCodes,
   consumeRecoveryCode,
   countUnusedRecoveryCodes,
 } from "../recoveryCodeService";
+
+// Pinned to the exported alphabet so this test fails if someone widens it
+// back out (e.g. reintroducing vowels or look-alikes) rather than passing
+// against the whole a-z0-9 range.
+const CODE_PATTERN = new RegExp(`^[${ALPHABET}]{5}-[${ALPHABET}]{5}$`);
 
 describe("recoveryCodeService", () => {
   let userId: string;
@@ -25,7 +31,7 @@ describe("recoveryCodeService", () => {
   it("issues ten readable codes", async () => {
     const codes = await generateRecoveryCodes(userId);
     expect(codes).toHaveLength(RECOVERY_CODE_COUNT);
-    for (const code of codes) expect(code).toMatch(/^[a-z0-9]{5}-[a-z0-9]{5}$/);
+    for (const code of codes) expect(code).toMatch(CODE_PATTERN);
     expect(new Set(codes).size).toBe(RECOVERY_CODE_COUNT);
   });
 
