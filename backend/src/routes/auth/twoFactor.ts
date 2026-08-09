@@ -6,7 +6,12 @@ import { authLimiter } from "../../middleware/rateLimit";
 import { AppError } from "../../middleware/errorHandler";
 import { getAuthCookieOptions } from "../auth";
 import { generateToken } from "../../utils/jwt";
-import { activateTwoFactorSchema, verifyTwoFactorSchema } from "../../schemas/twoFactor";
+import {
+  activateTwoFactorSchema,
+  verifyTwoFactorSchema,
+  disableTwoFactorSchema,
+} from "../../schemas/twoFactor";
+import { comparePassword } from "../../utils/password";
 import {
   generateSecret,
   buildOtpauthUrl,
@@ -202,5 +207,72 @@ router.post("/verify", authLimiter, async (req: AuthRequest, res: Response, next
     next(error);
   }
 });
+
+/** Clear everything for the caller. Costs the password, because switching off a
+ *  protection is exactly as sensitive as switching it on. */
+router.post(
+  "/disable",
+  authenticate,
+  authLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.userId!;
+      const { password } = disableTwoFactorSchema.parse(req.body);
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) throw new AppError("User not found", 404);
+      if (!(await comparePassword(password, user.passwordHash))) {
+        throw new AppError("Password is incorrect", 401);
+      }
+
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: userId },
+          data: {
+            twoFactorSecret: null,
+            twoFactorPendingSecret: null,
+            twoFactorEnabledAt: null,
+            twoFactorToken: null,
+            twoFactorTokenExpiry: null,
+          },
+        }),
+        prisma.twoFactorRecoveryCode.deleteMany({ where: { userId } }),
+      ]);
+
+      logger.info({ operation: "two_factor_disabled", userId });
+      res.json({ disabled: true });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/** A new sheet of codes — what you do when the old sheet leaked. */
+router.post(
+  "/recovery-codes",
+  authenticate,
+  authLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.userId!;
+      const { password } = disableTwoFactorSchema.parse(req.body);
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) throw new AppError("User not found", 404);
+      if (!user.twoFactorEnabledAt) {
+        throw new AppError("Two-factor authentication is not enabled", 400);
+      }
+      if (!(await comparePassword(password, user.passwordHash))) {
+        throw new AppError("Password is incorrect", 401);
+      }
+
+      const recoveryCodes = await generateRecoveryCodes(userId);
+      logger.info({ operation: "two_factor_recovery_codes_regenerated", userId });
+      res.json({ recoveryCodes });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 export default router;
