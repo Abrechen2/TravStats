@@ -4,14 +4,13 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
-## [2.5.0] - 2026-08-05
+## [2.5.0] - 2026-08-09
 
 Large minor release. Trips can pull in your Immich photo albums, travel
 companions become real records instead of loose text, airlines and aircraft
 get a proper catalogue behind the scenes, the flight list is rebuilt as a
 departures board, adding and editing a flight finally use the same form, and
-status stops being something you set by hand. Seventeen reported issues close
-with it.
+status stops being something you set by hand.
 
 ### Added
 - **Immich photo albums on a trip** (#154). Link an album from your own Immich
