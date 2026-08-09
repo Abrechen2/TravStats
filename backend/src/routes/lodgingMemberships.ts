@@ -38,6 +38,7 @@ function isUniqueConstraintError(
 // consumer has to know the join table exists.
 const MEMBERSHIP_INCLUDE = {
   chains: { include: { chain: { select: { id: true, name: true } } } },
+  lodgings: { include: { lodging: { select: { id: true, name: true } } } },
 } as const;
 
 type MembershipWithChains = Prisma.LodgingMembershipGetPayload<{
@@ -45,11 +46,13 @@ type MembershipWithChains = Prisma.LodgingMembershipGetPayload<{
 }>;
 
 function serialize(membership: MembershipWithChains) {
-  const { chains, ...rest } = membership;
+  const { chains, lodgings, ...rest } = membership;
   return {
     ...rest,
     chainIds: chains.map((link) => link.chainId),
     chains: chains.map((link) => link.chain),
+    lodgingIds: lodgings.map((link) => link.lodgingId),
+    lodgings: lodgings.map((link) => link.lodging),
   };
 }
 
@@ -69,6 +72,28 @@ async function resolveChainIds(chainIds: number[]): Promise<number[]> {
     const known = new Set(found.map((c) => c.id));
     const missing = unique.filter((id) => !known.has(id));
     throw new AppError(`Unknown chain id(s): ${missing.join(", ")}`, 400);
+  }
+  return unique;
+}
+
+/**
+ * Unlike chains — a shared catalogue where existence is the only question — a
+ * lodging is user-owned, so the lookup is scoped to the caller. An id belonging
+ * to someone else comes back as "unknown", identical to one that never existed,
+ * which is what keeps this from confirming another user's rows. A foreign key
+ * alone would have accepted it.
+ */
+async function resolveLodgingIds(lodgingIds: string[], userId: string): Promise<string[]> {
+  const unique = Array.from(new Set(lodgingIds));
+  if (unique.length === 0) return [];
+  const found = await prisma.lodging.findMany({
+    where: { id: { in: unique }, userId },
+    select: { id: true },
+  });
+  if (found.length !== unique.length) {
+    const known = new Set(found.map((l) => l.id));
+    const missing = unique.filter((id) => !known.has(id));
+    throw new AppError(`Unknown lodging id(s): ${missing.join(", ")}`, 400);
   }
   return unique;
 }
@@ -93,8 +118,9 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     const parsed = createMembershipSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    const { chainIds, ...fields } = parsed.data;
+    const { chainIds, lodgingIds, ...fields } = parsed.data;
     const linkIds = await resolveChainIds(chainIds ?? []);
+    const lodgingLinkIds = await resolveLodgingIds(lodgingIds ?? [], userId);
 
     try {
       const membership = await prisma.lodgingMembership.create({
@@ -102,6 +128,7 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
           ...fields,
           userId,
           chains: { create: linkIds.map((chainId) => ({ chainId })) },
+          lodgings: { create: lodgingLinkIds.map((lodgingId) => ({ lodgingId })) },
         },
         include: MEMBERSHIP_INCLUDE,
       });
@@ -140,11 +167,13 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     const parsed = updateMembershipSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    const { chainIds, ...fields } = parsed.data;
-    // Absent `chainIds` leaves the links untouched; an array REPLACES them (an
-    // empty array is a deliberate "covers no chain"), so editing a tier can
-    // never unlink a membership as a side effect.
+    const { chainIds, lodgingIds, ...fields } = parsed.data;
+    // Absent `chainIds`/`lodgingIds` leaves the links untouched; an array
+    // REPLACES them (an empty array is a deliberate "covers no chain/hotel"),
+    // so editing a tier can never unlink a membership as a side effect.
     const linkIds = chainIds === undefined ? null : await resolveChainIds(chainIds);
+    const lodgingLinkIds =
+      lodgingIds === undefined ? null : await resolveLodgingIds(lodgingIds, userId);
 
     try {
       const membership = await prisma.$transaction(async (tx) => {
@@ -154,6 +183,14 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
           if (linkIds.length > 0) {
             await tx.lodgingMembershipChain.createMany({
               data: linkIds.map((chainId) => ({ membershipId: existing.id, chainId })),
+            });
+          }
+        }
+        if (lodgingLinkIds !== null) {
+          await tx.lodgingMembershipLodging.deleteMany({ where: { membershipId: existing.id } });
+          if (lodgingLinkIds.length > 0) {
+            await tx.lodgingMembershipLodging.createMany({
+              data: lodgingLinkIds.map((lodgingId) => ({ membershipId: existing.id, lodgingId })),
             });
           }
         }

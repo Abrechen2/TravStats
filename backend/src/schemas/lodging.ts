@@ -135,6 +135,9 @@ const baseMembershipSchema = z.object({
   membershipNumber: z.string().max(60).optional(),
   tier: z.string().max(40).optional(),
   chainIds: z.array(z.number().int().positive()).max(100).optional(),
+  // Independent hotels this card covers. Same replace-on-present semantics as
+  // `chainIds`: absent leaves the links alone, an array replaces them.
+  lodgingIds: z.array(z.string().uuid()).max(500).optional(),
 });
 export const createMembershipSchema = baseMembershipSchema;
 export const updateMembershipSchema = baseMembershipSchema

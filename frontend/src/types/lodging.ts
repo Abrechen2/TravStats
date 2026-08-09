@@ -33,6 +33,12 @@ export interface LodgingChainRef {
   name: string;
 }
 
+/** A lodging as it appears on a membership — id + name only, no catalogue detail. */
+export interface LodgingRef {
+  id: string;
+  name: string;
+}
+
 export interface LodgingMembership {
   id: string;
   userId: string;
@@ -43,6 +49,9 @@ export interface LodgingMembership {
   /** Chains this membership covers, linked by id (see `LodgingMembershipChain` in schema.prisma). */
   chainIds: number[];
   chains: LodgingChainRef[];
+  /** Independent hotels this membership covers, linked by id. */
+  lodgingIds: string[];
+  lodgings: LodgingRef[];
   createdAt: string;
   updatedAt: string;
 }
@@ -198,6 +207,11 @@ export interface MembershipInput {
    * that only fixes a tier cannot unlink anything by accident.
    */
   chainIds?: number[];
+  /**
+   * Independent hotels this membership covers. Same rule as `chainIds`: OMIT to
+   * leave them alone, an array replaces them (`[]` covers no hotel).
+   */
+  lodgingIds?: string[];
 }
 
 /**

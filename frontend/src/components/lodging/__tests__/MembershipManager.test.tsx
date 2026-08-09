@@ -25,6 +25,8 @@ const existingMembership: LodgingMembership = {
   tier: "Gold",
   chainIds: [1],
   chains: [{ id: 1, name: "Marriott" }],
+  lodgingIds: [],
+  lodgings: [],
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
