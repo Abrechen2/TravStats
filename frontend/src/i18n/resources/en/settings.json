@@ -809,5 +809,22 @@
     "passwordLabel": "Password to confirm",
     "wrongPassword": "That password is not right."
   },
-  "scopeHint": "Applies to your account only."
+  "scopeHint": "Applies to your account only.",
+  "passkeys": {
+    "title": "Passkeys",
+    "description": "Sign in with a fingerprint, face, PIN or your password manager instead of a password. A passkey replaces both the password and the verification code, because the device already asks you to approve it.",
+    "none": "No passkey registered yet.",
+    "add": "Add a passkey",
+    "nameLabel": "Name for this passkey",
+    "namePlaceholder": "e.g. Phone, Laptop, Bitwarden",
+    "confirmAdd": "Create",
+    "remove": "Remove",
+    "rpIdLabel": "Valid for",
+    "lastUsed": "last used",
+    "neverUsed": "never used",
+    "addFailed": "The passkey could not be created.",
+    "removeFailed": "The passkey could not be removed.",
+    "insecureOrigin": "Passkeys need HTTPS. Browsers refuse them on a plain LAN address — reached through the tunnel they work.",
+    "notConfigured": "An administrator has to set this instance's public address before passkeys can be used."
+  }
 }
