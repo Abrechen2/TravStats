@@ -1,4 +1,5 @@
 import { prisma } from '../../db';
+import { dbLogger } from '../../utils/logger';
 import { resolveCompanions, linkRowsFor } from '../companionService';
 
 describe('resolveCompanions', () => {
@@ -60,6 +61,38 @@ describe('resolveCompanions', () => {
     const mine = await resolveCompanions(userId, ['Anna']);
     const theirs = await resolveCompanions(other.id, ['Anna']);
     expect(theirs[0].id).not.toBe(mine[0].id);
+  });
+
+  // Issue #244. Re-attaching a companion the user already has is the COMMON
+  // path, not a failure — but it used to be written as "create, and on a
+  // unique violation update instead", so the Prisma wrapper in db.ts logged
+  // every one of them at error level. A single 2.5.0 production boot wrote 83
+  // such lines with nothing actually wrong, which destroys "zero errors in the
+  // log" as a health signal: the next reader either distrusts a good deploy or
+  // learns to ignore the error log and misses a real error.
+  it('writes no error-level log line when the companion already exists', async () => {
+    await resolveCompanions(userId, ['Anna Müller']);
+
+    const errorSpy = jest.spyOn(dbLogger, 'error').mockImplementation(() => undefined);
+    try {
+      const again = await resolveCompanions(userId, ['Anna Müller']);
+      expect(again).toHaveLength(1);
+      expect(errorSpy).not.toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('still raises genuinely unexpected database errors', async () => {
+    // The old catch swallowed only P2002 and rethrew everything else. Losing
+    // that when the upsert replaced it would hide real failures.
+    const boom = new Error('connection reset');
+    const upsertSpy = jest.spyOn(prisma.companion, 'upsert').mockRejectedValueOnce(boom);
+    try {
+      await expect(resolveCompanions(userId, ['Bea'])).rejects.toThrow('connection reset');
+    } finally {
+      upsertSpy.mockRestore();
+    }
   });
 });
 
