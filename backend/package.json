@@ -47,6 +47,7 @@
     "@asteasolutions/zod-to-openapi": "^7.3.4",
     "@kenjiuno/msgreader": "^1.28.0",
     "@prisma/client": "^5.7.0",
+    "@simplewebauthn/server": "^13.3.2",
     "archiver": "^7.0.1",
     "axios": "^1.15.2",
     "bcrypt": "^5.1.1",

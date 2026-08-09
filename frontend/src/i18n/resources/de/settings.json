@@ -809,5 +809,22 @@
     "passwordLabel": "Passwort zur Bestätigung",
     "wrongPassword": "Das Passwort stimmt nicht."
   },
-  "scopeHint": "Gilt nur für dein Konto."
+  "scopeHint": "Gilt nur für dein Konto.",
+  "passkeys": {
+    "title": "Passkeys",
+    "description": "Melde dich mit Fingerabdruck, Gesichtserkennung, PIN oder deinem Passwortmanager an — statt mit dem Passwort. Ein Passkey ersetzt beides: Passwort und Bestätigungscode, weil das Gerät die Freigabe schon selbst abfragt.",
+    "none": "Noch kein Passkey hinterlegt.",
+    "add": "Passkey hinzufügen",
+    "nameLabel": "Name für diesen Passkey",
+    "namePlaceholder": "z. B. Handy, Notebook, Bitwarden",
+    "confirmAdd": "Anlegen",
+    "remove": "Entfernen",
+    "rpIdLabel": "Gültig für",
+    "lastUsed": "zuletzt benutzt",
+    "neverUsed": "noch nie benutzt",
+    "addFailed": "Der Passkey konnte nicht angelegt werden.",
+    "removeFailed": "Der Passkey konnte nicht entfernt werden.",
+    "insecureOrigin": "Passkeys brauchen HTTPS. Über eine reine LAN-Adresse ohne HTTPS verweigert der Browser sie — erreichbar über den Tunnel funktionieren sie.",
+    "notConfigured": "Für Passkeys muss ein Administrator zuerst die öffentliche Adresse dieser Instanz hinterlegen."
+  }
 }
