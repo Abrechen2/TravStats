@@ -89,6 +89,8 @@ export interface LodgingStay {
   roomAmenities: string[];
   bookingReference: string | null;
   membershipId: string | null;
+  /** true = no programme was used for this stay; false = derive from the hotel. */
+  membershipOptOut: boolean;
   receiptUrl: string | null;
   companions: string[];
   notes: string | null;
@@ -185,6 +187,7 @@ export interface StayInput {
   roomAmenities?: string[];
   bookingReference?: string | null;
   membershipId?: string | null;
+  membershipOptOut?: boolean;
   receiptUrl?: string | null;
   companions?: string[];
   notes?: string | null;

@@ -992,4 +992,46 @@ describe("Lodging API", () => {
       expect(still).not.toBeNull();
     });
   });
+
+  describe("POST/PATCH /api/v1/lodging/:id/stays — membership opt-out", () => {
+    let optOutLodgingId: string;
+
+    beforeAll(async () => {
+      const l = await prisma.lodging.create({ data: { userId, name: "Opt Out Hotel" } });
+      optOutLodgingId = l.id;
+    });
+
+    it("defaults to false and round-trips true", async () => {
+      const created = await request(app)
+        .post(`/api/v1/lodging/${optOutLodgingId}/stays`)
+        .set("Cookie", authCookie)
+        .send({ checkIn: "2026-02-01T15:00:00.000Z", checkOut: "2026-02-02T11:00:00.000Z" });
+      expect(created.status).toBe(201);
+      expect(created.body.data.membershipOptOut).toBe(false);
+
+      const patched = await request(app)
+        .patch(`/api/v1/lodging/${optOutLodgingId}/stays/${created.body.data.id}`)
+        .set("Cookie", authCookie)
+        .send({ membershipOptOut: true });
+      expect(patched.status).toBe(200);
+      expect(patched.body.data.membershipOptOut).toBe(true);
+    });
+
+    it("can be turned back off, and does not clear the override on its own", async () => {
+      const created = await request(app)
+        .post(`/api/v1/lodging/${optOutLodgingId}/stays`)
+        .set("Cookie", authCookie)
+        .send({
+          checkIn: "2026-02-03T15:00:00.000Z",
+          checkOut: "2026-02-04T11:00:00.000Z",
+          membershipOptOut: true,
+        });
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${optOutLodgingId}/stays/${created.body.data.id}`)
+        .set("Cookie", authCookie)
+        .send({ membershipOptOut: false });
+      expect(res.status).toBe(200);
+      expect(res.body.data.membershipOptOut).toBe(false);
+    });
+  });
 });

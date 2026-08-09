@@ -86,6 +86,7 @@ function makeStay(overrides: Partial<LodgingStay> = {}): LodgingStay {
     roomAmenities: [],
     bookingReference: null,
     membershipId: null,
+    membershipOptOut: false,
     receiptUrl: null,
     companions: [],
     notes: null,
