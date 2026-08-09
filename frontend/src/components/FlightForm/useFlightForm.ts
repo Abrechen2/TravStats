@@ -301,7 +301,12 @@ export function useFlightForm(
         // useEffect clears errors on every transition, so jumping to
         // "complete" here would drop the user into manual entry with no
         // indication of what went wrong (issue #82 follow-up).
-        if (data?.error === "LOOKUP_UNAVAILABLE") {
+        if (data?.error === "LOOKUP_NOT_CONFIGURED") {
+          // Nothing was searched — no provider is set up. Saying "not found"
+          // here sends the user looking for a better date instead of a key
+          // (#232).
+          setError(t("errors:lookupNotConfigured"));
+        } else if (data?.error === "LOOKUP_UNAVAILABLE") {
           setError(t("errors:lookupOutsideLiveWindow"));
         } else if (data?.error === "NO_FLIGHT_DATA_API_GAP") {
           setError(t("errors:noFlightDataApiGap"));
