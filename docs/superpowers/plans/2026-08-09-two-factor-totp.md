@@ -55,7 +55,7 @@
 **Interfaces:**
 - Produces: `User.twoFactorSecret`, `User.twoFactorEnabledAt`, `User.twoFactorPendingSecret`, `User.twoFactorToken`, `User.twoFactorTokenExpiry`; model `TwoFactorRecoveryCode { id, userId, codeHash, usedAt, createdAt }`
 
-- [ ] **Step 1: Add the columns to `User`**
+- [x] **Step 1: Add the columns to `User`**
 
 Insert after the `changeTokenExpiry` line:
 
@@ -75,7 +75,7 @@ Insert after the `changeTokenExpiry` line:
   twoFactorRecoveryCodes TwoFactorRecoveryCode[]
 ```
 
-- [ ] **Step 2: Add the recovery-code model**
+- [x] **Step 2: Add the recovery-code model**
 
 Insert after the `PairingCode` model:
 
@@ -98,7 +98,7 @@ model TwoFactorRecoveryCode {
 }
 ```
 
-- [ ] **Step 3: Create the migration**
+- [x] **Step 3: Create the migration**
 
 Run (worktree-local database, never `flights_dev`):
 
@@ -119,7 +119,7 @@ npx prisma generate
 rm -f node_modules/.prisma/client/query_engine-windows.dll.node.locked
 ```
 
-- [ ] **Step 4: Verify the columns exist**
+- [x] **Step 4: Verify the columns exist**
 
 Run:
 
@@ -130,7 +130,7 @@ docker exec travstats-db-dev psql -U flights_dev -d flights_2fa -c "\d two_facto
 
 Expected: five `two_factor_*` columns on `users`, and the recovery-code table with a `user_id` index.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/prisma/schema.prisma backend/prisma/migrations
@@ -153,13 +153,13 @@ git commit -m "feat(2fa): schema for TOTP secrets and recovery codes"
   - `encryptSecret(secret: string): string` / `decryptSecret(stored: string): string`
   - `verifyCode(secret: string, code: string): boolean` — secret is PLAINTEXT
 
-- [ ] **Step 1: Add the dependency**
+- [x] **Step 1: Add the dependency**
 
 ```bash
 cd backend && npm install otplib@^12.0.1
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 ```typescript
 import { authenticator } from "otplib";
@@ -230,12 +230,12 @@ describe("totpService", () => {
 });
 ```
 
-- [ ] **Step 3: Run it and watch it fail**
+- [x] **Step 3: Run it and watch it fail**
 
 Run: `cd backend && DATABASE_URL="postgresql://flights_dev:dev_password_change_me_123@localhost:5433/flights_2fa" npx jest src/services/twoFactor/__tests__/totpService.test.ts`
 Expected: FAIL — `Cannot find module '../totpService'`.
 
-- [ ] **Step 4: Implement**
+- [x] **Step 4: Implement**
 
 ```typescript
 import { authenticator } from "otplib";
@@ -277,12 +277,12 @@ export function verifyCode(secret: string, code: string): boolean {
 }
 ```
 
-- [ ] **Step 5: Run the tests and watch them pass**
+- [x] **Step 5: Run the tests and watch them pass**
 
 Run: `cd backend && DATABASE_URL="postgresql://flights_dev:dev_password_change_me_123@localhost:5433/flights_2fa" npx jest src/services/twoFactor/__tests__/totpService.test.ts`
 Expected: PASS, 7 tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/package.json backend/package-lock.json backend/src/services/twoFactor
@@ -305,7 +305,7 @@ git commit -m "feat(2fa): TOTP secret generation and verification"
   - `consumeRecoveryCode(userId: string, code: string): Promise<boolean>`
   - `countUnusedRecoveryCodes(userId: string): Promise<number>`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 import { prisma } from "../../../db";
@@ -382,12 +382,12 @@ describe("recoveryCodeService", () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cd backend && DATABASE_URL="postgresql://flights_dev:dev_password_change_me_123@localhost:5433/flights_2fa" npx jest src/services/twoFactor/__tests__/recoveryCodeService.test.ts`
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```typescript
 import crypto from "crypto";
@@ -469,12 +469,12 @@ export async function countUnusedRecoveryCodes(userId: string): Promise<number> 
 }
 ```
 
-- [ ] **Step 4: Run the tests and watch them pass**
+- [x] **Step 4: Run the tests and watch them pass**
 
 Run: `cd backend && DATABASE_URL="postgresql://flights_dev:dev_password_change_me_123@localhost:5433/flights_2fa" npx jest src/services/twoFactor/__tests__/recoveryCodeService.test.ts`
 Expected: PASS, 7 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/services/twoFactor
@@ -492,7 +492,7 @@ git commit -m "feat(2fa): single-use recovery codes"
 **Interfaces:**
 - Produces: `activateTwoFactorSchema`, `verifyTwoFactorSchema`, `disableTwoFactorSchema`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 import {
@@ -526,12 +526,12 @@ describe("two-factor schemas", () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cd backend && npx jest src/schemas/__tests__/twoFactor.test.ts`
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```typescript
 import { z } from "zod";
@@ -562,12 +562,12 @@ export const verifyTwoFactorSchema = z
 export const disableTwoFactorSchema = z.object({ password: z.string().min(1).max(200) });
 ```
 
-- [ ] **Step 4: Run the tests and watch them pass**
+- [x] **Step 4: Run the tests and watch them pass**
 
 Run: `cd backend && npx jest src/schemas/__tests__/twoFactor.test.ts`
 Expected: PASS, 4 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/schemas/twoFactor.ts backend/src/schemas/__tests__/twoFactor.test.ts
@@ -590,7 +590,7 @@ git commit -m "feat(2fa): request schemas"
   - `POST /api/v1/auth/2fa/activate` → `{ recoveryCodes: string[] }`
   - `GET /api/v1/auth/2fa/status` → `{ enabled: boolean; recoveryCodesLeft: number }`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 import request from "supertest";
@@ -690,12 +690,12 @@ describe("two-factor setup", () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cd backend && DATABASE_URL="postgresql://flights_dev:dev_password_change_me_123@localhost:5433/flights_2fa" npx jest src/routes/__tests__/twoFactor.setup.test.ts`
 Expected: FAIL — every route 404s.
 
-- [ ] **Step 3: Implement the router**
+- [x] **Step 3: Implement the router**
 
 ```typescript
 import { Router, Response, NextFunction } from "express";
@@ -814,7 +814,7 @@ router.post("/activate", authenticate, authLimiter, async (req: AuthRequest, res
 export default router;
 ```
 
-- [ ] **Step 4: Mount it**
+- [x] **Step 4: Mount it**
 
 In `backend/src/index.ts`, beside the existing auth route registration, add:
 
@@ -828,12 +828,12 @@ and, immediately after the line that mounts `/api/v1/auth`:
 app.use('/api/v1/auth/2fa', twoFactorRoutes);
 ```
 
-- [ ] **Step 5: Run the tests and watch them pass**
+- [x] **Step 5: Run the tests and watch them pass**
 
 Run: `cd backend && DATABASE_URL="postgresql://flights_dev:dev_password_change_me_123@localhost:5433/flights_2fa" npx jest src/routes/__tests__/twoFactor.setup.test.ts`
 Expected: PASS, 7 tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/src/routes/auth backend/src/index.ts backend/src/routes/__tests__/twoFactor.setup.test.ts
@@ -853,7 +853,7 @@ git commit -m "feat(2fa): setup, activation and status endpoints"
 - Consumes: Task 2 (`decryptSecret`, `verifyCode`), Task 3 (`consumeRecoveryCode`), Task 4 (`verifyTwoFactorSchema`)
 - Produces: `POST /api/v1/auth/login` may answer `{ requiresTwoFactor: true }` and set a `twofa_token` cookie; `POST /api/v1/auth/2fa/verify` completes the login and sets `auth_token`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 import request from "supertest";
@@ -1050,12 +1050,12 @@ describe("login with two-factor", () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cd backend && DATABASE_URL="postgresql://flights_dev:dev_password_change_me_123@localhost:5433/flights_2fa" npx jest src/routes/__tests__/twoFactor.login.test.ts`
 Expected: FAIL — login still returns a session.
 
-- [ ] **Step 3: Add the challenge branch to login**
+- [x] **Step 3: Add the challenge branch to login**
 
 In `backend/src/routes/auth.ts`, **immediately BEFORE the `mustChangePassword` block** (i.e. right after the `isValid` check that throws "Invalid credentials"). Placing it after that block leaves a bypass — see the comment in the code below:
 
@@ -1092,7 +1092,7 @@ In `backend/src/routes/auth.ts`, **immediately BEFORE the `mustChangePassword` b
     }
 ```
 
-- [ ] **Step 4: Add the verify endpoint**
+- [x] **Step 4: Add the verify endpoint**
 
 Append to `backend/src/routes/auth/twoFactor.ts`:
 
@@ -1183,12 +1183,12 @@ router.post("/verify", authLimiter, async (req: AuthRequest, res: Response, next
 });
 ```
 
-- [ ] **Step 5: Run the tests and watch them pass**
+- [x] **Step 5: Run the tests and watch them pass**
 
 Run: `cd backend && DATABASE_URL="postgresql://flights_dev:dev_password_change_me_123@localhost:5433/flights_2fa" npx jest src/routes/__tests__/twoFactor.login.test.ts`
 Expected: PASS, 9 tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/src/routes/auth.ts backend/src/routes/auth/twoFactor.ts backend/src/routes/__tests__/twoFactor.login.test.ts
@@ -1212,7 +1212,7 @@ git commit -m "feat(2fa): challenge the login and redeem it with a code"
   - `POST /api/v1/admin/users/:id/disable-2fa` — admin clears it for someone else
   - `disableTwoFactorForUsername(username: string): Promise<boolean>` exported from the script for testing
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 import request from "supertest";
@@ -1327,12 +1327,12 @@ describe("turning two-factor off", () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cd backend && DATABASE_URL="postgresql://flights_dev:dev_password_change_me_123@localhost:5433/flights_2fa" npx jest src/routes/__tests__/twoFactor.disable.test.ts`
 Expected: FAIL — routes 404, script module missing.
 
-- [ ] **Step 3: Add the self-service endpoints**
+- [x] **Step 3: Add the self-service endpoints**
 
 Append to `backend/src/routes/auth/twoFactor.ts`:
 
@@ -1398,7 +1398,7 @@ router.post("/recovery-codes", authenticate, authLimiter, async (req: AuthReques
 });
 ```
 
-- [ ] **Step 4: Add the admin endpoint**
+- [x] **Step 4: Add the admin endpoint**
 
 In `backend/src/routes/admin/users.ts`, after the `reset-password` route (it is already behind `requireAdmin` via `admin/index.ts`):
 
@@ -1445,7 +1445,7 @@ router.post(
 );
 ```
 
-- [ ] **Step 5: Write the command-line escape hatch**
+- [x] **Step 5: Write the command-line escape hatch**
 
 Create `backend/src/scripts/disableTwoFactor.ts`:
 
@@ -1514,12 +1514,12 @@ if (require.main === module) {
 }
 ```
 
-- [ ] **Step 6: Run the tests and watch them pass**
+- [x] **Step 6: Run the tests and watch them pass**
 
 Run: `cd backend && DATABASE_URL="postgresql://flights_dev:dev_password_change_me_123@localhost:5433/flights_2fa" npx jest src/routes/__tests__/twoFactor.disable.test.ts`
 Expected: PASS, 7 tests.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/src/routes/auth/twoFactor.ts backend/src/routes/admin/users.ts backend/src/scripts/disableTwoFactor.ts backend/src/routes/__tests__/twoFactor.disable.test.ts
@@ -1541,7 +1541,7 @@ git commit -m "feat(2fa): disable paths — self, admin and command line"
 - Consumes: Task 6 (`{ requiresTwoFactor: true }`, `POST /auth/2fa/verify`)
 - Produces: `LoginResult` gains `{ requiresTwoFactor: true }`; `authApi.verifyTwoFactor(body): Promise<{ user: User }>`
 
-- [ ] **Step 1: Extend the API client**
+- [x] **Step 1: Extend the API client**
 
 Two pieces: the login union widens in `auth.ts`, and a `twoFactorApi` object is
 created for everything the settings section calls. Task 9 mocks
@@ -1601,7 +1601,7 @@ export async function verifyTwoFactor(
 }
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 ```typescript
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -1680,12 +1680,12 @@ describe("TwoFactorChallengePage", () => {
 });
 ```
 
-- [ ] **Step 3: Run it and watch it fail**
+- [x] **Step 3: Run it and watch it fail**
 
 Run: `cd frontend && npx vitest --run src/__tests__/TwoFactorChallengePage.test.tsx`
 Expected: FAIL — module not found.
 
-- [ ] **Step 4: Implement the page**
+- [x] **Step 4: Implement the page**
 
 ```tsx
 import { useState, type FormEvent } from "react";
@@ -1778,7 +1778,7 @@ export default function TwoFactorChallengePage(): JSX.Element {
 }
 ```
 
-- [ ] **Step 5: Route to it from the login page**
+- [x] **Step 5: Route to it from the login page**
 
 In `frontend/src/pages/LoginPage.tsx`, beside the existing `requiresPasswordChange` branch:
 
@@ -1799,12 +1799,12 @@ const TwoFactorChallengePage = lazy(() => import("./pages/TwoFactorChallengePage
 <Route path="/2fa" element={<TwoFactorChallengePage />} />
 ```
 
-- [ ] **Step 6: Run the tests and watch them pass**
+- [x] **Step 6: Run the tests and watch them pass**
 
 Run: `cd frontend && npx vitest --run src/__tests__/TwoFactorChallengePage.test.tsx`
 Expected: PASS, 3 tests.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add frontend/src/lib/api/auth.ts frontend/src/pages/TwoFactorChallengePage.tsx frontend/src/pages/LoginPage.tsx frontend/src/App.tsx frontend/src/__tests__/TwoFactorChallengePage.test.tsx
@@ -1824,7 +1824,7 @@ git commit -m "feat(2fa): challenge step in the login flow"
 - Consumes: Task 5 (`/auth/2fa/setup`, `/auth/2fa/activate`, `/auth/2fa/status`), Task 7 (`/auth/2fa/disable`, `/auth/2fa/recovery-codes`)
 - Produces: settings section id `"security"`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -1893,12 +1893,12 @@ describe("SecuritySection", () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cd frontend && npx vitest --run src/components/settings/__tests__/SecuritySection.test.tsx`
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Implement the section**
+- [x] **Step 3: Implement the section**
 
 ```tsx
 import { useEffect, useState } from "react";
@@ -2011,7 +2011,7 @@ export default function SecuritySection(): JSX.Element {
 }
 ```
 
-- [ ] **Step 4: Register the section**
+- [x] **Step 4: Register the section**
 
 In `frontend/src/pages/SettingsPage.tsx`, add to the section list after `"profile"`:
 
@@ -2025,12 +2025,12 @@ and in the render switch beside the profile case:
             {activeSection === "security" && <SecuritySection />}
 ```
 
-- [ ] **Step 5: Run the tests and watch them pass**
+- [x] **Step 5: Run the tests and watch them pass**
 
 Run: `cd frontend && npx vitest --run src/components/settings/__tests__/SecuritySection.test.tsx`
 Expected: PASS, 4 tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add frontend/src/components/settings/SecuritySection.tsx frontend/src/pages/SettingsPage.tsx frontend/src/components/settings/__tests__/SecuritySection.test.tsx
@@ -2045,7 +2045,7 @@ git commit -m "feat(2fa): security section in settings"
 - Modify: `frontend/src/i18n/resources/de/auth.json`, `frontend/src/i18n/resources/en/auth.json`
 - Modify: `frontend/src/i18n/resources/de/settings.json`, `frontend/src/i18n/resources/en/settings.json`
 
-- [ ] **Step 1: Add the challenge copy**
+- [x] **Step 1: Add the challenge copy**
 
 `de/auth.json`, new `twoFactor` block:
 
@@ -2077,7 +2077,7 @@ git commit -m "feat(2fa): security section in settings"
   }
 ```
 
-- [ ] **Step 2: Add the settings copy**
+- [x] **Step 2: Add the settings copy**
 
 `de/settings.json`, new `security` block:
 
@@ -2111,7 +2111,7 @@ git commit -m "feat(2fa): security section in settings"
   }
 ```
 
-- [ ] **Step 3: Verify both files parse and the keys match**
+- [x] **Step 3: Verify both files parse and the keys match**
 
 Run:
 
@@ -2128,7 +2128,7 @@ console.log('security keys match:', a);
 
 Expected: `security keys match: activate,codeLabel,description,enable,enabled,saveCodes,title,tokenWarning,wrongCode`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add frontend/src/i18n/resources
@@ -2139,7 +2139,7 @@ git commit -m "feat(2fa): German and English copy"
 
 ### Task 11: Full gates and a browser pass
 
-- [ ] **Step 1: Run every gate**
+- [x] **Step 1: Run every gate**
 
 ```bash
 cd backend && npx tsc --noEmit && npm run lint && \
@@ -2149,7 +2149,7 @@ cd ../frontend && npx tsc --noEmit && npm run lint && npx vitest --run
 
 Expected: all green. If a suite fails, check whether it also fails with this work stashed before blaming it on this feature.
 
-- [ ] **Step 2: Walk it in a browser**
+- [x] **Step 2: Walk it in a browser**
 
 Green tests do not show a QR code that fails to scan. With a dev server on the worktree database:
 
@@ -2165,7 +2165,7 @@ Green tests do not show a QR code that fails to scan. With a dev server on the w
 docker exec -it <container> node dist/scripts/disableTwoFactor.js <username>
 ```
 
-- [ ] **Step 3: Commit anything the walk-through corrected**
+- [x] **Step 3: Commit anything the walk-through corrected**
 
 ```bash
 git commit -am "fix(2fa): corrections from the browser walk-through"
