@@ -79,4 +79,51 @@ describe("tripCostSources", () => {
       { currency: "USD", total: 480 },
     ]);
   });
+
+  // A hotel-only trip totalled to "—" for the same reason a cruise-only one
+  // did: a stay prices itself as `totalPrice`, which the cost model never read.
+  it("counts a lodging stay that carries its own price", () => {
+    const sources = tripCostSources([], [], [], [{ totalPrice: 420, currency: "EUR", bookingId: null }]);
+    expect(sumByCurrency(sources)).toEqual([{ currency: "EUR", total: 420 }]);
+  });
+
+  it("skips a stay whose price already sits on its booking", () => {
+    const sources = tripCostSources(
+      [{ price: 420, currency: "EUR" }],
+      [],
+      [],
+      [{ totalPrice: 420, currency: "EUR", bookingId: "b1" }]
+    );
+    expect(sumByCurrency(sources)).toEqual([{ currency: "EUR", total: 420 }]);
+  });
+
+  it("keeps a stay in a foreign currency separate", () => {
+    const sources = tripCostSources(
+      [{ price: 300, currency: "EUR" }],
+      [],
+      [],
+      [{ totalPrice: 250, currency: "CHF", bookingId: null }]
+    );
+    expect(sumByCurrency(sources)).toEqual([
+      { currency: "EUR", total: 300 },
+      { currency: "CHF", total: 250 },
+    ]);
+  });
+
+  // The FX snapshot on a stay is a second opinion about the same money, never
+  // an addition — only the raw amount may reach the total.
+  it("ignores a stay with no price at all", () => {
+    const sources = tripCostSources([], [], [], [{ totalPrice: null, currency: "EUR", bookingId: null }]);
+    expect(sumByCurrency(sources)).toEqual([]);
+  });
+
+  it("adds flights, cruises and stays together in one currency", () => {
+    const sources = tripCostSources(
+      [{ price: 100, currency: "EUR" }],
+      [{ price: 200, currency: "EUR", bookingId: null }],
+      [{ price: 300, currency: "EUR", bookingId: null }],
+      [{ totalPrice: 400, currency: "EUR", bookingId: null }]
+    );
+    expect(sumByCurrency(sources)).toEqual([{ currency: "EUR", total: 1000 }]);
+  });
 });
