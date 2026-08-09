@@ -245,6 +245,17 @@ export function useFlightForm(
   useEffect(() => {
     if (departureDate && departureTime && departure && arrival && !arrivalDateSetRef.current) {
       try {
+        // `estimateFlightTimes` takes a BOARDING time because it grew out of
+        // the boarding-pass path. Here there is no boarding time — the user
+        // typed a departure time — so one is synthesised by subtracting the
+        // same 30 minutes the estimator will add back. The round trip cancels
+        // out, which is why the resulting estimate is correct.
+        //
+        // This is an internal adaptation and must NOT leak into the copy: the
+        // UI used to explain the result as "based on boarding time" and
+        // "Departure = Boarding + 30min", telling the user their times came
+        // from an input they never gave and sending them looking for a field
+        // that does not exist on this form (#235).
         const depDateTime = new Date(`${departureDate}T${departureTime}`);
         depDateTime.setMinutes(depDateTime.getMinutes() - 30);
         const boardingTime = `${String(depDateTime.getHours()).padStart(2, "0")}:${String(depDateTime.getMinutes()).padStart(2, "0")}`;
@@ -297,7 +308,12 @@ export function useFlightForm(
         // useEffect clears errors on every transition, so jumping to
         // "complete" here would drop the user into manual entry with no
         // indication of what went wrong (issue #82 follow-up).
-        if (data?.error === "LOOKUP_UNAVAILABLE") {
+        if (data?.error === "LOOKUP_NOT_CONFIGURED") {
+          // Nothing was searched — no provider is set up. Saying "not found"
+          // here sends the user looking for a better date instead of a key
+          // (#232).
+          setError(t("errors:lookupNotConfigured"));
+        } else if (data?.error === "LOOKUP_UNAVAILABLE") {
           setError(t("errors:lookupOutsideLiveWindow"));
         } else if (data?.error === "NO_FLIGHT_DATA_API_GAP") {
           setError(t("errors:noFlightDataApiGap"));

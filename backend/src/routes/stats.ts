@@ -1148,14 +1148,17 @@ interface CountryStatsResponse {
   countries: CountryStat[];
   total: number;
   /**
-   * Counting vocabulary: lifetime departure countries as ISO alpha-2, with
+   * Counting vocabulary: lifetime countries VISITED as ISO alpha-2 — every
+   * country either end of a flight touched, not just departures (#233) — with
    * `Unknown` and the catalogue's placeholders dropped. The cross-domain KPI
    * unions this with the port catalogue's equivalent; keeping unresolvable
    * entries would mean counting things that cannot be deduplicated.
    */
   countriesIso: string[];
   /**
-   * Departure countries keyed by year, same ISO vocabulary. The cross-domain
+   * Visited countries keyed by year, same ISO vocabulary. Both ends of a
+   * flight land in its DEPARTURE year, so a red-eye is one journey rather
+   * than a country visited in a year the traveller never flew. The cross-domain
    * overview used to render the lifetime set for whichever year was selected
    * and stack a year-over-year delta on top of it that could only ever read
    * zero — a comparison that could not exist, presented as data.
@@ -1167,20 +1170,28 @@ interface CountryStatsResponse {
   byYear: Record<string, string[]>;
 }
 
-// GET /api/v1/stats/countries — departure country distribution
+// GET /api/v1/stats/countries — visited-country distribution (both flight ends)
 router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
 
     const flights = await prisma.flight.findMany({
       where: { userId },
-      select: { depIata: true, depIcao: true, departureTime: true },
+      select: {
+        depIata: true,
+        depIcao: true,
+        arrIata: true,
+        arrIcao: true,
+        departureTime: true,
+      },
     });
 
     const airportCodes = new Set<string>();
     for (const f of flights) {
       if (f.depIata) airportCodes.add(f.depIata);
       else if (f.depIcao) airportCodes.add(f.depIcao);
+      if (f.arrIata) airportCodes.add(f.arrIata);
+      else if (f.arrIcao) airportCodes.add(f.arrIcao);
     }
 
     const airportMap = await getCachedAirports([...airportCodes]);
@@ -1188,20 +1199,40 @@ router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunct
     const countryCounts = new Map<string, number>();
     const countriesByYear = new Map<number, Set<string>>();
     for (const f of flights) {
-      const code = f.depIata ?? f.depIcao;
-      const airport = code ? airportMap.get(code) : undefined;
-      const country = airport?.country ?? 'Unknown';
-      countryCounts.set(country, (countryCounts.get(country) ?? 0) + 1);
+      // BOTH ends count. This used to read the departure only, so a single
+      // FRA -> LHR reported "Länder besucht: 1" and the United Kingdom
+      // appeared nowhere — the KPI says VISITED, and landing somewhere is
+      // the clearest way to visit it (#233).
+      const depCode = f.depIata ?? f.depIcao;
+      const arrCode = f.arrIata ?? f.arrIcao;
+      const depAirport = depCode ? airportMap.get(depCode) : undefined;
+      const arrAirport = arrCode ? airportMap.get(arrCode) : undefined;
+
+      // A Set per flight, so a domestic leg is ONE visit to that country
+      // rather than two. Across flights the counts still accumulate, which
+      // keeps `countries` usable as a ranking.
+      const touched = new Set<string>();
+      touched.add(depAirport?.country ?? 'Unknown');
+      // Only when an arrival airport is actually on file — otherwise an
+      // incomplete row would invent a second "Unknown" visit.
+      if (arrCode) touched.add(arrAirport?.country ?? 'Unknown');
+
+      for (const country of touched) {
+        countryCounts.set(country, (countryCounts.get(country) ?? 0) + 1);
+      }
 
       // An undated flight cannot be attributed to a year. It stays in the
       // lifetime tally rather than being guessed into the current one.
       if (!f.departureTime) continue;
       // The timezone lives on the airport, not the flight — same source the
-      // flight list uses to derive depTimezone.
-      const year = localYearOf(f.departureTime, airport?.timezone ?? null);
+      // flight list uses to derive depTimezone. Both endpoints land in the
+      // DEPARTURE year: a red-eye that lands after midnight is still one
+      // journey, and splitting its two ends across two years would count a
+      // country as visited in a year the traveller never flew.
+      const year = localYearOf(f.departureTime, depAirport?.timezone ?? null);
       if (!Number.isFinite(year)) continue;
       const bucket = countriesByYear.get(year) ?? new Set<string>();
-      bucket.add(country);
+      for (const country of touched) bucket.add(country);
       countriesByYear.set(year, bucket);
     }
 
