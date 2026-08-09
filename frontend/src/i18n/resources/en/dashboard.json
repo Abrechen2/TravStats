@@ -240,5 +240,8 @@
     "flightFrequency": "Flights (frequency)",
     "flightSolid": "Flights",
     "lodging": "Lodging"
+  },
+  "userMenu": {
+    "label": "Account menu"
   }
 }

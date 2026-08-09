@@ -27,6 +27,14 @@ export interface ProfileSettings {
   email: string;
   profilePicture?: string;
   /**
+   * Real name (#241). Like `birthdate` these live on the User row rather than
+   * in the settings JSON, because the header reads them from /auth/me — but
+   * unlike birthdate they ride along on the ordinary settings payload, so no
+   * separate fetch is needed. null means "cleared", undefined "not loaded yet".
+   */
+  firstName?: string | null;
+  lastName?: string | null;
+  /**
    * ISO date string (YYYY-MM-DD) or null when unset. User-level field
    * stored on the User row, not in the settings JSON — loaded and saved
    * via the dedicated /settings/profile endpoint. Powers the
@@ -237,6 +245,8 @@ const defaultSettings: Omit<
     username: "",
     email: "",
     profilePicture: undefined,
+    firstName: null,
+    lastName: null,
   },
   display: {
     theme: "light",
