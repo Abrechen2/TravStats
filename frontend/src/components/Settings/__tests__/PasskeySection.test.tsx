@@ -46,6 +46,29 @@ describe("PasskeySection", () => {
     expect(screen.queryByRole("button", { name: "settings:passkeys.add" })).toBeNull();
   });
 
+  // Server config says available (tunnel https), page is plain-http LAN: the
+  // section must explain the HTTPS requirement instead of offering a ceremony
+  // the browser will refuse.
+  it("explains itself on an insecure page even when the server says available", async () => {
+    api.availability.mockResolvedValue({ available: true, reason: null });
+    const original = Object.getOwnPropertyDescriptor(window, "isSecureContext");
+    Object.defineProperty(window, "isSecureContext", { value: false, configurable: true });
+    try {
+      render(<PasskeySection />);
+      await waitFor(() =>
+        expect(screen.getByText("settings:passkeys.insecureOrigin")).toBeInTheDocument()
+      );
+      expect(screen.queryByRole("button", { name: "settings:passkeys.add" })).toBeNull();
+      // The list is not even fetched — there is nothing usable to show.
+      expect(api.list).not.toHaveBeenCalled();
+    } finally {
+      // jsdom keeps isSecureContext on the prototype — when there was no own
+      // descriptor, restoring means DELETING our override, not re-defining.
+      if (original) Object.defineProperty(window, "isSecureContext", original);
+      else delete (window as { isSecureContext?: boolean }).isSecureContext;
+    }
+  });
+
   it("says so when nothing is configured yet", async () => {
     api.availability.mockResolvedValue({ available: false, reason: "notConfigured" });
     render(<PasskeySection />);
