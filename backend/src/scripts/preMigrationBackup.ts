@@ -22,7 +22,7 @@ async function main(): Promise<void> {
     console.log(
       `[pre-migration-backup] First upgrade with last-version marker → ${ctx.currentVersion}`,
     );
-  } else if (ctx.majorBumped) {
+  } else if (ctx.shouldBackup) {
     console.log(
       `[pre-migration-backup] Major bump ${ctx.previousVersion} → ${ctx.currentVersion}`,
     );
@@ -36,7 +36,7 @@ async function main(): Promise<void> {
 
   if (ctx.backupCreated) {
     console.log(`[pre-migration-backup] Backup written: ${ctx.backupCreated}`);
-  } else if (ctx.majorBumped) {
+  } else if (ctx.shouldBackup) {
     console.log(
       "[pre-migration-backup] WARNING: major bump but backup failed — continuing",
     );

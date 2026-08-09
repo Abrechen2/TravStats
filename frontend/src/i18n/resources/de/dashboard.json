@@ -39,9 +39,9 @@
   "parser": "Parser",
   "logout": "Abmelden",
   "errors": {
-    "addFlight": "Fehler beim Hinzufügen des Fluges. Bitte versuchen Sie es erneut.",
-    "updateFlight": "Fehler beim Aktualisieren des Fluges. Bitte versuchen Sie es erneut.",
-    "deleteFlight": "Fehler beim Löschen des Fluges. Bitte versuchen Sie es erneut.",
+    "addFlight": "Fehler beim Hinzufügen des Fluges. Bitte versuche es erneut.",
+    "updateFlight": "Fehler beim Aktualisieren des Fluges. Bitte versuche es erneut.",
+    "deleteFlight": "Fehler beim Löschen des Fluges. Bitte versuche es erneut.",
     "duplicateFlight": "Fehler beim Duplizieren",
     "loadFlights": "Fehler beim Laden der Flüge",
     "exportFailed": "Export fehlgeschlagen",
@@ -97,7 +97,7 @@
   },
   "duplicateDialog": {
     "title": "Flug duplizieren",
-    "description": "Wie möchten Sie den Flug {{route}} duplizieren?",
+    "description": "Wie möchtest du den Flug {{route}} duplizieren?",
     "outbound": "Hinflug (gleiche Route)",
     "return": "Rückflug (Route tauschen)",
     "cancel": "Abbrechen"

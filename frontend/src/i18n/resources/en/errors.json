@@ -10,6 +10,7 @@
   "noFlightNumber": "Please enter a flight number",
   "noFlightsFound": "No flights found. Please try a different date or enter the data manually.",
   "lookupUnavailable": "Flight search currently unavailable. Please enter the data manually.",
+  "lookupNotConfigured": "No flight-data provider is configured, so no search was performed. Add an API key under Settings, or enter the flight manually.",
   "lookupOutsideLiveWindow": "This flight search is not available on the free providers. The free tier only covers live flights (today). For past or future flights, configure an Aviationstack Basic+ key in Settings, or enter the flight manually.",
   "noFlightDataForDate": "No flight data found for this flight on this date. Please double-check the flight number and date, or enter the flight manually.",
   "noFlightDataApiGap": "The data provider has no record of this flight on this date. Even with an API key configured, the API may not cover this flight — please enter the flight manually.",
