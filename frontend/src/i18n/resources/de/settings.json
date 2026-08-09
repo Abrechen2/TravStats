@@ -67,6 +67,8 @@
     "changePassword": "Passwort ändern",
     "uploadAvatar": "Profilbild hochladen",
     "chooseFile": "Datei auswählen",
+    "firstName": "Vorname",
+    "lastName": "Nachname",
     "username": "Benutzername",
     "email": "E-Mail-Adresse",
     "birthdate": "Geburtstag",
@@ -92,7 +94,8 @@
       "avatar": "PNG oder JPG, max. 5 MB. Wird lokal in der Datenbank gespeichert, nicht an externe Dienste gesendet.",
       "passwordTitle": "Passwort ändern:",
       "password": "Öffnet ein separates Modal, in dem das aktuelle Passwort zur Verifizierung eingegeben werden muss, bevor ein neues gesetzt wird."
-    }
+    },
+    "editProfile": "Profil bearbeiten"
   },
   "homeAirport": {
     "title": "Heimatflughafen",

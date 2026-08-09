@@ -13,6 +13,14 @@ model User {
   id                   String                   @id @default(uuid())
   username             String                   @unique
   passwordHash         String                   @map("password_hash")
+  // Real name, shown wherever the person is addressed rather than identified
+  // (#241). Columns on User rather than keys in the UserSettings JSON blob
+  // where profilePicture lives: the header renders the name on every page from
+  // the /auth/me payload, and reading it out of settings would make the header
+  // wait for a second fetch and flash the username first. Both optional — a
+  // logbook does not need your name.
+  firstName            String?                  @map("first_name")
+  lastName             String?                  @map("last_name")
   isAdmin              Boolean                  @default(false) @map("is_admin")
   isActive             Boolean                  @default(true) @map("is_active")
   invitedBy            String?                  @map("invited_by")
