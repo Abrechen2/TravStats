@@ -27,6 +27,7 @@ import ImportSection from "../components/Settings/ImportSection";
 import FeaturesSection from "../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../components/Settings/CruisePreferencesSection";
 import LodgingPreferencesSection from "../components/Settings/LodgingPreferencesSection";
+import MembershipsSection from "../components/Settings/MembershipsSection";
 import GeocoderSettingsCard from "../components/Settings/GeocoderSettingsCard";
 import ImmichConnectionCard from "../components/Settings/ImmichConnectionCard";
 import PasswordModal from "../components/Settings/PasswordModal";
@@ -145,6 +146,10 @@ export default function SettingsPage(): JSX.Element {
       {
         id: "lodgingPreferences",
         label: t("settings:lodgingPreferences.title") || "Präferenzen",
+      },
+      {
+        id: "lodgingMemberships",
+        label: t("settings:memberships.title") || "Bonusprogramme",
       },
     ];
     return { general, flight, cruise: cruiseTab, lodging: lodgingTab };
@@ -484,6 +489,7 @@ export default function SettingsPage(): JSX.Element {
                 <GeocoderSettingsCard isAdmin={user?.isAdmin ?? false} />
               </>
             )}
+            {activeSection === "lodgingMemberships" && <MembershipsSection />}
 
             {activeSection === "profile" && (
               <ProfileSection

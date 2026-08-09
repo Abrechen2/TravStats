@@ -46,6 +46,13 @@
       "testError": "Connection failed. Please check the URL and reachability."
     }
   },
+  "memberships": {
+    "title": "Loyalty programmes",
+    "description": "Every programme in one place, with the chains and individual hotels it covers.",
+    "coversNothing": "not linked to a chain yet",
+    "editHotels": "Individual hotels",
+    "noIndependentHotels": "No independent, chain-less hotels available."
+  },
   "about": {
     "buildLabel": "Build",
     "buildVersionHint": "Version that was baked into the container image at build time. This only differs from the displayed version when a promoted RC is running.",
