@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth';
 import twoFactorRoutes from './routes/auth/twoFactor';
+import passkeyRoutes from './routes/auth/passkeys';
 import flightRoutes from './routes/flights';
 import flightLookupRoutes from './routes/flightLookup';
 import statsRoutes from './routes/stats';
@@ -239,6 +240,7 @@ app.use('/api/v1/admin', adminRoutes);
 // Mounted BEFORE the generic /api/v1/auth routers so a future catch-all there
 // can never swallow the two-factor endpoints.
 app.use('/api/v1/auth/2fa', twoFactorRoutes);
+app.use('/api/v1/auth/passkeys', passkeyRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/auth', passwordResetRoutes);
 app.use('/api/v1/flights', flightRoutes);
