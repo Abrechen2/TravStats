@@ -29,6 +29,7 @@ import StatsDistanceSection from "../components/Stats/StatsDistanceSection";
 import StatsFlightBreakdown from "../components/Stats/StatsFlightBreakdown";
 import StatsFunSection from "../components/Stats/StatsFunSection";
 import StatsBusinessSection from "../components/Stats/StatsBusinessSection";
+import PunctualitySection from "../components/Stats/PunctualitySection";
 import StatsUniqueSection from "../components/Stats/StatsUniqueSection";
 import StatsAirportsSection from "../components/Stats/StatsAirportsSection";
 import StatsSeatSection from "../components/Stats/StatsSeatSection";
@@ -768,6 +769,9 @@ export default function AdvancedStatsPage(): JSX.Element {
                 shortestFlight={shortestFlight}
                 totalFlights={flights.length}
               />
+
+              {/* Punctuality (#2) — self-fetching, hides without a delay sample */}
+              <PunctualitySection />
 
               {/* Fun Statistics */}
               {funStats && <StatsFunSection funStats={funStats} />}

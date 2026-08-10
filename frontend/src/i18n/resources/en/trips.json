@@ -170,7 +170,8 @@
       "deletedJournal": "Entry deleted",
       "deletedStop": "Stop deleted",
       "deleteJournalConfirm": "Delete journal entry?",
-      "deleteStopConfirm": "Delete stop \"{{title}}\"?"
+      "deleteStopConfirm": "Delete stop \"{{title}}\"?",
+      "lodgingFarFromTrip": "Far from the trip's stops — check the address"
     }
   },
   "journalModal": {
@@ -279,5 +280,10 @@
     "deleteConfirm": "Really delete this photo?",
     "deleteError": "Failed to delete photo",
     "empty": "No photos yet — upload the first memories of this journey."
+  },
+  "insights": {
+    "longest": "Longest trip",
+    "mostExpensive": "Most expensive trip",
+    "mostCountries": "Most countries"
   }
 }

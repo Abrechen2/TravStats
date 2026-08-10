@@ -4,6 +4,7 @@ import { prisma } from '../db';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { calculateDistance } from '../utils/geo';
 import { getCachedAirports } from '../services/airportCache';
+import { computePunctuality } from '../services/punctualityStats';
 import { Prisma } from '@prisma/client';
 import {
   calculateFunStats,
@@ -1738,5 +1739,45 @@ router.get(
     }
   },
 );
+
+// GET /api/v1/stats/punctuality — actual-vs-scheduled aggregates (#2).
+// Reads the stored per-flight delayMinutes captured since 2.5; no new lookups.
+router.get('/punctuality', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.userId!;
+    const parsed = DateRangeQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      return;
+    }
+    const { fromDate, toDate } = parsed.data;
+
+    const where: Prisma.FlightWhereInput = {
+      userId,
+      status: { in: ['flown', 'historical'] },
+      delayMinutes: { not: null },
+    };
+    if (fromDate || toDate) {
+      where.departureTime = {};
+      if (fromDate) where.departureTime.gte = new Date(fromDate);
+      if (toDate) where.departureTime.lte = new Date(toDate);
+    }
+
+    const flights = await prisma.flight.findMany({
+      where,
+      select: {
+        delayMinutes: true,
+        airline: true,
+        airlineIata: true,
+        depIata: true,
+        arrIata: true,
+      },
+    });
+
+    res.json(computePunctuality(flights));
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default router;

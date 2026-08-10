@@ -170,7 +170,8 @@
       "deletedJournal": "Eintrag gelöscht",
       "deletedStop": "Stopp gelöscht",
       "deleteJournalConfirm": "Tagebuch-Eintrag löschen?",
-      "deleteStopConfirm": "Stopp \"{{title}}\" löschen?"
+      "deleteStopConfirm": "Stopp \"{{title}}\" löschen?",
+      "lodgingFarFromTrip": "Weit von den Reisezielen entfernt — Adresse prüfen"
     }
   },
   "journalModal": {
@@ -279,5 +280,10 @@
     "deleteConfirm": "Foto wirklich löschen?",
     "deleteError": "Foto konnte nicht gelöscht werden",
     "empty": "Noch keine Fotos — lade die ersten Erinnerungen dieser Reise hoch."
+  },
+  "insights": {
+    "longest": "Längste Reise",
+    "mostExpensive": "Teuerste Reise",
+    "mostCountries": "Meiste Länder"
   }
 }

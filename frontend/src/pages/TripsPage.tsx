@@ -4,6 +4,7 @@ import { tripsApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import type { Trip } from "../types";
 import TripsTab from "../components/Trips/TripsTab";
+import { TripInsightsBar } from "../components/Trips/TripInsightsBar";
 import PageTransition from "../components/PageTransition";
 import NavigationBar from "../components/NavigationBar";
 
@@ -46,6 +47,7 @@ export default function TripsPage(): JSX.Element {
             {t("trips:count", { count: trips.length })}
           </p>
         </div>
+        <TripInsightsBar trips={trips} />
         <TripsTab trips={trips} onTripsChange={() => void loadTrips()} />
       </div>
     </PageTransition>

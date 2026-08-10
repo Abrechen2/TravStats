@@ -101,7 +101,29 @@ export const statsApi = {
     );
     return data;
   },
+
+  getPunctuality: async (filters?: {
+    fromDate?: string;
+    toDate?: string;
+  }): Promise<PunctualityStats> => {
+    const { data } = await api.get<PunctualityStats>("/stats/punctuality", { params: filters });
+    return data;
+  },
 };
+
+export interface PunctualityGroup {
+  key: string;
+  avgDelayMinutes: number;
+  flights: number;
+}
+export interface PunctualityStats {
+  sampleSize: number;
+  avgDelayMinutes: number;
+  onTimeRate: number;
+  bestAirline: PunctualityGroup | null;
+  worstAirline: PunctualityGroup | null;
+  worstRoute: PunctualityGroup | null;
+}
 
 /** Shape returned by GET /api/v1/stats/cruise. */
 export interface CruiseStatsResponse {

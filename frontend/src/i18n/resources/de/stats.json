@@ -554,5 +554,16 @@
     "colDistance": "Distanz (km)",
     "colCo2": "CO₂ (kg)",
     "noYear": "Bitte zuerst ein Jahr auswählen"
+  },
+  "punctuality": {
+    "title": "Pünktlichkeit",
+    "subtitle": "Aus {{count}} Flügen mit erfasster Verspätung.",
+    "avgDelay": "Ø Verspätung",
+    "minutes_one": "{{count}} Min",
+    "minutes_other": "{{count}} Min",
+    "onTimeRate": "Pünktlich (< 15 Min)",
+    "bestAirline": "Pünktlichste Airline",
+    "worstAirline": "Unpünktlichste Airline",
+    "worstRoute": "Unpünktlichste Strecke"
   }
 }

@@ -250,5 +250,13 @@
     "import": "Import your travel",
     "addFlight": "Add your first flight",
     "chooseDomains": "Choose what to track"
+  },
+  "nextFlight": {
+    "label": "Next flight",
+    "inDays_one": "in {{count}} day",
+    "inDays_other": "in {{count}} days",
+    "inHours_one": "in {{count}} hour",
+    "inHours_other": "in {{count}} hours",
+    "today": "today"
   }
 }

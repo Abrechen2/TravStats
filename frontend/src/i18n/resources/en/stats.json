@@ -554,5 +554,16 @@
     "colDistance": "Distance (km)",
     "colCo2": "CO₂ (kg)",
     "noYear": "Please select a year first"
+  },
+  "punctuality": {
+    "title": "Punctuality",
+    "subtitle": "From {{count}} flights with a recorded delay.",
+    "avgDelay": "Avg delay",
+    "minutes_one": "{{count}} min",
+    "minutes_other": "{{count}} min",
+    "onTimeRate": "On time (< 15 min)",
+    "bestAirline": "Most punctual airline",
+    "worstAirline": "Least punctual airline",
+    "worstRoute": "Least punctual route"
   }
 }
