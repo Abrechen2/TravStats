@@ -1,3 +1,5 @@
+import { deriveStayTotalPrice, type StayPricingInput } from "../shared/stayPricing";
+
 /** A booking or a flight — anything that may carry a price. Both fields are
  *  optional because a flight type declares them so. */
 export interface BookingCostInput {
@@ -39,42 +41,25 @@ type PricedItem = BookingCostInput & { bookingId?: string | null };
  * concept of. Only the raw amount and its own currency feed the trip total —
  * `sumByCurrency` never converts, so the base-currency figure would be a second
  * opinion about the same money rather than an addition.
+ *
+ * The total is authoritative and derived on write (backend
+ * `shared/stayPricing.deriveStayTotalPrice`, plus a one-off backfill of legacy
+ * rows). The per-night fields stay on the type only as the shared helper's
+ * transitional fallback for anything the backend has not yet normalised.
  */
-export interface LodgingCostInput {
-  totalPrice?: number | null;
-  /** Fallback source when no total was typed. Both fields are hand-entered
-   *  today; the planned per-night derivation (total ÷ nights) will make
-   *  `totalPrice` the single source of truth and retire this arm. */
-  pricePerNight?: number | null;
-  checkIn?: string | Date | null;
-  checkOut?: string | Date | null;
+export type LodgingCostInput = StayPricingInput & {
   currency?: string | null;
   bookingId?: string | null;
-}
-
-/** Whole nights between check-in and check-out. Rounded, not floored: the
- *  stamps are hotel-local calendar dates and a DST hour must not eat a night. */
-function nightsOf(stay: LodgingCostInput): number {
-  if (!stay.checkIn || !stay.checkOut) return 0;
-  const inMs = new Date(stay.checkIn).getTime();
-  const outMs = new Date(stay.checkOut).getTime();
-  if (Number.isNaN(inMs) || Number.isNaN(outMs)) return 0;
-  return Math.max(0, Math.round((outMs - inMs) / 86_400_000));
-}
+};
 
 /**
- * What a stay contributes to the trip total: the typed total when there is
- * one, otherwise per-night × nights. A stay with only a per-night price used
- * to contribute NOTHING — visibly priced on its own page, invisible in the
- * trip sum.
+ * What a stay contributes to the trip total. Delegates to the ONE shared
+ * derivation so frontend and backend can never disagree about a stay's price —
+ * the duplicate per-night arm that used to live here is gone.
  */
 export function stayCost(stay: LodgingCostInput): number | null {
-  if (stay.totalPrice != null && stay.totalPrice > 0) return stay.totalPrice;
-  if (stay.pricePerNight != null && stay.pricePerNight > 0) {
-    const nights = nightsOf(stay);
-    if (nights > 0) return stay.pricePerNight * nights;
-  }
-  return null;
+  const total = deriveStayTotalPrice(stay);
+  return total != null && total > 0 ? total : null;
 }
 
 /**

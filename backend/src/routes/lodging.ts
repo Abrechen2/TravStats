@@ -10,6 +10,7 @@ import { resolveLocation } from "./lodgingGeocode";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { deriveLodgingStatus } from "../shared/statusDerivation";
 import { deriveStayOverallRating } from "../shared/ratingDerivation";
+import { deriveStayTotalPrice } from "../shared/stayPricing";
 import {
   createLodgingSchema,
   updateLodgingSchema,
@@ -431,7 +432,10 @@ router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunc
 
     const parsed = createStaySchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
-    const input = parsed.data;
+    // totalPrice is the source of truth: the UI types it, but an importer or
+    // API client may send only a per-night price — derive the total so it is
+    // always stored, and the FX snapshot below converts the right amount.
+    const input = { ...parsed.data, totalPrice: deriveStayTotalPrice(parsed.data) };
 
     const baseCurrency = await getBaseCurrency(userId);
     const fxOutcome = await applyFxSnapshot(input, baseCurrency);
@@ -517,19 +521,43 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
     // moment — silently clear a perfectly good historical snapshot (finding
     // 1, CRITICAL). Comparing against the CURRENT stored values means a
     // resend of the same value is correctly seen as "nothing changed".
+    // totalPrice is authoritative, and what the client EXPLICITLY sends drives
+    // the result — a stored total must not override a field the user just
+    // changed:
+    //   - an explicit totalPrice (incl. null = clear) wins outright;
+    //   - else an explicit pricePerNight re-derives total = per-night × nights;
+    //   - else nothing pricing-relevant was sent, so the stored total stands.
+    // `undefined` means "not sent"; an explicit `null` is a clear and survives.
+    let effectiveTotalPrice: number | null;
+    if (input.totalPrice !== undefined) {
+      effectiveTotalPrice = input.totalPrice;
+    } else if (input.pricePerNight !== undefined) {
+      effectiveTotalPrice = deriveStayTotalPrice({
+        totalPrice: null,
+        pricePerNight: input.pricePerNight,
+        checkIn: effectiveCheckIn,
+        checkOut: effectiveCheckOut,
+      });
+    } else {
+      // Dates alone can change what a per-night-priced stay costs, but only when
+      // the total was itself derived from per-night (no explicit total on file).
+      effectiveTotalPrice =
+        stay.totalPrice ??
+        deriveStayTotalPrice({
+          totalPrice: null,
+          pricePerNight: stay.pricePerNight,
+          checkIn: effectiveCheckIn,
+          checkOut: effectiveCheckOut,
+        });
+    }
+
     const fxInputsChanged =
-      (input.totalPrice !== undefined && input.totalPrice !== stay.totalPrice) ||
+      effectiveTotalPrice !== stay.totalPrice ||
       (input.currency !== undefined && input.currency !== stay.currency) ||
       (input.checkIn !== undefined && new Date(input.checkIn).getTime() !== stay.checkIn.getTime());
     let fxFields: Partial<FxSnapshotFields> = {};
     if (fxInputsChanged) {
       const baseCurrency = await getBaseCurrency(userId);
-      // `input.totalPrice` can now be an explicit `null` (finding 4 — the
-      // user cleared the price). `??` would treat that null the same as
-      // "not sent" and silently fall back to the OLD stay.totalPrice,
-      // defeating the clear — only an omitted key (undefined) should fall
-      // back to the existing value.
-      const effectiveTotalPrice = input.totalPrice !== undefined ? input.totalPrice : stay.totalPrice;
       const fxOutcome = await applyFxSnapshot(
         {
           totalPrice: effectiveTotalPrice,
@@ -558,6 +586,10 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
       where: { id: stay.id },
       data: {
         ...input,
+        // totalPrice is authoritative and derived above from the merged view,
+        // so it overrides whatever `...input` carried (which may be a stale
+        // re-send or absent while only the per-night price changed).
+        totalPrice: effectiveTotalPrice,
         ...fxFields,
         // Derived from the EFFECTIVE (merged) dates, not from `input`, so a
         // PATCH that moves only one date still re-derives against the range
