@@ -18,17 +18,44 @@ export interface UpgradeBackupContext {
 }
 
 /**
- * The runtime version of the running container — APP_VERSION env wins
- * (set by docker-compose for byte-identical RC promotion), then
- * BUILD_VERSION env, then the VERSION file baked into the image.
+ * The runtime version of the running container.
+ *
+ * Source of truth is the VERSION file baked into the image. APP_VERSION env is
+ * honoured in exactly ONE case: when it is the promotion alias of the baked
+ * version (a byte-identical RC retag ships a file saying "2.5.1-rc.1" while
+ * compose says "2.5.1" — same binary, released identity). That keeps the
+ * rc→final boot counting as a version change, which the #246 tests pin.
+ *
+ * Any OTHER disagreement is drift, and drift here has bitten twice on one
+ * deploy day: a stale env said beta.1 while the image was beta.2 — the
+ * pre-migration backup was silently SKIPPED on a real upgrade — and a shell
+ * quoting slip stored `beta.2"` with a literal quote as the last-run version.
+ * Trusting env unconditionally turns both into wrong backup decisions; the
+ * baked file cannot drift from the binary it ships in.
  */
 export function getCurrentVersion(): string {
-  if (process.env.APP_VERSION) return process.env.APP_VERSION.trim();
-  if (process.env.BUILD_VERSION) return process.env.BUILD_VERSION.trim();
-  if (fs.existsSync(VERSION_FILE)) {
-    return fs.readFileSync(VERSION_FILE, "utf-8").trim();
+  const baked = fs.existsSync(VERSION_FILE)
+    ? fs.readFileSync(VERSION_FILE, "utf-8").trim()
+    : "unknown";
+
+  const env = process.env.APP_VERSION?.trim();
+  if (env && env !== baked && baked !== "unknown") {
+    if (env === stripPrerelease(baked)) return env; // promotion alias
+    logger.warn({
+      operation: "upgrade_backup_version_drift",
+      message:
+        "APP_VERSION disagrees with the baked VERSION file and is not its promotion alias — using the baked file",
+      appVersionEnv: env,
+      bakedVersion: baked,
+    });
   }
-  return "unknown";
+  return env && baked === "unknown" ? env : baked;
+}
+
+/** Same rule as utils/version.ts — kept local because that module reads the
+ *  VERSION file at import time, which the tests here re-point via mocks. */
+function stripPrerelease(version: string): string {
+  return version.replace(/-(rc|security-rc|beta|alpha)\.\d+$/, "");
 }
 
 /**

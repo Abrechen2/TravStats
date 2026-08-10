@@ -127,9 +127,14 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
         )}
       </div>
 
-      {/* Heatmap */}
-      <div className="overflow-x-auto">
-        <div className="inline-block min-w-full">
+      {/* Heatmap.
+          overflow-y-hidden is load-bearing (#248): a bare overflow-x-auto is
+          computed as overflow-y:auto, so the moment the horizontal scrollbar
+          needs room the container grows a useless 1px VERTICAL scrollbar too.
+          Nothing in here legitimately scrolls vertically. align-top kills the
+          inline-block baseline gap that contributed the stray pixel. */}
+      <div className="overflow-x-auto overflow-y-hidden">
+        <div className="inline-block min-w-full align-top">
           {/* Month labels */}
           <div className="flex mb-2">
             <div className="w-8"></div>

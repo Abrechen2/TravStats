@@ -243,5 +243,12 @@
   },
   "userMenu": {
     "label": "Konto-Menü"
+  },
+  "empty": {
+    "title": "Willkommen bei TravStats",
+    "subtitle": "Noch nichts erfasst. Am schnellsten geht es mit einem Import deiner bisherigen Reisen — oder du legst den ersten Eintrag von Hand an.",
+    "import": "Reisen importieren",
+    "addFlight": "Ersten Flug anlegen",
+    "chooseDomains": "Auswählen, was du erfassen willst"
   }
 }
