@@ -280,5 +280,10 @@
     "deleteConfirm": "Foto wirklich löschen?",
     "deleteError": "Foto konnte nicht gelöscht werden",
     "empty": "Noch keine Fotos — lade die ersten Erinnerungen dieser Reise hoch."
+  },
+  "insights": {
+    "longest": "Längste Reise",
+    "mostExpensive": "Teuerste Reise",
+    "mostCountries": "Meiste Länder"
   }
 }
