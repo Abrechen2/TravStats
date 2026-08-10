@@ -170,7 +170,8 @@
       "deletedJournal": "Entry deleted",
       "deletedStop": "Stop deleted",
       "deleteJournalConfirm": "Delete journal entry?",
-      "deleteStopConfirm": "Delete stop \"{{title}}\"?"
+      "deleteStopConfirm": "Delete stop \"{{title}}\"?",
+      "lodgingFarFromTrip": "Far from the trip's stops — check the address"
     }
   },
   "journalModal": {
