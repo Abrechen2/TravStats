@@ -157,6 +157,59 @@ describe("Lodging API", () => {
     });
   });
 
+  describe("totalPrice is derived on write (#4)", () => {
+    it("stores total = per-night x nights when only a per-night price is sent", async () => {
+      const res = await request(app)
+        .post(`/api/v1/lodging/${lodgingId}/stays`)
+        .set("Cookie", authCookie)
+        .send({
+          checkIn: "2024-08-01T00:00:00.000Z",
+          checkOut: "2024-08-04T00:00:00.000Z", // 3 nights
+          pricePerNight: 95,
+          currency: "EUR",
+        });
+      expect(res.status).toBe(201);
+      expect(res.body.data.totalPrice).toBe(285);
+      // and the FX snapshot converted the DERIVED total, not null
+      expect(res.body.data.totalPriceBase).toBe(285);
+    });
+
+    it("keeps an explicit total over per-night x nights", async () => {
+      const res = await request(app)
+        .post(`/api/v1/lodging/${lodgingId}/stays`)
+        .set("Cookie", authCookie)
+        .send({
+          checkIn: "2024-08-10T00:00:00.000Z",
+          checkOut: "2024-08-13T00:00:00.000Z", // 3 nights -> 285 if derived
+          totalPrice: 249, // package rate wins
+          pricePerNight: 95,
+          currency: "EUR",
+        });
+      expect(res.status).toBe(201);
+      expect(res.body.data.totalPrice).toBe(249);
+    });
+
+    it("re-derives the total when a PATCH changes only the per-night price", async () => {
+      const created = await request(app)
+        .post(`/api/v1/lodging/${lodgingId}/stays`)
+        .set("Cookie", authCookie)
+        .send({
+          checkIn: "2024-09-01T00:00:00.000Z",
+          checkOut: "2024-09-03T00:00:00.000Z", // 2 nights
+          pricePerNight: 80,
+          currency: "EUR",
+        });
+      expect(created.body.data.totalPrice).toBe(160);
+
+      const patched = await request(app)
+        .patch(`/api/v1/lodging/${lodgingId}/stays/${created.body.data.id}`)
+        .set("Cookie", authCookie)
+        .send({ pricePerNight: 120 });
+      expect(patched.status).toBe(200);
+      expect(patched.body.data.totalPrice).toBe(240);
+    });
+  });
+
   describe("GET /api/v1/lodging/fx-preview — live rate preview (never the authoritative snapshot)", () => {
     it("returns a conversion preview for a differing currency", async () => {
       jest
