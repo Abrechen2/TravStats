@@ -12,6 +12,7 @@ import SpecialFlightModal from "../SpecialFlightModal";
 import { CruiseAddChooser } from "../Cruise/CruiseAddChooser";
 import { DomainTabStrip } from "./DomainTabStrip";
 import { AddDomainPicker, type AddableDomain } from "./AddDomainPicker";
+import { DashboardEmptyState } from "./DashboardEmptyState";
 import type { Flight, FlightInput } from "../../types";
 import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
 
@@ -21,12 +22,16 @@ interface DashboardLayoutProps {
   /** Optional refetch hook called after a create-modal saves so the
    * outer page can refresh counts / per-tab data without a navigation. */
   onDataChanged?: () => void;
+  /** True once the counts fetch has resolved. Gates the empty state so it
+   * cannot flash during the initial load, when every count is still 0. */
+  countsLoaded?: boolean;
 }
 
 export function DashboardLayout({
   children,
   counts,
   onDataChanged,
+  countsLoaded = false,
 }: DashboardLayoutProps): JSX.Element {
   // Ensures the dashboard namespace is loaded for children that use t("dashboard:...")
   const { t } = useTranslation(["dashboard", "flights"]);
@@ -42,6 +47,16 @@ export function DashboardLayout({
     poi: isEnabled("poi"),
     lodging: isEnabled("lodging"),
   };
+
+  // A truly empty account: nothing in any domain. Shown only after the counts
+  // have loaded, and only on the "all" landing tab — a per-domain tab already
+  // has its own empty copy and its own "+".
+  const isEmpty =
+    countsLoaded &&
+    counts.flight === 0 &&
+    counts.cruise === 0 &&
+    counts.poi === 0 &&
+    counts.lodging === 0;
 
   const handleFlightCreate = async (
     flight: FlightInput,
@@ -72,6 +87,9 @@ export function DashboardLayout({
           own domain on a single-domain tab. */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
         {children}
+        {isEmpty && tab === "all" && (
+          <DashboardEmptyState onAddFlight={() => setAddingDomain("flight")} />
+        )}
         <div style={{ position: "absolute", top: 16, right: 16, zIndex: 30 }}>
           {tab === "all" ? (
             <AddDomainPicker enabled={enabledDomains} onPick={setAddingDomain} />

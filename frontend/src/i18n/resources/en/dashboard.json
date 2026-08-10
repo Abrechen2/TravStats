@@ -243,5 +243,12 @@
   },
   "userMenu": {
     "label": "Account menu"
+  },
+  "empty": {
+    "title": "Welcome to TravStats",
+    "subtitle": "Nothing here yet. The quickest start is to import your past travel — or add your first entry by hand.",
+    "import": "Import your travel",
+    "addFlight": "Add your first flight",
+    "chooseDomains": "Choose what to track"
   }
 }
