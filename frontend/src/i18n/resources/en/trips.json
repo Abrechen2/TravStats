@@ -280,5 +280,10 @@
     "deleteConfirm": "Really delete this photo?",
     "deleteError": "Failed to delete photo",
     "empty": "No photos yet — upload the first memories of this journey."
+  },
+  "insights": {
+    "longest": "Longest trip",
+    "mostExpensive": "Most expensive trip",
+    "mostCountries": "Most countries"
   }
 }
