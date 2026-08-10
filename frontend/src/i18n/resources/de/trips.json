@@ -170,7 +170,8 @@
       "deletedJournal": "Eintrag gelöscht",
       "deletedStop": "Stopp gelöscht",
       "deleteJournalConfirm": "Tagebuch-Eintrag löschen?",
-      "deleteStopConfirm": "Stopp \"{{title}}\" löschen?"
+      "deleteStopConfirm": "Stopp \"{{title}}\" löschen?",
+      "lodgingFarFromTrip": "Weit von den Reisezielen entfernt — Adresse prüfen"
     }
   },
   "journalModal": {

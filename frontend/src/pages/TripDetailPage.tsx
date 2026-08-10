@@ -5,6 +5,7 @@ import { tripsApi } from "../lib/api";
 import { formatDateInTimezone } from "../lib/dateUtils";
 import { logger } from "../lib/logger";
 import { sumByCurrency, tripCostSources } from "../lib/bookingCost";
+import { assessStayPlausibility } from "../shared/stayPlausibility";
 import { formatDateTimeInTimezone } from "../lib/dateUtils";
 import { useSettingsStore } from "../store/settingsStore";
 import { computeRailStates } from "../lib/timelineRail";
@@ -629,6 +630,27 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
     return out.sort(compareTimelineEvents);
   }, [trip]);
 
+  // Cross-domain geo sanity (#6): a stay whose hotel sits far from every trip
+  // leg is almost certainly an import/typo error. Compute the set of such stay
+  // IDs once from this trip's flight arrivals and cruise ports; the timeline
+  // entry shows a soft hint. Hotel-only trips have no legs and never warn.
+  const implausibleStayIds = useMemo(() => {
+    // Flight arrivals are the signal here; the trip's cruise shape does not
+    // carry port coordinates, so a cruise-only trip has no legs and never
+    // warns — safe, and it still catches the common "hotel far from where you
+    // flew" case.
+    const legs = (trip?.flights ?? []).map((f) => ({ lat: f.arrLat, lon: f.arrLon }));
+    const flagged = new Set<string>();
+    for (const s of trip?.lodgingStays ?? []) {
+      const { plausible } = assessStayPlausibility(
+        { lat: s.lodging.lat, lon: s.lodging.lon },
+        legs
+      );
+      if (!plausible) flagged.add(s.id);
+    }
+    return flagged;
+  }, [trip]);
+
   // Past/upcoming is shown on the rail (line + dots), not by graying out
   // entries — see #184. Recomputed per render; a page-lifetime "now" is fine.
   const railStates = useMemo(() => {
@@ -756,7 +778,12 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
                 {ev.kind === "flight" && <FlightCard ev={ev} />}
                 {ev.kind === "cruise" && <CruiseCard ev={ev} language={language} />}
                 {(ev.kind === "lodging-checkin" || ev.kind === "lodging-checkout") && (
-                  <LodgingCheckCard ev={ev} t={t} language={language} />
+                  <LodgingCheckCard
+                    ev={ev}
+                    t={t}
+                    language={language}
+                    implausible={implausibleStayIds.has(ev.stay.id)}
+                  />
                 )}
                 {ev.kind === "stop" && (
                   <StopCard
@@ -960,10 +987,13 @@ function LodgingCheckCard({
   ev,
   t,
   language,
+  implausible = false,
 }: {
   ev: Extract<TimelineEvent, { kind: "lodging-checkin" | "lodging-checkout" }>;
   t: ReturnType<typeof useTranslation>["t"];
   language: string | undefined;
+  /** #6: hotel sits far from every trip leg — shown on the check-in entry. */
+  implausible?: boolean;
 }): JSX.Element {
   const { stay } = ev;
   const isCheckIn = ev.kind === "lodging-checkin";
@@ -975,6 +1005,8 @@ function LodgingCheckCard({
   // time of day. Rendering them in local time would print a meaningless "02:00" and,
   // west of UTC, shift the day backwards.
   const subtitle = formatDateInTimezone(ev.date, "UTC");
+  // Only on the check-in entry, so the hint appears once per stay, not twice.
+  const showHint = implausible && isCheckIn;
   return (
     <Link to={`/lodging/${stay.lodgingId}`} className="block">
       <EventCard
@@ -982,7 +1014,11 @@ function LodgingCheckCard({
         bg="rgba(212,119,143,0.15)"
         iconColor="var(--domain-lodging, #d4778f)"
         title={title}
-        subtitle={subtitle}
+        subtitle={
+          showHint
+            ? `${subtitle} · ⚠︎ ${t("trips:detail.timeline.lodgingFarFromTrip")}`
+            : subtitle
+        }
         date={ev.date}
         dateLabel={formatTimelineDate(ev.date, language)}
       />
