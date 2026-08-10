@@ -13,6 +13,7 @@ import { CruiseAddChooser } from "../Cruise/CruiseAddChooser";
 import { DomainTabStrip } from "./DomainTabStrip";
 import { AddDomainPicker, type AddableDomain } from "./AddDomainPicker";
 import { DashboardEmptyState } from "./DashboardEmptyState";
+import { NextFlightCard } from "./NextFlightCard";
 import type { Flight, FlightInput } from "../../types";
 import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
 
@@ -90,6 +91,9 @@ export function DashboardLayout({
         {isEmpty && tab === "all" && (
           <DashboardEmptyState onAddFlight={() => setAddingDomain("flight")} />
         )}
+        {/* Next-flight heads-up (#1): only on the flight-bearing tabs, and
+            never over the empty state (it self-hides when nothing is ahead). */}
+        {!isEmpty && (tab === "all" || tab === "flight") && <NextFlightCard />}
         <div style={{ position: "absolute", top: 16, right: 16, zIndex: 30 }}>
           {tab === "all" ? (
             <AddDomainPicker enabled={enabledDomains} onPick={setAddingDomain} />

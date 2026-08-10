@@ -250,5 +250,13 @@
     "import": "Reisen importieren",
     "addFlight": "Ersten Flug anlegen",
     "chooseDomains": "Auswählen, was du erfassen willst"
+  },
+  "nextFlight": {
+    "label": "Nächster Flug",
+    "inDays_one": "in {{count}} Tag",
+    "inDays_other": "in {{count}} Tagen",
+    "inHours_one": "in {{count}} Stunde",
+    "inHours_other": "in {{count}} Stunden",
+    "today": "heute"
   }
 }
