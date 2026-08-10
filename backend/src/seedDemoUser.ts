@@ -626,26 +626,38 @@ async function createDemoLodging(userId: string): Promise<void> {
 
   /** The stay should sit INSIDE its trip's flight window, so the timeline
    *  reads as one journey rather than a hotel floating outside the flights. */
+  // Prefer a trip by name, but fall back to any multi-flight trip not already
+  // used. Older demo-seed generations named the trips differently ("Japan
+  // 2022" vs "Tokyo · Japan"), and on the beta box the exact-name lookup
+  // silently produced 1 of 4 hotels. Names are a nice-to-have here; the
+  // guarantee that matters is that three stays land on three distinct trips.
+  const usedTripIds = new Set<string>();
   const tripWindow = async (
-    tripName: string,
+    preferredName: string,
   ): Promise<{ tripId: string; from: Date; to: Date } | null> => {
-    const trip = await prisma.trip.findFirst({
-      where: { userId, name: tripName },
+    const named = await prisma.trip.findFirst({
+      where: { userId, name: preferredName },
       select: { id: true },
     });
-    if (!trip) return null;
-    const flights = await prisma.flight.findMany({
-      where: { tripId: trip.id },
-      orderBy: { departureTime: 'asc' },
-      select: { departureTime: true, arrivalTime: true },
-    });
-    if (flights.length < 2) return null;
-    const first = flights[0];
-    const last = flights[flights.length - 1];
-    const from = first.arrivalTime ?? first.departureTime;
-    const to = last.departureTime;
-    if (!from || !to) return null;
-    return { tripId: trip.id, from: new Date(from), to: new Date(to) };
+    const candidates = named
+      ? [named]
+      : await prisma.trip.findMany({ where: { userId }, select: { id: true }, orderBy: { createdAt: 'asc' } });
+
+    for (const trip of candidates) {
+      if (usedTripIds.has(trip.id)) continue;
+      const flights = await prisma.flight.findMany({
+        where: { tripId: trip.id },
+        orderBy: { departureTime: 'asc' },
+        select: { departureTime: true, arrivalTime: true },
+      });
+      if (flights.length < 2) continue;
+      const from = flights[0].arrivalTime ?? flights[0].departureTime;
+      const to = flights[flights.length - 1].departureTime;
+      if (!from || !to) continue;
+      usedTripIds.add(trip.id);
+      return { tripId: trip.id, from: new Date(from), to: new Date(to) };
+    }
+    return null;
   };
 
   const day = 24 * 60 * 60 * 1000;

@@ -19,13 +19,19 @@ import { LodgingTab } from "../components/Dashboard/tabs/LodgingTab";
 const IMPORT_MOVED_FLAG = "tsv1_5_import_moved_seen";
 
 /**
- * One-time info toast telling users that the import feature has moved to
- * Settings → Import. Suppressed via a localStorage flag after first display.
+ * One-time info toast telling EXISTING users that the import feature has moved
+ * to Settings → Import. Suppressed via a localStorage flag after first display.
+ *
+ * `enabled` gates it on the account actually having flights: the copy says
+ * import is "jetzt hier", which only makes sense to someone who knew where it
+ * used to be. On a fresh install nobody does (#237) — there the empty-state
+ * card points at import directly instead.
  */
-function useImportMigrationToast(): void {
+function useImportMigrationToast(enabled: boolean): void {
   const { t } = useTranslation(["settings"]);
   const addToast = useToastStore((s) => s.addToast);
   useEffect(() => {
+    if (!enabled) return;
     if (typeof window === "undefined") return;
     if (window.localStorage.getItem(IMPORT_MOVED_FLAG)) return;
     addToast(
@@ -35,15 +41,17 @@ function useImportMigrationToast(): void {
       8000
     );
     window.localStorage.setItem(IMPORT_MOVED_FLAG, "1");
-  }, [addToast, t]);
+  }, [enabled, addToast, t]);
 }
 
 export default function DashboardPage(): JSX.Element {
-  useImportMigrationToast();
   const { tab } = useDashboardRoute();
   const { isEnabled } = useEnabledDomains();
   const { isFeatureVisible } = useBetaFeatures();
   const [counts, setCounts] = useState({ flight: 0, cruise: 0, poi: 0, lodging: 0 });
+  const [countsLoaded, setCountsLoaded] = useState(false);
+  // Only nag about the moved import once the account is known to have flights.
+  useImportMigrationToast(countsLoaded && counts.flight > 0);
   // Bumping this token re-runs the counts effect AND remounts the
   // active tab (via key prop) so per-tab data picks up the new entry
   // without needing a separate refetch wiring per tab.
@@ -72,6 +80,7 @@ export default function DashboardPage(): JSX.Element {
           poi: 0,
           lodging: lodgingStats?.lodgingsCount ?? 0,
         });
+        setCountsLoaded(true);
       } catch (err) {
         logger.error("Failed to load dashboard counts:", err);
       }
@@ -83,7 +92,11 @@ export default function DashboardPage(): JSX.Element {
   }, [isEnabled, refreshToken]);
 
   return (
-    <DashboardLayout counts={counts} onDataChanged={() => setRefreshToken((n) => n + 1)}>
+    <DashboardLayout
+      counts={counts}
+      countsLoaded={countsLoaded}
+      onDataChanged={() => setRefreshToken((n) => n + 1)}
+    >
       {tab === "all" && <AllTab key={refreshToken} />}
       {tab === "flight" && <FlightsTab key={refreshToken} />}
       {tab === "cruise" && <CruisesTab key={refreshToken} />}
