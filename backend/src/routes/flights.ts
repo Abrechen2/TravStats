@@ -557,6 +557,69 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
   }
 });
 
+/**
+ * The single soonest upcoming flight for the dashboard "next flight" block.
+ *
+ * "Upcoming" is departureTime in the future, ascending — the opposite order to
+ * the list endpoint, which is why this is its own route rather than a query
+ * flag. Status is not trusted here: the nightly sweep only reverts strictly
+ * future rows to `scheduled`, so a future flight still stored as `flown`
+ * (imported that way, or seeded) would be missed by a status filter. The time
+ * is the source of truth, matching deriveFlightStatus.
+ *
+ * Returns { flight: null } when there is nothing ahead — the block hides.
+ */
+router.get('/next', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const flight = await prisma.flight.findFirst({
+      where: {
+        userId,
+        status: { not: 'cancelled' },
+        departureTime: { gte: new Date() },
+      },
+      orderBy: [{ departureTime: 'asc' }, { id: 'asc' }],
+      select: {
+        id: true,
+        airline: true,
+        airlineIata: true,
+        flightNumber: true,
+        depIata: true,
+        arrIata: true,
+        departureTime: true,
+        arrivalTime: true,
+        depTimeSemantics: true,
+        arrTimeSemantics: true,
+        tripId: true,
+      },
+    });
+
+    if (!flight) {
+      res.json({ flight: null });
+      return;
+    }
+
+    // Enrich both ends with city/country in one batched lookup, same source
+    // the map overlays use, so the block can read "München → New York".
+    const codes = [flight.depIata, flight.arrIata].filter((c): c is string => !!c);
+    const airports = codes.length ? await getCachedAirports(codes) : new Map();
+    const end = (iata: string | null): { city: string | null; country: string | null } => {
+      const a = iata ? airports.get(iata.toUpperCase()) : undefined;
+      return { city: a?.city ?? null, country: a?.country ?? null };
+    };
+
+    res.json({
+      flight: {
+        ...flight,
+        departure: end(flight.depIata),
+        arrival: end(flight.arrIata),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get flights with filters
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

@@ -9,8 +9,35 @@ import type {
 import { API_TIMEOUTS } from "../../config/constants";
 import { api } from "./client";
 
+/** The soonest upcoming flight for the dashboard block, enriched with the
+ *  city/country of each end. `flight` is null when nothing lies ahead. */
+export interface NextFlightEnd {
+  city: string | null;
+  country: string | null;
+}
+export interface NextFlight {
+  id: string;
+  airline: string | null;
+  airlineIata: string | null;
+  flightNumber: string | null;
+  depIata: string | null;
+  arrIata: string | null;
+  departureTime: string | null;
+  arrivalTime: string | null;
+  depTimeSemantics: string;
+  arrTimeSemantics: string;
+  tripId: string | null;
+  departure: NextFlightEnd;
+  arrival: NextFlightEnd;
+}
+
 // Flights API
 export const flightsApi = {
+  getNext: async (): Promise<NextFlight | null> => {
+    const { data } = await api.get<{ flight: NextFlight | null }>("/flights/next");
+    return data.flight;
+  },
+
   getAll: async (
     filters?: FlightFilters
   ): Promise<{
