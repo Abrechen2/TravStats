@@ -17,7 +17,12 @@ import NodeCache from 'node-cache';
 import { findOrCreateAirport } from './airportLookup';
 import { getApiKey, getOpenSkyCredentials } from './apiKeyResolver';
 import { lookupFlightAerodatabox } from './aerodataboxLookup';
-import { convertAviationstackTimeToUtc, convertAirlabsTimeToUtc } from '../utils/timezone';
+import {
+  convertAviationstackTimeToUtc,
+  convertAirlabsTimeToUtc,
+  getAirportTimezone,
+  toLocalDateString,
+} from '../utils/timezone';
 import { resolveAirlineCodes } from '../utils/airlineNormalize';
 import { prisma } from '../db';
 import logger from '../utils/logger';
@@ -961,9 +966,23 @@ export async function lookupFlightWithHistorical(
   flightNumber: string,
   date: Date | undefined,
   userId?: string,
+  depAirportCode?: string,
 ): Promise<LookupWithHistoricalResult> {
   const trimmed = flightNumber.trim();
   if (!trimmed) return { flights: [] };
+
+  // When the caller passes a stored departure INSTANT (bulk refresh does),
+  // the provider date filter must be the LOCAL departure day at the airport,
+  // not the instant's UTC day — providers key rotations by local date. A
+  // SYD 06:00 departure is the previous day in UTC; querying that UTC day
+  // returns the previous rotation (the EK415 day-shift bug, 2026-08-11).
+  // Callers passing a user-picked calendar date (UI lookup) omit
+  // depAirportCode and keep the date exactly as given.
+  let localDayStr: string | undefined;
+  if (date && depAirportCode) {
+    const depTz = await getAirportTimezone(depAirportCode);
+    if (depTz) localDayStr = toLocalDateString(date, depTz);
+  }
 
   // Direction is decided on UTC-day boundaries, not on hours: "tomorrow" /
   // "yesterday" should always count as future / past regardless of how many
@@ -972,7 +991,7 @@ export async function lookupFlightWithHistorical(
   // day, which is exactly the issue-#82 symptom we're guarding against.
   const now = Date.now();
   const todayStr = new Date(now).toISOString().slice(0, 10);
-  const requestedStr = date ? date.toISOString().slice(0, 10) : undefined;
+  const requestedStr = localDayStr ?? (date ? date.toISOString().slice(0, 10) : undefined);
   const dayDelta = requestedStr ? dayDiff(requestedStr, todayStr) : 0;
 
   const isOutsideLiveWindow = dayDelta !== 0;
@@ -1030,7 +1049,7 @@ export async function lookupFlightWithHistorical(
     }
   }
 
-  const dateStr = date ? date.toISOString().split('T')[0] : undefined;
+  const dateStr = requestedStr;
   const result = await lookupFlightDetails(trimmed, dateStr, userId);
 
   if (!result) {

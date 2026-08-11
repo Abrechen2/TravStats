@@ -13,6 +13,12 @@ import { recalculateNextApiCheckAt } from '../utils/smartCheckSchedule';
 import { applyPendingUpdate } from './pendingUpdateService';
 import type { FlightDataSnapshot } from './pendingUpdateService';
 import { sweepStatuses } from './statusSweep';
+import {
+  getAirportTimezone,
+  normalizeFlightTimeUtc,
+  toLocalDateString,
+  type FlightTimeSemantics,
+} from '../utils/timezone';
 
 const prismaClient = prisma as PrismaClient;
 
@@ -35,6 +41,10 @@ export interface PendingUpdateData {
 
 const TIME_CHANGE_THRESHOLD_MINUTES = 5; // Only create update if time difference > 5 minutes
 const FLIGHT_ACTIVE_BUFFER_HOURS = 2; // Consider flight active for 2 hours after arrival
+// Beyond this, the API is describing a different rotation of a (usually
+// daily) flight number, not a schedule change to OUR flight. Legitimate
+// same-rotation shifts are minutes to a few hours; the wrong day is ±24h.
+const ROTATION_MISMATCH_MAX_HOURS = 12;
 
 /**
  * Check if a flight is currently active (during flight time + buffer)
@@ -380,8 +390,22 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
 
     for (const flight of activeFlights) {
       try {
-        // Lookup flight data from API
-        const dateStr = flight.departureTime ? flight.departureTime.toISOString().split('T')[0] : null;
+        // Lookup flight data from API.
+        //
+        // The date filter MUST be the LOCAL departure day at the departure
+        // airport, not the UTC day of the stored instant — flight-data APIs
+        // key rotations by local date. EK415 SYD→DXB departs 11 Aug 06:00
+        // local = 10 Aug 20:00 UTC; querying "2026-08-10" returned the
+        // previous day's rotation, which auto-apply then wrote over the
+        // flight, shifting it a full day into the past (prod, 2026-08-11).
+        // Every early-morning departure east of Greenwich hits this.
+        const depTz = await getAirportTimezone(flight.depIata ?? flight.depIcao);
+        const realDeparture = normalizeFlightTimeUtc(
+          flight.departureTime,
+          flight.depTimeSemantics as FlightTimeSemantics,
+          depTz,
+        ) ?? flight.departureTime;
+        const dateStr = realDeparture ? toLocalDateString(realDeparture, depTz) : null;
         if (!dateStr) {
           logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, operation: 'skip_no_departure_time' },
             `Skipping ${flight.flightNumber} — no departure time`);
@@ -433,6 +457,29 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, date: dateStr, operation: 'api_no_data' },
             `No API data returned for ${flight.flightNumber} on ${dateStr}`);
           continue;
+        }
+
+        // Rotation guard: daily flight numbers make a ±24h mismatch the
+        // signature failure mode of any date confusion. A schedule CHANGE is
+        // minutes-to-a-few-hours; a different ROTATION is a day apart. If the
+        // API's scheduled departure is further than 12h from ours, we are
+        // looking at the wrong day's aircraft — proposing (or auto-applying)
+        // its times would rewrite the user's flight onto the wrong date.
+        if (apiData.departureTime && realDeparture) {
+          const diffHours = Math.abs(
+            new Date(apiData.departureTime).getTime() - realDeparture.getTime()
+          ) / 3_600_000;
+          if (diffHours > ROTATION_MISMATCH_MAX_HOURS) {
+            logger.warn({
+              flightId: flight.id,
+              flightNumber: flight.flightNumber,
+              storedDeparture: realDeparture.toISOString(),
+              apiDeparture: new Date(apiData.departureTime).toISOString(),
+              diffHours: Math.round(diffHours * 10) / 10,
+              operation: 'rotation_mismatch_rejected',
+            }, `Rejected API data for ${flight.flightNumber}: scheduled departure ${Math.round(diffHours)}h away from ours — wrong rotation`);
+            continue;
+          }
         }
 
         // Mark this flight as live-tracked the moment an API actually returns data,

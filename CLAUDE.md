@@ -300,6 +300,19 @@ frontend/src/
   consume it. The Dockerfile copies `backend/data/marnet/marnet.geojson`
   into the production image alongside the land mask — without it the
   router throws ENOENT on first cruise request.
+- **Flight-data API date filters are LOCAL departure dates** — providers
+  (AirLabs `dep_date`, Aviationstack `flight_date`, AeroDataBox) key a
+  rotation by the flight's LOCAL departure day, never by the UTC day of the
+  departure instant. Deriving the filter via `toISOString().split('T')[0]`
+  shifts every early-morning departure east of Greenwich onto the PREVIOUS
+  rotation (EK415 SYD 06:00 local = 20:00Z the day before — prod flight got
+  rewritten one day early, 2026-08-11). Use
+  `toLocalDateString(instant, await getAirportTimezone(depIata))` from
+  `utils/timezone.ts`. `flightAutoUpdate` additionally rejects API data whose
+  scheduled departure is > 12h from ours (`rotation_mismatch_rejected`) —
+  that guard is the backstop for every remaining date-confusion path; do not
+  remove it to "fix" a schedule-change edge case (legit changes are minutes
+  to a few hours, a different rotation is ±24h).
 - **Ship + Port seeds are idempotent** — `seedShipsFromCSV` /
   `seedPortsFromCSV` skip rows whose `imo` / `unlocode` already exists.
   User-added rows (`isUserAdded=true`) are never overwritten by
