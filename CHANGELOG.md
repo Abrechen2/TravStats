@@ -4,6 +4,41 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.5.2] - 2026-08-11
+
+Hotfix release. One data-corrupting bug and its blast radius, no database
+changes.
+
+### Fixed
+- **Live tracking could move a flight to the previous day.** Flight-data
+  providers identify a rotation by its LOCAL departure date, but the
+  automatic update asked for the UTC day of the departure instant. For any
+  early-morning departure east of Greenwich those differ — a Sydney 06:00
+  departure is still the previous day in UTC — so the update fetched the
+  previous day's aircraft and, with approval disabled, rewrote the flight a
+  full day into the past, actual times and "flown" status included. Lookups
+  now use the departure airport's local calendar day, and any API answer
+  whose scheduled departure is more than 12 hours away from the stored one
+  is rejected as the wrong rotation instead of being proposed at all.
+- **The built-in parser misread Emirates bookings.** The itinerary tables
+  put the time, the weekday and a two-digit-year date on three separate
+  lines — the parser required four-digit years and never associated the
+  times, so the actual legs came out dateless. Worse, the legal footer
+  ("Erlass Nr. 2 von 1985") parsed as the flight date 1985-01-02, because
+  an unrecognised month silently became January. Month names are now
+  validated, implausible years are rejected, two-digit years are
+  understood, and a time on the line above its date is paired with it.
+- **Very long booking emails were silently cut off before the AI parser saw
+  them.** Anything beyond 5,000 characters was dropped without a trace —
+  and return legs live at the end of an itinerary. The window is now
+  12,000 characters and a truncation is logged.
+
+### Upgrade notes
+- No database migrations in this release.
+- Flights that live tracking already shifted to a wrong day are not
+  corrected retroactively — check recent long-haul arrivals whose departure
+  was an early morning east of UTC.
+
 ## [2.5.1] - 2026-08-09
 
 Patch release. Three fixes, no database changes.
