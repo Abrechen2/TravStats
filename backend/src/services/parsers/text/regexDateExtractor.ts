@@ -19,6 +19,61 @@ export function addDays(iso: string, days: number): string {
   return `${yy}-${mm}-${dd}T${timePart}`;
 }
 
+/**
+ * Resolve a raw year token to a full year, or null when implausible for a
+ * booking email. Two-digit years ("26" in Emirates' "05. Aug. 26") pivot at
+ * 70 and get a TIGHT window — the shorthand only appears in contemporary
+ * itineraries. Four-digit years get a wider window, but anything before 2000
+ * is rejected: that is how "Emir-Erlass Nr. 2 von 1985" in a legal footer
+ * became flight date 1985-01-02 (prod booking H68W8S, 2026-08-11).
+ */
+export function resolvePlausibleYear(raw: string): number | null {
+  const now = new Date().getUTCFullYear();
+  let year = Number(raw);
+  if (raw.length === 2) {
+    year = year < 70 ? 2000 + year : 1900 + year;
+    if (year < now - 5 || year > now + 3) return null;
+    return year;
+  }
+  if (year < 2000 || year > now + 3) return null;
+  return year;
+}
+
+/**
+ * Resolve a month token (name or number) to "MM", or null when it is not a
+ * month at all. Returning null instead of the old '01' default is what stops
+ * "2 von 1985" ("von" is no month) from ever becoming a date.
+ */
+export function resolveMonth(raw: string): string | null {
+  const upper = raw.toUpperCase();
+  if (MONTH_NAMES[upper]) return MONTH_NAMES[upper];
+  if (/^\d{1,2}$/.test(raw)) {
+    const n = Number(raw);
+    if (n >= 1 && n <= 12) return String(n).padStart(2, '0');
+  }
+  return null;
+}
+
+/**
+ * Column layouts (Emirates PDF) put the time on its own line ABOVE the date,
+ * with an optional weekday line in between:
+ *   "22:30\nMittwoch\n05. Aug. 26"
+ * When a date match carries no same-line time, look backward for a
+ * standalone HH:MM that is the last content (bar one weekday word) before
+ * the date.
+ */
+function timeOnPrecedingLine(source: string, matchIndex: number): { h: string; min: string } | null {
+  const before = source.slice(Math.max(0, matchIndex - 40), matchIndex);
+  const m = before.match(
+    /(\d{1,2}):(\d{2})(?:\s*Uhr)?[ \t]*\r?\n(?:[A-Za-zÄÖÜäöüß]+\.?[ \t]*\r?\n)?[\s\r\n]*$/
+  );
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  return { h: m[1].padStart(2, '0'), min: m[2] };
+}
+
 /** Extract all date/time pairs from text (positional, multi-flight) */
 export function extractAllTimePairs(source: string): Array<{ departure?: string; arrival?: string }> {
   const pairs: Array<{ departure?: string; arrival?: string }> = [];
@@ -49,18 +104,46 @@ export function extractAllTimePairs(source: string): Array<{ departure?: string;
   // would corrupt arrivals by matching dates that are actually departure repeats.
   if (pairs.length > 0) return pairs;
 
-  // German/English date format — abbreviated and full month names, time optional
-  // Also handles dash-separated time: "18.09.2025 - 08:25"
-  const germanPattern = /(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(?:-\s*)?(\d{1,2}):(\d{2}))?/gi;
-  const germanMatches = Array.from(source.matchAll(germanPattern));
+  // German/English date format — abbreviated and full month names, time optional.
+  // Handles dash-separated time ("18.09.2025 - 08:25"), two-digit years
+  // ("05. Aug. 26", Emirates), and a time on the PRECEDING line (column
+  // layouts put "06:00\n11. Aug. 26" in separate table cells).
+  // The inline-time separator is same-line only ([ \t,]) — a \s that crossed
+  // newlines let "11. Aug. 26\n14:10" bind the NEXT table cell's time to the
+  // wrong date in column layouts. The day token must not be the minutes of a
+  // time ("22:30" → day 30) or a digit run's tail — hence the lookbehind.
+  const germanPattern =
+    /(?<![:\d])(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4}|\d{2})\b(?:[ \t,]+(?:-\s*)?(\d{1,2}):(\d{2}))?/gi;
 
-  for (const match of germanMatches) {
+  const dated: Array<{ iso: string; hasTime: boolean }> = [];
+  let match: RegExpExecArray | null;
+  while ((match = germanPattern.exec(source)) !== null) {
+    // A REJECTED candidate must not consume its span: "30\nMittwoch\n05."
+    // (day 30 from a time, weekday as month) would otherwise swallow the
+    // real "05. Aug. 26" that starts inside it. Re-scan from index+1.
+    const reject = (): void => {
+      germanPattern.lastIndex = match!.index + 1;
+    };
+    const month = resolveMonth(match[2]);
+    if (!month) { reject(); continue; } // "2 von 1985" — not a month, not a date
+    const year = resolvePlausibleYear(match[3]);
+    if (year === null) { reject(); continue; }
+    // Two-digit years only in dotted shorthand ("05.08.26" / "05. Aug. 26") —
+    // space-separated digit triples like "Seite 2 3 26" are page furniture.
+    if (match[3].length === 2 && !match[0].includes('.')) { reject(); continue; }
+
     const day = match[1].padStart(2, '0');
-    const raw = match[2].toUpperCase();
-    const month = MONTH_NAMES[raw] ?? (match[2].length <= 2 ? match[2].padStart(2, '0') : '01');
-    const year = match[3];
-    const hour = match[4] ? match[4].padStart(2, '0') : '00';
-    const minute = match[5] ?? '00';
+    let hour = match[4] ? match[4].padStart(2, '0') : '00';
+    let minute = match[5] ?? '00';
+    let hasTime = Boolean(match[4]);
+    if (!hasTime) {
+      const above = timeOnPrecedingLine(source, match.index!);
+      if (above) {
+        hour = above.h;
+        minute = above.min;
+        hasTime = true;
+      }
+    }
     let isoTime = `${year}-${month}-${day}T${hour}:${minute}`;
 
     // Detect +N next-day marker (e.g. "+1", "(+1)") — exclude timezone offsets like +01:00
@@ -68,12 +151,23 @@ export function extractAllTimePairs(source: string): Array<{ departure?: string;
     const nextDay = after.match(/^\s*\(?\+(\d)\)?(?!\d*:)/);
     if (nextDay) isoTime = addDays(isoTime, Number(nextDay[1]));
 
-    // Add to pairs: first German date becomes departure, second becomes arrival of same pair
+    dated.push({ iso: isoTime, hasTime });
+  }
+
+  // Itinerary tables always carry times; headers ("Mittwoch 5. August 2026")
+  // and footers do not. When at least two timed dates exist, the date-only
+  // matches are page furniture — keeping them would shift every flight's
+  // times onto its neighbour (index-aligned pairing downstream).
+  const timed = dated.filter(d => d.hasTime);
+  const usable = timed.length >= 2 ? timed : dated;
+
+  for (const { iso } of usable) {
+    // First unpaired departure gets the arrival, else start a new pair.
     const existingPair = pairs.find(p => p.departure && !p.arrival);
     if (existingPair) {
-      existingPair.arrival = isoTime;
+      existingPair.arrival = iso;
     } else {
-      pairs.push({ departure: isoTime });
+      pairs.push({ departure: iso });
     }
   }
 
@@ -138,15 +232,16 @@ export function extractLabeledDates(source: string): { departureTime?: string; a
     }
     // German/English date format (time optional, dash or comma separator, "Uhr" suffix)
     const deM = slice.match(
-      /^(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(?:-\s*)?(\d{1,2}):(\d{2})(?:\s*Uhr)?)?/
+      /^(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4}|\d{2})\b(?:[,\s]+(?:-\s*)?(\d{1,2}):(\d{2})(?:\s*Uhr)?)?/
     );
     if (deM) {
       const d = deM[1].padStart(2, '0');
-      const raw = deM[2].toUpperCase();
-      const mo = MONTH_NAMES[raw] ?? (deM[2].length <= 2 ? deM[2].padStart(2, '0') : '01');
+      const mo = resolveMonth(deM[2]);
+      const yr = resolvePlausibleYear(deM[3]);
+      if (!mo || yr === null) return undefined;
       const h = deM[4] ? deM[4].padStart(2, '0') : '00';
       const min = deM[5] ?? '00';
-      let iso = `${deM[3]}-${mo}-${d}T${h}:${min}`;
+      let iso = `${yr}-${mo}-${d}T${h}:${min}`;
       const afterDate = slice.slice(deM[0].length, deM[0].length + 8);
       const nextDay = afterDate.match(/^\s*\(?\+(\d)\)?(?!\d*:)/);
       if (nextDay) iso = addDays(iso, Number(nextDay[1]));

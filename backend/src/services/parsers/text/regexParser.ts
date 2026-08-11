@@ -4,9 +4,9 @@ import { ParsedBooking } from '../../bookingParser';
 import { normalizeParsedBooking, PATTERNS } from '../shared/utils';
 import logger from '../../../utils/logger';
 
-import { FLIGHT_NUMBER_FALSE_PREFIXES, MONTH_NAMES } from './regexMappings';
+import { FLIGHT_NUMBER_FALSE_PREFIXES } from './regexMappings';
 import { extractAirportCodes, extractAllAirportPairs, isValidIATACode } from './regexAirportExtractor';
-import { addDays, extractAllTimePairs, extractLabeledDates } from './regexDateExtractor';
+import { extractAllTimePairs, extractLabeledDates } from './regexDateExtractor';
 import { extractSharedPNR, findPNRInSource } from './regexPnrExtractor';
 
 /**
@@ -276,27 +276,18 @@ export class RegexTextParser implements ITextParser {
       if (!data.arrivalTime && isoTimeMatches.length >= 2) data.arrivalTime = isoTimeMatches[1][1].replace(' ', 'T');
     }
 
-    // German/English date format — abbreviated and full month names, time optional (dash OK)
+    // German/English date format — delegates to the shared extractor, which
+    // validates month names, applies the plausible-year window, supports
+    // two-digit years, and associates column-layout times (time line above
+    // the date line). The previous inline copy defaulted unknown months to
+    // '01' and required four-digit years — both bugs the extractor fixes.
     if (!data.departureTime || !data.arrivalTime) {
-      const germanDatePattern = /(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(?:-\s*)?(\d{1,2}):(\d{2}))?/gi;
-      const dateMatches = Array.from(source.matchAll(germanDatePattern));
-      const toIso = (m: RegExpMatchArray, src: string): string => {
-        const d = m[1].padStart(2, '0');
-        const raw = m[2].toUpperCase();
-        const mo = MONTH_NAMES[raw] ?? (m[2].length <= 2 ? m[2].padStart(2, '0') : '01');
-        const y = m[3];
-        const h = m[4] ? m[4].padStart(2, '0') : '00';
-        const min = m[5] ?? '00';
-        let iso = `${y}-${mo}-${d}T${h}:${min}`;
-        // Detect +N next-day marker — exclude timezone offsets like +01:00
-        const after = src.slice(m.index! + m[0].length, m.index! + m[0].length + 8);
-        const nextDay = after.match(/^\s*\(?\+(\d)\)?(?!\d*:)/);
-        if (nextDay) iso = addDays(iso, Number(nextDay[1]));
-        return iso;
-      };
-      if (dateMatches.length > 0) {
-        if (!data.departureTime) data.departureTime = toIso(dateMatches[0], source);
-        if (!data.arrivalTime && dateMatches.length > 1) data.arrivalTime = toIso(dateMatches[1], source);
+      const germanPairs = extractAllTimePairs(source);
+      if (germanPairs.length > 0) {
+        if (!data.departureTime) data.departureTime = germanPairs[0].departure;
+        if (!data.arrivalTime) {
+          data.arrivalTime = germanPairs[0].arrival ?? germanPairs[1]?.departure;
+        }
       }
     }
 

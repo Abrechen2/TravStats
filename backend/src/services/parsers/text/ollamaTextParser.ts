@@ -51,6 +51,8 @@ Inference reporting:
 // single-leg regex templates for multi-flight bookings.
 const OLLAMA_GENERATE_TIMEOUT_MS = 300_000;
 
+const EMAIL_SNIPPET_MAX_CHARS = 12_000;
+
 function fetchJson(url: string, body: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
@@ -181,7 +183,17 @@ export class OllamaTextParser implements ITextParser {
   }
 
   async parseEmail(subject: string, text: string): Promise<ParsedBooking[]> {
-    const emailSnippet = text.slice(0, 5000);
+    // 12k chars ≈ 3k tokens — comfortably within every deployed model's
+    // context alongside the system prompt. The old 5000 cap sat 300 chars
+    // above a real Emirates booking PDF; anything longer silently lost its
+    // later legs (return flights live at the END of itinerary emails).
+    const emailSnippet = text.slice(0, EMAIL_SNIPPET_MAX_CHARS);
+    if (text.length > EMAIL_SNIPPET_MAX_CHARS) {
+      logger.warn(
+        { totalChars: text.length, keptChars: EMAIL_SNIPPET_MAX_CHARS },
+        "[Ollama Text Parser] Email text truncated — legs beyond the cap are invisible to the LLM"
+      );
+    }
     const userPrompt = `Subject: ${subject}\n\n${emailSnippet}`;
 
     // `think: false` disables chain-of-thought generation on reasoning models
