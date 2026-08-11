@@ -76,10 +76,18 @@ export interface BulkRefreshSummary {
  * Sorted newest-first so the user sees results from recent flights first
  * (most likely to be present in the provider's cache).
  */
+export interface BulkRefreshCandidate {
+  id: string;
+  flightNumber: string;
+  departureTime: Date;
+  depIata: string | null;
+  depIcao: string | null;
+}
+
 export async function findBulkRefreshCandidates(
   userId: string,
   limit: number = MAX_PER_CALL,
-): Promise<Array<{ id: string; flightNumber: string; departureTime: Date }>> {
+): Promise<BulkRefreshCandidate[]> {
   const now = new Date();
   const earliest = new Date(now);
   earliest.setDate(earliest.getDate() - HISTORICAL_WINDOW_DAYS);
@@ -102,13 +110,15 @@ export async function findBulkRefreshCandidates(
       id: true,
       flightNumber: true,
       departureTime: true,
+      depIata: true,
+      depIcao: true,
     },
     orderBy: { departureTime: 'desc' },
     take: limit,
   });
 
   return flights.filter(
-    (f): f is { id: string; flightNumber: string; departureTime: Date } =>
+    (f): f is BulkRefreshCandidate =>
       f.flightNumber !== null && f.departureTime !== null,
   );
 }
@@ -179,6 +189,7 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
         candidate.flightNumber,
         candidate.departureTime,
         userId,
+        candidate.depIata ?? candidate.depIcao ?? undefined,
       );
 
       if (unavailableReason || flights.length === 0) {
