@@ -49,6 +49,14 @@ FINAL=0
 # Docker Hub check, which is exactly the mirror users pull from.
 [[ "$TAG" =~ -(rc|beta|security)\. ]] || FINAL=1
 
+# `:rc-latest` is the rolling pointer to the newest RELEASE CANDIDATE. A beta
+# is a separate track — it lands on the beta server and deliberately does not
+# move that tag — so demanding a match there reports a healthy beta as broken.
+# Measured on 2.6.0-beta.7, which failed both mirror checks while being
+# perfectly traceable.
+IS_RC=0
+[[ "$TAG" =~ -(rc|security-rc)\. ]] && IS_RC=1
+
 for tool in git gh docker; do
   command -v "$tool" >/dev/null || { echo "missing required tool: $tool" >&2; exit 2; }
 done
@@ -162,6 +170,8 @@ if ((FINAL)); then
       pass "$ref matches ${TAG}"
     fi
   done
+elif ((IS_RC == 0)); then
+  info "beta build — :rc-latest is the RC pointer and is not expected to move"
 else
   for ref in "${GHCR_REPO}:rc-latest" "${HUB_REPO}:rc-latest"; do
     D=$(digest_of "$ref")
