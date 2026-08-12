@@ -97,6 +97,31 @@ export function normalizeFlightNumber(v: string | undefined | null): string | un
   return cleaned === "" ? undefined : cleaned;
 }
 
+/**
+ * Flight number in the form flight-data PROVIDERS use: the IATA designator
+ * followed by the number WITHOUT leading zeros.
+ *
+ * Airlines print zero-padded numbers on itineraries ("EK051"), but AirLabs,
+ * Aviationstack and AeroDataBox all key on the unpadded IATA form ("EK51").
+ * Querying the padded form returns an empty result set — verified against
+ * AirLabs on 2026-08-11: `flight_iata=EK051` → 0 records, `flight_iata=EK51`
+ * → the real flight. Every zero-padded booking (Emirates, Qatar, Gulf Air,
+ * EgyptAir …) was therefore invisible to live tracking.
+ *
+ * ONLY for outgoing provider requests. The stored number keeps the user's
+ * own spelling — mapping a response back onto the padded form is what stops
+ * auto-apply from silently renaming their flight to the provider's spelling.
+ */
+export function toProviderFlightNumber(v: string | undefined | null): string | undefined {
+  const normalized = normalizeFlightNumber(v);
+  if (!normalized) return undefined;
+  // Designator: 2-3 letters (incl. ICAO), or the letter+digit / digit+letter
+  // IATA forms ("U2", "9W"). Anything unrecognised is passed through as-is.
+  const m = normalized.match(/^([A-Z]{2,3}|[A-Z]\d|\d[A-Z])0*(\d{1,4})$/);
+  if (!m) return normalized;
+  return `${m[1]}${m[2]}`;
+}
+
 const normalizedFlightNumber = z
   .string()
   .nullable()
