@@ -24,6 +24,7 @@ import {
   toLocalDateString,
 } from '../utils/timezone';
 import { resolveAirlineCodes } from '../utils/airlineNormalize';
+import { toProviderFlightNumber } from '../schemas/flight';
 import { prisma } from '../db';
 import logger from '../utils/logger';
 
@@ -249,6 +250,25 @@ export function __setAviationstackDateFilterRestrictedForTests(value: boolean): 
   aviationstackDateFilterRestricted = value;
 }
 
+/**
+ * Tag an AirLabs `*_utc` value as UTC.
+ *
+ * AirLabs returns BOTH a local (`dep_time`) and a UTC (`dep_time_utc`)
+ * field, and BOTH in the bare form "YYYY-MM-DD HH:mm" — no `Z`, no offset.
+ * `convertAirlabsTimeToUtc` decides by that missing marker and re-interprets
+ * the value as airport-local, so preferring `*_utc` silently subtracted the
+ * airport's offset a second time (EK51 DXB→MUC 15:55 local / 11:55Z came out
+ * as 07:55Z; measured 2026-08-11). Marking the value keeps the converter's
+ * existing already-has-a-zone branch, and the local fallback still converts.
+ */
+function markUtc(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const v = value.trim();
+  if (!v) return undefined;
+  if (/[zZ]$/.test(v) || /[+-]\d{2}:?\d{2}$/.test(v)) return v;
+  return `${v.replace(' ', 'T')}Z`;
+}
+
 export interface FlightData {
   flightNumber: string;
   airline: string;
@@ -322,11 +342,13 @@ export async function lookupFlightByNumber(
   try {
     logger.info({ flightNumber, date: dateStr, api: 'airlabs', operation: 'api_call_start' },
       `Calling AirLabs API for ${flightNumber} on ${dateStr}`);
-    // AirLabs API endpoint for flight schedules
+    // AirLabs API endpoint for flight schedules. The query uses the UNPADDED
+    // IATA form — "EK051" returns zero records where "EK51" returns the
+    // flight (see toProviderFlightNumber).
     const response = await axios.get('https://airlabs.co/api/v9/schedules', {
       params: {
         api_key: apiKey,
-        flight_iata: flightNumber,
+        flight_iata: toProviderFlightNumber(flightNumber) ?? flightNumber,
         ...(date && { dep_date: date.toISOString().split('T')[0] }),
       },
       timeout: 5000,
@@ -341,7 +363,11 @@ export async function lookupFlightByNumber(
     }
 
     const flights: FlightData[] = response.data.response.map((flight: AirLabsFlightRecord) => ({
-      flightNumber: flight.flight_iata || flightNumber,
+      // Deliberately the CALLER's spelling, not the provider's: echoing back
+      // "EK51" for a stored "EK051" makes calculateChanges see a flightNumber
+      // change, which auto-apply would write — silently renaming the user's
+      // flight to the provider's padding convention.
+      flightNumber,
       airline: flight.airline_name || getAirlineName(flight.airline_iata || '') || flight.airline_icao || 'Unknown',
       airlineIata: flight.airline_iata,
       airlineIcao: flight.airline_icao,
@@ -349,8 +375,8 @@ export async function lookupFlightByNumber(
         iata: flight.dep_iata,
         icao: flight.dep_icao,
         name: flight.dep_name,
-        scheduledTime: flight.dep_time_utc || flight.dep_time,
-        actualTime: flight.dep_actual_utc || flight.dep_actual,
+        scheduledTime: markUtc(flight.dep_time_utc) || flight.dep_time,
+        actualTime: markUtc(flight.dep_actual_utc) || flight.dep_actual,
         terminal: flight.dep_terminal,
         gate: flight.dep_gate,
       },
@@ -358,8 +384,8 @@ export async function lookupFlightByNumber(
         iata: flight.arr_iata,
         icao: flight.arr_icao,
         name: flight.arr_name,
-        scheduledTime: flight.arr_time_utc || flight.arr_time,
-        actualTime: flight.arr_actual_utc || flight.arr_actual,
+        scheduledTime: markUtc(flight.arr_time_utc) || flight.arr_time,
+        actualTime: markUtc(flight.arr_actual_utc) || flight.arr_actual,
         terminal: flight.arr_terminal,
         gate: flight.arr_gate,
       },
@@ -574,10 +600,13 @@ export async function lookupFlightDetails(
         access_key: aviationstackKey,
         limit: '1',
       };
-      if (/^[A-Za-z]{2}\d+/.test(trimmedNumber)) {
-        params.flight_iata = trimmedNumber;
+      // Unpadded IATA form for the same reason as AirLabs (see
+      // toProviderFlightNumber) — providers do not carry leading zeros.
+      const providerNumber = toProviderFlightNumber(trimmedNumber) ?? trimmedNumber;
+      if (/^[A-Za-z]{2}\d+/.test(providerNumber)) {
+        params.flight_iata = providerNumber;
       } else {
-        params.flight_icao = trimmedNumber;
+        params.flight_icao = providerNumber;
       }
       if (date && !omitDateFilter) {
         params.flight_date = date;
@@ -661,7 +690,9 @@ export async function lookupFlightDetails(
           return {
             source: 'aviationstack',
             airline: result.airline?.name,
-            flightNumber: result.flight?.iata || result.flight?.icao || trimmedNumber,
+            // Caller's spelling — see the AirLabs mapping: echoing the
+            // provider's unpadded form would auto-rename a stored "EK051".
+            flightNumber: trimmedNumber,
             aircraft: result.aircraft?.icao || result.aircraft?.iata,
             departure: departureWithLive,
             arrival: arrivalWithLive,

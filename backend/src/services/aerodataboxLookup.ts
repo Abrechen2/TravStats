@@ -26,7 +26,7 @@ import { getApiKey } from "./apiKeyResolver";
 import { recordObservedQuota } from "./apiQuota";
 import logger from "../utils/logger";
 import type { FlightLookupResult } from "./flightLookup";
-import { normalizeFlightNumber } from "../schemas/flight";
+import { normalizeFlightNumber, toProviderFlightNumber } from "../schemas/flight";
 
 const HOST = "aerodatabox.p.rapidapi.com";
 const BASE_URL = `https://${HOST}`;
@@ -138,10 +138,13 @@ function pickOperatorAndMarketing(
 ): PickedFlights | undefined {
   if (flights.length === 0) return undefined;
   const operator = flights.find((f) => f.codeshareStatus === "isOperator") ?? flights[0];
-  const normalizedRequested = normalizeFlightNumber(requestedNumber);
+  // Compare in PROVIDER form on both sides: the stored number may be
+  // zero-padded ("EK051") while the response never is ("EK51"), and a
+  // padded-vs-unpadded mismatch would silently drop the marketing entry.
+  const normalizedRequested = toProviderFlightNumber(requestedNumber);
   const marketing = flights.find(
     (f) =>
-      f !== operator && normalizeFlightNumber(f.number ?? "") === normalizedRequested,
+      f !== operator && toProviderFlightNumber(f.number ?? "") === normalizedRequested,
   );
   return { operator, marketing };
 }
@@ -170,6 +173,7 @@ export async function lookupFlightAerodatabox(
   }
 
   const normalized = normalizeFlightNumber(trimmed) ?? trimmed;
+  const providerNumber = toProviderFlightNumber(trimmed) ?? normalized;
   const cacheKey = `${normalized}_${date}`;
 
   const cached = cache.get<FlightLookupResult | null>(cacheKey);
@@ -188,7 +192,9 @@ export async function lookupFlightAerodatabox(
     );
 
     const response = await axios.get<AerodataboxFlight[]>(
-      `${BASE_URL}/flights/number/${encodeURIComponent(normalized)}/${date}`,
+      // Unpadded IATA form — providers do not carry the leading zeros that
+      // itineraries print (see toProviderFlightNumber).
+      `${BASE_URL}/flights/number/${encodeURIComponent(providerNumber)}/${date}`,
       {
         headers: {
           "x-rapidapi-host": HOST,
