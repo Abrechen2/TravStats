@@ -4,12 +4,27 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
-## [2.5.2] - 2026-08-11
+## [2.5.2] - 2026-08-12
 
-Hotfix release. One data-corrupting bug and its blast radius, no database
-changes.
+Hotfix release. Three ways live flight data went wrong, no database changes.
 
 ### Fixed
+- **Flight numbers printed with a leading zero found nothing at all.**
+  Airlines write "EK051" on the itinerary and that is what gets stored, but
+  every flight-data provider keys on the unpadded form, "EK51", and answers
+  the padded query with an empty result. Live tracking, automatic updates and
+  enrichment therefore did nothing whatsoever for Emirates, Qatar, Gulf Air,
+  EgyptAir and every other airline that pads — silently, because "no data"
+  looks the same as "nothing to report". Requests now drop the padding while
+  the stored number keeps your spelling: the answer is mapped back onto it,
+  so an automatic update cannot quietly rename your flight to the provider's
+  convention.
+- **Departure and arrival times were an airport's offset too early.**
+  AirLabs returns both a local and a UTC time, and neither carries a zone
+  marker, so the UTC value was read a second time as local — an Emirates
+  flight leaving Dubai at 15:55 was recorded as departing 07:55 UTC instead
+  of 11:55. The UTC values are now marked as such before conversion; times
+  that only exist as local are still converted as before.
 - **Live tracking could move a flight to the previous day.** Flight-data
   providers identify a rotation by its LOCAL departure date, but the
   automatic update asked for the UTC day of the departure instant. For any
@@ -38,6 +53,9 @@ changes.
 - Flights that live tracking already shifted to a wrong day are not
   corrected retroactively — check recent long-haul arrivals whose departure
   was an early morning east of UTC.
+- Times already stored an offset too early are likewise not corrected
+  retroactively. Re-running a lookup on an affected flight now returns the
+  right value.
 
 ## [2.5.1] - 2026-08-09
 
