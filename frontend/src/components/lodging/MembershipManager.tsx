@@ -32,6 +32,15 @@ interface MembershipManagerProps {
   /** Extra note rendered under the title — e.g. "shared with Westin, Ritz-Carlton" when the program spans multiple chains. */
   sharedWithLabel?: string;
   /**
+   * The full chain catalogue, used to build the checkbox list when UNSCOPED
+   * (no `scopeChain`). Without this, the unscoped checkbox list is only
+   * `editingMembership.chains` — so creating a card offers nothing to tick
+   * at all (saves `chainIds: []`), and editing a card is untick-only, with
+   * no way to add a chain back. Ignored when `scopeChain` is set — the chain
+   * page keeps its existing `suggestedChains`-based list unchanged.
+   */
+  chainCatalog?: LodgingChainRef[];
+  /**
    * Extra content rendered inside each row, below the programme name/tier
    * line — e.g. the settings overview's coverage summary and hotel-coverage
    * picker. Kept as a render prop rather than a second list so a card's name
@@ -74,6 +83,7 @@ export function MembershipManager({
   onChanged,
   scopeChain,
   sharedWithLabel,
+  chainCatalog,
   renderRowExtra,
   reloadSignal,
 }: MembershipManagerProps): JSX.Element {
@@ -132,16 +142,20 @@ export function MembershipManager({
       : memberships;
   const hasFilteredMembership = scopeChain !== undefined && visibleMemberships.length > 0;
 
-  // Every chain tickable in the form: the suggestion for this chain plus what
-  // the membership being edited already covers, so a link to a chain outside
-  // the suggestion stays visible instead of being dropped on the next save.
+  // Every chain tickable in the form. Scoped (the chain page): the catalogue
+  // suggestion for this chain, unchanged from before. Unscoped (Settings):
+  // the FULL chain catalogue, so the user can tick a chain the card does not
+  // cover yet — not just untick one it already has. Either way, whatever the
+  // membership being edited already covers is added too, so a link outside
+  // the offered set stays visible instead of being dropped on the next save.
   const editingMembership =
     editingId !== null && editingId !== "new"
       ? memberships.find((m) => m.id === editingId)
       : undefined;
   const chainChoices: LodgingChainRef[] = (() => {
     const byId = new Map<number, LodgingChainRef>();
-    for (const c of scopeChain?.suggestedChains ?? []) byId.set(c.id, c);
+    const suggested = scopeChain !== undefined ? scopeChain.suggestedChains : (chainCatalog ?? []);
+    for (const c of suggested) byId.set(c.id, c);
     for (const c of editingMembership?.chains ?? []) byId.set(c.id, c);
     return Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name));
   })();

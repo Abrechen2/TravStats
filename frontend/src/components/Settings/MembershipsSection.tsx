@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { MembershipManager } from "../lodging/MembershipManager";
-import { listLodgings, updateMembership } from "../../lib/api/lodging";
+import { listChains, listLodgings, updateMembership } from "../../lib/api/lodging";
 import { logger } from "../../lib/logger";
-import type { Lodging, LodgingMembership } from "../../types/lodging";
+import type { Lodging, LodgingChainRef, LodgingMembership } from "../../types/lodging";
 
 /**
  * The one place every loyalty card is visible.
@@ -26,6 +26,7 @@ import type { Lodging, LodgingMembership } from "../../types/lodging";
 export default function MembershipsSection(): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
+  const [chains, setChains] = useState<LodgingChainRef[]>([]);
   const [openPicker, setOpenPicker] = useState<string | null>(null);
   const [reloadSignal, setReloadSignal] = useState<number | undefined>(undefined);
 
@@ -35,6 +36,17 @@ export default function MembershipsSection(): JSX.Element {
         setLodgings(await listLodgings());
       } catch (err) {
         logger.error("MembershipsSection: failed to load lodgings", err);
+      }
+    })();
+    void (async () => {
+      try {
+        // The full catalogue (no search term) — this is what makes the
+        // unscoped checkbox list complete instead of untick-only (Finding 2,
+        // fix-wave-1: without it, `MembershipManager` had nothing to offer
+        // beyond a card's own existing chains).
+        setChains(await listChains());
+      } catch (err) {
+        logger.error("MembershipsSection: failed to load chains", err);
       }
     })();
   }, []);
@@ -52,18 +64,34 @@ export default function MembershipsSection(): JSX.Element {
   // dormant); this filter is a UI affordance, not a validation rule.
   const independentLodgings = lodgings.filter((l) => l.chainId === null);
 
+  // Serializes toggles per membership id. `membership.lodgingIds` is a
+  // render-time snapshot — two quick clicks on different hotels for the SAME
+  // card (before the first PATCH has returned) used to both start from that
+  // same stale snapshot, so the second write silently discarded the first.
+  // Chaining on this map makes each toggle build on the PREVIOUS one's
+  // resolved list (the server's response, or — on failure — the list it
+  // just tried to save) instead of the closure it was created with.
+  const pendingLodgingIds = useRef<Map<string, Promise<string[]>>>(new Map());
+
   const toggleLodging = (membership: LodgingMembership, lodgingId: string, checked: boolean): void => {
-    const nextLodgingIds = checked
-      ? [...membership.lodgingIds, lodgingId]
-      : membership.lodgingIds.filter((id) => id !== lodgingId);
-    void (async () => {
+    const base = pendingLodgingIds.current.get(membership.id) ?? Promise.resolve(membership.lodgingIds);
+    const chained = base.then(async (currentLodgingIds) => {
+      const nextLodgingIds = checked
+        ? [...currentLodgingIds, lodgingId]
+        : currentLodgingIds.filter((id) => id !== lodgingId);
       try {
-        await updateMembership(membership.id, { lodgingIds: nextLodgingIds });
+        const updated = await updateMembership(membership.id, { lodgingIds: nextLodgingIds });
         setReloadSignal((prev) => (prev ?? 0) + 1);
+        return updated.lodgingIds;
       } catch (err) {
         logger.error("MembershipsSection: failed to update hotel coverage", err);
+        // Keep building on the list we intended, even though this PATCH
+        // failed — so a follow-up click still starts from the right base
+        // instead of reverting to the original render-time snapshot.
+        return nextLodgingIds;
       }
-    })();
+    });
+    pendingLodgingIds.current.set(membership.id, chained);
   };
 
   return (
@@ -75,6 +103,7 @@ export default function MembershipsSection(): JSX.Element {
 
       <MembershipManager
         reloadSignal={reloadSignal}
+        chainCatalog={chains}
         renderRowExtra={(m) => (
           <div className="mt-1 text-xs text-[var(--text-secondary)]">
             {coverage(m)}
