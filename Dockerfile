@@ -27,6 +27,16 @@ WORKDIR /app/backend
 
 COPY backend/package*.json ./
 COPY backend/prisma ./prisma/
+# bcrypt downloads a prebuilt binary from a GitHub release and falls back to
+# compiling from source when that fails. The fallback needs python3 and a
+# toolchain, which node:22-alpine does not carry — so a flaky CDN became a hard
+# build failure: measured 2026-08-12, one request in three for
+# bcrypt_lib-v5.1.1-napi-v3-linux-x64-musl.tar.gz ended in a socket hang up.
+# 2.6.0-beta.7 lost that roll; 2.5.2-rc.4 an hour earlier had won it. npm's
+# fetch-retries below do not cover node-pre-gyp's own download, so they never
+# helped. These packages make the documented fallback actually work. They live
+# in the builder stage and never reach the production image.
+RUN apk add --no-cache python3 make g++
 RUN npm config set fetch-retries 5 \
     && npm config set fetch-retry-mintimeout 30000 \
     && npm config set fetch-retry-maxtimeout 300000 \
