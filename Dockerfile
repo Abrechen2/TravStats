@@ -47,6 +47,33 @@ RUN rm -rf dist
 RUN npx prisma generate
 RUN npm run build
 
+# Stage 2b: production dependencies, resolved on the SAME libc as the runtime.
+#
+# This exists for one reason: bcrypt has no pure-JS path. It downloads a
+# prebuilt binary from a GitHub release and compiles from source when that
+# fails, and the download is measurably flaky — one request in three ended in a
+# socket hang up on 2026-08-12, which killed two consecutive 2.6.0-beta.7
+# builds. The fallback needs python3 and a toolchain, and putting those in the
+# shipped image would mean paying in size and attack surface for a build-time
+# problem. Resolving the dependencies here and copying only `node_modules`
+# forward keeps the compiler out of production while making the fallback real.
+#
+# bookworm-slim, not alpine: the native binary must match the runtime's libc,
+# so this stage has to be the same base as the production stage below.
+FROM node:22-bookworm-slim AS prod-deps
+
+WORKDIR /app/backend
+
+COPY backend/package*.json ./
+COPY backend/prisma ./prisma/
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
+RUN npm config set fetch-retries 5 \
+    && npm config set fetch-retry-mintimeout 30000 \
+    && npm config set fetch-retry-maxtimeout 300000 \
+    && npm ci --only=production
+
 # Stage 3: Production - Combined Container
 # Pinned to bookworm-slim so apt sources are deterministic.
 FROM node:22-bookworm-slim AS production
@@ -82,10 +109,10 @@ RUN apt-get update && \
 WORKDIR /app/backend
 COPY backend/package*.json ./
 COPY backend/prisma ./prisma/
-RUN npm config set fetch-retries 5 \
-    && npm config set fetch-retry-mintimeout 30000 \
-    && npm config set fetch-retry-maxtimeout 300000 \
-    && npm ci --only=production
+# Dependencies come from the prod-deps stage above rather than a second
+# `npm ci` here, so this image never needs a compiler. Same base image, so the
+# bcrypt binary in there matches this runtime's libc.
+COPY --from=prod-deps /app/backend/node_modules ./node_modules
 COPY --from=backend-builder /app/backend/dist ./dist
 # tsc compiles .ts files only — non-TS assets (CSV seed data) need an
 # explicit copy so seedPortsFromCSV / seedShipsFromCSV find them at
