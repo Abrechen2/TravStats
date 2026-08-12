@@ -20,9 +20,10 @@ import {
   singleOriginalCurrencySpend,
 } from "../lib/lodgingFormat";
 import { logger } from "../lib/logger";
+import { deriveStayMembership } from "../shared/membershipDerivation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
-import type { Lodging, LodgingStay } from "../types/lodging";
+import type { Lodging, LodgingMembership, LodgingStay } from "../types/lodging";
 
 export default function LodgingDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -42,12 +43,17 @@ export default function LodgingDetailPage(): JSX.Element {
   const [deleting, setDeleting] = useState<boolean>(false);
   // "new" = create mode, a LodgingStay = edit mode for that stay, null = closed.
   const [editingStay, setEditingStay] = useState<LodgingStay | "new" | null>(null);
-  // Name lookups for the stay cards' trip pill / loyalty mention — a stay
-  // only stores `tripId`/`membershipId`, never the display name, so this
-  // page resolves both once against the user's full trip and membership
-  // lists (small, already-fetched-elsewhere lists; no per-stay round trip).
+  // Name lookup for the stay cards' trip pill — a stay only stores `tripId`,
+  // never the display name, so this page resolves it once against the
+  // user's full trip list (small, already-fetched-elsewhere; no per-stay
+  // round trip).
   const [tripNameById, setTripNameById] = useState<Record<string, string>>({});
-  const [membershipNameById, setMembershipNameById] = useState<Record<string, string>>({});
+  // The FULL membership rows (not just a name lookup) — each stay's chip
+  // must run `deriveStayMembership`, because `stay.membershipId` is an
+  // override only. The migration nulled it for every stay whose stored card
+  // already matched what derivation now produces, so reading it raw would
+  // make the chip disappear from the normal case.
+  const [memberships, setMemberships] = useState<LodgingMembership[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -83,12 +89,8 @@ export default function LodgingDetailPage(): JSX.Element {
     })();
     void (async () => {
       try {
-        const memberships = await listMemberships();
-        if (!cancelled) {
-          setMembershipNameById(
-            Object.fromEntries(memberships.map((m) => [m.id, m.programName])),
-          );
-        }
+        const rows = await listMemberships();
+        if (!cancelled) setMemberships(rows);
       } catch (err: unknown) {
         logger.error("LodgingDetailPage: failed to load memberships", err);
       }
@@ -245,17 +247,39 @@ export default function LodgingDetailPage(): JSX.Element {
             </div>
             {lodging.stays.length > 0 ? (
               <div className="flex flex-col gap-2">
-                {lodging.stays.map((stay) => (
-                  <LodgingStayCard
-                    key={stay.id}
-                    stay={stay}
-                    onEdit={setEditingStay}
-                    tripName={stay.tripId ? tripNameById[stay.tripId] : undefined}
-                    membershipName={
-                      stay.membershipId ? membershipNameById[stay.membershipId] : undefined
-                    }
-                  />
-                ))}
+                {lodging.stays.map((stay) => {
+                  // The SAME function the server resolves with
+                  // (shared/membershipDerivation.ts) and the stay editor
+                  // already uses — so the list gives the same answer as the
+                  // editor for the same stay, instead of two different ones.
+                  const resolvedMembership = deriveStayMembership({
+                    overrideId: stay.membershipId,
+                    optOut: stay.membershipOptOut,
+                    lodgingId: lodging.id,
+                    lodgingChainId: lodging.chainId,
+                    memberships: memberships.map((m) => ({
+                      id: m.id,
+                      createdAt: m.createdAt,
+                      chainIds: m.chainIds,
+                      lodgingIds: m.lodgingIds,
+                    })),
+                  });
+                  const membershipName =
+                    resolvedMembership.membershipId !== null
+                      ? memberships.find((m) => m.id === resolvedMembership.membershipId)
+                          ?.programName
+                      : undefined;
+                  return (
+                    <LodgingStayCard
+                      key={stay.id}
+                      stay={stay}
+                      onEdit={setEditingStay}
+                      tripName={stay.tripId ? tripNameById[stay.tripId] : undefined}
+                      membershipName={membershipName}
+                      membershipSource={resolvedMembership.source}
+                    />
+                  );
+                })}
               </div>
             ) : (
               <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-4 py-6 text-center text-sm text-[var(--text-muted)]">
