@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import type { Lodging, LodgingStay } from "../../types/lodging";
+import type { Lodging, LodgingMembership, LodgingStay } from "../../types/lodging";
 
 const getLodgingMock = vi.fn();
 const deleteLodgingMock = vi.fn();
@@ -265,6 +265,48 @@ describe("LodgingDetailPage", () => {
     const tripPill = await screen.findByTestId("stay-trip-pill-stay-1");
     expect(tripPill.textContent).toContain("Zürich City");
     const membershipChip = screen.getByTestId("stay-membership-chip-stay-1");
+    expect(membershipChip.textContent).toContain("NH Rewards");
+  });
+
+  it("shows the loyalty chip derived from the hotel's chain even when the stay has no stored membershipId", async () => {
+    // The migration nulls membershipId for exactly this case (a stay whose
+    // stored card matched what derivation now produces) — so the card must
+    // come from `deriveStayMembership`, not from `stay.membershipId` raw.
+    const chainMembership: LodgingMembership = {
+      id: "mem-nh",
+      userId: "user-1",
+      programName: "NH Rewards",
+      membershipNumber: null,
+      tier: null,
+      chainIds: [42],
+      chains: [{ id: 42, name: "NH Hotels" }],
+      lodgingIds: [],
+      lodgings: [],
+      createdAt: "2024-01-01T00:00:00.000Z",
+      updatedAt: "2024-01-01T00:00:00.000Z",
+    };
+    listMembershipsMock.mockResolvedValue([chainMembership]);
+    const derivedStay: LodgingStay = { ...baseStay, membershipId: null, membershipOptOut: false };
+    getLodgingMock.mockResolvedValue(
+      makeLodging(
+        {
+          chainId: 42,
+          chain: {
+            id: 42,
+            name: "NH Hotels",
+            brandColor: null,
+            loyaltyProgram: null,
+            isUserAdded: false,
+            createdAt: "2024-01-01T00:00:00.000Z",
+          },
+        },
+        [derivedStay],
+      ),
+    );
+
+    renderDetailPage();
+
+    const membershipChip = await screen.findByTestId("stay-membership-chip-stay-1");
     expect(membershipChip.textContent).toContain("NH Rewards");
   });
 

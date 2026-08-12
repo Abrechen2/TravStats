@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatDateInTimezone } from "../../lib/dateUtils";
 import { formatRatingText, formatStayPriceDisplay, nightsBetween } from "../../lib/lodgingFormat";
+import type { StayMembershipSource } from "../../shared/membershipDerivation";
 import type { LodgingStay } from "../../types/lodging";
 
 interface LodgingStayCardProps {
@@ -10,8 +11,17 @@ interface LodgingStayCardProps {
   /** Resolved from `stay.tripId` by the caller (a stay only stores the id).
    * Undefined when unresolved/not linked — the pill is skipped either way. */
   tripName?: string;
-  /** Resolved from `stay.membershipId` by the caller, same convention as `tripName`. */
+  /**
+   * The programme name resolved by the caller via `deriveStayMembership` —
+   * NOT read from `stay.membershipId` directly. That column is an override
+   * only; the migration nulled it for every stay whose stored card already
+   * matched what derivation now produces, so a raw read would make the chip
+   * vanish for the normal case. Undefined (no chip) when derivation resolves
+   * to "none".
+   */
   membershipName?: string;
+  /** How `membershipName` was resolved — shown as a small qualifier next to the chip. */
+  membershipSource?: StayMembershipSource;
 }
 
 /**
@@ -29,6 +39,7 @@ export function LodgingStayCard({
   onEdit,
   tripName,
   membershipName,
+  membershipSource,
 }: LodgingStayCardProps): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "common"]);
   const nights = nightsBetween(stay.checkIn, stay.checkOut);
@@ -73,12 +84,17 @@ export function LodgingStayCard({
             🧳 {t("lodging:field.trip")}: {tripName}
           </span>
         )}
-        {stay.membershipId && membershipName && (
+        {membershipName !== undefined && (
           <span
             data-testid={`stay-membership-chip-${stay.id}`}
             className="inline-flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--bg-surface-2,transparent)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
           >
             🎖️ {membershipName}
+            {membershipSource && membershipSource !== "none" && (
+              <span className="text-[var(--text-faint,#5c6878)]">
+                ({t(`lodging:field.membershipSource.${membershipSource}`)})
+              </span>
+            )}
           </span>
         )}
         <span className="ml-auto text-sm font-semibold" style={{ color: "var(--star)" }}>

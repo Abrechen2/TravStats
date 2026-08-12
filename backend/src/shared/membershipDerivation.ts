@@ -8,6 +8,36 @@
  * shared/domains.ts, shared/statusDerivation.ts and shared/ratingDerivation.ts)
  * because the stay editor shows the reader the same card the server resolves.
  * Both sides are covered by tests asserting the same truth table.
+ *
+ * IMPORTANT — this module has NO runtime consumer on the server today.
+ * Nothing outside its own test imports `deriveStayMembership` from here: the
+ * server only ever stores the override (`membership_id` / `membership_opt_out`
+ * on `lodging_stays`), and the one place this exact rule had to be
+ * reproduced server-side was the migration
+ * (`prisma/migrations/20260809104800_membership_lodging_links/migration.sql`),
+ * written directly in SQL rather than by calling this function. That means
+ * the two mirrored copies (this file and the frontend one) are kept honest
+ * ONLY by their duplicated truth tables in each side's tests — there is no
+ * shared runtime path enforcing agreement. If a server-side consumer of
+ * `deriveStayMembership` is ever added (e.g. an API response that resolves
+ * the effective membership), keep it and the migration's SQL logic in step
+ * by hand; nothing currently does that automatically.
+ *
+ * WHY THE MIGRATION'S SQL TIE-BREAK MATCHES `oldest()` BELOW: both pick the
+ * smallest `(created_at, id)`, and the SQL breaks the `created_at` tie with a
+ * plain `<` on `id`. That agrees with this file's JS comparison ONLY because
+ * every `id` here is a `uuid()` default (see schema.prisma) — a fixed-length,
+ * lowercase-hex string with hyphens at fixed positions (8-4-4-4-12). Over that
+ * fixed character set, JS's UTF-16 `<` and Postgres's text collation order
+ * every pair of ids identically, so the two languages cannot disagree on which
+ * id is "smaller". If the id format ever changes (different casing, a prefix,
+ * a non-hex alphabet), that equivalence needs re-checking — it is not a
+ * general property of `<` on strings.
+ *
+ * This note lives here rather than in the migration because the migration has
+ * been applied on running instances and Prisma records a checksum of the file:
+ * editing it, even in a comment, makes `migrate deploy` report the migration
+ * as modified.
  */
 
 export type StayMembershipSource = "override" | "chain" | "lodging" | "none";
