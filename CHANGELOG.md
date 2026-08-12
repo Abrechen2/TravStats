@@ -4,6 +4,59 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.5.2] - 2026-08-12
+
+Hotfix release. Three ways live flight data went wrong, no database changes.
+
+### Fixed
+- **Flight numbers printed with a leading zero found nothing at all.**
+  Airlines write "EK051" on the itinerary and that is what gets stored, but
+  every flight-data provider keys on the unpadded form, "EK51", and answers
+  the padded query with an empty result. Live tracking, automatic updates and
+  enrichment therefore did nothing whatsoever for Emirates, Qatar, Gulf Air,
+  EgyptAir and every other airline that pads — silently, because "no data"
+  looks the same as "nothing to report". Requests now drop the padding while
+  the stored number keeps your spelling: the answer is mapped back onto it,
+  so an automatic update cannot quietly rename your flight to the provider's
+  convention.
+- **Departure and arrival times were an airport's offset too early.**
+  AirLabs returns both a local and a UTC time, and neither carries a zone
+  marker, so the UTC value was read a second time as local — an Emirates
+  flight leaving Dubai at 15:55 was recorded as departing 07:55 UTC instead
+  of 11:55. The UTC values are now marked as such before conversion; times
+  that only exist as local are still converted as before.
+- **Live tracking could move a flight to the previous day.** Flight-data
+  providers identify a rotation by its LOCAL departure date, but the
+  automatic update asked for the UTC day of the departure instant. For any
+  early-morning departure east of Greenwich those differ — a Sydney 06:00
+  departure is still the previous day in UTC — so the update fetched the
+  previous day's aircraft and, with approval disabled, rewrote the flight a
+  full day into the past, actual times and "flown" status included. Lookups
+  now use the departure airport's local calendar day, and any API answer
+  whose scheduled departure is more than 12 hours away from the stored one
+  is rejected as the wrong rotation instead of being proposed at all.
+- **The built-in parser misread Emirates bookings.** The itinerary tables
+  put the time, the weekday and a two-digit-year date on three separate
+  lines — the parser required four-digit years and never associated the
+  times, so the actual legs came out dateless. Worse, the legal footer
+  ("Erlass Nr. 2 von 1985") parsed as the flight date 1985-01-02, because
+  an unrecognised month silently became January. Month names are now
+  validated, implausible years are rejected, two-digit years are
+  understood, and a time on the line above its date is paired with it.
+- **Very long booking emails were silently cut off before the AI parser saw
+  them.** Anything beyond 5,000 characters was dropped without a trace —
+  and return legs live at the end of an itinerary. The window is now
+  12,000 characters and a truncation is logged.
+
+### Upgrade notes
+- No database migrations in this release.
+- Flights that live tracking already shifted to a wrong day are not
+  corrected retroactively — check recent long-haul arrivals whose departure
+  was an early morning east of UTC.
+- Times already stored an offset too early are likewise not corrected
+  retroactively. Re-running a lookup on an affected flight now returns the
+  right value.
+
 ## [2.5.1] - 2026-08-09
 
 Patch release. Three fixes, no database changes.
