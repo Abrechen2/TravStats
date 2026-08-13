@@ -104,10 +104,24 @@ const baseStaySchema = z.object({
     .optional(),
 });
 
-export const createStaySchema = baseStaySchema.refine(
-  (d) => new Date(d.checkOut).getTime() >= new Date(d.checkIn).getTime(),
-  { message: "checkOut must not precede checkIn", path: ["checkOut"] },
-);
+export const createStaySchema = baseStaySchema
+  .refine((d) => new Date(d.checkOut).getTime() >= new Date(d.checkIn).getTime(), {
+    message: "checkOut must not precede checkIn",
+    path: ["checkOut"],
+  })
+  // An amount with no unit is not a price. Without this, `currency` simply
+  // stayed absent and the NOT-NULL column's 'EUR' default answered for it —
+  // so an 11,662 AED stay entered through the API was stored, and totalled,
+  // as EUR 11,662. Both price fields are checked because the route derives
+  // the total from `pricePerNight` when only that one is sent.
+  //
+  // Deliberately NOT on `updateStaySchema`: a stored row always has a
+  // currency (the column is NOT NULL and a PATCH cannot clear it), so a
+  // price-only update carries its unit implicitly.
+  .refine((d) => (d.totalPrice == null && d.pricePerNight == null) || d.currency != null, {
+    message: "currency is required when a price is given",
+    path: ["currency"],
+  });
 export const updateStaySchema = baseStaySchema
   .partial()
   .refine((d) => Object.keys(d).length > 0, {
