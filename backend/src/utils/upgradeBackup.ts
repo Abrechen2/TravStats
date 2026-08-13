@@ -74,22 +74,6 @@ export function writeLastDeployedVersion(version: string): void {
 }
 
 /**
- * Parse the leading numeric major from a semver-ish string. Returns null
- * if the input does not start with a digit. Examples:
- *   "1.2.1"             -> 1
- *   "2.0.0-beta.4"      -> 2
- *   "v2.0.0-rc.1"       -> 2
- *   "unknown" / ""      -> null
- */
-export function parseMajor(version: string): number | null {
-  const stripped = version.replace(/^v/i, "").trim();
-  const match = stripped.match(/^(\d+)\./);
-  if (!match) return null;
-  const n = Number.parseInt(match[1], 10);
-  return Number.isNaN(n) ? null : n;
-}
-
-/**
  * Triggered before `prisma migrate deploy` on every boot. Compares the
  * version that last ran on this data volume to the version we are about to
  * start. If they differ on an install that already has data, we snapshot the
