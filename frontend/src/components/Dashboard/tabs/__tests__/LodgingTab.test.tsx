@@ -59,6 +59,7 @@ const baseStay = {
   fxRate: null,
   fxRateDate: null,
   fxBaseCurrency: null,
+  fxSource: null,
   isAwardStay: false,
   ratingRoom: null,
   ratingBreakfast: null,

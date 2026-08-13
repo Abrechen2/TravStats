@@ -19,8 +19,15 @@
 - Schema changes go through `npx prisma migrate dev`, never hand-written SQL.
 - Backend gate: `cd backend && npx tsc --noEmit && npm run lint && npm test -- --forceExit`
 - Prettier is NOT wired into ESLint here: `npx tsc --noEmit` and `npm run lint` both
-  pass on badly-formatted code (learned in Task 1). Every backend change also needs
-  `cd backend && npx prettier --check <touched files>` before its commit.
+  pass on badly-formatted code (learned in Task 1). But `prettier --check` on the
+  WORKING COPY is useless on Windows — it flags all 645 frontend files purely for
+  CRLF. Measure content instead:
+  `npx prettier <file> | tr -d '\r' | diff - <(tr -d '\r' < <file>) | wc -l`,
+  and compare that number against the same file at the base commit. Rules:
+  **a new file must come out at 0**; an edit to an existing file must not RAISE its
+  number. Legacy backend files written with single quotes and trailing commas are
+  already far from 0 — do not "fix" them here (Task-1 ruling: a repo-wide reformat is
+  its own commit), and match their local style so the number does not grow.
 - Frontend gate: `cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run`
 - Files 200–400 lines ideal, 800 hard maximum.
 - Do not merge to `main`. This work lands on a branch; releasing is the owner's decision.

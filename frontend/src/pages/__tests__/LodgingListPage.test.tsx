@@ -78,6 +78,7 @@ function makeStay(overrides: Partial<LodgingStay> = {}): LodgingStay {
     fxRate: null,
     fxRateDate: null,
     fxBaseCurrency: null,
+    fxSource: null,
     isAwardStay: false,
     ratingRoom: null,
     ratingBreakfast: null,
