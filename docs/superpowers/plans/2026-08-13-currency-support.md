@@ -18,6 +18,9 @@
 - Every user-facing string ships **DE and EN together**. DE is primary, informal "du".
 - Schema changes go through `npx prisma migrate dev`, never hand-written SQL.
 - Backend gate: `cd backend && npx tsc --noEmit && npm run lint && npm test -- --forceExit`
+- Prettier is NOT wired into ESLint here: `npx tsc --noEmit` and `npm run lint` both
+  pass on badly-formatted code (learned in Task 1). Every backend change also needs
+  `cd backend && npx prettier --check <touched files>` before its commit.
 - Frontend gate: `cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run`
 - Files 200–400 lines ideal, 800 hard maximum.
 - Do not merge to `main`. This work lands on a branch; releasing is the owner's decision.
