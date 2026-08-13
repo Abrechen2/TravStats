@@ -3,6 +3,10 @@ import logger from "../../utils/logger";
 import { getCdnRate } from "./currencyApiCdn";
 import { getRate, type FxRate, type RateSource } from "./frankfurter";
 
+// Re-exported so a consumer of the CHAIN never has to reach past it into one
+// individual provider just to name the type of its answer.
+export type { FxRate, RateSource };
+
 /**
  * Ask the providers in order.
  *
