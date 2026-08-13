@@ -58,9 +58,9 @@
     "error": "Diagnose-Export fehlgeschlagen"
   },
   "accessibility": {
-    "close": "Schlie\u00dfen",
+    "close": "Schließen",
     "showHelp": "Hilfe anzeigen",
-    "closeHint": "Hinweis schlie\u00dfen",
+    "closeHint": "Hinweis schließen",
     "toggleMenu": "Menü umschalten",
     "back": "Zurück"
   },
@@ -75,14 +75,14 @@
     "enableDark": "Dunklen Modus aktivieren"
   },
   "loading": {
-    "title": "L\u00e4dt...",
-    "checkingSystem": "Systemstatus wird gepr\u00fcft",
+    "title": "Lädt...",
+    "checkingSystem": "Systemstatus wird geprüft",
     "pleaseWait": "Bitte warten",
-    "default": "Wird geladen\u2026",
-    "flights": "Flugdaten werden geladen\u2026",
-    "stats": "Statistiken werden berechnet\u2026",
-    "map": "Karte wird vorbereitet\u2026",
-    "globe": "Globus wird gerendert\u2026"
+    "default": "Wird geladen…",
+    "flights": "Flugdaten werden geladen…",
+    "stats": "Statistiken werden berechnet…",
+    "map": "Karte wird vorbereitet…",
+    "globe": "Globus wird gerendert…"
   },
   "errorBoundary": {
     "title": "Ups! Etwas ist schiefgelaufen",
@@ -186,5 +186,11 @@
     "title": "Seite nicht gefunden",
     "message": "Diese Seite existiert nicht oder wurde verschoben.",
     "back": "Zum Dashboard"
+  },
+  "currencySelect": {
+    "label": "Währung",
+    "search": "Währung suchen …",
+    "frequent": "Häufig",
+    "all": "Alle Währungen"
   }
 }

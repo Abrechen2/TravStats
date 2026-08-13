@@ -1,6 +1,7 @@
+import CurrencySelect from "../common/CurrencySelect";
+import { ECB_CURRENCIES } from "../../shared/currencies";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
-import type { LodgingCurrency } from "../../types/lodging";
 
 interface LodgingPreferencesSectionProps {
   /** The user's actual base currency (`UserSettings.baseCurrency`) — every
@@ -11,7 +12,6 @@ interface LodgingPreferencesSectionProps {
   onSetBaseCurrency: (currency: string) => void;
 }
 
-const CURRENCIES: readonly LodgingCurrency[] = ["EUR", "USD", "GBP", "CHF"];
 
 /**
  * Lodging-domain preferences section, mirroring `CruisePreferencesSection`'s
@@ -38,18 +38,12 @@ export default function LodgingPreferencesSection({
         <label className="label" htmlFor="lodging-base-currency">
           {t("settings:lodgingPreferences.baseCurrency")}
         </label>
-        <select
+        <CurrencySelect
           id="lodging-base-currency"
-          className="input"
           value={baseCurrency}
-          onChange={(e): void => onSetBaseCurrency(e.target.value)}
-        >
-          {CURRENCIES.map((currency) => (
-            <option key={currency} value={currency}>
-              {currency}
-            </option>
-          ))}
-        </select>
+          onChange={onSetBaseCurrency}
+          restrictTo={ECB_CURRENCIES}
+        />
         <p className="mt-1 text-xs text-[var(--text-muted)]">
           {t("settings:lodgingPreferences.baseCurrencyHint")}
         </p>

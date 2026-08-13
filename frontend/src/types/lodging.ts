@@ -1,3 +1,4 @@
+import type { CurrencyCode } from "../shared/currencies";
 // Frontend view of the `lodging` domain (hotels + campsites). Mirrors
 // backend/prisma/schema.prisma (`Lodging`, `LodgingStay`, `LodgingChain`,
 // `LodgingMembership`) and backend/src/schemas/lodging.ts (enums + input
@@ -16,7 +17,10 @@ export type BoardType = "none" | "breakfast" | "half" | "full" | "all_inclusive"
  * `STAY_STATUSES` in backend/src/schemas/lodging.ts.
  */
 export type StayStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
-export type LodgingCurrency = "EUR" | "USD" | "GBP" | "CHF";
+// Any ISO-4217 code — the registry is the single source of truth, mirrored
+// from backend/src/shared/currencies.ts. It was four hardcoded codes until
+// 2026-08-13, which is why a Dubai booking could not be recorded at all.
+export type LodgingCurrency = CurrencyCode;
 
 export interface LodgingChain {
   id: number;
