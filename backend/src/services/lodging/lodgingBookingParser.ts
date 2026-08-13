@@ -188,10 +188,26 @@ function normalizeBooking(raw: Record<string, unknown>): ParsedLodgingBooking | 
         (24 * 60 * 60 * 1000),
     ),
   );
-  const totalPrice = asNumber(raw.totalPrice);
   const city = asString(raw.city);
   const roomCategory = asString(raw.roomCategory);
   const confirmationNumber = asString(raw.confirmationNumber);
+
+  // A number whose unit was thrown away is not a price.
+  //
+  // `asCurrency` returns null for anything outside CURRENCIES, and the amount
+  // used to survive that on its own. Downstream, `applyFxSnapshot` defaults a
+  // null currency to EUR — so the owner's Armani Hotel Dubai confirmation
+  // (11,662 AED, read correctly by the LLM) would have been booked as €11,662
+  // against a real cost of roughly €2,900, and quietly inflated every spend
+  // total it touched.
+  //
+  // Dropping the amount loses information; keeping it invents information.
+  // The row still imports, with the price flagged as missing, and the user can
+  // type it in. Widening CURRENCIES is the real fix and is a separate,
+  // deliberate decision — this branch simply stops firing once it lands.
+  const currency = asCurrency(raw.currency);
+  const rawPrice = asNumber(raw.totalPrice);
+  const totalPrice = currency === null ? null : rawPrice;
 
   const missing: string[] = [];
   if (!roomCategory) missing.push("roomCategory");
@@ -210,7 +226,7 @@ function normalizeBooking(raw: Record<string, unknown>): ParsedLodgingBooking | 
     city,
     country: asString(raw.country),
     totalPrice,
-    currency: asCurrency(raw.currency),
+    currency,
     confirmationNumber,
     parserTemplate: "ollama-lodging",
     parserConfidence: 70,
