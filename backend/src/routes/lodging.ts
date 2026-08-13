@@ -17,7 +17,7 @@ import {
   createStaySchema,
   updateStaySchema,
   lodgingQuerySchema,
-  CURRENCIES,
+  currencyField,
   type LodgingQueryInput,
 } from "../schemas/lodging";
 import logger from "../utils/logger";
@@ -244,7 +244,7 @@ export async function getBaseCurrency(userId: string): Promise<string> {
 // chainQuerySchema) since nothing else needs it.
 const fxPreviewQuerySchema = z.object({
   amount: z.coerce.number().min(0),
-  from: z.enum(CURRENCIES),
+  from: currencyField,
   // Calendar day only (YYYY-MM-DD) — the same granularity applyFxSnapshot
   // snapshots on save. No time-of-day component to avoid the local-timezone
   // reinterpretation trap that motivated isoDateTimeRequired in schemas/lodging.ts.

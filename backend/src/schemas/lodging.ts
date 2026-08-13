@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isCurrencyCode } from "../shared/currencies";
 import { receiptUrlValidator } from "./receiptUrl";
 
 export const LODGING_TYPES = ["hotel", "campsite", "guesthouse", "apartment", "hostel"] as const;
@@ -15,7 +16,14 @@ export const BOARD_TYPES = [
 // The wire still ACCEPTS all four so an importer or an older client is never
 // rejected, but only "cancelled" survives derivation; see deriveLodgingStatus.
 export const STAY_STATUSES = ["scheduled", "in_progress", "completed", "cancelled"] as const;
-export const CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
+/**
+ * Any real ISO-4217 code. Deliberately NOT limited to what a rate source can
+ * convert: recording a price and converting it are different questions, and
+ * conflating them is what made a Dubai booking unrecordable.
+ */
+export const currencyField = z
+  .string()
+  .refine(isCurrencyCode, { message: "must be a valid ISO 4217 currency code" });
 
 // Accept partial datetimes and coerce them to full ISO 8601, mirroring schemas/cruise.ts.
 const isoDateTimeRequired = z.preprocess((v) => {
@@ -70,7 +78,7 @@ const baseStaySchema = z.object({
   // Optional here even though the DB column is NOT NULL DEFAULT 'EUR' — omitting it
   // lets the client fall back to the column default rather than forcing every caller
   // to send a currency.
-  currency: z.enum(CURRENCIES).optional(),
+  currency: currencyField.optional(),
   // Nullable so a user can explicitly clear a price (e.g. an award stay that
   // turns out to have cost nothing) — an explicit `null` here also drives the
   // FX snapshot clear in routes/lodging.ts (finding 1 + finding 4 interact).
