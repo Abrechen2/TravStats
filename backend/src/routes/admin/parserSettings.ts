@@ -7,6 +7,7 @@ import { prisma } from '../../db';
 
 interface ParserSettingsUpdateData {
   allowUserApiKeys?: boolean;
+  fxCdnFallbackEnabled?: boolean;
   defaultVisionParser?: string;
   defaultTextParser?: string;
   ollamaUrl?: string | null;
@@ -15,6 +16,11 @@ interface ParserSettingsUpdateData {
 
 const parserSettingsSchema = z.object({
   allowUserApiKeys: z.boolean().optional(),
+  // Whether a rate the ECB cannot serve may be fetched from the keyless
+  // jsDelivr currency dataset. It sits with the other service settings
+  // because it is the same kind of decision as the Ollama URL: which outside
+  // service this instance is allowed to contact.
+  fxCdnFallbackEnabled: z.boolean().optional(),
   defaultVisionParser: z.string().optional(),
   defaultTextParser: z.string().optional(),
   ollamaUrl: z.string().url("Must be a valid URL").optional().nullable(),
@@ -41,6 +47,7 @@ router.get('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
 
     res.json({
       allowUserApiKeys: adminSettings.allowUserApiKeys,
+      fxCdnFallbackEnabled: adminSettings.fxCdnFallbackEnabled,
       allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys,
       defaultVisionParser: adminSettings.defaultVisionParser ?? 'tesseract',
       defaultTextParser: adminSettings.defaultTextParser ?? 'regex',
@@ -55,8 +62,14 @@ router.get('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
 // Update admin parser settings
 router.put('/parser-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { allowUserApiKeys, defaultVisionParser, defaultTextParser, ollamaUrl, ollamaModel } =
-      parserSettingsSchema.parse(req.body);
+    const {
+      allowUserApiKeys,
+      fxCdnFallbackEnabled,
+      defaultVisionParser,
+      defaultTextParser,
+      ollamaUrl,
+      ollamaModel,
+    } = parserSettingsSchema.parse(req.body);
 
     let adminSettings = await prisma.adminSettings.findFirst();
 
@@ -64,6 +77,9 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
 
     if (allowUserApiKeys !== undefined) {
       updateData.allowUserApiKeys = allowUserApiKeys;
+    }
+    if (fxCdnFallbackEnabled !== undefined) {
+      updateData.fxCdnFallbackEnabled = fxCdnFallbackEnabled;
     }
     if (defaultVisionParser !== undefined) {
       updateData.defaultVisionParser = defaultVisionParser;
@@ -98,6 +114,7 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
       message: 'Parser settings updated successfully',
       settings: {
         allowUserApiKeys: adminSettings.allowUserApiKeys,
+        fxCdnFallbackEnabled: adminSettings.fxCdnFallbackEnabled,
         defaultVisionParser: adminSettings.defaultVisionParser ?? 'tesseract',
         defaultTextParser: adminSettings.defaultTextParser ?? 'regex',
         ollamaUrl: adminSettings.ollamaUrl ?? null,

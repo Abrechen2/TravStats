@@ -3,19 +3,19 @@ import { prisma } from "../db";
 import { commitLodgingImport } from "../services/lodging/lodgingImportCommit";
 import type { CommitRowInput } from "../schemas/lodgingImport";
 
-// FX reaches out to Frankfurter — stub it so the suite is offline and
-// deterministic. A missing price must still be a normal, non-error outcome.
-jest.mock("../services/fx/frankfurter", () => ({
+// FX reaches out over the network — stub the provider CHAIN so the suite is
+// offline and deterministic. A missing price must still be a normal outcome.
+jest.mock("../services/fx/resolver", () => ({
   convertToBase: jest.fn(async (amount: number) => ({
     baseAmount: amount,
     rate: 1,
     rateDate: "2026-01-01",
     source: "ecb" as const,
   })),
-  getRate: jest.fn(async () => ({ rate: 1, source: "ecb" as const })),
+  resolveRate: jest.fn(async () => ({ rate: 1, source: "ecb" as const })),
 }));
 
-const frankfurterMock = jest.requireMock("../services/fx/frankfurter") as {
+const fxMock = jest.requireMock("../services/fx/resolver") as {
   convertToBase: jest.Mock;
 };
 
@@ -38,7 +38,7 @@ describe("commitLodgingImport", () => {
 
   beforeEach(() => {
     geocodeSpy.mockClear();
-    frankfurterMock.convertToBase.mockClear();
+    fxMock.convertToBase.mockClear();
   });
 
   afterAll(async () => {
@@ -159,7 +159,7 @@ describe("commitLodgingImport", () => {
     const result = await commitLodgingImport(userId, "csv", "stays.csv", rows);
     expect(result.failed).toEqual([]);
     expect(result.createdStays).toBe(1);
-    expect(frankfurterMock.convertToBase).not.toHaveBeenCalled();
+    expect(fxMock.convertToBase).not.toHaveBeenCalled();
 
     const stay = await prisma.lodgingStay.findFirst({
       where: { batchId: result.batchId },
@@ -436,7 +436,7 @@ describe("commitLodgingImport", () => {
     expect(result.createdStays).toBe(3);
     // Three rows, same (currency, day) pair — exactly ONE outbound FX call,
     // not three.
-    expect(frankfurterMock.convertToBase).toHaveBeenCalledTimes(1);
+    expect(fxMock.convertToBase).toHaveBeenCalledTimes(1);
 
     const stays = await prisma.lodgingStay.findMany({
       where: { batchId: result.batchId },
@@ -483,11 +483,11 @@ describe("commitLodgingImport", () => {
 
     expect(result.failed).toEqual([]);
     expect(result.createdStays).toBe(2);
-    expect(frankfurterMock.convertToBase).toHaveBeenCalledTimes(2);
+    expect(fxMock.convertToBase).toHaveBeenCalledTimes(2);
   });
 
   it("saves a priced stay without an FX snapshot when the FX lookup fails — never blocks the write", async () => {
-    frankfurterMock.convertToBase.mockImplementationOnce(async () => null);
+    fxMock.convertToBase.mockImplementationOnce(async () => null);
 
     const rows: CommitRowInput[] = [
       {
@@ -525,7 +525,7 @@ describe("commitLodgingImport", () => {
   });
 
   it("degrades a single pair to lookupFailed when the FX service THROWS (not just returns null) — never sinks the batch", async () => {
-    frankfurterMock.convertToBase.mockImplementationOnce(async () => {
+    fxMock.convertToBase.mockImplementationOnce(async () => {
       throw new Error("ECB feed unreachable");
     });
 
