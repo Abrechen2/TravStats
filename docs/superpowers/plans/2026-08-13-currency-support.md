@@ -398,6 +398,17 @@ call return `missingCurrency`.
 Leave `getBaseCurrency`'s `?? "EUR"` at line 239 alone — it covers a user with
 no settings row, which is a different question and has a correct default.
 
+**Added 2026-08-13 after the scoped review of tasks 2–4.** Removing the default
+inside `applyFxSnapshot` is not enough on the direct API path: `currency` is
+optional on `createStaySchema`, so a priced stay without one still reached the
+insert with the key absent, and the NOT-NULL column's `'EUR'` default answered
+for it. The spec (design doc line 75) always required a rejection there. Add a
+second `.refine` to `createStaySchema` — `(totalPrice == null &&
+pricePerNight == null) || currency != null`, message "currency is required when
+a price is given". Both price fields, because the route derives the total from
+`pricePerNight`. NOT on `updateStaySchema`: the stored row always has a
+currency, so a price-only PATCH must keep working.
+
 - [ ] **Step 4: Run the tests**
 
 Run: `cd backend && npx jest src/__tests__/lodgingImportCommit.currency.test.ts src/__tests__/lodgingImportCommit.test.ts --forceExit`
@@ -1102,8 +1113,16 @@ Expected: PASS.
 - [ ] **Step 3: Re-run the hotel-sample harness against the real mails**
 
 Run: `cd backend && npx tsx src/scripts/measureLodgingSamples.ts`
-Expected: template hits stay at 93/95 and price coverage rises from 94% toward
-100% — the six previously-dropped prices now survive parsing. Record the number.
+Expected: template hits stay at 93/95 and price coverage stays at **93/93**.
+
+That number was already reached on 2026-08-13, ahead of this task: the scoped
+review of tasks 2–4 found that the Booking.com template's own amount parser
+still matched a fixed alternation of four codes and three symbols, so a NOK
+confirmation yielded no total and never fell through to the LLM. Fixed in
+`bookingComTemplate.ts` (three-letter codes validated against the registry,
+symbols in a table extended with `US$`/`S$`/`A$`/…), which lifted coverage
+87/93 → 93/93. This step is now a REGRESSION check: if it reads below 93/93,
+something in tasks 5–10 broke the parser.
 
 - [ ] **Step 4: Commit**
 
