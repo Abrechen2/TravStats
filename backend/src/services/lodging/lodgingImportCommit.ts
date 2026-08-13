@@ -177,7 +177,11 @@ async function resolveFxOutcomes(
   for (const row of rows) {
     if (row.action === "skip" || !row.stay || row.stay.totalPrice == null)
       continue;
-    const currency = row.stay.currency ?? "EUR";
+    // A priced row with no currency has nothing to look up — `applyFxSnapshot`
+    // would answer `missingCurrency` anyway, and defaulting to EUR here would
+    // burn a real lookup on a guess.
+    const currency = row.stay.currency;
+    if (!currency) continue;
     const key = fxOutcomeKey(currency, row.stay.checkIn);
     if (outcomes.has(key)) continue;
     // `applyFxSnapshot` documents itself as never throwing — but that
@@ -222,7 +226,8 @@ function fxOutcomeForStay(
   outcomes: ReadonlyMap<string, FxSnapshotOutcome>,
 ): FxSnapshotOutcome {
   if (fields.totalPrice == null) return { status: "priceRemoved" };
-  const currency = fields.currency ?? "EUR";
+  if (!fields.currency) return { status: "missingCurrency" };
+  const currency = fields.currency;
   // Absent from the map only if the pre-resolve pass's lookup for this exact
   // pair itself failed — same non-blocking contract as a live failed lookup:
   // never fail the row, just omit the snapshot.
@@ -241,7 +246,23 @@ async function createStay(
   fxOutcome: FxSnapshotOutcome,
 ): Promise<void> {
   const checkIn = toDate(fields.checkIn);
-  const currency = fields.currency ?? "EUR";
+
+  // An amount whose unit the sheet never carried is not a price. Writing it
+  // against the column default ('EUR') would state a currency the source never
+  // said — the same invention the LLM parser's `asCurrency` guard refuses one
+  // layer up. The stay imports; only the unusable number stays out, and the
+  // user can type it in with its currency.
+  const priceHasNoCurrency = fields.totalPrice != null && !fields.currency;
+  if (priceHasNoCurrency) {
+    logger.warn(
+      {
+        operation: "lodging_import_price_without_currency",
+        checkInDay: fields.checkIn,
+        totalPrice: fields.totalPrice,
+      },
+      "[Lodging Import] Price without a currency — importing the stay without it",
+    );
+  }
 
   // A stay with no price simply has no FX snapshot — `resolveFxFields`
   // collapses any non-"snapshotted" outcome to an all-null snapshot. A
@@ -259,8 +280,10 @@ async function createStay(
       status: "completed",
       roomCategory: fields.roomCategory ?? null,
       board: fields.board ?? null,
-      totalPrice: fields.totalPrice ?? null,
-      currency,
+      totalPrice: priceHasNoCurrency ? null : (fields.totalPrice ?? null),
+      // Omitted rather than defaulted here: the column default ('EUR') then
+      // applies as the column's own answer, not as a claim about this row.
+      currency: fields.currency ?? undefined,
       ...fx,
       ratingRoom: fields.ratingRoom ?? null,
       ratingBreakfast: fields.ratingBreakfast ?? null,
