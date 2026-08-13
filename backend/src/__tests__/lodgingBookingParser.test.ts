@@ -303,6 +303,82 @@ describe("parseLodgingBookingText", () => {
     }
   });
 
+  it("drops a price whose currency the domain cannot represent", async () => {
+    // Found 2026-08-13 on the owner's Armani Hotel Dubai confirmation. The LLM
+    // read it correctly — 11662 AED — but AED is not in CURRENCIES, so
+    // `asCurrency` returned null while the NUMBER survived. Downstream,
+    // `applyFxSnapshot` defaults a null currency to EUR, so the stay would have
+    // been booked as €11,662 against a real cost of roughly €2,900.
+    //
+    // A number whose unit was thrown away is not a price. Losing it is honest;
+    // keeping it silently multiplies the user's spend statistics.
+    const server = await createMockOllamaServer((req, res) => {
+      if (req.url === "/api/tags") return respondJson(res, HEALTHY_TAGS_RESPONSE);
+      respondJson(res, {
+        response: JSON.stringify({
+          bookings: [
+            {
+              hotelName: "Armani Hotel Dubai",
+              checkIn: "2023-04-30",
+              checkOut: "2023-05-03",
+              nights: 3,
+              totalPrice: 11662,
+              currency: "AED",
+              confirmationNumber: "711754296",
+            },
+          ],
+        }),
+      });
+    });
+    try {
+      const result = await parseLodgingBookingText("Buchungsnummer: 711754296\nAnreise\nAbreise", {
+        url: server.url,
+        model: "mock",
+      });
+      const booking = result.bookings[0];
+      expect(booking.hotelName).toBe("Armani Hotel Dubai");
+      // Everything else survives — only the unusable amount is dropped.
+      expect(booking.checkIn).toBe("2023-04-30");
+      expect(booking.nights).toBe(3);
+      expect(booking.totalPrice).toBeNull();
+      expect(booking.currency).toBeNull();
+      expect(booking.missing).toContain("totalPrice");
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("keeps a price whose currency the domain does support", async () => {
+    const server = await createMockOllamaServer((req, res) => {
+      if (req.url === "/api/tags") return respondJson(res, HEALTHY_TAGS_RESPONSE);
+      respondJson(res, {
+        response: JSON.stringify({
+          bookings: [
+            {
+              hotelName: "Engimatt",
+              checkIn: "2026-06-30",
+              checkOut: "2026-07-01",
+              totalPrice: 292.83,
+              currency: "CHF",
+              confirmationNumber: "5980532080",
+            },
+          ],
+        }),
+      });
+    });
+    try {
+      const result = await parseLodgingBookingText("Buchungsnummer: 5980532080\nAnreise\nAbreise", {
+        url: server.url,
+        model: "mock",
+      });
+      expect(result.bookings[0].totalPrice).toBeCloseTo(292.83, 2);
+      expect(result.bookings[0].currency).toBe("CHF");
+      expect(result.bookings[0].missing).not.toContain("totalPrice");
+    } finally {
+      await server.close();
+    }
+  });
+
   describeSamples("real sample: direct hotel booking (LLM fully mocked)", () => {
     it("does not match the Booking.com template and reaches the mocked LLM fallback", async () => {
       const file = fs
