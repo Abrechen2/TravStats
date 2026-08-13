@@ -1,13 +1,13 @@
 import http from "http";
 import https from "https";
+import { type CurrencyCode, isCurrencyCode } from "../shared/currencies";
 import logger from "../utils/logger";
 import { getAdminParserSettings } from "./parserSettings";
 
 const CRUISE_CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
-const CRUISE_CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
 
 export type CruiseCabinType = (typeof CRUISE_CABIN_TYPES)[number];
-export type CruiseCurrency = (typeof CRUISE_CURRENCIES)[number];
+export type CruiseCurrency = CurrencyCode;
 
 export interface ParsedCruiseStop {
   portName?: string;
@@ -162,7 +162,7 @@ function isCabinType(value: unknown): value is CruiseCabinType {
 }
 
 function isCurrency(value: unknown): value is CruiseCurrency {
-  return typeof value === "string" && (CRUISE_CURRENCIES as readonly string[]).includes(value);
+  return isCurrencyCode(value);
 }
 
 function asString(value: unknown): string | undefined {

@@ -11,7 +11,7 @@ import {
   defaultSettings,
 } from './types';
 import { DOMAIN_KEYS, type DomainKey } from '../../shared/domains';
-import { CURRENCIES } from '../../schemas/lodging';
+import { ECB_CURRENCIES } from '../../shared/currencies';
 import { getInstanceSettings } from '../../services/instanceSettingsService';
 
 const router = Router();
@@ -19,6 +19,13 @@ const router = Router();
 // Coerce empty string to undefined before email validation so the frontend
 // can send back the cleared field without triggering a 400.
 const emptyToUndef = (v: unknown): unknown => (v === '' ? undefined : v);
+
+/**
+ * The FX BASE is narrower than what you may record in. Everything converts
+ * into it, so it has to be a currency with a dependable rate history — the 30
+ * the ECB publishes, back to 1999. The UI states this at the field.
+ */
+export const baseCurrencyField = z.enum(ECB_CURRENCIES as unknown as [string, ...string[]]);
 
 const settingsSchema = z.object({
   profile: z.object({
@@ -114,9 +121,8 @@ const settingsSchema = z.object({
   enabledDomains: z.array(z.enum(DOMAIN_KEYS as unknown as [DomainKey, ...DomainKey[]])).optional(),
   whatsNewSeenVersion: z.string().max(32).optional(),
   // Lodging-domain preference: single currency used to aggregate stay costs that
-  // were originally billed in whatever currency the hotel uses. Reuses the
-  // canonical currency list from schemas/lodging.ts to avoid a second source of truth.
-  baseCurrency: z.enum(CURRENCIES).optional(),
+  // were originally billed in whatever currency the hotel uses.
+  baseCurrency: baseCurrencyField.optional(),
 }).partial();
 
 export const settingsUpdateSchema = settingsSchema;
