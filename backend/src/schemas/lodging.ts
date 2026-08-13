@@ -83,6 +83,10 @@ const baseStaySchema = z.object({
   // turns out to have cost nothing) — an explicit `null` here also drives the
   // FX snapshot clear in routes/lodging.ts (finding 1 + finding 4 interact).
   totalPrice: z.number().min(0).nullable().optional(),
+  // A rate the USER supplies for a currency and day no provider covers. NOT a
+  // stay column: it produces `fxRate` + `fxSource: "manual"` and is stripped
+  // before the write. An explicit null takes the rate back.
+  manualFxRate: z.number().positive().nullable().optional(),
   isAwardStay: z.boolean().optional(),
   ratingRoom: rating,
   ratingBreakfast: rating,
