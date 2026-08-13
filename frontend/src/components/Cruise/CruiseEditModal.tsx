@@ -1,3 +1,4 @@
+import { minorUnits } from "../../shared/currencies";
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useState } from "react";
@@ -354,7 +355,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 <input
                   type="number"
                   min={0}
-                  step={0.01}
+                  step={10 ** -minorUnits(currency)}
                   aria-label={t("field.price")}
                   className={INPUT_CLASS}
                   value={price}

@@ -1,3 +1,4 @@
+import { minorUnits } from "../../shared/currencies";
 import type { JSX } from "react";
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
@@ -107,7 +108,7 @@ export function StayEditorPriceSection({
         <input
           type="number"
           min={0}
-          step={0.01}
+          step={10 ** -minorUnits(currency)}
           aria-label={t("lodging:field.totalPrice")}
           className={inputClassName}
           value={totalPrice}

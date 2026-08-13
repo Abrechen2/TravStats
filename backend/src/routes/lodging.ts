@@ -20,6 +20,7 @@ import {
   currencyField,
   type LodgingQueryInput,
 } from "../schemas/lodging";
+import { minorUnits } from "../shared/currencies";
 import logger from "../utils/logger";
 
 const router = Router();
@@ -261,8 +262,9 @@ export function applyManualRate(
   // No price means nothing to convert — the rate is moot rather than wrong, so
   // the stay simply keeps no snapshot instead of the request failing.
   if (totalPrice == null) return CLEARED_FX;
+  const factor = 10 ** minorUnits(baseCurrency);
   return {
-    totalPriceBase: Math.round(totalPrice * manualFxRate * 100) / 100,
+    totalPriceBase: Math.round(totalPrice * manualFxRate * factor) / factor,
     fxRate: manualFxRate,
     fxRateDate: new Date(checkIn),
     fxBaseCurrency: baseCurrency,
