@@ -524,6 +524,12 @@ model AdminSettings {
   allowUserApiKeys       Boolean @default(true) @map("allow_user_api_keys")
   allowUserFlightApiKeys Boolean @default(true) @map("allow_user_flight_api_keys")
 
+  // FX: whether a rate the ECB cannot serve may be fetched from the keyless
+  // jsDelivr currency dataset. On by default because it needs no key and is
+  // the only way to convert a currency outside the ECB's 30 — but a
+  // self-hoster gets to decide whether their instance talks to jsDelivr at all.
+  fxCdnFallbackEnabled Boolean @default(true) @map("fx_cdn_fallback_enabled")
+
   // Default parser settings for new users
   defaultVisionParser String @default("auto") @map("default_vision_parser")
   defaultTextParser   String @default("auto") @map("default_text_parser")

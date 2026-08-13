@@ -5,7 +5,7 @@ import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { fxPreviewLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
-import * as fx from "../services/fx/frankfurter";
+import * as fx from "../services/fx/resolver";
 import { resolveLocation } from "./lodgingGeocode";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { deriveLodgingStatus } from "../shared/statusDerivation";

@@ -1,5 +1,7 @@
-import { getRate, convertToBase } from "../frankfurter";
+import { getRate } from "../frankfurter";
 
+// This module is the ECB reference-rate CLIENT. Converting an amount moved to
+// `resolver.ts` when a second provider arrived, and so did those tests.
 describe("frankfurter FX", () => {
   const realFetch = global.fetch;
   afterEach(() => {
@@ -15,10 +17,9 @@ describe("frankfurter FX", () => {
     expect(rate?.rate).toBeCloseTo(1.0106, 4);
   });
 
-  it("short-circuits same-currency conversion with no network call", async () => {
+  it("short-circuits an identical pair with no network call", async () => {
     global.fetch = jest.fn() as unknown as typeof fetch;
-    const out = await convertToBase(200, "EUR", "EUR", new Date("2024-05-13"));
-    expect(out).toEqual({ baseAmount: 200, rate: 1, rateDate: "2024-05-13", source: "ecb" });
+    expect(await getRate("EUR", "EUR", "2024-05-13")).toEqual({ rate: 1, source: "ecb" });
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
@@ -31,19 +32,6 @@ describe("frankfurter FX", () => {
   it("returns null (never throws) when the API fails", async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error("network")) as unknown as typeof fetch;
     expect(await getRate("CHF", "EUR", "2024-05-20")).toBeNull();
-    expect(await convertToBase(420, "CHF", "EUR", new Date("2024-05-20"))).toBeNull();
-  });
-
-  // Also uses a fresh date for the same reason (see note above).
-  it("rounds the converted base amount to 2 decimals", async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ rates: { EUR: 1.0106 } }),
-    }) as unknown as typeof fetch;
-    const out = await convertToBase(420, "CHF", "EUR", new Date("2024-05-21"));
-    expect(out?.baseAmount).toBe(424.45); // 420 * 1.0106 = 424.452
-    expect(out?.rate).toBeCloseTo(1.0106, 4);
-    expect(out?.rateDate).toBe("2024-05-21");
   });
 
   // A bare number carries no provenance, and a stored conversion has to be
@@ -54,15 +42,9 @@ describe("frankfurter FX", () => {
       ok: true,
       json: async () => ({ rates: { EUR: 0.08481 } }),
     }) as unknown as typeof fetch;
-    const conv = await convertToBase(1000, "NOK", "EUR", new Date("2024-09-17"));
-    expect(conv?.source).toBe("ecb");
-    expect(await getRate("NOK", "EUR", "2024-09-18")).toMatchObject({ source: "ecb" });
-  });
-
-  it("returns null (never throws) for an invalid date, with no network call", async () => {
-    global.fetch = jest.fn() as unknown as typeof fetch;
-    const out = await convertToBase(100, "CHF", "EUR", new Date("not-a-date"));
-    expect(out).toBeNull();
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(await getRate("NOK", "EUR", "2024-09-18")).toMatchObject({
+      rate: 0.08481,
+      source: "ecb",
+    });
   });
 });

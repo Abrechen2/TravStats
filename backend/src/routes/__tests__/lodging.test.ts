@@ -3,7 +3,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
-import * as fx from "../../services/fx/frankfurter";
+import * as fx from "../../services/fx/resolver";
 import * as geo from "../../services/geo/nominatim";
 
 describe("Lodging API", () => {

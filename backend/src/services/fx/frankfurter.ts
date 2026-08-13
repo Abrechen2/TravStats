@@ -5,10 +5,6 @@ const BASE_URL = "https://api.frankfurter.app";
 // rates never change, so an unbounded map keyed by the tuple is safe and small.
 const rateCache = new Map<string, number>();
 
-function toIsoDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
 /**
  * Which provider a rate came from. Persisted per stay so a readout can be
  * honest: a bare number cannot tell an official ECB rate apart from one the
@@ -48,28 +44,7 @@ export async function getRate(from: string, to: string, date: string): Promise<F
   }
 }
 
-export interface FxConversion {
-  baseAmount: number;
-  rate: number;
-  rateDate: string;
-  source: RateSource;
-}
-
-/** Convert `amount` from `from` to `base` at the ECB rate for `date`. null on failure. */
-export async function convertToBase(
-  amount: number,
-  from: string,
-  base: string,
-  date: Date,
-): Promise<FxConversion | null> {
-  if (Number.isNaN(date.getTime())) {
-    logger.warn({ from, base, date: String(date) }, "FX conversion rejected: invalid date");
-    return null;
-  }
-  const rateDate = toIsoDate(date);
-  if (from === base) return { baseAmount: amount, rate: 1, rateDate, source: "ecb" };
-  const found = await getRate(from, base, rateDate);
-  if (found === null) return null;
-  const { rate, source } = found;
-  return { baseAmount: Math.round(amount * rate * 100) / 100, rate, rateDate, source };
-}
+// `convertToBase` used to live here and it is deliberately gone: converting an
+// amount is now a question for the whole provider chain, so it moved to
+// `resolver.ts`. This module stayed what it always was — the ECB
+// reference-rate client, one of the providers that chain asks.

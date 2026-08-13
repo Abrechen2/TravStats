@@ -3,7 +3,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
-import * as fx from "../../services/fx/frankfurter";
+import * as fx from "../../services/fx/resolver";
 
 /**
  * GET /api/v1/lodging/fx-preview proxies to the free public Frankfurter/ECB
