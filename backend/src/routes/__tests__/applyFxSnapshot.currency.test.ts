@@ -1,4 +1,4 @@
-import { applyFxSnapshot } from "../routes/lodging";
+import { applyFxSnapshot } from "../lodging";
 
 // No FX mock and no network: the first case returns before any lookup, and
 // the second is an identical pair, which `convertToBase` short-circuits.
