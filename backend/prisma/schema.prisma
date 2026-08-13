@@ -1177,6 +1177,9 @@ model LodgingStay {
   fxRate           Float?    @map("fx_rate")
   fxRateDate       DateTime? @map("fx_rate_date")
   fxBaseCurrency   String?   @map("fx_base_currency")
+  // 'ecb' | 'cdn' | 'manual' — which provider produced the snapshot above.
+  // A rate alone cannot say whether it is official or the user's own estimate.
+  fxSource         String?   @map("fx_source")
   isAwardStay      Boolean   @default(false) @map("is_award_stay")
   ratingRoom       Float?    @map("rating_room")
   ratingBreakfast  Float?    @map("rating_breakfast")

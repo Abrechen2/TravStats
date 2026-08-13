@@ -44,6 +44,8 @@ interface FxSnapshotFields {
   fxRate: number | null;
   fxRateDate: Date | null;
   fxBaseCurrency: string | null;
+  /** Which provider produced the snapshot — never inferred from the rate. */
+  fxSource: fx.RateSource | null;
 }
 
 const CLEARED_FX: FxSnapshotFields = {
@@ -51,6 +53,7 @@ const CLEARED_FX: FxSnapshotFields = {
   fxRate: null,
   fxRateDate: null,
   fxBaseCurrency: null,
+  fxSource: null,
 };
 
 interface RatedStay {
@@ -216,6 +219,7 @@ export async function applyFxSnapshot(
       fxRate: conv.rate,
       fxRateDate: new Date(conv.rateDate),
       fxBaseCurrency: baseCurrency,
+      fxSource: conv.source,
     },
   };
 }
