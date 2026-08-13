@@ -12,7 +12,6 @@ interface LodgingPreferencesSectionProps {
   onSetBaseCurrency: (currency: string) => void;
 }
 
-
 /**
  * Lodging-domain preferences section, mirroring `CruisePreferencesSection`'s
  * card/section pattern. Currently a single field: the base currency that
@@ -46,6 +45,11 @@ export default function LodgingPreferencesSection({
         />
         <p className="mt-1 text-xs text-[var(--text-muted)]">
           {t("settings:lodgingPreferences.baseCurrencyHint")}
+        </p>
+        {/* Why the choice is narrower than what you may RECORD in — the one
+            question this field reliably raises. */}
+        <p className="mt-1 text-xs text-[var(--text-muted)]">
+          {t("lodging:fx.baseCurrencyExplainer")}
         </p>
       </div>
     </SectionCard>

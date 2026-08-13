@@ -43,7 +43,7 @@ export function LodgingStayCard({
 }: LodgingStayCardProps): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "common"]);
   const nights = nightsBetween(stay.checkIn, stay.checkOut);
-  const { original, fxReadout } = formatStayPriceDisplay(
+  const { original, fxReadout, marker } = formatStayPriceDisplay(
     {
       totalPrice: stay.totalPrice,
       currency: stay.currency,
@@ -53,7 +53,13 @@ export function LodgingStayCard({
       fxBaseCurrency: stay.fxBaseCurrency,
     },
     i18n.language,
-    t("lodging:fx.source")
+    {
+      ecb: t("lodging:fx.source"),
+
+      manual: t("lodging:fx.markerManual"),
+
+      none: t("lodging:fx.markerNone"),
+    }
   );
 
   return (
@@ -134,7 +140,10 @@ export function LodgingStayCard({
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-        <span data-testid={`stay-price-${stay.id}`} className="font-semibold text-[var(--text-primary)]">
+        <span
+          data-testid={`stay-price-${stay.id}`}
+          className="font-semibold text-[var(--text-primary)]"
+        >
           {original}
         </span>
         {fxReadout !== null && (
@@ -146,6 +155,19 @@ export function LodgingStayCard({
             {fxReadout}
           </span>
         )}
+        {marker !== null && (
+          <span
+            data-testid={`stay-fx-marker-${stay.id}`}
+            className="rounded border border-[var(--border)] px-1 py-px text-[10px] text-[var(--text-muted)]"
+            title={
+              stay.fxSource === "manual"
+                ? t("lodging:fx.tooltipManual", { rate: stay.fxRate ?? "" })
+                : t("lodging:fx.tooltipNone")
+            }
+          >
+            {marker}
+          </span>
+        )}
       </div>
 
       {stay.bookingReference && (
@@ -153,7 +175,9 @@ export function LodgingStayCard({
           {t("lodging:field.bookingReference")}: {stay.bookingReference}
         </p>
       )}
-      {stay.notes && <p className="mt-2 whitespace-pre-wrap text-xs text-[var(--text-muted)]">{stay.notes}</p>}
+      {stay.notes && (
+        <p className="mt-2 whitespace-pre-wrap text-xs text-[var(--text-muted)]">{stay.notes}</p>
+      )}
     </div>
   );
 }

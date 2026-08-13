@@ -85,6 +85,8 @@ export interface LodgingStay {
   fxRate: number | null;
   fxRateDate: string | null;
   fxBaseCurrency: string | null;
+  /** Which provider converted it — 'ecb' | 'cdn' | 'manual', null if none did. */
+  fxSource: string | null;
   isAwardStay: boolean;
   ratingRoom: number | null;
   ratingBreakfast: number | null;
@@ -183,6 +185,12 @@ export interface StayInput {
   pricePerNight?: number | null;
   currency?: LodgingCurrency;
   totalPrice?: number | null;
+  /**
+   * A rate the USER supplies where no provider has one. Not a stay field: the
+   * backend turns it into `fxRate` + `fxSource: "manual"`. An explicit null
+   * takes it back; omitted means "leave it alone".
+   */
+  manualFxRate?: number | null;
   isAwardStay?: boolean;
   ratingRoom?: number | null;
   ratingBreakfast?: number | null;
