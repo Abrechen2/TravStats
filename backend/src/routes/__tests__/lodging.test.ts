@@ -58,7 +58,7 @@ describe("Lodging API", () => {
     it("snapshots a CHF stay into EUR base on create", async () => {
       jest
         .spyOn(fx, "convertToBase")
-        .mockResolvedValue({ baseAmount: 424.45, rate: 1.0106, rateDate: "2024-05-13" });
+        .mockResolvedValue({ baseAmount: 424.45, rate: 1.0106, rateDate: "2024-05-13", source: "ecb" });
       const res = await request(app)
         .post(`/api/v1/lodging/${lodgingId}/stays`)
         .set("Cookie", authCookie)
@@ -127,7 +127,7 @@ describe("Lodging API", () => {
       // the next one — this is the reviewer-flagged UTC-consistency gotcha.
       const spy = jest
         .spyOn(fx, "convertToBase")
-        .mockResolvedValue({ baseAmount: 100, rate: 1, rateDate: "2024-08-20" });
+        .mockResolvedValue({ baseAmount: 100, rate: 1, rateDate: "2024-08-20", source: "ecb" });
       await request(app)
         .post(`/api/v1/lodging/${lodgingId}/stays`)
         .set("Cookie", authCookie)
@@ -214,13 +214,15 @@ describe("Lodging API", () => {
     it("returns a conversion preview for a differing currency", async () => {
       jest
         .spyOn(fx, "convertToBase")
-        .mockResolvedValue({ baseAmount: 391.23, rate: 0.9315, rateDate: "2026-07-11" });
+        .mockResolvedValue({ baseAmount: 391.23, rate: 0.9315, rateDate: "2026-07-11", source: "ecb" });
       const res = await request(app)
         .get("/api/v1/lodging/fx-preview")
         .query({ amount: 420, from: "CHF", date: "2026-07-11" })
         .set("Cookie", authCookie);
       expect(res.status).toBe(200);
-      expect(res.body.data).toEqual({ baseAmount: 391.23, rate: 0.9315, rateDate: "2026-07-11", baseCurrency: "EUR" });
+      // `source` joined the payload with the provider chain: the editor has to
+      // be able to say WHICH source answered, and never label an estimate ECB.
+      expect(res.body.data).toEqual({ baseAmount: 391.23, rate: 0.9315, rateDate: "2026-07-11", source: "ecb", baseCurrency: "EUR" });
     });
 
     it("returns null data (never a broken partial) when the ECB lookup fails", async () => {
@@ -263,7 +265,7 @@ describe("Lodging API", () => {
     beforeAll(async () => {
       jest
         .spyOn(fx, "convertToBase")
-        .mockResolvedValue({ baseAmount: 100, rate: 1, rateDate: "2024-08-01" });
+        .mockResolvedValue({ baseAmount: 100, rate: 1, rateDate: "2024-08-01", source: "ecb" });
       const res = await request(app)
         .post(`/api/v1/lodging/${lodgingId}/stays`)
         .set("Cookie", authCookie)
@@ -290,7 +292,7 @@ describe("Lodging API", () => {
     });
 
     it("re-snapshots FX when totalPrice changes", async () => {
-      jest.spyOn(fx, "convertToBase").mockResolvedValue({ baseAmount: 250, rate: 1, rateDate: "2024-08-01" });
+      jest.spyOn(fx, "convertToBase").mockResolvedValue({ baseAmount: 250, rate: 1, rateDate: "2024-08-01", source: "ecb" });
       const res = await request(app)
         .patch(`/api/v1/lodging/${lodgingId}/stays/${stayId}`)
         .set("Cookie", authCookie)
@@ -302,7 +304,7 @@ describe("Lodging API", () => {
     it("re-snapshots FX when currency changes, using the existing totalPrice", async () => {
       const spy = jest
         .spyOn(fx, "convertToBase")
-        .mockResolvedValue({ baseAmount: 999, rate: 3.996, rateDate: "2024-08-01" });
+        .mockResolvedValue({ baseAmount: 999, rate: 3.996, rateDate: "2024-08-01", source: "ecb" });
       const res = await request(app)
         .patch(`/api/v1/lodging/${lodgingId}/stays/${stayId}`)
         .set("Cookie", authCookie)
@@ -357,7 +359,7 @@ describe("Lodging API", () => {
     beforeEach(async () => {
       jest
         .spyOn(fx, "convertToBase")
-        .mockResolvedValue({ baseAmount: 100, rate: 1, rateDate: "2025-02-01" });
+        .mockResolvedValue({ baseAmount: 100, rate: 1, rateDate: "2025-02-01", source: "ecb" });
       const l = await prisma.lodging.create({ data: { userId, name: "Editor Shape Hotel" } });
       editorLodgingId = l.id;
       const res = await request(app)

@@ -43,6 +43,7 @@ describe("GET /api/v1/lodging/fx-preview — rate limiting", () => {
       baseAmount: 100,
       rate: 1,
       rateDate: "2026-01-01",
+      source: "ecb",
     });
   });
 

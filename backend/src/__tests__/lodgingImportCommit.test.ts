@@ -10,8 +10,9 @@ jest.mock("../services/fx/frankfurter", () => ({
     baseAmount: amount,
     rate: 1,
     rateDate: "2026-01-01",
+    source: "ecb" as const,
   })),
-  getRate: jest.fn(async () => 1),
+  getRate: jest.fn(async () => ({ rate: 1, source: "ecb" as const })),
 }));
 
 const frankfurterMock = jest.requireMock("../services/fx/frankfurter") as {
