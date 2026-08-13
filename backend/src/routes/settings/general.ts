@@ -25,7 +25,10 @@ const emptyToUndef = (v: unknown): unknown => (v === '' ? undefined : v);
  * into it, so it has to be a currency with a dependable rate history — the 30
  * the ECB publishes, back to 1999. The UI states this at the field.
  */
-export const baseCurrencyField = z.enum(ECB_CURRENCIES as unknown as [string, ...string[]]);
+type EcbCurrency = (typeof ECB_CURRENCIES)[number];
+export const baseCurrencyField = z.enum(
+  ECB_CURRENCIES as unknown as [EcbCurrency, ...EcbCurrency[]],
+);
 
 const settingsSchema = z.object({
   profile: z.object({
