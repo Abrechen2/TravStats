@@ -1,3 +1,4 @@
+import { formatCurrency } from "../../lib/units";
 import { differenceInCalendarDays } from "date-fns";
 import type { Trip, TripCategory, TripStatus } from "../../types";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
@@ -224,7 +225,7 @@ export default function TripCard({ trip, onOpen, onEdit, onDelete }: TripCardPro
             value={
               costTotals.length > 0
                 ? costTotals
-                    .map((c) => formatCurrency(c.total, c.currency, i18n.language))
+                    .map((c) => formatCurrency(c.total, c.currency, { compact: true }))
                     .join(" + ")
                 : "—"
             }
@@ -357,18 +358,6 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 function formatDistance(km: number): string {
   if (km >= 1000) return `${(km / 1000).toFixed(1)}k`;
   return String(km);
-}
-
-function formatCurrency(value: number, code: string, locale: string): string {
-  try {
-    return new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency: code,
-      maximumFractionDigits: 0,
-    }).format(value);
-  } catch {
-    return `${code} ${Math.round(value)}`;
-  }
 }
 
 function formatDateRange(start: Date | null, end: Date | null, locale: string): string | null {
