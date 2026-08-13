@@ -1,4 +1,4 @@
-import type { CurrencyCode } from "../../shared/currencies";
+import { type CurrencyCode, isCurrencyCode } from "../../shared/currencies";
 
 export type LodgingCurrency = CurrencyCode;
 
@@ -38,14 +38,26 @@ const GERMAN_MONTHS: Record<string, number> = {
   dezember: 12,
 };
 
+/**
+ * Symbols only — three-letter codes are resolved against the ISO-4217 registry
+ * instead, so this table never has to grow for a new currency. Booking.com
+ * writes the dollar family with a country prefix and no space ("US$628,70",
+ * "S$ 1.324,90"), which is why those forms are listed rather than folded into
+ * a bare "$".
+ */
 const CURRENCY_SYMBOLS: Record<string, LodgingCurrency> = {
   "€": "EUR",
-  EUR: "EUR",
-  CHF: "CHF",
   $: "USD",
-  USD: "USD",
   "£": "GBP",
-  GBP: "GBP",
+  "¥": "JPY",
+  US$: "USD",
+  A$: "AUD",
+  C$: "CAD",
+  CA$: "CAD",
+  NZ$: "NZD",
+  HK$: "HKD",
+  S$: "SGD",
+  R$: "BRL",
 };
 
 const CONFIRMATION_RE = /Bestätigungsnummer:\s*‌?\s*(\d{6,})/;
@@ -226,11 +238,22 @@ function parseLage(raw: string | null): AddressParts {
   };
 }
 
-/** "€ 1.234,50" -> 1234.5 · "CHF 292,83" -> 292.83 · "€ 112" -> 112. */
+/**
+ * "€ 1.234,50" -> 1234.5 · "CHF 292,83" -> 292.83 · "NOK 3.380" -> 3380 ·
+ * "US$628,70" -> 628.7 · "S$ 1.324,90" -> 1324.9.
+ *
+ * The three-letter branch is validated against ISO-4217 rather than a list, so
+ * a booking in a currency nobody anticipated still yields its price. The check
+ * matters: it is what keeps a line like "TEL 1.234,50" from being read as an
+ * amount in the imaginary currency TEL.
+ */
 function parseAmount(line: string): { amount: number; currency: LodgingCurrency } | null {
-  const m = line.match(/^(€|CHF|EUR|USD|GBP|\$|£)\s*([\d.,]+)$/);
+  // The symbol alternative comes first so "US$" is read as a symbol rather
+  // than as the (non-existent) code "US".
+  const m = line.match(/^([A-Z]{1,2}\$|[€$£¥]|[A-Z]{3})\s*([\d.,]+)$/);
   if (!m) return null;
-  const currency = CURRENCY_SYMBOLS[m[1]];
+  const token = m[1];
+  const currency = CURRENCY_SYMBOLS[token] ?? (isCurrencyCode(token) ? token : null);
   if (!currency) return null;
   const numeric = Number(m[2].replace(/\./g, "").replace(",", "."));
   if (!Number.isFinite(numeric)) return null;
