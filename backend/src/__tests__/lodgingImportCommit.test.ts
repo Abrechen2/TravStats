@@ -138,6 +138,36 @@ describe("commitLodgingImport", () => {
     expect(stay?.ratingRoom).toBe(4);
   });
 
+  it("imports a priced row whose currency the sheet never carried WITHOUT the price", async () => {
+    // A number with no unit is not a price. The column default would make the
+    // row claim EUR, which is how an 11,662 AED booking becomes €11,662 and
+    // inflates every total it touches. The stay is worth keeping; the bare
+    // number is not, and no FX lookup is spent on a guess.
+    const rows: CommitRowInput[] = [
+      {
+        sourceRowIndex: 0,
+        action: "create",
+        lodging: { name: "Hotel Unit Unknown" },
+        stay: {
+          checkIn: "2026-06-01",
+          checkOut: "2026-06-03",
+          totalPrice: 11662,
+        },
+      },
+    ];
+    const result = await commitLodgingImport(userId, "csv", "stays.csv", rows);
+    expect(result.failed).toEqual([]);
+    expect(result.createdStays).toBe(1);
+    expect(frankfurterMock.convertToBase).not.toHaveBeenCalled();
+
+    const stay = await prisma.lodgingStay.findFirst({
+      where: { batchId: result.batchId },
+    });
+    expect(stay?.totalPrice).toBeNull();
+    expect(stay?.totalPriceBase).toBeNull();
+    expect(stay?.fxRate).toBeNull();
+  });
+
   it("attaches a stay to an existing lodging via matchedLodgingId", async () => {
     const host = await prisma.lodging.create({
       data: { userId, name: "Existing Host" },
