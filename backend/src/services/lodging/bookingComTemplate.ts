@@ -1,6 +1,6 @@
-import { CURRENCIES } from "../../schemas/lodging";
+import type { CurrencyCode } from "../../shared/currencies";
 
-export type LodgingCurrency = (typeof CURRENCIES)[number];
+export type LodgingCurrency = CurrencyCode;
 
 export interface ParsedLodgingBooking {
   hotelName: string;
