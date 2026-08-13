@@ -1,10 +1,11 @@
 import type { JSX } from "react";
+import CurrencySelect from "../common/CurrencySelect";
+import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useLodgingFxPreview } from "../../hooks/useLodgingFxPreview";
 import { formatStayPriceDisplay } from "../../lib/lodgingFormat";
 import { formatCurrency } from "../../lib/units";
 import type { LodgingCurrency } from "../../types/lodging";
 
-const CURRENCIES: LodgingCurrency[] = ["EUR", "USD", "GBP", "CHF"];
 
 interface StayEditorPriceSectionProps {
   totalPrice: string;
@@ -51,6 +52,7 @@ export function StayEditorPriceSection({
   t,
   inputClassName,
 }: StayEditorPriceSectionProps): JSX.Element {
+  const recentCurrencies = useRecentCurrencies();
   const parsedTotalPrice = totalPrice.trim().length > 0 ? Number.parseFloat(totalPrice) : null;
   const preview = useLodgingFxPreview({
     totalPrice: parsedTotalPrice,
@@ -98,18 +100,12 @@ export function StayEditorPriceSection({
             {pricePerNight !== null ? formatCurrency(pricePerNight, currency) : "—"}
           </span>
         </div>
-        <select
+        <CurrencySelect
           aria-label={t("lodging:field.currency")}
-          className={inputClassName}
           value={currency}
-          onChange={(e): void => onCurrencyChange(e.target.value as LodgingCurrency)}
-        >
-          {CURRENCIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+          recent={recentCurrencies}
+          onChange={(code): void => onCurrencyChange(code as LodgingCurrency)}
+        />
       </div>
 
       <label className="flex items-center gap-2 text-sm text-[var(--text-primary)]">

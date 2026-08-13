@@ -1,3 +1,5 @@
+import CurrencySelect from "../common/CurrencySelect";
+import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useEffect, useState, useCallback } from "react";
 import type { JSX, ReactNode } from "react";
 import type { ParsedCruiseEntry, ParsedFlightSuggestion } from "../../lib/api/parse";
@@ -34,7 +36,6 @@ interface CruiseImportPreviewModalProps {
 }
 
 const CABIN_TYPES: CabinType[] = ["inside", "oceanview", "balcony", "suite"];
-const CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
 const SEAT_CLASSES = ["economy", "premium_economy", "business", "first"] as const;
 type SeatClass = (typeof SEAT_CLASSES)[number];
 
@@ -272,6 +273,7 @@ function CruiseImportEntryEditor({
   const [bookingReference, setBookingReference] = useState(input.bookingReference ?? "");
   const [price, setPrice] = useState(input.price != null ? String(input.price) : "");
   const [currency, setCurrency] = useState<string>(input.currency ?? "EUR");
+  const recentCurrencies = useRecentCurrencies();
   const [departurePort, setDeparturePort] = useState<Port | null>(entry.departurePort ?? null);
   const [arrivalPort, setArrivalPort] = useState<Port | null>(entry.arrivalPort ?? null);
   const [stops, setStops] = useState<CruiseStopInput[]>(() =>
@@ -512,17 +514,12 @@ function CruiseImportEntryEditor({
           />
         </Field>
         <Field label={t("field.currency")}>
-          <select
+          <CurrencySelect
             value={currency}
-            onChange={(e): void => setCurrency(e.target.value)}
-            className={INPUT}
-          >
-            {CURRENCIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+            onChange={setCurrency}
+            recent={recentCurrencies}
+            aria-label={t("field.currency")}
+          />
         </Field>
         <Field label={t("field.bookingReference")}>
           <input

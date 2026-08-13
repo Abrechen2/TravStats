@@ -1,3 +1,4 @@
+import type { CurrencyCode } from "../shared/currencies";
 export interface Ship {
   id: number;
   name: string;
@@ -111,7 +112,7 @@ export interface CruiseInput {
   deck?: number | null;
   bookingReference?: string | null;
   price?: number | null;
-  currency?: "EUR" | "USD" | "GBP" | "CHF";
+  currency?: CurrencyCode;
   notes?: string | null;
   tags?: string[];
   companions?: string[];

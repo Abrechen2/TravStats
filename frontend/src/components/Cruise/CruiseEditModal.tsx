@@ -1,3 +1,5 @@
+import CurrencySelect from "../common/CurrencySelect";
+import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useState } from "react";
 import type {
   Cruise,
@@ -26,7 +28,6 @@ interface Props {
 }
 
 const CABIN_TYPES: CabinType[] = ["inside", "oceanview", "balcony", "suite"];
-const CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
 
 // Hex mirror of CRUISE_DISTINCT_PALETTE (lib/cruiseColor.ts) — the same
 // distinct hues the map's auto-derive falls back to, so a manual pick still
@@ -113,6 +114,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
   const [bookingReference, setBookingReference] = useState<string>(cruise?.bookingReference ?? "");
   const [price, setPrice] = useState<string>(cruise?.price?.toString() ?? "");
   const [currency, setCurrency] = useState<string>(cruise?.currency ?? "EUR");
+  const recentCurrencies = useRecentCurrencies();
 
   const [tagsInput, setTagsInput] = useState<string>((cruise?.tags ?? []).join(", "));
   const [companions, setCompanions] = useState<string[]>(cruise?.companions ?? []);
@@ -359,18 +361,12 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                   onChange={(e): void => setPrice(e.target.value)}
                   placeholder={t("field.price")}
                 />
-                <select
+                <CurrencySelect
                   aria-label={t("field.currency")}
-                  className={INPUT_CLASS}
                   value={currency}
-                  onChange={(e): void => setCurrency(e.target.value)}
-                >
-                  {CURRENCIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
+                  recent={recentCurrencies}
+                  onChange={setCurrency}
+                />
               </div>
             </Section>
 
