@@ -1,4 +1,5 @@
 import { getAdminFxSettings } from "../parserSettings";
+import { minorUnits } from "../../shared/currencies";
 import logger from "../../utils/logger";
 import { getCdnRate } from "./currencyApiCdn";
 import { getRate, type FxRate, type RateSource } from "./frankfurter";
@@ -76,8 +77,11 @@ export async function convertToBase(
   const rateDate = date.toISOString().slice(0, 10);
   const found = await resolveRate(from, base, rateDate);
   if (found === null) return null;
+  // Round to the BASE currency's own precision. A fixed 2 stores a phantom
+  // fraction for a yen total and truncates a dinar one.
+  const factor = 10 ** minorUnits(base);
   return {
-    baseAmount: Math.round(amount * found.rate * 100) / 100,
+    baseAmount: Math.round(amount * found.rate * factor) / factor,
     rate: found.rate,
     rateDate,
     source: found.source,

@@ -315,3 +315,18 @@ export function averageRatingsByCategory(
     service: average(stays.map((s) => s.ratingService).filter((v): v is number => v !== null)),
   };
 }
+
+/**
+ * How many stays carry a price that never made it into the base-currency
+ * total. Rendered as a footnote under any such total: a sum that silently
+ * omits rows reads exactly like a complete one, which is the whole reason
+ * the three-state design exists.
+ *
+ * A stay with NO price is not counted — it is not missing from the total,
+ * it simply has nothing to contribute.
+ */
+export function countUnconvertedStays(
+  stays: readonly { totalPrice: number | null; totalPriceBase: number | null }[]
+): number {
+  return stays.filter((s) => s.totalPrice !== null && s.totalPriceBase === null).length;
+}
