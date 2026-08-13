@@ -14,11 +14,25 @@ const SAMPLE_DIR = path.resolve(__dirname, "../../..", "test-samples", "Hotel Bu
 const hasSamples = fs.existsSync(SAMPLE_DIR);
 const describeSamples = hasSamples ? describe : describe.skip;
 
-/** Sample filenames carry emoji + umlauts; match on a stable substring instead. */
+/**
+ * Sample filenames carry emoji + umlauts; match on a stable substring instead.
+ *
+ * The fragment must identify exactly ONE file. `.find()` used to take whichever
+ * matched first, so when the owner dropped 88 more confirmations into the
+ * folder on 2026-08-13, "Novotel" silently started resolving to a different
+ * hotel and a passing assertion turned into a failing one about the wrong mail.
+ * An ambiguous fragment is a broken test, not a coin toss — say so.
+ */
 function loadSample(nameFragment: string): { subject: string; text: string } {
-  const file = fs
+  const matches = fs
     .readdirSync(SAMPLE_DIR)
-    .find((f) => f.includes(nameFragment) && f.endsWith(".msg"));
+    .filter((f) => f.includes(nameFragment) && f.endsWith(".msg"));
+  if (matches.length > 1) {
+    throw new Error(
+      `Fragment "${nameFragment}" matches ${matches.length} samples — make it unique.`,
+    );
+  }
+  const file = matches[0];
   if (!file) throw new Error(`No sample matching "${nameFragment}"`);
   const buffer = fs.readFileSync(path.join(SAMPLE_DIR, file));
   const extracted = extractEmailFromFile(buffer, file);
@@ -37,7 +51,7 @@ describeSamples("Booking.com template parser (real samples)", () => {
     const booking = loadSample("Bastion");
     expect(isBookingComConfirmation(booking.subject, booking.text)).toBe(true);
 
-    const direct = loadSample("Novina");
+    const direct = loadSample("Buchungsbestätigung _Novina");
     expect(isBookingComConfirmation(direct.subject, direct.text)).toBe(false);
     expect(parseBookingComEmail(direct.subject, direct.text)).toBeNull();
   });
@@ -107,7 +121,7 @@ describeSamples("Booking.com template parser (real samples)", () => {
   });
 
   it("parses the Novotel Suites Berlin confirmation (2 nights, district in the address)", () => {
-    const r = parseSample("Novotel");
+    const r = parseSample("Novotel Suites Berlin");
     expect(r.hotelName).toBe("Novotel Suites Berlin City Potsdamer Platz");
     expect(r.confirmationNumber).toBe("5967563369");
     expect(r.checkIn).toBe("2026-04-22");
@@ -131,6 +145,28 @@ describeSamples("Booking.com template parser (real samples)", () => {
     expect(r.city).toBe("Landsberg am Lech");
     expect(r.totalPrice).toBeCloseTo(112, 2);
     expect(r.currency).toBe("EUR");
+  });
+
+  // Booking.com sends TWO layouts. The cases above are the inline one, where
+  // the label and its value share a line ("Anreise\tMittwoch, …"). This one is
+  // the stacked layout: the label sits alone on its line and the value follows
+  // on the next. 22 of the owner's 95 samples arrived that way and every single
+  // one fell through to the LLM (measured 2026-08-13) because `findValue` only
+  // ever looked at the label's own line.
+  it("parses the Hotel Alzinn confirmation (stacked label/value layout)", () => {
+    const r = parseSample("Alzinn");
+    expect(r.hotelName).toBe("Hotel Alzinn");
+    expect(r.confirmationNumber).toBe("4914064941");
+    expect(r.checkIn).toBe("2024-06-26");
+    expect(r.checkOut).toBe("2024-06-28");
+    expect(r.nights).toBe(2);
+    expect(r.totalPrice).toBeCloseTo(324, 2);
+    expect(r.currency).toBe("EUR");
+    // Luxembourg writes the postal code as "L-5836" and puts it AFTER the city,
+    // so the city must not be read off the last-segment-before-country rule.
+    expect(r.city).toBe("Luxemburg (Stadt)");
+    expect(r.postcode).toBe("L-5836");
+    expect(r.country).toBe("Luxemburg");
   });
 });
 
@@ -157,6 +193,76 @@ describe("Booking.com template parser (synthetic)", () => {
     expect(r?.nights).toBe(2);
     expect(r?.totalPrice).toBeCloseTo(1234.5, 2);
     expect(r?.currency).toBe("EUR");
+  });
+
+  const stacked = [
+    "<https://booking.com> \t Bestätigungsnummer: 1234567890",
+    "Buchungsinformationen",
+    "Anreise",
+    "Montag, 5. Januar 2026 (ab 15:00)",
+    "Abreise",
+    "Mittwoch, 7. Januar 2026 (bis 11:00)",
+    "Ihre Buchung",
+    "2 Nächte, Superior Zimmer",
+    "Lage",
+    "Musterweg 1, 12345 Musterstadt, Deutschland",
+    "Preisangaben",
+    "Gesamtpreis",
+    "€ 1.234,50",
+    "",
+  ].join("\n");
+
+  it("parses the stacked layout, where each value sits on the line below its label", () => {
+    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", stacked);
+    expect(r?.checkIn).toBe("2026-01-05");
+    expect(r?.checkOut).toBe("2026-01-07");
+    expect(r?.nights).toBe(2);
+    expect(r?.roomCategory).toBe("Superior Zimmer");
+    expect(r?.city).toBe("Musterstadt");
+    expect(r?.totalPrice).toBeCloseTo(1234.5, 2);
+  });
+
+  it("does not read the NEXT label as a stacked value", () => {
+    // A label with no value at all must stay null rather than swallow whatever
+    // line follows it — otherwise "Anreise" would report "Abreise" as its date
+    // and the booking would carry a nonsense field instead of an honest gap.
+    const labelsOnly = [
+      "<https://booking.com> \t Bestätigungsnummer: 1234567890",
+      "Anreise",
+      "Abreise",
+      "Mittwoch, 7. Januar 2026 (bis 11:00)",
+      "",
+    ].join("\n");
+    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", labelsOnly);
+    expect(r).toBeNull(); // no check-in => the template declines, as it always has
+  });
+
+  it("accepts the short 'Preis' total label as well as 'Gesamtpreis'", () => {
+    const shortLabel = stacked.replace("Gesamtpreis", "Preis");
+    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", shortLabel);
+    expect(r?.totalPrice).toBeCloseTo(1234.5, 2);
+    expect(r?.missing).not.toContain("totalPrice");
+  });
+
+  it("still ignores the word Gesamtpreis inside cancellation prose", () => {
+    const prose = stacked.replace(
+      "Gesamtpreis\n€ 1.234,50",
+      "Bei einer Stornierung zahlen Sie einen Betrag in Höhe des Gesamtpreises.\n€ 1.234,50",
+    );
+    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", prose);
+    expect(r?.totalPrice).toBeNull();
+  });
+
+  it("reads a postcode that follows the city as its own segment", () => {
+    const luxembourg = stacked.replace(
+      "Musterweg 1, 12345 Musterstadt, Deutschland",
+      "2, Rue Nicolas Wester, Luxemburg (Stadt), L-5836, Luxemburg",
+    );
+    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", luxembourg);
+    expect(r?.address).toBe("2, Rue Nicolas Wester");
+    expect(r?.city).toBe("Luxemburg (Stadt)");
+    expect(r?.postcode).toBe("L-5836");
+    expect(r?.country).toBe("Luxemburg");
   });
 
   it("returns null for text that is not a Booking.com confirmation", () => {
