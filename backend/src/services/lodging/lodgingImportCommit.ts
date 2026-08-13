@@ -244,6 +244,7 @@ async function createStay(
   lodgingId: string,
   fields: StayCandidateFields,
   fxOutcome: FxSnapshotOutcome,
+  sourceRowIndex: number,
 ): Promise<void> {
   const checkIn = toDate(fields.checkIn);
 
@@ -254,13 +255,16 @@ async function createStay(
   // user can type it in with its currency.
   const priceHasNoCurrency = fields.totalPrice != null && !fields.currency;
   if (priceHasNoCurrency) {
+    // The row index is the only handle an operator has back to the
+    // spreadsheet — without it the warning names no row. The amount itself
+    // stays out of the log; it is the user's money, not diagnostic data.
     logger.warn(
       {
         operation: "lodging_import_price_without_currency",
+        sourceRowIndex,
         checkInDay: fields.checkIn,
-        totalPrice: fields.totalPrice,
       },
-      "[Lodging Import] Price without a currency — importing the stay without it",
+      "[Lodging Import] Price without a currency — importing the stay without it"
     );
   }
 
@@ -281,8 +285,10 @@ async function createStay(
       roomCategory: fields.roomCategory ?? null,
       board: fields.board ?? null,
       totalPrice: priceHasNoCurrency ? null : (fields.totalPrice ?? null),
-      // Omitted rather than defaulted here: the column default ('EUR') then
-      // applies as the column's own answer, not as a claim about this row.
+      // Omitted, so the NOT-NULL column applies its own 'EUR' default. The
+      // stored row is indistinguishable from an explicit EUR either way — the
+      // column cannot hold "unknown" — but the accompanying price is null, so
+      // nothing is labelled with a currency the source never gave.
       currency: fields.currency ?? undefined,
       ...fx,
       ratingRoom: fields.ratingRoom ?? null,
@@ -422,7 +428,7 @@ export async function commitLodgingImport(
       if (row.stay) {
         try {
           const fxOutcome = fxOutcomeForStay(row.stay, fxOutcomes);
-          await createStay(userId, batch.id, lodgingId, row.stay, fxOutcome);
+          await createStay(userId, batch.id, lodgingId, row.stay, fxOutcome, row.sourceRowIndex);
           createdStays++;
         } catch (err) {
           if (!isUniqueViolation(err)) throw err;
