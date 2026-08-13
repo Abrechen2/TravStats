@@ -5,6 +5,8 @@ import InlineHelp from "../Help/InlineHelp";
 
 export interface ParserSettingsData {
   allowUserApiKeys: boolean;
+  /** Whether this instance may ask jsDelivr for rates the ECB does not carry. */
+  fxCdnFallbackEnabled: boolean;
   defaultVisionParser: string;
   defaultTextParser: string;
   ollamaUrl: string | null;
@@ -106,11 +108,7 @@ export default function ParserSettings({
             {t("admin:parserSettings.description")}
           </p>
         </div>
-        <button
-          onClick={onSave}
-          disabled={savingParsers}
-          className="btn-primary"
-        >
+        <button onClick={onSave} disabled={savingParsers} className="btn-primary">
           {savingParsers ? t("common:buttons.saving") : t("admin:saveSettings")}
         </button>
       </div>
@@ -340,6 +338,30 @@ export default function ParserSettings({
             Allow users to add their own flight data API keys (Airlabs, Aviationstack, OpenSky)
           </label>
         </div>
+      </div>
+
+      {/* Which outside service this instance may reach for exchange rates —
+          the same kind of decision as the Ollama URL above, which is why it
+          sits here rather than in a user's own settings. */}
+      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-(--text-primary) mb-2">
+          {t("admin:fxCdn.title")}
+        </h3>
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="fxCdnFallbackEnabled"
+            checked={parserSettings.fxCdnFallbackEnabled}
+            onChange={(e) =>
+              onParserSettingsChange({ ...parserSettings, fxCdnFallbackEnabled: e.target.checked })
+            }
+            className="w-4 h-4 rounded-sm border-border"
+          />
+          <label htmlFor="fxCdnFallbackEnabled" className="text-sm text-(--text-primary)">
+            {t("admin:fxCdn.label")}
+          </label>
+        </div>
+        <p className="mt-2 text-xs text-(--text-muted)">{t("admin:fxCdn.description")}</p>
       </div>
     </div>
   );

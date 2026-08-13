@@ -97,23 +97,34 @@ export function StayEditor({
   const [board, setBoard] = useState<BoardType>(stay?.board ?? "none");
 
   const [ratingRoom, setRatingRoom] = useState<number | null>(stay?.ratingRoom ?? null);
-  const [ratingBreakfast, setRatingBreakfast] = useState<number | null>(stay?.ratingBreakfast ?? null);
+  const [ratingBreakfast, setRatingBreakfast] = useState<number | null>(
+    stay?.ratingBreakfast ?? null
+  );
   const [ratingService, setRatingService] = useState<number | null>(stay?.ratingService ?? null);
 
   const [totalPrice, setTotalPrice] = useState<string>(stay?.totalPrice?.toString() ?? "");
   const [currency, setCurrency] = useState<LodgingCurrency>(stay?.currency ?? "EUR");
+  // Text, not a number: an empty field means "no rate of my own", which is a
+  // different thing from 0 and must reach the API as an explicit null.
+  const [manualFxRate, setManualFxRate] = useState<string>(
+    stay?.fxSource === "manual" && stay.fxRate !== null ? String(stay.fxRate) : ""
+  );
   const [isAwardStay, setIsAwardStay] = useState<boolean>(stay?.isAwardStay ?? false);
 
   const [roomAmenities, setRoomAmenities] = useState<string[]>(stay?.roomAmenities ?? []);
   const [bookingReference, setBookingReference] = useState<string>(stay?.bookingReference ?? "");
   const [membershipId, setMembershipId] = useState<string>(stay?.membershipId ?? "");
-  const [membershipOptOut, setMembershipOptOut] = useState<boolean>(stay?.membershipOptOut ?? false);
+  const [membershipOptOut, setMembershipOptOut] = useState<boolean>(
+    stay?.membershipOptOut ?? false
+  );
   const [showMembershipOverride, setShowMembershipOverride] = useState<boolean>(
     (stay?.membershipId ?? null) !== null || (stay?.membershipOptOut ?? false)
   );
   const [tripId, setTripId] = useState<string>(stay?.tripId ?? "");
   const [receiptUrl, setReceiptUrl] = useState<string | null>(stay?.receiptUrl ?? null);
-  const [companionsInput, setCompanionsInput] = useState<string>((stay?.companions ?? []).join(", "));
+  const [companionsInput, setCompanionsInput] = useState<string>(
+    (stay?.companions ?? []).join(", ")
+  );
   const [notes, setNotes] = useState<string>(stay?.notes ?? "");
 
   const [memberships, setMemberships] = useState<LodgingMembership[]>([]);
@@ -160,6 +171,10 @@ export function StayEditor({
   const effectiveStatus: StayStatus = isCancelled ? "cancelled" : derivedStatus;
 
   const parsedTotalPrice = totalPrice.trim() ? Number.parseFloat(totalPrice) : null;
+  const parsedManualFxRate =
+    manualFxRate.trim() && Number.isFinite(Number.parseFloat(manualFxRate))
+      ? Number.parseFloat(manualFxRate)
+      : null;
   // The SAME function the server runs on save (shared/ratingDerivation.ts), so
   // the readout cannot promise a number the backend then stores differently.
   // `current` carries an overall the stay already has with no components behind
@@ -227,6 +242,9 @@ export function StayEditor({
         pricePerNight: derivedPricePerNight,
         currency,
         totalPrice: Number.isFinite(parsedTotalPrice) ? parsedTotalPrice : null,
+        // An emptied field is an explicit null — the user taking their rate
+        // back — and must not collapse into "leave it alone".
+        manualFxRate: parsedManualFxRate,
         // MUST reach the payload unconditionally (including `false`, to let
         // an edit turn an award stay back off) — without this, the four
         // POINTS_PRO_* achievements (Task 11) are permanently unreachable.
@@ -272,7 +290,8 @@ export function StayEditor({
     }
   };
 
-  const title = mode === "create" ? t("lodging:stayEditor.createTitle") : t("lodging:stayEditor.editTitle");
+  const title =
+    mode === "create" ? t("lodging:stayEditor.createTitle") : t("lodging:stayEditor.editTitle");
 
   return (
     <div
@@ -410,6 +429,8 @@ export function StayEditor({
               onCurrencyChange={setCurrency}
               isAwardStay={isAwardStay}
               onAwardStayChange={setIsAwardStay}
+              manualFxRate={manualFxRate}
+              onManualFxRateChange={setManualFxRate}
               checkInDate={checkIn}
               baseCurrency={baseCurrency}
               language={i18n.language}
@@ -555,7 +576,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       open
       className="mb-4 rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)]/50 p-3"
     >
-      <summary className="cursor-pointer text-sm font-medium text-[var(--text-primary)]">{title}</summary>
+      <summary className="cursor-pointer text-sm font-medium text-[var(--text-primary)]">
+        {title}
+      </summary>
       <div className="mt-3">{children}</div>
     </details>
   );

@@ -55,6 +55,7 @@ const baseStay: LodgingStay = {
   fxRate: 0.9895,
   fxRateDate: "2024-05-12T00:00:00.000Z",
   fxBaseCurrency: "EUR",
+  fxSource: null,
   isAwardStay: false,
   ratingRoom: 4,
   ratingBreakfast: 4,
@@ -157,6 +158,7 @@ describe("LodgingDetailPage", () => {
       fxRate: null,
       fxRateDate: null,
       fxBaseCurrency: null,
+      fxSource: null,
     };
     getLodgingMock.mockResolvedValue(makeLodging({}, [unconverted]));
 
@@ -351,6 +353,7 @@ describe("LodgingDetailPage", () => {
       fxRate: null,
       fxRateDate: null,
       fxBaseCurrency: null,
+      fxSource: null,
     };
     // Mirrors the real backend: a lodging with no priced stay computes
     // totalSpendBase as 0 (computeAggregates' `?? 0` fallback) — the page

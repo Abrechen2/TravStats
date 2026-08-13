@@ -10,6 +10,10 @@ import {
   type StayPriceSnapshot,
 } from "../lodgingFormat";
 
+// The formatter takes the three state words together now (task 9): a rate the
+// user typed must be labelled as theirs, never as the ECB's.
+const LABELS = { ecb: "EZB", manual: "eigener Kurs", none: "kein Kurs" };
+
 function makeSnapshot(overrides: Partial<StayPriceSnapshot> = {}): StayPriceSnapshot {
   return {
     totalPrice: 840,
@@ -24,12 +28,12 @@ function makeSnapshot(overrides: Partial<StayPriceSnapshot> = {}): StayPriceSnap
 
 describe("formatStayPriceDisplay", () => {
   it("renders the full FX readout when the snapshot is complete", () => {
-    const result = formatStayPriceDisplay(makeSnapshot(), "de", "EZB");
+    const result = formatStayPriceDisplay(makeSnapshot(), "de", LABELS);
 
     expect(result.fxReadout).not.toBeNull();
     expect(result.fxReadout).toContain("→");
     expect(result.fxReadout).toContain("0,9895");
-    expect(result.fxReadout).toContain("EZB");
+    expect(result.fxReadout).toContain(LABELS.ecb);
     expect(result.fxReadout).toContain("12.05.24");
     expect(result.original).not.toMatch(/null|NaN|undefined/);
   });
@@ -49,7 +53,7 @@ describe("formatStayPriceDisplay", () => {
         fxBaseCurrency: "EUR",
       }),
       "de",
-      "EZB"
+      LABELS
     );
 
     expect(result.fxReadout).toBeNull();
@@ -66,7 +70,7 @@ describe("formatStayPriceDisplay", () => {
     const result = formatStayPriceDisplay(
       makeSnapshot({ currency: "CHF", fxRate: 1, fxBaseCurrency: "EUR" }),
       "de",
-      "EZB"
+      LABELS
     );
 
     expect(result.fxReadout).not.toBeNull();
@@ -82,7 +86,7 @@ describe("formatStayPriceDisplay", () => {
         fxBaseCurrency: null,
       }),
       "de",
-      "EZB"
+      LABELS
     );
 
     expect(result.fxReadout).toBeNull();
@@ -95,7 +99,7 @@ describe("formatStayPriceDisplay", () => {
     const result = formatStayPriceDisplay(
       makeSnapshot({ fxRate: null }), // totalPriceBase/fxRateDate/fxBaseCurrency still set
       "de",
-      "EZB"
+      LABELS
     );
 
     expect(result.fxReadout).toBeNull();
@@ -112,7 +116,7 @@ describe("formatStayPriceDisplay", () => {
         fxBaseCurrency: null,
       }),
       "de",
-      "EZB"
+      LABELS
     );
 
     expect(result.original).toBe("—");
@@ -120,7 +124,7 @@ describe("formatStayPriceDisplay", () => {
   });
 
   it("uses an en-US-ish rate format for the English locale", () => {
-    const result = formatStayPriceDisplay(makeSnapshot(), "en", "ECB");
+    const result = formatStayPriceDisplay(makeSnapshot(), "en", { ...LABELS, ecb: "ECB" });
     expect(result.fxReadout).toContain("0.9895");
     expect(result.fxReadout).toContain("ECB");
   });
@@ -147,7 +151,7 @@ describe("hasAnyPrice", () => {
       hasAnyPrice([
         { totalPrice: null, currency: "EUR" },
         { totalPrice: 120, currency: "EUR" },
-      ]),
+      ])
     ).toBe(true);
   });
 });
@@ -159,7 +163,7 @@ describe("singleOriginalCurrencySpend", () => {
         { totalPrice: 420, currency: "CHF" },
         { totalPrice: 420, currency: "CHF" },
       ],
-      "EUR",
+      "EUR"
     );
     expect(result).toEqual({ amount: 840, currency: "CHF" });
   });
@@ -175,8 +179,8 @@ describe("singleOriginalCurrencySpend", () => {
           { totalPrice: 100, currency: "CHF" },
           { totalPrice: 50, currency: "USD" },
         ],
-        "EUR",
-      ),
+        "EUR"
+      )
     ).toBeNull();
   });
 
@@ -190,7 +194,7 @@ describe("singleOriginalCurrencySpend", () => {
         { totalPrice: null, currency: "USD" }, // unpriced — currency irrelevant, must not count as "mixed"
         { totalPrice: 420, currency: "CHF" },
       ],
-      "EUR",
+      "EUR"
     );
     expect(result).toEqual({ amount: 420, currency: "CHF" });
   });
@@ -242,7 +246,9 @@ describe("averageRatingsByCategory", () => {
   });
 
   it("returns null for a category nobody rated", () => {
-    const result = averageRatingsByCategory([{ ratingRoom: 4, ratingBreakfast: null, ratingService: null }]);
+    const result = averageRatingsByCategory([
+      { ratingRoom: 4, ratingBreakfast: null, ratingService: null },
+    ]);
     expect(result.breakfast).toBeNull();
     expect(result.service).toBeNull();
   });

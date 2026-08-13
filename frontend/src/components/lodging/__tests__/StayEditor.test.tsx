@@ -40,6 +40,7 @@ const baseStay: LodgingStay = {
   fxRate: null,
   fxRateDate: null,
   fxBaseCurrency: null,
+  fxSource: null,
   isAwardStay: true,
   ratingRoom: null,
   ratingBreakfast: null,
