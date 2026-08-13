@@ -333,18 +333,32 @@ export function AllTab(): JSX.Element {
     </button>
   );
 
-  // One colour-key row: a short line swatch (or, for a frequency ramp, a
-  // slightly taller/wider gradient bar) + its label. `background` takes any
-  // CSS colour OR gradient, so both row kinds share one renderer.
-  const legendRow = (background: string, label: string, key: string, ramp = false): JSX.Element => (
+  /**
+   * One colour-key row. The swatch takes the SHAPE of the thing it stands for:
+   *
+   *   "line"  a route — flights and cruises are drawn as arcs
+   *   "ramp"  a route coloured by a gradient (flight frequency mode)
+   *   "dot"   a place — a lodging is a pin, not a line (Alex, 2026-08-09:
+   *           "Da Unterkünfte keine 'Strecken' sind sollte hier auch in der
+   *           Legende ein Kreis sein.")
+   *
+   * `background` takes any CSS colour OR gradient, so all three share one
+   * renderer.
+   */
+  const legendRow = (
+    background: string,
+    label: string,
+    key: string,
+    shape: "line" | "ramp" | "dot" = "line",
+  ): JSX.Element => (
     <span key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <span
         aria-hidden
         style={{
-          width: ramp ? 24 : 14,
-          height: ramp ? 4 : 2,
+          width: shape === "ramp" ? 24 : shape === "dot" ? 8 : 14,
+          height: shape === "ramp" ? 4 : shape === "dot" ? 8 : 2,
           background,
-          borderRadius: 2,
+          borderRadius: shape === "dot" ? "50%" : 2,
           flexShrink: 0,
         }}
       />
@@ -359,7 +373,7 @@ export function AllTab(): JSX.Element {
       // Frequency mode: one gradient bar from the rarest to the most-flown
       // tier, using the very stops the arcs are painted with.
       const gradient = `linear-gradient(90deg, ${row.stops.map(rgbCss).join(", ")})`;
-      return legendRow(gradient, label, `flight-${row.slot}`, true);
+      return legendRow(gradient, label, `flight-${row.slot}`, "ramp");
     }
     return legendRow(rgbCss(row.color), label, `flight-${row.slot}`);
   });
@@ -375,7 +389,7 @@ export function AllTab(): JSX.Element {
       const segments = row.stops
         .map((c, i) => `${rgbCss(c)} ${i * step}% ${(i + 1) * step}%`)
         .join(", ");
-      return legendRow(`linear-gradient(90deg, ${segments})`, label, `cruise-${row.slot}`, true);
+      return legendRow(`linear-gradient(90deg, ${segments})`, label, `cruise-${row.slot}`, "ramp");
     }
     return legendRow(rgbCss(row.color), label, `cruise-${row.slot}`);
   });
@@ -385,7 +399,7 @@ export function AllTab(): JSX.Element {
   // `layers/lodgingPinsLayer.ts` resolves its pin colour through, so the
   // dot on the map and the swatch in the legend can never disagree.
   const lodgingLegendRows = buildLodgingLegend().map((row) =>
-    legendRow(rgbCss(row.color), t("dashboard:legend.lodging"), `lodging-${row.slot}`)
+    legendRow(rgbCss(row.color), t("dashboard:legend.lodging"), `lodging-${row.slot}`, "dot")
   );
 
   // Colour key as a compact table pinned bottom-right — out of the top band

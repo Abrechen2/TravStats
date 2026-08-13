@@ -162,13 +162,48 @@ export function LodgingImportPreviewModal({
     setSaving(true);
     setError(null);
     try {
-      const payload: LodgingImportCommitRow[] = edited
-        .filter((r): r is EditableRow & { decision: "create" | "skip" } => r.decision !== "")
+      const decided = edited.filter(
+        (r): r is EditableRow & { decision: "create" | "skip" } => r.decision !== "",
+      );
+
+      // Names some OTHER row in this payload will create. Those rows keep the
+      // established payload-name join (see the `lodging` comment below): they
+      // travel with `lodging: null` and the backend attaches them to whatever
+      // the creating row made. Comparison is a loose lower-case one rather
+      // than a copy of the backend's normaliser — it only decides whether we
+      // send the object at all, and the backend dedupes by name regardless, so
+      // neither a false positive nor a false negative can duplicate a hotel.
+      const createdByPayload = new Set(
+        decided
+          .filter((r) => r.decision === "create" && r.lodging?.name)
+          .map((r) => r.lodging!.name.trim().toLowerCase()),
+      );
+
+      const payload: LodgingImportCommitRow[] = decided
         .map((r) => ({
           sourceRowIndex: r.sourceRowIndex,
           action: r.decision,
           matchedLodgingId: r.matchedLodgingId,
-          lodging: r.lodging,
+          // `ensureLodging` materialises the lodging object lazily, on the
+          // first EDIT of a lodging field. A stays-only row the user simply
+          // marked "create" — hotel name plus dates, nothing to edit — never
+          // triggered that, so it went out as `lodging: null` and the backend
+          // answered `missing_lodging_reference` and created NOTHING. That is
+          // the whole "0 Hotel(s) und 0 Aufenthalt(e) angelegt" report Alex
+          // hit on 2026-08-09 with a CSV of stays.
+          //
+          // Choosing "create" IS the instruction to create it, and the name is
+          // the one field such a row always carries. Two rows keep `null`: one
+          // the user chose to SKIP (inventing a lodging there would create a
+          // hotel they just declined), and one whose name another row in this
+          // payload already creates (the payload-name join, unchanged).
+          lodging:
+            r.lodging ??
+            (r.decision === "create" &&
+            r.lodgingName &&
+            !createdByPayload.has(r.lodgingName.trim().toLowerCase())
+              ? { name: r.lodgingName }
+              : null),
           // An UNEDITED stays-only row the preview matched by free-text name
           // against ANOTHER candidate in this same payload (`lodging` stays
           // null, no dedupe hint) still needs that name at commit time — the

@@ -81,12 +81,15 @@ function makeLodging(overrides: Partial<Lodging> = {}): Lodging {
   };
 }
 
-/** The `background` style of the legend swatch next to `label`. */
-const swatchBackground = (label: string): string | undefined => {
+/** The legend swatch element next to `label`. */
+const swatchOf = (label: string): HTMLElement | undefined => {
   const row = screen.getByText(label).parentElement;
   const swatch = row?.querySelector("span[aria-hidden]");
-  return swatch instanceof HTMLElement ? swatch.style.background : undefined;
+  return swatch instanceof HTMLElement ? swatch : undefined;
 };
+
+/** The `background` style of the legend swatch next to `label`. */
+const swatchBackground = (label: string): string | undefined => swatchOf(label)?.style.background;
 
 describe("AllTab: the lodging domain chip actually does something", () => {
   beforeEach(() => {
@@ -125,6 +128,30 @@ describe("AllTab: the lodging domain chip actually does something", () => {
     // #d4778f -> rgb(212, 119, 143)
     expect(DOMAINS.lodging.color).toBe("#d4778f");
     expect(swatchBackground("dashboard:legend.lodging")).toBe("rgb(212, 119, 143)");
+  });
+
+  it("draws the lodging swatch as a dot, because a stay is a place and not a route", async () => {
+    // Alex, Discord 2026-08-09: "Da Unterkünfte keine 'Strecken' sind sollte
+    // hier auch in der Legende ein Kreis sein." Every swatch used to be the
+    // same 14x2 bar, so the key claimed lodgings were drawn as lines while the
+    // map drew them as pins.
+    render(
+      <MemoryRouter>
+        <AllTab />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("dashboard:legend.lodging")).toBeInTheDocument();
+    });
+
+    const dot = swatchOf("dashboard:legend.lodging");
+    expect(dot?.style.borderRadius).toBe("50%");
+    expect(dot?.style.width).toBe(dot?.style.height); // a circle, not an oval
+
+    // The route domains keep their line swatch — the point is the contrast.
+    const line = swatchOf("dashboard:legend.flightPast");
+    expect(line?.style.borderRadius).not.toBe("50%");
   });
 
   it("toggling the chip off hides the pins AND the legend row — the previously-dead chip is now functional", async () => {
