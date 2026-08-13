@@ -992,6 +992,16 @@ bound to `manualFxRate`, and a live preview of `totalPrice × rate`.
 In `LodgingPreferencesSection`, render `baseCurrencyExplainer` beneath the
 `<CurrencySelect restrictTo={ECB_CURRENCIES}>`.
 
+- [ ] **Step 6b: The CDN switch needs a face (added after task 5)**
+
+Task 5 wired `fxCdnFallbackEnabled` through GET/PUT `/admin/parser-settings`,
+so it is switchable by an admin client — but the spec (design doc line 158)
+also asks for it "surfaced in the admin parser/services area … with a line
+saying what it contacts and why", and all copy lands in this task. Add the
+toggle to the admin parser/services settings section with DE+EN copy stating
+that it contacts `cdn.jsdelivr.net`, and that turning it off leaves the 30 ECB
+currencies convertible and everything else marked "kein Kurs".
+
 - [ ] **Step 7: Run the frontend gate**
 
 Run: `cd frontend && npx tsc --noEmit && npx vitest --run`
@@ -1050,8 +1060,10 @@ In `formatCurrency`, replace the fixed `maximumFractionDigits: 2` with
 option (`maximumFractionDigits: 0`) and delete the local `formatCurrency` in
 `TripCard.tsx`, importing the shared one with `{ compact: true }`.
 
-In `frankfurter.ts:60`, replace `Math.round(amount * rate * 100) / 100` with a
-rounding that respects the base currency's minor units:
+In **`resolver.ts`** (task 5 moved `convertToBase` there out of
+`frankfurter.ts`, because converting is a question for the whole chain),
+replace `Math.round(amount * rate * 100) / 100` with a rounding that respects
+the base currency's minor units:
 
 ```ts
   const factor = 10 ** minorUnits(base);
