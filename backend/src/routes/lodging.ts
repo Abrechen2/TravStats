@@ -193,6 +193,7 @@ function buildLodgingWhere(q: LodgingQueryInput, userId: string): Prisma.Lodging
  */
 export type FxSnapshotOutcome =
   | { status: "priceRemoved" }
+  | { status: "missingCurrency" }
   | { status: "lookupFailed" }
   | { status: "snapshotted"; fields: FxSnapshotFields };
 
@@ -201,7 +202,10 @@ export async function applyFxSnapshot(
   baseCurrency: string,
 ): Promise<FxSnapshotOutcome> {
   if (input.totalPrice == null) return { status: "priceRemoved" };
-  const currency = input.currency ?? "EUR";
+  // No `?? "EUR"`. An amount whose unit we never learned is not a euro amount;
+  // guessing one is how 11,662 AED became €11,662 (see the 2026-08-13 spec).
+  if (!input.currency) return { status: "missingCurrency" };
+  const currency = input.currency;
   const checkInDate = new Date(input.checkIn);
   const conv = await fx.convertToBase(input.totalPrice, currency, baseCurrency, checkInDate);
   if (conv === null) return { status: "lookupFailed" };
@@ -218,7 +222,9 @@ export async function applyFxSnapshot(
 
 /**
  * Resolves an `FxSnapshotOutcome` to the fields a write should apply.
- * `priceRemoved`/`lookupFailed` both collapse to `CLEARED_FX` here because
+ * `priceRemoved`/`missingCurrency`/`lookupFailed` all collapse to `CLEARED_FX`
+ * here — they differ for the CALLER (only `missingCurrency` says the amount
+ * itself is unusable), but none of them yields a snapshot. They collapse because
  * both call sites only ever invoke `applyFxSnapshot` once the FX-relevant
  * inputs have ALREADY been confirmed to differ from what's stored (see
  * `fxInputsChanged` in the PATCH handler) — at that point a stale snapshot
