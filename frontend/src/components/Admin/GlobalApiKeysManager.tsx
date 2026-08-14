@@ -7,6 +7,7 @@ export interface GlobalApiKeys {
   globalAviationstackApiKey?: string;
   globalAerodataboxApiKey?: string;
   globalLogostreamApiKey?: string;
+  globalGooglePlacesApiKey?: string;
   globalOpenskyClientId?: string;
   globalOpenskyClientSecret?: string;
   globalOpenskyUsername?: string;
@@ -177,6 +178,23 @@ export default function GlobalApiKeysManager({
                 }
                 onClear={() =>
                   onGlobalApiKeysChange({ ...globalApiKeys, globalLogostreamApiKey: "" })
+                }
+                isAdmin={true}
+              />
+              <ApiKeyCard
+                provider="googlePlaces"
+                label={t("admin:globalApiKeys.googlePlaces.label")}
+                description={t("admin:globalApiKeys.googlePlaces.description")}
+                getKeyUrl="https://console.cloud.google.com/google/maps-apis/credentials"
+                isShared={false}
+                hasAccess={!!globalApiKeys.globalGooglePlacesApiKey}
+                value={globalApiKeys.globalGooglePlacesApiKey || ""}
+                testable={false}
+                onChange={(value) =>
+                  onGlobalApiKeysChange({ ...globalApiKeys, globalGooglePlacesApiKey: value })
+                }
+                onClear={() =>
+                  onGlobalApiKeysChange({ ...globalApiKeys, globalGooglePlacesApiKey: "" })
                 }
                 isAdmin={true}
               />

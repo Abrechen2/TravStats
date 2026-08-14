@@ -310,6 +310,18 @@ export default function LodgingListPage(): JSX.Element {
                         {lodgingTypeIcon(l.type)}
                       </span>
                       <span className="font-medium text-[var(--text-primary)]">{l.name}</span>
+                      {/* A saved-places import can bring in hundreds of houses
+                          the user has never slept in. Without a mark they are
+                          indistinguishable from the maintained ones. */}
+                      {!l.visited && (
+                        <span
+                          data-testid={`lodging-bookmarked-${l.id}`}
+                          title={t("lodging:list.bookmarkedHint")}
+                          className="ml-2 rounded border border-[var(--color-border)] px-1 py-px text-[10px] text-[var(--text-muted)]"
+                        >
+                          {t("lodging:list.bookmarked")}
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-[var(--text-muted)]">
                       {l.chain ? (

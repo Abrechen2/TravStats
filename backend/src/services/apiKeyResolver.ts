@@ -15,7 +15,8 @@ export type ApiProvider =
   | 'aviationstack'
   | 'aerodatabox'
   | 'opensky'
-  | 'logostream';
+  | 'logostream'
+  | 'googlePlaces';
 
 export interface OpenSkyCredentials {
   clientId?: string;
@@ -102,6 +103,11 @@ export async function getApiKey(
         case 'logostream':
           globalKey = adminSettings.globalLogostreamApiKey;
           break;
+        // Instance-wide like logostream: a map pin is a property of the place,
+        // not of who looked it up, so there is no per-user tier.
+        case 'googlePlaces':
+          globalKey = adminSettings.globalGooglePlacesApiKey;
+          break;
       }
 
       if (globalKey) {
@@ -126,6 +132,8 @@ export async function getApiKey(
         return process.env.AERODATABOX_API_KEY || null;
       case 'logostream':
         return process.env.LOGOSTREAM_API_KEY || null;
+      case 'googlePlaces':
+        return process.env.GOOGLE_PLACES_API_KEY || null;
       default:
         return null;
     }

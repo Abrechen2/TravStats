@@ -135,6 +135,7 @@ describe("TripDetailPage — linked lodging stays on the timeline", () => {
             lon: null,
             stars: null,
             amenities: [],
+            visited: true,
             notes: null,
             dataSource: null,
             createdAt: "2024-01-01T00:00:00.000Z",
