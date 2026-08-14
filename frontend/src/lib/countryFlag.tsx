@@ -41,8 +41,10 @@ export function countryName(code?: string | null, locale = "de"): string {
   }
 }
 
+// flagcdn serves LOWERCASE codes only — `/DE.svg` is a 404. Everything that
+// builds a flag URL goes through here so the casing is settled in one place.
 function flagUrl(cc: string): string {
-  return `https://flagcdn.com/${cc}.svg`;
+  return `https://flagcdn.com/${cc.toLowerCase()}.svg`;
 }
 
 // Every ISO 3166-1 alpha-2 code — plain data, not an opinionated subset, so
@@ -105,7 +107,13 @@ export function FlagImg({
   height?: number;
   className?: string;
 }): JSX.Element | null {
-  const cc = normCc(country);
+  // `resolveCountryCode`, not `normCc`: a country arrives here as a CODE from
+  // the airport catalogue but as a NAME from everything lodging-shaped — a
+  // booking mail says "Deutschland", Google Places says "China". Accepting
+  // only the code drew no flag at all for those rows, which is why a hotel
+  // list can sit there flagless while a flight list is fully flagged
+  // (the cross-domain country-vocabulary trap, seen again 2026-08-15).
+  const cc = resolveCountryCode(country);
   if (!cc) return null;
   return (
     <img
@@ -129,7 +137,8 @@ export function FlagImg({
 
 /** HTML string variant for the imperative globe tooltips. Empty when no flag. */
 export function flagImgHtml(country?: string | null, height = 13): string {
-  const cc = normCc(country);
+  // Names as well as codes, for the same reason `FlagImg` accepts them.
+  const cc = resolveCountryCode(country);
   if (!cc) return "";
   const w = Math.round(height * FLAG_ASPECT);
   return `<img src="${flagUrl(cc)}" alt="" aria-hidden="true" width="${w}" height="${height}" style="border-radius:2px;vertical-align:-2px;display:inline-block" />`;

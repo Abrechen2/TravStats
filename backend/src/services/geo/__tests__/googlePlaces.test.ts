@@ -16,8 +16,8 @@ const place = (primaryType: string) => ({
       location: { latitude: 31.24477, longitude: 121.45181 },
       shortFormattedAddress: "1001 Chang An Lu, Zhabei Qu",
       addressComponents: [
-        { longText: "Shanghai", types: ["locality"] },
-        { longText: "China", types: ["country"] },
+        { longText: "Shanghai", shortText: "Shanghai", types: ["locality"] },
+        { longText: "China", shortText: "CN", types: ["country"] },
       ],
     },
   ],
@@ -49,7 +49,39 @@ describe("Google Places tier", () => {
       city: "Shanghai",
       country: "China",
       address: "1001 Chang An Lu, Zhabei Qu",
+      chainName: null,
+      countryCode: "CN",
     });
+  });
+
+  it("asks for German, because a Shanghai address in Chinese is unreadable here", async () => {
+    mockedKey.mockResolvedValue("test-key");
+    answer(place("hotel"));
+
+    await findLodgingPlace("JI Hotel Shanghai");
+
+    const body = JSON.parse(
+      (global.fetch as jest.Mock).mock.calls[0][1].body as string,
+    ) as { languageCode?: string };
+    expect(body.languageCode).toBe("de");
+  });
+
+  it("reports the country as an ISO code — a flag cannot be drawn from \"China\"", async () => {
+    mockedKey.mockResolvedValue("test-key");
+    answer(place("hotel"));
+    expect((await findLodgingPlace("JI Hotel Shanghai"))?.countryCode).toBe("CN");
+  });
+
+  it("reads the chain off the hotel's own website, which the NAME does not carry", async () => {
+    mockedKey.mockResolvedValue("test-key");
+    const withSite = place("hotel");
+    withSite.places[0] = {
+      ...withSite.places[0],
+      websiteUri: "https://www.ihg.com/garner/hotels/de/de/erlangen",
+    } as typeof withSite.places[0];
+    answer(withSite);
+
+    expect((await findLodgingPlace("Garner Hotel Erlangen Süd by IHG"))?.chainName).toBe("IHG");
   });
 
   it("maps a campground onto our campsite, so a KOA stops being a hotel", async () => {

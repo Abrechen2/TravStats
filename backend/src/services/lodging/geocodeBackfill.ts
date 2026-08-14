@@ -13,9 +13,10 @@ export interface BackfillResult {
 }
 
 /** The lodging fields a coordinate lookup can work from. */
-interface GeocodeSubject {
+export interface GeocodeSubject {
   name: string;
   type: string;
+  chainId: number | null;
   address: string | null;
   city: string | null;
   country: string | null;
@@ -44,6 +45,38 @@ const OSM_LODGING_VALUES = new Set([
   "wilderness_hut",
 ]);
 
+/** Compare two place words the way a human would — case, accents and punctuation are noise. */
+function sameWord(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a?.trim() || !b?.trim()) return true; // Nothing to contradict.
+  const norm = (v: string): string =>
+    v
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+  const x = norm(a);
+  const y = norm(b);
+  // One containing the other covers "Rom"/"Roma" and "Frankfurt"/"Frankfurt am Main".
+  return x === y || x.includes(y) || y.includes(x);
+}
+
+/**
+ * Does this answer agree with what the row already says about WHERE it is?
+ *
+ * A business-listing search matches on NAME, and a name is not unique on this
+ * planet: asked for "Hotel St. Martin", Google confidently returned the one in
+ * ROME while the booking mail said Marktoberdorf. The address stayed German —
+ * because a lookup only fills gaps — so the card read Bavaria and the map
+ * showed Italy. Nothing in the data was flagged as wrong; it simply was.
+ *
+ * So a hit is only kept when it does not CONTRADICT the row. A row that knows
+ * nothing about its place (a bare life-list name) has nothing to contradict and
+ * is accepted, which is the case this whole tier exists for.
+ */
+export function agreesWithRow(row: GeocodeSubject, found: ResolvedCoordinates): boolean {
+  return sameWord(row.country, found.countryName) && sameWord(row.city, found.city);
+}
+
 /** Where a resolved position came from, so the caller can log it honestly. */
 export type CoordinateSource = "photon" | "nominatim" | "google";
 
@@ -56,6 +89,10 @@ export interface ResolvedCoordinates {
   city?: string | null;
   country?: string | null;
   address?: string | null;
+  /** Only Google can say which group a house belongs to — via its website. */
+  chainName?: string | null;
+  /** The country as a NAME, kept apart from the stored ISO code so it can be compared to the row. */
+  countryName?: string | null;
 }
 
 /**
@@ -74,7 +111,10 @@ export interface ResolvedCoordinates {
 async function resolveCoordinates(
   row: GeocodeSubject,
 ): Promise<ResolvedCoordinates | null> {
-  const query = [row.name, row.city, row.country].filter(Boolean).join(", ");
+  // The address belongs in the query, not just the city: it is the strongest
+  // signal a text search has, and leaving it out is what let a Bavarian hotel
+  // match its Roman namesake.
+  const query = [row.name, row.address, row.city, row.country].filter(Boolean).join(", ");
 
   const [best] = await searchPlaces(query, { limit: 1 });
   // A hit is only usable when it IS a lodging. Photon does not always report a
@@ -93,15 +133,27 @@ async function resolveCoordinates(
 
   const google = await findLodgingPlace(query);
   if (google) {
-    return {
+    const candidate: ResolvedCoordinates = {
       lat: google.lat,
       lon: google.lon,
       source: "google",
       type: google.type,
       city: google.city,
-      country: google.country,
+      // The ISO code, because that is what draws a flag. The name is only a
+      // fallback for the rare place Google reports without one.
+      country: google.countryCode ?? google.country,
       address: google.address,
+      chainName: google.chainName,
+      countryName: google.country,
     };
+    if (!agreesWithRow(row, candidate)) {
+      logger.info(
+        { operation: "google_places_contradicts_row", lodging: row.name },
+        "Discarding a Places hit that lands in a different place than the row says",
+      );
+      return null;
+    }
+    return candidate;
   }
 
   return null;
@@ -141,7 +193,15 @@ export async function backfillMissingCoordinates(
       // for. The old filter demanded a city or an address and therefore skipped
       // exactly the rows a parsed booking confirmation produces — hotel name,
       // no street — which is how an e-mail import ended up with no pin at all.
-      select: { id: true, name: true, type: true, address: true, city: true, country: true },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        address: true,
+        city: true,
+        country: true,
+        chainId: true,
+      },
       orderBy: { createdAt: "asc" },
       take: MAX_BACKFILL_ROWS,
     });
@@ -162,6 +222,11 @@ export async function backfillMissingCoordinates(
             ...(coords.city && !row.city ? { city: coords.city } : {}),
             ...(coords.country && !row.country ? { country: coords.country } : {}),
             ...(coords.address && !row.address ? { address: coords.address } : {}),
+            // A chain is only ever ADDED, never changed: the user may have
+            // corrected it, and an independent house must stay independent.
+            ...(coords.chainName && row.chainId === null
+              ? { chain: { connect: { name: coords.chainName } } }
+              : {}),
           },
         });
         filled++;
