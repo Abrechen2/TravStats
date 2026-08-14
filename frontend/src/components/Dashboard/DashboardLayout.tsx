@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDashboardRoute } from "../../hooks/useDashboardRoute";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { flightsApi } from "../../lib/api/flights";
+import { getUpcoming, type UpcomingEntry } from "../../lib/api/upcoming";
 import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
 import NavigationBar from "../NavigationBar";
@@ -13,7 +14,6 @@ import { CruiseAddChooser } from "../Cruise/CruiseAddChooser";
 import { DomainTabStrip } from "./DomainTabStrip";
 import { AddDomainPicker, type AddableDomain } from "./AddDomainPicker";
 import { DashboardEmptyState } from "./DashboardEmptyState";
-import { NextFlightCard } from "./NextFlightCard";
 import type { Flight, FlightInput } from "../../types";
 import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
 
@@ -41,6 +41,24 @@ export function DashboardLayout({
   const [showSpecialModal, setShowSpecialModal] = useState(false);
   const { isEnabled } = useEnabledDomains();
   const { addToast } = useToastStore();
+  // What is coming up, per domain. Fetched HERE rather than inside the strip so
+  // it reloads with the same `onDataChanged` signal the counts do — adding a
+  // flight must move this line, not leave it stale until the next full load.
+  const [upcoming, setUpcoming] = useState<UpcomingEntry[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getUpcoming()
+      .then((entries) => {
+        if (!cancelled) setUpcoming(entries);
+      })
+      .catch((err: unknown) => logger.error("Failed to load the upcoming entries", err));
+    return () => {
+      cancelled = true;
+    };
+    // `counts` changes whenever the page refetches after a create — the cheapest
+    // honest trigger for "something might now be sooner than what is shown".
+  }, [counts]);
 
   const enabledDomains = {
     flight: isEnabled("flight"),
@@ -79,7 +97,13 @@ export function DashboardLayout({
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <NavigationBar />
-      <DomainTabStrip active={tab} counts={counts} enabled={enabledDomains} onSelect={setTab} />
+      <DomainTabStrip
+        active={tab}
+        counts={counts}
+        enabled={enabledDomains}
+        onSelect={setTab}
+        upcoming={upcoming}
+      />
       {/* Modus / Filter moved into the in-map control panel (MapChromeSections)
           — the map is the control surface for those. The "+ hinzufügen"
           action is a separate floating overlay, top-right over the map: a
@@ -91,9 +115,6 @@ export function DashboardLayout({
         {isEmpty && tab === "all" && (
           <DashboardEmptyState onAddFlight={() => setAddingDomain("flight")} />
         )}
-        {/* Next-flight heads-up (#1): only on the flight-bearing tabs, and
-            never over the empty state (it self-hides when nothing is ahead). */}
-        {!isEmpty && (tab === "all" || tab === "flight") && <NextFlightCard />}
         <div style={{ position: "absolute", top: 16, right: 16, zIndex: 30 }}>
           {tab === "all" ? (
             <AddDomainPicker enabled={enabledDomains} onPick={setAddingDomain} />
