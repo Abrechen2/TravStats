@@ -18,6 +18,16 @@
 - Every user-facing string ships **DE and EN together**. DE is primary, informal "du".
 - Schema changes go through `npx prisma migrate dev`, never hand-written SQL.
 - Backend gate: `cd backend && npx tsc --noEmit && npm run lint && npm test -- --forceExit`
+- Prettier is NOT wired into ESLint here: `npx tsc --noEmit` and `npm run lint` both
+  pass on badly-formatted code (learned in Task 1). But `prettier --check` on the
+  WORKING COPY is useless on Windows — it flags all 645 frontend files purely for
+  CRLF. Measure content instead:
+  `npx prettier <file> | tr -d '\r' | diff - <(tr -d '\r' < <file>) | wc -l`,
+  and compare that number against the same file at the base commit. Rules:
+  **a new file must come out at 0**; an edit to an existing file must not RAISE its
+  number. Legacy backend files written with single quotes and trailing commas are
+  already far from 0 — do not "fix" them here (Task-1 ruling: a repo-wide reformat is
+  its own commit), and match their local style so the number does not grow.
 - Frontend gate: `cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run`
 - Files 200–400 lines ideal, 800 hard maximum.
 - Do not merge to `main`. This work lands on a branch; releasing is the owner's decision.
@@ -61,7 +71,7 @@
 
 Names come from `Intl.DisplayNames` at the point of display (`units.ts:118` already does this) — the registry carries **codes and minor units only**. Do not hand-maintain a name list.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `backend/src/shared/__tests__/currencies.test.ts`:
 
@@ -98,12 +108,12 @@ describe("currency registry", () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cd backend && npx jest src/shared/__tests__/currencies.test.ts --forceExit`
 Expected: FAIL — `Cannot find module '../currencies'`.
 
-- [ ] **Step 3: Write the registry**
+- [x] **Step 3: Write the registry**
 
 `backend/src/shared/currencies.ts`. The map below is the active ISO-4217 set; every entry is `code: minorUnits`. Only the non-two values matter for behaviour, but the full list is what `isCurrencyCode` validates against.
 
@@ -166,12 +176,12 @@ export const ECB_CURRENCIES = [
 ] as const satisfies readonly CurrencyCode[];
 ```
 
-- [ ] **Step 4: Run it and watch it pass**
+- [x] **Step 4: Run it and watch it pass**
 
 Run: `cd backend && npx jest src/shared/__tests__/currencies.test.ts --forceExit`
 Expected: PASS, 3 tests.
 
-- [ ] **Step 5: Mirror it to the frontend**
+- [x] **Step 5: Mirror it to the frontend**
 
 Copy the file verbatim to `frontend/src/shared/currencies.ts`. Change only the header comment's direction ("MIRRORED FROM `backend/src/shared/currencies.ts`").
 
@@ -184,12 +194,12 @@ import { ECB_CURRENCIES, ISO_4217, isCurrencyCode, minorUnits } from "../currenc
 
 The three `it(...)` bodies are unchanged.
 
-- [ ] **Step 6: Run the frontend test**
+- [x] **Step 6: Run the frontend test**
 
 Run: `cd frontend && npx vitest --run src/shared/__tests__/currencies.test.ts`
 Expected: PASS, 3 tests.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/src/shared/currencies.ts backend/src/shared/__tests__/currencies.test.ts \
@@ -214,7 +224,7 @@ git commit -m "feat(currency): one ISO-4217 registry, mirrored front and back"
 - Consumes: `isCurrencyCode`, `ECB_CURRENCIES` from Task 1.
 - Produces: `currencyField` — a reusable Zod schema exported from `backend/src/schemas/lodging.ts`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `backend/src/schemas/__tests__/currencyValidation.test.ts`:
 
@@ -242,12 +252,12 @@ describe("currency validation at the boundary", () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cd backend && npx jest src/schemas/__tests__/currencyValidation.test.ts --forceExit`
 Expected: FAIL — `currencyField` is not exported.
 
-- [ ] **Step 3: Replace the literals**
+- [x] **Step 3: Replace the literals**
 
 In `backend/src/schemas/lodging.ts`, delete the `CURRENCIES` literal on line 18 and add:
 
@@ -290,17 +300,17 @@ export const baseCurrencyField = z.enum(
 and replace line 119's `baseCurrency: z.enum(CURRENCIES).optional()` with
 `baseCurrency: baseCurrencyField.optional()`.
 
-- [ ] **Step 4: Run the test and the suites that touch these schemas**
+- [x] **Step 4: Run the test and the suites that touch these schemas**
 
 Run: `cd backend && npx jest src/schemas src/services/lodging src/routes/__tests__ --forceExit`
 Expected: PASS. If a suite asserts a rejection of `"NOK"`, that assertion encoded the old limit — update it to assert `"EURO"` is rejected instead.
 
-- [ ] **Step 5: Type-check**
+- [x] **Step 5: Type-check**
 
 Run: `cd backend && npx tsc --noEmit`
 Expected: no output. `LodgingCurrency` in `bookingComTemplate.ts` derived from the old literal — retype it as `import type { CurrencyCode } from "../../shared/currencies"; export type LodgingCurrency = CurrencyCode;`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/src
@@ -322,7 +332,7 @@ git commit -m "feat(currency): validate against ISO-4217, keep the FX base at th
 
 An unsupported currency and a missing one are different. The first is data we keep and cannot convert. The second is a number whose unit is unknown — the same fault the parser fix (`c1bb53da`) closed one layer up.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { applyFxSnapshot } from "../routes/lodging";
@@ -346,12 +356,12 @@ describe("a price without a currency", () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cd backend && npx jest src/__tests__/lodgingImportCommit.currency.test.ts --forceExit`
 Expected: FAIL — receives `"snapshotted"` for the first case, because line 204 defaults to EUR.
 
-- [ ] **Step 3: Remove the four defaults**
+- [x] **Step 3: Remove the four defaults**
 
 `routes/lodging.ts` — extend the union and the guard:
 
@@ -395,12 +405,23 @@ call return `missingCurrency`.
 Leave `getBaseCurrency`'s `?? "EUR"` at line 239 alone — it covers a user with
 no settings row, which is a different question and has a correct default.
 
-- [ ] **Step 4: Run the tests**
+**Added 2026-08-13 after the scoped review of tasks 2–4.** Removing the default
+inside `applyFxSnapshot` is not enough on the direct API path: `currency` is
+optional on `createStaySchema`, so a priced stay without one still reached the
+insert with the key absent, and the NOT-NULL column's `'EUR'` default answered
+for it. The spec (design doc line 75) always required a rejection there. Add a
+second `.refine` to `createStaySchema` — `(totalPrice == null &&
+pricePerNight == null) || currency != null`, message "currency is required when
+a price is given". Both price fields, because the route derives the total from
+`pricePerNight`. NOT on `updateStaySchema`: the stored row always has a
+currency, so a price-only PATCH must keep working.
+
+- [x] **Step 4: Run the tests**
 
 Run: `cd backend && npx jest src/__tests__/lodgingImportCommit.currency.test.ts src/__tests__/lodgingImportCommit.test.ts --forceExit`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src
@@ -421,7 +442,7 @@ git commit -m "fix(currency): a price with no currency is not a euro price"
 
 The first draft of the spec wanted the chain hidden entirely. It cannot be: a bare number carries no provenance, and the UI must never label a user's own estimate as an ECB rate.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `backend/src/services/fx/__tests__/frankfurter.test.ts`:
 
@@ -433,12 +454,12 @@ Append to `backend/src/services/fx/__tests__/frankfurter.test.ts`:
   });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cd backend && npx jest src/services/fx --forceExit`
 Expected: FAIL — `source` is `undefined`.
 
-- [ ] **Step 3: Thread the source through**
+- [x] **Step 3: Thread the source through**
 
 In `frankfurter.ts`, add above `getRate`:
 
@@ -451,12 +472,12 @@ Change the cache value type to `{ rate: number }`, have `getRate` return
 `{ rate, source: "ecb" }` (and `{ rate: 1, source: "ecb" }` for the identical
 pair), and add `source` to `FxConversion` and to both `convertToBase` returns.
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `cd backend && npx jest src/services/fx --forceExit`
 Expected: PASS. Fix the call site in `routes/lodging.ts` that destructures `conv`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/services/fx backend/src/routes/lodging.ts
@@ -478,7 +499,7 @@ git commit -m "refactor(fx): a rate says where it came from"
 - Consumes: `RateSource`, `getRate` from Task 4.
 - Produces: `resolveRate(from: string, to: string, date: string): Promise<{ rate: number; source: RateSource } | null>`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { resolveRate } from "../resolver";
@@ -518,12 +539,12 @@ describe("resolveRate", () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cd backend && npx jest src/services/fx/__tests__/resolver.test.ts --forceExit`
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Add the migration for the switch**
+- [x] **Step 3: Add the migration for the switch**
 
 In `schema.prisma`, on `model AdminSettings`, next to the other feature flags:
 
@@ -533,7 +554,7 @@ In `schema.prisma`, on `model AdminSettings`, next to the other feature flags:
 
 Run: `cd backend && npx prisma migrate dev --name fx_cdn_fallback_switch`
 
-- [ ] **Step 4: Write the CDN provider**
+- [x] **Step 4: Write the CDN provider**
 
 `currencyApiCdn.ts` — same shape as `frankfurter.ts`, different endpoint:
 
@@ -574,7 +595,7 @@ export async function getCdnRate(
 }
 ```
 
-- [ ] **Step 5: Write the resolver**
+- [x] **Step 5: Write the resolver**
 
 ```ts
 import logger from "../../utils/logger";
@@ -616,17 +637,17 @@ Add `getAdminFxSettings` to `services/parserSettings.ts`, reading
 `fxCdnFallbackEnabled` from `admin_settings` and defaulting to `true` when no
 row exists.
 
-- [ ] **Step 6: Point `applyFxSnapshot` at the resolver**
+- [x] **Step 6: Point `applyFxSnapshot` at the resolver**
 
 In `routes/lodging.ts`, replace the `fx.convertToBase(...)` call so the rate
 comes from `resolveRate` and the returned `source` is carried into the outcome.
 
-- [ ] **Step 7: Run the tests**
+- [x] **Step 7: Run the tests**
 
 Run: `cd backend && npx jest src/services/fx --forceExit`
 Expected: PASS, 4 new tests.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add backend/src backend/prisma
@@ -647,7 +668,7 @@ git commit -m "feat(fx): a second, admin-switchable rate source for what the ECB
 - Consumes: `RateSource` (Task 4), the resolver (Task 5).
 - Produces: `fxSource` on the stay payload — `"ecb" | "cdn" | "manual" | null`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 describe("fx provenance", () => {
@@ -664,12 +685,12 @@ describe("fx provenance", () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cd backend && npx jest src/routes/__tests__/lodgingFxSource.test.ts --forceExit`
 Expected: FAIL — `fxSource` does not exist.
 
-- [ ] **Step 3: Add the column and backfill**
+- [x] **Step 3: Add the column and backfill**
 
 ```prisma
   fxSource         String?   @map("fx_source")   // 'ecb' | 'cdn' | 'manual'
@@ -685,18 +706,18 @@ generated migration file:
 UPDATE "lodging_stays" SET "fx_source" = 'ecb' WHERE "total_price_base" IS NOT NULL;
 ```
 
-- [ ] **Step 4: Write it on both paths**
+- [x] **Step 4: Write it on both paths**
 
 Add `fxSource: RateSource | null` to `FxSnapshotFields`, set `fxSource: null` in
 `CLEARED_FX`, and carry the resolver's `source` into the snapshot in
 `applyFxSnapshot`. Include `fxSource` in the stay select/serialisation.
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 Run: `cd backend && npx jest src/routes/__tests__ --forceExit`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/src backend/prisma
@@ -716,7 +737,7 @@ git commit -m "feat(fx): store which source converted a stay, and backfill the o
 - Consumes: `resolveRate` (Task 5), `fxSource` (Task 6).
 - Produces: request field `manualFxRate?: number | null`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 describe("a rate the user typed in", () => {
@@ -743,12 +764,12 @@ describe("a rate the user typed in", () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cd backend && npx jest src/routes/__tests__/lodgingManualFx.test.ts --forceExit`
 Expected: FAIL — the field is stripped by Zod.
 
-- [ ] **Step 3: Accept it, narrowly**
+- [x] **Step 3: Accept it, narrowly**
 
 Schema: `manualFxRate: z.number().positive().nullable().optional()`.
 
@@ -774,12 +795,12 @@ In the write path, after the automatic attempt:
   }
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `cd backend && npx jest src/routes/__tests__/lodgingManualFx.test.ts --forceExit`
 Expected: PASS, 3 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src
@@ -805,7 +826,7 @@ git commit -m "feat(fx): let the user supply a rate where no source has one"
 - Consumes: `ISO_4217`, `ECB_CURRENCIES` (Task 1), `getCurrencyDisplayName` (`lib/units.ts:118`).
 - Produces: `<CurrencySelect value onChange restrictTo? />`; `GET /api/v1/currencies/recent → { codes: string[] }`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 describe("CurrencySelect", () => {
@@ -827,12 +848,12 @@ describe("CurrencySelect", () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cd frontend && npx vitest --run src/components/common/__tests__/CurrencySelect.test.tsx`
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Build the endpoint**
+- [x] **Step 3: Build the endpoint**
 
 `backend/src/routes/currencies.ts` — four grouped counts scoped to the user,
 merged and ordered by frequency:
@@ -859,7 +880,7 @@ router.get("/recent", authenticate, async (req: AuthRequest, res) => {
 
 Mount it in `index.ts` beside the other `/api/v1` routers.
 
-- [ ] **Step 4: Build the control**
+- [x] **Step 4: Build the control**
 
 `CurrencySelect.tsx` — a search box over `Object.keys(ISO_4217)` (or `restrictTo`),
 rendering code plus `getCurrencyDisplayName(code, locale)`, with a "Häufig"
@@ -867,7 +888,7 @@ group built from the `recent` prop followed by `ECB_CURRENCIES` for an account
 with no history yet. Fetch `recent` once per session through the settings store,
 not per keystroke.
 
-- [ ] **Step 5: Delete the six literals**
+- [x] **Step 5: Delete the six literals**
 
 Replace each with the shared control or `CurrencyCode`:
 `types/lodging.ts:19` and `types/cruise.ts:114` become
@@ -875,12 +896,12 @@ Replace each with the shared control or `CurrencyCode`:
 the three picker lists and the CSV coercion list in `lodgingCsv.ts:313` use
 `isCurrencyCode`.
 
-- [ ] **Step 6: Run the frontend gate**
+- [x] **Step 6: Run the frontend gate**
 
 Run: `cd frontend && npx tsc --noEmit && npx vitest --run`
 Expected: type-check clean, all suites pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add frontend/src backend/src
@@ -905,7 +926,7 @@ git commit -m "feat(currency): one picker for every domain, and the recent-curre
   `{ ecb: string; manual: string; none: string }`, replacing the single
   `fxSourceLabel` string at line 88.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 const labels = { ecb: "EZB-Kurs vom", manual: "eigener Kurs", none: "kein Kurs" };
@@ -936,18 +957,18 @@ it("marks an unconverted amount and shows no readout", () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cd frontend && npx vitest --run src/lib/__tests__/lodgingFormat.fxStates.test.ts`
 Expected: FAIL — `marker` does not exist and the signature takes a string.
 
-- [ ] **Step 3: Return a marker beside the readout**
+- [x] **Step 3: Return a marker beside the readout**
 
 Add `marker: string | null` to `StayPriceDisplay`; branch on `fxSource`. Render
 it in `LodgingStayCard` and `StayEditorPriceSection` as a small bordered word
 with a `title` carrying the concrete reason and date.
 
-- [ ] **Step 4: Add the copy, DE and EN together**
+- [x] **Step 4: Add the copy, DE and EN together**
 
 `de/lodging.json`:
 
@@ -967,23 +988,33 @@ with a `title` carrying the concrete reason and date.
 
 `en/lodging.json` mirrors every key.
 
-- [ ] **Step 5: Show the manual-rate row only when it is needed**
+- [x] **Step 5: Show the manual-rate row only when it is needed**
 
 In `StayEditorPriceSection`, when `useLodgingFxPreview` returns no rate for the
 current (currency, check-in), render `noRateHint`, an optional numeric input
 bound to `manualFxRate`, and a live preview of `totalPrice × rate`.
 
-- [ ] **Step 6: Put the explainer under the base-currency field**
+- [x] **Step 6: Put the explainer under the base-currency field**
 
 In `LodgingPreferencesSection`, render `baseCurrencyExplainer` beneath the
 `<CurrencySelect restrictTo={ECB_CURRENCIES}>`.
 
-- [ ] **Step 7: Run the frontend gate**
+- [x] **Step 6b: The CDN switch needs a face (added after task 5)**
+
+Task 5 wired `fxCdnFallbackEnabled` through GET/PUT `/admin/parser-settings`,
+so it is switchable by an admin client — but the spec (design doc line 158)
+also asks for it "surfaced in the admin parser/services area … with a line
+saying what it contacts and why", and all copy lands in this task. Add the
+toggle to the admin parser/services settings section with DE+EN copy stating
+that it contacts `cdn.jsdelivr.net`, and that turning it off leaves the 30 ECB
+currencies convertible and everything else marked "kein Kurs".
+
+- [x] **Step 7: Run the frontend gate**
 
 Run: `cd frontend && npx tsc --noEmit && npx vitest --run`
 Expected: all green.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add frontend/src
@@ -1011,7 +1042,7 @@ The spec's first draft claimed a two-decimal cap misprices a yen booking by
 three-decimal currency losing its third decimal, so this task is correctness,
 not urgency.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 it("formats each currency with its own number of decimals", () => {
@@ -1024,20 +1055,22 @@ it("keeps a compact mode for the trip cards", () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cd frontend && npx vitest --run src/lib/__tests__/units.minorUnits.test.ts`
 Expected: FAIL — KWD is truncated to two decimals.
 
-- [ ] **Step 3: Read the digit count from the registry**
+- [x] **Step 3: Read the digit count from the registry**
 
 In `formatCurrency`, replace the fixed `maximumFractionDigits: 2` with
 `minorUnits(currency)`, and `minimumFractionDigits: 0` stays. Add the `compact`
 option (`maximumFractionDigits: 0`) and delete the local `formatCurrency` in
 `TripCard.tsx`, importing the shared one with `{ compact: true }`.
 
-In `frankfurter.ts:60`, replace `Math.round(amount * rate * 100) / 100` with a
-rounding that respects the base currency's minor units:
+In **`resolver.ts`** (task 5 moved `convertToBase` there out of
+`frankfurter.ts`, because converting is a question for the whole chain),
+replace `Math.round(amount * rate * 100) / 100` with a rounding that respects
+the base currency's minor units:
 
 ```ts
   const factor = 10 ** minorUnits(base);
@@ -1046,19 +1079,19 @@ rounding that respects the base currency's minor units:
 
 Set `step` on both amount inputs to `10 ** -minorUnits(currency)`.
 
-- [ ] **Step 4: Render the footnote**
+- [x] **Step 4: Render the footnote**
 
 Wherever a lodging total is shown, count the stays with a price whose
 `totalPriceBase` is null and render `omittedFromTotal` with that count; render
 nothing when the count is zero.
 
-- [ ] **Step 5: Run both gates**
+- [x] **Step 5: Run both gates**
 
 Run: `cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run`
 Run: `cd backend && npx tsc --noEmit && npm run lint && npm test -- --forceExit`
 Expected: all green.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add frontend/src backend/src
@@ -1076,7 +1109,7 @@ git commit -m "feat(currency): per-currency decimals, one formatter, and an hone
 - Consumes: everything above.
 - Produces: nothing.
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 Providers mocked so the suite stays green offline; the cases are the owner's own
 bookings from the 2026-08-13 measurement.
@@ -1091,18 +1124,26 @@ describe("the six bookings that could not record a price", () => {
 });
 ```
 
-- [ ] **Step 2: Run it**
+- [x] **Step 2: Run it**
 
 Run: `cd backend && npx jest src/__tests__/lodgingCurrencyEndToEnd.test.ts --forceExit`
 Expected: PASS.
 
-- [ ] **Step 3: Re-run the hotel-sample harness against the real mails**
+- [x] **Step 3: Re-run the hotel-sample harness against the real mails**
 
 Run: `cd backend && npx tsx src/scripts/measureLodgingSamples.ts`
-Expected: template hits stay at 93/95 and price coverage rises from 94% toward
-100% — the six previously-dropped prices now survive parsing. Record the number.
+Expected: template hits stay at 93/95 and price coverage stays at **93/93**.
 
-- [ ] **Step 4: Commit**
+That number was already reached on 2026-08-13, ahead of this task: the scoped
+review of tasks 2–4 found that the Booking.com template's own amount parser
+still matched a fixed alternation of four codes and three symbols, so a NOK
+confirmation yielded no total and never fell through to the LLM. Fixed in
+`bookingComTemplate.ts` (three-letter codes validated against the registry,
+symbols in a table extended with `US$`/`S$`/`A$`/…), which lifted coverage
+87/93 → 93/93. This step is now a REGRESSION check: if it reads below 93/93,
+something in tasks 5–10 broke the parser.
+
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/src
@@ -1131,3 +1172,60 @@ in Tasks 5, 6 and 7. `getRate` and `getCdnRate` share one return shape.
 `formatStayPriceDisplay`'s third parameter changes from a string to a labels
 object in Task 9, which is the only signature change to an existing exported
 function and is stated there.
+
+---
+
+## Browser Acceptance (2026-08-14)
+
+Run against a local dev stack (backend :8000, frontend :3000, dev DB), logged in
+as the seeded admin, lodging domain enabled. What was exercised: the ECB path
+(45,000 JPY on 2024-10-10), the CDN path (11,662 EGP on 2024-06-01), the no-rate
+path with a hand-typed rate (2,400 AED on 2023-05-10), the admin CDN switch, the
+recent-currencies endpoint, and the totals on the lodging list, the lodging
+detail and the trip cards.
+
+Confirmed working: per-currency decimals (JPY shows no decimals, its per-night
+figure reads ¥15,000), the stored snapshot including `fx_source` (`ecb` / `cdn` /
+`manual` — read back from the database, not inferred), the admin switch really
+cutting the CDN off (same EGP query answers with a rate, then with none, then
+with a rate again), the shared picker in the cruise editor with recents pinned,
+the lodging total excluding unconverted stays and footnoting how many, and the
+trip card writing "1.490 € + $780" rather than swallowing the unconvertible half.
+
+Two defects the test suite could not see, both fixed here:
+
+1. **A CDN rate was labelled "EZB".** The ECB publishes 30 currencies and EGP is
+   not among them, so the readout stated something verifiably untrue about where
+   the number came from — and the tooltip said "EZB-Referenzkurs" outright.
+   `FxStateLabels` gained a `market` label and `formatStayPriceDisplay` now picks
+   the label from the source.
+
+2. **A hand-typed rate was labelled "EZB" too, and wore no badge.** Root cause of
+   both: `LodgingStayCard` and `StayEditorPriceSection` built the snapshot object
+   field by field and left `fxSource` out, so the formatter — which was right all
+   along, and whose own tests passed — never saw a source. `FxPreview` did not
+   carry `source` either, though the endpoint has always sent it.
+
+   The lesson is the one the airline-logo chain already taught: a unit test that
+   calls a pure function directly cannot catch a caller that forgets an argument.
+   `LodgingStayCard.fxSource.test.tsx` renders the component instead, and was
+   verified to FAIL against the code as it stood before the fix.
+
+Also fixed: the no-rate hint printed the check-in day as "2023-05-10" inside a
+German sentence; it now reads 10.05.2023 via `formatDayForLocale`.
+
+Left for the owner to decide, all pre-existing and none of them introduced here:
+
+- The lodging LIST's "Ausgaben" KPI has no "not converted" footnote, though the
+  detail page's does — the same total, honest on one screen and silent on the
+  other.
+- A lodging whose only priced stay is unconverted renders "$780 ≈ 0 €" in the
+  list row. The detail page says "kein Kurs" for the same stay.
+- `formatCurrency` passes `minimumFractionDigits: 0`, so a euro amount can read
+  "276,3 €" instead of "276,30 €". Changing it moves every price in the app.
+- The cruise list still prints raw "3290.00 EUR" while lodging formats properly.
+- `GET /currencies/recent` answers `{codes: [...]}` rather than the project's
+  `{success, data}` envelope.
+- `Intl.DisplayNames` has no name for SLE or ZWG, so the picker shows
+  "SLE — SLE". Harmless, and inventing names locally would fight the registry's
+  "codes only" design.

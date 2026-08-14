@@ -1,5 +1,7 @@
-import { getRate, convertToBase } from "../frankfurter";
+import { getRate } from "../frankfurter";
 
+// This module is the ECB reference-rate CLIENT. Converting an amount moved to
+// `resolver.ts` when a second provider arrived, and so did those tests.
 describe("frankfurter FX", () => {
   const realFetch = global.fetch;
   afterEach(() => {
@@ -12,13 +14,12 @@ describe("frankfurter FX", () => {
       json: async () => ({ amount: 1, base: "CHF", date: "2024-05-10", rates: { EUR: 1.0106 } }),
     }) as unknown as typeof fetch;
     const rate = await getRate("CHF", "EUR", "2024-05-13");
-    expect(rate).toBeCloseTo(1.0106, 4);
+    expect(rate?.rate).toBeCloseTo(1.0106, 4);
   });
 
-  it("short-circuits same-currency conversion with no network call", async () => {
+  it("short-circuits an identical pair with no network call", async () => {
     global.fetch = jest.fn() as unknown as typeof fetch;
-    const out = await convertToBase(200, "EUR", "EUR", new Date("2024-05-13"));
-    expect(out).toEqual({ baseAmount: 200, rate: 1, rateDate: "2024-05-13" });
+    expect(await getRate("EUR", "EUR", "2024-05-13")).toEqual({ rate: 1, source: "ecb" });
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
@@ -31,25 +32,19 @@ describe("frankfurter FX", () => {
   it("returns null (never throws) when the API fails", async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error("network")) as unknown as typeof fetch;
     expect(await getRate("CHF", "EUR", "2024-05-20")).toBeNull();
-    expect(await convertToBase(420, "CHF", "EUR", new Date("2024-05-20"))).toBeNull();
   });
 
-  // Also uses a fresh date for the same reason (see note above).
-  it("rounds the converted base amount to 2 decimals", async () => {
+  // A bare number carries no provenance, and a stored conversion has to be
+  // able to say whether a user typed the rate or the ECB published it — the UI
+  // must never label an estimate as an official rate. Fresh date, see above.
+  it("reports ECB as the source of its rates", async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ rates: { EUR: 1.0106 } }),
+      json: async () => ({ rates: { EUR: 0.08481 } }),
     }) as unknown as typeof fetch;
-    const out = await convertToBase(420, "CHF", "EUR", new Date("2024-05-21"));
-    expect(out?.baseAmount).toBe(424.45); // 420 * 1.0106 = 424.452
-    expect(out?.rate).toBeCloseTo(1.0106, 4);
-    expect(out?.rateDate).toBe("2024-05-21");
-  });
-
-  it("returns null (never throws) for an invalid date, with no network call", async () => {
-    global.fetch = jest.fn() as unknown as typeof fetch;
-    const out = await convertToBase(100, "CHF", "EUR", new Date("not-a-date"));
-    expect(out).toBeNull();
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(await getRate("NOK", "EUR", "2024-09-18")).toMatchObject({
+      rate: 0.08481,
+      source: "ecb",
+    });
   });
 });

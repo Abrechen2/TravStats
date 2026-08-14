@@ -136,7 +136,19 @@
   },
   "fx": {
     "source": "ECB",
-    "tooltip": "Converted at the ECB reference rate for the check-in day"
+    "sourceMarket": "market rate",
+    "tooltip": "Converted at the ECB reference rate for the check-in day",
+    "tooltipMarket": "Converted at a market rate for the check-in day — not an official ECB rate, but a free dataset for currencies the ECB does not publish.",
+    "markerNone": "no rate",
+    "markerManual": "your own rate",
+    "tooltipNone": "No rate available — not included in totals",
+    "tooltipManual": "Rate you entered: {{rate}}",
+    "noRateHint": "We have no rate for {{currency}} on {{date}}. You can enter one — otherwise the amount is saved but stays out of totals.",
+    "manualRateLabel": "Rate 1 {{currency}} = … {{base}} (optional)",
+    "omittedFromTotal": "{{count}} stays not converted",
+    "omittedFromTotal_one": "{{count}} stay not converted",
+    "omittedFromTotal_other": "{{count}} stays not converted",
+    "baseCurrencyExplainer": "The choice is the 30 currencies with official ECB rates, because everything is converted INTO this one — back to 1999. You can record in any currency. Stays in a currency with no rate are stored and shown, but do not count towards this total."
   },
   "chainPicker": {
     "placeholder": "Search chain …",

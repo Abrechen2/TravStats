@@ -1,8 +1,8 @@
 import { z } from 'zod';
+import { currencyField } from './lodging';
 
 const CABIN_TYPES = ['inside', 'oceanview', 'balcony', 'suite'] as const;
 const STATUSES = ['scheduled', 'flown', 'cancelled', 'historical'] as const;
-const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF'] as const;
 
 // "" and null both mean "clear" on the wire; undefined means "don't change"
 // on update. The old empty->undefined transform made clearing impossible:
@@ -95,7 +95,7 @@ const baseCruiseSchema = z.object({
   deck: z.number().int().min(1).max(30).nullable().optional(),
   bookingReference: z.string().max(40).nullable().optional(),
   price: z.number().min(0).nullable().optional(),
-  currency: z.enum(CURRENCIES).optional(),
+  currency: currencyField.optional(),
   // Plain-text notes. The frontend renders these as React text (auto-escaped),
   // so no HTML sanitization happens or is needed here. The previous
   // `.replace(/<[^>]*>/g, '')` transform was INCOMPLETE sanitization (trivially

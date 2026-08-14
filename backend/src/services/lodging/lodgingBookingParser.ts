@@ -2,7 +2,8 @@ import http from "http";
 import https from "https";
 import logger from "../../utils/logger";
 import { getAdminParserSettings } from "../parserSettings";
-import { CURRENCIES, LODGING_TYPES } from "../../schemas/lodging";
+import { LODGING_TYPES } from "../../schemas/lodging";
+import { isCurrencyCode } from "../../shared/currencies";
 import {
   isBookingComConfirmation,
   parseBookingComEmail,
@@ -164,9 +165,7 @@ function asNumber(value: unknown): number | null {
 }
 
 function asCurrency(value: unknown): LodgingCurrency | null {
-  return typeof value === "string" && (CURRENCIES as readonly string[]).includes(value)
-    ? (value as LodgingCurrency)
-    : null;
+  return isCurrencyCode(value) ? value : null;
 }
 
 const ISO_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -194,17 +193,19 @@ function normalizeBooking(raw: Record<string, unknown>): ParsedLodgingBooking | 
 
   // A number whose unit was thrown away is not a price.
   //
-  // `asCurrency` returns null for anything outside CURRENCIES, and the amount
-  // used to survive that on its own. Downstream, `applyFxSnapshot` defaults a
-  // null currency to EUR — so the owner's Armani Hotel Dubai confirmation
-  // (11,662 AED, read correctly by the LLM) would have been booked as €11,662
-  // against a real cost of roughly €2,900, and quietly inflated every spend
-  // total it touched.
+  // `asCurrency` returns null for anything that is not an ISO-4217 code, and
+  // the amount used to survive that on its own. Downstream, `applyFxSnapshot`
+  // defaults a null currency to EUR — so the owner's Armani Hotel Dubai
+  // confirmation (11,662 AED, read correctly by the LLM) would have been booked
+  // as €11,662 against a real cost of roughly €2,900, and quietly inflated every
+  // spend total it touched.
   //
   // Dropping the amount loses information; keeping it invents information.
   // The row still imports, with the price flagged as missing, and the user can
-  // type it in. Widening CURRENCIES is the real fix and is a separate,
-  // deliberate decision — this branch simply stops firing once it lands.
+  // type it in. The guard was widened from four hardcoded codes to the full
+  // ISO-4217 registry on 2026-08-13, so AED and its like now pass; what still
+  // trips this branch is an LLM emitting something that is not a currency at
+  // all ("EURO", "$", a stray word).
   const currency = asCurrency(raw.currency);
   const rawPrice = asNumber(raw.totalPrice);
   const totalPrice = currency === null ? null : rawPrice;

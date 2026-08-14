@@ -52,6 +52,20 @@ export interface LodgingStats {
   spendBaseTotal: number;
   /** Original amounts grouped by their original currency — not a conversion. */
   spendByCurrency: Record<string, number>;
+  /**
+   * How many stays carry a price that no provider could convert, and are
+   * therefore absent from `spendBaseTotal`.
+   *
+   * The same rule the stay list uses (`countUnconvertedStays`): a price with
+   * no `totalPriceBase` at all. A stay converted under an OLDER base currency
+   * is NOT counted here — it has a rate, it is simply reported by
+   * `spendBaseByCurrency` instead, and counting it twice would put the same
+   * stay behind two different hints.
+   *
+   * A total that silently omits rows reads exactly like a complete one, which
+   * is why this number is computed here rather than left to each screen.
+   */
+  spendUnconvertedStays: number;
   /** Every totalPriceBase amount grouped by the currency it was snapshotted into — the full picture behind spendBaseTotal's single current-base slice. */
   spendBaseByCurrency: Record<string, number>;
   awardNights: number;
@@ -110,6 +124,7 @@ export function calculateLodgingStats(
   let totalNights = 0;
   let longestStayNights = 0;
   let awardNights = 0;
+  let spendUnconvertedStays = 0;
   let ratingSum = 0;
   let ratingCount = 0;
 
@@ -135,6 +150,10 @@ export function calculateLodgingStats(
     if (stay.totalPriceBase !== null && stay.fxBaseCurrency !== null) {
       spendBaseByCurrency[stay.fxBaseCurrency] =
         (spendBaseByCurrency[stay.fxBaseCurrency] ?? 0) + stay.totalPriceBase;
+    } else if (stay.totalPrice !== null) {
+      // Priced, but nothing converted it — the amount exists and is shown on
+      // the stay, it just cannot be part of any base-currency sum.
+      spendUnconvertedStays += 1;
     }
 
     if (stay.ratingOverall !== null) {
@@ -195,6 +214,7 @@ export function calculateLodgingStats(
     countriesCount: countries.size,
     spendBaseTotal: spendBaseByCurrency[currentBaseCurrency] ?? 0,
     spendByCurrency,
+    spendUnconvertedStays,
     spendBaseByCurrency,
     awardNights,
     nightsByType,

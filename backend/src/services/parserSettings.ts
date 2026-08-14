@@ -96,3 +96,22 @@ export async function getParserConfigWithSettings(userId: string): Promise<Parse
     adminSettings: adminSettings || undefined,
   };
 }
+
+export interface AdminFxSettings {
+  cdnFallbackEnabled: boolean;
+}
+
+/**
+ * The instance-level FX switch. Lives here rather than in the FX service so
+ * `admin_settings` keeps ONE reader.
+ *
+ * No settings row at all means a fresh instance that has never opened the
+ * admin page — it gets the column's own default (on), so a first-boot user
+ * can convert an EGP booking without configuring anything.
+ */
+export async function getAdminFxSettings(): Promise<AdminFxSettings> {
+  const settings = await prisma.adminSettings.findFirst({
+    select: { fxCdnFallbackEnabled: true },
+  });
+  return { cdnFallbackEnabled: settings?.fxCdnFallbackEnabled ?? true };
+}

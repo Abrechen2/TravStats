@@ -155,13 +155,13 @@ describe("lodging API client — fx preview", () => {
 
   it("getFxPreview() GETs /lodging/fx-preview with amount/from/date and unwraps the envelope", async () => {
     vi.mocked(api.get).mockResolvedValue({
-      data: { success: true, data: { baseAmount: 391.23, rate: 0.9315, rateDate: "2026-07-11", baseCurrency: "EUR" } },
+      data: { success: true, data: { baseAmount: 391.23, rate: 0.9315, rateDate: "2026-07-11", baseCurrency: "EUR", source: "ecb" } },
     });
     const result = await getFxPreview(420, "CHF", "2026-07-11");
     expect(api.get).toHaveBeenCalledWith("/lodging/fx-preview", {
       params: { amount: 420, from: "CHF", date: "2026-07-11" },
     });
-    expect(result).toEqual({ baseAmount: 391.23, rate: 0.9315, rateDate: "2026-07-11", baseCurrency: "EUR" });
+    expect(result).toEqual({ baseAmount: 391.23, rate: 0.9315, rateDate: "2026-07-11", baseCurrency: "EUR", source: "ecb" });
   });
 
   it("getFxPreview() passes through a null preview (ECB lookup failed)", async () => {

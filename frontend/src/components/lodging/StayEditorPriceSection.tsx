@@ -1,10 +1,11 @@
+import { minorUnits } from "../../shared/currencies";
 import type { JSX } from "react";
+import CurrencySelect from "../common/CurrencySelect";
+import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useLodgingFxPreview } from "../../hooks/useLodgingFxPreview";
-import { formatStayPriceDisplay } from "../../lib/lodgingFormat";
+import { formatDayForLocale, formatStayPriceDisplay } from "../../lib/lodgingFormat";
 import { formatCurrency } from "../../lib/units";
 import type { LodgingCurrency } from "../../types/lodging";
-
-const CURRENCIES: LodgingCurrency[] = ["EUR", "USD", "GBP", "CHF"];
 
 interface StayEditorPriceSectionProps {
   totalPrice: string;
@@ -16,6 +17,9 @@ interface StayEditorPriceSectionProps {
   currency: LodgingCurrency;
   onCurrencyChange: (v: LodgingCurrency) => void;
   isAwardStay: boolean;
+  /** The rate the user typed for a currency/day no provider covers, as text. */
+  manualFxRate?: string;
+  onManualFxRateChange?: (v: string) => void;
   onAwardStayChange: (v: boolean) => void;
   /** Check-in as "YYYY-MM-DD" (the calendar day the ECB rate snapshots against), or "" while unset. */
   checkInDate: string;
@@ -44,6 +48,8 @@ export function StayEditorPriceSection({
   currency,
   onCurrencyChange,
   isAwardStay,
+  manualFxRate = "",
+  onManualFxRateChange,
   onAwardStayChange,
   checkInDate,
   baseCurrency,
@@ -51,6 +57,7 @@ export function StayEditorPriceSection({
   t,
   inputClassName,
 }: StayEditorPriceSectionProps): JSX.Element {
+  const recentCurrencies = useRecentCurrencies();
   const parsedTotalPrice = totalPrice.trim().length > 0 ? Number.parseFloat(totalPrice) : null;
   const preview = useLodgingFxPreview({
     totalPrice: parsedTotalPrice,
@@ -59,7 +66,24 @@ export function StayEditorPriceSection({
     baseCurrency,
   });
 
-  const { fxReadout } = formatStayPriceDisplay(
+  // The row only appears where it is USEFUL: there is a price, the currency
+  // differs from the base, and no provider had a rate for that day. Offering
+  // it otherwise would invite someone to overwrite the ECB by hand.
+  const needsManualRate =
+    onManualFxRateChange !== undefined &&
+    parsedTotalPrice !== null &&
+    currency !== baseCurrency &&
+    preview === null;
+  const parsedManualRate = manualFxRate.trim().length > 0 ? Number.parseFloat(manualFxRate) : null;
+  const manualPreview =
+    parsedManualRate !== null &&
+    Number.isFinite(parsedManualRate) &&
+    parsedManualRate > 0 &&
+    parsedTotalPrice !== null
+      ? `${formatCurrency(parsedTotalPrice, currency)} → ${formatCurrency(Math.round(parsedTotalPrice * parsedManualRate * 100) / 100, baseCurrency)}`
+      : null;
+
+  const { fxReadout, marker } = formatStayPriceDisplay(
     {
       totalPrice: parsedTotalPrice,
       currency,
@@ -67,9 +91,20 @@ export function StayEditorPriceSection({
       fxRate: preview?.rate ?? null,
       fxRateDate: preview?.rateDate ?? null,
       fxBaseCurrency: preview?.baseCurrency ?? null,
+      // The preview must name the SAME source the saved stay will, or the
+      // editor promises an ECB rate the card then contradicts.
+      fxSource: preview?.source ?? null,
     },
     language,
-    t("lodging:fx.source"),
+    {
+      ecb: t("lodging:fx.source"),
+
+      market: t("lodging:fx.sourceMarket"),
+
+      manual: t("lodging:fx.markerManual"),
+
+      none: t("lodging:fx.markerNone"),
+    }
   );
 
   return (
@@ -78,7 +113,7 @@ export function StayEditorPriceSection({
         <input
           type="number"
           min={0}
-          step={0.01}
+          step={10 ** -minorUnits(currency)}
           aria-label={t("lodging:field.totalPrice")}
           className={inputClassName}
           value={totalPrice}
@@ -98,18 +133,12 @@ export function StayEditorPriceSection({
             {pricePerNight !== null ? formatCurrency(pricePerNight, currency) : "—"}
           </span>
         </div>
-        <select
+        <CurrencySelect
           aria-label={t("lodging:field.currency")}
-          className={inputClassName}
           value={currency}
-          onChange={(e): void => onCurrencyChange(e.target.value as LodgingCurrency)}
-        >
-          {CURRENCIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+          recent={recentCurrencies}
+          onChange={(code): void => onCurrencyChange(code as LodgingCurrency)}
+        />
       </div>
 
       <label className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
@@ -131,6 +160,50 @@ export function StayEditorPriceSection({
         >
           {fxReadout}
         </p>
+      )}
+
+      {marker !== null && (
+        <span
+          data-testid="stay-editor-fx-marker"
+          className="inline-block rounded border border-[var(--border)] px-1 py-px text-[10px] text-[var(--text-muted)]"
+        >
+          {marker}
+        </span>
+      )}
+
+      {needsManualRate && (
+        <div data-testid="stay-editor-manual-rate" className="space-y-1">
+          <p className="text-xs text-[var(--text-muted)]">
+            {t("lodging:fx.noRateHint", {
+              currency,
+              // The day the user reads, not the day the API speaks: a German
+              // sentence carrying "2023-05-10" is the machine's format leaking
+              // into the copy.
+              date: formatDayForLocale(checkInDate, language),
+            })}
+          </p>
+          <label className="block text-xs text-[var(--text-primary)]">
+            {t("lodging:fx.manualRateLabel", { currency, base: baseCurrency })}
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="any"
+              className={inputClassName}
+              value={manualFxRate}
+              aria-label={t("lodging:fx.manualRateLabel", { currency, base: baseCurrency })}
+              onChange={(e): void => onManualFxRateChange?.(e.target.value)}
+            />
+          </label>
+          {manualPreview !== null && (
+            <p
+              data-testid="stay-editor-manual-preview"
+              className="text-xs text-[var(--text-muted)]"
+            >
+              {manualPreview}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
