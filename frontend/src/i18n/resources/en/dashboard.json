@@ -239,7 +239,9 @@
     "cruiseSolid": "Cruises",
     "flightFrequency": "Flights (frequency)",
     "flightSolid": "Flights",
-    "lodging": "Lodging"
+    "lodging": "Lodging",
+    "airport": "Airport",
+    "port": "Port"
   },
   "userMenu": {
     "label": "Account menu"

@@ -35,7 +35,11 @@ const PORT_RING_RADIUS_M = 6000;
 // Was sky-400 [56, 189, 248] which is a different blue and not in the brand
 // palette — port markers are the primary on-map signifier of the cruise
 // domain so they have to render in the canonical domain colour.
-const PORT_RGB: [number, number, number] = [111, 160, 214];
+// Exported so the map LEGEND can name this mark without keeping a second copy
+// of the colour — the rule the 2.4.0 colour-mode work established: a legend
+// swatch is resolved from the same source the layer paints with, never typed
+// in beside it.
+export const PORT_RGB: [number, number, number] = [111, 160, 214];
 
 /**
  * Match the airport-label zoom gate from routesLayer

@@ -12,8 +12,11 @@ import { tripsApi } from "../../../lib/api/trips";
 import { buildCruiseLegend, type CruiseLegendRow } from "../../../lib/cruiseColor";
 import { buildFlightLegend, rgbCss, type FlightLegendRow } from "../../../lib/flightColor";
 import { buildLodgingLegend } from "../../../lib/lodgingColor";
+import { PORT_RGB } from "../../layers/cruisePortsLayer";
+import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
 import { logger } from "../../../lib/logger";
 import { useCruiseColorStore } from "../../../store/cruiseColorStore";
+import { useThemeStore } from "../../../store/themeStore";
 import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
 import { useFlightColorStore } from "../../../store/flightColorStore";
 import {
@@ -75,6 +78,9 @@ export function AllTab(): JSX.Element {
   // the state, run through the same colour resolver.
   const flightColorConfig = useFlightColorStore((s) => s.config);
   const cruiseColorConfig = useCruiseColorStore((s) => s.config);
+  // Same store `DeckGLMap` reads to colour the airport dot, so the key and the
+  // map change together when the map theme changes.
+  const themeColors = MAP_LAYER_COLORS[useThemeStore((s) => s.mapTheme)];
   const [flights, setFlights] = useState<GeoJSONFeature[]>([]);
   const [cruises, setCruises] = useState<Cruise[]>([]);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
@@ -333,18 +339,32 @@ export function AllTab(): JSX.Element {
     </button>
   );
 
-  // One colour-key row: a short line swatch (or, for a frequency ramp, a
-  // slightly taller/wider gradient bar) + its label. `background` takes any
-  // CSS colour OR gradient, so both row kinds share one renderer.
-  const legendRow = (background: string, label: string, key: string, ramp = false): JSX.Element => (
+  /**
+   * One colour-key row. The swatch takes the SHAPE of the thing it stands for:
+   *
+   *   "line"  a route — flights and cruises are drawn as arcs
+   *   "ramp"  a route coloured by a gradient (flight frequency mode)
+   *   "dot"   a place — a lodging is a pin, not a line (Alex, 2026-08-09:
+   *           "Da Unterkünfte keine 'Strecken' sind sollte hier auch in der
+   *           Legende ein Kreis sein.")
+   *
+   * `background` takes any CSS colour OR gradient, so all three share one
+   * renderer.
+   */
+  const legendRow = (
+    background: string,
+    label: string,
+    key: string,
+    shape: "line" | "ramp" | "dot" = "line",
+  ): JSX.Element => (
     <span key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <span
         aria-hidden
         style={{
-          width: ramp ? 24 : 14,
-          height: ramp ? 4 : 2,
+          width: shape === "ramp" ? 24 : shape === "dot" ? 8 : 14,
+          height: shape === "ramp" ? 4 : shape === "dot" ? 8 : 2,
           background,
-          borderRadius: 2,
+          borderRadius: shape === "dot" ? "50%" : 2,
           flexShrink: 0,
         }}
       />
@@ -359,7 +379,7 @@ export function AllTab(): JSX.Element {
       // Frequency mode: one gradient bar from the rarest to the most-flown
       // tier, using the very stops the arcs are painted with.
       const gradient = `linear-gradient(90deg, ${row.stops.map(rgbCss).join(", ")})`;
-      return legendRow(gradient, label, `flight-${row.slot}`, true);
+      return legendRow(gradient, label, `flight-${row.slot}`, "ramp");
     }
     return legendRow(rgbCss(row.color), label, `flight-${row.slot}`);
   });
@@ -375,7 +395,7 @@ export function AllTab(): JSX.Element {
       const segments = row.stops
         .map((c, i) => `${rgbCss(c)} ${i * step}% ${(i + 1) * step}%`)
         .join(", ");
-      return legendRow(`linear-gradient(90deg, ${segments})`, label, `cruise-${row.slot}`, true);
+      return legendRow(`linear-gradient(90deg, ${segments})`, label, `cruise-${row.slot}`, "ramp");
     }
     return legendRow(rgbCss(row.color), label, `cruise-${row.slot}`);
   });
@@ -385,8 +405,29 @@ export function AllTab(): JSX.Element {
   // `layers/lodgingPinsLayer.ts` resolves its pin colour through, so the
   // dot on the map and the swatch in the legend can never disagree.
   const lodgingLegendRows = buildLodgingLegend().map((row) =>
-    legendRow(rgbCss(row.color), t("dashboard:legend.lodging"), `lodging-${row.slot}`)
+    legendRow(rgbCss(row.color), t("dashboard:legend.lodging"), `lodging-${row.slot}`, "dot")
   );
+
+  // Airports and ports are the only marks on this map that are ONLY marks:
+  // an arc explains itself by connecting two places, a dot does not. They were
+  // drawn and never named, which is the one thing a legend exists for (Alex,
+  // 2026-08-09, same message as the lodging circle above).
+  //
+  // Both colours are READ from what the layers paint with — the airport dot
+  // from the active map theme (`routesLayer` falls back to exactly this value),
+  // the port from `cruisePortsLayer`'s own exported constant. Nothing is typed
+  // in twice, so switching the map theme cannot leave the key behind.
+  const placeLegendRows = [
+    flightsVisible &&
+      legendRow(
+        rgbCss(themeColors.airportDot),
+        t("dashboard:legend.airport"),
+        "place-airport",
+        "dot"
+      ),
+    cruisesVisible &&
+      legendRow(rgbCss(PORT_RGB), t("dashboard:legend.port"), "place-port", "dot"),
+  ].filter((row): row is JSX.Element => row !== false);
 
   // Colour key as a compact table pinned bottom-right — out of the top band
   // so it never collides with the globe's time histogram or the top-left
@@ -413,6 +454,7 @@ export function AllTab(): JSX.Element {
       {flightsVisible && flightLegendRows}
       {cruisesVisible && cruiseLegendRows}
       {lodgingsVisible && lodgingLegendRows}
+      {placeLegendRows}
     </div>
   );
 

@@ -66,11 +66,56 @@ export function isBookingComConfirmation(subject: string | undefined, body: stri
   return /booking\.com/i.test(haystack) && CONFIRMATION_RE.test(haystack);
 }
 
+/**
+ * Every label Booking.com puts on a line of its own in the stacked layout.
+ * Used only as a STOP list: a bare label may never be read as another label's
+ * value. Without it, a confirmation that omits a field entirely would report
+ * the following label as that field's content — a plausible-looking wrong
+ * value, which is worse than the honest gap the parser already handles.
+ */
+const KNOWN_LABELS = new Set([
+  "Anreise",
+  "Abreise",
+  "Ihre Buchung",
+  "Sie haben gebucht für",
+  "Lage",
+  "Telefon",
+  "Kontakt",
+  "Stornierungsbedingungen",
+  "Stornierungsgebühren",
+  "Preisangaben",
+  "Gesamtpreis",
+  "Buchungsinformationen",
+  "Zahlungsangaben",
+]);
+
+/**
+ * Booking.com ships the same confirmation in TWO layouts, and both are in the
+ * wild right now:
+ *
+ *   inline   "Anreise\tMittwoch, 26. Juni 2024 (ab 15:00)"
+ *   stacked  "Anreise"  /  "Mittwoch, 26. Juni 2024 (ab 15:00)"
+ *
+ * Measured against 95 real confirmations on 2026-08-13: 71 inline, 22 stacked
+ * (the remaining 2 are direct hotel bookings, correctly not our business). The
+ * stacked ones ALL fell through to the LLM — with Ollama off, that means the
+ * user got manual entry for a mail the template could read perfectly well.
+ *
+ * Inline keeps priority; the stacked read only happens when the label owns its
+ * line, and only when the next non-empty line is not itself a label.
+ */
 function findValue(lines: string[], label: string): string | null {
-  const re = new RegExp(`^${label}[\\s\\u00a0]+(.+)$`);
-  for (const line of lines) {
-    const m = line.match(re);
+  const inline = new RegExp(`^${label}[\\s\\u00a0]+(.+)$`);
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(inline);
     if (m) return m[1].trim();
+
+    if (lines[i] !== label) continue;
+    for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+      const next = lines[j];
+      if (next === "") continue;
+      return KNOWN_LABELS.has(next) ? null : next;
+    }
   }
   return null;
 }
@@ -96,10 +141,23 @@ function parseGermanDate(value: string | null): string | null {
  * of taking whichever line happens to come first.
  */
 function findBookingLine(lines: string[]): { nights: number | null; room: string | null } {
-  const re = /^Ihre Buchung[\s]+(\d+)\s+N(?:acht|ächte)\s*,\s*(.+)$/;
-  for (const line of lines) {
-    const m = line.match(re);
+  const inline = /^Ihre Buchung[\s]+(\d+)\s+N(?:acht|ächte)\s*,\s*(.+)$/;
+  // Stacked layout (see findValue): "Ihre Buchung" alone, "2 Nächte, 1 Zimmer"
+  // on the next line. The shape check does the disambiguating here — the
+  // unrelated "Ihre Buchung wird mit Booking.com bezahlt" line cannot produce
+  // a "<N> Nacht(e), <room>" follower, so no label stop-list is needed.
+  const value = /^(\d+)\s+N(?:acht|ächte)\s*,\s*(.+)$/;
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(inline);
     if (m) return { nights: Number(m[1]), room: m[2].trim() };
+
+    if (lines[i] !== "Ihre Buchung") continue;
+    for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+      if (lines[j] === "") continue;
+      const stacked = lines[j].match(value);
+      if (stacked) return { nights: Number(stacked[1]), room: stacked[2].trim() };
+      break;
+    }
   }
   return { nights: null, room: null };
 }
@@ -143,6 +201,23 @@ function parseLage(raw: string | null): AddressParts {
       };
     }
   }
+
+  // Luxembourg (and the same shape elsewhere) writes the code as its OWN
+  // segment, AFTER the city: "2, Rue Nicolas Wester, Luxemburg (Stadt),
+  // L-5836, Luxemburg". The loop above finds nothing, and the fallback below
+  // would then report "L-5836" as the city. Recognise a segment that is
+  // NOTHING BUT a postal code and read the city off the segment before it.
+  const bareCodeRe = /^(?:[A-Z]{1,2}-)?\d{4,5}$/;
+  for (let i = rest.length - 1; i >= 1; i--) {
+    if (!bareCodeRe.test(rest[i])) continue;
+    const address = rest.slice(0, i - 1).join(", ");
+    return {
+      address: address.length > 0 ? address : null,
+      postcode: rest[i],
+      city: rest[i - 1],
+      country,
+    };
+  }
   return {
     address: rest.slice(0, -1).join(", ") || null,
     postcode: null,
@@ -164,12 +239,19 @@ function parseAmount(line: string): { amount: number; currency: LodgingCurrency 
 
 /**
  * The literal word "Gesamtpreis" also appears mid-sentence in the cancellation
- * prose ("… des Gesamtpreises …"), so we anchor on a line that is EXACTLY
- * "Gesamtpreis" and take the next non-empty line as the amount.
+ * prose ("… des Gesamtpreises …"), so we anchor on a line that is EXACTLY the
+ * label and take the next non-empty line as the amount.
+ *
+ * Booking.com labels the same figure "Preis" in some confirmations and
+ * "Gesamtpreis" in others — 9 of the owner's 95 samples used the short form and
+ * silently lost their total (measured 2026-08-13). Both are accepted; the
+ * exact-line anchor keeps the prose out either way.
  */
+const TOTAL_LABELS = new Set(["Gesamtpreis", "Preis"]);
+
 function findTotal(lines: string[]): { amount: number; currency: LodgingCurrency } | null {
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i] !== "Gesamtpreis") continue;
+    if (!TOTAL_LABELS.has(lines[i])) continue;
     for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
       if (lines[j] === "") continue;
       const parsed = parseAmount(lines[j]);

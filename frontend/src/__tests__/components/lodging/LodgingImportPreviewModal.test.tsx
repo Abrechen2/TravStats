@@ -116,6 +116,73 @@ describe("LodgingImportPreviewModal", () => {
     expect(edited?.lodging?.city).toBe("Hamburg");
   });
 
+  it("materialises a lodging from the free-text name when the user picks Anlegen and edits nothing", async () => {
+    // The defect this pins (found 2026-08-13 against the owner's own CSV, and
+    // reported by Alex on 2026-08-09): a stays-only row carries `lodging: null`
+    // and only a `lodgingName`. Choosing "Anlegen" used to send `lodging: null`
+    // unchanged, because the lodging object was materialised lazily — on the
+    // first EDIT of a lodging field. The backend then answered 201 with
+    // `missing_lodging_reference` for the row and created nothing, so a CSV of
+    // hotel names plus dates imported zero rows unless the user happened to
+    // type into a field they had no reason to touch.
+    //
+    // Picking "Anlegen" IS the instruction to create it. The name is the one
+    // thing such a row always has.
+    const onCommit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <LodgingImportPreviewModal
+        rows={rows}
+        summary={summary}
+        onCommit={onCommit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    fireEvent.change(screen.getByTestId("lodging-import-action-1"), {
+      target: { value: "create" },
+    });
+    fireEvent.click(screen.getByTestId("lodging-import-commit"));
+
+    await waitFor(() => expect(onCommit).toHaveBeenCalledTimes(1));
+
+    const committed = onCommit.mock.calls[0][0] as {
+      sourceRowIndex: number;
+      action: string;
+      lodging: { name?: string } | null;
+      lodgingName: string | null;
+    }[];
+    const created = committed.find((r) => r.sourceRowIndex === 1);
+    expect(created?.action).toBe("create");
+    expect(created?.lodging?.name).toBe("Unknown Hotel");
+    // The name still travels separately: the backend uses it to join a
+    // stays-only row onto a lodging another row in the same payload creates.
+    expect(created?.lodgingName).toBe("Unknown Hotel");
+  });
+
+  it("does not invent a lodging for a row the user chose to skip", async () => {
+    const onCommit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <LodgingImportPreviewModal
+        rows={rows}
+        summary={summary}
+        onCommit={onCommit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    fireEvent.change(screen.getByTestId("lodging-import-action-1"), {
+      target: { value: "skip" },
+    });
+    fireEvent.click(screen.getByTestId("lodging-import-commit"));
+
+    await waitFor(() => expect(onCommit).toHaveBeenCalledTimes(1));
+    const committed = onCommit.mock.calls[0][0] as {
+      sourceRowIndex: number;
+      lodging: { name?: string } | null;
+    }[];
+    expect(committed.find((r) => r.sourceRowIndex === 1)?.lodging).toBeNull();
+  });
+
   it("does not let an edit on a matched row's name/city reach the commit payload", async () => {
     // A row with `matchedLodgingId` set attaches its stay to the EXISTING
     // hotel on commit — the backend (lodgingImportCommit.ts) never reads
