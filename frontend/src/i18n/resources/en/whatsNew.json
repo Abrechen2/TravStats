@@ -3,6 +3,28 @@
   "subtitle": "A short overview of the most important changes.",
   "dismiss": "Got it",
   "entries": {
+    "v260": {
+      "lodging": {
+        "title": "Hotels are a domain of their own",
+        "body": "Stays are now kept like flights and cruises: with chain, room, board, per-category ratings, price, loyalty programme and the trip they belong to. They appear on the map as pins and count towards statistics and achievements — and switching the domain off removes it everywhere without touching your data."
+      },
+      "parser": {
+        "title": "TravStats reads your booking confirmations",
+        "body": "Booking.com mails are read by a deterministic template: measured against 95 real confirmations it finds the stay in 93 and the price in all 93 — across both layouts the sender uses. Anything it does not recognise takes the same AI path flights do. For whole lists there is a CSV import that shows what it will do first, puts doubtful rows on top, and can be reverted as one batch."
+      },
+      "currency": {
+        "title": "Any currency — and a total that hides nothing",
+        "body": "A price may be written in any currency. Conversion goes through the European Central Bank, and for the currencies it does not publish, through a free dataset you can switch off as the operator. Where no rate exists the amount stays in its own currency, is marked \"no rate\", counts towards no total — and the total tells you how many entries it is missing. You may enter a rate yourself; it is always shown as yours, never as an official one."
+      },
+      "security": {
+        "title": "Two-factor and passkeys",
+        "body": "You can protect your account with a second factor — TOTP, with single-use recovery codes — or with a passkey that replaces the password entirely. Both live in the new security section of the settings."
+      },
+      "map": {
+        "title": "A tidier map",
+        "body": "What is coming up next now sits at the right of the domain strip instead of floating over the map, where it covered the map-mode switcher completely. The entry follows the selected domain and names the trip it belongs to. The legend draws lodgings as a circle rather than a line, and finally names airports and ports too."
+      }
+    },
     "v250": {
       "flightsTable": {
         "title": "The flight table reads like a departures board",
