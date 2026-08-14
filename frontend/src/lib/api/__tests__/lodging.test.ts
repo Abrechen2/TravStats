@@ -34,14 +34,52 @@ describe("lodging API client — lodgings", () => {
   it("listLodgings() GETs /lodging with params and unwraps the envelope", async () => {
     vi.mocked(api.get).mockResolvedValue({ data: { success: true, data: [{ id: "l1" }] } });
     const result = await listLodgings({ type: "hotel", sort: "nights" });
-    expect(api.get).toHaveBeenCalledWith("/lodging", { params: { type: "hotel", sort: "nights" } });
+    expect(api.get).toHaveBeenCalledWith("/lodging", {
+      params: { type: "hotel", sort: "nights", limit: 500, offset: 0 },
+    });
     expect(result).toEqual([{ id: "l1" }]);
   });
 
-  it("listLodgings() defaults to no params", async () => {
+  it("listLodgings() walks every page instead of stopping at the server's first one", async () => {
+    // The defect this pins: one request, no limit, `meta` discarded. An account
+    // past the page size then lost a contiguous alphabetical tail — silently,
+    // because the server DOES report the truncation in `meta.total`.
+    const page = (ids: string[], total: number, offset: number) => ({
+      data: { success: true, data: ids.map((id) => ({ id })), meta: { total, limit: 500, offset } },
+    });
+    vi.mocked(api.get)
+      .mockResolvedValueOnce(page(["a", "b"], 3, 0))
+      .mockResolvedValueOnce(page(["c"], 3, 500));
+
+    const result = await listLodgings();
+
+    expect(result).toEqual([{ id: "a" }, { id: "b" }, { id: "c" }]);
+    expect(api.get).toHaveBeenNthCalledWith(2, "/lodging", {
+      params: { limit: 500, offset: 500 },
+    });
+  });
+
+  it("listLodgings() stops on an empty page even if meta.total disagrees", async () => {
+    // A `total` that outruns what the server actually returns must not spin the
+    // walk to its cap on every page load.
+    vi.mocked(api.get)
+      .mockResolvedValueOnce({
+        data: { success: true, data: [{ id: "a" }], meta: { total: 9999, limit: 500, offset: 0 } },
+      })
+      .mockResolvedValueOnce({
+        data: { success: true, data: [], meta: { total: 9999, limit: 500, offset: 500 } },
+      });
+
+    const result = await listLodgings();
+
+    expect(result).toEqual([{ id: "a" }]);
+    expect(api.get).toHaveBeenCalledTimes(2);
+  });
+
+  it("listLodgings() sends no filters of its own, only the page window", async () => {
     vi.mocked(api.get).mockResolvedValue({ data: { success: true, data: [] } });
     await listLodgings();
-    expect(api.get).toHaveBeenCalledWith("/lodging", { params: {} });
+    expect(api.get).toHaveBeenCalledWith("/lodging", { params: { limit: 500, offset: 0 } });
   });
 
   it("getLodging() GETs /lodging/:id and unwraps the envelope", async () => {
