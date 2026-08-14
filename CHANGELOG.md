@@ -4,6 +4,89 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.6.0] - 2026-08-14
+
+The lodging release. Hotels become a domain of their own — recorded, imported,
+mapped and counted like flights and cruises — and every price in TravStats can
+now be written in the currency it was actually paid in. Two-factor
+authentication and passkeys arrive alongside.
+
+### Added
+- **Hotels and other stays are a full domain.** A lodging carries its type
+  (hotel, guesthouse, apartment, hostel, campsite), its chain, its position on
+  the map and its own stays; a stay carries dates, room, board, per-category
+  ratings, price, loyalty programme and the trip it belongs to. The domain
+  switches on and off like the others — off means it is gone from the
+  navigation, the dashboard, the map, the statistics and the achievements,
+  while the data stays untouched.
+- **Booking confirmations are read for you.** Booking.com mails are parsed by a
+  deterministic template — measured against 95 real confirmations, it now finds
+  the stay in 93 of them and the price in all 93, across both layouts the
+  sender uses. Anything the template does not recognise falls back to the LLM
+  path, exactly as flights and cruises do, and PDF attachments go through the
+  same pipeline.
+- **A CSV import that shows you what it will do first.** The preview names
+  every row it considers questionable, orders those first, offers a mapping for
+  the columns it could not place, and commits the run as ONE batch that can be
+  reverted whole. Hotels without coordinates are geocoded afterwards, in the
+  background, so a slow lookup never blocks the import.
+- **Loyalty programmes live in one place.** A card is created once, covers as
+  many chains and individual hotels as it really covers, and each stay derives
+  its programme instead of asking again. A programme that is already on file
+  offers to extend to the chain you are looking at rather than refusing you.
+- **Any currency, and an honest total.** A price can be recorded in any of the
+  155 ISO-4217 currencies. Conversion asks the European Central Bank first —
+  authoritative and self-hostable, back to 1999 — and, for the currencies the
+  ECB does not publish, a keyless public dataset that an administrator can
+  switch off entirely. Where no source has a rate, the amount is kept in its
+  own currency, marked "kein Kurs", left out of every total, and the total says
+  how many stays it left out. You may enter a rate yourself; it is always shown
+  as yours, never as an official one.
+- **Two-factor authentication and passkeys.** TOTP as a second factor with
+  single-use recovery codes, or a passkey that replaces the password entirely.
+  Both are configured in the new security section; an administrator can reset a
+  locked-out user's second factor.
+- **Statistics and achievements grew with the domain.** 41 new lodging and
+  cross-domain achievements, punctuality figures for flights (average delay,
+  on-time rate, best and worst airline and route), trip-level insights, and a
+  spend breakdown per currency.
+- **Places are picked, not typed.** One shared location input — search, pasted
+  coordinates or a pin on the map — now serves hotels, cruise stops and custom
+  ports. The geocoding services are instance-configurable.
+
+### Changed
+- **The next upcoming entry moved into the domain strip.** It used to float
+  over the map and covered the map-mode switcher completely. It now sits beside
+  the tabs, follows the active tab, and names the trip it belongs to.
+- **The map legend names what it draws.** Lodgings appear as a circle rather
+  than a line — a stay is a place, not a route — and airports and ports finally
+  have a swatch of their own.
+- **Every `/api` response is `Cache-Control: no-store` by default.** A shared
+  cache was observed serving one signed-in user's response to another.
+- **The import hub carries every domain**, including the e-mail and PDF routes,
+  instead of scattering entry points across the app.
+
+### Fixed
+- **A total that leaves entries out now says so** — on the stay, on the lodging,
+  in the list and in the statistics strip, rather than quietly summing what it
+  could and presenting it as complete.
+- **The lodging list stopped at 200 rows without a word.** With more hotels than
+  that, everything past the cut simply did not exist for the list — while the
+  counter above it reported the true number.
+- **A price whose currency was thrown away is no longer read as euros.** The API
+  refuses an amount without a currency instead of guessing one.
+- **"Länder besucht" counts every country a flight touched** (#233), not only
+  the ones it started or ended in.
+- Numerous smaller corrections from the beta review: a stay priced only per
+  night now reaches the trip total, the overall rating is derived on every write
+  path, a hotel-only trip shows its cost, and the import surface no longer has
+  dead ends.
+
+### Security
+- Closed an IDOR in the lodging import commit path, scoped receipt access to the
+  owner, and hardened the import HTTP surface (four findings from a scoped
+  review).
+
 ## [2.5.2] - 2026-08-12
 
 Hotfix release. Three ways live flight data went wrong, no database changes.
