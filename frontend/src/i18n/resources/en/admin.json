@@ -719,5 +719,10 @@
     "typeToSearch": "Type at least two characters to search the catalogue.",
     "refineSearch": "More matches than shown — refine the search."
   },
-  "scopeHint": "Applies to the whole instance — for every user."
+  "scopeHint": "Applies to the whole instance — for every user.",
+  "fxCdn": {
+    "title": "Exchange rates",
+    "label": "Fetch rates for currencies the ECB does not publish from cdn.jsdelivr.net",
+    "description": "The ECB publishes 30 currencies. With this off, exactly those stay convertible; everything else is stored and shown but marked “no rate” and left out of totals. With it on, this instance asks the free jsDelivr dataset for the rest — only for rates the ECB lacks, and without a key."
+  }
 }

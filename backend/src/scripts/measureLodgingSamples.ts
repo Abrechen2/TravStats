@@ -10,8 +10,9 @@
  * a summary and per-file field gaps; run it after any change to the template.
  * Baseline 2026-08-13, 95 samples: 71/95 hits before the stacked-layout fix,
  * 93/95 after (the 2 misses are direct hotel bookings, which belong to the LLM
- * path by design). The remaining price gaps are bookings in a currency the
- * lodging domain does not support yet.
+ * path by design). Price coverage across those hits was 87/93 until the amount
+ * parser stopped recognising only four currencies; since the ISO-4217 work it
+ * is 93/93 — the NOK, AUD, SGD and US$ bookings now carry their totals.
  */
 import * as fs from "fs";
 import * as path from "path";

@@ -136,7 +136,19 @@
   },
   "fx": {
     "source": "EZB",
-    "tooltip": "Umgerechnet zum EZB-Referenzkurs des Check-in-Tages"
+    "sourceMarket": "Marktkurs",
+    "tooltip": "Umgerechnet zum EZB-Referenzkurs des Check-in-Tages",
+    "tooltipMarket": "Umgerechnet zu einem Marktkurs des Check-in-Tages — kein amtlicher EZB-Kurs, sondern ein freier Datensatz für Währungen, die die EZB nicht veröffentlicht.",
+    "markerNone": "kein Kurs",
+    "markerManual": "eigener Kurs",
+    "tooltipNone": "Kein Kurs verfügbar — nicht in Summen enthalten",
+    "tooltipManual": "Kurs von dir eingetragen: {{rate}}",
+    "noRateHint": "Für {{currency}} haben wir am {{date}} keinen Kurs. Du kannst einen eintragen — sonst wird der Betrag gespeichert, fließt aber nicht in Summen ein.",
+    "manualRateLabel": "Kurs 1 {{currency}} = … {{base}} (optional)",
+    "omittedFromTotal": "{{count}} Aufenthalte nicht umgerechnet",
+    "omittedFromTotal_one": "{{count}} Aufenthalt nicht umgerechnet",
+    "omittedFromTotal_other": "{{count}} Aufenthalte nicht umgerechnet",
+    "baseCurrencyExplainer": "Zur Wahl stehen die 30 Währungen mit amtlichen EZB-Kursen, weil in diese Währung alles umgerechnet wird — zurück bis 1999. Erfassen kannst du in jeder Währung. Aufenthalte in einer Währung ohne Kurs werden gespeichert und angezeigt, zählen aber nicht in diese Summe."
   },
   "chainPicker": {
     "placeholder": "Kette suchen …",

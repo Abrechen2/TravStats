@@ -719,5 +719,10 @@
     "typeToSearch": "Mindestens zwei Zeichen eingeben, um den Katalog zu durchsuchen.",
     "refineSearch": "Mehr Treffer als angezeigt — Suche verfeinern."
   },
-  "scopeHint": "Gilt für die gesamte Instanz — für alle Benutzer."
+  "scopeHint": "Gilt für die gesamte Instanz — für alle Benutzer.",
+  "fxCdn": {
+    "title": "Wechselkurse",
+    "label": "Kurse für Währungen ohne EZB-Kurs von cdn.jsdelivr.net holen",
+    "description": "Die EZB veröffentlicht 30 Währungen. Ist das aus, bleiben genau diese umrechenbar; alles andere wird gespeichert und angezeigt, aber als „kein Kurs“ markiert und nicht in Summen gezählt. Ist es an, fragt diese Instanz für die übrigen Währungen den kostenlosen jsDelivr-Datensatz ab — nur für Kurse, die die EZB nicht hat, und ohne Schlüssel."
+  }
 }

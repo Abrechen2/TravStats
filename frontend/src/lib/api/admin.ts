@@ -235,6 +235,7 @@ export const adminApi = {
 
   getAdminParserSettings: async (): Promise<{
     allowUserApiKeys: boolean;
+    fxCdnFallbackEnabled: boolean;
     defaultVisionParser: string;
     defaultTextParser: string;
     ollamaUrl: string | null;
@@ -242,6 +243,7 @@ export const adminApi = {
   }> => {
     const { data } = await api.get<{
       allowUserApiKeys: boolean;
+      fxCdnFallbackEnabled: boolean;
       defaultVisionParser: string;
       defaultTextParser: string;
       ollamaUrl: string | null;
@@ -252,6 +254,7 @@ export const adminApi = {
 
   updateAdminParserSettings: async (settings: {
     allowUserApiKeys?: boolean;
+    fxCdnFallbackEnabled?: boolean;
     ollamaUrl?: string | null;
     ollamaModel?: string | null;
   }): Promise<MessageResponse> => {

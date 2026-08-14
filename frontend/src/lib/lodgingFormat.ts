@@ -34,11 +34,40 @@ export interface StayPriceSnapshot {
   fxRate: number | null;
   fxRateDate: string | null;
   fxBaseCurrency: string | null;
+  /** Which provider converted it: 'ecb' | 'cdn' | 'manual', null if none did. */
+  fxSource?: string | null;
+}
+
+/**
+ * The words for the three states, passed in rather than imported, so this
+ * module stays a pure formatter with no i18n dependency.
+ */
+export interface FxStateLabels {
+  /** Prefix for a rate the ECB itself published, e.g. "EZB". */
+  ecb: string;
+  /**
+   * Prefix for an automatic rate from the CDN dataset, e.g. "Marktkurs".
+   *
+   * A separate word because the ECB publishes 30 currencies and nothing else:
+   * an EGP rate CANNOT be an ECB reference rate, so labelling it "EZB" states
+   * something verifiably untrue about where the number came from.
+   */
+  market: string;
+  /** Badge for a rate the user typed in. */
+  manual: string;
+  /** Badge for an amount nothing could convert. */
+  none: string;
 }
 
 export interface StayPriceDisplay {
   /** The stay's price in its own currency (e.g. "840 CHF"), or "—" when there is no price. */
   original: string;
+  /**
+   * A short word naming a state that needs naming — "kein Kurs" for an amount
+   * nothing could convert, "eigener Kurs" for one the user converted himself.
+   * `null` for the ordinary case, which needs no badge.
+   */
+  marker: string | null;
   /**
    * The full conversion readout (e.g. "840 CHF → 883 € · EZB 0,9895 · 12.05.24").
    *
@@ -75,17 +104,43 @@ function formatShortDate(iso: string, locale: string): string {
 }
 
 /**
- * Build the price display for one stay: the original amount always, and the
- * FX conversion readout only when the full snapshot is present.
+ * A calendar day ("YYYY-MM-DD") written the way the reader writes it —
+ * 10.05.2023 in German, 05/10/2023 in English. Empty string in, empty string
+ * out, so a caller can render it before a date has been picked.
  *
- * `fxSourceLabel` is the translated rate-source label ("EZB" / "ECB") — kept
- * as a parameter rather than an i18n dependency so this module stays a pure,
- * UI-framework-free formatter.
+ * Parsed as UTC (the `T00:00:00Z` suffix): a bare "2023-05-10" is already UTC
+ * midnight by spec, and formatting it in a westward local zone would show the
+ * ninth.
+ */
+export function formatDayForLocale(day: string, language: string | undefined): string {
+  if (day === "") return "";
+  return formatFullDate(`${day.slice(0, 10)}T00:00:00.000Z`, localeForLanguage(language));
+}
+
+function formatFullDate(iso: string, locale: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return FALLBACK;
+  return new Intl.DateTimeFormat(locale, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+/**
+ * Build the price display for one stay: the original amount always, the FX
+ * readout only when the full snapshot is present, and a marker naming the
+ * state when the conversion is not an ordinary official one.
+ *
+ * The marker is the whole point of the three-state design: a converted price
+ * and an unconverted one used to look identical apart from a missing line, so
+ * a total that quietly left stays out could not be told from a complete one.
  */
 export function formatStayPriceDisplay(
   stay: StayPriceSnapshot,
   language: string | undefined,
-  fxSourceLabel: string
+  labels: FxStateLabels
 ): StayPriceDisplay {
   const locale = localeForLanguage(language);
   const original =
@@ -95,8 +150,16 @@ export function formatStayPriceDisplay(
   // null checks below — narrowing a combined boolean doesn't propagate back
   // to `stay.totalPriceBase` etc.
   const { totalPriceBase, fxRate, fxRateDate, fxBaseCurrency } = stay;
-  if (totalPriceBase === null || fxRate === null || fxRateDate === null || fxBaseCurrency === null) {
-    return { original, fxReadout: null };
+  if (
+    totalPriceBase === null ||
+    fxRate === null ||
+    fxRateDate === null ||
+    fxBaseCurrency === null
+  ) {
+    // A price nothing could convert is MARKED. A stay with no price at all is
+    // not: nothing was attempted, so nothing failed, and a badge there would
+    // cry wolf on the most ordinary row there is.
+    return { original, fxReadout: null, marker: stay.totalPrice !== null ? labels.none : null };
   }
 
   // A stay already priced in the base currency has a COMPLETE snapshot —
@@ -107,16 +170,28 @@ export function formatStayPriceDisplay(
   // that never happened (reported 2026-07-12). The guard is on the currency
   // PAIR, never on `fxRate === 1` — CHF→EUR can legitimately sit at parity.
   if (stay.currency === fxBaseCurrency) {
-    return { original, fxReadout: null };
+    return { original, fxReadout: null, marker: null };
   }
 
   const base = formatCurrency(totalPriceBase, fxBaseCurrency);
   const rate = formatRate(fxRate, locale);
   const date = formatShortDate(fxRateDate, locale);
+  const isManual = stay.fxSource === "manual";
+  // A rate the user typed must never be dressed as an official one, so the
+  // readout carries THEIR label instead of the provider's — and a CDN rate
+  // gets its own word for the same reason. Only `fxSource === "ecb"` (and a
+  // snapshot written before the column existed, which the migration backfills
+  // to 'ecb' precisely because it COULD only have come from there) may say ECB.
+  const sourceLabel = isManual
+    ? labels.manual
+    : stay.fxSource === "cdn"
+      ? labels.market
+      : labels.ecb;
 
   return {
     original,
-    fxReadout: `${original} → ${base} · ${fxSourceLabel} ${rate} · ${date}`,
+    fxReadout: `${original} → ${base} · ${sourceLabel} ${rate} · ${date}`,
+    marker: isManual ? labels.manual : null,
   };
 }
 
@@ -195,6 +270,21 @@ export function singleOriginalCurrencySpend(
   stays: readonly StaySpendSnapshot[],
   baseCurrency: string
 ): { amount: number; currency: string } | null {
+  const spend = singleCurrencySpend(stays);
+  return spend !== null && spend.currency !== baseCurrency ? spend : null;
+}
+
+/**
+ * The same sum WITHOUT the base-currency rule: what this lodging cost, when
+ * every priced stay shares one currency, whichever currency that is.
+ *
+ * Wanted wherever no conversion is being shown alongside — an unconverted
+ * lodging must still name its amount, and suppressing a base-currency figure
+ * there left a row reading only "kein Kurs", with the number gone.
+ */
+export function singleCurrencySpend(
+  stays: readonly StaySpendSnapshot[]
+): { amount: number; currency: string } | null {
   let amount = 0;
   let currency: string | null = null;
   for (const stay of stays) {
@@ -203,8 +293,7 @@ export function singleOriginalCurrencySpend(
     else if (currency !== stay.currency) return null; // mixed currencies — no single "original"
     amount += stay.totalPrice;
   }
-  if (currency === null || currency === baseCurrency) return null;
-  return { amount, currency };
+  return currency === null ? null : { amount, currency };
 }
 
 export interface OtherCurrencySpend {
@@ -233,10 +322,10 @@ export interface OtherCurrencySpend {
 export function otherCurrencySpend(
   spendByCurrency: Record<string, number>,
   spendBaseTotal: number,
-  baseCurrency: string,
+  baseCurrency: string
 ): OtherCurrencySpend | null {
   const otherEntries = Object.entries(spendByCurrency).filter(
-    ([currency, amount]) => currency !== baseCurrency && amount > 0,
+    ([currency, amount]) => currency !== baseCurrency && amount > 0
   );
   if (otherEntries.length === 0) return null;
   const convertedTotal = spendBaseTotal - (spendByCurrency[baseCurrency] ?? 0);
@@ -271,10 +360,27 @@ function average(values: readonly number[]): number | null {
  * `deriveOverallRating` rounding (one decimal), but per category instead of
  * collapsed into one aggregate (mockup screen ②'s "★ Ø-Bewertung" card).
  */
-export function averageRatingsByCategory(stays: readonly StayCategoryRatings[]): CategoryRatingAverages {
+export function averageRatingsByCategory(
+  stays: readonly StayCategoryRatings[]
+): CategoryRatingAverages {
   return {
     room: average(stays.map((s) => s.ratingRoom).filter((v): v is number => v !== null)),
     breakfast: average(stays.map((s) => s.ratingBreakfast).filter((v): v is number => v !== null)),
     service: average(stays.map((s) => s.ratingService).filter((v): v is number => v !== null)),
   };
+}
+
+/**
+ * How many stays carry a price that never made it into the base-currency
+ * total. Rendered as a footnote under any such total: a sum that silently
+ * omits rows reads exactly like a complete one, which is the whole reason
+ * the three-state design exists.
+ *
+ * A stay with NO price is not counted — it is not missing from the total,
+ * it simply has nothing to contribute.
+ */
+export function countUnconvertedStays(
+  stays: readonly { totalPrice: number | null; totalPriceBase: number | null }[]
+): number {
+  return stays.filter((s) => s.totalPrice !== null && s.totalPriceBase === null).length;
 }

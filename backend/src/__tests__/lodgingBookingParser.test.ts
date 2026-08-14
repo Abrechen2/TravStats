@@ -303,15 +303,17 @@ describe("parseLodgingBookingText", () => {
     }
   });
 
-  it("drops a price whose currency the domain cannot represent", async () => {
-    // Found 2026-08-13 on the owner's Armani Hotel Dubai confirmation. The LLM
-    // read it correctly — 11662 AED — but AED is not in CURRENCIES, so
-    // `asCurrency` returned null while the NUMBER survived. Downstream,
-    // `applyFxSnapshot` defaults a null currency to EUR, so the stay would have
-    // been booked as €11,662 against a real cost of roughly €2,900.
+  it("keeps an AED price, which the four-currency era could not represent", async () => {
+    // The owner's Armani Hotel Dubai confirmation, found 2026-08-13. The LLM
+    // read it correctly — 11662 AED — but AED was not one of the four codes the
+    // domain accepted, so `asCurrency` returned null and the amount was dropped
+    // to keep `applyFxSnapshot` from reading it as €11,662 against a real cost
+    // of roughly €2,900.
     //
-    // A number whose unit was thrown away is not a price. Losing it is honest;
-    // keeping it silently multiplies the user's spend statistics.
+    // Dropping it was the honest answer to a validation limit, not the goal.
+    // With the ISO-4217 registry in place the limit is gone and the price
+    // survives with its own unit; whether a RATE exists for it is a separate
+    // question, answered further down the chain.
     const server = await createMockOllamaServer((req, res) => {
       if (req.url === "/api/tags") return respondJson(res, HEALTHY_TAGS_RESPONSE);
       respondJson(res, {
@@ -337,6 +339,46 @@ describe("parseLodgingBookingText", () => {
       });
       const booking = result.bookings[0];
       expect(booking.hotelName).toBe("Armani Hotel Dubai");
+      expect(booking.checkIn).toBe("2023-04-30");
+      expect(booking.nights).toBe(3);
+      expect(booking.totalPrice).toBe(11662);
+      expect(booking.currency).toBe("AED");
+      expect(booking.missing).not.toContain("totalPrice");
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("still drops a price whose currency is not a currency at all", async () => {
+    // The guard that saved the AED booking above is still needed: an LLM that
+    // emits "EURO", a bare symbol, or a stray word gives us a number with no
+    // usable unit. A number whose unit was thrown away is not a price — losing
+    // it is honest, keeping it silently multiplies the user's spend statistics.
+    const server = await createMockOllamaServer((req, res) => {
+      if (req.url === "/api/tags") return respondJson(res, HEALTHY_TAGS_RESPONSE);
+      respondJson(res, {
+        response: JSON.stringify({
+          bookings: [
+            {
+              hotelName: "Hotel Ohne Einheit",
+              checkIn: "2023-04-30",
+              checkOut: "2023-05-03",
+              nights: 3,
+              totalPrice: 11662,
+              currency: "EURO",
+              confirmationNumber: "711754296",
+            },
+          ],
+        }),
+      });
+    });
+    try {
+      const result = await parseLodgingBookingText("Buchungsnummer: 711754296\nAnreise\nAbreise", {
+        url: server.url,
+        model: "mock",
+      });
+      const booking = result.bookings[0];
+      expect(booking.hotelName).toBe("Hotel Ohne Einheit");
       // Everything else survives — only the unusable amount is dropped.
       expect(booking.checkIn).toBe("2023-04-30");
       expect(booking.nights).toBe(3);

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BOARD_TYPES, CURRENCIES, LODGING_TYPES } from "./lodging";
+import { BOARD_TYPES, currencyField, LODGING_TYPES } from "./lodging";
 
 /**
  * Shared import-candidate contract for the lodging import pipeline (see
@@ -72,7 +72,7 @@ export const stayCandidateFieldsSchema = z.object({
   // (stays joined by hotel name) never carries a price, and that is a valid stay,
   // not a malformed one — it simply never gets an FX snapshot at commit time.
   totalPrice: z.number().min(0).nullable().optional(),
-  currency: z.enum(CURRENCIES).nullable().optional(),
+  currency: currencyField.nullable().optional(),
   ratingRoom: rating,
   ratingBreakfast: rating,
   ratingService: rating,

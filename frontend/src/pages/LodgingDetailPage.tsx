@@ -12,6 +12,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { deleteLodging, getLodging, listMemberships } from "../lib/api/lodging";
 import { tripsApi } from "../lib/api";
 import { formatCurrency } from "../lib/units";
+import { countUnconvertedStays } from "../lib/lodgingFormat";
 import {
   averageRatingsByCategory,
   formatRatingText,
@@ -150,6 +151,7 @@ export default function LodgingDetailPage(): JSX.Element {
   const typeIcon = lodgingTypeIcon(lodging.type);
   const addressLine = [lodging.address, lodging.city, lodging.country].filter(Boolean).join(", ");
   const priced = hasAnyPrice(lodging.stays);
+  const unconvertedCount = countUnconvertedStays(lodging.stays ?? []);
   const avgPerNight = lodging.nights > 0 ? lodging.totalSpendBase / lodging.nights : null;
   const originalSpend = singleOriginalCurrencySpend(lodging.stays, baseCurrency);
   const categoryRatings = averageRatingsByCategory(lodging.stays);
@@ -317,6 +319,17 @@ export default function LodgingDetailPage(): JSX.Element {
                   </dd>
                 </div>
               </dl>
+              {/* A total that left rows out must say so. Silence here reads as
+                  "this is everything", which is exactly the lie the marker on
+                  each stay exists to prevent. */}
+              {unconvertedCount > 0 && (
+                <p
+                  data-testid="lodging-omitted-from-total"
+                  className="mt-1 text-xs text-[var(--text-muted)]"
+                >
+                  {t("lodging:fx.omittedFromTotal", { count: unconvertedCount })}
+                </p>
+              )}
             </div>
 
             <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">

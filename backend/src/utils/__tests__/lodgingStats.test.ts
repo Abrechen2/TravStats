@@ -73,6 +73,7 @@ describe("calculateLodgingStats", () => {
     expect(s.spendBaseTotal).toBe(0);
     expect(s.spendByCurrency).toEqual({});
     expect(s.spendBaseByCurrency).toEqual({});
+    expect(s.spendUnconvertedStays).toBe(0);
     expect(s.awardNights).toBe(0);
     expect(s.nightsByType).toEqual({});
     expect(s.avgRatingOverall).toBeNull();
@@ -93,6 +94,9 @@ describe("calculateLodgingStats", () => {
     expect(s.spendByCurrency).toEqual({ JPY: 15000, EUR: 200 });
     expect(s.spendBaseTotal).toBe(200);
     expect(Number.isNaN(s.spendBaseTotal)).toBe(false);
+    // …and it SAYS that it left one out. A sum that quietly drops a row reads
+    // exactly like a complete one, which is the whole reason this count exists.
+    expect(s.spendUnconvertedStays).toBe(1);
   });
 
   it("never mixes totalPriceBase amounts snapshotted into different base currencies (finding 2)", () => {

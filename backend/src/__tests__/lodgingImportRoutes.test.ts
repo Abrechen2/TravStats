@@ -4,13 +4,14 @@ import { prisma } from "../db";
 import { hashPassword } from "../utils/password";
 import { generateToken } from "../utils/jwt";
 
-jest.mock("../services/fx/frankfurter", () => ({
+jest.mock("../services/fx/resolver", () => ({
   convertToBase: jest.fn(async (amount: number) => ({
     baseAmount: amount,
     rate: 1,
     rateDate: "2026-01-01",
+    source: "ecb" as const,
   })),
-  getRate: jest.fn(async () => 1),
+  resolveRate: jest.fn(async () => ({ rate: 1, source: "ecb" as const })),
 }));
 
 const backfillSpy = jest.fn(async () => ({ attempted: 0, filled: 0 }));

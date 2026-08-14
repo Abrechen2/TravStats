@@ -1,3 +1,4 @@
+import { minorUnits } from "../shared/currencies";
 export type DistanceUnit = "kilometers" | "miles" | "nautical_miles";
 
 /**
@@ -141,20 +142,33 @@ const LOCALE_HINTS: Record<string, string> = {
 };
 
 /**
- * Format currency value as a localized string. Accepts any ISO 4217
+ * Format a currency value as a localized string. Accepts any ISO 4217
  * alpha-3 code natively supported by Intl.NumberFormat.
+ *
+ * The digit count comes from the registry, not from a fixed 2: JPY has none
+ * and KWD has three, so a fixed cap silently dropped a dinar's third decimal.
+ *
+ * `compact` rounds to whole units for headline figures (the trip cards). It
+ * exists so those cards can stop carrying their OWN copy of this function,
+ * which is how a trip total and a stay total came to disagree about how a
+ * currency is written.
  */
-export function formatCurrency(value: number, currency: Currency): string {
+export function formatCurrency(
+  value: number,
+  currency: Currency,
+  opts?: { compact?: boolean }
+): string {
   if (value === undefined || value === null || isNaN(value)) return "";
 
   const locale = LOCALE_HINTS[currency] || undefined;
+  const digits = opts?.compact ? 0 : minorUnits(currency);
 
   try {
     return new Intl.NumberFormat(locale, {
       style: "currency",
       currency,
       minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
+      maximumFractionDigits: digits,
     }).format(value);
   } catch {
     // Intl rejects unknown / malformed codes — render the raw value with

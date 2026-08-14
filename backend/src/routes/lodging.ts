@@ -5,7 +5,7 @@ import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { fxPreviewLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
-import * as fx from "../services/fx/frankfurter";
+import * as fx from "../services/fx/resolver";
 import { resolveLocation } from "./lodgingGeocode";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { deriveLodgingStatus } from "../shared/statusDerivation";
@@ -17,9 +17,10 @@ import {
   createStaySchema,
   updateStaySchema,
   lodgingQuerySchema,
-  CURRENCIES,
+  currencyField,
   type LodgingQueryInput,
 } from "../schemas/lodging";
+import { minorUnits } from "../shared/currencies";
 import logger from "../utils/logger";
 
 const router = Router();
@@ -44,6 +45,8 @@ interface FxSnapshotFields {
   fxRate: number | null;
   fxRateDate: Date | null;
   fxBaseCurrency: string | null;
+  /** Which provider produced the snapshot — never inferred from the rate. */
+  fxSource: fx.RateSource | null;
 }
 
 const CLEARED_FX: FxSnapshotFields = {
@@ -51,6 +54,7 @@ const CLEARED_FX: FxSnapshotFields = {
   fxRate: null,
   fxRateDate: null,
   fxBaseCurrency: null,
+  fxSource: null,
 };
 
 interface RatedStay {
@@ -193,6 +197,7 @@ function buildLodgingWhere(q: LodgingQueryInput, userId: string): Prisma.Lodging
  */
 export type FxSnapshotOutcome =
   | { status: "priceRemoved" }
+  | { status: "missingCurrency" }
   | { status: "lookupFailed" }
   | { status: "snapshotted"; fields: FxSnapshotFields };
 
@@ -201,7 +206,10 @@ export async function applyFxSnapshot(
   baseCurrency: string,
 ): Promise<FxSnapshotOutcome> {
   if (input.totalPrice == null) return { status: "priceRemoved" };
-  const currency = input.currency ?? "EUR";
+  // No `?? "EUR"`. An amount whose unit we never learned is not a euro amount;
+  // guessing one is how 11,662 AED became €11,662 (see the 2026-08-13 spec).
+  if (!input.currency) return { status: "missingCurrency" };
+  const currency = input.currency;
   const checkInDate = new Date(input.checkIn);
   const conv = await fx.convertToBase(input.totalPrice, currency, baseCurrency, checkInDate);
   if (conv === null) return { status: "lookupFailed" };
@@ -212,13 +220,16 @@ export async function applyFxSnapshot(
       fxRate: conv.rate,
       fxRateDate: new Date(conv.rateDate),
       fxBaseCurrency: baseCurrency,
+      fxSource: conv.source,
     },
   };
 }
 
 /**
  * Resolves an `FxSnapshotOutcome` to the fields a write should apply.
- * `priceRemoved`/`lookupFailed` both collapse to `CLEARED_FX` here because
+ * `priceRemoved`/`missingCurrency`/`lookupFailed` all collapse to `CLEARED_FX`
+ * here — they differ for the CALLER (only `missingCurrency` says the amount
+ * itself is unusable), but none of them yields a snapshot. They collapse because
  * both call sites only ever invoke `applyFxSnapshot` once the FX-relevant
  * inputs have ALREADY been confirmed to differ from what's stored (see
  * `fxInputsChanged` in the PATCH handler) — at that point a stale snapshot
@@ -227,6 +238,38 @@ export async function applyFxSnapshot(
  */
 export function resolveFxFields(outcome: FxSnapshotOutcome): FxSnapshotFields {
   return outcome.status === "snapshotted" ? outcome.fields : CLEARED_FX;
+}
+
+/**
+ * Apply a rate the user typed in.
+ *
+ * The contract is narrow on purpose. A manual rate is for the GAP — a currency
+ * and day no provider covers — not for disagreeing with the ECB, so supplying
+ * one where an automatic rate exists is a mistake worth naming rather than
+ * silently preferring or silently dropping. And whatever it produces is marked
+ * `manual`, because the UI must never present an estimate as an official rate.
+ */
+export function applyManualRate(
+  auto: FxSnapshotOutcome,
+  manualFxRate: number,
+  totalPrice: number | null,
+  checkIn: string | Date,
+  baseCurrency: string,
+): FxSnapshotFields {
+  if (auto.status === "snapshotted") {
+    throw new AppError("A rate is already available for this currency and date", 400);
+  }
+  // No price means nothing to convert — the rate is moot rather than wrong, so
+  // the stay simply keeps no snapshot instead of the request failing.
+  if (totalPrice == null) return CLEARED_FX;
+  const factor = 10 ** minorUnits(baseCurrency);
+  return {
+    totalPriceBase: Math.round(totalPrice * manualFxRate * factor) / factor,
+    fxRate: manualFxRate,
+    fxRateDate: new Date(checkIn),
+    fxBaseCurrency: baseCurrency,
+    fxSource: "manual",
+  };
 }
 
 export async function getBaseCurrency(userId: string): Promise<string> {
@@ -244,7 +287,7 @@ export async function getBaseCurrency(userId: string): Promise<string> {
 // chainQuerySchema) since nothing else needs it.
 const fxPreviewQuerySchema = z.object({
   amount: z.coerce.number().min(0),
-  from: z.enum(CURRENCIES),
+  from: currencyField,
   // Calendar day only (YYYY-MM-DD) — the same granularity applyFxSnapshot
   // snapshots on save. No time-of-day component to avoid the local-timezone
   // reinterpretation trap that motivated isoDateTimeRequired in schemas/lodging.ts.
@@ -435,14 +478,20 @@ router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunc
     // totalPrice is the source of truth: the UI types it, but an importer or
     // API client may send only a per-night price — derive the total so it is
     // always stored, and the FX snapshot below converts the right amount.
-    const input = { ...parsed.data, totalPrice: deriveStayTotalPrice(parsed.data) };
+    // `manualFxRate` is a request field, not a stay column — it must not reach
+    // the spread below, where Prisma would reject it as an unknown argument.
+    const { manualFxRate, ...body } = parsed.data;
+    const input = { ...body, totalPrice: deriveStayTotalPrice(body) };
 
     const baseCurrency = await getBaseCurrency(userId);
     const fxOutcome = await applyFxSnapshot(input, baseCurrency);
     if (fxOutcome.status === "lookupFailed") {
       logger.warn({ operation: "lodging_fx_lookup_failed", lodgingId: lodging.id, userId });
     }
-    const fxFields = resolveFxFields(fxOutcome);
+    const fxFields =
+      manualFxRate != null
+        ? applyManualRate(fxOutcome, manualFxRate, input.totalPrice, input.checkIn, baseCurrency)
+        : resolveFxFields(fxOutcome);
 
     const stay = await prisma.lodgingStay.create({
       data: {
@@ -494,7 +543,8 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
 
     const parsed = updateStaySchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
-    const input = parsed.data;
+    // Same reason as the create path: this one is not a stay column.
+    const { manualFxRate, ...input } = parsed.data;
 
     // The schema-level date-order refine only fires when BOTH checkIn and
     // checkOut are present in the SAME body. A partial PATCH that only sends
@@ -551,7 +601,12 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
         });
     }
 
+    // A manual rate sent on its own changes NOTHING about price, currency or
+    // date — it is the ordinary way a user fills the gap after saving a stay
+    // they were told had no rate. Without this the recompute below would skip,
+    // and the rate they just typed would be dropped without a word.
     const fxInputsChanged =
+      manualFxRate !== undefined ||
       effectiveTotalPrice !== stay.totalPrice ||
       (input.currency !== undefined && input.currency !== stay.currency) ||
       (input.checkIn !== undefined && new Date(input.checkIn).getTime() !== stay.checkIn.getTime());
@@ -569,7 +624,19 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
       if (fxOutcome.status === "lookupFailed") {
         logger.warn({ operation: "lodging_fx_lookup_failed", stayId: stay.id, userId });
       }
-      fxFields = resolveFxFields(fxOutcome);
+      // An explicit null is the user TAKING THE RATE BACK: fall through to the
+      // automatic answer, which for a gap currency is "no rate" — the honest
+      // state, not the old estimate left standing.
+      fxFields =
+        manualFxRate != null
+          ? applyManualRate(
+              fxOutcome,
+              manualFxRate,
+              effectiveTotalPrice,
+              input.checkIn ?? stay.checkIn,
+              baseCurrency,
+            )
+          : resolveFxFields(fxOutcome);
     }
 
     // Same merge rule as the dates above, and the same explicit-null trap as

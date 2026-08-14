@@ -1,3 +1,4 @@
+import type { CurrencyCode } from "../shared/currencies";
 // Frontend view of the `lodging` domain (hotels + campsites). Mirrors
 // backend/prisma/schema.prisma (`Lodging`, `LodgingStay`, `LodgingChain`,
 // `LodgingMembership`) and backend/src/schemas/lodging.ts (enums + input
@@ -16,7 +17,10 @@ export type BoardType = "none" | "breakfast" | "half" | "full" | "all_inclusive"
  * `STAY_STATUSES` in backend/src/schemas/lodging.ts.
  */
 export type StayStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
-export type LodgingCurrency = "EUR" | "USD" | "GBP" | "CHF";
+// Any ISO-4217 code — the registry is the single source of truth, mirrored
+// from backend/src/shared/currencies.ts. It was four hardcoded codes until
+// 2026-08-13, which is why a Dubai booking could not be recorded at all.
+export type LodgingCurrency = CurrencyCode;
 
 export interface LodgingChain {
   id: number;
@@ -81,6 +85,8 @@ export interface LodgingStay {
   fxRate: number | null;
   fxRateDate: string | null;
   fxBaseCurrency: string | null;
+  /** Which provider converted it, null if none did. */
+  fxSource: FxRateSource | null;
   isAwardStay: boolean;
   ratingRoom: number | null;
   ratingBreakfast: number | null;
@@ -179,6 +185,12 @@ export interface StayInput {
   pricePerNight?: number | null;
   currency?: LodgingCurrency;
   totalPrice?: number | null;
+  /**
+   * A rate the USER supplies where no provider has one. Not a stay field: the
+   * backend turns it into `fxRate` + `fxSource: "manual"`. An explicit null
+   * takes it back; omitted means "leave it alone".
+   */
+  manualFxRate?: number | null;
   isAwardStay?: boolean;
   ratingRoom?: number | null;
   ratingBreakfast?: number | null;
@@ -231,7 +243,16 @@ export interface FxPreview {
   rate: number;
   rateDate: string;
   baseCurrency: string;
+  /**
+   * Which provider answered — `GET /lodging/fx-preview` has always sent it;
+   * the type used to drop it, so the editor could not tell an ECB rate from a
+   * CDN one and called both "EZB".
+   */
+  source: FxRateSource;
 }
+
+/** The providers a stored or previewed rate can come from. */
+export type FxRateSource = "ecb" | "cdn" | "manual";
 
 /**
  * Shape of `GET /api/v1/lodging-chains/:id` (routes/lodgingChains.ts). The
@@ -306,6 +327,8 @@ export interface LodgingStats {
   spendBaseTotal: number;
   /** Original amounts grouped by their original currency — not a conversion. */
   spendByCurrency: Record<string, number>;
+  /** How many priced stays no provider could convert, and which `spendBaseTotal` therefore leaves out. */
+  spendUnconvertedStays: number;
   /** Every totalPriceBase amount grouped by the currency it was snapshotted into — includes the current-base slice that also makes up spendBaseTotal. */
   spendBaseByCurrency: Record<string, number>;
   awardNights: number;

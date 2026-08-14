@@ -244,6 +244,29 @@ describe("Booking.com template parser (synthetic)", () => {
     expect(r?.missing).not.toContain("totalPrice");
   });
 
+  // The four shapes the owner's own 95 confirmations actually use for a
+  // currency outside the euro. Measured 2026-08-13 against the sample folder:
+  // six mails matched the template and still lost their price, three of them
+  // in NOK. `US$` is the telling one — USD was a "supported" currency all
+  // along; the SYMBOL form simply was not in the table, so the price fell out.
+  it.each([
+    ["NOK 3.380", 3380, "NOK"],
+    ["AUD 2.886", 2886, "AUD"],
+    ["S$ 1.324,90", 1324.9, "SGD"],
+    ["US$628,70", 628.7, "USD"],
+  ])("reads a total written as %s", (line, amount, currency) => {
+    const mail = stacked.replace("€ 1.234,50", line);
+    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", mail);
+    expect(r?.totalPrice).toBeCloseTo(amount, 2);
+    expect(r?.currency).toBe(currency);
+  });
+
+  it("does not mistake a three-letter word that is not a currency for one", () => {
+    const mail = stacked.replace("€ 1.234,50", "TEL 1.234,50");
+    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", mail);
+    expect(r?.totalPrice).toBeNull();
+  });
+
   it("still ignores the word Gesamtpreis inside cancellation prose", () => {
     const prose = stacked.replace(
       "Gesamtpreis\n€ 1.234,50",
