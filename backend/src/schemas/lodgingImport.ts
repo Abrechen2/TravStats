@@ -58,6 +58,12 @@ export const lodgingCandidateFieldsSchema = z.object({
   // "google:<place_id>" — see Lodging.externalRef (Task 1).
   externalRef: z.string().max(200).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
+  /**
+   * Whether the user has actually stayed here. Absent means true — every
+   * importer that existed before saved-places lists carries real visits, and
+   * a missing field must not silently demote them to bookmarks.
+   */
+  visited: z.boolean().optional(),
 });
 export type LodgingCandidateFields = z.infer<
   typeof lodgingCandidateFieldsSchema

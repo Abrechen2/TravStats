@@ -712,6 +712,10 @@
       "flight": "AirLabs, Aviationstack and OpenSky are used for automatic flight data updates.",
       "permissionsTitle": "User Permissions:",
       "permissions": "Controls whether users can set their own keys. Global keys are the fallback for users without their own keys."
+    },
+    "googlePlaces": {
+      "label": "Google Places (lodging locations)",
+      "description": "Optional. Without a key TravStats looks positions up in OpenStreetMap only — free, but hotels are often simply not in it. With a key, Google is asked as the last tier because it knows businesses: measured on 30 real names, OpenStreetMap found 14 lodgings, Google 27. The free tier covers this comfortably."
     }
   },
   "masterData": {

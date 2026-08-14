@@ -133,6 +133,11 @@ export interface Lodging {
   stars: number | null;
   amenities: string[];
   notes: string | null;
+  /**
+   * Has the user been here, or is the house only noted down? A saved-places
+   * import asks once and stores the answer; everything else defaults to true.
+   */
+  visited: boolean;
   dataSource: string | null;
   createdAt: string;
   updatedAt: string;

@@ -511,6 +511,11 @@ model AdminSettings {
   globalAviationstackApiKey String? @map("global_aviationstack_api_key")
   globalAerodataboxApiKey   String? @map("global_aerodatabox_api_key")
   globalLogostreamApiKey    String? @map("global_logostream_api_key")
+  /// Google Places, the ONLY tier that finds a hotel by its business name
+  /// where OpenStreetMap has no entry (measured: 27/30 vs 14/30). Off by
+  /// default — the keyless chain stays the normal case, exactly like the FX
+  /// CDN switch and the airline-logo tiers.
+  globalGooglePlacesApiKey  String? @map("global_google_places_api_key")
   globalOpenskyClientId     String? @map("global_opensky_client_id")
   globalOpenskyClientSecret String? @map("global_opensky_client_secret")
   globalOpenskyUsername     String? @map("global_opensky_username")
@@ -1138,6 +1143,12 @@ model Lodging {
   stars         Int?     // official 1–5
   amenities     String[] @default([])
   notes         String?
+  /// Has the user actually been here, or is it only noted down? A saved-places
+  /// export mixes both, and only the user knows which is which — so the import
+  /// asks once instead of inferring. Defaults to true: everything created
+  /// before this column existed, and everything entered by hand or parsed from
+  /// a booking, describes a place the user really went to.
+  visited       Boolean  @default(true)
   dataSource    String?  @map("data_source") // parser | manual | enriched
   externalRef   String?  @map("external_ref") // e.g. "google:ChIJd8BlQ2Bo5kcRAFTLmuLK8bA"
   batchId       String?  @map("batch_id")

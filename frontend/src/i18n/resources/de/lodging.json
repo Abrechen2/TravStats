@@ -16,7 +16,9 @@
       "rating": "Bewertung",
       "spend": "Ausgaben"
     },
-    "otherCurrencyHint": "Enthält weitere Beträge in einer älteren Basiswährung, die hier nicht mitgezählt sind."
+    "otherCurrencyHint": "Enthält weitere Beträge in einer älteren Basiswährung, die hier nicht mitgezählt sind.",
+    "bookmarked": "vorgemerkt",
+    "bookmarkedHint": "Noch nicht besucht — zählt in keiner Statistik mit."
   },
   "filter": {
     "searchPlaceholder": "Suche nach Name oder Ort …",
@@ -304,6 +306,13 @@
         "success": "{{deletedLodgings}} Hotel(s) und {{deletedStays}} Aufenthalt(e) gelöscht.",
         "withDetached": "{{deletedLodgings}} Hotel(s) und {{deletedStays}} Aufenthalt(e) gelöscht, {{detachedLodgings}} Hotel(s) behalten (haben weitere Aufenthalte)."
       }
+    },
+    "visited": {
+      "legend": "Was beschreibt diese Datei?",
+      "yes": "Häuser, in denen ich war",
+      "yesHint": "Zählt als besucht. Wann genau, kannst du je Haus später nachtragen.",
+      "no": "Häuser, die ich mir gemerkt habe",
+      "noHint": "Nur vorgemerkt — erscheint in der Liste und auf der Karte, zählt aber nirgends mit."
     }
   }
 }

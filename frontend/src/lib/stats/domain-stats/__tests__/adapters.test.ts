@@ -307,6 +307,7 @@ function makeLodging(overrides: Partial<Lodging> = {}): Lodging {
     lon: null,
     stars: null,
     amenities: [],
+    visited: true,
     notes: null,
     dataSource: null,
     createdAt: "2024-06-01T00:00:00.000Z",

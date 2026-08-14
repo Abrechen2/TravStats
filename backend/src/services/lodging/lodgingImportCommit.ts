@@ -145,6 +145,10 @@ async function createLodging(
       lon: fields.lon ?? null,
       notes: fields.notes ?? null,
       externalRef: fields.externalRef ?? null,
+      // Absent means visited — an importer that predates saved-places lists
+      // carries real stays, and defaulting the other way would demote every
+      // one of them to a bookmark.
+      visited: fields.visited ?? true,
       dataSource: "import",
     },
   });

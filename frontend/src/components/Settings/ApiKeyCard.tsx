@@ -12,7 +12,7 @@ import type { ProviderQuota } from "../../lib/api/settings";
 export type ApiCardCapability = "historical365";
 
 export interface ApiKeyCardProps {
-  provider: "airlabs" | "aviationstack" | "aerodatabox" | "opensky" | "logostream";
+  provider: "airlabs" | "aviationstack" | "aerodatabox" | "opensky" | "logostream" | "googlePlaces";
   label: string;
   description: string;
   getKeyUrl: string;
@@ -90,7 +90,9 @@ export default function ApiKeyCard({
   const handleTest = async () => {
     // No backend test endpoint exists for these providers; the early return
     // also narrows `provider` for the testApiKey union below.
-    if (!testable || provider === "logostream") {
+    // Neither of these has a backend test endpoint: one serves images, the
+    // other bills per request, and a "test" button that costs money is a trap.
+    if (!testable || provider === "logostream" || provider === "googlePlaces") {
       return;
     }
     setTesting(true);

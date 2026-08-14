@@ -91,8 +91,17 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
   }
 
   if (!matchedLodgingId && lodging) {
-    const key = `${normalizeLodgingName(lodging.name)}|${normalizeCity(lodging.city)}`;
-    const hits = idx.byNameCity.get(key) ?? [];
+    const nameKey = normalizeLodgingName(lodging.name);
+    const cityKey = normalizeCity(lodging.city);
+    // A row that carries a city is matched on name AND city — two "Hotel Post"
+    // in different towns are different houses. A row that carries NO city can
+    // only be matched on the name: comparing its empty city against a stored
+    // one can never succeed, so the strict key silently made every such row a
+    // new hotel. That is how a saved-places export (name and a map link,
+    // nothing else) re-created 38 houses the account already had.
+    const hits = cityKey
+      ? (idx.byNameCity.get(`${nameKey}|${cityKey}`) ?? [])
+      : (idx.byName.get(nameKey) ?? []);
     if (hits.length === 1) {
       dedupeHint = "lodging_name_city";
       matchedLodgingId = hits[0].id;

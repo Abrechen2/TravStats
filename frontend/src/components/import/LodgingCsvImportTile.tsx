@@ -55,6 +55,11 @@ export function LodgingCsvImportTile({ onImported }: Props): JSX.Element {
   // Shown INSIDE the wizard: a rejected mapping leaves it open, so a message
   // rendered only on the page behind it never reaches the user.
   const [mappingError, setMappingError] = useState<string | null>(null);
+  // A saved-places export mixes places the user stayed at with places they only
+  // noted down, and the file says nothing about which is which. Only the user
+  // knows, so the tile asks once per run instead of inferring per row. Default
+  // "visited": that is what every other import source describes.
+  const [visited, setVisited] = useState<boolean>(true);
 
   const fields = useMemo(
     () => buildLodgingMappingFields((f: LodgingCsvField) => t(`lodging:import.fields.${f}`)),
@@ -92,7 +97,7 @@ export function LodgingCsvImportTile({ onImported }: Props): JSX.Element {
   const handleMappingSubmit = useCallback(
     async (mapping: LodgingCsvMapping): Promise<void> => {
       if (!records) return;
-      const built = buildLodgingCandidates(records, mapping);
+      const built = buildLodgingCandidates(records, mapping, { visited });
       if (built.candidates.length === 0) {
         // A dead end that only says "nothing could be read" leaves the user
         // guessing which of their columns is wrong — name the reason and an
@@ -114,7 +119,7 @@ export function LodgingCsvImportTile({ onImported }: Props): JSX.Element {
         setError(t("lodging:import.errors.previewFailed"));
       }
     },
-    [records, t]
+    [records, t, visited]
   );
 
   const reset = useCallback((): void => {
@@ -126,6 +131,7 @@ export function LodgingCsvImportTile({ onImported }: Props): JSX.Element {
     setPreview(null);
     setError(null);
     setMappingError(null);
+    setVisited(true);
   }, []);
 
   return (
@@ -141,6 +147,46 @@ export function LodgingCsvImportTile({ onImported }: Props): JSX.Element {
       }
       errorBlock={error ? <ImportErrorBlock message={error} /> : undefined}
     >
+      {records && !preview && (
+        <fieldset
+          data-testid="lodging-import-visited"
+          style={{
+            border: "1px solid var(--color-border)",
+            borderRadius: 8,
+            padding: "10px 12px",
+            marginBottom: 12,
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+          }}
+        >
+          <legend style={{ padding: "0 6px", fontSize: 12, color: "var(--text-muted)" }}>
+            {t("lodging:import.visited.legend")}
+          </legend>
+          {[true, false].map((value) => (
+            <label
+              key={String(value)}
+              style={{ display: "flex", gap: 8, alignItems: "flex-start", cursor: "pointer" }}
+            >
+              <input
+                type="radio"
+                name="lodging-import-visited"
+                checked={visited === value}
+                onChange={() => setVisited(value)}
+                style={{ marginTop: 3 }}
+              />
+              <span>
+                <span style={{ display: "block", fontSize: 14 }}>
+                  {t(value ? "lodging:import.visited.yes" : "lodging:import.visited.no")}
+                </span>
+                <span style={{ display: "block", fontSize: 12, color: "var(--text-muted)" }}>
+                  {t(value ? "lodging:import.visited.yesHint" : "lodging:import.visited.noHint")}
+                </span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      )}
       {records && !preview && (
         <ColumnMappingWizard
           fields={fields}

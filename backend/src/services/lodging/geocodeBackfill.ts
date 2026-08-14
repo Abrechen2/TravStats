@@ -1,6 +1,8 @@
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import { geocodeAddress, reverseGeocode } from "../geo/nominatim";
+import { searchPlaces } from "../geo/photon";
+import { findLodgingPlace } from "../geo/googlePlaces";
 
 /** A guardrail, not a policy: a single pass never walks more than this many rows. */
 export const MAX_BACKFILL_ROWS = 500;
@@ -8,6 +10,101 @@ export const MAX_BACKFILL_ROWS = 500;
 export interface BackfillResult {
   attempted: number;
   filled: number;
+}
+
+/** The lodging fields a coordinate lookup can work from. */
+interface GeocodeSubject {
+  name: string;
+  type: string;
+  address: string | null;
+  city: string | null;
+  country: string | null;
+}
+
+/**
+ * OSM place kinds that are somewhere to sleep. Photon answers with the raw
+ * `osm_value`, and anything outside this set is NOT the hotel we asked for.
+ *
+ * Measured on 30 of the owner's real names: of 21 Photon answers, 7 were a
+ * charging station, a restaurant, a locality or a sawmill — "Thon Hotel Halden"
+ * came back as `charging_station`. Stored unchecked, those are pins that look
+ * right and are wrong, which is worse than an empty map.
+ */
+const OSM_LODGING_VALUES = new Set([
+  "hotel",
+  "hostel",
+  "guest_house",
+  "motel",
+  "apartment",
+  "chalet",
+  "camp_site",
+  "caravan_site",
+  "camp_pitch",
+  "alpine_hut",
+  "wilderness_hut",
+]);
+
+/** Where a resolved position came from, so the caller can log it honestly. */
+export type CoordinateSource = "photon" | "nominatim" | "google";
+
+export interface ResolvedCoordinates {
+  lat: number;
+  lon: number;
+  source: CoordinateSource;
+  /** Only Google reports what KIND of place it found; the others cannot. */
+  type?: string;
+  city?: string | null;
+  country?: string | null;
+  address?: string | null;
+}
+
+/**
+ * Find coordinates for one lodging: Photon, then Nominatim, then Google Places
+ * if — and only if — an admin has entered a key.
+ *
+ * The order is deliberate. Photon is keyless, fuzzy and name-first, which is
+ * what a saved-places list needs, and it has no per-second policy. Nominatim
+ * answers structured addresses the others may miss. Google is last because it
+ * is the only tier that costs money and leaves the open-data world; it is also
+ * the only one that knows a hotel by its business name, which is why an
+ * instance that wants precision can switch it on.
+ *
+ * Never throws — every tier degrades to "no answer" internally.
+ */
+async function resolveCoordinates(
+  row: GeocodeSubject,
+): Promise<ResolvedCoordinates | null> {
+  const query = [row.name, row.city, row.country].filter(Boolean).join(", ");
+
+  const [best] = await searchPlaces(query, { limit: 1 });
+  // A hit is only usable when it IS a lodging. Photon does not always report a
+  // type; an unknown one is treated as unusable rather than assumed good.
+  if (best && best.type && OSM_LODGING_VALUES.has(best.type)) {
+    return { lat: best.lat, lon: best.lon, source: "photon" };
+  }
+
+  const nominatim = await geocodeAddress({
+    name: row.name,
+    address: row.address,
+    city: row.city,
+    country: row.country,
+  });
+  if (nominatim) return { lat: nominatim.lat, lon: nominatim.lon, source: "nominatim" };
+
+  const google = await findLodgingPlace(query);
+  if (google) {
+    return {
+      lat: google.lat,
+      lon: google.lon,
+      source: "google",
+      type: google.type,
+      city: google.city,
+      country: google.country,
+      address: google.address,
+    };
+  }
+
+  return null;
 }
 
 /**
@@ -44,7 +141,7 @@ export async function backfillMissingCoordinates(
       // for. The old filter demanded a city or an address and therefore skipped
       // exactly the rows a parsed booking confirmation produces — hotel name,
       // no street — which is how an e-mail import ended up with no pin at all.
-      select: { id: true, name: true, address: true, city: true, country: true },
+      select: { id: true, name: true, type: true, address: true, city: true, country: true },
       orderBy: { createdAt: "asc" },
       take: MAX_BACKFILL_ROWS,
     });
@@ -52,16 +149,20 @@ export async function backfillMissingCoordinates(
     for (const row of rows) {
       attempted++;
       try {
-        const coords = await geocodeAddress({
-          name: row.name,
-          address: row.address,
-          city: row.city,
-          country: row.country,
-        });
+        const coords = await resolveCoordinates(row);
         if (!coords) continue;
         await prisma.lodging.update({
           where: { id: row.id },
-          data: { lat: coords.lat, lon: coords.lon },
+          data: {
+            lat: coords.lat,
+            lon: coords.lon,
+            // Only ever FILLS gaps: a value the user typed is never overwritten
+            // by a lookup, and only Google reports a kind at all.
+            ...(coords.type && coords.type !== row.type ? { type: coords.type } : {}),
+            ...(coords.city && !row.city ? { city: coords.city } : {}),
+            ...(coords.country && !row.country ? { country: coords.country } : {}),
+            ...(coords.address && !row.address ? { address: coords.address } : {}),
+          },
         });
         filled++;
       } catch (err) {
