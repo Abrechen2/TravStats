@@ -136,7 +136,9 @@
   },
   "fx": {
     "source": "EZB",
+    "sourceMarket": "Marktkurs",
     "tooltip": "Umgerechnet zum EZB-Referenzkurs des Check-in-Tages",
+    "tooltipMarket": "Umgerechnet zu einem Marktkurs des Check-in-Tages — kein amtlicher EZB-Kurs, sondern ein freier Datensatz für Währungen, die die EZB nicht veröffentlicht.",
     "markerNone": "kein Kurs",
     "markerManual": "eigener Kurs",
     "tooltipNone": "Kein Kurs verfügbar — nicht in Summen enthalten",

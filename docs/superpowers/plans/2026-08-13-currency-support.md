@@ -1172,3 +1172,60 @@ in Tasks 5, 6 and 7. `getRate` and `getCdnRate` share one return shape.
 `formatStayPriceDisplay`'s third parameter changes from a string to a labels
 object in Task 9, which is the only signature change to an existing exported
 function and is stated there.
+
+---
+
+## Browser Acceptance (2026-08-14)
+
+Run against a local dev stack (backend :8000, frontend :3000, dev DB), logged in
+as the seeded admin, lodging domain enabled. What was exercised: the ECB path
+(45,000 JPY on 2024-10-10), the CDN path (11,662 EGP on 2024-06-01), the no-rate
+path with a hand-typed rate (2,400 AED on 2023-05-10), the admin CDN switch, the
+recent-currencies endpoint, and the totals on the lodging list, the lodging
+detail and the trip cards.
+
+Confirmed working: per-currency decimals (JPY shows no decimals, its per-night
+figure reads ¥15,000), the stored snapshot including `fx_source` (`ecb` / `cdn` /
+`manual` — read back from the database, not inferred), the admin switch really
+cutting the CDN off (same EGP query answers with a rate, then with none, then
+with a rate again), the shared picker in the cruise editor with recents pinned,
+the lodging total excluding unconverted stays and footnoting how many, and the
+trip card writing "1.490 € + $780" rather than swallowing the unconvertible half.
+
+Two defects the test suite could not see, both fixed here:
+
+1. **A CDN rate was labelled "EZB".** The ECB publishes 30 currencies and EGP is
+   not among them, so the readout stated something verifiably untrue about where
+   the number came from — and the tooltip said "EZB-Referenzkurs" outright.
+   `FxStateLabels` gained a `market` label and `formatStayPriceDisplay` now picks
+   the label from the source.
+
+2. **A hand-typed rate was labelled "EZB" too, and wore no badge.** Root cause of
+   both: `LodgingStayCard` and `StayEditorPriceSection` built the snapshot object
+   field by field and left `fxSource` out, so the formatter — which was right all
+   along, and whose own tests passed — never saw a source. `FxPreview` did not
+   carry `source` either, though the endpoint has always sent it.
+
+   The lesson is the one the airline-logo chain already taught: a unit test that
+   calls a pure function directly cannot catch a caller that forgets an argument.
+   `LodgingStayCard.fxSource.test.tsx` renders the component instead, and was
+   verified to FAIL against the code as it stood before the fix.
+
+Also fixed: the no-rate hint printed the check-in day as "2023-05-10" inside a
+German sentence; it now reads 10.05.2023 via `formatDayForLocale`.
+
+Left for the owner to decide, all pre-existing and none of them introduced here:
+
+- The lodging LIST's "Ausgaben" KPI has no "not converted" footnote, though the
+  detail page's does — the same total, honest on one screen and silent on the
+  other.
+- A lodging whose only priced stay is unconverted renders "$780 ≈ 0 €" in the
+  list row. The detail page says "kein Kurs" for the same stay.
+- `formatCurrency` passes `minimumFractionDigits: 0`, so a euro amount can read
+  "276,3 €" instead of "276,30 €". Changing it moves every price in the app.
+- The cruise list still prints raw "3290.00 EUR" while lodging formats properly.
+- `GET /currencies/recent` answers `{codes: [...]}` rather than the project's
+  `{success, data}` envelope.
+- `Intl.DisplayNames` has no name for SLE or ZWG, so the picker shows
+  "SLE — SLE". Harmless, and inventing names locally would fight the registry's
+  "codes only" design.

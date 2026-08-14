@@ -3,7 +3,7 @@ import type { JSX } from "react";
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useLodgingFxPreview } from "../../hooks/useLodgingFxPreview";
-import { formatStayPriceDisplay } from "../../lib/lodgingFormat";
+import { formatDayForLocale, formatStayPriceDisplay } from "../../lib/lodgingFormat";
 import { formatCurrency } from "../../lib/units";
 import type { LodgingCurrency } from "../../types/lodging";
 
@@ -91,10 +91,15 @@ export function StayEditorPriceSection({
       fxRate: preview?.rate ?? null,
       fxRateDate: preview?.rateDate ?? null,
       fxBaseCurrency: preview?.baseCurrency ?? null,
+      // The preview must name the SAME source the saved stay will, or the
+      // editor promises an ECB rate the card then contradicts.
+      fxSource: preview?.source ?? null,
     },
     language,
     {
       ecb: t("lodging:fx.source"),
+
+      market: t("lodging:fx.sourceMarket"),
 
       manual: t("lodging:fx.markerManual"),
 
@@ -171,7 +176,10 @@ export function StayEditorPriceSection({
           <p className="text-xs text-[var(--text-muted)]">
             {t("lodging:fx.noRateHint", {
               currency,
-              date: checkInDate ? checkInDate.slice(0, 10) : "",
+              // The day the user reads, not the day the API speaks: a German
+              // sentence carrying "2023-05-10" is the machine's format leaking
+              // into the copy.
+              date: formatDayForLocale(checkInDate, language),
             })}
           </p>
           <label className="block text-xs text-[var(--text-primary)]">

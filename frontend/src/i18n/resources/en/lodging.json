@@ -136,7 +136,9 @@
   },
   "fx": {
     "source": "ECB",
+    "sourceMarket": "market rate",
     "tooltip": "Converted at the ECB reference rate for the check-in day",
+    "tooltipMarket": "Converted at a market rate for the check-in day — not an official ECB rate, but a free dataset for currencies the ECB does not publish.",
     "markerNone": "no rate",
     "markerManual": "your own rate",
     "tooltipNone": "No rate available — not included in totals",
