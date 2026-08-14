@@ -41,7 +41,7 @@ const INLINE_CELL_STYLE: CSSProperties = {
  * `/lodging` list page (`variant="inline"`).
  */
 export function LodgingStatStrip({ stats, variant = "overlay" }: LodgingStatStripProps): JSX.Element {
-  const { t } = useTranslation(["dashboard"]);
+  const { t } = useTranslation(["dashboard", "lodging"]);
   // `spendBaseTotal` is computed by the backend in the user's actual base
   // currency (`UserSettings.baseCurrency`, ECB rate applied per stay's
   // check-in day) — NOT `units.currency`, which is an independent display
@@ -54,12 +54,23 @@ export function LodgingStatStrip({ stats, variant = "overlay" }: LodgingStatStri
       ? `★ ${stats.avgRatingOverall.toFixed(1)}`
       : t("dashboard:lodgingTab.stats.noRating");
   const otherSpend = otherCurrencySpend(stats.spendByCurrency, stats.spendBaseTotal, baseCurrency);
-  const spendSub = otherSpend
-    ? t("dashboard:lodgingTab.stats.spendOtherCurrency", {
-        orig: otherSpend.currencies.map(({ currency, amount }) => formatCurrency(amount, currency)).join(" + "),
-        converted: formatCurrency(otherSpend.convertedTotal, baseCurrency),
-      })
-    : null;
+  // Two different things can sit under this total, and they are not the same
+  // sentence: money recorded in another currency and CONVERTED into this one,
+  // versus money nothing could convert and that the total therefore omits. The
+  // second used to go unsaid here while the lodging detail page said it — the
+  // same figure, honest on one screen and silent on the other.
+  const spendSubParts = [
+    otherSpend
+      ? t("dashboard:lodgingTab.stats.spendOtherCurrency", {
+          orig: otherSpend.currencies.map(({ currency, amount }) => formatCurrency(amount, currency)).join(" + "),
+          converted: formatCurrency(otherSpend.convertedTotal, baseCurrency),
+        })
+      : null,
+    stats.spendUnconvertedStays > 0
+      ? t("lodging:fx.omittedFromTotal", { count: stats.spendUnconvertedStays })
+      : null,
+  ].filter((part): part is string => part !== null);
+  const spendSub = spendSubParts.length > 0 ? spendSubParts.join(" · ") : null;
 
   const cells: { key: string; value: string; label: string; sub?: string | null }[] = [
     {

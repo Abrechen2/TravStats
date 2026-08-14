@@ -23,6 +23,7 @@ const baseStats: LodgingStats = {
   countriesCount: 1,
   spendBaseTotal: 0,
   spendByCurrency: {},
+  spendUnconvertedStays: 0,
   spendBaseByCurrency: {},
   awardNights: 0,
   nightsByType: { hotel: 11 },

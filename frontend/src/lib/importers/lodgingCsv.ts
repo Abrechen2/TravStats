@@ -1,3 +1,4 @@
+import { isCurrencyCode } from "../../shared/currencies";
 // Lodging CSV importer: field spec, header heuristic, shape detection and
 // candidate builder. This is a ONE-TIME MIGRATION TOOL (spec §3.1) — the
 // ongoing lodging import path is email/PDF via cruiseBookingParser-style
@@ -310,7 +311,6 @@ function toRating(raw: string): NumericCellResult {
 
 const LODGING_TYPES = ["hotel", "campsite", "guesthouse", "apartment", "hostel"] as const;
 const BOARD_TYPES = ["none", "breakfast", "half", "full", "all_inclusive"] as const;
-const CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
 
 function toLodgingType(raw: string): LodgingType | null {
   const v = raw.toLowerCase();
@@ -327,8 +327,11 @@ function toBoard(raw: string): BoardType | null {
 }
 
 function toCurrency(raw: string): LodgingCurrency | null {
+  // Validated against the whole ISO-4217 registry, not four codes: a sheet in
+  // NOK used to arrive here, lose its currency, and take its price down with
+  // it (the commit path refuses to invent one).
   const v = raw.toUpperCase();
-  return (CURRENCIES as readonly string[]).includes(v) ? (v as (typeof CURRENCIES)[number]) : null;
+  return isCurrencyCode(v) ? v : null;
 }
 
 /** A row error before it knows which row it belongs to. */

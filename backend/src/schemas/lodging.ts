@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isCurrencyCode } from "../shared/currencies";
 import { receiptUrlValidator } from "./receiptUrl";
 
 export const LODGING_TYPES = ["hotel", "campsite", "guesthouse", "apartment", "hostel"] as const;
@@ -15,7 +16,14 @@ export const BOARD_TYPES = [
 // The wire still ACCEPTS all four so an importer or an older client is never
 // rejected, but only "cancelled" survives derivation; see deriveLodgingStatus.
 export const STAY_STATUSES = ["scheduled", "in_progress", "completed", "cancelled"] as const;
-export const CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
+/**
+ * Any real ISO-4217 code. Deliberately NOT limited to what a rate source can
+ * convert: recording a price and converting it are different questions, and
+ * conflating them is what made a Dubai booking unrecordable.
+ */
+export const currencyField = z
+  .string()
+  .refine(isCurrencyCode, { message: "must be a valid ISO 4217 currency code" });
 
 // Accept partial datetimes and coerce them to full ISO 8601, mirroring schemas/cruise.ts.
 const isoDateTimeRequired = z.preprocess((v) => {
@@ -70,11 +78,15 @@ const baseStaySchema = z.object({
   // Optional here even though the DB column is NOT NULL DEFAULT 'EUR' — omitting it
   // lets the client fall back to the column default rather than forcing every caller
   // to send a currency.
-  currency: z.enum(CURRENCIES).optional(),
+  currency: currencyField.optional(),
   // Nullable so a user can explicitly clear a price (e.g. an award stay that
   // turns out to have cost nothing) — an explicit `null` here also drives the
   // FX snapshot clear in routes/lodging.ts (finding 1 + finding 4 interact).
   totalPrice: z.number().min(0).nullable().optional(),
+  // A rate the USER supplies for a currency and day no provider covers. NOT a
+  // stay column: it produces `fxRate` + `fxSource: "manual"` and is stripped
+  // before the write. An explicit null takes the rate back.
+  manualFxRate: z.number().positive().nullable().optional(),
   isAwardStay: z.boolean().optional(),
   ratingRoom: rating,
   ratingBreakfast: rating,
@@ -96,10 +108,24 @@ const baseStaySchema = z.object({
     .optional(),
 });
 
-export const createStaySchema = baseStaySchema.refine(
-  (d) => new Date(d.checkOut).getTime() >= new Date(d.checkIn).getTime(),
-  { message: "checkOut must not precede checkIn", path: ["checkOut"] },
-);
+export const createStaySchema = baseStaySchema
+  .refine((d) => new Date(d.checkOut).getTime() >= new Date(d.checkIn).getTime(), {
+    message: "checkOut must not precede checkIn",
+    path: ["checkOut"],
+  })
+  // An amount with no unit is not a price. Without this, `currency` simply
+  // stayed absent and the NOT-NULL column's 'EUR' default answered for it —
+  // so an 11,662 AED stay entered through the API was stored, and totalled,
+  // as EUR 11,662. Both price fields are checked because the route derives
+  // the total from `pricePerNight` when only that one is sent.
+  //
+  // Deliberately NOT on `updateStaySchema`: a stored row always has a
+  // currency (the column is NOT NULL and a PATCH cannot clear it), so a
+  // price-only update carries its unit implicitly.
+  .refine((d) => (d.totalPrice == null && d.pricePerNight == null) || d.currency != null, {
+    message: "currency is required when a price is given",
+    path: ["currency"],
+  });
 export const updateStaySchema = baseStaySchema
   .partial()
   .refine((d) => Object.keys(d).length > 0, {

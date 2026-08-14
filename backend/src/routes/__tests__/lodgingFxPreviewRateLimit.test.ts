@@ -3,7 +3,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
-import * as fx from "../../services/fx/frankfurter";
+import * as fx from "../../services/fx/resolver";
 
 /**
  * GET /api/v1/lodging/fx-preview proxies to the free public Frankfurter/ECB
@@ -43,6 +43,7 @@ describe("GET /api/v1/lodging/fx-preview — rate limiting", () => {
       baseAmount: 100,
       rate: 1,
       rateDate: "2026-01-01",
+      source: "ecb",
     });
   });
 

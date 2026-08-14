@@ -78,11 +78,11 @@
     "title": "Loading...",
     "checkingSystem": "Checking system status",
     "pleaseWait": "Please wait",
-    "default": "Loading\u2026",
-    "flights": "Loading flights\u2026",
-    "stats": "Crunching statistics\u2026",
-    "map": "Preparing map\u2026",
-    "globe": "Rendering globe\u2026"
+    "default": "Loading…",
+    "flights": "Loading flights…",
+    "stats": "Crunching statistics…",
+    "map": "Preparing map…",
+    "globe": "Rendering globe…"
   },
   "errorBoundary": {
     "title": "Oops! Something went wrong",
@@ -186,5 +186,11 @@
     "title": "Page not found",
     "message": "This page doesn't exist or has moved.",
     "back": "Back to dashboard"
+  },
+  "currencySelect": {
+    "label": "Currency",
+    "search": "Search currency …",
+    "frequent": "Frequent",
+    "all": "All currencies"
   }
 }
