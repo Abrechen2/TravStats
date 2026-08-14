@@ -21,6 +21,7 @@ import { z } from "zod";
 import { getApiKey } from "../apiKeyResolver";
 import logger from "../../utils/logger";
 import { LODGING_TYPES } from "../../schemas/lodging";
+import { chainFromWebsite } from "../lodging/chainFromWebsite";
 
 /** The vocabulary the app stores — never Google's. */
 type LodgingTypeKey = (typeof LODGING_TYPES)[number];
@@ -70,8 +71,15 @@ const responseSchema = z.object({
         primaryType: z.string().optional(),
         location: z.object({ latitude: z.number(), longitude: z.number() }),
         shortFormattedAddress: z.string().optional(),
+        websiteUri: z.string().optional(),
         addressComponents: z
-          .array(z.object({ longText: z.string(), types: z.array(z.string()) }))
+          .array(
+            z.object({
+              longText: z.string(),
+              shortText: z.string().optional(),
+              types: z.array(z.string()),
+            }),
+          )
           .optional(),
       }),
     )
@@ -87,6 +95,14 @@ export interface GooglePlaceMatch {
   city: string | null;
   country: string | null;
   address: string | null;
+  /**
+   * The chain, derived from the hotel's own website — Places has no brand
+   * field, but a link to ihg.com says what "Garner Hotel Erlangen Süd by IHG"
+   * does not. Null for an independent house, which is the common case.
+   */
+  chainName: string | null;
+  /** ISO 3166-1 alpha-2, which is what a flag is drawn from. */
+  countryCode: string | null;
 }
 
 /** True when an instance has a key configured — used to skip the tier entirely. */
@@ -116,9 +132,13 @@ export async function findLodgingPlace(query: string): Promise<GooglePlaceMatch 
         // Field mask is mandatory AND billing-relevant: asking for less is
         // cheaper, so request exactly the six fields this function returns.
         "X-Goog-FieldMask":
-          "places.displayName,places.primaryType,places.location,places.shortFormattedAddress,places.addressComponents",
+          "places.displayName,places.primaryType,places.location,places.shortFormattedAddress,places.addressComponents,places.websiteUri",
       },
-      body: JSON.stringify({ textQuery: trimmed, maxResultCount: 1 }),
+      // Without a language Google answers in the LOCAL one, and a Shanghai
+      // hotel comes back with a Chinese address that a German reader cannot
+      // read at all. Asking for German gets the transliterated/localised form
+      // where one exists, and the local text only where it does not.
+      body: JSON.stringify({ textQuery: trimmed, maxResultCount: 1, languageCode: "de" }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
 
@@ -150,6 +170,9 @@ export async function findLodgingPlace(query: string): Promise<GooglePlaceMatch 
 
     const component = (wanted: string): string | null =>
       place.addressComponents?.find((c) => c.types.includes(wanted))?.longText ?? null;
+    // The flag needs the ISO code, not the name — "China" draws nothing.
+    const countryCode =
+      place.addressComponents?.find((c) => c.types.includes("country"))?.shortText ?? null;
 
     return {
       lat: place.location.latitude,
@@ -159,6 +182,8 @@ export async function findLodgingPlace(query: string): Promise<GooglePlaceMatch 
       city: component("locality") ?? component("postal_town") ?? component("administrative_area_level_2"),
       country: component("country"),
       address: place.shortFormattedAddress ?? null,
+      chainName: chainFromWebsite(place.websiteUri),
+      countryCode,
     };
   } catch (error) {
     logger.warn(

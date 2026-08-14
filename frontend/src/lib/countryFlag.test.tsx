@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { countryFromUnlocode, flagImgHtml, resolveCountryCode } from "./countryFlag";
+import { render } from "@testing-library/react";
+import { countryFromUnlocode, FlagImg, flagImgHtml, resolveCountryCode } from "./countryFlag";
 
 describe("countryFromUnlocode", () => {
   it("takes the ISO prefix of the LOCODE, upper-cased", () => {
@@ -53,5 +54,40 @@ describe("resolveCountryCode", () => {
     expect(resolveCountryCode(null)).toBeNull();
     expect(resolveCountryCode("")).toBeNull();
     expect(resolveCountryCode("Nonexistentland")).toBeNull();
+  });
+});
+
+describe("flagImgHtml", () => {
+  it("resolves a name too, so a globe tooltip is not the odd one out", () => {
+    expect(flagImgHtml("Deutschland")).toContain("https://flagcdn.com/de.svg");
+    expect(flagImgHtml("Nirgendwo")).toBe("");
+  });
+});
+
+describe("FlagImg", () => {
+  it("draws a flag for a country NAME, not only for a code", () => {
+    // A lodging carries its country as a name — "Deutschland" from a booking
+    // mail, whatever Google Places answers for the rest. Accepting only the
+    // two-letter code left a whole hotel list flagless while the flight list,
+    // fed by the airport catalogue, was fully flagged.
+    const { container } = render(<FlagImg country="Deutschland" />);
+    expect(container.querySelector("img")?.getAttribute("src")).toBe("https://flagcdn.com/de.svg");
+  });
+
+  it("still draws one for a plain code", () => {
+    const { container } = render(<FlagImg country="ch" />);
+    expect(container.querySelector("img")?.getAttribute("src")).toBe("https://flagcdn.com/ch.svg");
+  });
+
+  it("keeps the URL lowercase — flagcdn 404s on /DE.svg", () => {
+    // `resolveCountryCode` upper-cases by design (it is an ISO code), so the
+    // URL builder has to lower it again. Both call sites go through flagUrl.
+    const { container } = render(<FlagImg country="Schweiz" />);
+    expect(container.querySelector("img")?.getAttribute("src")).toBe("https://flagcdn.com/ch.svg");
+  });
+
+  it("draws nothing at all when the country cannot be resolved", () => {
+    const { container } = render(<FlagImg country="Nirgendwo" />);
+    expect(container.querySelector("img")).toBeNull();
   });
 });
