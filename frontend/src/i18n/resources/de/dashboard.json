@@ -253,12 +253,14 @@
     "addFlight": "Ersten Flug anlegen",
     "chooseDomains": "Auswählen, was du erfassen willst"
   },
-  "nextFlight": {
-    "label": "Nächster Flug",
+  "nextUp": {
+    "label": "Als Nächstes",
+    "inDays": "in {{count}} Tagen",
     "inDays_one": "in {{count}} Tag",
     "inDays_other": "in {{count}} Tagen",
-    "inHours_one": "in {{count}} Stunde",
-    "inHours_other": "in {{count}} Stunden",
+    "inHours": "in {{count}} Std.",
+    "inHours_one": "in {{count}} Std.",
+    "inHours_other": "in {{count}} Std.",
     "today": "heute"
   }
 }

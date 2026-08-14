@@ -2,6 +2,8 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import type { DashboardTab } from "../../types/dashboard";
+import type { UpcomingEntry } from "../../lib/api/upcoming";
+import { NextUpEntry } from "./NextUpEntry";
 import { DASHBOARD_TABS } from "../../types/dashboard";
 
 interface DomainTabStripProps {
@@ -9,6 +11,14 @@ interface DomainTabStripProps {
   counts: Record<Exclude<DashboardTab, "all">, number>;
   enabled: Record<Exclude<DashboardTab, "all">, boolean>;
   onSelect(next: DashboardTab): void;
+  /**
+   * At most one upcoming entry per domain, soonest first. The strip shows the
+   * one belonging to the ACTIVE tab, or the soonest of all on "Alle" — the
+   * next thing that concerns whatever the user is looking at.
+   */
+  upcoming?: readonly UpcomingEntry[];
+  /** Now, as a timestamp — injected so the countdown is testable. */
+  nowMs?: number;
 }
 
 const TAB_ICON: Record<DashboardTab, string> = {
@@ -24,6 +34,8 @@ export function DomainTabStrip({
   counts,
   enabled,
   onSelect,
+  upcoming = [],
+  nowMs = Date.now(),
 }: DomainTabStripProps): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
   const { isFeatureVisible } = useBetaFeatures();
@@ -33,6 +45,12 @@ export function DomainTabStrip({
   const visibleTabs = DASHBOARD_TABS.filter(
     (tab) => tab !== "poi" || isFeatureVisible("poiDashboardTab")
   );
+
+  // On a domain tab, that domain's next entry; on "Alle", the soonest of all —
+  // including the trip, which belongs to no single tab. `upcoming` arrives
+  // sorted, so "the soonest" is simply the first one.
+  const nextUp =
+    active === "all" ? upcoming[0] : upcoming.find((entry) => entry.domain === active);
 
   return (
     <div
@@ -44,6 +62,7 @@ export function DomainTabStrip({
         borderBottom: "1px solid var(--color-border)",
         display: "flex",
         gap: "4px",
+        alignItems: "center",
         fontSize: "13px",
         overflowX: "auto",
         whiteSpace: "nowrap",
@@ -91,6 +110,7 @@ export function DomainTabStrip({
           </button>
         );
       })}
+      {nextUp && <NextUpEntry entry={nextUp} nowMs={nowMs} />}
     </div>
   );
 }
