@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Lodging } from "../../../../types/lodging";
+import { MAP_LAYER_COLORS } from "../../../../types/mapTheme";
+import { PORT_RGB } from "../../../layers/cruisePortsLayer";
 import { DOMAINS } from "../../../../shared/domains";
 import { useDashboardFilterStore } from "../../../../store/dashboardFilterStore";
 
@@ -152,6 +154,44 @@ describe("AllTab: the lodging domain chip actually does something", () => {
     // The route domains keep their line swatch — the point is the contrast.
     const line = swatchOf("dashboard:legend.flightPast");
     expect(line?.style.borderRadius).not.toBe("50%");
+  });
+
+  it("names the airport and port dots too, in the colours the layers paint them", async () => {
+    // Same message as the lodging circle: the marks that are ONLY marks had no
+    // key at all. Colours are asserted against the sources the layers use —
+    // the map theme for the airport dot, cruisePortsLayer's own constant for
+    // the port — so a copied literal here would fail.
+    render(
+      <MemoryRouter>
+        <AllTab />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("dashboard:legend.airport")).toBeInTheDocument();
+    });
+
+    expect(swatchBackground("dashboard:legend.airport")).toBe(
+      `rgb(${MAP_LAYER_COLORS.glassmorphism.airportDot.join(", ")})`
+    );
+    expect(swatchBackground("dashboard:legend.port")).toBe(`rgb(${PORT_RGB.join(", ")})`);
+    expect(swatchOf("dashboard:legend.airport")?.style.borderRadius).toBe("50%");
+    expect(swatchOf("dashboard:legend.port")?.style.borderRadius).toBe("50%");
+  });
+
+  it("drops the port row when the cruise chip is off — a key for marks that are not drawn is noise", async () => {
+    useDashboardFilterStore.setState({ domains: ["flight", "lodging"] });
+
+    render(
+      <MemoryRouter>
+        <AllTab />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("dashboard:legend.airport")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("dashboard:legend.port")).not.toBeInTheDocument();
   });
 
   it("toggling the chip off hides the pins AND the legend row — the previously-dead chip is now functional", async () => {
