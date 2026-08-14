@@ -3,6 +3,28 @@
   "subtitle": "Ein kurzer Überblick über die wichtigsten Änderungen.",
   "dismiss": "Verstanden",
   "entries": {
+    "v260": {
+      "lodging": {
+        "title": "Hotels sind ein eigener Bereich",
+        "body": "Übernachtungen werden jetzt wie Flüge und Kreuzfahrten geführt: mit Kette, Zimmer, Verpflegung, Bewertungen je Kategorie, Preis, Bonusprogramm und der Reise, zu der sie gehören. Auf der Karte stehen sie als Nadel, in Statistiken und Erfolgen zählen sie mit — und wer den Bereich abschaltet, sieht ihn nirgends mehr, ohne dass Daten verloren gehen."
+      },
+      "parser": {
+        "title": "Buchungsbestätigungen liest TravStats selbst",
+        "body": "Booking.com-Mails werden von einer festen Vorlage gelesen: an 95 echten Bestätigungen gemessen findet sie den Aufenthalt in 93 und den Preis in allen 93 — in beiden Layouts, die der Absender verschickt. Was die Vorlage nicht kennt, geht denselben Weg wie bei Flügen über die KI. Für ganze Listen gibt es einen CSV-Import, der vorher zeigt, was er tun wird, Zweifelsfälle nach oben sortiert und sich als Ganzes zurücknehmen lässt."
+      },
+      "currency": {
+        "title": "Jede Währung — und eine Summe, die nichts verschweigt",
+        "body": "Ein Preis darf in jeder Währung stehen. Umgerechnet wird über die Europäische Zentralbank, und für Währungen, die sie nicht führt, über einen freien Datensatz, den du als Betreiber abschalten kannst. Wo es keinen Kurs gibt, bleibt der Betrag in seiner Währung stehen, wird als „kein Kurs\" gekennzeichnet, zählt in keine Summe — und die Summe sagt, wie viele Einträge ihr fehlen. Einen eigenen Kurs darfst du eintragen; er wird immer als deiner ausgewiesen, nie als amtlicher."
+      },
+      "security": {
+        "title": "Zwei-Faktor und Passkeys",
+        "body": "Du kannst dein Konto mit einem zweiten Faktor absichern — TOTP, mit einmalig nutzbaren Wiederherstellungscodes — oder gleich mit einem Passkey, der das Passwort ersetzt. Beides findest du im neuen Sicherheitsbereich der Einstellungen."
+      },
+      "map": {
+        "title": "Aufgeräumte Karte",
+        "body": "Was als Nächstes ansteht, steht jetzt rechts in der Bereichsleiste statt als Kachel über der Karte — dort verdeckte es die Modus-Umschaltung vollständig. Der Eintrag folgt dem gewählten Bereich und nennt die Reise, zu der er gehört. Die Legende zeigt Unterkünfte als Kreis statt als Strecke und benennt endlich auch Flughäfen und Häfen."
+      }
+    },
     "v250": {
       "flightsTable": {
         "title": "Flugtabelle wie eine Abflugtafel",
