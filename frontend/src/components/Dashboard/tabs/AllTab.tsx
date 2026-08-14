@@ -12,8 +12,11 @@ import { tripsApi } from "../../../lib/api/trips";
 import { buildCruiseLegend, type CruiseLegendRow } from "../../../lib/cruiseColor";
 import { buildFlightLegend, rgbCss, type FlightLegendRow } from "../../../lib/flightColor";
 import { buildLodgingLegend } from "../../../lib/lodgingColor";
+import { PORT_RGB } from "../../layers/cruisePortsLayer";
+import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
 import { logger } from "../../../lib/logger";
 import { useCruiseColorStore } from "../../../store/cruiseColorStore";
+import { useThemeStore } from "../../../store/themeStore";
 import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
 import { useFlightColorStore } from "../../../store/flightColorStore";
 import {
@@ -75,6 +78,9 @@ export function AllTab(): JSX.Element {
   // the state, run through the same colour resolver.
   const flightColorConfig = useFlightColorStore((s) => s.config);
   const cruiseColorConfig = useCruiseColorStore((s) => s.config);
+  // Same store `DeckGLMap` reads to colour the airport dot, so the key and the
+  // map change together when the map theme changes.
+  const themeColors = MAP_LAYER_COLORS[useThemeStore((s) => s.mapTheme)];
   const [flights, setFlights] = useState<GeoJSONFeature[]>([]);
   const [cruises, setCruises] = useState<Cruise[]>([]);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
@@ -402,6 +408,27 @@ export function AllTab(): JSX.Element {
     legendRow(rgbCss(row.color), t("dashboard:legend.lodging"), `lodging-${row.slot}`, "dot")
   );
 
+  // Airports and ports are the only marks on this map that are ONLY marks:
+  // an arc explains itself by connecting two places, a dot does not. They were
+  // drawn and never named, which is the one thing a legend exists for (Alex,
+  // 2026-08-09, same message as the lodging circle above).
+  //
+  // Both colours are READ from what the layers paint with — the airport dot
+  // from the active map theme (`routesLayer` falls back to exactly this value),
+  // the port from `cruisePortsLayer`'s own exported constant. Nothing is typed
+  // in twice, so switching the map theme cannot leave the key behind.
+  const placeLegendRows = [
+    flightsVisible &&
+      legendRow(
+        rgbCss(themeColors.airportDot),
+        t("dashboard:legend.airport"),
+        "place-airport",
+        "dot"
+      ),
+    cruisesVisible &&
+      legendRow(rgbCss(PORT_RGB), t("dashboard:legend.port"), "place-port", "dot"),
+  ].filter((row): row is JSX.Element => row !== false);
+
   // Colour key as a compact table pinned bottom-right — out of the top band
   // so it never collides with the globe's time histogram or the top-left
   // controls. Renders only the visible domains' rows.
@@ -427,6 +454,7 @@ export function AllTab(): JSX.Element {
       {flightsVisible && flightLegendRows}
       {cruisesVisible && cruiseLegendRows}
       {lodgingsVisible && lodgingLegendRows}
+      {placeLegendRows}
     </div>
   );
 

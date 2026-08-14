@@ -239,7 +239,9 @@
     "cruiseSolid": "Kreuzfahrten",
     "flightFrequency": "Flüge (Häufigkeit)",
     "flightSolid": "Flüge",
-    "lodging": "Unterkünfte"
+    "lodging": "Unterkünfte",
+    "airport": "Flughafen",
+    "port": "Hafen"
   },
   "userMenu": {
     "label": "Konto-Menü"
