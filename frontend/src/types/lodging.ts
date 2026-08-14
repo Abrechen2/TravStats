@@ -85,8 +85,8 @@ export interface LodgingStay {
   fxRate: number | null;
   fxRateDate: string | null;
   fxBaseCurrency: string | null;
-  /** Which provider converted it — 'ecb' | 'cdn' | 'manual', null if none did. */
-  fxSource: string | null;
+  /** Which provider converted it, null if none did. */
+  fxSource: FxRateSource | null;
   isAwardStay: boolean;
   ratingRoom: number | null;
   ratingBreakfast: number | null;
@@ -243,7 +243,16 @@ export interface FxPreview {
   rate: number;
   rateDate: string;
   baseCurrency: string;
+  /**
+   * Which provider answered — `GET /lodging/fx-preview` has always sent it;
+   * the type used to drop it, so the editor could not tell an ECB rate from a
+   * CDN one and called both "EZB".
+   */
+  source: FxRateSource;
 }
+
+/** The providers a stored or previewed rate can come from. */
+export type FxRateSource = "ecb" | "cdn" | "manual";
 
 /**
  * Shape of `GET /api/v1/lodging-chains/:id` (routes/lodgingChains.ts). The

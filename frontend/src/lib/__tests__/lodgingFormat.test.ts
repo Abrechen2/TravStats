@@ -12,7 +12,12 @@ import {
 
 // The formatter takes the three state words together now (task 9): a rate the
 // user typed must be labelled as theirs, never as the ECB's.
-const LABELS = { ecb: "EZB", manual: "eigener Kurs", none: "kein Kurs" };
+const LABELS = {
+  ecb: "EZB",
+  market: "Marktkurs",
+  manual: "eigener Kurs",
+  none: "kein Kurs",
+};
 
 function makeSnapshot(overrides: Partial<StayPriceSnapshot> = {}): StayPriceSnapshot {
   return {

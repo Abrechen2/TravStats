@@ -51,16 +51,32 @@ export function LodgingStayCard({
       fxRate: stay.fxRate,
       fxRateDate: stay.fxRateDate,
       fxBaseCurrency: stay.fxBaseCurrency,
+      // Without this the formatter cannot tell an ECB rate from a CDN or a
+      // hand-typed one, and silently labelled all three "EZB" (found in
+      // browser acceptance — every unit test stayed green, because they call
+      // the formatter directly and DO pass it).
+      fxSource: stay.fxSource,
     },
     i18n.language,
     {
       ecb: t("lodging:fx.source"),
+
+      market: t("lodging:fx.sourceMarket"),
 
       manual: t("lodging:fx.markerManual"),
 
       none: t("lodging:fx.markerNone"),
     }
   );
+
+  // The hover text names the same source the readout does — one derivation, so
+  // the two can never disagree about where the rate came from.
+  const readoutTitle =
+    stay.fxSource === "manual"
+      ? t("lodging:fx.tooltipManual", { rate: stay.fxRate ?? "" })
+      : stay.fxSource === "cdn"
+        ? t("lodging:fx.tooltipMarket")
+        : t("lodging:fx.tooltip");
 
   return (
     <div
@@ -150,7 +166,7 @@ export function LodgingStayCard({
           <span
             data-testid={`stay-fx-readout-${stay.id}`}
             className="text-[var(--fx,#6ab7d8)]"
-            title={t("lodging:fx.tooltip")}
+            title={readoutTitle}
           >
             {fxReadout}
           </span>

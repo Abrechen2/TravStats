@@ -43,8 +43,16 @@ export interface StayPriceSnapshot {
  * module stays a pure formatter with no i18n dependency.
  */
 export interface FxStateLabels {
-  /** Prefix for an automatic conversion, e.g. "EZB-Kurs vom". */
+  /** Prefix for a rate the ECB itself published, e.g. "EZB". */
   ecb: string;
+  /**
+   * Prefix for an automatic rate from the CDN dataset, e.g. "Marktkurs".
+   *
+   * A separate word because the ECB publishes 30 currencies and nothing else:
+   * an EGP rate CANNOT be an ECB reference rate, so labelling it "EZB" states
+   * something verifiably untrue about where the number came from.
+   */
+  market: string;
   /** Badge for a rate the user typed in. */
   manual: string;
   /** Badge for an amount nothing could convert. */
@@ -91,6 +99,31 @@ function formatShortDate(iso: string, locale: string): string {
     day: "2-digit",
     month: "2-digit",
     year: "2-digit",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+/**
+ * A calendar day ("YYYY-MM-DD") written the way the reader writes it —
+ * 10.05.2023 in German, 05/10/2023 in English. Empty string in, empty string
+ * out, so a caller can render it before a date has been picked.
+ *
+ * Parsed as UTC (the `T00:00:00Z` suffix): a bare "2023-05-10" is already UTC
+ * midnight by spec, and formatting it in a westward local zone would show the
+ * ninth.
+ */
+export function formatDayForLocale(day: string, language: string | undefined): string {
+  if (day === "") return "";
+  return formatFullDate(`${day.slice(0, 10)}T00:00:00.000Z`, localeForLanguage(language));
+}
+
+function formatFullDate(iso: string, locale: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return FALLBACK;
+  return new Intl.DateTimeFormat(locale, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
     timeZone: "UTC",
   }).format(date);
 }
@@ -145,8 +178,15 @@ export function formatStayPriceDisplay(
   const date = formatShortDate(fxRateDate, locale);
   const isManual = stay.fxSource === "manual";
   // A rate the user typed must never be dressed as an official one, so the
-  // readout carries THEIR label instead of the provider's.
-  const sourceLabel = isManual ? labels.manual : labels.ecb;
+  // readout carries THEIR label instead of the provider's — and a CDN rate
+  // gets its own word for the same reason. Only `fxSource === "ecb"` (and a
+  // snapshot written before the column existed, which the migration backfills
+  // to 'ecb' precisely because it COULD only have come from there) may say ECB.
+  const sourceLabel = isManual
+    ? labels.manual
+    : stay.fxSource === "cdn"
+      ? labels.market
+      : labels.ecb;
 
   return {
     original,

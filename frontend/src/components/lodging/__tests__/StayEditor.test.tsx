@@ -91,6 +91,7 @@ describe("StayEditor", () => {
       rate: 0.9315,
       rateDate: "2026-07-11",
       baseCurrency: "EUR",
+      source: "ecb",
     });
 
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
