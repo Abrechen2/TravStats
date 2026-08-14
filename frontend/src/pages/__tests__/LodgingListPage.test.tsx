@@ -20,6 +20,7 @@ const defaultStats: LodgingStats = {
   countriesCount: 1,
   spendBaseTotal: 883,
   spendByCurrency: { EUR: 883 },
+  spendUnconvertedStays: 0,
   spendBaseByCurrency: { EUR: 883 },
   awardNights: 0,
   nightsByType: { hotel: 2 },
@@ -57,6 +58,22 @@ vi.unmock("../../store/settingsStore");
 // Imported after the mocks above so the module graph picks them up.
 import LodgingListPage from "../LodgingListPage";
 import { useSettingsStore } from "../../store/settingsStore";
+
+/**
+ * The FX snapshot half of a CONVERTED stay.
+ *
+ * A lodging's `totalSpendBase` is the sum of its stays' `totalPriceBase`, so a
+ * fixture pairing a non-zero total with stays that carry no snapshot describes
+ * a row the backend cannot produce — and the spend cell now reads the stays to
+ * tell "converted to zero" from "nothing converted at all".
+ */
+const CONVERTED = {
+  totalPriceBase: 883,
+  fxRate: 1.0512,
+  fxRateDate: "2024-01-01T00:00:00.000Z",
+  fxBaseCurrency: "EUR",
+  fxSource: "ecb",
+} as const;
 
 function makeStay(overrides: Partial<LodgingStay> = {}): LodgingStay {
   return {
@@ -158,7 +175,9 @@ describe("LodgingListPage", () => {
       units: { distanceUnit: "kilometers", currency: "USD" },
     });
     listLodgingsMock.mockResolvedValue([
-      makeLodging({ stays: [makeStay({ totalPrice: 883, currency: "CHF" })] }),
+      makeLodging({
+        stays: [makeStay({ totalPrice: 883, currency: "CHF", ...CONVERTED })],
+      }),
     ]);
 
     renderListPage();
@@ -315,7 +334,7 @@ describe("LodgingListPage", () => {
       makeLodging({
         totalSpendBase: 883,
         totalSpendBaseByCurrency: { EUR: 883 },
-        stays: [makeStay({ totalPrice: 840, currency: "CHF" })],
+        stays: [makeStay({ totalPrice: 840, currency: "CHF", ...CONVERTED })],
       }),
     ]);
 
@@ -329,6 +348,52 @@ describe("LodgingListPage", () => {
     expect(row?.textContent).toMatch(/CHF/);
     expect(row?.textContent).toMatch(/≈/);
     expect(row?.textContent).toMatch(/883/);
+  });
+
+  it("says 'kein Kurs' instead of 0 € when nothing on the lodging could be converted", async () => {
+    // The row used to render "$780 ≈ 0 €" — the zero is the empty sum, not a
+    // price, and pairing it with a real amount makes it look like arithmetic.
+    listLodgingsMock.mockResolvedValue([
+      makeLodging({
+        totalSpendBase: 0,
+        totalSpendBaseByCurrency: {},
+        stays: [makeStay({ totalPrice: 780, currency: "USD" })],
+      }),
+    ]);
+
+    renderListPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
+    });
+    const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
+    expect(row?.textContent).toMatch(/780/);
+    expect(row?.textContent).toContain("lodging:fx.markerNone");
+    expect(row?.textContent).not.toMatch(/≈/);
+  });
+
+  it("says how many stays a partly converted total leaves out", async () => {
+    // One stay converted, one not: the figure is real but incomplete, and the
+    // row used to show it bare — indistinguishable from a complete one.
+    listLodgingsMock.mockResolvedValue([
+      makeLodging({
+        totalSpendBase: 883,
+        totalSpendBaseByCurrency: { EUR: 883 },
+        stays: [
+          makeStay({ totalPrice: 840, currency: "CHF", ...CONVERTED }),
+          makeStay({ id: "stay-2", totalPrice: 1120, currency: "EUR" }),
+        ],
+      }),
+    ]);
+
+    renderListPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
+    });
+    const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
+    expect(row?.textContent).toMatch(/883/);
+    expect(row?.textContent).toContain("lodging:fx.omittedFromTotal");
   });
 
   it("renders — (not 0 €) in the spend column when every stay's price has been cleared", async () => {

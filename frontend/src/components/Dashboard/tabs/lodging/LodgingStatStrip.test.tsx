@@ -23,6 +23,7 @@ const stats: LodgingStats = {
   countriesCount: 1,
   spendBaseTotal: 1234,
   spendByCurrency: {},
+  spendUnconvertedStays: 0,
   spendBaseByCurrency: { EUR: 1234 },
   awardNights: 0,
   nightsByType: { hotel: 11 },
@@ -79,12 +80,26 @@ describe("LodgingStatStrip", () => {
       ...stats,
       spendBaseTotal: 2553,
       spendByCurrency: { EUR: 1670, CHF: 840 },
+      spendUnconvertedStays: 0,
       spendBaseByCurrency: { EUR: 2553 },
     };
 
     render(<LodgingStatStrip stats={withForeignSpend} />);
 
     expect(screen.getByTestId("lodging-stat-strip-spend-sub")).toBeInTheDocument();
+  });
+
+  it("says how many stays the total leaves out", () => {
+    // The lodging DETAIL page footnoted this from the start; the strip — the
+    // same money, one screen up — stayed silent, so a total missing two stays
+    // read exactly like a complete one. Keys, not prose: see the note above.
+    const withUnconverted = { ...stats, spendUnconvertedStays: 2 };
+
+    render(<LodgingStatStrip stats={withUnconverted} />);
+
+    expect(screen.getByTestId("lodging-stat-strip-spend-sub").textContent).toContain(
+      "lodging:fx.omittedFromTotal"
+    );
   });
 
   it("shows no FX sub-line when every stay is already in the base currency", () => {

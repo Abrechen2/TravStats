@@ -37,7 +37,9 @@ router.get("/recent", async (req: AuthRequest, res: Response, next: NextFunction
     }
 
     const codes = [...tally.entries()].sort((a, b) => b[1] - a[1]).map(([code]) => code);
-    res.json({ codes });
+    // The project's envelope, like every other route — this one answered a
+    // bare `{codes}`, which every client would have had to special-case.
+    res.json({ success: true, data: { codes } });
   } catch (error) {
     next(error);
   }

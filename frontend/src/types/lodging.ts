@@ -327,6 +327,8 @@ export interface LodgingStats {
   spendBaseTotal: number;
   /** Original amounts grouped by their original currency — not a conversion. */
   spendByCurrency: Record<string, number>;
+  /** How many priced stays no provider could convert, and which `spendBaseTotal` therefore leaves out. */
+  spendUnconvertedStays: number;
   /** Every totalPriceBase amount grouped by the currency it was snapshotted into — includes the current-base slice that also makes up spendBaseTotal. */
   spendBaseByCurrency: Record<string, number>;
   awardNights: number;

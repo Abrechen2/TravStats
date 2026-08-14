@@ -16,9 +16,9 @@ async function load(): Promise<string[]> {
   if (cache) return cache;
   if (!inFlight) {
     inFlight = api
-      .get<{ codes: string[] }>("/currencies/recent")
+      .get<{ success: boolean; data: { codes: string[] } }>("/currencies/recent")
       .then((res) => {
-        cache = res.data.codes ?? [];
+        cache = res.data.data?.codes ?? [];
         return cache;
       })
       .catch(() => [])

@@ -77,20 +77,20 @@ describe("recent currencies", () => {
   it("ranks the user's own currencies by how often they appear", async () => {
     const res = await request(app).get("/api/v1/currencies/recent").set("Cookie", authCookie);
     expect(res.status).toBe(200);
-    expect(res.body.codes[0]).toBe("NOK"); // three stays beats one
-    expect(res.body.codes).toContain("EGP");
+    expect(res.body.data.codes[0]).toBe("NOK"); // three stays beats one
+    expect(res.body.data.codes).toContain("EGP");
   });
 
   it("never offers back a stored value that is not a currency", async () => {
     const res = await request(app).get("/api/v1/currencies/recent").set("Cookie", authCookie);
-    expect(res.body.codes).not.toContain("EURO");
+    expect(res.body.data.codes).not.toContain("EURO");
   });
 
   it("does not leak another account's currencies", async () => {
     const res = await request(app).get("/api/v1/currencies/recent").set("Cookie", authCookie);
-    expect(res.body.codes).not.toContain("JPY");
+    expect(res.body.data.codes).not.toContain("JPY");
     const theirs = await request(app).get("/api/v1/currencies/recent").set("Cookie", otherCookie);
-    expect(theirs.body.codes).toEqual(["JPY"]);
+    expect(theirs.body.data.codes).toEqual(["JPY"]);
   });
 
   it("requires authentication", async () => {

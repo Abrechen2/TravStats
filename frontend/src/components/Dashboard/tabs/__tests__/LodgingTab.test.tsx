@@ -121,6 +121,7 @@ const zeroStats: LodgingStats = {
   countriesCount: 0,
   spendBaseTotal: 0,
   spendByCurrency: {},
+  spendUnconvertedStays: 0,
   spendBaseByCurrency: {},
   awardNights: 0,
   nightsByType: {},

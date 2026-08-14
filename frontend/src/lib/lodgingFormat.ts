@@ -270,6 +270,21 @@ export function singleOriginalCurrencySpend(
   stays: readonly StaySpendSnapshot[],
   baseCurrency: string
 ): { amount: number; currency: string } | null {
+  const spend = singleCurrencySpend(stays);
+  return spend !== null && spend.currency !== baseCurrency ? spend : null;
+}
+
+/**
+ * The same sum WITHOUT the base-currency rule: what this lodging cost, when
+ * every priced stay shares one currency, whichever currency that is.
+ *
+ * Wanted wherever no conversion is being shown alongside — an unconverted
+ * lodging must still name its amount, and suppressing a base-currency figure
+ * there left a row reading only "kein Kurs", with the number gone.
+ */
+export function singleCurrencySpend(
+  stays: readonly StaySpendSnapshot[]
+): { amount: number; currency: string } | null {
   let amount = 0;
   let currency: string | null = null;
   for (const stay of stays) {
@@ -278,8 +293,7 @@ export function singleOriginalCurrencySpend(
     else if (currency !== stay.currency) return null; // mixed currencies — no single "original"
     amount += stay.totalPrice;
   }
-  if (currency === null || currency === baseCurrency) return null;
-  return { amount, currency };
+  return currency === null ? null : { amount, currency };
 }
 
 export interface OtherCurrencySpend {
