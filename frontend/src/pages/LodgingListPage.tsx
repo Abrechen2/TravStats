@@ -11,7 +11,13 @@ import { useLodgingImportAdapter } from "../components/import/adapters/lodgingAd
 import { useTranslation } from "../hooks/useTranslation";
 import { getLodgingStats, listLodgings } from "../lib/api/lodging";
 import { formatCurrency } from "../lib/units";
-import { hasAnyPrice, lodgingTypeIcon, singleOriginalCurrencySpend } from "../lib/lodgingFormat";
+import {
+  countUnconvertedStays,
+  hasAnyPrice,
+  lodgingTypeIcon,
+  singleCurrencySpend,
+  singleOriginalCurrencySpend,
+} from "../lib/lodgingFormat";
 import { FlagImg, resolveCountryCode } from "../lib/countryFlag";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
@@ -399,10 +405,51 @@ function LodgingSpendCell({
   lodging: Lodging;
   baseCurrency: string;
 }): JSX.Element {
+  const { t } = useTranslation(["lodging"]);
   if (!hasAnyPrice(lodging.stays)) return <>—</>;
 
   const original = singleOriginalCurrencySpend(lodging.stays, baseCurrency);
-  if (!original) return <>{formatCurrency(lodging.totalSpendBase, baseCurrency)}</>;
+  // Priced, but nothing converted: `totalSpendBase` is 0 because the sum has
+  // no addends, NOT because the stay cost nothing. Rendering that zero told
+  // the reader a hotel was free — and where an original amount was shown it
+  // read "$780 ≈ 0 €", which is worse, because it looks like arithmetic.
+  //
+  // Asked as "is every priced stay unconverted", never as `totalSpendBase === 0`:
+  // a genuinely free night (an award stay entered as 0) converts fine and its
+  // total is honestly zero.
+  const pricedCount = lodging.stays.filter((s) => s.totalPrice !== null).length;
+  const unconverted = countUnconvertedStays(lodging.stays);
+  const nothingConverted = unconverted === pricedCount;
+  // Some converted, some not: the figure below is real but incomplete, and
+  // saying so is the same rule the detail page and the stat strip follow.
+  const omitted =
+    !nothingConverted && unconverted > 0 ? (
+      <div className="text-[10px] text-(--text-muted)" title={t("lodging:fx.tooltipNone")}>
+        {t("lodging:fx.omittedFromTotal", { count: unconverted })}
+      </div>
+    ) : null;
+  if (nothingConverted) {
+    // `singleCurrencySpend`, not `original`: with no conversion shown next to
+    // it there is nothing for a base-currency amount to be redundant WITH, and
+    // hiding it left the row saying "kein Kurs" with no number at all.
+    const amount = singleCurrencySpend(lodging.stays);
+    return (
+      <>
+        {amount && <div>{formatCurrency(amount.amount, amount.currency)}</div>}
+        <div className="text-[10px] text-(--text-muted)" title={t("lodging:fx.tooltipNone")}>
+          {t("lodging:fx.markerNone")}
+        </div>
+      </>
+    );
+  }
+  if (!original) {
+    return (
+      <>
+        <div>{formatCurrency(lodging.totalSpendBase, baseCurrency)}</div>
+        {omitted}
+      </>
+    );
+  }
 
   return (
     <>
@@ -410,6 +457,7 @@ function LodgingSpendCell({
       <div className="text-[10px]" style={{ color: "var(--fx, #6ab7d8)" }}>
         ≈ {formatCurrency(lodging.totalSpendBase, baseCurrency)}
       </div>
+      {omitted}
     </>
   );
 }
