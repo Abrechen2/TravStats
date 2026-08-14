@@ -8,6 +8,7 @@ import authRoutes from './routes/auth';
 import twoFactorRoutes from './routes/auth/twoFactor';
 import passkeyRoutes from './routes/auth/passkeys';
 import flightRoutes from './routes/flights';
+import upcomingRoutes from './routes/upcoming';
 import flightLookupRoutes from './routes/flightLookup';
 import statsRoutes from './routes/stats';
 import airportRoutes from './routes/airports';
@@ -260,6 +261,9 @@ app.use('/api/v1/auth/passkeys', passkeyRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/auth', passwordResetRoutes);
 app.use('/api/v1/flights', flightRoutes);
+// The dashboard tab strip's "next up" line — one route for every domain,
+// so the strip never depends on which tab happens to have loaded.
+app.use('/api/v1/upcoming', upcomingRoutes);
 app.use('/api/v1/flight-lookup', flightLookupRoutes);
 app.use('/api/v1/stats', statsRoutes);
 app.use('/api/v1/airports', airportRoutes);

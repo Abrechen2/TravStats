@@ -251,12 +251,14 @@
     "addFlight": "Add your first flight",
     "chooseDomains": "Choose what to track"
   },
-  "nextFlight": {
-    "label": "Next flight",
+  "nextUp": {
+    "label": "Next up",
+    "inDays": "in {{count}} days",
     "inDays_one": "in {{count}} day",
     "inDays_other": "in {{count}} days",
-    "inHours_one": "in {{count}} hour",
-    "inHours_other": "in {{count}} hours",
+    "inHours": "in {{count}} h",
+    "inHours_one": "in {{count}} h",
+    "inHours_other": "in {{count}} h",
     "today": "today"
   }
 }
