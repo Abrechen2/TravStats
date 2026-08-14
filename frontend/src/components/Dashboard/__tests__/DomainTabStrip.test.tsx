@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import type { UpcomingEntry } from "../../../lib/api/upcoming";
 import { DomainTabStrip } from "../DomainTabStrip";
 import { useSettingsStore } from "../../../store/settingsStore";
 
@@ -124,5 +126,90 @@ describe("DomainTabStrip", () => {
       renderStrip();
       expect(screen.getByRole("tab", { name: /poi/i })).toBeTruthy();
     });
+  });
+});
+
+describe("DomainTabStrip: the next-up entry", () => {
+  // It replaces a card that floated over the map and covered the mode switcher
+  // completely (232x39 px, measured 2026-08-14). Living in the strip, it also
+  // gets to follow the tab: the next thing about what you are looking at.
+  beforeEach(() => {
+    useSettingsStore.setState({ betaFeaturesEnabled: true });
+  });
+
+  const NOW = Date.parse("2026-08-14T12:00:00.000Z");
+  const entries: UpcomingEntry[] = [
+    {
+      domain: "trip",
+      id: "t1",
+      startsAt: "2026-08-16T00:00:00.000Z",
+      tripId: "t1",
+      tripName: null,
+      primary: "Tokyo",
+      secondary: "Japan",
+    },
+    {
+      domain: "flight",
+      id: "f1",
+      startsAt: "2026-08-20T08:00:00.000Z",
+      tripId: "t1",
+      tripName: "Tokyo · Japan",
+      primary: "München → Wien",
+      secondary: "LH 2280",
+    },
+  ];
+
+  const renderStrip = (active: "all" | "flight" | "cruise"): void => {
+    render(
+      <MemoryRouter>
+        <DomainTabStrip
+          active={active}
+          counts={{ flight: 1, cruise: 0, poi: 0, lodging: 0 }}
+          enabled={{ flight: true, cruise: true, poi: false, lodging: true }}
+          onSelect={vi.fn()}
+          upcoming={entries}
+          nowMs={NOW}
+        />
+      </MemoryRouter>
+    );
+  };
+
+  it("shows the soonest entry of any domain on the Alle tab", () => {
+    renderStrip("all");
+    expect(screen.getByTestId("next-up-entry").textContent).toContain("Tokyo");
+  });
+
+  it("follows the active tab: the flight tab shows the next FLIGHT, not the sooner trip", () => {
+    renderStrip("flight");
+    const entry = screen.getByTestId("next-up-entry").textContent ?? "";
+    // The flight is the ENTRY; the trip may still appear on it as the journey
+    // it belongs to, which is a different claim than "the trip is next".
+    expect(entry).toContain("München → Wien");
+    expect(entry).toContain("LH 2280");
+  });
+
+  it("shows nothing at all when the active tab has nothing ahead", () => {
+    // Silence beats "—": an empty domain has no news, and a placeholder in the
+    // strip would read like a broken value.
+    renderStrip("cruise");
+    expect(screen.queryByTestId("next-up-entry")).not.toBeInTheDocument();
+  });
+
+  it("counts the days from the injected clock, not the real one", () => {
+    renderStrip("all");
+    expect(screen.getByTestId("next-up-entry").textContent).toContain("dashboard:nextUp.inDays");
+  });
+
+  it("names the trip an entry belongs to, instead of only linking to it", () => {
+    // Owner, 2026-08-14: "wenn das nächste Teil einer Reise ist muss das
+    // gezeigt werden". The id alone carried the click and told the reader
+    // nothing.
+    renderStrip("flight");
+    expect(screen.getByTestId("next-up-trip").textContent).toContain("Tokyo · Japan");
+  });
+
+  it("does not repeat the name on a trip entry, where it is already the headline", () => {
+    renderStrip("all");
+    expect(screen.queryByTestId("next-up-trip")).not.toBeInTheDocument();
   });
 });
