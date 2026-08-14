@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Lodging } from "../../../../types/lodging";
+import { MAP_LAYER_COLORS } from "../../../../types/mapTheme";
+import { PORT_RGB } from "../../../layers/cruisePortsLayer";
 import { DOMAINS } from "../../../../shared/domains";
 import { useDashboardFilterStore } from "../../../../store/dashboardFilterStore";
 
@@ -81,12 +83,15 @@ function makeLodging(overrides: Partial<Lodging> = {}): Lodging {
   };
 }
 
-/** The `background` style of the legend swatch next to `label`. */
-const swatchBackground = (label: string): string | undefined => {
+/** The legend swatch element next to `label`. */
+const swatchOf = (label: string): HTMLElement | undefined => {
   const row = screen.getByText(label).parentElement;
   const swatch = row?.querySelector("span[aria-hidden]");
-  return swatch instanceof HTMLElement ? swatch.style.background : undefined;
+  return swatch instanceof HTMLElement ? swatch : undefined;
 };
+
+/** The `background` style of the legend swatch next to `label`. */
+const swatchBackground = (label: string): string | undefined => swatchOf(label)?.style.background;
 
 describe("AllTab: the lodging domain chip actually does something", () => {
   beforeEach(() => {
@@ -125,6 +130,68 @@ describe("AllTab: the lodging domain chip actually does something", () => {
     // #d4778f -> rgb(212, 119, 143)
     expect(DOMAINS.lodging.color).toBe("#d4778f");
     expect(swatchBackground("dashboard:legend.lodging")).toBe("rgb(212, 119, 143)");
+  });
+
+  it("draws the lodging swatch as a dot, because a stay is a place and not a route", async () => {
+    // Alex, Discord 2026-08-09: "Da Unterkünfte keine 'Strecken' sind sollte
+    // hier auch in der Legende ein Kreis sein." Every swatch used to be the
+    // same 14x2 bar, so the key claimed lodgings were drawn as lines while the
+    // map drew them as pins.
+    render(
+      <MemoryRouter>
+        <AllTab />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("dashboard:legend.lodging")).toBeInTheDocument();
+    });
+
+    const dot = swatchOf("dashboard:legend.lodging");
+    expect(dot?.style.borderRadius).toBe("50%");
+    expect(dot?.style.width).toBe(dot?.style.height); // a circle, not an oval
+
+    // The route domains keep their line swatch — the point is the contrast.
+    const line = swatchOf("dashboard:legend.flightPast");
+    expect(line?.style.borderRadius).not.toBe("50%");
+  });
+
+  it("names the airport and port dots too, in the colours the layers paint them", async () => {
+    // Same message as the lodging circle: the marks that are ONLY marks had no
+    // key at all. Colours are asserted against the sources the layers use —
+    // the map theme for the airport dot, cruisePortsLayer's own constant for
+    // the port — so a copied literal here would fail.
+    render(
+      <MemoryRouter>
+        <AllTab />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("dashboard:legend.airport")).toBeInTheDocument();
+    });
+
+    expect(swatchBackground("dashboard:legend.airport")).toBe(
+      `rgb(${MAP_LAYER_COLORS.glassmorphism.airportDot.join(", ")})`
+    );
+    expect(swatchBackground("dashboard:legend.port")).toBe(`rgb(${PORT_RGB.join(", ")})`);
+    expect(swatchOf("dashboard:legend.airport")?.style.borderRadius).toBe("50%");
+    expect(swatchOf("dashboard:legend.port")?.style.borderRadius).toBe("50%");
+  });
+
+  it("drops the port row when the cruise chip is off — a key for marks that are not drawn is noise", async () => {
+    useDashboardFilterStore.setState({ domains: ["flight", "lodging"] });
+
+    render(
+      <MemoryRouter>
+        <AllTab />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("dashboard:legend.airport")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("dashboard:legend.port")).not.toBeInTheDocument();
   });
 
   it("toggling the chip off hides the pins AND the legend row — the previously-dead chip is now functional", async () => {
