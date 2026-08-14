@@ -158,3 +158,9 @@ ROADMAP.local.md.archive
 # FF number in the barcode). NEVER in this public repo; the private companion
 # repo TravStats-local is the place if they need to be versioned at all.
 test-samples/boarding-passes/
+
+# Auto-generated JWT/encryption secrets and the logo cache. The backend writes
+# them next to its working directory on first boot, so a stray start from the
+# wrong folder drops them anywhere in the tree — a real secret nearly landed in
+# a commit this way.
+.travstats-data/

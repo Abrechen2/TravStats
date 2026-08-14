@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { logger } from "../logger";
 import type {
   Lodging,
   LodgingStay,
@@ -17,13 +18,48 @@ import type {
 interface Envelope<T> {
   success: boolean;
   data: T;
+  /** Present on the paginated list routes — see `listLodgings`. */
+  meta?: { total: number; limit: number; offset: number };
 }
 
 // ---- Lodging CRUD ----
 
+/** The server's own maximum per request (`lodgingQuerySchema`), so a full account costs as few round trips as the API allows. */
+const LODGING_PAGE_SIZE = 500;
+/** Backstop against an endless loop if `meta.total` ever disagrees with what the server actually returns. 20 000 lodgings is far past any real account. */
+const MAX_LODGING_PAGES = 40;
+
+/**
+ * Every lodging matching the query — ALL of them, walked page by page.
+ *
+ * This used to be a single request with no `limit`, which the server answers
+ * with its default page of 200 and a `meta.total` this client threw away. The
+ * result was a list that stopped at 200 rows and said nothing: with 210
+ * lodgings the same screen showed "210 Unterkünfte" in the stat strip (that
+ * figure comes from /stats/lodging, which does not paginate) and "200
+ * angezeigt" over a table missing ten alphabetically-last rows. Reported by a
+ * tester as "the hotel I just created never appears in the list" — it sorted
+ * past the cut, while its own detail page worked fine (Discord, 2026-08-09).
+ *
+ * Paging HERE rather than in the list page is deliberate: the dashboard map,
+ * the domain stats and the settings membership picker call this same function,
+ * and every one of them was silently losing the same rows. One fix, one code
+ * path — a second "paged" entry point would have left them behind.
+ */
 export const listLodgings = async (params: LodgingListQuery = {}): Promise<Lodging[]> => {
-  const { data } = await api.get<Envelope<Lodging[]>>("/lodging", { params });
-  return data.data;
+  const items: Lodging[] = [];
+  for (let page = 0; page < MAX_LODGING_PAGES; page += 1) {
+    const { data } = await api.get<Envelope<Lodging[]>>("/lodging", {
+      params: { ...params, limit: LODGING_PAGE_SIZE, offset: page * LODGING_PAGE_SIZE },
+    });
+    items.push(...data.data);
+    // An empty page ends the walk even if `meta` is missing or wrong — without
+    // it a stale `total` would spin this loop to its cap on every load.
+    if (data.data.length === 0) return items;
+    if (data.meta === undefined || items.length >= data.meta.total) return items;
+  }
+  logger.warn("listLodgings: stopped at the page cap — some lodgings were not fetched");
+  return items;
 };
 
 export const getLodging = async (id: string): Promise<Lodging> => {
