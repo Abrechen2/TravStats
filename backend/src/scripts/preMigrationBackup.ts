@@ -6,7 +6,7 @@
  * upgrade-backup hook only runs in `npm run dev`.
  *
  * Exit codes:
- *   0 — backup ran successfully OR was skipped (no major bump)
+ *   0 — backup ran successfully OR was skipped (not a version change)
  *   0 — backup attempted but failed (soft fail, see upgradeBackup.ts)
  *   1 — internal error before the backup attempt could complete
  *
@@ -23,14 +23,19 @@ async function main(): Promise<void> {
       `[pre-migration-backup] First upgrade with last-version marker → ${ctx.currentVersion}`,
     );
   } else if (ctx.shouldBackup) {
+    // These lines still said "Major bump" and "Same major" long after #246
+    // changed the rule to ANY version change. Watched live on the 2.5.2 →
+    // 2.6.0 boot, the entrypoint announced a "Major bump" for a minor one —
+    // the behaviour was right and the sentence was wrong, which is the kind of
+    // thing an operator reads at 3am while deciding whether to roll back.
     console.log(
-      `[pre-migration-backup] Major bump ${ctx.previousVersion} → ${ctx.currentVersion}`,
+      `[pre-migration-backup] Version change ${ctx.previousVersion} → ${ctx.currentVersion}`,
     );
   } else if (ctx.previousVersion === null) {
     console.log("[pre-migration-backup] Fresh install — no backup needed");
   } else {
     console.log(
-      `[pre-migration-backup] Same major (${ctx.previousVersion} → ${ctx.currentVersion}) — no backup needed`,
+      `[pre-migration-backup] Same version (${ctx.currentVersion}) — no backup needed`,
     );
   }
 
@@ -38,7 +43,7 @@ async function main(): Promise<void> {
     console.log(`[pre-migration-backup] Backup written: ${ctx.backupCreated}`);
   } else if (ctx.shouldBackup) {
     console.log(
-      "[pre-migration-backup] WARNING: major bump but backup failed — continuing",
+      "[pre-migration-backup] WARNING: version changed but backup failed — continuing",
     );
   }
 }
