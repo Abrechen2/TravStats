@@ -16,7 +16,9 @@
       "rating": "Rating",
       "spend": "Spend"
     },
-    "otherCurrencyHint": "Includes further amounts in an older base currency, not counted here."
+    "otherCurrencyHint": "Includes further amounts in an older base currency, not counted here.",
+    "bookmarked": "bookmarked",
+    "bookmarkedHint": "Not visited yet — counted in no statistic."
   },
   "filter": {
     "searchPlaceholder": "Search by name or location …",
@@ -304,6 +306,13 @@
         "success": "Deleted {{deletedLodgings}} hotel(s) and {{deletedStays}} stay(s).",
         "withDetached": "Deleted {{deletedLodgings}} hotel(s) and {{deletedStays}} stay(s), kept {{detachedLodgings}} hotel(s) (they have other stays)."
       }
+    },
+    "visited": {
+      "legend": "What does this file describe?",
+      "yes": "Places I have stayed at",
+      "yesHint": "Counts as visited. You can fill in when, per house, later.",
+      "no": "Places I only noted down",
+      "noHint": "Bookmarked only — shown in the list and on the map, counted nowhere."
     }
   }
 }

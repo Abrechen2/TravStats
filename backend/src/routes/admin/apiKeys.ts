@@ -16,6 +16,7 @@ interface GlobalApiKeysUpdateData {
   globalAviationstackApiKey?: string | null;
   globalAerodataboxApiKey?: string | null;
   globalLogostreamApiKey?: string | null;
+  globalGooglePlacesApiKey?: string | null;
   globalOpenskyClientId?: string | null;
   globalOpenskyClientSecret?: string | null;
   globalOpenskyUsername?: string | null;
@@ -32,6 +33,15 @@ const globalApiKeysSchema = z.object({
   // (clear the key) and a masked echo of the GET response (unchanged) —
   // but reject any other short value before it ever reaches encryptApiKey.
   globalLogostreamApiKey: z
+    .string()
+    .refine((v) => v === "" || v.includes("****") || v.length >= 16, {
+      message: "API key must be at least 16 characters",
+    })
+    .optional()
+    .nullable(),
+  // Same short-secret guard as the logostream key above — and the same two
+  // sentinels: "" clears it, a masked echo means "unchanged".
+  globalGooglePlacesApiKey: z
     .string()
     .refine((v) => v === "" || v.includes("****") || v.length >= 16, {
       message: "API key must be at least 16 characters",
@@ -108,6 +118,7 @@ router.get('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
         globalAviationstackApiKey: undefined,
         globalAerodataboxApiKey: undefined,
         globalLogostreamApiKey: undefined,
+        globalGooglePlacesApiKey: undefined,
         globalOpenskyClientId: undefined,
         globalOpenskyClientSecret: undefined,
         globalOpenskyUsername: undefined,
@@ -121,6 +132,7 @@ router.get('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
       globalAviationstackApiKey: maskKey(adminSettings.globalAviationstackApiKey),
       globalAerodataboxApiKey: maskKey(adminSettings.globalAerodataboxApiKey),
       globalLogostreamApiKey: maskKey(adminSettings.globalLogostreamApiKey),
+      globalGooglePlacesApiKey: maskKey(adminSettings.globalGooglePlacesApiKey),
       globalOpenskyClientId: maskKey(adminSettings.globalOpenskyClientId),
       globalOpenskyClientSecret: maskKey(adminSettings.globalOpenskyClientSecret),
       globalOpenskyUsername: maskKey(adminSettings.globalOpenskyUsername),
@@ -175,6 +187,12 @@ router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
       const encrypted = encryptUnlessMasked(payload.globalLogostreamApiKey);
       if (encrypted !== undefined) {
         updateData.globalLogostreamApiKey = encrypted;
+      }
+    }
+    if (payload.globalGooglePlacesApiKey !== undefined) {
+      const encrypted = encryptUnlessMasked(payload.globalGooglePlacesApiKey);
+      if (encrypted !== undefined) {
+        updateData.globalGooglePlacesApiKey = encrypted;
       }
     }
     if (payload.globalOpenskyClientId !== undefined) {

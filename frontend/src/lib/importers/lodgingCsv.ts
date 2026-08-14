@@ -57,7 +57,7 @@ export type LodgingCsvMapping = Partial<Record<LodgingCsvField, string>>;
  * both need an entry here (umlaut and ASCII-transliterated spelling).
  */
 export const LODGING_FIELD_ALIASES: Record<LodgingCsvField, string[]> = {
-  name: ["name", "hotel", "unterkunft", "hotelname", "lodging", "property"],
+  name: ["name", "hotel", "unterkunft", "hotelname", "lodging", "property", "titel", "title"],
   type: ["type", "typ", "art", "kategorie"],
   chainName: ["chain", "kette", "marke", "brand", "hotelkette"],
   stars: ["stars", "sterne", "sternekategorie", "starrating"],
@@ -66,7 +66,9 @@ export const LODGING_FIELD_ALIASES: Record<LodgingCsvField, string[]> = {
   country: ["country", "land", "staat"],
   lat: ["lat", "latitude", "breitengrad"],
   lon: ["lon", "lng", "long", "longitude", "laengengrad", "längengrad"],
-  googlePlaceId: ["googleplaceid", "placeid", "googleid", "cid"],
+  // "url"/"link": a Google Maps saved-places export has no id column at all —
+  // the identity sits inside the map link, which `extractPlaceId` pulls out.
+  googlePlaceId: ["googleplaceid", "placeid", "googleid", "cid", "url", "link", "maps", "googlemaps"],
   checkIn: ["checkin", "anreise", "von", "startdate", "arrival"],
   checkOut: ["checkout", "abreise", "bis", "enddate", "departure"],
   roomCategory: ["roomcategory", "zimmer", "zimmerkategorie", "zimmertyp", "roomtype"],
@@ -312,6 +314,63 @@ function toRating(raw: string): NumericCellResult {
 const LODGING_TYPES = ["hotel", "campsite", "guesthouse", "apartment", "hostel"] as const;
 const BOARD_TYPES = ["none", "breakfast", "half", "full", "all_inclusive"] as const;
 
+/**
+ * What kind of house a NAME describes, when the file has no type column.
+ *
+ * A saved-places export is a list of names and nothing else, and importing all
+ * of it as "hotel" is simply wrong: the owner's own list holds 26 campsites,
+ * plus guesthouses and apartments. The name almost always says which — people
+ * write "Camping Plitvice", "Gasthof Ochsalm", "Hostel Marina".
+ *
+ * Deterministic on purpose, and checked in a fixed order: the more specific
+ * word wins, so "Camping Resort Hotel" is a campsite rather than a hotel. What
+ * this cannot decide stays null, and the caller falls back to "hotel" — a
+ * WRONG guess is worse than the default, because the default is at least
+ * visibly generic.
+ *
+ * Matched on word boundaries against the lower-cased name; German and English
+ * both, because the list mixes them.
+ */
+/**
+ * Per type: words matched on WORD BOUNDARIES, and stems matched anywhere.
+ *
+ * The split is not decoration, it is the German compound problem. "Camping"
+ * appears inside "Seecamping" and "Wohnmobilstellplatz", so it has to match as
+ * a stem — while "inn" must NOT, or Innsbruck becomes a hotel. Only stems that
+ * cannot plausibly hide inside an unrelated word are listed on the right.
+ */
+const TYPE_KEYWORDS: readonly (readonly [LodgingType, readonly string[], readonly string[]])[] = [
+  [
+    "campsite",
+    // "koa" is Kampgrounds of America — it shows up 3x in the owner's own list
+    // as "… KOA Holiday" / "… KOA Journey" and carries no other clue.
+    ["campsite", "caravan", "holiday park", "ferienpark", "rv park", "koa", "camp"],
+    ["camping", "stellplatz", "campground", "wohnmobil", "eurocamp"],
+  ],
+  ["hostel", ["backpacker", "youth hostel"], ["hostel", "jugendherberge"]],
+  [
+    "apartment",
+    ["apartment", "apartments", "appartement", "residence", "suites"],
+    ["aparthotel", "ferienwohnung", "fewo"],
+  ],
+  [
+    "guesthouse",
+    ["pension", "guesthouse", "guest house", "bed & breakfast", "b&b", "bnb"],
+    ["gasthof", "gasthaus", "landgasthof"],
+  ],
+  ["hotel", ["hotel", "hôtel", "motel", "inn", "resort", "lodge", "herberge"], []],
+];
+
+export function inferLodgingType(name: string): LodgingType | null {
+  const cleaned = name.toLowerCase().replace(/[^\p{L}\p{N}&']+/gu, " ");
+  const haystack = ` ${cleaned} `;
+  for (const [type, words, stems] of TYPE_KEYWORDS) {
+    if (words.some((word) => haystack.includes(` ${word} `))) return type;
+    if (stems.some((stem) => cleaned.includes(stem))) return type;
+  }
+  return null;
+}
+
 function toLodgingType(raw: string): LodgingType | null {
   const v = raw.toLowerCase();
   return (LODGING_TYPES as readonly string[]).includes(v)
@@ -352,13 +411,41 @@ function numberError(field: string, sample: string): PendingRowError {
   return { code: "unreadable_number", message: `Row has an unreadable ${field} value`, sample };
 }
 
+/**
+ * The identity inside a Google Maps link.
+ *
+ * A saved-places export ships no id column; it ships the URL the "share" button
+ * produces, and the identity is buried in it in one of two shapes:
+ *   …/data=!4m2!3m1!1s0x479009f0421b2f1b:0x13197a53660c2f5e   (the hex CID pair)
+ *   …?place_id=ChIJd8BlQ2Bo5kcRAFTLmuLK8bA                     (the modern id)
+ * Either one is stable per place, which is what makes a SECOND import of the
+ * same list a no-op instead of a second copy of every hotel.
+ *
+ * A value that is not a link is passed through untouched — a real id column
+ * still works. Returns null when there is nothing identity-like, because a
+ * fabricated key would be worse than none: it would dedupe unrelated rows.
+ */
+export function extractPlaceId(raw: string): string | null {
+  const value = raw.trim();
+  if (!value) return null;
+  if (!/^https?:\/\//i.test(value)) return value;
+
+  const modern = value.match(/[?&]place_id=([A-Za-z0-9_-]+)/);
+  if (modern) return modern[1];
+
+  const hexPair = value.match(/!1s(0x[0-9a-f]+:0x[0-9a-f]+)/i);
+  if (hexPair) return hexPair[1];
+
+  return null;
+}
+
 function buildLodgingFields(
   record: Record<string, string>,
   m: LodgingCsvMapping,
   name: string
 ): FieldBuildResult<LodgingCandidateFields> {
   const errors: PendingRowError[] = [];
-  const placeId = cell(record, m.googlePlaceId);
+  const placeId = extractPlaceId(cell(record, m.googlePlaceId));
 
   const starsCell = parseNumericCell(cell(record, m.stars));
   if (starsCell.unparseable) errors.push(numberError("stars", cell(record, m.stars)));
@@ -376,7 +463,9 @@ function buildLodgingFields(
   return {
     fields: {
       name,
-      type: toLodgingType(cell(record, m.type)),
+      // The mapped column wins; the name is only consulted when the file has
+      // no type at all — never to overrule what the user actually stated.
+      type: toLodgingType(cell(record, m.type)) ?? inferLodgingType(name),
       chainName: cell(record, m.chainName) || null,
       stars,
       address: cell(record, m.address) || null,
@@ -447,9 +536,21 @@ function buildStayFields(
   };
 }
 
+export interface BuildCandidatesOptions {
+  /**
+   * What the rows describe: places the user has been to, or places merely
+   * noted down. A saved-places export mixes both and the file says nothing
+   * about which — so the IMPORTER asks once and applies the answer to the run,
+   * rather than guessing per row. Defaults to visited, matching every other
+   * source.
+   */
+  visited?: boolean;
+}
+
 export function buildLodgingCandidates(
   records: Record<string, string>[],
-  mapping: LodgingCsvMapping
+  mapping: LodgingCsvMapping,
+  options: BuildCandidatesOptions = {}
 ): LodgingCsvParseResult {
   const shape = detectCsvShape(mapping);
   const candidates: LodgingImportCandidate[] = [];
@@ -494,7 +595,8 @@ export function buildLodgingCandidates(
     let lodging: LodgingCandidateFields | null = null;
     if (shape !== "stays") {
       const lodgingResult = buildLodgingFields(record, mapping, name);
-      lodging = lodgingResult.fields;
+      // The run-level answer, not a per-row guess — see BuildCandidatesOptions.
+      lodging = { ...lodgingResult.fields, visited: options.visited ?? true };
       fieldErrors.push(...lodgingResult.errors);
     }
 

@@ -90,6 +90,7 @@ function makeLodging(overrides: Partial<Lodging> = {}, stays: LodgingStay[] = [b
     lon: 8.53,
     stars: 4,
     amenities: ["Garden", "Parking"],
+    visited: true,
     notes: null,
     dataSource: null,
     createdAt: "2024-01-01T00:00:00.000Z",

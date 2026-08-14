@@ -712,6 +712,10 @@
       "flight": "AirLabs, Aviationstack und OpenSky werden für automatische Flugdaten-Updates verwendet.",
       "permissionsTitle": "Benutzer-Berechtigungen:",
       "permissions": "Steuert ob Benutzer eigene Schlüssel setzen können. Globale Schlüssel sind Fallback für Benutzer ohne eigene Schlüssel."
+    },
+    "googlePlaces": {
+      "label": "Google Places (Unterkunfts-Orte)",
+      "description": "Optional. Ohne Schlüssel sucht TravStats Positionen ausschließlich in OpenStreetMap — kostenlos, aber Hotels sind dort oft gar nicht erfasst. Mit Schlüssel wird als letzte Stufe Google gefragt, das Betriebe kennt: an 30 echten Namen gemessen fand OpenStreetMap 14 Unterkünfte, Google 27. Der kostenlose Tarif reicht dafür bequem."
     }
   },
   "masterData": {

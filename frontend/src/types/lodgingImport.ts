@@ -28,6 +28,12 @@ export interface LodgingCandidateFields {
   /** "google:<place_id>" — see Lodging.externalRef. */
   externalRef?: string | null;
   notes?: string | null;
+  /**
+   * Whether the user actually stayed here, or only noted the place down. Absent
+   * means visited: every source except a saved-places list describes a real
+   * stay, and a missing field must not demote those to bookmarks.
+   */
+  visited?: boolean;
 }
 
 export interface StayCandidateFields {

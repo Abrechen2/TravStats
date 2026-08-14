@@ -93,6 +93,7 @@ function makeLodging(): Lodging {
     lon: 8.5,
     stars: null,
     amenities: [],
+    visited: true,
     notes: null,
     dataSource: null,
     createdAt: "",
