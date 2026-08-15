@@ -7,6 +7,7 @@ import type { Flight } from "../../../../types";
 import type { CruiseStatsResponse } from "../../../api/stats";
 import type { Cruise } from "../../../../types/cruise";
 import type { Lodging, LodgingStats } from "../../../../types/lodging";
+import { EMPTY_LODGING_STATS_BLOCKS } from "../../../../types/lodgingStatsFixture";
 
 function makeFlight(overrides: Partial<Flight>): Flight {
   return {
@@ -252,6 +253,7 @@ const baseLodgingStats: LodgingStats = {
   plannedNights: 0,
   plannedLodgingsCount: 0,
   notedLodgingsCount: 0,
+  ...EMPTY_LODGING_STATS_BLOCKS,
 };
 
 function makeLodgingStay(overrides: Partial<Lodging["stays"][number]> = {}): Lodging["stays"][number] {

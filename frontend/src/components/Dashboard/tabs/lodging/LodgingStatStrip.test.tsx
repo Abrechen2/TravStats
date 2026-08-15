@@ -9,6 +9,7 @@ vi.unmock("../../../../store/settingsStore");
 // Imported after the unmock above so the module graph picks it up.
 import { useSettingsStore } from "../../../../store/settingsStore";
 import { LodgingStatStrip } from "./LodgingStatStrip";
+import { EMPTY_LODGING_STATS_BLOCKS } from "../../../../types/lodgingStatsFixture";
 
 const stats: LodgingStats = {
   lodgingsCount: 2,
@@ -34,6 +35,7 @@ const stats: LodgingStats = {
   plannedNights: 0,
   plannedLodgingsCount: 0,
   notedLodgingsCount: 0,
+  ...EMPTY_LODGING_STATS_BLOCKS,
 };
 
 describe("LodgingStatStrip", () => {
