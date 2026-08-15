@@ -233,6 +233,7 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       type: l.type,
       country: l.country,
       city: l.city,
+      visited: l.visited,
     }));
     const lodgingStats = calculateLodgingStats(lodgingStatsInput, lodgingBaseCurrency, lodgingRecords);
 

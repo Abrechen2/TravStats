@@ -248,6 +248,10 @@ const baseLodgingStats: LodgingStats = {
   avgRatingOverall: null,
   chainLoyaltyMax: 0,
   sameHotelRepeatMax: 0,
+  plannedStaysCount: 0,
+  plannedNights: 0,
+  plannedLodgingsCount: 0,
+  notedLodgingsCount: 0,
 };
 
 function makeLodgingStay(overrides: Partial<Lodging["stays"][number]> = {}): Lodging["stays"][number] {

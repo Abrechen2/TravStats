@@ -7,6 +7,7 @@
 // and heatmap is derived here from the raw stay list (the aggregate stats
 // response doesn't carry day-level granularity).
 import type { Lodging, LodgingStats } from "../../../types/lodging";
+import { classifyLodging, classifyStay } from "../../../shared/lodgingCounting";
 import type { DomainStats } from "./types";
 
 export interface LodgingAdapterInput {
@@ -29,11 +30,20 @@ export function adaptLodging(input: LodgingAdapterInput): DomainStats {
   const chainCounts = new Map<string, number>();
 
   for (const lodging of lodgings) {
-    for (const stay of lodging.stays) {
-      // Mirrors calculateLodgingStats' own exclusion (utils/lodgingStats.ts)
-      // — a cancelled stay never happened, so it must not contribute to any
-      // bucket here either.
-      if (stay.status === "cancelled") continue;
+    // Mirrors calculateLodgingStats: a house the user only bookmarked
+    // contributes nothing, and neither does one whose every stay is still
+    // ahead — the cross-domain heatmap shows days that HAPPENED.
+    const stayStates = lodging.stays.map((s) =>
+      classifyStay({
+        status: s.status,
+        checkIn: new Date(s.checkIn),
+        checkOut: new Date(s.checkOut),
+      })
+    );
+    if (classifyLodging(lodging, stayStates) === "excluded") continue;
+
+    for (const [i, stay] of lodging.stays.entries()) {
+      if (stayStates[i] !== "visited") continue;
 
       const checkIn = new Date(stay.checkIn);
       if (Number.isNaN(checkIn.getTime())) continue;

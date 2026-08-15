@@ -1,3 +1,9 @@
+import {
+  classifyLodging,
+  classifyStay,
+  type LodgingCountState,
+} from "../shared/lodgingCounting";
+
 export interface LodgingStayData {
   lodgingId: string;
   type: string;
@@ -27,6 +33,12 @@ export interface LodgingRecord {
   type: string;
   country: string | null;
   city: string | null;
+  /**
+   * `false` = the house is only noted down (a saved-places import), not a place
+   * the user has been. Excluded from every actual figure — see
+   * shared/lodgingCounting.ts.
+   */
+  visited: boolean;
 }
 
 export interface LodgingStats {
@@ -82,6 +94,21 @@ export interface LodgingStats {
   avgRatingOverall: number | null;
   chainLoyaltyMax: number;
   sameHotelRepeatMax: number;
+  /**
+   * Forward-looking counterparts to `staysCount` / `totalNights` /
+   * `lodgingsCount`: everything whose check-out has not happened yet.
+   *
+   * They are reported SEPARATELY rather than folded in, because a booking for
+   * next month is not a night slept (owner rule, 2026-08-15). Keeping them in
+   * the same payload is what lets a screen say "plus 3 booked" without a second
+   * request — the alternative, leaving them out entirely, made an upcoming stay
+   * invisible everywhere except the stay list.
+   */
+  plannedStaysCount: number;
+  plannedNights: number;
+  plannedLodgingsCount: number;
+  /** Houses the user only bookmarked (`visited === false`). Never part of any other figure. */
+  notedLodgingsCount: number;
 }
 
 /**
@@ -97,17 +124,38 @@ export interface LodgingStats {
  * `lodgings` is optional and, when supplied, changes the semantics of
  * `lodgingsCount` and `chainsUnique`: instead of being derived only from
  * stays seen (a hotel with zero stays would otherwise be invisible), they
- * count every lodging the user HAS. Its cities/countries are folded into
- * the shared city/country sets too — a hotel added in a new country counts
- * as that country even before the user has stayed there. Callers that omit
- * `lodgings` keep today's stay-derived behaviour (back-compat).
+ * count every lodging the user HAS BEEN TO. Its cities/countries are folded
+ * into the shared city/country sets too. Callers that omit `lodgings` keep
+ * today's stay-derived behaviour (back-compat).
+ *
+ * What counts is decided in ONE place, `shared/lodgingCounting.ts`: a stay is
+ * an actual figure only once its check-out is past, a cancelled stay counts
+ * nowhere, and a bookmarked house is not a visit. `now` is injectable so tests
+ * can pin the boundary; production always passes the real clock.
  */
 export function calculateLodgingStats(
   stays: LodgingStayData[],
   currentBaseCurrency = "EUR",
   lodgings?: LodgingRecord[],
+  now?: Date,
 ): LodgingStats {
-  const activeStays = stays.filter((s) => s.status !== "cancelled");
+  // Classify once, up front — every figure below reads the verdict rather than
+  // re-deriving it, so "counts as visited" cannot mean two things in one file.
+  const stayStates = new Map<LodgingStayData, LodgingCountState>();
+  const statesByLodgingId = new Map<string, LodgingCountState[]>();
+  for (const s of stays) {
+    const state = classifyStay(
+      { status: s.status, checkIn: s.checkIn, checkOut: s.checkOut },
+      now,
+    );
+    stayStates.set(s, state);
+    const bucket = statesByLodgingId.get(s.lodgingId);
+    if (bucket) bucket.push(state);
+    else statesByLodgingId.set(s.lodgingId, [state]);
+  }
+
+  const activeStays = stays.filter((s) => stayStates.get(s) === "visited");
+  const plannedStays = stays.filter((s) => stayStates.get(s) === "planned");
 
   const lodgingIds = new Set<string>();
   const chainIds = new Set<number>();
@@ -185,19 +233,38 @@ export function calculateLodgingStats(
     if (count > sameHotelRepeatMax) sameHotelRepeatMax = count;
   }
 
+  // Nights that lie ahead. Deliberately walked into a THROWAWAY accumulator:
+  // nightsByYear/nightsByMonth describe what happened, and a booking for next
+  // June must not appear in the same series as a night actually slept.
+  let plannedNights = 0;
+  for (const stay of plannedStays) {
+    plannedNights += walkNights(stay.checkIn, stay.checkOut, {}, {});
+  }
+
   // When the caller supplies the user's full lodgings list, lodgingsCount/
-  // chainsUnique count hotels the user HAS (including ones with no stay
-  // yet), and their cities/countries fold into the shared sets too.
+  // chainsUnique count hotels the user HAS BEEN TO (including ones with no
+  // stay recorded — see classifyLodging), and their cities/countries fold
+  // into the shared sets too.
   let lodgingsCount = lodgingIds.size;
   let chainsUnique = chainIds.size;
+  let plannedLodgingsCount = 0;
+  let notedLodgingsCount = 0;
   if (lodgings) {
     const lodgingChainIds = new Set<number>();
+    let visitedLodgings = 0;
     for (const l of lodgings) {
+      const state = classifyLodging(l, statesByLodgingId.get(l.id) ?? []);
+      if (state === "planned") plannedLodgingsCount += 1;
+      // `excluded` here can only mean "bookmarked" — a cancelled stay leaves
+      // its house countable, the house itself was never cancelled.
+      if (state === "excluded") notedLodgingsCount += 1;
+      if (state !== "visited") continue;
+      visitedLodgings += 1;
       if (l.chainId !== null) lodgingChainIds.add(l.chainId);
       if (l.city) cities.add(l.city);
       if (l.country) countries.add(l.country);
     }
-    lodgingsCount = lodgings.length;
+    lodgingsCount = visitedLodgings;
     chainsUnique = lodgingChainIds.size;
   }
 
@@ -222,6 +289,10 @@ export function calculateLodgingStats(
       ratingCount > 0 ? Math.round((ratingSum / ratingCount) * 10) / 10 : null,
     chainLoyaltyMax,
     sameHotelRepeatMax,
+    plannedStaysCount: plannedStays.length,
+    plannedNights,
+    plannedLodgingsCount,
+    notedLodgingsCount,
   };
 }
 

@@ -342,4 +342,15 @@ export interface LodgingStats {
   avgRatingOverall: number | null;
   chainLoyaltyMax: number;
   sameHotelRepeatMax: number;
+  /**
+   * Forward-looking counterparts to `staysCount` / `totalNights` /
+   * `lodgingsCount` — everything whose check-out has not happened yet. Reported
+   * separately, never folded in: a booking for next month is not a night slept
+   * (owner rule, 2026-08-15; see `shared/lodgingCounting.ts`).
+   */
+  plannedStaysCount: number;
+  plannedNights: number;
+  plannedLodgingsCount: number;
+  /** Houses the user only bookmarked (`visited === false`). Never part of any other figure. */
+  notedLodgingsCount: number;
 }

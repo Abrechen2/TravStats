@@ -27,6 +27,10 @@ const defaultStats: LodgingStats = {
   avgRatingOverall: null,
   chainLoyaltyMax: 0,
   sameHotelRepeatMax: 1,
+  plannedStaysCount: 0,
+  plannedNights: 0,
+  plannedLodgingsCount: 0,
+  notedLodgingsCount: 0,
 };
 
 vi.mock("../../lib/api/lodging", () => ({
