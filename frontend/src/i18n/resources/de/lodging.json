@@ -392,6 +392,76 @@
       "fromStays_one": "aus {{count}} Aufenthalt",
       "fromStays_other": "aus {{count}} Aufenthalten",
       "bestValue": "Bestes Preis-Leistungs-Verhältnis"
+    },
+    "geo": {
+      "title": "Wo du geschlafen hast",
+      "unlocated": "{{count}} Aufenthalte ohne Koordinaten — in den Extremwerten und im Mittelpunkt nicht enthalten",
+      "unlocated_one": "{{count}} Aufenthalt ohne Koordinaten — in den Extremwerten und im Mittelpunkt nicht enthalten",
+      "unlocated_other": "{{count}} Aufenthalte ohne Koordinaten — in den Extremwerten und im Mittelpunkt nicht enthalten",
+      "continents": "Kontinente",
+      "noContinents": "Noch kein Land zugeordnet",
+      "northernmost": "Nördlichste Übernachtung",
+      "southernmost": "Südlichste Übernachtung",
+      "noCoords": "Noch keine Koordinaten erfasst",
+      "centre": "Dein Reisemittelpunkt",
+      "centreDesc": "Der nach Nächten gewichtete Schwerpunkt aller Übernachtungen",
+      "centreFootnote": "Auf der Kugel gerechnet — sonst läge der Mittelpunkt zweier Nächte beiderseits der Datumsgrenze mitten im Atlantik.",
+      "topCities": "Städte, nach Nächten",
+      "topCountries": "Länder, nach Nächten",
+      "noPlaces": "Noch keine Orte erfasst",
+      "nights": "{{count}} Nächte",
+      "nights_one": "{{count}} Nacht",
+      "nights_other": "{{count}} Nächte",
+      "stays": "{{count}} Aufenthalte",
+      "stays_one": "{{count}} Aufenthalt",
+      "stays_other": "{{count}} Aufenthalte"
+    },
+    "rhythm": {
+      "title": "Wann du unterwegs warst",
+      "nightsAway": "Nächte auswärts",
+      "nightsAwayDesc": "Verschiedene Tage, an denen du nicht zuhause geschlafen hast",
+      "overlap": "{{count}} Nächte doppelt gebucht und hier nur einmal gezählt",
+      "overlap_one": "{{count}} Nacht doppelt gebucht und hier nur einmal gezählt",
+      "overlap_other": "{{count}} Nächte doppelt gebucht und hier nur einmal gezählt",
+      "longestStreak": "Längste Zeit am Stück",
+      "longestStreakDesc": "{{start}} bis {{end}}",
+      "longestGap": "Längste Zeit zuhause",
+      "longestGapDesc": "Zwischen der ersten und der letzten erfassten Nacht",
+      "busiestMonth": "Stärkster Monat",
+      "busiestMonthDesc": "Über alle Jahre zusammen",
+      "byWeekday": "Nächte nach Wochentag",
+      "bySeason": "Nächte nach Jahreszeit",
+      "awayShare": "Anteil des Jahres auswärts",
+      "noNights": "Noch keine Nächte erfasst",
+      "weekday": {
+        "mon": "Montag",
+        "tue": "Dienstag",
+        "wed": "Mittwoch",
+        "thu": "Donnerstag",
+        "fri": "Freitag",
+        "sat": "Samstag",
+        "sun": "Sonntag"
+      },
+      "season": {
+        "winter": "Winter",
+        "spring": "Frühling",
+        "summer": "Sommer",
+        "autumn": "Herbst"
+      },
+      "month": {
+        "0": "Januar",
+        "1": "Februar",
+        "2": "März",
+        "3": "April",
+        "4": "Mai",
+        "5": "Juni",
+        "6": "Juli",
+        "7": "August",
+        "8": "September",
+        "9": "Oktober",
+        "10": "November",
+        "11": "Dezember"
+      }
     }
   }
 }
