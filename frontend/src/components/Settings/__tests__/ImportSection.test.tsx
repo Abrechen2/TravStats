@@ -20,15 +20,6 @@ vi.mock("../../import/LodgingCsvImportTile", () => ({
     <button data-testid="tile-lodging-csv" onClick={() => onImported?.()} />
   ),
 }));
-// Exposes the tile's `onImported` so a test can fire it — the parse flow
-// itself (drop file → parse → review → commit) is covered by its own suites.
-vi.mock("../../import/ParseImportTile", () => ({
-  ParseImportTile: ({ onImported }: { onImported?: () => void }) => (
-    <div data-testid="import-tile-parse">
-      <button data-testid="parse-imported-probe" onClick={() => onImported?.()} />
-    </div>
-  ),
-}));
 // The log fetches on mount — render a marker that reports the reload key it
 // was handed, so a missed refresh signal is visible instead of silent.
 vi.mock("../../import/ImportLogSection", () => ({
@@ -40,8 +31,8 @@ vi.unmock("../../../store/settingsStore");
 
 import ImportSection from "../ImportSection";
 
-// The hub links to the flights page for the flight parse route (#238), so the
-// component needs a router in scope.
+// Tiles link out (the FR24 help page, the area itself), so the component needs
+// a router in scope.
 const render = (ui: React.ReactElement) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
 import { useSettingsStore } from "../../../store/settingsStore";
 
@@ -138,38 +129,32 @@ describe("ImportSection — every enabled domain, every route (#238)", () => {
     expect(screen.getByText("common:domain.cruise")).toBeTruthy();
   });
 
-  it("offers the e-mail/PDF route for every enabled domain", () => {
-    useSettingsStore.setState({ enabledDomains: ["flight", "cruise", "lodging"] });
-    render(<ImportSection />);
-    expect(screen.getAllByTestId("import-tile-parse")).toHaveLength(3);
-  });
-
-  it("does not offer a route for a domain that is switched off", () => {
+  it("does not render a section for a domain that is switched off", () => {
     useSettingsStore.setState({ enabledDomains: ["flight"] });
     render(<ImportSection />);
     expect(screen.queryByText("common:domain.cruise")).toBeNull();
-    expect(screen.getAllByTestId("import-tile-parse")).toHaveLength(1);
   });
 });
 
 /**
- * The parse route writes an import batch for lodging, so it has to reach the
- * log exactly like the CSV route does. This was wrong once already on the CSV
- * tile, and the new parse tile reintroduced it — hence a test on the WIRING,
- * not just on the rendering.
+ * The page carries LISTS only. The e-mail/PDF route was here once — #238 read
+ * its absence as a gap — and the decision went the other way: a booking mail
+ * arrives again and again and belongs in the add-dialog of its area, while a
+ * list is a one-off migration. Two acts, two places.
+ *
+ * This is a test on a DECISION, not on markup: if an e-mail route reappears
+ * here, the two surfaces have started to blur again.
  */
-describe("ImportSection — a parse import reaches the log too", () => {
-  beforeEach(() => {
-    useSettingsStore.setState({ enabledDomains: ["lodging"] });
+describe("ImportSection — lists only", () => {
+  it("offers no e-mail/PDF route for any enabled domain", () => {
+    useSettingsStore.setState({ enabledDomains: ["flight", "cruise", "lodging"] });
+    render(<ImportSection />);
+    expect(screen.queryByTestId("import-tile-parse")).toBeNull();
   });
 
-  it("bumps the log's reload key when the lodging e-mail/PDF route creates something", async () => {
-    const user = userEvent.setup();
+  it("says so plainly for an area that has no list format yet", () => {
+    useSettingsStore.setState({ enabledDomains: ["cruise"] });
     render(<ImportSection />);
-    const before = screen.getByTestId("import-log").textContent;
-
-    await user.click(screen.getByTestId("parse-imported-probe"));
-
-    expect(screen.getByTestId("import-log").textContent).not.toBe(before);
+    expect(screen.getByText("settings:import.noRoutes")).toBeTruthy();
   });
 });

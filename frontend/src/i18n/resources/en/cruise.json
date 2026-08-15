@@ -1,5 +1,7 @@
 {
-  "nav": { "link": "Cruises" },
+  "nav": {
+    "link": "Cruises"
+  },
   "list": {
     "title": "Cruises",
     "new": "Add cruise",
@@ -127,7 +129,10 @@
     "via_geocoder": "Map search (OpenStreetMap)",
     "searchError": "Port search failed - please try again"
   },
-  "map": { "layer": "Cruises", "fallbackTitle": "Cruise" },
+  "map": {
+    "layer": "Cruises",
+    "fallbackTitle": "Cruise"
+  },
   "filter": {
     "title": "Filter",
     "searchPlaceholder": "Search ship or line …",
@@ -148,19 +153,7 @@
     "saveError": "Could not save the cruise"
   },
   "add": {
-    "title": "Add cruise",
-    "back": "Back",
-    "import": {
-      "best": "Best option",
-      "title": "Import booking",
-      "hint": "Read in a booking email (.eml/.msg) or PDF — auto-detected.",
-      "cta": "Import"
-    },
-    "manual": {
-      "title": "Enter manually",
-      "hint": "Add ship, route and ports yourself.",
-      "cta": "Start"
-    }
+    "title": "Add cruise"
   },
   "import": {
     "button": "Import PDF",
@@ -192,6 +185,7 @@
     "shipUnmatchedHint": "Stored as free text. You can link the ship in the editor.",
     "stopsLabel": "Stops",
     "unmatchedTitle": "Unmatched ports",
-    "unmatchedHint": "These ports weren't found in the catalog and were marked as unresolved — they stay ports (not sea days). Pick the matching port below, or resolve them later in the editor."
+    "unmatchedHint": "These ports weren't found in the catalog and were marked as unresolved — they stay ports (not sea days). Pick the matching port below, or resolve them later in the editor.",
+    "alreadyImported": "{{count}} booking(s) had already been read in."
   }
 }

@@ -33,8 +33,8 @@ describe("lodging import schema", () => {
   });
 
   it("creates an import batch and stamps its id on the rows it created", async () => {
-    const batch = await prisma.lodgingImportBatch.create({
-      data: { userId, source: "csv", fileName: "places.csv" },
+    const batch = await prisma.importBatch.create({
+      data: { domain: "lodging", userId, source: "csv", fileName: "places.csv" },
     });
     expect(batch.source).toBe("csv");
 
@@ -63,7 +63,7 @@ describe("lodging import schema", () => {
 
     await prisma.lodgingStay.deleteMany({ where: { batchId: batch.id } });
     await prisma.lodging.deleteMany({ where: { batchId: batch.id } });
-    await prisma.lodgingImportBatch.delete({ where: { id: batch.id } });
+    await prisma.importBatch.delete({ where: { id: batch.id } });
   });
 
   it("rejects a duplicate externalRef for the same user on lodgings", async () => {

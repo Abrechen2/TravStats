@@ -30,7 +30,6 @@ interface SimplifiedFlightFormProps {
   // parent handles closing this form and opening SpecialFlightModal.
   onPickSpecialFlight?: () => void;
   /** Open straight into the e-mail/PDF uploader (entered from the import hub). */
-  openEmailImport?: boolean;
 }
 
 export default function SimplifiedFlightFormV2({
@@ -38,11 +37,10 @@ export default function SimplifiedFlightFormV2({
   onCancel,
   onBatchComplete,
   onPickSpecialFlight,
-  openEmailImport,
 }: SimplifiedFlightFormProps): JSX.Element {
   const { t } = useTranslation(["flights", "errors", "common"]);
 
-  const form = useFlightForm(onSubmit, onCancel, onBatchComplete, { openEmailImport });
+  const form = useFlightForm(onSubmit, onCancel, onBatchComplete);
 
   // Theme classes (dark-only — see TravStatsWeb/brand/BRAND.md §1.1)
   const bgClass = "bg-(--bg-surface)";
@@ -84,19 +82,15 @@ export default function SimplifiedFlightFormV2({
               searchDate={form.searchDate}
               loading={form.loading}
               showScanner={form.showScanner}
-              showEmailUploader={form.showEmailUploader}
-              textClass={textClass}
-              mutedTextClass={mutedTextClass}
-              bgClass={bgClass}
               sizedInputClass={sizedInputClass}
               setFlightNumber={form.setFlightNumber}
               setSearchDate={form.setSearchDate}
               setShowScanner={form.setShowScanner}
-              setShowEmailUploader={form.setShowEmailUploader}
               setStep={form.setStep}
               setError={form.setError}
               handleFlightLookup={form.handleFlightLookup}
               handleBoardingPassScan={form.handleBoardingPassScan}
+              setImportBatchId={form.setImportBatchId}
               setParsedFlights={form.setParsedFlights}
               setCurrentFlightIndex={form.setCurrentFlightIndex}
               setParserProvider={form.setParserProvider}
@@ -108,9 +102,9 @@ export default function SimplifiedFlightFormV2({
 
           {form.step === "select" && form.lookupResults.length > 0 && (
             <FlightSelectStep
-              lookupResults={form.lookupResults}
               textClass={textClass}
               mutedTextClass={mutedTextClass}
+              lookupResults={form.lookupResults}
               handleSelectFlight={form.handleSelectFlight}
               setStep={form.setStep}
             />
@@ -118,6 +112,8 @@ export default function SimplifiedFlightFormV2({
 
           {form.step === "complete" && (
             <FlightCompleteStep
+              textClass={textClass}
+              mutedTextClass={mutedTextClass}
               selectedFlight={form.selectedFlight}
               timeEstimationWarning={form.timeEstimationWarning}
               departure={form.departure}
@@ -195,8 +191,6 @@ export default function SimplifiedFlightFormV2({
               setCompanions={form.setCompanions}
               notes={form.notes}
               setNotes={form.setNotes}
-              textClass={textClass}
-              mutedTextClass={mutedTextClass}
               sizedInputClass={sizedInputClass}
               setTimeEstimationWarning={form.setTimeEstimationWarning}
             />

@@ -1,10 +1,4 @@
 {
-  "tabs": {
-    "email": "Email",
-    "pdf": "PDF",
-    "manual": "Manual",
-    "manualHint": "Opening entry form …"
-  },
   "email": {
     "dropZone": "Drop email here or click",
     "textFallback": "Or paste raw text",
@@ -24,16 +18,51 @@
     "parseError": "Parsing the PDF failed"
   },
   "cruise": {
-    "panelTitle": "Import cruise",
-    "panelHint": "Read in a booking email or PDF, or add manually — all in one place."
-  },
-  "flight": {
-    "panelTitle": "Import flight",
-    "panelHint": "Read in a booking email or PDF, or add manually — all in one place."
+    "panelTitle": "Add cruise",
+    "panelHint": "Where shall we start?"
   },
   "lodging": {
-    "panelTitle": "Import lodging",
-    "panelHint": "Read in a booking email or PDF, or add manually — all in one place.",
+    "panelTitle": "Add stay",
+    "panelHint": "Where shall we start?",
     "triggerLabel": "Read booking"
+  },
+  "route": {
+    "document": {
+      "title": "Booking e-mail or PDF",
+      "description": "We read it out, you only check it over."
+    },
+    "manual": "None of these — enter by hand"
+  },
+  "trip": {
+    "panelTitle": "Add trip",
+    "panelHint": "Where shall we start?",
+    "triggerLabel": "Add trip",
+    "document": {
+      "title": "Read travel documents",
+      "description": "Your operator's mail with its PDF — flights, hotels and dates are all in there."
+    },
+    "fromExisting": {
+      "title": "Build from existing entries",
+      "description": "Pick a period — we suggest what belongs together.",
+      "action": "Choose",
+      "empty": "Nothing found that would group into a trip.",
+      "failed": "Could not load suggestions."
+    },
+    "manual": "Create empty and fill in by hand"
+  },
+  "poi": {
+    "panelTitle": "Add place",
+    "panelHint": "Where shall we start?",
+    "triggerLabel": "Add place",
+    "search": {
+      "title": "Search for a place",
+      "description": "Name or address — coordinates, country and kind come along.",
+      "action": "Search"
+    },
+    "onMap": {
+      "title": "Drop it on the map",
+      "description": "For anything without a name — a viewpoint, a pitch, a bay.",
+      "action": "Map"
+    }
   }
 }

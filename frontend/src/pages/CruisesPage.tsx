@@ -4,7 +4,8 @@ import { cruiseApi } from "../lib/api";
 import type { Cruise, CruiseStatus } from "../types";
 import { CruiseRow } from "../components/Cruise/CruiseRow";
 import CruiseRowActions from "../components/Cruise/CruiseRowActions";
-import { CruiseAddChooser } from "../components/Cruise/CruiseAddChooser";
+import DomainImportPanel from "../components/import/DomainImportPanel";
+import { useCruiseImportAdapter } from "../components/import/adapters/cruiseAdapter";
 import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
 import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
@@ -25,6 +26,7 @@ export default function CruisesPage(): JSX.Element {
   const [cruises, setCruises] = useState<Cruise[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [showAdd, setShowAdd] = useState<boolean>(false);
+  const importAdapter = useCruiseImportAdapter();
   const [editingCruise, setEditingCruise] = useState<Cruise | null>(null);
   const [cruiseToDelete, setCruiseToDelete] = useState<Cruise | null>(null);
   const [duplicateSource, setDuplicateSource] = useState<Cruise | null>(null);
@@ -327,7 +329,15 @@ export default function CruisesPage(): JSX.Element {
           </div>
         )}
 
-        {showAdd && <CruiseAddChooser onClose={() => setShowAdd(false)} onSaved={reload} />}
+        {/* Cruises had their own chooser, built before the shared one existed
+            — a third copy of the same idea, with the drop zone hidden behind a
+            button that swapped the view. Same rows as every other area now. */}
+        <DomainImportPanel
+          open={showAdd}
+          onClose={() => setShowAdd(false)}
+          onItemsCreated={reload}
+          adapter={importAdapter}
+        />
         {editingCruise && (
           <CruiseEditModal
             mode="edit"

@@ -3,10 +3,9 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
-import { listLodgingImportBatches, revertLodgingImportBatch } from "../../lib/api/lodgingImport";
-import { describeLodgingRevertResult } from "../../lib/lodgingImportResult";
+import { listImportBatches, revertImportBatch } from "../../lib/api/importBatches";
+import type { ImportBatchSummary } from "../../lib/api/importBatches";
 import { DOMAINS } from "../../shared/domains";
-import type { LodgingImportBatchSummary } from "../../types/lodgingImport";
 
 interface Props {
   /** Runs after a successful revert so a surrounding page (list + stats) can refresh too. */
@@ -21,23 +20,38 @@ interface Props {
  * a domain page, which is the same rule 2.5.0 established for the importers
  * themselves: one place to import, one place to see what was imported.
  *
- * DELIBERATELY HONEST ABOUT ITS SCOPE: only lodging writes import batches
- * today, so every entry carries a domain label and the empty state says which
- * imports can be undone. The flight tiles (FR24, generic CSV) create no batch
- * rows and are not revertible — a log that silently showed nothing for them
- * would read as "no flight imports happened". When a domain gains batches, it
- * adds its source here and its entries appear with their own label.
+ * It used to cover stays alone, because they were the only domain that
+ * recorded its imports; a flight logbook could be imported and left no trace
+ * at all, so the log read "nothing imported yet" while 160 flights had just
+ * landed. Every domain writes a batch now, and each entry says which area it
+ * belongs to.
  *
  * A revert deletes only what that batch created — a batch-created lodging that
  * still has foreign stays (hand-added, or attached by a later batch) survives,
  * detached (`detachedLodgings`). The confirm dialog and the result toast both
  * exist to make that distinction visible, never to hide it.
  */
+
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/**
+ * What a batch produced, in the words of its own area. A stay import made
+ * houses AND nights; a flight import made flights. One shared phrasing would
+ * have to say "rows", which tells the user nothing about what they would get
+ * back by reverting it.
+ */
+function describeCounts(batch: ImportBatchSummary, t: Translate): string {
+  const { lodgings, stays, flights, cruises } = batch.counts;
+  if (batch.domain === "flight") return t("settings:import.log.counts.flights", { count: flights });
+  if (batch.domain === "cruise") return t("settings:import.log.counts.cruises", { count: cruises });
+  return t("lodging:import.batches.created", { lodgingCount: lodgings, stayCount: stays });
+}
+
 export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element {
   const { t } = useTranslation(["lodging", "settings", "common"]);
   const addToast = useToastStore((s) => s.addToast);
 
-  const [batches, setBatches] = useState<LodgingImportBatchSummary[]>([]);
+  const [batches, setBatches] = useState<ImportBatchSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<boolean>(false);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
@@ -47,7 +61,7 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
     setLoading(true);
     setLoadError(false);
     try {
-      const data = await listLodgingImportBatches();
+      const data = await listImportBatches();
       setBatches(data);
     } catch (err: unknown) {
       logger.error("ImportLogSection: failed to load import batches", err);
@@ -69,9 +83,19 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
     async (batchId: string): Promise<void> => {
       setReverting(true);
       try {
-        const result = await revertLodgingImportBatch(batchId);
-        const toast = describeLodgingRevertResult(result, t);
-        addToast(toast.type, toast.message);
+        const result = await revertImportBatch(batchId);
+        // A stay import can leave a hotel standing when other stays still hang
+        // from it — saying so is the difference between "8 removed" and the
+        // user wondering why a hotel is still there.
+        addToast(
+          "success",
+          result.detached
+            ? t("settings:import.log.revertedWithKept", {
+                count: result.deleted,
+                kept: result.detached,
+              })
+            : t("settings:import.log.reverted", { count: result.deleted }),
+        );
         setConfirmingId(null);
         await load();
         await onReverted?.();
@@ -126,16 +150,15 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
                   className="flex items-center gap-2 font-medium"
                   style={{ color: "var(--text-primary)" }}
                 >
-                  {/* Which domain this run belongs to — today always lodging,
-                      but never left implicit: an unlabelled log would claim to
-                      cover imports it cannot see. */}
+                  {/* Which area this run landed in. Never left implicit: an
+                      unlabelled log reads as if it covered everything. */}
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                     <span
                       aria-hidden="true"
                       className="h-1.5 w-1.5 rounded-full"
-                      style={{ background: DOMAINS.lodging.color }}
+                      style={{ background: DOMAINS[batch.domain].color }}
                     />
-                    {t(`common:${DOMAINS.lodging.i18nKey}`)}
+                    {t(`common:${DOMAINS[batch.domain].i18nKey}`)}
                   </span>
                   <span>{t(`lodging:import.batches.source.${batch.source}`)}</span>
                   {batch.fileName && <span> · {batch.fileName}</span>}
@@ -143,12 +166,7 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
                 <div className="text-xs" style={{ color: "var(--text-muted)" }}>
                   <span>{new Date(batch.createdAt).toLocaleDateString()}</span>
                   {" · "}
-                  <span>
-                    {t("lodging:import.batches.created", {
-                      lodgingCount: batch.lodgingCount,
-                      stayCount: batch.stayCount,
-                    })}
-                  </span>
+                  <span>{describeCounts(batch, t)}</span>
                 </div>
               </div>
               <button
