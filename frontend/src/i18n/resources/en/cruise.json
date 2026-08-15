@@ -185,6 +185,7 @@
     "shipUnmatchedHint": "Stored as free text. You can link the ship in the editor.",
     "stopsLabel": "Stops",
     "unmatchedTitle": "Unmatched ports",
-    "unmatchedHint": "These ports weren't found in the catalog and were marked as unresolved — they stay ports (not sea days). Pick the matching port below, or resolve them later in the editor."
+    "unmatchedHint": "These ports weren't found in the catalog and were marked as unresolved — they stay ports (not sea days). Pick the matching port below, or resolve them later in the editor.",
+    "alreadyImported": "{{count}} booking(s) had already been read in."
   }
 }

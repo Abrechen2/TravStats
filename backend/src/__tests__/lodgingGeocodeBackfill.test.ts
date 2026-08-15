@@ -109,8 +109,8 @@ describe("backfillMissingCoordinates", () => {
 
   it("scopes to a single batch when a batchId is given", async () => {
     geocodeAddress.mockResolvedValue({ lat: 10, lon: 20 });
-    const batch = await prisma.lodgingImportBatch.create({
-      data: { userId, source: "csv", fileName: "b.csv" },
+    const batch = await prisma.importBatch.create({
+      data: { domain: "lodging", userId, source: "csv", fileName: "b.csv" },
     });
     await prisma.lodging.create({
       data: { userId, name: "In Batch", city: "Rome", batchId: batch.id },
@@ -131,7 +131,7 @@ describe("backfillMissingCoordinates", () => {
     ).toBeNull();
 
     await prisma.lodging.deleteMany({ where: { batchId: batch.id } });
-    await prisma.lodgingImportBatch.delete({ where: { id: batch.id } });
+    await prisma.importBatch.delete({ where: { id: batch.id } });
   });
 
   it("never touches another user's rows, even via a real batch id owned by them", async () => {
@@ -141,8 +141,8 @@ describe("backfillMissingCoordinates", () => {
       data: { username: "lodging-geocode-backfill-other", passwordHash: "x" },
     });
     try {
-      const otherBatch = await prisma.lodgingImportBatch.create({
-        data: { userId: otherUser.id, source: "csv", fileName: "other.csv" },
+      const otherBatch = await prisma.importBatch.create({
+        data: { domain: "lodging", userId: otherUser.id, source: "csv", fileName: "other.csv" },
       });
       const otherLodging = await prisma.lodging.create({
         data: {
@@ -164,7 +164,7 @@ describe("backfillMissingCoordinates", () => {
       ).toBeNull();
     } finally {
       await prisma.lodging.deleteMany({ where: { userId: otherUser.id } });
-      await prisma.lodgingImportBatch.deleteMany({
+      await prisma.importBatch.deleteMany({
         where: { userId: otherUser.id },
       });
       await prisma.user.delete({ where: { id: otherUser.id } });

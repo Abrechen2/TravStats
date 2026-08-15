@@ -94,6 +94,13 @@ const baseCruiseSchema = z.object({
   cabinType: z.enum(CABIN_TYPES).nullable().optional(),
   deck: z.number().int().min(1).max(30).nullable().optional(),
   bookingReference: z.string().max(40).nullable().optional(),
+  /**
+   * Present when this cruise arrives from an import rather than the form.
+   * Its presence is what marks the row as imported: the server derives the
+   * provenance key from it, so the rule for "same cruise" lives in one place
+   * instead of being restated by every client.
+   */
+  importBatchId: z.string().uuid().nullable().optional(),
   price: z.number().min(0).nullable().optional(),
   currency: currencyField.optional(),
   // Plain-text notes. The frontend renders these as React text (auto-escaped),
