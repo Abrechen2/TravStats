@@ -49,9 +49,49 @@ describe("resolveCountryCode", () => {
     expect(resolveCountryCode("switzerland")).toBe("CH");
   });
 
+  // Measured on the real lodging data: 65 of 279 houses showed NO flag because
+  // the field holds the country's name in its OWN language — which is what an
+  // imported list or a foreign booking mail naturally carries.
+  it("resolves a country name in its own language", () => {
+    expect(resolveCountryCode("España")).toBe("ES");
+    expect(resolveCountryCode("Italia")).toBe("IT");
+    expect(resolveCountryCode("Sverige")).toBe("SE");
+    expect(resolveCountryCode("Česko")).toBe("CZ");
+    expect(resolveCountryCode("Slovenija")).toBe("SI");
+    expect(resolveCountryCode("Lëtzebuerg")).toBe("LU");
+    expect(resolveCountryCode("Nederland")).toBe("NL");
+    expect(resolveCountryCode("România")).toBe("RO");
+    expect(resolveCountryCode("Việt Nam")).toBe("VN");
+    expect(resolveCountryCode("日本")).toBe("JP");
+    expect(resolveCountryCode("中国")).toBe("CN");
+    expect(resolveCountryCode("مصر")).toBe("EG");
+  });
+
+  // A multilingual country writes all its names into one field.
+  it("resolves a field that carries several names at once", () => {
+    expect(resolveCountryCode("Schweiz/Suisse/Svizzera/Svizra")).toBe("CH");
+    expect(resolveCountryCode("België / Belgique / Belgien")).toBe("BE");
+    expect(resolveCountryCode("Suomi / Finland")).toBe("FI");
+    expect(resolveCountryCode("Madagasikara / Madagascar")).toBe("MG");
+  });
+
+  // Names Intl does not carry: former official forms and everyday variants.
+  it("resolves well-known alternative names", () => {
+    expect(resolveCountryCode("Tschechische Republik")).toBe("CZ");
+    expect(resolveCountryCode("Czech Republic")).toBe("CZ");
+    expect(resolveCountryCode("USA")).toBe("US");
+  });
+
   it("returns null (never a broken glyph) for unresolvable input", () => {
     expect(resolveCountryCode(null)).toBeNull();
     expect(resolveCountryCode("")).toBeNull();
     expect(resolveCountryCode("Nonexistentland")).toBeNull();
+  });
+
+  // "null" arrives as literal text when an import writes a missing value as a
+  // string. A flag for a country called "null" would be pure invention.
+  it("refuses the strings 'null' and 'undefined'", () => {
+    expect(resolveCountryCode("null")).toBeNull();
+    expect(resolveCountryCode("undefined")).toBeNull();
   });
 });
