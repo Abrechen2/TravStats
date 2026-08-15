@@ -32,6 +32,16 @@ interface Row {
 /** Optional: write the parsed documents out so other tools can compare against them. */
 const OUT = process.env.OUT ?? "";
 
+/**
+ * A Node `Buffer` is a VIEW into a shared allocation pool, so handing
+ * `.buffer` to a reader that wants an `ArrayBuffer` would hand it the whole
+ * pool — every other file read in this process included. Slicing to the view's
+ * own range gives the reader exactly this file's bytes and nothing else.
+ */
+function toArrayBuffer(b: Buffer): ArrayBuffer {
+  return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer;
+}
+
 async function main(): Promise<void> {
   const entries = fs.readdirSync(DIR).sort();
   const files = entries.filter((f) => /\.msg$/i.test(f));
@@ -40,7 +50,7 @@ async function main(): Promise<void> {
   let mailsWithoutPdf = 0;
 
   for (const mail of files) {
-    const reader = new MsgReader(fs.readFileSync(path.join(DIR, mail)));
+    const reader = new MsgReader(toArrayBuffer(fs.readFileSync(path.join(DIR, mail))));
     const attachments = (reader.getFileData().attachments ?? []).filter((a) =>
       /\.pdf$/i.test(a.fileName ?? ""),
     );
