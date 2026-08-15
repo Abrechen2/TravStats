@@ -39,6 +39,7 @@ vi.mock("../../../MapContainer3D", () => ({
 
 // Imported after the mocks above so the module graph picks them up.
 import { LodgingTab } from "../LodgingTab";
+import { EMPTY_LODGING_STATS_BLOCKS } from "../../../../types/lodgingStatsFixture";
 
 const baseStay = {
   id: "stay-1",
@@ -133,6 +134,7 @@ const zeroStats: LodgingStats = {
   plannedNights: 0,
   plannedLodgingsCount: 0,
   notedLodgingsCount: 0,
+  ...EMPTY_LODGING_STATS_BLOCKS,
 };
 
 describe("LodgingTab", () => {

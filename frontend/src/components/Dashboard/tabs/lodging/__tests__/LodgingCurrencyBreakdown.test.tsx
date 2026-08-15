@@ -9,6 +9,7 @@ vi.unmock("../../../../../store/settingsStore");
 // Imported after the unmock above so the module graph picks it up.
 import { useSettingsStore } from "../../../../../store/settingsStore";
 import { LodgingCurrencyBreakdown } from "../LodgingCurrencyBreakdown";
+import { EMPTY_LODGING_STATS_BLOCKS } from "../../../../../types/lodgingStatsFixture";
 
 const baseStats: LodgingStats = {
   lodgingsCount: 2,
@@ -34,6 +35,7 @@ const baseStats: LodgingStats = {
   plannedNights: 0,
   plannedLodgingsCount: 0,
   notedLodgingsCount: 0,
+  ...EMPTY_LODGING_STATS_BLOCKS,
 };
 
 describe("LodgingCurrencyBreakdown", () => {

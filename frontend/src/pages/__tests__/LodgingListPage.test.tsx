@@ -31,6 +31,7 @@ const defaultStats: LodgingStats = {
   plannedNights: 0,
   plannedLodgingsCount: 0,
   notedLodgingsCount: 0,
+  ...EMPTY_LODGING_STATS_BLOCKS,
 };
 
 vi.mock("../../lib/api/lodging", () => ({
@@ -62,6 +63,7 @@ vi.unmock("../../store/settingsStore");
 // Imported after the mocks above so the module graph picks them up.
 import LodgingListPage from "../LodgingListPage";
 import { useSettingsStore } from "../../store/settingsStore";
+import { EMPTY_LODGING_STATS_BLOCKS } from "../../types/lodgingStatsFixture";
 
 /**
  * The FX snapshot half of a CONVERTED stay.
