@@ -92,7 +92,7 @@ describe("commitLodgingImport", () => {
     expect(result.failed).toEqual([]);
     expect(geocodeSpy).not.toHaveBeenCalled();
 
-    const batch = await prisma.lodgingImportBatch.findUnique({
+    const batch = await prisma.importBatch.findUnique({
       where: { id: result.batchId },
     });
     expect(batch?.source).toBe("email");
@@ -561,7 +561,7 @@ describe("commitLodgingImport", () => {
     expect(result.createdLodgings).toBe(2);
     expect(result.createdStays).toBe(1);
 
-    const batch = await prisma.lodgingImportBatch.findUnique({
+    const batch = await prisma.importBatch.findUnique({
       where: { id: result.batchId },
     });
     expect(batch).not.toBeNull();

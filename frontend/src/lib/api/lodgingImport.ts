@@ -1,12 +1,10 @@
 import { api } from "./client";
 import { logger } from "../logger";
 import type {
-  LodgingImportBatchSummary,
   LodgingImportCandidate,
   LodgingImportCommitResult,
   LodgingImportCommitRow,
   LodgingImportPreviewRow,
-  LodgingImportRevertResult,
   LodgingImportSource,
   LodgingImportSummary,
 } from "../../types/lodgingImport";
@@ -38,20 +36,11 @@ export const commitLodgingImport = async (
   return data.data;
 };
 
-export const listLodgingImportBatches = async (): Promise<LodgingImportBatchSummary[]> => {
-  const { data } =
-    await api.get<Envelope<LodgingImportBatchSummary[]>>("/lodging-import/batches");
-  return data.data;
-};
-
-export const revertLodgingImportBatch = async (
-  batchId: string,
-): Promise<LodgingImportRevertResult> => {
-  const { data } = await api.delete<Envelope<LodgingImportRevertResult>>(
-    `/lodging-import/batches/${batchId}`,
-  );
-  return data.data;
-};
+// The batch list and the revert used to live here, lodging-only. They moved to
+// `lib/api/importBatches.ts` when flights and cruises started recording their
+// imports too — one log, one way back, whatever area the rows landed in. The
+// server still answers the old `/lodging-import/batches` paths for anyone
+// scripting against them with an API token.
 
 /**
  * The LLM is NEVER in the critical path: any failure (network, timeout,

@@ -19,6 +19,7 @@ import type { Airport } from "../../lib/api";
 import { cruiseApi } from "../../lib/api/cruise";
 import { flightsApi } from "../../lib/api/flights";
 import { tripsApi } from "../../lib/api/trips";
+import { createImportBatch } from "../../lib/api/importBatches";
 import { useToastStore } from "../../store/toastStore";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -79,6 +80,18 @@ export function deriveTripMeta(
  * Each cruise is an editable audit card; detected flights become opt-in
  * editable cards; everything can be grouped into one Trip on save.
  */
+
+/**
+ * A 409 from `POST /cruises` means the server already holds this booking —
+ * the ordinary answer to re-reading a forwarded confirmation. Recognised by
+ * the fixed code rather than by prose, so a reworded message never turns a
+ * known outcome back into an unexplained failure.
+ */
+function isAlreadyImported(err: unknown): boolean {
+  const res = (err as { response?: { status?: number; data?: { error?: string } } }).response;
+  return res?.status === 409 && res.data?.error === "already_imported";
+}
+
 export function CruiseImportPreviewModal({
   entries,
   onCancel,
@@ -115,8 +128,29 @@ export function CruiseImportPreviewModal({
         tripId = trip.id;
       }
 
+      // One import, one entry in the log — and a booking that was already read
+      // once is counted, not created twice. A batch that cannot be created
+      // must not cost the user their import, so it falls back to unbatched.
+      let batchId: string | null = null;
+      try {
+        batchId = await createImportBatch("cruise", "email", null);
+      } catch (err: unknown) {
+        logger.error("CruiseImportPreviewModal: import batch create failed", err);
+      }
+
+      let alreadyThere = 0;
       for (const e of entryData) {
-        await cruiseApi.create({ ...e.input, tripId });
+        try {
+          await cruiseApi.create({ ...e.input, tripId, importBatchId: batchId });
+        } catch (err: unknown) {
+          // 409 is the server saying "you already have this one" — the normal
+          // answer to re-reading a forwarded confirmation, not a failure.
+          if (isAlreadyImported(err)) {
+            alreadyThere += 1;
+            continue;
+          }
+          throw err;
+        }
       }
 
       const flightIds: string[] = [];
@@ -128,6 +162,9 @@ export function CruiseImportPreviewModal({
         await tripsApi.assignFlights(tripId, { flightIds, action: "add" });
       }
 
+      if (alreadyThere > 0) {
+        addToast("info", t("cruise:import.alreadyImported", { count: alreadyThere }));
+      }
       addToast(
         "success",
         allFlights.length > 0

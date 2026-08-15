@@ -622,7 +622,13 @@
     "openHub": "Import",
     "log": {
       "title": "Import log",
-      "scopeHint": "Every bulk import as a whole, newest first. Only accommodation imports can currently be undone; flight imports are not logged here yet."
+      "scopeHint": "Every list import as a whole — newest first. Revertible as long as the entries still come from that import.",
+      "counts": {
+        "flights": "{{count}} flights",
+        "cruises": "{{count}} cruises"
+      },
+      "reverted": "{{count}} entries removed.",
+      "revertedWithKept": "{{count}} entries removed. {{kept}} kept, because other data still hangs from them."
     },
     "tile": {
       "fr24": {
@@ -671,7 +677,8 @@
         "failed_one": "{{count}} chunk failed — see error message",
         "failed_other": "{{count}} chunks failed — see error message",
         "openFlights": "Open flights list",
-        "close": "Close"
+        "close": "Close",
+        "alreadyPresent": "{{count}} were already here — from an earlier import of the same file."
       },
       "wizard": {
         "title": "Map your CSV columns to TravStats fields",

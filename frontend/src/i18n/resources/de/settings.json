@@ -622,7 +622,13 @@
     "openHub": "Importieren",
     "log": {
       "title": "Import-Logbuch",
-      "scopeHint": "Jeder Massen-Import als Ganzes — neueste zuerst. Rückgängig machen lässt sich derzeit nur der Import von Unterkünften; Flug-Importe werden hier noch nicht protokolliert."
+      "scopeHint": "Jeder Listen-Import als Ganzes — neueste zuerst. Rücknehmbar, solange die Einträge noch aus diesem Import stammen.",
+      "counts": {
+        "flights": "{{count}} Flüge",
+        "cruises": "{{count}} Kreuzfahrten"
+      },
+      "reverted": "{{count}} Einträge entfernt.",
+      "revertedWithKept": "{{count}} Einträge entfernt. {{kept}} behalten, weil andere Daten daran hängen."
     },
     "tile": {
       "fr24": {
@@ -671,7 +677,8 @@
         "failed_one": "{{count}} Block fehlgeschlagen — Fehlermeldung beachten",
         "failed_other": "{{count}} Blöcke fehlgeschlagen — Fehlermeldung beachten",
         "openFlights": "Zur Flugliste",
-        "close": "Schließen"
+        "close": "Schließen",
+        "alreadyPresent": "{{count}} waren schon da — aus einem früheren Import derselben Datei."
       },
       "wizard": {
         "title": "CSV-Spalten auf TravStats-Felder zuordnen",
