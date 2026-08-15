@@ -161,7 +161,8 @@
       "addAnyway": "Add Anyway",
       "mergedToast": "Existing flight enriched with {{count}} fields",
       "mergedNoChange": "No empty fields to fill"
-    }
+    },
+    "alreadyImported": "This flight had already been read in — nothing was created twice."
   },
   "list": {
     "title": "Flights",

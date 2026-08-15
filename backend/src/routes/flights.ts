@@ -32,6 +32,7 @@ import { normalizeAircraft } from '../utils/aircraftNormalize';
 import { calculateNextApiCheckAt } from '../utils/smartCheckSchedule';
 import { buildFlightMergePatch } from '../utils/flightMerge';
 import batchRouter from './flightsBatch';
+import { flightExternalRef, isDocumentImport } from '../services/importProvenance';
 import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from '../shared/statusDerivation';
 import { resolveCompanions, linkRowsFor } from '../services/companionService';
 
@@ -240,6 +241,42 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
     const userId = req.userId!;
     const data = createFlightSchema.parse(req.body);
 
+    // A mail carrying ONE flight comes through here rather than the batch
+    // route, so provenance has to live in both places or half of every
+    // mail-imported logbook stays unrecorded.
+    let importBatchId: string | null = null;
+    if (data.importBatchId) {
+      const batch = await prisma.importBatch.findFirst({
+        where: { id: data.importBatchId, userId, domain: 'flight' },
+        select: { id: true },
+      });
+      importBatchId = batch?.id ?? null;
+    }
+    const externalRef = isDocumentImport(data.dataSource)
+      ? flightExternalRef({
+          flightNumber: data.flightNumber,
+          departureLocal: data.departureLocal,
+          depIata: data.departure.iata,
+          arrIata: data.arrival.iata,
+        })
+      : null;
+    if (externalRef) {
+      const existing = await prisma.flight.findFirst({
+        where: { userId, externalRef },
+        select: { id: true },
+      });
+      if (existing) {
+        // Re-reading a forwarded confirmation is ordinary. 409 says what
+        // happened; a 500 from the unique index would say the import broke.
+        res.status(409).json({
+          success: false,
+          error: 'already_imported',
+          data: { id: existing.id },
+        });
+        return;
+      }
+    }
+
     // Soft warning for past-dated `scheduled` rows (G4) — not rejected so
     // legitimate edge cases (manually re-edited just-departed rows) still
     // succeed, but flagged for ops review since these are almost always a
@@ -420,6 +457,8 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
       const created = await tx.flight.create({
         data: {
           userId,
+          externalRef,
+          importBatchId,
           airline: data.airline,
           airlineIata,
           airlineIcao,

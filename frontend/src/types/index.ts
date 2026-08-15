@@ -275,6 +275,13 @@ export interface TripPhoto {
 }
 
 export interface FlightInput {
+  /**
+   * Set when the flight arrives from an import — a booking mail, a boarding
+   * pass, a file. The server derives the provenance key from it; what counts
+   * as "the same flight" is a rule about the data, not one each client should
+   * restate.
+   */
+  importBatchId?: string | null;
   /** For the nullable fields in this interface: `null` clears the stored
    *  value on update; `undefined` leaves it alone. */
   airline?: string | null;

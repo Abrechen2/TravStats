@@ -17,6 +17,27 @@
 /** Prefix marking a key as machine-derived rather than a real foreign id. */
 const DERIVED = "import";
 
+/**
+ * Did this row come from a DOCUMENT the user handed us — a file, a mail, a
+ * boarding pass — rather than from typing or from an API lookup?
+ *
+ * Only those get provenance. The distinction is not cosmetic: a document can
+ * be handed over twice (a forward, a second export, a re-run), and that is
+ * exactly what provenance is for. A typed flight has no source to point back
+ * at, and an API lookup is a question the app asked, not a file it was given —
+ * recording either would make two legitimate entries collide.
+ *
+ * `email_import` matters most here and is easy to miss: `/flights/batch`
+ * DEFAULTS to it when no source is named, so a booking mail with several
+ * flights arrives under that label and would otherwise slip past unrecorded.
+ */
+const DOCUMENT_SOURCES = new Set(["email_import", "boarding_pass_scan", "bulk_import"]);
+
+export function isDocumentImport(dataSource?: string | null): boolean {
+  const source = (dataSource ?? "").trim();
+  return source.startsWith("imported_") || DOCUMENT_SOURCES.has(source);
+}
+
 function segment(value: string | null | undefined): string {
   const trimmed = (value ?? "").trim().toUpperCase();
   // A colon would split the key when read back; a missing part becomes "-" so

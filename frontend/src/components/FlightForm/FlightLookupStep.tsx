@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ImportManualFooter, ImportRouteRow } from "../import/ImportRouteList";
 import type { ParseEmailResult, ParsePdfResult } from "../../lib/api/parse";
+import { createImportBatch } from "../../lib/api/importBatches";
 import { GlobeLoader } from "../GlobeLoader";
 import type { ParsedBooking } from "../../types";
 import {
@@ -31,6 +32,7 @@ export interface FlightLookupStepProps {
   // Handlers
   handleFlightLookup: () => Promise<void>;
   handleBoardingPassScan: (parsedData: ParsedBooking) => Promise<void>;
+  setImportBatchId: (id: string | null) => void;
   setParsedFlights: (flights: ParsedBooking[]) => void;
   setCurrentFlightIndex: (idx: number) => void;
   setParserProvider: (p: string) => void;
@@ -57,6 +59,7 @@ export default function FlightLookupStep({
   setError,
   handleFlightLookup,
   handleBoardingPassScan,
+  setImportBatchId,
   setParsedFlights,
   setCurrentFlightIndex,
   setParserProvider,
@@ -68,6 +71,23 @@ export default function FlightLookupStep({
 
   // Lifted out of the old nested modal: the drop zone now sits inline in the
   // first route, so these run in place instead of behind an extra window.
+  /**
+   * One import, one entry in the log. Created when the document is read rather
+   * than when the first flight is saved, so a mail carrying four flights ends
+   * up as ONE run that can be taken back in one go — not four separate rows
+   * with no relation to each other.
+   *
+   * A batch that cannot be created must not cost the user their import: the
+   * flights still go in, they just land without an undo record.
+   */
+  const openImportBatch = async (source: "email" | "pdf"): Promise<void> => {
+    try {
+      setImportBatchId(await createImportBatch("flight", source, null));
+    } catch {
+      setImportBatchId(null);
+    }
+  };
+
   const handleEmailResult = (result: ParseEmailResult): void => {
     if (isCruiseEmailResult(result) || isLodgingEmailResult(result)) {
       setError(t("flights:form.noFlightsInEmail"));
@@ -78,6 +98,7 @@ export default function FlightLookupStep({
       setError(t("flights:form.noFlightsInEmail"));
       return;
     }
+    void openImportBatch("email");
     setParsedFlights(flights);
     setCurrentFlightIndex(0);
     setParserProvider(result.provider ?? "template");
@@ -94,6 +115,7 @@ export default function FlightLookupStep({
       setError(t("flights:form.noFlightsInEmail"));
       return;
     }
+    void openImportBatch("pdf");
     setParsedFlights(result.flights);
     setCurrentFlightIndex(0);
     setParserProvider(result.parserUsed ?? "template");

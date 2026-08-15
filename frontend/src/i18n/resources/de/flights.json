@@ -161,7 +161,8 @@
       "addAnyway": "Trotzdem hinzufügen",
       "mergedToast": "Bestehender Flug um {{count}} Felder ergänzt",
       "mergedNoChange": "Keine neuen Felder zu ergänzen"
-    }
+    },
+    "alreadyImported": "Dieser Flug war schon eingelesen — es wurde nichts doppelt angelegt."
   },
   "list": {
     "title": "Flüge",
