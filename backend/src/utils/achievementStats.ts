@@ -163,6 +163,31 @@ export interface UserStats {
   lodgingChainLoyaltyMax: number;
   lodgingSameHotelRepeatMax: number;
   lodgingLongestStayNights: number;
+  // --- Measures added with the 2.7 statistics expansion ---
+  /** Distinct lodging types slept in (hotel/campsite/hostel/…). */
+  lodgingTypesUnique: number;
+  lodgingCitiesUnique: number;
+  lodgingContinents: number;
+  /** Nights in houses rated five stars officially. */
+  lodgingFiveStarNights: number;
+  lodgingAllInclusiveNights: number;
+  /** Stays rated 5 on all four columns; a blank on any of them disqualifies. */
+  lodgingPerfectStays: number;
+  /** Stays rated 2 or worse overall — the ones the user got through. */
+  lodgingEnduredStays: number;
+  lodgingRatedStays: number;
+  lodgingOneNightStays: number;
+  /** Longest unbroken run of nights away, merging touching stays. */
+  lodgingStreakNights: number;
+  /** Highest share of any single year spent away, as a PERCENTAGE (0-100). */
+  lodgingAwaySharePct: number;
+  lodgingIndependentNights: number;
+  /** Most nights under one programme in one calendar year — how status is counted. */
+  lodgingProgrammeYearNights: number;
+  /** Latitude of the northernmost night; 0 when there is none. */
+  lodgingNorthernmostLat: number;
+  /** Trips carrying a flight or cruise, a stay, a journal entry AND a photo. */
+  tripsFullyDocumented: number;
   // Cross-domain (lodging)
   /** True when a single trip links at least one flight AND at least one
    * lodging stay. Computed by `computeFlyAndStayFlags` from per-trip
@@ -284,6 +309,21 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     lodgingChainLoyaltyMax: 0,
     lodgingSameHotelRepeatMax: 0,
     lodgingLongestStayNights: 0,
+    lodgingTypesUnique: 0,
+    lodgingCitiesUnique: 0,
+    lodgingContinents: 0,
+    lodgingFiveStarNights: 0,
+    lodgingAllInclusiveNights: 0,
+    lodgingPerfectStays: 0,
+    lodgingEnduredStays: 0,
+    lodgingRatedStays: 0,
+    lodgingOneNightStays: 0,
+    lodgingStreakNights: 0,
+    lodgingAwaySharePct: 0,
+    lodgingIndependentNights: 0,
+    lodgingProgrammeYearNights: 0,
+    lodgingNorthernmostLat: 0,
+    tripsFullyDocumented: 0,
     flyAndStay: false,
     grandTour: false,
   };

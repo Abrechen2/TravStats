@@ -83,6 +83,8 @@ export function calculateLodgingStats(
   const spendByCurrency: Record<string, number> = {};
   const spendBaseByCurrency: Record<string, number> = {};
   const nightsByType: Record<string, number> = {};
+  const nightsByStars: Record<string, number> = {};
+  const nightsByBoard: Record<string, number> = {};
   const lodgingCounts = new Map<string, number>();
   const chainCounts = new Map<number, number>();
   // Nights are walked once here and handed on, so money.ts and quality.ts
@@ -95,6 +97,9 @@ export function calculateLodgingStats(
   let spendUnconvertedStays = 0;
   let ratingSum = 0;
   let ratingCount = 0;
+  let perfectStays = 0;
+  let enduredStays = 0;
+  let oneNightStays = 0;
 
   for (const stay of activeStays) {
     lodgingIds.add(stay.lodgingId);
@@ -123,6 +128,16 @@ export function calculateLodgingStats(
     if (stay.ratingOverall !== null) {
       ratingSum += stay.ratingOverall;
       ratingCount += 1;
+      if (stay.ratingOverall <= 2) enduredStays += 1;
+      // All four at 5, none of them blank — see `perfectStays` in types.ts.
+      if (
+        stay.ratingOverall === 5 &&
+        stay.ratingRoom === 5 &&
+        stay.ratingBreakfast === 5 &&
+        stay.ratingService === 5
+      ) {
+        perfectStays += 1;
+      }
     }
 
     const stayNights = walkNights(stay.checkIn, stay.checkOut, nightsByYear, nightsByMonth);
@@ -131,8 +146,16 @@ export function calculateLodgingStats(
     withNights.push({ stay, nights: stayNights });
 
     if (stay.isAwardStay) awardNights += stayNights;
+    if (stayNights === 1) oneNightStays += 1;
     if (stayNights > 0) {
       nightsByType[stay.type] = (nightsByType[stay.type] ?? 0) + stayNights;
+      if (stay.stars !== null) {
+        const key = String(stay.stars);
+        nightsByStars[key] = (nightsByStars[key] ?? 0) + stayNights;
+      }
+      if (stay.board) {
+        nightsByBoard[stay.board] = (nightsByBoard[stay.board] ?? 0) + stayNights;
+      }
     }
   }
 
@@ -204,6 +227,11 @@ export function calculateLodgingStats(
     plannedNights,
     plannedLodgingsCount,
     notedLodgingsCount,
+    nightsByStars,
+    nightsByBoard,
+    perfectStays,
+    enduredStays,
+    oneNightStays,
     price: computePriceStats(withNights, currentBaseCurrency, awardNights),
     ratings: computeRatingStats(withNights, currentBaseCurrency),
     geo: computeGeoStats(withNights),

@@ -809,6 +809,142 @@
     "GRAND_TOUR": {
       "name": "Grand Tour",
       "description": "Trip with a flight, cruise, AND stay"
+    },
+    "LODGING_TYPES_3": {
+      "name": "Not fussy",
+      "description": "Slept in 3 different kinds of lodging"
+    },
+    "LODGING_TYPES_5": {
+      "name": "A bed is a bed",
+      "description": "Slept in all 5 kinds of lodging"
+    },
+    "LODGING_CITIES_10": {
+      "name": "Ten cities",
+      "description": "Slept in 10 different cities"
+    },
+    "LODGING_CITIES_25": {
+      "name": "City collector",
+      "description": "Slept in 25 different cities"
+    },
+    "LODGING_CITIES_50": {
+      "name": "At home anywhere",
+      "description": "Slept in 50 different cities"
+    },
+    "LODGING_CITIES_100": {
+      "name": "A hundred beds, a hundred cities",
+      "description": "Slept in 100 different cities"
+    },
+    "LODGING_CONTINENTS_2": {
+      "name": "Two continents",
+      "description": "Slept on 2 continents"
+    },
+    "LODGING_CONTINENTS_4": {
+      "name": "Four continents",
+      "description": "Slept on 4 continents"
+    },
+    "LODGING_CONTINENTS_6": {
+      "name": "Six continents",
+      "description": "Slept on 6 continents"
+    },
+    "FIVE_STAR_10": {
+      "name": "Five stars",
+      "description": "10 nights in five-star houses"
+    },
+    "FIVE_STAR_50": {
+      "name": "Refined taste",
+      "description": "50 nights in five-star houses"
+    },
+    "PERFECT_STAY_1": {
+      "name": "Nothing to fault",
+      "description": "A stay rated 5 of 5 on all four columns"
+    },
+    "PERFECT_STAY_10": {
+      "name": "An eye for a good house",
+      "description": "10 stays rated 5 of 5 on all four columns"
+    },
+    "PROGRAMME_YEAR_10": {
+      "name": "On the way to status",
+      "description": "10 nights under one programme in one calendar year"
+    },
+    "PROGRAMME_YEAR_25": {
+      "name": "Status chaser",
+      "description": "25 nights under one programme in one calendar year"
+    },
+    "PROGRAMME_YEAR_50": {
+      "name": "Top tier",
+      "description": "50 nights under one programme in one calendar year"
+    },
+    "AWAY_STREAK_14": {
+      "name": "A fortnight from your own bed",
+      "description": "14 nights away in a row"
+    },
+    "AWAY_STREAK_30": {
+      "name": "No fixed abode",
+      "description": "30 nights away in a row"
+    },
+    "AWAY_STREAK_90": {
+      "name": "Address: travelling",
+      "description": "90 nights away in a row"
+    },
+    "AWAY_SHARE_25": {
+      "name": "A quarter of the year gone",
+      "description": "Slept away on 25 % of the days in one year"
+    },
+    "AWAY_SHARE_50": {
+      "name": "More away than home",
+      "description": "Slept away on over 50 % of the days in one year"
+    },
+    "NORTHERN_LODGING_60": {
+      "name": "Far north",
+      "description": "Slept north of the 60th parallel"
+    },
+    "NORTHERN_LODGING_66": {
+      "name": "Beyond the Arctic Circle",
+      "description": "Slept north of the Arctic Circle"
+    },
+    "ALL_INCLUSIVE_14": {
+      "name": "Wristband on",
+      "description": "14 nights on all-inclusive board"
+    },
+    "ONE_NIGHTERS_10": {
+      "name": "Only ever one night",
+      "description": "10 stays of exactly one night"
+    },
+    "ONE_NIGHTERS_50": {
+      "name": "The eternal stopover",
+      "description": "50 stays of exactly one night"
+    },
+    "INDEPENDENT_50": {
+      "name": "Not a chain person",
+      "description": "50 nights in houses with no chain"
+    },
+    "INDEPENDENT_200": {
+      "name": "Owner-run",
+      "description": "200 nights in houses with no chain"
+    },
+    "ENDURED_STAY_1": {
+      "name": "Got through it",
+      "description": "Rated a stay 2 stars or worse"
+    },
+    "ENDURED_STAY_10": {
+      "name": "Made of tougher stuff",
+      "description": "Rated 10 stays 2 stars or worse"
+    },
+    "RATED_STAYS_25": {
+      "name": "Diligent reviewer",
+      "description": "Rated 25 stays"
+    },
+    "RATED_STAYS_100": {
+      "name": "Your own hotel guide",
+      "description": "Rated 100 stays"
+    },
+    "DOCUMENTED_TRIP_1": {
+      "name": "Recorded end to end",
+      "description": "A trip with a journey, a bed, a journal and photos"
+    },
+    "DOCUMENTED_TRIP_10": {
+      "name": "Chronicler",
+      "description": "10 trips with a journey, a bed, a journal and photos"
     }
   }
 }

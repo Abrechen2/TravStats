@@ -93,7 +93,15 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       prisma.trip.findMany({
         where: { userId },
         select: {
-          _count: { select: { flights: true, cruises: true, lodgingStays: true } },
+          _count: {
+            select: {
+              flights: true,
+              cruises: true,
+              lodgingStays: true,
+              journalEntries: true,
+              photos: true,
+            },
+          },
         },
       }),
       prisma.userSettings.findUnique({ where: { userId }, select: { baseCurrency: true } }),
@@ -355,6 +363,43 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       lodgingChainLoyaltyMax: lodgingStats.chainLoyaltyMax,
       lodgingSameHotelRepeatMax: lodgingStats.sameHotelRepeatMax,
       lodgingLongestStayNights: lodgingStats.longestStayNights,
+      // Measures added with the 2.7 statistics expansion. All read straight
+      // off the same rollup the stats page renders, so a badge and a number on
+      // screen can never disagree.
+      lodgingTypesUnique: Object.keys(lodgingStats.nightsByType).length,
+      lodgingCitiesUnique: lodgingStats.citiesUnique,
+      lodgingContinents: lodgingStats.geo.continentsCount,
+      lodgingFiveStarNights: lodgingStats.nightsByStars['5'] ?? 0,
+      lodgingAllInclusiveNights: lodgingStats.nightsByBoard['all_inclusive'] ?? 0,
+      lodgingPerfectStays: lodgingStats.perfectStays,
+      lodgingEnduredStays: lodgingStats.enduredStays,
+      lodgingRatedStays: lodgingStats.ratings.ratedStays,
+      lodgingOneNightStays: lodgingStats.oneNightStays,
+      lodgingStreakNights: lodgingStats.rhythm.longestStreakNights,
+      // Stored 0..1; the requirement is written as a percentage because "25 %
+      // of a year away" is the sentence, and 0.25 in a seed file is not.
+      lodgingAwaySharePct: Math.round(
+        Math.max(0, ...Object.values(lodgingStats.rhythm.awayShareByYear), 0) * 100,
+      ),
+      lodgingIndependentNights: lodgingStats.loyalty.independentNights,
+      lodgingProgrammeYearNights: Math.max(
+        0,
+        ...lodgingStats.loyalty.programmeYears.map((p) => p.nights),
+      ),
+      // Northernmost latitude, floored to whole degrees by the checker. A
+      // southern-hemisphere-only traveller yields a negative here, which no
+      // requirement can reach — that is the intended outcome, not a bug.
+      lodgingNorthernmostLat: lodgingStats.geo.northernmost?.lat ?? 0,
+      // A trip is "fully documented" when it records the journey, the bed, the
+      // words and the pictures. A cruise counts as the journey too — a
+      // flightless cruise trip is not an undocumented one.
+      tripsFullyDocumented: trips.filter(
+        (t) =>
+          t._count.flights + t._count.cruises > 0 &&
+          t._count.lodgingStays > 0 &&
+          t._count.journalEntries > 0 &&
+          t._count.photos > 0,
+      ).length,
       // Cross-domain (lodging)
       flyAndStay,
       grandTour,
