@@ -6,6 +6,7 @@ import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { getLodgingStats, listLodgings } from "../../../lib/api/lodging";
 import { logger } from "../../../lib/logger";
+import { loadMapAppearance, saveMapAppearance } from "../../map/mapAppearance";
 import {
   intervalOverlapsRange,
   useDashboardFilterStore,
@@ -15,9 +16,7 @@ import MapContainer3D from "../../MapContainer3D";
 import { LodgingListPanel } from "../sidebars/LodgingListPanel";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
 import { LodgingChainsView } from "./lodging/LodgingChainsView";
-import { LodgingCurrencyBreakdown } from "./lodging/LodgingCurrencyBreakdown";
 import { LodgingNightsChart } from "./lodging/LodgingNightsChart";
-import { LodgingStatStrip } from "./lodging/LodgingStatStrip";
 
 export function LodgingTab(): JSX.Element {
   const { mode } = useDashboardRoute();
@@ -32,7 +31,24 @@ export function LodgingTab(): JSX.Element {
   // Open by default (unlike CruisesTab's hidden-by-default sidebar) — the
   // list is one of this tab's three core surfaces (map + stat strip + list),
   // not an optional extra.
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  /**
+   * The list panel remembers whether it was open.
+   *
+   * It used to start open on every mount, and switching domain remounts the
+   * tab — so it sprang open again every single time, undoing the choice the
+   * user had just made. Stored next to the rest of the map appearance, which
+   * is where the map control panel's own expanded state already lives.
+   */
+  const [sidebarOpen, setSidebarOpenState] = useState<boolean>(
+    () => loadMapAppearance().lodgingListOpen ?? true
+  );
+  const setSidebarOpen = useCallback((open: boolean | ((prev: boolean) => boolean)): void => {
+    setSidebarOpenState((prev) => {
+      const next = typeof open === "function" ? open(prev) : open;
+      saveMapAppearance({ lodgingListOpen: next });
+      return next;
+    });
+  }, []);
 
   const loadLodgings = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -131,8 +147,11 @@ export function LodgingTab(): JSX.Element {
         onClose={() => setSidebarOpen(false)}
       />
 
-      {hasData && stats && <LodgingStatStrip stats={stats} />}
-      {hasData && stats && <LodgingCurrencyBreakdown stats={stats} />}
+      {/* The stat strip and the currency breakdown used to sit HERE, floating
+          over the map. They are statistics, not map controls: 291 hotels, 176
+          nights and a per-currency breakdown tell you nothing about what you
+          are looking at and cover the part of the world you came to see. They
+          now live on the statistics page, where the rest of the numbers are. */}
       {hasData && mode === "nights" && stats && (
         <LodgingNightsChart nightsByMonth={stats.nightsByMonth} />
       )}

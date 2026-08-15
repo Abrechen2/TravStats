@@ -27,6 +27,15 @@ import {
   type FlightColorSlot,
 } from "../../lib/flightColor";
 import { FLIGHT_ROUTE_SHAPES, type FlightRouteShape } from "../../lib/flightRouteShape";
+import {
+  DEFAULT_LODGING_COLOR_CONFIG,
+  LODGING_COLOR_MODES,
+  LODGING_COLOR_PRESETS,
+  slotsForMode,
+  type LodgingColorConfig,
+  type LodgingColorMode,
+  type LodgingColorSlot,
+} from "../../lib/lodgingColor";
 
 // ── Design tokens ────────────────────────────────────────────────────
 export const ACCENT = "240,169,71"; // amber — the app's primary action colour
@@ -763,6 +772,12 @@ export function CruiseAppearanceSection({
 export interface LodgingAppearanceState {
   markerSize: number;
   onMarkerSizeChange: (s: number) => void;
+  /** How pins are coloured. Optional so a panel that has no colour story to
+   *  tell — a single-domain view with no legend — can omit it and get the
+   *  slider alone, exactly as before. */
+  colorConfig?: LodgingColorConfig;
+  onColorModeChange?: (m: LodgingColorMode) => void;
+  onColorChange?: (slot: LodgingColorSlot, c: [number, number, number]) => void;
 }
 
 export interface LodgingAppearanceSectionProps extends LodgingAppearanceState {
@@ -772,20 +787,66 @@ export interface LodgingAppearanceSectionProps extends LodgingAppearanceState {
 }
 
 /**
- * The lodging domain's appearance controls: just the marker-size slider
- * (0 = hidden). No colour/width/arrow controls — lodging pins have no
- * routes to colour or width, unlike flights/cruises.
+ * The lodging domain's appearance controls: colour MODE ("solid" / "type" /
+ * "rating" / "chain"), the colours that mode uses, and the marker-size slider.
+ *
+ * It used to be the slider alone, on the reasoning that lodging pins have no
+ * routes to colour. True — but a pin still has to answer "which of these is
+ * which", and a list of hundreds of houses has distinctions worth seeing.
+ * Structure copied from the cruise section deliberately: only the ACTIVE
+ * mode's colours are shown, so the panel can never offer a control that does
+ * nothing to the map.
  */
 export function LodgingAppearanceSection({
   title,
+  colorConfig = DEFAULT_LODGING_COLOR_CONFIG,
+  onColorModeChange,
+  onColorChange,
   markerSize,
   onMarkerSizeChange,
   sizeLabel,
 }: LodgingAppearanceSectionProps): JSX.Element {
   const { t } = useTranslation();
+  const { mode, colors } = colorConfig;
+
+  const modeOptions = LODGING_COLOR_MODES.map((m) => ({
+    value: m,
+    label: t(`map:globe.panel.lodgingColorMode.${m}.label`),
+  }));
+
   return (
     <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
       <SectionLabel>{title}</SectionLabel>
+
+      {onColorModeChange && onColorChange && (
+        <>
+          <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
+            {t("map:globe.panel.lodgingColorMode.label")}
+          </div>
+          <SegControl<LodgingColorMode>
+            value={mode}
+            onChange={onColorModeChange}
+            options={modeOptions}
+          />
+          <div
+            className="mt-1 text-[10px] leading-snug"
+            style={{ color: "rgba(241,245,249,0.45)" }}
+          >
+            {t(`map:globe.panel.lodgingColorMode.${mode}.hint`)}
+          </div>
+
+          {slotsForMode(mode).map((slot) => (
+            <ColorRow
+              key={slot}
+              caption={t(`map:globe.panel.lodgingColorMode.swatch.${slot}`)}
+              value={colors[slot]}
+              presets={LODGING_COLOR_PRESETS}
+              onChange={(c) => onColorChange(slot, c)}
+            />
+          ))}
+        </>
+      )}
+
       <Slider
         label={sizeLabel}
         value={markerSize}

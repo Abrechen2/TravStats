@@ -34,6 +34,7 @@ import StatsUniqueSection from "../components/Stats/StatsUniqueSection";
 import StatsAirportsSection from "../components/Stats/StatsAirportsSection";
 import StatsSeatSection from "../components/Stats/StatsSeatSection";
 import CruiseStatsSection from "../components/Stats/CruiseStatsSection";
+import LodgingStatsSection from "../components/Stats/LodgingStatsSection";
 import OverviewTab from "../components/Stats/Overview/OverviewTab";
 import KpiScorecard from "../components/Stats/scorecard/KpiScorecard";
 import type { ScorecardTileVM } from "../components/Stats/scorecard/ScorecardTile";
@@ -597,6 +598,9 @@ export default function AdvancedStatsPage(): JSX.Element {
 
           {/* Cruise tab renders its own stats section. */}
           {filter === "cruise" && <CruiseStatsSection />}
+          {/* Moved off the dashboard map, where these numbers floated on top of
+              the world the user came to look at. */}
+          {filter === "lodging" && <LodgingStatsSection />}
 
           {/* Generate Certificate + Year Report Buttons — flight-only now. */}
           {filter === "flight" && flights.length > 0 && (

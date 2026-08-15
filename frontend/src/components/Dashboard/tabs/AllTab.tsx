@@ -11,7 +11,7 @@ import { listLodgings } from "../../../lib/api/lodging";
 import { tripsApi } from "../../../lib/api/trips";
 import { buildCruiseLegend, type CruiseLegendRow } from "../../../lib/cruiseColor";
 import { buildFlightLegend, rgbCss, type FlightLegendRow } from "../../../lib/flightColor";
-import { buildLodgingLegend } from "../../../lib/lodgingColor";
+import { buildLodgingLegend, type LodgingLegendRow } from "../../../lib/lodgingColor";
 import { PORT_RGB } from "../../layers/cruisePortsLayer";
 import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
 import { logger } from "../../../lib/logger";
@@ -19,6 +19,7 @@ import { useCruiseColorStore } from "../../../store/cruiseColorStore";
 import { useThemeStore } from "../../../store/themeStore";
 import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
 import { useFlightColorStore } from "../../../store/flightColorStore";
+import { useLodgingColorStore } from "../../../store/lodgingColorStore";
 import {
   intervalOverlapsRange,
   useDashboardFilterStore,
@@ -49,6 +50,19 @@ const FLIGHT_LEGEND_LABEL_KEY: Record<FlightLegendRow["slot"], string> = {
 // Same contract on the cruise side (#reported-2.3.1): the legend used to
 // hardcode rgb(74,144,217) / rgb(34,211,238) as string literals, so it kept
 // claiming blue/cyan while the user's colours were already on the map.
+const LODGING_LEGEND_LABEL_KEY: Record<LodgingLegendRow["slot"], string> = {
+  solid: "dashboard:legend.lodging",
+  hotel: "lodging:type.hotel",
+  guesthouse: "lodging:type.guesthouse",
+  apartment: "lodging:type.apartment",
+  hostel: "lodging:type.hostel",
+  campsite: "lodging:type.campsite",
+  rated: "dashboard:legend.lodgingRated",
+  unrated: "dashboard:legend.lodgingUnrated",
+  chain: "dashboard:legend.lodgingChain",
+  independent: "dashboard:legend.lodgingIndependent",
+};
+
 const CRUISE_LEGEND_LABEL_KEY: Record<CruiseLegendRow["slot"], string> = {
   past: "dashboard:legend.cruisePast",
   planned: "dashboard:legend.cruisePlanned",
@@ -78,6 +92,7 @@ export function AllTab(): JSX.Element {
   // the state, run through the same colour resolver.
   const flightColorConfig = useFlightColorStore((s) => s.config);
   const cruiseColorConfig = useCruiseColorStore((s) => s.config);
+  const lodgingColorConfig = useLodgingColorStore((s) => s.config);
   // Same store `DeckGLMap` reads to colour the airport dot, so the key and the
   // map change together when the map theme changes.
   const themeColors = MAP_LAYER_COLORS[useThemeStore((s) => s.mapTheme)];
@@ -400,12 +415,17 @@ export function AllTab(): JSX.Element {
     return legendRow(rgbCss(row.color), label, `cruise-${row.slot}`);
   });
 
-  // Lodging has exactly one row — no colour mode to switch — but it is
-  // still DERIVED from `buildLodgingLegend()`, the same function
-  // `layers/lodgingPinsLayer.ts` resolves its pin colour through, so the
-  // dot on the map and the swatch in the legend can never disagree.
-  const lodgingLegendRows = buildLodgingLegend().map((row) =>
-    legendRow(rgbCss(row.color), t("dashboard:legend.lodging"), `lodging-${row.slot}`, "dot")
+  // Lodging rows are DERIVED from the same config `layers/lodgingPinsLayer.ts`
+  // resolves its pin colour through, so the dots on the map and the swatches in
+  // the legend can never disagree — including now that there is a mode, where a
+  // five-colour map beside a one-row legend would misdescribe what is on screen.
+  const lodgingLegendRows = buildLodgingLegend(lodgingColorConfig).map((row) =>
+    legendRow(
+      rgbCss(row.color),
+      t(LODGING_LEGEND_LABEL_KEY[row.slot]),
+      `lodging-${row.slot}`,
+      "dot"
+    )
   );
 
   // Airports and ports are the only marks on this map that are ONLY marks:

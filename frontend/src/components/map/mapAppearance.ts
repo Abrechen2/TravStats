@@ -17,6 +17,12 @@ import {
   type CruiseColors,
 } from "../../lib/cruiseColor";
 import {
+  lodgingColorFromStored,
+  type LodgingColorConfig,
+  type LodgingColorMode,
+  type LodgingColors,
+} from "../../lib/lodgingColor";
+import {
   flightColorFromStored,
   type FlightColorConfig,
   type FlightColorMode,
@@ -80,6 +86,16 @@ export interface MapAppearance {
    * in `DeckGLMap` alongside the cruise-port layer it mirrors.
    */
   lodgingMarkerSize?: number;
+  /** How lodging pins are coloured + the user's colour per slot. Owned by
+   *  `store/lodgingColorStore.ts`, the same shape flights and cruises use —
+   *  one store the layer and the panel both read, so they cannot disagree.
+   *  No legacy single-colour field to migrate: pins were always brand rose. */
+  lodgingColorMode?: LodgingColorMode;
+  lodgingColors?: LodgingColors;
+  /** Whether the lodging LIST panel is open (its own state, not the map
+   *  control panel's `panelExpanded`). It used to open on every mount, so
+   *  switching domain and coming back always sprang it open again. */
+  lodgingListOpen?: boolean;
   // Layers
   showTerrain?: boolean;
   showPlaceLabels?: boolean;
@@ -205,6 +221,10 @@ export function loadFlightColorConfig(): FlightColorConfig {
  * See the migration comment in `lib/cruiseColor.ts` for the trade-off (the
  * Kreuzfahrten tab's implicit per-cruise colouring is not preserved).
  */
+export function loadLodgingColorConfig(): LodgingColorConfig {
+  return lodgingColorFromStored(loadMapAppearance() as unknown as Record<string, unknown>);
+}
+
 export function loadCruiseColorConfig(): CruiseColorConfig {
   return cruiseColorFromStored(loadMapAppearance() as unknown as Record<string, unknown>);
 }

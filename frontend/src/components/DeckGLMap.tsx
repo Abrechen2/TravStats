@@ -12,6 +12,7 @@ import type { LabelsMode } from "./map/labelPriority";
 import { loadFlightRouteShape, loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 import type { FlightRouteShape } from "../lib/flightRouteShape";
 import { useFlightColorStore } from "../store/flightColorStore";
+import { useLodgingColorStore } from "../store/lodgingColorStore";
 import { FLAT_BASEMAPS, resolveFlatStyle, type FlatStyleId } from "./map/basemapStyles";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
@@ -182,6 +183,9 @@ export function DeckGLMap({
   // panels and the dashboard legend read too. The mode used to be a hardcoded
   // prop per dashboard tab — the user had no say and never saw "Pro Reise".
   const cruiseColorConfig = useCruiseColorStore((s) => s.config);
+  const lodgingColorConfig = useLodgingColorStore((s) => s.config);
+  const setLodgingColorMode = useLodgingColorStore((s) => s.setMode);
+  const setLodgingColor = useLodgingColorStore((s) => s.setColor);
   const setCruiseColorMode = useCruiseColorStore((s) => s.setMode);
   const setCruiseColor = useCruiseColorStore((s) => s.setColor);
   const mapRef = useRef<MapRef>(null);
@@ -693,6 +697,7 @@ export function DeckGLMap({
       buildLodgingPins(lodgingsOverride ?? [], lodgingMarkerSize, zoom, {
         onPinClick: handleLodgingClick,
         labelsMode,
+        colors: lodgingColorConfig,
       }) ?? [];
 
     return [
@@ -732,6 +737,7 @@ export function DeckGLMap({
     flightColorConfig,
     lodgingsOverride,
     lodgingMarkerSize,
+    lodgingColorConfig,
     handleLodgingClick,
   ]);
 
@@ -873,6 +879,9 @@ export function DeckGLMap({
           lodgingAppearance={{
             markerSize: lodgingMarkerSize,
             onMarkerSizeChange: onLodgingMarkerSizeChange ?? (() => {}),
+            colorConfig: lodgingColorConfig,
+            onColorModeChange: setLodgingColorMode,
+            onColorChange: setLodgingColor,
           }}
         />
       </div>

@@ -242,7 +242,11 @@
     "flightSolid": "Flüge",
     "lodging": "Unterkünfte",
     "airport": "Flughafen",
-    "port": "Hafen"
+    "port": "Hafen",
+    "lodgingRated": "Bewertet",
+    "lodgingUnrated": "Ohne Bewertung",
+    "lodgingChain": "Kette",
+    "lodgingIndependent": "Unabhängig"
   },
   "userMenu": {
     "label": "Konto-Menü"

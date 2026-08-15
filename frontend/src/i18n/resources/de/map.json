@@ -113,6 +113,37 @@
         },
         "swatchSailed": "gefahren",
         "swatchPlanned": "geplant"
+      },
+      "lodgingColorMode": {
+        "label": "Farbe nach",
+        "solid": {
+          "label": "Einfarbig",
+          "hint": "Jedes Haus in derselben Farbe."
+        },
+        "type": {
+          "label": "Art",
+          "hint": "Hotel, Pension, Ferienwohnung, Hostel oder Zeltplatz."
+        },
+        "rating": {
+          "label": "Bewertung",
+          "hint": "Bewertet oder noch nicht bewertet — keine Skala, denn eine fehlende Bewertung ist keine schlechte."
+        },
+        "chain": {
+          "label": "Kette",
+          "hint": "Gehört zu einer Kette oder ist unabhängig."
+        },
+        "swatch": {
+          "solid": "Alle Unterkünfte",
+          "hotel": "Hotel",
+          "guesthouse": "Pension",
+          "apartment": "Ferienwohnung",
+          "hostel": "Hostel",
+          "campsite": "Zeltplatz",
+          "rated": "Bewertet",
+          "unrated": "Ohne Bewertung",
+          "chain": "Kette",
+          "independent": "Unabhängig"
+        }
       }
     },
     "timesFlown": "{{count}}x geflogen",
