@@ -2,8 +2,8 @@
  * keep the parent under the project's file-size guideline. Plain
  * `react-map-gl/maplibre` `<Marker draggable>` + click-to-move, NOT deck.gl
  * (per the plan — the picker map stays a lightweight overlay-free widget). */
-import type { JSX } from "react";
-import Map, { Marker, type MapLayerMouseEvent } from "react-map-gl/maplibre";
+import { useEffect, useRef, type JSX } from "react";
+import Map, { Marker, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
 import type { LocationCoordinates } from "./LocationInput";
 
 const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
@@ -11,6 +11,12 @@ const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/st
 export interface LocationMiniMapProps {
   value: LocationCoordinates | null;
   initialViewState: { longitude: number; latitude: number; zoom: number };
+  /**
+   * Bumped by the parent whenever a coordinate arrives from somewhere OTHER
+   * than this map — a search hit, a pasted pair, a typed field. Only those
+   * move the viewport; see the effect below for why the distinction matters.
+   */
+  focusNonce: number;
   compact: boolean;
   ariaLabel: string;
   attributionLabel: string;
@@ -21,12 +27,39 @@ export interface LocationMiniMapProps {
 export function LocationMiniMap({
   value,
   initialViewState,
+  focusNonce,
   compact,
   ariaLabel,
   attributionLabel,
   onMapClick,
   onMarkerDragEnd,
 }: LocationMiniMapProps): JSX.Element {
+  const mapRef = useRef<MapRef | null>(null);
+
+  /**
+   * Move the map to a coordinate that came from outside it.
+   *
+   * `initialViewState` is read ONCE, when the map mounts — react-map-gl treats
+   * it as uncontrolled, so recomputing it in a useMemo changes nothing. Open
+   * the picker first and search afterwards (the order the lodging form invites,
+   * since the search field sits above the map) and the marker was placed
+   * correctly on a map still showing the default world view: a pin that is
+   * there and cannot be seen.
+   *
+   * Keyed on `focusNonce`, not on `value`, because the two sources of a new
+   * coordinate deserve opposite treatment. A search result should be flown to.
+   * A marker DRAG must not be — recentring under the cursor yanks the map away
+   * mid-gesture, and the point is by definition already visible.
+   */
+  useEffect(() => {
+    if (!value) return;
+    mapRef.current
+      ?.getMap()
+      .easeTo({ center: [value.lon, value.lat], zoom: initialViewState.zoom, duration: 600 });
+    // `value` is deliberately absent: a drag changes it and must NOT move the map.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusNonce]);
+
   return (
     <div
       className="relative rounded-md overflow-hidden border"
@@ -38,6 +71,7 @@ export function LocationMiniMap({
       aria-label={ariaLabel}
     >
       <Map
+        ref={mapRef}
         initialViewState={initialViewState}
         mapStyle={DARK_MAP_STYLE}
         style={{ position: "absolute", inset: 0 }}

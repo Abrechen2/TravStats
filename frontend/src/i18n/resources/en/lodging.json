@@ -16,7 +16,18 @@
       "rating": "Rating",
       "spend": "Spend"
     },
-    "otherCurrencyHint": "Includes further amounts in an older base currency, not counted here."
+    "otherCurrencyHint": "Includes further amounts in an older base currency, not counted here.",
+    "status": {
+      "label": "Status",
+      "unlocated": "Not found",
+      "unlocatedHint": "An address is there but no point on the map — the search did not find it. Saving again retries.",
+      "noAddress": "No address",
+      "noAddressHint": "No street is recorded for this place.",
+      "bare": "Name only",
+      "bareHint": "No address, no city, no point on the map — nothing is known here beyond the name.",
+      "unknownCountry": "Unclear country",
+      "unknownCountryHint": "The country field holds something that is not a country anyone can place."
+    }
   },
   "filter": {
     "searchPlaceholder": "Search by name or location …",

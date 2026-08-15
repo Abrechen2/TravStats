@@ -6,6 +6,7 @@ import { LodgingStatStrip } from "../components/Dashboard/tabs/lodging/LodgingSt
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import { StarRating } from "../components/lodging/StarRating";
 import { ChainNameLink } from "../components/lodging/ChainNameLink";
+import { LodgingStatusTag } from "../components/lodging/LodgingStatusTag";
 import DomainImportButton from "../components/import/DomainImportButton";
 import { useLodgingImportAdapter } from "../components/import/adapters/lodgingAdapter";
 import { useTranslation } from "../hooks/useTranslation";
@@ -292,6 +293,7 @@ export default function LodgingListPage(): JSX.Element {
                   <th className="px-3 py-2 text-left">{t("lodging:list.columns.name")}</th>
                   <th className="px-3 py-2 text-left">{t("lodging:list.columns.chain")}</th>
                   <th className="px-3 py-2 text-left">{t("lodging:list.columns.location")}</th>
+                  <th className="px-3 py-2 text-left">{t("lodging:list.status.label")}</th>
                   <th className="px-3 py-2 text-right">{t("lodging:list.columns.stays")}</th>
                   <th className="px-3 py-2 text-right">{t("lodging:list.columns.nights")}</th>
                   <th className="px-3 py-2 text-left">{t("lodging:list.columns.rating")}</th>
@@ -327,6 +329,9 @@ export default function LodgingListPage(): JSX.Element {
                       ) : (
                         "—"
                       )}
+                    </td>
+                    <td className="px-3 py-2">
+                      <LodgingStatusTag lodging={l} />
                     </td>
                     <td className="px-3 py-2 text-right">{l.stayCount}</td>
                     <td className="px-3 py-2 text-right">{l.nights}</td>
