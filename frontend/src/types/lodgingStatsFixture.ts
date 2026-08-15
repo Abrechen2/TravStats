@@ -1,4 +1,9 @@
-import type { LodgingPriceStats, LodgingRatingStats } from "./lodging";
+import type {
+  LodgingGeoStats,
+  LodgingPriceStats,
+  LodgingRatingStats,
+  LodgingRhythmStats,
+} from "./lodging";
 
 /**
  * Resting state of the money and quality blocks — what a user with no priced
@@ -39,8 +44,32 @@ export const EMPTY_LODGING_RATING_STATS: LodgingRatingStats = {
   bestValue: [],
 };
 
-/** Spread into a `LodgingStats` fixture that has no opinion on money or ratings. */
+export const EMPTY_LODGING_GEO_STATS: LodgingGeoStats = {
+  continents: [],
+  continentsCount: 0,
+  northernmost: null,
+  southernmost: null,
+  centreOfGravity: null,
+  topCities: [],
+  topCountries: [],
+  unlocatedStays: 0,
+};
+
+export const EMPTY_LODGING_RHYTHM_STATS: LodgingRhythmStats = {
+  nightsAway: 0,
+  nightsByWeekday: [0, 0, 0, 0, 0, 0, 0],
+  nightsByMonthOfYear: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  nightsBySeason: { winter: 0, spring: 0, summer: 0, autumn: 0 },
+  longestStreakNights: 0,
+  longestStreak: null,
+  longestGapDays: 0,
+  awayShareByYear: {},
+};
+
+/** Spread into a `LodgingStats` fixture that has no opinion on the sub-blocks. */
 export const EMPTY_LODGING_STATS_BLOCKS = {
   price: EMPTY_LODGING_PRICE_STATS,
   ratings: EMPTY_LODGING_RATING_STATS,
+  geo: EMPTY_LODGING_GEO_STATS,
+  rhythm: EMPTY_LODGING_RHYTHM_STATS,
 } as const;

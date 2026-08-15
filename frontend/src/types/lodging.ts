@@ -355,6 +355,63 @@ export interface LodgingStats {
   notedLodgingsCount: number;
   price: LodgingPriceStats;
   ratings: LodgingRatingStats;
+  geo: LodgingGeoStats;
+  rhythm: LodgingRhythmStats;
+}
+
+/** A stay singled out for where it was — the northernmost, the southernmost. */
+export interface LodgingPlace {
+  lodgingId: string;
+  lodgingName: string;
+  city: string | null;
+  country: string | null;
+  lat: number;
+  lon: number;
+  checkIn: string;
+}
+
+/** One city or country, with how much of the user's sleeping it accounts for. */
+export interface LodgingPlaceCount {
+  key: string;
+  nights: number;
+  stays: number;
+}
+
+export interface LodgingGeoStats {
+  continents: string[];
+  continentsCount: number;
+  northernmost: LodgingPlace | null;
+  southernmost: LodgingPlace | null;
+  /**
+   * Nights-weighted mean position, computed on the unit sphere so a traveller
+   * either side of the dateline does not get a centre in the Atlantic.
+   */
+  centreOfGravity: { lat: number; lon: number } | null;
+  /** Most nights first, untruncated — the screen slices. */
+  topCities: LodgingPlaceCount[];
+  topCountries: LodgingPlaceCount[];
+  /** Stays whose house has no coordinates, and which the coordinate figures omit. */
+  unlocatedStays: number;
+}
+
+/**
+ * When the nights happened. Derived from the SET of dates away from home, so
+ * touching stays form one run and overlapping stays never double-count.
+ */
+export interface LodgingRhythmStats {
+  /** Distinct dates away — differs from `totalNights` exactly when stays overlap. */
+  nightsAway: number;
+  /** Seven entries, index 0 = Sunday, matching `Date.getUTCDay()`. */
+  nightsByWeekday: number[];
+  /** Twelve entries, index 0 = January — across all years, unlike `nightsByMonth`. */
+  nightsByMonthOfYear: number[];
+  nightsBySeason: Record<"winter" | "spring" | "summer" | "autumn", number>;
+  longestStreakNights: number;
+  longestStreak: { start: string; end: string } | null;
+  /** Longest stretch at home, counted only between the first and last night away. */
+  longestGapDays: number;
+  /** Fraction of each year spent away, 0..1; the current year uses days elapsed. */
+  awayShareByYear: Record<string, number>;
 }
 
 /**

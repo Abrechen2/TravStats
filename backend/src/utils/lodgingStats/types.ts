@@ -228,4 +228,80 @@ export interface LodgingStats {
   notedLodgingsCount: number;
   price: LodgingPriceStats;
   ratings: LodgingRatingStats;
+  geo: LodgingGeoStats;
+  rhythm: LodgingRhythmStats;
+}
+
+/** A stay singled out for where it was — the northernmost, the southernmost. */
+export interface LodgingPlace {
+  lodgingId: string;
+  lodgingName: string;
+  city: string | null;
+  country: string | null;
+  lat: number;
+  lon: number;
+  checkIn: string;
+}
+
+/** One city or country, with how much of the user's sleeping it accounts for. */
+export interface LodgingPlaceCount {
+  key: string;
+  nights: number;
+  stays: number;
+}
+
+/**
+ * Where the nights happened. Coordinates have been on the lodging rows since
+ * the geocoding backfill and produced nothing but map pins until now.
+ */
+export interface LodgingGeoStats {
+  /** Sorted names from `utils/continents.ts` — resolved by country, coordinates only as fallback. */
+  continents: string[];
+  continentsCount: number;
+  northernmost: LodgingPlace | null;
+  southernmost: LodgingPlace | null;
+  /**
+   * Nights-weighted mean position, computed on the unit sphere so a traveller
+   * either side of the dateline does not get a centre in the Atlantic. Null
+   * when no stay has coordinates, or when the weighted vectors cancel out.
+   */
+  centreOfGravity: { lat: number; lon: number } | null;
+  /** Most nights first. Not truncated — a screen slices, a payload should not decide. */
+  topCities: LodgingPlaceCount[];
+  topCountries: LodgingPlaceCount[];
+  /** Stays whose house has no coordinates, and which the coordinate figures therefore omit. */
+  unlocatedStays: number;
+}
+
+/**
+ * When the nights happened. Every figure is derived from the SET of dates away
+ * from home, so touching stays form one run and overlapping stays never count
+ * a night twice.
+ */
+export interface LodgingRhythmStats {
+  /**
+   * Distinct dates spent away. Differs from `totalNights` exactly when stays
+   * overlap — and the difference is the interesting part, so both are reported.
+   */
+  nightsAway: number;
+  /** Seven entries, index 0 = Sunday, matching `Date.getUTCDay()`. */
+  nightsByWeekday: number[];
+  /** Twelve entries, index 0 = January — a histogram across all years, unlike `nightsByMonth`. */
+  nightsByMonthOfYear: number[];
+  nightsBySeason: Record<"winter" | "spring" | "summer" | "autumn", number>;
+  /** Longest unbroken run of nights away. */
+  longestStreakNights: number;
+  /** ISO dates of that run; null when there are no nights at all. */
+  longestStreak: { start: string; end: string } | null;
+  /**
+   * Longest stretch at home, counted only BETWEEN the first and last night
+   * away — before the first recorded night the user was not at home for
+   * decades, they simply had no data.
+   */
+  longestGapDays: number;
+  /**
+   * Fraction of each year spent away, 0..1. The current year is divided by the
+   * days elapsed so far, not by 365, so a January reading is not a collapse.
+   */
+  awayShareByYear: Record<string, number>;
 }
