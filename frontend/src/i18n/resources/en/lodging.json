@@ -16,7 +16,8 @@
       "rating": "Rating",
       "spend": "Spend"
     },
-    "otherCurrencyHint": "Includes further amounts in an older base currency, not counted here."
+    "otherCurrencyHint": "Includes further amounts in an older base currency, not counted here.",
+    "wholeListHint": "A whole list at once?"
   },
   "filter": {
     "searchPlaceholder": "Search by name or location …",
