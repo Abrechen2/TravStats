@@ -1,8 +1,11 @@
 import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
-import { DOMAINS } from "../../shared/domains";
 import type { Lodging } from "../../types/lodging";
-import { hexToRgb } from "../map/controlPanelKit";
+import {
+  DEFAULT_LODGING_COLOR_CONFIG,
+  resolveLodgingColor,
+  type LodgingColorConfig,
+} from "../../lib/lodgingColor";
 import { markerDotRadiusProps } from "./markerDotStyle";
 import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
 
@@ -28,15 +31,17 @@ interface LodgingPinDatum {
   stayCount: number;
   /** Total nights recorded at this lodging — feeds the hover tooltip. */
   nights: number;
+  /** Decides the pin's colour in "chain" mode. */
+  chainId: number | null;
+  /** Decides it in "rating" mode — null means not judged, which is its own colour. */
+  overallRating: number | null;
 }
 
-// Brand lodging rose (BRAND.md §3), derived from the single source of truth
-// `DOMAINS.lodging.color` (shared/domains.ts) rather than a second inlined
-// hex — there's no CSS custom property for this domain yet (unlike
-// --domain-flight/--domain-cruise), so this map layer needs the RGB tuple
-// deck.gl expects. `hexToRgb` is the ONE shared implementation exported by
-// controlPanelKit.tsx (Task 8) — this layer used to hand-roll its own copy.
-const LODGING_RGB: [number, number, number] = hexToRgb(DOMAINS.lodging.color);
+// The pin colour is no longer one constant: it comes from the lodging colour
+// CONFIG, the same one the legend derives from (`lib/lodgingColor.ts`), so a
+// pin and its swatch cannot drift apart. The brand rose survives as the
+// default inside that config, so a user who never opens the panel sees exactly
+// what they saw before.
 
 // Hotel/campsite names run much longer than the UN/LOCODE-derived port names
 // `toPortLabel` (portLabel.ts) was built for ("Kempinski Hotel Bristol
@@ -67,6 +72,10 @@ export interface LodgingPinsAppearance {
    * relies on this to skip the background-click selection-clear).
    */
   onPinClick?: (lodgingId: string) => void;
+  /** How pins are coloured. Defaults to the brand rose for every caller that
+   *  has no opinion — e.g. the trip map, which shows one journey and needs no
+   *  legend to explain a class. */
+  colors?: LodgingColorConfig;
   /**
    * Name-label reveal: off / key lodgings only (priority by stay count) /
    * all — the SAME `LabelsMode` the cruise-port labels use
@@ -105,7 +114,7 @@ export function buildLodgingPins(
   zoom: number = LODGING_LABEL_DEFAULT_ZOOM,
   appearance: LodgingPinsAppearance = {}
 ): Layer[] | null {
-  const { onPinClick, labelsMode = "important" } = appearance;
+  const { onPinClick, labelsMode = "important", colors = DEFAULT_LODGING_COLOR_CONFIG } = appearance;
   const data: LodgingPinDatum[] = [];
   for (const lodging of lodgings) {
     if (lodging.lat === null || lodging.lon === null) continue;
@@ -119,6 +128,8 @@ export function buildLodgingPins(
       country: lodging.country,
       stayCount: lodging.stayCount,
       nights: lodging.nights,
+      chainId: lodging.chainId ?? null,
+      overallRating: lodging.overallRating ?? null,
     });
   }
   if (data.length === 0) return null;
@@ -128,7 +139,7 @@ export function buildLodgingPins(
     data,
     getPosition: (d) => d.position,
     ...markerDotRadiusProps(sizeScale),
-    getFillColor: [...LODGING_RGB, 220],
+    getFillColor: (d) => [...resolveLodgingColor(d, colors), 220] as [number, number, number, number],
     getLineColor: [255, 255, 255, 220],
     lineWidthUnits: "pixels",
     getLineWidth: 1,
@@ -177,7 +188,7 @@ export function buildLodgingPins(
     background: true,
     backgroundPadding: [4, 2],
     getBackgroundColor: [13, 17, 23, 200],
-    getBorderColor: [...LODGING_RGB, 200] as [number, number, number, number],
+    getBorderColor: [...resolveLodgingColor({}, colors), 200] as [number, number, number, number],
     getBorderWidth: 1,
     getPixelOffset: [0, -16],
     sizeUnits: "pixels",

@@ -1,6 +1,19 @@
 import { describe, it, expect } from "vitest";
 import { DOMAINS } from "../shared/domains";
-import { LODGING_COLOR, buildLodgingLegend } from "./lodgingColor";
+import {
+  DEFAULT_LODGING_COLOR_CONFIG,
+  LODGING_COLOR,
+  buildLodgingLegend,
+  lodgingColorFromStored,
+  resolveLodgingColor,
+  slotsForMode,
+  type LodgingColorConfig,
+} from "./lodgingColor";
+
+const cfg = (mode: LodgingColorConfig["mode"]): LodgingColorConfig => ({
+  ...DEFAULT_LODGING_COLOR_CONFIG,
+  mode,
+});
 
 describe("LODGING_COLOR", () => {
   it("is derived from DOMAINS.lodging.color, not a second hardcoded literal", () => {
@@ -10,16 +23,90 @@ describe("LODGING_COLOR", () => {
   });
 });
 
-describe("buildLodgingLegend", () => {
-  it("returns exactly one row — lodging has no colour mode to switch", () => {
-    const rows = buildLodgingLegend();
-    expect(rows).toHaveLength(1);
+describe("resolveLodgingColor", () => {
+  it("paints every house alike in the default mode — nothing changes for someone who never opens the panel", () => {
+    const a = resolveLodgingColor({ type: "hotel" }, DEFAULT_LODGING_COLOR_CONFIG);
+    const b = resolveLodgingColor({ type: "campsite", chainId: 3 }, DEFAULT_LODGING_COLOR_CONFIG);
+    expect(a).toEqual(LODGING_COLOR);
+    expect(b).toEqual(a);
   });
 
-  it("the row's colour IS LODGING_COLOR — the same constant the pin layer resolves through", () => {
-    const [row] = buildLodgingLegend();
-    expect(row.kind).toBe("swatch");
-    expect(row.slot).toBe("lodging");
-    expect(row.color).toEqual(LODGING_COLOR);
+  it("separates the types when asked to", () => {
+    const hotel = resolveLodgingColor({ type: "hotel" }, cfg("type"));
+    const zelt = resolveLodgingColor({ type: "campsite" }, cfg("type"));
+    expect(zelt).not.toEqual(hotel);
+  });
+
+  it("treats an unknown type as no information, not as a category of its own", () => {
+    // A row whose type the app does not know must not get a colour that reads
+    // as a meaningful class — it falls back to the neutral.
+    expect(resolveLodgingColor({ type: "iglu" }, cfg("type"))).toEqual(
+      DEFAULT_LODGING_COLOR_CONFIG.colors.solid
+    );
+  });
+
+  it("an unrated house is not a badly rated one", () => {
+    const bewertet = resolveLodgingColor({ overallRating: 4 }, cfg("rating"));
+    const ohne = resolveLodgingColor({ overallRating: null }, cfg("rating"));
+    expect(ohne).not.toEqual(bewertet);
+    // Deliberately NOT a red/green scale: the distinction is "judged" vs "not",
+    // and BRAND.md keeps state off colour alone anyway.
+    expect(ohne).toEqual(DEFAULT_LODGING_COLOR_CONFIG.colors.unrated);
+  });
+
+  it("a rating of 1 still counts as rated", () => {
+    // `!= null` and not truthiness: a 0 or a 1 is an opinion, not a gap.
+    expect(resolveLodgingColor({ overallRating: 1 }, cfg("rating"))).toEqual(
+      DEFAULT_LODGING_COLOR_CONFIG.colors.rated
+    );
+  });
+
+  it("tells a chain from an independent house", () => {
+    const kette = resolveLodgingColor({ chainId: 7 }, cfg("chain"));
+    const frei = resolveLodgingColor({ chainId: null }, cfg("chain"));
+    expect(kette).not.toEqual(frei);
+  });
+});
+
+describe("buildLodgingLegend", () => {
+  it("returns one row in the default mode, in the brand colour", () => {
+    const rows = buildLodgingLegend();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].kind).toBe("swatch");
+    expect(rows[0].color).toEqual(LODGING_COLOR);
+  });
+
+  it("follows the mode — the legend cannot show fewer classes than the map paints", () => {
+    // This is the whole point of deriving both from one config: a five-colour
+    // map with a one-row legend would be a lie about what the reader is seeing.
+    for (const mode of ["solid", "type", "rating", "chain"] as const) {
+      expect(buildLodgingLegend(cfg(mode))).toHaveLength(slotsForMode(mode).length);
+    }
+  });
+
+  it("every row's colour is the one the map would paint", () => {
+    const c = cfg("type");
+    for (const row of buildLodgingLegend(c)) {
+      expect(row.color).toEqual(c.colors[row.slot]);
+    }
+  });
+});
+
+describe("lodgingColorFromStored", () => {
+  it("falls back to the default for an empty or unknown blob", () => {
+    expect(lodgingColorFromStored({})).toEqual(DEFAULT_LODGING_COLOR_CONFIG);
+    expect(lodgingColorFromStored({ lodgingColorMode: "nonsense" })).toEqual(
+      DEFAULT_LODGING_COLOR_CONFIG
+    );
+  });
+
+  it("keeps a stored mode and repairs only the broken colours around it", () => {
+    const gelesen = lodgingColorFromStored({
+      lodgingColorMode: "type",
+      lodgingColors: { hotel: [1, 2, 3], campsite: "kaputt" },
+    });
+    expect(gelesen.mode).toBe("type");
+    expect(gelesen.colors.hotel).toEqual([1, 2, 3]);
+    expect(gelesen.colors.campsite).toEqual(DEFAULT_LODGING_COLOR_CONFIG.colors.campsite);
   });
 });
