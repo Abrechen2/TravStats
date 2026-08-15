@@ -67,6 +67,14 @@ const NAME_LOCALES = [
   "lb", "ca", "eu", "gl", "cy", "sq", "mk", "bs", "af", "sw", "hi", "fa", "uz",
 ];
 
+// Every ISO 639-1 language code. Not a curated selection — the point is that
+// nobody has to have thought of the language the data happens to be in. Codes
+// the runtime does not support fall back harmlessly (see `wide` below).
+const ISO_639_1 =
+  "aa ab ae af ak am an ar as av ay az ba be bg bh bi bm bn bo br bs ca ce ch co cr cs cu cv cy da de dv dz ee el en eo es et eu fa ff fi fj fo fr fy ga gd gl gn gu gv ha he hi ho hr ht hu hy hz ia id ie ig ii ik io is it iu ja jv ka kg ki kj kk kl km kn ko kr ks ku kv kw ky la lb lg li ln lo lt lu lv mg mh mi mk ml mn mr ms mt my na nb nd ne ng nl nn no nr nv ny oc oj om or os pa pi pl ps pt qu rm rn ro ru rw sa sc sd se sg si sk sl sm sn so sq sr ss st su sv sw ta te tg th ti tk tl tn to tr ts tt tw ty ug uk ur uz ve vi vo wa wo xh yi yo za zh zu".split(
+    " "
+  );
+
 // Names `Intl.DisplayNames` does not carry: former official forms and everyday
 // short forms. Deliberately tiny — anything Intl already knows does not belong
 // here, or the two sources drift apart.
@@ -93,11 +101,12 @@ const NAME_ALIASES: Record<string, string> = {
  * cached; earlier locales win, so German and English stay authoritative where
  * two languages share a spelling.
  */
-let nameToCode: Map<string, string> | null = null;
-function nameToCodeIndex(): Map<string, string> {
-  if (nameToCode) return nameToCode;
+let narrowIndex: Map<string, string> | null = null;
+let wideIndex: Map<string, string> | null = null;
+
+function buildIndex(locales: readonly string[]): Map<string, string> {
   const index = new Map<string, string>();
-  for (const locale of NAME_LOCALES) {
+  for (const locale of locales) {
     try {
       const dn = new Intl.DisplayNames([locale], { type: "region" });
       for (const cc of ISO_3166_1_ALPHA2) {
@@ -110,15 +119,44 @@ function nameToCodeIndex(): Map<string, string> {
   }
   for (const [name, cc] of Object.entries(NAME_ALIASES))
     if (!index.has(name)) index.set(name, cc);
-  nameToCode = index;
   return index;
 }
 
 /**
+ * Two indexes, and the wide one is only ever built on a miss.
+ *
+ * The UI is German and English, but the DATA is not: a country field arrives
+ * in whatever language wrote it. So the resolver has to know every language,
+ * while the interface stays bilingual — those are different questions and this
+ * is where they part company.
+ *
+ * "Every language" cannot be enumerated: there is no API that lists the
+ * locales a runtime supports (`Intl.supportedValuesOf` has no "locale" key,
+ * and no "region" key either — do not reach for it). So the wide pass walks
+ * the ISO 639-1 language codes and lets `Intl.DisplayNames` fall back for the
+ * ones it does not carry; a fallback yields names already in the index, and
+ * since the FIRST locale to claim a spelling keeps it, those cost nothing but
+ * a lookup.
+ *
+ * Building it is ~180 locales x 249 codes, which is why it does not happen
+ * until a name misses the narrow pass. Almost every field resolves on German,
+ * English or a bare code and never pays for it.
+ */
+function narrow(): Map<string, string> {
+  narrowIndex ??= buildIndex(NAME_LOCALES);
+  return narrowIndex;
+}
+function wide(): Map<string, string> {
+  wideIndex ??= buildIndex([...NAME_LOCALES, ...ISO_639_1]);
+  return wideIndex;
+}
+
+/**
  * Resolves a free-text country field (as stored on `Lodging.country`) to an
- * ISO 3166-1 alpha-2 code for flag rendering. Handles both forms the field
- * can hold: an already-valid code ("CH") or a full name in German or English
- * ("Switzerland" / "Schweiz"). Returns `null` when neither resolves — callers
+ * ISO 3166-1 alpha-2 code for flag rendering. Handles every form the field can
+ * hold: an already-valid code ("CH"), or a name in ANY language — the one the
+ * app is displayed in, the one the country calls itself, or the one a foreign
+ * booking mail happened to use. Returns `null` when nothing resolves — callers
  * must render nothing rather than guess (a wrong flag is worse than no flag).
  */
 export function resolveCountryCode(country?: string | null): string | null {
@@ -129,15 +167,21 @@ export function resolveCountryCode(country?: string | null): string | null {
   // An import that writes a missing value as text leaves the literal strings
   // "null"/"undefined" in the field. A flag for those would be invention.
   if (needle.length === 0 || needle === "null" || needle === "undefined") return null;
-  const index = nameToCodeIndex();
-  const whole = index.get(needle);
-  if (whole) return whole;
+
   // A multilingual country writes all its names into one field:
   // "Schweiz/Suisse/Svizzera/Svizra", "Suomi / Finland". Any part that resolves
   // identifies the country — they all name the same one.
-  for (const part of needle.split(/[/|,;]| - /)) {
-    const code = index.get(part.trim());
-    if (code) return code;
+  const kandidaten = [needle, ...needle.split(/[/|,;]| - /).map((p) => p.trim())].filter(Boolean);
+
+  // The tiers are iterated as FUNCTIONS, not as an array of their results: a
+  // `[narrow(), wide()]` literal would build the wide index on every call and
+  // throw away the whole reason for splitting them.
+  for (const tier of [narrow, wide]) {
+    const index = tier();
+    for (const part of kandidaten) {
+      const code = index.get(part);
+      if (code) return code;
+    }
   }
   return null;
 }
