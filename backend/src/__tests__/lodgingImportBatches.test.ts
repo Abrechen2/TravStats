@@ -83,7 +83,7 @@ describe("lodging import batches", () => {
     ).toBeNull();
     expect(await prisma.lodging.findUnique({ where: { id: preExisting.id } })).not.toBeNull();
     expect(await prisma.lodgingStay.count({ where: { lodgingId: preExisting.id } })).toBe(0);
-    expect(await prisma.lodgingImportBatch.findUnique({ where: { id: batchId } })).toBeNull();
+    expect(await prisma.importBatch.findUnique({ where: { id: batchId } })).toBeNull();
 
     await prisma.lodging.delete({ where: { id: preExisting.id } });
   });
@@ -217,7 +217,7 @@ describe("lodging import batches", () => {
     await expect(revertLodgingImportBatch(userId, batchId)).rejects.toThrow(
       "Import batch not found",
     );
-    expect(await prisma.lodgingImportBatch.findUnique({ where: { id: batchId } })).not.toBeNull();
+    expect(await prisma.importBatch.findUnique({ where: { id: batchId } })).not.toBeNull();
 
     await prisma.user.delete({ where: { id: other.id } });
   });

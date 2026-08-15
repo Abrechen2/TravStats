@@ -185,6 +185,7 @@
     "shipUnmatchedHint": "Wird als freier Text gespeichert. Du kannst das Schiff im Editor verknüpfen.",
     "stopsLabel": "Stopps",
     "unmatchedTitle": "Häfen ohne Treffer",
-    "unmatchedHint": "Diese Häfen wurden im Katalog nicht gefunden und als „nicht aufgelöst\" markiert – sie bleiben Häfen (keine Seetage). Wähle unten den passenden Hafen, oder löse sie später im Editor auf."
+    "unmatchedHint": "Diese Häfen wurden im Katalog nicht gefunden und als „nicht aufgelöst\" markiert – sie bleiben Häfen (keine Seetage). Wähle unten den passenden Hafen, oder löse sie später im Editor auf.",
+    "alreadyImported": "{{count}} Buchung(en) waren schon eingelesen."
   }
 }

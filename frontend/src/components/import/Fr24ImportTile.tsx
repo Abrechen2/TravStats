@@ -62,6 +62,7 @@ export function Fr24ImportTile(): JSX.Element {
             }
             return {
               committed: result.committed,
+              alreadyPresent: result.skipped,
               failedChunks: result.failures.length,
             };
           }}

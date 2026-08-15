@@ -62,7 +62,7 @@ describe("/api/v1/lodging-import", () => {
   afterAll(async () => {
     await prisma.lodgingStay.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.lodging.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
-    await prisma.lodgingImportBatch.deleteMany({
+    await prisma.importBatch.deleteMany({
       where: { userId: { in: [userId, otherUserId] } },
     });
     await prisma.user.delete({ where: { id: userId } });
@@ -239,7 +239,7 @@ describe("/api/v1/lodging-import", () => {
     // The other user's lodging must remain untouched — no stay attached.
     expect(await prisma.lodgingStay.count({ where: { lodgingId: theirs.id } })).toBe(0);
 
-    await prisma.lodgingImportBatch.delete({ where: { id: res.body.data.batchId } });
+    await prisma.importBatch.delete({ where: { id: res.body.data.batchId } });
     await prisma.lodging.delete({ where: { id: theirs.id } });
   });
 
@@ -273,7 +273,7 @@ describe("/api/v1/lodging-import", () => {
       .set("Cookie", authOther());
     expect(theirs.body.data.some((b: { id: string }) => b.id === theirBatchId)).toBe(true);
 
-    await prisma.lodgingImportBatch.delete({ where: { id: theirBatchId } });
+    await prisma.importBatch.delete({ where: { id: theirBatchId } });
     await prisma.lodging.deleteMany({ where: { userId: otherUserId, name: "Other User Batch Hotel" } });
   });
 
@@ -302,10 +302,10 @@ describe("/api/v1/lodging-import", () => {
     expect(revert.status).toBe(404);
 
     expect(
-      await prisma.lodgingImportBatch.findUnique({ where: { id: theirBatchId } }),
+      await prisma.importBatch.findUnique({ where: { id: theirBatchId } }),
     ).not.toBeNull();
 
-    await prisma.lodgingImportBatch.delete({ where: { id: theirBatchId } });
+    await prisma.importBatch.delete({ where: { id: theirBatchId } });
     await prisma.lodging.deleteMany({ where: { userId: otherUserId, name: "Other User Revert Hotel" } });
   });
 });

@@ -94,6 +94,12 @@ export interface CruiseStopInput {
 }
 
 export interface CruiseInput {
+  /**
+   * Set when the cruise arrives from an import. Its presence is what tells
+   * the server the row came from a source, so the server can derive where
+   * from — the rule for "the same cruise" stays on the server side.
+   */
+  importBatchId?: string | null;
   shipId?: number | null;
   /** For the string/number fields below: `null` clears the stored value on
    *  update; `undefined` leaves it alone. */

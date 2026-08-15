@@ -74,7 +74,7 @@ model User {
   lodgings             Lodging[]
   lodgingStays         LodgingStay[]
   lodgingMemberships   LodgingMembership[]
-  lodgingImportBatches LodgingImportBatch[]
+  importBatches        ImportBatch[]
   companions           Companion[]
 
   @@map("users")
@@ -341,7 +341,16 @@ model Flight {
   patternLon     Float?  @map("pattern_lon")
   specialData    Json?   @map("special_data")
 
+  /// Where this row came from, so a second import of the same file recognises
+  /// it instead of duplicating it (#84). Format `<source>:<stable key>`; the
+  /// key must identify THIS entry, never just the booking — a return leg
+  /// shares its PNR with the outbound one, and a unique constraint on the
+  /// booking alone would silently refuse the second half of every trip.
+  externalRef   String?  @map("external_ref")
+  importBatchId String?  @map("import_batch_id")
+
   user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  importBatch    ImportBatch?          @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
   trip           Trip?                 @relation(fields: [tripId], references: [id], onDelete: SetNull)
   booking        Booking?              @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   pendingUpdates PendingFlightUpdate[]
@@ -356,6 +365,8 @@ model Flight {
   @@index([bookingId])
   @@index([nextApiCheckAt])
   @@index([specialType])
+  @@index([importBatchId])
+  @@unique([userId, externalRef])
   @@map("flights")
 }
 
@@ -1022,7 +1033,17 @@ model Cruise {
   booking       Booking?     @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   stops         CruiseStop[]
   legs          CruiseLeg[]
+
+  /// Where this row came from, so a second import of the same file recognises
+  /// it instead of duplicating it (#84). Format `<source>:<stable key>`; the
+  /// key must identify THIS entry, never just the booking — a return leg
+  /// shares its PNR with the outbound one, and a unique constraint on the
+  /// booking alone would silently refuse the second half of every trip.
+  externalRef   String?  @map("external_ref")
+  importBatchId String?  @map("import_batch_id")
+
   companionLinks CruiseCompanion[]
+  importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([startDate])
@@ -1030,6 +1051,8 @@ model Cruise {
   @@index([cruiseLine])
   @@index([tripId])
   @@index([bookingId])
+  @@index([importBatchId])
+  @@unique([userId, externalRef])
   @@map("cruises")
 }
 
@@ -1146,7 +1169,7 @@ model Lodging {
 
   user            User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
   chain           LodgingChain?              @relation(fields: [chainId], references: [id], onDelete: SetNull)
-  batch           LodgingImportBatch?        @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  batch           ImportBatch?               @relation(fields: [batchId], references: [id], onDelete: SetNull)
   stays           LodgingStay[]
   membershipLinks LodgingMembershipLodging[]
 
@@ -1208,7 +1231,7 @@ model LodgingStay {
   trip       Trip?               @relation(fields: [tripId], references: [id], onDelete: SetNull)
   booking    Booking?            @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   membership LodgingMembership?  @relation(fields: [membershipId], references: [id], onDelete: SetNull)
-  batch      LodgingImportBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  batch      ImportBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
 
   @@unique([userId, externalRef])
   @@index([lodgingId])
@@ -1310,9 +1333,18 @@ model LodgingMembershipLodging {
 
 /// One import run (CSV file, e-mail or PDF). Every row it created carries its
 /// id, so a 232-row import that turns out wrong is revertible as a unit.
-model LodgingImportBatch {
+/// One import, as a unit the user can take back.
+///
+/// Started life as `LodgingImportBatch` because stays were the only domain
+/// that logged its imports; flights and cruises wrote their rows and left no
+/// trace, so "undo" existed for one area out of three. The model is the same
+/// for all of them — what differs is only which rows point at it, hence the
+/// `domain` column and one relation per domain rather than three near-identical
+/// tables.
+model ImportBatch {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
+  domain    String // flight | cruise | lodging
   source    String // csv | email | pdf
   fileName  String?  @map("file_name")
   createdAt DateTime @default(now()) @map("created_at")
@@ -1320,9 +1352,12 @@ model LodgingImportBatch {
   user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   lodgings Lodging[]
   stays    LodgingStay[]
+  flights  Flight[]
+  cruises  Cruise[]
 
   @@index([userId])
-  @@map("lodging_import_batches")
+  @@index([userId, domain])
+  @@map("import_batches")
 }
 
 model Airline {
