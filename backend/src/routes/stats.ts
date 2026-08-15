@@ -14,6 +14,10 @@ import {
 } from '../utils/statsCalculator';
 import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from '../utils/cruiseStats';
 import { calculateLodgingStats, type LodgingStayData, type LodgingRecord } from '../utils/lodgingStats';
+import {
+  buildMembershipContext,
+  resolveStayProgramme,
+} from '../services/lodging/stayMembership';
 import { normalizeHistory } from '../utils/homeAirport';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
@@ -1427,7 +1431,7 @@ router.get(
         return;
       }
 
-      const [stays, lodgings, settings] = await Promise.all([
+      const [stays, lodgings, settings, memberships] = await Promise.all([
         prisma.lodgingStay.findMany({
           where: { userId },
           // The chain is joined for its NAME: the price and rating rankings
@@ -1450,8 +1454,16 @@ router.get(
           where: { userId },
           select: { baseCurrency: true },
         }),
+        // Which card covered which stay is DERIVED, not stored: a membership
+        // attached to a chain covers every stay at that chain without the user
+        // restating it per stay. The link tables are what make that derivable.
+        prisma.lodgingMembership.findMany({
+          where: { userId },
+          include: { chains: true, lodgings: true },
+        }),
       ]);
       const baseCurrency = settings?.baseCurrency ?? 'EUR';
+      const membershipContext = buildMembershipContext(memberships);
       const lodgingRecords: LodgingRecord[] = lodgings.map((l) => ({
         id: l.id,
         chainId: l.chainId,
@@ -1461,7 +1473,9 @@ router.get(
         visited: l.visited,
       }));
 
-      const stayData: LodgingStayData[] = stays.map((s) => ({
+      const stayData: LodgingStayData[] = stays.map((s) => {
+        const programme = resolveStayProgramme(s, s.lodging.chainId, membershipContext);
+        return {
         lodgingId: s.lodgingId,
         lodgingName: s.lodging.name,
         type: s.lodging.type,
@@ -1485,7 +1499,10 @@ router.get(
         ratingRoom: s.ratingRoom,
         ratingBreakfast: s.ratingBreakfast,
         ratingService: s.ratingService,
-      }));
+          programName: programme.programName,
+          membershipTier: programme.tier,
+        };
+      });
 
       // Defensive parity with the cruise/flight stats endpoints: a
       // calculation error on one malformed stay must not 500 the whole

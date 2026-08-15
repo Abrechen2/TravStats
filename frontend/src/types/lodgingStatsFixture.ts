@@ -1,5 +1,6 @@
 import type {
   LodgingGeoStats,
+  LodgingLoyaltyStats,
   LodgingPriceStats,
   LodgingRatingStats,
   LodgingRhythmStats,
@@ -66,10 +67,21 @@ export const EMPTY_LODGING_RHYTHM_STATS: LodgingRhythmStats = {
   awayShareByYear: {},
 };
 
+export const EMPTY_LODGING_LOYALTY_STATS: LodgingLoyaltyStats = {
+  chainNights: 0,
+  independentNights: 0,
+  topChain: null,
+  topChainShare: null,
+  concentration: null,
+  chainNightsRanked: [],
+  programmeYears: [],
+};
+
 /** Spread into a `LodgingStats` fixture that has no opinion on the sub-blocks. */
 export const EMPTY_LODGING_STATS_BLOCKS = {
   price: EMPTY_LODGING_PRICE_STATS,
   ratings: EMPTY_LODGING_RATING_STATS,
   geo: EMPTY_LODGING_GEO_STATS,
   rhythm: EMPTY_LODGING_RHYTHM_STATS,
+  loyalty: EMPTY_LODGING_LOYALTY_STATS,
 } as const;

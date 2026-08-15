@@ -462,6 +462,28 @@
         "10": "November",
         "11": "Dezember"
       }
+    },
+    "loyalty": {
+      "title": "Ketten und Programme",
+      "chainShare": "Anteil Kettenhäuser",
+      "chainShareDesc": "{{chain}} Nächte in Ketten, {{independent}} in unabhängigen Häusern",
+      "topChain": "Meistgenutzte Kette",
+      "topChainDesc": "{{count}} Nächte",
+      "topChainDesc_one": "{{count}} Nacht",
+      "topChainDesc_other": "{{count}} Nächte",
+      "noChains": "Noch keine Kettenhäuser erfasst",
+      "topChainShare": "Anteil an deinen Kettennächten",
+      "topChainShareDesc": "Wie stark sich deine Kettennächte auf eine Marke bündeln",
+      "concentration": "Bündelungsgrad",
+      "concentrationDesc": "1,00 = alles bei einer Marke, nahe 0 = breit verteilt",
+      "concentrationFootnote": "Herfindahl-Index über deine Kettennächte. Er sagt nichts darüber, wie oft du überhaupt eine Kette wählst — das steht links daneben.",
+      "byChain": "Ketten, nach Nächten",
+      "programmeYears": "Status-Fortschritt je Jahr",
+      "noProgrammes": "Noch keine Karte einem Aufenthalt zugeordnet",
+      "programme": "Programm",
+      "year": "Jahr",
+      "nights": "Nächte",
+      "stays": "Aufenthalte"
     }
   }
 }

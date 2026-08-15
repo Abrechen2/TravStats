@@ -14,6 +14,10 @@ import {
   type LodgingRecord,
 } from './lodgingStats';
 import { computeFlyAndStayFlags, unionCountries, type TripDomainCounts } from './achievementStats';
+import {
+  buildMembershipContext,
+  resolveStayProgramme,
+} from '../services/lodging/stayMembership';
 
 type UserAchievementWithRelation = UserAchievement & { achievement: Achievement };
 
@@ -54,7 +58,7 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     // + lodging stays (all statuses — calculateLodgingStats filters cancelled itself)
     // + per-trip domain counts (flights/cruises/lodgingStays) for the
     //   cross-domain Fly & Stay / Grand Tour flags.
-    const [flights, allFlights, cruises, lodgingStays, lodgings, trips, userSettings] = await Promise.all([
+    const [flights, allFlights, cruises, lodgingStays, lodgings, lodgingMemberships, trips, userSettings] = await Promise.all([
       prisma.flight.findMany({
         where: { userId, status: { in: ['flown', 'historical'] } },
         orderBy: { departureTime: 'asc' },
@@ -80,6 +84,12 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       // Collector counts hotels the user added, not only hotels stayed at
       // (owner decision, finding 1).
       prisma.lodging.findMany({ where: { userId } }),
+      // Same derivation the stats endpoint uses, so a loyalty achievement and
+      // the loyalty figures can never disagree about which card covered a stay.
+      prisma.lodgingMembership.findMany({
+        where: { userId },
+        include: { chains: true, lodgings: true },
+      }),
       prisma.trip.findMany({
         where: { userId },
         select: {
@@ -211,7 +221,10 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     const cruiseStats = calculateCruiseStats(cruiseStatsInput, userBirthday);
 
     // Lodging stats (multi-domain V1) — computed separately from flight/cruise stats.
-    const lodgingStatsInput: LodgingStatsInput[] = lodgingStays.map((s) => ({
+    const membershipContext = buildMembershipContext(lodgingMemberships);
+    const lodgingStatsInput: LodgingStatsInput[] = lodgingStays.map((s) => {
+      const programme = resolveStayProgramme(s, s.lodging.chainId, membershipContext);
+      return {
       lodgingId: s.lodgingId,
       lodgingName: s.lodging.name,
       type: s.lodging.type,
@@ -235,7 +248,10 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       ratingRoom: s.ratingRoom,
       ratingBreakfast: s.ratingBreakfast,
       ratingService: s.ratingService,
-    }));
+      programName: programme.programName,
+      membershipTier: programme.tier,
+      };
+    });
     const lodgingRecords: LodgingRecord[] = lodgings.map((l) => ({
       id: l.id,
       chainId: l.chainId,
