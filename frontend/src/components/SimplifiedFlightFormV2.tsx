@@ -84,15 +84,10 @@ export default function SimplifiedFlightFormV2({
               searchDate={form.searchDate}
               loading={form.loading}
               showScanner={form.showScanner}
-              showEmailUploader={form.showEmailUploader}
-              textClass={textClass}
-              mutedTextClass={mutedTextClass}
-              bgClass={bgClass}
               sizedInputClass={sizedInputClass}
               setFlightNumber={form.setFlightNumber}
               setSearchDate={form.setSearchDate}
               setShowScanner={form.setShowScanner}
-              setShowEmailUploader={form.setShowEmailUploader}
               setStep={form.setStep}
               setError={form.setError}
               handleFlightLookup={form.handleFlightLookup}
@@ -108,9 +103,9 @@ export default function SimplifiedFlightFormV2({
 
           {form.step === "select" && form.lookupResults.length > 0 && (
             <FlightSelectStep
-              lookupResults={form.lookupResults}
               textClass={textClass}
               mutedTextClass={mutedTextClass}
+              lookupResults={form.lookupResults}
               handleSelectFlight={form.handleSelectFlight}
               setStep={form.setStep}
             />
@@ -118,6 +113,8 @@ export default function SimplifiedFlightFormV2({
 
           {form.step === "complete" && (
             <FlightCompleteStep
+              textClass={textClass}
+              mutedTextClass={mutedTextClass}
               selectedFlight={form.selectedFlight}
               timeEstimationWarning={form.timeEstimationWarning}
               departure={form.departure}
@@ -195,8 +192,6 @@ export default function SimplifiedFlightFormV2({
               setCompanions={form.setCompanions}
               notes={form.notes}
               setNotes={form.setNotes}
-              textClass={textClass}
-              mutedTextClass={mutedTextClass}
               sizedInputClass={sizedInputClass}
               setTimeEstimationWarning={form.setTimeEstimationWarning}
             />

@@ -16,7 +16,8 @@
       "rating": "Bewertung",
       "spend": "Ausgaben"
     },
-    "otherCurrencyHint": "Enthält weitere Beträge in einer älteren Basiswährung, die hier nicht mitgezählt sind."
+    "otherCurrencyHint": "Enthält weitere Beträge in einer älteren Basiswährung, die hier nicht mitgezählt sind.",
+    "wholeListHint": "Eine ganze Liste auf einmal?"
   },
   "filter": {
     "searchPlaceholder": "Suche nach Name oder Ort …",

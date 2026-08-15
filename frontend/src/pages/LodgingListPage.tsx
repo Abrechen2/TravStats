@@ -3,10 +3,9 @@ import type { JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import NavigationBar from "../components/NavigationBar";
 import { LodgingStatStrip } from "../components/Dashboard/tabs/lodging/LodgingStatStrip";
-import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import { StarRating } from "../components/lodging/StarRating";
 import { ChainNameLink } from "../components/lodging/ChainNameLink";
-import DomainImportButton from "../components/import/DomainImportButton";
+import DomainImportPanel from "../components/import/DomainImportPanel";
 import { useLodgingImportAdapter } from "../components/import/adapters/lodgingAdapter";
 import { useTranslation } from "../hooks/useTranslation";
 import { getLodgingStats, listLodgings } from "../lib/api/lodging";
@@ -243,21 +242,12 @@ export default function LodgingListPage(): JSX.Element {
             {t("lodging:list.title")}
           </h1>
           <div className="flex flex-wrap items-center gap-2">
-            <Link
-              to="/settings?section=import"
-              className="flex items-center gap-2 whitespace-nowrap rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary) hover:border-(--accent)"
-            >
-              <span aria-hidden="true">📥</span>
-              <span>{t("settings:import.openHub")}</span>
-            </Link>
-            {/* Deliberately NOT the panel title ("Unterkunft importieren"):
-                sitting next to the hub link above, two near-identical import
-                labels are exactly the confusion Alex reported on 2026-08-03.
-                This button parses ONE booking email/PDF; the link goes to the
-                bulk hub. The labels have to say which is which. */}
-            <DomainImportButton adapter={importAdapter} onItemsCreated={reloadAll} icon="✉️">
-              {t("import:lodging.triggerLabel")}
-            </DomainImportButton>
+            {/* One way in, not three. "Buchung einlesen" used to sit here as
+                its own button beside "Importieren" and "Hotel hinzufügen" —
+                three controls for two ideas, and two of them saying "import".
+                Reading a booking is not a separate act, it is the first and
+                best ROUTE into adding one, so it lives inside this dialog now.
+                The bulk hub keeps a quiet link below, not a rival button. */}
             <button
               type="button"
               onClick={() => setShowAdd(true)}
@@ -268,6 +258,16 @@ export default function LodgingListPage(): JSX.Element {
             </button>
           </div>
         </div>
+
+        <p className="mb-4 text-xs text-(--text-muted)">
+          {t("lodging:list.wholeListHint")}{" "}
+          <Link
+            to="/settings?section=import"
+            className="underline underline-offset-4 hover:text-(--text-primary)"
+          >
+            {t("settings:import.openHub")}
+          </Link>
+        </p>
 
         {stats && <LodgingStatStrip stats={stats} variant="inline" />}
 
@@ -361,17 +361,15 @@ export default function LodgingListPage(): JSX.Element {
             hub (Settings → Import) together with the importers it belongs to —
             one place to import, one place to see and undo what was imported. */}
 
-        {showAdd && (
-          <LodgingFormModal
-            mode="create"
-            onClose={() => setShowAdd(false)}
-            onSaved={async (created) => {
-              setShowAdd(false);
-              await reloadAll();
-              navigate(`/lodging/${created.id}`);
-            }}
-          />
-        )}
+        {/* Adding asks "what do you have?" first: a booking mail or PDF fills
+            everything in, typing it out is the last resort in the footer. The
+            form itself is unchanged — it is now one route among several. */}
+        <DomainImportPanel
+          open={showAdd}
+          onClose={() => setShowAdd(false)}
+          onItemsCreated={reloadAll}
+          adapter={importAdapter}
+        />
       </div>
     </div>
   );

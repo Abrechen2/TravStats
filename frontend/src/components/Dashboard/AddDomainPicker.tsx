@@ -9,7 +9,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ACCENT, BORDER, PANEL_BG, TEXT } from "../map/controlPanelKit";
 
-export type AddableDomain = "flight" | "cruise" | "poi";
+export type AddableDomain = "flight" | "cruise" | "lodging" | "poi";
 
 interface AddDomainPickerProps {
   enabled: Record<AddableDomain, boolean>;
@@ -33,6 +33,7 @@ export function AddDomainPicker({ enabled, onPick }: AddDomainPickerProps): JSX.
   const options: { key: AddableDomain; label: string }[] = [];
   if (enabled.flight) options.push({ key: "flight", label: t("dashboard:addPicker.flight") });
   if (enabled.cruise) options.push({ key: "cruise", label: t("dashboard:addPicker.cruise") });
+  if (enabled.lodging) options.push({ key: "lodging", label: t("dashboard:addPicker.lodging") });
   if (enabled.poi) options.push({ key: "poi", label: t("dashboard:addPicker.poi") });
 
   return (

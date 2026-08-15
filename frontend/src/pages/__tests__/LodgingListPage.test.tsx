@@ -448,18 +448,23 @@ describe("LodgingListPage", () => {
     expect(screen.queryByText("lodging:import.csv.title")).not.toBeInTheDocument();
   });
 
-  // Two buttons that both read "…importieren" sat side by side after the tile
-  // moved out — the same indistinguishable-labels problem reported in Discord
-  // on 2026-08-03. The email/PDF trigger must not echo the hub link.
-  it("gives the single-booking import trigger a label distinct from the hub link", async () => {
+  // Three controls used to sit here — "Importieren", "Buchung einlesen" and
+  // "Hotel hinzufügen" — two of which said "import" and were reported as
+  // indistinguishable in Discord on 2026-08-03. Distinguishing the labels was
+  // treating the symptom: reading a booking is not a separate act, it is the
+  // first ROUTE into adding one. One button now, and the confusion cannot
+  // recur because the second button no longer exists.
+  it("offers exactly one way to add, with no rival import button beside it", async () => {
     listLodgingsMock.mockResolvedValue([]);
     renderListPage();
 
+    expect(await screen.findByRole("button", { name: /lodging:add\.title/ })).toBeInTheDocument();
     expect(
-      await screen.findByRole("button", { name: /import:lodging\.triggerLabel/ })
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /import:lodging\.triggerLabel/ })
+    ).not.toBeInTheDocument();
+    // The hub stays reachable, but as a quiet link — never a competing button.
     expect(
-      screen.queryByRole("button", { name: /import:lodging\.panelTitle/ })
+      screen.queryByRole("button", { name: /settings:import\.openHub/ })
     ).not.toBeInTheDocument();
   });
 });

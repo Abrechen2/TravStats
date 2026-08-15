@@ -82,21 +82,21 @@
       "flightNumberExpanded": "The flight lookup cascades through multiple APIs:\n• Aviationstack (with Basic+ key: past and future flights)\n• AirLabs (today's flights)\n• OpenSky (today's flights, credentials required)\n\nIf no provider covers the selected date, you'll need to enter the flight manually. Even with a key configured, the API may simply not have data for some flights."
     },
     "steps": {
-      "input": "Enter flight number for automatic lookup",
+      "input": "Where shall we start?",
       "select": "Select your flight from the results",
       "complete": "Review and complete flight details"
     },
     "boardingPass": {
-      "title": "Have a Boarding Pass?",
-      "description": "Scan it for instant auto-fill!",
-      "scan": "Scan Now"
+      "title": "Picture of your boarding pass",
+      "description": "A photo or a screenshot — gate, terminal and boarding time are read from it.",
+      "scan": "Choose picture"
     },
     "email": {
-      "title": "Have a Booking Email?",
+      "title": "Booking e-mail or PDF",
       "description": "Import flights directly from confirmation emails!",
       "import": "Import Email",
       "bestOption": "Best Option",
-      "bestOptionDescription": "Captures all data best from confirmation emails",
+      "bestOptionDescription": "We read it all out, you only check it over. Several flights at once, too.",
       "textFallback": "Paste email text (fallback)",
       "textPlaceholder": "Paste email content here...",
       "regexWarning": {
