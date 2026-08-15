@@ -137,7 +137,7 @@ describe("LodgingTab", () => {
     getLodgingStatsMock.mockReset();
   });
 
-  it("renders the hotel name and the nights stat once data loads", async () => {
+  it("renders the hotel on the map and in the list — but NOT the stat strip", async () => {
     const lodging = makeLodging();
     listLodgingsMock.mockResolvedValue([lodging]);
     getLodgingStatsMock.mockResolvedValue({
@@ -158,8 +158,11 @@ describe("LodgingTab", () => {
     await waitFor(() => {
       expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
     });
-    expect(screen.getByText("11")).toBeInTheDocument();
     expect(screen.getByTestId("map-stub").getAttribute("data-lodging-count")).toBe("1");
+    // The nights figure moved to the statistics page. It used to float over the
+    // map, where a lifetime total describes nothing the map is showing and
+    // covers the part of the world the user opened the map to see.
+    expect(screen.queryByText("11")).not.toBeInTheDocument();
   });
 
   it("passes only the lodging appearanceDomains to MapContainer3D — no flight/cruise appearance controls on the Hotels tab", async () => {
@@ -217,5 +220,53 @@ describe("LodgingTab", () => {
     await waitFor(() => {
       expect(screen.getByText("dashboard:errors.loadLodgings")).toBeInTheDocument();
     });
+  });
+});
+
+describe("LodgingTab — die Liste merkt sich, ob sie offen war", () => {
+  it("öffnet sie beim ersten Mal", async () => {
+    listLodgingsMock.mockResolvedValue([makeLodging()]);
+    getLodgingStatsMock.mockResolvedValue({ ...zeroStats, lodgingsCount: 1 });
+    window.localStorage.clear();
+
+    render(
+      <MemoryRouter>
+        <LodgingTab />
+      </MemoryRouter>
+    );
+    await waitFor(() => {
+      expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
+    });
+  });
+
+  it("hält sie geschlossen, wenn der Nutzer sie geschlossen hat", async () => {
+    // Der Kern des gemeldeten Fehlers: der Tab wird bei jedem Bereichswechsel
+    // neu montiert, und der alte Anfangswert `true` hat die Entscheidung des
+    // Nutzers dabei jedes Mal überschrieben.
+    listLodgingsMock.mockResolvedValue([makeLodging()]);
+    getLodgingStatsMock.mockResolvedValue({ ...zeroStats, lodgingsCount: 1 });
+    window.localStorage.setItem("mapAppearance.v2", JSON.stringify({ lodgingListOpen: false }));
+
+    const { unmount } = render(
+      <MemoryRouter>
+        <LodgingTab />
+      </MemoryRouter>
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("map-stub")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Hotel Test Ludwigsburg")).not.toBeInTheDocument();
+
+    // Und auch nach einem erneuten Montieren, denn genau das passiert beim Wechsel.
+    unmount();
+    render(
+      <MemoryRouter>
+        <LodgingTab />
+      </MemoryRouter>
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("map-stub")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Hotel Test Ludwigsburg")).not.toBeInTheDocument();
   });
 });

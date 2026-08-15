@@ -113,6 +113,37 @@
         },
         "swatchSailed": "sailed",
         "swatchPlanned": "planned"
+      },
+      "lodgingColorMode": {
+        "label": "Colour by",
+        "solid": {
+          "label": "One colour",
+          "hint": "Every place in the same colour."
+        },
+        "type": {
+          "label": "Type",
+          "hint": "Hotel, guesthouse, apartment, hostel or campsite."
+        },
+        "rating": {
+          "label": "Rating",
+          "hint": "Rated or not yet rated — not a scale, because a missing rating is not a bad one."
+        },
+        "chain": {
+          "label": "Chain",
+          "hint": "Part of a chain, or independent."
+        },
+        "swatch": {
+          "solid": "All places",
+          "hotel": "Hotel",
+          "guesthouse": "Guesthouse",
+          "apartment": "Apartment",
+          "hostel": "Hostel",
+          "campsite": "Campsite",
+          "rated": "Rated",
+          "unrated": "Not rated",
+          "chain": "Chain",
+          "independent": "Independent"
+        }
       }
     },
     "timesFlown": "Flown {{count}}x",

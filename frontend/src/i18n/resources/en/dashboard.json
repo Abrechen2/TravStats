@@ -242,7 +242,11 @@
     "flightSolid": "Flights",
     "lodging": "Lodging",
     "airport": "Airport",
-    "port": "Port"
+    "port": "Port",
+    "lodgingRated": "Rated",
+    "lodgingUnrated": "Not rated",
+    "lodgingChain": "Chain",
+    "lodgingIndependent": "Independent"
   },
   "userMenu": {
     "label": "Account menu"
