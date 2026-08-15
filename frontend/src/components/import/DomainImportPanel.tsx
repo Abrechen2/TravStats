@@ -103,7 +103,10 @@ export default function DomainImportPanel({
         aria-modal="true"
         aria-labelledby="domain-import-title"
       >
-        <div className="w-full max-w-2xl rounded-xl bg-(--bg-surface) shadow-2xl">
+        {/* Same height guard as the lodging form: routes, drop zone and a
+            parsed preview together outgrow a laptop viewport, and a centred
+            child with no limit overflows with nothing to scroll. */}
+        <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-(--bg-surface) shadow-2xl">
           <header className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
             <div>
               <h2

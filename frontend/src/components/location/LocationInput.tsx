@@ -132,6 +132,15 @@ export function LocationInput({
 
   const hasPosition = value !== null;
 
+  /**
+   * Counts the coordinates that arrived from somewhere other than the map, so
+   * the picker can fly to those and only those. The map must follow a search
+   * hit; it must NOT follow a marker drag, which would pull the map out from
+   * under the cursor mid-gesture.
+   */
+  const [focusNonce, setFocusNonce] = useState(0);
+  const focusMap = useCallback((): void => setFocusNonce((n) => n + 1), []);
+
   const handleQueryChange = useCallback(
     (raw: string): void => {
       setQuery(raw);
@@ -140,11 +149,12 @@ export function LocationInput({
         setCoordsDetected(true);
         setDropdownOpen(false);
         onChange({ lat: parsed.lat, lon: parsed.lon });
+        focusMap();
       } else {
         setCoordsDetected(false);
       }
     },
-    [onChange]
+    [onChange, focusMap]
   );
 
   const handleSelectResult = useCallback(
@@ -154,8 +164,9 @@ export function LocationInput({
       setCoordsDetected(false);
       setDropdownOpen(false);
       reset();
+      focusMap();
     },
-    [onChange, reset]
+    [onChange, reset, focusMap]
   );
 
   const handlePositionPick = useCallback(
@@ -164,6 +175,16 @@ export function LocationInput({
       onChange({ lat, lon });
     },
     [onChange]
+  );
+
+  /** A coordinate typed or pasted into the advanced fields — the map follows it. */
+  const handleTypedPick = useCallback(
+    (lat: number, lon: number): void => {
+      if (!isValidLat(lat) || !isValidLon(lon)) return;
+      onChange({ lat, lon });
+      focusMap();
+    },
+    [onChange, focusMap]
   );
 
   const handleMapClick = useCallback(
@@ -186,9 +207,9 @@ export function LocationInput({
       const lat = inputToNum(raw);
       const lon = inputToNum(lonInput);
       if (lat === null || lon === null) return;
-      handlePositionPick(lat, lon);
+      handleTypedPick(lat, lon);
     },
-    [handlePositionPick, lonInput]
+    [handleTypedPick, lonInput]
   );
 
   const handleAdvancedLonChange = useCallback(
@@ -197,9 +218,9 @@ export function LocationInput({
       const lon = inputToNum(raw);
       const lat = inputToNum(latInput);
       if (lat === null || lon === null) return;
-      handlePositionPick(lat, lon);
+      handleTypedPick(lat, lon);
     },
-    [handlePositionPick, latInput]
+    [handleTypedPick, latInput]
   );
 
   const handleKeyDown = useCallback(
@@ -309,6 +330,7 @@ export function LocationInput({
         <LocationMiniMap
           value={value}
           initialViewState={initialViewState}
+          focusNonce={focusNonce}
           compact={compact}
           ariaLabel={t("location:mapAriaLabel")}
           attributionLabel={t("location:attribution")}
