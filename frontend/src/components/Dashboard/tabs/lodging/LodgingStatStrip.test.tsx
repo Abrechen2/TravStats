@@ -30,6 +30,10 @@ const stats: LodgingStats = {
   avgRatingOverall: 4.3,
   chainLoyaltyMax: 1,
   sameHotelRepeatMax: 1,
+  plannedStaysCount: 0,
+  plannedNights: 0,
+  plannedLodgingsCount: 0,
+  notedLodgingsCount: 0,
 };
 
 describe("LodgingStatStrip", () => {

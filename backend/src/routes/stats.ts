@@ -1435,6 +1435,11 @@ router.get(
         // Every lodging the user HAS, including ones with no stay yet — a
         // hotel added but never checked into must still count toward
         // lodgingsCount/chainsUnique (owner decision, finding 1).
+        //
+        // Loaded UNFILTERED on purpose: `visited === false` rows are needed
+        // here, not to be counted as visits but to be counted as bookmarks
+        // (`notedLodgingsCount`). Filtering them out in the query would make
+        // that figure unreachable without a second round-trip.
         prisma.lodging.findMany({ where: { userId } }),
         // Current base currency — spendBaseTotal is filtered against it so a
         // stay snapshotted under an OLDER base currency never gets silently
@@ -1451,6 +1456,7 @@ router.get(
         type: l.type,
         country: l.country,
         city: l.city,
+        visited: l.visited,
       }));
 
       const stayData: LodgingStayData[] = stays.map((s) => ({
