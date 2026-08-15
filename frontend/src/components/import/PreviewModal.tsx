@@ -5,6 +5,13 @@ import { hasHardError, type PreviewFlag, type PreviewRowEnriched } from "../../l
 export interface PreviewCommitResult {
   committed: number;
   failedChunks: number;
+  /**
+   * Rows the server already held from an earlier import of the same file.
+   * Deliberately NOT called "skipped": that word is already taken here for
+   * rows the USER unticked, and telling the two apart is the whole point —
+   * one is a decision, the other is the import doing its job.
+   */
+  alreadyPresent?: number;
   failureMessage?: string;
 }
 
@@ -26,7 +33,13 @@ export interface PreviewModalProps {
 type SubmitState =
   | { phase: "idle" }
   | { phase: "submitting" }
-  | { phase: "success"; committed: number; skipped: number; failedChunks: number }
+  | {
+      phase: "success";
+      committed: number;
+      skipped: number;
+      alreadyPresent: number;
+      failedChunks: number;
+    }
   | { phase: "error"; message: string };
 
 const WARNING_FLAGS = ["duration_mismatch"] as const;
@@ -83,6 +96,7 @@ export function PreviewModal({
         phase: "success",
         committed: result.committed,
         skipped: rows.length - acceptedRows.length,
+        alreadyPresent: result.alreadyPresent ?? 0,
         failedChunks: result.failedChunks,
       });
     } catch (err) {
@@ -144,6 +158,7 @@ export function PreviewModal({
           <SuccessView
             committed={submitState.committed}
             skipped={submitState.skipped}
+            alreadyPresent={submitState.alreadyPresent}
             failedChunks={submitState.failedChunks}
             flightsListHref={flightsListHref}
             onClose={onClose}
@@ -314,7 +329,10 @@ function RowsView({ rows, checked, toggle, isSubmitting, t }: RowsViewProps): JS
 
 interface SuccessViewProps {
   committed: number;
+  /** Rows the user unticked in the preview. */
   skipped: number;
+  /** Rows the server already had from an earlier import. */
+  alreadyPresent: number;
   failedChunks: number;
   flightsListHref?: string;
   onClose: () => void;
@@ -324,6 +342,7 @@ interface SuccessViewProps {
 function SuccessView({
   committed,
   skipped,
+  alreadyPresent,
   failedChunks,
   flightsListHref,
   onClose,
@@ -335,6 +354,11 @@ function SuccessView({
         <p className="text-lg font-medium">
           {t("settings:import.preview.success.imported", { count: committed })}
         </p>
+        {alreadyPresent > 0 && (
+          <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("settings:import.preview.success.alreadyPresent", { count: alreadyPresent })}
+          </p>
+        )}
         {skipped > 0 && (
           <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
             {t("settings:import.preview.success.skipped", { count: skipped })}

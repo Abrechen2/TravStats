@@ -189,6 +189,7 @@ export function GenericCsvImportTile(): JSX.Element {
             }
             return {
               committed: result.committed,
+              alreadyPresent: result.skipped,
               failedChunks: result.failures.length,
             };
           }}

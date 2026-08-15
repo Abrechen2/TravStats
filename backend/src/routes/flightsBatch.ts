@@ -14,6 +14,7 @@ import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
 import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from "../shared/statusDerivation";
 import { recomputeTripStatus } from "../services/tripStatusService";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
+import { flightExternalRef, isDocumentImport } from "../services/importProvenance";
 
 function toUtcDate(local: string | null | undefined, tz: string | null | undefined): Date | null {
   if (!local || !tz) return null;
@@ -52,6 +53,74 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
       }
     }
 
+    // The batch id rides in the QUERY, not the body: the body is a bare array
+    // and has been since the first API client shipped. Changing its shape to
+    // carry one field would break every existing caller for nothing.
+    const rawBatchId = typeof req.query.batchId === "string" ? req.query.batchId : null;
+    let importBatchId: string | null = null;
+    if (rawBatchId) {
+      // Client-supplied id, so ownership is checked here — the same IDOR class
+      // the lodging revert closes. A batch belonging to someone else is simply
+      // not found, and the import continues unbatched rather than failing: the
+      // rows the user asked for matter more than the undo record.
+      const batch = await prisma.importBatch.findFirst({
+        where: { id: rawBatchId, userId, domain: "flight" },
+        select: { id: true },
+      });
+      if (!batch) {
+        logger.warn({ operation: "flight_batch_unknown_import_batch", userId });
+      }
+      importBatchId = batch?.id ?? null;
+    }
+
+    // Provenance, so importing the same export twice recognises what it
+    // already holds instead of doubling it. Only for rows that came FROM a
+    // source — a hand-typed flight has no provenance to record, and giving it
+    // a derived key would make two identical manual entries collide.
+    // The SAME default the write below applies — a booking mail arrives here
+    // without a named source and is stored as `email_import`, so the decision
+    // about provenance has to see that value, not the absent one.
+    const refs = parsedFlights.map((data) =>
+      isDocumentImport(data.dataSource ?? "email_import")
+        ? flightExternalRef({
+            flightNumber: data.flightNumber,
+            departureLocal: data.departureLocal,
+            depIata: data.departure.iata,
+            arrIata: data.arrival.iata,
+          })
+        : null,
+    );
+    const candidateRefs = refs.filter((r): r is string => r !== null);
+    const alreadyHere = new Set<string>(
+      candidateRefs.length === 0
+        ? []
+        : (
+            await prisma.flight.findMany({
+              where: { userId, externalRef: { in: candidateRefs } },
+              select: { externalRef: true },
+            })
+          ).flatMap((f) => (f.externalRef ? [f.externalRef] : [])),
+    );
+    // Also drops a row that repeats INSIDE this chunk — one export listing the
+    // same flight twice would otherwise hit the unique index and take the
+    // whole transaction, and its 19 innocent rows, down with it.
+    const seenInChunk = new Set<string>();
+    const keep = parsedFlights.map((_data, i) => {
+      const ref = refs[i];
+      if (ref === null) return true;
+      if (alreadyHere.has(ref) || seenInChunk.has(ref)) return false;
+      seenInChunk.add(ref);
+      return true;
+    });
+    const skipped = keep.filter((k) => !k).length;
+    const flightsToCreate = parsedFlights.filter((_f, i) => keep[i]);
+    const refsToCreate = refs.filter((_r, i) => keep[i]);
+
+    if (flightsToCreate.length === 0) {
+      res.status(201).json({ flights: [], count: 0, skipped });
+      return;
+    }
+
     // Step 1: Enrich airports OUTSIDE the transaction (async I/O, not DB ops).
     // Companion names are resolved to Companion entities here too (find-or-create
     // is idempotent via companionService, so it's safe to run outside the
@@ -59,7 +128,7 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
     // inside the transaction below, so a failure never leaves the legacy
     // `companions` array and the `companionLinks` table disagreeing.
     const enrichedDataList = await Promise.all(
-      parsedFlights.map(async (data) => {
+      flightsToCreate.map(async (data, index) => {
         const enriched = await enrichFlightAirports({
           departure: {
             iata: data.departure.iata ?? undefined,
@@ -77,7 +146,7 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
           },
         });
         const resolvedCompanions = await resolveCompanions(userId, data.companions ?? []);
-        return { data, enriched, resolvedCompanions };
+        return { data, enriched, resolvedCompanions, externalRef: refsToCreate[index] };
       })
     );
 
@@ -90,7 +159,7 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
     const createdFlights = await prisma.$transaction(async (tx) => {
       // Create all flights
       const flights = [];
-      for (const { data, enriched, resolvedCompanions } of enrichedDataList) {
+      for (const { data, enriched, resolvedCompanions, externalRef } of enrichedDataList) {
         const departureUtc = toUtcDate(data.departureLocal, data.depTimezone);
         const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
         const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
@@ -119,6 +188,8 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
         const flight = await tx.flight.create({
           data: {
             userId,
+            externalRef,
+            importBatchId,
             airline: data.airline,
             airlineIata: data.airlineIata ?? resolvedAirline?.iata,
             airlineIcao: data.airlineIcao ?? resolvedAirline?.icao,
@@ -314,6 +385,7 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
     res.status(201).json({
       flights: createdFlights,
       count: createdFlights.length,
+      skipped,
       newAchievements: newAchievements.length > 0 ? newAchievements : undefined,
     });
   } catch (error) {

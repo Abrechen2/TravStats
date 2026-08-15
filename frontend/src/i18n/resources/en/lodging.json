@@ -18,7 +18,8 @@
     },
     "otherCurrencyHint": "Includes further amounts in an older base currency, not counted here.",
     "bookmarked": "bookmarked",
-    "bookmarkedHint": "Not visited yet — counted in no statistic."
+    "bookmarkedHint": "Not visited yet — counted in no statistic.",
+    "wholeListHint": "A whole list at once?"
   },
   "filter": {
     "searchPlaceholder": "Search by name or location …",
@@ -313,6 +314,13 @@
       "yesHint": "Counts as visited. You can fill in when, per house, later.",
       "no": "Places I only noted down",
       "noHint": "Bookmarked only — shown in the list and on the map, counted nowhere."
+    },
+    "maps": {
+      "title": "Google Maps export",
+      "description": "A saved list from Google Takeout. Each row carries Google's id for the place, so a second import recognises what is already here. Such a list holds no dates and no prices.",
+      "uploadLabel": "Choose Takeout CSV",
+      "noRows": "No row in this file carries a name — is it really a saved list from Takeout?",
+      "withoutId": "{{count}} rows carry no place id. They are imported, but a second import will not recognise them."
     }
   }
 }

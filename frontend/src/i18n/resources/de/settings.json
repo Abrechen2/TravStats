@@ -617,12 +617,18 @@
     }
   },
   "import": {
-    "title": "Import",
-    "description": "Bestehende Daten aus anderen Diensten importieren — pro Bereich gebündelt.",
+    "title": "Listen importieren",
+    "description": "Eine ganze Sammlung auf einmal übernehmen — einmalig, kein laufender Weg. Einzelne Buchungen legst du direkt im jeweiligen Bereich an.",
     "openHub": "Importieren",
     "log": {
       "title": "Import-Logbuch",
-      "scopeHint": "Jeder Massen-Import als Ganzes — neueste zuerst. Rückgängig machen lässt sich derzeit nur der Import von Unterkünften; Flug-Importe werden hier noch nicht protokolliert."
+      "scopeHint": "Jeder Listen-Import als Ganzes — neueste zuerst. Rücknehmbar, solange die Einträge noch aus diesem Import stammen.",
+      "counts": {
+        "flights": "{{count}} Flüge",
+        "cruises": "{{count}} Kreuzfahrten"
+      },
+      "reverted": "{{count}} Einträge entfernt.",
+      "revertedWithKept": "{{count}} Einträge entfernt. {{kept}} behalten, weil andere Daten daran hängen."
     },
     "tile": {
       "fr24": {
@@ -634,23 +640,6 @@
         "title": "Aus beliebigem Logbuch (CSV)",
         "description": "Lade eine flache Flug-CSV — nach dem Upload öffnet sich ein Mapping-Wizard, mit dem du jede Spalte einem TravStats-Feld zuordnest.",
         "uploadLabel": "CSV-Datei auswählen"
-      },
-      "parse": {
-        "flight": {
-          "title": "Aus E-Mail oder PDF",
-          "description": "Buchungsbestätigung einer Airline einlesen — der übliche Weg. Öffnet sich im Flug-Dialog, weil dort die Prüfung mehrerer Flüge stattfindet.",
-          "action": "Flug-Import öffnen"
-        },
-        "cruise": {
-          "title": "Aus E-Mail oder PDF",
-          "description": "Buchungsbestätigung einer Reederei einlesen (AIDA, TUI und generisch) — mit Vorschau vor dem Übernehmen.",
-          "action": "E-Mail oder PDF einlesen"
-        },
-        "lodging": {
-          "title": "Aus E-Mail oder PDF",
-          "description": "Hotelbestätigung einlesen, z. B. von Booking.com — mit Vorschau vor dem Übernehmen.",
-          "action": "E-Mail oder PDF einlesen"
-        }
       }
     },
     "preview": {
@@ -688,7 +677,8 @@
         "failed_one": "{{count}} Block fehlgeschlagen — Fehlermeldung beachten",
         "failed_other": "{{count}} Blöcke fehlgeschlagen — Fehlermeldung beachten",
         "openFlights": "Zur Flugliste",
-        "close": "Schließen"
+        "close": "Schließen",
+        "alreadyPresent": "{{count}} waren schon da — aus einem früheren Import derselben Datei."
       },
       "wizard": {
         "title": "CSV-Spalten auf TravStats-Felder zuordnen",
@@ -725,7 +715,7 @@
     "toast": {
       "movedFromDashboard": "Der Flug-Import ist jetzt hier — unter Einstellungen → Import."
     },
-    "noRoutes": "Für diesen Bereich gibt es noch keinen Importweg."
+    "noRoutes": "Für diesen Bereich gibt es noch kein Listenformat. Einzelne Einträge legst du direkt dort an."
   },
   "devices": {
     "title": "Geräte",

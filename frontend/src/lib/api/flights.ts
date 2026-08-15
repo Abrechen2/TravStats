@@ -126,14 +126,24 @@ export const flightsApi = {
     await api.delete(`/flights/${id}`);
   },
 
+  // `batchId` rides in the query rather than the body: the body is a bare
+  // array and has been since the first API client shipped.
   createBatch: async (
-    flights: FlightInput[]
-  ): Promise<{ flights: Flight[]; count: number; newAchievements?: UserAchievement[] }> => {
+    flights: FlightInput[],
+    batchId?: string | null
+  ): Promise<{
+    flights: Flight[];
+    count: number;
+    skipped?: number;
+    newAchievements?: UserAchievement[];
+  }> => {
+    const qs = batchId ? `?batchId=${encodeURIComponent(batchId)}` : "";
     const { data } = await api.post<{
       flights: Flight[];
       count: number;
+      skipped?: number;
       newAchievements?: UserAchievement[];
-    }>("/flights/batch", flights);
+    }>(`/flights/batch${qs}`, flights);
     return data;
   },
 

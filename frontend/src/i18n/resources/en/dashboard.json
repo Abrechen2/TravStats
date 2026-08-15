@@ -165,7 +165,8 @@
     "button": "Add",
     "flight": "Flight",
     "cruise": "Cruise",
-    "poi": "POI"
+    "poi": "POI",
+    "lodging": "Stay"
   },
   "controls": {
     "mode": "Mode",

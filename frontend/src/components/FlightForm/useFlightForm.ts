@@ -101,6 +101,18 @@ export function buildLocalString(
   return `${date}T${time}`;
 }
 
+
+/**
+ * A 409 `already_imported` is the server saying "you already have this one" —
+ * the ordinary answer to reading a forwarded confirmation a second time. It is
+ * recognised by the fixed code, never by prose, so a reworded message cannot
+ * turn a known outcome back into an unexplained failure.
+ */
+function isAlreadyImported(err: unknown): boolean {
+  const res = (err as { response?: { status?: number; data?: { error?: string } } }).response;
+  return res?.status === 409 && res.data?.error === "already_imported";
+}
+
 export function useFlightForm(
   // Returning the created Flight is what makes the post-create trip
   // assignment possible; `void` keeps older callers valid (they simply get
@@ -114,7 +126,6 @@ export function useFlightForm(
    * route, but the multi-flight review loop lives here — so the hub sends the
    * user in rather than growing a second copy of it.
    */
-  options?: { openEmailImport?: boolean }
 ) {
   const { t } = useTranslation(["flights", "errors"]);
   const settings = useSettingsStore();
@@ -124,7 +135,6 @@ export function useFlightForm(
   const [error, setError] = useState("");
   const [duplicateFlight, setDuplicateFlight] = useState<DuplicateFlight | null>(null);
   const [showScanner, setShowScanner] = useState(false);
-  const [showEmailUploader, setShowEmailUploader] = useState(options?.openEmailImport ?? false);
   const [step, setStep] = useState<"input" | "lookup" | "select" | "complete">("input");
   const [timeEstimationWarning, setTimeEstimationWarning] = useState<TimeEstimationWarning | null>(
     null
@@ -132,6 +142,10 @@ export function useFlightForm(
 
   // Email Import & Review State
   const [parsedFlights, setParsedFlights] = useState<ParsedBooking[]>([]);
+  // The import this review belongs to. Set once when a document is read, so
+  // every flight out of the SAME mail lands in one entry in the import log —
+  // and can be taken back as one.
+  const [importBatchId, setImportBatchId] = useState<string | null>(null);
   const [currentFlightIndex, setCurrentFlightIndex] = useState(0);
   const [showFlightReview, setShowFlightReview] = useState(false);
   const [parserProvider, setParserProvider] = useState<string>("unknown");
@@ -841,6 +855,7 @@ export function useFlightForm(
 
     const enrichedFlight: FlightInput = {
       ...flightData,
+      importBatchId,
       baggageAllowance: sourceFlight?.baggageAllowance,
       frequentFlyerNumber: sourceFlight?.frequentFlyerNumber,
       bookingClassLetter: sourceFlight?.bookingClassLetter,
@@ -866,11 +881,12 @@ export function useFlightForm(
         setLoading(true);
         setError("");
         try {
-          const batchResult = await flightsApi.createBatch(confirmedFlightsRef.current);
+          const batchResult = await flightsApi.createBatch(confirmedFlightsRef.current, importBatchId);
           confirmedFlightsRef.current = [];
           setShowFlightReview(false);
           setParsedFlights([]);
           setCurrentFlightIndex(0);
+          setImportBatchId(null);
           onBatchComplete?.(batchResult.newAchievements);
           onCancel();
         } catch (err: unknown) {
@@ -884,8 +900,16 @@ export function useFlightForm(
         }
       }
     } else {
-      // Single flight — use the existing onSubmit callback
-      await onSubmit(enrichedFlight, { hasMoreFlights });
+      // Single flight — use the existing onSubmit callback. A repeat of the
+      // same confirmation is counted, not treated as a failed save: the user
+      // did nothing wrong, and "saving failed" would send them looking for a
+      // problem that isn't there.
+      try {
+        await onSubmit(enrichedFlight, { hasMoreFlights });
+      } catch (err: unknown) {
+        if (!isAlreadyImported(err)) throw err;
+        useToastStore.getState().addToast("info", t("flights:form.alreadyImported"));
+      }
 
       if (hasMoreFlights) {
         setCurrentFlightIndex(nextIndex);
@@ -893,6 +917,7 @@ export function useFlightForm(
         setShowFlightReview(false);
         setParsedFlights([]);
         setCurrentFlightIndex(0);
+        setImportBatchId(null);
         onCancel();
       }
     }
@@ -904,7 +929,6 @@ export function useFlightForm(
     error,
     duplicateFlight,
     showScanner,
-    showEmailUploader,
     step,
     timeEstimationWarning,
     // Email/review state
@@ -960,10 +984,10 @@ export function useFlightForm(
     setError,
     setDuplicateFlight,
     setShowScanner,
-    setShowEmailUploader,
     setStep,
     setTimeEstimationWarning,
     setParsedFlights,
+    setImportBatchId,
     setCurrentFlightIndex,
     setShowFlightReview,
     setParserProvider,

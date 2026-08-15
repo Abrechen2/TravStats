@@ -1,14 +1,13 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
 import type { ParseEmailResult, ParsePdfResult } from "../../lib/api/parse";
+import { ImportManualFooter, ImportRouteList, ImportRouteRow } from "./ImportRouteList";
+import { isParseableDomain } from "./types";
 import type { DomainImportAdapter } from "./types";
 
 const EmailImportTab = lazy(() => import("./EmailImportTab"));
-const PdfImportTab = lazy(() => import("./PdfImportTab"));
-
-type TabId = "email" | "pdf" | "manual";
 
 interface DomainImportPanelProps {
   open: boolean;
@@ -16,8 +15,6 @@ interface DomainImportPanelProps {
   /** Called once an item has been created server-side (parse → review → save). */
   onItemsCreated: () => void | Promise<void>;
   adapter: DomainImportAdapter;
-  /** Initial tab when the panel opens. Defaults to "email". */
-  initialTab?: TabId;
 }
 
 interface ParseState {
@@ -27,31 +24,36 @@ interface ParseState {
 }
 
 /**
- * Cross-domain import shell. Renders a tabbed modal with Email-Upload, PDF-Upload,
- * and Manual-Entry tabs. Domain-specific bits (review modal, manual modal) are
- * provided by the `adapter`.
+ * Cross-domain "what do you have?" chooser.
+ *
+ * It used to be a tabbed modal — E-Mail | PDF | Manuell — which asked the user
+ * to classify their own file before showing them anything. Now the first route
+ * IS the drop zone: drag a file in, paste the mail text, or pick a file, and
+ * the same control takes a `.msg`, an `.eml` and a `.pdf` alike. The separate
+ * PDF tab is gone because it was the same drop zone with a narrower filter.
+ *
+ * Everything domain-specific comes from the `adapter`: the extra routes, the
+ * manual form, and the review step that shows what was found BEFORE anything
+ * is created.
  */
 export default function DomainImportPanel({
   open,
   onClose,
   onItemsCreated,
   adapter,
-  initialTab = "email",
 }: DomainImportPanelProps): JSX.Element | null {
   const { t } = useTranslation(["import", "common"]);
   const addToast = useToastStore((s) => s.addToast);
-  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [parseState, setParseState] = useState<ParseState | null>(null);
   const [showManual, setShowManual] = useState(false);
 
   // Reset internal state every time the panel opens so successive opens start fresh.
   useEffect(() => {
     if (open) {
-      setActiveTab(initialTab);
       setParseState(null);
       setShowManual(false);
     }
-  }, [open, initialTab]);
+  }, [open]);
 
   const handleError = useCallback(
     (message: string) => {
@@ -72,11 +74,6 @@ export default function DomainImportPanel({
     setParseState({ kind: "pdf", result });
   }, []);
 
-  const handleManualClick = useCallback(() => {
-    setActiveTab("manual");
-    setShowManual(true);
-  }, []);
-
   const handleReviewCommit = useCallback(async (): Promise<void> => {
     setParseState(null);
     await onItemsCreated();
@@ -93,7 +90,22 @@ export default function DomainImportPanel({
     onClose();
   }, [onItemsCreated, onClose]);
 
+  // One drop zone for every document a booking arrives as. `.pdf` is added
+  // here rather than in each adapter so no domain can forget it and quietly
+  // reject the attachment half of its own mails.
+  const acceptedExtensions = useMemo(
+    () => Array.from(new Set([...adapter.acceptedEmailExtensions, ".pdf"])),
+    [adapter.acceptedEmailExtensions]
+  );
+
   if (!open) return null;
+
+  // Two conditions, and both are real: the adapter may switch the route off
+  // while its parser is being built, and a domain the backend cannot parse at
+  // all must never show a drop zone — the type guard is what stops that from
+  // becoming a runtime 400 nobody sees until a user drops a file.
+  const parseDomain = isParseableDomain(adapter.domain) ? adapter.domain : null;
+  const showDocumentRoute = adapter.supportsDocumentImport !== false && parseDomain !== null;
 
   return (
     <>
@@ -103,13 +115,10 @@ export default function DomainImportPanel({
         aria-modal="true"
         aria-labelledby="domain-import-title"
       >
-        <div className="w-full max-w-2xl rounded-xl bg-(--bg-surface) shadow-2xl">
+        <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-(--bg-surface) shadow-2xl">
           <header className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
             <div>
-              <h2
-                id="domain-import-title"
-                className="text-xl font-semibold text-(--text-primary)"
-              >
+              <h2 id="domain-import-title" className="text-xl font-semibold text-(--text-primary)">
                 {adapter.panelTitle}
               </h2>
               <p className="mt-0.5 text-sm text-(--text-muted)">{adapter.panelHint}</p>
@@ -135,55 +144,36 @@ export default function DomainImportPanel({
             </button>
           </header>
 
-          <nav
-            className="flex gap-1 border-b border-border px-4"
-            role="tablist"
-            aria-label={adapter.panelTitle}
-          >
-            <TabButton
-              id="email"
-              activeTab={activeTab}
-              onClick={() => setActiveTab("email")}
-              label={t("import:tabs.email")}
-            />
-            <TabButton
-              id="pdf"
-              activeTab={activeTab}
-              onClick={() => setActiveTab("pdf")}
-              label={t("import:tabs.pdf")}
-            />
-            <TabButton
-              id="manual"
-              activeTab={activeTab}
-              onClick={handleManualClick}
-              label={t("import:tabs.manual")}
-            />
-          </nav>
+          <div className="flex flex-col gap-2 px-6 py-5">
+            {showDocumentRoute && parseDomain && (
+              <ImportRouteRow
+                primary
+                icon="✉️"
+                title={adapter.documentRoute?.title ?? t("import:route.document.title")}
+                description={
+                  adapter.documentRoute?.description ?? t("import:route.document.description")
+                }
+              >
+                <div className="mt-3">
+                  <Suspense fallback={<RouteFallback label={t("common:loading.default")} />}>
+                    <EmailImportTab
+                      domain={parseDomain}
+                      acceptedExtensions={acceptedExtensions}
+                      onEmailResult={handleEmailResult}
+                      onPdfResult={handlePdfResult}
+                      onError={handleError}
+                    />
+                  </Suspense>
+                </div>
+              </ImportRouteRow>
+            )}
 
-          <div className="px-6 py-5">
-            {activeTab === "email" && (
-              <Suspense fallback={<TabFallback label={t("common:loading.default")} />}>
-                <EmailImportTab
-                  domain={adapter.domain}
-                  acceptedExtensions={adapter.acceptedEmailExtensions}
-                  onEmailResult={handleEmailResult}
-                  onPdfResult={handlePdfResult}
-                  onError={handleError}
-                />
-              </Suspense>
-            )}
-            {activeTab === "pdf" && (
-              <Suspense fallback={<TabFallback label={t("common:loading.default")} />}>
-                <PdfImportTab
-                  domain={adapter.domain}
-                  onResult={handlePdfResult}
-                  onError={handleError}
-                />
-              </Suspense>
-            )}
-            {activeTab === "manual" && !showManual && (
-              <div className="text-sm text-(--text-muted)">{t("import:tabs.manualHint")}</div>
-            )}
+            <ImportRouteList routes={adapter.routes ?? []} />
+
+            <ImportManualFooter
+              label={adapter.manualLabel ?? t("import:route.manual")}
+              onSelect={() => setShowManual(true)}
+            />
           </div>
         </div>
       </div>
@@ -207,37 +197,6 @@ export default function DomainImportPanel({
   );
 }
 
-interface TabButtonProps {
-  id: TabId;
-  activeTab: TabId;
-  label: string;
-  onClick: () => void;
-}
-
-function TabButton({ id, activeTab, label, onClick }: TabButtonProps): JSX.Element {
-  const isActive = activeTab === id;
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={isActive}
-      onClick={onClick}
-      className={[
-        "px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px",
-        isActive
-          ? "border-(--accent) text-(--text-primary)"
-          : "border-transparent text-(--text-muted) hover:text-(--text-primary)",
-      ].join(" ")}
-    >
-      {label}
-    </button>
-  );
-}
-
-function TabFallback({ label }: { label: string }): JSX.Element {
-  return (
-    <div className="flex min-h-[220px] items-center justify-center text-sm text-(--text-muted)">
-      {label}
-    </div>
-  );
+function RouteFallback({ label }: { label: string }): JSX.Element {
+  return <div className="py-6 text-center text-sm text-(--text-muted)">{label}</div>;
 }

@@ -1,10 +1,4 @@
 {
-  "tabs": {
-    "email": "E-Mail",
-    "pdf": "PDF",
-    "manual": "Manuell",
-    "manualHint": "Eingabeformular wird geöffnet …"
-  },
   "email": {
     "dropZone": "E-Mail hier ablegen oder klicken",
     "textFallback": "Stattdessen Text einfügen",
@@ -24,16 +18,51 @@
     "parseError": "Beim Parsen des PDFs ist ein Fehler aufgetreten"
   },
   "cruise": {
-    "panelTitle": "Kreuzfahrt importieren",
-    "panelHint": "Buchungs-E-Mail oder PDF einlesen, manuell hinzufügen — alles an einer Stelle."
-  },
-  "flight": {
-    "panelTitle": "Flug importieren",
-    "panelHint": "Buchungs-E-Mail oder PDF einlesen, manuell hinzufügen — alles an einer Stelle."
+    "panelTitle": "Kreuzfahrt hinzufügen",
+    "panelHint": "Womit fangen wir an?"
   },
   "lodging": {
-    "panelTitle": "Unterkunft importieren",
-    "panelHint": "Buchungs-E-Mail oder PDF einlesen, manuell hinzufügen — alles an einer Stelle.",
+    "panelTitle": "Unterkunft hinzufügen",
+    "panelHint": "Womit fangen wir an?",
     "triggerLabel": "Buchung einlesen"
+  },
+  "route": {
+    "document": {
+      "title": "Buchungs-E-Mail oder PDF",
+      "description": "Wir lesen alles aus, du prüfst nur nach."
+    },
+    "manual": "Nichts davon — von Hand eingeben"
+  },
+  "trip": {
+    "panelTitle": "Reise hinzufügen",
+    "panelHint": "Womit fangen wir an?",
+    "triggerLabel": "Reise hinzufügen",
+    "document": {
+      "title": "Reiseunterlagen einlesen",
+      "description": "Die Mail deines Veranstalters samt PDF — Flüge, Hotels und Termine stehen dort vollständig drin."
+    },
+    "fromExisting": {
+      "title": "Aus vorhandenen Einträgen bauen",
+      "description": "Zeitraum wählen — wir schlagen vor, was zusammengehört.",
+      "action": "Auswählen",
+      "empty": "Nichts gefunden, was sich zu einer Reise bündeln liesse.",
+      "failed": "Vorschläge konnten nicht geladen werden."
+    },
+    "manual": "Leer anlegen und von Hand füllen"
+  },
+  "poi": {
+    "panelTitle": "Ort hinzufügen",
+    "panelHint": "Womit fangen wir an?",
+    "triggerLabel": "Ort hinzufügen",
+    "search": {
+      "title": "Ort suchen",
+      "description": "Name oder Adresse — Koordinaten, Land und Art kommen mit.",
+      "action": "Suchen"
+    },
+    "onMap": {
+      "title": "Auf der Karte setzen",
+      "description": "Für alles ohne Namen — Aussichtspunkt, Stellplatz, Bucht.",
+      "action": "Karte"
+    }
   }
 }

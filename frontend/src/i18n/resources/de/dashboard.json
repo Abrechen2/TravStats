@@ -165,7 +165,8 @@
     "button": "Hinzufügen",
     "flight": "Flug",
     "cruise": "Kreuzfahrt",
-    "poi": "POI"
+    "poi": "POI",
+    "lodging": "Unterkunft"
   },
   "controls": {
     "mode": "Modus",

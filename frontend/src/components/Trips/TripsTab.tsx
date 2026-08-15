@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import type { Trip, TripCategory, TripStatus } from "../../types";
 import TripCard from "./TripCard";
 import TripModal from "./TripModal";
+import DomainImportPanel from "../import/DomainImportPanel";
+import { useTripImportAdapter } from "../import/adapters/tripAdapter";
 import TripCleanupModal from "./TripCleanupModal";
 import DetectTripsBanner from "./DetectTripsBanner";
 import { tripsApi } from "../../lib/api";
@@ -36,11 +38,12 @@ const CATEGORY_ICON: Record<TripCategory, string> = {
 };
 
 export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.Element {
-  const { t } = useTranslation(["trips"]);
+  const { t } = useTranslation(["trips", "import"]);
   const addToast = useToastStore((s) => s.addToast);
   const navigate = useNavigate();
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showAddPanel, setShowAddPanel] = useState(false);
+  const tripAdapter = useTripImportAdapter(onTripsChange);
   const [deleteTarget, setDeleteTarget] = useState<Trip | null>(null);
   const [showCleanup, setShowCleanup] = useState(false);
 
@@ -169,11 +172,11 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
               </>
             )}
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => setShowAddPanel(true)}
               className="px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed transition-colors hover:border-(--accent) hover:text-(--accent)"
               style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
             >
-              ＋ {t("trips:createTrip")}
+              ＋ {t("import:trip.triggerLabel")}
             </button>
           </div>
         </div>
@@ -298,7 +301,7 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
             {/* New trip placeholder card — only on the unfiltered list */}
             {statusFilter === "all" && categoryFilter === "all" && search === "" && (
               <button
-                onClick={() => setShowCreateModal(true)}
+                onClick={() => setShowAddPanel(true)}
                 className="rounded-xl border border-dashed flex flex-col items-center justify-center min-h-[280px] gap-2 transition-colors hover:border-(--accent)/50"
                 style={{
                   borderColor: "var(--color-border)",
@@ -334,15 +337,22 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
         />
       )}
 
-      {(showCreateModal || editingTrip !== null) && (
+      {/* Adding asks "what do you have?" first — building from existing
+          entries is the route that fills in the most, so the empty form is no
+          longer the default way in. Editing an existing trip still opens the
+          form directly: there is nothing to choose. */}
+      <DomainImportPanel
+        open={showAddPanel}
+        onClose={() => setShowAddPanel(false)}
+        onItemsCreated={onTripsChange}
+        adapter={tripAdapter}
+      />
+
+      {editingTrip !== null && (
         <TripModal
           trip={editingTrip}
-          onClose={() => {
-            setShowCreateModal(false);
-            setEditingTrip(null);
-          }}
+          onClose={() => setEditingTrip(null)}
           onSaved={() => {
-            setShowCreateModal(false);
             setEditingTrip(null);
             onTripsChange();
           }}
@@ -403,7 +413,7 @@ function MergeConfirmModal({
   onCancel: () => void;
   onConfirm: (name: string) => void;
 }): JSX.Element {
-  const { t } = useTranslation(["trips"]);
+  const { t } = useTranslation(["trips", "import"]);
   const [name, setName] = useState(defaultName);
 
   return (
