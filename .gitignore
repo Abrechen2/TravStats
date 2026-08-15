@@ -77,6 +77,16 @@ Logo/
 test-samples/**/*.msg
 test-samples/**/*.eml
 test-samples/**/*.txt
+# PDFs waren hier NICHT abgedeckt: vier Kreuzfahrt-Rechnungen mit Name,
+# Anschrift, IBAN und Telefonnummer lagen dadurch ab 2026-04-25 im
+# oeffentlichen Repository. Beispieldokumente sind fast immer echte
+# Buchungen - die Regel deckt deshalb jedes Dokumentformat ab, nicht die,
+# an die gerade jemand gedacht hat.
+test-samples/**/*.pdf
+test-samples/**/*.doc
+test-samples/**/*.docx
+test-samples/**/*.html
+test-samples/**/*.csv
 test-samples/**/*.jpg
 test-samples/**/*.png
 test-samples/**/*.gif
