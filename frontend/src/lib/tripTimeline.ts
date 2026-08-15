@@ -99,26 +99,54 @@ export interface SortableEvent {
 }
 
 /**
- * Chronological order, with two deliberate tie-breaks.
+ * Where an event sits within its day when it carries NO time of day.
+ *
+ * Midnight means "no time given" (see `hasExplicitTime`) — but sorting by the
+ * stored instant reads it as 00:00, the EARLIEST moment of the day. That put
+ * a hotel check-in above the flight that landed at 07:45 and brought the
+ * traveller there, on the owner's Madagascar trip. Every lodging stay is
+ * stored this way, so the misordering was general, not one bad row.
+ *
+ * A day without recorded times still has a shape: you leave the hotel, you
+ * travel, you arrive somewhere and check in, and you write the day up at its
+ * end. That shape is what these ranks encode — and only for events whose time
+ * is genuinely unknown. A check-in that DOES carry a time keeps its place in
+ * the clock order; the rank is a fallback for missing information, never an
+ * override of information we have.
+ */
+function dayRank(ev: SortableEvent): number {
+  if (ev.kind === "journal") return 3; // always the day's last word — #175
+  if (hasExplicitTime(ev.date)) return 1;
+  if (ev.kind === "lodging-checkout") return 0; // you leave before you travel
+  if (ev.kind === "lodging-checkin") return 2; // you arrive before you settle
+  return 1;
+}
+
+/**
+ * Chronological order, with three deliberate tie-breaks.
  *
  * 1. A DIARY entry sorts after everything else on the same calendar day —
  *    Alex's request (#175): "Diary entries should always be the last entry of
  *    a day". A day's write-up is about the day, so it belongs at its end. He
  *    offered a settings toggle as an alternative; this ships the fixed rule,
  *    which is the behaviour he named first and costs the user no decision.
- * 2. Otherwise ties keep their original relative order (the comparator returns
+ * 2. A time-less check-in or check-out is placed by `dayRank` rather than by
+ *    its midnight instant — see there for why.
+ * 3. Otherwise ties keep their original relative order (the comparator returns
  *    0 and Array.prototype.sort is stable), so two stops entered for the same
  *    time stay in the order the backend returned them — which is `orderIdx`.
+ *
+ * All three apply WITHIN a day only. Across days the instants decide, so a
+ * check-in on the 1st can never be dragged past anything on the 2nd.
  */
 export function compareTimelineEvents(a: SortableEvent, b: SortableEvent): number {
   const ta = new Date(a.date).getTime();
   const tb = new Date(b.date).getTime();
 
-  const sameDay = utcDayOf(a.date) === utcDayOf(b.date);
-  if (sameDay) {
-    const aJournal = a.kind === "journal";
-    const bJournal = b.kind === "journal";
-    if (aJournal !== bJournal) return aJournal ? 1 : -1;
+  if (utcDayOf(a.date) === utcDayOf(b.date)) {
+    const ra = dayRank(a);
+    const rb = dayRank(b);
+    if (ra !== rb) return ra - rb;
   }
 
   if (Number.isNaN(ta) || Number.isNaN(tb)) return 0;
