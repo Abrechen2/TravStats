@@ -14,7 +14,7 @@ import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
 import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from "../shared/statusDerivation";
 import { recomputeTripStatus } from "../services/tripStatusService";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
-import { flightExternalRef } from "../services/importProvenance";
+import { flightExternalRef, isDocumentImport } from "../services/importProvenance";
 
 function toUtcDate(local: string | null | undefined, tz: string | null | undefined): Date | null {
   if (!local || !tz) return null;
@@ -77,8 +77,11 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
     // already holds instead of doubling it. Only for rows that came FROM a
     // source — a hand-typed flight has no provenance to record, and giving it
     // a derived key would make two identical manual entries collide.
+    // The SAME default the write below applies — a booking mail arrives here
+    // without a named source and is stored as `email_import`, so the decision
+    // about provenance has to see that value, not the absent one.
     const refs = parsedFlights.map((data) =>
-      (data.dataSource ?? "").startsWith("imported_") || data.dataSource === "bulk_import"
+      isDocumentImport(data.dataSource ?? "email_import")
         ? flightExternalRef({
             flightNumber: data.flightNumber,
             departureLocal: data.departureLocal,

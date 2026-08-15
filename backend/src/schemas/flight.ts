@@ -176,6 +176,13 @@ const baseFlightSchema = z.object({
   // Provenance flag — primarily for bulk-import / AI-agent flows that want
   // to mark a row as 'bulk_import' so admins can later audit / re-process
   // them. Defaults to 'manual' in the route when omitted.
+  /**
+   * Set when the flight arrives from an import rather than the form. The
+   * server derives the provenance key itself — what counts as "the same
+   * flight" is a rule about the data, not something each client should
+   * restate.
+   */
+  importBatchId: z.string().uuid().nullable().optional(),
   dataSource: z.enum([
     'manual',
     'email_import',

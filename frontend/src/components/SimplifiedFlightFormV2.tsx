@@ -90,6 +90,7 @@ export default function SimplifiedFlightFormV2({
               setError={form.setError}
               handleFlightLookup={form.handleFlightLookup}
               handleBoardingPassScan={form.handleBoardingPassScan}
+              setImportBatchId={form.setImportBatchId}
               setParsedFlights={form.setParsedFlights}
               setCurrentFlightIndex={form.setCurrentFlightIndex}
               setParserProvider={form.setParserProvider}
