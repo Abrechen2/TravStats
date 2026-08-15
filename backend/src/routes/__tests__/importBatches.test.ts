@@ -154,12 +154,28 @@ describe("import batches — across domains", () => {
       .set("Cookie", cookie)
       .send({ domain: "flight", source: "csv", fileName: "mine.csv" })
       .expect(201);
+    // Both batches need a row of their own: a batch that produced nothing is
+    // not listed at all, which would make this pass for the wrong reason.
+    await prisma.flight.create({
+      data: {
+        userId,
+        importBatchId: mine.body.data.id as string,
+        flightNumber: "LH400",
+        depLat: 50.0379,
+        depLon: 8.5622,
+        arrLat: 40.6413,
+        arrLon: -73.7781,
+      },
+    });
 
     const other = await prisma.user.create({
       data: { username: "stranger", passwordHash: "x" },
     });
-    await prisma.importBatch.create({
+    const theirs = await prisma.importBatch.create({
       data: { userId: other.id, domain: "lodging", source: "csv", fileName: "theirs.csv" },
+    });
+    await prisma.lodging.create({
+      data: { userId: other.id, name: "Ihr Hotel", type: "hotel", batchId: theirs.id },
     });
 
     const list = await request(app).get("/api/v1/import-batches").set("Cookie", cookie).expect(200);
@@ -167,6 +183,20 @@ describe("import batches — across domains", () => {
     expect(list.body.data).toHaveLength(1);
     expect(list.body.data[0].id).toBe(mine.body.data.id);
     expect(list.body.data.map((b: { fileName: string }) => b.fileName)).not.toContain("theirs.csv");
+  });
+
+  // A mail read a second time produces nothing, because every flight in it is
+  // already here. Showing that as a run would invite the user to undo an
+  // import that never happened.
+  it("does not list a batch that produced nothing", async () => {
+    await request(app)
+      .post("/api/v1/import-batches")
+      .set("Cookie", cookie)
+      .send({ domain: "flight", source: "email", fileName: "schon-gelesen.eml" })
+      .expect(201);
+
+    const list = await request(app).get("/api/v1/import-batches").set("Cookie", cookie).expect(200);
+    expect(list.body.data).toHaveLength(0);
   });
 
   it("rejects a domain it cannot revert", async () => {

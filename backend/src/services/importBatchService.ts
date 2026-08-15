@@ -48,9 +48,28 @@ export async function createImportBatch(
   return batch;
 }
 
+/**
+ * An import that imported nothing is not an import.
+ *
+ * A batch is opened when a document is read, before anyone knows whether it
+ * will produce rows — and a mail read a second time produces none, because
+ * every flight in it is already here. Listing that as a run would invite the
+ * user to "undo" an import that never happened, and would fill the log with
+ * entries that say nothing. The record stays in the database (it costs a row
+ * and keeps the id stable if something else ever references it); it simply is
+ * not a run worth showing.
+ */
 export async function listImportBatches(userId: string): Promise<ImportBatchSummary[]> {
   const batches = await prisma.importBatch.findMany({
-    where: { userId },
+    where: {
+      userId,
+      OR: [
+        { lodgings: { some: {} } },
+        { stays: { some: {} } },
+        { flights: { some: {} } },
+        { cruises: { some: {} } },
+      ],
+    },
     orderBy: { createdAt: "desc" },
     include: {
       _count: { select: { lodgings: true, stays: true, flights: true, cruises: true } },
