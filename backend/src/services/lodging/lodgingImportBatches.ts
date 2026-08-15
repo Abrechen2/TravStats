@@ -17,7 +17,7 @@ function asSource(value: string): LodgingImportSource {
 export async function listLodgingImportBatches(
   userId: string,
 ): Promise<LodgingImportBatchSummary[]> {
-  const batches = await prisma.lodgingImportBatch.findMany({
+  const batches = await prisma.importBatch.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { lodgings: true, stays: true } } },
@@ -80,7 +80,7 @@ export async function revertLodgingImportBatch(
 ): Promise<RevertResult> {
   const result = await prisma.$transaction(
     async (tx) => {
-      const batch = await tx.lodgingImportBatch.findFirst({ where: { id: batchId, userId } });
+      const batch = await tx.importBatch.findFirst({ where: { id: batchId, userId } });
       if (!batch) throw new AppError("Import batch not found", 404);
 
       const stays = await tx.lodgingStay.deleteMany({ where: { userId, batchId } });
@@ -102,7 +102,7 @@ export async function revertLodgingImportBatch(
           })
         : { count: 0 };
 
-      await tx.lodgingImportBatch.delete({ where: { id: batchId } });
+      await tx.importBatch.delete({ where: { id: batchId } });
 
       return {
         deletedStays: stays.count,

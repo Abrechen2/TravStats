@@ -82,21 +82,21 @@
       "flightNumberExpanded": "Die Flugsuche kaskadiert über mehrere APIs:\n• Aviationstack (mit Basic+ Key: vergangene und zukünftige Flüge)\n• AirLabs (heutige Flüge)\n• OpenSky (heutige Flüge, Login erforderlich)\n\nFehlt ein passender Provider für das gewählte Datum, müssen die Daten manuell eingetragen werden. Auch bei konfiguriertem Key kann es passieren, dass die API einen bestimmten Flug nicht kennt."
     },
     "steps": {
-      "input": "Flugnummer für automatische Suche eingeben",
+      "input": "Womit fangen wir an?",
       "select": "Wähle deinen Flug aus den Ergebnissen",
       "complete": "Flugdetails überprüfen und vervollständigen"
     },
     "boardingPass": {
-      "title": "Hast du einen Boarding Pass?",
-      "description": "Scanne ihn und alles füllt sich von selbst aus!",
-      "scan": "Jetzt scannen"
+      "title": "Bild vom Boarding-Pass",
+      "description": "Foto oder Bildschirmfoto — Gate, Terminal und Boarding-Zeit werden ausgelesen.",
+      "scan": "Bild wählen"
     },
     "email": {
-      "title": "Hast du eine Buchungs-E-Mail?",
+      "title": "Buchungs-E-Mail oder PDF",
       "description": "Importiere Flüge direkt aus Bestätigungs-E-Mails!",
       "import": "E-Mail importieren",
       "bestOption": "Beste Option",
-      "bestOptionDescription": "Erfasst alle Daten am besten aus Bestätigungs-E-Mails",
+      "bestOptionDescription": "Wir lesen alles aus, du prüfst nur nach. Auch mehrere Flüge auf einmal.",
       "textFallback": "Email-Text einfügen (Fallback)",
       "textPlaceholder": "Email-Inhalt hier einfügen...",
       "regexWarning": {
@@ -161,7 +161,8 @@
       "addAnyway": "Trotzdem hinzufügen",
       "mergedToast": "Bestehender Flug um {{count}} Felder ergänzt",
       "mergedNoChange": "Keine neuen Felder zu ergänzen"
-    }
+    },
+    "alreadyImported": "Dieser Flug war schon eingelesen — es wurde nichts doppelt angelegt."
   },
   "list": {
     "title": "Flüge",
@@ -172,7 +173,8 @@
     "from": "Von",
     "to": "Nach",
     "aircraft": "Flugzeug",
-    "deleteConfirm": "Möchtest du diesen Flug wirklich löschen?"
+    "deleteConfirm": "Möchtest du diesen Flug wirklich löschen?",
+    "wholeListHint": "Ein ganzes Logbuch auf einmal?"
   },
   "table": {
     "title": "Flugliste",

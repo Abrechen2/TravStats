@@ -9,6 +9,7 @@ import { checkAndUpdateAchievements } from '../utils/achievements';
 import { buildEffectivePortSequence } from '../shared/cruise/portSequence';
 import { computeSchematicRoute } from '../services/schematicRouter';
 import { recomputeLegsForCruise } from '../services/cruiseDistance/cruiseLegService';
+import { cruiseExternalRef } from '../services/importProvenance';
 import { deriveCruiseStatus, CRUISE_PASSTHROUGH } from '../shared/statusDerivation';
 import { recomputeTripStatus } from '../services/tripStatusService';
 import { resolveCompanions, linkRowsFor } from '../services/companionService';
@@ -279,8 +280,52 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
     const parsed = createCruiseSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    const { stops, startDate, endDate, tripId, bookingId, status, companions, ...rest } =
+    const { stops, startDate, endDate, tripId, bookingId, status, companions, importBatchId, ...rest } =
       parsed.data;
+
+    // A batch id means "this came from an import". It is client-supplied, so
+    // ownership is checked here — otherwise it is a handle into someone
+    // else's undo history. An unrecognised one is dropped rather than
+    // refused: the cruise the user asked for matters more than the record of
+    // where it came from.
+    let batchId: string | null = null;
+    if (importBatchId) {
+      const batch = await prisma.importBatch.findFirst({
+        where: { id: importBatchId, userId, domain: "cruise" },
+        select: { id: true },
+      });
+      batchId = batch?.id ?? null;
+    }
+    // Derived here, not by the caller: what counts as "the same cruise" is a
+    // rule about the data, and every client restating it would be a rule with
+    // several versions.
+    const externalRef = batchId
+      ? cruiseExternalRef({
+          bookingReference: rest.bookingReference,
+          shipNameOverride: rest.shipNameOverride,
+          cruiseLine: rest.cruiseLine,
+          startDate,
+        })
+      : null;
+
+    // Reading the same confirmation twice is a normal thing to do — a forward,
+    // a second copy in the inbox. Answering it with a 500 from a unique-index
+    // violation would read as "the import is broken"; 409 says what actually
+    // happened, and the importer counts it instead of creating a twin.
+    if (externalRef) {
+      const existing = await prisma.cruise.findFirst({
+        where: { userId, externalRef },
+        select: { id: true },
+      });
+      if (existing) {
+        res.status(409).json({
+          success: false,
+          error: 'already_imported',
+          data: { id: existing.id },
+        });
+        return;
+      }
+    }
 
     const startDateUtc = startDate ? new Date(startDate) : null;
     const endDateUtc = endDate ? new Date(endDate) : null;
@@ -307,6 +352,8 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
         data: {
           userId,
           ...rest,
+          importBatchId: batchId,
+          externalRef,
           status: effectiveStatus,
           startDate: startDateUtc,
           endDate: endDateUtc,

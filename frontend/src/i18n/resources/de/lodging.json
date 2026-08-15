@@ -18,7 +18,8 @@
     },
     "otherCurrencyHint": "Enthält weitere Beträge in einer älteren Basiswährung, die hier nicht mitgezählt sind.",
     "bookmarked": "vorgemerkt",
-    "bookmarkedHint": "Noch nicht besucht — zählt in keiner Statistik mit."
+    "bookmarkedHint": "Noch nicht besucht — zählt in keiner Statistik mit.",
+    "wholeListHint": "Eine ganze Liste auf einmal?"
   },
   "filter": {
     "searchPlaceholder": "Suche nach Name oder Ort …",
@@ -313,6 +314,13 @@
       "yesHint": "Zählt als besucht. Wann genau, kannst du je Haus später nachtragen.",
       "no": "Häuser, die ich mir gemerkt habe",
       "noHint": "Nur vorgemerkt — erscheint in der Liste und auf der Karte, zählt aber nirgends mit."
+    },
+    "maps": {
+      "title": "Google-Maps-Export",
+      "description": "Eine gespeicherte Liste aus Google Takeout. Jede Zeile bringt Googles Kennung des Ortes mit — dadurch erkennt ein zweiter Import, was schon da ist. Datum und Preis stehen in so einer Liste nicht.",
+      "uploadLabel": "Takeout-CSV wählen",
+      "noRows": "In dieser Datei steht keine Zeile mit einem Namen — ist es wirklich eine gespeicherte Liste aus Takeout?",
+      "withoutId": "{{count}} Zeilen bringen keine Ortskennung mit — sie werden übernommen, aber ein zweiter Import erkennt sie nicht wieder."
     }
   }
 }

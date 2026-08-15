@@ -332,8 +332,8 @@ export async function commitLodgingImport(
   fileName: string | null,
   rows: CommitRowInput[],
 ): Promise<CommitResult> {
-  const batch = await prisma.lodgingImportBatch.create({
-    data: { userId, source, fileName },
+  const batch = await prisma.importBatch.create({
+    data: { userId, domain: "lodging", source, fileName },
   });
   const baseCurrency = await getBaseCurrency(userId);
   // See `resolveFxOutcomes` — one lookup per distinct (currency, day) pair

@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ImportLogSection } from "../ImportLogSection";
-import { listLodgingImportBatches, revertLodgingImportBatch } from "../../../lib/api/lodgingImport";
+import { listImportBatches, revertImportBatch } from "../../../lib/api/importBatches";
 import { logger } from "../../../lib/logger";
-import type { LodgingImportBatchSummary } from "../../../types/lodgingImport";
+import type { ImportBatchSummary } from "../../../lib/api/importBatches";
 
-vi.mock("../../../lib/api/lodgingImport", () => ({
-  listLodgingImportBatches: vi.fn(),
-  revertLodgingImportBatch: vi.fn(),
+vi.mock("../../../lib/api/importBatches", () => ({
+  listImportBatches: vi.fn(),
+  revertImportBatch: vi.fn(),
 }));
 
 vi.mock("../../../lib/logger", () => ({
@@ -43,22 +43,34 @@ vi.mock("../../../hooks/useTranslation", () => ({
   }),
 }));
 
-const csvBatch: LodgingImportBatchSummary = {
+const csvBatch: ImportBatchSummary = {
   id: "batch-1",
+  domain: "lodging",
   source: "csv",
   fileName: "places.csv",
   createdAt: "2026-07-01T00:00:00.000Z",
-  lodgingCount: 2,
-  stayCount: 3,
+  counts: { lodgings: 2, stays: 3, flights: 0, cruises: 0 },
 };
 
-const emailBatch: LodgingImportBatchSummary = {
+const emailBatch: ImportBatchSummary = {
   id: "batch-2",
+  domain: "lodging",
   source: "email",
   fileName: null,
   createdAt: "2026-06-15T00:00:00.000Z",
-  lodgingCount: 1,
-  stayCount: 1,
+  counts: { lodgings: 1, stays: 1, flights: 0, cruises: 0 },
+};
+
+// The reason this component was touched at all: a flight logbook import used
+// to leave no trace, so the log said "nothing imported yet" while 160 flights
+// had just landed.
+const flightBatch: ImportBatchSummary = {
+  id: "batch-3",
+  domain: "flight",
+  source: "csv",
+  fileName: "logbook.csv",
+  createdAt: "2026-08-01T00:00:00.000Z",
+  counts: { lodgings: 0, stays: 0, flights: 160, cruises: 0 },
 };
 
 function renderList(
@@ -77,11 +89,11 @@ describe("ImportLogSection", () => {
   });
 
   it("renders rows from the fetched batches — source, fileName, date, created counts", async () => {
-    vi.mocked(listLodgingImportBatches).mockResolvedValue([csvBatch, emailBatch]);
+    vi.mocked(listImportBatches).mockResolvedValue([csvBatch, emailBatch]);
 
     renderList();
 
-    await waitFor(() => expect(listLodgingImportBatches).toHaveBeenCalled());
+    await waitFor(() => expect(listImportBatches).toHaveBeenCalled());
     expect(await screen.findByText("lodging:import.batches.source.csv")).toBeInTheDocument();
     expect(screen.getByText(/places\.csv/)).toBeInTheDocument();
     expect(screen.getByText("lodging:import.batches.source.email")).toBeInTheDocument();
@@ -94,7 +106,7 @@ describe("ImportLogSection", () => {
   });
 
   it("renders the empty state with the section title", async () => {
-    vi.mocked(listLodgingImportBatches).mockResolvedValue([]);
+    vi.mocked(listImportBatches).mockResolvedValue([]);
 
     renderList();
 
@@ -107,15 +119,29 @@ describe("ImportLogSection", () => {
   });
 
   it("labels each entry with the domain it belongs to", async () => {
-    vi.mocked(listLodgingImportBatches).mockResolvedValue([csvBatch]);
+    vi.mocked(listImportBatches).mockResolvedValue([csvBatch]);
 
     renderList();
 
     expect(await screen.findByText("common:domain.lodging")).toBeInTheDocument();
   });
 
+  // The whole reason this component changed: a flight import used to be
+  // invisible here, so the log read "nothing imported yet" right after 160
+  // flights had landed.
+  it("shows a flight import with its own label and its own count", async () => {
+    vi.mocked(listImportBatches).mockResolvedValue([flightBatch, csvBatch]);
+
+    renderList();
+
+    expect(await screen.findByText("common:domain.flight")).toBeInTheDocument();
+    expect(screen.getByText("common:domain.lodging")).toBeInTheDocument();
+    // Counted in the words of its own area — "160 flights", not "160 rows".
+    expect(screen.getByText("settings:import.log.counts.flights(count:160)")).toBeInTheDocument();
+  });
+
   it("shows a translated error and logs when the batch fetch fails", async () => {
-    vi.mocked(listLodgingImportBatches).mockRejectedValue(new Error("network down"));
+    vi.mocked(listImportBatches).mockRejectedValue(new Error("network down"));
 
     renderList();
 
@@ -125,7 +151,7 @@ describe("ImportLogSection", () => {
   });
 
   it("does not call revert when the row button is clicked (only opens the confirm dialog)", async () => {
-    vi.mocked(listLodgingImportBatches).mockResolvedValue([csvBatch]);
+    vi.mocked(listImportBatches).mockResolvedValue([csvBatch]);
 
     renderList();
     await screen.findByText(/places\.csv/);
@@ -133,11 +159,11 @@ describe("ImportLogSection", () => {
     await userEvent.click(screen.getByTestId("batch-revert-batch-1"));
 
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
-    expect(revertLodgingImportBatch).not.toHaveBeenCalled();
+    expect(revertImportBatch).not.toHaveBeenCalled();
   });
 
   it("does not call revert when the confirm dialog is cancelled", async () => {
-    vi.mocked(listLodgingImportBatches).mockResolvedValue([csvBatch]);
+    vi.mocked(listImportBatches).mockResolvedValue([csvBatch]);
 
     renderList();
     await screen.findByText(/places\.csv/);
@@ -147,16 +173,12 @@ describe("ImportLogSection", () => {
     await userEvent.click(screen.getByTestId("batch-revert-cancel"));
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(revertLodgingImportBatch).not.toHaveBeenCalled();
+    expect(revertImportBatch).not.toHaveBeenCalled();
   });
 
   it("calls revert exactly once with the row's id on confirm, refetches, and calls onReverted", async () => {
-    vi.mocked(listLodgingImportBatches).mockResolvedValueOnce([csvBatch]).mockResolvedValueOnce([]);
-    vi.mocked(revertLodgingImportBatch).mockResolvedValue({
-      deletedLodgings: 2,
-      deletedStays: 3,
-      detachedLodgings: 0,
-    });
+    vi.mocked(listImportBatches).mockResolvedValueOnce([csvBatch]).mockResolvedValueOnce([]);
+    vi.mocked(revertImportBatch).mockResolvedValue({ domain: "lodging", deleted: 5 });
 
     const onReverted = vi.fn();
     renderList({ onReverted });
@@ -166,20 +188,16 @@ describe("ImportLogSection", () => {
 
     await userEvent.click(screen.getByTestId("batch-revert-confirm"));
 
-    await waitFor(() => expect(revertLodgingImportBatch).toHaveBeenCalledTimes(1));
-    expect(revertLodgingImportBatch).toHaveBeenCalledWith("batch-1");
+    await waitFor(() => expect(revertImportBatch).toHaveBeenCalledTimes(1));
+    expect(revertImportBatch).toHaveBeenCalledWith("batch-1");
     await waitFor(() => expect(onReverted).toHaveBeenCalledTimes(1));
-    // Re-fetches the list after a successful revert (second `listLodgingImportBatches` call).
-    await waitFor(() => expect(listLodgingImportBatches).toHaveBeenCalledTimes(2));
+    // Re-fetches the list after a successful revert (second `listImportBatches` call).
+    await waitFor(() => expect(listImportBatches).toHaveBeenCalledTimes(2));
   });
 
   it("shows the honest 'kept' distinction when detachedLodgings > 0", async () => {
-    vi.mocked(listLodgingImportBatches).mockResolvedValue([csvBatch]);
-    vi.mocked(revertLodgingImportBatch).mockResolvedValue({
-      deletedLodgings: 2,
-      deletedStays: 3,
-      detachedLodgings: 1,
-    });
+    vi.mocked(listImportBatches).mockResolvedValue([csvBatch]);
+    vi.mocked(revertImportBatch).mockResolvedValue({ domain: "lodging", deleted: 5, detached: 1 });
 
     renderList();
     await screen.findByText(/places\.csv/);
@@ -190,17 +208,13 @@ describe("ImportLogSection", () => {
     await waitFor(() => expect(addToastMock).toHaveBeenCalled());
     const [type, message] = addToastMock.mock.calls[0] as [string, string];
     expect(type).toBe("success");
-    expect(message).toContain("withDetached");
-    expect(message).toContain("detachedLodgings:1");
+    expect(message).toContain("revertedWithKept");
+    expect(message).toContain("kept:1");
   });
 
   it("shows a clean result (no 'kept' clause) when detachedLodgings is 0", async () => {
-    vi.mocked(listLodgingImportBatches).mockResolvedValue([csvBatch]);
-    vi.mocked(revertLodgingImportBatch).mockResolvedValue({
-      deletedLodgings: 2,
-      deletedStays: 3,
-      detachedLodgings: 0,
-    });
+    vi.mocked(listImportBatches).mockResolvedValue([csvBatch]);
+    vi.mocked(revertImportBatch).mockResolvedValue({ domain: "lodging", deleted: 5 });
 
     renderList();
     await screen.findByText(/places\.csv/);
@@ -211,13 +225,15 @@ describe("ImportLogSection", () => {
     await waitFor(() => expect(addToastMock).toHaveBeenCalled());
     const [type, message] = addToastMock.mock.calls[0] as [string, string];
     expect(type).toBe("success");
-    expect(message).not.toContain("detachedLodgings");
-    expect(message).toContain("revertResult.success");
+    // No "kept" clause when nothing had to be kept — the distinction only
+    // appears where it means something.
+    expect(message).not.toContain("kept");
+    expect(message).toContain("settings:import.log.reverted");
   });
 
   it("shows a translated error (never the raw message) and logs when revert fails", async () => {
-    vi.mocked(listLodgingImportBatches).mockResolvedValue([csvBatch]);
-    vi.mocked(revertLodgingImportBatch).mockRejectedValue(
+    vi.mocked(listImportBatches).mockResolvedValue([csvBatch]);
+    vi.mocked(revertImportBatch).mockRejectedValue(
       new Error("SQL constraint violation on lodging_import_batches")
     );
 
@@ -236,12 +252,12 @@ describe("ImportLogSection", () => {
   });
 
   it("re-fetches when reloadKey changes (a new import landed elsewhere on the page)", async () => {
-    vi.mocked(listLodgingImportBatches).mockResolvedValue([csvBatch]);
+    vi.mocked(listImportBatches).mockResolvedValue([csvBatch]);
 
     const { rerender } = render(<ImportLogSection onReverted={vi.fn()} reloadKey={1} />);
-    await waitFor(() => expect(listLodgingImportBatches).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(listImportBatches).toHaveBeenCalledTimes(1));
 
     rerender(<ImportLogSection onReverted={vi.fn()} reloadKey={2} />);
-    await waitFor(() => expect(listLodgingImportBatches).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(listImportBatches).toHaveBeenCalledTimes(2));
   });
 });

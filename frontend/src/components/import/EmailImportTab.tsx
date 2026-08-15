@@ -8,10 +8,11 @@ import { useMinLoadingState } from "../../hooks/useMinLoadingState";
 import { GlobeLoader } from "../GlobeLoader";
 import { logger } from "../../lib/logger";
 import { extractApiErrorMessage } from "../../lib/apiError";
-import type { ImportDomain } from "./types";
+import type { ParseableImportDomain } from "./types";
 
 interface EmailImportTabProps {
-  domain: ImportDomain;
+  /** Only a domain the backend can actually parse for — see `types.ts`. */
+  domain: ParseableImportDomain;
   acceptedExtensions: string[];
   onEmailResult: (result: ParseEmailResult) => void;
   /**

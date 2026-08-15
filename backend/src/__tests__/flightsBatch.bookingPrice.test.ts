@@ -23,6 +23,13 @@ describe("flights batch — booking-level total price", () => {
     await prisma.$disconnect();
   });
 
+  // Each case books a DIFFERENT journey. They used to share one template —
+  // the same flight number, day and route under four booking references —
+  // which no logbook can contain: a person cannot fly FRA-JFK as LH400 on the
+  // same day twice. Since imported rows now carry provenance, the repeats were
+  // correctly recognised as the same flight and skipped, and the cases had
+  // nothing to assert on. The fixtures are realistic now; the behaviour under
+  // test (moving a shared total onto the booking) is untouched.
   function makeFlight(overrides: Record<string, unknown>): Record<string, unknown> {
     return {
       flightNumber: "LH400",
@@ -80,7 +87,13 @@ describe("flights batch — booking-level total price", () => {
       .post("/api/v1/flights/batch")
       .set("Cookie", authCookie)
       .send([
-        makeFlight({ bookingReference: "BOOKB2", price: 300, currency: "EUR" }),
+        makeFlight({
+          bookingReference: "BOOKB2",
+          price: 300,
+          currency: "EUR",
+          departureLocal: "2024-06-01T10:00",
+          arrivalLocal: "2024-06-01T18:00",
+        }),
         makeFlight({
           flightNumber: "LH405",
           bookingReference: "BOOKB2",
@@ -102,7 +115,13 @@ describe("flights batch — booking-level total price", () => {
       .post("/api/v1/flights/batch")
       .set("Cookie", authCookie)
       .send([
-        makeFlight({ bookingReference: "BOOKC3", price: 400, currency: "EUR" }),
+        makeFlight({
+          bookingReference: "BOOKC3",
+          price: 400,
+          currency: "EUR",
+          departureLocal: "2024-07-01T10:00",
+          arrivalLocal: "2024-07-01T18:00",
+        }),
         makeFlight({
           flightNumber: "LH407",
           bookingReference: "BOOKC3",
@@ -119,7 +138,15 @@ describe("flights batch — booking-level total price", () => {
     const res = await request(app)
       .post("/api/v1/flights/batch")
       .set("Cookie", authCookie)
-      .send([makeFlight({ bookingReference: "BOOKD4", price: 150, currency: "USD" })]);
+      .send([
+        makeFlight({
+          bookingReference: "BOOKD4",
+          price: 150,
+          currency: "USD",
+          departureLocal: "2024-08-01T10:00",
+          arrivalLocal: "2024-08-01T18:00",
+        }),
+      ]);
     expect(res.status).toBe(201);
     expect(await prisma.booking.findFirst({ where: { userId, pnr: "BOOKD4" } })).toBeNull();
     const f = await prisma.flight.findFirst({ where: { userId, bookingReference: "BOOKD4" } });

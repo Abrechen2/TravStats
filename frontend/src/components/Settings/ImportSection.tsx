@@ -7,80 +7,48 @@ import { SectionCard, SectionTitle } from "./SettingsShared";
 import { Fr24ImportTile } from "../import/Fr24ImportTile";
 import { GenericCsvImportTile } from "../import/GenericCsvImportTile";
 import { LodgingCsvImportTile } from "../import/LodgingCsvImportTile";
-import { ParseImportTile } from "../import/ParseImportTile";
+import { MapsExportImportTile } from "../import/MapsExportImportTile";
 import { ImportLogSection } from "../import/ImportLogSection";
-import { useCruiseImportAdapter } from "../import/adapters/cruiseAdapter";
-import { useLodgingImportAdapter } from "../import/adapters/lodgingAdapter";
 
+/**
+ * The one place for LISTS — a whole collection at once, from a file.
+ *
+ * It used to hold the e-mail/PDF routes as well, and #238 read that as a gap
+ * to fill. The opposite turned out to be right: a list is a one-off migration
+ * of something you already have, while a booking mail arrives again and again
+ * and belongs where the entry will live. Two different acts, two different
+ * places — so the e-mail tiles moved to the add-dialog of each area, and this
+ * page stopped promising them.
+ *
+ * Every ENABLED area still gets a section, even one with no list format yet:
+ * the honest line "no route yet" is what tells a cruise user that nothing is
+ * hidden from them.
+ */
 export default function ImportSection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
   const { isEnabled } = useEnabledDomains();
 
-  // The log and the tiles now live on the SAME page, so a commit here must
-  // reach the log — it loads once on mount, and without this signal a fresh
-  // import sat under a log still reading "no imports yet" (caught in the
-  // browser; every unit test was green while it was wrong).
+  // The log and the tiles live on the SAME page, so a commit here must reach
+  // the log — it loads once on mount, and without this signal a fresh import
+  // sat under a log still reading "no imports yet" (caught in the browser;
+  // every unit test was green while it was wrong).
   const [importToken, setImportToken] = useState<number>(0);
   const handleImported = useCallback((): void => setImportToken((n) => n + 1), []);
 
-  // Hooks, so they run unconditionally regardless of which domains are on.
-  const cruiseAdapter = useCruiseImportAdapter();
-  const lodgingAdapter = useLodgingImportAdapter();
-
-  /** Bulk importers per domain. A domain may legitimately have none. */
-  const bulkImporters = useMemo<Partial<Record<DomainKey, JSX.Element[]>>>(
+  /** List importers per domain. A domain may legitimately have none yet. */
+  const listImporters = useMemo<Partial<Record<DomainKey, JSX.Element[]>>>(
     () => ({
       flight: [<Fr24ImportTile key="fr24" />, <GenericCsvImportTile key="csv" />],
-      lodging: [<LodgingCsvImportTile key="lodging-csv" onImported={handleImported} />],
+      lodging: [
+        // The Maps export first: it is the one file that brings an identity
+        // with it, and the generic path would reduce it to a name.
+        <MapsExportImportTile key="lodging-maps" onImported={handleImported} />,
+        <LodgingCsvImportTile key="lodging-csv" onImported={handleImported} />,
+      ],
     }),
     [handleImported]
   );
 
-  /**
-   * The e-mail / PDF route per domain — the way most bookings actually arrive,
-   * and the one the hub used to omit entirely (#238). Cruise and lodging open
-   * it in place; flights start it on their own page, where the multi-flight
-   * review loop already lives (see `ParseImportTile`).
-   */
-  const parseImporters = useMemo<Partial<Record<DomainKey, JSX.Element>>>(
-    () => ({
-      flight: (
-        <ParseImportTile
-          key="flight-parse"
-          title={t("settings:import.tile.parse.flight.title")}
-          description={t("settings:import.tile.parse.flight.description")}
-          actionLabel={t("settings:import.tile.parse.flight.action")}
-          to="/flights?import=email"
-        />
-      ),
-      cruise: (
-        <ParseImportTile
-          key="cruise-parse"
-          title={t("settings:import.tile.parse.cruise.title")}
-          description={t("settings:import.tile.parse.cruise.description")}
-          actionLabel={t("settings:import.tile.parse.cruise.action")}
-          adapter={cruiseAdapter}
-          onImported={handleImported}
-        />
-      ),
-      lodging: (
-        <ParseImportTile
-          key="lodging-parse"
-          title={t("settings:import.tile.parse.lodging.title")}
-          description={t("settings:import.tile.parse.lodging.description")}
-          actionLabel={t("settings:import.tile.parse.lodging.action")}
-          adapter={lodgingAdapter}
-          onImported={handleImported}
-        />
-      ),
-    }),
-    [t, cruiseAdapter, lodgingAdapter]
-  );
-
-  // EVERY enabled domain gets a section. Filtering by "has a bulk importer"
-  // is what hid cruises on an instance that had them switched on: the page
-  // promises "bundled per area", so an area that is on must appear — with
-  // whatever routes it has, or an honest line saying it has none yet.
   const groups = AVAILABLE_DOMAINS.filter((key) => isEnabled(key));
 
   return (
@@ -91,9 +59,7 @@ export default function ImportSection(): JSX.Element {
       />
       <div className="flex flex-col gap-6">
         {groups.map((key) => {
-          const tiles = [...(bulkImporters[key] ?? [])];
-          const parseTile = parseImporters[key];
-          if (parseTile) tiles.push(parseTile);
+          const tiles = listImporters[key] ?? [];
           return (
             <div key={key}>
               <div className="mb-3 flex items-center gap-2">
@@ -115,9 +81,7 @@ export default function ImportSection(): JSX.Element {
           );
         })}
       </div>
-      {/* One log for every bulk import, below the tiles that produce them —
-          moved here from the lodging page, where a second import surface
-          contradicted the "one place to import" rule. */}
+      {/* One log for every list import, below the tiles that produce them. */}
       <ImportLogSection reloadKey={importToken} />
     </SectionCard>
   );
