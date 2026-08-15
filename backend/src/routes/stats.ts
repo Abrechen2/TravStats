@@ -36,6 +36,8 @@ import {
   type DatedRow,
 } from '../utils/stats/timeseries';
 import { computeDedupedTotalCost } from '../utils/stats/dedupedCost';
+import { buildTravelAccount } from '../services/stats/travelAccount';
+import { buildTripAccount } from '../services/stats/tripAccount';
 
 const router = Router();
 
@@ -1813,5 +1815,107 @@ router.get('/punctuality', async (req: AuthRequest, res: Response, next: NextFun
     next(error);
   }
 });
+
+/**
+ * GET /api/v1/stats/travel-account — the cross-domain night account plus the
+ * per-trip rollup.
+ *
+ * One endpoint for both because a screen that asks "where did I sleep this
+ * year" invariably asks "and which trip has a gap" next, and two round-trips
+ * for one question is two chances to show half an answer.
+ */
+router.get(
+  '/travel-account',
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const [stays, cruises, flights, trips] = await Promise.all([
+        prisma.lodgingStay.findMany({
+          where: { userId },
+          select: { status: true, checkIn: true, checkOut: true },
+        }),
+        prisma.cruise.findMany({
+          where: { userId },
+          select: { status: true, startDate: true, endDate: true },
+        }),
+        prisma.flight.findMany({
+          where: { userId },
+          select: { status: true, departureTime: true, arrivalTime: true },
+        }),
+        prisma.trip.findMany({
+          where: { userId },
+          select: {
+            id: true,
+            name: true,
+            startDate: true,
+            endDate: true,
+            status: true,
+            category: true,
+            tags: true,
+            journalEntries: { select: { mood: true, weather: true } },
+            _count: { select: { photos: true } },
+            lodgingStays: {
+              select: {
+                status: true,
+                checkIn: true,
+                checkOut: true,
+                totalPrice: true,
+                currency: true,
+                totalPriceBase: true,
+                fxBaseCurrency: true,
+              },
+            },
+            cruises: {
+              select: {
+                status: true,
+                startDate: true,
+                endDate: true,
+                price: true,
+                currency: true,
+              },
+            },
+            flights: {
+              select: {
+                status: true,
+                departureTime: true,
+                arrivalTime: true,
+                price: true,
+                currency: true,
+              },
+            },
+          },
+        }),
+      ]);
+
+      const now = new Date();
+      const account = buildTravelAccount({ stays, cruises, flights, now });
+      const tripAccount = buildTripAccount(
+        trips.map((t) => ({
+          id: t.id,
+          name: t.name,
+          startDate: t.startDate,
+          endDate: t.endDate,
+          status: t.status,
+          category: t.category,
+          tags: t.tags,
+          journalEntries: t.journalEntries,
+          photoCount: t._count.photos,
+          stays: t.lodgingStays,
+          cruises: t.cruises,
+          flights: t.flights,
+        })),
+      );
+
+      res.json({ account, trips: tripAccount });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 export default router;

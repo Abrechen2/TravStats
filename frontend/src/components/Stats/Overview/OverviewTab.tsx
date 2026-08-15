@@ -16,6 +16,7 @@ import CrossDomainActivityChart from "./CrossDomainActivityChart";
 import CrossDomainHeatmap from "./CrossDomainHeatmap";
 import DomainToggleChips from "./DomainToggleChips";
 import DomainSummaryCard from "./DomainSummaryCard";
+import TravelAccountSection from "./TravelAccountSection";
 
 interface Props {
   /** Already filtered to status === "flown" || "historical". */
@@ -187,6 +188,12 @@ export default function OverviewTab({ flights, achievements }: Props): JSX.Eleme
           ))}
         </div>
       </section>
+
+      {/* The cross-domain night account. Fetches on its own rather than
+          joining useDomainStats: it is one request answering a question none
+          of the per-domain adapters can, and a failure in it must not take
+          the rest of the overview down. */}
+      <TravelAccountSection />
     </div>
   );
 }
