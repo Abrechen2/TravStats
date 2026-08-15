@@ -114,7 +114,6 @@ export function useFlightForm(
    * route, but the multi-flight review loop lives here — so the hub sends the
    * user in rather than growing a second copy of it.
    */
-  options?: { openEmailImport?: boolean }
 ) {
   const { t } = useTranslation(["flights", "errors"]);
   const settings = useSettingsStore();
@@ -124,7 +123,6 @@ export function useFlightForm(
   const [error, setError] = useState("");
   const [duplicateFlight, setDuplicateFlight] = useState<DuplicateFlight | null>(null);
   const [showScanner, setShowScanner] = useState(false);
-  const [showEmailUploader, setShowEmailUploader] = useState(options?.openEmailImport ?? false);
   const [step, setStep] = useState<"input" | "lookup" | "select" | "complete">("input");
   const [timeEstimationWarning, setTimeEstimationWarning] = useState<TimeEstimationWarning | null>(
     null
@@ -904,7 +902,6 @@ export function useFlightForm(
     error,
     duplicateFlight,
     showScanner,
-    showEmailUploader,
     step,
     timeEstimationWarning,
     // Email/review state
@@ -960,7 +957,6 @@ export function useFlightForm(
     setError,
     setDuplicateFlight,
     setShowScanner,
-    setShowEmailUploader,
     setStep,
     setTimeEstimationWarning,
     setParsedFlights,

@@ -26,7 +26,7 @@ describe("CruiseEditModal", () => {
   });
 
   // Create mode opens directly on the manual form now — email/PDF import is a
-  // separate flow on the list page (DomainImportButton), so there's no longer
+  // the first route in the add-dialog (DomainImportPanel), so there's no longer
   // an import-vs-manual chooser step to advance past.
   it("submits a new cruise and calls onSaved", async () => {
     vi.mocked(cruiseApi.create).mockResolvedValue({

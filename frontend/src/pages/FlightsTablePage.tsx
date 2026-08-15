@@ -67,19 +67,12 @@ export default function FlightsTablePage(): JSX.Element {
   const [showSpecialModal, setShowSpecialModal] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
 
-  // `?import=email` — the central import hub's flight tile lands here (#238).
-  // The hub carries the route; the multi-flight review loop stays in the form,
-  // where it already lives, instead of being copied into settings.
-  //
-  // The intent is held in STATE, not read from the URL at mount time: the same
-  // effect strips the param (so a reload does not reopen the dialog), and both
-  // updates land in one render — reading the param directly would hand the
-  // freshly-opened form `false` and drop the user on the lookup step.
+  // `?import=email` — kept for old bookmarks. It simply opens the add dialog:
+  // the drop zone is its first route now, so there is no separate email view
+  // left to jump to. The param is stripped so a reload does not reopen it.
   const [searchParams, setSearchParams] = useSearchParams();
-  const [emailImportRequested, setEmailImportRequested] = useState(false);
   useEffect(() => {
     if (searchParams.get("import") !== "email") return;
-    setEmailImportRequested(true);
     setShowAddFlight(true);
     const next = new URLSearchParams(searchParams);
     next.delete("import");
@@ -88,7 +81,6 @@ export default function FlightsTablePage(): JSX.Element {
 
   const closeAddFlight = (): void => {
     setShowAddFlight(false);
-    setEmailImportRequested(false);
   };
 
   useEffect(() => {
@@ -342,13 +334,6 @@ export default function FlightsTablePage(): JSX.Element {
               {t("dashboard:flightsTitle")}
             </h1>
             <div className="flex items-center gap-2">
-              <Link
-                to="/settings?section=import"
-                className="flex items-center gap-2 whitespace-nowrap rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary) hover:border-(--accent)"
-              >
-                <span aria-hidden="true">📥</span>
-                <span>{t("settings:import.openHub")}</span>
-              </Link>
               <button
                 className="btn-primary flex items-center gap-2 whitespace-nowrap"
                 onClick={() => setShowAddFlight(true)}
@@ -358,6 +343,16 @@ export default function FlightsTablePage(): JSX.Element {
               </button>
             </div>
           </div>
+
+          <p className="mb-4 text-xs text-(--text-muted)">
+            {t("flights:list.wholeListHint")}{" "}
+            <Link
+              to="/settings?section=import"
+              className="underline underline-offset-4 hover:text-(--text-primary)"
+            >
+              {t("settings:import.openHub")}
+            </Link>
+          </p>
 
           {/* Table */}
           <div
@@ -672,7 +667,6 @@ export default function FlightsTablePage(): JSX.Element {
         {/* Add Flight Modal */}
         {showAddFlight && (
           <SimplifiedFlightFormV2
-            openEmailImport={emailImportRequested}
             onSubmit={handleAddFlight}
             onCancel={closeAddFlight}
             onPickSpecialFlight={() => {

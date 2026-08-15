@@ -78,7 +78,7 @@ const DARK_PICKER_STYLE: React.CSSProperties = { colorScheme: "dark" };
 
 /**
  * Modal for creating or editing a cruise — a single manual entry form.
- * Email/PDF import is a separate flow on the list page (DomainImportButton),
+ * Email/PDF import is the first route in the add-dialog (DomainImportPanel),
  * so this modal no longer carries its own import chooser.
  */
 export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.Element {
