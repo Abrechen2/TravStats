@@ -19,7 +19,18 @@
     "otherCurrencyHint": "Enthält weitere Beträge in einer älteren Basiswährung, die hier nicht mitgezählt sind.",
     "bookmarked": "vorgemerkt",
     "bookmarkedHint": "Noch nicht besucht — zählt in keiner Statistik mit.",
-    "wholeListHint": "Eine ganze Liste auf einmal?"
+    "wholeListHint": "Eine ganze Liste auf einmal?",
+    "status": {
+      "label": "Status",
+      "unlocated": "Nicht gefunden",
+      "unlocatedHint": "Adresse vorhanden, aber kein Punkt auf der Karte — die Suche hat sie nicht gefunden. Erneut speichern versucht es noch einmal.",
+      "noAddress": "Keine Adresse",
+      "noAddressHint": "Zu dieser Unterkunft ist keine Strasse hinterlegt.",
+      "bare": "Nur ein Name",
+      "bareHint": "Weder Adresse noch Ort noch Punkt auf der Karte — hier ist nichts ausser dem Namen bekannt.",
+      "unknownCountry": "Land unklar",
+      "unknownCountryHint": "Der Eintrag im Länderfeld ist kein Land, das sich zuordnen lässt."
+    }
   },
   "filter": {
     "searchPlaceholder": "Suche nach Name oder Ort …",
