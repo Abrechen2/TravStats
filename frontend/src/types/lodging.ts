@@ -353,4 +353,95 @@ export interface LodgingStats {
   plannedLodgingsCount: number;
   /** Houses the user only bookmarked (`visited === false`). Never part of any other figure. */
   notedLodgingsCount: number;
+  price: LodgingPriceStats;
+  ratings: LodgingRatingStats;
+}
+
+/**
+ * One row of a price ranking. `key` is a country code, chain name, lodging
+ * type, year or board code depending on which list it appears in.
+ */
+export interface LodgingPriceGroup {
+  key: string;
+  nights: number;
+  totalBase: number;
+  /** totalBase / nights, rounded to cents. */
+  avgPerNight: number;
+}
+
+/** A single stay singled out as a superlative — cheapest or dearest night. */
+export interface LodgingPricedNight {
+  lodgingId: string;
+  lodgingName: string;
+  city: string | null;
+  country: string | null;
+  checkIn: string;
+  nights: number;
+  pricePerNight: number;
+}
+
+/**
+ * Money, all in the user's CURRENT base currency and all from the subset of
+ * stays whose FX snapshot matches it — the same slice `spendBaseTotal` sums.
+ * Anything else lands in `unpricedStays` rather than skewing an average.
+ */
+export interface LodgingPriceStats {
+  avgPricePerNight: number | null;
+  /** Median over NIGHTS, not over stays: a three-week stay weighs three weeks. */
+  medianPricePerNight: number | null;
+  pricedNights: number;
+  pricedStays: number;
+  /** Stays with a price that could not be compared — no conversion, or an older base currency. */
+  unpricedStays: number;
+  cheapestNight: LodgingPricedNight | null;
+  dearestNight: LodgingPricedNight | null;
+  /** Oldest year first — read as a trend. */
+  byYear: LodgingPriceGroup[];
+  /** The rest come back most-nights-first. */
+  byCountry: LodgingPriceGroup[];
+  byChain: LodgingPriceGroup[];
+  byType: LodgingPriceGroup[];
+  byBoard: LodgingPriceGroup[];
+  /** Award nights valued at the average PAID night rate; null when nothing was ever paid. */
+  awardNightsValue: number | null;
+}
+
+/** One row of a rating ranking — chain, country, type, or official star count. */
+export interface LodgingRatingGroup {
+  key: string;
+  stays: number;
+  avgOverall: number;
+}
+
+export interface LodgingValueStay {
+  lodgingId: string;
+  lodgingName: string;
+  city: string | null;
+  country: string | null;
+  ratingOverall: number;
+  pricePerNight: number;
+  /** ratingOverall / pricePerNight — the ranking key. */
+  valueScore: number;
+}
+
+/**
+ * The user's own verdicts. Every average ignores nulls and carries its own
+ * denominator: "4.2 from three stays" and "4.2 from ninety" are not the same
+ * claim, and a screen that cannot tell them apart shows the first as the second.
+ */
+export interface LodgingRatingStats {
+  avgOverall: number | null;
+  avgRoom: number | null;
+  avgBreakfast: number | null;
+  avgService: number | null;
+  ratedStays: number;
+  unratedStays: number;
+  /** Best average first. */
+  byChain: LodgingRatingGroup[];
+  byCountry: LodgingRatingGroup[];
+  byType: LodgingRatingGroup[];
+  /** Keyed by official star count ("1".."5"), kept in SCALE order, not ranked. */
+  byStars: LodgingRatingGroup[];
+  /** Rating points per unit of price per night, best first; at most five. */
+  bestValue: LodgingValueStay[];
 }

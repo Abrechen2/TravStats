@@ -6,6 +6,8 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { LodgingStatStrip } from "../Dashboard/tabs/lodging/LodgingStatStrip";
 import { LodgingCurrencyBreakdown } from "../Dashboard/tabs/lodging/LodgingCurrencyBreakdown";
+import LodgingMoneySection from "./lodging/LodgingMoneySection";
+import LodgingQualitySection from "./lodging/LodgingQualitySection";
 
 /**
  * The lodging numbers, on the statistics page where numbers belong.
@@ -56,6 +58,8 @@ export default function LodgingStatsSection(): JSX.Element {
     <div className="relative flex flex-col gap-4">
       <LodgingStatStrip stats={stats} />
       <LodgingCurrencyBreakdown stats={stats} />
+      <LodgingMoneySection stats={stats} />
+      <LodgingQualitySection stats={stats} />
     </div>
   );
 }

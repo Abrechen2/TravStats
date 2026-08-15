@@ -74,7 +74,7 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       }),
       prisma.lodgingStay.findMany({
         where: { userId },
-        include: { lodging: true },
+        include: { lodging: { include: { chain: true } } },
       }),
       // Every lodging the user HAS, including ones with no stay yet — Hotel
       // Collector counts hotels the user added, not only hotels stayed at
@@ -213,10 +213,15 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     // Lodging stats (multi-domain V1) — computed separately from flight/cruise stats.
     const lodgingStatsInput: LodgingStatsInput[] = lodgingStays.map((s) => ({
       lodgingId: s.lodgingId,
+      lodgingName: s.lodging.name,
       type: s.lodging.type,
       country: s.lodging.country,
       city: s.lodging.city,
       chainId: s.lodging.chainId,
+      chainName: s.lodging.chain?.name ?? null,
+      stars: s.lodging.stars,
+      lat: s.lodging.lat,
+      lon: s.lodging.lon,
       checkIn: s.checkIn,
       checkOut: s.checkOut,
       status: s.status,
@@ -224,8 +229,12 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       fxBaseCurrency: s.fxBaseCurrency,
       currency: s.currency,
       totalPrice: s.totalPrice,
+      board: s.board,
       isAwardStay: s.isAwardStay,
       ratingOverall: s.ratingOverall,
+      ratingRoom: s.ratingRoom,
+      ratingBreakfast: s.ratingBreakfast,
+      ratingService: s.ratingService,
     }));
     const lodgingRecords: LodgingRecord[] = lodgings.map((l) => ({
       id: l.id,

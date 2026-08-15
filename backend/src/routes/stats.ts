@@ -1430,7 +1430,9 @@ router.get(
       const [stays, lodgings, settings] = await Promise.all([
         prisma.lodgingStay.findMany({
           where: { userId },
-          include: { lodging: true },
+          // The chain is joined for its NAME: the price and rating rankings
+          // are read by a human, and a chain id is not a label.
+          include: { lodging: { include: { chain: true } } },
         }),
         // Every lodging the user HAS, including ones with no stay yet — a
         // hotel added but never checked into must still count toward
@@ -1461,10 +1463,15 @@ router.get(
 
       const stayData: LodgingStayData[] = stays.map((s) => ({
         lodgingId: s.lodgingId,
+        lodgingName: s.lodging.name,
         type: s.lodging.type,
         country: s.lodging.country,
         city: s.lodging.city,
         chainId: s.lodging.chainId,
+        chainName: s.lodging.chain?.name ?? null,
+        stars: s.lodging.stars,
+        lat: s.lodging.lat,
+        lon: s.lodging.lon,
         checkIn: s.checkIn,
         checkOut: s.checkOut,
         status: s.status,
@@ -1472,8 +1479,12 @@ router.get(
         fxBaseCurrency: s.fxBaseCurrency,
         currency: s.currency,
         totalPrice: s.totalPrice,
+        board: s.board,
         isAwardStay: s.isAwardStay,
         ratingOverall: s.ratingOverall,
+        ratingRoom: s.ratingRoom,
+        ratingBreakfast: s.ratingBreakfast,
+        ratingService: s.ratingService,
       }));
 
       // Defensive parity with the cruise/flight stats endpoints: a
