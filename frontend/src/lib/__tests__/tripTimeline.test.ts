@@ -131,4 +131,53 @@ describe("compareTimelineEvents", () => {
     const b = { date: "2026-05-01T00:00:00.000Z", kind: "stop", id: "second" };
     expect([a, b].sort(compareTimelineEvents).map((e) => e.id)).toEqual(["first", "second"]);
   });
+
+  it("puts a time-less check-in AFTER the flight that arrived that day", () => {
+    // Found on the owner's Madagascar trip: the hotel in Antananarivo appeared
+    // above the flight that brought him there. A stay carries no time of day,
+    // so it is stored at midnight — which this comparator read as 00:00, the
+    // earliest moment of the day, rather than as "unknown".
+    const events = [
+      { date: "2026-05-19T00:00:00.000Z", kind: "lodging-checkin", id: "hotel" },
+      { date: "2026-05-19T02:55:00.000Z", kind: "flight", id: "ADD-TNR" },
+    ];
+    expect(events.sort(compareTimelineEvents).map((e) => e.id)).toEqual(["ADD-TNR", "hotel"]);
+  });
+
+  it("puts a time-less check-out BEFORE that day's departure", () => {
+    // The mirror case: you leave the hotel in the morning and fly on. Ordering
+    // by kind only works if it runs in the direction the day actually runs.
+    const events = [
+      { date: "2026-06-02T08:50:00.000Z", kind: "flight", id: "TNR-ADD" },
+      { date: "2026-06-02T00:00:00.000Z", kind: "lodging-checkout", id: "hotel" },
+    ];
+    expect(events.sort(compareTimelineEvents).map((e) => e.id)).toEqual(["hotel", "TNR-ADD"]);
+  });
+
+  it("respects a check-in that DOES carry a time", () => {
+    // The kind-based rule is a fallback for missing information, not an
+    // override. A stay checked in at 09:00 belongs before an 18:00 flight.
+    const events = [
+      { date: "2026-05-19T18:00:00.000Z", kind: "flight", id: "abends" },
+      { date: "2026-05-19T09:00:00.000Z", kind: "lodging-checkin", id: "frueh" },
+    ];
+    expect(events.sort(compareTimelineEvents).map((e) => e.id)).toEqual(["frueh", "abends"]);
+  });
+
+  it("still keeps a diary entry after a time-less check-in", () => {
+    const events = [
+      { date: "2026-05-19T00:00:00.000Z", kind: "journal", id: "tagebuch" },
+      { date: "2026-05-19T00:00:00.000Z", kind: "lodging-checkin", id: "hotel" },
+    ];
+    expect(events.sort(compareTimelineEvents).map((e) => e.id)).toEqual(["hotel", "tagebuch"]);
+  });
+
+  it("does not reorder across days", () => {
+    // A check-out on the 2nd must not be dragged before a check-in on the 1st.
+    const events = [
+      { date: "2026-05-02T00:00:00.000Z", kind: "lodging-checkout", id: "zweiter" },
+      { date: "2026-05-01T00:00:00.000Z", kind: "lodging-checkin", id: "erster" },
+    ];
+    expect(events.sort(compareTimelineEvents).map((e) => e.id)).toEqual(["erster", "zweiter"]);
+  });
 });
