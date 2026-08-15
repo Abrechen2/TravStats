@@ -35,6 +35,17 @@ export interface LodgingStayData {
   ratingRoom: number | null;
   ratingBreakfast: number | null;
   ratingService: number | null;
+  /**
+   * The loyalty programme this stay ran under, already resolved — the stored
+   * `membershipId` is an OVERRIDE, not the answer (a card attached to a chain
+   * covers every stay at that chain). Resolution needs the membership link
+   * tables, so it happens in `services/lodging/stayMembership.ts` before the
+   * rollup runs; passing those tables in here would make a statistics module a
+   * query layer. Null when no card covered the stay.
+   */
+  programName: string | null;
+  /** The card's CURRENT tier, travelling with the name — a status figure without it says half. */
+  membershipTier: string | null;
 }
 
 /**
@@ -230,6 +241,40 @@ export interface LodgingStats {
   ratings: LodgingRatingStats;
   geo: LodgingGeoStats;
   rhythm: LodgingRhythmStats;
+  loyalty: LodgingLoyaltyStats;
+}
+
+/** Nights under one programme in one calendar year — the unit hotel status is counted in. */
+export interface LodgingProgrammeYear {
+  programme: string;
+  /** The card's current tier, not the tier held during that year. */
+  tier: string | null;
+  year: string;
+  nights: number;
+  stays: number;
+}
+
+/**
+ * Brand loyalty and programme status.
+ *
+ * `topChainShare` and `concentration` are shares of CHAIN nights, not of all
+ * nights: "three quarters of your chain nights are with one brand" is a
+ * statement about brand choice, while folding in independents would turn it
+ * into a statement about how often the user picks a chain at all — which is
+ * `chainNights` vs `independentNights`, the figure right next to it.
+ */
+export interface LodgingLoyaltyStats {
+  chainNights: number;
+  independentNights: number;
+  topChain: { name: string; nights: number } | null;
+  /** Share of chain nights at the single most-used brand, 0..1. */
+  topChainShare: number | null;
+  /** Herfindahl index over chain nights: 1 = one brand only, near 0 = spread thin. */
+  concentration: number | null;
+  /** Chains by nights, most first. */
+  chainNightsRanked: LodgingPlaceCount[];
+  /** Newest year first, then most nights — how a programme's own counter reads. */
+  programmeYears: LodgingProgrammeYear[];
 }
 
 /** A stay singled out for where it was — the northernmost, the southernmost. */

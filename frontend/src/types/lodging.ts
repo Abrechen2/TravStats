@@ -357,6 +357,39 @@ export interface LodgingStats {
   ratings: LodgingRatingStats;
   geo: LodgingGeoStats;
   rhythm: LodgingRhythmStats;
+  loyalty: LodgingLoyaltyStats;
+}
+
+/** Nights under one programme in one calendar year — the unit hotel status is counted in. */
+export interface LodgingProgrammeYear {
+  programme: string;
+  /** The card's current tier, not the tier held during that year. */
+  tier: string | null;
+  year: string;
+  nights: number;
+  stays: number;
+}
+
+/**
+ * Brand loyalty and programme status.
+ *
+ * `topChainShare` and `concentration` are shares of CHAIN nights, not of all
+ * nights: "three quarters of your chain nights are with one brand" is a
+ * statement about brand choice, while folding in independents would turn it
+ * into a statement about how often the user picks a chain at all — which is
+ * `chainNights` vs `independentNights`, right next to it.
+ */
+export interface LodgingLoyaltyStats {
+  chainNights: number;
+  independentNights: number;
+  topChain: { name: string; nights: number } | null;
+  /** Share of chain nights at the single most-used brand, 0..1. */
+  topChainShare: number | null;
+  /** Herfindahl index over chain nights: 1 = one brand only, near 0 = spread thin. */
+  concentration: number | null;
+  chainNightsRanked: LodgingPlaceCount[];
+  /** Newest year first, then most nights. */
+  programmeYears: LodgingProgrammeYear[];
 }
 
 /** A stay singled out for where it was — the northernmost, the southernmost. */

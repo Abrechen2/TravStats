@@ -462,6 +462,28 @@
         "10": "November",
         "11": "December"
       }
+    },
+    "loyalty": {
+      "title": "Chains and programmes",
+      "chainShare": "Share of chain houses",
+      "chainShareDesc": "{{chain}} nights in chains, {{independent}} in independent houses",
+      "topChain": "Most-used chain",
+      "topChainDesc": "{{count}} nights",
+      "topChainDesc_one": "{{count}} night",
+      "topChainDesc_other": "{{count}} nights",
+      "noChains": "No chain house recorded yet",
+      "topChainShare": "Share of your chain nights",
+      "topChainShareDesc": "How tightly your chain nights cluster on one brand",
+      "concentration": "Concentration",
+      "concentrationDesc": "1.00 = all with one brand, near 0 = spread wide",
+      "concentrationFootnote": "Herfindahl index over your chain nights. It says nothing about how often you pick a chain at all — that is the figure to its left.",
+      "byChain": "Chains, by nights",
+      "programmeYears": "Status progress by year",
+      "noProgrammes": "No card resolved to a stay yet",
+      "programme": "Programme",
+      "year": "Year",
+      "nights": "Nights",
+      "stays": "Stays"
     }
   }
 }
