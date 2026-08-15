@@ -17,6 +17,7 @@ import {
   type LodgingCountState,
 } from "../../shared/lodgingCounting";
 import { computeGeoStats } from "./geography";
+import { computeLoyaltyStats } from "./loyalty";
 import { computePriceStats, type StayWithNights } from "./money";
 import { walkNights } from "./nights";
 import { computeRatingStats } from "./quality";
@@ -25,11 +26,13 @@ import type { LodgingRecord, LodgingStats, LodgingStayData } from "./types";
 
 export type {
   LodgingGeoStats,
+  LodgingLoyaltyStats,
   LodgingPlace,
   LodgingPlaceCount,
   LodgingPriceGroup,
   LodgingPricedNight,
   LodgingPriceStats,
+  LodgingProgrammeYear,
   LodgingRatingGroup,
   LodgingRatingStats,
   LodgingRecord,
@@ -205,5 +208,6 @@ export function calculateLodgingStats(
     ratings: computeRatingStats(withNights, currentBaseCurrency),
     geo: computeGeoStats(withNights),
     rhythm: computeRhythmStats(withNights, now ?? new Date()),
+    loyalty: computeLoyaltyStats(withNights),
   };
 }
