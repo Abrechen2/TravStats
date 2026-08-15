@@ -7,6 +7,7 @@ import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { Trip } from "../../types";
 import type { Lodging } from "../../types/lodging";
 import { buildLodgingPins } from "../layers/lodgingPinsLayer";
+import { declutterByDistance, pickLabelled } from "../map/labelPriority";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 import { computeBbox } from "../../utils/mapAnimationHelpers";
 import { logger } from "../../lib/logger";
@@ -92,6 +93,17 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
   const mapRef = useRef<MapRef | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [projection, setProjection] = useState<Projection>("mercator");
+  /**
+   * The live zoom, because labels are budgeted by it.
+   *
+   * The main map reveals names progressively — a world view shows a handful,
+   * each zoom step roughly doubles the count (`labelBudget`), and a dense
+   * cluster is thinned by screen distance on top of that. This map used to
+   * hand `buildLodgingPins` a FIXED zoom and `labelsMode: "all"`, so eleven
+   * hotels in one Madagascan valley printed eleven names over each other and
+   * never thinned out. Same rule as everywhere else now.
+   */
+  const [zoom, setZoom] = useState(INITIAL_VIEW.zoom ?? 2);
   const [cruiseGeometry, setCruiseGeometry] = useState<Map<string, CruiseRouteFeatureCollection>>(
     () => new Map()
   );
@@ -371,9 +383,20 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
     // coloured circles — the title only surfaced on hover — so a name never
     // showed on the map (#176). Render the title above each stop dot with an
     // outline so it stays readable over any basemap.
+    // Stops follow the same budget. They carry no visit count to rank by, so
+    // the weight is a constant — `pickLabelled` then keeps the first N, and
+    // `declutterByDistance` does the work that matters here: stops on one trip
+    // sit close together far more often than airports do.
+    const stopLabelData = declutterByDistance(
+      pickLabelled(stopPoints, () => 1, "important", zoom),
+      () => 1,
+      (d) => d.position,
+      zoom
+    );
+
     const stopLabels = new TextLayer<PointDatum>({
       id: "trip-stop-labels",
-      data: stopPoints,
+      data: stopLabelData,
       getPosition: (d) => d.position,
       getText: (d) => d.label,
       getColor: [241, 245, 249, 255],
@@ -400,10 +423,10 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
     // knows the "lodging-pins" ids), so a house looks the same wherever it is
     // shown. Labels are forced on: a trip has a handful of hotels, not the
     // hundreds the flat map's priority budget exists for.
-    const lodgingPins = buildLodgingPins(lodgings, 1, 6, { labelsMode: "all" }) ?? [];
+    const lodgingPins = buildLodgingPins(lodgings, 1, zoom, { labelsMode: "important" }) ?? [];
 
     return [paths, arcs, airports, stops, ...lodgingPins, stopLabels];
-  }, [flightArcs, cruisePaths, airportPoints, stopPoints, lodgings]);
+  }, [flightArcs, cruisePaths, airportPoints, stopPoints, lodgings, zoom]);
 
   /* ---- bbox fit ---- */
 
@@ -481,7 +504,14 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
         mapStyle={DARK_MAP_STYLE}
         style={{ position: "absolute", inset: 0 }}
         cursor="grab"
-        onLoad={(): void => setMapLoaded(true)}
+        onLoad={(e): void => {
+          setMapLoaded(true);
+          setZoom(e.target.getZoom());
+        }}
+        // moveend statt zoom: es feuert auch nach fitBounds und nach einem
+        // flyTo, also genau dann, wenn sich das Label-Budget wirklich
+        // geaendert hat — und nicht bei jedem Zwischenbild.
+        onMoveEnd={(e): void => setZoom(e.viewState.zoom)}
       >
         {mapLoaded && (
           <DeckGLOverlay layers={layers} onClick={handleClick} getTooltip={getTooltip} />
