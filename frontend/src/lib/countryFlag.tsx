@@ -56,28 +56,63 @@ const ISO_3166_1_ALPHA2 =
     " "
   );
 
+// The languages a country field can plausibly arrive in. German and English
+// are not enough: an imported saved-places list and a foreign booking mail both
+// write the country in its OWN language. Measured on real lodging data, 65 of
+// 279 houses showed no flag for exactly that reason — "España", "Italia",
+// "Sverige", "Česko", "日本". Each locale here is one more language the field
+// may be written in; the index is built once, lazily, and then cached.
+const NAME_LOCALES = [
+  "de", "en", "fr", "it", "es", "pt", "nl", "cs", "sk", "sl", "pl", "hu", "hr",
+  "sv", "nb", "da", "fi", "et", "lv", "lt", "ro", "bg", "el", "tr", "ru", "uk",
+  "ja", "zh", "ko", "ar", "th", "id", "ms", "vi", "he", "is", "ga", "mt", "sr",
+  "lb", "ca", "eu", "gl", "cy", "sq", "mk", "bs", "af", "sw", "hi", "fa", "uz",
+];
+
+// Names `Intl.DisplayNames` does not carry: former official forms and everyday
+// short forms. Deliberately tiny — anything Intl already knows does not belong
+// here, or the two sources drift apart.
+const NAME_ALIASES: Record<string, string> = {
+  "tschechische republik": "CZ",
+  "czech republic": "CZ",
+  "usa": "US",
+  "u.s.a.": "US",
+  "united states of america": "US",
+  "großbritannien": "GB",
+  "grossbritannien": "GB",
+  "england": "GB",
+  "südkorea": "KR",
+  "suedkorea": "KR",
+  "south korea": "KR",
+  "north korea": "KP",
+  "nordkorea": "KP",
+};
+
 /**
- * Reverse index (lowercased localized country name → ISO code), built lazily
- * per locale from `Intl.DisplayNames` — no hand-maintained name table, so it
- * recognises a name in whatever language the user typed it in as long as
- * `Intl` knows that locale. Cached per locale since building it iterates the
- * full code list once.
+ * Reverse index (lowercased country name in ANY supported language → ISO code),
+ * built lazily from `Intl.DisplayNames` — no hand-maintained name table, so it
+ * recognises a name in whatever language it was written in. Built once and
+ * cached; earlier locales win, so German and English stay authoritative where
+ * two languages share a spelling.
  */
-const nameToCodeCache = new Map<string, Map<string, string>>();
-function nameToCodeIndex(locale: string): Map<string, string> {
-  let index = nameToCodeCache.get(locale);
-  if (index) return index;
-  index = new Map();
-  try {
-    const dn = new Intl.DisplayNames([locale], { type: "region" });
-    for (const cc of ISO_3166_1_ALPHA2) {
-      const name = dn.of(cc);
-      if (name) index.set(name.toLowerCase(), cc);
+let nameToCode: Map<string, string> | null = null;
+function nameToCodeIndex(): Map<string, string> {
+  if (nameToCode) return nameToCode;
+  const index = new Map<string, string>();
+  for (const locale of NAME_LOCALES) {
+    try {
+      const dn = new Intl.DisplayNames([locale], { type: "region" });
+      for (const cc of ISO_3166_1_ALPHA2) {
+        const name = dn.of(cc);
+        if (name && !index.has(name.toLowerCase())) index.set(name.toLowerCase(), cc);
+      }
+    } catch {
+      // Unsupported locale — skip it, the remaining ones still resolve.
     }
-  } catch {
-    // Unsupported locale — leave the index empty, caller falls back gracefully.
   }
-  nameToCodeCache.set(locale, index);
+  for (const [name, cc] of Object.entries(NAME_ALIASES))
+    if (!index.has(name)) index.set(name, cc);
+  nameToCode = index;
   return index;
 }
 
@@ -93,8 +128,20 @@ export function resolveCountryCode(country?: string | null): string | null {
   if (direct) return direct.toUpperCase();
   if (!country) return null;
   const needle = country.trim().toLowerCase();
-  if (needle.length === 0) return null;
-  return nameToCodeIndex("de").get(needle) ?? nameToCodeIndex("en").get(needle) ?? null;
+  // An import that writes a missing value as text leaves the literal strings
+  // "null"/"undefined" in the field. A flag for those would be invention.
+  if (needle.length === 0 || needle === "null" || needle === "undefined") return null;
+  const index = nameToCodeIndex();
+  const whole = index.get(needle);
+  if (whole) return whole;
+  // A multilingual country writes all its names into one field:
+  // "Schweiz/Suisse/Svizzera/Svizra", "Suomi / Finland". Any part that resolves
+  // identifies the country — they all name the same one.
+  for (const part of needle.split(/[/|,;]| - /)) {
+    const code = index.get(part.trim());
+    if (code) return code;
+  }
+  return null;
 }
 
 /** Inline flag image. Renders nothing for a missing/invalid country. */
