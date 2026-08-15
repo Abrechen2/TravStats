@@ -53,6 +53,30 @@ authentication and passkeys arrive alongside.
 - **Places are picked, not typed.** One shared location input — search, pasted
   coordinates or a pin on the map — now serves hotels, cruise stops and custom
   ports. The geocoding services are instance-configurable.
+- **Two doors for getting data in.** A one-off list import lives in the
+  settings; every domain page and the dashboard offer the single-entry chooser,
+  where the first route IS the drop zone — one control takes a `.msg`, an
+  `.eml` and a `.pdf` alike, so nobody has to classify their own file first.
+- **Every import leaves a trace, and can be taken back.** Flights, cruises and
+  stays record where each row came from and which run created it, so the same
+  document read twice adds nothing the second time, and a whole run can be
+  undone as one batch.
+- **A Google Maps saved-places list, imported as itself.** Each row carries
+  Google's own id for the place, so a second import recognises what is already
+  there. Such a list holds no dates and no prices, and the import says so.
+- **Package-tour travel documents are read.** Measured against seven real
+  bookings: the invoice yields the trip, its price and its flights with IATA
+  codes; the travel documents yield the day-by-day itinerary and the hotels
+  with their addresses. Fourteen lines that look like flights and are not —
+  un-ticketed placeholder legs, separately ticketed ones, the rail transfer to
+  the airport — are refused WITH a reason rather than dropped silently.
+- **The trip map shows the hotels**, not only the flights: one pin per house
+  with this trip's nights on it, and the flight arcs lie flat on the map
+  instead of bowing out of it.
+- **The lodging table says what a row still needs** — an address the geocoder
+  could not find, no address at all, a name and nothing else, or a country
+  field holding something that is not a country. Nothing is shown for a sound
+  row.
 
 ### Changed
 - **The next upcoming entry moved into the domain strip.** It used to float
@@ -81,6 +105,27 @@ authentication and passkeys arrive alongside.
   night now reaches the trip total, the overall rating is derived on every write
   path, a hotel-only trip shows its cost, and the import surface no longer has
   dead ends.
+- **Clearing a location no longer invents a new one.** Emptying address, city
+  and country handed the geocoder the hotel's NAME and adopted whatever came
+  back, so a cleared row returned with a different address and a matching pin
+  somewhere else entirely. A deliberately emptied field is an instruction, not
+  a gap.
+- **A flag for a country that names itself in its own language.** The resolver
+  understood German and English, while imported data arrives as "Italia",
+  "Sverige", "Việt Nam" or "Schweiz/Suisse/Svizzera/Svizra". It now reads a
+  country name in any language the runtime knows — the interface stays German
+  and English; those are different questions. The flag also NAMES its country
+  now, as a tooltip and to screen readers, instead of being a decoration they
+  were told to ignore.
+- **A hotel check-in no longer sorts above the flight that brought you there.**
+  A stay carries no time of day and is stored at midnight, which the timeline
+  read as 00:00 — the earliest moment of the day — rather than as unknown.
+- **The lodging form scrolls.** With the map picker or the advanced panel open
+  it grew past the viewport with nothing to scroll and the save button out of
+  reach. Its map now follows a search instead of staying on the world view with
+  the pin off-screen, and deliberately does NOT follow a marker drag.
+- **Sample documents can no longer be committed** — the ignore rules covered
+  mail files but not documents.
 
 ### Security
 - Closed an IDOR in the lodging import commit path, scoped receipt access to the
