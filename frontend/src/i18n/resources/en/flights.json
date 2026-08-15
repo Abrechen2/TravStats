@@ -172,7 +172,8 @@
     "from": "From",
     "to": "To",
     "aircraft": "Aircraft",
-    "deleteConfirm": "Are you sure you want to delete this flight?"
+    "deleteConfirm": "Are you sure you want to delete this flight?",
+    "wholeListHint": "A whole logbook at once?"
   },
   "table": {
     "title": "Flight List",

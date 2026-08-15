@@ -21,10 +21,6 @@
     "panelTitle": "Kreuzfahrt hinzufügen",
     "panelHint": "Womit fangen wir an?"
   },
-  "flight": {
-    "panelTitle": "Flug importieren",
-    "panelHint": "Buchungs-E-Mail oder PDF einlesen, manuell hinzufügen — alles an einer Stelle."
-  },
   "lodging": {
     "panelTitle": "Unterkunft hinzufügen",
     "panelHint": "Womit fangen wir an?",

@@ -21,10 +21,6 @@
     "panelTitle": "Add cruise",
     "panelHint": "Where shall we start?"
   },
-  "flight": {
-    "panelTitle": "Import flight",
-    "panelHint": "Read in a booking email or PDF, or add manually — all in one place."
-  },
   "lodging": {
     "panelTitle": "Add stay",
     "panelHint": "Where shall we start?",
