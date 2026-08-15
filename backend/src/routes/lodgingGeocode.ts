@@ -25,6 +25,24 @@ function merge<T>(sent: T | undefined, stored: T | null | undefined): T | null {
 }
 
 /**
+ * Is there anything here that says WHERE this is?
+ *
+ * A name is not a location. "Hotel St. Martin" exists in Marktoberdorf, in the
+ * Palatinate and in Rome, and a geocoder handed nothing but that will answer
+ * with whichever one ranks first — confidently, and often wrongly. It takes a
+ * street, a town or a country to turn a name into a place.
+ *
+ * The same mistake put a Bavarian hotel in Italy during a bulk enrichment. It
+ * lived in the app too, where it turned "clear this address" into "here is a
+ * different address".
+ */
+function hasPlaceMaterial(fields: AddressFields): boolean {
+  return [fields.address, fields.city, fields.country].some(
+    (value) => (value ?? "").trim().length > 0,
+  );
+}
+
+/**
  * PATCH-time geocode decision, extracted out of routes/lodging.ts to keep
  * that file within the project's file-size guideline.
  *
@@ -62,6 +80,17 @@ export async function resolveUpdatedCoordinates(
   const missingCoordinates = existing.lat == null || existing.lon == null;
   if (!addressChanged && !missingCoordinates) return null;
 
+  // What the row will actually say after this write — an explicit null clears,
+  // an omitted key keeps what is stored.
+  const effective = {
+    address: input.address !== undefined ? input.address : existing.address,
+    city: input.city !== undefined ? input.city : existing.city,
+    country: input.country !== undefined ? input.country : existing.country,
+  };
+  // Nothing left that says where this is. Searching by the bare name here is
+  // exactly how emptying an address produced a new one somewhere else.
+  if (!hasPlaceMaterial(effective)) return null;
+
   return geo.resolveCoordinates({
     lat: input.lat ?? null,
     lon: input.lon ?? null,
@@ -73,9 +102,7 @@ export async function resolveUpdatedCoordinates(
     // — exactly the bug finding 4 flags for the stay/lodging PATCH handlers.
     // Only an omitted key (undefined) should fall back; an explicit null
     // must reach the geocoder as-is.
-    address: input.address !== undefined ? input.address : existing.address,
-    city: input.city !== undefined ? input.city : existing.city,
-    country: input.country !== undefined ? input.country : existing.country,
+    ...effective,
   });
 }
 
@@ -113,10 +140,17 @@ export async function resolveLocation(
 ): Promise<LocationPatch> {
   const coords = existing
     ? await resolveUpdatedCoordinates(input, existing)
-    : await geo.resolveCoordinates(input);
+    : hasPlaceMaterial(input)
+      ? await geo.resolveCoordinates(input)
+      : null;
+
+  // Sending both coordinates as null is not an omission, it is "remove the
+  // pin". A lookup that runs in the same write — because the address changed —
+  // must not quietly put one back.
+  const pinRemoved = input.lat === null && input.lon === null;
 
   const patch: LocationPatch = {};
-  if (coords) {
+  if (coords && !pinRemoved) {
     patch.lat = coords.lat;
     patch.lon = coords.lon;
   }
@@ -133,9 +167,13 @@ export async function resolveLocation(
     city: merge(input.city, existing?.city),
     country: merge(input.country, existing?.country),
   });
-  if (completed?.address) patch.address = completed.address;
-  if (completed?.city) patch.city = completed.city;
-  if (completed?.country) patch.country = completed.country;
+  // Only fields the request did not mention. A field the user explicitly
+  // emptied stays empty: reverse geocoding fills gaps, it does not overrule a
+  // decision. Restoring what someone just deleted — from coordinates that may
+  // themselves be wrong — is how a correction becomes a new error.
+  if (completed?.address && input.address === undefined) patch.address = completed.address;
+  if (completed?.city && input.city === undefined) patch.city = completed.city;
+  if (completed?.country && input.country === undefined) patch.country = completed.country;
 
   return patch;
 }
