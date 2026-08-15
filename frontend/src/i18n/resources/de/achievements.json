@@ -809,6 +809,142 @@
     "GRAND_TOUR": {
       "name": "Grand Tour",
       "description": "Trip mit Flug, Kreuzfahrt UND Unterkunft"
+    },
+    "LODGING_TYPES_3": {
+      "name": "Nicht wählerisch",
+      "description": "In 3 verschiedenen Unterkunftsarten übernachtet"
+    },
+    "LODGING_TYPES_5": {
+      "name": "Hauptsache ein Bett",
+      "description": "In allen 5 Unterkunftsarten übernachtet"
+    },
+    "LODGING_CITIES_10": {
+      "name": "Zehn Städte",
+      "description": "In 10 verschiedenen Städten übernachtet"
+    },
+    "LODGING_CITIES_25": {
+      "name": "Städtesammler",
+      "description": "In 25 verschiedenen Städten übernachtet"
+    },
+    "LODGING_CITIES_50": {
+      "name": "Überall zuhause",
+      "description": "In 50 verschiedenen Städten übernachtet"
+    },
+    "LODGING_CITIES_100": {
+      "name": "Hundert Betten, hundert Städte",
+      "description": "In 100 verschiedenen Städten übernachtet"
+    },
+    "LODGING_CONTINENTS_2": {
+      "name": "Zwei Kontinente",
+      "description": "Auf 2 Kontinenten übernachtet"
+    },
+    "LODGING_CONTINENTS_4": {
+      "name": "Vier Kontinente",
+      "description": "Auf 4 Kontinenten übernachtet"
+    },
+    "LODGING_CONTINENTS_6": {
+      "name": "Sechs Kontinente",
+      "description": "Auf 6 Kontinenten übernachtet"
+    },
+    "FIVE_STAR_10": {
+      "name": "Fünf Sterne",
+      "description": "10 Nächte in Fünf-Sterne-Häusern"
+    },
+    "FIVE_STAR_50": {
+      "name": "Gehobene Ansprüche",
+      "description": "50 Nächte in Fünf-Sterne-Häusern"
+    },
+    "PERFECT_STAY_1": {
+      "name": "Nichts zu beanstanden",
+      "description": "Ein Aufenthalt mit 5 von 5 in allen vier Bewertungen"
+    },
+    "PERFECT_STAY_10": {
+      "name": "Ein Händchen für Häuser",
+      "description": "10 Aufenthalte mit 5 von 5 in allen vier Bewertungen"
+    },
+    "PROGRAMME_YEAR_10": {
+      "name": "Auf dem Weg zum Status",
+      "description": "10 Nächte in einem Kalenderjahr unter einem Programm"
+    },
+    "PROGRAMME_YEAR_25": {
+      "name": "Statusjäger",
+      "description": "25 Nächte in einem Kalenderjahr unter einem Programm"
+    },
+    "PROGRAMME_YEAR_50": {
+      "name": "Oberste Stufe",
+      "description": "50 Nächte in einem Kalenderjahr unter einem Programm"
+    },
+    "AWAY_STREAK_14": {
+      "name": "Zwei Wochen ohne eigenes Bett",
+      "description": "14 Nächte am Stück auswärts"
+    },
+    "AWAY_STREAK_30": {
+      "name": "Heimatlos",
+      "description": "30 Nächte am Stück auswärts"
+    },
+    "AWAY_STREAK_90": {
+      "name": "Adresse: unterwegs",
+      "description": "90 Nächte am Stück auswärts"
+    },
+    "AWAY_SHARE_25": {
+      "name": "Ein Viertel des Jahres fort",
+      "description": "In einem Jahr an 25 % aller Tage auswärts geschlafen"
+    },
+    "AWAY_SHARE_50": {
+      "name": "Mehr fort als da",
+      "description": "In einem Jahr an über 50 % aller Tage auswärts geschlafen"
+    },
+    "NORTHERN_LODGING_60": {
+      "name": "Hoher Norden",
+      "description": "Nördlich des 60. Breitengrads übernachtet"
+    },
+    "NORTHERN_LODGING_66": {
+      "name": "Jenseits des Polarkreises",
+      "description": "Nördlich des Polarkreises übernachtet"
+    },
+    "ALL_INCLUSIVE_14": {
+      "name": "Bändchen am Handgelenk",
+      "description": "14 Nächte mit All-inclusive-Verpflegung"
+    },
+    "ONE_NIGHTERS_10": {
+      "name": "Immer nur eine Nacht",
+      "description": "10 Aufenthalte von genau einer Nacht"
+    },
+    "ONE_NIGHTERS_50": {
+      "name": "Der ewige Zwischenstopp",
+      "description": "50 Aufenthalte von genau einer Nacht"
+    },
+    "INDEPENDENT_50": {
+      "name": "Kein Kettenmensch",
+      "description": "50 Nächte in Häusern ohne Kette"
+    },
+    "INDEPENDENT_200": {
+      "name": "Inhabergeführt",
+      "description": "200 Nächte in Häusern ohne Kette"
+    },
+    "ENDURED_STAY_1": {
+      "name": "Durchgehalten",
+      "description": "Einen Aufenthalt mit 2 Sternen oder schlechter bewertet"
+    },
+    "ENDURED_STAY_10": {
+      "name": "Hart im Nehmen",
+      "description": "10 Aufenthalte mit 2 Sternen oder schlechter bewertet"
+    },
+    "RATED_STAYS_25": {
+      "name": "Fleißig bewertet",
+      "description": "25 Aufenthalte bewertet"
+    },
+    "RATED_STAYS_100": {
+      "name": "Der eigene Hotelführer",
+      "description": "100 Aufenthalte bewertet"
+    },
+    "DOCUMENTED_TRIP_1": {
+      "name": "Lückenlos festgehalten",
+      "description": "Eine Reise mit Anreise, Unterkunft, Tagebuch und Fotos"
+    },
+    "DOCUMENTED_TRIP_10": {
+      "name": "Chronist",
+      "description": "10 Reisen mit Anreise, Unterkunft, Tagebuch und Fotos"
     }
   }
 }

@@ -237,6 +237,24 @@ export interface LodgingStats {
   plannedLodgingsCount: number;
   /** Houses the user only bookmarked (`visited === false`). Never part of any other figure. */
   notedLodgingsCount: number;
+  /**
+   * Nights by the house's OFFICIAL star count ("1".."5"). A house with no star
+   * rating has no key here at all — an unrated guesthouse is not a "0-star",
+   * and inventing a bucket for it would put campsites next to one-star hotels.
+   */
+  nightsByStars: Record<string, number>;
+  /** Nights by board type. Covers every stay, unlike `price.byBoard` which needs a comparable price. */
+  nightsByBoard: Record<string, number>;
+  /**
+   * Stays rated 5 on ALL FOUR columns. A null on any column disqualifies:
+   * "everything was perfect" is a claim about everything, and three fives with
+   * a blank is a claim about three things.
+   */
+  perfectStays: number;
+  /** Stays the user rated 2 or worse overall — the ones they got through. */
+  enduredStays: number;
+  /** Stays of exactly one night. */
+  oneNightStays: number;
   price: LodgingPriceStats;
   ratings: LodgingRatingStats;
   geo: LodgingGeoStats;
