@@ -7,6 +7,7 @@
 // it from the UN/LOCODE prefix (DEHAM → DE).
 
 import type { JSX } from "react";
+import { useTranslation } from "../hooks/useTranslation";
 
 const FLAG_ASPECT = 4 / 3;
 
@@ -196,13 +197,20 @@ export function FlagImg({
   height?: number;
   className?: string;
 }): JSX.Element | null {
+  const { i18n } = useTranslation();
   const cc = normCc(country);
   if (!cc) return null;
+  // The flag is the ONLY thing naming the country in the places it is used
+  // most: the lodging table shows city OR country, so a row with a city has
+  // its country nowhere but here. A picture of a flag is not a name — the
+  // reader has to already know the flag, and a screen reader was told to
+  // ignore it entirely. Both get the name now, in the interface language.
+  const name = countryName(cc, i18n.language) || cc.toUpperCase();
   return (
     <img
       src={flagUrl(cc)}
-      alt=""
-      aria-hidden
+      alt={name}
+      title={name}
       loading="lazy"
       width={Math.round(height * FLAG_ASPECT)}
       height={height}
