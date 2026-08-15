@@ -1,5 +1,7 @@
 {
-  "nav": { "link": "Kreuzfahrten" },
+  "nav": {
+    "link": "Kreuzfahrten"
+  },
   "list": {
     "title": "Kreuzfahrten",
     "new": "Kreuzfahrt hinzufügen",
@@ -127,7 +129,10 @@
     "via_geocoder": "Kartensuche (OpenStreetMap)",
     "searchError": "Hafensuche fehlgeschlagen - bitte erneut versuchen"
   },
-  "map": { "layer": "Kreuzfahrten", "fallbackTitle": "Kreuzfahrt" },
+  "map": {
+    "layer": "Kreuzfahrten",
+    "fallbackTitle": "Kreuzfahrt"
+  },
   "filter": {
     "title": "Filter",
     "searchPlaceholder": "Suche nach Schiff oder Reederei …",
@@ -148,19 +153,7 @@
     "saveError": "Kreuzfahrt konnte nicht gespeichert werden"
   },
   "add": {
-    "title": "Kreuzfahrt hinzufügen",
-    "back": "Zurück",
-    "import": {
-      "best": "Beste Option",
-      "title": "Buchung importieren",
-      "hint": "Buchungs-E-Mail (.eml/.msg) oder PDF einlesen — wird automatisch erkannt.",
-      "cta": "Importieren"
-    },
-    "manual": {
-      "title": "Manuell eingeben",
-      "hint": "Schiff, Route und Häfen selbst erfassen.",
-      "cta": "Starten"
-    }
+    "title": "Kreuzfahrt hinzufügen"
   },
   "import": {
     "button": "PDF importieren",

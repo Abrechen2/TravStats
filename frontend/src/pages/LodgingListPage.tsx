@@ -352,10 +352,9 @@ export default function LodgingListPage(): JSX.Element {
         )}
 
         {/* The CSV tile used to sit here. It now lives in the central import
-            hub (Settings → Import), which is where every domain's BULK
-            importers belong — the header links there. Single-record email/PDF
-            parsing stays on this page as `DomainImportButton`, per the hub's
-            own rule. */}
+            hub (Settings → Import), which is where every domain's LIST
+            importers belong — the line under the heading links there. Reading
+            a single booking is the first route in the add-dialog below. */}
 
         {/* The import log used to sit here. It moved to the central import
             hub (Settings → Import) together with the importers it belongs to —

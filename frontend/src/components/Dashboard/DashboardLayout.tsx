@@ -10,7 +10,7 @@ import { logger } from "../../lib/logger";
 import NavigationBar from "../NavigationBar";
 import SimplifiedFlightFormV2 from "../SimplifiedFlightFormV2";
 import SpecialFlightModal from "../SpecialFlightModal";
-import { CruiseAddChooser } from "../Cruise/CruiseAddChooser";
+import { useCruiseImportAdapter } from "../import/adapters/cruiseAdapter";
 import { DomainTabStrip } from "./DomainTabStrip";
 import { AddDomainPicker, type AddableDomain } from "./AddDomainPicker";
 import DomainImportPanel from "../import/DomainImportPanel";
@@ -41,6 +41,7 @@ export function DashboardLayout({
   const { tab, setTab } = useDashboardRoute();
   const [addingDomain, setAddingDomain] = useState<AddableDomain | null>(null);
   const lodgingAdapter = useLodgingImportAdapter();
+  const cruiseAdapter = useCruiseImportAdapter();
   const [showSpecialModal, setShowSpecialModal] = useState(false);
   const { isEnabled } = useEnabledDomains();
   const { addToast } = useToastStore();
@@ -153,9 +154,12 @@ export function DashboardLayout({
           onDataChanged?.();
         }}
       />
-      {addingDomain === "cruise" && (
-        <CruiseAddChooser onClose={() => setAddingDomain(null)} onSaved={() => onDataChanged?.()} />
-      )}
+      <DomainImportPanel
+        open={addingDomain === "cruise"}
+        onClose={() => setAddingDomain(null)}
+        onItemsCreated={() => onDataChanged?.()}
+        adapter={cruiseAdapter}
+      />
       {/* Stays were missing from this menu entirely, although the tab strip
           right above it counts them — the menu had been hard-wired to flights
           back when flights were all there was. */}
