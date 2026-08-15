@@ -22,7 +22,9 @@ describe("import: visited vs. noted down", () => {
   afterEach(async () => {
     await prisma.lodgingStay.deleteMany({ where: { userId } });
     await prisma.lodging.deleteMany({ where: { userId } });
-    await prisma.lodgingImportBatch.deleteMany({ where: { userId } });
+    // Das Modell heisst seit der Verallgemeinerung der Import-Stapel
+    // `ImportBatch` — es traegt jetzt alle Domaenen, nicht nur Unterkuenfte.
+    await prisma.importBatch.deleteMany({ where: { userId } });
   });
 
   afterAll(async () => {
