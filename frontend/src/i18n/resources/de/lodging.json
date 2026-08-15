@@ -305,6 +305,13 @@
         "success": "{{deletedLodgings}} Hotel(s) und {{deletedStays}} Aufenthalt(e) gelöscht.",
         "withDetached": "{{deletedLodgings}} Hotel(s) und {{deletedStays}} Aufenthalt(e) gelöscht, {{detachedLodgings}} Hotel(s) behalten (haben weitere Aufenthalte)."
       }
+    },
+    "maps": {
+      "title": "Google-Maps-Export",
+      "description": "Eine gespeicherte Liste aus Google Takeout. Jede Zeile bringt Googles Kennung des Ortes mit — dadurch erkennt ein zweiter Import, was schon da ist. Datum und Preis stehen in so einer Liste nicht.",
+      "uploadLabel": "Takeout-CSV wählen",
+      "noRows": "In dieser Datei steht keine Zeile mit einem Namen — ist es wirklich eine gespeicherte Liste aus Takeout?",
+      "withoutId": "{{count}} Zeilen bringen keine Ortskennung mit — sie werden übernommen, aber ein zweiter Import erkennt sie nicht wieder."
     }
   }
 }

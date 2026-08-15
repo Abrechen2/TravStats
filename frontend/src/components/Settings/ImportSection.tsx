@@ -7,6 +7,7 @@ import { SectionCard, SectionTitle } from "./SettingsShared";
 import { Fr24ImportTile } from "../import/Fr24ImportTile";
 import { GenericCsvImportTile } from "../import/GenericCsvImportTile";
 import { LodgingCsvImportTile } from "../import/LodgingCsvImportTile";
+import { MapsExportImportTile } from "../import/MapsExportImportTile";
 import { ImportLogSection } from "../import/ImportLogSection";
 
 /**
@@ -38,7 +39,12 @@ export default function ImportSection(): JSX.Element {
   const listImporters = useMemo<Partial<Record<DomainKey, JSX.Element[]>>>(
     () => ({
       flight: [<Fr24ImportTile key="fr24" />, <GenericCsvImportTile key="csv" />],
-      lodging: [<LodgingCsvImportTile key="lodging-csv" onImported={handleImported} />],
+      lodging: [
+        // The Maps export first: it is the one file that brings an identity
+        // with it, and the generic path would reduce it to a name.
+        <MapsExportImportTile key="lodging-maps" onImported={handleImported} />,
+        <LodgingCsvImportTile key="lodging-csv" onImported={handleImported} />,
+      ],
     }),
     [handleImported]
   );

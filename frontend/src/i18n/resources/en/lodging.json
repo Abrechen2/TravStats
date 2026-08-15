@@ -305,6 +305,13 @@
         "success": "Deleted {{deletedLodgings}} hotel(s) and {{deletedStays}} stay(s).",
         "withDetached": "Deleted {{deletedLodgings}} hotel(s) and {{deletedStays}} stay(s), kept {{detachedLodgings}} hotel(s) (they have other stays)."
       }
+    },
+    "maps": {
+      "title": "Google Maps export",
+      "description": "A saved list from Google Takeout. Each row carries Google's id for the place, so a second import recognises what is already here. Such a list holds no dates and no prices.",
+      "uploadLabel": "Choose Takeout CSV",
+      "noRows": "No row in this file carries a name — is it really a saved list from Takeout?",
+      "withoutId": "{{count}} rows carry no place id. They are imported, but a second import will not recognise them."
     }
   }
 }
