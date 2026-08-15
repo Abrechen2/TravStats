@@ -126,7 +126,12 @@ export function LodgingFormModal({
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-lg rounded-lg border border-[var(--color-border)] bg-[var(--bg-elevated)] p-6 shadow-xl">
+      {/* max-h + overflow: the form grows past the viewport as soon as the map
+          picker or the advanced panel is open, and a centred flex child with
+          no height limit simply overflows the screen with nothing to scroll —
+          the save button ends up unreachable. Same shape the cruise and flight
+          modals already use. */}
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-[var(--color-border)] bg-[var(--bg-elevated)] p-6 shadow-xl">
         <h3 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h3>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">

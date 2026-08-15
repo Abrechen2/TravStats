@@ -5,6 +5,8 @@ import { createMarkerTooltip } from "../map/markerTooltip";
 import { ArcLayer, PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { Trip } from "../../types";
+import type { Lodging } from "../../types/lodging";
+import { buildLodgingPins } from "../layers/lodgingPinsLayer";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 import { computeBbox } from "../../utils/mapAnimationHelpers";
 import { logger } from "../../lib/logger";
@@ -195,6 +197,44 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
     return Array.from(seen.values());
   }, [trip.flights]);
 
+  /**
+   * The trip's lodgings, one entry per HOUSE rather than per night.
+   *
+   * A round trip sleeps in the same hotel on its first and last night, and two
+   * pins on one roof are one pin the user cannot click apart. The counts are
+   * scoped to THIS trip on purpose: "2 Nächte" on a trip map means two nights
+   * on this trip, not the lifetime total the lodging list shows.
+   *
+   * `stayCount`/`nights` are aggregates the lodging LIST endpoint computes; the
+   * trip endpoint returns the plain row, so they are derived here rather than
+   * read from a field the payload does not actually carry.
+   */
+  const lodgings = useMemo<Lodging[]>(() => {
+    const byHouse = new Map<string, { lodging: Lodging; stays: number; nights: number }>();
+    for (const stay of trip.lodgingStays ?? []) {
+      const house = stay.lodging;
+      if (!house || house.lat == null || house.lon == null) continue;
+      const nights = Math.max(
+        0,
+        Math.round(
+          (Date.parse(stay.checkOut) - Date.parse(stay.checkIn)) / 86_400_000
+        ) || 0
+      );
+      const seen = byHouse.get(house.id);
+      if (seen) {
+        seen.stays += 1;
+        seen.nights += nights;
+      } else {
+        byHouse.set(house.id, { lodging: house, stays: 1, nights });
+      }
+    }
+    return Array.from(byHouse.values()).map(({ lodging, stays, nights }) => ({
+      ...lodging,
+      stayCount: stays,
+      nights,
+    }));
+  }, [trip.lodgingStays]);
+
   const stopPoints = useMemo<PointDatum[]>(() => {
     const out: PointDatum[] = [];
     for (const s of trip.stops ?? []) {
@@ -252,6 +292,9 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
       } else if (id === "trip-airports" || id === "trip-stops") {
         const pt = info.object as PointDatum;
         flyToPoint(pt.position, pt.kind === "airport" ? 7 : 11);
+      } else if (id === "lodging-pins" || id === "lodging-pins-labels") {
+        const pin = info.object as { position: [number, number] };
+        flyToPoint(pin.position, 12);
       }
     },
     [flyToBbox, flyToPoint]
@@ -269,6 +312,12 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
       getTargetColor: [...FLIGHT_RGB, 230] as [number, number, number, number],
       getWidth: 2,
       greatCircle: true,
+      // Flat. deck.gl's ArcLayer bows every arc up out of the map by default,
+      // which reads as depth on a tilted view and as a meaningless bulge on a
+      // flat one — and on a short hop the bulge is taller than the route is
+      // long. Height 0 lays the great circle on the ground, where the line
+      // between two airports actually belongs.
+      getHeight: 0,
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 255, 255, 80],
@@ -346,8 +395,15 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
       pickable: false,
     });
 
-    return [paths, arcs, airports, stops, stopLabels];
-  }, [flightArcs, cruisePaths, airportPoints, stopPoints]);
+    // The trip's hotels. Reuses the layer the main map already draws them with
+    // (same rose, same dot weight, same tooltip — `markerTooltip` already
+    // knows the "lodging-pins" ids), so a house looks the same wherever it is
+    // shown. Labels are forced on: a trip has a handful of hotels, not the
+    // hundreds the flat map's priority budget exists for.
+    const lodgingPins = buildLodgingPins(lodgings, 1, 6, { labelsMode: "all" }) ?? [];
+
+    return [paths, arcs, airports, stops, ...lodgingPins, stopLabels];
+  }, [flightArcs, cruisePaths, airportPoints, stopPoints, lodgings]);
 
   /* ---- bbox fit ---- */
 
@@ -362,8 +418,14 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
     for (const s of stopPoints) {
       pts.push(s.position);
     }
+    // Hotels count towards the fit too. A round trip whose flights all land in
+    // one capital would otherwise open zoomed on the airport while the twelve
+    // houses it actually visited sit outside the frame.
+    for (const l of lodgings) {
+      if (l.lat != null && l.lon != null) pts.push([l.lon, l.lat]);
+    }
     return pts;
-  }, [flightArcs, cruisePaths, stopPoints]);
+  }, [flightArcs, cruisePaths, stopPoints, lodgings]);
 
   useEffect(() => {
     if (!mapLoaded || didFit.current) return;
@@ -456,7 +518,8 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
           color: "var(--text-muted)",
         }}
       >
-        {flightArcs.length}✈ · {cruisePaths.length}⚓ · {stopPoints.length}📍
+        {flightArcs.length}✈ · {cruisePaths.length}⚓ · {lodgings.length}🏨 ·{" "}
+        {stopPoints.length}📍
       </div>
       {!empty && (
         <div

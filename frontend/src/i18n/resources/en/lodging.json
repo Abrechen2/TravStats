@@ -19,7 +19,18 @@
     "otherCurrencyHint": "Includes further amounts in an older base currency, not counted here.",
     "bookmarked": "bookmarked",
     "bookmarkedHint": "Not visited yet — counted in no statistic.",
-    "wholeListHint": "A whole list at once?"
+    "wholeListHint": "A whole list at once?",
+    "status": {
+      "label": "Status",
+      "unlocated": "Not found",
+      "unlocatedHint": "An address is there but no point on the map — the search did not find it. Saving again retries.",
+      "noAddress": "No address",
+      "noAddressHint": "No street is recorded for this place.",
+      "bare": "Name only",
+      "bareHint": "No address, no city, no point on the map — nothing is known here beyond the name.",
+      "unknownCountry": "Unclear country",
+      "unknownCountryHint": "The country field holds something that is not a country anyone can place."
+    }
   },
   "filter": {
     "searchPlaceholder": "Search by name or location …",
