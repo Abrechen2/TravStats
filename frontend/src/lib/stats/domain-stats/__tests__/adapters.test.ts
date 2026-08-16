@@ -289,6 +289,7 @@ function makeLodgingStay(overrides: Partial<Lodging["stays"][number]> = {}): Lod
     membershipId: null,
     membershipOptOut: false,
     receiptUrl: null,
+    guests: null,
     companions: [],
     notes: null,
     parserTemplate: null,

@@ -73,6 +73,7 @@ const baseStay = {
   membershipId: null,
   membershipOptOut: false,
   receiptUrl: null,
+  guests: null,
   companions: [],
   notes: null,
   parserTemplate: null,
