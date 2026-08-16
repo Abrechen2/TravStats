@@ -9,6 +9,7 @@ import { authLimiter } from '../middleware/rateLimit';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { getInstanceSettings } from '../services/instanceSettingsService';
 import logger from '../utils/logger';
+import { stampWhatsNewSeen } from "../services/whatsNewStamp";
 
 const router = Router();
 const cookieMaxAgeMs = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -117,6 +118,9 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
           notificationEmail: invitationEmail,
         },
       });
+
+      // Nothing is "new" to an account created a moment ago — see whatsNewStamp.
+      await stampWhatsNewSeen(tx, created.id);
 
       // Mark invitation as used within the same transaction
       if (invitationToken) {
