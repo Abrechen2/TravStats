@@ -67,6 +67,8 @@ interface Indexes {
   payloadNames: Set<string>;
   /** Every stored lodging, for the coordinate fallback — a name can be decorated, a building cannot move. */
   allLodgings: ExistingLodging[];
+  /** Catalogue chain names, lowercased. A name that is not in here is offered, never created silently. */
+  chainNames: Set<string>;
   staysByExternalRef: Map<string, ExistingStay>;
   staysByLodging: Map<string, ExistingStay[]>;
 }
@@ -139,6 +141,15 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
       dedupeHint = "lodging_nearby";
       flags = [...flags, "ambiguous_lodging_name"];
     }
+  }
+
+  // A chain the catalogue does not know is an OFFER, never a silent create:
+  // the commit used to add any unknown name, which fills the catalogue with
+  // whatever a parser took for a chain. Measured on real confirmations, the
+  // parser now recognises groups the catalogue has never heard of — "KOA"
+  // among them — and each of those deserves one decision, not an entry.
+  if (lodging?.chainName && !idx.chainNames.has(lodging.chainName.trim().toLowerCase())) {
+    flags = [...flags, "unknown_chain"];
   }
 
   if (!lodging && joinName) {
@@ -222,7 +233,7 @@ export async function buildLodgingPreviewRows(
   userId: string,
   candidates: LodgingImportCandidate[],
 ): Promise<{ rows: LodgingImportPreviewRow[]; summary: LodgingImportSummary }> {
-  const [lodgings, stays] = await Promise.all([
+  const [lodgings, stays, chains] = await Promise.all([
     prisma.lodging.findMany({
       where: { userId },
       select: { id: true, name: true, city: true, externalRef: true, lat: true, lon: true },
@@ -231,6 +242,7 @@ export async function buildLodgingPreviewRows(
       where: { userId },
       select: { id: true, lodgingId: true, externalRef: true, checkIn: true },
     }),
+    prisma.lodgingChain.findMany({ select: { name: true } }),
   ]);
 
   const byExternalRef = new Map<string, ExistingLodging>();
@@ -267,6 +279,7 @@ export async function buildLodgingPreviewRows(
     byName,
     payloadNames,
     allLodgings: lodgings,
+    chainNames: new Set(chains.map((c) => c.name.trim().toLowerCase())),
     staysByExternalRef,
     staysByLodging,
   };
