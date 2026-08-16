@@ -6,6 +6,13 @@ interface StatCardProps {
   description: ReactNode;
   footnote?: ReactNode;
   valueSize?: "sm" | "md" | "lg";
+  /**
+   * CSS colour for the big number. Defaults to the brand accent (amber), which
+   * is the flight domain's identity. Per-domain screens pass their own token —
+   * `var(--domain-lodging)` and friends — so a lodging figure is not dressed in
+   * the flight colour.
+   */
+  accent?: string;
   title2?: never;
 }
 
@@ -25,6 +32,7 @@ export default function StatCard({
   description,
   footnote,
   valueSize = "lg",
+  accent = "var(--accent)",
 }: StatCardProps): JSX.Element {
   return (
     <div
@@ -38,7 +46,7 @@ export default function StatCard({
       <h3 className="mb-2 text-sm font-medium" style={{ color: "var(--text-muted)" }}>
         {title}
       </h3>
-      <p className={`mb-1 font-bold ${VALUE_CLASS[valueSize]}`} style={{ color: "var(--accent)" }}>
+      <p className={`mb-1 font-bold ${VALUE_CLASS[valueSize]}`} style={{ color: accent }}>
         {value}
       </p>
       <p className="text-sm opacity-75">{description}</p>

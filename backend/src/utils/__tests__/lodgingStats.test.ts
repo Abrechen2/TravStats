@@ -2,12 +2,23 @@ import { calculateLodgingStats, LodgingStayData } from "../lodgingStats";
 
 const stay = (o: Partial<LodgingStayData>): LodgingStayData => ({
   lodgingId: "l1",
+  lodgingName: "Hotel Adlon",
   type: "hotel",
   country: "DE",
   city: "Berlin",
   chainId: 1,
+  chainName: "Kempinski",
+  stars: 5,
+  lat: 52.516,
+  lon: 13.38,
+  board: "breakfast",
+  ratingRoom: null,
+  ratingBreakfast: null,
+  ratingService: null,
   checkIn: new Date("2024-05-14T00:00:00Z"),
   checkOut: new Date("2024-05-16T00:00:00Z"),
+  datePrecision: "DAY",
+  nights: null,
   status: "completed",
   totalPriceBase: 190,
   // Every fixture snapshots into EUR by default so pre-existing tests that
@@ -204,8 +215,8 @@ describe("calculateLodgingStats", () => {
     // Owner-decision fix: lodgingsCount/chainsUnique must reflect hotels the
     // user HAS, including ones with no stay yet (a newly added hotel).
     const lodgings = [
-      { id: "l1", chainId: 1, type: "hotel", country: "DE", city: "Berlin" },
-      { id: "l2-no-stay", chainId: 2, type: "hotel", country: "AT", city: "Vienna" },
+      { id: "l1", chainId: 1, type: "hotel", country: "DE", city: "Berlin", visited: true },
+      { id: "l2-no-stay", chainId: 2, type: "hotel", country: "AT", city: "Vienna", visited: true },
     ];
     const s = calculateLodgingStats([stay({ lodgingId: "l1", chainId: 1 })], "EUR", lodgings);
     expect(s.lodgingsCount).toBe(2);
@@ -222,7 +233,7 @@ describe("calculateLodgingStats", () => {
   });
 
   it("does not double-count a lodging that both has a stay and appears in the lodgings list", () => {
-    const lodgings = [{ id: "l1", chainId: 1, type: "hotel", country: "DE", city: "Berlin" }];
+    const lodgings = [{ id: "l1", chainId: 1, type: "hotel", country: "DE", city: "Berlin", visited: true }];
     const s = calculateLodgingStats(
       [stay({ lodgingId: "l1", chainId: 1 }), stay({ lodgingId: "l1", chainId: 1 })],
       "EUR",
@@ -230,6 +241,84 @@ describe("calculateLodgingStats", () => {
     );
     expect(s.lodgingsCount).toBe(1);
     expect(s.chainsUnique).toBe(1);
+  });
+
+  describe("the counting rule (owner, 2026-08-15)", () => {
+    // Fixed clock so "future" stays future — see shared/lodgingCounting.ts.
+    const NOW = new Date("2026-08-15T12:00:00Z");
+    const future = (o: Partial<LodgingStayData> = {}): LodgingStayData =>
+      stay({
+        checkIn: new Date("2026-09-01T00:00:00Z"),
+        checkOut: new Date("2026-09-04T00:00:00Z"),
+        status: "scheduled",
+        ...o,
+      });
+
+    it("keeps a future booking out of every actual figure", () => {
+      const s = calculateLodgingStats([stay({}), future()], "EUR", undefined, NOW);
+      expect(s.staysCount).toBe(1);
+      expect(s.totalNights).toBe(2);
+      // 3 nights booked for September must not appear in the 2026 series.
+      expect(s.nightsByYear["2026"]).toBeUndefined();
+      expect(s.spendBaseTotal).toBe(190);
+    });
+
+    it("reports the future booking separately instead of dropping it", () => {
+      const s = calculateLodgingStats([stay({}), future()], "EUR", undefined, NOW);
+      expect(s.plannedStaysCount).toBe(1);
+      expect(s.plannedNights).toBe(3);
+    });
+
+    it("counts a stay the user is sitting in right now as planned, not slept", () => {
+      const s = calculateLodgingStats(
+        [
+          future({
+            checkIn: new Date("2026-08-14T00:00:00Z"),
+            checkOut: new Date("2026-08-20T00:00:00Z"),
+          }),
+        ],
+        "EUR",
+        undefined,
+        NOW,
+      );
+      expect(s.staysCount).toBe(0);
+      expect(s.plannedStaysCount).toBe(1);
+    });
+
+    it("does not count a house the user only bookmarked as visited", () => {
+      const lodgings = [
+        { id: "l1", chainId: 1, type: "hotel", country: "DE", city: "Berlin", visited: true },
+        { id: "l2", chainId: 2, type: "hotel", country: "JP", city: "Tokyo", visited: false },
+      ];
+      const s = calculateLodgingStats([stay({ lodgingId: "l1" })], "EUR", lodgings, NOW);
+      expect(s.lodgingsCount).toBe(1);
+      expect(s.notedLodgingsCount).toBe(1);
+      // The bookmark's country and chain must not leak into the visited sets.
+      expect(s.countries.has("JP")).toBe(false);
+      expect(s.chainsUnique).toBe(1);
+      expect(s.citiesUnique).toBe(1);
+    });
+
+    it("counts a house whose only stay is still ahead as planned, not visited", () => {
+      const lodgings = [
+        { id: "l9", chainId: 3, type: "hotel", country: "IT", city: "Rome", visited: true },
+      ];
+      const s = calculateLodgingStats([future({ lodgingId: "l9" })], "EUR", lodgings, NOW);
+      expect(s.lodgingsCount).toBe(0);
+      expect(s.plannedLodgingsCount).toBe(1);
+      expect(s.countries.has("IT")).toBe(false);
+    });
+
+    it("counts a long-past stay whose status column was never converged", () => {
+      const s = calculateLodgingStats(
+        [stay({ status: "scheduled" })],
+        "EUR",
+        undefined,
+        NOW,
+      );
+      expect(s.staysCount).toBe(1);
+      expect(s.totalNights).toBe(2);
+    });
   });
 
   it("tracks nights by type (award/hotel/campsite) and longest stay", () => {

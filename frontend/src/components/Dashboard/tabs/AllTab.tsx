@@ -158,8 +158,14 @@ export function AllTab(): JSX.Element {
     if (!lodgingsVisible) return [];
     if (!filterTime.from && !filterTime.to) return lodgings;
     return lodgings.filter((lodging) =>
-      lodging.stays.some((stay) =>
-        intervalOverlapsRange(stay.checkIn, stay.checkOut, filterTime.from, filterTime.to)
+      lodging.stays.some(
+        (stay) =>
+          // An undated stay overlaps no range: it is not known which days it
+          // occupied. It reappears the moment the time filter is cleared,
+          // rather than being shown under a range it may not belong to.
+          stay.checkIn !== null &&
+          stay.checkOut !== null &&
+          intervalOverlapsRange(stay.checkIn, stay.checkOut, filterTime.from, filterTime.to)
       )
     );
   }, [lodgings, lodgingsVisible, filterTime.from, filterTime.to]);

@@ -14,6 +14,10 @@ import {
   type LodgingRecord,
 } from './lodgingStats';
 import { computeFlyAndStayFlags, unionCountries, type TripDomainCounts } from './achievementStats';
+import {
+  buildMembershipContext,
+  resolveStayProgramme,
+} from '../services/lodging/stayMembership';
 
 type UserAchievementWithRelation = UserAchievement & { achievement: Achievement };
 
@@ -54,7 +58,7 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     // + lodging stays (all statuses — calculateLodgingStats filters cancelled itself)
     // + per-trip domain counts (flights/cruises/lodgingStays) for the
     //   cross-domain Fly & Stay / Grand Tour flags.
-    const [flights, allFlights, cruises, lodgingStays, lodgings, trips, userSettings] = await Promise.all([
+    const [flights, allFlights, cruises, lodgingStays, lodgings, lodgingMemberships, trips, userSettings] = await Promise.all([
       prisma.flight.findMany({
         where: { userId, status: { in: ['flown', 'historical'] } },
         orderBy: { departureTime: 'asc' },
@@ -74,16 +78,30 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       }),
       prisma.lodgingStay.findMany({
         where: { userId },
-        include: { lodging: true },
+        include: { lodging: { include: { chain: true } } },
       }),
       // Every lodging the user HAS, including ones with no stay yet — Hotel
       // Collector counts hotels the user added, not only hotels stayed at
       // (owner decision, finding 1).
       prisma.lodging.findMany({ where: { userId } }),
+      // Same derivation the stats endpoint uses, so a loyalty achievement and
+      // the loyalty figures can never disagree about which card covered a stay.
+      prisma.lodgingMembership.findMany({
+        where: { userId },
+        include: { chains: true, lodgings: true },
+      }),
       prisma.trip.findMany({
         where: { userId },
         select: {
-          _count: { select: { flights: true, cruises: true, lodgingStays: true } },
+          _count: {
+            select: {
+              flights: true,
+              cruises: true,
+              lodgingStays: true,
+              journalEntries: true,
+              photos: true,
+            },
+          },
         },
       }),
       prisma.userSettings.findUnique({ where: { userId }, select: { baseCurrency: true } }),
@@ -211,28 +229,46 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     const cruiseStats = calculateCruiseStats(cruiseStatsInput, userBirthday);
 
     // Lodging stats (multi-domain V1) — computed separately from flight/cruise stats.
-    const lodgingStatsInput: LodgingStatsInput[] = lodgingStays.map((s) => ({
+    const membershipContext = buildMembershipContext(lodgingMemberships);
+    const lodgingStatsInput: LodgingStatsInput[] = lodgingStays.map((s) => {
+      const programme = resolveStayProgramme(s, s.lodging.chainId, membershipContext);
+      return {
       lodgingId: s.lodgingId,
+      lodgingName: s.lodging.name,
       type: s.lodging.type,
       country: s.lodging.country,
       city: s.lodging.city,
       chainId: s.lodging.chainId,
+      chainName: s.lodging.chain?.name ?? null,
+      stars: s.lodging.stars,
+      lat: s.lodging.lat,
+      lon: s.lodging.lon,
       checkIn: s.checkIn,
       checkOut: s.checkOut,
+      datePrecision: s.datePrecision,
+      nights: s.nights,
       status: s.status,
       totalPriceBase: s.totalPriceBase,
       fxBaseCurrency: s.fxBaseCurrency,
       currency: s.currency,
       totalPrice: s.totalPrice,
+      board: s.board,
       isAwardStay: s.isAwardStay,
       ratingOverall: s.ratingOverall,
-    }));
+      ratingRoom: s.ratingRoom,
+      ratingBreakfast: s.ratingBreakfast,
+      ratingService: s.ratingService,
+      programName: programme.programName,
+      membershipTier: programme.tier,
+      };
+    });
     const lodgingRecords: LodgingRecord[] = lodgings.map((l) => ({
       id: l.id,
       chainId: l.chainId,
       type: l.type,
       country: l.country,
       city: l.city,
+      visited: l.visited,
     }));
     const lodgingStats = calculateLodgingStats(lodgingStatsInput, lodgingBaseCurrency, lodgingRecords);
 
@@ -329,6 +365,43 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       lodgingChainLoyaltyMax: lodgingStats.chainLoyaltyMax,
       lodgingSameHotelRepeatMax: lodgingStats.sameHotelRepeatMax,
       lodgingLongestStayNights: lodgingStats.longestStayNights,
+      // Measures added with the 2.7 statistics expansion. All read straight
+      // off the same rollup the stats page renders, so a badge and a number on
+      // screen can never disagree.
+      lodgingTypesUnique: Object.keys(lodgingStats.nightsByType).length,
+      lodgingCitiesUnique: lodgingStats.citiesUnique,
+      lodgingContinents: lodgingStats.geo.continentsCount,
+      lodgingFiveStarNights: lodgingStats.nightsByStars['5'] ?? 0,
+      lodgingAllInclusiveNights: lodgingStats.nightsByBoard['all_inclusive'] ?? 0,
+      lodgingPerfectStays: lodgingStats.perfectStays,
+      lodgingEnduredStays: lodgingStats.enduredStays,
+      lodgingRatedStays: lodgingStats.ratings.ratedStays,
+      lodgingOneNightStays: lodgingStats.oneNightStays,
+      lodgingStreakNights: lodgingStats.rhythm.longestStreakNights,
+      // Stored 0..1; the requirement is written as a percentage because "25 %
+      // of a year away" is the sentence, and 0.25 in a seed file is not.
+      lodgingAwaySharePct: Math.round(
+        Math.max(0, ...Object.values(lodgingStats.rhythm.awayShareByYear), 0) * 100,
+      ),
+      lodgingIndependentNights: lodgingStats.loyalty.independentNights,
+      lodgingProgrammeYearNights: Math.max(
+        0,
+        ...lodgingStats.loyalty.programmeYears.map((p) => p.nights),
+      ),
+      // Northernmost latitude, floored to whole degrees by the checker. A
+      // southern-hemisphere-only traveller yields a negative here, which no
+      // requirement can reach — that is the intended outcome, not a bug.
+      lodgingNorthernmostLat: lodgingStats.geo.northernmost?.lat ?? 0,
+      // A trip is "fully documented" when it records the journey, the bed, the
+      // words and the pictures. A cruise counts as the journey too — a
+      // flightless cruise trip is not an undocumented one.
+      tripsFullyDocumented: trips.filter(
+        (t) =>
+          t._count.flights + t._count.cruises > 0 &&
+          t._count.lodgingStays > 0 &&
+          t._count.journalEntries > 0 &&
+          t._count.photos > 0,
+      ).length,
       // Cross-domain (lodging)
       flyAndStay,
       grandTour,

@@ -39,6 +39,7 @@ vi.mock("../../../MapContainer3D", () => ({
 
 // Imported after the mocks above so the module graph picks them up.
 import { LodgingTab } from "../LodgingTab";
+import { EMPTY_LODGING_STATS_BLOCKS } from "../../../../types/lodgingStatsFixture";
 
 const baseStay = {
   id: "stay-1",
@@ -48,6 +49,8 @@ const baseStay = {
   bookingId: null,
   checkIn: "2024-05-12",
   checkOut: "2024-05-14",
+  datePrecision: "DAY" as const,
+  nights: null,
   status: "completed" as const,
   roomNumber: null,
   roomCategory: null,
@@ -129,6 +132,11 @@ const zeroStats: LodgingStats = {
   avgRatingOverall: null,
   chainLoyaltyMax: 0,
   sameHotelRepeatMax: 0,
+  plannedStaysCount: 0,
+  plannedNights: 0,
+  plannedLodgingsCount: 0,
+  notedLodgingsCount: 0,
+  ...EMPTY_LODGING_STATS_BLOCKS,
 };
 
 describe("LodgingTab", () => {

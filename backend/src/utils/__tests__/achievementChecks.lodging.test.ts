@@ -15,6 +15,7 @@ import { achievements } from "../../data/achievements";
 import { seedsPartA } from "../../data/achievementSeeds/partA";
 import { seedsPartB } from "../../data/achievementSeeds/partB";
 import { seedsPartC } from "../../data/achievementSeeds/partC";
+import { seedsPartE } from "../../data/achievementSeeds/partE";
 import { seedsPartD } from "../../data/achievementSeeds/partD";
 
 jest.mock("../../services/airportCache", () => ({
@@ -81,7 +82,7 @@ describe("checkAchievement — lodging requirement types", () => {
     ).toBe(false);
   });
 
-  it("every requirementType used by seedsPartD is handled by a real case (no silent default fallthrough)", async () => {
+  it("every requirementType used by seedsPartD/E is handled by a real case (no silent default fallthrough)", async () => {
     const base = await calculateUserStats([]);
     // "Maxed out" stats: every lodging/shared numeric field set far above
     // any requirement in the catalog, every boolean true, and the one
@@ -103,12 +104,30 @@ describe("checkAchievement — lodging requirement types", () => {
       lodgingSameHotelRepeatMax: 1_000_000,
       lodgingLongestStayNights: 1_000_000,
       lodgingStaysCount: 1_000_000,
+      // Measures added with the 2.7 statistics expansion. Latitude is the one
+      // that is NOT a plain count — 90 is the pole, so nothing above it can be
+      // required and 1_000_000 would make the test pass for a broken case.
+      lodgingTypesUnique: 1_000_000,
+      lodgingCitiesUnique: 1_000_000,
+      lodgingContinents: 1_000_000,
+      lodgingFiveStarNights: 1_000_000,
+      lodgingAllInclusiveNights: 1_000_000,
+      lodgingPerfectStays: 1_000_000,
+      lodgingEnduredStays: 1_000_000,
+      lodgingRatedStays: 1_000_000,
+      lodgingOneNightStays: 1_000_000,
+      lodgingStreakNights: 1_000_000,
+      lodgingAwaySharePct: 100,
+      lodgingIndependentNights: 1_000_000,
+      lodgingProgrammeYearNights: 1_000_000,
+      lodgingNorthernmostLat: 90,
+      tripsFullyDocumented: 1_000_000,
       flyAndStay: true,
       grandTour: true,
     };
 
     const untestedTypes: string[] = [];
-    for (const def of seedsPartD) {
+    for (const def of [...seedsPartD, ...seedsPartE]) {
       const { isUnlocked, progress } = checkAchievement(
         fakeAchievement({
           requirementType: def.requirementType,
@@ -127,8 +146,8 @@ describe("checkAchievement — lodging requirement types", () => {
 });
 
 describe("achievement seed integrity", () => {
-  it("has no duplicate codes across partA + partB + partC + partD", () => {
-    const allCodes = [...seedsPartA, ...seedsPartB, ...seedsPartC, ...seedsPartD].map(
+  it("has no duplicate codes across partA + partB + partC + partD + partE", () => {
+    const allCodes = [...seedsPartA, ...seedsPartB, ...seedsPartC, ...seedsPartD, ...seedsPartE].map(
       (a) => a.code,
     );
     const seen = new Set<string>();
@@ -140,9 +159,9 @@ describe("achievement seed integrity", () => {
     expect(duplicates).toEqual([]);
   });
 
-  it("the aggregated `achievements` export includes every partD entry", () => {
+  it("the aggregated `achievements` export includes every partD and partE entry", () => {
     const achievementCodes = new Set(achievements.map((a) => a.code));
-    for (const def of seedsPartD) {
+    for (const def of [...seedsPartD, ...seedsPartE]) {
       expect(achievementCodes.has(def.code)).toBe(true);
     }
   });

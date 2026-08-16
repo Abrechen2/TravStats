@@ -565,5 +565,26 @@
     "bestAirline": "Most punctual airline",
     "worstAirline": "Least punctual airline",
     "worstRoute": "Least punctual route"
+  },
+  "travelAccount": {
+    "title": "Where you slept",
+    "subtitle": "Every year split in full — lodging, at sea, in the air, at home. The bar is always one whole year.",
+    "contested": "{{count}} nights were claimed by two domains and given to the cabin",
+    "contested_one": "{{count}} night was claimed by two domains and given to the cabin",
+    "contested_other": "{{count}} nights were claimed by two domains and given to the cabin",
+    "hotelNights": "Lodging",
+    "seaNights": "At sea",
+    "airNights": "In the air",
+    "homeNights": "At home",
+    "tripsCovered": "Fully covered trips",
+    "tripsCoveredDesc": "Trips where every travelling day records where you were",
+    "uncoveredDays": "Days without a record",
+    "uncoveredDaysDesc": "Travelling days with no lodging, no ship and no overnight flight",
+    "avgTripDays": "Avg trip length",
+    "avgTripDaysDesc": "Longest trip: {{count}} days",
+    "avgTripDaysDesc_one": "Longest trip: {{count}} day",
+    "avgTripDaysDesc_other": "Longest trip: {{count}} days",
+    "journalEntries": "Journal entries",
+    "noMoods": "No mood recorded yet"
   }
 }

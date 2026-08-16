@@ -92,6 +92,8 @@ describe("TripDetailPage — linked lodging stays on the timeline", () => {
           bookingId: null,
           checkIn: "2024-05-13T15:00:00.000Z",
           checkOut: "2024-05-15T11:00:00.000Z",
+          datePrecision: "DAY" as const,
+          nights: null,
           status: "completed",
           roomNumber: null,
           roomCategory: null,
