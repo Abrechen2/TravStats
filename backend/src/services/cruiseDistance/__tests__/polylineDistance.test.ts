@@ -2,11 +2,16 @@ import { polylineDistanceKm } from "../polylineDistance";
 
 describe("polylineDistanceKm", () => {
   it("sums the great-circle length of each segment", () => {
-    // Two 1° steps along the equator, ~111.19 km each.
+    // A 1° east step then a 1° north step — deliberately non-collinear, so a
+    // bug that only measured first-to-last would land far outside this
+    // bracket instead of accidentally passing.
+    // AB (equator, 1° east) ~111.195 km, BC (1° north at lon=1°) ~111.195 km,
+    // segment sum ~222.390 km. The direct first-to-last distance from
+    // (0,0) to (1,1) is ~157.250 km — well outside (220, 224).
     const km = polylineDistanceKm([
       [0, 0],
       [1, 0],
-      [2, 0],
+      [1, 1],
     ]);
     expect(km).toBeGreaterThan(220);
     expect(km).toBeLessThan(224);
