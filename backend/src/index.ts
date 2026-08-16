@@ -41,6 +41,7 @@ import shipsRoutes from './routes/ships';
 import airlinesRoutes from './routes/airlines';
 import aircraftRoutes from './routes/aircraft';
 import cruisesRouter from './routes/cruises';
+import cruiseRouteOverrideRoutes from './routes/cruises/routeOverride';
 import currenciesRouter from './routes/currencies';
 import lodgingRouter from './routes/lodging';
 import lodgingChainsRouter from './routes/lodgingChains';
@@ -295,6 +296,9 @@ app.use('/api/v1/ships', shipsRoutes);
 app.use('/api/v1/airlines', airlinesRoutes);
 app.use('/api/v1/aircraft', aircraftRoutes);
 app.use('/api/v1/cruises', cruisesRouter);
+// Same-prefix satellite router, same pattern as authRoutes + passwordResetRoutes
+// above — split out of cruises.ts once that file crossed the 800-line max.
+app.use('/api/v1/cruises', cruiseRouteOverrideRoutes);
 app.use('/api/v1/currencies', currenciesRouter);
 app.use('/api/v1/lodging', lodgingRouter);
 app.use('/api/v1/lodging-chains', lodgingChainsRouter);
