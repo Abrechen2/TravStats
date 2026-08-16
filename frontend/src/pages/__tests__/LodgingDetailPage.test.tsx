@@ -44,6 +44,8 @@ const baseStay: LodgingStay = {
   bookingId: null,
   checkIn: "2024-05-12T15:00:00.000Z",
   checkOut: "2024-05-14T11:00:00.000Z",
+  datePrecision: "DAY" as const,
+  nights: null,
   status: "completed",
   roomNumber: "21",
   roomCategory: "Gartenzimmer",

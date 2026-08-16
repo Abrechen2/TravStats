@@ -1,3 +1,4 @@
+import type { TravelAccountResponse } from "../../types/travelAccount";
 import type {
   AircraftProfileResponse,
   AircraftRankingResponse,
@@ -16,6 +17,17 @@ import type { SummaryParams, SummaryResponse, TimeseriesParams, TimeseriesRespon
 
 // Stats API
 export const statsApi = {
+
+  /**
+   * The cross-domain night account plus the per-trip rollup — one request
+   * because a screen asking "where did I sleep" asks "which trip has a gap"
+   * next, and two round-trips for one question is two chances to show half
+   * an answer.
+   */
+  getTravelAccount: async (): Promise<TravelAccountResponse> => {
+    const { data } = await api.get<TravelAccountResponse>("/stats/travel-account");
+    return data;
+  },
   getSummary: async (params?: SummaryParams): Promise<SummaryResponse> => {
     const { data } = await api.get<SummaryResponse>("/stats/summary", { params });
     return data;

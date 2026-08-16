@@ -9,6 +9,7 @@ import * as fx from "../services/fx/resolver";
 import { resolveLocation } from "./lodgingGeocode";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { deriveLodgingStatus } from "../shared/statusDerivation";
+import { resolveStayTiming } from "../shared/lodgingTiming";
 import { deriveStayOverallRating } from "../shared/ratingDerivation";
 import { deriveStayTotalPrice } from "../shared/stayPricing";
 import {
@@ -90,14 +91,11 @@ export function deriveOverallRating(stays: RatedStay[]): number | null {
   return Math.round((rated.reduce((sum, v) => sum + v, 0) / rated.length) * 10) / 10;
 }
 
-function nightsBetween(checkIn: Date, checkOut: Date): number {
-  const ms = checkOut.getTime() - checkIn.getTime();
-  return Math.max(0, Math.round(ms / (24 * 60 * 60 * 1000)));
-}
-
 interface AggregateStay extends RatedStay, AggregateStayFx {
-  checkIn: Date;
-  checkOut: Date;
+  checkIn: Date | null;
+  checkOut: Date | null;
+  datePrecision: string;
+  nights: number | null;
 }
 
 export interface LodgingAggregates {
@@ -118,7 +116,10 @@ export function computeAggregates(
   return {
     overallRating: deriveOverallRating(stays),
     stayCount: stays.length,
-    nights: stays.reduce((sum, s) => sum + nightsBetween(s.checkIn, s.checkOut), 0),
+    // Nights come from `resolveStayTiming`, not from a local date subtraction:
+    // an undated stay can still carry an explicit night count, and a
+    // month-precision one must not have its placeholder dates differenced.
+    nights: stays.reduce((sum, s) => sum + resolveStayTiming(s).nights, 0),
     totalSpendBase: totalSpendBaseByCurrency[currentBaseCurrency] ?? 0,
     totalSpendBaseByCurrency,
   };
@@ -141,7 +142,9 @@ function sortLodgings(
       return [...items].sort((a, b) => b.totalSpendBase - a.totalSpendBase);
     case "checkIn": {
       const latestCheckIn = (l: LodgingListItem) =>
-        l.stays.reduce((max, s) => Math.max(max, s.checkIn.getTime()), 0);
+        // An undated stay has no position on this axis. It sorts as if it were
+        // the oldest thing in the list rather than jumping to the top on a NaN.
+        l.stays.reduce((max, s) => Math.max(max, s.checkIn?.getTime() ?? 0), 0);
       return [...items].sort((a, b) => latestCheckIn(b) - latestCheckIn(a));
     }
     default:
@@ -202,10 +205,15 @@ export type FxSnapshotOutcome =
   | { status: "snapshotted"; fields: FxSnapshotFields };
 
 export async function applyFxSnapshot(
-  input: { totalPrice?: number | null; currency?: string | null; checkIn: string | Date },
+  input: { totalPrice?: number | null; currency?: string | null; checkIn?: string | Date | null },
   baseCurrency: string,
 ): Promise<FxSnapshotOutcome> {
   if (input.totalPrice == null) return { status: "priceRemoved" };
+  // A rate is a rate ON A DAY. An undated stay has no day to look one up for,
+  // and picking today's rate for a hotel from 2011 would produce a number that
+  // looks converted and is not. The amount is kept in its own currency and
+  // reported by `spendByCurrency`, exactly like a failed lookup.
+  if (input.checkIn == null) return { status: "lookupFailed" };
   // No `?? "EUR"`. An amount whose unit we never learned is not a euro amount;
   // guessing one is how 11,662 AED became €11,662 (see the 2026-08-13 spec).
   if (!input.currency) return { status: "missingCurrency" };
@@ -490,7 +498,16 @@ router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunc
     }
     const fxFields =
       manualFxRate != null
-        ? applyManualRate(fxOutcome, manualFxRate, input.totalPrice, input.checkIn, baseCurrency)
+        ? applyManualRate(
+            fxOutcome,
+            manualFxRate,
+            input.totalPrice,
+            // A manual rate still needs a day to be stamped with. An undated
+            // stay cannot have one, and applyFxSnapshot has already refused
+            // the conversion above — this argument is then never read.
+            input.checkIn ?? new Date(),
+            baseCurrency,
+          )
         : resolveFxFields(fxOutcome);
 
     const stay = await prisma.lodgingStay.create({
@@ -501,9 +518,12 @@ router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunc
         // client sent is only consulted for the one value derivation honours,
         // "cancelled" — so an old client, an importer or a stale form can no
         // longer store a status the dates contradict.
+        // With no dates there is nothing to derive from and the deriver
+        // returns `current` — which is correct: an undated stay is recorded
+        // after the fact, so what the client says is a statement, not a cache.
         status: deriveLodgingStatus({
-          checkIn: new Date(input.checkIn),
-          checkOut: new Date(input.checkOut),
+          checkIn: input.checkIn ? new Date(input.checkIn) : null,
+          checkOut: input.checkOut ? new Date(input.checkOut) : null,
           current: input.status,
         }),
         // Likewise derived, not accepted: the overall score follows the three
@@ -554,7 +574,14 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
     // date range (finding 3).
     const effectiveCheckIn = input.checkIn ? new Date(input.checkIn) : stay.checkIn;
     const effectiveCheckOut = input.checkOut ? new Date(input.checkOut) : stay.checkOut;
-    if (effectiveCheckOut.getTime() < effectiveCheckIn.getTime()) {
+    // Only orderable when both ends actually exist. A stay may legitimately
+    // carry one date or none at all since 2.7 (an undated hotel is still a
+    // hotel), and there is no order to violate then.
+    if (
+      effectiveCheckIn !== null &&
+      effectiveCheckOut !== null &&
+      effectiveCheckOut.getTime() < effectiveCheckIn.getTime()
+    ) {
       throw new AppError("checkOut must not precede checkIn", 400);
     }
 
@@ -609,7 +636,10 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
       manualFxRate !== undefined ||
       effectiveTotalPrice !== stay.totalPrice ||
       (input.currency !== undefined && input.currency !== stay.currency) ||
-      (input.checkIn !== undefined && new Date(input.checkIn).getTime() !== stay.checkIn.getTime());
+      (input.checkIn !== undefined &&
+        (input.checkIn === null
+          ? stay.checkIn !== null
+          : new Date(input.checkIn).getTime() !== (stay.checkIn?.getTime() ?? NaN)));
     let fxFields: Partial<FxSnapshotFields> = {};
     if (fxInputsChanged) {
       const baseCurrency = await getBaseCurrency(userId);
@@ -633,7 +663,7 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
               fxOutcome,
               manualFxRate,
               effectiveTotalPrice,
-              input.checkIn ?? stay.checkIn,
+              input.checkIn ?? stay.checkIn ?? new Date(),
               baseCurrency,
             )
           : resolveFxFields(fxOutcome);

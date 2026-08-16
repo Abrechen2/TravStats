@@ -29,6 +29,8 @@ const baseStay: LodgingStay = {
   bookingId: null,
   checkIn: "2026-07-11T00:00:00.000Z",
   checkOut: "2026-07-12T00:00:00.000Z",
+  datePrecision: "DAY" as const,
+  nights: null,
   status: "completed",
   roomNumber: null,
   roomCategory: null,
@@ -240,6 +242,60 @@ describe("StayEditor", () => {
     expect(payload.roomNumber).not.toBeUndefined();
     expect(payload.totalPrice).not.toBeUndefined();
     expect(payload.notes).not.toBeUndefined();
+  });
+
+  it("saves a stay with no dates at all once the precision says so", async () => {
+    // The point of the whole feature: a hotel you remember but cannot date.
+    // Before this, the editor refused the save and the stay — with its rating
+    // and its price — could not be recorded at all.
+    const onSaved = vi.fn();
+    vi.mocked(createStay).mockResolvedValue({} as never);
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={onSaved} />);
+
+    await userEvent.selectOptions(screen.getByTestId("stay-date-precision"), "NONE");
+    await userEvent.type(screen.getByTestId("stay-nights-input"), "3");
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    await waitFor(() => expect(createStay).toHaveBeenCalled());
+    const payload = vi.mocked(createStay).mock.calls[0][1];
+    expect(payload.checkIn).toBeNull();
+    expect(payload.checkOut).toBeNull();
+    expect(payload.datePrecision).toBe("NONE");
+    expect(payload.nights).toBe(3);
+  });
+
+  it("stores a month-precision stay on the first of the month, marked as such", () => {
+    // The column holds a full date either way; `datePrecision` is what stops
+    // every consumer from reading that placeholder as a real day.
+    const onSaved = vi.fn();
+    vi.mocked(createStay).mockResolvedValue({} as never);
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={onSaved} />);
+
+    return (async (): Promise<void> => {
+      await userEvent.selectOptions(screen.getByTestId("stay-date-precision"), "MONTH");
+      const monthInput = screen.getByLabelText(/check.?in/i);
+      fireEvent.change(monthInput, { target: { value: "2011-07" } });
+      await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+      await waitFor(() => expect(createStay).toHaveBeenCalled());
+      const payload = vi.mocked(createStay).mock.calls[0][1];
+      expect(payload.datePrecision).toBe("MONTH");
+      expect(payload.checkIn).toContain("2011-07-01");
+      // A month-precision stay has no second end to store.
+      expect(payload.checkOut).toBeNull();
+    })();
+  });
+
+  it("still demands both dates when the user claims exact ones", async () => {
+    // The precision is a claim. Saying "exact dates" and sending none is a
+    // record disagreeing with itself, so that one keeps its guard.
+    const onSaved = vi.fn();
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={onSaved} />);
+
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    expect(await screen.findByTestId("stay-editor-error")).toBeInTheDocument();
+    expect(createStay).not.toHaveBeenCalled();
   });
 
   it("shows a save error and does not call onSaved when checkIn/checkOut are missing", async () => {

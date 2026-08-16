@@ -7,6 +7,7 @@ import type { Flight } from "../../../../types";
 import type { CruiseStatsResponse } from "../../../api/stats";
 import type { Cruise } from "../../../../types/cruise";
 import type { Lodging, LodgingStats } from "../../../../types/lodging";
+import { EMPTY_LODGING_STATS_BLOCKS } from "../../../../types/lodgingStatsFixture";
 
 function makeFlight(overrides: Partial<Flight>): Flight {
   return {
@@ -248,6 +249,11 @@ const baseLodgingStats: LodgingStats = {
   avgRatingOverall: null,
   chainLoyaltyMax: 0,
   sameHotelRepeatMax: 0,
+  plannedStaysCount: 0,
+  plannedNights: 0,
+  plannedLodgingsCount: 0,
+  notedLodgingsCount: 0,
+  ...EMPTY_LODGING_STATS_BLOCKS,
 };
 
 function makeLodgingStay(overrides: Partial<Lodging["stays"][number]> = {}): Lodging["stays"][number] {
@@ -259,6 +265,8 @@ function makeLodgingStay(overrides: Partial<Lodging["stays"][number]> = {}): Lod
     bookingId: null,
     checkIn: "2024-06-01T00:00:00.000Z",
     checkOut: "2024-06-03T00:00:00.000Z",
+    datePrecision: "DAY" as const,
+    nights: null,
     status: "completed",
     roomNumber: null,
     roomCategory: null,
@@ -345,6 +353,8 @@ describe("adaptLodging", () => {
             makeLodgingStay({
               checkIn: "2024-06-01T00:00:00.000Z",
               checkOut: "2024-06-03T00:00:00.000Z",
+              datePrecision: "DAY" as const,
+              nights: null,
             }),
           ],
         }),
