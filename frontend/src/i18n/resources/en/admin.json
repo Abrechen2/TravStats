@@ -132,6 +132,10 @@
       "allowRegistration": {
         "label": "Allow public registration",
         "help": "When enabled, new users can register without an invitation link (not recommended)."
+      },
+      "betaFeatures": {
+        "label": "Show beta features",
+        "help": "Reveals unfinished features for everyone on this instance. For testing only — beta features may change or disappear again."
       }
     },
     "passkeys": {

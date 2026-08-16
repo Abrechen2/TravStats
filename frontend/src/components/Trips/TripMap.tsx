@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
+import MapGL, { useControl, useMap, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
+import { applyHoverCursor } from "../map/mapCursor";
 import { createMarkerTooltip } from "../map/markerTooltip";
 import { ArcLayer, PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
@@ -70,16 +71,24 @@ function DeckGLOverlay({
   onClick: (info: PickingInfo) => void;
   getTooltip: ReturnType<typeof createMarkerTooltip>;
 }): null {
+  const { current: map } = useMap();
+  // Issue #247. See map/mapCursor.ts for why this cannot be deck.gl's
+  // `getCursor`: the deck canvas has no pointer events, MapLibre owns the
+  // cursor.
+  const handleHover = (info: PickingInfo): void => {
+    applyHoverCursor(map, Boolean(info.object));
+  };
   const overlay = useControl<MapboxOverlay>(
     () =>
       new MapboxOverlay({
         layers,
         pickingRadius: 8,
         getTooltip,
+        onHover: handleHover,
       }),
     { position: "top-left" }
   );
-  overlay.setProps({ layers, pickingRadius: 8, onClick, getTooltip });
+  overlay.setProps({ layers, pickingRadius: 8, onClick, getTooltip, onHover: handleHover });
   return null;
 }
 

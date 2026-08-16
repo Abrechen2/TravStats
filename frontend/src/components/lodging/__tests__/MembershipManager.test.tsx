@@ -283,3 +283,51 @@ describe("MembershipManager", () => {
     );
   });
 });
+
+/**
+ * Found in the beta.3 UAT: untick the chain you are standing on, save, and the
+ * block resets to "no programmes yet". The row is NOT lost — it stays reachable
+ * through "Bonusprogramme verwalten" in the stay editor — but from the chain
+ * page it reads as deleted, and re-creating it then runs into the duplicate 409.
+ *
+ * The chain page resolves the membership through the link table filtered by
+ * THIS chain (routes/lodgingChains.ts), so the disappearance is correct
+ * behaviour with no warning attached. Say it before the save, not after.
+ */
+describe("MembershipManager — unticking the chain you are on", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(listMemberships).mockResolvedValue([existingMembership]);
+  });
+
+  it("warns that the programme will leave this page", async () => {
+    render(<MembershipManager scopeChain={marriottScope} />);
+    await waitFor(() => expect(listMemberships).toHaveBeenCalled());
+
+    await userEvent.click(await screen.findByText("common:buttons.edit"));
+    // Marriott is the chain this page is about, and it is currently ticked.
+    await userEvent.click(screen.getByRole("checkbox", { name: "Marriott" }));
+
+    expect(await screen.findByTestId("membership-leaves-chain")).toBeInTheDocument();
+  });
+
+  it("stays silent while the chain is still covered", async () => {
+    render(<MembershipManager scopeChain={marriottScope} />);
+    await waitFor(() => expect(listMemberships).toHaveBeenCalled());
+
+    await userEvent.click(await screen.findByText("common:buttons.edit"));
+    // Ticking a DIFFERENT chain must not raise the warning.
+    await userEvent.click(screen.getByRole("checkbox", { name: "Sheraton" }));
+
+    expect(screen.queryByTestId("membership-leaves-chain")).not.toBeInTheDocument();
+  });
+
+  it("says nothing on the unscoped manager, which lists every card anyway", async () => {
+    render(<MembershipManager />);
+    await waitFor(() => expect(listMemberships).toHaveBeenCalled());
+
+    await userEvent.click(await screen.findByText("common:buttons.edit"));
+
+    expect(screen.queryByTestId("membership-leaves-chain")).not.toBeInTheDocument();
+  });
+});

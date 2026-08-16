@@ -13,6 +13,8 @@ export interface InstanceSettings {
   instanceName: string;
   maxUsers: number;
   allowRegistration: boolean;
+  /** Instance-wide gate for unfinished features — see config/betaFeatures.ts. */
+  betaFeaturesEnabled: boolean;
   frontendUrl: string | null;
   publicUrl: string | null;
   lanUrl: string | null;
@@ -45,6 +47,7 @@ export interface InstanceSettingsPatch {
   instanceName?: string;
   maxUsers?: number;
   allowRegistration?: boolean;
+  betaFeaturesEnabled?: boolean;
   frontendUrl?: string;
   publicUrl?: string;
   lanUrl?: string;

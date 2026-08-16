@@ -196,7 +196,8 @@
     "saveError": "Bonusprogramm konnte nicht gespeichert werden",
     "duplicateError": "Dieses Programm ist bereits hinterlegt",
     "deleteError": "Bonusprogramm konnte nicht gelöscht werden",
-    "extendExisting": "„{{name}}“ stattdessen um diese Kette erweitern"
+    "extendExisting": "„{{name}}“ stattdessen um diese Kette erweitern",
+    "leavesThisChain": "Diese Kette ist nicht mehr angehakt: nach dem Speichern erscheint das Programm auf dieser Kettenseite nicht mehr. Es bleibt erhalten und ist weiterhin über „Bonusprogramme verwalten\" erreichbar."
   },
   "chainDetail": {
     "loading": "Kette wird geladen …",

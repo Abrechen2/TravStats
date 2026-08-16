@@ -30,6 +30,7 @@ const SETTINGS_FIXTURE = {
   lanUrl: null,
   webauthnRpId: null,
   webauthnOrigins: [],
+  betaFeaturesEnabled: false,
   photonUrl: "https://photon.komoot.io",
   nominatimUrl: "https://nominatim.openstreetmap.org",
 };

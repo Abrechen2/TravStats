@@ -9,6 +9,12 @@ interface Settings {
   instanceName: string;
   maxUsers: number;
   allowRegistration: boolean;
+  /**
+   * Instance-wide gate for unfinished features (see config/betaFeatures.ts).
+   * Instance state, never persisted client-side — the settings store
+   * deliberately leaves it out of its `partialize`.
+   */
+  betaFeaturesEnabled: boolean;
   frontendUrl: string | null;
   publicUrl: string | null;
   lanUrl: string | null;
@@ -53,6 +59,7 @@ export default function InstanceSettings(): JSX.Element {
     instanceName: "TravStats",
     maxUsers: 10,
     allowRegistration: false,
+    betaFeaturesEnabled: false,
     frontendUrl: "",
     publicUrl: "",
     lanUrl: "",
@@ -71,6 +78,7 @@ export default function InstanceSettings(): JSX.Element {
           instanceName: settings.instanceName,
           maxUsers: settings.maxUsers,
           allowRegistration: settings.allowRegistration,
+          betaFeaturesEnabled: settings.betaFeaturesEnabled,
           frontendUrl: settings.frontendUrl ?? "",
           publicUrl: settings.publicUrl ?? "",
           lanUrl: settings.lanUrl ?? "",
@@ -102,6 +110,7 @@ export default function InstanceSettings(): JSX.Element {
         instanceName: form.instanceName.trim(),
         maxUsers: form.maxUsers,
         allowRegistration: form.allowRegistration,
+        betaFeaturesEnabled: form.betaFeaturesEnabled,
         frontendUrl: (form.frontendUrl ?? "").trim(),
         publicUrl: (form.publicUrl ?? "").trim(),
         lanUrl: (form.lanUrl ?? "").trim(),
@@ -112,6 +121,7 @@ export default function InstanceSettings(): JSX.Element {
         instanceName: settings.instanceName,
         maxUsers: settings.maxUsers,
         allowRegistration: settings.allowRegistration,
+        betaFeaturesEnabled: settings.betaFeaturesEnabled,
         frontendUrl: settings.frontendUrl ?? "",
         publicUrl: settings.publicUrl ?? "",
         lanUrl: settings.lanUrl ?? "",
@@ -310,6 +320,21 @@ export default function InstanceSettings(): JSX.Element {
           <span className="font-medium">{t("admin:instance.fields.allowRegistration.label")}</span>
           <span className="block text-xs text-(--text-muted)">
             {t("admin:instance.fields.allowRegistration.help")}
+          </span>
+        </span>
+      </label>
+
+      <label className="flex items-start gap-3 text-sm text-(--text-primary)">
+        <input
+          type="checkbox"
+          checked={form.betaFeaturesEnabled}
+          onChange={(e) => setForm({ ...form, betaFeaturesEnabled: e.target.checked })}
+          className="mt-1 h-4 w-4 rounded-sm border-(--border)"
+        />
+        <span>
+          <span className="font-medium">{t("admin:instance.fields.betaFeatures.label")}</span>
+          <span className="block text-xs text-(--text-muted)">
+            {t("admin:instance.fields.betaFeatures.help")}
           </span>
         </span>
       </label>
