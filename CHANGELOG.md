@@ -116,6 +116,24 @@ authentication and passkeys arrive alongside.
   statistics, where figures belong.
 
 ### Fixed
+- **A country field that names no country is filled from the pin.** A booking
+  confirmation that prints only "Downtown Dubai" left a city standing in the
+  country filter as its own country — no flag, one country too many in every
+  count. Emptying a field deliberately still keeps it empty, and a country name
+  the resolver knows is never overruled by a lookup.
+- **The parser judges what it is looking at, instead of only transcribing it.**
+  The kind of place (a campground is not a hotel), the group behind a brand
+  ("Courtyard by Marriott" -> Marriott), and the country a city sits in are now
+  asked for. Measured on real confirmations: six campgrounds recognised as
+  campsites, and US bookings that used to store "TX" — a state — now store the
+  country.
+- **An unknown chain is offered, never created behind your back.** The import
+  used to add any chain name it was handed, so a single run could mint entries
+  nobody chose. The preview now flags a chain the catalogue does not know and
+  asks once.
+- **The lodging filter lists countries, not spellings.** One entry covers
+  "Deutschland" and "Germany", named in the reader's language.
+
 - **A hotel confirmation could not be read at all once a flight had been
   parsed before it.** The lodging and cruise parsers asked the language model
   for one context size and the flight parser for another; a model is loaded per
