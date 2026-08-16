@@ -7,6 +7,7 @@ import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { Trip } from "../../types";
 import type { Lodging } from "../../types/lodging";
 import { buildLodgingPins } from "../layers/lodgingPinsLayer";
+import { stayNights } from "../../lib/lodgingDateDisplay";
 import { declutterByDistance, pickLabelled } from "../map/labelPriority";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 import { computeBbox } from "../../utils/mapAnimationHelpers";
@@ -226,12 +227,10 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
     for (const stay of trip.lodgingStays ?? []) {
       const house = stay.lodging;
       if (!house || house.lat == null || house.lon == null) continue;
-      const nights = Math.max(
-        0,
-        Math.round(
-          (Date.parse(stay.checkOut) - Date.parse(stay.checkIn)) / 86_400_000
-        ) || 0
-      );
+      // Via the shared resolver: an undated stay may still carry an explicit
+      // night count, and a month-precision one must not have its placeholder
+      // dates differenced.
+      const nights = stayNights(stay);
       const seen = byHouse.get(house.id);
       if (seen) {
         seen.stays += 1;

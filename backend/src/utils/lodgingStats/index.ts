@@ -16,10 +16,11 @@ import {
   classifyStay,
   type LodgingCountState,
 } from "../../shared/lodgingCounting";
+import { resolveStayTiming, type StayTiming } from "../../shared/lodgingTiming";
 import { computeGeoStats } from "./geography";
 import { computeLoyaltyStats } from "./loyalty";
 import { computePriceStats, type StayWithNights } from "./money";
-import { walkNights } from "./nights";
+import { bucketNights, walkNights } from "./nights";
 import { computeRatingStats } from "./quality";
 import { computeRhythmStats } from "./rhythm";
 import type { LodgingRecord, LodgingStats, LodgingStayData } from "./types";
@@ -74,6 +75,9 @@ export function calculateLodgingStats(
   const activeStays = stays.filter((s) => stayStates.get(s) === "visited");
   const plannedStays = stays.filter((s) => stayStates.get(s) === "planned");
 
+  const timings = new Map<LodgingStayData, StayTiming>();
+  for (const s of stays) timings.set(s, resolveStayTiming(s));
+
   const lodgingIds = new Set<string>();
   const chainIds = new Set<number>();
   const cities = new Set<string>();
@@ -100,6 +104,9 @@ export function calculateLodgingStats(
   let perfectStays = 0;
   let enduredStays = 0;
   let oneNightStays = 0;
+  let undatedStays = 0;
+  let undatedNights = 0;
+  let staysWithUnknownLength = 0;
 
   for (const stay of activeStays) {
     lodgingIds.add(stay.lodgingId);
@@ -140,10 +147,20 @@ export function calculateLodgingStats(
       }
     }
 
-    const stayNights = walkNights(stay.checkIn, stay.checkOut, nightsByYear, nightsByMonth);
+    // One resolution decides what this stay's dates are good for; nothing
+    // below reads checkIn/checkOut to make that call again.
+    const timing = timings.get(stay) as StayTiming;
+    const stayNights = timing.walkable
+      ? walkNights(stay.checkIn!, stay.checkOut!, nightsByYear, nightsByMonth)
+      : bucketNights(timing, nightsByYear, nightsByMonth);
+    if (timing.precision === "NONE") {
+      undatedStays += 1;
+      undatedNights += stayNights;
+    }
+    if (!timing.nightsKnown) staysWithUnknownLength += 1;
     totalNights += stayNights;
     if (stayNights > longestStayNights) longestStayNights = stayNights;
-    withNights.push({ stay, nights: stayNights });
+    withNights.push({ stay, nights: stayNights, timing });
 
     if (stay.isAwardStay) awardNights += stayNights;
     if (stayNights === 1) oneNightStays += 1;
@@ -173,7 +190,10 @@ export function calculateLodgingStats(
   // June must not appear in the same series as a night actually slept.
   let plannedNights = 0;
   for (const stay of plannedStays) {
-    plannedNights += walkNights(stay.checkIn, stay.checkOut, {}, {});
+    const timing = timings.get(stay) as StayTiming;
+    plannedNights += timing.walkable
+      ? walkNights(stay.checkIn!, stay.checkOut!, {}, {})
+      : timing.nights;
   }
 
   // When the caller supplies the user's full lodgings list, lodgingsCount/
@@ -232,6 +252,9 @@ export function calculateLodgingStats(
     perfectStays,
     enduredStays,
     oneNightStays,
+    undatedStays,
+    undatedNights,
+    staysWithUnknownLength,
     price: computePriceStats(withNights, currentBaseCurrency, awardNights),
     ratings: computeRatingStats(withNights, currentBaseCurrency),
     geo: computeGeoStats(withNights),

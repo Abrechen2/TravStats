@@ -46,6 +46,12 @@ export interface CountableLodging {
  * reached it. Nights already slept are therefore not yet in the totals; they
  * arrive the morning the stay ends. Counting a partial stay would mean the
  * figure changes every day on its own, which no other domain does.
+ *
+ * A stay with NO dates falls back to its stored status, because
+ * `deriveLodgingStatus` has nothing to derive from — and that is the right
+ * answer, not a gap: an undated stay is one the user is recording after the
+ * fact, so the stored "completed" is a statement rather than a stale cache.
+ * The default on the column is "completed" for exactly that reason.
  */
 export function classifyStay(stay: CountableStay, now?: Date): LodgingCountState {
   const derived = deriveLodgingStatus({

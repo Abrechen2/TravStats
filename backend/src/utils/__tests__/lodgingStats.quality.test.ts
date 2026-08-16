@@ -15,6 +15,8 @@ const stay = (o: Partial<LodgingStayData>): LodgingStayData => ({
   lon: 13.38,
   checkIn: new Date("2024-05-14T00:00:00Z"),
   checkOut: new Date("2024-05-16T00:00:00Z"),
+  datePrecision: "DAY",
+  nights: null,
   status: "completed",
   totalPriceBase: 200,
   fxBaseCurrency: "EUR",

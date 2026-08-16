@@ -67,7 +67,7 @@ function toPlace(entry: StayWithNights, lat: number, lon: number): LodgingPlace 
     country: entry.stay.country,
     lat,
     lon,
-    checkIn: entry.stay.checkIn.toISOString(),
+    checkIn: entry.stay.checkIn?.toISOString() ?? null,
   };
 }
 

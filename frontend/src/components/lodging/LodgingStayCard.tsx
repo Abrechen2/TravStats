@@ -1,7 +1,11 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatDateInTimezone } from "../../lib/dateUtils";
-import { formatRatingText, formatStayPriceDisplay, nightsBetween } from "../../lib/lodgingFormat";
+import { formatRatingText, formatStayPriceDisplay } from "../../lib/lodgingFormat";
+import {
+  formatStayPeriod,
+  hasUnknownLength,
+  stayNights,
+} from "../../lib/lodgingDateDisplay";
 import type { StayMembershipSource } from "../../shared/membershipDerivation";
 import type { LodgingStay } from "../../types/lodging";
 
@@ -42,7 +46,8 @@ export function LodgingStayCard({
   membershipSource,
 }: LodgingStayCardProps): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "common"]);
-  const nights = nightsBetween(stay.checkIn, stay.checkOut);
+  const nights = stayNights(stay);
+  const period = formatStayPeriod(stay, i18n.language, t);
   const { original, fxReadout, marker } = formatStayPriceDisplay(
     {
       totalPrice: stay.totalPrice,
@@ -85,10 +90,14 @@ export function LodgingStayCard({
     >
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-semibold text-[var(--text-primary)]">
-          {formatDateInTimezone(stay.checkIn, "UTC")} – {formatDateInTimezone(stay.checkOut, "UTC")}
+          {period.label}
         </span>
         <span className="text-xs text-[var(--text-muted)]">
-          {t("lodging:field.nightsCount", { count: nights })}
+          {/* A stay nobody knows the length of shows that, rather than "0 nights" —
+              which reads as a same-day stay somebody actually recorded. */}
+          {hasUnknownLength(stay)
+            ? t("lodging:period.unknownLength")
+            : t("lodging:field.nightsCount", { count: nights })}
           {stay.roomCategory ? ` · ${stay.roomCategory}` : ""}
           {stay.roomNumber ? ` · ${t("lodging:field.room")} ${stay.roomNumber}` : ""}
         </span>

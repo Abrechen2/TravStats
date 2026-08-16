@@ -1490,6 +1490,8 @@ router.get(
         lon: s.lodging.lon,
         checkIn: s.checkIn,
         checkOut: s.checkOut,
+        datePrecision: s.datePrecision,
+        nights: s.nights,
         status: s.status,
         totalPriceBase: s.totalPriceBase,
         fxBaseCurrency: s.fxBaseCurrency,
@@ -1837,7 +1839,13 @@ router.get(
       const [stays, cruises, flights, trips] = await Promise.all([
         prisma.lodgingStay.findMany({
           where: { userId },
-          select: { status: true, checkIn: true, checkOut: true },
+          select: {
+            status: true,
+            checkIn: true,
+            checkOut: true,
+            datePrecision: true,
+            nights: true,
+          },
         }),
         prisma.cruise.findMany({
           where: { userId },
@@ -1864,6 +1872,8 @@ router.get(
                 status: true,
                 checkIn: true,
                 checkOut: true,
+                datePrecision: true,
+                nights: true,
                 totalPrice: true,
                 currency: true,
                 totalPriceBase: true,

@@ -12,6 +12,8 @@
  * get the same snapshot treatment, "1.240 EUR + 320 CHF" is the honest answer
  * and one number would be a fabricated one.
  */
+import { resolveStayTiming } from "../../shared/lodgingTiming";
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface TripAccountInput {
@@ -26,8 +28,10 @@ export interface TripAccountInput {
   photoCount: number;
   stays: {
     status: string;
-    checkIn: Date;
-    checkOut: Date;
+    checkIn: Date | null;
+    checkOut: Date | null;
+    datePrecision: string;
+    nights: number | null;
     totalPrice: number | null;
     currency: string | null;
     totalPriceBase: number | null;
@@ -112,7 +116,11 @@ export function buildTripAccount(trips: TripAccountInput[]): TripAccount {
       if (stay.totalPriceBase !== null && stay.fxBaseCurrency !== null) {
         addAmount(spendBaseByCurrency, stay.fxBaseCurrency, stay.totalPriceBase);
       }
-      for (let c = dayKey(stay.checkIn); c < dayKey(stay.checkOut); c += DAY_MS) covered.add(c);
+      // Coverage is about WHICH days are accounted for, so an undated stay
+      // cannot cover one — it is not known which. Its money still counts:
+      // that question needs no calendar (owner rule, 2026-08-16).
+      if (!resolveStayTiming(stay).walkable) continue;
+      for (let c = dayKey(stay.checkIn!); c < dayKey(stay.checkOut!); c += DAY_MS) covered.add(c);
     }
     for (const cruise of trip.cruises) {
       if (cruise.status === "cancelled") continue;
