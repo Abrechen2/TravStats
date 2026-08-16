@@ -14,6 +14,7 @@ import { seedsPartA } from './achievementSeeds/partA';
 import { seedsPartB } from './achievementSeeds/partB';
 import { seedsPartC } from './achievementSeeds/partC';
 import { seedsPartD } from './achievementSeeds/partD';
+import { seedsPartE } from './achievementSeeds/partE';
 
 export interface AchievementDefinition {
   code: string;
@@ -34,6 +35,7 @@ export const achievements: AchievementDefinition[] = [
   ...seedsPartB,
   ...seedsPartC,
   ...seedsPartD,
+  ...seedsPartE,
 ];
 
 /**

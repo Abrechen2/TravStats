@@ -565,5 +565,26 @@
     "bestAirline": "Pünktlichste Airline",
     "worstAirline": "Unpünktlichste Airline",
     "worstRoute": "Unpünktlichste Strecke"
+  },
+  "travelAccount": {
+    "title": "Wo du geschlafen hast",
+    "subtitle": "Jedes Jahr vollständig aufgeteilt — Hotel, See, Flugzeug, zuhause. Der Balken ist immer ein ganzes Jahr.",
+    "contested": "{{count}} Nächte von zwei Bereichen beansprucht und der Kabine zugeschlagen",
+    "contested_one": "{{count}} Nacht von zwei Bereichen beansprucht und der Kabine zugeschlagen",
+    "contested_other": "{{count}} Nächte von zwei Bereichen beansprucht und der Kabine zugeschlagen",
+    "hotelNights": "Unterkunft",
+    "seaNights": "An Bord",
+    "airNights": "Im Flugzeug",
+    "homeNights": "Zuhause",
+    "tripsCovered": "Lückenlose Reisen",
+    "tripsCoveredDesc": "Reisen, bei denen für jeden Reisetag festgehalten ist, wo du warst",
+    "uncoveredDays": "Tage ohne Nachweis",
+    "uncoveredDaysDesc": "Reisetage, an denen weder Unterkunft noch Schiff noch Nachtflug erfasst ist",
+    "avgTripDays": "Ø Reisedauer",
+    "avgTripDaysDesc": "Längste Reise: {{count}} Tage",
+    "avgTripDaysDesc_one": "Längste Reise: {{count}} Tag",
+    "avgTripDaysDesc_other": "Längste Reise: {{count}} Tage",
+    "journalEntries": "Tagebucheinträge",
+    "noMoods": "Noch keine Stimmung erfasst"
   }
 }

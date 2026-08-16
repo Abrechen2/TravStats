@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isCurrencyCode } from "../shared/currencies";
 import { receiptUrlValidator } from "./receiptUrl";
+import { LODGING_DATE_PRECISIONS } from "../shared/lodgingTiming";
 
 export const LODGING_TYPES = ["hotel", "campsite", "guesthouse", "apartment", "hostel"] as const;
 export const BOARD_TYPES = [
@@ -66,8 +67,17 @@ export const updateLodgingSchema = baseLodgingSchema
   });
 
 const baseStaySchema = z.object({
-  checkIn: isoDateTimeRequired,
-  checkOut: isoDateTimeRequired,
+  // Nullable since 2.7: a hotel you remember but cannot date is still a place
+  // you slept, and rating/price/board/room/membership all live on the STAY, so
+  // without a dateless stay those had nowhere to go. `datePrecision` says what
+  // the dates that ARE here actually mean — see shared/lodgingTiming.ts.
+  checkIn: isoDateTimeRequired.nullable().optional(),
+  checkOut: isoDateTimeRequired.nullable().optional(),
+  datePrecision: z.enum(LODGING_DATE_PRECISIONS).optional(),
+  // Explicit night count, for when the dates cannot supply one. "Three nights,
+  // no idea when" and "July 2011, no idea how long" are different gaps and one
+  // field cannot express both.
+  nights: z.number().int().min(0).max(3650).nullable().optional(),
   status: z.enum(STAY_STATUSES).default("completed"),
   tripId: z.string().uuid().nullable().optional(),
   bookingId: z.string().uuid().nullable().optional(),
@@ -109,10 +119,29 @@ const baseStaySchema = z.object({
 });
 
 export const createStaySchema = baseStaySchema
-  .refine((d) => new Date(d.checkOut).getTime() >= new Date(d.checkIn).getTime(), {
-    message: "checkOut must not precede checkIn",
-    path: ["checkOut"],
+  .refine(
+    (d) =>
+      d.checkIn == null ||
+      d.checkOut == null ||
+      new Date(d.checkOut).getTime() >= new Date(d.checkIn).getTime(),
+    { message: "checkOut must not precede checkIn", path: ["checkOut"] },
+  )
+  // A precision is a claim about dates that are there. Saying "DAY" with no
+  // date, or "NONE" while sending one, are both a record disagreeing with
+  // itself — and `resolveStayTiming` would quietly override either, which is
+  // worse than refusing the write.
+  .refine((d) => !(d.datePrecision === "NONE" && (d.checkIn != null || d.checkOut != null)), {
+    message: "datePrecision NONE cannot carry a date",
+    path: ["datePrecision"],
   })
+  .refine(
+    (d) =>
+      d.checkIn != null ||
+      d.checkOut != null ||
+      d.datePrecision === undefined ||
+      d.datePrecision === "NONE",
+    { message: "a stay with no dates must use datePrecision NONE", path: ["datePrecision"] },
+  )
   // An amount with no unit is not a price. Without this, `currency` simply
   // stayed absent and the NOT-NULL column's 'EUR' default answered for it —
   // so an 11,662 AED stay entered through the API was stored, and totalled,

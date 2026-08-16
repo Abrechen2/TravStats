@@ -27,6 +27,11 @@ const defaultStats: LodgingStats = {
   avgRatingOverall: null,
   chainLoyaltyMax: 0,
   sameHotelRepeatMax: 1,
+  plannedStaysCount: 0,
+  plannedNights: 0,
+  plannedLodgingsCount: 0,
+  notedLodgingsCount: 0,
+  ...EMPTY_LODGING_STATS_BLOCKS,
 };
 
 vi.mock("../../lib/api/lodging", () => ({
@@ -58,6 +63,7 @@ vi.unmock("../../store/settingsStore");
 // Imported after the mocks above so the module graph picks them up.
 import LodgingListPage from "../LodgingListPage";
 import { useSettingsStore } from "../../store/settingsStore";
+import { EMPTY_LODGING_STATS_BLOCKS } from "../../types/lodgingStatsFixture";
 
 /**
  * The FX snapshot half of a CONVERTED stay.
@@ -84,6 +90,8 @@ function makeStay(overrides: Partial<LodgingStay> = {}): LodgingStay {
     bookingId: null,
     checkIn: "2024-01-01T00:00:00.000Z",
     checkOut: "2024-01-02T00:00:00.000Z",
+    datePrecision: "DAY" as const,
+    nights: null,
     status: "completed",
     roomNumber: null,
     roomCategory: null,

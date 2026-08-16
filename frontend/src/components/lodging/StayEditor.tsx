@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import {
+  LODGING_DATE_PRECISIONS,
+  type LodgingDatePrecision,
+} from "../../shared/lodgingTiming";
 import { useSettingsStore } from "../../store/settingsStore";
 import { createStay, updateStay, listMemberships } from "../../lib/api/lodging";
 import { tripsApi } from "../../lib/api";
@@ -74,6 +78,14 @@ const splitCsv = (v: string): string[] =>
  * `<Section>` blocks). Star pickers and the price/FX block are extracted
  * into their own files to keep this one under the project's file-size limit.
  */
+/** "2011-07" -> "2011-07-01", "2011" -> "2011-01-01"; a day passes through. */
+function precisionToIsoDay(raw: string, precision: LodgingDatePrecision): string {
+  if (!raw) return "";
+  if (precision === "MONTH") return `${raw}-01`;
+  if (precision === "YEAR") return `${raw.padStart(4, "0")}-01-01`;
+  return raw;
+}
+
 export function StayEditor({
   mode,
   lodgingId,
@@ -87,6 +99,17 @@ export function StayEditor({
 
   const [checkIn, setCheckIn] = useState<string>(toDateInput(stay?.checkIn));
   const [checkOut, setCheckOut] = useState<string>(toDateInput(stay?.checkOut));
+  // How much of the date the user actually knows. A hotel from 2011 you cannot
+  // date is still a place you slept, and rating/price/board all live on the
+  // stay — so the alternative to this control was not entering the stay at all.
+  const [datePrecision, setDatePrecision] = useState<LodgingDatePrecision>(
+    stay?.datePrecision ?? "DAY"
+  );
+  // Only consulted when the dates cannot supply a length. Kept as text so a
+  // half-typed value does not become 0.
+  const [nightsText, setNightsText] = useState<string>(
+    stay?.nights != null ? String(stay.nights) : ""
+  );
   // Cancellation is the ONLY status the user decides, so it is the only one
   // held in state. Keeping a full `status` here is what let the editor save a
   // stale "completed" default while the UI displayed the correctly derived
@@ -162,10 +185,13 @@ export function StayEditor({
   // stay in sync, and that effect is exactly where such bugs live.
   // What the backend will store for these dates. Shown next to the cancelled
   // checkbox so the derived state is visible rather than a surprise after save.
+  // With no dates the deriver has nothing to work from and returns `current`.
+  // "completed" is the right default there: an undated stay is one being
+  // recorded after the fact.
   const derivedStatus = deriveLodgingStatus({
-    checkIn: checkIn ? new Date(checkIn) : null,
-    checkOut: checkOut ? new Date(checkOut) : null,
-    current: "scheduled",
+    checkIn: datePrecision === "NONE" || !checkIn ? null : new Date(checkIn),
+    checkOut: datePrecision !== "DAY" || !checkOut ? null : new Date(checkOut),
+    current: datePrecision === "NONE" ? "completed" : "scheduled",
   }) as StayStatus;
   // The single value the save path sends — no second source to drift from.
   const effectiveStatus: StayStatus = isCancelled ? "cancelled" : derivedStatus;
@@ -210,8 +236,31 @@ export function StayEditor({
   const resolvedMembershipName =
     memberships.find((m) => m.id === resolvedMembership.membershipId)?.programName ?? null;
 
+  // A month input speaks "YYYY-MM" and a year input a bare number, but the
+  // column stores a full date either way — the FIRST of the period, marked as
+  // a placeholder by `datePrecision`. These two convert between the two
+  // vocabularies in one place so the form and the payload cannot disagree.
+  const precisionInputValue =
+    datePrecision === "MONTH"
+      ? checkIn.slice(0, 7)
+      : datePrecision === "YEAR"
+        ? checkIn.slice(0, 4)
+        : checkIn;
+
+  const parsedNights =
+    nightsText.trim() && Number.isFinite(Number.parseInt(nightsText, 10))
+      ? Math.max(0, Number.parseInt(nightsText, 10))
+      : null;
+
   const submit = async (): Promise<void> => {
-    if (!checkIn || !checkOut) {
+    // Only exact dates still demand both ends. Every other precision is a
+    // statement that the user does NOT have them, so demanding them would be
+    // refusing the very data the field was added for.
+    if (datePrecision === "DAY" && (!checkIn || !checkOut)) {
+      setError(t("lodging:stayEditor.datesRequired"));
+      return;
+    }
+    if ((datePrecision === "MONTH" || datePrecision === "YEAR") && !checkIn) {
       setError(t("lodging:stayEditor.datesRequired"));
       return;
     }
@@ -225,8 +274,14 @@ export function StayEditor({
     setError(null);
     try {
       const input: StayInput = {
-        checkIn: fromDateInput(checkIn),
-        checkOut: fromDateInput(checkOut),
+        // At NONE precision both dates are cleared outright rather than left
+        // as whatever the form last held — a hidden date would be stored and
+        // then bucketed as if the user had meant it.
+        checkIn: datePrecision === "NONE" ? null : checkIn ? fromDateInput(checkIn) : null,
+        checkOut:
+          datePrecision === "DAY" && checkOut ? fromDateInput(checkOut) : null,
+        datePrecision,
+        nights: parsedNights,
         status: effectiveStatus,
         // `null` (not `undefined`) for every clearable field below — an
         // omitted key means "leave it alone" to the backend PATCH handler,
@@ -306,24 +361,74 @@ export function StayEditor({
 
         <div className="p-6">
           <Section title={t("lodging:stayEditor.datesSection")}>
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                type="date"
-                aria-label={t("lodging:field.checkIn")}
-                className={INPUT_CLASS}
-                style={DARK_PICKER_STYLE}
-                value={checkIn}
-                onChange={(e): void => setCheckIn(e.target.value)}
-              />
-              <input
-                type="date"
-                aria-label={t("lodging:field.checkOut")}
-                className={INPUT_CLASS}
-                style={DARK_PICKER_STYLE}
-                value={checkOut}
-                onChange={(e): void => setCheckOut(e.target.value)}
-              />
-            </div>
+            {/* The precision picker comes FIRST because it decides which of the
+                fields below make sense. Offering two date inputs and then
+                refusing the save is the behaviour this replaces. */}
+            <label className="mb-1 block text-xs text-[var(--text-muted)]">
+              {t("lodging:period.precision.label")}
+            </label>
+            <select
+              aria-label={t("lodging:period.precision.label")}
+              data-testid="stay-date-precision"
+              className={INPUT_CLASS}
+              value={datePrecision}
+              onChange={(e): void => setDatePrecision(e.target.value as LodgingDatePrecision)}
+            >
+              {LODGING_DATE_PRECISIONS.map((p) => (
+                <option key={p} value={p}>
+                  {t(`lodging:period.precision.${p}`)}
+                </option>
+              ))}
+            </select>
+            <p className="mb-3 mt-1 text-xs text-[var(--text-muted)]">
+              {t(`lodging:period.precision.${datePrecision}Hint`)}
+            </p>
+
+            {datePrecision !== "NONE" && (
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type={datePrecision === "MONTH" ? "month" : datePrecision === "YEAR" ? "number" : "date"}
+                  aria-label={t("lodging:field.checkIn")}
+                  className={INPUT_CLASS}
+                  style={DARK_PICKER_STYLE}
+                  value={precisionInputValue}
+                  onChange={(e): void => setCheckIn(precisionToIsoDay(e.target.value, datePrecision))}
+                />
+                {datePrecision === "DAY" && (
+                  <input
+                    type="date"
+                    aria-label={t("lodging:field.checkOut")}
+                    className={INPUT_CLASS}
+                    style={DARK_PICKER_STYLE}
+                    value={checkOut}
+                    onChange={(e): void => setCheckOut(e.target.value)}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Only asked for where the dates cannot answer it. At DAY
+                precision with both ends the dates win anyway, so a field here
+                would be a second answer to a settled question. */}
+            {datePrecision !== "DAY" && (
+              <div className="mt-3">
+                <label className="mb-1 block text-xs text-[var(--text-muted)]">
+                  {t("lodging:period.nightsField")}
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  aria-label={t("lodging:period.nightsField")}
+                  data-testid="stay-nights-input"
+                  className={INPUT_CLASS}
+                  value={nightsText}
+                  onChange={(e): void => setNightsText(e.target.value)}
+                />
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  {t("lodging:period.nightsHint")}
+                </p>
+              </div>
+            )}
             {/* Status follows the dates (Alex, Discord 2026-07-12) — the same
                 rule 2.5.0 applied to flights, cruises and trips. Only the
                 cancellation is a human decision, so only it is a control. The

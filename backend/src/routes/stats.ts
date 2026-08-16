@@ -14,6 +14,10 @@ import {
 } from '../utils/statsCalculator';
 import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from '../utils/cruiseStats';
 import { calculateLodgingStats, type LodgingStayData, type LodgingRecord } from '../utils/lodgingStats';
+import {
+  buildMembershipContext,
+  resolveStayProgramme,
+} from '../services/lodging/stayMembership';
 import { normalizeHistory } from '../utils/homeAirport';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
@@ -32,6 +36,8 @@ import {
   type DatedRow,
 } from '../utils/stats/timeseries';
 import { computeDedupedTotalCost } from '../utils/stats/dedupedCost';
+import { buildTravelAccount } from '../services/stats/travelAccount';
+import { buildTripAccount } from '../services/stats/tripAccount';
 
 const router = Router();
 
@@ -1427,14 +1433,21 @@ router.get(
         return;
       }
 
-      const [stays, lodgings, settings] = await Promise.all([
+      const [stays, lodgings, settings, memberships] = await Promise.all([
         prisma.lodgingStay.findMany({
           where: { userId },
-          include: { lodging: true },
+          // The chain is joined for its NAME: the price and rating rankings
+          // are read by a human, and a chain id is not a label.
+          include: { lodging: { include: { chain: true } } },
         }),
         // Every lodging the user HAS, including ones with no stay yet — a
         // hotel added but never checked into must still count toward
         // lodgingsCount/chainsUnique (owner decision, finding 1).
+        //
+        // Loaded UNFILTERED on purpose: `visited === false` rows are needed
+        // here, not to be counted as visits but to be counted as bookmarks
+        // (`notedLodgingsCount`). Filtering them out in the query would make
+        // that figure unreachable without a second round-trip.
         prisma.lodging.findMany({ where: { userId } }),
         // Current base currency — spendBaseTotal is filtered against it so a
         // stay snapshotted under an OLDER base currency never gets silently
@@ -1443,32 +1456,57 @@ router.get(
           where: { userId },
           select: { baseCurrency: true },
         }),
+        // Which card covered which stay is DERIVED, not stored: a membership
+        // attached to a chain covers every stay at that chain without the user
+        // restating it per stay. The link tables are what make that derivable.
+        prisma.lodgingMembership.findMany({
+          where: { userId },
+          include: { chains: true, lodgings: true },
+        }),
       ]);
       const baseCurrency = settings?.baseCurrency ?? 'EUR';
+      const membershipContext = buildMembershipContext(memberships);
       const lodgingRecords: LodgingRecord[] = lodgings.map((l) => ({
         id: l.id,
         chainId: l.chainId,
         type: l.type,
         country: l.country,
         city: l.city,
+        visited: l.visited,
       }));
 
-      const stayData: LodgingStayData[] = stays.map((s) => ({
+      const stayData: LodgingStayData[] = stays.map((s) => {
+        const programme = resolveStayProgramme(s, s.lodging.chainId, membershipContext);
+        return {
         lodgingId: s.lodgingId,
+        lodgingName: s.lodging.name,
         type: s.lodging.type,
         country: s.lodging.country,
         city: s.lodging.city,
         chainId: s.lodging.chainId,
+        chainName: s.lodging.chain?.name ?? null,
+        stars: s.lodging.stars,
+        lat: s.lodging.lat,
+        lon: s.lodging.lon,
         checkIn: s.checkIn,
         checkOut: s.checkOut,
+        datePrecision: s.datePrecision,
+        nights: s.nights,
         status: s.status,
         totalPriceBase: s.totalPriceBase,
         fxBaseCurrency: s.fxBaseCurrency,
         currency: s.currency,
         totalPrice: s.totalPrice,
+        board: s.board,
         isAwardStay: s.isAwardStay,
         ratingOverall: s.ratingOverall,
-      }));
+        ratingRoom: s.ratingRoom,
+        ratingBreakfast: s.ratingBreakfast,
+        ratingService: s.ratingService,
+          programName: programme.programName,
+          membershipTier: programme.tier,
+        };
+      });
 
       // Defensive parity with the cruise/flight stats endpoints: a
       // calculation error on one malformed stay must not 500 the whole
@@ -1779,5 +1817,115 @@ router.get('/punctuality', async (req: AuthRequest, res: Response, next: NextFun
     next(error);
   }
 });
+
+/**
+ * GET /api/v1/stats/travel-account — the cross-domain night account plus the
+ * per-trip rollup.
+ *
+ * One endpoint for both because a screen that asks "where did I sleep this
+ * year" invariably asks "and which trip has a gap" next, and two round-trips
+ * for one question is two chances to show half an answer.
+ */
+router.get(
+  '/travel-account',
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const [stays, cruises, flights, trips] = await Promise.all([
+        prisma.lodgingStay.findMany({
+          where: { userId },
+          select: {
+            status: true,
+            checkIn: true,
+            checkOut: true,
+            datePrecision: true,
+            nights: true,
+          },
+        }),
+        prisma.cruise.findMany({
+          where: { userId },
+          select: { status: true, startDate: true, endDate: true },
+        }),
+        prisma.flight.findMany({
+          where: { userId },
+          select: { status: true, departureTime: true, arrivalTime: true },
+        }),
+        prisma.trip.findMany({
+          where: { userId },
+          select: {
+            id: true,
+            name: true,
+            startDate: true,
+            endDate: true,
+            status: true,
+            category: true,
+            tags: true,
+            journalEntries: { select: { mood: true, weather: true } },
+            _count: { select: { photos: true } },
+            lodgingStays: {
+              select: {
+                status: true,
+                checkIn: true,
+                checkOut: true,
+                datePrecision: true,
+                nights: true,
+                totalPrice: true,
+                currency: true,
+                totalPriceBase: true,
+                fxBaseCurrency: true,
+              },
+            },
+            cruises: {
+              select: {
+                status: true,
+                startDate: true,
+                endDate: true,
+                price: true,
+                currency: true,
+              },
+            },
+            flights: {
+              select: {
+                status: true,
+                departureTime: true,
+                arrivalTime: true,
+                price: true,
+                currency: true,
+              },
+            },
+          },
+        }),
+      ]);
+
+      const now = new Date();
+      const account = buildTravelAccount({ stays, cruises, flights, now });
+      const tripAccount = buildTripAccount(
+        trips.map((t) => ({
+          id: t.id,
+          name: t.name,
+          startDate: t.startDate,
+          endDate: t.endDate,
+          status: t.status,
+          category: t.category,
+          tags: t.tags,
+          journalEntries: t.journalEntries,
+          photoCount: t._count.photos,
+          stays: t.lodgingStays,
+          cruises: t.cruises,
+          flights: t.flights,
+        })),
+      );
+
+      res.json({ account, trips: tripAccount });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 export default router;

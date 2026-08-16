@@ -490,6 +490,83 @@ export function checkAchievement(
       isUnlocked = progress >= achievement.requirement;
       break;
 
+    case 'lodging_types_unique':
+      progress = stats.lodgingTypesUnique;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_cities_unique':
+      progress = stats.lodgingCitiesUnique;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_continents':
+      progress = stats.lodgingContinents;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_five_star_nights':
+      progress = stats.lodgingFiveStarNights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_all_inclusive_nights':
+      progress = stats.lodgingAllInclusiveNights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_perfect_stays':
+      progress = stats.lodgingPerfectStays;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_endured_stays':
+      progress = stats.lodgingEnduredStays;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_rated_stays':
+      progress = stats.lodgingRatedStays;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_one_night_stays':
+      progress = stats.lodgingOneNightStays;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_streak_nights':
+      progress = stats.lodgingStreakNights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    // Requirement is a PERCENTAGE (e.g. 25 = a quarter of the year away).
+    case 'lodging_away_share_pct':
+      progress = stats.lodgingAwaySharePct;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_independent_nights':
+      progress = stats.lodgingIndependentNights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_programme_year_nights':
+      progress = stats.lodgingProgrammeYearNights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    // Requirement is a latitude in whole degrees (66 = the Arctic Circle).
+    case 'lodging_northern_lat':
+      progress = Math.floor(stats.lodgingNorthernmostLat);
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'trips_fully_documented':
+      progress = stats.tripsFullyDocumented;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
     case 'fly_and_stay':
       progress = stats.flyAndStay ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
