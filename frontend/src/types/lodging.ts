@@ -145,6 +145,8 @@ export interface Lodging {
   address: string | null;
   city: string | null;
   country: string | null;
+  /** ISO 3166-1 alpha-2, derived from `country`. Null when the text names no country. */
+  isoCountryCode: string | null;
   lat: number | null;
   lon: number | null;
   stars: number | null;

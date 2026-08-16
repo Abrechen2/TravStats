@@ -71,6 +71,7 @@ describe("LodgingChainDetailPage", () => {
           address: null,
           city: "Zürich",
           country: "CH",
+          isoCountryCode: null,
           lat: null,
           lon: null,
           stars: 4,

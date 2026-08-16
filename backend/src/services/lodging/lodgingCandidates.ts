@@ -20,8 +20,10 @@ export function bookingsToCandidates(bookings: ParsedLodgingBooking[]): LodgingI
     sourceRowIndex: index,
     lodging: {
       name: booking.hotelName,
-      type: "hotel" as const,
-      chainName: null,
+      // Judged by the parser now — a KOA is a campsite, and a third of real
+      // confirmations are chain properties that used to import as independent.
+      type: booking.type ?? ("hotel" as const),
+      chainName: booking.chainName,
       stars: null,
       address: composeAddress(booking),
       city: booking.city,

@@ -1,5 +1,8 @@
 import { type CurrencyCode, isCurrencyCode } from "../../shared/currencies";
 import type { LodgingBoard } from "./lodgingFieldNormalization";
+import type { LODGING_TYPES } from "../../schemas/lodging";
+
+type LodgingType = (typeof LODGING_TYPES)[number];
 
 export type LodgingCurrency = CurrencyCode;
 
@@ -25,6 +28,10 @@ export interface ParsedLodgingBooking {
    * the name stays the user's to supply.
    */
   guests: number | null;
+  /** What kind of place: a KOA is a campsite, not a hotel. Null = unjudged. */
+  type: LodgingType | null;
+  /** The group behind the brand — "Courtyard by Marriott" -> "Marriott". */
+  chainName: string | null;
   confirmationNumber: string | null;
   parserTemplate: string;
   parserConfidence: number;
@@ -363,6 +370,8 @@ export function parseBookingComEmail(
     pricePerNight: null,
     board: null,
     guests: null,
+    type: null,
+    chainName: null,
     currency: total?.currency ?? null,
     confirmationNumber: confirmation ? confirmation[1] : null,
     parserTemplate: TEMPLATE_NAME,
