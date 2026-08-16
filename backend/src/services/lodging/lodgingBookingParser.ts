@@ -6,6 +6,7 @@ import {
   normalizeBoard,
   normalizeGuestCount,
 } from "./lodgingFieldNormalization";
+import { reconcileTotalPrice } from "./documentTotal";
 import { getAdminParserSettings } from "../parserSettings";
 import { LODGING_TYPES } from "../../schemas/lodging";
 import { isCurrencyCode } from "../../shared/currencies";
@@ -178,7 +179,10 @@ function asCurrency(value: unknown): LodgingCurrency | null {
 
 const ISO_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-function normalizeBooking(raw: Record<string, unknown>): ParsedLodgingBooking | null {
+function normalizeBooking(
+  raw: Record<string, unknown>,
+  documentText: string,
+): ParsedLodgingBooking | null {
   const hotelName = asString(raw.hotelName);
   const checkIn = asString(raw.checkIn);
   const checkOut = asString(raw.checkOut);
@@ -216,7 +220,23 @@ function normalizeBooking(raw: Record<string, unknown>): ParsedLodgingBooking | 
   // all ("EURO", "$", a stray word).
   const currency = asCurrency(raw.currency);
   const rawPrice = asNumber(raw.totalPrice);
-  const totalPrice = currency === null ? null : rawPrice;
+  const modelPrice = currency === null ? null : rawPrice;
+
+  // The document outranks the model on this one field. Asking for "the total
+  // price" is not reliable and cannot be made reliable — two identical runs of
+  // the owner's Armani confirmation returned the tax-inclusive total and the
+  // bare room rate. A labelled total in the source is provable, so it wins.
+  // Only when a currency survived the guard above: an amount without a unit is
+  // not a price, whoever proposed it.
+  const reconciled =
+    currency === null ? { value: null, source: "none" as const } : reconcileTotalPrice(modelPrice, documentText);
+  const totalPrice = reconciled.value;
+  if (reconciled.source === "document" && modelPrice !== null) {
+    logger.info(
+      { operation: "lodging_total_from_document" },
+      "[Lodging Parser] The document's labelled total overruled the model's figure",
+    );
+  }
 
   const missing: string[] = [];
   if (!roomCategory) missing.push("roomCategory");
@@ -304,7 +324,7 @@ async function parseWithOllama(
 
   const parsed: unknown = JSON.parse(cleaned);
   return unwrapBookings(parsed)
-    .map((entry) => normalizeBooking((entry ?? {}) as Record<string, unknown>))
+    .map((entry) => normalizeBooking((entry ?? {}) as Record<string, unknown>, snippet))
     .filter((b): b is ParsedLodgingBooking => b !== null);
 }
 
