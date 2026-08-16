@@ -1,4 +1,5 @@
 import type { CurrencyCode } from "../shared/currencies";
+import type { LodgingDatePrecision } from "../shared/lodgingTiming";
 // Frontend view of the `lodging` domain (hotels + campsites). Mirrors
 // backend/prisma/schema.prisma (`Lodging`, `LodgingStay`, `LodgingChain`,
 // `LodgingMembership`) and backend/src/schemas/lodging.ts (enums + input
@@ -66,8 +67,18 @@ export interface LodgingStay {
   userId: string;
   tripId: string | null;
   bookingId: string | null;
-  checkIn: string;
-  checkOut: string;
+  /**
+   * Nullable since 2.7 — a hotel you remember but cannot date is still a place
+   * you slept, and rating/price/board/room/membership all live on the stay.
+   * What the dates mean is qualified by `datePrecision`; see
+   * `shared/lodgingTiming.ts`, which every consumer asks rather than reading
+   * these two directly.
+   */
+  checkIn: string | null;
+  checkOut: string | null;
+  datePrecision: LodgingDatePrecision;
+  /** Explicit night count, for when the dates cannot supply one. */
+  nights: number | null;
   status: StayStatus;
   roomNumber: string | null;
   roomCategory: string | null;
@@ -98,6 +109,12 @@ export interface LodgingStay {
   /** true = no programme was used for this stay; false = derive from the hotel. */
   membershipOptOut: boolean;
   receiptUrl: string | null;
+  /**
+   * How many people the booking covered, as the confirmation stated it. A
+   * COUNT, never a name — which is why the editor points at `companions`
+   * rather than filling it.
+   */
+  guests: number | null;
   companions: string[];
   notes: string | null;
   parserTemplate: string | null;
@@ -179,8 +196,10 @@ export interface LodgingInput {
 }
 
 export interface StayInput {
-  checkIn?: string;
-  checkOut?: string;
+  checkIn?: string | null;
+  checkOut?: string | null;
+  datePrecision?: LodgingDatePrecision;
+  nights?: number | null;
   status?: StayStatus;
   tripId?: string | null;
   bookingId?: string | null;
@@ -206,6 +225,7 @@ export interface StayInput {
   membershipId?: string | null;
   membershipOptOut?: boolean;
   receiptUrl?: string | null;
+  guests?: number | null;
   companions?: string[];
   notes?: string | null;
 }
@@ -342,4 +362,216 @@ export interface LodgingStats {
   avgRatingOverall: number | null;
   chainLoyaltyMax: number;
   sameHotelRepeatMax: number;
+  /**
+   * Forward-looking counterparts to `staysCount` / `totalNights` /
+   * `lodgingsCount` — everything whose check-out has not happened yet. Reported
+   * separately, never folded in: a booking for next month is not a night slept
+   * (owner rule, 2026-08-15; see `shared/lodgingCounting.ts`).
+   */
+  plannedStaysCount: number;
+  plannedNights: number;
+  plannedLodgingsCount: number;
+  /** Houses the user only bookmarked (`visited === false`). Never part of any other figure. */
+  notedLodgingsCount: number;
+  /** Nights by the house's OFFICIAL star count ("1".."5"); a house with none has no key. */
+  nightsByStars: Record<string, number>;
+  /** Nights by board type. Covers every stay, unlike `price.byBoard` which needs a price. */
+  nightsByBoard: Record<string, number>;
+  /** Stays rated 5 on all four columns; a blank on any of them disqualifies. */
+  perfectStays: number;
+  /** Stays rated 2 or worse overall — the ones the user got through. */
+  enduredStays: number;
+  oneNightStays: number;
+  /**
+   * Stays with no usable date. They count in every sum, ranking and achievement
+   * and in no calendar series (owner rule, 2026-08-16). Reported so a screen can
+   * say so — a year chart quietly missing eleven stays looks exactly like one
+   * that has them all.
+   */
+  undatedStays: number;
+  undatedNights: number;
+  /** Stays whose length nobody knows — neither dates nor an explicit count. */
+  staysWithUnknownLength: number;
+  price: LodgingPriceStats;
+  ratings: LodgingRatingStats;
+  geo: LodgingGeoStats;
+  rhythm: LodgingRhythmStats;
+  loyalty: LodgingLoyaltyStats;
+}
+
+/** Nights under one programme in one calendar year — the unit hotel status is counted in. */
+export interface LodgingProgrammeYear {
+  programme: string;
+  /** The card's current tier, not the tier held during that year. */
+  tier: string | null;
+  year: string;
+  nights: number;
+  stays: number;
+}
+
+/**
+ * Brand loyalty and programme status.
+ *
+ * `topChainShare` and `concentration` are shares of CHAIN nights, not of all
+ * nights: "three quarters of your chain nights are with one brand" is a
+ * statement about brand choice, while folding in independents would turn it
+ * into a statement about how often the user picks a chain at all — which is
+ * `chainNights` vs `independentNights`, right next to it.
+ */
+export interface LodgingLoyaltyStats {
+  chainNights: number;
+  independentNights: number;
+  topChain: { name: string; nights: number } | null;
+  /** Share of chain nights at the single most-used brand, 0..1. */
+  topChainShare: number | null;
+  /** Herfindahl index over chain nights: 1 = one brand only, near 0 = spread thin. */
+  concentration: number | null;
+  chainNightsRanked: LodgingPlaceCount[];
+  /** Newest year first, then most nights. */
+  programmeYears: LodgingProgrammeYear[];
+}
+
+/** A stay singled out for where it was — the northernmost, the southernmost. */
+export interface LodgingPlace {
+  lodgingId: string;
+  lodgingName: string;
+  city: string | null;
+  country: string | null;
+  lat: number;
+  lon: number;
+  /** ISO check-in date, or null when the stay carries none. */
+  checkIn: string | null;
+}
+
+/** One city or country, with how much of the user's sleeping it accounts for. */
+export interface LodgingPlaceCount {
+  key: string;
+  nights: number;
+  stays: number;
+}
+
+export interface LodgingGeoStats {
+  continents: string[];
+  continentsCount: number;
+  northernmost: LodgingPlace | null;
+  southernmost: LodgingPlace | null;
+  /**
+   * Nights-weighted mean position, computed on the unit sphere so a traveller
+   * either side of the dateline does not get a centre in the Atlantic.
+   */
+  centreOfGravity: { lat: number; lon: number } | null;
+  /** Most nights first, untruncated — the screen slices. */
+  topCities: LodgingPlaceCount[];
+  topCountries: LodgingPlaceCount[];
+  /** Stays whose house has no coordinates, and which the coordinate figures omit. */
+  unlocatedStays: number;
+}
+
+/**
+ * When the nights happened. Derived from the SET of dates away from home, so
+ * touching stays form one run and overlapping stays never double-count.
+ */
+export interface LodgingRhythmStats {
+  /** Distinct dates away — differs from `totalNights` exactly when stays overlap. */
+  nightsAway: number;
+  /** Seven entries, index 0 = Sunday, matching `Date.getUTCDay()`. */
+  nightsByWeekday: number[];
+  /** Twelve entries, index 0 = January — across all years, unlike `nightsByMonth`. */
+  nightsByMonthOfYear: number[];
+  nightsBySeason: Record<"winter" | "spring" | "summer" | "autumn", number>;
+  longestStreakNights: number;
+  longestStreak: { start: string; end: string } | null;
+  /** Longest stretch at home, counted only between the first and last night away. */
+  longestGapDays: number;
+  /** Fraction of each year spent away, 0..1; the current year uses days elapsed. */
+  awayShareByYear: Record<string, number>;
+}
+
+/**
+ * One row of a price ranking. `key` is a country code, chain name, lodging
+ * type, year or board code depending on which list it appears in.
+ */
+export interface LodgingPriceGroup {
+  key: string;
+  nights: number;
+  totalBase: number;
+  /** totalBase / nights, rounded to cents. */
+  avgPerNight: number;
+}
+
+/** A single stay singled out as a superlative — cheapest or dearest night. */
+export interface LodgingPricedNight {
+  lodgingId: string;
+  lodgingName: string;
+  city: string | null;
+  country: string | null;
+  checkIn: string | null;
+  nights: number;
+  pricePerNight: number;
+}
+
+/**
+ * Money, all in the user's CURRENT base currency and all from the subset of
+ * stays whose FX snapshot matches it — the same slice `spendBaseTotal` sums.
+ * Anything else lands in `unpricedStays` rather than skewing an average.
+ */
+export interface LodgingPriceStats {
+  avgPricePerNight: number | null;
+  /** Median over NIGHTS, not over stays: a three-week stay weighs three weeks. */
+  medianPricePerNight: number | null;
+  pricedNights: number;
+  pricedStays: number;
+  /** Stays with a price that could not be compared — no conversion, or an older base currency. */
+  unpricedStays: number;
+  cheapestNight: LodgingPricedNight | null;
+  dearestNight: LodgingPricedNight | null;
+  /** Oldest year first — read as a trend. */
+  byYear: LodgingPriceGroup[];
+  /** The rest come back most-nights-first. */
+  byCountry: LodgingPriceGroup[];
+  byChain: LodgingPriceGroup[];
+  byType: LodgingPriceGroup[];
+  byBoard: LodgingPriceGroup[];
+  /** Award nights valued at the average PAID night rate; null when nothing was ever paid. */
+  awardNightsValue: number | null;
+}
+
+/** One row of a rating ranking — chain, country, type, or official star count. */
+export interface LodgingRatingGroup {
+  key: string;
+  stays: number;
+  avgOverall: number;
+}
+
+export interface LodgingValueStay {
+  lodgingId: string;
+  lodgingName: string;
+  city: string | null;
+  country: string | null;
+  ratingOverall: number;
+  pricePerNight: number;
+  /** ratingOverall / pricePerNight — the ranking key. */
+  valueScore: number;
+}
+
+/**
+ * The user's own verdicts. Every average ignores nulls and carries its own
+ * denominator: "4.2 from three stays" and "4.2 from ninety" are not the same
+ * claim, and a screen that cannot tell them apart shows the first as the second.
+ */
+export interface LodgingRatingStats {
+  avgOverall: number | null;
+  avgRoom: number | null;
+  avgBreakfast: number | null;
+  avgService: number | null;
+  ratedStays: number;
+  unratedStays: number;
+  /** Best average first. */
+  byChain: LodgingRatingGroup[];
+  byCountry: LodgingRatingGroup[];
+  byType: LodgingRatingGroup[];
+  /** Keyed by official star count ("1".."5"), kept in SCALE order, not ranked. */
+  byStars: LodgingRatingGroup[];
+  /** Rating points per unit of price per night, best first; at most five. */
+  bestValue: LodgingValueStay[];
 }

@@ -78,7 +78,18 @@ export const stayCandidateFieldsSchema = z.object({
   // (stays joined by hotel name) never carries a price, and that is a valid stay,
   // not a malformed one — it simply never gets an FX snapshot at commit time.
   totalPrice: z.number().min(0).nullable().optional(),
+  // Stated by 47 % of real confirmations. Kept alongside the total rather than
+  // derived from it: a rate that excludes taxes divided out of a total that
+  // includes them is a different number, and the document knows which is which.
+  pricePerNight: z.number().min(0).nullable().optional(),
   currency: currencyField.nullable().optional(),
+  /**
+   * How many people the booking covers. Stored: the count is a fact of the
+   * booking, and the stay editor needs it AFTER the import to point at the
+   * companions field. What is not stored is WHO came along — a confirmation
+   * names the booker, never the companion, so that stays the user's to enter.
+   */
+  guests: z.number().int().min(1).max(20).nullable().optional(),
   ratingRoom: rating,
   ratingBreakfast: rating,
   ratingService: rating,
@@ -125,6 +136,7 @@ export type LodgingDedupeHint =
   | "none"
   | "lodging_exact_ref"
   | "lodging_name_city"
+  | "lodging_nearby"
   | "stay_exact_ref"
   | "stay_same_dates";
 

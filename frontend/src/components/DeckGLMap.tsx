@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import MapGL, { useControl, type MapRef, type MapLayerMouseEvent } from "react-map-gl/maplibre";
+import MapGL, { useControl, useMap, type MapRef, type MapLayerMouseEvent } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
+import { applyHoverCursor } from "./map/mapCursor";
 import { createMarkerTooltip } from "./map/markerTooltip";
 import { LightingEffect, type PickingInfo } from "@deck.gl/core";
 import { useDeckHoverCursor } from "../hooks/useDeckHoverCursor";
@@ -85,6 +86,15 @@ interface DeckOverlayProps {
 }
 
 function DeckGLOverlay({ layers, effects, getTooltip, onHover }: DeckOverlayProps): null {
+  const { current: map } = useMap();
+  // Issue #247: the pointer must say what is clickable. deck.gl's own
+  // `getCursor` cannot do it here — MapboxOverlay mounts the deck canvas with
+  // `pointerEvents: 'none'` and never reads that prop, so the visible cursor
+  // belongs to the MapLibre canvas underneath.
+  const hoverWithCursor = (info: PickingInfo): void => {
+    applyHoverCursor(map, Boolean(info.object));
+    onHover(info);
+  };
   const overlay = useControl<MapboxOverlay>(
     () =>
       new MapboxOverlay({
@@ -92,14 +102,14 @@ function DeckGLOverlay({ layers, effects, getTooltip, onHover }: DeckOverlayProp
         effects,
         pickingRadius: 5,
         getTooltip,
-        onHover,
+        onHover: hoverWithCursor,
       }),
     { position: "top-left" }
   );
   // Push getTooltip on every render too so language switches propagate
   // — MapboxOverlay caches the constructor's getTooltip otherwise. `onHover`
   // rides along for the same reason.
-  overlay.setProps({ layers, effects, pickingRadius: 5, getTooltip, onHover });
+  overlay.setProps({ layers, effects, pickingRadius: 5, getTooltip, onHover: hoverWithCursor });
   return null;
 }
 

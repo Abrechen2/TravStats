@@ -29,6 +29,8 @@ const baseStay: LodgingStay = {
   bookingId: null,
   checkIn: "2026-07-11T00:00:00.000Z",
   checkOut: "2026-07-12T00:00:00.000Z",
+  datePrecision: "DAY" as const,
+  nights: null,
   status: "completed",
   roomNumber: null,
   roomCategory: null,
@@ -51,6 +53,7 @@ const baseStay: LodgingStay = {
   membershipId: null,
   membershipOptOut: false,
   receiptUrl: null,
+  guests: null,
   companions: [],
   notes: null,
   parserTemplate: null,
@@ -240,6 +243,60 @@ describe("StayEditor", () => {
     expect(payload.roomNumber).not.toBeUndefined();
     expect(payload.totalPrice).not.toBeUndefined();
     expect(payload.notes).not.toBeUndefined();
+  });
+
+  it("saves a stay with no dates at all once the precision says so", async () => {
+    // The point of the whole feature: a hotel you remember but cannot date.
+    // Before this, the editor refused the save and the stay — with its rating
+    // and its price — could not be recorded at all.
+    const onSaved = vi.fn();
+    vi.mocked(createStay).mockResolvedValue({} as never);
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={onSaved} />);
+
+    await userEvent.selectOptions(screen.getByTestId("stay-date-precision"), "NONE");
+    await userEvent.type(screen.getByTestId("stay-nights-input"), "3");
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    await waitFor(() => expect(createStay).toHaveBeenCalled());
+    const payload = vi.mocked(createStay).mock.calls[0][1];
+    expect(payload.checkIn).toBeNull();
+    expect(payload.checkOut).toBeNull();
+    expect(payload.datePrecision).toBe("NONE");
+    expect(payload.nights).toBe(3);
+  });
+
+  it("stores a month-precision stay on the first of the month, marked as such", () => {
+    // The column holds a full date either way; `datePrecision` is what stops
+    // every consumer from reading that placeholder as a real day.
+    const onSaved = vi.fn();
+    vi.mocked(createStay).mockResolvedValue({} as never);
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={onSaved} />);
+
+    return (async (): Promise<void> => {
+      await userEvent.selectOptions(screen.getByTestId("stay-date-precision"), "MONTH");
+      const monthInput = screen.getByLabelText(/check.?in/i);
+      fireEvent.change(monthInput, { target: { value: "2011-07" } });
+      await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+      await waitFor(() => expect(createStay).toHaveBeenCalled());
+      const payload = vi.mocked(createStay).mock.calls[0][1];
+      expect(payload.datePrecision).toBe("MONTH");
+      expect(payload.checkIn).toContain("2011-07-01");
+      // A month-precision stay has no second end to store.
+      expect(payload.checkOut).toBeNull();
+    })();
+  });
+
+  it("still demands both dates when the user claims exact ones", async () => {
+    // The precision is a claim. Saying "exact dates" and sending none is a
+    // record disagreeing with itself, so that one keeps its guard.
+    const onSaved = vi.fn();
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={onSaved} />);
+
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    expect(await screen.findByTestId("stay-editor-error")).toBeInTheDocument();
+    expect(createStay).not.toHaveBeenCalled();
   });
 
   it("shows a save error and does not call onSaved when checkIn/checkOut are missing", async () => {
@@ -593,5 +650,80 @@ describe("StayEditor", () => {
     const payload = vi.mocked(updateStay).mock.calls[0][2];
     expect(payload.membershipOptOut).toBe(true);
     expect(payload.membershipId).toBeNull();
+  });
+});
+
+/**
+ * A confirmation states how many people it covers (42 % of 640 real ones do),
+ * and the parser now carries that count through to the stay. It never carries a
+ * NAME — a confirmation names the booker, not the companion — so the editor
+ * points at the field instead of filling it (owner, 2026-08-16).
+ *
+ * Threshold is "more than one person", not "more than two": the booking that
+ * prompted this was for two adults, and a threshold of three would have left
+ * exactly that case silent.
+ */
+describe("StayEditor — companion hint for a multi-person booking", () => {
+  const stayFor = (guests: number | null, companions: string[] = []): LodgingStay =>
+    ({
+      ...baseStay,
+      guests,
+      companions,
+    }) as LodgingStay;
+
+  it("points at the companions field when the booking covered two people", () => {
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        stay={stayFor(2)}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("companions-hint")).toBeInTheDocument();
+  });
+
+  it("stays quiet for a booking covering one person", () => {
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        stay={stayFor(1)}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId("companions-hint")).not.toBeInTheDocument();
+  });
+
+  it("stays quiet when the document never stated an occupancy", () => {
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        stay={stayFor(null)}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId("companions-hint")).not.toBeInTheDocument();
+  });
+
+  it("stops nagging once a companion has been entered", () => {
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        stay={stayFor(2, ["Norbert"])}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId("companions-hint")).not.toBeInTheDocument();
   });
 });

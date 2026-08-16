@@ -9,19 +9,19 @@
  * because the stay editor shows the reader the same card the server resolves.
  * Both sides are covered by tests asserting the same truth table.
  *
- * IMPORTANT — this module has NO runtime consumer on the server today.
- * Nothing outside its own test imports `deriveStayMembership` from here: the
- * server only ever stores the override (`membership_id` / `membership_opt_out`
- * on `lodging_stays`), and the one place this exact rule had to be
- * reproduced server-side was the migration
+ * IMPORTANT — the server DOES consume this now, via
+ * `services/lodging/stayMembership.ts`, which the lodging stats endpoint and
+ * the achievement rollup both call to decide which card a stay ran under. The
+ * note this replaces said there was no server-side consumer and asked whoever
+ * added the first one to keep it in step with the migration by hand; this is
+ * that consumer, and the obligation stands.
+ *
+ * The rule is also reproduced in the migration
  * (`prisma/migrations/20260809104800_membership_lodging_links/migration.sql`),
- * written directly in SQL rather than by calling this function. That means
- * the two mirrored copies (this file and the frontend one) are kept honest
- * ONLY by their duplicated truth tables in each side's tests — there is no
- * shared runtime path enforcing agreement. If a server-side consumer of
- * `deriveStayMembership` is ever added (e.g. an API response that resolves
- * the effective membership), keep it and the migration's SQL logic in step
- * by hand; nothing currently does that automatically.
+ * written directly in SQL rather than by calling this function. So three
+ * copies of one rule exist — this file, its frontend mirror, and that SQL —
+ * and only the first two are kept honest by duplicated truth tables in each
+ * side's tests. Nothing enforces agreement with the SQL automatically.
  *
  * WHY THE MIGRATION'S SQL TIE-BREAK MATCHES `oldest()` BELOW: both pick the
  * smallest `(created_at, id)`, and the SQL breaks the `created_at` tie with a

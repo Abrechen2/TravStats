@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { findNearbyLodgings } from "./proximityMatch";
 import logger from "../../utils/logger";
 import type {
   LodgingDedupeHint,
@@ -23,18 +24,28 @@ function normalizeCity(city: string | null | undefined): string {
 
 const ISO_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * How close two pins have to be to mean one building. Generous enough that a
+ * saved-places pin and a geocoded address agree (they differed by tens of
+ * metres in the real data), tight enough not to reach the hotel next door.
+ */
+const PROXIMITY_METRES = 150;
+
 interface ExistingLodging {
   id: string;
   name: string;
   city: string | null;
   externalRef: string | null;
+  lat: number | null;
+  lon: number | null;
 }
 
 interface ExistingStay {
   id: string;
   lodgingId: string;
   externalRef: string | null;
-  checkIn: Date;
+  /** Nullable since 2.7 — an undated stay is still a stay a re-import could duplicate. */
+  checkIn: Date | null;
 }
 
 function dayKey(date: Date): string {
@@ -54,6 +65,8 @@ interface Indexes {
   byNameCity: Map<string, ExistingLodging[]>;
   byName: Map<string, ExistingLodging[]>;
   payloadNames: Set<string>;
+  /** Every stored lodging, for the coordinate fallback — a name can be decorated, a building cannot move. */
+  allLodgings: ExistingLodging[];
   staysByExternalRef: Map<string, ExistingStay>;
   staysByLodging: Map<string, ExistingStay[]>;
 }
@@ -111,6 +124,23 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     }
   }
 
+  // Last resort before declaring a new house: the same SPOT. The matcher above
+  // keys on the name, so "Hotel Fortuna" and "Hotel - Restaurant Fortuna" read
+  // as two buildings — measured on a real library, 25 pairs among 293 houses,
+  // 24 of them sharing a coordinate. A hit here is a GUESS like name+city, so
+  // it is surfaced for confirmation and never skipped silently: two hotels can
+  // genuinely share an address, and folding those together loses a house.
+  if (!matchedLodgingId && lodging) {
+    const nearby = findNearbyLodgings(idx.allLodgings, lodging.lat, lodging.lon, PROXIMITY_METRES);
+    if (nearby.length === 1) {
+      dedupeHint = "lodging_nearby";
+      matchedLodgingId = nearby[0].id;
+    } else if (nearby.length > 1) {
+      dedupeHint = "lodging_nearby";
+      flags = [...flags, "ambiguous_lodging_name"];
+    }
+  }
+
   if (!lodging && joinName) {
     const hits = idx.byName.get(normalizeLodgingName(joinName)) ?? [];
     if (hits.length === 1) {
@@ -148,7 +178,12 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
 
     if (!matchedStayId && matchedLodgingId) {
       const existing = idx.staysByLodging.get(matchedLodgingId) ?? [];
-      const sameDay = existing.find((s) => dayKey(s.checkIn) === stay.checkIn);
+      // An undated existing stay has no day to compare, so it can never be the
+      // same-day match — it falls through to being treated as a new row rather
+      // than silently absorbing an incoming dated one.
+      const sameDay = existing.find(
+        (s) => s.checkIn !== null && dayKey(s.checkIn) === stay.checkIn,
+      );
       if (sameDay) {
         dedupeHint = "stay_same_dates";
         matchedStayId = sameDay.id;
@@ -190,7 +225,7 @@ export async function buildLodgingPreviewRows(
   const [lodgings, stays] = await Promise.all([
     prisma.lodging.findMany({
       where: { userId },
-      select: { id: true, name: true, city: true, externalRef: true },
+      select: { id: true, name: true, city: true, externalRef: true, lat: true, lon: true },
     }),
     prisma.lodgingStay.findMany({
       where: { userId },
@@ -231,6 +266,7 @@ export async function buildLodgingPreviewRows(
     byNameCity,
     byName,
     payloadNames,
+    allLodgings: lodgings,
     staysByExternalRef,
     staysByLodging,
   };

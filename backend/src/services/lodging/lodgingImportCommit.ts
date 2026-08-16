@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { resolveCountryCode } from "../../shared/geo/countryCode";
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import {
@@ -139,6 +140,7 @@ async function createLodging(
       address: fields.address ?? null,
       city: fields.city ?? null,
       country: fields.country ?? null,
+      isoCountryCode: resolveCountryCode(fields.country ?? null),
       // NO geocoding here (spec §3.1). Coordinates the source carried are used
       // as-is; missing ones are filled later by the throttled background pass.
       lat: fields.lat ?? null,
@@ -288,7 +290,10 @@ async function createStay(
       status: "completed",
       roomCategory: fields.roomCategory ?? null,
       board: fields.board ?? null,
+      guests: fields.guests ?? null,
       totalPrice: priceHasNoCurrency ? null : (fields.totalPrice ?? null),
+      // Same guard as the total: a rate without a currency states nothing.
+      pricePerNight: priceHasNoCurrency ? null : (fields.pricePerNight ?? null),
       // Omitted, so the NOT-NULL column applies its own 'EUR' default. The
       // stored row is indistinguishable from an explicit EUR either way — the
       // column cannot hold "unknown" — but the accompanying price is null, so

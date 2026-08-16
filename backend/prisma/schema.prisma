@@ -1161,6 +1161,11 @@ model Lodging {
   address       String?
   city          String?
   country       String?
+  /// ISO 3166-1 alpha-2, derived from `country`. The text field keeps whatever
+  /// the source wrote ("Deutschland", "Germany", "Schweiz/Suisse/Svizzera/Svizra");
+  /// everything that GROUPS or COUNTS joins on this instead. Null when the text
+  /// resolves to no country — a finding, not a gap ("Dubai" is a city).
+  isoCountryCode String?  @map("iso_country_code")
   lat           Float?
   lon           Float?
   stars         Int?     // official 1–5
@@ -1198,12 +1203,40 @@ model LodgingStay {
   userId           String    @map("user_id")
   tripId           String?   @map("trip_id")
   bookingId        String?   @map("booking_id")
-  checkIn          DateTime  @map("check_in")  // hotel-local, do not normalize to UTC
-  checkOut         DateTime  @map("check_out")
-  status           String    @default("completed") // scheduled | completed | cancelled
+  /// Hotel-local, do not normalize to UTC.
+  ///
+  /// NULLABLE since 2.7: a hotel you remember but cannot date is still a place
+  /// you slept, and rating/price/board/room/membership all live on the STAY —
+  /// so without a dateless stay those data points had nowhere to go. Flights
+  /// (`departure_time`) and cruises (`start_date`) have always allowed this;
+  /// lodging was the odd one out. What the dates mean is qualified by
+  /// `date_precision`.
+  checkIn          DateTime? @map("check_in")
+  checkOut         DateTime? @map("check_out")
+  /// How much of the date is actually known: DAY (both dates real) | MONTH
+  /// ("July 2011", stored as the 1st) | YEAR ("some time in 2011", stored as
+  /// 1 January) | NONE (no idea, both dates null).
+  ///
+  /// Mirrors `Flight.dep_time_semantics`, which exists for the same reason: a
+  /// placeholder that is not marked as one gets aggregated as if it were real.
+  /// A MONTH-precision stay must never land in a weekday histogram, and a
+  /// YEAR-precision one must never land in a month histogram — see
+  /// shared/lodgingTiming.ts, which is the only place that decides this.
+  datePrecision    String    @default("DAY") @map("date_precision")
+  /// Nights, when the dates cannot supply them. "Three nights, no idea when"
+  /// is a different gap from "July 2011, no idea how long", and one field
+  /// cannot express both. Null = unknown; the dates win wherever they can
+  /// answer (DAY precision with both ends).
+  nights           Int?
+  status           String    @default("completed") // scheduled | in_progress | completed | cancelled
   roomNumber       String?   @map("room_number")
   roomCategory     String?   @map("room_category")
   board            String?   // none | breakfast | half | full | all_inclusive
+  // How many people the booking covered, as the confirmation states it. A COUNT,
+  // never a name: a confirmation names the booker, so who came along stays the
+  // user's to enter in `companions`. Kept so the stay editor can point at that
+  // field when a booking covered more than one person.
+  guests           Int?
   pricePerNight    Float?    @map("price_per_night")
   currency         String    @default("EUR")
   totalPrice       Float?    @map("total_price")

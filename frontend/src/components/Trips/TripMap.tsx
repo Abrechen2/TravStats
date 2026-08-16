@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
+import MapGL, { useControl, useMap, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
+import { applyHoverCursor } from "../map/mapCursor";
 import { createMarkerTooltip } from "../map/markerTooltip";
 import { ArcLayer, PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { Trip } from "../../types";
 import type { Lodging } from "../../types/lodging";
 import { buildLodgingPins } from "../layers/lodgingPinsLayer";
+import { stayNights } from "../../lib/lodgingDateDisplay";
 import { declutterByDistance, pickLabelled } from "../map/labelPriority";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 import { computeBbox } from "../../utils/mapAnimationHelpers";
@@ -69,16 +71,24 @@ function DeckGLOverlay({
   onClick: (info: PickingInfo) => void;
   getTooltip: ReturnType<typeof createMarkerTooltip>;
 }): null {
+  const { current: map } = useMap();
+  // Issue #247. See map/mapCursor.ts for why this cannot be deck.gl's
+  // `getCursor`: the deck canvas has no pointer events, MapLibre owns the
+  // cursor.
+  const handleHover = (info: PickingInfo): void => {
+    applyHoverCursor(map, Boolean(info.object));
+  };
   const overlay = useControl<MapboxOverlay>(
     () =>
       new MapboxOverlay({
         layers,
         pickingRadius: 8,
         getTooltip,
+        onHover: handleHover,
       }),
     { position: "top-left" }
   );
-  overlay.setProps({ layers, pickingRadius: 8, onClick, getTooltip });
+  overlay.setProps({ layers, pickingRadius: 8, onClick, getTooltip, onHover: handleHover });
   return null;
 }
 
@@ -226,12 +236,10 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
     for (const stay of trip.lodgingStays ?? []) {
       const house = stay.lodging;
       if (!house || house.lat == null || house.lon == null) continue;
-      const nights = Math.max(
-        0,
-        Math.round(
-          (Date.parse(stay.checkOut) - Date.parse(stay.checkIn)) / 86_400_000
-        ) || 0
-      );
+      // Via the shared resolver: an undated stay may still carry an explicit
+      // night count, and a month-precision one must not have its placeholder
+      // dates differenced.
+      const nights = stayNights(stay);
       const seen = byHouse.get(house.id);
       if (seen) {
         seen.stays += 1;

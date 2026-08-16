@@ -207,7 +207,14 @@ export class OllamaTextParser implements ITextParser {
       prompt: userPrompt,
       stream: false,
       think: false,
-      options: { temperature: 0.1 },
+      // num_ctx MUST match the other two parsers (lodging, cruise). Ollama keys a
+      // loaded model on its context size, so two parsers asking for different
+      // sizes make every alternation unload and reload 9.9 GB. Measured against
+      // the real host on 2026-08-16: a request that matches the loaded instance
+      // answers in 7 s, one that forces the reload did not answer within 240 s —
+      // which is why a hotel confirmation timed out and "could not be read"
+      // whenever a flight had been parsed before it.
+      options: { temperature: 0.1, num_ctx: 8192 },
     });
 
     logger.info({ model: this.model, url: this.url }, "[Ollama Text Parser] Sending email to Ollama");
