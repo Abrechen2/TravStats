@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from "express";
+import { resolveCountryCode } from "../shared/geo/countryCode";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../db";
@@ -417,8 +418,16 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
 
     // dataSource is provenance metadata, never client-set (finding 1) —
     // a lodging created through this endpoint was hand-entered by the user.
+    // Derive from the EFFECTIVE country — `resolveLocation` may have filled it
+    // in from the geocoder, and deriving from the payload alone would miss that.
+    const created = { ...parsed.data, ...location };
     const lodging = await prisma.lodging.create({
-      data: { ...parsed.data, ...location, userId, dataSource: "manual" },
+      data: {
+        ...created,
+        isoCountryCode: resolveCountryCode(created.country ?? null),
+        userId,
+        dataSource: "manual",
+      },
       include: LODGING_INCLUDE,
     });
     logger.info({ operation: "lodging_create", lodgingId: lodging.id, userId });
@@ -447,9 +456,17 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     // never "clear it", so a failed lookup can't wipe good data.
     const location = await resolveLocation(input, existing);
 
+    // An absent `country` key means "leave it alone" — deriving from the stored
+    // value would rewrite a column the request never mentioned.
+    const patched = { ...input, ...location };
     const lodging = await prisma.lodging.update({
       where: { id: existing.id },
-      data: { ...input, ...location },
+      data: {
+        ...patched,
+        ...(patched.country !== undefined
+          ? { isoCountryCode: resolveCountryCode(patched.country) }
+          : {}),
+      },
       include: LODGING_INCLUDE,
     });
     const baseCurrency = await getBaseCurrency(userId);

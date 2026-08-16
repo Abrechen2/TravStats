@@ -120,3 +120,42 @@ describe("reconcileTotalPrice", () => {
     expect(reconcileTotalPrice(11662.004, ARMANI).source).toBe("model");
   });
 });
+
+/**
+ * REGRESSION, found by the owner on 2026-08-16: a Courtyard confirmation came
+ * back as 1 USD.
+ *
+ * The document says "Gesamtpreis gilt für die von Ihnen gebuchte Anzahl an
+ * Gästen (1 Erwachsener)" — a labelled total followed by a GUEST COUNT. The
+ * first version of this module took the first digits after the label, read the
+ * 1, and — because the document outranks the model — wrote it over a correct
+ * $135.87. A fix that replaces a right number with a wrong one is worse than
+ * the defect it was written for.
+ */
+const COURTYARD = `
+Zimmerpreis	$118,15
+Steuern und Gebühren	$17,72
+Gesamtpreis	$135,87
+
+Der Gesamtpreis gilt für die von Ihnen gebuchte Anzahl an Gästen (1 Erwachsener).
+Frühstück $15 pro Person, pro Nacht.
+`;
+
+describe("findLabelledTotal — a count is not an amount", () => {
+  it("skips the guest count and takes the money", () => {
+    expect(findLabelledTotal(COURTYARD)).toBe(135.87);
+  });
+
+  it("ignores a bare integer that names people, not money", () => {
+    expect(findLabelledTotal("Gesamtpreis gilt für 2 Erwachsene")).toBeNull();
+  });
+
+  it("accepts a bare integer once it carries a currency", () => {
+    expect(findLabelledTotal("Total amount: USD 65")).toBe(65);
+    expect(findLabelledTotal("Gesamtpreis 65 EUR")).toBe(65);
+  });
+
+  it("accepts a decimal amount without any currency marker", () => {
+    expect(findLabelledTotal("Gesamtpreis 135,87")).toBe(135.87);
+  });
+});

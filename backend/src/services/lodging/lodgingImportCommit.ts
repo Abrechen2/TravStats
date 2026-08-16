@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { resolveCountryCode } from "../../shared/geo/countryCode";
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import {
@@ -139,6 +140,7 @@ async function createLodging(
       address: fields.address ?? null,
       city: fields.city ?? null,
       country: fields.country ?? null,
+      isoCountryCode: resolveCountryCode(fields.country ?? null),
       // NO geocoding here (spec §3.1). Coordinates the source carried are used
       // as-is; missing ones are filled later by the throttled background pass.
       lat: fields.lat ?? null,

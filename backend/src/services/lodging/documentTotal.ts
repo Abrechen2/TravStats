@@ -79,8 +79,23 @@ const TOTAL_LABELS = [
 /** How far past the label a figure may sit and still belong to it. */
 const LOOKAHEAD_CHARS = 120;
 
-/** A printed amount: optional currency, digits with grouping, optional decimals. */
-const AMOUNT_RE = /(?:[A-Z]{3}|[€$£])?\s*(\d[\d.,]*\d|\d)/;
+/**
+ * A printed amount, and only that.
+ *
+ * The first version took any digits after the label, which read
+ * "Gesamtpreis gilt für die gebuchte Anzahl an Gästen (1 Erwachsener)" as a
+ * total of 1 — and, because the document outranks the model, wrote it over a
+ * correct $135.87. A number is money only if it carries a currency marker or
+ * has a two-digit decimal tail; a bare integer in prose is a count.
+ */
+const MONEY_RE =
+  /(?<pre>[A-Z]{3}|[€$£¥])?\s*(?<num>\d[\d.,]*\d|\d)\s*(?<post>[A-Z]{3}|[€$£¥])?/g;
+
+function looksLikeMoney(num: string, pre?: string, post?: string): boolean {
+  if (pre || post) return true;
+  // "135,87" / "135.87" — a decimal tail of exactly two digits.
+  return /[.,]\d{2}$/.test(num);
+}
 
 /**
  * The tax-inclusive total the document names, or null when it names none.
@@ -90,21 +105,35 @@ const AMOUNT_RE = /(?:[A-Z]{3}|[€$£])?\s*(\d[\d.,]*\d|\d)/;
  * mail is the more authoritative statement.
  */
 export function findLabelledTotal(text: string): number | null {
-  let found: number | null = null;
+  // The amount a label refers to is the one printed right after it. Ranking by
+  // DISTANCE rather than by document order is what separates
+  //   "Gesamtpreis	$135,87"                        -> 0 characters away
+  // from
+  //   "Der Gesamtpreis gilt für ... Frühstück $15"   -> sixty characters away
+  // in a document that says "Gesamtpreis" twice.
+  let best: { distance: number; value: number } | null = null;
 
   for (const label of TOTAL_LABELS) {
     const pattern = new RegExp(label.source, `${label.flags}g`);
     for (const match of text.matchAll(pattern)) {
       const from = match.index + match[0].length;
       const window = text.slice(from, from + LOOKAHEAD_CHARS);
-      const amount = AMOUNT_RE.exec(window);
-      if (!amount) continue;
-      const value = parseAmount(amount[1]);
-      if (value !== null && value > 0) found = value;
+      MONEY_RE.lastIndex = 0;
+      for (const money of window.matchAll(MONEY_RE)) {
+        const { pre, num, post } = money.groups ?? {};
+        if (!num || !looksLikeMoney(num, pre, post)) continue;
+        const value = parseAmount(num);
+        if (value === null || value <= 0) continue;
+        const distance = money.index ?? 0;
+        // `<=` so a later label wins a tie: a summary block at the foot of a
+        // mail is the more authoritative statement.
+        if (best === null || distance <= best.distance) best = { distance, value };
+        break;
+      }
     }
   }
 
-  return found;
+  return best?.value ?? null;
 }
 
 export type TotalSource = "document" | "model" | "none";
