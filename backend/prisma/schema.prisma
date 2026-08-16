@@ -1038,6 +1038,7 @@ model Cruise {
   booking       Booking?     @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   stops         CruiseStop[]
   legs          CruiseLeg[]
+  legRoutes     CruiseLegRoute[]
 
   /// Where this row came from, so a second import of the same file recognises
   /// it instead of duplicating it (#84). Format `<source>:<stable key>`; the
@@ -1086,6 +1087,42 @@ model CruiseLeg {
   @@index([toPortId])
   @@index([method])
   @@map("cruise_legs")
+}
+
+/// A hand-corrected route for one leg of one cruise.
+///
+/// Keyed by the leg's two ENDPOINTS, never by its ordinal: keying by position
+/// means inserting a port shifts every stored line one leg along, and the map
+/// then looks like the router broke. With endpoint keying an itinerary change
+/// simply leaves the row unmatched and inert.
+///
+/// Consequence accepted on purpose: if the same directed pair occurs twice in
+/// one itinerary, both occurrences render the same corrected line — which is
+/// almost always what the user meant.
+model CruiseLegRoute {
+  id       String @id @default(uuid())
+  cruiseId String @map("cruise_id")
+
+  /// 'port' today. 'place' arrives with the private-place stage; the column
+  /// exists now so that stage adds rows rather than migrating every stored line.
+  fromKind String @map("from_kind")
+  /// The endpoint's id as text — a Port id today.
+  fromRef  String @map("from_ref")
+  toKind   String @map("to_kind")
+  toRef    String @map("to_ref")
+
+  /// `[[lon, lat], ...]` in GeoJSON order, 2..64 points, first and last equal
+  /// to the leg's endpoints. Validated by Zod on the way in.
+  waypoints Json
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  cruise Cruise @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+
+  @@unique([cruiseId, fromKind, fromRef, toKind, toRef])
+  @@index([cruiseId])
+  @@map("cruise_leg_routes")
 }
 
 model CruiseStop {
