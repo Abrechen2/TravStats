@@ -24,8 +24,17 @@ A follow-up clarified the priority and added a third case:
 > Waypoints are the main thing. A private place is also good when, for
 > example, an excursion happens mid-route to an iceberg.
 
+And, after trying a working mock-up of the editor:
+
+> The route editing has to be easy to use — drag and drop the waypoints, or by
+> clicking with the mouse. And you must be able to add a zodiac trip or the
+> like to a waypoint.
+
 Both wishes fail on the same sentence in the current model: **a route
-point must be a `Port` row from the shared catalogue.**
+point must be a `Port` row from the shared catalogue.** The last clarification
+adds a second: whether a point is "a bend in the line" or "a place we were" is
+something the *user* decides afterwards, on the map — not something the data
+model should make them declare up front (§6.2).
 
 ### Owner decisions (2026-08-16)
 
@@ -33,7 +42,7 @@ point must be a `Port` row from the shared catalogue.**
 |---|---|---|
 | 1 | Is the private-place entity worth the cost of re-shaping leg endpoints? | **Yes.** Full path, stages 1–5. |
 | 2 | Does a landing count as a port call? | **No — count them separately.** A landing is not a port visit. |
-| 3 | How much excursion in the first cut? | **Keep it simple.** Photos "maybe, like trips with Immich" — see §9. |
+| 3 | How much excursion in the first cut? | **Keep it simple.** Photos "maybe, like trips with Immich" — see §10. |
 | 4 | Which release? | **2.7.0** |
 
 ---
@@ -158,6 +167,12 @@ Enforced in `backend/src/schemas/cruise.ts` by extending the existing
 `superRefine`, and documented in `CLAUDE.md` alongside the current rule.
 `onDelete: Restrict` mirrors the leg FKs: a place still used by a stop
 cannot be deleted out from under it.
+
+**A place stop is normally born as a waypoint.** The owner's requirement —
+"you must be able to add a zodiac trip or the like to a waypoint" — is not a
+fourth feature; it is one gesture that turns a shape-only waypoint into a
+place stop and back. See §6.2. This collapses what an earlier draft of this
+document treated as two separate things.
 
 ### 4.3 `CruiseLegRoute` — the hand-corrected line
 
@@ -315,6 +330,39 @@ Technically this is the `LocationMiniMap` pattern one step further:
 the guide and the curve, and nearest-segment insertion computed from the
 click coordinate rather than by hit-testing a rendered feature.
 
+### 6.2 Promoting a waypoint to a landing
+
+A waypoint is cheap on purpose: it shapes the line, has no name, no time, and
+counts nowhere. Where something actually happened, one click turns it into a
+place stop — with a label, a time, and excursions hanging off it. A second
+click turns it back.
+
+| Gesture | Result |
+|---|---|
+| Select a waypoint, click ◆ (or press `Enter`) | Becomes a place stop. A `CruisePlace` is created at those coordinates and the stop references it. |
+| On a place stop, click the same badge again, or "back to waypoint" | Reverts to a shape-only waypoint. If excursions hang off it, **ask first** — never delete silently. |
+| Delete (✕) on a place stop | Removes the point entirely, with the same warning. |
+
+**Two invariants make this safe, and they are the whole reason it is one
+gesture rather than two features:**
+
+1. **Promoting must not move the line.** The rendered route may not shift by a
+   pixel when a waypoint becomes a stop. The user is labelling a point, not
+   re-routing.
+2. **Promoting must not change the distance.** One leg becomes two, and the
+   total stays identical.
+
+Both follow from one implementation rule: **the spline is computed over the
+whole route, not per leg in isolation.** Splining each leg separately gives
+its endpoints duplicated control points, so every new stop would introduce a
+tangent break — a visible kink and a small distance jump on every promotion.
+Per-leg distance is therefore measured by walking the continuous route curve
+between consecutive stop indices, not by re-splining the leg on its own.
+
+This differs from today's rendering, where the geometry endpoint emits one
+LineString per port pair and the frontend splines each separately. Ports are
+genuine corners so nobody noticed; a promoted waypoint is not, and would.
+
 ### The trap this must not fall into
 
 Geometry is not persisted; distance is. If `recomputeLegsForCruise` does not
@@ -345,10 +393,88 @@ Therefore:
 4. A hand-corrected route survives router and data version bumps.
 5. Departure and arrival ports stay part of every effective sequence.
 6. Frontend and backend answer "how many ports" with the same rule.
+7. Promoting or demoting a waypoint moves neither the drawn line nor the
+   total distance (§6.2). This is a property test, not a code review item:
+   promote every waypoint of a fixture route in turn and assert the total is
+   unchanged to the metre.
 
 ---
 
-## 8. Migration and back-compat
+## 8. Integration into the app
+
+### Where it lives
+
+The cruise detail page already shows the route on a MapLibre map
+(`frontend/src/components/Cruise/CruiseRouteMap.tsx`, read-only today). The
+editor is a **mode of that map**, not a new page: a "Route bearbeiten" button
+in its chrome, an editing state, and Speichern / Wieder automatisch beside it.
+The stop list lives in `CruiseStopsEditor` inside `CruiseEditModal`.
+
+### One truth, two views
+
+Map and list edit the same stops, so their roles have to be split cleanly or
+they will fight:
+
+- **The list owns order, dates and times.** It is the right tool for "day 4
+  was Ny-Ålesund".
+- **The map owns geometry** — waypoints, and the coordinates of a place.
+- **Both may promote and demote.** A place created on the map appears in the
+  list at once; a landing deleted in the list disappears from the map.
+
+Anything a view cannot express, it must show rather than hide. The list shows
+a place stop with its label and a "on the map" affordance; it does not offer
+a coordinate field, because typing coordinates is exactly what the map exists
+to replace.
+
+### The `dayNumber` conflict — needs a decision
+
+`CLAUDE.md` records the current rule: *the stops editor renumbers `dayNumber`
+as `index + 1` after add / remove / reorder.* `dayNumber` is therefore
+positional, not calendrical.
+
+That rule breaks on the itineraries this feature is for. Three zodiac landings
+on one day of an expedition cruise would become days 4, 5 and 6, and every
+later stop would shift. Promoting a waypoint mid-leg would silently renumber
+the rest of the cruise.
+
+Two ways out, and this is the owner's call:
+
+- **(a) `dayNumber` becomes a pure ordering index that may repeat**, with the
+  calendar day read from `date`. Truthful, and it makes "three landings on day
+  4" expressible. Costs: every consumer that treats `dayNumber` as a day has
+  to be found and fixed.
+- **(b) A promoted stop inherits the `date` of the leg it sits on and keeps a
+  positional `dayNumber`.** Cheaper, but the displayed day number stays a lie
+  for multi-landing days.
+
+Recommendation: **(a)**, but only after the write paths are enumerated — the
+same lesson as the derived-values sweep: listing every writer finds more than
+the reported symptom.
+
+### Where excursions surface
+
+The cruise detail timeline already renders a per-stop `meta` line (that is
+where `excursionNote` appears today) — excursions replace it there. Beyond
+that: a count in the cruise statistics section, and the trip page inherits
+them through its cruises. Nothing new on the dashboard in 2.7.
+
+### Touch and small screens
+
+The same editor has to work on a phone: drag is native to pointer events, but
+the ✕ and ◆ badges need real touch targets (≥ 44 px) rather than the 18 px
+that reads well with a mouse. Below a breakpoint the badges become a small
+action bar under the map instead of floating next to the handle.
+
+### Scope and permissions
+
+Route edits and places are writes and are covered by the existing
+`requireWriteScope` on the cruise routes — a read-only PAT keeps read access
+and cannot edit. Places are per-user; nothing in this feature writes to a
+shared catalogue.
+
+---
+
+## 9. Migration and back-compat
 
 - **Additive first.** Stage 4 adds the generic endpoint columns, backfills
   existing legs as `kind = 'port'` with coordinates copied from the ports,
@@ -369,7 +495,7 @@ Therefore:
 
 ---
 
-## 9. Explicitly out of scope for 2.7
+## 10. Explicitly out of scope for 2.7
 
 - **Excursion photos.** Trips link *Immich albums* — album granularity, in
   either link mode (proxied, zero bytes) or import mode (`TripPhoto` rows).
@@ -385,31 +511,36 @@ Therefore:
 
 ---
 
-## 10. Staging
+## 11. Staging
 
 Each stage is useful on its own and leaves the numbers measurable.
 
 | Stage | Content | Acceptance |
 |---|---|---|
 | **1** | Fix D1, D2, D3. No feature, no visible change beyond the corrected port count. | One counting rule, shared by a test across both sides; first and last leg appear in the globe slider; backfill agrees with `recomputeLegsForCruise` on an untouched database. |
-| **2** | Route editing: `CruiseLegRoute`, override-aware geometry and distance, map editor. **The owner's main wish.** | A hand-corrected leg keeps its line and its kilometres across a forced `recomputeLegsForCruise` and a version bump. |
+| **2** | Route editing: `CruiseLegRoute`, override-aware geometry and distance, whole-route splining (§6.2), map editor. **The owner's main wish.** | A hand-corrected leg keeps its line and its kilometres across a forced `recomputeLegsForCruise` and a version bump. |
 | **3** | `CruiseExcursion` + note migration + editor + detail page + one statistic. Independent of 2 and 4; may run in parallel. | Existing notes survive as excursions; a stop carries several excursions. |
-| **4** | Generic leg endpoints, additive, backfilled, version bumped, everything recomputed. | Total distance over all cruises identical before and after. Single number, single check. |
-| **5** | `CruisePlace`, fourth stop state, place picker on the map, separate counters, excursions on place stops. | An Arctic cruise with landings renders end to end; ports and landings count separately; the iceberg excursion hangs off its place. |
+| **4** | Generic leg endpoints, additive, backfilled, version bumped, everything recomputed. Resolve the `dayNumber` question (§8) before stage 5 depends on it. | Total distance over all cruises identical before and after. Single number, single check. |
+| **5** | `CruisePlace`, fourth stop state, **promote / demote a waypoint**, separate counters, excursions on place stops, list-and-map sync. | An Arctic cruise with landings renders end to end; ports and landings count separately; promoting every waypoint of a fixture route in turn changes the total distance by zero. |
 
 Stages 1 + 2 alone satisfy the primary wish. Stage 3 alone satisfies the
 excursion wish for ports. Only the mid-leg iceberg needs all five.
 
 ---
 
-## 11. Open items
+## 12. Open items
 
 1. **D1 resolution** (§5): confirm that the backend rule wins and the cruise
    row's port count changes for cruises with unresolved stops.
 2. **Board item.** `roadmap.local.yaml` lives in the main checkout and is
    gitignored, so it is not in this worktree. A 2.7.0 item for this work
    still has to be added there.
-3. Whether stage 3 runs in parallel with stage 2 or after it — a scheduling
+3. **`dayNumber`** (§8): does it become a repeatable ordering index with the
+   calendar day read from `date` (recommended), or does a promoted stop
+   inherit its leg's date and keep a positional number? The current
+   `index + 1` rule cannot express three landings on one day, which is the
+   normal shape of an expedition itinerary.
+4. Whether stage 3 runs in parallel with stage 2 or after it — a scheduling
    question, not a design one.
 
 ---
