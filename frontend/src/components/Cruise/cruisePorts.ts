@@ -48,24 +48,61 @@ export function countUnresolvedPorts(cruise: Cruise): number {
   return names.size;
 }
 
+/** One entry of the effective itinerary, with whatever timing it carries.
+ *  Departure and arrival ports have no stop row, so they borrow the cruise's
+ *  own start/end timestamps. */
+export interface EffectiveSequenceEntry {
+  port: Port;
+  dayNumber: number;
+  arrivalTime: string | null;
+  departureTime: string | null;
+}
+
 /**
- * Ordered port-call sequence including departure and arrival ports
- * (sea days excluded). This is what map layers pair into legs — it
- * mirrors the backend's `buildEffectivePortSequence`
- * (backend/src/shared/cruise/portSequence.ts).
+ * Ordered port-call sequence including departure and arrival ports, carrying
+ * each entry's timing (sea days excluded). This is the single source for the
+ * itinerary order on the frontend — map layers, leg pairing and the globe
+ * time slider all read it, so they cannot drift apart. Mirrors the backend's
+ * `buildEffectivePortSequence` (backend/src/shared/cruise/portSequence.ts).
+ *
+ * Dedupe rule, same as the backend: departure/arrival are skipped when they
+ * equal the first/last port call — parsers often repeat the embark port as
+ * day 1.
  */
-export function effectivePortSequence(cruise: Cruise): Port[] {
-  const seq = cruise.stops
+export function effectiveTimedSequence(cruise: Cruise): EffectiveSequenceEntry[] {
+  const seq: EffectiveSequenceEntry[] = cruise.stops
     .filter((s) => !s.isAtSea && s.port !== null)
     .sort((a, b) => a.dayNumber - b.dayNumber)
-    .map((s) => s.port as Port);
-  if (cruise.departurePort && cruise.departurePort.id !== seq[0]?.id) {
-    seq.unshift(cruise.departurePort);
+    .map((s) => ({
+      port: s.port as Port,
+      dayNumber: s.dayNumber,
+      arrivalTime: s.arrivalTime,
+      departureTime: s.departureTime,
+    }));
+
+  if (cruise.departurePort && cruise.departurePort.id !== seq[0]?.port.id) {
+    seq.unshift({
+      port: cruise.departurePort,
+      dayNumber: 1,
+      arrivalTime: null,
+      departureTime: cruise.startDate,
+    });
   }
-  if (cruise.arrivalPort && cruise.arrivalPort.id !== seq[seq.length - 1]?.id) {
-    seq.push(cruise.arrivalPort);
+  if (cruise.arrivalPort && cruise.arrivalPort.id !== seq[seq.length - 1]?.port.id) {
+    seq.push({
+      port: cruise.arrivalPort,
+      dayNumber: (seq[seq.length - 1]?.dayNumber ?? 0) + 1,
+      arrivalTime: cruise.endDate,
+      departureTime: null,
+    });
   }
   return seq;
+}
+
+/** Ports only, in itinerary order. Thin projection of
+ *  `effectiveTimedSequence` so there is exactly one ordering rule. */
+export function effectivePortSequence(cruise: Cruise): Port[] {
+  return effectiveTimedSequence(cruise).map((e) => e.port);
 }
 
 export interface EffectiveTimelineEntry {

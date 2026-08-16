@@ -1,5 +1,9 @@
 import type { Cruise } from "../../types/cruise";
 import type { GeoJSONFeature } from "../../types";
+import {
+  effectiveTimedSequence,
+  type EffectiveSequenceEntry,
+} from "../Cruise/cruisePorts";
 
 /**
  * Helpers that drive the Globe time-slider. Everything here is pure
@@ -30,40 +34,44 @@ const safeDate = (s: string | null | undefined): Date | null => {
 };
 
 /**
- * Per-leg dates for one cruise. Returns an empty list if the cruise
- * has no usable startDate AND no per-stop times — there's nothing to
- * pin a date to. Sea-day stops are skipped, matching the geometry
- * router's behaviour (it only emits LineStrings between port stops).
+ * Per-leg dates for one cruise. Returns an empty list if the cruise has no
+ * usable startDate AND no per-stop times — there's nothing to pin a date to.
+ *
+ * Walks the SAME effective sequence the geometry endpoint uses, departure and
+ * arrival ports included. Building it from stop rows alone (as this did until
+ * 2026-08-16) dropped the first and last leg, because those two ports live on
+ * the cruise row — and `GlobeView` pairs geometry to dates by
+ * `fromPortId:toPortId`, so those legs simply vanished in slider mode.
  */
 export const computeCruiseLegDates = (cruise: Cruise): CruiseLegDates[] => {
   const cruiseStart = safeDate(cruise.startDate);
-  const portStops = cruise.stops.filter((s) => !s.isAtSea && s.port !== null);
-  if (portStops.length < 2) return [];
+  const seq = effectiveTimedSequence(cruise);
+  if (seq.length < 2) return [];
 
-  const stopDate = (s: (typeof portStops)[number], which: "arrival" | "departure"): Date | null => {
-    const explicit = safeDate(which === "arrival" ? s.arrivalTime : s.departureTime);
+  const entryDate = (e: EffectiveSequenceEntry, which: "arrival" | "departure"): Date | null => {
+    const explicit = safeDate(which === "arrival" ? e.arrivalTime : e.departureTime);
     if (explicit) return explicit;
     if (cruiseStart) {
       // dayNumber is 1-based. Day 1 = cruiseStart at midnight UTC.
-      return new Date(cruiseStart.getTime() + (s.dayNumber - 1) * ONE_DAY_MS);
+      return new Date(cruiseStart.getTime() + (e.dayNumber - 1) * ONE_DAY_MS);
     }
     return null;
   };
 
   const out: CruiseLegDates[] = [];
-  for (let i = 0; i < portStops.length - 1; i++) {
-    const from = portStops[i];
-    const to = portStops[i + 1];
-    const start = stopDate(from, "departure") ?? stopDate(from, "arrival");
-    const end = stopDate(to, "arrival") ?? stopDate(to, "departure");
-    if (!start || !end || !from.port || !to.port) continue;
+  for (let i = 0; i < seq.length - 1; i++) {
+    const from = seq[i];
+    const to = seq[i + 1];
+    const start = entryDate(from, "departure") ?? entryDate(from, "arrival");
+    const end = entryDate(to, "arrival") ?? entryDate(to, "departure");
+    if (!start || !end) continue;
     out.push({
       cruiseId: cruise.id,
       fromPortId: from.port.id,
       toPortId: to.port.id,
       startDate: start,
-      // If the data is corrupt and end < start, force a zero-length
-      // window so the leg appears at exactly start and stays.
+      // If the data is corrupt and end < start, force a zero-length window so
+      // the leg appears at exactly start and stays.
       endDate: end.getTime() < start.getTime() ? start : end,
     });
   }
