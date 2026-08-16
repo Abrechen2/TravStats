@@ -132,6 +132,10 @@
       "allowRegistration": {
         "label": "Öffentliche Registrierung erlauben",
         "help": "Wenn aktiviert, können sich neue Benutzer ohne Einladungslink registrieren (nicht empfohlen)."
+      },
+      "betaFeatures": {
+        "label": "Beta-Funktionen anzeigen",
+        "help": "Blendet unfertige Funktionen für alle Nutzer dieser Instanz ein. Nur zum Testen gedacht — Beta-Funktionen können sich ändern oder wieder verschwinden."
       }
     },
     "passkeys": {

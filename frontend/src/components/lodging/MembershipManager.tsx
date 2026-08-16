@@ -194,6 +194,16 @@ export function MembershipManager({
     setClash(null);
   };
 
+  /**
+   * The chain page resolves "the membership for this chain" through the LINK
+   * table (routes/lodgingChains.ts), so a card that no longer covers this chain
+   * simply is not there any more — correct, and indistinguishable from deleted.
+   * Beta.3 UAT: users read it as data loss and re-created the card, which then
+   * hit the duplicate 409. Say it while the box is being unticked, not after.
+   */
+  const leavesScopeChain =
+    scopeChain !== undefined && editingId !== null && !chainIds.includes(scopeChain.id);
+
   const messageForSaveError = (err: unknown): string =>
     httpStatus(err) === 409
       ? t("lodging:membership.duplicateError")
@@ -393,6 +403,14 @@ export function MembershipManager({
             </fieldset>
           )}
 
+          {leavesScopeChain && (
+            <p
+              data-testid="membership-leaves-chain"
+              className="text-xs text-[var(--text-muted)]"
+            >
+              {t("lodging:membership.leavesThisChain")}
+            </p>
+          )}
           {formError !== null && (
             <p data-testid="membership-form-error" className="text-xs text-[var(--danger)]">
               {formError}
