@@ -13,6 +13,7 @@ import {
 } from '../schemas/cruise';
 import { checkAndUpdateAchievements } from '../utils/achievements';
 import { buildEffectivePortSequence } from '../shared/cruise/portSequence';
+import { buildLegRouteOverrideMap, portLegRouteKey } from '../shared/cruise/legRouteKey';
 import { computeSchematicRoute } from '../services/schematicRouter';
 import { recomputeLegsForCruise } from '../services/cruiseDistance/cruiseLegService';
 import { cruiseExternalRef } from '../services/importProvenance';
@@ -78,17 +79,13 @@ async function buildCruiseGeometry(
   // The stored line wins. It has to be the same source the distance came from
   // (services/cruiseDistance/cruiseLegService.ts), or the map and the
   // statistics would quietly disagree.
-  const overrideByLeg = new Map<string, [number, number][]>();
-  for (const o of cruise.legRoutes ?? []) {
-    if (!Array.isArray(o.waypoints)) continue;
-    overrideByLeg.set(`${o.fromKind}:${o.fromRef}:${o.toKind}:${o.toRef}`, o.waypoints as [number, number][]);
-  }
+  const overrideByLeg = buildLegRouteOverrideMap(cruise.legRoutes ?? []);
 
   for (let i = 0; i < ordered.length - 1; i++) {
     const a = ordered[i];
     const b = ordered[i + 1];
 
-    const manual = overrideByLeg.get(`port:${a.id}:port:${b.id}`);
+    const manual = overrideByLeg.get(portLegRouteKey(a.id, b.id));
     if (manual && manual.length >= 2) {
       features.push({
         type: 'Feature',

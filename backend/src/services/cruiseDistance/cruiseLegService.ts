@@ -13,6 +13,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../../db";
 import { buildEffectivePortSequence } from "../../shared/cruise/portSequence";
+import { buildLegRouteOverrideMap, portLegRouteKey } from "../../shared/cruise/legRouteKey";
 import { computeLegDistance } from "./index";
 import { polylineDistanceKm } from "./polylineDistance";
 import type { PortPoint } from "./types";
@@ -77,18 +78,14 @@ export async function recomputeLegsForCruise(
   // A hand-corrected line wins over the router, and keeps winning: this lookup
   // is why a routerVersion bump cannot silently reset the user's kilometres
   // while the map still shows their line (spec §6, "The trap").
-  const overrideByLeg = new Map<string, Array<[number, number]>>();
-  for (const o of overrides) {
-    if (!Array.isArray(o.waypoints)) continue;
-    overrideByLeg.set(`${o.fromKind}:${o.fromRef}:${o.toKind}:${o.toRef}`, o.waypoints as Array<[number, number]>);
-  }
+  const overrideByLeg = buildLegRouteOverrideMap(overrides);
 
   const rows: Prisma.CruiseLegCreateManyInput[] = [];
   for (let i = 1; i < sequence.length; i++) {
     const from = sequence[i - 1];
     const to = sequence[i];
 
-    const manual = overrideByLeg.get(`port:${from.id}:port:${to.id}`);
+    const manual = overrideByLeg.get(portLegRouteKey(from.id, to.id));
     if (manual && manual.length >= 2) {
       rows.push({
         cruiseId,
