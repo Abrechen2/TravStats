@@ -23,6 +23,7 @@ import {
   recomputeLegsForCruise,
   ORCHESTRATOR_VERSION,
 } from "../services/cruiseDistance/cruiseLegService";
+import { buildEffectivePortSequence } from "../shared/cruise/portSequence";
 
 interface BackfillStats {
   scanned: number;
@@ -30,6 +31,34 @@ interface BackfillStats {
   recomputed: number;
   failed: number;
   zeroLegCruises: number;
+}
+
+export interface ExpectedLegInput {
+  departurePortId: number | null;
+  arrivalPortId: number | null;
+  /** Port-call stops in itinerary order (sea days already excluded). */
+  stops: Array<{ portId: number | null }>;
+}
+
+/**
+ * How many legs `recomputeLegsForCruise` will produce for this cruise.
+ *
+ * Must use the SAME sequence rule as the recompute, which is why it goes
+ * through `buildEffectivePortSequence`. The previous `portCallCount - 1`
+ * ignored the departure and arrival ports — those live on the cruise row, not
+ * in `cruise_stops` — so this script judged correct cruises to be out of date
+ * and would have been the wrong ruler for any migration that trusted it.
+ */
+export function expectedLegCount(cruise: ExpectedLegInput): number {
+  const portCalls = cruise.stops
+    .filter((s): s is { portId: number } => s.portId !== null)
+    .map((s) => ({ id: s.portId }));
+  const sequence = buildEffectivePortSequence(
+    cruise.departurePortId !== null ? { id: cruise.departurePortId } : null,
+    portCalls,
+    cruise.arrivalPortId !== null ? { id: cruise.arrivalPortId } : null,
+  );
+  return Math.max(0, sequence.length - 1);
 }
 
 async function backfill(apply: boolean): Promise<BackfillStats> {
@@ -44,9 +73,12 @@ async function backfill(apply: boolean): Promise<BackfillStats> {
   const cruises = await prisma.cruise.findMany({
     select: {
       id: true,
+      departurePortId: true,
+      arrivalPortId: true,
       stops: {
         where: { isAtSea: false, portId: { not: null } },
-        select: { id: true },
+        orderBy: { dayNumber: "asc" },
+        select: { portId: true },
       },
       legs: { select: { routerVersion: true } },
     },
@@ -54,8 +86,7 @@ async function backfill(apply: boolean): Promise<BackfillStats> {
 
   for (const cruise of cruises) {
     stats.scanned += 1;
-    const portCallCount = cruise.stops.length;
-    const expectedLegs = Math.max(0, portCallCount - 1);
+    const expectedLegs = expectedLegCount(cruise);
     const haveLegs = cruise.legs.length;
 
     if (expectedLegs === 0) {
@@ -100,7 +131,12 @@ async function main(): Promise<void> {
   await prisma.$disconnect();
 }
 
-main().catch((err) => {
-  console.error("[backfill] fatal:", err);
-  void prisma.$disconnect().finally(() => process.exit(1));
-});
+// Only run when invoked as a script. Without this guard, importing the module
+// (a unit test does) would execute the backfill against the live database.
+// Same pattern as scripts/recheckAchievements.ts.
+if (require.main === module) {
+  main().catch((err) => {
+    console.error("[backfill] fatal:", err);
+    void prisma.$disconnect().finally(() => process.exit(1));
+  });
+}
