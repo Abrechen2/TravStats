@@ -264,7 +264,8 @@
       "ambiguous_lodging_name": "Hotelname mehrdeutig",
       "malformed_date": "Datum ungültig",
       "invalid_date_range": "Zeitraum ungültig",
-      "missing_coordinates": "Keine Koordinaten"
+      "missing_coordinates": "Keine Koordinaten",
+      "unknown_chain": "Kette nicht im Katalog"
     },
     "dedupeHints": {
       "lodging_exact_ref": "Bereits importiert (gleiche Referenz)",
@@ -334,7 +335,8 @@
       "uploadLabel": "Takeout-CSV wählen",
       "noRows": "In dieser Datei steht keine Zeile mit einem Namen — ist es wirklich eine gespeicherte Liste aus Takeout?",
       "withoutId": "{{count}} Zeilen bringen keine Ortskennung mit — sie werden übernommen, aber ein zweiter Import erkennt sie nicht wieder."
-    }
+    },
+    "createChain": "„{{name}}\" anlegen"
   },
   "stats": {
     "more": "+ {{count}} weitere",

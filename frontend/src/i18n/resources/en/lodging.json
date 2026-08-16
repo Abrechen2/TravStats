@@ -264,7 +264,8 @@
       "ambiguous_lodging_name": "Hotel name is ambiguous",
       "malformed_date": "Malformed date",
       "invalid_date_range": "Invalid date range",
-      "missing_coordinates": "Missing coordinates"
+      "missing_coordinates": "Missing coordinates",
+      "unknown_chain": "Chain not in the catalogue"
     },
     "dedupeHints": {
       "lodging_exact_ref": "Already imported (exact reference match)",
@@ -334,7 +335,8 @@
       "uploadLabel": "Choose Takeout CSV",
       "noRows": "No row in this file carries a name — is it really a saved list from Takeout?",
       "withoutId": "{{count}} rows carry no place id. They are imported, but a second import will not recognise them."
-    }
+    },
+    "createChain": "Create “{{name}}”"
   },
   "stats": {
     "more": "+ {{count}} more",

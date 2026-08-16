@@ -49,6 +49,16 @@ export const lodgingCandidateFieldsSchema = z.object({
   name: z.string().trim().min(1).max(200),
   type: z.enum(LODGING_TYPES).nullable().optional(),
   chainName: z.string().trim().max(120).nullable().optional(),
+  /**
+   * Create `chainName` in the catalogue if it is not there yet.
+   *
+   * Default false, and deliberately so: the commit used to create any unknown
+   * chain silently, which fills the catalogue with whatever a parser thought a
+   * chain was — spelling variants and all. The preview now surfaces an unknown
+   * chain (`unknown_chain`) and the user ticks it once; an unticked row keeps
+   * the house chain-less rather than inventing an entry.
+   */
+  createChain: z.boolean().optional(),
   stars: z.number().int().min(1).max(5).nullable().optional(),
   address: z.string().max(300).nullable().optional(),
   city: z.string().max(120).nullable().optional(),
@@ -130,7 +140,8 @@ export type LodgingImportFlag =
   | "ambiguous_lodging_name"
   | "malformed_date"
   | "invalid_date_range"
-  | "missing_coordinates";
+  | "missing_coordinates"
+  | "unknown_chain";
 
 export type LodgingDedupeHint =
   | "none"

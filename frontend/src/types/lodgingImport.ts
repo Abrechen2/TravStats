@@ -16,6 +16,12 @@ import type { BoardType, LodgingCurrency, LodgingType } from "./lodging";
 export type LodgingImportSource = "csv" | "email" | "pdf";
 
 export interface LodgingCandidateFields {
+  /**
+   * Create `chainName` in the catalogue on commit. Absent means no — the
+   * commit stopped creating whatever a parser took for a chain, so an unknown
+   * name is offered once (flag `unknown_chain`) rather than added silently.
+   */
+  createChain?: boolean;
   name: string;
   type?: LodgingType | null;
   chainName?: string | null;
@@ -70,7 +76,8 @@ export type LodgingImportFlag =
   | "ambiguous_lodging_name"
   | "malformed_date"
   | "invalid_date_range"
-  | "missing_coordinates";
+  | "missing_coordinates"
+  | "unknown_chain";
 
 export type LodgingDedupeHint =
   "none" | "lodging_exact_ref" | "lodging_name_city" | "stay_exact_ref" | "stay_same_dates";

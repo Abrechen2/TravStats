@@ -456,6 +456,24 @@ function PreviewRowLine({ row, onChange, t }: PreviewRowLineProps): JSX.Element 
               {t(`lodging:import.flags.${flag}`)}
             </span>
           ))}
+          {/* An unknown chain is an OFFER, never a silent create — the commit
+              stopped adding whatever a parser took for a chain. One tick per
+              row decides it; unticked, the house imports without a chain. */}
+          {row.flags.includes("unknown_chain") && row.lodging?.chainName && (
+            <label className="flex items-center gap-1 text-[10px] text-amber-300">
+              <input
+                type="checkbox"
+                checked={row.lodging.createChain === true}
+                onChange={(e): void =>
+                  onChange(sourceRowIndex, {
+                    lodging: { ...row.lodging!, createChain: e.target.checked },
+                  })
+                }
+                className="h-3 w-3"
+              />
+              {t("lodging:import.createChain", { name: row.lodging.chainName })}
+            </label>
+          )}
           {showDedupeHint && (
             <span
               title={t(`lodging:import.dedupeHints.${row.dedupeHint}`)}
