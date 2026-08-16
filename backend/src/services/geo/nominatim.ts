@@ -3,6 +3,7 @@ import {
   DEFAULT_NOMINATIM_URL,
 } from "../instanceSettingsService";
 import logger from "../../utils/logger";
+import { formatStreetAddress } from "./streetAddress";
 
 // Nominatim's usage policy demands a descriptive UA and at most 1 req/s.
 const USER_AGENT = "TravStats/1.0 (self-hosted travel logbook)";
@@ -44,6 +45,8 @@ interface NominatimAddress {
   village?: unknown;
   municipality?: unknown;
   country?: unknown;
+  /** ISO 3166-1 alpha-2, lowercase — decides whether the number leads the street. */
+  country_code?: unknown;
 }
 
 interface NominatimReverseRow {
@@ -222,7 +225,9 @@ async function fetchAddress(
   const city = str(a.city) ?? str(a.town) ?? str(a.village) ?? str(a.municipality);
   const road = str(a.road);
   const houseNumber = str(a.house_number);
-  const address = road ? [road, houseNumber].filter(Boolean).join(" ") : null;
+  // Order by country, not by our own habit: "50 Southwest Morrison Street", not
+  // "Southwest Morrison Street 50". See services/geo/streetAddress.ts.
+  const address = formatStreetAddress(road, houseNumber, str(a.country_code)) ?? null;
   const parts: GeocodeParts = { address, city, country: str(a.country) };
   // All three empty is indistinguishable from "no answer" to every caller, so
   // report it as one rather than handing back a hollow object.
