@@ -1,4 +1,5 @@
 import type { CurrencyCode } from "../shared/currencies";
+import type { LodgingDatePrecision } from "../shared/lodgingTiming";
 // Frontend view of the `lodging` domain (hotels + campsites). Mirrors
 // backend/prisma/schema.prisma (`Lodging`, `LodgingStay`, `LodgingChain`,
 // `LodgingMembership`) and backend/src/schemas/lodging.ts (enums + input
@@ -66,8 +67,18 @@ export interface LodgingStay {
   userId: string;
   tripId: string | null;
   bookingId: string | null;
-  checkIn: string;
-  checkOut: string;
+  /**
+   * Nullable since 2.7 — a hotel you remember but cannot date is still a place
+   * you slept, and rating/price/board/room/membership all live on the stay.
+   * What the dates mean is qualified by `datePrecision`; see
+   * `shared/lodgingTiming.ts`, which every consumer asks rather than reading
+   * these two directly.
+   */
+  checkIn: string | null;
+  checkOut: string | null;
+  datePrecision: LodgingDatePrecision;
+  /** Explicit night count, for when the dates cannot supply one. */
+  nights: number | null;
   status: StayStatus;
   roomNumber: string | null;
   roomCategory: string | null;
@@ -179,8 +190,10 @@ export interface LodgingInput {
 }
 
 export interface StayInput {
-  checkIn?: string;
-  checkOut?: string;
+  checkIn?: string | null;
+  checkOut?: string | null;
+  datePrecision?: LodgingDatePrecision;
+  nights?: number | null;
   status?: StayStatus;
   tripId?: string | null;
   bookingId?: string | null;
@@ -353,6 +366,25 @@ export interface LodgingStats {
   plannedLodgingsCount: number;
   /** Houses the user only bookmarked (`visited === false`). Never part of any other figure. */
   notedLodgingsCount: number;
+  /** Nights by the house's OFFICIAL star count ("1".."5"); a house with none has no key. */
+  nightsByStars: Record<string, number>;
+  /** Nights by board type. Covers every stay, unlike `price.byBoard` which needs a price. */
+  nightsByBoard: Record<string, number>;
+  /** Stays rated 5 on all four columns; a blank on any of them disqualifies. */
+  perfectStays: number;
+  /** Stays rated 2 or worse overall — the ones the user got through. */
+  enduredStays: number;
+  oneNightStays: number;
+  /**
+   * Stays with no usable date. They count in every sum, ranking and achievement
+   * and in no calendar series (owner rule, 2026-08-16). Reported so a screen can
+   * say so — a year chart quietly missing eleven stays looks exactly like one
+   * that has them all.
+   */
+  undatedStays: number;
+  undatedNights: number;
+  /** Stays whose length nobody knows — neither dates nor an explicit count. */
+  staysWithUnknownLength: number;
   price: LodgingPriceStats;
   ratings: LodgingRatingStats;
   geo: LodgingGeoStats;
@@ -400,7 +432,8 @@ export interface LodgingPlace {
   country: string | null;
   lat: number;
   lon: number;
-  checkIn: string;
+  /** ISO check-in date, or null when the stay carries none. */
+  checkIn: string | null;
 }
 
 /** One city or country, with how much of the user's sleeping it accounts for. */
@@ -465,7 +498,7 @@ export interface LodgingPricedNight {
   lodgingName: string;
   city: string | null;
   country: string | null;
-  checkIn: string;
+  checkIn: string | null;
   nights: number;
   pricePerNight: number;
 }

@@ -245,6 +245,8 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       lon: s.lodging.lon,
       checkIn: s.checkIn,
       checkOut: s.checkOut,
+      datePrecision: s.datePrecision,
+      nights: s.nights,
       status: s.status,
       totalPriceBase: s.totalPriceBase,
       fxBaseCurrency: s.fxBaseCurrency,

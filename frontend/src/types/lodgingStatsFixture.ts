@@ -77,8 +77,25 @@ export const EMPTY_LODGING_LOYALTY_STATS: LodgingLoyaltyStats = {
   programmeYears: [],
 };
 
+/**
+ * The scalar counters that arrived with the statistics expansion, at rest.
+ * Same purpose as the blocks below: a fixture about nights should not have to
+ * spell out a dozen fields it has no opinion about.
+ */
+export const EMPTY_LODGING_STATS_COUNTERS = {
+  nightsByStars: {},
+  nightsByBoard: {},
+  perfectStays: 0,
+  enduredStays: 0,
+  oneNightStays: 0,
+  undatedStays: 0,
+  undatedNights: 0,
+  staysWithUnknownLength: 0,
+} as const;
+
 /** Spread into a `LodgingStats` fixture that has no opinion on the sub-blocks. */
 export const EMPTY_LODGING_STATS_BLOCKS = {
+  ...EMPTY_LODGING_STATS_COUNTERS,
   price: EMPTY_LODGING_PRICE_STATS,
   ratings: EMPTY_LODGING_RATING_STATS,
   geo: EMPTY_LODGING_GEO_STATS,

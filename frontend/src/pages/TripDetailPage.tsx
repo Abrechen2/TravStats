@@ -616,13 +616,20 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
     // hotel is actually visible in the trip's chronology instead of
     // disappearing once it's assigned (the spec gap this closes).
     for (const s of trip.lodgingStays ?? []) {
-      out.push({ id: `lodging-checkin-${s.id}`, kind: "lodging-checkin", date: s.checkIn, stay: s });
-      out.push({
-        id: `lodging-checkout-${s.id}`,
-        kind: "lodging-checkout",
-        date: s.checkOut,
-        stay: s,
-      });
+      // A timeline is ordered by date, so an undated stay has no place on one.
+      // It is still shown on the trip — in the lodging list below, which needs
+      // no chronology — rather than being dropped from the page.
+      if (s.checkIn !== null) {
+        out.push({ id: `lodging-checkin-${s.id}`, kind: "lodging-checkin", date: s.checkIn, stay: s });
+      }
+      if (s.checkOut !== null) {
+        out.push({
+          id: `lodging-checkout-${s.id}`,
+          kind: "lodging-checkout",
+          date: s.checkOut,
+          stay: s,
+        });
+      }
     }
     // #175: ordered by time of day, with a day's diary entry last. See
     // compareTimelineEvents — the tie-break rules and the reason they exist

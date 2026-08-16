@@ -485,5 +485,26 @@
       "nights": "Nights",
       "stays": "Stays"
     }
+  },
+  "period": {
+    "from": "from",
+    "until": "until",
+    "unknown": "Date unknown",
+    "unknownLength": "Length unknown",
+    "precision": {
+      "label": "How exactly do you know the date?",
+      "DAY": "Exact dates",
+      "MONTH": "Month and year only",
+      "YEAR": "Year only",
+      "NONE": "I don't remember",
+      "DAYHint": "Both check-in and check-out are known.",
+      "MONTHHint": "Counts in month and year figures, not in the weekday distribution.",
+      "YEARHint": "Counts in year figures only.",
+      "NONEHint": "Counts in every total, ranking and achievement — but in no time series."
+    },
+    "monthField": "Month",
+    "yearField": "Year",
+    "nightsField": "Nights (if known)",
+    "nightsHint": "Optional. Without it the stay still counts, just without nights."
   }
 }
