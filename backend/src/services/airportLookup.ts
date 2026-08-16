@@ -498,8 +498,18 @@ export async function enrichFlightAirports(flightData: {
       name: flightData.departure.name || foundDeparture.name,
       city: flightData.departure.city || foundDeparture.city,
       country: flightData.departure.country || foundDeparture.country,
-      lat: flightData.departure.lat ?? foundDeparture.lat,
-      lon: flightData.departure.lon ?? foundDeparture.lon,
+      // The catalogue OWNS the position — it is not a gap-filler here.
+      // This used to read `flightData.departure.lat ?? foundDeparture.lat`,
+      // which let every caller win, and every import path brings a coordinate:
+      // the e-mail parser, the boarding-pass scan, a live provider update, the
+      // manual form. Providers quote different reference points for one airport
+      // (terminal vs. ARP vs. runway threshold), so the stored copies drifted
+      // apart and never converged — measured at 242 of 878 airport references
+      // on a real account, across 30 airports, the worst 1.6 km out. The caller
+      // still supplies the position for an airport the catalogue does not know,
+      // because then there is no other.
+      lat: foundDeparture.lat ?? flightData.departure.lat,
+      lon: foundDeparture.lon ?? flightData.departure.lon,
       altitude: flightData.departure.altitude ?? foundDeparture.altitude,
       timezone: flightData.departure.timezone || foundDeparture.timezone,
     };
@@ -519,8 +529,9 @@ export async function enrichFlightAirports(flightData: {
       name: flightData.arrival.name || foundArrival.name,
       city: flightData.arrival.city || foundArrival.city,
       country: flightData.arrival.country || foundArrival.country,
-      lat: flightData.arrival.lat ?? foundArrival.lat,
-      lon: flightData.arrival.lon ?? foundArrival.lon,
+      // Same authority rule as the departure above.
+      lat: foundArrival.lat ?? flightData.arrival.lat,
+      lon: foundArrival.lon ?? flightData.arrival.lon,
       altitude: flightData.arrival.altitude ?? foundArrival.altitude,
       timezone: flightData.arrival.timezone || foundArrival.timezone,
     };
