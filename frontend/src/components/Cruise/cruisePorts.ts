@@ -61,9 +61,15 @@ export interface EffectiveSequenceEntry {
 /**
  * Ordered port-call sequence including departure and arrival ports, carrying
  * each entry's timing (sea days excluded). This is the single source for the
- * itinerary order on the frontend — map layers, leg pairing and the globe
- * time slider all read it, so they cannot drift apart. Mirrors the backend's
- * `buildEffectivePortSequence` (backend/src/shared/cruise/portSequence.ts).
+ * itinerary order used by map layers and the globe time slider, so those
+ * two cannot drift apart. Mirrors the backend's `buildEffectivePortSequence`
+ * (backend/src/shared/cruise/portSequence.ts).
+ *
+ * NOT the source for the detail timeline — `buildEffectiveTimeline` below
+ * still carries its own copy of the departure/arrival dedupe (and, unlike
+ * this function, trusts the API's stop order instead of sorting by
+ * `dayNumber`), because the timeline needs the raw `stop`/`unresolvedPortName`
+ * fields this projection drops.
  *
  * Dedupe rule, same as the backend: departure/arrival are skipped when they
  * equal the first/last port call — parsers often repeat the embark port as

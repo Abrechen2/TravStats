@@ -4,7 +4,8 @@
 **Branch:** `dev/cruise-extension` (off `origin/main` @ `0734d177`)
 **Target version:** 2.7.0
 **Status:** direction approved by the owner 2026-08-16; this document awaits
-his review. Nothing implemented.
+his review. Stage 1 implemented on `dev/cruise-extension`; stages 2–5 not
+started.
 
 ---
 
@@ -569,7 +570,7 @@ Each stage is useful on its own and leaves the numbers measurable.
 
 | Stage | Content | Acceptance |
 |---|---|---|
-| **1** | Fix D1, D2, D3. No feature, no visible change beyond the corrected port count. | One counting rule, shared by a test across both sides; first and last leg appear in the globe slider; backfill agrees with `recomputeLegsForCruise` on an untouched database. |
+| **1** | Fix D1, D2, D3. No feature, no visible change beyond the corrected port count. | Frontend counting rule changed to match the backend's, each side covered by its own test, the two documented as mirrors (not a shared cross-language test — that's out of stage 1's scope); first and last leg appear in the globe slider; backfill agrees with `recomputeLegsForCruise` on an untouched database. |
 | **2** | Route editing: `CruiseLegRoute`, override-aware geometry and distance, whole-route splining (§6.2), map editor. **The owner's main wish.** | A hand-corrected leg keeps its line and its kilometres across a forced `recomputeLegsForCruise` and a version bump. |
 | **3** | `CruiseExcursion` + note migration + editor + detail page + one statistic. Independent of 2 and 4; may run in parallel. | Existing notes survive as excursions; a stop carries several excursions. |
 | **4** | Generic leg endpoints, additive, backfilled, version bumped, everything recomputed. Resolve the `dayNumber` question (§8) before stage 5 depends on it. | Total distance over all cruises identical before and after. Single number, single check. |

@@ -43,6 +43,7 @@ export function CruiseRow({ cruise, onOpen, actions }: Props): JSX.Element {
           <span
             className="ml-1 text-xs"
             title={t("list.unresolvedPorts", { count: unresolvedCount })}
+            aria-label={t("list.unresolvedPorts", { count: unresolvedCount })}
           >
             (+{unresolvedCount})
           </span>

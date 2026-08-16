@@ -11,17 +11,19 @@ import {
  * React or Zustand setup.
  */
 
-/** Per-leg date metadata. Each cruise contributes (n_port_stops - 1)
- * entries — one for each consecutive port-pair, in itinerary order. */
+/** Per-leg date metadata. Each cruise contributes (n_sequence_entries - 1)
+ * entries — one for each consecutive pair in the *effective* sequence
+ * (departure port → port calls → arrival port, via `effectiveTimedSequence`),
+ * in itinerary order. */
 export interface CruiseLegDates {
   cruiseId: string;
   fromPortId: number;
   toPortId: number;
-  /** When the ship departs `fromPort`. Falls back to
-   * `cruise.startDate + (fromStop.dayNumber - 1) days` if the explicit
+  /** When the ship departs the `from` entry. Falls back to
+   * `cruise.startDate + (fromEntry.dayNumber - 1) days` if the explicit
    * `departureTime` is null. */
   startDate: Date;
-  /** When the ship arrives at `toPort`. Falls back analogously. */
+  /** When the ship arrives at the `to` entry. Falls back analogously. */
   endDate: Date;
 }
 
