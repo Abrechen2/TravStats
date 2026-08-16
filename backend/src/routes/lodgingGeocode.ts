@@ -1,4 +1,5 @@
 import * as geo from "../services/geo/nominatim";
+import { resolveCountryCode } from "../shared/geo/countryCode";
 
 export interface AddressFields {
   /** The lodging's own name — geocode material when there is no street address. */
@@ -173,7 +174,20 @@ export async function resolveLocation(
   // themselves be wrong — is how a correction becomes a new error.
   if (completed?.address && input.address === undefined) patch.address = completed.address;
   if (completed?.city && input.city === undefined) patch.city = completed.city;
-  if (completed?.country && input.country === undefined) patch.country = completed.country;
+  // The country may also be replaced when the value present is not a country at
+  // all — a city or a state left there by a parser. A name the resolver knows
+  // is left alone even if the pin disagrees: that is a conflict for the user to
+  // settle, not for a reverse lookup to overrule.
+  const effectiveCountry = merge(input.country, existing?.country);
+  // "Present, but not a country" — a city or a state left there by a parser.
+  // An EMPTY value is not that: emptying a field is a decision, and refilling
+  // it from coordinates is exactly the defect 2.6.0 removed. So the replacement
+  // needs a non-empty value that resolves to nothing.
+  const countryIsNotACountry =
+    Boolean(effectiveCountry?.trim()) && resolveCountryCode(effectiveCountry) === null;
+  if (completed?.country && (input.country === undefined || countryIsNotACountry)) {
+    patch.country = completed.country;
+  }
 
   return patch;
 }

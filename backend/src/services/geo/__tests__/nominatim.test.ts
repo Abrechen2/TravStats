@@ -355,10 +355,29 @@ describe("nominatim geocoder", () => {
         lon: 2,
         address: "A",
         city: "B",
-        country: "C",
+        // A REAL country: the placeholder "C" used to stand here, and it now
+        // counts as "present but not a country" — see the next test.
+        country: "Schweiz",
       }),
     ).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // A country field that names no country is not complete, however full it
+  // looks. An Armani confirmation prints "Burj Khalifa, Downtown Dubai" and
+  // never the word "Emirates", so the field held "Dubai" — a city standing in
+  // the country filter as its own country. The pin knew better all along.
+  it("treats a country field that names no country as missing", async () => {
+    const fetchMock = jest.fn();
+    global.fetch = fetchMock as unknown as typeof fetch;
+    await completeAddressFromCoordinates({
+      lat: 25.1972,
+      lon: 55.2744,
+      address: "Burj Khalifa",
+      city: "Dubai",
+      country: "Dubai",
+    });
+    expect(fetchMock).toHaveBeenCalled();
   });
 
   it("does not call the geocoder without coordinates to reverse", async () => {
