@@ -152,3 +152,32 @@ export const cruiseQuerySchema = z.object({
 
 export type CruiseInput = z.infer<typeof baseCruiseSchema>;
 export type CruiseQueryInput = z.infer<typeof cruiseQuerySchema>;
+
+/** One `[lon, lat]` pair, in GeoJSON order. */
+const waypointSchema = z.tuple([
+  z.number().min(-180).max(180),
+  z.number().min(-90).max(90),
+]);
+
+/**
+ * A hand-corrected line for one leg.
+ *
+ * The endpoint refs are strings because the column is `kind` + `ref`, ready for
+ * a place id (a uuid) alongside a port id (an integer) — see the model's own
+ * doc comment. Today only `port` is written.
+ *
+ * The 64-point ceiling is a storage guard, not a UX limit: the router emits
+ * 3–8 waypoints and a person correcting a line by hand adds a handful more.
+ */
+export const routeOverrideSchema = z.object({
+  fromKind: z.literal('port'),
+  fromRef: z.string().min(1).max(64),
+  toKind: z.literal('port'),
+  toRef: z.string().min(1).max(64),
+  waypoints: z.array(waypointSchema).min(2).max(64),
+});
+
+export type RouteOverrideInput = z.infer<typeof routeOverrideSchema>;
+
+/** Query form of the endpoint key, for DELETE. */
+export const routeOverrideKeySchema = routeOverrideSchema.omit({ waypoints: true });

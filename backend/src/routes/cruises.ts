@@ -4,7 +4,13 @@ import { z } from 'zod';
 import { prisma } from '../db';
 import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
-import { createCruiseSchema, updateCruiseSchema, cruiseQuerySchema } from '../schemas/cruise';
+import {
+  createCruiseSchema,
+  updateCruiseSchema,
+  cruiseQuerySchema,
+  routeOverrideSchema,
+  routeOverrideKeySchema,
+} from '../schemas/cruise';
 import { checkAndUpdateAchievements } from '../utils/achievements';
 import { buildEffectivePortSequence } from '../shared/cruise/portSequence';
 import { computeSchematicRoute } from '../services/schematicRouter';
@@ -147,6 +153,121 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     next(err);
   }
 });
+
+/**
+ * Is `from → to` an actual leg of this cruise's itinerary?
+ *
+ * Checked on every write. Without it the table accepts lines for legs that do
+ * not exist, which can never match anything on read — the user would see a
+ * silent no-op instead of an error.
+ */
+async function legExists(
+  cruiseId: string,
+  userId: string,
+  fromRef: string,
+  toRef: string,
+): Promise<boolean> {
+  const cruise = await prisma.cruise.findFirst({
+    where: { id: cruiseId, userId },
+    include: {
+      departurePort: true,
+      arrivalPort: true,
+      stops: {
+        where: { isAtSea: false, portId: { not: null } },
+        orderBy: { dayNumber: 'asc' },
+        include: { port: true },
+      },
+    },
+  });
+  if (!cruise) return false;
+
+  const portCalls = cruise.stops
+    .filter((s): s is typeof s & { port: NonNullable<typeof s.port> } => s.port !== null)
+    .map((s) => s.port);
+  const sequence = buildEffectivePortSequence(cruise.departurePort, portCalls, cruise.arrivalPort);
+
+  for (let i = 1; i < sequence.length; i++) {
+    if (String(sequence[i - 1].id) === fromRef && String(sequence[i].id) === toRef) return true;
+  }
+  return false;
+}
+
+router.put('/:id/route-override', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const parsed = routeOverrideSchema.safeParse(req.body);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    const { fromKind, fromRef, toKind, toRef, waypoints } = parsed.data;
+
+    if (!(await legExists(req.params.id, userId, fromRef, toRef))) {
+      throw new AppError('Cruise or leg not found', 404);
+    }
+
+    const key = { cruiseId: req.params.id, fromKind, fromRef, toKind, toRef };
+    const existing = await prisma.cruiseLegRoute.findUnique({
+      where: { cruiseId_fromKind_fromRef_toKind_toRef: key },
+      select: { id: true },
+    });
+
+    const row = await prisma.cruiseLegRoute.upsert({
+      where: { cruiseId_fromKind_fromRef_toKind_toRef: key },
+      create: { ...key, waypoints: waypoints as unknown as Prisma.InputJsonValue },
+      update: { waypoints: waypoints as unknown as Prisma.InputJsonValue },
+    });
+
+    await recomputeLegsForCruise(req.params.id);
+
+    logger.info({
+      operation: 'cruise_route_override_saved',
+      cruiseId: req.params.id,
+      userId,
+      fromRef,
+      toRef,
+      waypoints: waypoints.length,
+      replaced: existing !== null,
+    });
+
+    res.status(existing ? 200 : 201).json({ success: true, data: row });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete(
+  '/:id/route-override',
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = requireUser(req);
+      const parsed = routeOverrideKeySchema.safeParse(req.query);
+      if (!parsed.success) throw new AppError(parsed.error.message, 400);
+
+      const owned = await prisma.cruise.findFirst({
+        where: { id: req.params.id, userId },
+        select: { id: true },
+      });
+      if (!owned) throw new AppError('Cruise not found', 404);
+
+      const { count } = await prisma.cruiseLegRoute.deleteMany({
+        where: { cruiseId: req.params.id, ...parsed.data },
+      });
+
+      await recomputeLegsForCruise(req.params.id);
+
+      logger.info({
+        operation: 'cruise_route_override_cleared',
+        cruiseId: req.params.id,
+        userId,
+        fromRef: parsed.data.fromRef,
+        toRef: parsed.data.toRef,
+        deleted: count,
+      });
+
+      res.json({ success: true, data: { deleted: count } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
