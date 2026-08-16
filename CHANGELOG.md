@@ -4,7 +4,7 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
-## [2.6.0] - 2026-08-14
+## [2.6.0] - 2026-08-16
 
 The lodging release. Hotels become a domain of their own — recorded, imported,
 mapped and counted like flights and cruises — and every price in TravStats can
@@ -78,6 +78,21 @@ authentication and passkeys arrive alongside.
   field holding something that is not a country. Nothing is shown for a sound
   row.
 
+- **Hotel statistics grow into their own chapter.** What a night cost — by year,
+  country, chain and board, with the median taken over nights rather than
+  bookings — and what it was worth: the value of award nights, and all four
+  rating columns separately instead of one blended score. Where the nights
+  happened: continents, the northernmost night, the centre of gravity of your
+  travel computed on the sphere. When they happened: by weekday, by season, and
+  the longest unbroken run away from home. Nights per loyalty programme per
+  calendar year. And a travel account that splits every year into hotel, ship,
+  aircraft and home — naming the days it cannot account for rather than hiding
+  them.
+- **34 new achievements** for the measures that had none, in German and English.
+- **A hotel you cannot date is still a hotel you slept in.** A stay may now
+  record only a month, only a year, or no date at all, and says which — instead
+  of forcing a guess that later reads as fact.
+
 ### Changed
 - **The next upcoming entry moved into the domain strip.** It used to float
   over the map and covered the map-mode switcher completely. It now sits beside
@@ -89,6 +104,16 @@ authentication and passkeys arrive alongside.
   cache was observed serving one signed-in user's response to another.
 - **The import hub carries every domain**, including the e-mail and PDF routes,
   instead of scattering entry points across the app.
+
+- **A stay counts once it is over.** Lodging figures counted every house on
+  record, including ones only bookmarked from a saved-places import, and
+  bookings that have not happened yet. A bookmark is not a visit, and a booking
+  for next month is not a night slept: both are now reported separately rather
+  than folded into a total or dropped from it. What counts is decided in one
+  place.
+- **Lodging pins take a colour mode** like flights and cruises, the list panel
+  remembers whether it was open, and the figures moved off the map into the
+  statistics, where figures belong.
 
 ### Fixed
 - **A total that leaves entries out now says so** — on the stay, on the lodging,
@@ -126,6 +151,23 @@ authentication and passkeys arrive alongside.
   the pin off-screen, and deliberately does NOT follow a marker drag.
 - **Sample documents can no longer be committed** — the ignore rules covered
   mail files but not documents.
+
+- **Flight arcs start at the airport again.** Every flight kept its own copy of
+  the departure and arrival coordinates, written by whichever source created it
+  — and providers quote different reference points for the same airport, so one
+  airport sat in several places at once. Measured on one account: 58 of 694
+  references disagreed with the catalogue, the worst by 1.6 km, which drew arcs
+  that visibly missed their own airport dot. The catalogue is the authority now,
+  both when drawing the map and when writing a flight.
+- **The map says what is clickable.** Airport dots, route arcs, ports and
+  lodging pins all open something on click; the pointer never showed it.
+- **Beta features can be switched on from the admin surface**, instead of only
+  through an API call.
+- **Unticking a chain no longer looks like deleting the card.** A loyalty
+  programme leaves that chain's page by design — it now says so before you save,
+  and names where the card stays reachable.
+- **Names on the trip map thin out with zoom**, as they already did everywhere
+  else.
 
 ### Security
 - Closed an IDOR in the lodging import commit path, scoped receipt access to the
