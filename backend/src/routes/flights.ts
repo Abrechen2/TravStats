@@ -24,7 +24,11 @@ import {
 import { getProviderQuota } from '../services/apiQuota';
 import { estimateRoute } from '../services/routeEstimationService';
 import { calculateCo2Kg, haversineKm, toSeatClass } from '../services/co2Calculator';
-import { getCachedAirports } from '../services/airportCache';
+import { getCachedAirports, compareAirportAuthority } from '../services/airportCache';
+import {
+  buildAirportCoordinateIndex,
+  resolveAirportCoordinate,
+} from '../services/airportCoordinates';
 import { tzAwareDurationMinutes, type FlightTimeSemantics } from '../utils/timezone';
 import { fromZonedTime } from 'date-fns-tz';
 import { resolveAirlineCodes } from '../utils/airlineNormalize';
@@ -815,28 +819,60 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
     }
     const infoByIata = new Map<string, AirportInfo>();
     const infoByIcao = new Map<string, AirportInfo>();
+    let coordinateIndex = buildAirportCoordinateIndex([]);
     if (iatas.size > 0 || icaos.size > 0) {
       const airports = await prisma.airport.findMany({
         where: {
           OR: [{ iata: { in: [...iatas] } }, { icao: { in: [...icaos] } }],
         },
-        select: { iata: true, icao: true, country: true, city: true },
+        select: {
+          iata: true,
+          icao: true,
+          country: true,
+          city: true,
+          lat: true,
+          lon: true,
+          isClosed: true,
+        },
       });
-      for (const a of airports) {
+      // Sort most-authoritative first so a closed predecessor sharing the code
+      // (MUC-Riem, TXL, THF) never supplies the country, city or position for a
+      // live flight, and take the first row per code.
+      const authoritativeFirst = [...airports].sort(compareAirportAuthority);
+      for (const a of authoritativeFirst) {
         const info: AirportInfo = { country: a.country ?? null, city: a.city ?? null };
-        if (a.iata) infoByIata.set(a.iata, info);
-        if (a.icao) infoByIcao.set(a.icao, info);
+        if (a.iata && !infoByIata.has(a.iata)) infoByIata.set(a.iata, info);
+        if (a.icao && !infoByIcao.has(a.icao)) infoByIcao.set(a.icao, info);
       }
+      coordinateIndex = buildAirportCoordinateIndex(airports);
     }
     const airportInfo = (iata: string | null, icao: string | null): AirportInfo =>
       (iata ? infoByIata.get(iata) : undefined) ??
       (icao ? infoByIcao.get(icao) : undefined) ?? { country: null, city: null };
 
     const features = flights.map(flight => {
-      const arcPoints = generateArcPoints(
-        [flight.depLon, flight.depLat],
-        [flight.arrLon, flight.arrLat]
+      // Draw from the catalogue, not from the flight's own copy of the
+      // coordinates. Those copies disagree between flights for the same
+      // airport, and the map derives its airport DOT from the first-seen flight
+      // per airport but each ARC from the first-seen flight per route — two
+      // different "first seen" on two different coordinates, so the arc visibly
+      // misses the dot (found at ZRH, 739 m out). Falls back to the stored
+      // value for airports the catalogue does not know.
+      const depPosition = resolveAirportCoordinate(
+        coordinateIndex,
+        flight.depIata,
+        flight.depIcao,
+        flight.depLat,
+        flight.depLon
       );
+      const arrPosition = resolveAirportCoordinate(
+        coordinateIndex,
+        flight.arrIata,
+        flight.arrIcao,
+        flight.arrLat,
+        flight.arrLon
+      );
+      const arcPoints = generateArcPoints(depPosition, arrPosition);
 
       return {
         type: 'Feature',
