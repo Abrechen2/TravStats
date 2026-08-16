@@ -84,6 +84,12 @@ const baseStaySchema = z.object({
   roomNumber: z.string().max(20).nullable().optional(),
   roomCategory: z.string().max(120).nullable().optional(),
   board: z.enum(BOARD_TYPES).optional(),
+  /**
+   * How many people the booking covered, as the confirmation states it. A
+   * COUNT, never a name — a confirmation names the booker, so who came along
+   * belongs in `companions` and only the user can put it there.
+   */
+  guests: z.number().int().min(1).max(20).nullable().optional(),
   pricePerNight: z.number().min(0).nullable().optional(),
   // Optional here even though the DB column is NOT NULL DEFAULT 'EUR' — omitting it
   // lets the client fall back to the column default rather than forcing every caller

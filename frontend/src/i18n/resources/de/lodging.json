@@ -185,7 +185,8 @@
     "overrideMembership": "Abweichend zuordnen",
     "receiptSection": "Beleg",
     "notesSection": "Notizen",
-    "saveError": "Aufenthalt konnte nicht gespeichert werden"
+    "saveError": "Aufenthalt konnte nicht gespeichert werden",
+    "companionsHint": "Diese Buchung galt für {{count}} Personen. Trage die Begleitung ein — der Beleg nennt nur den Buchenden."
   },
   "membership": {
     "title": "Bonusprogramme",

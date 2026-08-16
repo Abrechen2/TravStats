@@ -288,6 +288,7 @@ async function createStay(
       status: "completed",
       roomCategory: fields.roomCategory ?? null,
       board: fields.board ?? null,
+      guests: fields.guests ?? null,
       totalPrice: priceHasNoCurrency ? null : (fields.totalPrice ?? null),
       // Same guard as the total: a rate without a currency states nothing.
       pricePerNight: priceHasNoCurrency ? null : (fields.pricePerNight ?? null),

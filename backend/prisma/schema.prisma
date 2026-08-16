@@ -1227,6 +1227,11 @@ model LodgingStay {
   roomNumber       String?   @map("room_number")
   roomCategory     String?   @map("room_category")
   board            String?   // none | breakfast | half | full | all_inclusive
+  // How many people the booking covered, as the confirmation states it. A COUNT,
+  // never a name: a confirmation names the booker, so who came along stays the
+  // user's to enter in `companions`. Kept so the stay editor can point at that
+  // field when a booking covered more than one person.
+  guests           Int?
   pricePerNight    Float?    @map("price_per_night")
   currency         String    @default("EUR")
   totalPrice       Float?    @map("total_price")

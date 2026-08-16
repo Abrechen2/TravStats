@@ -116,6 +116,7 @@ describe("TripDetailPage — linked lodging stays on the timeline", () => {
           membershipId: null,
           membershipOptOut: false,
           receiptUrl: null,
+          guests: null,
           companions: [],
           notes: null,
           parserTemplate: null,

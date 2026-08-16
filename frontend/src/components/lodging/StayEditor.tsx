@@ -622,6 +622,22 @@ export function StayEditor({
           </Section>
 
           <Section title={t("lodging:stayEditor.notesSection")}>
+            {/* The confirmation says HOW MANY people it covered; it names the
+                booker, never the companion. So point at the field rather than
+                filling it. Threshold is more than ONE person — the booking that
+                prompted this covered two, and a threshold of three would have
+                left exactly that case silent. Disappears as soon as a name is
+                typed: a hint that stays after it has been acted on is nagging. */}
+            {stay?.guests != null &&
+              stay.guests > 1 &&
+              companionsInput.trim().length === 0 && (
+                <p
+                  data-testid="companions-hint"
+                  className="mb-2 text-xs text-[var(--warning)]"
+                >
+                  {t("lodging:stayEditor.companionsHint", { count: stay.guests })}
+                </p>
+              )}
             <input
               aria-label={t("lodging:field.companions")}
               className={INPUT_CLASS}

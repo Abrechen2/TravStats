@@ -53,6 +53,7 @@ const baseStay: LodgingStay = {
   membershipId: null,
   membershipOptOut: false,
   receiptUrl: null,
+  guests: null,
   companions: [],
   notes: null,
   parserTemplate: null,
@@ -649,5 +650,80 @@ describe("StayEditor", () => {
     const payload = vi.mocked(updateStay).mock.calls[0][2];
     expect(payload.membershipOptOut).toBe(true);
     expect(payload.membershipId).toBeNull();
+  });
+});
+
+/**
+ * A confirmation states how many people it covers (42 % of 640 real ones do),
+ * and the parser now carries that count through to the stay. It never carries a
+ * NAME — a confirmation names the booker, not the companion — so the editor
+ * points at the field instead of filling it (owner, 2026-08-16).
+ *
+ * Threshold is "more than one person", not "more than two": the booking that
+ * prompted this was for two adults, and a threshold of three would have left
+ * exactly that case silent.
+ */
+describe("StayEditor — companion hint for a multi-person booking", () => {
+  const stayFor = (guests: number | null, companions: string[] = []): LodgingStay =>
+    ({
+      ...baseStay,
+      guests,
+      companions,
+    }) as LodgingStay;
+
+  it("points at the companions field when the booking covered two people", () => {
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        stay={stayFor(2)}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("companions-hint")).toBeInTheDocument();
+  });
+
+  it("stays quiet for a booking covering one person", () => {
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        stay={stayFor(1)}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId("companions-hint")).not.toBeInTheDocument();
+  });
+
+  it("stays quiet when the document never stated an occupancy", () => {
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        stay={stayFor(null)}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId("companions-hint")).not.toBeInTheDocument();
+  });
+
+  it("stops nagging once a companion has been entered", () => {
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        stay={stayFor(2, ["Norbert"])}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId("companions-hint")).not.toBeInTheDocument();
   });
 });
