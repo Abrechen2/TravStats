@@ -289,6 +289,8 @@ async function createStay(
       roomCategory: fields.roomCategory ?? null,
       board: fields.board ?? null,
       totalPrice: priceHasNoCurrency ? null : (fields.totalPrice ?? null),
+      // Same guard as the total: a rate without a currency states nothing.
+      pricePerNight: priceHasNoCurrency ? null : (fields.pricePerNight ?? null),
       // Omitted, so the NOT-NULL column applies its own 'EUR' default. The
       // stored row is indistinguishable from an explicit EUR either way — the
       // column cannot hold "unknown" — but the accompanying price is null, so
