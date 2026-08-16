@@ -143,6 +143,29 @@ describe("Cruise route overrides", () => {
     expect(await prisma.cruiseLegRoute.count({ where: { cruiseId: foreignCruiseId } })).toBe(0);
   });
 
+  it("rejects an unknown endpoint kind", async () => {
+    const res = await request(app)
+      .put(`/api/v1/cruises/${cruiseId}/route-override`)
+      .set("Cookie", authCookie)
+      .send({ ...key(), fromKind: "place", waypoints: LINE });
+    expect(res.status).toBe(400);
+  });
+
+  it("will not delete another user's override", async () => {
+    const foreignRoute = await prisma.cruiseLegRoute.create({
+      data: { cruiseId: foreignCruiseId, ...key(), waypoints: LINE },
+    });
+
+    const res = await request(app)
+      .delete(`/api/v1/cruises/${foreignCruiseId}/route-override`)
+      .query(key())
+      .set("Cookie", authCookie);
+    expect(res.status).toBe(404);
+
+    const stillThere = await prisma.cruiseLegRoute.findUnique({ where: { id: foreignRoute.id } });
+    expect(stillThere).not.toBeNull();
+  });
+
   it("clears the line, and clearing again is not an error", async () => {
     const first = await request(app)
       .delete(`/api/v1/cruises/${cruiseId}/route-override`)
