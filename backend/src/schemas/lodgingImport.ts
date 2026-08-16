@@ -136,6 +136,7 @@ export type LodgingDedupeHint =
   | "none"
   | "lodging_exact_ref"
   | "lodging_name_city"
+  | "lodging_nearby"
   | "stay_exact_ref"
   | "stay_same_dates";
 
