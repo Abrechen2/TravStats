@@ -44,6 +44,15 @@ model should make them declare up front (§6.2).
 | 2 | Does a landing count as a port call? | **No — count them separately.** A landing is not a port visit. |
 | 3 | How much excursion in the first cut? | **Keep it simple.** Photos "maybe, like trips with Immich" — see §10. |
 | 4 | Which release? | **2.7.0** |
+| 5 | Is a waypoint *converted* into a landing, or does labelling it make it one? | **Labelling makes it one.** No convert button, no second type of point (§6.2). |
+| 6 | Do per-section kilometres have to reach the persisted statistics — longest leg, trip distance, achievements? | **Yes — do the full rebuild.** A landing becomes a real leg endpoint, not just something drawn on the map. |
+
+Decision 6 was taken with its cost stated: it is what keeps stages 4 and 5 in
+the plan. The cheaper alternative — landings as named points that legs ignore
+— was offered and rejected. The reason it is the right call: an expedition
+cruise with no intermediate ports would otherwise have exactly **one** leg, so
+"longest leg" and every distance statistic derived per leg would degenerate to
+a single meaningless number.
 
 ---
 
@@ -168,11 +177,12 @@ Enforced in `backend/src/schemas/cruise.ts` by extending the existing
 `onDelete: Restrict` mirrors the leg FKs: a place still used by a stop
 cannot be deleted out from under it.
 
-**A place stop is normally born as a waypoint.** The owner's requirement —
-"you must be able to add a zodiac trip or the like to a waypoint" — is not a
-fourth feature; it is one gesture that turns a shape-only waypoint into a
-place stop and back. See §6.2. This collapses what an earlier draft of this
-document treated as two separate things.
+**A place stop is always born as a waypoint, and never by declaration.** The
+owner's requirement — "you must be able to add a zodiac trip or the like to a
+waypoint… it's only about the labelling" — means the fourth state is never
+something the user picks. It is what a waypoint *is* once it carries a label
+or an excursion. See §6.2. The machinery below exists so that the interface
+can stay that simple, not so the user has to know about it.
 
 ### 4.3 `CruiseLegRoute` — the hand-corrected line
 
@@ -257,12 +267,31 @@ A landing is not a port visit. Concretely:
 - Countries and regions: a place contributes through `isoCountryCode` when
   it has one. A place in international waters or Antarctica contributes
   nothing, which is correct.
-- Distances **do** include place legs. A landing is not a port, but the
-  ship really sailed there.
+- Distances **do** include place legs, and per decision 6 those legs are
+  persisted like any other. A landing is not a port, but the ship really
+  sailed there, and the kilometres are real.
 - Achievements: existing port-based achievements keep their current meaning.
   Whether landings earn their own badge is out of scope here.
 
-**Open, needs the owner's word (§11):** D1 forces a choice about unresolved
+### What decision 6 changes in the numbers
+
+Making a landing a real leg endpoint moves figures that already exist. None of
+these is a defect; all of them will look like one if they arrive unannounced.
+
+- **`longestLegKm` falls** for any cruise with landings: the single
+  Longyearbyen-to-Longyearbyen loop becomes a chain of shorter sections. This
+  is the *point* of the decision — the old number was one meaningless
+  aggregate — but it is a visible change to a shipped statistic.
+- **Leg count rises**, so anything that divides by it (an average per leg)
+  moves with it.
+- **`totalDistanceKm` must not move.** It is the sum of the same curve
+  segments either way (§6.2). A test pins this: total distance over all
+  cruises identical before and after the migration.
+- **Trip distances** (`trips.ts` sums `cruiseLeg.distanceKm`) stay correct
+  only because of that invariant. If the sum ever moves, this is where it
+  surfaces first.
+
+**Open, needs the owner's word (§12):** D1 forces a choice about unresolved
 ports. The proposal is that the backend rule wins — an unresolved name is a
 port *call* but not a unique *port*, because it cannot be reliably deduped
 against a matched port of the same name. This changes a visible number on
@@ -330,38 +359,59 @@ Technically this is the `LocationMiniMap` pattern one step further:
 the guide and the curve, and nearest-segment insertion computed from the
 click coordinate rather than by hit-testing a rendered feature.
 
-### 6.2 Promoting a waypoint to a landing
+### 6.2 A waypoint that carries a name is a landing
 
 A waypoint is cheap on purpose: it shapes the line, has no name, no time, and
-counts nowhere. Where something actually happened, one click turns it into a
-place stop — with a label, a time, and excursions hanging off it. A second
-click turns it back.
+counts nowhere. Where something actually happened, the user types a name or
+attaches an excursion — and that alone makes it a landing.
 
-| Gesture | Result |
+**There is no convert button, and the user is never asked what kind of point
+this is.** An earlier draft had a "promote" badge; the owner rejected it, and
+he was right: *"wouldn't it be better that it stays a waypoint, where I attach
+a zodiac trip if it is more than a waypoint — it's only about the labelling."*
+
+So the rule is: **a waypoint that carries a label or an excursion is a
+landing. Nothing else marks it, and no gesture declares it.**
+
+| What the user does | What happens underneath |
 |---|---|
-| Select a waypoint, click ◆ (or press `Enter`) | Becomes a place stop. A `CruisePlace` is created at those coordinates and the stop references it. |
-| On a place stop, click the same badge again, or "back to waypoint" | Reverts to a shape-only waypoint. If excursions hang off it, **ask first** — never delete silently. |
-| Delete (✕) on a place stop | Removes the point entirely, with the same warning. |
+| Types a name into a waypoint's row, or attaches an excursion | A `CruiseStop` of the fourth kind is created, referencing a `CruisePlace` at those coordinates. The waypoint itself does not move or change. |
+| Clears the name *and* removes every excursion | The stop and its place link disappear. The point is a shape-only waypoint again. |
+| Clears the name while excursions remain | Stays a landing — the excursions are what make it one. It shows as "ohne Namen" rather than silently vanishing. |
+| Deletes the point while it carries a name or excursions | **Ask first.** Never destroy that content as a side effect of tidying the line. |
 
-**Two invariants make this safe, and they are the whole reason it is one
-gesture rather than two features:**
+On the map the difference is shown, not chosen: an unnamed handle is a small
+hollow circle, a named one is filled and labelled with its time and excursion
+count. That is a rendering consequence of having something to show.
 
-1. **Promoting must not move the line.** The rendered route may not shift by a
-   pixel when a waypoint becomes a stop. The user is labelling a point, not
+**Two invariants make this safe:**
+
+1. **Labelling must not move the line.** The rendered route may not shift by a
+   pixel when a waypoint gains a name. The user is labelling a point, not
    re-routing.
-2. **Promoting must not change the distance.** One leg becomes two, and the
-   total stays identical.
+2. **Labelling must not change the total distance.** One leg becomes two and
+   per-section figures appear, but the sum is identical to the metre.
 
 Both follow from one implementation rule: **the spline is computed over the
 whole route, not per leg in isolation.** Splining each leg separately gives
-its endpoints duplicated control points, so every new stop would introduce a
-tangent break — a visible kink and a small distance jump on every promotion.
-Per-leg distance is therefore measured by walking the continuous route curve
-between consecutive stop indices, not by re-splining the leg on its own.
+its endpoints duplicated control points, so every new landing would introduce
+a tangent break — a visible kink and a small distance jump every time someone
+types a name. Per-leg distance is therefore measured by summing the lengths of
+the individual curve segments of the continuous route, never by re-splining a
+leg on its own. Total distance is the sum of all segments; a leg is a partial
+sum of the same numbers, so the two can never drift apart.
 
 This differs from today's rendering, where the geometry endpoint emits one
 LineString per port pair and the frontend splines each separately. Ports are
-genuine corners so nobody noticed; a promoted waypoint is not, and would.
+genuine corners so nobody noticed; a named waypoint is not, and would.
+
+**The stored override splits with the leg.** A `CruiseLegRoute` row is keyed by
+its two endpoints (§4.3), so when a waypoint inside `A → B` becomes a landing
+`P`, that row is replaced by two: `A → P` carrying the waypoints up to and
+including `P`, and `P → B` carrying `P` and everything after. Clearing the
+name merges them back the same way. Both operations are pure list surgery on
+coordinates already stored — no re-routing, no recomputation from the router,
+which is what lets invariant 1 hold trivially rather than approximately.
 
 ### The trap this must not fall into
 
@@ -393,10 +443,12 @@ Therefore:
 4. A hand-corrected route survives router and data version bumps.
 5. Departure and arrival ports stay part of every effective sequence.
 6. Frontend and backend answer "how many ports" with the same rule.
-7. Promoting or demoting a waypoint moves neither the drawn line nor the
-   total distance (§6.2). This is a property test, not a code review item:
-   promote every waypoint of a fixture route in turn and assert the total is
-   unchanged to the metre.
+7. Naming a waypoint — or clearing its name again — moves neither the drawn
+   line nor the total distance (§6.2). This is a property test, not a code
+   review item: name every waypoint of a fixture route in turn and assert the
+   total is unchanged to the metre while the section figures appear.
+8. Total distance is the sum of the per-segment lengths, and a leg distance is
+   a partial sum of the same numbers. Neither is computed by a second method.
 
 ---
 
@@ -521,7 +573,7 @@ Each stage is useful on its own and leaves the numbers measurable.
 | **2** | Route editing: `CruiseLegRoute`, override-aware geometry and distance, whole-route splining (§6.2), map editor. **The owner's main wish.** | A hand-corrected leg keeps its line and its kilometres across a forced `recomputeLegsForCruise` and a version bump. |
 | **3** | `CruiseExcursion` + note migration + editor + detail page + one statistic. Independent of 2 and 4; may run in parallel. | Existing notes survive as excursions; a stop carries several excursions. |
 | **4** | Generic leg endpoints, additive, backfilled, version bumped, everything recomputed. Resolve the `dayNumber` question (§8) before stage 5 depends on it. | Total distance over all cruises identical before and after. Single number, single check. |
-| **5** | `CruisePlace`, fourth stop state, **promote / demote a waypoint**, separate counters, excursions on place stops, list-and-map sync. | An Arctic cruise with landings renders end to end; ports and landings count separately; promoting every waypoint of a fixture route in turn changes the total distance by zero. |
+| **5** | `CruisePlace`, fourth stop state, **labelling a waypoint creates it** (§6.2), separate counters, per-section distances, excursions on landings, list-and-map sync. | An Arctic cruise with landings renders end to end; ports and landings count separately; naming every waypoint of a fixture route in turn changes the total distance by zero while the section figures appear. |
 
 Stages 1 + 2 alone satisfy the primary wish. Stage 3 alone satisfies the
 excursion wish for ports. Only the mid-leg iceberg needs all five.
