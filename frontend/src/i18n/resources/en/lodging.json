@@ -185,7 +185,8 @@
     "overrideMembership": "Assign a different one",
     "receiptSection": "Receipt",
     "notesSection": "Notes",
-    "saveError": "Could not save stay"
+    "saveError": "Could not save stay",
+    "companionsHint": "This booking covered {{count}} people. Add the companions — the confirmation only names the booker."
   },
   "membership": {
     "title": "Loyalty programs",

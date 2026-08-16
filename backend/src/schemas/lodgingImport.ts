@@ -84,10 +84,10 @@ export const stayCandidateFieldsSchema = z.object({
   pricePerNight: z.number().min(0).nullable().optional(),
   currency: currencyField.nullable().optional(),
   /**
-   * How many people the booking covers. NOT stored on the stay — there is no
-   * such column, and there should not be: what matters afterwards is WHO came
-   * along, which only the user can say. It rides along so the editor can point
-   * at the companions field when a booking covers more than one person.
+   * How many people the booking covers. Stored: the count is a fact of the
+   * booking, and the stay editor needs it AFTER the import to point at the
+   * companions field. What is not stored is WHO came along — a confirmation
+   * names the booker, never the companion, so that stays the user's to enter.
    */
   guests: z.number().int().min(1).max(20).nullable().optional(),
   ratingRoom: rating,

@@ -109,6 +109,12 @@ export interface LodgingStay {
   /** true = no programme was used for this stay; false = derive from the hotel. */
   membershipOptOut: boolean;
   receiptUrl: string | null;
+  /**
+   * How many people the booking covered, as the confirmation stated it. A
+   * COUNT, never a name — which is why the editor points at `companions`
+   * rather than filling it.
+   */
+  guests: number | null;
   companions: string[];
   notes: string | null;
   parserTemplate: string | null;
@@ -219,6 +225,7 @@ export interface StayInput {
   membershipId?: string | null;
   membershipOptOut?: boolean;
   receiptUrl?: string | null;
+  guests?: number | null;
   companions?: string[];
   notes?: string | null;
 }
