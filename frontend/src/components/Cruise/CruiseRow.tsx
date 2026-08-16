@@ -1,7 +1,7 @@
 import type { Cruise } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
-import { countUniquePorts } from "./cruisePorts";
+import { countUniquePorts, countUnresolvedPorts } from "./cruisePorts";
 import { formatCurrency } from "../../lib/units";
 
 interface Props {
@@ -18,6 +18,7 @@ const fmtDate = (iso: string | null): string => {
 export function CruiseRow({ cruise, onOpen, actions }: Props): JSX.Element {
   const { t } = useTranslation("cruise");
   const portsCount = countUniquePorts(cruise);
+  const unresolvedCount = countUnresolvedPorts(cruise);
   const displayLine = cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? "—";
   const displayShip = cruise.ship?.name ?? cruise.shipNameOverride ?? "—";
   // Through the shared formatter, like every other price in the app: this row
@@ -36,7 +37,17 @@ export function CruiseRow({ cruise, onOpen, actions }: Props): JSX.Element {
       <td className="px-3 py-2 text-sm text-(--text-muted)">
         {fmtDate(cruise.startDate)} – {fmtDate(cruise.endDate)}
       </td>
-      <td className="px-3 py-2 text-sm text-(--text-muted)">{portsCount}</td>
+      <td className="px-3 py-2 text-sm text-(--text-muted)">
+        {portsCount}
+        {unresolvedCount > 0 && (
+          <span
+            className="ml-1 text-xs"
+            title={t("list.unresolvedPorts", { count: unresolvedCount })}
+          >
+            (+{unresolvedCount})
+          </span>
+        )}
+      </td>
       <td className="px-3 py-2 text-sm">
         <span
           className="rounded-full px-2 py-1 text-xs font-semibold"

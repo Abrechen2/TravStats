@@ -11,23 +11,41 @@ import type { Cruise, CruiseStop, Port } from "../../types";
  * Every consumer goes through these helpers now.
  */
 
-/** Unique ports across departure / arrival / port-call stops, including
- *  unresolved (coordinate-less) ports counted by distinct trimmed name. A
- *  matched port and an unresolved same-named port are counted separately. */
+/**
+ * Unique, identifiable ports across departure / arrival / port-call stops.
+ *
+ * Unresolved (coordinate-less) stops are deliberately NOT counted here. They
+ * are real port *calls*, but their name could not be matched to the catalogue,
+ * so they cannot be de-duplicated against a matched port of the same name —
+ * counting them would double a port the user visited once. This mirrors the
+ * backend's `cruisePortsUnique` (backend/src/utils/cruiseStats.ts), which has
+ * always excluded them. Use `countUnresolvedPorts` to show them alongside.
+ */
 export function countUniquePorts(cruise: Cruise): number {
   const portIds = new Set<number>();
   if (cruise.departurePort?.id != null) portIds.add(cruise.departurePort.id);
   if (cruise.arrivalPort?.id != null) portIds.add(cruise.arrivalPort.id);
-  const unresolvedNames = new Set<string>();
   for (const stop of cruise.stops) {
     if (stop.isAtSea) continue;
-    if (stop.port?.id != null) {
-      portIds.add(stop.port.id);
-    } else if (stop.unresolvedPortName) {
-      unresolvedNames.add(stop.unresolvedPortName.trim().toLowerCase());
+    if (stop.port?.id != null) portIds.add(stop.port.id);
+  }
+  return portIds.size;
+}
+
+/**
+ * Distinct unresolved port names, trimmed and compared case-insensitively.
+ * Shown next to `countUniquePorts`, never merged into it — see that function
+ * for why.
+ */
+export function countUnresolvedPorts(cruise: Cruise): number {
+  const names = new Set<string>();
+  for (const stop of cruise.stops) {
+    if (stop.isAtSea || stop.port?.id != null) continue;
+    if (stop.unresolvedPortName) {
+      names.add(stop.unresolvedPortName.trim().toLowerCase());
     }
   }
-  return portIds.size + unresolvedNames.size;
+  return names.size;
 }
 
 /**

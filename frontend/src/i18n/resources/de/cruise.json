@@ -9,6 +9,8 @@
     "loading": "Kreuzfahrten werden geladen …",
     "sortBy": "Nach {{col}} sortieren",
     "duplicate": "Duplizieren",
+    "unresolvedPorts_one": "{{count}} Hafen konnte dem Katalog nicht zugeordnet werden",
+    "unresolvedPorts_other": "{{count}} Häfen konnten dem Katalog nicht zugeordnet werden",
     "columns": {
       "ship": "Schiff",
       "line": "Reederei",

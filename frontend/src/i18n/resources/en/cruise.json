@@ -9,6 +9,8 @@
     "loading": "Loading cruises …",
     "sortBy": "Sort by {{col}}",
     "duplicate": "Duplicate",
+    "unresolvedPorts_one": "{{count}} port could not be matched to the catalogue",
+    "unresolvedPorts_other": "{{count}} ports could not be matched to the catalogue",
     "columns": {
       "ship": "Ship",
       "line": "Line",
