@@ -157,7 +157,13 @@ function buildLodgingWhere(q: LodgingQueryInput, userId: string): Prisma.Lodging
   const where: Prisma.LodgingWhereInput = { userId };
   if (q.type) where.type = q.type;
   if (q.chainId) where.chainId = q.chainId;
-  if (q.country) where.country = q.country;
+  // The filter sends an ISO code now ("DE"), so one option covers "Deutschland"
+  // AND "Germany". A non-code value is still accepted verbatim: an older client
+  // — and any house whose text resolves to no country at all — must keep working.
+  if (q.country) {
+    if (/^[A-Za-z]{2}$/.test(q.country)) where.isoCountryCode = q.country.toUpperCase();
+    else where.country = q.country;
+  }
 
   const stayFilter: Prisma.LodgingStayWhereInput = {};
   if (q.tripId) stayFilter.tripId = q.tripId;

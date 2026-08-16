@@ -9,6 +9,7 @@ import { LodgingStatusTag } from "../components/lodging/LodgingStatusTag";
 import DomainImportPanel from "../components/import/DomainImportPanel";
 import { useLodgingImportAdapter } from "../components/import/adapters/lodgingAdapter";
 import { useTranslation } from "../hooks/useTranslation";
+import { countryName } from "../shared/geo/countryCode";
 import { getLodgingStats, listLodgings } from "../lib/api/lodging";
 import { formatCurrency } from "../lib/units";
 import {
@@ -32,7 +33,7 @@ const TYPES: LodgingType[] = ["hotel", "campsite", "guesthouse", "apartment", "h
 const SORT_KEYS: SortKey[] = ["name", "nights", "rating", "spend"];
 
 export default function LodgingListPage(): JSX.Element {
-  const { t } = useTranslation(["lodging", "common", "settings", "import"]);
+  const { t, i18n } = useTranslation(["lodging", "common", "settings", "import"]);
   const navigate = useNavigate();
   // `totalSpendBase` is computed by the backend in the user's actual base
   // currency (`UserSettings.baseCurrency`) — NOT `units.currency`, which is an
@@ -115,13 +116,29 @@ export default function LodgingListPage(): JSX.Element {
     return Array.from(years).sort((a, b) => b - a);
   }, [baseline]);
 
+  /**
+   * One option per COUNTRY, not per spelling.
+   *
+   * The list used to be built from the raw `country` text, which is whatever
+   * the source wrote — so "Deutschland" and "Germany" stood side by side as two
+   * places, and a real library showed 60 entries for 33 countries. Grouping on
+   * the derived ISO code collapses them; a house whose text names no country
+   * (a city in the country field, say) keeps its own entry rather than
+   * disappearing from the filter entirely.
+   */
   const availableCountries = useMemo(() => {
-    const countries = new Set<string>();
+    const byValue = new Map<string, string>();
     for (const l of baseline) {
-      if (l.country) countries.add(l.country);
+      if (l.isoCountryCode) {
+        byValue.set(l.isoCountryCode, countryName(l.isoCountryCode, i18n.language) || l.isoCountryCode);
+      } else if (l.country) {
+        byValue.set(l.country, l.country);
+      }
     }
-    return Array.from(countries).sort((a, b) => a.localeCompare(b));
-  }, [baseline]);
+    return Array.from(byValue, ([value, label]) => ({ value, label })).sort((a, b) =>
+      a.label.localeCompare(b.label)
+    );
+  }, [baseline, i18n.language]);
 
   // Search is client-side ONLY as a visibility narrower over the already
   // server-sorted `rows` — it never reorders them, so it can't reintroduce
@@ -207,8 +224,8 @@ export default function LodgingListPage(): JSX.Element {
             >
               <option value="all">{t("lodging:filter.allCountries")}</option>
               {availableCountries.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+                <option key={c.value} value={c.value}>
+                  {c.label}
                 </option>
               ))}
             </select>

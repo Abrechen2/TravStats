@@ -312,6 +312,7 @@ function makeLodging(overrides: Partial<Lodging> = {}): Lodging {
     address: null,
     city: "Berlin",
     country: "DE",
+    isoCountryCode: null,
     lat: null,
     lon: null,
     stars: null,

@@ -89,6 +89,7 @@ function makeLodging(overrides: Partial<Lodging> = {}, stays: LodgingStay[] = [b
     address: "Engimattstr. 14",
     city: "Zürich",
     country: "CH",
+    isoCountryCode: null,
     lat: 47.36,
     lon: 8.53,
     stars: 4,

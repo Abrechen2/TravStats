@@ -137,6 +137,7 @@ function makeLodging(overrides: Partial<Lodging> = {}): Lodging {
     address: null,
     city: "Ludwigsburg",
     country: "DE",
+    isoCountryCode: null,
     lat: 48.9,
     lon: 9.19,
     stars: 4,
