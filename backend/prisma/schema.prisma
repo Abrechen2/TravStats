@@ -1161,6 +1161,11 @@ model Lodging {
   address       String?
   city          String?
   country       String?
+  /// ISO 3166-1 alpha-2, derived from `country`. The text field keeps whatever
+  /// the source wrote ("Deutschland", "Germany", "Schweiz/Suisse/Svizzera/Svizra");
+  /// everything that GROUPS or COUNTS joins on this instead. Null when the text
+  /// resolves to no country — a finding, not a gap ("Dubai" is a city).
+  isoCountryCode String?  @map("iso_country_code")
   lat           Float?
   lon           Float?
   stars         Int?     // official 1–5
