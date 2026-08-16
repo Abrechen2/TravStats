@@ -1,4 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import type { Prisma } from "@prisma/client";
+import { appVersion } from "../utils/version";
 import { z } from 'zod';
 import { prisma } from '../db';
 import { hashPassword } from '../utils/password';
@@ -91,7 +93,11 @@ router.post('/initialize', authLimiter, async (req: Request, res: Response, next
       where: { userId: user.id },
       create: {
         userId: user.id,
-        data: {},
+        // Nothing is "new" to the account that just created the instance. The
+        // setup page stamps this client-side too; doing it here means it holds
+        // even if that follow-up request never lands. The flag lives inside the
+        // `data` blob — Prisma never sees it by name.
+        data: { whatsNewSeenVersion: appVersion } as unknown as Prisma.InputJsonValue,
         enabledDomains,
       },
       update: {

@@ -9,6 +9,7 @@ import { sendAdminPasswordResetEmail } from '../../services/emailService';
 import { SMTP_CONFIG_ID } from './smtp';
 import logger from '../../utils/logger';
 import { getInstanceSettings } from '../../services/instanceSettingsService';
+import { stampWhatsNewSeen } from "../../services/whatsNewStamp";
 
 const router = Router();
 
@@ -38,6 +39,9 @@ router.post('/users', async (req: AuthRequest, res: Response, next: NextFunction
       },
       select: { id: true, username: true, isAdmin: true, isActive: true, createdAt: true },
     });
+
+    // Nothing is "new" to an account created a moment ago — see whatsNewStamp.
+    await stampWhatsNewSeen(prisma, created.id);
 
     logger.info({
       operation: 'admin_user_create',
