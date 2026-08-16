@@ -10,6 +10,7 @@
  * `services/lodging/mappingSuggestion.ts`.
  */
 import { z } from "zod";
+import { formatStreetAddress } from "./streetAddress";
 import {
   resolveGeocoderUrls,
   DEFAULT_PHOTON_URL,
@@ -97,10 +98,9 @@ type PhotonFeature = z.infer<typeof photonFeatureSchema>;
 type PhotonProperties = NonNullable<PhotonFeature["properties"]>;
 
 function buildAddress(props: PhotonProperties): string | undefined {
-  if (props.street && props.housenumber) {
-    return `${props.street} ${props.housenumber}`;
-  }
-  return props.street;
+  // Order by country, not by our own habit: "50 Southwest Morrison Street", not
+  // "Southwest Morrison Street 50". See services/geo/streetAddress.ts.
+  return formatStreetAddress(props.street, props.housenumber, props.countrycode);
 }
 
 /**
