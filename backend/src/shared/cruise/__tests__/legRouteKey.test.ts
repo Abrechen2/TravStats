@@ -8,6 +8,16 @@ describe("legRouteKey", () => {
   it("matches the generic key builder for the port kind", () => {
     expect(portLegRouteKey(1, 2)).toBe(legRouteKey("port", "1", "port", "2"));
   });
+
+  // Pinned against a literal, not derived from the helper itself. If the
+  // format ever changes (separator, prefix), every already-stored row
+  // silently stops matching on read — a self-referential assertion
+  // (`expect(f(...)).toBe(f(...))`) would stay green through exactly that
+  // regression, so the expected value here MUST stay a hand-written string.
+  it("produces the exact persisted key format", () => {
+    expect(legRouteKey("port", "1", "port", "2")).toBe("port:1:port:2");
+    expect(portLegRouteKey(1, 2)).toBe("port:1:port:2");
+  });
 });
 
 describe("buildLegRouteOverrideMap", () => {
@@ -16,6 +26,15 @@ describe("buildLegRouteOverrideMap", () => {
       { fromKind: "port", fromRef: "1", toKind: "port", toRef: "2", waypoints: { not: "an array" } },
       { fromKind: "port", fromRef: "3", toKind: "port", toRef: "4", waypoints: null },
       { fromKind: "port", fromRef: "5", toKind: "port", toRef: "6", waypoints: "also not an array" },
+    ]);
+    expect(map.size).toBe(0);
+  });
+
+  it("skips a row whose waypoints is an array of non-coordinate entries", () => {
+    const map = buildLegRouteOverrideMap([
+      { fromKind: "port", fromRef: "1", toKind: "port", toRef: "2", waypoints: ["a", "b"] },
+      // Right shape, wrong arity — also not a coordinate pair.
+      { fromKind: "port", fromRef: "3", toKind: "port", toRef: "4", waypoints: [[1, 2, 3]] },
     ]);
     expect(map.size).toBe(0);
   });

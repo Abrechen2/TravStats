@@ -14,6 +14,7 @@ import {
 import { checkAndUpdateAchievements } from '../utils/achievements';
 import { buildEffectivePortSequence } from '../shared/cruise/portSequence';
 import { buildLegRouteOverrideMap, portLegRouteKey } from '../shared/cruise/legRouteKey';
+import { haversineKm } from '../shared/geo/haversine';
 import { computeSchematicRoute } from '../services/schematicRouter';
 import { recomputeLegsForCruise } from '../services/cruiseDistance/cruiseLegService';
 import { cruiseExternalRef } from '../services/importProvenance';
@@ -186,18 +187,20 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 });
 
 /**
- * Is `from → to` an actual leg of this cruise's itinerary?
+ * Is `from → to` an actual leg of this cruise's itinerary? Returns the two
+ * ports (with their coordinates) if so.
  *
  * Checked on every write. Without it the table accepts lines for legs that do
  * not exist, which can never match anything on read — the user would see a
- * silent no-op instead of an error.
+ * silent no-op instead of an error. The coordinates are what the anchor
+ * check below needs — fetched here rather than by a second query.
  */
-async function legExists(
+async function findLegPorts(
   cruiseId: string,
   userId: string,
   fromRef: string,
   toRef: string,
-): Promise<boolean> {
+): Promise<{ from: PortRow; to: PortRow } | null> {
   const cruise = await prisma.cruise.findFirst({
     where: { id: cruiseId, userId },
     include: {
@@ -210,7 +213,7 @@ async function legExists(
       },
     },
   });
-  if (!cruise) return false;
+  if (!cruise) return null;
 
   const portCalls = cruise.stops
     .filter((s): s is typeof s & { port: NonNullable<typeof s.port> } => s.port !== null)
@@ -218,9 +221,49 @@ async function legExists(
   const sequence = buildEffectivePortSequence(cruise.departurePort, portCalls, cruise.arrivalPort);
 
   for (let i = 1; i < sequence.length; i++) {
-    if (String(sequence[i - 1].id) === fromRef && String(sequence[i].id) === toRef) return true;
+    if (String(sequence[i - 1].id) === fromRef && String(sequence[i].id) === toRef) {
+      return { from: sequence[i - 1], to: sequence[i] };
+    }
   }
-  return false;
+  return null;
+}
+
+// Generous on purpose: coordinate rounding between what the catalogue stores
+// and what a client round-trips can be tens of metres, and this only needs
+// to catch a line anchored to the wrong sea, not sub-kilometre drift.
+const ROUTE_ANCHOR_TOLERANCE_KM = 1;
+
+/**
+ * A stored line that doesn't start/end at its leg's ports poisons a
+ * persisted statistic silently: `polylineDistanceKm` returns its length as
+ * the leg's distance regardless of where it actually goes, so the map shows
+ * a detached line AND the kilometres agree with it — worse than the two
+ * disagreeing, because nothing looks wrong. Zod cannot check this; it has no
+ * database access.
+ */
+function assertRouteAnchored(
+  waypoints: ReadonlyArray<[number, number]>,
+  from: PortRow,
+  to: PortRow,
+): void {
+  const [firstLon, firstLat] = waypoints[0];
+  const [lastLon, lastLat] = waypoints[waypoints.length - 1];
+
+  const startOffsetKm = haversineKm({ lat: from.lat, lon: from.lon }, { lat: firstLat, lon: firstLon });
+  if (startOffsetKm > ROUTE_ANCHOR_TOLERANCE_KM) {
+    throw new AppError(
+      `Route does not start at the leg's departure port (${startOffsetKm.toFixed(1)} km away)`,
+      400,
+    );
+  }
+
+  const endOffsetKm = haversineKm({ lat: to.lat, lon: to.lon }, { lat: lastLat, lon: lastLon });
+  if (endOffsetKm > ROUTE_ANCHOR_TOLERANCE_KM) {
+    throw new AppError(
+      `Route does not end at the leg's arrival port (${endOffsetKm.toFixed(1)} km away)`,
+      400,
+    );
+  }
 }
 
 router.put('/:id/route-override', async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -230,23 +273,34 @@ router.put('/:id/route-override', async (req: AuthRequest, res: Response, next: 
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
     const { fromKind, fromRef, toKind, toRef, waypoints } = parsed.data;
 
-    if (!(await legExists(req.params.id, userId, fromRef, toRef))) {
-      throw new AppError('Cruise or leg not found', 404);
-    }
+    const legPorts = await findLegPorts(req.params.id, userId, fromRef, toRef);
+    if (!legPorts) throw new AppError('Cruise or leg not found', 404);
+    assertRouteAnchored(waypoints, legPorts.from, legPorts.to);
 
     const key = { cruiseId: req.params.id, fromKind, fromRef, toKind, toRef };
-    const existing = await prisma.cruiseLegRoute.findUnique({
-      where: { cruiseId_fromKind_fromRef_toKind_toRef: key },
-      select: { id: true },
-    });
 
-    const row = await prisma.cruiseLegRoute.upsert({
-      where: { cruiseId_fromKind_fromRef_toKind_toRef: key },
-      create: { ...key, waypoints: waypoints as unknown as Prisma.InputJsonValue },
-      update: { waypoints: waypoints as unknown as Prisma.InputJsonValue },
-    });
+    // Write and recompute must commit together. `recomputeLegsForCruise`
+    // deletes every leg and re-inserts them as two separate statements — a
+    // fault between those two would otherwise leave a committed override row
+    // next to zero legs: the map still draws the user's line while the
+    // statistics silently fall back to inline haversine. Mirrors POST / and
+    // PATCH /:id in this same file.
+    const { row, replaced } = await prisma.$transaction(async (tx) => {
+      const existing = await tx.cruiseLegRoute.findUnique({
+        where: { cruiseId_fromKind_fromRef_toKind_toRef: key },
+        select: { id: true },
+      });
 
-    await recomputeLegsForCruise(req.params.id);
+      const row = await tx.cruiseLegRoute.upsert({
+        where: { cruiseId_fromKind_fromRef_toKind_toRef: key },
+        create: { ...key, waypoints: waypoints as unknown as Prisma.InputJsonValue },
+        update: { waypoints: waypoints as unknown as Prisma.InputJsonValue },
+      });
+
+      await recomputeLegsForCruise(req.params.id, tx);
+
+      return { row, replaced: existing !== null };
+    });
 
     logger.info({
       operation: 'cruise_route_override_saved',
@@ -255,10 +309,10 @@ router.put('/:id/route-override', async (req: AuthRequest, res: Response, next: 
       fromRef,
       toRef,
       waypoints: waypoints.length,
-      replaced: existing !== null,
+      replaced,
     });
 
-    res.status(existing ? 200 : 201).json({ success: true, data: row });
+    res.status(replaced ? 200 : 201).json({ success: true, data: row });
   } catch (err) {
     next(err);
   }
@@ -278,11 +332,21 @@ router.delete(
       });
       if (!owned) throw new AppError('Cruise not found', 404);
 
-      const { count } = await prisma.cruiseLegRoute.deleteMany({
-        where: { cruiseId: req.params.id, ...parsed.data },
+      // Delete and recompute must commit together, same reasoning as the PUT
+      // handler above. The recompute only runs when something was actually
+      // deleted — clearing an override that was never set (the editor's
+      // "automatic again" button on an already-automatic leg) would
+      // otherwise delete-and-reinsert every leg and re-run the router for
+      // nothing.
+      const { count } = await prisma.$transaction(async (tx) => {
+        const result = await tx.cruiseLegRoute.deleteMany({
+          where: { cruiseId: req.params.id, ...parsed.data },
+        });
+        if (result.count > 0) {
+          await recomputeLegsForCruise(req.params.id, tx);
+        }
+        return result;
       });
-
-      await recomputeLegsForCruise(req.params.id);
 
       logger.info({
         operation: 'cruise_route_override_cleared',

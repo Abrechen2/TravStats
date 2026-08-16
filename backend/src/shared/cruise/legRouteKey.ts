@@ -30,6 +30,25 @@ interface LegRouteRow {
 }
 
 /**
+ * True iff `value` is a usable `[[lon, lat], ...]` polyline: an array of
+ * two-element tuples whose entries are both numbers. `Json` columns hold
+ * whatever was last written to them — a direct database write or a future
+ * importer could land something array-shaped but not coordinate-shaped
+ * (e.g. `["a", "b"]`), which `Array.isArray` alone would wave through and
+ * which `polylineDistanceKm` would then silently turn into `NaN`.
+ */
+function isCoordinatePolyline(value: unknown): value is Array<[number, number]> {
+  if (!Array.isArray(value)) return false;
+  return value.every(
+    (point) =>
+      Array.isArray(point) &&
+      point.length === 2 &&
+      typeof point[0] === "number" &&
+      typeof point[1] === "number",
+  );
+}
+
+/**
  * Turn stored override rows into the lookup map both the geometry path and
  * the distance path use. Rows whose `waypoints` column does not hold a
  * usable polyline are skipped — the column is `Json`, so anything could be
@@ -40,11 +59,8 @@ export function buildLegRouteOverrideMap(
 ): Map<string, Array<[number, number]>> {
   const overrideByLeg = new Map<string, Array<[number, number]>>();
   for (const row of rows) {
-    if (!Array.isArray(row.waypoints)) continue;
-    overrideByLeg.set(
-      legRouteKey(row.fromKind, row.fromRef, row.toKind, row.toRef),
-      row.waypoints as Array<[number, number]>,
-    );
+    if (!isCoordinatePolyline(row.waypoints)) continue;
+    overrideByLeg.set(legRouteKey(row.fromKind, row.fromRef, row.toKind, row.toRef), row.waypoints);
   }
   return overrideByLeg;
 }

@@ -34,7 +34,7 @@ export interface CruiseRouteFeature {
     routed: boolean;
     protectedPrefixCount?: number;
     protectedSuffixCount?: number;
-    method?: "short_hop" | "maritime_graph" | "coarse_a_star" | "direct";
+    method?: "short_hop" | "maritime_graph" | "coarse_a_star" | "direct" | "manual_polyline";
   };
 }
 

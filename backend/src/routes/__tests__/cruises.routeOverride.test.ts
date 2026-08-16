@@ -4,12 +4,6 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 
-const LINE: Array<[number, number]> = [
-  [9.99, 53.55],
-  [4.0, 52.0],
-  [-9.14, 38.72],
-];
-
 describe("Cruise route overrides", () => {
   let authCookie: string;
   let userId: string;
@@ -18,6 +12,19 @@ describe("Cruise route overrides", () => {
   let foreignCruiseId: string;
   let fromPortId: number;
   let toPortId: number;
+  let fromPort: { lat: number; lon: number };
+  let toPort: { lat: number; lon: number };
+
+  // Anchored on purpose: the endpoints are the fixture's REAL port
+  // coordinates, not arbitrary numbers — the PUT handler rejects a line
+  // that doesn't start/end at its leg's ports (within 1 km), so any
+  // waypoints used for a case that expects success have to be built from
+  // whichever two ports the fixture actually picked up from the catalogue.
+  const LINE = (): Array<[number, number]> => [
+    [fromPort.lon, fromPort.lat],
+    [(fromPort.lon + toPort.lon) / 2, (fromPort.lat + toPort.lat) / 2],
+    [toPort.lon, toPort.lat],
+  ];
 
   const key = (): Record<string, string> => ({
     fromKind: "port",
@@ -44,6 +51,8 @@ describe("Cruise route overrides", () => {
     if (ports.length < 2) throw new Error("need two seeded ports — run the port seeder first");
     fromPortId = ports[0].id;
     toPortId = ports[1].id;
+    fromPort = { lat: ports[0].lat, lon: ports[0].lon };
+    toPort = { lat: ports[1].lat, lon: ports[1].lon };
 
     const c = await prisma.cruise.create({
       data: {
@@ -82,18 +91,18 @@ describe("Cruise route overrides", () => {
     const res = await request(app)
       .put(`/api/v1/cruises/${cruiseId}/route-override`)
       .set("Cookie", authCookie)
-      .send({ ...key(), waypoints: LINE });
+      .send({ ...key(), waypoints: LINE() });
     expect(res.status).toBe(201);
 
     const rows = await prisma.cruiseLegRoute.findMany({ where: { cruiseId } });
     expect(rows).toHaveLength(1);
-    expect(rows[0].waypoints).toEqual(LINE);
+    expect(rows[0].waypoints).toEqual(LINE());
   });
 
   it("replaces the line on a second write, leaving one row", async () => {
     const shorter: Array<[number, number]> = [
-      [9.99, 53.55],
-      [-9.14, 38.72],
+      [fromPort.lon, fromPort.lat],
+      [toPort.lon, toPort.lat],
     ];
     const res = await request(app)
       .put(`/api/v1/cruises/${cruiseId}/route-override`)
@@ -111,7 +120,7 @@ describe("Cruise route overrides", () => {
     const res = await request(app)
       .put(`/api/v1/cruises/${cruiseId}/route-override`)
       .set("Cookie", authCookie)
-      .send({ ...key(), fromRef: String(toPortId), toRef: String(fromPortId), waypoints: LINE });
+      .send({ ...key(), fromRef: String(toPortId), toRef: String(fromPortId), waypoints: LINE() });
     expect(res.status).toBe(404);
     expect(await prisma.cruiseLegRoute.count({ where: { cruiseId } })).toBe(before);
   });
@@ -134,11 +143,39 @@ describe("Cruise route overrides", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects a line whose first point is far from the departure port", async () => {
+    const unanchored: Array<[number, number]> = [
+      // Nowhere near fromPort — off by thousands of km.
+      [fromPort.lon + 30, fromPort.lat + 10],
+      [toPort.lon, toPort.lat],
+    ];
+    const res = await request(app)
+      .put(`/api/v1/cruises/${cruiseId}/route-override`)
+      .set("Cookie", authCookie)
+      .send({ ...key(), waypoints: unanchored });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/departure port/i);
+  });
+
+  it("rejects a line whose last point is far from the arrival port", async () => {
+    const unanchored: Array<[number, number]> = [
+      [fromPort.lon, fromPort.lat],
+      // Nowhere near toPort.
+      [toPort.lon + 30, toPort.lat + 10],
+    ];
+    const res = await request(app)
+      .put(`/api/v1/cruises/${cruiseId}/route-override`)
+      .set("Cookie", authCookie)
+      .send({ ...key(), waypoints: unanchored });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/arrival port/i);
+  });
+
   it("will not write into another user's cruise", async () => {
     const res = await request(app)
       .put(`/api/v1/cruises/${foreignCruiseId}/route-override`)
       .set("Cookie", authCookie)
-      .send({ ...key(), waypoints: LINE });
+      .send({ ...key(), waypoints: LINE() });
     expect(res.status).toBe(404);
     expect(await prisma.cruiseLegRoute.count({ where: { cruiseId: foreignCruiseId } })).toBe(0);
   });
@@ -147,13 +184,13 @@ describe("Cruise route overrides", () => {
     const res = await request(app)
       .put(`/api/v1/cruises/${cruiseId}/route-override`)
       .set("Cookie", authCookie)
-      .send({ ...key(), fromKind: "place", waypoints: LINE });
+      .send({ ...key(), fromKind: "place", waypoints: LINE() });
     expect(res.status).toBe(400);
   });
 
   it("will not delete another user's override", async () => {
     const foreignRoute = await prisma.cruiseLegRoute.create({
-      data: { cruiseId: foreignCruiseId, ...key(), waypoints: LINE },
+      data: { cruiseId: foreignCruiseId, ...key(), waypoints: LINE() },
     });
 
     const res = await request(app)
