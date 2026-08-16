@@ -4,6 +4,7 @@ import {
 } from "../instanceSettingsService";
 import logger from "../../utils/logger";
 import { formatStreetAddress } from "./streetAddress";
+import { resolveCountryCode } from "../../shared/geo/countryCode";
 
 // Nominatim's usage policy demands a descriptive UA and at most 1 req/s.
 const USER_AGENT = "TravStats/1.0 (self-hosted travel logbook)";
@@ -300,8 +301,15 @@ export async function completeAddressFromCoordinates(
 ): Promise<GeocodeParts | null> {
   const { lat, lon } = input;
   if (lat == null || lon == null) return null;
+  // A country field that names no country counts as missing. It is not empty —
+  // an Armani confirmation prints "Burj Khalifa, Downtown Dubai" and never the
+  // word "Emirates", so the field held "Dubai": a city, standing in the country
+  // filter as its own country, with no flag and one country too many in every
+  // count. The pin knew better all along.
+  const countryIsNotACountry =
+    Boolean(input.country?.trim()) && resolveCountryCode(input.country) === null;
   const missing =
-    !input.address?.trim() || !input.city?.trim() || !input.country?.trim();
+    !input.address?.trim() || !input.city?.trim() || !input.country?.trim() || countryIsNotACountry;
   if (!missing) return null;
 
   const resolved = await reverseGeocode(lat, lon);
@@ -310,7 +318,8 @@ export async function completeAddressFromCoordinates(
   const filled: GeocodeParts = {};
   if (!input.address?.trim() && resolved.address) filled.address = resolved.address;
   if (!input.city?.trim() && resolved.city) filled.city = resolved.city;
-  if (!input.country?.trim() && resolved.country) filled.country = resolved.country;
+  if ((!input.country?.trim() || countryIsNotACountry) && resolved.country)
+    filled.country = resolved.country;
   return Object.keys(filled).length > 0 ? filled : null;
 }
 
