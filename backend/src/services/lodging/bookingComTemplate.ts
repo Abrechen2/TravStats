@@ -1,4 +1,5 @@
 import { type CurrencyCode, isCurrencyCode } from "../../shared/currencies";
+import type { LodgingBoard } from "./lodgingFieldNormalization";
 
 export type LodgingCurrency = CurrencyCode;
 
@@ -13,7 +14,17 @@ export interface ParsedLodgingBooking {
   city: string | null;
   country: string | null;
   totalPrice: number | null;
+  /** Per-night rate as printed. 47 % of real confirmations state one. */
+  pricePerNight: number | null;
   currency: LodgingCurrency | null;
+  /** Meal plan as printed, mapped onto BOARD_TYPES. 61 % state one. */
+  board: LodgingBoard | null;
+  /**
+   * How many people the booking covers. 42 % of confirmations state it.
+   * A COUNT only — a confirmation names the booker, never the companion, so
+   * the name stays the user's to supply.
+   */
+  guests: number | null;
   confirmationNumber: string | null;
   parserTemplate: string;
   parserConfidence: number;
@@ -347,6 +358,11 @@ export function parseBookingComEmail(
     city: lage.city,
     country: lage.country,
     totalPrice: total?.amount ?? null,
+    // The Booking.com template does not read these three yet; the LLM path
+    // does. Null keeps the shape honest rather than inventing a default.
+    pricePerNight: null,
+    board: null,
+    guests: null,
     currency: total?.currency ?? null,
     confirmationNumber: confirmation ? confirmation[1] : null,
     parserTemplate: TEMPLATE_NAME,

@@ -1,6 +1,11 @@
 import http from "http";
 import https from "https";
 import logger from "../../utils/logger";
+import {
+  cleanText,
+  normalizeBoard,
+  normalizeGuestCount,
+} from "./lodgingFieldNormalization";
 import { getAdminParserSettings } from "../parserSettings";
 import { LODGING_TYPES } from "../../schemas/lodging";
 import { isCurrencyCode } from "../../shared/currencies";
@@ -54,12 +59,15 @@ A BOOKING object has these fields:
 - roomCategory: the room type as printed, e.g. "Deluxe Zimmer mit Kingsize-Bett".
 - address: street and house number only.
 - postcode, city, country: as printed.
-- totalPrice: the total price as a number ("€ 1.234,50" -> 1234.50).
+- totalPrice: the total price as a number ("€ 1.234,50" -> 1234.50). Use the amount that includes taxes and fees.
+- pricePerNight: the printed per-night rate, else null.
 - currency: 3-letter ISO code; "€" -> "EUR", "CHF" -> "CHF".
+- board: meal plan as printed, else null.
+- adults, children: integers if stated, else null.
 - confirmationNumber: the booking/confirmation number as printed, digits only.
 
 EXAMPLE OUTPUT:
-{"bookings":[{"hotelName":"Novina Sleep Inn Herzogenaurach","checkIn":"2026-03-08","checkOut":"2026-03-09","nights":1,"roomCategory":"Doppelzimmer","address":"Beethovenstraße 4","postcode":"91074","city":"Herzogenaurach","country":"Deutschland","totalPrice":89.00,"currency":"EUR","confirmationNumber":"260308233983"}]}`;
+{"bookings":[{"hotelName":"Novina Sleep Inn Herzogenaurach","checkIn":"2026-03-08","checkOut":"2026-03-09","nights":1,"roomCategory":"Doppelzimmer","address":"Beethovenstraße 4","postcode":"91074","city":"Herzogenaurach","country":"Deutschland","totalPrice":89.00,"pricePerNight":89.00,"currency":"EUR","board":"Breakfast","adults":2,"children":0,"confirmationNumber":"260308233983"}]}`;
 
 function postJson(url: string, body: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -187,9 +195,9 @@ function normalizeBooking(raw: Record<string, unknown>): ParsedLodgingBooking | 
         (24 * 60 * 60 * 1000),
     ),
   );
-  const city = asString(raw.city);
-  const roomCategory = asString(raw.roomCategory);
-  const confirmationNumber = asString(raw.confirmationNumber);
+  const city = cleanText(raw.city);
+  const roomCategory = cleanText(raw.roomCategory);
+  const confirmationNumber = cleanText(raw.confirmationNumber);
 
   // A number whose unit was thrown away is not a price.
   //
@@ -216,18 +224,27 @@ function normalizeBooking(raw: Record<string, unknown>): ParsedLodgingBooking | 
   if (totalPrice === null) missing.push("totalPrice");
   if (!confirmationNumber) missing.push("confirmationNumber");
 
+  // A per-night rate is priced in the same currency as the total, so it falls
+  // to the same guard: an amount without a usable currency is not a price.
+  const pricePerNight = currency === null ? null : asNumber(raw.pricePerNight);
+
   return {
     hotelName,
     checkIn,
     checkOut,
     nights: nightsRaw !== null && nightsRaw > 0 ? Math.floor(nightsRaw) : nightsFromDates,
     roomCategory,
-    address: asString(raw.address),
-    postcode: asString(raw.postcode),
+    address: cleanText(raw.address),
+    postcode: cleanText(raw.postcode),
     city,
-    country: asString(raw.country),
+    // `cleanText`, not `asString`: the model emits the four characters "null"
+    // for an absent country often enough that it was being stored that way.
+    country: cleanText(raw.country),
     totalPrice,
+    pricePerNight,
     currency,
+    board: normalizeBoard(raw.board),
+    guests: normalizeGuestCount(raw.adults, raw.children),
     confirmationNumber,
     parserTemplate: "ollama-lodging",
     parserConfidence: 70,
