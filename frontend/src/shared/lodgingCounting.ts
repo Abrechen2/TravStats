@@ -25,7 +25,12 @@ export interface CountableLodging {
   visited: boolean;
 }
 
-/** An in-progress stay counts as `planned` — the rule is "until the check-out is past". */
+/**
+ * An in-progress stay counts as `planned` — the rule is "until the check-out is
+ * past". A stay with no dates falls back to its stored status: there is nothing
+ * to derive from, and an undated stay is one recorded after the fact, so
+ * "completed" there is a statement rather than a stale cache.
+ */
 export function classifyStay(stay: CountableStay, now?: Date): LodgingCountState {
   const derived = deriveLodgingStatus({
     checkIn: stay.checkIn,

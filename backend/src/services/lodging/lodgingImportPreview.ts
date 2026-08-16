@@ -34,7 +34,8 @@ interface ExistingStay {
   id: string;
   lodgingId: string;
   externalRef: string | null;
-  checkIn: Date;
+  /** Nullable since 2.7 — an undated stay is still a stay a re-import could duplicate. */
+  checkIn: Date | null;
 }
 
 function dayKey(date: Date): string {
@@ -148,7 +149,12 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
 
     if (!matchedStayId && matchedLodgingId) {
       const existing = idx.staysByLodging.get(matchedLodgingId) ?? [];
-      const sameDay = existing.find((s) => dayKey(s.checkIn) === stay.checkIn);
+      // An undated existing stay has no day to compare, so it can never be the
+      // same-day match — it falls through to being treated as a new row rather
+      // than silently absorbing an incoming dated one.
+      const sameDay = existing.find(
+        (s) => s.checkIn !== null && dayKey(s.checkIn) === stay.checkIn,
+      );
       if (sameDay) {
         dedupeHint = "stay_same_dates";
         matchedStayId = sameDay.id;

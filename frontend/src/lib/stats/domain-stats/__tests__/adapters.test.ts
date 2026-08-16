@@ -265,6 +265,8 @@ function makeLodgingStay(overrides: Partial<Lodging["stays"][number]> = {}): Lod
     bookingId: null,
     checkIn: "2024-06-01T00:00:00.000Z",
     checkOut: "2024-06-03T00:00:00.000Z",
+    datePrecision: "DAY" as const,
+    nights: null,
     status: "completed",
     roomNumber: null,
     roomCategory: null,
@@ -351,6 +353,8 @@ describe("adaptLodging", () => {
             makeLodgingStay({
               checkIn: "2024-06-01T00:00:00.000Z",
               checkOut: "2024-06-03T00:00:00.000Z",
+              datePrecision: "DAY" as const,
+              nights: null,
             }),
           ],
         }),

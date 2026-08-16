@@ -23,6 +23,8 @@ const baseStay: LodgingStay = {
   bookingId: null,
   checkIn: "2024-06-01T00:00:00.000Z",
   checkOut: "2024-06-05T00:00:00.000Z",
+  datePrecision: "DAY" as const,
+  nights: null,
   status: "completed",
   roomNumber: null,
   roomCategory: null,

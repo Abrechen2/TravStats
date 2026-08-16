@@ -40,3 +40,41 @@ export function walkNights(
 
   return nights;
 }
+
+/**
+ * Nights for a stay whose dates cannot be walked day by day — an undated stay,
+ * a one-ended one, or one recorded only to the month or the year.
+ *
+ * The nights still count toward totals (a hotel you cannot date is still one
+ * you slept in), but they enter only the series the precision can honestly
+ * support: a MONTH-precision stay reaches the month bucket, a YEAR-precision
+ * one only the year, and an undated one neither. Putting them all on their
+ * anchor date would place "some time in 2011" on 1 January, where it is
+ * indistinguishable from a stay that really started there.
+ *
+ * Mutates the accumulators in place and returns the night count, mirroring
+ * `walkNights` so the caller can use either without a second shape.
+ */
+export function bucketNights(
+  timing: {
+    nights: number;
+    anchor: Date | null;
+    canBucketByYear: boolean;
+    canBucketByMonth: boolean;
+  },
+  nightsByYear: Record<string, number>,
+  nightsByMonth: Record<string, number>,
+): number {
+  const { nights, anchor } = timing;
+  if (nights <= 0 || anchor === null) return Math.max(0, nights);
+
+  if (timing.canBucketByYear) {
+    const year = String(anchor.getUTCFullYear());
+    nightsByYear[year] = (nightsByYear[year] ?? 0) + nights;
+    if (timing.canBucketByMonth) {
+      const month = `${year}-${String(anchor.getUTCMonth() + 1).padStart(2, "0")}`;
+      nightsByMonth[month] = (nightsByMonth[month] ?? 0) + nights;
+    }
+  }
+  return nights;
+}

@@ -485,5 +485,26 @@
       "nights": "Nächte",
       "stays": "Aufenthalte"
     }
+  },
+  "period": {
+    "from": "ab",
+    "until": "bis",
+    "unknown": "Zeitpunkt unbekannt",
+    "unknownLength": "Dauer unbekannt",
+    "precision": {
+      "label": "Wie genau weißt du das Datum?",
+      "DAY": "Genaue Daten",
+      "MONTH": "Nur Monat und Jahr",
+      "YEAR": "Nur das Jahr",
+      "NONE": "Weiß ich nicht mehr",
+      "DAYHint": "An- und Abreise sind bekannt.",
+      "MONTHHint": "Zählt in Monats- und Jahresauswertungen, nicht in die Wochentagsverteilung.",
+      "YEARHint": "Zählt nur in Jahresauswertungen.",
+      "NONEHint": "Zählt in allen Summen, Ranglisten und Erfolgen — aber in keiner Zeitreihe."
+    },
+    "monthField": "Monat",
+    "yearField": "Jahr",
+    "nightsField": "Nächte (falls bekannt)",
+    "nightsHint": "Optional. Ohne Angabe zählt der Aufenthalt, aber ohne Nächte."
   }
 }

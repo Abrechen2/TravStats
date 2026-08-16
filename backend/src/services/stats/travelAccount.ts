@@ -10,13 +10,16 @@
  * Pure — no I/O, no Prisma. The caller loads the rows.
  */
 import { classifyStay } from "../../shared/lodgingCounting";
+import { resolveStayTiming } from "../../shared/lodgingTiming";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface AccountStay {
   status: string;
-  checkIn: Date;
-  checkOut: Date;
+  checkIn: Date | null;
+  checkOut: Date | null;
+  datePrecision: string;
+  nights: number | null;
 }
 
 export interface AccountCruise {
@@ -49,6 +52,12 @@ export interface TravelAccountYear {
 
 export interface TravelAccount {
   years: TravelAccountYear[];
+  /**
+   * Stays left out because they carry no usable date. They count in every
+   * total elsewhere; here there is nowhere to put them. Reported so a screen
+   * can say so rather than showing a year that quietly omits them.
+   */
+  undatedStays: number;
   /**
    * Nights that two domains both claimed — a hotel booked over a night
    * actually spent at sea, or a red-eye out of a hotel whose check-out was
@@ -93,10 +102,20 @@ export function buildTravelAccount(input: {
   const hotel = new Set<number>();
   const sea = new Set<number>();
   const air = new Set<number>();
+  let undatedStays = 0;
 
   for (const stay of stays) {
     // The same rule every lodging figure uses: only a stay that is over counts.
     if (classifyStay({ status: stay.status, checkIn: stay.checkIn, checkOut: stay.checkOut }, now) !== "visited") {
+      continue;
+    }
+    // The account assigns NIGHTS TO DATES, so it needs real dates. An undated
+    // stay — or one known only to the month — has nights but no position for
+    // them, and placing them on a placeholder would take those days away from
+    // the "at home" bucket on days the user may well have been at home.
+    const timing = resolveStayTiming(stay);
+    if (!timing.walkable || stay.checkIn === null || stay.checkOut === null) {
+      undatedStays += 1;
       continue;
     }
     spanDays(stay.checkIn, stay.checkOut, hotel);
@@ -184,6 +203,7 @@ export function buildTravelAccount(input: {
 
   return {
     years: [...byYear.values()].sort((a, b) => a.year.localeCompare(b.year)),
+    undatedStays,
     contestedNights,
   };
 }

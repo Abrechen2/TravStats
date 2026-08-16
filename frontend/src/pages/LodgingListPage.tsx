@@ -105,6 +105,9 @@ export default function LodgingListPage(): JSX.Element {
     const years = new Set<number>();
     for (const l of baseline) {
       for (const stay of l.stays) {
+        // An undated stay belongs to no year, so it offers none to filter by.
+        // It stays visible while no year is selected.
+        if (stay.checkIn === null) continue;
         const year = new Date(stay.checkIn).getFullYear();
         if (!Number.isNaN(year)) years.add(year);
       }

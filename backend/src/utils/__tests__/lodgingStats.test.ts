@@ -17,6 +17,8 @@ const stay = (o: Partial<LodgingStayData>): LodgingStayData => ({
   ratingService: null,
   checkIn: new Date("2024-05-14T00:00:00Z"),
   checkOut: new Date("2024-05-16T00:00:00Z"),
+  datePrecision: "DAY",
+  nights: null,
   status: "completed",
   totalPriceBase: 190,
   // Every fixture snapshots into EUR by default so pre-existing tests that

@@ -45,7 +45,12 @@ export function computeRhythmStats(
   // consecutive-run detection is plain arithmetic.
   const nightDays = new Set<number>();
 
-  for (const { stay } of entries) {
+  for (const { stay, timing } of entries) {
+    // Only a stay with two real dates has days to contribute. An undated one,
+    // or one known only to the month, has no position on a calendar — placing
+    // it on its placeholder would invent a weekday, and could bridge a gap
+    // between two real runs that never touched.
+    if (!timing.walkable || stay.checkIn === null || stay.checkOut === null) continue;
     let cursor = Date.UTC(
       stay.checkIn.getUTCFullYear(),
       stay.checkIn.getUTCMonth(),

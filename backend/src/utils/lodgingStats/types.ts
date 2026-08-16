@@ -21,8 +21,13 @@ export interface LodgingStayData {
   stars: number | null;
   lat: number | null;
   lon: number | null;
-  checkIn: Date;
-  checkOut: Date;
+  /** Nullable since 2.7 — see shared/lodgingTiming.ts for what the dates are good for. */
+  checkIn: Date | null;
+  checkOut: Date | null;
+  /** "DAY" | "MONTH" | "YEAR" | "NONE" — how much of the date is actually known. */
+  datePrecision: string;
+  /** Explicit night count, for when the dates cannot supply one. */
+  nights: number | null;
   status: string;
   totalPriceBase: number | null;
   /** The base currency this stay's `totalPriceBase` was snapshotted into — NOT necessarily the user's CURRENT base currency (see spendBaseByCurrency). */
@@ -89,8 +94,8 @@ export interface LodgingPricedNight {
   lodgingName: string;
   city: string | null;
   country: string | null;
-  /** ISO date of the check-in, so a screen can say when without a second lookup. */
-  checkIn: string;
+  /** ISO check-in date, or null when the stay carries none. */
+  checkIn: string | null;
   nights: number;
   pricePerNight: number;
 }
@@ -255,6 +260,20 @@ export interface LodgingStats {
   enduredStays: number;
   /** Stays of exactly one night. */
   oneNightStays: number;
+  /**
+   * Stays with no usable date at all (NONE precision). They count in every sum,
+   * ranking and achievement — a hotel you cannot date is still one you slept in
+   * — and in no calendar series, because a guessed position there would be
+   * indistinguishable from a known one (owner rule, 2026-08-16).
+   *
+   * Reported so a screen can say so. A year chart quietly missing eleven stays
+   * looks exactly like a year chart that has them all.
+   */
+  undatedStays: number;
+  /** Nights from those stays. Included in `totalNights`, absent from `nightsByYear`/`nightsByMonth`. */
+  undatedNights: number;
+  /** Stays whose length nobody knows — neither dates nor an explicit count. */
+  staysWithUnknownLength: number;
   price: LodgingPriceStats;
   ratings: LodgingRatingStats;
   geo: LodgingGeoStats;
@@ -303,7 +322,8 @@ export interface LodgingPlace {
   country: string | null;
   lat: number;
   lon: number;
-  checkIn: string;
+  /** ISO check-in date, or null when the stay carries none. */
+  checkIn: string | null;
 }
 
 /** One city or country, with how much of the user's sleeping it accounts for. */

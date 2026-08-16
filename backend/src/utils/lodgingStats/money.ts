@@ -7,11 +7,14 @@
  * euros with kroner and produce a number that is wrong without looking wrong,
  * so those land in `unpricedStays` instead.
  */
+import type { StayTiming } from "../../shared/lodgingTiming";
 import type { LodgingPriceGroup, LodgingPricedNight, LodgingPriceStats, LodgingStayData } from "./types";
 
 export interface StayWithNights {
   stay: LodgingStayData;
   nights: number;
+  /** What this stay's dates are good for — see shared/lodgingTiming.ts. */
+  timing: StayTiming;
 }
 
 /** Money is compared and displayed in cents; carrying more precision invents accuracy. */
@@ -75,7 +78,7 @@ function toPricedNight(entry: StayWithNights, pricePerNight: number): LodgingPri
     lodgingName: entry.stay.lodgingName,
     city: entry.stay.city,
     country: entry.stay.country,
-    checkIn: entry.stay.checkIn.toISOString(),
+    checkIn: entry.stay.checkIn?.toISOString() ?? null,
     nights: entry.nights,
     pricePerNight: round2(pricePerNight),
   };
@@ -131,7 +134,12 @@ export function computePriceStats(
       paidTotal += total;
     }
 
-    addTo(byYear, String(stay.checkIn.getUTCFullYear()), nights, total);
+    // An undated stay has no year to sit in. It still counts in the average,
+    // the median and the superlatives above — only the year series, which is
+    // read as a trend, has nothing honest to do with it.
+    if (entry.timing.canBucketByYear && entry.timing.anchor !== null) {
+      addTo(byYear, String(entry.timing.anchor.getUTCFullYear()), nights, total);
+    }
     if (stay.country) addTo(byCountry, stay.country, nights, total);
     if (stay.chainName) addTo(byChain, stay.chainName, nights, total);
     addTo(byType, stay.type, nights, total);

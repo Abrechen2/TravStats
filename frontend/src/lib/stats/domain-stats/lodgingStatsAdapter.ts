@@ -36,14 +36,18 @@ export function adaptLodging(input: LodgingAdapterInput): DomainStats {
     const stayStates = lodging.stays.map((s) =>
       classifyStay({
         status: s.status,
-        checkIn: new Date(s.checkIn),
-        checkOut: new Date(s.checkOut),
+        checkIn: s.checkIn === null ? null : new Date(s.checkIn),
+        checkOut: s.checkOut === null ? null : new Date(s.checkOut),
       })
     );
     if (classifyLodging(lodging, stayStates) === "excluded") continue;
 
     for (const [i, stay] of lodging.stays.entries()) {
       if (stayStates[i] !== "visited") continue;
+      // This adapter expands stays into DAY buckets for the cross-domain
+      // heatmap, so it needs real dates. An undated stay counts everywhere the
+      // rollup counts it; here there is no day to mark.
+      if (stay.checkIn === null || stay.checkOut === null) continue;
 
       const checkIn = new Date(stay.checkIn);
       if (Number.isNaN(checkIn.getTime())) continue;
