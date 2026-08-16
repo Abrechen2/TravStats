@@ -1,0 +1,158 @@
+import { describe, expect, it } from "vitest";
+import {
+  initRouteEditor,
+  insertWaypoint,
+  isDirty,
+  isEndpoint,
+  moveWaypoint,
+  nudgeWaypoint,
+  removeWaypoint,
+  selectWaypoint,
+  undo,
+  type LonLat,
+} from "../../../components/Cruise/routeEditorState";
+
+const LINE: LonLat[] = [
+  [0, 0],
+  [1, 1],
+  [2, 2],
+  [3, 3],
+];
+
+describe("routeEditorState", () => {
+  it("starts clean, with nothing selected", () => {
+    const s = initRouteEditor(LINE);
+    expect(isDirty(s)).toBe(false);
+    expect(s.selected).toBeNull();
+    expect(s.waypoints).toEqual(LINE);
+  });
+
+  it("treats the first and last points as endpoints", () => {
+    const s = initRouteEditor(LINE);
+    expect(isEndpoint(s, 0)).toBe(true);
+    expect(isEndpoint(s, 3)).toBe(true);
+    expect(isEndpoint(s, 1)).toBe(false);
+    expect(isEndpoint(s, 2)).toBe(false);
+  });
+
+  it("refuses to move an endpoint", () => {
+    const s = initRouteEditor(LINE);
+    const after = moveWaypoint(s, 0, [9, 9]);
+    // A leg begins and ends at its ports. The map must not offer this, and
+    // the state must not perform it even if the map asks.
+    expect(after.waypoints).toEqual(LINE);
+    expect(isDirty(after)).toBe(false);
+  });
+
+  it("refuses to remove an endpoint", () => {
+    const s = initRouteEditor(LINE);
+    expect(removeWaypoint(s, 3).waypoints).toEqual(LINE);
+  });
+
+  it("moves an interior point and becomes dirty", () => {
+    const s = moveWaypoint(initRouteEditor(LINE), 1, [5, 5]);
+    expect(s.waypoints[1]).toEqual([5, 5]);
+    expect(s.waypoints).toHaveLength(4);
+    expect(isDirty(s)).toBe(true);
+  });
+
+  it("inserts into the clicked segment, not next to it", () => {
+    // Segment 0 is the stretch between waypoint 0 and waypoint 1, so the new
+    // point must land at index 1 and push the rest along. Off-by-one here is
+    // the whole reason this function exists.
+    const s = insertWaypoint(initRouteEditor(LINE), 0, [0.5, 0.5]);
+    expect(s.waypoints).toEqual([
+      [0, 0],
+      [0.5, 0.5],
+      [1, 1],
+      [2, 2],
+      [3, 3],
+    ]);
+  });
+
+  it("inserts into the last segment before the end point", () => {
+    const s = insertWaypoint(initRouteEditor(LINE), 2, [2.5, 2.5]);
+    expect(s.waypoints[3]).toEqual([2.5, 2.5]);
+    expect(s.waypoints[4]).toEqual([3, 3]);
+  });
+
+  it("removes an interior point", () => {
+    const s = removeWaypoint(initRouteEditor(LINE), 1);
+    expect(s.waypoints).toEqual([
+      [0, 0],
+      [2, 2],
+      [3, 3],
+    ]);
+    expect(isDirty(s)).toBe(true);
+  });
+
+  it("clears the selection when the selected point is removed", () => {
+    let s = selectWaypoint(initRouteEditor(LINE), 1);
+    s = removeWaypoint(s, 1);
+    expect(s.selected).toBeNull();
+  });
+
+  it("undoes a move exactly, and reports clean again", () => {
+    const start = initRouteEditor(LINE);
+    const moved = moveWaypoint(start, 1, [5, 5]);
+    const back = undo(moved);
+    expect(back.waypoints).toEqual(LINE);
+    // Not merely "some earlier state" — the same line we began with, so the
+    // save button must go quiet again.
+    expect(isDirty(back)).toBe(false);
+  });
+
+  it("undoes step by step, not all the way at once", () => {
+    let s = initRouteEditor(LINE);
+    s = moveWaypoint(s, 1, [5, 5]);
+    s = moveWaypoint(s, 2, [6, 6]);
+    s = undo(s);
+    expect(s.waypoints[1]).toEqual([5, 5]);
+    expect(s.waypoints[2]).toEqual([2, 2]);
+  });
+
+  it("does nothing when there is nothing to undo", () => {
+    const s = initRouteEditor(LINE);
+    expect(undo(s)).toEqual(s);
+  });
+
+  it("never selects an endpoint", () => {
+    const s = selectWaypoint(initRouteEditor(LINE), 0);
+    expect(s.selected).toBeNull();
+  });
+
+  it("does not mutate the state it was given", () => {
+    const s = initRouteEditor(LINE);
+    const before = JSON.stringify(s);
+    moveWaypoint(s, 1, [7, 7]);
+    insertWaypoint(s, 0, [8, 8]);
+    removeWaypoint(s, 1);
+    expect(JSON.stringify(s)).toBe(before);
+  });
+
+  it("bounds the history so a long session cannot grow without limit", () => {
+    let s = initRouteEditor(LINE);
+    for (let i = 0; i < 200; i++) s = moveWaypoint(s, 1, [i, i]);
+    expect(s.history.length).toBeLessThanOrEqual(50);
+  });
+
+  it("nudges an interior point by the given delta", () => {
+    const s = nudgeWaypoint(initRouteEditor(LINE), 1, 0.5, -0.25);
+    expect(s.waypoints[1]).toEqual([1.5, 0.75]);
+    expect(isDirty(s)).toBe(true);
+  });
+
+  it("refuses to nudge an endpoint, exactly as dragging one is refused", () => {
+    // The keyboard path must not be a way around a protection the mouse path
+    // enforces.
+    const s = initRouteEditor(LINE);
+    expect(nudgeWaypoint(s, 0, 1, 1).waypoints).toEqual(LINE);
+    expect(nudgeWaypoint(s, 3, 1, 1).waypoints).toEqual(LINE);
+  });
+
+  it("undoes a nudge like any other change", () => {
+    const s = undo(nudgeWaypoint(initRouteEditor(LINE), 2, 1, 1));
+    expect(s.waypoints).toEqual(LINE);
+    expect(isDirty(s)).toBe(false);
+  });
+});
