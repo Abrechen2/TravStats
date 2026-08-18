@@ -5,7 +5,11 @@ import { PathLayer } from "@deck.gl/layers";
 import { createMarkerTooltip } from "../map/markerTooltip";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { Cruise } from "../../types";
-import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/cruise";
+import {
+  cruiseApi,
+  type CruiseRouteFeatureCollection,
+  type RouteOverrideKey,
+} from "../../lib/api/cruise";
 import { createCruiseArcsLayer, createCruiseArrowsLayer } from "../layers/cruiseArcsLayer";
 import { createCruisePortsLayer } from "../layers/cruisePortsLayer";
 import { DEFAULT_CRUISE_COLORS, type CruiseColorConfig } from "../../lib/cruiseColor";
@@ -18,7 +22,10 @@ import {
   dragWaypoint,
   initRouteEditor,
   insertWaypoint,
+  isDirty,
+  isEndpoint,
   nudgeWaypoint,
+  redo,
   removeWaypoint,
   selectWaypoint,
   undo,
@@ -89,7 +96,9 @@ interface EditingLeg {
  * first geometry + port load, then lets the user pan/zoom freely.
  */
 export function CruiseRouteMap({ cruise }: Props): JSX.Element {
-  const { t, i18n } = useTranslation(["map"]);
+  // Both namespaces: the tooltip machinery speaks "map", the route editor's
+  // strings live in "cruise" beside the rest of this feature's wording.
+  const { t, i18n } = useTranslation(["map", "cruise"]);
   const locale = i18n.language || "de";
   const getTooltip = useMemo(() => createMarkerTooltip(t, locale), [t, locale]);
   const mapRef = useRef<MapRef | null>(null);
@@ -99,6 +108,8 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   const didFit = useRef(false);
   const [editing, setEditing] = useState<EditingLeg | null>(null);
   const [editorState, setEditorState] = useState<RouteEditorState | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [saveError, setSaveError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -126,8 +137,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     return {
       ...geometry,
       features: geometry.features.map((f) =>
-        f.properties.fromPortId === editing.fromPortId &&
-        f.properties.toPortId === editing.toPortId
+        f.properties.fromPortId === editing.fromPortId && f.properties.toPortId === editing.toPortId
           ? { ...f, geometry: { ...f.geometry, coordinates: editorState.waypoints } }
           : f
       ),
@@ -179,6 +189,10 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     setEditorState((prev) => (prev ? undo(prev) : prev));
   }, []);
 
+  const onEditorRedo = useCallback((): void => {
+    setEditorState((prev) => (prev ? redo(prev) : prev));
+  }, []);
+
   /**
    * MapLibre's own keyboard handler listens on the map container, and a
    * handle's keydown bubbles into it NATIVELY — before React's root-mounted
@@ -194,12 +208,11 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     return (): void => {
       map.keyboard.enable();
     };
-  }, [editing]);
+  }, [editing, mapLoaded]);
 
   /**
-   * Entering the editor. Task 3 owns this so the editor is demonstrable on
-   * its own; Task 4 adds the exit/cancel control, so `editing` simply stays
-   * set once a leg is clicked. The `cruise-arcs` PathLayer is always
+   * Entering the editor: while edit mode is armed and no leg is under edit
+   * yet, a click on a leg opens it. The `cruise-arcs` PathLayer is always
    * pickable (see createCruiseArcsLayer) but is not given its own onClick
    * here, so a hit on it falls through to this deck-level handler — see the
    * comment on DeckOverlayProps.onClick above for why that is safe to rely
@@ -207,7 +220,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
    */
   const handleMapClick = useCallback(
     (info: PickingInfo): void => {
-      if (editing || !geometry) return;
+      if (!editMode || editing || !geometry) return;
       if (info.layer?.id !== "cruise-arcs") return;
       const clicked = info.object as { fromPortId: number; toPortId: number } | undefined;
       if (!clicked) return;
@@ -220,8 +233,93 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
       setEditing({ fromPortId: clicked.fromPortId, toPortId: clicked.toPortId });
       setEditorState(initRouteEditor(feature.geometry.coordinates));
     },
-    [editing, geometry]
+    [editMode, editing, geometry]
   );
+
+  /** Legs the server says carry a hand-drawn line. Drives the badge and
+   *  whether "back to automatic" is offered at all — there is nothing to
+   *  reset on a leg the router still owns. */
+  const editedLegKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const f of geometry?.features ?? []) {
+      if (f.properties.method === "manual_polyline") {
+        keys.add(`${f.properties.fromPortId}:${f.properties.toPortId}`);
+      }
+    }
+    return keys;
+  }, [geometry]);
+
+  const legKey = (leg: EditingLeg): RouteOverrideKey => ({
+    fromKind: "port",
+    fromRef: String(leg.fromPortId),
+    toKind: "port",
+    toRef: String(leg.toPortId),
+  });
+
+  const refetchGeometry = async (): Promise<void> => {
+    // Re-read rather than trusting the local line: what the map shows after a
+    // save must be what the server stored, not what the client hoped it did.
+    setGeometry(await cruiseApi.getGeometry(cruise.id));
+  };
+
+  const closeEditor = (): void => {
+    setEditing(null);
+    setEditorState(null);
+    setSaveError(false);
+  };
+
+  const onSave = async (): Promise<void> => {
+    if (!editing || !editorState) return;
+    try {
+      await cruiseApi.saveRouteOverride(cruise.id, legKey(editing), editorState.waypoints);
+      await refetchGeometry();
+      closeEditor();
+      setEditMode(false);
+    } catch (err) {
+      // Keep the editor open and the user's line intact. Discarding someone's
+      // work because a request failed is the one thing this must never do.
+      logger.warn("CruiseRouteMap: saving the route override failed", err);
+      setSaveError(true);
+    }
+  };
+
+  const onReset = async (): Promise<void> => {
+    if (!editing) return;
+    try {
+      await cruiseApi.clearRouteOverride(cruise.id, legKey(editing));
+      await refetchGeometry();
+      closeEditor();
+      setEditMode(false);
+    } catch (err) {
+      logger.warn("CruiseRouteMap: clearing the route override failed", err);
+      setSaveError(true);
+    }
+  };
+
+  /** The one exit from edit mode — dirty work is challenged, never dropped. */
+  const onCancel = useCallback((): void => {
+    if (
+      editorState &&
+      isDirty(editorState) &&
+      !window.confirm(t("cruise:routeEditor.discardConfirm"))
+    ) {
+      return;
+    }
+    setEditing(null);
+    setEditorState(null);
+    setSaveError(false);
+    setEditMode(false);
+  }, [editorState, t]);
+
+  /** Esc leaves the editor without saving (spec §6.1), same path as Cancel. */
+  useEffect(() => {
+    if (!editMode) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return (): void => window.removeEventListener("keydown", onKey);
+  }, [editMode, onCancel]);
 
   const layers: Layer[] = useMemo(() => {
     // The cruise DETAIL map, not a dashboard view: it shows exactly one cruise,
@@ -310,40 +408,105 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     didFit.current = true;
   }, [mapLoaded, bboxPoints]);
 
+  const barButton =
+    "rounded-md border border-border px-2 py-1 text-xs text-(--text-muted) hover:bg-(--bg-surface) disabled:opacity-50";
+
   return (
-    <div className="relative h-64 w-full overflow-hidden rounded-md border border-border">
-      <MapGL
-        ref={mapRef}
-        reuseMaps
-        initialViewState={INITIAL_VIEW}
-        mapStyle={DARK_MAP_STYLE}
-        style={{ position: "absolute", inset: "0" }}
-        onLoad={(): void => setMapLoaded(true)}
-        onMove={(evt): void => {
-          const nextZoom = Math.round(evt.viewState.zoom);
-          setZoom((prev) => (prev === nextZoom ? prev : nextZoom));
-        }}
-      >
-        {mapLoaded && (
-          <DeckGLOverlay layers={layers} getTooltip={getTooltip} onClick={handleMapClick} />
+    <div>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        {!editMode && (
+          <button type="button" className={barButton} onClick={(): void => setEditMode(true)}>
+            {t("cruise:routeEditor.edit")}
+          </button>
+        )}
+        {editMode && !editing && (
+          <>
+            <span className="text-sm text-(--text-muted)">{t("cruise:routeEditor.pickLeg")}</span>
+            <button type="button" className={barButton} onClick={onCancel}>
+              {t("cruise:routeEditor.cancel")}
+            </button>
+          </>
         )}
         {editing && editorState && (
-          <RouteEditorOverlay
-            state={editorState}
-            onDragStart={onEditorDragStart}
-            onDrag={onEditorDrag}
-            onSelect={onEditorSelect}
-            onRemove={onEditorRemove}
-            onNudge={onEditorNudge}
-            onUndo={onEditorUndo}
-            nudgeStep={nudgeStep}
-            // TODO(task 4): replace with t("cruise:routeEditor.removeHandle") once the i18n keys land.
-            removeLabel="Punkt entfernen"
-            // TODO(task 4): replace with t("cruise:routeEditor.handle", { index }) once the i18n keys land.
-            handleLabel={(index): string => `Wegpunkt ${index + 1}`}
-          />
+          <>
+            <button
+              type="button"
+              className={barButton}
+              disabled={editorState.history.length === 0}
+              onClick={onEditorUndo}
+            >
+              {t("cruise:routeEditor.undo")}
+            </button>
+            <button
+              type="button"
+              className={barButton}
+              disabled={editorState.future.length === 0}
+              onClick={onEditorRedo}
+            >
+              {t("cruise:routeEditor.redo")}
+            </button>
+            <button
+              type="button"
+              className={barButton}
+              disabled={!isDirty(editorState)}
+              onClick={(): void => void onSave()}
+            >
+              {t("cruise:routeEditor.save")}
+            </button>
+            <button type="button" className={barButton} onClick={onCancel}>
+              {t("cruise:routeEditor.cancel")}
+            </button>
+            {editedLegKeys.has(`${editing.fromPortId}:${editing.toPortId}`) && (
+              <button type="button" className={barButton} onClick={(): void => void onReset()}>
+                {t("cruise:routeEditor.reset")}
+              </button>
+            )}
+          </>
         )}
-      </MapGL>
+        {!editing && editedLegKeys.size > 0 && (
+          <span className="text-xs text-(--text-muted)">{t("cruise:routeEditor.editedBadge")}</span>
+        )}
+        {saveError && (
+          <span className="text-sm text-(--danger)">{t("cruise:routeEditor.saveFailed")}</span>
+        )}
+      </div>
+      <div className="relative h-64 w-full overflow-hidden rounded-md border border-border">
+        <MapGL
+          ref={mapRef}
+          reuseMaps
+          initialViewState={INITIAL_VIEW}
+          mapStyle={DARK_MAP_STYLE}
+          style={{ position: "absolute", inset: "0" }}
+          onLoad={(): void => setMapLoaded(true)}
+          onMove={(evt): void => {
+            const nextZoom = Math.round(evt.viewState.zoom);
+            setZoom((prev) => (prev === nextZoom ? prev : nextZoom));
+          }}
+        >
+          {mapLoaded && (
+            <DeckGLOverlay layers={layers} getTooltip={getTooltip} onClick={handleMapClick} />
+          )}
+          {editing && editorState && (
+            <RouteEditorOverlay
+              state={editorState}
+              onDragStart={onEditorDragStart}
+              onDrag={onEditorDrag}
+              onSelect={onEditorSelect}
+              onRemove={onEditorRemove}
+              onNudge={onEditorNudge}
+              onUndo={onEditorUndo}
+              onRedo={onEditorRedo}
+              nudgeStep={nudgeStep}
+              removeLabel={t("cruise:routeEditor.removeHandle")}
+              handleLabel={(index): string =>
+                isEndpoint(editorState, index)
+                  ? t("cruise:routeEditor.endpoint")
+                  : t("cruise:routeEditor.handle", { index: index + 1 })
+              }
+            />
+          )}
+        </MapGL>
+      </div>
     </div>
   );
 }

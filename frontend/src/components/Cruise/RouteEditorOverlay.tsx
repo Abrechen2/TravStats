@@ -13,6 +13,7 @@ interface Props {
   onRemove: (index: number) => void;
   onNudge: (index: number, dLon: number, dLat: number) => void;
   onUndo: () => void;
+  onRedo: () => void;
   /** Degrees moved per arrow press; a tenth of that with Shift held. */
   nudgeStep: number;
   removeLabel: string;
@@ -37,6 +38,7 @@ export function RouteEditorOverlay({
   onRemove,
   onNudge,
   onUndo,
+  onRedo,
   nudgeStep,
   removeLabel,
   handleLabel,
@@ -66,13 +68,19 @@ export function RouteEditorOverlay({
                 aria-label={handleLabel(index)}
                 onClick={(): void => onSelect(index)}
                 onKeyDown={(e): void => {
-                  // Ctrl+Z is checked FIRST and unconditionally — undo is a
-                  // session-wide action, not a per-handle one, so it must
-                  // still fire when an (unfocusable-for-drag but still
-                  // Tab-reachable) endpoint handle has focus.
+                  // Ctrl+Z / Ctrl+Y are checked FIRST and unconditionally —
+                  // undo and redo are session-wide actions, not per-handle
+                  // ones, so they must still fire when an
+                  // (unfocusable-for-drag but still Tab-reachable) endpoint
+                  // handle has focus.
                   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
                     e.preventDefault();
                     onUndo();
+                    return;
+                  }
+                  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+                    e.preventDefault();
+                    onRedo();
                     return;
                   }
                   // The spec requires this editor to be usable without a

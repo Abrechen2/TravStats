@@ -8,6 +8,7 @@ import {
   isEndpoint,
   moveWaypoint,
   nudgeWaypoint,
+  redo,
   removeWaypoint,
   selectWaypoint,
   undo,
@@ -195,5 +196,61 @@ describe("routeEditorState", () => {
     const before = JSON.stringify(s);
     dragWaypoint(s, 1, [7, 7]);
     expect(JSON.stringify(s)).toBe(before);
+  });
+
+  it("redoes what undo took back, step by step", () => {
+    let s = initRouteEditor(LINE);
+    s = moveWaypoint(s, 1, [5, 5]);
+    s = moveWaypoint(s, 2, [6, 6]);
+    s = undo(s);
+    s = undo(s);
+    expect(s.waypoints).toEqual(LINE);
+    s = redo(s);
+    expect(s.waypoints[1]).toEqual([5, 5]);
+    expect(s.waypoints[2]).toEqual([2, 2]);
+    s = redo(s);
+    expect(s.waypoints[2]).toEqual([6, 6]);
+    expect(isDirty(s)).toBe(true);
+  });
+
+  it("redo after undo restores dirty and clean states faithfully", () => {
+    const moved = moveWaypoint(initRouteEditor(LINE), 1, [5, 5]);
+    const back = undo(moved);
+    expect(isDirty(back)).toBe(false);
+    const again = redo(back);
+    expect(again.waypoints[1]).toEqual([5, 5]);
+    expect(isDirty(again)).toBe(true);
+  });
+
+  it("a new change discards the redo future", () => {
+    // The universal editor convention: undo, then do something ELSE — the
+    // abandoned branch is gone. A redo that resurrected it would splice a
+    // stale line over the user's newer work.
+    let s = moveWaypoint(initRouteEditor(LINE), 1, [5, 5]);
+    s = undo(s);
+    s = moveWaypoint(s, 2, [7, 7]);
+    const after = redo(s);
+    expect(after.waypoints).toEqual(s.waypoints);
+  });
+
+  it("a drag gesture also discards the redo future", () => {
+    let s = moveWaypoint(initRouteEditor(LINE), 1, [5, 5]);
+    s = undo(s);
+    s = beginDrag(s, 2);
+    s = dragWaypoint(s, 2, [8, 8]);
+    const after = redo(s);
+    expect(after.waypoints).toEqual(s.waypoints);
+  });
+
+  it("does nothing when there is nothing to redo", () => {
+    const s = initRouteEditor(LINE);
+    expect(redo(s)).toEqual(s);
+  });
+
+  it("survives an undo/redo/undo round trip", () => {
+    const moved = moveWaypoint(initRouteEditor(LINE), 1, [5, 5]);
+    const s = undo(redo(undo(moved)));
+    expect(s.waypoints).toEqual(LINE);
+    expect(isDirty(s)).toBe(false);
   });
 });

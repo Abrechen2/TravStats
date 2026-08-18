@@ -135,6 +135,21 @@
     "layer": "Kreuzfahrten",
     "fallbackTitle": "Kreuzfahrt"
   },
+  "routeEditor": {
+    "edit": "Route bearbeiten",
+    "pickLeg": "Etappe auf der Karte antippen",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "reset": "Wieder automatisch",
+    "undo": "Rückgängig",
+    "redo": "Wiederholen",
+    "handle": "Wegpunkt {{index}}",
+    "endpoint": "Endpunkt der Etappe — nicht verschiebbar",
+    "removeHandle": "Wegpunkt entfernen",
+    "editedBadge": "von Hand korrigiert",
+    "saveFailed": "Speichern fehlgeschlagen. Die Linie auf der Karte ist noch deine — noch einmal versuchen?",
+    "discardConfirm": "Änderungen an dieser Etappe verwerfen?"
+  },
   "filter": {
     "title": "Filter",
     "searchPlaceholder": "Suche nach Schiff oder Reederei …",

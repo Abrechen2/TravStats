@@ -18,6 +18,10 @@ export interface RouteEditorState {
   original: LonLat[];
   selected: number | null;
   history: LonLat[][];
+  /** Lines undo took back, newest last — what redo restores. Any NEW
+   *  change discards it: redoing an abandoned branch over newer work is
+   *  the one thing redo must never do. */
+  future: LonLat[][];
 }
 
 /** Enough to undo a session's worth of nudges without growing forever. */
@@ -40,6 +44,7 @@ export function initRouteEditor(waypoints: LonLat[]): RouteEditorState {
     original: clone(waypoints),
     selected: null,
     history: [],
+    future: [],
   };
 }
 
@@ -60,7 +65,7 @@ export function moveWaypoint(state: RouteEditorState, index: number, to: LonLat)
   if (isEndpoint(state, index)) return state;
   const waypoints = clone(state.waypoints);
   waypoints[index] = [to[0], to[1]];
-  return { ...state, waypoints, history: remember(state), selected: index };
+  return { ...state, waypoints, history: remember(state), selected: index, future: [] };
 }
 
 /**
@@ -71,7 +76,7 @@ export function moveWaypoint(state: RouteEditorState, index: number, to: LonLat)
  */
 export function beginDrag(state: RouteEditorState, index: number): RouteEditorState {
   if (isEndpoint(state, index)) return state;
-  return { ...state, history: remember(state), selected: index };
+  return { ...state, history: remember(state), selected: index, future: [] };
 }
 
 /** A drag in flight: move without remembering — `beginDrag` already did. */
@@ -90,19 +95,19 @@ export function dragWaypoint(state: RouteEditorState, index: number, to: LonLat)
 export function insertWaypoint(
   state: RouteEditorState,
   segmentIndex: number,
-  at: LonLat,
+  at: LonLat
 ): RouteEditorState {
   if (segmentIndex < 0 || segmentIndex >= state.waypoints.length - 1) return state;
   const waypoints = clone(state.waypoints);
   waypoints.splice(segmentIndex + 1, 0, [at[0], at[1]]);
-  return { ...state, waypoints, history: remember(state), selected: segmentIndex + 1 };
+  return { ...state, waypoints, history: remember(state), selected: segmentIndex + 1, future: [] };
 }
 
 export function removeWaypoint(state: RouteEditorState, index: number): RouteEditorState {
   if (isEndpoint(state, index)) return state;
   const waypoints = clone(state.waypoints);
   waypoints.splice(index, 1);
-  return { ...state, waypoints, history: remember(state), selected: null };
+  return { ...state, waypoints, history: remember(state), selected: null, future: [] };
 }
 
 /**
@@ -114,7 +119,7 @@ export function nudgeWaypoint(
   state: RouteEditorState,
   index: number,
   dLon: number,
-  dLat: number,
+  dLat: number
 ): RouteEditorState {
   if (isEndpoint(state, index)) return state;
   const [lon, lat] = state.waypoints[index];
@@ -125,7 +130,17 @@ export function undo(state: RouteEditorState): RouteEditorState {
   if (state.history.length === 0) return state;
   const history = [...state.history];
   const previous = history.pop() as LonLat[];
-  return { ...state, waypoints: previous, history, selected: null };
+  const future = [...state.future, clone(state.waypoints)];
+  return { ...state, waypoints: previous, history, future, selected: null };
+}
+
+/** Restore what undo took back. Bounded by undo itself — the future can
+ *  never outgrow the history that fed it. */
+export function redo(state: RouteEditorState): RouteEditorState {
+  if (state.future.length === 0) return state;
+  const future = [...state.future];
+  const next = future.pop() as LonLat[];
+  return { ...state, waypoints: next, history: remember(state), future, selected: null };
 }
 
 /** Has the line actually changed? Drives whether saving is offered at all. */
