@@ -116,6 +116,63 @@ authentication and passkeys arrive alongside.
   statistics, where figures belong.
 
 ### Fixed
+- **A country field that names no country is filled from the pin.** A booking
+  confirmation that prints only "Downtown Dubai" left a city standing in the
+  country filter as its own country — no flag, one country too many in every
+  count. Emptying a field deliberately still keeps it empty, and a country name
+  the resolver knows is never overruled by a lookup.
+- **The parser judges what it is looking at, instead of only transcribing it.**
+  The kind of place (a campground is not a hotel), the group behind a brand
+  ("Courtyard by Marriott" -> Marriott), and the country a city sits in are now
+  asked for. Measured on real confirmations: six campgrounds recognised as
+  campsites, and US bookings that used to store "TX" — a state — now store the
+  country.
+- **An unknown chain is offered, never created behind your back.** The import
+  used to add any chain name it was handed, so a single run could mint entries
+  nobody chose. The preview now flags a chain the catalogue does not know and
+  asks once.
+- **The lodging filter lists countries, not spellings.** One entry covers
+  "Deutschland" and "Germany", named in the reader's language.
+
+- **A hotel confirmation could not be read at all once a flight had been
+  parsed before it.** The lodging and cruise parsers asked the language model
+  for one context size and the flight parser for another; a model is loaded per
+  context size, so every alternation forced a full 9.9 GB reload. Measured
+  against a real host: a request matching the loaded model answers in 7
+  seconds, one that forces the reload did not answer within 240 — well past the
+  parser's own limit, so it gave up and offered manual entry. All three now ask
+  for the same size.
+- **The total on a confirmation is read from the document, not guessed.** Two
+  identical runs of the same booking returned the full amount once and the bare
+  room rate the other time — a difference of 2,142 AED on one stay. A total the
+  document actually labels now overrules the model. A number counts as money
+  only if it carries a currency or two decimals, so "(1 Erwachsener)" beside the
+  word "Gesamtpreis" stays a guest count; and the amount belonging to a label is
+  the nearest one, not the last.
+- **Confirmations are read for what they say.** The meal plan, the per-night
+  rate and how many people the booking covers were never asked for, though 61 %,
+  47 % and 42 % of real confirmations state them. A booking for more than one
+  person now points at the companions field — it never invents a name, because
+  a confirmation names the booker, not the companion.
+- **A country is a country, whatever language wrote it.** The lodging filter
+  listed 60 entries for 33 countries, "Deutschland" beside "Germany". Grouping
+  now runs on the ISO code; the original text is kept untouched as the record of
+  what the source said.
+- **Flight arcs start at the airport again.** Every flight kept its own copy of
+  the airport coordinates, and providers quote different reference points, so
+  one airport sat in several places at once — 58 of 694 references off, the
+  worst by 1.6 km, which drew arcs that visibly missed their own airport dot.
+- **The import looks for the house before creating it a second time.** It
+  compared names and cities only, so one building became two records whenever a
+  booking mail and a saved-places export wrote it differently. It now also
+  compares where the house IS, and reads through decoration like "Hotel",
+  "Restaurant" or "GmbH".
+- **A house number goes where the country puts it** — "50 Southwest Morrison
+  Street", not "Southwest Morrison Street 50".
+- **The map says what is clickable**, and beta features can be switched on from
+  the admin surface instead of only through an API call.
+- **Unticking a chain no longer looks like deleting the loyalty card.**
+
 - **A total that leaves entries out now says so** — on the stay, on the lodging,
   in the list and in the statistics strip, rather than quietly summing what it
   could and presenting it as complete.

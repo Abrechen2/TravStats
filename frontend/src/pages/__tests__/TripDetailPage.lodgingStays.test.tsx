@@ -134,6 +134,7 @@ describe("TripDetailPage — linked lodging stays on the timeline", () => {
             address: null,
             city: "Zürich",
             country: "CH",
+            isoCountryCode: null,
             lat: null,
             lon: null,
             stars: null,

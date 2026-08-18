@@ -59,16 +59,26 @@ A BOOKING object has these fields:
 - nights: number of nights as an integer.
 - roomCategory: the room type as printed, e.g. "Deluxe Zimmer mit Kingsize-Bett".
 - address: street and house number only.
-- postcode, city, country: as printed.
+- postcode, city: as printed.
+- country: the COUNTRY, never a city, region or state. If the document names only
+  a city ("Dubai", "Canton, TX"), give the country that city is in ("United Arab
+  Emirates", "United States"). If you cannot tell, use null.
 - totalPrice: the total price as a number ("€ 1.234,50" -> 1234.50). Use the amount that includes taxes and fees.
 - pricePerNight: the printed per-night rate, else null.
 - currency: 3-letter ISO code; "€" -> "EUR", "CHF" -> "CHF".
 - board: meal plan as printed, else null.
 - adults, children: integers if stated, else null.
 - confirmationNumber: the booking/confirmation number as printed, digits only.
+- type: what KIND of place this is — "hotel", "campsite", "guesthouse",
+  "apartment" or "hostel". Judge it from the name and the text (a KOA or
+  "Campingplatz" is a campsite, a "Ferienwohnung" an apartment). Default "hotel".
+- chainName: the hotel GROUP behind the brand, if any — "Courtyard by Marriott"
+  -> "Marriott", "Hampton by Hilton" -> "Hilton", "Novotel"/"ibis"/"Mercure" ->
+  "Accor", "Holiday Inn"/"Garner" -> "IHG", "Park Inn" -> "Radisson". null for an
+  independent house.
 
 EXAMPLE OUTPUT:
-{"bookings":[{"hotelName":"Novina Sleep Inn Herzogenaurach","checkIn":"2026-03-08","checkOut":"2026-03-09","nights":1,"roomCategory":"Doppelzimmer","address":"Beethovenstraße 4","postcode":"91074","city":"Herzogenaurach","country":"Deutschland","totalPrice":89.00,"pricePerNight":89.00,"currency":"EUR","board":"Breakfast","adults":2,"children":0,"confirmationNumber":"260308233983"}]}`;
+{"bookings":[{"hotelName":"Novina Sleep Inn Herzogenaurach","checkIn":"2026-03-08","checkOut":"2026-03-09","nights":1,"roomCategory":"Doppelzimmer","address":"Beethovenstraße 4","postcode":"91074","city":"Herzogenaurach","country":"Deutschland","totalPrice":89.00,"pricePerNight":89.00,"currency":"EUR","board":"Breakfast","adults":2,"children":0,"confirmationNumber":"260308233983","type":"hotel","chainName":null}]}`;
 
 function postJson(url: string, body: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -265,6 +275,10 @@ function normalizeBooking(
     currency,
     board: normalizeBoard(raw.board),
     guests: normalizeGuestCount(raw.adults, raw.children),
+    // Validated against the vocabulary, never trusted as free text: a model
+    // that invents "resort" must not reach a Zod enum and fail the whole row.
+    type: LODGING_TYPES.find((v) => v === cleanText(raw.type)?.toLowerCase()) ?? null,
+    chainName: cleanText(raw.chainName),
     confirmationNumber,
     parserTemplate: "ollama-lodging",
     parserConfidence: 70,

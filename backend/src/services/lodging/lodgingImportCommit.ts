@@ -99,6 +99,7 @@ function toDate(day: string): Date {
  */
 async function resolveChainId(
   chainName: string | null | undefined,
+  allowCreate: boolean,
 ): Promise<number | null> {
   const name = chainName?.trim();
   if (!name) return null;
@@ -107,6 +108,11 @@ async function resolveChainId(
     where: { name: { equals: name, mode: "insensitive" } },
   });
   if (existing) return existing.id;
+
+  // Unknown, and nobody said to create it. The house imports without a chain
+  // rather than growing the catalogue behind the user's back — the preview
+  // flags it as `unknown_chain` and offers the choice.
+  if (!allowCreate) return null;
 
   try {
     const created = await prisma.lodgingChain.create({
@@ -128,7 +134,7 @@ async function createLodging(
   batchId: string,
   fields: LodgingCandidateFields,
 ): Promise<string> {
-  const chainId = await resolveChainId(fields.chainName);
+  const chainId = await resolveChainId(fields.chainName, fields.createChain === true);
   const lodging = await prisma.lodging.create({
     data: {
       userId,

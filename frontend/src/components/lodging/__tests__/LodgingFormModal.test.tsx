@@ -59,6 +59,7 @@ const baseLodging: Lodging = {
   address: "Bahnhofstrasse 1",
   city: "Zürich",
   country: "CH",
+  isoCountryCode: null,
   lat: null,
   lon: null,
   stars: null,

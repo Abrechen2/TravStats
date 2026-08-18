@@ -43,6 +43,7 @@ const lodgingRow: Lodging = {
   address: null,
   city: null,
   country: null,
+  isoCountryCode: null,
   lat: null,
   lon: null,
   stars: null,
