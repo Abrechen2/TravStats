@@ -242,9 +242,30 @@ describe("routeEditorState", () => {
     expect(after.waypoints).toEqual(s.waypoints);
   });
 
+  it("an insert also discards the redo future", () => {
+    // Every mutating entry point must clear it, not just move — a redo that
+    // resurrects the abandoned branch over an inserted point splices a stale
+    // line over newer work.
+    let s = moveWaypoint(initRouteEditor(LINE), 1, [5, 5]);
+    s = undo(s);
+    s = insertWaypoint(s, 0, [0.5, 0.5]);
+    const after = redo(s);
+    expect(after.waypoints).toEqual(s.waypoints);
+  });
+
+  it("a removal also discards the redo future", () => {
+    let s = moveWaypoint(initRouteEditor(LINE), 1, [5, 5]);
+    s = undo(s);
+    s = removeWaypoint(s, 2);
+    const after = redo(s);
+    expect(after.waypoints).toEqual(s.waypoints);
+  });
+
   it("does nothing when there is nothing to redo", () => {
     const s = initRouteEditor(LINE);
-    expect(redo(s)).toEqual(s);
+    // Identity, not just equality: a no-op that returned a fresh object
+    // would re-render the whole overlay for nothing.
+    expect(redo(s)).toBe(s);
   });
 
   it("survives an undo/redo/undo round trip", () => {
