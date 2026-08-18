@@ -6,7 +6,7 @@
     "allYears": "Alle Jahre",
     "allMonths": "Alle Monate",
     "routeFrequency": "Routenfrequenz",
-    "minFlown": "Mindestens {{count}}x geflogen",
+    "minFlown": "Mindestens {{count}} Flüge",
     "airlines": "Airlines",
     "none": "Keine",
     "all": "Alle",
@@ -147,6 +147,7 @@
       }
     },
     "timesFlown": "{{count}}x geflogen",
+    "timesPlanned": "{{count}}x geplant",
     "flight_one": "Flug",
     "flight_other": "Flüge",
     "antipodalSimplified_one": "{{count}} antipodale Route flach dargestellt",
