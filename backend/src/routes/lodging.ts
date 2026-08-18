@@ -10,6 +10,7 @@ import * as fx from "../services/fx/resolver";
 import { resolveLocation } from "./lodgingGeocode";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { deriveLodgingStatus } from "../shared/statusDerivation";
+import { classifyStay } from "../shared/lodgingCounting";
 import { resolveStayTiming } from "../shared/lodgingTiming";
 import { deriveStayOverallRating } from "../shared/ratingDerivation";
 import { deriveStayTotalPrice } from "../shared/stayPricing";
@@ -97,6 +98,7 @@ interface AggregateStay extends RatedStay, AggregateStayFx {
   checkOut: Date | null;
   datePrecision: string;
   nights: number | null;
+  status: string;
 }
 
 export interface LodgingAggregates {
@@ -113,14 +115,18 @@ export function computeAggregates(
   stays: AggregateStay[],
   currentBaseCurrency: string,
 ): LodgingAggregates {
-  const totalSpendBaseByCurrency = sumSpendBaseByCurrency(stays);
+  // The check-out rule (shared/lodgingCounting): a stay counts once it is
+  // over. Future and cancelled bookings contribute nothing to any figure —
+  // the same verdict the stats path (calculateLodgingStats) already applies.
+  const visited = stays.filter((s) => classifyStay(s) === "visited");
+  const totalSpendBaseByCurrency = sumSpendBaseByCurrency(visited);
   return {
-    overallRating: deriveOverallRating(stays),
-    stayCount: stays.length,
+    overallRating: deriveOverallRating(visited),
+    stayCount: visited.length,
     // Nights come from `resolveStayTiming`, not from a local date subtraction:
     // an undated stay can still carry an explicit night count, and a
     // month-precision one must not have its placeholder dates differenced.
-    nights: stays.reduce((sum, s) => sum + resolveStayTiming(s).nights, 0),
+    nights: visited.reduce((sum, s) => sum + resolveStayTiming(s).nights, 0),
     totalSpendBase: totalSpendBaseByCurrency[currentBaseCurrency] ?? 0,
     totalSpendBaseByCurrency,
   };
