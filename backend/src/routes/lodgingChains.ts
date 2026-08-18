@@ -11,6 +11,7 @@ import {
   deriveOverallRating,
   getBaseCurrency,
 } from "./lodging";
+import { classifyStay } from "../shared/lodgingCounting";
 
 // A shared, global catalog: every authenticated user reads the SAME rows
 // (Marriott, Hilton, NH, ...), seeded from CSV in a later task. A user may
@@ -112,10 +113,16 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
       stayCount: lodgings.reduce((sum, l) => sum + l.stayCount, 0),
       nights: lodgings.reduce((sum, l) => sum + l.nights, 0),
       totalSpendBase: lodgings.reduce((sum, l) => sum + l.totalSpendBase, 0),
-      // Averaged across every stay of every one of the caller's hotels in
-      // this chain — NOT an average of the per-hotel averages, so a hotel
-      // with 10 rated stays counts 10x more than one with a single stay.
-      avgRating: deriveOverallRating(rawLodgings.flatMap((l) => l.stays)),
+      // Averaged across every VISITED stay of every one of the caller's
+      // hotels in this chain — NOT an average of the per-hotel averages, so
+      // a hotel with 10 rated stays counts 10x more than one with a single
+      // stay. Filtered through the same check-out rule as computeAggregates
+      // above (shared/lodgingCounting): a scheduled or cancelled stay must
+      // not pull this average even if it already carries a rating, or it
+      // would disagree with every per-hotel overallRating on this same page.
+      avgRating: deriveOverallRating(
+        rawLodgings.flatMap((l) => l.stays.filter((s) => classifyStay(s) === "visited")),
+      ),
     };
 
     // The caller's membership for this chain, resolved through the LINK table.

@@ -276,6 +276,51 @@ describe("Lodging Chains API", () => {
       expect(res.body.data.siblingChains).toEqual([]);
     });
 
+    it("averages avgRating over visited stays only — a scheduled stay's rating must not dilute it", async () => {
+      const chain = await prisma.lodgingChain.create({
+        data: { name: "Avg Rating Detail Test" },
+      });
+      createdChainIds.push(chain.id);
+
+      const lodging = await prisma.lodging.create({
+        data: { userId, name: "Avg Rating Detail Test Hotel", chainId: chain.id },
+      });
+      // Completed stay — over, so it counts. Rated 4.
+      await prisma.lodgingStay.create({
+        data: {
+          lodgingId: lodging.id,
+          userId,
+          checkIn: new Date("2024-05-13T15:00:00.000Z"),
+          checkOut: new Date("2024-05-15T11:00:00.000Z"),
+          ratingOverall: 4,
+        },
+      });
+      // Scheduled stay — lies in the future, must be excluded even though it
+      // already carries a rating. Rated 1: if this leaked in, avgRating would
+      // be (4+1)/2 = 2.5 instead of 4.
+      const future = new Date();
+      future.setUTCFullYear(future.getUTCFullYear() + 5);
+      const futureEnd = new Date(future);
+      futureEnd.setUTCDate(futureEnd.getUTCDate() + 2);
+      await prisma.lodgingStay.create({
+        data: {
+          lodgingId: lodging.id,
+          userId,
+          checkIn: future,
+          checkOut: futureEnd,
+          ratingOverall: 1,
+        },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/lodging-chains/${chain.id}`)
+        .set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data.lodgings).toHaveLength(1);
+      expect(res.body.data.lodgings[0].overallRating).toBe(4);
+      expect(res.body.data.stats.avgRating).toBe(4);
+    });
+
     it("never returns another user's hotels for this chain", async () => {
       const chain = await prisma.lodgingChain.create({ data: { name: "Isolation Test Chain" } });
       createdChainIds.push(chain.id);
