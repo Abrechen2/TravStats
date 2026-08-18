@@ -100,6 +100,9 @@ export function createCruisePortsLayer(
     }
   };
   for (const cruise of cruises) {
+    // A scheduled/in-progress/cancelled cruise hasn't (fully) sailed —
+    // only flown/historical port calls count as an actual visit.
+    if (cruise.status !== "flown" && cruise.status !== "historical") continue;
     const firstPortCall = cruise.stops.find((s) => !s.isAtSea && s.port);
     const lastPortCall = [...cruise.stops].reverse().find((s) => !s.isAtSea && s.port);
     // Departure/arrival ports get markers too — skipped only when they
