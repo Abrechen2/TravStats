@@ -5,7 +5,10 @@ import { isEndpoint } from "./routeEditorState";
 
 interface Props {
   state: RouteEditorState;
-  onMove: (index: number, to: LonLat) => void;
+  /** Fired once when a handle's drag begins — the gesture's one undo point. */
+  onDragStart: (index: number) => void;
+  /** Fired continuously while dragging AND once more on release. */
+  onDrag: (index: number, to: LonLat) => void;
   onSelect: (index: number) => void;
   onRemove: (index: number) => void;
   onNudge: (index: number, dLon: number, dLat: number) => void;
@@ -28,7 +31,8 @@ interface Props {
  */
 export function RouteEditorOverlay({
   state,
-  onMove,
+  onDragStart,
+  onDrag,
   onSelect,
   onRemove,
   onNudge,
@@ -44,11 +48,17 @@ export function RouteEditorOverlay({
         const selected = state.selected === index;
         return (
           <Marker
-            key={`${index}-${point[0]}-${point[1]}`}
+            // The index alone — a key that carried the coordinates would
+            // remount the marker on every move and throw away keyboard
+            // focus, killing the arrow keys after their first press
+            // (measured in the browser, not hypothetical).
+            key={index}
             longitude={point[0]}
             latitude={point[1]}
             draggable={!endpoint}
-            onDragEnd={(e): void => onMove(index, [e.lngLat.lng, e.lngLat.lat])}
+            onDragStart={(): void => onDragStart(index)}
+            onDrag={(e): void => onDrag(index, [e.lngLat.lng, e.lngLat.lat])}
+            onDragEnd={(e): void => onDrag(index, [e.lngLat.lng, e.lngLat.lat])}
           >
             <div className="relative">
               <button

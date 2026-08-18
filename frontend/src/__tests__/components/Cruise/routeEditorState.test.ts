@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  beginDrag,
+  dragWaypoint,
   initRouteEditor,
   insertWaypoint,
   isDirty,
@@ -154,5 +156,44 @@ describe("routeEditorState", () => {
     const s = undo(nudgeWaypoint(initRouteEditor(LINE), 2, 1, 1));
     expect(s.waypoints).toEqual(LINE);
     expect(isDirty(s)).toBe(false);
+  });
+
+  it("records one history entry per drag gesture, not one per drag event", () => {
+    // A live drag fires dozens of intermediate positions. Only beginDrag
+    // remembers; the moves themselves must not, or a single gesture floods
+    // the bounded history and undo stops meaning "one gesture back".
+    let s = beginDrag(initRouteEditor(LINE), 1);
+    expect(s.history).toHaveLength(1);
+    expect(s.selected).toBe(1);
+    s = dragWaypoint(s, 1, [1.1, 1.1]);
+    s = dragWaypoint(s, 1, [1.5, 1.4]);
+    s = dragWaypoint(s, 1, [2.2, 0.9]);
+    expect(s.history).toHaveLength(1);
+    expect(s.waypoints[1]).toEqual([2.2, 0.9]);
+    expect(isDirty(s)).toBe(true);
+  });
+
+  it("undoes a whole drag gesture in one step, back to where it began", () => {
+    let s = beginDrag(initRouteEditor(LINE), 2);
+    s = dragWaypoint(s, 2, [5, 5]);
+    s = dragWaypoint(s, 2, [6, 6]);
+    const back = undo(s);
+    expect(back.waypoints).toEqual(LINE);
+    expect(isDirty(back)).toBe(false);
+  });
+
+  it("refuses to begin or continue a drag on an endpoint", () => {
+    const s = initRouteEditor(LINE);
+    expect(beginDrag(s, 0)).toEqual(s);
+    expect(beginDrag(s, 3)).toEqual(s);
+    expect(dragWaypoint(s, 0, [9, 9]).waypoints).toEqual(LINE);
+    expect(dragWaypoint(s, 3, [9, 9]).waypoints).toEqual(LINE);
+  });
+
+  it("does not mutate the given state while dragging", () => {
+    const s = beginDrag(initRouteEditor(LINE), 1);
+    const before = JSON.stringify(s);
+    dragWaypoint(s, 1, [7, 7]);
+    expect(JSON.stringify(s)).toBe(before);
   });
 });

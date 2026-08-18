@@ -14,9 +14,10 @@ import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import { RouteEditorOverlay } from "./RouteEditorOverlay";
 import {
+  beginDrag,
+  dragWaypoint,
   initRouteEditor,
   insertWaypoint,
-  moveWaypoint,
   nudgeWaypoint,
   removeWaypoint,
   selectWaypoint,
@@ -150,8 +151,12 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
    * reducer in routeEditorState.ts — nothing here recomputes waypoints
    * itself, so the editor has exactly one source of truth for the line.
    */
-  const onEditorMove = useCallback((index: number, to: LonLat): void => {
-    setEditorState((prev) => (prev ? moveWaypoint(prev, index, to) : prev));
+  const onEditorDragStart = useCallback((index: number): void => {
+    setEditorState((prev) => (prev ? beginDrag(prev, index) : prev));
+  }, []);
+
+  const onEditorDrag = useCallback((index: number, to: LonLat): void => {
+    setEditorState((prev) => (prev ? dragWaypoint(prev, index, to) : prev));
   }, []);
 
   const onEditorSelect = useCallback((index: number): void => {
@@ -173,6 +178,23 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   const onEditorUndo = useCallback((): void => {
     setEditorState((prev) => (prev ? undo(prev) : prev));
   }, []);
+
+  /**
+   * MapLibre's own keyboard handler listens on the map container, and a
+   * handle's keydown bubbles into it NATIVELY — before React's root-mounted
+   * synthetic handler can stop anything. So while a leg is being edited the
+   * map's keyboard navigation is switched off entirely; otherwise every
+   * arrow-key nudge also pans the map 100px (measured in the browser).
+   */
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    if (editing) map.keyboard.disable();
+    else map.keyboard.enable();
+    return (): void => {
+      map.keyboard.enable();
+    };
+  }, [editing]);
 
   /**
    * Entering the editor. Task 3 owns this so the editor is demonstrable on
@@ -308,7 +330,8 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
         {editing && editorState && (
           <RouteEditorOverlay
             state={editorState}
-            onMove={onEditorMove}
+            onDragStart={onEditorDragStart}
+            onDrag={onEditorDrag}
             onSelect={onEditorSelect}
             onRemove={onEditorRemove}
             onNudge={onEditorNudge}

@@ -64,6 +64,25 @@ export function moveWaypoint(state: RouteEditorState, index: number, to: LonLat)
 }
 
 /**
+ * The start of a drag gesture: remember the line once, select the handle.
+ * A live drag then streams positions through `dragWaypoint`, which does NOT
+ * remember — one gesture, one history entry, one undo step. `moveWaypoint`
+ * stays the right call for single-shot changes (a keyboard nudge).
+ */
+export function beginDrag(state: RouteEditorState, index: number): RouteEditorState {
+  if (isEndpoint(state, index)) return state;
+  return { ...state, history: remember(state), selected: index };
+}
+
+/** A drag in flight: move without remembering — `beginDrag` already did. */
+export function dragWaypoint(state: RouteEditorState, index: number, to: LonLat): RouteEditorState {
+  if (isEndpoint(state, index)) return state;
+  const waypoints = clone(state.waypoints);
+  waypoints[index] = [to[0], to[1]];
+  return { ...state, waypoints, selected: index };
+}
+
+/**
  * Insert into the segment the user clicked. Segment `i` is the stretch
  * between waypoint `i` and waypoint `i + 1`, so the new point lands at
  * `i + 1` — the off-by-one this function exists to get right once.
