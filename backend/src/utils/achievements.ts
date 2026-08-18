@@ -18,6 +18,12 @@ import {
   buildMembershipContext,
   resolveStayProgramme,
 } from '../services/lodging/stayMembership';
+import { classifyStay } from '../shared/lodgingCounting';
+
+/** Shared "did this actually happen" check for flights and cruises alike —
+ * both domains use the same status vocabulary (`flown` / `historical` are
+ * done, everything else — scheduled, in_progress, cancelled — is not). */
+const isDoneStatus = (status: string): boolean => status === 'flown' || status === 'historical';
 
 type UserAchievementWithRelation = UserAchievement & { achievement: Achievement };
 
@@ -54,7 +60,9 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     );
 
     // Get user's flights (flown+historical for geo/distance stats, all for planner/survivor)
-    // + cruises (all statuses except cancelled; include stops+ports and trip for Fly & Sail)
+    // + cruises (flown+historical only — a booked-but-not-yet-sailed cruise must not
+    //   unlock a cruise achievement any more than a scheduled flight unlocks a flight
+    //   one; include stops+ports and trip for Fly & Sail)
     // + lodging stays (all statuses — calculateLodgingStats filters cancelled itself)
     // + per-trip domain counts (flights/cruises/lodgingStays) for the
     //   cross-domain Fly & Stay / Grand Tour flags.
@@ -68,7 +76,7 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
         orderBy: { departureTime: 'asc' },
       }),
       prisma.cruise.findMany({
-        where: { userId, status: { not: 'cancelled' } },
+        where: { userId, status: { in: ['flown', 'historical'] } },
         include: {
           stops: { include: { port: true } },
           trip: { include: { flights: true, cruises: true } },
@@ -90,18 +98,20 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
         where: { userId },
         include: { chains: true, lodgings: true },
       }),
+      // Domain rows come back as bare status/date columns, not `_count`s — a
+      // DB `where` can express "flown or historical" for flights/cruises, but
+      // it cannot express `classifyStay`'s date-derived "visited" for lodging
+      // stays, so all three counts get computed in JS below (see
+      // `tripDomainCounts` / `tripsFullyDocumented`). journalEntries/photos
+      // stay `_count`s — a written entry or an uploaded photo IS done, no
+      // status to filter on.
       prisma.trip.findMany({
         where: { userId },
         select: {
-          _count: {
-            select: {
-              flights: true,
-              cruises: true,
-              lodgingStays: true,
-              journalEntries: true,
-              photos: true,
-            },
-          },
+          flights: { select: { status: true } },
+          cruises: { select: { status: true } },
+          lodgingStays: { select: { status: true, checkIn: true, checkOut: true } },
+          _count: { select: { journalEntries: true, photos: true } },
         },
       }),
       prisma.userSettings.findUnique({ where: { userId }, select: { baseCurrency: true } }),
@@ -272,18 +282,35 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     }));
     const lodgingStats = calculateLodgingStats(lodgingStatsInput, lodgingBaseCurrency, lodgingRecords);
 
+    // Per-trip domain counts, DONE items only (flown/historical flights and
+    // cruises, visited lodging stays) — a merely booked leg or a stay that
+    // hasn't happened yet must not count toward any cross-domain flag below.
+    const doneTrips = trips.map((t) => ({
+      flightCount: t.flights.filter((f) => isDoneStatus(f.status)).length,
+      cruiseCount: t.cruises.filter((c) => isDoneStatus(c.status)).length,
+      lodgingStayCount: t.lodgingStays.filter((s) => classifyStay(s) === 'visited').length,
+      journalEntries: t._count.journalEntries,
+      photos: t._count.photos,
+    }));
+
     // Fly & Stay / Grand Tour — derived per-trip so a flight in one trip and
     // a stay in an unrelated trip never counts (see computeFlyAndStayFlags).
-    const tripDomainCounts: TripDomainCounts[] = trips.map((t) => ({
-      flightCount: t._count.flights,
-      cruiseCount: t._count.cruises,
-      lodgingStayCount: t._count.lodgingStays,
+    const tripDomainCounts: TripDomainCounts[] = doneTrips.map((t) => ({
+      flightCount: t.flightCount,
+      cruiseCount: t.cruiseCount,
+      lodgingStayCount: t.lodgingStayCount,
     }));
     const { flyAndStay, grandTour } = computeFlyAndStayFlags(tripDomainCounts);
 
-    // Fly & Sail — at least one trip contains BOTH a flight and a cruise
+    // Fly & Sail — at least one trip contains BOTH a done flight and a done cruise.
+    // `cruises` is already filtered to flown/historical, but the sibling rows
+    // read off `c.trip.flights` / `c.trip.cruises` (via include) are NOT — they
+    // carry every status in that trip, so they need the same done-predicate here.
     const flyAndSail = cruises.some(
-      (c) => c.trip && c.trip.flights.length > 0 && c.trip.cruises.length > 0,
+      (c) =>
+        c.trip &&
+        c.trip.flights.some((f) => isDoneStatus(f.status)) &&
+        c.trip.cruises.some((tc) => isDoneStatus(tc.status)),
     );
 
     // Amphibious Week — fires when any flight sits within ±7 days of a
@@ -395,12 +422,12 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       // A trip is "fully documented" when it records the journey, the bed, the
       // words and the pictures. A cruise counts as the journey too — a
       // flightless cruise trip is not an undocumented one.
-      tripsFullyDocumented: trips.filter(
+      tripsFullyDocumented: doneTrips.filter(
         (t) =>
-          t._count.flights + t._count.cruises > 0 &&
-          t._count.lodgingStays > 0 &&
-          t._count.journalEntries > 0 &&
-          t._count.photos > 0,
+          t.flightCount + t.cruiseCount > 0 &&
+          t.lodgingStayCount > 0 &&
+          t.journalEntries > 0 &&
+          t.photos > 0,
       ).length,
       // Cross-domain (lodging)
       flyAndStay,
