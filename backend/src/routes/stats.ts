@@ -1183,7 +1183,7 @@ router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunct
     const userId = req.userId!;
 
     const flights = await prisma.flight.findMany({
-      where: { userId },
+      where: { userId, status: { in: ['flown', 'historical'] } },
       select: {
         depIata: true,
         depIcao: true,
