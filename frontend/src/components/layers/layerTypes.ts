@@ -19,6 +19,12 @@ export interface ArcDatum {
   //   - mixed (upcoming + past-flown): blue-tipped, hardcoded red core
   hasPastFlown?: boolean;
   isHistorical?: boolean;
+  // Status-aware split of `count` — flown/historical vs. scheduled. `count`
+  // itself keeps its all-statuses meaning (width/frequency-tier/min-route
+  // filter semantics are unchanged); these two are additive breakdowns for
+  // the hover tooltip so a planned flight is never presented as flown.
+  flownCount: number;
+  scheduledCount: number;
   /** First-seen departure/arrival identity for this canonical route —
    *  drives the flag/ICAO/name shown in the hover tooltip. */
   departure: { iata?: string; icao?: string; name?: string; city?: string | null; country?: string | null };

@@ -254,6 +254,51 @@ describe("buildRouteData", () => {
     expect(mixedArc!.sourceColor).toEqual(mixedArc!.targetColor);
   });
 
+  it("splits flown and scheduled counts per route", () => {
+    const flown1: GeoJSONFeature = {
+      ...mockFlight,
+      properties: { ...mockFlight.properties, id: "split-flown-1", status: "flown" },
+    };
+    const flown2: GeoJSONFeature = {
+      ...mockFlight,
+      properties: { ...mockFlight.properties, id: "split-flown-2", status: "flown" },
+    };
+    const scheduled: GeoJSONFeature = {
+      ...mockFlight,
+      properties: { ...mockFlight.properties, id: "split-sched-1", status: "scheduled" },
+    };
+    const { arcs } = buildRouteData([flown1, flown2, scheduled], 1);
+    expect(arcs).toHaveLength(1);
+    expect(arcs[0].flownCount).toBe(2);
+    expect(arcs[0].scheduledCount).toBe(1);
+    expect(arcs[0].count).toBe(3);
+  });
+
+  it("a scheduled flight does not become the airport lastVisit", () => {
+    const flown: GeoJSONFeature = {
+      ...mockFlight,
+      properties: {
+        ...mockFlight.properties,
+        id: "lastvisit-flown",
+        status: "flown",
+        departureTime: "2024-05-01T10:00:00Z",
+      },
+    };
+    const scheduled: GeoJSONFeature = {
+      ...mockFlight,
+      properties: {
+        ...mockFlight.properties,
+        id: "lastvisit-sched",
+        status: "scheduled",
+        departureTime: "2027-01-01T10:00:00Z",
+      },
+    };
+    const { points } = buildRouteData([flown, scheduled], 1);
+    const fra = points.find((p) => p.iata === "FRA");
+    expect(fra?.lastVisit).toBeDefined();
+    expect(fra?.lastVisit?.startsWith("2024")).toBe(true);
+  });
+
   it("flags isHistorical (grey is a frequency-mode treatment, see flightColor)", () => {
     const historical: GeoJSONFeature = {
       ...mockFlight,

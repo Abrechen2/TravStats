@@ -62,6 +62,10 @@ export interface FlatRouteDatum {
    *  "flown Nx" line from this, so a tip must not report the tip colour. */
   sourceColor: Rgba;
   count: number;
+  // Threaded from ArcDatum so the shared hover tooltip can distinguish
+  // flown from planned on this shape too — see routesLayer.ts.
+  flownCount: number;
+  scheduledCount: number;
   flightIds: string[];
   hasUpcoming: boolean;
   hasPastFlown: boolean;
@@ -91,6 +95,8 @@ export function buildFlatRoutes(
     const shared = {
       sourceColor: arc.sourceColor,
       count: arc.count,
+      flownCount: arc.flownCount,
+      scheduledCount: arc.scheduledCount,
       flightIds: arc.flightIds,
       hasUpcoming: !!arc.hasUpcoming,
       hasPastFlown: !!arc.hasPastFlown,
