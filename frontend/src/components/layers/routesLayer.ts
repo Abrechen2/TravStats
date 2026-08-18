@@ -70,6 +70,12 @@ interface RouteRecord {
   depAirport: AirportProps;
   arrAirport: AirportProps;
   count: number;
+  // Status-aware split of `count`. `count` itself keeps its all-statuses
+  // meaning (width/frequency-tier/min-route-filter semantics unchanged) —
+  // these two are additive breakdowns threaded through to ArcDatum for the
+  // hover tooltip, so a planned flight is never presented as flown.
+  flownCount: number;
+  scheduledCount: number;
   flightIds: string[];
   hasUpcoming: boolean;
   // True when at least one flight on this canonical pair has status !==
@@ -93,11 +99,14 @@ function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord>
     // code-less airfields still aggregate instead of being dropped (#120).
     const key = routeKey(airportId(dep, coords.depCoord), airportId(arr, coords.arrCoord));
     const isScheduled = f.properties.status === "scheduled";
+    const isFlown = f.properties.status === "flown" || f.properties.status === "historical";
     const isHistorical = f.properties.status === "historical";
     const existing = records.get(key);
     if (existing) {
       existing.count += 1;
       existing.flightIds.push(f.properties.id);
+      if (isScheduled) existing.scheduledCount += 1;
+      if (isFlown) existing.flownCount += 1;
       if (isScheduled) existing.hasUpcoming = true;
       if (!isScheduled) existing.hasPastFlown = true;
       if (!isHistorical) existing.allHistorical = false;
@@ -109,6 +118,8 @@ function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord>
         depAirport: dep,
         arrAirport: arr,
         count: 1,
+        flownCount: isFlown ? 1 : 0,
+        scheduledCount: isScheduled ? 1 : 0,
         flightIds: [f.properties.id],
         hasUpcoming: isScheduled,
         hasPastFlown: !isScheduled,
@@ -166,6 +177,8 @@ function buildArcs(
       sourcePosition: r.depCoord,
       targetPosition: r.arrCoord,
       count: r.count,
+      flownCount: r.flownCount,
+      scheduledCount: r.scheduledCount,
       sourceColor: argb,
       targetColor: argb,
       flightIds: r.flightIds,
@@ -206,7 +219,11 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
     const arr = f.properties.arrivalAirport;
     const coords = getCoordsFromFeature(f);
     if (!coords) continue;
-    const departureTime = f.properties.departureTime ?? undefined;
+    // A scheduled flight is a future flight — it must never bump "Letzter
+    // Besuch" into the future. `count` stays all-status (its label "Flüge"
+    // is neutral); only the visit timestamp is status-gated.
+    const departureTime =
+      f.properties.status !== "scheduled" ? (f.properties.departureTime ?? undefined) : undefined;
     // Key by IATA → ICAO → coordinate key so code-less airports still get a
     // marker (#120). The displayed label falls back the same way.
     const depKey = airportId(dep, coords.depCoord);
