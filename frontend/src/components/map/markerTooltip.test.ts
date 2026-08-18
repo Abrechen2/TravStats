@@ -145,8 +145,23 @@ describe("createMarkerTooltip — routes", () => {
       })
     );
     expect(result).not.toBeNull();
-    expect(result!.html).toContain("3× geflogen");
-    expect(result!.html).toContain("1× geplant");
+    expect(result!.html).toContain("3× geflogen · 1× geplant");
+  });
+
+  it("falls back to the legacy flown label for a cancelled-only route", () => {
+    const result = getTooltip(
+      makeInfo("routes-arc", {
+        departure: { iata: "MUC", name: "Munich Airport", country: "DE" },
+        arrival: { iata: "JFK", name: "New York", country: "US" },
+        count: 2,
+        flownCount: 0,
+        scheduledCount: 0,
+        sourceColor: [240, 169, 71, 220],
+      })
+    );
+    expect(result).not.toBeNull();
+    expect(result!.html).toContain("2× geflogen");
+    expect(result!.html).not.toContain("geplant");
   });
 
   it("keeps the plain flown label for legacy datums without counts", () => {
