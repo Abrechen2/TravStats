@@ -38,9 +38,12 @@ function makeStop(
   return base as Cruise["stops"][number];
 }
 
-function makeCruise(stops: Cruise["stops"]): Cruise {
+function makeCruise(
+  stops: Cruise["stops"],
+  overrides: { id?: string; status?: Cruise["status"] } = {}
+): Cruise {
   return {
-    id: "c1",
+    id: overrides.id ?? "c1",
     userId: "u1",
     shipId: null,
     ship: null,
@@ -53,7 +56,10 @@ function makeCruise(stops: Cruise["stops"]): Cruise {
     arrivalPort: null,
     startDate: null,
     endDate: null,
-    status: "scheduled",
+    // Default "flown" — most tests here aren't exercising status semantics
+    // and would otherwise silently produce zero visits under the new
+    // sailed-only filter. Tests that DO care about status pass it explicitly.
+    status: overrides.status ?? "flown",
     cabinNumber: null,
     cabinType: null,
     deck: null,
@@ -125,5 +131,44 @@ describe("createCruisePortsLayer", () => {
     expect(labelLayer).toBeDefined();
     const props = (labelLayer as unknown as { props: { characterSet?: unknown } }).props;
     expect(props.characterSet).toBe("auto");
+  });
+
+  it("a scheduled cruise contributes no visits — only sailed (flown/historical) cruises count", () => {
+    const sharedPort = {
+      id: 1,
+      lat: 41.9,
+      lon: 12.45,
+      name: "Civitavecchia",
+      country: "IT",
+      city: "Civitavecchia",
+    };
+    const scheduledOnlyPort = {
+      id: 2,
+      lat: 37.98,
+      lon: 23.72,
+      name: "Piraeus",
+      country: "GR",
+      city: "Athens",
+    };
+    const flownCruise = makeCruise([makeStop(1, sharedPort)], { id: "flown", status: "flown" });
+    const scheduledCruise = makeCruise([makeStop(1, sharedPort), makeStop(2, scheduledOnlyPort)], {
+      id: "scheduled",
+      status: "scheduled",
+    });
+
+    const layers = createCruisePortsLayer([flownCruise, scheduledCruise]);
+    expect(layers).not.toBeNull();
+    const dotLayer = layers!.find((l) => l.id === "cruise-ports");
+    const data = (dotLayer as { props: { data: unknown } }).props.data as Array<{
+      name: string;
+      visits: number;
+    }>;
+
+    // Only the flown cruise's port survives; the scheduled cruise's own port
+    // never appears at all.
+    expect(data.find((d) => d.name === "Piraeus")).toBeUndefined();
+    const civitavecchia = data.find((d) => d.name === "Civitavecchia");
+    expect(civitavecchia).toBeDefined();
+    expect(civitavecchia!.visits).toBe(1);
   });
 });

@@ -771,6 +771,12 @@ export default function GlobeView({
       // "scheduled" only when EVERY flight on it is still scheduled.
       hasUpcoming: boolean;
       hasPastFlown: boolean;
+      // Status-aware split of `count`, same predicate as routesLayer.ts's
+      // RouteRecord — flown = status 'flown'|'historical', scheduled =
+      // status 'scheduled'. Threaded through to ArcDatum for the hover
+      // tooltip's two-part label.
+      flownCount: number;
+      scheduledCount: number;
     }
     const routes = new Map<string, RouteAcc>();
     for (const flight of filteredFlights) {
@@ -794,6 +800,10 @@ export default function GlobeView({
       // multiple flights that were similar-but-not-identical routes.
       const flightWeak = !dep?.iata || !arr?.iata;
       const isScheduled = flight.properties?.status === "scheduled";
+      // Same predicate as routesLayer.ts's aggregateAllRoutes: flown covers
+      // both 'flown' and 'historical' (a route already sailed either way).
+      const isFlown =
+        flight.properties?.status === "flown" || flight.properties?.status === "historical";
       const key = createRouteKey(depKey, arrKey);
       const existing = routes.get(key);
       if (existing) {
@@ -802,6 +812,8 @@ export default function GlobeView({
         if (flightWeak) existing.weak = true;
         if (isScheduled) existing.hasUpcoming = true;
         if (!isScheduled) existing.hasPastFlown = true;
+        if (isScheduled) existing.scheduledCount += 1;
+        if (isFlown) existing.flownCount += 1;
       } else {
         routes.set(key, {
           count: 1,
@@ -813,6 +825,8 @@ export default function GlobeView({
           weak: flightWeak,
           hasUpcoming: isScheduled,
           hasPastFlown: !isScheduled,
+          flownCount: isFlown ? 1 : 0,
+          scheduledCount: isScheduled ? 1 : 0,
         });
       }
     }
@@ -846,6 +860,8 @@ export default function GlobeView({
           quartile,
           weak: r.weak,
           status,
+          flownCount: r.flownCount,
+          scheduledCount: r.scheduledCount,
         });
         continue;
       }
@@ -862,6 +878,8 @@ export default function GlobeView({
         quartile,
         weak: r.weak,
         status,
+        flownCount: r.flownCount,
+        scheduledCount: r.scheduledCount,
       });
     }
     return { arcsData: arcs, antipodalArcs: antipodals, heatmapThresholds: thresholds };
@@ -881,7 +899,14 @@ export default function GlobeView({
       const arr = flight.properties?.arrivalAirport;
       const start = coords[0];
       const end = coords[coords.length - 1];
-      const departureTime = flight.properties?.departureTime ?? undefined;
+      // A scheduled flight is a future flight — it must never bump
+      // "last visit" into the future. `size` stays all-status (its label
+      // is neutral); only the visit timestamp is status-gated (mirrors
+      // routesLayer.ts's buildAirportPoints).
+      const departureTime =
+        flight.properties?.status !== "scheduled"
+          ? (flight.properties?.departureTime ?? undefined)
+          : undefined;
       if (dep?.iata && Number.isFinite(start[0]) && Number.isFinite(start[1])) {
         const key = dep.iata;
         const cur = seen.get(key);
@@ -1104,6 +1129,10 @@ export default function GlobeView({
   const portPoints = useMemo<PointDatum[]>(() => {
     const seen = new Map<number, PointDatum>();
     for (const c of cruises) {
+      // A scheduled/in-progress/cancelled cruise hasn't (fully) sailed —
+      // only flown/historical port calls count as an actual visit (mirrors
+      // cruisePortsLayer.ts's sailed-only guard).
+      if (c.status !== "flown" && c.status !== "historical") continue;
       const legs = cruiseLegDatesByCruise.get(c.id) ?? [];
       // A port is "visited" at the ARRIVAL date of the leg ending there
       // (or at startDate for the first port of the cruise).
@@ -1192,6 +1221,9 @@ export default function GlobeView({
     if (![start[0], start[1], end[0], end[1]].every(Number.isFinite)) return null;
     const distanceKm = calculateDistance(start[1], start[0], end[1], end[0]);
     const peakAltitudeM = getArcPeakAltitudeMeters(distanceKm) * altitudeFactor;
+    const isScheduled = latest.properties?.status === "scheduled";
+    const isFlown =
+      latest.properties?.status === "flown" || latest.properties?.status === "historical";
     return {
       from: [start[0], start[1]],
       to: [end[0], end[1]],
@@ -1208,7 +1240,9 @@ export default function GlobeView({
       departure: latest.properties.departureAirport ?? {},
       arrival: latest.properties.arrivalAirport ?? {},
       weak: false,
-      status: latest.properties?.status === "scheduled" ? "scheduled" : "past",
+      status: isScheduled ? "scheduled" : "past",
+      flownCount: isFlown ? 1 : 0,
+      scheduledCount: isScheduled ? 1 : 0,
     };
   }, [sliderMode, filteredFlights, lite, altitudeFactor]);
 
@@ -1281,11 +1315,21 @@ export default function GlobeView({
             ${flagImgHtml(ep.country, 18)}<span>${escapeHtml(ep.iata ?? "UNK")}</span>
             <span style="opacity:0.6;font-weight:500;font-size:11px;">${escapeHtml(ep.name ?? "")}</span>
           </div>`;
+        // Two-part label, same rule as markerTooltip.ts's renderArcHtml:
+        // flown first, then scheduled, zero-count parts omitted. Falls back
+        // to the legacy flown-only label for a cancelled-only route where
+        // both counts are 0 despite count > 0 (accepted pre-existing
+        // cancelled semantic, out of this fix's scope).
+        const labelParts: string[] = [];
+        if (d.flownCount > 0) labelParts.push(t("map:globe.timesFlown", { count: d.flownCount }));
+        if (d.scheduledCount > 0)
+          labelParts.push(t("map:globe.timesPlanned", { count: d.scheduledCount }));
+        const label = labelParts.join(" · ") || t("map:globe.timesFlown", { count: d.count });
         const html = `
           ${epLine(d.departure)}
           ${epLine(d.arrival)}
           <div style="color:rgb(${d.color[0]},${d.color[1]},${d.color[2]});font-weight:600;margin-top:4px;">
-            ${escapeHtml(t("map:globe.timesFlown", { count: d.count }))}
+            ${escapeHtml(label)}
           </div>`;
         tooltipRef.current?.show({ html, x: info.x, y: info.y });
       } else {

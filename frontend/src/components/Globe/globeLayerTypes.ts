@@ -20,8 +20,20 @@ export interface ArcDatum {
   flightIds: string[];
   color: [number, number, number];
   quartile: Quartile;
-  departure: { iata?: string; icao?: string; name?: string; city?: string | null; country?: string | null };
-  arrival: { iata?: string; icao?: string; name?: string; city?: string | null; country?: string | null };
+  departure: {
+    iata?: string;
+    icao?: string;
+    name?: string;
+    city?: string | null;
+    country?: string | null;
+  };
+  arrival: {
+    iata?: string;
+    icao?: string;
+    name?: string;
+    city?: string | null;
+    country?: string | null;
+  };
   /**
    * Set when at least one constituent flight had no IATA on either
    * endpoint and we fell back to coordinate-rounded identity. The arc
@@ -40,6 +52,14 @@ export interface ArcDatum {
    * `resolveFlightArcColor` → the shared `resolveFlightColor`.
    */
   status: "past" | "scheduled";
+  /**
+   * Status-aware split of `count` — flown/historical vs. scheduled. `count`
+   * itself keeps its all-statuses meaning; these two are additive
+   * breakdowns for the hover tooltip so a planned flight is never presented
+   * as flown (mirrors routesLayer.ts's RouteRecord / ArcDatum).
+   */
+  flownCount: number;
+  scheduledCount: number;
 }
 
 export interface PointDatum {

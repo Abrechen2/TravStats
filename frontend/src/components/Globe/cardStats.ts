@@ -107,13 +107,18 @@ export function getPortStats(cruises: Cruise[], portKey: string): PortCardStats 
   // `portKey` is whatever the PointDatum carries — historically the
   // marker's iata-or-name slot. Match against unlocode AND name so
   // both code-keyed and name-keyed markers resolve.
-  const stops = cruises.flatMap((c) =>
-    c.stops
-      .filter(
-        (s) => s.port?.unlocode === portKey || s.port?.name === portKey || s.port?.city === portKey
-      )
-      .map((s) => ({ stop: s, cruise: c }))
-  );
+  // Only sailed cruises (flown/historical) contribute an actual port call —
+  // a scheduled cruise is a future plan, not a visit yet.
+  const stops = cruises
+    .filter((c) => c.status === "flown" || c.status === "historical")
+    .flatMap((c) =>
+      c.stops
+        .filter(
+          (s) =>
+            s.port?.unlocode === portKey || s.port?.name === portKey || s.port?.city === portKey
+        )
+        .map((s) => ({ stop: s, cruise: c }))
+    );
 
   const country = stops[0]?.stop.port?.country ?? null;
   const region = stops[0]?.stop.port?.region ?? null;
