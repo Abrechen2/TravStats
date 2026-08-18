@@ -74,6 +74,11 @@ interface ArcTooltipDatum {
   readonly arrival?: { iata?: string; name?: string; country?: string | null };
   readonly count?: number;
   readonly sourceColor?: readonly [number, number, number, number];
+  /** Flights on this route with status flown|historical. Optional — legacy
+   *  datums without it fall back to the old "{{count}}x flown" label. */
+  readonly flownCount?: number;
+  /** Flights on this route with status scheduled. Optional, see flownCount. */
+  readonly scheduledCount?: number;
 }
 
 interface CruisePathTooltipDatum {
@@ -307,12 +312,25 @@ function renderArcHtml(d: ArcTooltipDatum, t: TFn): string {
       ${flagImgHtml(ep?.country, 16)}<span>${escapeHtml(ep?.iata ?? "?")}</span>
       <span style="opacity:0.6;font-weight:500;font-size:11px;">${escapeHtml(ep?.name ?? "")}</span>
     </div>`;
-  const count = d.count ?? 0;
   const [r, g, b] = d.sourceColor ?? [241, 245, 249, 255];
+  const flown = d.flownCount;
+  const scheduled = d.scheduledCount;
+  let label: string;
+  if (typeof flown === "number" && typeof scheduled === "number") {
+    const parts: string[] = [];
+    if (flown > 0) parts.push(t("map:globe.timesFlown", { count: flown }));
+    if (scheduled > 0) parts.push(t("map:globe.timesPlanned", { count: scheduled }));
+    // Cancelled-only route: flown + scheduled can both be 0 while count > 0.
+    // Falls back to the legacy flown label with the total — accepted
+    // pre-existing cancelled semantic, out of this fix's scope.
+    label = parts.join(" · ") || t("map:globe.timesFlown", { count: d.count ?? 0 });
+  } else {
+    label = t("map:globe.timesFlown", { count: d.count ?? 0 });
+  }
   return `
     ${epLine(d.departure)}
     ${epLine(d.arrival)}
     <div style="color:rgb(${r},${g},${b});font-weight:600;margin-top:4px;">
-      ${escapeHtml(t("map:globe.timesFlown", { count }))}
+      ${escapeHtml(label)}
     </div>`;
 }

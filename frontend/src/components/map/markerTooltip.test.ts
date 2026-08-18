@@ -8,6 +8,7 @@ const t = (key: string, opts?: Record<string, unknown>): string => {
   if (key === "map:airportMarkers.visits") return "Besuche";
   if (key === "map:tooltip.lastCall") return "Letzter Anlauf";
   if (key === "map:globe.timesFlown") return `${opts?.count}× geflogen`;
+  if (key === "map:globe.timesPlanned") return `${opts?.count}× geplant`;
   if (key === "lodging:field.staysCount") return `${opts?.count} Aufenthalte`;
   if (key === "lodging:field.nightsCount") return `${opts?.count} Übernachtungen`;
   return key;
@@ -114,6 +115,51 @@ describe("createMarkerTooltip — routes", () => {
 
   it("returns null when the arc datum has no departure/arrival identity", () => {
     expect(getTooltip(makeInfo("routes-arc-scheduled", { count: 1 }))).toBeNull();
+  });
+
+  it("labels a pure-scheduled route as planned, not flown", () => {
+    const result = getTooltip(
+      makeInfo("routes-arc-scheduled", {
+        departure: { iata: "MUC", name: "Munich Airport", country: "DE" },
+        arrival: { iata: "JFK", name: "New York", country: "US" },
+        count: 1,
+        flownCount: 0,
+        scheduledCount: 1,
+        sourceColor: [240, 169, 71, 220],
+      })
+    );
+    expect(result).not.toBeNull();
+    expect(result!.html).toContain("1× geplant");
+    expect(result!.html).not.toContain("geflogen");
+  });
+
+  it("labels a mixed route with both counts", () => {
+    const result = getTooltip(
+      makeInfo("routes-arc", {
+        departure: { iata: "MUC", name: "Munich Airport", country: "DE" },
+        arrival: { iata: "JFK", name: "New York", country: "US" },
+        count: 4,
+        flownCount: 3,
+        scheduledCount: 1,
+        sourceColor: [240, 169, 71, 220],
+      })
+    );
+    expect(result).not.toBeNull();
+    expect(result!.html).toContain("3× geflogen");
+    expect(result!.html).toContain("1× geplant");
+  });
+
+  it("keeps the plain flown label for legacy datums without counts", () => {
+    const result = getTooltip(
+      makeInfo("routes-arc", {
+        departure: { iata: "MUC", name: "Munich Airport", country: "DE" },
+        arrival: { iata: "JFK", name: "New York", country: "US" },
+        count: 3,
+        sourceColor: [240, 169, 71, 220],
+      })
+    );
+    expect(result).not.toBeNull();
+    expect(result!.html).toContain("3× geflogen");
   });
 });
 
