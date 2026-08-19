@@ -150,6 +150,7 @@
   "routeDetails": "Route Details",
   "tripDetails": "Trip Details",
   "flown": "flown",
+  "planned": "planned",
   "flightsOnRoute": "Flights on this route",
   "tabStrip": {
     "label": "Domain switcher",
