@@ -62,4 +62,15 @@ describe("RouteDetailsSidebar", () => {
     render(<RouteDetailsSidebar flights={flights} onBack={() => {}} />);
     expect(screen.getByText(/1× geflogen/)).toBeInTheDocument();
   });
+
+  it("shows only the flown count when every leg has flown (majority case)", () => {
+    const flights = [
+      makeFlight({ id: "1", status: "flown" }),
+      makeFlight({ id: "2", status: "flown" }),
+      makeFlight({ id: "3", status: "flown" }),
+    ];
+    render(<RouteDetailsSidebar flights={flights} onBack={() => {}} />);
+    expect(screen.getByText(/3× geflogen/)).toBeInTheDocument();
+    expect(screen.queryByText(/geplant/)).toBeNull();
+  });
 });
