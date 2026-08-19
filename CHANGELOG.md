@@ -4,7 +4,7 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
-## [2.6.0] - 2026-08-16
+## [2.6.0] - 2026-08-19
 
 The lodging release. Hotels become a domain of their own — recorded, imported,
 mapped and counted like flights and cruises — and every price in TravStats can
@@ -77,6 +77,10 @@ authentication and passkeys arrive alongside.
   could not find, no address at all, a name and nothing else, or a country
   field holding something that is not a country. Nothing is shown for a sound
   row.
+- **The logostream and Google Places keys can be tested from the admin page**,
+  like every other provider key. The Places check sends one real, billed
+  request and its result names the price (~0.03 USD) — a test that costs money
+  must say so.
 
 - **Hotel statistics grow into their own chapter.** What a night cost — by year,
   country, chain and board, with the median taken over nights rather than
@@ -225,6 +229,21 @@ authentication and passkeys arrive alongside.
   and names where the card stays reachable.
 - **Names on the trip map thin out with zoom**, as they already did everywhere
   else.
+
+- **Something planned is no longer counted as done.** One tooltip reading
+  "1× geflogen" over a route nobody had flown yet led to thirteen places across
+  every domain with the same blindness: countries "visited" by a scheduled
+  flight, cruise figures counting bookings, cruise achievements unlocked by
+  booking alone, a chain's average rating including unvisited stays, "last
+  visit" dates in the future, flown-km sums including planned flights, and trip
+  superlatives crowned by a merely planned trip. Every count, label and unlock
+  now asks whether the thing actually happened; a mixed route says
+  "3× geflogen · 1× geplant". The itinerary map of a booked cruise keeps its
+  port pins — it just no longer claims you have been there.
+- **A brand-new account is not greeted with old news.** Signing up put "New in
+  TravStats 2.6.0" in front of someone who had never run 2.5. The running
+  version is now recorded as seen when the account is created — on
+  registration, admin-created users and first-boot setup alike.
 
 ### Security
 - Closed an IDOR in the lodging import commit path, scoped receipt access to the
