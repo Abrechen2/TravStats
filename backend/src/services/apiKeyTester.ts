@@ -375,6 +375,124 @@ export async function testAerodataboxKey(apiKey: string, userId?: string): Promi
 }
 
 /**
+ * Test logostream API key
+ *
+ * Mirrors the real request `airlineLogoService.ts` makes (buildLogostreamUrl
+ * / fromLogostream): a GET for a known airline's icon variant, key as a
+ * `key=` query param. The response is an image — the body is never parsed,
+ * only the status matters, so `responseType: 'arraybuffer'` is enough.
+ */
+export async function testLogostreamKey(apiKey: string, userId?: string): Promise<ApiKeyTestResult> {
+  try {
+    const key = apiKey || (await getApiKey('logostream', userId));
+    if (!key) {
+      return {
+        success: false,
+        message: 'No API key provided',
+      };
+    }
+
+    const response = await axios.get(
+      `https://airlines-api.logostream.dev/airlines/iata/AA?variant=icon&key=${encodeURIComponent(key)}`,
+      {
+        responseType: 'arraybuffer',
+        timeout: 10000,
+      },
+    );
+
+    if (response.status === 200) {
+      return {
+        success: true,
+        message: 'API key is valid',
+      };
+    }
+
+    return {
+      success: false,
+      message: `Unexpected response: ${response.status}`,
+    };
+  } catch (error: unknown) {
+    const errInfo = extractAxiosErrorInfo(error);
+    if (errInfo.status === 401 || errInfo.status === 403) {
+      return {
+        success: false,
+        message: 'Invalid API key',
+      };
+    }
+    return {
+      success: false,
+      message: errInfo.message,
+    };
+  }
+}
+
+/**
+ * Test Google Places API key
+ *
+ * Mirrors the real request `services/geo/googlePlaces.ts` (findLodgingPlace)
+ * makes: a Text Search POST with `X-Goog-Api-Key` + `X-Goog-FieldMask`
+ * headers. Unlike the other testers this one is NOT free — every call bills
+ * one Text Search request — so it uses the cheapest possible field mask
+ * (`places.displayName` only, same principle as googlePlaces.ts:132-135) and
+ * says so explicitly in the success message, since the admin is paying for
+ * every click of the Test button.
+ */
+export async function testGooglePlacesKey(apiKey: string, userId?: string): Promise<ApiKeyTestResult> {
+  try {
+    const key = apiKey || (await getApiKey('googlePlaces', userId));
+    if (!key) {
+      return {
+        success: false,
+        message: 'No API key provided',
+      };
+    }
+
+    const response = await axios.post(
+      'https://places.googleapis.com/v1/places:searchText',
+      { textQuery: 'Frankfurt Airport' },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': key,
+          'X-Goog-FieldMask': 'places.displayName',
+        },
+        timeout: 10000,
+      },
+    );
+
+    if (response.status === 200) {
+      return {
+        success: true,
+        message: 'API key is valid (this test sent one billed Text Search request, ~0.03 USD)',
+      };
+    }
+
+    return {
+      success: false,
+      message: `Unexpected response: ${response.status}`,
+    };
+  } catch (error: unknown) {
+    const errInfo = extractAxiosErrorInfo(error);
+    // Google answers a malformed/revoked key with 400 INVALID_ARGUMENT, and
+    // a valid-but-disabled-API key with 403 PERMISSION_DENIED — both are
+    // "the key doesn't work", and extractAxiosErrorInfo already pulled
+    // Google's own error.message out of the response body, which is far
+    // more actionable than a generic message ("... has not been used in
+    // project ... or it is disabled" tells the admin exactly what to fix).
+    if (errInfo.status === 400 || errInfo.status === 401 || errInfo.status === 403) {
+      return {
+        success: false,
+        message: errInfo.message || 'Invalid API key',
+      };
+    }
+    return {
+      success: false,
+      message: errInfo.message,
+    };
+  }
+}
+
+/**
  * Test OpenSky credentials (OAuth2 only - Client ID + Client Secret)
  */
 export async function testOpenSkyCredentials(

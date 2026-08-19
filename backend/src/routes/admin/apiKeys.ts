@@ -8,6 +8,8 @@ import {
   testAirlabsKey,
   testAviationstackKey,
   testAerodataboxKey,
+  testLogostreamKey,
+  testGooglePlacesKey,
   testOpenSkyCredentials,
 } from '../../services/apiKeyTester';
 
@@ -90,6 +92,8 @@ async function resolveAdminGlobalKey(
     | 'globalAirlabsApiKey'
     | 'globalAviationstackApiKey'
     | 'globalAerodataboxApiKey'
+    | 'globalLogostreamApiKey'
+    | 'globalGooglePlacesApiKey'
     | 'globalOpenskyClientId'
     | 'globalOpenskyClientSecret',
 ): Promise<string | null> {
@@ -302,6 +306,38 @@ router.post('/api-keys/test/aerodatabox', async (req: AuthRequest, res: Response
       return res.status(400).json({ success: false, message: 'No AeroDataBox key configured to test. Save one first.' });
     }
     const result = await testAerodataboxKey(effective);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/api-keys/test/logostream', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { apiKey } = testApiKeySchema.parse(req.body);
+    const effective = looksMasked(apiKey)
+      ? (await resolveAdminGlobalKey('globalLogostreamApiKey')) ?? ''
+      : apiKey!;
+    if (!effective) {
+      return res.status(400).json({ success: false, message: 'No logostream key configured to test. Save one first.' });
+    }
+    const result = await testLogostreamKey(effective);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/api-keys/test/googlePlaces', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { apiKey } = testApiKeySchema.parse(req.body);
+    const effective = looksMasked(apiKey)
+      ? (await resolveAdminGlobalKey('globalGooglePlacesApiKey')) ?? ''
+      : apiKey!;
+    if (!effective) {
+      return res.status(400).json({ success: false, message: 'No Google Places key configured to test. Save one first.' });
+    }
+    const result = await testGooglePlacesKey(effective);
     res.json(result);
   } catch (error) {
     next(error);

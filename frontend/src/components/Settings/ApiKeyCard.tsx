@@ -19,8 +19,9 @@ export interface ApiKeyCardProps {
   isShared: boolean;
   hasAccess: boolean;
   value?: string;
-  /** Whether the card offers a "Test" button. Providers without a
-   *  backend test endpoint (e.g. logostream) must pass false. */
+  /** Whether the card offers a "Test" button. Every provider has a backend
+   *  test endpoint now; pass false only for a provider that genuinely has
+   *  none. */
   testable?: boolean;
   /** Explicit "the user has saved their own key" signal. User cards MUST
    *  pass this from `apiKeysStatus.<provider>.hasKey` because their `value`
@@ -88,24 +89,25 @@ export default function ApiKeyCard({
   };
 
   const handleTest = async () => {
-    // No backend test endpoint exists for these providers; the early return
-    // also narrows `provider` for the testApiKey union below.
-    // Neither of these has a backend test endpoint: one serves images, the
-    // other bills per request, and a "test" button that costs money is a trap.
-    if (!testable || provider === "logostream" || provider === "googlePlaces") {
+    if (!testable) {
       return;
     }
     setTesting(true);
     setTestResult(null);
     try {
-      const api = isAdmin ? adminApi : settingsApi;
       let result;
       if (provider === "opensky" && openskyFields) {
+        const api = isAdmin ? adminApi : settingsApi;
         result = await api.testApiKey(provider, undefined, {
           clientId: openskyFields.clientId,
           clientSecret: openskyFields.clientSecret,
         });
+      } else if (provider === "logostream" || provider === "googlePlaces") {
+        // Admin-only providers — no user-level test endpoint exists, so
+        // these always go through adminApi regardless of `isAdmin`.
+        result = await adminApi.testApiKey(provider, localValue || value);
       } else {
+        const api = isAdmin ? adminApi : settingsApi;
         result = await api.testApiKey(provider, localValue || value);
       }
       setTestResult(result);
