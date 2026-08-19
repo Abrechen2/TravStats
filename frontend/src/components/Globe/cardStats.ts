@@ -81,8 +81,13 @@ export function getAirportStats(flights: GeoJSONFeature[], iata: string): Airpor
   );
   const departures = touched.filter((f) => f.properties.departureAirport.iata === iata);
 
-  // Only taken (flown/historical) flights count as visits — a scheduled flight
-  // is a future plan, not a visit yet.
+  // A scheduled flight must never count as a visit or bump the last-visit
+  // date — it's a future plan, not something that happened. Cancelled
+  // flights deliberately still count here (status !== "scheduled" keeps
+  // them in) — a deferred semantic, not the bug this filter guards against.
+  // That's an asymmetry vs. getPortStats below, which filters cruises down
+  // to flown|historical explicitly (so cancelled cruises DON'T count as a
+  // port call) — both are intentional, just answering different questions.
   const visitedOnly = touched.filter((f) => f.properties.status !== "scheduled");
 
   // Longest route originating from this airport, by distance.
