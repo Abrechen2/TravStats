@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { getPortStats } from "./cardStats";
+import { getAirportStats, getPortStats } from "./cardStats";
 import type { Cruise, Port } from "../../types/cruise";
+import type { GeoJSONFeature } from "../../types";
 
 const PORT: Port = {
   id: 1,
@@ -14,6 +15,46 @@ const PORT: Port = {
   region: null,
   isUserAdded: false,
 };
+
+function makeFlight(
+  departureIata: string,
+  arrivalIata: string,
+  departureTime: string | null,
+  status: string,
+  distance: number = 1000,
+  airline: string = "LH",
+  _aircraft: string = "A350"
+): GeoJSONFeature {
+  return {
+    type: "Feature",
+    properties: {
+      id: `flight-${Math.random()}`,
+      airline,
+      flightNumber: "123",
+      departureAirport: {
+        iata: departureIata,
+        lat: 0,
+        lon: 0,
+      },
+      arrivalAirport: {
+        iata: arrivalIata,
+        lat: 10,
+        lon: 10,
+      },
+      departureTime,
+      arrivalTime: null,
+      status,
+      distance,
+    },
+    geometry: {
+      type: "LineString",
+      coordinates: [
+        [0, 0],
+        [10, 10],
+      ],
+    },
+  };
+}
 
 function makeStop(
   arrivalTime: string | null,
@@ -96,5 +137,37 @@ describe("getPortStats", () => {
 
     expect(stats.totalVisits).toBe(1);
     expect(stats.lastCallDate).toBe(arrival);
+  });
+});
+
+describe("getAirportStats", () => {
+  it("excludes scheduled flights from visit count and last visit date", () => {
+    // A flown flight in the past, departing from FRA, with 1000 km distance.
+    const flownDeparture = "2024-05-10T09:00:00.000Z";
+    const flownFlight = makeFlight("FRA", "LHR", flownDeparture, "flown", 1000, "LH", "A350");
+
+    // A scheduled flight in the future, also departing from FRA, with longer distance (2000 km).
+    // This must not count as a visit or push lastVisitDate into the future.
+    const scheduledDeparture = "2099-01-01T09:00:00.000Z";
+    const scheduledFlight = makeFlight(
+      "FRA",
+      "JFK",
+      scheduledDeparture,
+      "scheduled",
+      2000,
+      "LH",
+      "A380"
+    );
+
+    const stats = getAirportStats([flownFlight, scheduledFlight], "FRA");
+
+    // Only the flown flight counts as a visit.
+    expect(stats.totalVisits).toBe(1);
+    // Last visit date is from the flown flight, not the future scheduled one.
+    expect(stats.lastVisitDate).toBe(flownDeparture);
+    // But longestRoute may still come from any touched flight (including scheduled),
+    // since route statistics are neutral favourites computed over all flights.
+    expect(stats.longestRoute?.iata).toBe("JFK");
+    expect(stats.longestRoute?.km).toBe(2000);
   });
 });

@@ -81,6 +81,10 @@ export function getAirportStats(flights: GeoJSONFeature[], iata: string): Airpor
   );
   const departures = touched.filter((f) => f.properties.departureAirport.iata === iata);
 
+  // Only taken (flown/historical) flights count as visits — a scheduled flight
+  // is a future plan, not a visit yet.
+  const visitedOnly = touched.filter((f) => f.properties.status !== "scheduled");
+
   // Longest route originating from this airport, by distance.
   let longestRoute: AirportCardStats["longestRoute"] = null;
   for (const f of departures) {
@@ -93,8 +97,8 @@ export function getAirportStats(flights: GeoJSONFeature[], iata: string): Airpor
   }
 
   return {
-    totalVisits: touched.length,
-    lastVisitDate: maxDate(touched.map((f) => f.properties.departureTime)),
+    totalVisits: visitedOnly.length,
+    lastVisitDate: maxDate(visitedOnly.map((f) => f.properties.departureTime)),
     longestRoute,
     topAirline: modeOf(touched.map((f) => f.properties.airline)),
     topAircraft: modeOf(touched.map((f) => f.properties.aircraft)),
