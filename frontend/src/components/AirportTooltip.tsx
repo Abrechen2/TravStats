@@ -69,7 +69,11 @@ export function AirportTooltip({
         }
       }
       if (f.properties.airline) airlinesSet.add(f.properties.airline);
-      totalKm += f.properties.distance ?? 0;
+      // Only flown (or historically-known-flown) legs contribute km — a
+      // scheduled-but-not-yet-flown flight hasn't covered any distance yet.
+      if (f.properties.status === "flown" || f.properties.status === "historical") {
+        totalKm += f.properties.distance ?? 0;
+      }
     }
 
     const topRoutes = [...routeCounts.entries()]

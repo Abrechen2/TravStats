@@ -47,6 +47,23 @@ export function RouteDetailsSidebar({ flights, onBack }: RouteDetailsSidebarProp
     return durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
   }, [sorted]);
 
+  const flownLegs = useMemo(
+    () => sorted.filter((f) => f.status === "flown" || f.status === "historical"),
+    [sorted]
+  );
+  const scheduledLegs = useMemo(() => sorted.filter((f) => f.status === "scheduled"), [sorted]);
+
+  // "2× geflogen · 1× geplant" — each part appears only when non-zero. When
+  // neither is present (e.g. a cancelled-only selection) fall back to the
+  // legacy "N× flown" label so that case still reads sensibly.
+  const countsLabel = useMemo(() => {
+    const parts: string[] = [];
+    if (flownLegs.length > 0) parts.push(`${flownLegs.length}× ${t("dashboard:flown")}`);
+    if (scheduledLegs.length > 0) parts.push(`${scheduledLegs.length}× ${t("dashboard:planned")}`);
+    if (parts.length === 0) return `${sorted.length}× ${t("dashboard:flown")}`;
+    return parts.join(" · ");
+  }, [flownLegs.length, scheduledLegs.length, sorted.length, t]);
+
   const airlineCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const f of sorted) {
@@ -92,8 +109,7 @@ export function RouteDetailsSidebar({ flights, onBack }: RouteDetailsSidebarProp
 
         <div className="mt-2 space-y-0.5">
           <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-            {Math.round(totalDistanceKm).toLocaleString(locale)} km · {sorted.length}×{" "}
-            {t("dashboard:flown")}
+            {Math.round(totalDistanceKm).toLocaleString(locale)} km · {countsLabel}
           </div>
           {avgDurationMin > 0 && (
             <div className="text-xs" style={{ color: "var(--text-muted)" }}>

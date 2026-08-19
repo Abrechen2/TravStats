@@ -71,15 +71,18 @@ function winner(
 }
 
 export function computeTripInsights(trips: Trip[], language: string): TripInsights {
+  // A trip still on the drawing board hasn't flown, spent, or visited
+  // anything yet — it must not win a superlative over a trip that has.
+  const started = trips.filter((t) => t.status !== "planned");
   const nf = new Intl.NumberFormat(language);
   return {
     longest: winner(
-      trips,
+      started,
       (t) => tripDistanceKm(t),
       (_t, km) => `${nf.format(Math.round(km))} km`
     ),
     mostExpensive: winner(
-      trips,
+      started,
       (t) => tripDominantCost(t)?.amount ?? 0,
       (t) => {
         const c = tripDominantCost(t)!;
@@ -87,7 +90,7 @@ export function computeTripInsights(trips: Trip[], language: string): TripInsigh
       }
     ),
     mostCountries: winner(
-      trips,
+      started,
       (t) => t.countries?.length ?? 0,
       (_t, n) => String(n)
     ),

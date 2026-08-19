@@ -150,6 +150,7 @@
   "routeDetails": "Route-Details",
   "tripDetails": "Trip-Details",
   "flown": "geflogen",
+  "planned": "geplant",
   "flightsOnRoute": "Flüge auf dieser Route",
   "tabStrip": {
     "label": "Bereichswahl",

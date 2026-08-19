@@ -113,6 +113,23 @@ describe("AirportTooltip", () => {
     expect(screen.getByText("EDDF")).toBeInTheDocument();
   });
 
+  it("airport km line sums flown flights only", () => {
+    render(
+      <AirportTooltip
+        iata="MUC"
+        screenX={100}
+        screenY={100}
+        flights={[
+          makeFeature({ id: "1", status: "flown", distance: 1000 }),
+          makeFeature({ id: "2", status: "scheduled", distance: 5000 }),
+        ]}
+        onClose={() => {}}
+      />
+    );
+    expect(screen.getByText(/1,000 km/)).toBeInTheDocument();
+    expect(screen.queryByText(/6,000 km/)).toBeNull();
+  });
+
   it("does not render ICAO when unavailable", () => {
     const feature = makeFeature({
       departureAirport: { iata: "MUC", name: "Munich Airport" },

@@ -66,4 +66,32 @@ describe("tripInsights", () => {
     expect(r.mostExpensive).toBeNull();
     expect(r.mostCountries).toBeNull();
   });
+
+  it("ignores planned trips for all superlatives", () => {
+    const trips = [
+      trip({
+        id: "planned",
+        name: "Planned",
+        status: "planned",
+        // MUC -> SYD is ~16,000 km great-circle — far longer than the
+        // completed trip below, so the old (unfiltered) behaviour would
+        // wrongly crown this one.
+        flights: [flight({ id: "pf", arrLat: -33.87, arrLon: 151.21 })],
+        countries: ["DE", "AU"],
+        bookings: [{ price: 9000, currency: "EUR" }] as never,
+      }),
+      trip({
+        id: "done",
+        name: "Done",
+        status: "completed",
+        flights: [flight()],
+        countries: ["DE"],
+        bookings: [{ price: 300, currency: "EUR" }] as never,
+      }),
+    ];
+    const r = computeTripInsights(trips, "en");
+    expect(r.longest?.tripId).toBe("done");
+    expect(r.mostExpensive?.tripId).toBe("done");
+    expect(r.mostCountries?.tripId).toBe("done");
+  });
 });
