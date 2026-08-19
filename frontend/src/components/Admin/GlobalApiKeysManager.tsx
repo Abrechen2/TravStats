@@ -172,7 +172,6 @@ export default function GlobalApiKeysManager({
                 isShared={false}
                 hasAccess={!!globalApiKeys.globalLogostreamApiKey}
                 value={globalApiKeys.globalLogostreamApiKey || ""}
-                testable={false}
                 onChange={(value) =>
                   onGlobalApiKeysChange({ ...globalApiKeys, globalLogostreamApiKey: value })
                 }
@@ -189,7 +188,6 @@ export default function GlobalApiKeysManager({
                 isShared={false}
                 hasAccess={!!globalApiKeys.globalGooglePlacesApiKey}
                 value={globalApiKeys.globalGooglePlacesApiKey || ""}
-                testable={false}
                 onChange={(value) =>
                   onGlobalApiKeysChange({ ...globalApiKeys, globalGooglePlacesApiKey: value })
                 }
