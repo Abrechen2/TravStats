@@ -274,7 +274,7 @@ describe("LodgingListPage", () => {
     await user.selectOptions(screen.getByLabelText("lodging:filter.type"), "campsite");
     await waitFor(() => {
       expect(listLodgingsMock).toHaveBeenCalledWith(
-        expect.objectContaining({ type: "campsite", sort: "name" })
+        expect.objectContaining({ type: "campsite" })
       );
     });
 
@@ -282,7 +282,7 @@ describe("LodgingListPage", () => {
     await user.selectOptions(screen.getByLabelText("lodging:filter.year"), "2023");
     await waitFor(() => {
       expect(listLodgingsMock).toHaveBeenCalledWith(
-        expect.objectContaining({ type: "campsite", year: 2023, sort: "name" })
+        expect.objectContaining({ type: "campsite", year: 2023 })
       );
     });
 
@@ -290,29 +290,22 @@ describe("LodgingListPage", () => {
     await user.selectOptions(screen.getByLabelText("lodging:filter.country"), "US");
     await waitFor(() => {
       expect(listLodgingsMock).toHaveBeenCalledWith(
-        expect.objectContaining({ type: "campsite", year: 2023, country: "US", sort: "name" })
+        expect.objectContaining({ type: "campsite", year: 2023, country: "US" })
       );
     });
 
-    listLodgingsMock.mockClear();
-    await user.selectOptions(screen.getByLabelText("lodging:filter.sort"), "spend");
-    await waitFor(() => {
-      expect(listLodgingsMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: "campsite",
-          year: 2023,
-          country: "US",
-          sort: "spend",
-        })
-      );
-    });
+    // Sorting is client-side now (header clicks) — the server query must
+    // NEVER carry a sort key again, or the fetch and the headers would fight
+    // over the order.
+    for (const call of listLodgingsMock.mock.calls) {
+      expect(call[0]).not.toHaveProperty("sort");
+    }
   });
 
-  it("renders rows in exactly the order the API returned them — never re-sorted client-side", async () => {
-    // The backend sorts the full set THEN paginates; a local re-sort of an
-    // already-ordered response would silently produce a wrong order. This
-    // order is deliberately NOT alphabetical and NOT sorted by nights/spend,
-    // so a client-side re-sort bug (by any of those keys) would be caught.
+  it("sorts client-side: name ascending by default, header click re-sorts", async () => {
+    // Owner ask (2026-08-20): sorting moved into the column headers,
+    // flights-table style. Client-side is safe here because listLodgings
+    // returns the COMPLETE set, never one paginated slice.
     const ordered: Lodging[] = [
       makeLodging({ id: "l-1", name: "Zebra Lodge", nights: 1, totalSpendBase: 500 }),
       makeLodging({ id: "l-2", name: "Alpha Inn", nights: 9, totalSpendBase: 10 }),
@@ -320,18 +313,32 @@ describe("LodgingListPage", () => {
     ];
     listLodgingsMock.mockResolvedValue(ordered);
 
+    const user = userEvent.setup();
     const { container } = renderListPage();
 
     await waitFor(() => {
       expect(container.querySelectorAll("tbody tr").length).toBe(3);
     });
 
-    const rowNames = Array.from(container.querySelectorAll("tbody tr")).map(
-      (row) => row.querySelector("td")?.textContent ?? ""
-    );
-    expect(rowNames[0]).toContain("Zebra Lodge");
-    expect(rowNames[1]).toContain("Alpha Inn");
-    expect(rowNames[2]).toContain("Mid Motel");
+    const rowNames = (): string[] =>
+      Array.from(container.querySelectorAll("tbody tr")).map(
+        (row) => row.querySelector("td")?.textContent ?? ""
+      );
+    expect(rowNames()[0]).toContain("Alpha Inn");
+    expect(rowNames()[1]).toContain("Mid Motel");
+    expect(rowNames()[2]).toContain("Zebra Lodge");
+
+    // Clicking the nights header sorts by nights, descending first. (The
+    // global t-mock is identity, so every header button shares the same
+    // aria-label — target the header by its visible label text instead.)
+    await user.click(screen.getByText("lodging:list.columns.nights"));
+    expect(rowNames()[0]).toContain("Alpha Inn");
+    expect(rowNames()[1]).toContain("Mid Motel");
+    expect(rowNames()[2]).toContain("Zebra Lodge");
+
+    // Same header again flips the direction.
+    await user.click(screen.getByText("lodging:list.columns.nights"));
+    expect(rowNames()[0]).toContain("Zebra Lodge");
   });
 
   it("renders the empty state without crashing when there are no lodgings", async () => {
@@ -435,10 +442,9 @@ describe("LodgingListPage", () => {
     // reload call that actually feeds the table always includes `sort`.
     // Only the latter fails here, mirroring a real backend 500 on the list
     // query while the dropdown-options fetch still succeeds.
-    listLodgingsMock.mockImplementation((query: Record<string, unknown>) => {
-      if ("sort" in query) return Promise.reject(new Error("network failure"));
-      return Promise.resolve([]);
-    });
+    // Both the baseline and the table fetch fail — only the table fetch
+    // drives the alert; the baseline failure merely logs.
+    listLodgingsMock.mockRejectedValue(new Error("network failure"));
 
     renderListPage();
 

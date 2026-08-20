@@ -193,6 +193,9 @@
     "frequent": "Frequent",
     "all": "All currencies"
   },
+  "table": {
+    "columns": "Columns"
+  },
   "support": {
     "donate": "Donate",
     "donateAria": "Donate via PayPal",

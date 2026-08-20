@@ -193,6 +193,9 @@
     "frequent": "Häufig",
     "all": "Alle Währungen"
   },
+  "table": {
+    "columns": "Spalten"
+  },
   "support": {
     "donate": "Spenden",
     "donateAria": "Über PayPal spenden",

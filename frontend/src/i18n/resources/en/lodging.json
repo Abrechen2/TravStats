@@ -30,6 +30,13 @@
     "otherCurrencyHint": "Includes further amounts in an older base currency, not counted here.",
     "bookmarked": "bookmarked",
     "bookmarkedHint": "Not visited yet — counted in no statistic.",
+    "sortBy": "Sort by {{col}}",
+    "footer": {
+      "showing": "{{count}} lodgings",
+      "showing_one": "{{count}} lodging",
+      "showing_other": "{{count}} lodgings",
+      "sortedBy": "Sorted by {{label}} ({{direction}})"
+    },
     "wholeListHint": "A whole list at once?",
     "status": {
       "label": "Status",
