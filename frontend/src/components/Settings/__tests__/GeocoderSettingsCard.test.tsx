@@ -175,10 +175,10 @@ describe("GeocoderSettingsCard", () => {
   it("shows the hit count when the connection test succeeds", async () => {
     const user = userEvent.setup();
     vi.mocked(adminApi.getInstanceSettings).mockResolvedValue(resp(SETTINGS_FIXTURE));
-    vi.mocked(searchPlaces).mockResolvedValue([
+    vi.mocked(searchPlaces).mockResolvedValue({ results: [
       { name: "Berlin", lat: 52.52, lon: 13.405 },
       { name: "Berlin, Connecticut", lat: 41.62, lon: -72.75 },
-    ]);
+    ], degraded: false });
 
     render(<GeocoderSettingsCard isAdmin={true} />);
 
@@ -198,7 +198,7 @@ describe("GeocoderSettingsCard", () => {
   it("shows the empty-result message in a non-error color when the test succeeds with zero hits", async () => {
     const user = userEvent.setup();
     vi.mocked(adminApi.getInstanceSettings).mockResolvedValue(resp(SETTINGS_FIXTURE));
-    vi.mocked(searchPlaces).mockResolvedValue([]);
+    vi.mocked(searchPlaces).mockResolvedValue({ results: [], degraded: false });
 
     render(<GeocoderSettingsCard isAdmin={true} />);
 

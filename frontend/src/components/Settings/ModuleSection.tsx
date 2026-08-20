@@ -27,7 +27,13 @@ export default function ModuleSection(): JSX.Element {
           return (
             <li
               key={key}
-              className="rounded-lg p-4 flex items-center gap-4"
+              // The whole tile toggles, not just the small switch (UAT
+              // finding B9). The switch stays the accessible control and
+              // stops propagation so its own click doesn't toggle twice.
+              onClick={() => toggle(key)}
+              className={`rounded-lg p-4 flex items-center gap-4 ${
+                d.available ? "cursor-pointer" : ""
+              }`}
               style={{
                 background: "var(--bg-surface)",
                 border: "1px solid var(--color-border)",
@@ -66,7 +72,10 @@ export default function ModuleSection(): JSX.Element {
                 aria-checked={enabled}
                 aria-label={d.i18nKey}
                 disabled={!d.available}
-                onClick={() => toggle(key)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggle(key);
+                }}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-hidden shrink-0 ${
                   enabled ? "bg-(--accent)" : "bg-gray-600"
                 } ${d.available ? "" : "opacity-50 cursor-not-allowed"}`}

@@ -192,5 +192,11 @@
     "search": "Search currency …",
     "frequent": "Frequent",
     "all": "All currencies"
+  },
+  "support": {
+    "donate": "Donate",
+    "donateAria": "Donate via PayPal",
+    "star": "Star",
+    "starAria": "Star on GitHub"
   }
 }

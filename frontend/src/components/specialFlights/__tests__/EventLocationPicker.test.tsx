@@ -76,7 +76,7 @@ describe("EventLocationPicker", () => {
 
   it("searches via the same-origin api module (never a direct external fetch)", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
-    vi.mocked(searchPlaces).mockResolvedValue([zurich]);
+    vi.mocked(searchPlaces).mockResolvedValue({ results: [zurich], degraded: false });
     const onChange = vi.fn();
     render(<EventLocationPicker value={{ lat: null, lon: null }} onChange={onChange} />);
 
@@ -88,7 +88,7 @@ describe("EventLocationPicker", () => {
   });
 
   it("fills the coordinates when a suggestion is selected", async () => {
-    vi.mocked(searchPlaces).mockResolvedValue([zurich]);
+    vi.mocked(searchPlaces).mockResolvedValue({ results: [zurich], degraded: false });
     const onChange = vi.fn();
     render(<EventLocationPicker value={{ lat: null, lon: null }} onChange={onChange} />);
 

@@ -21,15 +21,22 @@ export interface PlaceSearchResult {
 interface Envelope<T> {
   success: boolean;
   data: T;
+  /** true = the geocoder itself failed; the empty list is NOT "no matches" (#263). */
+  degraded?: boolean;
+}
+
+export interface PlaceSearchResponse {
+  results: PlaceSearchResult[];
+  degraded: boolean;
 }
 
 /**
  * Same-origin Photon place search (search-as-you-type), proxied through our
  * backend — the browser's CSP forbids fetching Photon/Nominatim directly.
  */
-export const searchPlaces = async (q: string, lang?: string): Promise<PlaceSearchResult[]> => {
+export const searchPlaces = async (q: string, lang?: string): Promise<PlaceSearchResponse> => {
   const params: Record<string, string> = { q };
   if (lang) params.lang = lang;
   const { data } = await api.get<Envelope<PlaceSearchResult[]>>("/geo/search", { params });
-  return data.data;
+  return { results: data.data, degraded: data.degraded === true };
 };

@@ -71,6 +71,7 @@
     "spendBase": "In base currency",
     "spendPerNight": "Per night",
     "noLocation": "No location on file",
+    "setLocationNow": "Find location now",
     "deleteConfirmTitle": "Delete lodging?",
     "deleteConfirmMessage": "This lodging and its {{count}} stays will be permanently deleted. This action cannot be undone.",
     "deleteConfirmMessage_one": "This lodging and its {{count}} stay will be permanently deleted. This action cannot be undone.",
