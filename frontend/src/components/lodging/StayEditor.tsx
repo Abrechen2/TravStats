@@ -99,6 +99,11 @@ export function StayEditor({
 
   const [checkIn, setCheckIn] = useState<string>(toDateInput(stay?.checkIn));
   const [checkOut, setCheckOut] = useState<string>(toDateInput(stay?.checkOut));
+  // Optional "HH:mm" wall-clock times for the two days above — so a planned
+  // hotel does not "begin" at midnight in the Als-Nächstes countdown. Only
+  // offered at DAY precision; submit clears them at any other precision.
+  const [checkInTime, setCheckInTime] = useState<string>(stay?.checkInTime ?? "");
+  const [checkOutTime, setCheckOutTime] = useState<string>(stay?.checkOutTime ?? "");
   // How much of the date the user actually knows. A hotel from 2011 you cannot
   // date is still a place you slept, and rating/price/board all live on the
   // stay — so the alternative to this control was not entering the stay at all.
@@ -280,6 +285,10 @@ export function StayEditor({
         checkIn: datePrecision === "NONE" ? null : checkIn ? fromDateInput(checkIn) : null,
         checkOut:
           datePrecision === "DAY" && checkOut ? fromDateInput(checkOut) : null,
+        // A time is a claim about a DAY-precise date — anything else clears
+        // it, matching the backend's invariant (routes/lodging.ts PATCH).
+        checkInTime: datePrecision === "DAY" && checkIn && checkInTime ? checkInTime : null,
+        checkOutTime: datePrecision === "DAY" && checkOut && checkOutTime ? checkOutTime : null,
         datePrecision,
         nights: parsedNights,
         status: effectiveStatus,
@@ -404,6 +413,40 @@ export function StayEditor({
                     onChange={(e): void => setCheckOut(e.target.value)}
                   />
                 )}
+              </div>
+            )}
+
+            {/* Optional times, DAY precision only — mainly so a planned stay's
+                "Als Nächstes" countdown points at the real check-in, not at
+                midnight. */}
+            {datePrecision === "DAY" && (
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div>
+                  <input
+                    type="time"
+                    aria-label={t("lodging:field.checkInTime")}
+                    className={INPUT_CLASS}
+                    style={DARK_PICKER_STYLE}
+                    value={checkInTime}
+                    onChange={(e): void => setCheckInTime(e.target.value)}
+                  />
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    {t("lodging:field.checkInTimeHint")}
+                  </p>
+                </div>
+                <div>
+                  <input
+                    type="time"
+                    aria-label={t("lodging:field.checkOutTime")}
+                    className={INPUT_CLASS}
+                    style={DARK_PICKER_STYLE}
+                    value={checkOutTime}
+                    onChange={(e): void => setCheckOutTime(e.target.value)}
+                  />
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    {t("lodging:field.checkOutTimeHint")}
+                  </p>
+                </div>
               </div>
             )}
 

@@ -88,6 +88,8 @@ function makeStay(overrides: Partial<LodgingStay> = {}): LodgingStay {
     userId: "user-1",
     tripId: null,
     bookingId: null,
+    checkInTime: null,
+    checkOutTime: null,
     checkIn: "2024-01-01T00:00:00.000Z",
     checkOut: "2024-01-02T00:00:00.000Z",
     datePrecision: "DAY" as const,
