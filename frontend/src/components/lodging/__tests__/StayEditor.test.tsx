@@ -27,6 +27,8 @@ const baseStay: LodgingStay = {
   userId: "user-1",
   tripId: null,
   bookingId: null,
+    checkInTime: null,
+    checkOutTime: null,
   checkIn: "2026-07-11T00:00:00.000Z",
   checkOut: "2026-07-12T00:00:00.000Z",
   datePrecision: "DAY" as const,
@@ -181,6 +183,52 @@ describe("StayEditor", () => {
     expect(payload.checkIn).toBe("2026-07-11T00:00:00.000Z");
     expect(payload.checkOut).toBe("2026-07-12T00:00:00.000Z");
     expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: "new-stay" }));
+  });
+
+  it("includes optional check-in/check-out times in the payload (#dev-talk 2026-08-18)", async () => {
+    vi.mocked(createStay).mockResolvedValue({ ...baseStay, id: "new-stay" });
+
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+      target: { value: "2026-07-11" },
+    });
+    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+      target: { value: "2026-07-12" },
+    });
+    fireEvent.change(screen.getByLabelText("lodging:field.checkInTime"), {
+      target: { value: "15:00" },
+    });
+    fireEvent.change(screen.getByLabelText("lodging:field.checkOutTime"), {
+      target: { value: "11:00" },
+    });
+
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    await waitFor(() => expect(createStay).toHaveBeenCalled());
+    const [, payload] = vi.mocked(createStay).mock.calls[0];
+    expect(payload.checkInTime).toBe("15:00");
+    expect(payload.checkOutTime).toBe("11:00");
+  });
+
+  it("sends null times when no time is entered (a date alone stays a date)", async () => {
+    vi.mocked(createStay).mockResolvedValue({ ...baseStay, id: "new-stay" });
+
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+      target: { value: "2026-07-11" },
+    });
+    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+      target: { value: "2026-07-12" },
+    });
+
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    await waitFor(() => expect(createStay).toHaveBeenCalled());
+    const [, payload] = vi.mocked(createStay).mock.calls[0];
+    expect(payload.checkInTime).toBeNull();
+    expect(payload.checkOutTime).toBeNull();
   });
 
   it("un-checking an existing award stay sends isAwardStay=false on update (not just omitted)", async () => {

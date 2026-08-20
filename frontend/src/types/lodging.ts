@@ -76,6 +76,13 @@ export interface LodgingStay {
    */
   checkIn: string | null;
   checkOut: string | null;
+  /**
+   * Optional wall-clock times ("HH:mm") refining the day anchors above —
+   * only the "Als Nächstes" countdown consumes them; the dates stay
+   * authoritative for everything else. DAY precision only.
+   */
+  checkInTime: string | null;
+  checkOutTime: string | null;
   datePrecision: LodgingDatePrecision;
   /** Explicit night count, for when the dates cannot supply one. */
   nights: number | null;
@@ -200,6 +207,9 @@ export interface LodgingInput {
 export interface StayInput {
   checkIn?: string | null;
   checkOut?: string | null;
+  /** "HH:mm" or null to clear; requires a DAY-precision date on the same end. */
+  checkInTime?: string | null;
+  checkOutTime?: string | null;
   datePrecision?: LodgingDatePrecision;
   nights?: number | null;
   status?: StayStatus;

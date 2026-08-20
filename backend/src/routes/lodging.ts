@@ -614,6 +614,31 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
       throw new AppError("checkOut must not precede checkIn", 400);
     }
 
+    // Times are claims about a DAY-precise date (see schemas/lodging.ts).
+    // The schema can only check the body; here the MERGED stay is checked:
+    // an explicit time the merged stay cannot carry is a contradiction and
+    // refused, while a STORED time whose date/precision is being edited away
+    // is cleared alongside — the row must never carry a time without its day.
+    const effectiveDatePrecision = input.datePrecision ?? stay.datePrecision;
+    const supportsTime = (date: Date | null): boolean =>
+      date !== null && effectiveDatePrecision === "DAY";
+    if (input.checkInTime != null && !supportsTime(effectiveCheckIn)) {
+      throw new AppError("checkInTime requires a DAY-precision check-in date", 400);
+    }
+    if (input.checkOutTime != null && !supportsTime(effectiveCheckOut)) {
+      throw new AppError("checkOutTime requires a DAY-precision check-out date", 400);
+    }
+    const timeClears = {
+      ...(input.checkInTime === undefined && stay.checkInTime !== null && !supportsTime(effectiveCheckIn)
+        ? { checkInTime: null }
+        : {}),
+      ...(input.checkOutTime === undefined &&
+      stay.checkOutTime !== null &&
+      !supportsTime(effectiveCheckOut)
+        ? { checkOutTime: null }
+        : {}),
+    };
+
     // Only re-run the FX snapshot when a field that feeds the conversion
     // ACTUALLY CHANGED VALUE — an unrelated edit (e.g. notes) must not touch
     // a previously-good snapshot, and must never fail the request either way.
@@ -712,6 +737,7 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
       where: { id: stay.id },
       data: {
         ...input,
+        ...timeClears,
         // totalPrice is authoritative and derived above from the merged view,
         // so it overrides whatever `...input` carried (which may be a stale
         // re-send or absent while only the per-night price changed).
