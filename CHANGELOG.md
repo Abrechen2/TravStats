@@ -96,6 +96,11 @@ authentication and passkeys arrive alongside.
 - **A hotel you cannot date is still a hotel you slept in.** A stay may now
   record only a month, only a year, or no date at all, and says which — instead
   of forcing a guess that later reads as fact.
+- **A stay can carry its check-in and check-out time.** Both are optional and
+  refine the day rather than replace it — night counts, statuses and currency
+  conversion keep reading the dates. The "Next up" line counts down to the real
+  15:00 check-in instead of midnight, and no longer drops today's stay the
+  moment the date turns.
 
 ### Changed
 - **The next upcoming entry moved into the domain strip.** It used to float
@@ -244,6 +249,42 @@ authentication and passkeys arrive alongside.
   TravStats 2.6.0" in front of someone who had never run 2.5. The running
   version is now recorded as seen when the account is created — on
   registration, admin-created users and first-boot setup alike.
+- **An untouched flight form no longer classifies the flight.** Seat class and
+  category were silently preselected ("Economy", "Business"), so a
+  never-classified flight was stored as an economy business trip. Both start
+  empty now, and the settings page gained an explicit "no default" choice.
+- **A selected flight no longer follows you into another domain.** The popup
+  card and its selection rings survived the dashboard tab switch and kept
+  rendering over the lodging map.
+- **The login page stops advertising a locked door.** With registration
+  disabled the "Register" link is hidden; invitation links still work, and the
+  rejection now arrives in the UI's language.
+- **A lodging without coordinates is no longer a dead row.** The dashboard
+  list links every lodging to its detail page and marks the unlocated ones;
+  "no location on file" on the detail page now offers to search one right
+  there.
+- **The place search can no longer fail silently.** The OSM request now
+  identifies itself (it sent no User-Agent — exactly the traffic public OSM
+  infrastructure blanket-blocks), retries without an unsupported UI language
+  instead of returning nothing, tolerates a base URL already ending in /api,
+  and a geocoder outage now reads "search unavailable" instead of the
+  misleading "no results" — including in the admin connection test.
+- **Messages arrive in the UI's language.** API-key test results and the
+  registration rejection were English prose in a German UI; they now travel as
+  message keys the frontend translates.
+- **Ones are singular.** "1 Übernachtungen", "1 Hotel(s)" and friends now
+  inflect properly, and the multiplier reads "×" everywhere.
+- **The flights tab greets an empty logbook** with the cruises tab's empty
+  state — what the tab shows, plus both ways to get a first flight in; the
+  lodging tab's card gained the same call to action.
+- **Airport search stopped ranking closed heliports.** "GRU" returns São Paulo
+  instead of nine closed US strips whose identifiers merely contain the
+  letters; closed airports stay findable by their exact code.
+- **Small honesty fixes across the UI.** Tab counts say "(n planned)" so they
+  stop contradicting the flown-only statistics; the settings footer claims
+  auto-save only where auto-save exists; the whole domain tile toggles; the
+  flight-number search date field got a real label; the support menu speaks
+  the UI's language.
 
 ### Security
 - Closed an IDOR in the lodging import commit path, scoped receipt access to the
