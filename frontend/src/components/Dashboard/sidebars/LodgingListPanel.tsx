@@ -101,7 +101,7 @@ export function LodgingListPanel({
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {t("lodging:list.unlocated")}
+                  {t("lodging:list.status.unlocated")}
                 </span>
               )}
             </div>

@@ -63,7 +63,7 @@ describe("LodgingListPanel", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText("lodging:list.unlocated")).toBeInTheDocument();
+    expect(screen.getByText("lodging:list.status.unlocated")).toBeInTheDocument();
   });
 
   it("shows no marker when coordinates exist", () => {
@@ -73,6 +73,6 @@ describe("LodgingListPanel", () => {
       </MemoryRouter>
     );
 
-    expect(screen.queryByText("lodging:list.unlocated")).toBeNull();
+    expect(screen.queryByText("lodging:list.status.unlocated")).toBeNull();
   });
 });

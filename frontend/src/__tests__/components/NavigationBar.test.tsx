@@ -44,8 +44,8 @@ import { useSettingsStore } from "../../store/settingsStore";
 // same convention the pre-existing domain-gating tests and useNavItems.test.ts
 // rely on. Assertions below match the raw keys (case-insensitively) instead
 // of the localized "Logbuch"/"Einstellungen" strings a real i18n run would
-// produce. Donate/Star/Discord/Bug stay literal since those labels are
-// hardcoded English strings, never routed through t().
+// produce. Donate/Star route through t() since UAT finding C13 (the support
+// menu spoke English in the German UI), so they match raw keys now too.
 describe("NavigationBar grouped navigation", () => {
   beforeEach(() => {
     useSettingsStore.setState({ enabledDomains: ["flight", "cruise"] });
@@ -86,8 +86,8 @@ describe("NavigationBar grouped navigation", () => {
     renderNav();
     expect(screen.getByRole("button", { name: /Bug/ })).toBeTruthy();
     fireEvent.click(screen.getAllByRole("button", { name: /nav\.support/i })[0]);
-    expect(screen.getByRole("menuitem", { name: /Donate/ })).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: /Star/ })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: /support\.donate/ })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: /support\.star/ })).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: /Discord/ })).toBeTruthy();
   });
 

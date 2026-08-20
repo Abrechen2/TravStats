@@ -5,6 +5,11 @@ import { MemoryRouter } from "react-router-dom";
 const authApi = vi.hoisted(() => ({
   login: vi.fn(),
   getSmtpStatus: vi.fn().mockResolvedValue({ smtpEnabled: false, adminContactEmail: null }),
+  getRegistrationStatus: vi.fn().mockResolvedValue({
+    registrationEnabled: true,
+    requiresInvitation: false,
+    limitReached: false,
+  }),
   forgotPassword: vi.fn(),
 }));
 const passkeyApi = vi.hoisted(() => ({
