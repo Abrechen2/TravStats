@@ -38,8 +38,8 @@ export function describeLodgingCommitResult(
     return {
       type: "success",
       message: t("lodging:import.commitResult.success", {
-        createdLodgings: result.createdLodgings,
-        createdStays: result.createdStays,
+        hotels: t("lodging:units.hotels", { count: result.createdLodgings }),
+        stays: t("lodging:units.stays", { count: result.createdStays }),
         skipped: result.skipped,
       }),
     };
@@ -56,10 +56,10 @@ export function describeLodgingCommitResult(
   return {
     type: "warning",
     message: t("lodging:import.commitResult.partial", {
-      createdLodgings: result.createdLodgings,
-      createdStays: result.createdStays,
+      hotels: t("lodging:units.hotels", { count: result.createdLodgings }),
+      stays: t("lodging:units.stays", { count: result.createdStays }),
       skipped: result.skipped,
-      failedCount: result.failed.length,
+      rows: t("lodging:units.rows", { count: result.failed.length }),
       reasons,
     }),
   };
@@ -125,9 +125,9 @@ export function describeLodgingRevertResult(
     return {
       type: "success",
       message: t("lodging:import.batches.revertResult.withDetached", {
-        deletedLodgings: result.deletedLodgings,
-        deletedStays: result.deletedStays,
-        detachedLodgings: result.detachedLodgings,
+        hotels: t("lodging:units.hotels", { count: result.deletedLodgings }),
+        stays: t("lodging:units.stays", { count: result.deletedStays }),
+        kept: t("lodging:units.hotels", { count: result.detachedLodgings }),
       }),
     };
   }
@@ -135,8 +135,8 @@ export function describeLodgingRevertResult(
   return {
     type: "success",
     message: t("lodging:import.batches.revertResult.success", {
-      deletedLodgings: result.deletedLodgings,
-      deletedStays: result.deletedStays,
+      hotels: t("lodging:units.hotels", { count: result.deletedLodgings }),
+      stays: t("lodging:units.stays", { count: result.deletedStays }),
     }),
   };
 }

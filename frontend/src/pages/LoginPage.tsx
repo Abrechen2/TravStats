@@ -26,6 +26,7 @@ export default function LoginPage(): JSX.Element {
   // Forgot password modal state
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [smtpEnabled, setSmtpEnabled] = useState<boolean | null>(null);
+  const [registrationEnabled, setRegistrationEnabled] = useState<boolean | null>(null);
   const [adminContactEmail, setAdminContactEmail] = useState<string | null>(null);
   const [forgotUsername, setForgotUsername] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
@@ -40,6 +41,17 @@ export default function LoginPage(): JSX.Element {
         setAdminContactEmail(r.adminContactEmail);
       })
       .catch(() => setSmtpEnabled(false));
+  }, []);
+
+  // #258: don't advertise a locked door. When registration is disabled the
+  // "Registrieren" link is hidden — invited users never come through it (an
+  // invitation lands directly on /register?token=…). Fail-open on error,
+  // matching RegisterPage's convention: worst case is the old behaviour.
+  useEffect(() => {
+    authApi
+      .getRegistrationStatus()
+      .then((r) => setRegistrationEnabled(r.registrationEnabled))
+      .catch(() => setRegistrationEnabled(true));
   }, []);
 
   // Ask before drawing the button: on an insecure origin WebAuthn is impossible
@@ -242,16 +254,18 @@ export default function LoginPage(): JSX.Element {
           )}
 
           <div className="mt-5 flex flex-col items-center gap-2 text-sm">
-            <span style={{ color: "var(--text-muted)" }}>
-              {t("login.noAccount")}{" "}
-              <Link
-                to="/register"
-                className="font-medium hover:underline"
-                style={{ color: "var(--accent)" }}
-              >
-                {t("login.register")}
-              </Link>
-            </span>
+            {registrationEnabled !== false && (
+              <span style={{ color: "var(--text-muted)" }}>
+                {t("login.noAccount")}{" "}
+                <Link
+                  to="/register"
+                  className="font-medium hover:underline"
+                  style={{ color: "var(--accent)" }}
+                >
+                  {t("login.register")}
+                </Link>
+              </span>
+            )}
             <button
               type="button"
               onClick={() => setShowForgotModal(true)}

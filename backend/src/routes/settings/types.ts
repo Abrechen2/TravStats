@@ -145,9 +145,11 @@ export const defaultSettings = {
   units: { distanceUnit: "kilometers", currency: "EUR" },
   defaults: {
     flightStatus: "scheduled",
-    seatClass: "economy",
+    // "" = no default: the flight form must not classify an untouched
+    // flight (#256). Mirrors frontend settingsStore.ts.
+    seatClass: "",
     favoriteAirline: "Lufthansa",
-    flightCategory: "business",
+    flightCategory: "",
   },
   map: {
     mapStyle: "osm",

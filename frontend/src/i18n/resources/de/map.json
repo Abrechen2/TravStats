@@ -146,8 +146,8 @@
         }
       }
     },
-    "timesFlown": "{{count}}x geflogen",
-    "timesPlanned": "{{count}}x geplant",
+    "timesFlown": "{{count}}× geflogen",
+    "timesPlanned": "{{count}}× geplant",
     "flight_one": "Flug",
     "flight_other": "Flüge",
     "antipodalSimplified_one": "{{count}} antipodale Route flach dargestellt",
