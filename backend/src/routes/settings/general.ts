@@ -76,9 +76,10 @@ const settingsSchema = z.object({
   }).partial().optional(),
   defaults: z.object({
     flightStatus: z.enum(['scheduled', 'flown']).optional(),
-    seatClass: z.enum(['economy', 'premium_economy', 'business', 'first']).optional(),
+    // '' = "no default" — the flight form then starts unclassified (#256).
+    seatClass: z.enum(['', 'economy', 'premium_economy', 'business', 'first']).optional(),
     favoriteAirline: z.string().optional(),
-    flightCategory: z.enum(['business', 'private', 'vacation']).optional(),
+    flightCategory: z.enum(['', 'business', 'private', 'vacation']).optional(),
   }).partial().optional(),
   map: z.object({
     mapStyle: z.enum(['osm', 'satellite']).optional(),

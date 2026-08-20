@@ -10,8 +10,9 @@ type LanguagePreference = "de" | "en";
 type DistanceUnit = "kilometers" | "miles" | "nautical_miles";
 /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
 type Currency = string;
-type FlightCategory = "business" | "private" | "vacation";
-type SeatClass = "economy" | "premium_economy" | "business" | "first";
+// "" = no default: the flight form starts unclassified (#256).
+type FlightCategory = "" | "business" | "private" | "vacation";
+type SeatClass = "" | "economy" | "premium_economy" | "business" | "first";
 
 type FlightReminder = "off" | "24h" | "48h";
 
@@ -261,9 +262,11 @@ const defaultSettings: Omit<
   },
   defaults: {
     flightStatus: "scheduled",
-    seatClass: "economy",
+    // No shipped classification defaults (#256): an untouched flight form
+    // must not store a seat class or category the user never picked.
+    seatClass: "",
     favoriteAirline: "Lufthansa",
-    flightCategory: "business",
+    flightCategory: "",
   },
   notifications: {
     flightReminder: "24h",

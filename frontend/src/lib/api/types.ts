@@ -80,7 +80,12 @@ export interface SuccessResponse {
 /** API key test response */
 export interface ApiKeyTestResponse {
   success: boolean;
+  /** English diagnostic fallback — render messageKey's translation when set (#260). */
   message: string;
+  /** Stable outcome identifier, translated via settings:apiKeyTest.<key>. */
+  messageKey?: string;
+  /** Interpolation values for messageKey (e.g. { status }). */
+  messageParams?: Record<string, string | number>;
   details?: Record<string, unknown>;
 }
 

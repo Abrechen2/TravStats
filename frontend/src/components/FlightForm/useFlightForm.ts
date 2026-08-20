@@ -192,12 +192,12 @@ export function useFlightForm(
   const [gate, setGate] = useState("");
   const [seatNumber, setSeatNumber] = useState("");
   const [boardingGroup, setBoardingGroup] = useState("");
-  // "" is the explicit "(optional)" choice — submitted as null, stored as
-  // NULL. The initial value still comes from the user's settings defaults
-  // (see the effect below), so the common path is unchanged.
+  // "" is the "(optional)" choice — submitted as null, stored as NULL, and
+  // the INITIAL state (#256): an untouched form must not classify the
+  // flight. Only a user-chosen settings default overrides it (effect below).
   const [seatClass, setSeatClass] = useState<
     "" | "economy" | "premium_economy" | "business" | "first"
-  >("economy");
+  >("");
   const [status, setStatus] = useState<"scheduled" | "flown" | "cancelled" | "historical">("flown");
   const [notes, setNotes] = useState("");
   const [price, setPrice] = useState<number | undefined>(undefined);
@@ -205,7 +205,7 @@ export function useFlightForm(
   const [taxes, setTaxes] = useState<number | undefined>(undefined);
   const [fees, setFees] = useState<number | undefined>(undefined);
   const [receiptUrl, setReceiptUrl] = useState("");
-  const [category, setCategory] = useState<"" | "business" | "private" | "vacation">("business");
+  const [category, setCategory] = useState<"" | "business" | "private" | "vacation">("");
   const [tags, setTags] = useState<string[]>([]);
   const [companions, setCompanions] = useState<string[]>([]);
   const [bookingReference, setBookingReference] = useState("");

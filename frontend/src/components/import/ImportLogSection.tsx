@@ -44,7 +44,10 @@ function describeCounts(batch: ImportBatchSummary, t: Translate): string {
   const { lodgings, stays, flights, cruises } = batch.counts;
   if (batch.domain === "flight") return t("settings:import.log.counts.flights", { count: flights });
   if (batch.domain === "cruise") return t("settings:import.log.counts.cruises", { count: cruises });
-  return t("lodging:import.batches.created", { lodgingCount: lodgings, stayCount: stays });
+  return t("lodging:import.batches.created", {
+    hotels: t("lodging:units.hotels", { count: lodgings }),
+    stays: t("lodging:units.stays", { count: stays }),
+  });
 }
 
 export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element {

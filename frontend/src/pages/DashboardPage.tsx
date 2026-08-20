@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { DashboardLayout } from "../components/Dashboard/DashboardLayout";
 import { useDashboardRoute } from "../hooks/useDashboardRoute";
+import { useClearMapSelectionsOnTabChange } from "../hooks/useClearMapSelectionsOnTabChange";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { flightsApi } from "../lib/api/flights";
@@ -46,6 +47,9 @@ function useImportMigrationToast(enabled: boolean): void {
 
 export default function DashboardPage(): JSX.Element {
   const { tab } = useDashboardRoute();
+  // #257: a selected flight/cruise (popup + rings) must not survive into
+  // another domain's map.
+  useClearMapSelectionsOnTabChange(tab);
   const { isEnabled } = useEnabledDomains();
   const { isFeatureVisible } = useBetaFeatures();
   const [counts, setCounts] = useState({ flight: 0, cruise: 0, poi: 0, lodging: 0 });

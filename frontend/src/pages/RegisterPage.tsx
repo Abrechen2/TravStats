@@ -62,12 +62,21 @@ export default function RegisterPage(): JSX.Element {
     } catch (err: unknown) {
       const errorObj = err as {
         response?: {
+          status?: number;
           data?: {
             error?: string;
             details?: Array<{ field?: string; message?: string }>;
           };
         };
       };
+      // A 403 is "registration is disabled" — translate it instead of
+      // rendering the backend's English prose (#258/#260). This is the
+      // fail-open path: the status probe erred, the form rendered anyway,
+      // and the submit is where the instance finally says no.
+      if (errorObj.response?.status === 403) {
+        setError(t("register.disabled"));
+        return;
+      }
       // Prefer the specific Zod validation message over the generic
       // "Validation error" envelope when the backend returns one.
       const detail = errorObj.response?.data?.details?.[0]?.message;

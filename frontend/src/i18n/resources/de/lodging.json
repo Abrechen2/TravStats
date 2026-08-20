@@ -2,6 +2,14 @@
   "nav": {
     "link": "Unterkünfte"
   },
+  "units": {
+    "hotels_one": "{{count}} Hotel",
+    "hotels_other": "{{count}} Hotels",
+    "stays_one": "{{count}} Aufenthalt",
+    "stays_other": "{{count}} Aufenthalte",
+    "rows_one": "{{count}} Zeile",
+    "rows_other": "{{count}} Zeilen"
+  },
   "list": {
     "title": "Unterkünfte",
     "loading": "Unterkünfte werden geladen …",
@@ -64,7 +72,9 @@
     "spendPerNight": "Pro Übernachtung",
     "noLocation": "Kein Standort hinterlegt",
     "deleteConfirmTitle": "Unterkunft löschen?",
-    "deleteConfirmMessage": "Diese Unterkunft mit {{count}} Aufenthalt(en) wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteConfirmMessage": "Diese Unterkunft mit {{count}} Aufenthalten wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteConfirmMessage_one": "Diese Unterkunft mit {{count}} Aufenthalt wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteConfirmMessage_other": "Diese Unterkunft mit {{count}} Aufenthalten wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
     "deleteSuccess": "Unterkunft gelöscht",
     "deleteError": "Unterkunft konnte nicht gelöscht werden"
   },
@@ -218,7 +228,9 @@
   },
   "import": {
     "preview": {
-      "title": "Vorschau ({{count}} Zeile(n))",
+      "title": "Vorschau ({{count}} Zeilen)",
+      "title_one": "Vorschau ({{count}} Zeile)",
+      "title_other": "Vorschau ({{count}} Zeilen)",
       "newLabel": "neu",
       "presentLabel": "bereits vorhanden",
       "needsInputLabel": "brauchen dich",
@@ -289,13 +301,15 @@
         "unreadable_number": "{{count}}× Zahl unlesbar"
       },
       "rowSample": " (z. B. „{{sample}}“ in Zeile {{row}})",
-      "skippedRows": "{{count}} Zeile(n) wurden wegen ungültiger Werte übersprungen.",
+      "skippedRows": "{{count}} Zeilen wurden wegen ungültiger Werte übersprungen.",
+      "skippedRows_one": "{{count}} Zeile wurde wegen ungültiger Werte übersprungen.",
+      "skippedRows_other": "{{count}} Zeilen wurden wegen ungültiger Werte übersprungen.",
       "parseFailed": "Diese CSV-Datei konnte nicht gelesen werden.",
       "previewFailed": "Die Vorschau konnte nicht geladen werden."
     },
     "commitResult": {
-      "success": "{{createdLodgings}} Hotel(s) und {{createdStays}} Aufenthalt(e) importiert, {{skipped}} übersprungen (bereits vorhanden).",
-      "partial": "{{createdLodgings}} Hotel(s) und {{createdStays}} Aufenthalt(e) importiert, {{skipped}} übersprungen (bereits vorhanden), {{failedCount}} Zeile(n) fehlgeschlagen: {{reasons}}",
+      "success": "{{hotels}} und {{stays}} importiert, {{skipped}} übersprungen (bereits vorhanden).",
+      "partial": "{{hotels}} und {{stays}} importiert, {{skipped}} übersprungen (bereits vorhanden), {{rows}} fehlgeschlagen: {{reasons}}",
       "failureCodes": {
         "ownership_mismatch": "gehört einem anderen Konto",
         "missing_lodging_reference": "Hotel-Referenz fehlt",
@@ -312,14 +326,14 @@
         "email": "E-Mail",
         "pdf": "PDF"
       },
-      "created": "{{lodgingCount}} Hotel(s) und {{stayCount}} Aufenthalt(e) angelegt",
+      "created": "{{hotels}} und {{stays}} angelegt",
       "revert": "Import rückgängig machen",
       "revertError": "Der Import konnte nicht rückgängig gemacht werden.",
       "confirmTitle": "Import wirklich rückgängig machen?",
       "confirmMessage": "Nur das, was dieser Import angelegt hat, wird gelöscht. Von Hand hinzugefügte oder durch einen späteren Import verknüpfte Aufenthalte bleiben erhalten — ihre Unterkunft bleibt bestehen.",
       "revertResult": {
-        "success": "{{deletedLodgings}} Hotel(s) und {{deletedStays}} Aufenthalt(e) gelöscht.",
-        "withDetached": "{{deletedLodgings}} Hotel(s) und {{deletedStays}} Aufenthalt(e) gelöscht, {{detachedLodgings}} Hotel(s) behalten (haben weitere Aufenthalte)."
+        "success": "{{hotels}} und {{stays}} gelöscht.",
+        "withDetached": "{{hotels}} und {{stays}} gelöscht, {{kept}} behalten (haben weitere Aufenthalte)."
       }
     },
     "visited": {

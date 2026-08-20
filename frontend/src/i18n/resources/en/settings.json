@@ -173,6 +173,7 @@
     "favoriteAirline": "Favorite Airline",
     "flightCategory": "Flight Category",
     "options": {
+      "none": "No default (field stays empty)",
       "scheduled": "Scheduled",
       "flown": "Flown",
       "economy": "Economy",
@@ -512,6 +513,19 @@
   "externalServices": {
     "title": "My external services"
   },
+  "apiKeyTest": {
+    "valid": "API key is valid",
+    "validBilled": "API key is valid (this test sent one billed Text Search request, ~0.03 USD)",
+    "invalid": "Invalid API key",
+    "rateLimited": "Rate limit reached — please try again later",
+    "noKey": "No API key provided",
+    "notConfigured": "No key saved to test. Please save one first.",
+    "unexpectedStatus": "Unexpected response ({{status}})",
+    "protocol": "Unexpected response from the provider",
+    "openskyMissingCredentials": "Client ID and Client Secret are required",
+    "openskyInvalid": "Invalid OAuth2 credentials — please check Client ID and Client Secret",
+    "requestFailed": "Test failed"
+  },
   "apiKeys": {
     "title": "API Keys",
     "description": "Manage API keys for external services. Keys shared by the administrator are automatically used.",
@@ -625,10 +639,18 @@
       "scopeHint": "Every list import as a whole — newest first. Revertible as long as the entries still come from that import.",
       "counts": {
         "flights": "{{count}} flights",
-        "cruises": "{{count}} cruises"
+        "flights_one": "{{count}} flight",
+        "flights_other": "{{count}} flights",
+        "cruises": "{{count}} cruises",
+        "cruises_one": "{{count}} cruise",
+        "cruises_other": "{{count}} cruises"
       },
       "reverted": "{{count}} entries removed.",
-      "revertedWithKept": "{{count}} entries removed. {{kept}} kept, because other data still hangs from them."
+      "reverted_one": "{{count}} entry removed.",
+      "reverted_other": "{{count}} entries removed.",
+      "revertedWithKept": "{{count}} entries removed. {{kept}} kept, because other data still hangs from them.",
+      "revertedWithKept_one": "{{count}} entry removed. {{kept}} kept, because other data still hangs from them.",
+      "revertedWithKept_other": "{{count}} entries removed. {{kept}} kept, because other data still hangs from them."
     },
     "tile": {
       "fr24": {

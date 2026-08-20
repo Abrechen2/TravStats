@@ -3,12 +3,34 @@
  * Tests API keys by making actual API calls
  */
 
-import axios from 'axios';
-import { getApiKey, getOpenSkyCredentials } from './apiKeyResolver';
+import axios from "axios";
+import { getApiKey, getOpenSkyCredentials } from "./apiKeyResolver";
+
+/**
+ * Stable, translatable identifiers for the test outcomes the UI can name in
+ * the user's language (#260 — the Immich error-kind pattern). `message`
+ * stays the English diagnostic fallback: upstream prose (Google's own
+ * error.message, OAuth error_description, network errors) carries no key on
+ * purpose — it cannot be translated and is more actionable verbatim.
+ */
+export type ApiKeyTestMessageKey =
+  | "valid"
+  | "validBilled"
+  | "invalid"
+  | "rateLimited"
+  | "noKey"
+  | "notConfigured"
+  | "unexpectedStatus"
+  | "protocol"
+  | "openskyMissingCredentials"
+  | "openskyInvalid";
 
 export interface ApiKeyTestResult {
   success: boolean;
   message: string;
+  messageKey?: ApiKeyTestMessageKey;
+  /** Interpolation values for messageKey (e.g. { status } for unexpectedStatus). */
+  messageParams?: Record<string, string | number>;
   details?: Record<string, unknown>;
 }
 
@@ -21,17 +43,18 @@ function extractAxiosErrorInfo(error: unknown): {
   if (axios.isAxiosError(error)) {
     return {
       status: error.response?.status,
-      message: error.response?.data?.error?.message
-        ?? error.response?.data?.error?.info
-        ?? error.message
-        ?? 'Unknown error',
+      message:
+        error.response?.data?.error?.message ??
+        error.response?.data?.error?.info ??
+        error.message ??
+        "Unknown error",
       data: error.response?.data as Record<string, unknown> | undefined,
     };
   }
   if (error instanceof Error) {
     return { message: error.message };
   }
-  return { message: 'Unknown error' };
+  return { message: "Unknown error" };
 }
 
 /**
@@ -39,26 +62,27 @@ function extractAxiosErrorInfo(error: unknown): {
  */
 export async function testOpenAIKey(apiKey: string, userId?: string): Promise<ApiKeyTestResult> {
   try {
-    const key = apiKey || await getApiKey('openai', userId);
+    const key = apiKey || (await getApiKey("openai", userId));
     if (!key) {
       return {
         success: false,
-        message: 'No API key provided',
+        message: "No API key provided",
+        messageKey: "noKey",
       };
     }
 
     // Test with a simple completion request
     const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
+      "https://api.openai.com/v1/chat/completions",
       {
-        model: 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: 'test' }],
+        model: "gpt-3.5-turbo",
+        messages: [{ role: "user", content: "test" }],
         max_tokens: 5,
       },
       {
         headers: {
-          'Authorization': `Bearer ${key}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
         },
         timeout: 10000,
       }
@@ -67,7 +91,8 @@ export async function testOpenAIKey(apiKey: string, userId?: string): Promise<Ap
     if (response.status === 200) {
       return {
         success: true,
-        message: 'API key is valid',
+        message: "API key is valid",
+        messageKey: "valid",
         details: {
           model: response.data.model,
         },
@@ -77,19 +102,23 @@ export async function testOpenAIKey(apiKey: string, userId?: string): Promise<Ap
     return {
       success: false,
       message: `Unexpected response: ${response.status}`,
+      messageKey: "unexpectedStatus",
+      messageParams: { status: response.status },
     };
   } catch (error: unknown) {
     const errInfo = extractAxiosErrorInfo(error);
     if (errInfo.status === 401) {
       return {
         success: false,
-        message: 'Invalid API key',
+        message: "Invalid API key",
+        messageKey: "invalid",
       };
     }
     if (errInfo.status === 429) {
       return {
         success: false,
-        message: 'Rate limit exceeded',
+        message: "Rate limit exceeded",
+        messageKey: "rateLimited",
       };
     }
     return {
@@ -104,27 +133,28 @@ export async function testOpenAIKey(apiKey: string, userId?: string): Promise<Ap
  */
 export async function testClaudeKey(apiKey: string, userId?: string): Promise<ApiKeyTestResult> {
   try {
-    const key = apiKey || await getApiKey('claude', userId);
+    const key = apiKey || (await getApiKey("claude", userId));
     if (!key) {
       return {
         success: false,
-        message: 'No API key provided',
+        message: "No API key provided",
+        messageKey: "noKey",
       };
     }
 
     // Test with a simple message request
     const response = await axios.post(
-      'https://api.anthropic.com/v1/messages',
+      "https://api.anthropic.com/v1/messages",
       {
-        model: 'claude-3-haiku-20240307',
+        model: "claude-3-haiku-20240307",
         max_tokens: 5,
-        messages: [{ role: 'user', content: 'test' }],
+        messages: [{ role: "user", content: "test" }],
       },
       {
         headers: {
-          'x-api-key': key,
-          'anthropic-version': '2023-06-01',
-          'Content-Type': 'application/json',
+          "x-api-key": key,
+          "anthropic-version": "2023-06-01",
+          "Content-Type": "application/json",
         },
         timeout: 10000,
       }
@@ -133,7 +163,8 @@ export async function testClaudeKey(apiKey: string, userId?: string): Promise<Ap
     if (response.status === 200) {
       return {
         success: true,
-        message: 'API key is valid',
+        message: "API key is valid",
+        messageKey: "valid",
         details: {
           model: response.data.model,
         },
@@ -143,19 +174,23 @@ export async function testClaudeKey(apiKey: string, userId?: string): Promise<Ap
     return {
       success: false,
       message: `Unexpected response: ${response.status}`,
+      messageKey: "unexpectedStatus",
+      messageParams: { status: response.status },
     };
   } catch (error: unknown) {
     const errInfo = extractAxiosErrorInfo(error);
     if (errInfo.status === 401) {
       return {
         success: false,
-        message: 'Invalid API key',
+        message: "Invalid API key",
+        messageKey: "invalid",
       };
     }
     if (errInfo.status === 429) {
       return {
         success: false,
-        message: 'Rate limit exceeded',
+        message: "Rate limit exceeded",
+        messageKey: "rateLimited",
       };
     }
     return {
@@ -170,41 +205,41 @@ export async function testClaudeKey(apiKey: string, userId?: string): Promise<Ap
  */
 export async function testAirlabsKey(apiKey: string, userId?: string): Promise<ApiKeyTestResult> {
   try {
-    const key = apiKey || await getApiKey('airlabs', userId);
+    const key = apiKey || (await getApiKey("airlabs", userId));
     if (!key) {
       return {
         success: false,
-        message: 'No API key provided',
+        message: "No API key provided",
+        messageKey: "noKey",
       };
     }
 
     // Test with a simple API call
-    const response = await axios.get(
-      'https://airlabs.co/api/v9/ping',
-      {
-        params: {
-          api_key: key,
-        },
-        timeout: 10000,
-      }
-    );
+    const response = await axios.get("https://airlabs.co/api/v9/ping", {
+      params: {
+        api_key: key,
+      },
+      timeout: 10000,
+    });
 
     // AirLabs API returns different response formats
     if (response.status === 200) {
       // Check for success status
-      if (response.data?.status === 'success' || response.data?.response) {
+      if (response.data?.status === "success" || response.data?.response) {
         return {
           success: true,
-          message: 'API key is valid',
+          message: "API key is valid",
+          messageKey: "valid",
           details: response.data,
         };
       }
 
       // Check for error in response
       if (response.data?.error) {
-        const errorMsg = typeof response.data.error === 'string'
-          ? response.data.error
-          : response.data.error.message || 'API error';
+        const errorMsg =
+          typeof response.data.error === "string"
+            ? response.data.error
+            : response.data.error.message || "API error";
         return {
           success: false,
           message: errorMsg,
@@ -214,7 +249,8 @@ export async function testAirlabsKey(apiKey: string, userId?: string): Promise<A
       // If we get 200 but no clear success/error, assume it's valid
       return {
         success: true,
-        message: 'API key is valid',
+        message: "API key is valid",
+        messageKey: "valid",
         details: response.data,
       };
     }
@@ -222,23 +258,27 @@ export async function testAirlabsKey(apiKey: string, userId?: string): Promise<A
     return {
       success: false,
       message: `Unexpected response: ${response.status}`,
+      messageKey: "unexpectedStatus",
+      messageParams: { status: response.status },
     };
   } catch (error: unknown) {
     const errInfo = extractAxiosErrorInfo(error);
     if (errInfo.status === 401 || errInfo.status === 403) {
       return {
         success: false,
-        message: 'Invalid API key',
+        message: "Invalid API key",
+        messageKey: "invalid",
       };
     }
     // Check for AirLabs error format
-    if (errInfo.data && typeof errInfo.data === 'object' && 'error' in errInfo.data) {
+    if (errInfo.data && typeof errInfo.data === "object" && "error" in errInfo.data) {
       const apiError = errInfo.data.error;
-      const errorMsg = typeof apiError === 'string'
-        ? apiError
-        : (typeof apiError === 'object' && apiError !== null && 'message' in apiError)
-          ? String((apiError as { message: unknown }).message)
-          : 'API error';
+      const errorMsg =
+        typeof apiError === "string"
+          ? apiError
+          : typeof apiError === "object" && apiError !== null && "message" in apiError
+            ? String((apiError as { message: unknown }).message)
+            : "API error";
       return {
         success: false,
         message: errorMsg,
@@ -254,38 +294,40 @@ export async function testAirlabsKey(apiKey: string, userId?: string): Promise<A
 /**
  * Test Aviationstack API key
  */
-export async function testAviationstackKey(apiKey: string, userId?: string): Promise<ApiKeyTestResult> {
+export async function testAviationstackKey(
+  apiKey: string,
+  userId?: string
+): Promise<ApiKeyTestResult> {
   try {
-    const key = apiKey || await getApiKey('aviationstack', userId);
+    const key = apiKey || (await getApiKey("aviationstack", userId));
     if (!key) {
       return {
         success: false,
-        message: 'No API key provided',
+        message: "No API key provided",
+        messageKey: "noKey",
       };
     }
 
     // Test with a simple API call
-    const response = await axios.get(
-      'https://api.aviationstack.com/v1/flights',
-      {
-        params: {
-          access_key: key,
-          limit: 1,
-        },
-        timeout: 10000,
-      }
-    );
+    const response = await axios.get("https://api.aviationstack.com/v1/flights", {
+      params: {
+        access_key: key,
+        limit: 1,
+      },
+      timeout: 10000,
+    });
 
     if (response.status === 200) {
       if (response.data?.error) {
         return {
           success: false,
-          message: response.data.error.info || 'API error',
+          message: response.data.error.info || "API error",
         };
       }
       return {
         success: true,
-        message: 'API key is valid',
+        message: "API key is valid",
+        messageKey: "valid",
         details: {
           pagination: response.data?.pagination,
         },
@@ -295,13 +337,16 @@ export async function testAviationstackKey(apiKey: string, userId?: string): Pro
     return {
       success: false,
       message: `Unexpected response: ${response.status}`,
+      messageKey: "unexpectedStatus",
+      messageParams: { status: response.status },
     };
   } catch (error: unknown) {
     const errInfo = extractAxiosErrorInfo(error);
     if (errInfo.status === 401 || errInfo.status === 403) {
       return {
         success: false,
-        message: 'Invalid API key',
+        message: "Invalid API key",
+        messageKey: "invalid",
       };
     }
     return {
@@ -319,32 +364,34 @@ export async function testAviationstackKey(apiKey: string, userId?: string): Pro
  * header + key header). Avoids burning a real flight-lookup call from
  * the BASIC tier's tight 600-unit/month budget just to validate.
  */
-export async function testAerodataboxKey(apiKey: string, userId?: string): Promise<ApiKeyTestResult> {
+export async function testAerodataboxKey(
+  apiKey: string,
+  userId?: string
+): Promise<ApiKeyTestResult> {
   try {
-    const key = apiKey || (await getApiKey('aerodatabox', userId));
+    const key = apiKey || (await getApiKey("aerodatabox", userId));
     if (!key) {
       return {
         success: false,
-        message: 'No API key provided',
+        message: "No API key provided",
+        messageKey: "noKey",
       };
     }
 
-    const response = await axios.get(
-      'https://aerodatabox.p.rapidapi.com/subscriptions/balance',
-      {
-        headers: {
-          'x-rapidapi-host': 'aerodatabox.p.rapidapi.com',
-          'x-rapidapi-key': key,
-          'Content-Type': 'application/json',
-        },
-        timeout: 10000,
+    const response = await axios.get("https://aerodatabox.p.rapidapi.com/subscriptions/balance", {
+      headers: {
+        "x-rapidapi-host": "aerodatabox.p.rapidapi.com",
+        "x-rapidapi-key": key,
+        "Content-Type": "application/json",
       },
-    );
+      timeout: 10000,
+    });
 
     if (response.status === 200) {
       return {
         success: true,
-        message: 'API key is valid',
+        message: "API key is valid",
+        messageKey: "valid",
         details: response.data as Record<string, unknown>,
       };
     }
@@ -352,19 +399,23 @@ export async function testAerodataboxKey(apiKey: string, userId?: string): Promi
     return {
       success: false,
       message: `Unexpected response: ${response.status}`,
+      messageKey: "unexpectedStatus",
+      messageParams: { status: response.status },
     };
   } catch (error: unknown) {
     const errInfo = extractAxiosErrorInfo(error);
     if (errInfo.status === 401 || errInfo.status === 403) {
       return {
         success: false,
-        message: 'Invalid API key',
+        message: "Invalid API key",
+        messageKey: "invalid",
       };
     }
     if (errInfo.status === 429) {
       return {
         success: false,
-        message: 'Rate limit exceeded',
+        message: "Rate limit exceeded",
+        messageKey: "rateLimited",
       };
     }
     return {
@@ -382,41 +433,49 @@ export async function testAerodataboxKey(apiKey: string, userId?: string): Promi
  * `key=` query param. The response is an image — the body is never parsed,
  * only the status matters, so `responseType: 'arraybuffer'` is enough.
  */
-export async function testLogostreamKey(apiKey: string, userId?: string): Promise<ApiKeyTestResult> {
+export async function testLogostreamKey(
+  apiKey: string,
+  userId?: string
+): Promise<ApiKeyTestResult> {
   try {
-    const key = apiKey || (await getApiKey('logostream', userId));
+    const key = apiKey || (await getApiKey("logostream", userId));
     if (!key) {
       return {
         success: false,
-        message: 'No API key provided',
+        message: "No API key provided",
+        messageKey: "noKey",
       };
     }
 
     const response = await axios.get(
       `https://airlines-api.logostream.dev/airlines/iata/AA?variant=icon&key=${encodeURIComponent(key)}`,
       {
-        responseType: 'arraybuffer',
+        responseType: "arraybuffer",
         timeout: 10000,
-      },
+      }
     );
 
     if (response.status === 200) {
       return {
         success: true,
-        message: 'API key is valid',
+        message: "API key is valid",
+        messageKey: "valid",
       };
     }
 
     return {
       success: false,
       message: `Unexpected response: ${response.status}`,
+      messageKey: "unexpectedStatus",
+      messageParams: { status: response.status },
     };
   } catch (error: unknown) {
     const errInfo = extractAxiosErrorInfo(error);
     if (errInfo.status === 401 || errInfo.status === 403) {
       return {
         success: false,
-        message: 'Invalid API key',
+        message: "Invalid API key",
+        messageKey: "invalid",
       };
     }
     return {
@@ -437,39 +496,46 @@ export async function testLogostreamKey(apiKey: string, userId?: string): Promis
  * says so explicitly in the success message, since the admin is paying for
  * every click of the Test button.
  */
-export async function testGooglePlacesKey(apiKey: string, userId?: string): Promise<ApiKeyTestResult> {
+export async function testGooglePlacesKey(
+  apiKey: string,
+  userId?: string
+): Promise<ApiKeyTestResult> {
   try {
-    const key = apiKey || (await getApiKey('googlePlaces', userId));
+    const key = apiKey || (await getApiKey("googlePlaces", userId));
     if (!key) {
       return {
         success: false,
-        message: 'No API key provided',
+        message: "No API key provided",
+        messageKey: "noKey",
       };
     }
 
     const response = await axios.post(
-      'https://places.googleapis.com/v1/places:searchText',
-      { textQuery: 'Frankfurt Airport' },
+      "https://places.googleapis.com/v1/places:searchText",
+      { textQuery: "Frankfurt Airport" },
       {
         headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': key,
-          'X-Goog-FieldMask': 'places.displayName',
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": key,
+          "X-Goog-FieldMask": "places.displayName",
         },
         timeout: 10000,
-      },
+      }
     );
 
     if (response.status === 200) {
       return {
         success: true,
-        message: 'API key is valid (this test sent one billed Text Search request, ~0.03 USD)',
+        message: "API key is valid (this test sent one billed Text Search request, ~0.03 USD)",
+        messageKey: "validBilled",
       };
     }
 
     return {
       success: false,
       message: `Unexpected response: ${response.status}`,
+      messageKey: "unexpectedStatus",
+      messageParams: { status: response.status },
     };
   } catch (error: unknown) {
     const errInfo = extractAxiosErrorInfo(error);
@@ -482,7 +548,7 @@ export async function testGooglePlacesKey(apiKey: string, userId?: string): Prom
     if (errInfo.status === 400 || errInfo.status === 401 || errInfo.status === 403) {
       return {
         success: false,
-        message: errInfo.message || 'Invalid API key',
+        message: errInfo.message || "Invalid API key",
       };
     }
     return {
@@ -512,23 +578,24 @@ export async function testOpenSkyCredentials(
     if (!creds.clientId || !creds.clientSecret) {
       return {
         success: false,
-        message: 'Client ID and Client Secret are required',
+        message: "Client ID and Client Secret are required",
+        messageKey: "openskyMissingCredentials",
       };
     }
 
     // Test with OAuth2 (only method supported)
     try {
       const params = new URLSearchParams({
-        grant_type: 'client_credentials',
+        grant_type: "client_credentials",
         client_id: creds.clientId,
         client_secret: creds.clientSecret,
       });
 
       const response = await axios.post(
-        'https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token',
+        "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token",
         params.toString(),
         {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
           timeout: 10000,
         }
       );
@@ -536,23 +603,26 @@ export async function testOpenSkyCredentials(
       if (response.status === 200 && response.data?.access_token) {
         return {
           success: true,
-          message: 'OAuth2 credentials are valid',
+          message: "OAuth2 credentials are valid",
+          messageKey: "valid",
         };
       }
 
       return {
         success: false,
-        message: 'Invalid response from authentication server',
+        message: "Invalid response from authentication server",
+        messageKey: "protocol",
       };
     } catch (error: unknown) {
       const errInfo = extractAxiosErrorInfo(error);
       if (errInfo.status === 401 || errInfo.status === 403) {
         return {
           success: false,
-          message: 'Invalid OAuth2 credentials - please check Client ID and Client Secret',
+          message: "Invalid OAuth2 credentials - please check Client ID and Client Secret",
+          messageKey: "openskyInvalid",
         };
       }
-      if (errInfo.data && typeof errInfo.data === 'object' && 'error_description' in errInfo.data) {
+      if (errInfo.data && typeof errInfo.data === "object" && "error_description" in errInfo.data) {
         return {
           success: false,
           message: String(errInfo.data.error_description),
@@ -560,13 +630,13 @@ export async function testOpenSkyCredentials(
       }
       return {
         success: false,
-        message: errInfo.message || 'Authentication failed',
+        message: errInfo.message || "Authentication failed",
       };
     }
   } catch (error: unknown) {
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
