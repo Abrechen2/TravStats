@@ -41,7 +41,7 @@ describe("testLogostreamKey", () => {
 
     const result = await testLogostreamKey("real-key-1234567890");
 
-    expect(result).toEqual({ success: true, message: "API key is valid" });
+    expect(result).toEqual({ success: true, message: "API key is valid", messageKey: "valid" });
     expect(mockedAxios.get).toHaveBeenCalledWith(
       "https://airlines-api.logostream.dev/airlines/iata/AA?variant=icon&key=real-key-1234567890",
       expect.objectContaining({ responseType: "arraybuffer" }),
@@ -53,7 +53,7 @@ describe("testLogostreamKey", () => {
 
     const result = await testLogostreamKey("bad-key");
 
-    expect(result).toEqual({ success: false, message: "Invalid API key" });
+    expect(result).toEqual({ success: false, message: "Invalid API key", messageKey: "invalid" });
   });
 
   it("reports an invalid key on 403", async () => {
@@ -61,7 +61,7 @@ describe("testLogostreamKey", () => {
 
     const result = await testLogostreamKey("bad-key");
 
-    expect(result).toEqual({ success: false, message: "Invalid API key" });
+    expect(result).toEqual({ success: false, message: "Invalid API key", messageKey: "invalid" });
   });
 
   it("surfaces the axios error message on a timeout/network failure", async () => {
