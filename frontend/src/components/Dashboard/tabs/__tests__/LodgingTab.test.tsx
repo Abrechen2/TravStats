@@ -47,6 +47,8 @@ const baseStay = {
   userId: "user-1",
   tripId: null,
   bookingId: null,
+    checkInTime: null,
+    checkOutTime: null,
   checkIn: "2024-05-12",
   checkOut: "2024-05-14",
   datePrecision: "DAY" as const,

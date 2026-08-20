@@ -1213,6 +1213,15 @@ model LodgingStay {
   /// `date_precision`.
   checkIn          DateTime? @map("check_in")
   checkOut         DateTime? @map("check_out")
+  /// Optional wall-clock times ("HH:mm", hotel-local like the dates) for the
+  /// check-in/check-out DAY above. Stored separately so the UTC-midnight day
+  /// anchors — which the FX snapshot, night counting and status derivation
+  /// all key on — never shift. Only the "Als Nächstes" countdown combines
+  /// day + time; everything else keeps reading the dates alone. Meaningful
+  /// only at DAY precision (schema-enforced). Tester wish, #dev-talk
+  /// 2026-08-18: a planned hotel should not "begin" at midnight.
+  checkInTime      String?   @map("check_in_time")
+  checkOutTime     String?   @map("check_out_time")
   /// How much of the date is actually known: DAY (both dates real) | MONTH
   /// ("July 2011", stored as the 1st) | YEAR ("some time in 2011", stored as
   /// 1 January) | NONE (no idea, both dates null).

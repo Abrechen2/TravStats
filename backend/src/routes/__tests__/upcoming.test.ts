@@ -210,4 +210,93 @@ describe("GET /api/v1/upcoming", () => {
 
     expect(res.body.data.entries).toEqual([]);
   });
+
+  // #dev-talk 2026-08-18: a planned hotel must not "begin" at midnight. The
+  // stay's optional check-in time refines the countdown instant; a stay
+  // checking in TODAY stays visible until that time instead of vanishing at
+  // 00:00.
+  describe("stay check-in times", () => {
+    /** Midnight-UTC day anchor `n` days ahead — how every writer stores checkIn. */
+    const dayAnchor = (n: number): Date => {
+      const d = new Date(Date.now() + n * DAY);
+      d.setUTCHours(0, 0, 0, 0);
+      return d;
+    };
+
+    const createStay = async (checkIn: Date, checkInTime: string | null): Promise<void> => {
+      const lodging = await prisma.lodging.create({
+        data: { userId, name: "B&B Test Adlershof" },
+      });
+      await prisma.lodgingStay.create({
+        data: {
+          userId,
+          lodgingId: lodging.id,
+          checkIn,
+          checkOut: new Date(checkIn.getTime() + DAY),
+          checkInTime,
+          status: "scheduled",
+        },
+      });
+    };
+
+    afterEach(async () => {
+      await prisma.lodgingStay.deleteMany({ where: { userId } });
+      await prisma.lodging.deleteMany({ where: { userId } });
+    });
+
+    it("combines the check-in time into startsAt", async () => {
+      await enableDomains(["lodging"]);
+      await createStay(dayAnchor(2), "15:00");
+
+      const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+
+      const stay = res.body.data.entries.find((e: { domain: string }) => e.domain === "lodging");
+      expect(stay).toBeDefined();
+      expect(stay.startsAt).toBe(
+        new Date(dayAnchor(2).getTime() + 15 * 3_600_000).toISOString(),
+      );
+    });
+
+    it("keeps startsAt at the day anchor when no time is recorded", async () => {
+      await enableDomains(["lodging"]);
+      await createStay(dayAnchor(2), null);
+
+      const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+
+      const stay = res.body.data.entries.find((e: { domain: string }) => e.domain === "lodging");
+      expect(stay.startsAt).toBe(dayAnchor(2).toISOString());
+    });
+
+    it("still shows a stay checking in later TODAY (the old query dropped it at midnight)", async () => {
+      await enableDomains(["lodging"]);
+      // One hour ahead of now, expressed as the anchor of the UTC day it
+      // falls on plus its wall-clock time — crossing midnight is handled by
+      // deriving both from the same instant.
+      const inOneHour = new Date(Date.now() + 3_600_000);
+      const anchor = new Date(inOneHour);
+      anchor.setUTCHours(0, 0, 0, 0);
+      const hhmm = inOneHour.toISOString().slice(11, 16);
+      await createStay(anchor, hhmm);
+
+      const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+
+      const stay = res.body.data.entries.find((e: { domain: string }) => e.domain === "lodging");
+      expect(stay).toBeDefined();
+    });
+
+    it("does not offer a stay whose check-in time already passed", async () => {
+      await enableDomains(["lodging"]);
+      // Two hours ago, same day-anchor + wall-clock derivation.
+      const twoHoursAgo = new Date(Date.now() - 2 * 3_600_000);
+      const anchor = new Date(twoHoursAgo);
+      anchor.setUTCHours(0, 0, 0, 0);
+      const hhmm = twoHoursAgo.toISOString().slice(11, 16);
+      await createStay(anchor, hhmm);
+
+      const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+
+      const stay = res.body.data.entries.find((e: { domain: string }) => e.domain === "lodging");
+      expect(stay).toBeUndefined();
+    });
+  });
 });

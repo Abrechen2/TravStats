@@ -66,6 +66,15 @@ export const updateLodgingSchema = baseLodgingSchema
     message: "At least one field must be provided for update",
   });
 
+// "HH:mm", 24h. Deliberately NOT a datetime: the day lives in
+// checkIn/checkOut, and re-encoding it here would create two sources of
+// truth for the same day.
+const stayTimeField = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "time must be HH:mm")
+  .nullable()
+  .optional();
+
 const baseStaySchema = z.object({
   // Nullable since 2.7: a hotel you remember but cannot date is still a place
   // you slept, and rating/price/board/room/membership all live on the STAY, so
@@ -73,6 +82,14 @@ const baseStaySchema = z.object({
   // the dates that ARE here actually mean — see shared/lodgingTiming.ts.
   checkIn: isoDateTimeRequired.nullable().optional(),
   checkOut: isoDateTimeRequired.nullable().optional(),
+  // Optional wall-clock times ("HH:mm", hotel-local like the dates) for the
+  // day anchors above. Kept separate from checkIn/checkOut on purpose: the
+  // FX snapshot, night counting and status derivation all key on the
+  // UTC-midnight day and must never shift; only the "Als Nächstes"
+  // countdown combines day + time (routes/upcoming.ts). Nullable so a PATCH
+  // can take a time back.
+  checkInTime: stayTimeField,
+  checkOutTime: stayTimeField,
   datePrecision: z.enum(LODGING_DATE_PRECISIONS).optional(),
   // Explicit night count, for when the dates cannot supply one. "Three nights,
   // no idea when" and "July 2011, no idea how long" are different gaps and one
@@ -160,7 +177,18 @@ export const createStaySchema = baseStaySchema
   .refine((d) => (d.totalPrice == null && d.pricePerNight == null) || d.currency != null, {
     message: "currency is required when a price is given",
     path: ["currency"],
-  });
+  })
+  // A time is a claim about a specific day: it needs that day to exist and
+  // to be DAY-precise. "15:00, some time in July 2011" is noise pretending
+  // to be data.
+  .refine(
+    (d) => d.checkInTime == null || (d.checkIn != null && (d.datePrecision ?? "DAY") === "DAY"),
+    { message: "checkInTime requires a DAY-precision check-in date", path: ["checkInTime"] },
+  )
+  .refine(
+    (d) => d.checkOutTime == null || (d.checkOut != null && (d.datePrecision ?? "DAY") === "DAY"),
+    { message: "checkOutTime requires a DAY-precision check-out date", path: ["checkOutTime"] },
+  );
 export const updateStaySchema = baseStaySchema
   .partial()
   .refine((d) => Object.keys(d).length > 0, {
