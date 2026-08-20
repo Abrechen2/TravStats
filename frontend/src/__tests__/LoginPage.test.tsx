@@ -8,6 +8,11 @@ vi.mock("../lib/api", () => ({
   authApi: {
     login: vi.fn(),
     getSmtpStatus: vi.fn().mockResolvedValue({ smtpEnabled: false, adminContactEmail: null }),
+    getRegistrationStatus: vi.fn().mockResolvedValue({
+      registrationEnabled: true,
+      requiresInvitation: false,
+      limitReached: false,
+    }),
     forgotPassword: vi.fn(),
   },
   // The page asks on mount whether passkeys are possible. Default to "no" here
@@ -111,6 +116,25 @@ describe("LoginPage", () => {
     // Register link text is i18n key: login.register
     const registerLink = screen.getByRole("link", { name: /login\.register/i });
     expect(registerLink).toHaveAttribute("href", "/register");
+  });
+
+  it("hides the register link when registration is disabled (#258)", async () => {
+    vi.mocked(authApi.getRegistrationStatus).mockResolvedValue({
+      registrationEnabled: false,
+      requiresInvitation: true,
+      limitReached: false,
+    });
+
+    render(
+      <BrowserRouter>
+        <LoginPage />
+      </BrowserRouter>
+    );
+
+    await waitFor(() => {
+      expect(authApi.getRegistrationStatus).toHaveBeenCalled();
+    });
+    expect(screen.queryByRole("link", { name: /login\.register/i })).toBeNull();
   });
 
   it("shows forgot password link", () => {

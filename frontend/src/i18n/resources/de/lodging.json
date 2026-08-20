@@ -3,10 +3,13 @@
     "link": "Unterkünfte"
   },
   "units": {
+    "hotels": "{{count}} Hotels",
     "hotels_one": "{{count}} Hotel",
     "hotels_other": "{{count}} Hotels",
+    "stays": "{{count}} Aufenthalte",
     "stays_one": "{{count}} Aufenthalt",
     "stays_other": "{{count}} Aufenthalte",
+    "rows": "{{count}} Zeilen",
     "rows_one": "{{count}} Zeile",
     "rows_other": "{{count}} Zeilen"
   },
