@@ -19,6 +19,12 @@ import logger from "../../utils/logger";
 
 const DEFAULT_LIMIT = 6;
 
+// Identify ourselves like `portGeocoder.ts` does. The previous fetch sent NO
+// headers at all — an anonymous, UA-less request from every self-hosted
+// instance is exactly the traffic public OSM infrastructure blanket-blocks,
+// and a blocked instance showed nothing but "no results" (#263).
+const USER_AGENT = "TravStats/2.0 (self-hosted travel logbook; +https://travstats.de)";
+
 // Deliberately short — this backs live search-as-you-type, so the user gets
 // "no results yet" far sooner than a stalled spinner. Overridable via
 // `PHOTON_SEARCH_TIMEOUT_MS` (test-only escape hatch; production always gets
@@ -59,6 +65,18 @@ export interface PlaceResult {
 export interface SearchPlacesOptions {
   limit?: number;
   lang?: string;
+}
+
+/**
+ * `degraded: true` means the geocoder FAILED (unreachable, blocked, bad
+ * response) — as opposed to a healthy "genuinely no matches". The route
+ * forwards the flag so the UI can say "search is unavailable" instead of
+ * the misleading "no results" (#263: a self-hoster whose egress was blocked
+ * had no signal anywhere in the product).
+ */
+export interface PlaceSearchOutcome {
+  results: PlaceResult[];
+  degraded: boolean;
 }
 
 // Photon's actual GeoJSON carries many more properties than we consume —
@@ -157,15 +175,106 @@ function safeJsonParse(text: string): unknown | typeof PARSE_FAILED {
  * `req.setTimeout()`'s idle-timer behaviour (the lesson from the Task-10
  * lodging-mapping timeout work).
  */
-export async function searchPlaces(
+type FetchOutcome =
+  | { ok: true; results: PlaceResult[] }
+  | { ok: false; stage: "http_status" | "size_cap" | "invalid_json" | "schema" | "network" };
+
+async function fetchPhoton(url: string, limit: number): Promise<FetchOutcome> {
+  const maxBytes = getMaxResponseBytes();
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT },
+      signal: AbortSignal.timeout(getSearchTimeoutMs()),
+    });
+
+    if (!res.ok) {
+      logger.warn(
+        {
+          operation: "photon_search_failed",
+          stage: "http_status",
+          status: res.status,
+        },
+        "[Photon] non-OK response — degrading to empty result",
+      );
+      return { ok: false, stage: "http_status" };
+    }
+
+    const contentLength = res.headers.get("content-length");
+    if (contentLength && Number(contentLength) > maxBytes) {
+      logger.warn(
+        { operation: "photon_search_failed", stage: "size_cap" },
+        "[Photon] response exceeded size cap — degrading to empty result",
+      );
+      return { ok: false, stage: "size_cap" };
+    }
+
+    const text = await res.text();
+    if (Buffer.byteLength(text) > maxBytes) {
+      logger.warn(
+        { operation: "photon_search_failed", stage: "size_cap" },
+        "[Photon] response exceeded size cap — degrading to empty result",
+      );
+      return { ok: false, stage: "size_cap" };
+    }
+
+    const json = safeJsonParse(text);
+    if (json === PARSE_FAILED) {
+      logger.warn(
+        { operation: "photon_search_failed", stage: "invalid_json" },
+        "[Photon] response was not valid JSON — degrading to empty result",
+      );
+      return { ok: false, stage: "invalid_json" };
+    }
+
+    const parsed = photonResponseSchema.safeParse(json);
+    if (!parsed.success) {
+      logger.warn(
+        { operation: "photon_search_failed", stage: "schema" },
+        "[Photon] response failed schema validation — degrading to empty result",
+      );
+      return { ok: false, stage: "schema" };
+    }
+
+    const features = parsed.data.features ?? [];
+    const results: PlaceResult[] = [];
+    for (const feature of features) {
+      const normalized = normalizeFeature(feature);
+      if (normalized) results.push(normalized);
+      if (results.length >= limit) break;
+    }
+    return { ok: true, results };
+  } catch (error) {
+    logger.warn(
+      {
+        operation: "photon_search_failed",
+        stage: "network",
+        error: error instanceof Error ? error.message : String(error),
+      },
+      "[Photon] search failed — degrading to empty result",
+    );
+    return { ok: false, stage: "network" };
+  }
+}
+
+/**
+ * Like `searchPlaces`, but distinguishes "no matches" from "the geocoder
+ * failed" via `degraded`. Also owns two robustness moves (#263):
+ *
+ * - An admin-entered base URL that already ends in `/api` used to become
+ *   `/api/api/?` → 404 → silently empty; the trailing segment is stripped.
+ * - The public Photon rejects unsupported `lang` values with an HTTP error
+ *   (it supports only a handful of languages), so a UI language like `pt`
+ *   made EVERY search fail while the lang-less "Verbindung testen" stayed
+ *   green. An HTTP-level failure with a lang set is retried once without it.
+ */
+export async function searchPlacesDetailed(
   query: string,
   options?: SearchPlacesOptions,
-): Promise<PlaceResult[]> {
+): Promise<PlaceSearchOutcome> {
   const trimmed = query.trim();
-  if (trimmed.length < 2) return [];
+  if (trimmed.length < 2) return { results: [], degraded: false };
 
   const limit = options?.limit ?? DEFAULT_LIMIT;
-  const maxBytes = getMaxResponseBytes();
 
   let photonUrl = DEFAULT_PHOTON_URL;
   try {
@@ -184,81 +293,38 @@ export async function searchPlaces(
     );
   }
 
-  const baseUrl = photonUrl.replace(/\/+$/, "");
+  const baseUrl = photonUrl.replace(/\/+$/, "").replace(/\/api$/i, "");
   const params = new URLSearchParams({ q: trimmed, limit: String(limit) });
   if (options?.lang) params.set("lang", options.lang);
   const url = `${baseUrl}/api/?${params.toString()}`;
 
-  try {
-    const res = await fetch(url, {
-      signal: AbortSignal.timeout(getSearchTimeoutMs()),
-    });
+  const first = await fetchPhoton(url, limit);
+  if (first.ok) return { results: first.results, degraded: false };
 
-    if (!res.ok) {
-      logger.warn(
-        {
-          operation: "photon_search_failed",
-          stage: "http_status",
-          status: res.status,
-        },
-        "[Photon] non-OK response — degrading to empty result",
-      );
-      return [];
-    }
-
-    const contentLength = res.headers.get("content-length");
-    if (contentLength && Number(contentLength) > maxBytes) {
-      logger.warn(
-        { operation: "photon_search_failed", stage: "size_cap" },
-        "[Photon] response exceeded size cap — degrading to empty result",
-      );
-      return [];
-    }
-
-    const text = await res.text();
-    if (Buffer.byteLength(text) > maxBytes) {
-      logger.warn(
-        { operation: "photon_search_failed", stage: "size_cap" },
-        "[Photon] response exceeded size cap — degrading to empty result",
-      );
-      return [];
-    }
-
-    const json = safeJsonParse(text);
-    if (json === PARSE_FAILED) {
-      logger.warn(
-        { operation: "photon_search_failed", stage: "invalid_json" },
-        "[Photon] response was not valid JSON — degrading to empty result",
-      );
-      return [];
-    }
-
-    const parsed = photonResponseSchema.safeParse(json);
-    if (!parsed.success) {
-      logger.warn(
-        { operation: "photon_search_failed", stage: "schema" },
-        "[Photon] response failed schema validation — degrading to empty result",
-      );
-      return [];
-    }
-
-    const features = parsed.data.features ?? [];
-    const results: PlaceResult[] = [];
-    for (const feature of features) {
-      const normalized = normalizeFeature(feature);
-      if (normalized) results.push(normalized);
-      if (results.length >= limit) break;
-    }
-    return results;
-  } catch (error) {
-    logger.warn(
-      {
-        operation: "photon_search_failed",
-        stage: "network",
-        error: error instanceof Error ? error.message : String(error),
-      },
-      "[Photon] search failed — degrading to empty result",
-    );
-    return [];
+  if (options?.lang && first.stage === "http_status") {
+    params.delete("lang");
+    const retry = await fetchPhoton(`${baseUrl}/api/?${params.toString()}`, limit);
+    if (retry.ok) return { results: retry.results, degraded: false };
   }
+
+  return { results: [], degraded: true };
+}
+
+/**
+ * Search Photon for places matching free text. **Never throws.** Every
+ * failure path — unreachable, non-200, oversized response, invalid JSON, or
+ * a response shape that fails schema validation — degrades to `[]` and logs
+ * a stage-tagged warning (never the raw body, since it's third-party
+ * content). Uses a hard deadline via `AbortSignal.timeout`: a real
+ * wall-clock timeout that does NOT reset on socket activity, unlike
+ * `req.setTimeout()`'s idle-timer behaviour (the lesson from the Task-10
+ * lodging-mapping timeout work). Callers that need to tell a failure from
+ * "no matches" use `searchPlacesDetailed` instead.
+ */
+export async function searchPlaces(
+  query: string,
+  options?: SearchPlacesOptions,
+): Promise<PlaceResult[]> {
+  const outcome = await searchPlacesDetailed(query, options);
+  return outcome.results;
 }

@@ -245,4 +245,78 @@ describe("Photon place search", () => {
 
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }, 10_000);
+
+  // ——— #263: the OSM path returned nothing on some self-hosted instances ———
+
+  it("sends a descriptive User-Agent (anonymous requests are what OSM infrastructure blocks)", async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValue(jsonResponse(featureCollection([zurichFeature])));
+    global.fetch = fetchMock;
+
+    await searchPlaces("Zürich");
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect((init as RequestInit).headers).toMatchObject({
+      "User-Agent": expect.stringContaining("TravStats"),
+    });
+  });
+
+  it("strips a trailing /api from an admin-entered base URL instead of requesting /api/api/", async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValue(jsonResponse(featureCollection([])));
+    global.fetch = fetchMock;
+    mockResolveGeocoderUrls.mockResolvedValue({
+      photonUrl: "https://photon.example.com/api",
+      nominatimUrl: "https://nominatim.openstreetmap.org",
+    });
+
+    await searchPlaces("Berlin");
+
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toContain("https://photon.example.com/api/?");
+    expect(url).not.toContain("/api/api/");
+  });
+
+  it("retries once without lang when the lang-bearing request fails at HTTP level", async () => {
+    // Public Photon rejects unsupported languages with an HTTP error — a UI
+    // language like "pt" used to make EVERY typeahead search silently empty.
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({}, 400))
+      .mockResolvedValueOnce(jsonResponse(featureCollection([zurichFeature])));
+    global.fetch = fetchMock;
+
+    const results = await searchPlaces("Zürich", { lang: "pt" });
+
+    expect(results).toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toContain("lang=pt");
+    expect(fetchMock.mock.calls[1][0]).not.toContain("lang=");
+  });
+
+  it("does not retry a network failure without lang (would double the timeout for nothing)", async () => {
+    const fetchMock = jest.fn().mockRejectedValue(new Error("ECONNREFUSED"));
+    global.fetch = fetchMock;
+
+    const results = await searchPlaces("Zürich", { lang: "pt" });
+
+    expect(results).toEqual([]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks a geocoder failure as degraded, and a clean zero-hit search as not degraded", async () => {
+    const { searchPlacesDetailed } = await import("../photon");
+
+    global.fetch = jest.fn().mockResolvedValue(jsonResponse({}, 503));
+    const failed = await searchPlacesDetailed("Berlin");
+    expect(failed).toEqual({ results: [], degraded: true });
+
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(jsonResponse(featureCollection([])));
+    const empty = await searchPlacesDetailed("Berlin");
+    expect(empty).toEqual({ results: [], degraded: false });
+  });
 });

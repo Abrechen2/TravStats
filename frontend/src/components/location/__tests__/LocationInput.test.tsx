@@ -81,7 +81,7 @@ describe("LocationInput", () => {
   });
 
   it("searches as the user types and fills every field on selection", async () => {
-    vi.mocked(searchPlaces).mockResolvedValue([zurich]);
+    vi.mocked(searchPlaces).mockResolvedValue({ results: [zurich], degraded: false });
     const onChange = vi.fn();
     render(<LocationInput value={null} onChange={onChange} />);
 
@@ -140,7 +140,7 @@ describe("LocationInput", () => {
 
   it("supports keyboard navigation of the suggestion dropdown", async () => {
     const secondHit: PlaceSearchResult = { ...zurich, name: "Zürichberg", lat: 47.38, lon: 8.55 };
-    vi.mocked(searchPlaces).mockResolvedValue([zurich, secondHit]);
+    vi.mocked(searchPlaces).mockResolvedValue({ results: [zurich, secondHit], degraded: false });
     const onChange = vi.fn();
     render(<LocationInput value={null} onChange={onChange} />);
 
@@ -185,7 +185,7 @@ describe("LocationInput", () => {
 
   it("never fetches an external host directly — only the api module is called", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
-    vi.mocked(searchPlaces).mockResolvedValue([zurich]);
+    vi.mocked(searchPlaces).mockResolvedValue({ results: [zurich], degraded: false });
     const onChange = vi.fn();
     render(<LocationInput value={null} onChange={onChange} />);
 

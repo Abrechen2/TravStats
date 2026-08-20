@@ -4,6 +4,7 @@
     "flightNumber": "Flight Number",
     "flightNumberExample": "(e.g., LH400, BA1234)",
     "searchFlight": "Search Flight",
+    "searchDate": "Flight date",
     "searching": "Searching...",
     "departure": "Departure",
     "arrival": "Arrival",

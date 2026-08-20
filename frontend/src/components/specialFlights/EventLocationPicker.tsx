@@ -115,9 +115,15 @@ export function EventLocationPicker({
     setSearching(true);
     setSearchError(false);
     try {
-      const hits = await searchPlaces(q);
+      const { results: hits, degraded } = await searchPlaces(q);
       // Late-arriving response — ignore if a newer request has superseded us.
       if (requestIdRef.current !== requestId) return;
+      if (degraded) {
+        // The geocoder failed (#263) — say so instead of "no results".
+        setSearchError(true);
+        setResults([]);
+        return;
+      }
       setResults(hits);
       setDropdownOpen(true);
     } catch (err) {

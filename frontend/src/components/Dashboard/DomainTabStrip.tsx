@@ -9,6 +9,14 @@ import { DASHBOARD_TABS } from "../../types/dashboard";
 interface DomainTabStripProps {
   active: DashboardTab;
   counts: Record<Exclude<DashboardTab, "all">, number>;
+  /**
+   * How many of `counts` are merely planned (per domain, optional). Shown as
+   * a "(n geplant)" hint so the tab count and the statistics stop appearing
+   * to contradict each other — "Flüge 1" next to "keine Daten" is factually
+   * consistent (statistics count flown things) but reads like a bug without
+   * the hint (UAT finding B6).
+   */
+  scheduledCounts?: Partial<Record<Exclude<DashboardTab, "all">, number>>;
   enabled: Record<Exclude<DashboardTab, "all">, boolean>;
   onSelect(next: DashboardTab): void;
   /**
@@ -32,6 +40,7 @@ const TAB_ICON: Record<DashboardTab, string> = {
 export function DomainTabStrip({
   active,
   counts,
+  scheduledCounts,
   enabled,
   onSelect,
   upcoming = [],
@@ -72,6 +81,7 @@ export function DomainTabStrip({
         const isActive = tab === active;
         const isDisabled = tab !== "all" && !enabled[tab];
         const count = tab === "all" ? null : counts[tab];
+        const scheduled = tab === "all" ? 0 : (scheduledCounts?.[tab] ?? 0);
         const label = t(`dashboard:tabStrip.tabs.${tab}`);
 
         return (
@@ -105,6 +115,11 @@ export function DomainTabStrip({
                 }}
               >
                 {count}
+                {scheduled > 0 && (
+                  <span style={{ marginLeft: 4, fontFamily: "inherit" }}>
+                    {t("dashboard:tabStrip.scheduledHint", { count: scheduled })}
+                  </span>
+                )}
               </span>
             )}
           </button>

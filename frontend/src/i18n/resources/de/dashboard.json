@@ -50,6 +50,11 @@
     "loadCruises": "Kreuzfahrten konnten nicht geladen werden. Bitte später erneut versuchen.",
     "loadLodgings": "Unterkünfte konnten nicht geladen werden. Bitte später erneut versuchen."
   },
+  "flightTab": {
+    "emptyTitle": "Noch keine Flüge",
+    "emptyBody": "Füge deinen ersten Flug über „+ Hinzufügen“ hinzu oder importiere eine Buchungs-E-Mail bzw. ein PDF auf der Flüge-Seite.",
+    "emptyCta": "Zur Flüge-Seite"
+  },
   "cruiseTab": {
     "loading": "Kreuzfahrten werden geladen …",
     "emptyTitle": "Noch keine Kreuzfahrten",
@@ -59,7 +64,8 @@
   "lodgingTab": {
     "loading": "Unterkünfte werden geladen …",
     "emptyTitle": "Noch keine Unterkünfte",
-    "emptyBody": "Lege deine erste Unterkunft über „+ Hotel“ auf der Unterkünfte-Seite an.",
+    "emptyBody": "Lege deine erste Unterkunft über „+ Hotel“ auf der Unterkünfte-Seite an — oder importiere eine Buchungs-E-Mail, ein PDF oder eine CSV-Liste.",
+    "emptyCta": "Zur Unterkünfte-Seite",
     "listTitle": "Unterkünfte",
     "listEmpty": "Noch keine Unterkünfte erfasst",
     "independentChain": "Unabhängig",
@@ -162,6 +168,7 @@
   "flightsOnRoute": "Flüge auf dieser Route",
   "tabStrip": {
     "label": "Bereichswahl",
+    "scheduledHint": "({{count}} geplant)",
     "tabs": {
       "all": "Alle",
       "flight": "Flüge",

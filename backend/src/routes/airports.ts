@@ -63,6 +63,12 @@ router.get(
         AND: [
           // Exclude exact matches to avoid duplicates
           ...(exactIds.length > 0 ? [{ id: { notIn: exactIds } }] : []),
+          // Closed airports stay findable via their EXACT code (the
+          // Munich-Riem contract above) but are excluded from fuzzy
+          // matching: "GRU" used to fill the list with closed US heliports
+          // whose identifiers merely contained the letters (UAT finding
+          // C13), burying the airports anyone actually searches for.
+          { isClosed: false },
           {
             OR: [
               { iata: { contains: searchTerm, mode: 'insensitive' } },
@@ -74,7 +80,7 @@ router.get(
         ],
       },
       take: Math.max(0, 10 - exactMatches.length),
-      orderBy: [{ isClosed: 'asc' }, { iata: 'asc' }],
+      orderBy: [{ iata: 'asc' }],
     });
 
     res.json([...exactMatches, ...partialMatches]);

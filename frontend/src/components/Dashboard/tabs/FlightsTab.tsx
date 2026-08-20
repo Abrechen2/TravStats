@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import type { JSX } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Layer } from "@deck.gl/core";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
@@ -40,12 +41,16 @@ function nullToUndef<T>(v: T | null | undefined): T | undefined {
 
 export function FlightsTab(): JSX.Element {
   const { t } = useTranslation(["dashboard", "common", "flights"]);
+  const navigate = useNavigate();
   const { mode } = useDashboardRoute();
   const { isEnabled } = useEnabledDomains();
   const flightEnabled = isEnabled("flight");
   const [flights, setFlights] = useState<GeoJSONFeature[]>([]);
   const [structuredFlights, setStructuredFlights] = useState<Flight[]>([]);
   const [structuredTotal, setStructuredTotal] = useState(0);
+  // Guards the empty state (#262): only shown once the first load settled,
+  // never while the counts are still the initial zeros.
+  const [loaded, setLoaded] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   const [editingSpecialFlight, setEditingSpecialFlight] = useState<Flight | null>(null);
@@ -91,6 +96,7 @@ export function FlightsTab(): JSX.Element {
     let cancelled = false;
     void Promise.all([loadGeoJSON(), loadStructured()]).then(() => {
       if (cancelled) return;
+      setLoaded(true);
     });
     return () => {
       cancelled = true;
@@ -309,6 +315,58 @@ export function FlightsTab(): JSX.Element {
             setShowSpecialModal(true);
           }}
         />
+      )}
+      {loaded && structuredTotal === 0 && flights.length === 0 && (
+        // Empty state (#262), modeled on the cruises tab: what this tab
+        // shows, plus the two ways to get a first flight in.
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 20,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            style={{
+              pointerEvents: "auto",
+              maxWidth: 420,
+              textAlign: "center",
+              padding: "28px 32px",
+              borderRadius: 16,
+              background: "rgba(22,27,34,0.92)",
+              border: "1px solid var(--color-border)",
+            }}
+          >
+            <div style={{ fontSize: 40, marginBottom: 12 }} aria-hidden>
+              ✈️
+            </div>
+            <h2 style={{ margin: "0 0 8px", color: "var(--text-primary)", fontSize: 18 }}>
+              {t("dashboard:flightTab.emptyTitle")}
+            </h2>
+            <p style={{ margin: "0 0 20px", color: "var(--text-muted)", fontSize: 14 }}>
+              {t("dashboard:flightTab.emptyBody")}
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate("/flights")}
+              style={{
+                padding: "10px 20px",
+                background: "var(--accent)",
+                color: "#0d1117",
+                borderRadius: 10,
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              {t("dashboard:flightTab.emptyCta")}
+            </button>
+          </div>
+        </div>
       )}
       <SpecialFlightModal
         isOpen={showSpecialModal || editingSpecialFlight !== null}

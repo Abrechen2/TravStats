@@ -23,6 +23,13 @@ function DeckGLOverlay({ layers }: DeckOverlayProps): null {
 
 interface LodgingMiniMapProps {
   lodging: Lodging;
+  /**
+   * Renders a "set location now" button inside the no-location placeholder
+   * (UAT finding B7) — typically opens the edit modal, whose search box and
+   * map can fill the missing coordinates. Without it the placeholder is a
+   * statement with no way to act on it.
+   */
+  onSetLocation?: () => void;
 }
 
 /**
@@ -35,7 +42,7 @@ interface LodgingMiniMapProps {
  * no coordinates yet (geocoding is best-effort and can fail/be skipped —
  * see `services/geo/nominatim.ts`).
  */
-export function LodgingMiniMap({ lodging }: LodgingMiniMapProps): JSX.Element {
+export function LodgingMiniMap({ lodging, onSetLocation }: LodgingMiniMapProps): JSX.Element {
   const { t } = useTranslation(["lodging"]);
   const [mapLoaded, setMapLoaded] = useState(false);
 
@@ -47,8 +54,17 @@ export function LodgingMiniMap({ lodging }: LodgingMiniMapProps): JSX.Element {
 
   if (lodging.lat === null || lodging.lon === null) {
     return (
-      <div className="flex h-40 w-full items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] text-xs text-[var(--text-muted)]">
-        {t("lodging:detail.noLocation")}
+      <div className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] text-xs text-[var(--text-muted)]">
+        <span>{t("lodging:detail.noLocation")}</span>
+        {onSetLocation && (
+          <button
+            type="button"
+            onClick={onSetLocation}
+            className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-elevated,rgba(255,255,255,0.05))]"
+          >
+            {t("lodging:detail.setLocationNow")}
+          </button>
+        )}
       </div>
     );
   }

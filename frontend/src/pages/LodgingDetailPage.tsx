@@ -291,7 +291,7 @@ export default function LodgingDetailPage(): JSX.Element {
           </div>
 
           <aside className="space-y-3 md:col-span-2">
-            <LodgingMiniMap lodging={lodging} />
+            <LodgingMiniMap lodging={lodging} onSetLocation={() => setEditing(true)} />
 
             <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
               <h3 className="text-sm font-semibold text-[var(--text-primary)]">

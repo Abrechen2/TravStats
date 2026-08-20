@@ -1,5 +1,5 @@
 jest.mock("../../services/geo/photon", () => ({
-  searchPlaces: jest.fn(),
+  searchPlacesDetailed: jest.fn(),
 }));
 
 import request from "supertest";
@@ -7,9 +7,9 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
-import { searchPlaces } from "../../services/geo/photon";
+import { searchPlacesDetailed } from "../../services/geo/photon";
 
-const mockSearchPlaces = searchPlaces as jest.Mock;
+const mockSearchPlaces = searchPlacesDetailed as jest.Mock;
 
 describe("Geo API", () => {
   let authCookie: string;
@@ -38,18 +38,21 @@ describe("Geo API", () => {
 
   describe("GET /api/v1/geo/search", () => {
     it("returns the normalized envelope on a happy path", async () => {
-      mockSearchPlaces.mockResolvedValue([
-        {
-          name: "Zürich",
-          address: "Bahnhofstrasse 1",
-          city: "Zürich",
-          country: "Switzerland",
-          countryCode: "CH",
-          lat: 47.3769,
-          lon: 8.5417,
-          type: "city",
-        },
-      ]);
+      mockSearchPlaces.mockResolvedValue({
+        results: [
+          {
+            name: "Zürich",
+            address: "Bahnhofstrasse 1",
+            city: "Zürich",
+            country: "Switzerland",
+            countryCode: "CH",
+            lat: 47.3769,
+            lon: 8.5417,
+            type: "city",
+          },
+        ],
+        degraded: false,
+      });
 
       const res = await request(app)
         .get("/api/v1/geo/search?q=Zurich")
@@ -57,6 +60,7 @@ describe("Geo API", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
+      expect(res.body.degraded).toBe(false);
       expect(res.body.data).toEqual([
         {
           name: "Zürich",
@@ -75,7 +79,7 @@ describe("Geo API", () => {
     });
 
     it("forwards lang to the service", async () => {
-      mockSearchPlaces.mockResolvedValue([]);
+      mockSearchPlaces.mockResolvedValue({ results: [], degraded: false });
       await request(app)
         .get("/api/v1/geo/search?q=Berlin&lang=de")
         .set("Cookie", authCookie);
@@ -112,16 +116,18 @@ describe("Geo API", () => {
     });
 
     it("never surfaces a 5xx to the client when the geocoder is down — the service degrades to []", async () => {
-      mockSearchPlaces.mockResolvedValue([]);
+      mockSearchPlaces.mockResolvedValue({ results: [], degraded: true });
       const res = await request(app)
         .get("/api/v1/geo/search?q=Berlin")
         .set("Cookie", authCookie);
       expect(res.status).toBe(200);
       expect(res.body.data).toEqual([]);
+      // #263: the failure is still visible to the client — as a flag, not a 5xx.
+      expect(res.body.degraded).toBe(true);
     });
 
     it("applies the photonSearchLimiter (rate-limit headers present)", async () => {
-      mockSearchPlaces.mockResolvedValue([]);
+      mockSearchPlaces.mockResolvedValue({ results: [], degraded: false });
       const res = await request(app)
         .get("/api/v1/geo/search?q=Berlin")
         .set("Cookie", authCookie);

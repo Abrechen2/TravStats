@@ -140,7 +140,7 @@ export default function NavigationBar(): JSX.Element {
   const supportLinks: ExternalLink[] = [
     {
       id: "donate",
-      label: "Donate",
+      label: t("common:support.donate"),
       href: "https://www.paypal.com/donate?hosted_button_id=HW9MPYVURCT42",
       icon: (
         <svg width="11" height="11" viewBox="0 0 16 16" fill="#e85d8a" aria-hidden="true">
@@ -150,7 +150,7 @@ export default function NavigationBar(): JSX.Element {
     },
     {
       id: "star",
-      label: "Star",
+      label: t("common:support.star"),
       href: "https://github.com/Abrechen2/TravStats",
       icon: (
         <svg width="11" height="11" viewBox="0 0 16 16" fill="#f5a623" aria-hidden="true">
@@ -412,12 +412,12 @@ export default function NavigationBar(): JSX.Element {
                   e.currentTarget.style.borderColor = "var(--color-border)";
                   e.currentTarget.style.color = "var(--text-muted)";
                 }}
-                aria-label="Donate via PayPal"
+                aria-label={t("common:support.donateAria")}
               >
                 <svg width="11" height="11" viewBox="0 0 16 16" fill="#e85d8a" aria-hidden="true">
                   <path d="M8 14s-6-3.9-6-8a4 4 0 0 1 6-3.44A4 4 0 0 1 14 6c0 4.1-6 8-6 8z" />
                 </svg>
-                Donate
+                {t("common:support.donate")}
               </a>
               <a
                 href="https://github.com/Abrechen2/TravStats"
@@ -433,12 +433,12 @@ export default function NavigationBar(): JSX.Element {
                   e.currentTarget.style.borderColor = "var(--color-border)";
                   e.currentTarget.style.color = "var(--text-muted)";
                 }}
-                aria-label="Star on GitHub"
+                aria-label={t("common:support.starAria")}
               >
                 <svg width="11" height="11" viewBox="0 0 16 16" fill="#f5a623" aria-hidden="true">
                   <path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25z" />
                 </svg>
-                Star
+                {t("common:support.star")}
               </a>
               <a
                 href="https://discord.gg/CRnjB9f78t"

@@ -71,6 +71,7 @@
     "spendBase": "In Basiswährung",
     "spendPerNight": "Pro Übernachtung",
     "noLocation": "Kein Standort hinterlegt",
+    "setLocationNow": "Standort jetzt suchen",
     "deleteConfirmTitle": "Unterkunft löschen?",
     "deleteConfirmMessage": "Diese Unterkunft mit {{count}} Aufenthalten wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
     "deleteConfirmMessage_one": "Diese Unterkunft mit {{count}} Aufenthalt wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",

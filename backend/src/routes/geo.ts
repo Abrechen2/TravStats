@@ -7,7 +7,7 @@ import {
 } from "../middleware/auth";
 import { photonSearchLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
-import { searchPlaces } from "../services/geo/photon";
+import { searchPlacesDetailed } from "../services/geo/photon";
 
 /**
  * Same-origin geocoder proxy — mounted at /api/v1/geo. The browser's CSP
@@ -39,8 +39,11 @@ router.get(
       if (!parsed.success) throw new AppError(parsed.error.message, 400);
       const { q, lang } = parsed.data;
 
-      const results = await searchPlaces(q, { lang });
-      res.json({ success: true, data: results });
+      // `degraded: true` = the geocoder itself failed (still HTTP 200 with
+      // an empty list, so a flaky geocoder never breaks the form) — the UI
+      // uses it to show "search unavailable" instead of "no results" (#263).
+      const outcome = await searchPlacesDetailed(q, { lang });
+      res.json({ success: true, data: outcome.results, degraded: outcome.degraded });
     } catch (err) {
       next(err);
     }

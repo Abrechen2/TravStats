@@ -7,7 +7,10 @@ import { formatStreetAddress } from "./streetAddress";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
 
 // Nominatim's usage policy demands a descriptive UA and at most 1 req/s.
-const USER_AGENT = "TravStats/1.0 (self-hosted travel logbook)";
+// The contact URL matters (#263): a contactless UA identical across every
+// self-hosted instance is the signature OSM blanket-blocks. Mirrors
+// `portGeocoder.ts`.
+const USER_AGENT = "TravStats/2.0 (self-hosted travel logbook; +https://travstats.de)";
 const MIN_INTERVAL_MS = 1000;
 const REQUEST_TIMEOUT_MS = 5000;
 

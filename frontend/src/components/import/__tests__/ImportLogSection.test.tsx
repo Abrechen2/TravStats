@@ -98,10 +98,14 @@ describe("ImportLogSection", () => {
     expect(screen.getByText(/places\.csv/)).toBeInTheDocument();
     expect(screen.getByText("lodging:import.batches.source.email")).toBeInTheDocument();
     expect(
-      screen.getByText("lodging:import.batches.created(lodgingCount:2,stayCount:3)")
+      screen.getByText(
+        "lodging:import.batches.created(hotels:lodging:units.hotels(count:2),stays:lodging:units.stays(count:3))"
+      )
     ).toBeInTheDocument();
     expect(
-      screen.getByText("lodging:import.batches.created(lodgingCount:1,stayCount:1)")
+      screen.getByText(
+        "lodging:import.batches.created(hotels:lodging:units.hotels(count:1),stays:lodging:units.stays(count:1))"
+      )
     ).toBeInTheDocument();
   });
 

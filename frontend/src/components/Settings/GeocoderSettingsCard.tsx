@@ -127,7 +127,10 @@ export default function GeocoderSettingsCard({
     setTestStatus("loading");
     setTestMessage(null);
     try {
-      const results = await searchPlaces(TEST_QUERY);
+      const { results, degraded } = await searchPlaces(TEST_QUERY);
+      // A degraded outcome means the geocoder FAILED (#263) — before the
+      // flag, a blocked instance tested green as "0 hits, connection ok".
+      if (degraded) throw new Error("geocoder degraded");
       if (results.length > 0) {
         setTestStatus("ok");
         setTestMessage(
