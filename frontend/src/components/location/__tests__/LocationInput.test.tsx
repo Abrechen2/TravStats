@@ -9,6 +9,7 @@ import type { PlaceSearchResult } from "../../../lib/api/geo";
 
 vi.mock("../../../lib/api/geo", () => ({
   searchPlaces: vi.fn(),
+  reverseGeocode: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("../../../lib/logger", () => ({
@@ -153,19 +154,34 @@ describe("LocationInput", () => {
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ name: "Zürichberg" }));
   });
 
-  it("moves the pin on map click and marker drag once the map is opened", async () => {
+  // The inline mini-map is gone (owner decision 2026-08-21): the ONE map way
+  // is the modal. Nothing reaches the parent before "Übernehmen".
+  it("picks a point through the map modal — confirm reports, cancel discards", async () => {
     const onChange = vi.fn();
-    const { rerender } = render(<LocationInput value={{ lat: 10, lon: 20 }} onChange={onChange} />);
+    render(<LocationInput value={{ lat: 10, lon: 20 }} onChange={onChange} />);
 
-    await userEvent.click(screen.getByText("location:mapShow"));
+    await userEvent.click(screen.getByText("location:mapPick"));
     const map = await screen.findByTestId("mock-map");
     await userEvent.click(map);
-    expect(onChange).toHaveBeenLastCalledWith({ lat: 2.222, lon: 1.111 });
+    expect(onChange).not.toHaveBeenCalled();
 
-    rerender(<LocationInput value={{ lat: 2.222, lon: 1.111 }} onChange={onChange} />);
-    const marker = await screen.findByTestId("mock-marker");
-    await userEvent.click(marker);
-    expect(onChange).toHaveBeenLastCalledWith({ lat: 8.888, lon: 9.999 });
+    await userEvent.click(screen.getByText("location:mapModal.confirm"));
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ lat: 2.222, lon: 1.111 })
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("cancelling the map modal changes nothing", async () => {
+    const onChange = vi.fn();
+    render(<LocationInput value={null} onChange={onChange} />);
+
+    await userEvent.click(screen.getByText("location:mapPick"));
+    await userEvent.click(screen.getByTestId("mock-map"));
+    await userEvent.click(screen.getByText("location:mapModal.cancel"));
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("round-trips through the advanced raw lat/lon panel, seeded from an existing value", async () => {

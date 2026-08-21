@@ -27,6 +27,8 @@ import Map, { Marker, type MapLayerMouseEvent, type MapRef } from "react-map-gl/
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { searchPlaces, type PlaceSearchResult } from "../../lib/api/geo";
+import { LocationMapModal } from "../location/LocationMapModal";
+import type { LocationSelection } from "../location/LocationInput";
 
 /** MapLibre styles — reuse the same CartoCDN basemaps as DeckGLMap so the
  *  mini-map blends visually with the main map. */
@@ -88,7 +90,7 @@ export function EventLocationPicker({
   onChange,
   idPrefix = "event-location",
 }: EventLocationPickerProps): JSX.Element {
-  const { t } = useTranslation(["specialFlights"]);
+  const { t } = useTranslation(["specialFlights", "location"]);
 
   const mapRef = useRef<MapRef | null>(null);
   const debounceRef = useRef<number | null>(null);
@@ -104,6 +106,7 @@ export function EventLocationPicker({
   const [isSearching, setSearching] = useState<boolean>(false);
   const [searchError, setSearchError] = useState<boolean>(false);
   const [advancedOpen, setAdvancedOpen] = useState<boolean>(false);
+  const [modalOpen, setModalOpen] = useState<boolean>(false);
 
   const hasPosition = value.lat !== null && value.lon !== null;
 
@@ -200,6 +203,21 @@ export function EventLocationPicker({
       const { lng, lat } = e.lngLat;
       if (!isValidLat(lat) || !isValidLon(lng)) return;
       onChange({ lat, lon: lng });
+    },
+    [onChange]
+  );
+
+  /** The shared map-pick modal (owner request 2026-08-21: every address
+   *  input offers it). An event location is a bare point, so only the
+   *  coordinates of the confirmed selection are consumed. */
+  const handleModalConfirm = useCallback(
+    (selection: LocationSelection): void => {
+      onChange({ lat: selection.lat, lon: selection.lon });
+      setModalOpen(false);
+      const map = mapRef.current;
+      if (map && typeof map.flyTo === "function") {
+        map.flyTo({ center: [selection.lon, selection.lat], zoom: PICKED_ZOOM, duration: 600 });
+      }
     },
     [onChange]
   );
@@ -320,6 +338,23 @@ export function EventLocationPicker({
           </div>
         )}
       </div>
+
+      <button
+        type="button"
+        onClick={() => setModalOpen(true)}
+        className="text-xs hover:underline"
+        style={{ color: "var(--accent, #ffc107)" }}
+      >
+        {t("location:mapPick")}
+      </button>
+
+      <LocationMapModal
+        open={modalOpen}
+        value={hasPosition && value.lat !== null && value.lon !== null ? { lat: value.lat, lon: value.lon } : null}
+        onClose={() => setModalOpen(false)}
+        onConfirm={handleModalConfirm}
+        idPrefix={`${idPrefix}-map-modal`}
+      />
 
       {/* Mini-map */}
       <div

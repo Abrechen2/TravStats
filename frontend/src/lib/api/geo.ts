@@ -40,3 +40,25 @@ export const searchPlaces = async (q: string, lang?: string): Promise<PlaceSearc
   const { data } = await api.get<Envelope<PlaceSearchResult[]>>("/geo/search", { params });
   return { results: data.data, degraded: data.degraded === true };
 };
+
+/** Address parts resolved from a picked pin — mirrors the backend's
+ * `GeocodeParts` (`GET /api/v1/geo/reverse`). `null` = nothing resolved
+ * (open water is not an error). */
+export interface ReverseGeocodeResult {
+  name?: string | null;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
+}
+
+/** Coordinates → address parts, proxied through our backend (same CSP
+ * rationale as `searchPlaces` — the browser may not talk to Nominatim). */
+export const reverseGeocode = async (
+  lat: number,
+  lon: number
+): Promise<ReverseGeocodeResult | null> => {
+  const { data } = await api.get<Envelope<ReverseGeocodeResult | null>>("/geo/reverse", {
+    params: { lat: String(lat), lon: String(lon) },
+  });
+  return data.data;
+};
