@@ -311,6 +311,57 @@ export async function searchPlacesDetailed(
 }
 
 /**
+ * The named places closest to a coordinate — Photon's `/reverse` with
+ * `limit > 1`. This is the "what is HERE?" list behind the map-pick modal's
+ * POI selection (owner request 2026-08-21, Google-Maps-like): the user drops
+ * a pin, sees the hotels/restaurants/stations around it, and picks the one
+ * they meant. Same never-throws / `degraded` contract and the same URL and
+ * lang-retry robustness moves as `searchPlacesDetailed`.
+ */
+export async function reversePlacesDetailed(
+  lat: number,
+  lon: number,
+  options?: SearchPlacesOptions,
+): Promise<PlaceSearchOutcome> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return { results: [], degraded: false };
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return { results: [], degraded: false };
+
+  const limit = options?.limit ?? DEFAULT_LIMIT;
+
+  let photonUrl = DEFAULT_PHOTON_URL;
+  try {
+    const settings = await resolveGeocoderUrls();
+    photonUrl = settings.photonUrl;
+  } catch (error) {
+    photonUrl = process.env.PHOTON_URL ?? DEFAULT_PHOTON_URL;
+    logger.warn(
+      { error },
+      "[Photon] failed to resolve geocoder settings, falling back to ENV/default URL",
+    );
+  }
+
+  const baseUrl = photonUrl.replace(/\/+$/, "").replace(/\/api$/i, "");
+  const params = new URLSearchParams({
+    lat: String(lat),
+    lon: String(lon),
+    limit: String(limit),
+  });
+  if (options?.lang) params.set("lang", options.lang);
+  const url = `${baseUrl}/reverse?${params.toString()}`;
+
+  const first = await fetchPhoton(url, limit);
+  if (first.ok) return { results: first.results, degraded: false };
+
+  if (options?.lang && first.stage === "http_status") {
+    params.delete("lang");
+    const retry = await fetchPhoton(`${baseUrl}/reverse?${params.toString()}`, limit);
+    if (retry.ok) return { results: retry.results, degraded: false };
+  }
+
+  return { results: [], degraded: true };
+}
+
+/**
  * Search Photon for places matching free text. **Never throws.** Every
  * failure path — unreachable, non-200, oversized response, invalid JSON, or
  * a response shape that fails schema validation — degrades to `[]` and logs

@@ -7,7 +7,7 @@ import {
 } from "../middleware/auth";
 import { photonSearchLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
-import { searchPlacesDetailed } from "../services/geo/photon";
+import { reversePlacesDetailed, searchPlacesDetailed } from "../services/geo/photon";
 import { reverseGeocode } from "../services/geo/nominatim";
 
 /**
@@ -72,6 +72,35 @@ router.get(
 
       const parts = await reverseGeocode(lat, lon);
       res.json({ success: true, data: parts });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+const reversePlacesQuerySchema = z.object({
+  lat: z.coerce.number().min(-90).max(90),
+  lon: z.coerce.number().min(-180).max(180),
+  lang: z.string().length(2).optional(),
+});
+
+/** How many nearby places the modal's POI list shows. */
+const REVERSE_PLACES_LIMIT = 5;
+
+// The nearest NAMED places around a pin (Photon /reverse, limit > 1) — the
+// map-pick modal's Google-Maps-like "what is here?" selection. Same envelope
+// as /search: `degraded: true` = the geocoder failed, still HTTP 200.
+router.get(
+  "/reverse-places",
+  photonSearchLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const parsed = reversePlacesQuerySchema.safeParse(req.query);
+      if (!parsed.success) throw new AppError(parsed.error.message, 400);
+      const { lat, lon, lang } = parsed.data;
+
+      const outcome = await reversePlacesDetailed(lat, lon, { lang, limit: REVERSE_PLACES_LIMIT });
+      res.json({ success: true, data: outcome.results, degraded: outcome.degraded });
     } catch (err) {
       next(err);
     }

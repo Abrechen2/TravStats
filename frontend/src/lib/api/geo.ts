@@ -51,6 +51,21 @@ export interface ReverseGeocodeResult {
   country?: string | null;
 }
 
+/** The nearest NAMED places around a pin (Photon reverse, limit 5) — the
+ * map-pick modal's Google-Maps-like "what is here?" selection. */
+export const reversePlaces = async (
+  lat: number,
+  lon: number,
+  lang?: string
+): Promise<PlaceSearchResponse> => {
+  const params: Record<string, string> = { lat: String(lat), lon: String(lon) };
+  if (lang) params.lang = lang;
+  const { data } = await api.get<Envelope<PlaceSearchResult[]>>("/geo/reverse-places", {
+    params,
+  });
+  return { results: data.data, degraded: data.degraded === true };
+};
+
 /** Coordinates → address parts, proxied through our backend (same CSP
  * rationale as `searchPlaces` — the browser may not talk to Nominatim). */
 export const reverseGeocode = async (

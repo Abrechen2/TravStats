@@ -17,7 +17,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
 import type { MapLayerMouseEvent } from "react-map-gl/maplibre";
 import { useTranslation } from "../../hooks/useTranslation";
-import { reverseGeocode, type PlaceSearchResult, type ReverseGeocodeResult } from "../../lib/api/geo";
+import {
+  reverseGeocode,
+  reversePlaces,
+  type PlaceSearchResult,
+  type ReverseGeocodeResult,
+} from "../../lib/api/geo";
 import { logger } from "../../lib/logger";
 import type { LocationCoordinates, LocationSelection } from "./LocationInput";
 import { useLocationSearch } from "./useLocationSearch";
@@ -51,6 +56,8 @@ export function LocationMapModal({
   const [hit, setHit] = useState<PlaceSearchResult | null>(null);
   const [resolved, setResolved] = useState<ReverseGeocodeResult | null>(null);
   const [resolving, setResolving] = useState(false);
+  /** The named places around a MAP-placed pin — the "what is here?" list. */
+  const [pois, setPois] = useState<PlaceSearchResult[]>([]);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
   const [focusNonce, setFocusNonce] = useState(0);
@@ -63,6 +70,7 @@ export function LocationMapModal({
     setDraft(value);
     setHit(null);
     setResolved(null);
+    setPois([]);
     setQuery("");
     // The parent's value is only read at open — while the modal is up, the
     // draft is the single source of truth.
@@ -80,6 +88,9 @@ export function LocationMapModal({
     reverseIdRef.current = requestId;
     setResolving(true);
     const timer = window.setTimeout(() => {
+      // Address and nearby-POI lookups run in parallel — the address is the
+      // fallback line, the POIs are the Google-Maps-like "what is here?"
+      // selection. Either failing alone must not take the other down.
       void (async (): Promise<void> => {
         try {
           const parts = await reverseGeocode(draft.lat, draft.lon);
@@ -93,15 +104,28 @@ export function LocationMapModal({
           if (reverseIdRef.current === requestId) setResolving(false);
         }
       })();
+      void (async (): Promise<void> => {
+        try {
+          const lang = i18n.language?.split("-")[0];
+          const nearby = await reversePlaces(draft.lat, draft.lon, lang);
+          if (reverseIdRef.current !== requestId) return;
+          setPois(nearby.results);
+        } catch (err) {
+          if (reverseIdRef.current !== requestId) return;
+          logger.warn("LocationMapModal: reverse places failed", err);
+          setPois([]);
+        }
+      })();
     }, REVERSE_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
-  }, [open, draft, hit]);
+  }, [open, draft, hit, i18n.language]);
 
   const placeFromMap = useCallback((lat: number, lon: number): void => {
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
     setDraft({ lat, lon });
     setHit(null);
     setResolved(null);
+    setPois([]);
   }, []);
 
   const handleMapClick = useCallback(
@@ -120,12 +144,22 @@ export function LocationMapModal({
       setDraft({ lat: selectedHit.lat, lon: selectedHit.lon });
       setHit(selectedHit);
       setResolved(null);
+      setPois([]);
       setQuery("");
       reset();
       setFocusNonce((n) => n + 1);
     },
     [reset]
   );
+
+  /** A place picked from the "what is here?" list: the pin snaps to it and
+   *  its fields win on confirm — exactly like a search hit. The list stays,
+   *  so a wrong first tap can simply be corrected with a second one. */
+  const handlePickPoi = useCallback((poi: PlaceSearchResult): void => {
+    setDraft({ lat: poi.lat, lon: poi.lon });
+    setHit(poi);
+    setFocusNonce((n) => n + 1);
+  }, []);
 
   const handleConfirm = useCallback((): void => {
     if (!draft) return;
@@ -253,6 +287,40 @@ export function LocationMapModal({
             onMarkerDragEnd={handleMarkerDragEnd}
           />
         </div>
+
+        {pois.length > 0 && (
+          <div className="mt-3" data-testid="map-modal-poi-list">
+            <p className="mb-1 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              {t("location:mapModal.nearby")}
+            </p>
+            <ul className="max-h-40 divide-y divide-[var(--color-border)] overflow-y-auto rounded-lg border border-[var(--color-border)]">
+              {pois.map((poi, i) => {
+                const selected =
+                  hit !== null && hit.lat === poi.lat && hit.lon === poi.lon && hit.name === poi.name;
+                return (
+                  <li key={`${poi.name}-${i}`}>
+                    <button
+                      type="button"
+                      onClick={() => handlePickPoi(poi)}
+                      className={
+                        "flex w-full items-baseline justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--bg-inset)]" +
+                        (selected ? " bg-[var(--bg-inset)]" : "")
+                      }
+                    >
+                      <span className="truncate text-[var(--text-primary)]">
+                        {selected ? "✓ " : ""}
+                        {poi.name}
+                      </span>
+                      <span className="shrink-0 text-xs text-[var(--text-muted)]">
+                        {[poi.city, poi.country].filter(Boolean).join(", ")}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
 
         <div className="mt-3 flex items-center justify-between gap-4">
           <div className="min-w-0 text-xs text-[var(--text-muted)]">

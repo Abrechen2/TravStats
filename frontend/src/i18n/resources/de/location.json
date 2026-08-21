@@ -22,6 +22,7 @@
     "confirm": "Übernehmen",
     "cancel": "Abbrechen",
     "resolving": "Adresse wird ermittelt…",
-    "noAddress": "Keine Adresse zu diesem Punkt gefunden"
+    "noAddress": "Keine Adresse zu diesem Punkt gefunden",
+    "nearby": "In der Nähe"
   }
 }

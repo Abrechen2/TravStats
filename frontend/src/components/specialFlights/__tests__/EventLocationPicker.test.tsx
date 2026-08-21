@@ -13,6 +13,7 @@ import type { PlaceSearchResult } from "../../../lib/api/geo";
 vi.mock("../../../lib/api/geo", () => ({
   searchPlaces: vi.fn(),
   reverseGeocode: vi.fn().mockResolvedValue(null),
+  reversePlaces: vi.fn().mockResolvedValue({ results: [], degraded: false }),
 }));
 
 vi.mock("../../../lib/logger", () => ({

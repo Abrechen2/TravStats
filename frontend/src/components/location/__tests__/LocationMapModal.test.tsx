@@ -3,12 +3,13 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { JSX, ReactNode } from "react";
 import { LocationMapModal } from "../LocationMapModal";
-import { reverseGeocode, searchPlaces } from "../../../lib/api/geo";
+import { reverseGeocode, reversePlaces, searchPlaces } from "../../../lib/api/geo";
 import type { PlaceSearchResult } from "../../../lib/api/geo";
 
 vi.mock("../../../lib/api/geo", () => ({
   searchPlaces: vi.fn(),
   reverseGeocode: vi.fn(),
+  reversePlaces: vi.fn(),
 }));
 
 vi.mock("../../../lib/logger", () => ({
@@ -74,6 +75,7 @@ describe("LocationMapModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(reverseGeocode).mockResolvedValue(null);
+    vi.mocked(reversePlaces).mockResolvedValue({ results: [], degraded: false });
   });
 
   it("renders nothing while closed", () => {
@@ -178,5 +180,93 @@ describe("LocationMapModal", () => {
 
     await userEvent.click(screen.getByText("location:mapModal.confirm"));
     expect(onConfirm).toHaveBeenCalledWith(expect.objectContaining({ lat: 10, lon: 20 }));
+  });
+
+  describe("nearby-POI selection (Google-Maps-like)", () => {
+    const adlonPoi: PlaceSearchResult = {
+      name: "Hotel Adlon Kempinski",
+      address: "Unter den Linden 77",
+      city: "Berlin",
+      country: "Deutschland",
+      countryCode: "DE",
+      lat: 52.5163,
+      lon: 13.3803,
+      type: "hotel",
+    };
+    const bahnhofPoi: PlaceSearchResult = {
+      name: "Bahnhof Brandenburger Tor",
+      city: "Berlin",
+      country: "Deutschland",
+      countryCode: "DE",
+      lat: 52.5162,
+      lon: 13.3812,
+      type: "station",
+    };
+
+    it("lists the nearby places after a map click", async () => {
+      vi.mocked(reversePlaces).mockResolvedValue({
+        results: [adlonPoi, bahnhofPoi],
+        degraded: false,
+      });
+      render(
+        <LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={vi.fn()} />
+      );
+
+      await userEvent.click(screen.getByTestId("mock-map"));
+
+      expect(await screen.findByText("Hotel Adlon Kempinski")).toBeInTheDocument();
+      expect(screen.getByText("Bahnhof Brandenburger Tor")).toBeInTheDocument();
+    });
+
+    it("picking a place makes confirm report its full fields", async () => {
+      vi.mocked(reversePlaces).mockResolvedValue({ results: [adlonPoi], degraded: false });
+      const onConfirm = vi.fn();
+      render(
+        <LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={onConfirm} />
+      );
+
+      await userEvent.click(screen.getByTestId("mock-map"));
+      await userEvent.click(await screen.findByText("Hotel Adlon Kempinski"));
+      await userEvent.click(screen.getByText("location:mapModal.confirm"));
+
+      expect(onConfirm).toHaveBeenCalledWith({
+        lat: 52.5163,
+        lon: 13.3803,
+        name: "Hotel Adlon Kempinski",
+        address: "Unter den Linden 77",
+        city: "Berlin",
+        country: "Deutschland",
+        countryCode: "DE",
+      });
+    });
+
+    it("a new map click clears the picked place again", async () => {
+      vi.mocked(reversePlaces).mockResolvedValue({ results: [adlonPoi], degraded: false });
+      const onConfirm = vi.fn();
+      render(
+        <LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={onConfirm} />
+      );
+
+      await userEvent.click(screen.getByTestId("mock-map"));
+      await userEvent.click(await screen.findByText("Hotel Adlon Kempinski"));
+      await userEvent.click(screen.getByTestId("mock-map"));
+      await userEvent.click(screen.getByText("location:mapModal.confirm"));
+
+      expect(onConfirm).toHaveBeenCalledWith(
+        expect.not.objectContaining({ name: "Hotel Adlon Kempinski" })
+      );
+    });
+
+    it("shows no list when nothing is nearby", async () => {
+      vi.mocked(reversePlaces).mockResolvedValue({ results: [], degraded: false });
+      render(
+        <LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={vi.fn()} />
+      );
+
+      await userEvent.click(screen.getByTestId("mock-map"));
+      await new Promise((r) => setTimeout(r, 700));
+
+      expect(screen.queryByTestId("map-modal-poi-list")).not.toBeInTheDocument();
+    });
   });
 });
