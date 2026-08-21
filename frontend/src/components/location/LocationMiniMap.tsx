@@ -18,6 +18,8 @@ export interface LocationMiniMapProps {
    */
   focusNonce: number;
   compact: boolean;
+  /** Overrides the compact/full height — the map-pick modal wants a tall map. */
+  height?: number;
   ariaLabel: string;
   attributionLabel: string;
   onMapClick: (e: MapLayerMouseEvent) => void;
@@ -29,6 +31,7 @@ export function LocationMiniMap({
   initialViewState,
   focusNonce,
   compact,
+  height,
   ariaLabel,
   attributionLabel,
   onMapClick,
@@ -64,7 +67,7 @@ export function LocationMiniMap({
     <div
       className="relative rounded-md overflow-hidden border"
       style={{
-        height: compact ? 220 : 320,
+        height: height ?? (compact ? 220 : 320),
         borderColor: "var(--color-border)",
         background: "var(--bg-elevated)",
       }}

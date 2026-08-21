@@ -7,8 +7,6 @@
   "searchError": "Suche fehlgeschlagen. Bitte erneut versuchen.",
   "coordinatesDetected": "Koordinaten erkannt",
   "advanced": "Erweitert",
-  "mapShow": "Karte anzeigen",
-  "mapHide": "Karte ausblenden",
   "mapAriaLabel": "Karte zur Positionsauswahl",
   "attribution": "© OpenStreetMap Mitwirkende",
   "clear": "✕ Position zurücksetzen",
@@ -16,5 +14,14 @@
   "field": {
     "lat": "Breite",
     "lon": "Länge"
+  },
+  "mapPick": "Auf Karte wählen…",
+  "mapModal": {
+    "title": "Punkt auf Karte wählen",
+    "searchPlaceholder": "Ort suchen – ein Treffer setzt den Pin",
+    "confirm": "Übernehmen",
+    "cancel": "Abbrechen",
+    "resolving": "Adresse wird ermittelt…",
+    "noAddress": "Keine Adresse zu diesem Punkt gefunden"
   }
 }
