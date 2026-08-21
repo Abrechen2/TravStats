@@ -737,7 +737,11 @@
     "toast": {
       "movedFromDashboard": "Der Flug-Import ist jetzt hier — unter Einstellungen → Import."
     },
-    "noRoutes": "Für diesen Bereich gibt es noch kein Listenformat. Einzelne Einträge legst du direkt dort an."
+    "noRoutes": "Für diesen Bereich gibt es noch kein Listenformat. Einzelne Einträge legst du direkt dort an.",
+    "autoCreateTrips": {
+      "label": "Reisen automatisch anlegen",
+      "description": "Flüge mit derselben Buchungsnummer werden beim Import automatisch zu einer Reise mit Buchung gruppiert. Ausgeschaltet bleibt die Buchungsnummer erhalten – über „Reisen erkennen“ lässt sich die Gruppierung später jederzeit nachholen."
+    }
   },
   "devices": {
     "title": "Geräte",

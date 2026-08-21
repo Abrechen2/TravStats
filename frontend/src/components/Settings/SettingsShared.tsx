@@ -7,15 +7,19 @@ interface AmberToggleProps {
   checked: boolean;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   disabled?: boolean;
+  /** Lets an external `<label htmlFor>` name the toggle. */
+  id?: string;
 }
 
 export function AmberToggle({
   checked,
   onChange,
   disabled = false,
+  id,
 }: AmberToggleProps): JSX.Element {
   return (
     <input
+      id={id}
       type="checkbox"
       checked={checked}
       onChange={onChange}

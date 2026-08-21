@@ -3,7 +3,8 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { AVAILABLE_DOMAINS, DOMAINS, type DomainKey } from "../../shared/domains";
-import { SectionCard, SectionTitle } from "./SettingsShared";
+import { AmberToggle, SectionCard, SectionTitle } from "./SettingsShared";
+import { useSettingsStore } from "../../store/settingsStore";
 import { Fr24ImportTile } from "../import/Fr24ImportTile";
 import { GenericCsvImportTile } from "../import/GenericCsvImportTile";
 import { LodgingCsvImportTile } from "../import/LodgingCsvImportTile";
@@ -27,6 +28,8 @@ import { ImportLogSection } from "../import/ImportLogSection";
 export default function ImportSection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
   const { isEnabled } = useEnabledDomains();
+  const autoCreateTrips = useSettingsStore((s) => s.autoCreateTrips);
+  const setAutoCreateTrips = useSettingsStore((s) => s.setAutoCreateTrips);
 
   // The log and the tiles live on the SAME page, so a commit here must reach
   // the log — it loads once on mount, and without this signal a fresh import
@@ -57,6 +60,31 @@ export default function ImportSection(): JSX.Element {
         title={t("settings:import.title")}
         description={t("settings:import.description")}
       />
+      {/* Import behaviour, not an import route: whether flights sharing a
+          booking reference silently become a trip + booking. Persists
+          immediately via the store's setter (like the base currency). */}
+      <div
+        className="flex items-start justify-between gap-4 rounded-lg p-4"
+        style={{ background: "var(--bg-inset)", border: "1px solid var(--color-border)" }}
+      >
+        <div>
+          <label
+            htmlFor="import-auto-create-trips"
+            className="block text-sm font-medium"
+            style={{ color: "var(--text-primary)" }}
+          >
+            {t("settings:import.autoCreateTrips.label")}
+          </label>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>
+            {t("settings:import.autoCreateTrips.description")}
+          </p>
+        </div>
+        <AmberToggle
+          id="import-auto-create-trips"
+          checked={autoCreateTrips}
+          onChange={(e) => setAutoCreateTrips(e.target.checked)}
+        />
+      </div>
       <div className="flex flex-col gap-6">
         {groups.map((key) => {
           const tiles = listImporters[key] ?? [];

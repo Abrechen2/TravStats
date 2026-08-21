@@ -128,6 +128,13 @@ export interface SettingsState {
    */
   baseCurrency: string;
   /**
+   * Silent trip auto-creation during flight import (`UserSettings.
+   * autoCreateTrips`, column-backed, default true). Off = imported flights
+   * keep their PNR but no trip/booking is created silently; the explicit
+   * "detect trips" action still works.
+   */
+  autoCreateTrips: boolean;
+  /**
    * Instance-level beta gate, mirrored read-only from `GET /settings`.
    * `null` = not loaded yet → consumers must treat it as OFF (see
    * `hooks/useBetaFeatures.ts`). There is deliberately no setter and it is
@@ -152,6 +159,8 @@ export interface SettingsState {
    * payload for the same reason.
    */
   setBaseCurrency: (currency: string) => void;
+  /** Persists immediately, like `setBaseCurrency` — same rationale. */
+  setAutoCreateTrips: (enabled: boolean) => void;
   loadApiKeysStatus: () => Promise<void>;
   resetSettings: () => void;
   loadRemoteSettings: () => Promise<void>;
@@ -235,6 +244,7 @@ const defaultSettings: Omit<
   | "setApiKeys"
   | "setEnabledDomains"
   | "setBaseCurrency"
+  | "setAutoCreateTrips"
   | "loadApiKeysStatus"
   | "resetSettings"
   | "loadRemoteSettings"
@@ -283,6 +293,7 @@ const defaultSettings: Omit<
   apiKeys: null,
   enabledDomains: ["flight"],
   baseCurrency: "EUR",
+  autoCreateTrips: true,
   betaFeaturesEnabled: null,
 };
 
@@ -324,6 +335,12 @@ export const useSettingsStore = create<SettingsState>()(
         set({ baseCurrency: currency });
         settingsApi.update({ baseCurrency: currency }).catch((error: unknown) => {
           logger.warn("Failed to save base currency", error);
+        });
+      },
+      setAutoCreateTrips: (enabled) => {
+        set({ autoCreateTrips: enabled });
+        settingsApi.update({ autoCreateTrips: enabled }).catch((error: unknown) => {
+          logger.warn("Failed to save autoCreateTrips", error);
         });
       },
       loadApiKeysStatus: async () => {
@@ -426,6 +443,11 @@ export const useSettingsStore = create<SettingsState>()(
               // not part of any of the settings-group objects merged above.
               if (typeof remote.baseCurrency === "string" && remote.baseCurrency.length > 0) {
                 newState.baseCurrency = remote.baseCurrency;
+              }
+              // autoCreateTrips is a plain top-level field too. Missing field
+              // (older backend) keeps the default `true` = today's behaviour.
+              if (typeof remote.autoCreateTrips === "boolean") {
+                newState.autoCreateTrips = remote.autoCreateTrips;
               }
               // Instance-level, read-only. Anything that isn't an explicit
               // `true`/`false` (missing field, older backend) stays `null` =
