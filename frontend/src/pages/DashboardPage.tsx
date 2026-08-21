@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { DashboardLayout } from "../components/Dashboard/DashboardLayout";
 import { useDashboardRoute } from "../hooks/useDashboardRoute";
+import { useClearMapSelectionsOnTabChange } from "../hooks/useClearMapSelectionsOnTabChange";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { flightsApi } from "../lib/api/flights";
@@ -46,9 +47,20 @@ function useImportMigrationToast(enabled: boolean): void {
 
 export default function DashboardPage(): JSX.Element {
   const { tab } = useDashboardRoute();
+  // #257: a selected flight/cruise (popup + rings) must not survive into
+  // another domain's map.
+  useClearMapSelectionsOnTabChange(tab);
   const { isEnabled } = useEnabledDomains();
   const { isFeatureVisible } = useBetaFeatures();
   const [counts, setCounts] = useState({ flight: 0, cruise: 0, poi: 0, lodging: 0 });
+  // How many of the counted entries are merely planned (B6): shown as a
+  // "(n geplant)" hint so the tab count and the flown-only statistics stop
+  // looking contradictory. Cruises derive it from the list already loaded;
+  // flights need their own count query.
+  const [scheduledCounts, setScheduledCounts] = useState<{ flight: number; cruise: number }>({
+    flight: 0,
+    cruise: 0,
+  });
   const [countsLoaded, setCountsLoaded] = useState(false);
   // Only nag about the moved import once the account is known to have flights.
   useImportMigrationToast(countsLoaded && counts.flight > 0);
@@ -62,14 +74,20 @@ export default function DashboardPage(): JSX.Element {
     const load = async (): Promise<void> => {
       try {
         const flightsPromise = flightsApi.getAll({ limit: 1, offset: 0 });
+        const scheduledFlightsPromise = flightsApi.getAll({
+          limit: 1,
+          offset: 0,
+          status: "scheduled",
+        });
         const cruisesPromise = isEnabled("cruise") ? cruiseApi.list({}) : Promise.resolve([]);
         // getLodgingStats().lodgingsCount is the exact count — cheaper than
         // fetching the full lodging list just to read its length.
         const lodgingPromise = isEnabled("lodging")
           ? getLodgingStats()
           : Promise.resolve(null);
-        const [flights, cruises, lodgingStats] = await Promise.all([
+        const [flights, scheduledFlights, cruises, lodgingStats] = await Promise.all([
           flightsPromise,
+          scheduledFlightsPromise,
           cruisesPromise,
           lodgingPromise,
         ]);
@@ -79,6 +97,10 @@ export default function DashboardPage(): JSX.Element {
           cruise: cruises.length,
           poi: 0,
           lodging: lodgingStats?.lodgingsCount ?? 0,
+        });
+        setScheduledCounts({
+          flight: scheduledFlights.total,
+          cruise: cruises.filter((c) => c.status === "scheduled").length,
         });
         setCountsLoaded(true);
       } catch (err) {
@@ -94,6 +116,7 @@ export default function DashboardPage(): JSX.Element {
   return (
     <DashboardLayout
       counts={counts}
+      scheduledCounts={scheduledCounts}
       countsLoaded={countsLoaded}
       onDataChanged={() => setRefreshToken((n) => n + 1)}
     >

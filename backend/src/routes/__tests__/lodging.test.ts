@@ -704,6 +704,40 @@ describe("Lodging API", () => {
       expect(res.body.data.nights).toBe(3); // 1 + 2 + 0
     });
 
+    it("counts only stays whose check-out has passed — a scheduled stay is not a visit yet (owner check-out rule)", async () => {
+      // UTC-midnight offsets, not raw ms deltas — matches resolveStayTiming's
+      // daySpan so the night counts land exactly on 4 and 3, not off-by-one
+      // depending on the test run's time-of-day.
+      const today = new Date();
+      const daysFromNow = (n: number): Date =>
+        new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + n));
+
+      const lodging = await prisma.lodging.create({ data: { userId, name: "Checkout Rule Hotel" } });
+      await prisma.lodgingStay.createMany({
+        data: [
+          {
+            lodgingId: lodging.id,
+            userId,
+            checkIn: daysFromNow(-10),
+            checkOut: daysFromNow(-6), // past -> completed, 4 nights
+            status: "completed",
+          },
+          {
+            lodgingId: lodging.id,
+            userId,
+            checkIn: daysFromNow(30),
+            checkOut: daysFromNow(33), // future -> scheduled, 3 nights
+            status: "scheduled",
+          },
+        ],
+      });
+
+      const list = await request(app).get("/api/v1/lodging").set("Cookie", authCookie).expect(200);
+      const row = list.body.data.find((l: { id: string }) => l.id === lodging.id);
+      expect(row.stayCount).toBe(1);
+      expect(row.nights).toBe(4);
+    });
+
     it("updates a lodging", async () => {
       const res = await request(app)
         .patch(`/api/v1/lodging/${lodgingId}`)

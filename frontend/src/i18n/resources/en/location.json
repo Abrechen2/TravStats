@@ -7,8 +7,6 @@
   "searchError": "Search failed. Please try again.",
   "coordinatesDetected": "Coordinates detected",
   "advanced": "Advanced",
-  "mapShow": "Show map",
-  "mapHide": "Hide map",
   "mapAriaLabel": "Map for choosing a position",
   "attribution": "© OpenStreetMap contributors",
   "clear": "✕ Clear position",
@@ -16,5 +14,14 @@
   "field": {
     "lat": "Latitude",
     "lon": "Longitude"
+  },
+  "mapPick": "Pick on map…",
+  "mapModal": {
+    "title": "Pick a point on the map",
+    "searchPlaceholder": "Search a place – a hit sets the pin",
+    "confirm": "Apply",
+    "cancel": "Cancel",
+    "resolving": "Resolving address…",
+    "noAddress": "No address found for this point"
   }
 }

@@ -10,6 +10,7 @@ import * as fx from "../services/fx/resolver";
 import { resolveLocation } from "./lodgingGeocode";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { deriveLodgingStatus } from "../shared/statusDerivation";
+import { classifyStay } from "../shared/lodgingCounting";
 import { resolveStayTiming } from "../shared/lodgingTiming";
 import { deriveStayOverallRating } from "../shared/ratingDerivation";
 import { deriveStayTotalPrice } from "../shared/stayPricing";
@@ -97,6 +98,7 @@ interface AggregateStay extends RatedStay, AggregateStayFx {
   checkOut: Date | null;
   datePrecision: string;
   nights: number | null;
+  status: string;
 }
 
 export interface LodgingAggregates {
@@ -113,14 +115,18 @@ export function computeAggregates(
   stays: AggregateStay[],
   currentBaseCurrency: string,
 ): LodgingAggregates {
-  const totalSpendBaseByCurrency = sumSpendBaseByCurrency(stays);
+  // The check-out rule (shared/lodgingCounting): a stay counts once it is
+  // over. Future and cancelled bookings contribute nothing to any figure —
+  // the same verdict the stats path (calculateLodgingStats) already applies.
+  const visited = stays.filter((s) => classifyStay(s) === "visited");
+  const totalSpendBaseByCurrency = sumSpendBaseByCurrency(visited);
   return {
-    overallRating: deriveOverallRating(stays),
-    stayCount: stays.length,
+    overallRating: deriveOverallRating(visited),
+    stayCount: visited.length,
     // Nights come from `resolveStayTiming`, not from a local date subtraction:
     // an undated stay can still carry an explicit night count, and a
     // month-precision one must not have its placeholder dates differenced.
-    nights: stays.reduce((sum, s) => sum + resolveStayTiming(s).nights, 0),
+    nights: visited.reduce((sum, s) => sum + resolveStayTiming(s).nights, 0),
     totalSpendBase: totalSpendBaseByCurrency[currentBaseCurrency] ?? 0,
     totalSpendBaseByCurrency,
   };
@@ -608,6 +614,31 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
       throw new AppError("checkOut must not precede checkIn", 400);
     }
 
+    // Times are claims about a DAY-precise date (see schemas/lodging.ts).
+    // The schema can only check the body; here the MERGED stay is checked:
+    // an explicit time the merged stay cannot carry is a contradiction and
+    // refused, while a STORED time whose date/precision is being edited away
+    // is cleared alongside — the row must never carry a time without its day.
+    const effectiveDatePrecision = input.datePrecision ?? stay.datePrecision;
+    const supportsTime = (date: Date | null): boolean =>
+      date !== null && effectiveDatePrecision === "DAY";
+    if (input.checkInTime != null && !supportsTime(effectiveCheckIn)) {
+      throw new AppError("checkInTime requires a DAY-precision check-in date", 400);
+    }
+    if (input.checkOutTime != null && !supportsTime(effectiveCheckOut)) {
+      throw new AppError("checkOutTime requires a DAY-precision check-out date", 400);
+    }
+    const timeClears = {
+      ...(input.checkInTime === undefined && stay.checkInTime !== null && !supportsTime(effectiveCheckIn)
+        ? { checkInTime: null }
+        : {}),
+      ...(input.checkOutTime === undefined &&
+      stay.checkOutTime !== null &&
+      !supportsTime(effectiveCheckOut)
+        ? { checkOutTime: null }
+        : {}),
+    };
+
     // Only re-run the FX snapshot when a field that feeds the conversion
     // ACTUALLY CHANGED VALUE — an unrelated edit (e.g. notes) must not touch
     // a previously-good snapshot, and must never fail the request either way.
@@ -706,6 +737,7 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
       where: { id: stay.id },
       data: {
         ...input,
+        ...timeClears,
         // totalPrice is authoritative and derived above from the merged view,
         // so it overrides whatever `...input` carried (which may be a stale
         // re-send or absent while only the per-night price changed).

@@ -8,6 +8,8 @@ import { useState, useEffect, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { flightsApi, tripsApi } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
+import { ColumnPicker } from "../components/table/ColumnPicker";
+import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import type { Flight, FlightFilters, FlightInput, Trip } from "../types";
 import Filters from "../components/Filters";
 import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
@@ -39,6 +41,21 @@ import SourceInfoDot from "../components/flightsTable/SourceInfoDot";
 // This page now focuses purely on the flight table; the trip badge in
 // each flight row is a Link to /trips/:id.
 
+// Column-visibility ids (ColumnPicker) — header and row cells must agree.
+const FLIGHT_COLUMN_IDS = [
+  "airline",
+  "flightNumber",
+  "route",
+  "time",
+  "status",
+  "duration",
+  "aircraft",
+  "price",
+  "trip",
+  "actions",
+] as const;
+const FLIGHT_ALWAYS_VISIBLE = ["route", "actions"] as const;
+
 export default function FlightsTablePage(): JSX.Element {
   const { t } = useTranslation([
     "flights",
@@ -63,6 +80,7 @@ export default function FlightsTablePage(): JSX.Element {
     "departureTime"
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const flightColumnPrefs = useColumnPrefs("flights-list", FLIGHT_ALWAYS_VISIBLE);
   const [showAddFlight, setShowAddFlight] = useState(false);
   const [showSpecialModal, setShowSpecialModal] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
@@ -334,6 +352,22 @@ export default function FlightsTablePage(): JSX.Element {
               {t("dashboard:flightsTitle")}
             </h1>
             <div className="flex items-center gap-2">
+              <ColumnPicker
+                columns={FLIGHT_COLUMN_IDS.map((id) => ({
+                  id,
+                  // Two ids whose label keys don't match their column id: the
+                  // duration header says "Flugzeit", the trip column borrows
+                  // the trips tab title.
+                  label:
+                    id === "trip"
+                      ? t("trips:tab")
+                      : id === "duration"
+                        ? t("flights:table.flightTime")
+                        : t(`flights:table.${id}`),
+                  always: (FLIGHT_ALWAYS_VISIBLE as readonly string[]).includes(id),
+                }))}
+                prefs={flightColumnPrefs}
+              />
               <button
                 className="btn-primary flex items-center gap-2 whitespace-nowrap"
                 onClick={() => setShowAddFlight(true)}
@@ -383,6 +417,7 @@ export default function FlightsTablePage(): JSX.Element {
                       }}
                     >
                       <tr>
+                        {flightColumnPrefs.isVisible("airline") && (
                         <th
                           className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
                           style={thStyle}
@@ -396,18 +431,24 @@ export default function FlightsTablePage(): JSX.Element {
                             {sortBy === "airline" && (sortOrder === "asc" ? "▼" : "▲")}
                           </button>
                         </th>
+                        )}
+                        {flightColumnPrefs.isVisible("flightNumber") && (
                         <th
                           className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
                           style={thStyle}
                         >
                           {t("flights:table.flightNumber")}
                         </th>
+                        )}
+                        {flightColumnPrefs.isVisible("route") && (
                         <th
                           className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
                           style={thStyle}
                         >
                           {t("flights:table.route")}
                         </th>
+                        )}
+                        {flightColumnPrefs.isVisible("time") && (
                         <th
                           className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
                           style={thStyle}
@@ -421,6 +462,8 @@ export default function FlightsTablePage(): JSX.Element {
                             {sortBy === "departureTime" && (sortOrder === "asc" ? "▼" : "▲")}
                           </button>
                         </th>
+                        )}
+                        {flightColumnPrefs.isVisible("status") && (
                         <th
                           className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
                           style={thStyle}
@@ -434,6 +477,8 @@ export default function FlightsTablePage(): JSX.Element {
                             {sortBy === "status" && (sortOrder === "asc" ? "▼" : "▲")}
                           </button>
                         </th>
+                        )}
+                        {flightColumnPrefs.isVisible("duration") && (
                         <th
                           className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
                           style={thStyle}
@@ -447,30 +492,39 @@ export default function FlightsTablePage(): JSX.Element {
                             {sortBy === "duration" && (sortOrder === "asc" ? "▼" : "▲")}
                           </button>
                         </th>
+                        )}
+                        {flightColumnPrefs.isVisible("aircraft") && (
                         <th
                           className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
                           style={thStyle}
                         >
                           {t("flights:table.aircraft")}
                         </th>
+                        )}
+                        {flightColumnPrefs.isVisible("price") && (
                         <th
                           className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
                           style={thStyle}
                         >
                           {t("flights:table.price")}
                         </th>
+                        )}
+                        {flightColumnPrefs.isVisible("trip") && (
                         <th
                           className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider"
                           style={thStyle}
                         >
                           {t("trips:tab")}
                         </th>
+                        )}
+                        {flightColumnPrefs.isVisible("actions") && (
                         <th
                           className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider whitespace-nowrap"
                           style={thStyle}
                         >
                           {t("flights:table.actions")}
                         </th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -495,6 +549,7 @@ export default function FlightsTablePage(): JSX.Element {
                           >
                             {/* py-1 instead of py-3: the brand tile fills the row height
                                 set by the two-line route/time cells instead of growing it. */}
+                            {flightColumnPrefs.isVisible("airline") && (
                             <td className="px-4 py-1" style={{ color: "var(--text-primary)" }}>
                               <AirlineWordmarkCell flight={flight} />
                               {flight.specialType && (
@@ -503,18 +558,26 @@ export default function FlightsTablePage(): JSX.Element {
                                 </div>
                               )}
                             </td>
+                            )}
+                            {flightColumnPrefs.isVisible("flightNumber") && (
                             <td className="px-4 py-3" style={{ color: "var(--text-muted)" }}>
                               {flight.flightNumber || t("common:labels.notAvailable")}
                             </td>
+                            )}
+                            {flightColumnPrefs.isVisible("route") && (
                             <td
                               className="px-4 py-3 max-w-[16rem]"
                               style={{ color: "var(--text-primary)" }}
                             >
                               <RouteCell flight={flight} />
                             </td>
+                            )}
+                            {flightColumnPrefs.isVisible("time") && (
                             <td className="px-4 py-3">
                               <TimeCell flight={flight} />
                             </td>
+                            )}
+                            {flightColumnPrefs.isVisible("status") && (
                             <td className="px-4 py-3">
                               <span
                                 className="px-2 py-1 text-xs font-semibold rounded-full"
@@ -540,18 +603,24 @@ export default function FlightsTablePage(): JSX.Element {
                                 })}
                               </span>
                             </td>
+                            )}
+                            {flightColumnPrefs.isVisible("duration") && (
                             <td
                               className="px-4 py-3 text-sm"
                               style={{ color: "var(--text-muted)" }}
                             >
                               {formatFlightDurationCell(flight)}
                             </td>
+                            )}
+                            {flightColumnPrefs.isVisible("aircraft") && (
                             <td
                               className="px-4 py-3 text-sm"
                               style={{ color: "var(--text-muted)" }}
                             >
                               {flight.aircraft || t("common:labels.notAvailable")}
                             </td>
+                            )}
+                            {flightColumnPrefs.isVisible("price") && (
                             <td
                               className="px-4 py-3 text-sm"
                               style={{
@@ -570,6 +639,8 @@ export default function FlightsTablePage(): JSX.Element {
                                 t("common:labels.notAvailable")
                               )}
                             </td>
+                            )}
+                            {flightColumnPrefs.isVisible("trip") && (
                             <td className="px-3 py-2">
                               {tripEntry ? (
                                 <Link
@@ -591,6 +662,8 @@ export default function FlightsTablePage(): JSX.Element {
                                 <span style={{ color: "var(--text-muted)", opacity: 0.3 }}>—</span>
                               )}
                             </td>
+                            )}
+                            {flightColumnPrefs.isVisible("actions") && (
                             <td className="px-4 py-3 text-right whitespace-nowrap">
                               <div className="flex items-center justify-end gap-1.5">
                                 <FlightRowActions
@@ -616,6 +689,7 @@ export default function FlightsTablePage(): JSX.Element {
                                 </span>
                               </div>
                             </td>
+                            )}
                           </tr>
                         );
                       })}

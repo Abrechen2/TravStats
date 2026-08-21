@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { JSX, ReactNode } from "react";
 import { EventLocationPicker } from "../EventLocationPicker";
@@ -12,6 +12,7 @@ import type { PlaceSearchResult } from "../../../lib/api/geo";
 // through `lib/api/geo.ts`'s same-origin proxy — never `global.fetch`.
 vi.mock("../../../lib/api/geo", () => ({
   searchPlaces: vi.fn(),
+  reverseGeocode: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("../../../lib/logger", () => ({
@@ -76,7 +77,7 @@ describe("EventLocationPicker", () => {
 
   it("searches via the same-origin api module (never a direct external fetch)", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
-    vi.mocked(searchPlaces).mockResolvedValue([zurich]);
+    vi.mocked(searchPlaces).mockResolvedValue({ results: [zurich], degraded: false });
     const onChange = vi.fn();
     render(<EventLocationPicker value={{ lat: null, lon: null }} onChange={onChange} />);
 
@@ -88,7 +89,7 @@ describe("EventLocationPicker", () => {
   });
 
   it("fills the coordinates when a suggestion is selected", async () => {
-    vi.mocked(searchPlaces).mockResolvedValue([zurich]);
+    vi.mocked(searchPlaces).mockResolvedValue({ results: [zurich], degraded: false });
     const onChange = vi.fn();
     render(<EventLocationPicker value={{ lat: null, lon: null }} onChange={onChange} />);
 
@@ -109,5 +110,25 @@ describe("EventLocationPicker", () => {
     await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument(), { timeout: 2000 });
     expect(screen.getByRole("alert")).toHaveTextContent("specialFlights:location.searchError");
     expect(screen.queryByText(/network exploded/)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Owner request 2026-08-21: EVERY address input offers the shared map-pick
+ * modal. The special-flight picker keeps its inline map (it is the widget's
+ * centrepiece) and gains the modal as the roomy alternative.
+ */
+describe("EventLocationPicker — map-pick modal", () => {
+  it("confirming a point in the modal reports it as the event location", async () => {
+    const onChange = vi.fn();
+    render(<EventLocationPicker value={{ lat: null, lon: null }} onChange={onChange} />);
+
+    await userEvent.click(screen.getByText("location:mapPick"));
+    const dialog = screen.getByRole("dialog");
+    await userEvent.click(within(dialog).getByTestId("mock-map"));
+    expect(onChange).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByText("location:mapModal.confirm"));
+    expect(onChange).toHaveBeenCalledWith({ lat: 2.222, lon: 1.111 });
   });
 });

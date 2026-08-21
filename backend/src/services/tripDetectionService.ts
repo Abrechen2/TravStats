@@ -46,7 +46,7 @@ import { TRIP_COLORS } from "../schemas/trip";
 import { calculateDistance } from "../utils/geo";
 import { type HomeAirportEntry, getHomeAirportAt, normalizeHistory } from "../utils/homeAirport";
 import logger from "../utils/logger";
-import { recomputeTripStatus } from "./tripStatusService";
+import { fillTripDatesFromSegments, recomputeTripStatus } from "./tripStatusService";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const PNR_MAX_SPAN_DAYS = 30;
@@ -591,6 +591,7 @@ async function commitProposals(
   // (tripId=null) rows since the trip creation and the linking updateMany
   // both happened in that same transaction.
   for (const c of created) {
+    await fillTripDatesFromSegments(c.tripId);
     await recomputeTripStatus(c.tripId);
   }
 

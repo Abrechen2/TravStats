@@ -60,6 +60,7 @@ export default function DefaultsSection({
             }
             className="input"
           >
+            <option value="">{t("settings:defaults.options.none")}</option>
             <option value="economy">{t("settings:defaults.options.economy")}</option>
             <option value="premium_economy">
               {t("settings:defaults.options.premium_economy")}
@@ -86,6 +87,7 @@ export default function DefaultsSection({
             }
             className="input"
           >
+            <option value="">{t("settings:defaults.options.none")}</option>
             <option value="business">{t("settings:defaults.options.business")}</option>
             <option value="private">{t("settings:defaults.options.private")}</option>
             <option value="vacation">{t("settings:defaults.options.vacation")}</option>

@@ -1183,7 +1183,7 @@ router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunct
     const userId = req.userId!;
 
     const flights = await prisma.flight.findMany({
-      where: { userId },
+      where: { userId, status: { in: ['flown', 'historical'] } },
       select: {
         depIata: true,
         depIcao: true,
@@ -1267,10 +1267,13 @@ router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunct
 /**
  * Cruise-domain stats endpoint for the StatsPage cruise tab.
  *
- * Loads the user's cruises (excluding cancelled ones, same scope as the
- * achievement engine uses) and pipes them through the shared
- * `calculateCruiseStats` util. The heavy Set<string> fields are
- * serialised to sorted arrays for JSON transport.
+ * Loads only the user's SAILED cruises (`status: { in: ['flown',
+ * 'historical'] }` — the same done-predicate `/stats/countries` uses)
+ * and pipes them through the shared `calculateCruiseStats` util. A
+ * merely-booked 'scheduled' (or still-`in_progress`) cruise must not
+ * inflate "gefahren" figures like cruisesCount or the visited-countries
+ * list. The heavy Set<string> fields are serialised to sorted arrays for
+ * JSON transport.
  */
 router.get(
   '/cruise',
@@ -1285,7 +1288,7 @@ router.get(
       const [user, cruises] = await Promise.all([
         prisma.user.findUnique({ where: { id: userId }, select: { birthdate: true } }),
         prisma.cruise.findMany({
-          where: { userId, status: { not: 'cancelled' } },
+          where: { userId, status: { in: ['flown', 'historical'] } },
           include: {
             stops: { include: { port: true } },
             legs: { orderBy: { ordinal: 'asc' }, select: { distanceKm: true } },

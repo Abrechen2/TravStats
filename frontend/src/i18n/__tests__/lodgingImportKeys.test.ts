@@ -115,18 +115,27 @@ describe("lodging import i18n", () => {
   });
 
   it("interpolates the commit-result counters", () => {
+    // #261: the counts arrive as pre-pluralized unit phrases ({{hotels}} =
+    // t("lodging:units.hotels", {count}) etc.), never as "Hotel(s)".
     for (const locale of [deLodging, enLodging]) {
-      expect(locale.import.commitResult.success).toContain("{{createdLodgings}}");
-      expect(locale.import.commitResult.success).toContain("{{createdStays}}");
+      expect(locale.import.commitResult.success).toContain("{{hotels}}");
+      expect(locale.import.commitResult.success).toContain("{{stays}}");
       // Finding 3: `skipped` must be shown, not just created/failed — a
       // same-file re-import (everything skipped, nothing failed) otherwise
       // reads as a silent "0 hotels, 0 stays imported".
       expect(locale.import.commitResult.success).toContain("{{skipped}}");
-      expect(locale.import.commitResult.partial).toContain("{{createdLodgings}}");
-      expect(locale.import.commitResult.partial).toContain("{{createdStays}}");
+      expect(locale.import.commitResult.partial).toContain("{{hotels}}");
+      expect(locale.import.commitResult.partial).toContain("{{stays}}");
       expect(locale.import.commitResult.partial).toContain("{{skipped}}");
-      expect(locale.import.commitResult.partial).toContain("{{failedCount}}");
+      expect(locale.import.commitResult.partial).toContain("{{rows}}");
       expect(locale.import.commitResult.partial).toContain("{{reasons}}");
+      // The unit phrases themselves must exist with proper plural forms.
+      expect(locale.units.hotels_one).toContain("{{count}}");
+      expect(locale.units.hotels_other).toContain("{{count}}");
+      expect(locale.units.stays_one).toContain("{{count}}");
+      expect(locale.units.stays_other).toContain("{{count}}");
+      expect(locale.units.rows_one).toContain("{{count}}");
+      expect(locale.units.rows_other).toContain("{{count}}");
     }
   });
 
@@ -153,8 +162,8 @@ describe("lodging import i18n", () => {
 
   it("interpolates the batch created-counts label", () => {
     for (const locale of [deLodging, enLodging]) {
-      expect(locale.import.batches.created).toContain("{{lodgingCount}}");
-      expect(locale.import.batches.created).toContain("{{stayCount}}");
+      expect(locale.import.batches.created).toContain("{{hotels}}");
+      expect(locale.import.batches.created).toContain("{{stays}}");
     }
   });
 
@@ -165,11 +174,11 @@ describe("lodging import i18n", () => {
   // needs the two delete counters (no hidden zero to fake).
   it("interpolates the revert-result counters", () => {
     for (const locale of [deLodging, enLodging]) {
-      expect(locale.import.batches.revertResult.success).toContain("{{deletedLodgings}}");
-      expect(locale.import.batches.revertResult.success).toContain("{{deletedStays}}");
-      expect(locale.import.batches.revertResult.withDetached).toContain("{{deletedLodgings}}");
-      expect(locale.import.batches.revertResult.withDetached).toContain("{{deletedStays}}");
-      expect(locale.import.batches.revertResult.withDetached).toContain("{{detachedLodgings}}");
+      expect(locale.import.batches.revertResult.success).toContain("{{hotels}}");
+      expect(locale.import.batches.revertResult.success).toContain("{{stays}}");
+      expect(locale.import.batches.revertResult.withDetached).toContain("{{hotels}}");
+      expect(locale.import.batches.revertResult.withDetached).toContain("{{stays}}");
+      expect(locale.import.batches.revertResult.withDetached).toContain("{{kept}}");
     }
   });
 

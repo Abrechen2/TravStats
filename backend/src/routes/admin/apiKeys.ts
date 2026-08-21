@@ -1,15 +1,17 @@
-import { Router, Response, NextFunction } from 'express';
-import { z } from 'zod';
-import { AuthRequest } from '../../middleware/auth';
-import { prisma } from '../../db';
-import { decryptApiKey, encryptApiKey } from '../../utils/encryption';
-import logger from '../../utils/logger';
+import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
+import { AuthRequest } from "../../middleware/auth";
+import { prisma } from "../../db";
+import { decryptApiKey, encryptApiKey } from "../../utils/encryption";
+import logger from "../../utils/logger";
 import {
   testAirlabsKey,
   testAviationstackKey,
   testAerodataboxKey,
+  testLogostreamKey,
+  testGooglePlacesKey,
   testOpenSkyCredentials,
-} from '../../services/apiKeyTester';
+} from "../../services/apiKeyTester";
 
 interface GlobalApiKeysUpdateData {
   globalAirlabsApiKey?: string | null;
@@ -24,36 +26,38 @@ interface GlobalApiKeysUpdateData {
   allowUserFlightApiKeys?: boolean;
 }
 
-const globalApiKeysSchema = z.object({
-  globalAirlabsApiKey: z.string().optional().nullable(),
-  globalAviationstackApiKey: z.string().optional().nullable(),
-  globalAerodataboxApiKey: z.string().optional().nullable(),
-  // Encryption silently corrupts secrets shorter than 16 bytes (see
-  // utils/encryption.ts). Allow the "no change" sentinels — empty string
-  // (clear the key) and a masked echo of the GET response (unchanged) —
-  // but reject any other short value before it ever reaches encryptApiKey.
-  globalLogostreamApiKey: z
-    .string()
-    .refine((v) => v === "" || v.includes("****") || v.length >= 16, {
-      message: "API key must be at least 16 characters",
-    })
-    .optional()
-    .nullable(),
-  // Same short-secret guard as the logostream key above — and the same two
-  // sentinels: "" clears it, a masked echo means "unchanged".
-  globalGooglePlacesApiKey: z
-    .string()
-    .refine((v) => v === "" || v.includes("****") || v.length >= 16, {
-      message: "API key must be at least 16 characters",
-    })
-    .optional()
-    .nullable(),
-  globalOpenskyClientId: z.string().optional().nullable(),
-  globalOpenskyClientSecret: z.string().optional().nullable(),
-  globalOpenskyUsername: z.string().optional().nullable(),
-  globalOpenskyPassword: z.string().optional().nullable(),
-  allowUserFlightApiKeys: z.boolean().optional(),
-}).partial();
+const globalApiKeysSchema = z
+  .object({
+    globalAirlabsApiKey: z.string().optional().nullable(),
+    globalAviationstackApiKey: z.string().optional().nullable(),
+    globalAerodataboxApiKey: z.string().optional().nullable(),
+    // Encryption silently corrupts secrets shorter than 16 bytes (see
+    // utils/encryption.ts). Allow the "no change" sentinels — empty string
+    // (clear the key) and a masked echo of the GET response (unchanged) —
+    // but reject any other short value before it ever reaches encryptApiKey.
+    globalLogostreamApiKey: z
+      .string()
+      .refine((v) => v === "" || v.includes("****") || v.length >= 16, {
+        message: "API key must be at least 16 characters",
+      })
+      .optional()
+      .nullable(),
+    // Same short-secret guard as the logostream key above — and the same two
+    // sentinels: "" clears it, a masked echo means "unchanged".
+    globalGooglePlacesApiKey: z
+      .string()
+      .refine((v) => v === "" || v.includes("****") || v.length >= 16, {
+        message: "API key must be at least 16 characters",
+      })
+      .optional()
+      .nullable(),
+    globalOpenskyClientId: z.string().optional().nullable(),
+    globalOpenskyClientSecret: z.string().optional().nullable(),
+    globalOpenskyUsername: z.string().optional().nullable(),
+    globalOpenskyPassword: z.string().optional().nullable(),
+    allowUserFlightApiKeys: z.boolean().optional(),
+  })
+  .partial();
 
 const testApiKeySchema = z.object({
   apiKey: z.string().optional(),
@@ -71,8 +75,7 @@ const testOpenSkySchema = z.object({
  * into the Test request when the admin hasn't typed anything new. Treat
  * empty + masked as "test the persisted key".
  */
-const looksMasked = (s: string | undefined | null): boolean =>
-  !s || s.includes('****');
+const looksMasked = (s: string | undefined | null): boolean => !s || s.includes("****");
 
 /**
  * Encrypt an incoming key value for storage, honouring the masked-echo
@@ -83,15 +86,17 @@ const looksMasked = (s: string | undefined | null): boolean =>
  * to null).
  */
 const encryptUnlessMasked = (incoming: string | null): string | null | undefined =>
-  incoming && incoming.includes('****') ? undefined : encryptApiKey(incoming);
+  incoming && incoming.includes("****") ? undefined : encryptApiKey(incoming);
 
 async function resolveAdminGlobalKey(
   column:
-    | 'globalAirlabsApiKey'
-    | 'globalAviationstackApiKey'
-    | 'globalAerodataboxApiKey'
-    | 'globalOpenskyClientId'
-    | 'globalOpenskyClientSecret',
+    | "globalAirlabsApiKey"
+    | "globalAviationstackApiKey"
+    | "globalAerodataboxApiKey"
+    | "globalLogostreamApiKey"
+    | "globalGooglePlacesApiKey"
+    | "globalOpenskyClientId"
+    | "globalOpenskyClientSecret"
 ): Promise<string | null> {
   const settings = await prisma.adminSettings.findFirst();
   return decryptApiKey((settings?.[column] as string | null) ?? null);
@@ -108,7 +113,7 @@ const maskKey = (encrypted: string | null | undefined): string | undefined => {
 };
 
 // Get global API keys
-router.get('/api-keys', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get("/api-keys", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const adminSettings = await prisma.adminSettings.findFirst();
 
@@ -141,9 +146,9 @@ router.get('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
     });
   } catch (error) {
     logger.error({
-      operation: 'get_global_api_keys_error',
-      message: 'Failed to get global API keys',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      operation: "get_global_api_keys_error",
+      message: "Failed to get global API keys",
+      error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
     });
     next(error);
@@ -151,7 +156,7 @@ router.get('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
 });
 
 // Update global API keys
-router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.put("/api-keys", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const payload = globalApiKeysSchema.parse(req.body);
 
@@ -232,8 +237,8 @@ router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
       adminSettings = await prisma.adminSettings.create({
         data: {
           allowUserApiKeys: true,
-          defaultVisionParser: 'auto',
-          defaultTextParser: 'auto',
+          defaultVisionParser: "auto",
+          defaultTextParser: "auto",
           allowUserFlightApiKeys: true,
           ...updateData,
         },
@@ -241,7 +246,7 @@ router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
     }
 
     res.json({
-      message: 'Global API keys updated successfully',
+      message: "Global API keys updated successfully",
       settings: {
         globalAirlabsApiKey: maskKey(adminSettings.globalAirlabsApiKey),
         globalAviationstackApiKey: maskKey(adminSettings.globalAviationstackApiKey),
@@ -260,69 +265,155 @@ router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
 });
 
 // Test API key endpoints (admin)
-router.post('/api-keys/test/airlabs', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { apiKey } = testApiKeySchema.parse(req.body);
-    const effective = looksMasked(apiKey)
-      ? (await resolveAdminGlobalKey('globalAirlabsApiKey')) ?? ''
-      : apiKey!;
-    if (!effective) {
-      return res.status(400).json({ success: false, message: 'No AirLabs key configured to test. Save one first.' });
+router.post(
+  "/api-keys/test/airlabs",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { apiKey } = testApiKeySchema.parse(req.body);
+      const effective = looksMasked(apiKey)
+        ? ((await resolveAdminGlobalKey("globalAirlabsApiKey")) ?? "")
+        : apiKey!;
+      if (!effective) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "No AirLabs key configured to test. Save one first.",
+            messageKey: "notConfigured",
+          });
+      }
+      const result = await testAirlabsKey(effective);
+      res.json(result);
+    } catch (error) {
+      next(error);
     }
-    const result = await testAirlabsKey(effective);
-    res.json(result);
-  } catch (error) {
-    next(error);
   }
-});
+);
 
-router.post('/api-keys/test/aviationstack', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { apiKey } = testApiKeySchema.parse(req.body);
-    const effective = looksMasked(apiKey)
-      ? (await resolveAdminGlobalKey('globalAviationstackApiKey')) ?? ''
-      : apiKey!;
-    if (!effective) {
-      return res.status(400).json({ success: false, message: 'No Aviationstack key configured to test. Save one first.' });
+router.post(
+  "/api-keys/test/aviationstack",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { apiKey } = testApiKeySchema.parse(req.body);
+      const effective = looksMasked(apiKey)
+        ? ((await resolveAdminGlobalKey("globalAviationstackApiKey")) ?? "")
+        : apiKey!;
+      if (!effective) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "No Aviationstack key configured to test. Save one first.",
+            messageKey: "notConfigured",
+          });
+      }
+      const result = await testAviationstackKey(effective);
+      res.json(result);
+    } catch (error) {
+      next(error);
     }
-    const result = await testAviationstackKey(effective);
-    res.json(result);
-  } catch (error) {
-    next(error);
   }
-});
+);
 
-router.post('/api-keys/test/aerodatabox', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { apiKey } = testApiKeySchema.parse(req.body);
-    const effective = looksMasked(apiKey)
-      ? (await resolveAdminGlobalKey('globalAerodataboxApiKey')) ?? ''
-      : apiKey!;
-    if (!effective) {
-      return res.status(400).json({ success: false, message: 'No AeroDataBox key configured to test. Save one first.' });
+router.post(
+  "/api-keys/test/aerodatabox",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { apiKey } = testApiKeySchema.parse(req.body);
+      const effective = looksMasked(apiKey)
+        ? ((await resolveAdminGlobalKey("globalAerodataboxApiKey")) ?? "")
+        : apiKey!;
+      if (!effective) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "No AeroDataBox key configured to test. Save one first.",
+            messageKey: "notConfigured",
+          });
+      }
+      const result = await testAerodataboxKey(effective);
+      res.json(result);
+    } catch (error) {
+      next(error);
     }
-    const result = await testAerodataboxKey(effective);
-    res.json(result);
-  } catch (error) {
-    next(error);
   }
-});
+);
 
-router.post('/api-keys/test/opensky', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    let { clientId, clientSecret, username, password } = testOpenSkySchema.parse(req.body);
-    if (looksMasked(clientId) || looksMasked(clientSecret)) {
-      clientId = (await resolveAdminGlobalKey('globalOpenskyClientId')) ?? undefined;
-      clientSecret = (await resolveAdminGlobalKey('globalOpenskyClientSecret')) ?? undefined;
+router.post(
+  "/api-keys/test/logostream",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { apiKey } = testApiKeySchema.parse(req.body);
+      const effective = looksMasked(apiKey)
+        ? ((await resolveAdminGlobalKey("globalLogostreamApiKey")) ?? "")
+        : apiKey!;
+      if (!effective) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "No logostream key configured to test. Save one first.",
+            messageKey: "notConfigured",
+          });
+      }
+      const result = await testLogostreamKey(effective);
+      res.json(result);
+    } catch (error) {
+      next(error);
     }
-    if (!(clientId && clientSecret) && !(username && password)) {
-      return res.status(400).json({ success: false, message: 'No OpenSky credentials configured to test. Save them first.' });
-    }
-    const result = await testOpenSkyCredentials({ clientId, clientSecret, username, password });
-    res.json(result);
-  } catch (error) {
-    next(error);
   }
-});
+);
+
+router.post(
+  "/api-keys/test/googlePlaces",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { apiKey } = testApiKeySchema.parse(req.body);
+      const effective = looksMasked(apiKey)
+        ? ((await resolveAdminGlobalKey("globalGooglePlacesApiKey")) ?? "")
+        : apiKey!;
+      if (!effective) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "No Google Places key configured to test. Save one first.",
+            messageKey: "notConfigured",
+          });
+      }
+      const result = await testGooglePlacesKey(effective);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  "/api-keys/test/opensky",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      let { clientId, clientSecret, username, password } = testOpenSkySchema.parse(req.body);
+      if (looksMasked(clientId) || looksMasked(clientSecret)) {
+        clientId = (await resolveAdminGlobalKey("globalOpenskyClientId")) ?? undefined;
+        clientSecret = (await resolveAdminGlobalKey("globalOpenskyClientSecret")) ?? undefined;
+      }
+      if (!(clientId && clientSecret) && !(username && password)) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "No OpenSky credentials configured to test. Save them first.",
+            messageKey: "notConfigured",
+          });
+      }
+      const result = await testOpenSkyCredentials({ clientId, clientSecret, username, password });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 export default router;

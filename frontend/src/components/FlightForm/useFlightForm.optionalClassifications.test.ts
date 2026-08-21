@@ -15,6 +15,8 @@ const mocks = vi.hoisted(() => ({
   onSubmit: vi.fn(),
   createBatch: vi.fn(),
   addToast: vi.fn(),
+  // Mutable so individual tests can opt into a user-chosen default.
+  settingsDefaults: {} as Record<string, string>,
 }));
 
 vi.mock("../../lib/api", () => ({
@@ -36,7 +38,7 @@ vi.mock("../../lib/logger", () => ({
 vi.mock("../../store/settingsStore", () => ({
   useSettingsStore: () => ({
     units: { currency: "EUR" },
-    defaults: {},
+    defaults: mocks.settingsDefaults,
     display: { timezone: "Europe/Berlin" },
     features: {},
   }),
@@ -76,6 +78,7 @@ describe("useFlightForm optional seat class and category", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.onSubmit.mockResolvedValue(undefined);
+    for (const key of Object.keys(mocks.settingsDefaults)) delete mocks.settingsDefaults[key];
   });
 
   it('submits null for both when "(optional)" is chosen', async () => {
@@ -100,7 +103,10 @@ describe("useFlightForm optional seat class and category", () => {
     expect(payload.category).toBeNull();
   });
 
-  it("still submits the defaulted values when the user leaves them alone", async () => {
+  it("submits null for both when the user never touches them (no silent classification)", async () => {
+    // Regression for #256: an untouched form used to store "economy" +
+    // "business" the user never picked. With no settings default, both
+    // fields start at "(optional)" and submit as an explicit null.
     const { result } = renderHook(() => useFlightForm(mocks.onSubmit, vi.fn()));
 
     act(() => {
@@ -115,7 +121,28 @@ describe("useFlightForm optional seat class and category", () => {
     });
 
     const payload = mocks.onSubmit.mock.calls[0][0];
-    expect(payload.seatClass).toBe("economy");
-    expect(payload.category).toBe("business");
+    expect(payload.seatClass).toBeNull();
+    expect(payload.category).toBeNull();
+  });
+
+  it("still applies a user-chosen settings default", async () => {
+    mocks.settingsDefaults.seatClass = "premium_economy";
+    mocks.settingsDefaults.flightCategory = "vacation";
+    const { result } = renderHook(() => useFlightForm(mocks.onSubmit, vi.fn()));
+
+    act(() => {
+      result.current.setDeparture(makeAirport("FRA"));
+      result.current.setArrival(makeAirport("JFK"));
+      result.current.setDepartureDate("2026-07-01");
+      result.current.setArrivalDate("2026-07-01");
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit(submitEvent());
+    });
+
+    const payload = mocks.onSubmit.mock.calls[0][0];
+    expect(payload.seatClass).toBe("premium_economy");
+    expect(payload.category).toBe("vacation");
   });
 });

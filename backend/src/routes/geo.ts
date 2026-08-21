@@ -7,7 +7,8 @@ import {
 } from "../middleware/auth";
 import { photonSearchLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
-import { searchPlaces } from "../services/geo/photon";
+import { searchPlacesDetailed } from "../services/geo/photon";
+import { reverseGeocode } from "../services/geo/nominatim";
 
 /**
  * Same-origin geocoder proxy — mounted at /api/v1/geo. The browser's CSP
@@ -39,8 +40,38 @@ router.get(
       if (!parsed.success) throw new AppError(parsed.error.message, 400);
       const { q, lang } = parsed.data;
 
-      const results = await searchPlaces(q, { lang });
-      res.json({ success: true, data: results });
+      // `degraded: true` = the geocoder itself failed (still HTTP 200 with
+      // an empty list, so a flaky geocoder never breaks the form) — the UI
+      // uses it to show "search unavailable" instead of "no results" (#263).
+      const outcome = await searchPlacesDetailed(q, { lang });
+      res.json({ success: true, data: outcome.results, degraded: outcome.degraded });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+const reverseQuerySchema = z.object({
+  lat: z.coerce.number().min(-90).max(90),
+  lon: z.coerce.number().min(-180).max(180),
+});
+
+// Coordinates → address parts, for the map-pick modal: a picked pin can
+// COMPLETE an address on every surface, not only via the lodging save path.
+// Backed by Nominatim (one-shot lookups, not per-keystroke), which brings its
+// own process-wide 1 req/s throttle + cache and never throws — a failed
+// lookup answers `data: null`, exactly like a pin in open water.
+router.get(
+  "/reverse",
+  photonSearchLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const parsed = reverseQuerySchema.safeParse(req.query);
+      if (!parsed.success) throw new AppError(parsed.error.message, 400);
+      const { lat, lon } = parsed.data;
+
+      const parts = await reverseGeocode(lat, lon);
+      res.json({ success: true, data: parts });
     } catch (err) {
       next(err);
     }

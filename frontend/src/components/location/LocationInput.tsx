@@ -9,28 +9,23 @@
  *      skipped entirely, the pin is set from the pair, and a translated
  *      "Koordinaten erkannt" hint replaces the dropdown.
  *
- * Below the field: a collapsible MapLibre mini-map (draggable `<Marker>` +
- * click-to-move — NOT deck.gl, per the plan) and a collapsible "Erweitert"
- * raw lat/lon panel. Both mirror `EventLocationPicker`'s UX (that component
- * is left untouched — this is a new, shared, from-scratch implementation).
+ * Below the field: a button opening the shared `LocationMapModal` (the ONE
+ * map way to pick a point — the inline mini-map it replaces was too cramped;
+ * owner decision 2026-08-21) and a collapsible "Erweitert" raw lat/lon panel.
  *
  * Controlled interface: the parent owns `{lat, lon} | null` and receives
- * every position change (search selection, paste, map, advanced panel) via
- * `onChange`. No map is mounted until the user opens it — the default render
- * (value=null, collapsed) never touches `react-map-gl`.
+ * every position change (search selection, paste, modal confirm, advanced
+ * panel) via `onChange`. No map is mounted until the modal opens — the
+ * default render (value=null) never touches `react-map-gl`.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { JSX, KeyboardEvent } from "react";
-import type { MapLayerMouseEvent } from "react-map-gl/maplibre";
 import { useTranslation } from "../../hooks/useTranslation";
 import { parseCoordinateInput } from "../../lib/coordinateParse";
 import type { PlaceSearchResult } from "../../lib/api/geo";
 import { useLocationSearch } from "./useLocationSearch";
 import { LocationSuggestions } from "./LocationSuggestions";
-import { LocationMiniMap } from "./LocationMiniMap";
-
-const DEFAULT_VIEW = { longitude: 10, latitude: 50, zoom: 3 };
-const PICKED_ZOOM = 9;
+import { LocationMapModal } from "./LocationMapModal";
 
 export interface LocationCoordinates {
   lat: number;
@@ -105,7 +100,7 @@ export function LocationInput({
   const [coordsDetected, setCoordsDetected] = useState(false);
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [mapOpen, setMapOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [latInput, setLatInput] = useState<string>(numToInput(value?.lat));
   const [lonInput, setLonInput] = useState<string>(numToInput(value?.lon));
@@ -132,15 +127,6 @@ export function LocationInput({
 
   const hasPosition = value !== null;
 
-  /**
-   * Counts the coordinates that arrived from somewhere other than the map, so
-   * the picker can fly to those and only those. The map must follow a search
-   * hit; it must NOT follow a marker drag, which would pull the map out from
-   * under the cursor mid-gesture.
-   */
-  const [focusNonce, setFocusNonce] = useState(0);
-  const focusMap = useCallback((): void => setFocusNonce((n) => n + 1), []);
-
   const handleQueryChange = useCallback(
     (raw: string): void => {
       setQuery(raw);
@@ -149,12 +135,11 @@ export function LocationInput({
         setCoordsDetected(true);
         setDropdownOpen(false);
         onChange({ lat: parsed.lat, lon: parsed.lon });
-        focusMap();
       } else {
         setCoordsDetected(false);
       }
     },
-    [onChange, focusMap]
+    [onChange]
   );
 
   const handleSelectResult = useCallback(
@@ -164,12 +149,12 @@ export function LocationInput({
       setCoordsDetected(false);
       setDropdownOpen(false);
       reset();
-      focusMap();
     },
-    [onChange, reset, focusMap]
+    [onChange, reset]
   );
 
-  const handlePositionPick = useCallback(
+  /** A coordinate typed or pasted into the advanced fields. */
+  const handleTypedPick = useCallback(
     (lat: number, lon: number): void => {
       if (!isValidLat(lat) || !isValidLon(lon)) return;
       onChange({ lat, lon });
@@ -177,28 +162,12 @@ export function LocationInput({
     [onChange]
   );
 
-  /** A coordinate typed or pasted into the advanced fields — the map follows it. */
-  const handleTypedPick = useCallback(
-    (lat: number, lon: number): void => {
-      if (!isValidLat(lat) || !isValidLon(lon)) return;
-      onChange({ lat, lon });
-      focusMap();
+  const handleModalConfirm = useCallback(
+    (selection: LocationSelection): void => {
+      onChange(selection);
+      setModalOpen(false);
     },
-    [onChange, focusMap]
-  );
-
-  const handleMapClick = useCallback(
-    (e: MapLayerMouseEvent): void => {
-      handlePositionPick(e.lngLat.lat, e.lngLat.lng);
-    },
-    [handlePositionPick]
-  );
-
-  const handleMarkerDragEnd = useCallback(
-    (e: { lngLat: { lng: number; lat: number } }): void => {
-      handlePositionPick(e.lngLat.lat, e.lngLat.lng);
-    },
-    [handlePositionPick]
+    [onChange]
   );
 
   const handleAdvancedLatChange = useCallback(
@@ -244,13 +213,6 @@ export function LocationInput({
     },
     [isDropdownOpen, results, activeIndex, handleSelectResult]
   );
-
-  const initialViewState = useMemo(() => {
-    if (hasPosition && value) {
-      return { longitude: value.lon, latitude: value.lat, zoom: PICKED_ZOOM };
-    }
-    return DEFAULT_VIEW;
-  }, [hasPosition, value]);
 
   const listboxId = `${idPrefix}-listbox`;
 
@@ -319,25 +281,21 @@ export function LocationInput({
 
       <button
         type="button"
-        onClick={() => setMapOpen((open) => !open)}
+        onClick={() => setModalOpen(true)}
         className="text-xs hover:underline"
-        style={{ color: "var(--text-muted)" }}
+        style={{ color: "var(--accent, #ffc107)" }}
       >
-        {mapOpen ? t("location:mapHide") : t("location:mapShow")}
+        {t("location:mapPick")}
       </button>
 
-      {mapOpen && (
-        <LocationMiniMap
-          value={value}
-          initialViewState={initialViewState}
-          focusNonce={focusNonce}
-          compact={compact}
-          ariaLabel={t("location:mapAriaLabel")}
-          attributionLabel={t("location:attribution")}
-          onMapClick={handleMapClick}
-          onMarkerDragEnd={handleMarkerDragEnd}
-        />
-      )}
+      <LocationMapModal
+        open={modalOpen}
+        value={value}
+        onClose={() => setModalOpen(false)}
+        onConfirm={handleModalConfirm}
+        idPrefix={`${idPrefix}-map-modal`}
+      />
+      {/* `compact` now only trims the search hint; the modal is one size. */}
 
       <details
         open={advancedOpen}

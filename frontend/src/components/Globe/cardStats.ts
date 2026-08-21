@@ -81,6 +81,15 @@ export function getAirportStats(flights: GeoJSONFeature[], iata: string): Airpor
   );
   const departures = touched.filter((f) => f.properties.departureAirport.iata === iata);
 
+  // A scheduled flight must never count as a visit or bump the last-visit
+  // date — it's a future plan, not something that happened. Cancelled
+  // flights deliberately still count here (status !== "scheduled" keeps
+  // them in) — a deferred semantic, not the bug this filter guards against.
+  // That's an asymmetry vs. getPortStats below, which filters cruises down
+  // to flown|historical explicitly (so cancelled cruises DON'T count as a
+  // port call) — both are intentional, just answering different questions.
+  const visitedOnly = touched.filter((f) => f.properties.status !== "scheduled");
+
   // Longest route originating from this airport, by distance.
   let longestRoute: AirportCardStats["longestRoute"] = null;
   for (const f of departures) {
@@ -93,8 +102,8 @@ export function getAirportStats(flights: GeoJSONFeature[], iata: string): Airpor
   }
 
   return {
-    totalVisits: touched.length,
-    lastVisitDate: maxDate(touched.map((f) => f.properties.departureTime)),
+    totalVisits: visitedOnly.length,
+    lastVisitDate: maxDate(visitedOnly.map((f) => f.properties.departureTime)),
     longestRoute,
     topAirline: modeOf(touched.map((f) => f.properties.airline)),
     topAircraft: modeOf(touched.map((f) => f.properties.aircraft)),
@@ -107,13 +116,18 @@ export function getPortStats(cruises: Cruise[], portKey: string): PortCardStats 
   // `portKey` is whatever the PointDatum carries — historically the
   // marker's iata-or-name slot. Match against unlocode AND name so
   // both code-keyed and name-keyed markers resolve.
-  const stops = cruises.flatMap((c) =>
-    c.stops
-      .filter(
-        (s) => s.port?.unlocode === portKey || s.port?.name === portKey || s.port?.city === portKey
-      )
-      .map((s) => ({ stop: s, cruise: c }))
-  );
+  // Only sailed cruises (flown/historical) contribute an actual port call —
+  // a scheduled cruise is a future plan, not a visit yet.
+  const stops = cruises
+    .filter((c) => c.status === "flown" || c.status === "historical")
+    .flatMap((c) =>
+      c.stops
+        .filter(
+          (s) =>
+            s.port?.unlocode === portKey || s.port?.name === portKey || s.port?.city === portKey
+        )
+        .map((s) => ({ stop: s, cruise: c }))
+    );
 
   const country = stops[0]?.stop.port?.country ?? null;
   const region = stops[0]?.stop.port?.region ?? null;

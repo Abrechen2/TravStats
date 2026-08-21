@@ -351,7 +351,15 @@ export const adminApi = {
   },
 
   testApiKey: async (
-    provider: "openai" | "claude" | "airlabs" | "aviationstack" | "aerodatabox" | "opensky",
+    provider:
+      | "openai"
+      | "claude"
+      | "airlabs"
+      | "aviationstack"
+      | "aerodatabox"
+      | "opensky"
+      | "logostream"
+      | "googlePlaces",
     apiKey?: string,
     openskyCredentials?: {
       clientId?: string;

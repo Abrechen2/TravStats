@@ -37,7 +37,10 @@ function makeCruise(): Cruise {
     arrivalPort: null,
     startDate: null,
     endDate: null,
-    status: "scheduled",
+    // "flown" — this test exercises dot-sizing parity, not status
+    // filtering; a "scheduled" cruise would be filtered out entirely by
+    // createCruisePortsLayer's sailed-only guard.
+    status: "flown",
     cabinNumber: null,
     cabinType: null,
     deck: null,

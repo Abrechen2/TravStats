@@ -41,6 +41,22 @@ interface SectionRef {
   label: string;
 }
 
+/**
+ * Sections whose edits persist through the settings store's auto-save (and
+ * therefore drive `autoSaveState`). Only these show the auto-save strip —
+ * everywhere else the sections save explicitly or not at all, and the strip
+ * would promise something that never happens (UAT finding B8).
+ */
+const AUTO_SAVED_SECTIONS = new Set([
+  "display",
+  "units",
+  "defaults",
+  "features",
+  "modules",
+  "cruisePreferences",
+  "lodgingPreferences",
+]);
+
 export default function SettingsPage(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -566,7 +582,12 @@ export default function SettingsPage(): JSX.Element {
                 idle, "saving" during the write, a green confirmation for a few
                 seconds after one lands. It used to be a permanent green
                 checkmark reading "Auto-saved", which is why a flight default
-                silently failing to persist looked like a success (issue #198). */}
+                silently failing to persist looked like a success (issue #198).
+                Shown ONLY on sections that actually auto-save through the
+                settings store (UAT finding B8) — on a page with an explicit
+                "Speichern" button (profile, notifications, API keys) or none
+                at all (import), the strip's promise is simply false. */}
+            {AUTO_SAVED_SECTIONS.has(activeSection) && (
             <div
               className="rounded-md px-3 py-1.5 text-xs flex items-center justify-between gap-3"
               style={{
@@ -643,6 +664,7 @@ export default function SettingsPage(): JSX.Element {
                 </svg>
               </button>
             </div>
+            )}
           </main>
         </div>
       </div>

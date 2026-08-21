@@ -50,6 +50,11 @@
     "loadCruises": "Could not load cruises. Please try again later.",
     "loadLodgings": "Could not load lodgings. Please try again later."
   },
+  "flightTab": {
+    "emptyTitle": "No flights yet",
+    "emptyBody": "Add your first flight via “+ Add” or import a booking email or PDF on the flights page.",
+    "emptyCta": "Go to flights page"
+  },
   "cruiseTab": {
     "loading": "Loading cruises …",
     "emptyTitle": "No cruises yet",
@@ -59,15 +64,24 @@
   "lodgingTab": {
     "loading": "Loading lodgings …",
     "emptyTitle": "No lodgings yet",
-    "emptyBody": "Add your first lodging via “+ Hotel” on the lodging page.",
+    "emptyBody": "Add your first lodging via “+ Hotel” on the lodging page — or import a booking email, a PDF or a CSV list.",
+    "emptyCta": "Go to lodging page",
     "listTitle": "Lodgings",
     "listEmpty": "No lodgings recorded yet",
     "independentChain": "Independent",
     "stats": {
       "hotels": "Lodgings",
+      "hotels_one": "Lodging",
+      "hotels_other": "Lodgings",
       "stays": "Stays",
+      "stays_one": "Stay",
+      "stays_other": "Stays",
       "nights": "Nights",
+      "nights_one": "Night",
+      "nights_other": "Nights",
       "chains": "Chains",
+      "chains_one": "Chain",
+      "chains_other": "Chains",
       "spend": "Spend",
       "spendOtherCurrency": "incl. {{orig}} → {{converted}}",
       "rating": "Avg. rating",
@@ -150,9 +164,11 @@
   "routeDetails": "Route Details",
   "tripDetails": "Trip Details",
   "flown": "flown",
+  "planned": "planned",
   "flightsOnRoute": "Flights on this route",
   "tabStrip": {
     "label": "Domain switcher",
+    "scheduledHint": "({{count}} planned)",
     "tabs": {
       "all": "All",
       "flight": "Flights",

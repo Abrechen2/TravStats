@@ -14,10 +14,13 @@ import type {
  */
 function makeMockTranslate() {
   const translations: Record<string, string> = {
+    "lodging:units.hotels": "{{count}} hotel(s)",
+    "lodging:units.stays": "{{count}} stay(s)",
+    "lodging:units.rows": "{{count}} row(s)",
     "lodging:import.commitResult.success":
-      "Imported {{createdLodgings}} hotel(s) and {{createdStays}} stay(s), skipped {{skipped}} (already present).",
+      "Imported {{hotels}} and {{stays}}, skipped {{skipped}} (already present).",
     "lodging:import.commitResult.partial":
-      "Imported {{createdLodgings}} hotel(s) and {{createdStays}} stay(s), skipped {{skipped}} (already present), {{failedCount}} row(s) failed: {{reasons}}",
+      "Imported {{hotels}} and {{stays}}, skipped {{skipped}} (already present), {{rows}} failed: {{reasons}}",
     "lodging:import.commitResult.failureCodes.ownership_mismatch": "belongs to another account",
     "lodging:import.commitResult.failureCodes.missing_lodging_reference": "missing hotel reference",
     "lodging:import.commitResult.failureCodes.unexpected_error": "unexpected error",
@@ -364,10 +367,11 @@ describe("describeLodgingCommitResult", () => {
  */
 function makeMockRevertTranslate() {
   const translations: Record<string, string> = {
-    "lodging:import.batches.revertResult.success":
-      "{{deletedLodgings}} hotel(s) and {{deletedStays}} stay(s) deleted.",
+    "lodging:units.hotels": "{{count}} hotel(s)",
+    "lodging:units.stays": "{{count}} stay(s)",
+    "lodging:import.batches.revertResult.success": "{{hotels}} and {{stays}} deleted.",
     "lodging:import.batches.revertResult.withDetached":
-      "{{deletedLodgings}} hotel(s) and {{deletedStays}} stay(s) deleted, {{detachedLodgings}} hotel(s) kept (they have other stays).",
+      "{{hotels}} and {{stays}} deleted, {{kept}} kept (they have other stays).",
   };
 
   return (key: string, options?: Record<string, unknown>): string => {

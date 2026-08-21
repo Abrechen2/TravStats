@@ -112,8 +112,8 @@ export function LodgingChainsView({ lodgings }: LodgingChainsViewProps): JSX.Ele
                   )}
                 </span>
                 <span style={{ color: "var(--text-muted)" }}>
-                  {chain.stayCount} {t("dashboard:lodgingTab.stats.stays")} · {chain.nights}{" "}
-                  {t("dashboard:lodgingTab.stats.nights")}
+                  {t("lodging:field.staysCount", { count: chain.stayCount })} ·{" "}
+                  {t("lodging:field.nightsCount", { count: chain.nights })}
                 </span>
               </div>
               <div

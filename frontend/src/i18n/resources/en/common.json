@@ -192,5 +192,14 @@
     "search": "Search currency …",
     "frequent": "Frequent",
     "all": "All currencies"
+  },
+  "table": {
+    "columns": "Columns"
+  },
+  "support": {
+    "donate": "Donate",
+    "donateAria": "Donate via PayPal",
+    "star": "Star",
+    "starAria": "Star on GitHub"
   }
 }

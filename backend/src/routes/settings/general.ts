@@ -76,9 +76,10 @@ const settingsSchema = z.object({
   }).partial().optional(),
   defaults: z.object({
     flightStatus: z.enum(['scheduled', 'flown']).optional(),
-    seatClass: z.enum(['economy', 'premium_economy', 'business', 'first']).optional(),
+    // '' = "no default" — the flight form then starts unclassified (#256).
+    seatClass: z.enum(['', 'economy', 'premium_economy', 'business', 'first']).optional(),
     favoriteAirline: z.string().optional(),
-    flightCategory: z.enum(['business', 'private', 'vacation']).optional(),
+    flightCategory: z.enum(['', 'business', 'private', 'vacation']).optional(),
   }).partial().optional(),
   map: z.object({
     mapStyle: z.enum(['osm', 'satellite']).optional(),
@@ -126,6 +127,9 @@ const settingsSchema = z.object({
   // Lodging-domain preference: single currency used to aggregate stay costs that
   // were originally billed in whatever currency the hotel uses.
   baseCurrency: baseCurrencyField.optional(),
+  // Silent trip auto-creation during flight import (column-backed, default
+  // true). The explicit "detect trips" button is not gated by this.
+  autoCreateTrips: z.boolean().optional(),
 }).partial();
 
 export const settingsUpdateSchema = settingsSchema;
@@ -154,6 +158,7 @@ function buildSettingsResponse(betaFeaturesEnabled: boolean, name: {
   historicalEnrichmentMaxPerDay: number | null;
   enabledDomains: string[];
   baseCurrency: string;
+  autoCreateTrips: boolean;
 }): SettingsResponse {
   const baseData = (typeof record.data === 'object' && record.data !== null
     ? record.data
@@ -183,6 +188,7 @@ function buildSettingsResponse(betaFeaturesEnabled: boolean, name: {
     },
     enabledDomains: record.enabledDomains,
     baseCurrency: record.baseCurrency,
+    autoCreateTrips: record.autoCreateTrips ?? true,
     // Listed after the `...baseData` spread so a stale key that somehow made
     // it into the settings JSON can never shadow the authoritative value.
     betaFeaturesEnabled,
@@ -249,7 +255,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     // never reaches the DB — the value below is always re-read from
     // AdminSettings, never taken from the request body.
     const payload = settingsSchema.parse(req.body);
-    const { enabledDomains, baseCurrency, ...rest } = payload;
+    const { enabledDomains, baseCurrency, autoCreateTrips, ...rest } = payload;
     const { betaFeaturesEnabled } = await getInstanceSettings();
     logger.info({ operation: 'settings_update', userId });
 
@@ -356,6 +362,11 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       updateData.baseCurrency = baseCurrency;
     }
 
+    // Handle silent trip auto-creation (column-backed; absent = leave alone)
+    if (autoCreateTrips !== undefined) {
+      updateData.autoCreateTrips = autoCreateTrips;
+    }
+
     const saved = await prisma.userSettings.upsert({
       where: { userId },
       update: updateData,
@@ -375,6 +386,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         boardingPassParserStrategy: boardingPassParserStrategy ?? null,
         enabledDomains: enabledDomains ?? ['flight'],
         baseCurrency: baseCurrency ?? 'EUR',
+        autoCreateTrips: autoCreateTrips ?? true,
       },
     });
 

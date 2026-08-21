@@ -76,22 +76,22 @@ export function LodgingStatStrip({ stats, variant = "overlay" }: LodgingStatStri
     {
       key: "hotels",
       value: String(stats.lodgingsCount),
-      label: t("dashboard:lodgingTab.stats.hotels"),
+      label: t("dashboard:lodgingTab.stats.hotels", { count: stats.lodgingsCount }),
     },
     {
       key: "stays",
       value: String(stats.staysCount),
-      label: t("dashboard:lodgingTab.stats.stays"),
+      label: t("dashboard:lodgingTab.stats.stays", { count: stats.staysCount }),
     },
     {
       key: "nights",
       value: String(stats.totalNights),
-      label: t("dashboard:lodgingTab.stats.nights"),
+      label: t("dashboard:lodgingTab.stats.nights", { count: stats.totalNights }),
     },
     {
       key: "chains",
       value: String(stats.chainsUnique),
-      label: t("dashboard:lodgingTab.stats.chains"),
+      label: t("dashboard:lodgingTab.stats.chains", { count: stats.chainsUnique }),
     },
     {
       key: "spend",

@@ -19,8 +19,9 @@ export interface ApiKeyCardProps {
   isShared: boolean;
   hasAccess: boolean;
   value?: string;
-  /** Whether the card offers a "Test" button. Providers without a
-   *  backend test endpoint (e.g. logostream) must pass false. */
+  /** Whether the card offers a "Test" button. Every provider has a backend
+   *  test endpoint now; pass false only for a provider that genuinely has
+   *  none. */
   testable?: boolean;
   /** Explicit "the user has saved their own key" signal. User cards MUST
    *  pass this from `apiKeysStatus.<provider>.hasKey` because their `value`
@@ -70,7 +71,23 @@ export default function ApiKeyCard({
   const [showKey, setShowKey] = useState(false);
   const [localValue, setLocalValue] = useState(value || "");
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+    messageKey?: string;
+    messageParams?: Record<string, string | number>;
+  } | null>(null);
+
+  // #260: the backend names the outcome with a stable key; the English
+  // `message` is only the fallback for keys this build doesn't know (and
+  // for untranslatable upstream prose, which carries no key at all).
+  const testResultText = (result: NonNullable<typeof testResult>): string =>
+    result.messageKey
+      ? t(`settings:apiKeyTest.${result.messageKey}`, {
+          ...result.messageParams,
+          defaultValue: result.message,
+        })
+      : result.message;
 
   const handleChange = (newValue: string) => {
     setLocalValue(newValue);
@@ -88,32 +105,48 @@ export default function ApiKeyCard({
   };
 
   const handleTest = async () => {
-    // No backend test endpoint exists for these providers; the early return
-    // also narrows `provider` for the testApiKey union below.
-    // Neither of these has a backend test endpoint: one serves images, the
-    // other bills per request, and a "test" button that costs money is a trap.
-    if (!testable || provider === "logostream" || provider === "googlePlaces") {
+    if (!testable) {
       return;
     }
     setTesting(true);
     setTestResult(null);
     try {
-      const api = isAdmin ? adminApi : settingsApi;
       let result;
       if (provider === "opensky" && openskyFields) {
+        const api = isAdmin ? adminApi : settingsApi;
         result = await api.testApiKey(provider, undefined, {
           clientId: openskyFields.clientId,
           clientSecret: openskyFields.clientSecret,
         });
+      } else if (provider === "logostream" || provider === "googlePlaces") {
+        // Admin-only providers — no user-level test endpoint exists, so
+        // these always go through adminApi regardless of `isAdmin`.
+        result = await adminApi.testApiKey(provider, localValue || value);
       } else {
+        const api = isAdmin ? adminApi : settingsApi;
         result = await api.testApiKey(provider, localValue || value);
       }
       setTestResult(result);
     } catch (error: unknown) {
-      const errorObj = error as { response?: { data?: { message?: string } }; message?: string };
+      // The "nothing configured to test" answer is a 400, so it arrives
+      // here — carry its messageKey through, or the translation is lost
+      // exactly where it matters most (#260).
+      const errorObj = error as {
+        response?: {
+          data?: {
+            message?: string;
+            messageKey?: string;
+            messageParams?: Record<string, string | number>;
+          };
+        };
+        message?: string;
+      };
+      const data = errorObj.response?.data;
       setTestResult({
         success: false,
-        message: errorObj.response?.data?.message || errorObj.message || "Test fehlgeschlagen",
+        message: data?.message || errorObj.message || t("settings:apiKeyTest.requestFailed"),
+        messageKey: data?.messageKey,
+        messageParams: data?.messageParams,
       });
     } finally {
       setTesting(false);
@@ -439,7 +472,7 @@ export default function ApiKeyCard({
                   d="M5 13l4 4L19 7"
                 />
               </svg>
-              {testResult.message}
+              {testResultText(testResult)}
             </div>
           ) : (
             <div className="flex items-center gap-2">
@@ -451,7 +484,7 @@ export default function ApiKeyCard({
                   d="M6 18L18 6M6 6l12 12"
                 />
               </svg>
-              {testResult.message}
+              {testResultText(testResult)}
             </div>
           )}
         </div>

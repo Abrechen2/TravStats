@@ -8,6 +8,7 @@ import {
 } from "../../lib/lodgingDateDisplay";
 import type { StayMembershipSource } from "../../shared/membershipDerivation";
 import type { LodgingStay } from "../../types/lodging";
+import { StayStatusPill } from "./StayStatusPill";
 
 interface LodgingStayCardProps {
   stay: LodgingStay;
@@ -101,6 +102,10 @@ export function LodgingStayCard({
           {stay.roomCategory ? ` · ${stay.roomCategory}` : ""}
           {stay.roomNumber ? ` · ${t("lodging:field.room")} ${stay.roomNumber}` : ""}
         </span>
+        {/* Owner ask (2026-08-20): the status must be visible in lists, like
+            the flights table — a cancelled stay used to look identical to a
+            booked one here. */}
+        <StayStatusPill status={stay.status} testId={`stay-status-${stay.id}`} />
         {stay.isAwardStay && (
           <span className="rounded-full bg-[var(--accent)]/15 px-2 py-0.5 text-xs font-medium text-[var(--accent)]">
             {t("lodging:field.awardStay")}

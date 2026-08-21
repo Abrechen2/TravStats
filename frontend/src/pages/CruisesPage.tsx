@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { cruiseApi } from "../lib/api";
 import type { Cruise, CruiseStatus } from "../types";
-import { CruiseRow } from "../components/Cruise/CruiseRow";
+import { CruiseRow, type CruiseColumnId } from "../components/Cruise/CruiseRow";
+import { ColumnPicker } from "../components/table/ColumnPicker";
+import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import CruiseRowActions from "../components/Cruise/CruiseRowActions";
 import DomainImportPanel from "../components/import/DomainImportPanel";
 import { useCruiseImportAdapter } from "../components/import/adapters/cruiseAdapter";
@@ -18,6 +20,19 @@ type YearFilter = number | "all";
 // #status-from-dates: in_progress included so the filter dropdown can
 // discover cruises currently under way, not just scheduled/flown/cancelled.
 const STATUSES: CruiseStatus[] = ["scheduled", "in_progress", "flown", "cancelled", "historical"];
+
+// Column-visibility ids (ColumnPicker) — header and CruiseRow must agree.
+const CRUISE_COLUMN_IDS: readonly CruiseColumnId[] = [
+  "ship",
+  "line",
+  "dates",
+  "ports",
+  "status",
+  "cabin",
+  "price",
+  "actions",
+];
+const CRUISE_ALWAYS_VISIBLE = ["ship", "actions"] as const;
 
 export default function CruisesPage(): JSX.Element {
   const { t } = useTranslation(["cruise", "common"]);
@@ -38,6 +53,7 @@ export default function CruisesPage(): JSX.Element {
   const [yearFilter, setYearFilter] = useState<YearFilter>("all");
   const [sortBy, setSortBy] = useState<CruiseSortKey>("date");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const columnPrefs = useColumnPrefs("cruise-list", CRUISE_ALWAYS_VISIBLE);
 
   const handleSort = (col: CruiseSortKey): void => {
     if (col === sortBy) {
@@ -129,7 +145,7 @@ export default function CruisesPage(): JSX.Element {
           borderBottom: "1px solid var(--color-border)",
         }}
       >
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="mx-auto flex max-w-(--breakpoint-2xl) flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-1 flex-col gap-2 md:flex-row md:items-center">
             <input
               type="search"
@@ -184,17 +200,29 @@ export default function CruisesPage(): JSX.Element {
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl px-4 py-6">
+      {/* Same width budget as the flights table page — owner principle:
+          the domain list pages look the same, only the content differs. */}
+      <div className="mx-auto max-w-(--breakpoint-2xl) px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold text-(--text-primary)">{t("list.title")}</h1>
-          <button
-            type="button"
-            onClick={() => setShowAdd(true)}
-            className="btn-primary flex items-center gap-2 whitespace-nowrap"
-          >
-            <span>+</span>
-            <span>{t("add.title")}</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <ColumnPicker
+              columns={CRUISE_COLUMN_IDS.map((id) => ({
+                id,
+                label: t(`list.columns.${id}`),
+                always: (CRUISE_ALWAYS_VISIBLE as readonly string[]).includes(id),
+              }))}
+              prefs={columnPrefs}
+            />
+            <button
+              type="button"
+              onClick={() => setShowAdd(true)}
+              className="btn-primary flex items-center gap-2 whitespace-nowrap"
+            >
+              <span>+</span>
+              <span>{t("add.title")}</span>
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -208,6 +236,7 @@ export default function CruisesPage(): JSX.Element {
             <table className="w-full text-sm min-w-[640px]">
               <thead className="bg-(--bg-surface) text-(--text-muted)">
                 <tr>
+                  {columnPrefs.isVisible("ship") && (
                   <th className="px-3 py-2 text-left">
                     <button
                       type="button"
@@ -224,6 +253,8 @@ export default function CruisesPage(): JSX.Element {
                       </span>
                     </button>
                   </th>
+                  )}
+                  {columnPrefs.isVisible("line") && (
                   <th className="px-3 py-2 text-left">
                     <button
                       type="button"
@@ -240,6 +271,8 @@ export default function CruisesPage(): JSX.Element {
                       </span>
                     </button>
                   </th>
+                  )}
+                  {columnPrefs.isVisible("dates") && (
                   <th className="px-3 py-2 text-left">
                     <button
                       type="button"
@@ -256,6 +289,8 @@ export default function CruisesPage(): JSX.Element {
                       </span>
                     </button>
                   </th>
+                  )}
+                  {columnPrefs.isVisible("ports") && (
                   <th className="px-3 py-2 text-right">
                     <button
                       type="button"
@@ -272,6 +307,8 @@ export default function CruisesPage(): JSX.Element {
                       </span>
                     </button>
                   </th>
+                  )}
+                  {columnPrefs.isVisible("status") && (
                   <th className="px-3 py-2 text-left">
                     <button
                       type="button"
@@ -288,7 +325,11 @@ export default function CruisesPage(): JSX.Element {
                       </span>
                     </button>
                   </th>
+                  )}
+                  {columnPrefs.isVisible("cabin") && (
                   <th className="px-3 py-2 text-left">{t("list.columns.cabin")}</th>
+                  )}
+                  {columnPrefs.isVisible("price") && (
                   <th className="px-3 py-2 text-right">
                     <button
                       type="button"
@@ -305,7 +346,10 @@ export default function CruisesPage(): JSX.Element {
                       </span>
                     </button>
                   </th>
+                  )}
+                  {columnPrefs.isVisible("actions") && (
                   <th className="px-3 py-2 text-right">{t("list.columns.actions")}</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -313,6 +357,7 @@ export default function CruisesPage(): JSX.Element {
                   <CruiseRow
                     key={c.id}
                     cruise={c}
+                    isColumnVisible={columnPrefs.isVisible}
                     onOpen={() => navigate(`/cruises/${c.id}`)}
                     actions={
                       <CruiseRowActions

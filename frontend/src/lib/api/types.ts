@@ -80,7 +80,12 @@ export interface SuccessResponse {
 /** API key test response */
 export interface ApiKeyTestResponse {
   success: boolean;
+  /** English diagnostic fallback — render messageKey's translation when set (#260). */
   message: string;
+  /** Stable outcome identifier, translated via settings:apiKeyTest.<key>. */
+  messageKey?: string;
+  /** Interpolation values for messageKey (e.g. { status }). */
+  messageParams?: Record<string, string | number>;
   details?: Record<string, unknown>;
 }
 
@@ -134,6 +139,8 @@ export interface UserSettings {
    * on the backend) — used to convert/aggregate money figures like lodging spend. Distinct
    * from `units.currency`, a separate display preference. */
   baseCurrency?: string;
+  /** Silent trip auto-creation during flight import (default true). */
+  autoCreateTrips?: boolean;
   /**
    * Instance-level beta gate — READ-ONLY. Served by GET /settings for
    * convenience; PUT /settings ignores it (Zod strips it server-side). Only

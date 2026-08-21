@@ -2,6 +2,17 @@
   "nav": {
     "link": "Lodging"
   },
+  "units": {
+    "hotels": "{{count}} hotels",
+    "hotels_one": "{{count}} hotel",
+    "hotels_other": "{{count}} hotels",
+    "stays": "{{count}} stays",
+    "stays_one": "{{count}} stay",
+    "stays_other": "{{count}} stays",
+    "rows": "{{count}} rows",
+    "rows_one": "{{count}} row",
+    "rows_other": "{{count}} rows"
+  },
   "list": {
     "title": "Lodging",
     "loading": "Loading lodgings …",
@@ -19,6 +30,13 @@
     "otherCurrencyHint": "Includes further amounts in an older base currency, not counted here.",
     "bookmarked": "bookmarked",
     "bookmarkedHint": "Not visited yet — counted in no statistic.",
+    "sortBy": "Sort by {{col}}",
+    "footer": {
+      "showing": "{{count}} lodgings",
+      "showing_one": "{{count}} lodging",
+      "showing_other": "{{count}} lodgings",
+      "sortedBy": "Sorted by {{label}} ({{direction}})"
+    },
     "wholeListHint": "A whole list at once?",
     "status": {
       "label": "Status",
@@ -63,8 +81,11 @@
     "spendBase": "In base currency",
     "spendPerNight": "Per night",
     "noLocation": "No location on file",
+    "setLocationNow": "Find location now",
     "deleteConfirmTitle": "Delete lodging?",
-    "deleteConfirmMessage": "This lodging and its {{count}} stay(s) will be permanently deleted. This action cannot be undone.",
+    "deleteConfirmMessage": "This lodging and its {{count}} stays will be permanently deleted. This action cannot be undone.",
+    "deleteConfirmMessage_one": "This lodging and its {{count}} stay will be permanently deleted. This action cannot be undone.",
+    "deleteConfirmMessage_other": "This lodging and its {{count}} stays will be permanently deleted. This action cannot be undone.",
     "deleteSuccess": "Lodging deleted",
     "deleteError": "Could not delete lodging"
   },
@@ -96,6 +117,10 @@
     "chain": "Chain",
     "checkIn": "Check-in",
     "checkOut": "Check-out",
+    "checkInTime": "Check-in time",
+    "checkInTimeHint": "Optional — e.g. 15:00. Only drives the “Next up” countdown.",
+    "checkOutTime": "Check-out time",
+    "checkOutTimeHint": "Optional — e.g. 11:00.",
     "status": "Status",
     "roomCategory": "Room category",
     "currency": "Currency",
@@ -218,7 +243,9 @@
   },
   "import": {
     "preview": {
-      "title": "Preview ({{count}} row(s))",
+      "title": "Preview ({{count}} rows)",
+      "title_one": "Preview ({{count}} row)",
+      "title_other": "Preview ({{count}} rows)",
       "newLabel": "new",
       "presentLabel": "already present",
       "needsInputLabel": "need you",
@@ -289,13 +316,15 @@
         "unreadable_number": "{{count}}× unreadable number"
       },
       "rowSample": " (e.g. \"{{sample}}\" in row {{row}})",
-      "skippedRows": "{{count}} row(s) were skipped due to invalid values.",
+      "skippedRows": "{{count}} rows were skipped due to invalid values.",
+      "skippedRows_one": "{{count}} row was skipped due to invalid values.",
+      "skippedRows_other": "{{count}} rows were skipped due to invalid values.",
       "parseFailed": "This CSV file could not be read.",
       "previewFailed": "The import preview could not be loaded."
     },
     "commitResult": {
-      "success": "Imported {{createdLodgings}} hotel(s) and {{createdStays}} stay(s), skipped {{skipped}} (already present).",
-      "partial": "Imported {{createdLodgings}} hotel(s) and {{createdStays}} stay(s), skipped {{skipped}} (already present), {{failedCount}} row(s) failed: {{reasons}}",
+      "success": "Imported {{hotels}} and {{stays}}, skipped {{skipped}} (already present).",
+      "partial": "Imported {{hotels}} and {{stays}}, skipped {{skipped}} (already present), {{rows}} failed: {{reasons}}",
       "failureCodes": {
         "ownership_mismatch": "belongs to another account",
         "missing_lodging_reference": "missing hotel reference",
@@ -312,14 +341,14 @@
         "email": "Email",
         "pdf": "PDF"
       },
-      "created": "{{lodgingCount}} hotel(s) and {{stayCount}} stay(s) created",
+      "created": "{{hotels}} and {{stays}} created",
       "revert": "Revert import",
       "revertError": "Could not revert the import.",
       "confirmTitle": "Really revert this import?",
       "confirmMessage": "Only what this import created is deleted. Stays added by hand or attached by a later import are kept — their hotel stays too.",
       "revertResult": {
-        "success": "Deleted {{deletedLodgings}} hotel(s) and {{deletedStays}} stay(s).",
-        "withDetached": "Deleted {{deletedLodgings}} hotel(s) and {{deletedStays}} stay(s), kept {{detachedLodgings}} hotel(s) (they have other stays)."
+        "success": "Deleted {{hotels}} and {{stays}}.",
+        "withDetached": "Deleted {{hotels}} and {{stays}}, kept {{kept}} (they have other stays)."
       }
     },
     "visited": {

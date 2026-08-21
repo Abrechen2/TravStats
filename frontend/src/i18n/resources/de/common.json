@@ -192,5 +192,14 @@
     "search": "Währung suchen …",
     "frequent": "Häufig",
     "all": "Alle Währungen"
+  },
+  "table": {
+    "columns": "Spalten"
+  },
+  "support": {
+    "donate": "Spenden",
+    "donateAria": "Über PayPal spenden",
+    "star": "Stern",
+    "starAria": "Auf GitHub einen Stern geben"
   }
 }

@@ -173,6 +173,7 @@
     "favoriteAirline": "Lieblings-Airline",
     "flightCategory": "Flugkategorie",
     "options": {
+      "none": "Kein Standard (Feld bleibt leer)",
       "scheduled": "Geplant",
       "flown": "Geflogen",
       "economy": "Economy",
@@ -512,6 +513,19 @@
   "externalServices": {
     "title": "Meine externen Dienste"
   },
+  "apiKeyTest": {
+    "valid": "API-Schlüssel ist gültig",
+    "validBilled": "API-Schlüssel ist gültig (dieser Test hat eine kostenpflichtige Text-Search-Anfrage gesendet, ca. 0,03 USD)",
+    "invalid": "Ungültiger API-Schlüssel",
+    "rateLimited": "Anfragelimit erreicht — bitte später erneut versuchen",
+    "noKey": "Kein API-Schlüssel angegeben",
+    "notConfigured": "Kein Schlüssel zum Testen gespeichert. Bitte zuerst speichern.",
+    "unexpectedStatus": "Unerwartete Antwort ({{status}})",
+    "protocol": "Unerwartete Antwort des Anbieters",
+    "openskyMissingCredentials": "Client-ID und Client-Secret sind erforderlich",
+    "openskyInvalid": "Ungültige OAuth2-Zugangsdaten — bitte Client-ID und Client-Secret prüfen",
+    "requestFailed": "Test fehlgeschlagen"
+  },
   "apiKeys": {
     "title": "API-Schlüssel",
     "description": "Verwalte API-Schlüssel für externe Dienste. Vom Administrator geteilte Schlüssel werden automatisch verwendet.",
@@ -625,10 +639,18 @@
       "scopeHint": "Jeder Listen-Import als Ganzes — neueste zuerst. Rücknehmbar, solange die Einträge noch aus diesem Import stammen.",
       "counts": {
         "flights": "{{count}} Flüge",
-        "cruises": "{{count}} Kreuzfahrten"
+        "flights_one": "{{count}} Flug",
+        "flights_other": "{{count}} Flüge",
+        "cruises": "{{count}} Kreuzfahrten",
+        "cruises_one": "{{count}} Kreuzfahrt",
+        "cruises_other": "{{count}} Kreuzfahrten"
       },
       "reverted": "{{count}} Einträge entfernt.",
-      "revertedWithKept": "{{count}} Einträge entfernt. {{kept}} behalten, weil andere Daten daran hängen."
+      "reverted_one": "{{count}} Eintrag entfernt.",
+      "reverted_other": "{{count}} Einträge entfernt.",
+      "revertedWithKept": "{{count}} Einträge entfernt. {{kept}} behalten, weil andere Daten daran hängen.",
+      "revertedWithKept_one": "{{count}} Eintrag entfernt. {{kept}} behalten, weil andere Daten daran hängen.",
+      "revertedWithKept_other": "{{count}} Einträge entfernt. {{kept}} behalten, weil andere Daten daran hängen."
     },
     "tile": {
       "fr24": {
@@ -715,7 +737,11 @@
     "toast": {
       "movedFromDashboard": "Der Flug-Import ist jetzt hier — unter Einstellungen → Import."
     },
-    "noRoutes": "Für diesen Bereich gibt es noch kein Listenformat. Einzelne Einträge legst du direkt dort an."
+    "noRoutes": "Für diesen Bereich gibt es noch kein Listenformat. Einzelne Einträge legst du direkt dort an.",
+    "autoCreateTrips": {
+      "label": "Reisen automatisch anlegen",
+      "description": "Flüge mit derselben Buchungsnummer werden beim Import automatisch zu einer Reise mit Buchung gruppiert. Ausgeschaltet bleibt die Buchungsnummer erhalten – über „Reisen erkennen“ lässt sich die Gruppierung später jederzeit nachholen."
+    }
   },
   "devices": {
     "title": "Geräte",

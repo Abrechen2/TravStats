@@ -58,8 +58,16 @@ export function useLocationSearch(query: string, lang?: string): UseLocationSear
     const timer = window.setTimeout(() => {
       void (async (): Promise<void> => {
         try {
-          const hits = await searchPlaces(trimmed, lang);
+          const { results: hits, degraded } = await searchPlaces(trimmed, lang);
           if (requestIdRef.current !== requestId) return; // superseded
+          if (degraded) {
+            // The geocoder itself failed (#263) — surface the error state,
+            // not the misleading "no results".
+            setResults([]);
+            setSearchError(true);
+            setSearching(false);
+            return;
+          }
           setResults(hits);
           setSearching(false);
         } catch (err) {

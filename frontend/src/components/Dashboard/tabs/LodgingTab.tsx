@@ -231,9 +231,24 @@ export function LodgingTab(): JSX.Element {
             <h2 style={{ margin: "0 0 8px", color: "var(--text-primary)", fontSize: 18 }}>
               {t("dashboard:lodgingTab.emptyTitle")}
             </h2>
-            <p style={{ margin: 0, color: "var(--text-muted)", fontSize: 14 }}>
+            <p style={{ margin: "0 0 20px", color: "var(--text-muted)", fontSize: 14 }}>
               {t("dashboard:lodgingTab.emptyBody")}
             </p>
+            <button
+              type="button"
+              onClick={() => navigate("/lodging")}
+              style={{
+                padding: "10px 20px",
+                background: "var(--accent)",
+                color: "#0d1117",
+                borderRadius: 10,
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              {t("dashboard:lodgingTab.emptyCta")}
+            </button>
           </div>
         </div>
       )}

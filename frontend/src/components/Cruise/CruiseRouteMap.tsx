@@ -340,7 +340,12 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
       zoom,
       colorConfig: DETAIL_MAP_COLOR_CONFIG,
     });
-    const portsLayers = createCruisePortsLayer([cruise], zoom);
+    // Detail map for ONE cruise, possibly still just booked — it must show
+    // every stop as a pin regardless of status (Finding 1 of the
+    // status-blind-counts review: the default "visits" scope drops every
+    // stop for a scheduled/in-progress/cancelled cruise and the layer
+    // returns null, leaving the itinerary preview blank).
+    const portsLayers = createCruisePortsLayer([cruise], zoom, { scope: "itinerary" });
 
     // The straight guide between handles, one path per segment so a click
     // resolves directly to the segment index insertWaypoint wants. The

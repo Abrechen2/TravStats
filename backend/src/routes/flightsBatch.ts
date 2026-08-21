@@ -11,7 +11,7 @@ import { calculateCo2Kg, haversineKm, toSeatClass } from "../services/co2Calcula
 import { resolveAirlineCodes } from "../utils/airlineNormalize";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
-import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from "../shared/statusDerivation";
+import { deriveFlightStatus, FLIGHT_PASSTHROUGH, tripDateBounds } from "../shared/statusDerivation";
 import { recomputeTripStatus } from "../services/tripStatusService";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { flightExternalRef, isDocumentImport } from "../services/importProvenance";
@@ -285,14 +285,24 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
         flights.push(flight);
       }
 
-      // Group by bookingReference to auto-create Trips+Bookings
+      // Group by bookingReference to auto-create Trips+Bookings — unless the
+      // user turned the silent grouping off. The PNR stays on the flight rows
+      // either way, so the explicit "detect trips" endpoint can group later.
+      const settings = await tx.userSettings.findUnique({
+        where: { userId },
+        select: { autoCreateTrips: true },
+      });
+      const autoCreateTrips = settings?.autoCreateTrips ?? true;
+
       type CreatedFlight = (typeof flights)[number];
       const pnrGroups = new Map<string, CreatedFlight[]>();
-      for (const f of flights) {
-        if (f.bookingReference) {
-          const group = pnrGroups.get(f.bookingReference) ?? [];
-          group.push(f);
-          pnrGroups.set(f.bookingReference, group);
+      if (autoCreateTrips) {
+        for (const f of flights) {
+          if (f.bookingReference) {
+            const group = pnrGroups.get(f.bookingReference) ?? [];
+            group.push(f);
+            pnrGroups.set(f.bookingReference, group);
+          }
         }
       }
 
@@ -313,7 +323,19 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
         }) ?? "";
         const name = `${origin} – ${dest} · ${month}`;
 
-        const trip = await tx.trip.create({ data: { userId, name, color } });
+        // An auto-created trip knows its flights, so it gets its date range
+        // right away — four dated legs and a NULL start/end was the measured
+        // defect (board item auto-created-trip-has-no-dates).
+        const bounds = tripDateBounds(groupFlights, []);
+        const trip = await tx.trip.create({
+          data: {
+            userId,
+            name,
+            color,
+            startDate: bounds.earliestStart,
+            endDate: bounds.latestEnd,
+          },
+        });
         createdTripIds.push(trip.id);
 
         // Identical non-null total on every segment = the repeated booking

@@ -20,9 +20,16 @@ interface PortDatum {
   country?: string | null;
   /** City the port serves — shown in the hover tooltip's place line. */
   city?: string | null;
+  /**
+   * Sailed-only visit count (flown|historical cruises). Stays 0 in
+   * "itinerary" scope when the port is only reachable via a stop that
+   * hasn't sailed yet — the tooltip omits the visit line whenever this
+   * is 0 (see markerTooltip.ts's `visits > 0` gate).
+   */
   visits: number;
-  /** ISO date of the most recent stop at this port (max of
-   *  stop.arrivalTime across cruises). Surfaced in the hover tooltip. */
+  /** ISO date of the most recent SAILED stop at this port (max of
+   *  stop.arrivalTime across flown|historical cruises). Surfaced in the
+   *  hover tooltip; stays unset alongside visits === 0. */
   lastVisit?: string;
 }
 
@@ -50,13 +57,16 @@ export const PORT_RGB: [number, number, number] = [111, 160, 214];
 const PORT_LABEL_VISIBILITY_MIN_ZOOM = 4;
 
 /**
- * Build a stack of layers (halo ring, solid dot, label) for unique
- * ports visited across all cruises. At-sea stops and stops without a
- * resolved port are ignored.
+ * Build a stack of layers (halo ring, solid dot, label) for unique ports
+ * across the given cruises. At-sea stops and stops without a resolved
+ * port are ignored.
  *
  * `zoom` gates the label layer visibility — same threshold as airport
  * IATA labels (LABEL_VISIBILITY_MIN_ZOOM in routesLayer). Defaults to
  * "always visible" so legacy callers without zoom plumbing don't break.
+ *
+ * `appearance.scope` controls which cruises may put a pin on the map
+ * (see `PortsAppearance.scope`).
  *
  * Returns `null` when no qualifying ports exist.
  */
@@ -69,6 +79,26 @@ export interface PortsAppearance {
   /** Port-label reveal: off / key ports only (priority by visits, the
    *  default) / all. Replaces the old hard zoom gate. */
   labelsMode?: LabelsMode;
+  /**
+   * "visits" (default) — for aggregate maps (dashboard, globe): only
+   * sailed (flown|historical) cruises put a pin on the map at all, and
+   * the visit count comes from them too. A merely planned cruise must
+   * never claim a port as visited.
+   *
+   * "itinerary" — for a single cruise's own detail map (CruiseRouteMap):
+   * ALL of that cruise's stops render as pins regardless of status, so a
+   * booked-but-not-sailed cruise still shows its route. The visit count
+   * / last-call date stay sailed-only though, and land on the datum as
+   * `visits: 0` / `lastVisit: undefined` when the cruise hasn't sailed —
+   * the tooltip already omits both lines in that case (see
+   * markerTooltip.ts), so an itinerary pin never claims a visit that
+   * didn't happen.
+   */
+  scope?: "visits" | "itinerary";
+}
+
+function isSailedCruise(cruise: Cruise): boolean {
+  return cruise.status === "flown" || cruise.status === "historical";
 }
 
 export function createCruisePortsLayer(
@@ -76,43 +106,56 @@ export function createCruisePortsLayer(
   zoom: number = PORT_LABEL_VISIBILITY_MIN_ZOOM,
   appearance: PortsAppearance = {}
 ): Layer[] | null {
-  const { portColor, portSizeScale = 1, labelsMode = "important" } = appearance;
+  const { portColor, portSizeScale = 1, labelsMode = "important", scope = "visits" } = appearance;
   const portRgb = portColor ?? PORT_RGB;
   const byPort = new Map<number, PortDatum>();
-  const recordVisit = (port: Port, date: string | undefined): void => {
+  const ensurePort = (port: Port): PortDatum => {
     const existing = byPort.get(port.id);
-    if (existing) {
-      existing.visits += 1;
-      if (date && (!existing.lastVisit || date > existing.lastVisit)) {
-        existing.lastVisit = date;
-      }
-    } else {
-      byPort.set(port.id, {
-        position: [port.lon, port.lat],
-        portId: port.id,
-        name: port.name,
-        shortLabel: toPortLabel(port.name),
-        country: port.country,
-        city: port.city,
-        visits: 1,
-        lastVisit: date,
-      });
+    if (existing) return existing;
+    const created: PortDatum = {
+      position: [port.lon, port.lat],
+      portId: port.id,
+      name: port.name,
+      shortLabel: toPortLabel(port.name),
+      country: port.country,
+      city: port.city,
+      visits: 0,
+    };
+    byPort.set(port.id, created);
+    return created;
+  };
+  const recordVisit = (port: Port, date: string | undefined): void => {
+    const entry = ensurePort(port);
+    entry.visits += 1;
+    if (date && (!entry.lastVisit || date > entry.lastVisit)) {
+      entry.lastVisit = date;
     }
   };
   for (const cruise of cruises) {
+    // "visits" scope (aggregate maps): a scheduled/in-progress/cancelled
+    // cruise hasn't (fully) sailed and contributes NOTHING — no pin, no
+    // visit. "itinerary" scope (one cruise's own detail map): every
+    // cruise still gets a pin so a booked route isn't blank, but only a
+    // sailed cruise's stops may claim a visit.
+    if (scope === "visits" && !isSailedCruise(cruise)) continue;
+    const claimsVisit = isSailedCruise(cruise);
+    const touch = (port: Port, date: string | undefined): void => {
+      if (claimsVisit) recordVisit(port, date);
+      else ensurePort(port);
+    };
     const firstPortCall = cruise.stops.find((s) => !s.isAtSea && s.port);
     const lastPortCall = [...cruise.stops].reverse().find((s) => !s.isAtSea && s.port);
     // Departure/arrival ports get markers too — skipped only when they
     // duplicate the first/last port-call stop (counted there instead).
     if (cruise.departurePort && cruise.departurePort.id !== firstPortCall?.port?.id) {
-      recordVisit(cruise.departurePort, cruise.startDate ?? undefined);
+      touch(cruise.departurePort, cruise.startDate ?? undefined);
     }
     for (const stop of cruise.stops) {
       if (stop.isAtSea || !stop.port) continue;
-      recordVisit(stop.port, stop.arrivalTime ?? stop.departureTime ?? undefined);
+      touch(stop.port, stop.arrivalTime ?? stop.departureTime ?? undefined);
     }
     if (cruise.arrivalPort && cruise.arrivalPort.id !== lastPortCall?.port?.id) {
-      recordVisit(cruise.arrivalPort, cruise.endDate ?? undefined);
+      touch(cruise.arrivalPort, cruise.endDate ?? undefined);
     }
   }
   const data = Array.from(byPort.values());
