@@ -273,6 +273,48 @@ export function checkAchievement(
       isUnlocked = progress >= achievement.requirement;
       break;
 
+    // ── Kurios expansion (2.7) ────────────────────────────────────
+    case 'friday13_flights':
+      progress = stats.friday13Flights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'xmas_flights':
+      progress = stats.xmasFlights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'palindrome_day_flights':
+      progress = stats.palindromeFlights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'flights_one_day_max':
+      progress = stats.maxFlightsOneDay;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'same_day_return':
+      progress = stats.hasSameDayReturn;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'flight_number_666':
+      progress = stats.flight666Count;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'flight_number_777_on_777':
+      progress = stats.jackpot777Count;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'timezone_span':
+      progress = stats.maxTimezoneSpan;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'aisle_streak':
+      progress = stats.aisleStreak;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'antarctic_flight':
+      progress = checkAntarcticFlight(flights) ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
     // --- Cruise cases ---
     case 'cruises_count':
       progress = stats.cruisesCount;
@@ -359,6 +401,21 @@ export function checkAchievement(
 
     case 'cruise_dateline_crossing':
       progress = stats.hasCruiseDatelineCrossing ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_equator_crossing':
+      progress = stats.hasCruiseEquatorCrossing ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_ship_loyalty':
+      progress = stats.cruiseShipLoyaltyMax;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_cabin_inside_count':
+      progress = stats.cruiseInsideCabinCount;
       isUnlocked = progress >= achievement.requirement;
       break;
 
@@ -562,6 +619,24 @@ export function checkAchievement(
       isUnlocked = progress >= achievement.requirement;
       break;
 
+    // Requirement is a SOUTHERN latitude in whole degrees (45 = 45°S).
+    // The stat stores the raw (negative) latitude; flip the sign so a
+    // northern-hemisphere-only traveller clamps to 0, never unlocks.
+    case 'lodging_southern_lat':
+      progress = Math.max(0, Math.floor(-stats.lodgingSouthernmostLat));
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_birthday_stay':
+      progress = stats.hasLodgingBirthdayStay ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'lodging_xmas_stay':
+      progress = stats.hasLodgingXmasStay ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
     case 'trips_fully_documented':
       progress = stats.tripsFullyDocumented;
       isUnlocked = progress >= achievement.requirement;
@@ -642,6 +717,16 @@ function checkArcticFlight(flights: FlightData[]): boolean {
   const arcticCircle = 66.5;
   for (const flight of flights) {
     if (flight.depLat >= arcticCircle || flight.arrLat >= arcticCircle) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function checkAntarcticFlight(flights: FlightData[]): boolean {
+  const antarcticCircle = -66.5;
+  for (const flight of flights) {
+    if (flight.depLat <= antarcticCircle || flight.arrLat <= antarcticCircle) {
       return true;
     }
   }

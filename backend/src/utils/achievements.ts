@@ -7,7 +7,11 @@ import {
   type FlightData,
 } from './achievementStats';
 import { checkAchievement } from './achievementChecks';
-import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from './cruiseStats';
+import {
+  calculateCruiseStats,
+  rangeContainsMonthDay,
+  type CruiseData as CruiseStatsInput,
+} from './cruiseStats';
 import {
   calculateLodgingStats,
   type LodgingStayData as LodgingStatsInput,
@@ -282,6 +286,28 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     }));
     const lodgingStats = calculateLodgingStats(lodgingStatsInput, lodgingBaseCurrency, lodgingRecords);
 
+    // Birthday / Christmas stays — a day-precise, actually-visited stay whose
+    // check-in..check-out range spans the date in question. Month/Year/None
+    // precision is excluded: a guessed overlap would be indistinguishable
+    // from a known one.
+    const dayPreciseVisitedStays = lodgingStays.filter(
+      (s) =>
+        s.datePrecision === 'DAY' &&
+        s.checkIn &&
+        s.checkOut &&
+        classifyStay(s) === 'visited',
+    );
+    const hasLodgingBirthdayStay =
+      userBirthday !== undefined &&
+      dayPreciseVisitedStays.some((s) =>
+        rangeContainsMonthDay(s.checkIn!, s.checkOut!, userBirthday),
+      );
+    const hasLodgingXmasStay = dayPreciseVisitedStays.some(
+      (s) =>
+        rangeContainsMonthDay(s.checkIn!, s.checkOut!, { month: 12, day: 24 }) ||
+        rangeContainsMonthDay(s.checkIn!, s.checkOut!, { month: 12, day: 25 }),
+    );
+
     // Per-trip domain counts, DONE items only (flown/historical flights and
     // cruises, visited lodging stays) — a merely booked leg or a stay that
     // hasn't happened yet must not count toward any cross-domain flag below.
@@ -378,6 +404,9 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       cruiseTotalDistanceKm: cruiseStats.totalDistanceKm,
       cruiseLongestLegKm: cruiseStats.longestLegKm,
       hasCruiseDatelineCrossing: cruiseStats.hasDatelineCrossing,
+      hasCruiseEquatorCrossing: cruiseStats.hasEquatorCrossing,
+      cruiseShipLoyaltyMax: cruiseStats.shipLoyaltyMax,
+      cruiseInsideCabinCount: cruiseStats.insideCabinCount,
       hasFlyAndSailTrip: flyAndSail,
       hasFlyAndSail7d: flyAndSail7d,
       cruiseCarnivalBrandsCovered: 0, // computed inside the checker
@@ -419,6 +448,11 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       // southern-hemisphere-only traveller yields a negative here, which no
       // requirement can reach — that is the intended outcome, not a bug.
       lodgingNorthernmostLat: lodgingStats.geo.northernmost?.lat ?? 0,
+      // Southernmost counterpart — negative latitudes are the interesting ones;
+      // the checker flips the sign, so a northern-only traveller yields 0.
+      lodgingSouthernmostLat: lodgingStats.geo.southernmost?.lat ?? 0,
+      hasLodgingBirthdayStay,
+      hasLodgingXmasStay,
       // A trip is "fully documented" when it records the journey, the bed, the
       // words and the pictures. A cruise counts as the journey too — a
       // flightless cruise trip is not an undocumented one.

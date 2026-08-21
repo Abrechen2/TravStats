@@ -150,7 +150,7 @@ export const seedsPartB: AchievementDefinition[] = [
   {
     code: 'ISLAND_HOPPER',
     name: 'Island Hopper',
-    description: '10 Flüge mit mindestens einem Insel-Flughafen als Start oder Ziel',
+    description: '10 flights with at least one island airport as origin or destination',
     category: 'explorer',
     domain: 'flight',
     icon: '🏝️',
@@ -325,11 +325,15 @@ export const seedsPartB: AchievementDefinition[] = [
     // not a legacy-carrier filter. The old description ("flagship
     // airline") implied a brand restriction that doesn't exist —
     // tightening to "favourite airline" matches the actual check.
-    description: '15 Flüge mit derselben Lieblings-Airline',
+    description: '15 flights with the same favourite airline',
     category: 'elite',
     domain: 'flight',
     icon: '🎖️',
-    tier: 'gold',
+    // Silver, not gold: this sits between AIRLINE_LOYAL_10 (bronze) and
+    // AIRLINE_LOYAL_25 (silver) on the SAME `airline_loyalty` ladder — a
+    // gold badge below the silver rung inverted the tier order, and gold
+    // was already taken by AIRLINE_LOYAL_50.
+    tier: 'silver',
     requirement: 15,
     requirementType: 'airline_loyalty',
     points: 60,

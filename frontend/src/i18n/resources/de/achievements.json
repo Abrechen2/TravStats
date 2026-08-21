@@ -116,7 +116,7 @@
     },
     "DISTANCE_50000": {
       "name": "Weltumrundung",
-      "description": "Fliege 50.000 km (Erdumfang)"
+      "description": "Fliege 50.000 km (1,25-mal um die Erde)"
     },
     "DISTANCE_100000": {
       "name": "Globetrotter",
@@ -267,7 +267,7 @@
       "description": "Absolviere 50 Flüge in einem einzigen Jahr"
     },
     "TRANSCONTINENTAL": {
-      "name": "Transkontinental",
+      "name": "Transozeanisch",
       "description": "Absolviere einen Flug über einen Ozean"
     },
     "TIME_TRAVELER": {
@@ -312,7 +312,7 @@
     },
     "ISLAND_HOPPER": {
       "name": "Insel-Hopper",
-      "description": "10 Flüge zwischen Insel-Flughäfen"
+      "description": "10 Flüge mit mindestens einem Insel-Flughafen als Start oder Ziel"
     },
     "MICRO_STATES": {
       "name": "Mikrostaaten-Club",
@@ -363,8 +363,8 @@
       "description": "IATA-Codes mit allen 26 Anfangsbuchstaben besucht"
     },
     "LEGACY_LOYALIST": {
-      "name": "Flaggschiff-Loyalist",
-      "description": "15 Flüge mit derselben Flaggschiff-Airline"
+      "name": "Stamm-Loyalist",
+      "description": "15 Flüge mit derselben Lieblings-Airline"
     },
     "LOWCOST_CHAMPION": {
       "name": "Low-Cost-Champion",
@@ -945,6 +945,82 @@
     "DOCUMENTED_TRIP_10": {
       "name": "Chronist",
       "description": "10 Reisen mit Anreise, Unterkunft, Tagebuch und Fotos"
+    },
+    "FRIDAY_13_FLIGHT": {
+      "name": "Freitag, der 13.",
+      "description": "Ein Flug an einem Freitag, dem 13."
+    },
+    "XMAS_FLIGHT": {
+      "name": "Rentier-Konkurrenz",
+      "description": "Ein Flug am 24. oder 25. Dezember"
+    },
+    "PALINDROME_DAY": {
+      "name": "Palindrom-Flug",
+      "description": "Ein Flug an einem Palindrom-Datum (z. B. 22.02.2022)"
+    },
+    "FLIGHT_666": {
+      "name": "Höllenritt",
+      "description": "Ein Flug mit der Flugnummer 666"
+    },
+    "JACKPOT_777": {
+      "name": "Jackpot",
+      "description": "Flugnummer 777 auf einer Boeing 777"
+    },
+    "HATTRICK": {
+      "name": "Hattrick",
+      "description": "Drei Flüge an einem Kalendertag"
+    },
+    "THERE_AND_BACK": {
+      "name": "Hin und zurück an einem Tag",
+      "description": "Hin- und Rückflug derselben Strecke am selben Kalendertag"
+    },
+    "JETLAG_DENIER": {
+      "name": "Jetlag-Leugner",
+      "description": "Ein einzelner Flug über acht oder mehr Zeitzonen"
+    },
+    "AISLE_STREAK_20": {
+      "name": "Gang-Taktiker",
+      "description": "20 Gangplätze in Folge"
+    },
+    "ANTARCTIC_FLIGHT": {
+      "name": "Pinguin-Kurs",
+      "description": "Ein Flug südlich des südlichen Polarkreises (66,5° S)"
+    },
+    "AIRLINES_75": {
+      "name": "Airline-Enzyklopädie",
+      "description": "Mit 75 verschiedenen Airlines geflogen"
+    },
+    "AIRCRAFT_75": {
+      "name": "Flugzeug-Lexikon",
+      "description": "Auf 75 verschiedenen Flugzeugtypen geflogen"
+    },
+    "CRUISE_EQUATOR_CROSSING": {
+      "name": "Äquatortaufe",
+      "description": "Ein Kreuzfahrt-Leg über den Äquator — Neptun grüßt"
+    },
+    "SHIP_LOYALTY_3": {
+      "name": "Schiffskatze",
+      "description": "3 Kreuzfahrten mit demselben Schiff"
+    },
+    "INSIDE_CABIN_5": {
+      "name": "Innenkabinen-Stoiker",
+      "description": "5 Kreuzfahrten in der Innenkabine"
+    },
+    "LODGING_BIRTHDAY": {
+      "name": "Geburtstag im Hotelbett",
+      "description": "Ein Aufenthalt über den eigenen Geburtstag"
+    },
+    "LODGING_XMAS": {
+      "name": "Weihnachten im Hotel",
+      "description": "Ein Aufenthalt über den 24. oder 25. Dezember"
+    },
+    "SOUTHERN_LODGING_45": {
+      "name": "Tief im Süden",
+      "description": "Südlich des 45. südlichen Breitengrads übernachtet"
+    },
+    "ALL_INCLUSIVE_50": {
+      "name": "All-inclusive-Veteran",
+      "description": "50 Nächte mit All-inclusive-Verpflegung"
     }
   }
 }

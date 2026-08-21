@@ -99,6 +99,14 @@ export interface CruiseStats {
   /** True when any cruise has a leg where the longitude jumps across
    * the antimeridian (lon ±180°), e.g. an Auckland → Tahiti hop. */
   hasDatelineCrossing: boolean;
+  /** True when any leg connects ports on opposite sides of the equator —
+   * the classic line-crossing ceremony ("Äquatortaufe"). Chord check
+   * between consecutive catalog ports, same approximation as distance. */
+  hasEquatorCrossing: boolean;
+  /** Most cruises taken on one and the same ship. */
+  shipLoyaltyMax: number;
+  /** Number of cruises booked in an inside cabin. */
+  insideCabinCount: number;
   /** Total number of port calls across all cruises (counts revisits).
    * `cruisePortsUnique` is the de-duplicated set; this is the gross
    * tally — needed for revisit-rate and average-ports-per-cruise. */
@@ -122,6 +130,7 @@ export function calculateCruiseStats(
 ): CruiseStats {
   const portIds = new Set<number>();
   const shipIds = new Set<number>();
+  const shipCounts = new Map<number, number>();
   const cruiseLines = new Set<string>();
   const regions = new Set<string>();
   const countries = new Set<string>();
@@ -142,12 +151,18 @@ export function calculateCruiseStats(
   let totalDistanceKm = 0;
   let longestLegKm = 0;
   let hasDatelineCrossing = false;
+  let hasEquatorCrossing = false;
+  let insideCabinCount = 0;
   let totalPortCalls = 0;
   let totalCruiseDays = 0;
   const regionVisitCounts: Record<string, number> = {};
 
   for (const cruise of cruises) {
-    if (cruise.shipId !== null) shipIds.add(cruise.shipId);
+    if (cruise.shipId !== null) {
+      shipIds.add(cruise.shipId);
+      shipCounts.set(cruise.shipId, (shipCounts.get(cruise.shipId) ?? 0) + 1);
+    }
+    if (cruise.cabinType === 'inside') insideCabinCount += 1;
     if (cruise.cruiseLine) {
       cruiseLines.add(cruise.cruiseLine);
       lineCounts.set(cruise.cruiseLine, (lineCounts.get(cruise.cruiseLine) ?? 0) + 1);
@@ -249,6 +264,13 @@ export function calculateCruiseStats(
             // skips the dateline. Detect via raw longitude jump.
             const lonSpan = Math.abs(here.lon - prevPortPoint.lon);
             if (lonSpan > 180) hasDatelineCrossing = true;
+            // Equator crossing: leg endpoints in opposite hemispheres.
+            if (
+              (prevPortPoint.lat > 0 && here.lat < 0) ||
+              (prevPortPoint.lat < 0 && here.lat > 0)
+            ) {
+              hasEquatorCrossing = true;
+            }
           }
           prevPortPoint = here;
           portCallIndex += 1;
@@ -287,6 +309,11 @@ export function calculateCruiseStats(
     if (count > cruiseLineLoyaltyMax) cruiseLineLoyaltyMax = count;
   }
 
+  let shipLoyaltyMax = 0;
+  for (const count of shipCounts.values()) {
+    if (count > shipLoyaltyMax) shipLoyaltyMax = count;
+  }
+
   return {
     cruisesCount: cruises.length,
     cruisePortsUnique: portIds.size,
@@ -311,13 +338,22 @@ export function calculateCruiseStats(
     totalDistanceKm,
     longestLegKm,
     hasDatelineCrossing,
+    hasEquatorCrossing,
+    shipLoyaltyMax,
+    insideCabinCount,
     totalPortCalls,
     totalCruiseDays,
     regionVisitCounts,
   };
 }
 
-function rangeContainsMonthDay(
+/**
+ * Whether a date range (inclusive, UTC day-walk) contains a given
+ * month/day, year-agnostic. Exported for the lodging birthday/Christmas
+ * stay flags in `achievements.ts` — same semantics as the cruise
+ * birthday-at-sea check.
+ */
+export function rangeContainsMonthDay(
   start: Date,
   end: Date,
   md: { month: number; day: number },

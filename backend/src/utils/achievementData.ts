@@ -97,6 +97,9 @@ export const TURBO_PROP_SUBSTRINGS: readonly string[] = [
 /** Normalized aircraft substrings that count as the Queen of the Skies. */
 export const JUMBO_SUBSTRINGS: readonly string[] = ['B747', '747', 'BOEING 747'];
 
+/** Boeing 777 family — the Jackpot achievement wants flight number 777 ON a 777. */
+export const B777_SUBSTRINGS: readonly string[] = ['B777', '777', 'BOEING 777'];
+
 /**
  * Airline ↔ alliance mapping. Keys are matched case-insensitively against
  * the Flight.airline field (display name or IATA code).

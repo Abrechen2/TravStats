@@ -121,8 +121,10 @@ export const seedsPartA: AchievementDefinition[] = [
   },
   {
     code: 'DISTANCE_50000',
+    // Earth's circumference is 40,075 km, not 50,000 — the old parenthesis
+    // claimed they were equal. Keep the round threshold, fix the claim.
     name: 'Around the World',
-    description: 'Fly 50,000 km (circumference of Earth)',
+    description: 'Fly 50,000 km (1.25× around the Earth)',
     category: 'distance',
     domain: 'flight',
     icon: '🌎',
@@ -483,7 +485,11 @@ export const seedsPartA: AchievementDefinition[] = [
   },
   {
     code: 'RED_EYE_MASTER',
-    name: 'Red Eye Master',
+    // Renamed from "Red Eye Master": RED_EYE_VETERAN (partB) counts a
+    // DIFFERENT metric (`red_eye_flights`, 23:00–05:00) — two badges named
+    // "Red Eye" whose counters disagree read as a bug. This one is the
+    // second rung of the NIGHT_OWL ladder (`night_flights`, 00:00–06:00).
+    name: 'Nocturnal Legend',
     description: 'Complete 25 flights departing between midnight and 6 AM',
     category: 'special',
     domain: 'flight',
@@ -599,7 +605,10 @@ export const seedsPartA: AchievementDefinition[] = [
   // ELITE CATEGORY - First class experiences
   {
     code: 'TRANSCONTINENTAL',
-    name: 'Transcontinental',
+    // The checker (`ocean_crossing`) detects an OCEAN crossing, not a
+    // continent crossing — the display name now says what the badge checks.
+    // The code is frozen (it's the DB key for existing user unlocks).
+    name: 'Transoceanic',
     description: 'Complete a flight crossing an ocean',
     category: 'elite',
     domain: 'flight',
@@ -610,7 +619,9 @@ export const seedsPartA: AchievementDefinition[] = [
     points: 100,
   },
 
-  // SPECIAL CATEGORY - Hidden achievements
+  // SPECIAL CATEGORY - One-off oddities. Only TIME_TRAVELER and
+  // POLAR_EXPLORER are hidden; EQUATOR_CROSSING and YEAR_ROUND are visible
+  // on purpose — they are chaseable goals, not surprises.
   {
     code: 'TIME_TRAVELER',
     name: 'Time Traveler',

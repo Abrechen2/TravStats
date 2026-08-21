@@ -116,7 +116,7 @@
     },
     "DISTANCE_50000": {
       "name": "Around the World",
-      "description": "Fly 50,000 km (circumference of Earth)"
+      "description": "Fly 50,000 km (1.25× around the Earth)"
     },
     "DISTANCE_100000": {
       "name": "Globe Trotter",
@@ -231,7 +231,7 @@
       "description": "Complete 10 flights departing between midnight and 6 AM"
     },
     "RED_EYE_MASTER": {
-      "name": "Red Eye Master",
+      "name": "Nocturnal Legend",
       "description": "Complete 25 flights departing between midnight and 6 AM"
     },
     "WEEKEND_WARRIOR": {
@@ -267,7 +267,7 @@
       "description": "Complete 50 flights in a single year"
     },
     "TRANSCONTINENTAL": {
-      "name": "Transcontinental",
+      "name": "Transoceanic",
       "description": "Complete a flight crossing an ocean"
     },
     "TIME_TRAVELER": {
@@ -312,7 +312,7 @@
     },
     "ISLAND_HOPPER": {
       "name": "Island Hopper",
-      "description": "10 flights between island airports"
+      "description": "10 flights with at least one island airport as origin or destination"
     },
     "MICRO_STATES": {
       "name": "Micro-State Club",
@@ -364,7 +364,7 @@
     },
     "LEGACY_LOYALIST": {
       "name": "Legacy Loyalist",
-      "description": "15 flights with the same flagship airline"
+      "description": "15 flights with the same favourite airline"
     },
     "LOWCOST_CHAMPION": {
       "name": "Low-Cost Champion",
@@ -945,6 +945,82 @@
     "DOCUMENTED_TRIP_10": {
       "name": "Chronicler",
       "description": "10 trips with a journey, a bed, a journal and photos"
+    },
+    "FRIDAY_13_FLIGHT": {
+      "name": "Friday the 13th",
+      "description": "A flight on a Friday the 13th"
+    },
+    "XMAS_FLIGHT": {
+      "name": "Reindeer's Rival",
+      "description": "A flight on 24 or 25 December"
+    },
+    "PALINDROME_DAY": {
+      "name": "Palindrome Day",
+      "description": "A flight on a palindrome date (e.g. 22.02.2022)"
+    },
+    "FLIGHT_666": {
+      "name": "Highway to Hell",
+      "description": "A flight with flight number 666"
+    },
+    "JACKPOT_777": {
+      "name": "Jackpot",
+      "description": "Flight number 777 on a Boeing 777"
+    },
+    "HATTRICK": {
+      "name": "Hat-Trick",
+      "description": "Three flights in a single calendar day"
+    },
+    "THERE_AND_BACK": {
+      "name": "There and Back Again",
+      "description": "Out and back on the same route within one calendar day"
+    },
+    "JETLAG_DENIER": {
+      "name": "Jet-Lag Denier",
+      "description": "A single flight spanning eight or more time zones"
+    },
+    "AISLE_STREAK_20": {
+      "name": "Aisle Tactician",
+      "description": "20 consecutive aisle seats"
+    },
+    "ANTARCTIC_FLIGHT": {
+      "name": "Penguin Course",
+      "description": "Fly below the Antarctic Circle (66.5°S)"
+    },
+    "AIRLINES_75": {
+      "name": "Airline Encyclopedia",
+      "description": "Fly with 75 different airlines"
+    },
+    "AIRCRAFT_75": {
+      "name": "Aircraft Lexicon",
+      "description": "Fly on 75 different aircraft types"
+    },
+    "CRUISE_EQUATOR_CROSSING": {
+      "name": "Crossing the Line",
+      "description": "A cruise leg across the equator — Neptune sends his regards"
+    },
+    "SHIP_LOYALTY_3": {
+      "name": "Ship's Cat",
+      "description": "3 cruises on the same ship"
+    },
+    "INSIDE_CABIN_5": {
+      "name": "Inside-Cabin Stoic",
+      "description": "5 cruises in an inside cabin"
+    },
+    "LODGING_BIRTHDAY": {
+      "name": "Birthday in a Hotel Bed",
+      "description": "A stay spanning your own birthday"
+    },
+    "LODGING_XMAS": {
+      "name": "Christmas at the Hotel",
+      "description": "A stay spanning 24 or 25 December"
+    },
+    "SOUTHERN_LODGING_45": {
+      "name": "Deep South",
+      "description": "Spend a night south of latitude 45°S"
+    },
+    "ALL_INCLUSIVE_50": {
+      "name": "All-Inclusive Veteran",
+      "description": "50 nights on an all-inclusive board"
     }
   }
 }

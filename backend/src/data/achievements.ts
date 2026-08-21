@@ -2,7 +2,7 @@
  * Achievement definitions for TravStats
  * These are core application data that must always be available.
  *
- * The seed array is split across two sibling files (Part A, Part B) to
+ * The seed array is split across sibling files (Part A through Part F) to
  * keep every source file under the 800-line limit mandated by CLAUDE.md.
  * This file composes them into the single `achievements` export consumed
  * by the rest of the codebase.
@@ -15,6 +15,7 @@ import { seedsPartB } from './achievementSeeds/partB';
 import { seedsPartC } from './achievementSeeds/partC';
 import { seedsPartD } from './achievementSeeds/partD';
 import { seedsPartE } from './achievementSeeds/partE';
+import { seedsPartF } from './achievementSeeds/partF';
 
 export interface AchievementDefinition {
   code: string;
@@ -36,6 +37,7 @@ export const achievements: AchievementDefinition[] = [
   ...seedsPartC,
   ...seedsPartD,
   ...seedsPartE,
+  ...seedsPartF,
 ];
 
 /**
@@ -47,22 +49,18 @@ export async function ensureAchievements(): Promise<void> {
   logger.info({ operation: 'ensure_achievements_start', message: 'Ensuring achievements are present in database' });
 
   try {
-    // Check if achievements already exist
     const existingCount = await prisma.achievement.count();
 
-    if (existingCount === achievements.length) {
-      logger.info({
-        operation: 'ensure_achievements_already_present',
-        message: `All achievements already present (${existingCount} achievements)`,
-        context: { existingCount },
-      });
-      return;
-    }
-
+    // NO early return on a matching count: seed edits that only change
+    // points, tier or copy (no new codes) keep the row count identical, and
+    // the old `existingCount === achievements.length` short-circuit silently
+    // froze such edits forever on any install whose count happened to match.
+    // Several seed comments rely on "upserted on every boot" being true —
+    // this loop is what makes it true.
     if (existingCount > 0) {
       logger.info({
         operation: 'ensure_achievements_updating',
-        message: `Found ${existingCount} existing achievements, ensuring all are present...`,
+        message: `Found ${existingCount} existing achievements, upserting all definitions...`,
         context: { existingCount, expectedCount: achievements.length },
       });
     }

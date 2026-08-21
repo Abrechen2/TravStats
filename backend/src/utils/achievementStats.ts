@@ -8,6 +8,7 @@ import logger from './logger';
 import { getCachedAirports } from '../services/airportCache';
 import { normalizeAircraft } from './aircraftNormalize';
 import {
+  B777_SUBSTRINGS,
   HIGH_ALTITUDE_AIRPORTS,
   ISLAND_AIRPORTS,
   JUMBO_SUBSTRINGS,
@@ -108,6 +109,26 @@ export interface UserStats {
   halloweenFlights: number;
   // Sonder-Flüge — counts per signature type, plus a distinct-type
   // counter for the "variety" achievement.
+  // Kurios expansion (2.7) — calendar eggs, number play, seat + range trivia
+  /** Flights departing on a Friday the 13th. */
+  friday13Flights: number;
+  /** Flights departing on 24 or 25 December. */
+  xmasFlights: number;
+  /** Flights on a palindrome date — DDMMYYYY reads the same reversed. */
+  palindromeFlights: number;
+  /** Most flights on a single calendar day (hat-trick check). */
+  maxFlightsOneDay: number;
+  /** 1 when any calendar day contains both a route and its exact reverse. */
+  hasSameDayReturn: number;
+  /** Flights whose numeric flight number is exactly 666. */
+  flight666Count: number;
+  /** Flights numbered 777 flown on a Boeing 777. */
+  jackpot777Count: number;
+  /** Widest single-flight longitude span in whole 15° time-zone steps.
+   *  A longitude proxy, not a tz-database lookup — good enough as a signal. */
+  maxTimezoneSpan: number;
+  /** Longest run of consecutive aisle seats (C/D, wide-body G/H). */
+  aisleStreak: number;
   specialSightseeingCount: number;
   specialZerogCount: number;
   specialEclipseCount: number;
@@ -143,6 +164,12 @@ export interface UserStats {
   cruiseLongestLegKm: number;
   /** True when any cruise leg crosses the antimeridian. Hidden egg. */
   hasCruiseDatelineCrossing: boolean;
+  /** True when any cruise leg crosses the equator — the line-crossing ceremony. */
+  hasCruiseEquatorCrossing: boolean;
+  /** Most cruises taken on one and the same ship. */
+  cruiseShipLoyaltyMax: number;
+  /** Number of cruises booked in an inside cabin. */
+  cruiseInsideCabinCount: number;
   // Cross-domain
   hasFlyAndSailTrip: boolean;
   /** True when any flight is within ±7 days of any cruise start/end.
@@ -186,6 +213,12 @@ export interface UserStats {
   lodgingProgrammeYearNights: number;
   /** Latitude of the northernmost night; 0 when there is none. */
   lodgingNorthernmostLat: number;
+  /** Latitude of the southernmost night; 0 when there is none. */
+  lodgingSouthernmostLat: number;
+  /** True when a day-precise, visited stay spans the user's birthday. */
+  hasLodgingBirthdayStay: boolean;
+  /** True when a day-precise, visited stay spans 24 or 25 December. */
+  hasLodgingXmasStay: boolean;
   /** Trips carrying a flight or cruise, a stay, a journal entry AND a photo. */
   tripsFullyDocumented: number;
   // Cross-domain (lodging)
@@ -268,6 +301,15 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     piDayFlights: 0,
     piPrecisionFlights: 0,
     halloweenFlights: 0,
+    friday13Flights: 0,
+    xmasFlights: 0,
+    palindromeFlights: 0,
+    maxFlightsOneDay: 0,
+    hasSameDayReturn: 0,
+    flight666Count: 0,
+    jackpot777Count: 0,
+    maxTimezoneSpan: 0,
+    aisleStreak: 0,
     specialSightseeingCount: 0,
     specialZerogCount: 0,
     specialEclipseCount: 0,
@@ -295,6 +337,9 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     cruiseTotalDistanceKm: 0,
     cruiseLongestLegKm: 0,
     hasCruiseDatelineCrossing: false,
+    hasCruiseEquatorCrossing: false,
+    cruiseShipLoyaltyMax: 0,
+    cruiseInsideCabinCount: 0,
     hasFlyAndSailTrip: false,
     hasFlyAndSail7d: false,
     cruiseCarnivalBrandsCovered: 0,
@@ -323,6 +368,9 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     lodgingIndependentNights: 0,
     lodgingProgrammeYearNights: 0,
     lodgingNorthernmostLat: 0,
+    lodgingSouthernmostLat: 0,
+    hasLodgingBirthdayStay: false,
+    hasLodgingXmasStay: false,
     tripsFullyDocumented: 0,
     flyAndStay: false,
     grandTour: false,
@@ -379,6 +427,12 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     if (distance > 0) {
       stats.shortestSingleFlight = Math.min(stats.shortestSingleFlight, distance);
       if (distance < 250) stats.hasMicroFlight = 1;
+
+      // Time-zone span — longitude proxy (15° per zone), shortest way around.
+      const lonSpanRaw = Math.abs(flight.depLon - flight.arrLon);
+      const lonSpan = lonSpanRaw > 180 ? 360 - lonSpanRaw : lonSpanRaw;
+      const tzSpan = Math.floor(lonSpan / 15);
+      if (tzSpan > stats.maxTimezoneSpan) stats.maxTimezoneSpan = tzSpan;
     }
 
     // Flight time (historical flights have null times — contribute 0 hours)
@@ -551,6 +605,22 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
         }
       }
       if (month === 9 && day === 31) stats.halloweenFlights++;         // 31 Oct — Halloween
+      if (month === 11 && (day === 24 || day === 25)) stats.xmasFlights++; // Christmas
+      if (day === 13 && d.getDay() === 5) stats.friday13Flights++;     // Friday the 13th
+      // Palindrome date: DDMMYYYY reads the same reversed (e.g. 22.02.2022).
+      const dateDigits =
+        `${String(day).padStart(2, '0')}${String(month + 1).padStart(2, '0')}${d.getFullYear()}`;
+      if (dateDigits === dateDigits.split('').reverse().join('')) {
+        stats.palindromeFlights++;
+      }
+    }
+
+    // Flight-number play — trailing digits, leading zeros ignored ("LH0666" hits).
+    const flightNoMatch = flight.flightNumber?.match(/(\d+)\s*$/);
+    const flightNo = flightNoMatch ? parseInt(flightNoMatch[1], 10) : null;
+    if (flightNo === 666) stats.flight666Count++;
+    if (flightNo === 777 && matchesAircraftBucket(flight.aircraft, B777_SUBSTRINGS)) {
+      stats.jackpot777Count++;
     }
 
     // Sonder-Flüge counts — per-type counters for the "first X" single-event
@@ -580,16 +650,20 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     .filter((f) => f.status === 'flown' && f.departureTime)
     .sort((a, b) => (a.departureTime!.getTime() - b.departureTime!.getTime()));
 
-  // Window / Middle streaks (based on seatNumber last char: A/F typically window, B/E middle — rough)
+  // Window / Middle / Aisle streaks (based on seatNumber last char: A/F typically
+  // window, B/E middle, C/D aisle — rough; G/H are the wide-body aisle letters)
   let winRun = 0;
   let maxWin = 0;
   let midRun = 0;
   let maxMid = 0;
+  let aisleRun = 0;
+  let maxAisle = 0;
   for (const f of sorted) {
     const seat = f.seatNumber?.toUpperCase().match(/[A-Z]$/)?.[0];
     if (!seat) {
       winRun = 0;
       midRun = 0;
+      aisleRun = 0;
       continue;
     }
     // Conventional narrow-body mapping: A / F / K = window, C / D = aisle, B / E = middle
@@ -597,17 +671,37 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
       winRun++;
       maxWin = Math.max(maxWin, winRun);
       midRun = 0;
+      aisleRun = 0;
     } else if (seat === 'B' || seat === 'E') {
       midRun++;
       maxMid = Math.max(maxMid, midRun);
       winRun = 0;
+      aisleRun = 0;
+    } else if (seat === 'C' || seat === 'D' || seat === 'G' || seat === 'H') {
+      aisleRun++;
+      maxAisle = Math.max(maxAisle, aisleRun);
+      winRun = 0;
+      midRun = 0;
     } else {
       winRun = 0;
       midRun = 0;
+      aisleRun = 0;
     }
   }
   stats.windowStreak = maxWin;
   stats.middleStreak = maxMid;
+  stats.aisleStreak = maxAisle;
+
+  // Hat-Trick — most flights on one calendar day. Counts flown + historical
+  // alike: a historical import carries a real date even when the time of day
+  // is a placeholder.
+  const flightsPerDay = new Map<string, number>();
+  for (const f of flights) {
+    if (!f.departureTime) continue;
+    const dayKey = f.departureTime.toISOString().slice(0, 10);
+    flightsPerDay.set(dayKey, (flightsPerDay.get(dayKey) ?? 0) + 1);
+  }
+  stats.maxFlightsOneDay = Math.max(0, ...flightsPerDay.values());
 
   // Groundhog Day — same route on three consecutive calendar days
   const routesByDay = new Map<string, Set<string>>();
@@ -637,6 +731,21 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     }
   }
   stats.groundhogRoute = maxGroundhog;
+
+  // There and Back Again — one calendar day holding a route AND its exact
+  // reverse. Reuses the flown-only routesByDay map built for Groundhog Day.
+  const hasReversePair = (routes: Set<string>): boolean => {
+    for (const route of routes) {
+      const [a, b] = route.split('-');
+      if (a && b && a !== 'null' && b !== 'null' && a !== b && routes.has(`${b}-${a}`)) {
+        return true;
+      }
+    }
+    return false;
+  };
+  if (Array.from(routesByDay.values()).some(hasReversePair)) {
+    stats.hasSameDayReturn = 1;
+  }
 
   // Tight connection — any consecutive flight pair where arrival airport == next departure airport,
   // and the gap between arrivalTime and next departureTime is < 45 minutes (but > 0).
