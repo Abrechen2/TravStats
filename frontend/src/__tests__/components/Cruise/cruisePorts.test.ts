@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildEffectiveTimeline, countUniquePorts } from "../../../components/Cruise/cruisePorts";
+import {
+  buildEffectiveTimeline,
+  countUniquePorts,
+  countUnresolvedPorts,
+} from "../../../components/Cruise/cruisePorts";
 import type { Cruise, CruiseStop, Port } from "../../../types";
 
 const port = (id: number, name: string): Port => ({
@@ -128,7 +132,7 @@ describe("buildEffectiveTimeline", () => {
 });
 
 describe("countUniquePorts with unresolved stops", () => {
-  it("counts an unresolved stop as a port and dedupes by name", () => {
+  it("does NOT count unresolved stops as unique ports", () => {
     const cruise = baseCruise({
       departurePort: null,
       arrivalPort: null,
@@ -139,7 +143,32 @@ describe("countUniquePorts with unresolved stops", () => {
         stop("s4", null, true, 4),
       ],
     });
-    expect(countUniquePorts(cruise)).toBe(2); // Kiel(id 1) + one Taranto
+    // Only Kiel is an identifiable port. The backend's `cruisePortsUnique`
+    // counts the same way; before this change the frontend said 2.
+    expect(countUniquePorts(cruise)).toBe(1);
+  });
+
+  it("reports unresolved stops separately, de-duplicated by trimmed name", () => {
+    const cruise = baseCruise({
+      departurePort: null,
+      arrivalPort: null,
+      stops: [
+        stop("s1", port(1, "Kiel"), false, 1),
+        { ...stop("s2", null, false, 2), unresolvedPortName: "Taranto" },
+        { ...stop("s3", null, false, 3), unresolvedPortName: " taranto " },
+        stop("s4", null, true, 4),
+      ],
+    });
+    expect(countUnresolvedPorts(cruise)).toBe(1);
+  });
+
+  it("returns zero unresolved for a cruise with only matched ports", () => {
+    const cruise = baseCruise({
+      departurePort: HAMBURG,
+      arrivalPort: LISBON,
+      stops: [stop("s1", SOUTHAMPTON, false, 1)],
+    });
+    expect(countUnresolvedPorts(cruise)).toBe(0);
   });
 });
 

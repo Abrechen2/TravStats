@@ -34,13 +34,25 @@ export interface CruiseRouteFeature {
     routed: boolean;
     protectedPrefixCount?: number;
     protectedSuffixCount?: number;
-    method?: "short_hop" | "maritime_graph" | "coarse_a_star" | "direct";
+    method?: "short_hop" | "maritime_graph" | "coarse_a_star" | "direct" | "manual_polyline";
   };
 }
 
 export interface CruiseRouteFeatureCollection {
   type: "FeatureCollection";
   features: CruiseRouteFeature[];
+}
+
+/**
+ * Identifies one leg by its two endpoints — the same key the server stores
+ * under. Deliberately not the leg's position: inserting a port would shift
+ * every stored line onto the wrong leg (see the spec, §4.3).
+ */
+export interface RouteOverrideKey {
+  fromKind: "port";
+  fromRef: string;
+  toKind: "port";
+  toRef: string;
 }
 
 export const cruiseApi = {
@@ -82,6 +94,21 @@ export const cruiseApi = {
   },
   remove: async (id: string): Promise<void> => {
     await api.delete(`/cruises/${id}`);
+  },
+  /** Store this leg's hand-corrected line. Replaces any previous one. */
+  saveRouteOverride: async (
+    cruiseId: string,
+    key: RouteOverrideKey,
+    waypoints: Array<[number, number]>
+  ): Promise<void> => {
+    await api.put(`/cruises/${cruiseId}/route-override`, { ...key, waypoints });
+  },
+  /**
+   * Back to the router's line. The key travels as query parameters because
+   * that is where the server reads it on DELETE.
+   */
+  clearRouteOverride: async (cruiseId: string, key: RouteOverrideKey): Promise<void> => {
+    await api.delete(`/cruises/${cruiseId}/route-override`, { params: { ...key } });
   },
 };
 

@@ -173,6 +173,61 @@ describe("computeCruiseLegDates", () => {
   });
 });
 
+describe("computeCruiseLegDates includes departure and arrival ports", () => {
+  const HAMBURG = port(10, "Hamburg");
+  const SOUTHAMPTON = port(11, "Southampton");
+  const LISBON = port(12, "Lisbon");
+
+  it("produces two legs for departure → one stop → arrival", () => {
+    const cruise = baseCruise({
+      startDate: "2026-06-01T00:00:00.000Z",
+      endDate: "2026-06-04T00:00:00.000Z",
+      departurePort: HAMBURG,
+      arrivalPort: LISBON,
+      stops: [stop({ id: "s1", portId: SOUTHAMPTON.id, port: SOUTHAMPTON, dayNumber: 2 })],
+    });
+    const legs = computeCruiseLegDates(cruise);
+    expect(legs.map((l) => [l.fromPortId, l.toPortId])).toEqual([
+      [HAMBURG.id, SOUTHAMPTON.id],
+      [SOUTHAMPTON.id, LISBON.id],
+    ]);
+  });
+
+  it("produces one leg for a cruise with no stops at all", () => {
+    const cruise = baseCruise({
+      startDate: "2026-06-01T00:00:00.000Z",
+      endDate: "2026-06-04T00:00:00.000Z",
+      departurePort: HAMBURG,
+      arrivalPort: LISBON,
+      stops: [],
+    });
+    const legs = computeCruiseLegDates(cruise);
+    expect(legs).toHaveLength(1);
+    expect(legs[0].fromPortId).toBe(HAMBURG.id);
+    expect(legs[0].toPortId).toBe(LISBON.id);
+    expect(legs[0].startDate.toISOString()).toBe("2026-06-01T00:00:00.000Z");
+    expect(legs[0].endDate.toISOString()).toBe("2026-06-04T00:00:00.000Z");
+  });
+
+  it("does not duplicate a departure port that is also the first port call", () => {
+    const cruise = baseCruise({
+      startDate: "2026-06-01T00:00:00.000Z",
+      endDate: "2026-06-04T00:00:00.000Z",
+      departurePort: HAMBURG,
+      arrivalPort: LISBON,
+      stops: [
+        stop({ id: "s1", portId: HAMBURG.id, port: HAMBURG, dayNumber: 1 }),
+        stop({ id: "s2", portId: SOUTHAMPTON.id, port: SOUTHAMPTON, dayNumber: 2 }),
+      ],
+    });
+    const legs = computeCruiseLegDates(cruise);
+    expect(legs.map((l) => [l.fromPortId, l.toPortId])).toEqual([
+      [HAMBURG.id, SOUTHAMPTON.id],
+      [SOUTHAMPTON.id, LISBON.id],
+    ]);
+  });
+});
+
 describe("computeTimeRange", () => {
   it("returns null when there are no dated items", () => {
     expect(computeTimeRange([], [])).toBeNull();

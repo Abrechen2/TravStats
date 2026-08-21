@@ -4,7 +4,11 @@ import { cruiseApi } from "../lib/api";
 import type { Cruise } from "../types";
 import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
 import { CruiseRouteMap } from "../components/Cruise/CruiseRouteMap";
-import { buildEffectiveTimeline, countUniquePorts } from "../components/Cruise/cruisePorts";
+import {
+  buildEffectiveTimeline,
+  countUniquePorts,
+  countUnresolvedPorts,
+} from "../components/Cruise/cruisePorts";
 import { cruiseStatusPillStyle } from "../components/Cruise/cruiseStatusStyle";
 import TripTimeline, { type TimelineEvent } from "../components/Trip/TripTimeline";
 import NavigationBar from "../components/NavigationBar";
@@ -111,6 +115,7 @@ export default function CruiseDetailPage(): JSX.Element {
   }));
 
   const portsCount = countUniquePorts(cruise);
+  const unresolvedCount = countUnresolvedPorts(cruise);
   const seaDays = cruise.stops.filter((s) => s.isAtSea).length;
 
   return (
@@ -155,6 +160,15 @@ export default function CruiseDetailPage(): JSX.Element {
             </span>
             <span className="rounded-md border border-border bg-(--bg-base) px-2 py-1">
               {portsCount} {t("field.ports", { count: portsCount })}
+              {unresolvedCount > 0 && (
+                <span
+                  className="ml-1 text-xs"
+                  title={t("list.unresolvedPorts", { count: unresolvedCount })}
+                  aria-label={t("list.unresolvedPorts", { count: unresolvedCount })}
+                >
+                  (+{unresolvedCount})
+                </span>
+              )}
             </span>
             <span className="rounded-md border border-border bg-(--bg-base) px-2 py-1">
               {seaDays} {t("field.sea_days", { count: seaDays })}

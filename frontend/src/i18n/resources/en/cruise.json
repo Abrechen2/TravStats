@@ -9,6 +9,8 @@
     "loading": "Loading cruises …",
     "sortBy": "Sort by {{col}}",
     "duplicate": "Duplicate",
+    "unresolvedPorts_one": "{{count}} port could not be matched to the catalogue",
+    "unresolvedPorts_other": "{{count}} ports could not be matched to the catalogue",
     "columns": {
       "ship": "Ship",
       "line": "Line",
@@ -132,6 +134,21 @@
   "map": {
     "layer": "Cruises",
     "fallbackTitle": "Cruise"
+  },
+  "routeEditor": {
+    "edit": "Edit route",
+    "pickLeg": "Tap a leg on the map",
+    "save": "Save",
+    "cancel": "Cancel",
+    "reset": "Back to automatic",
+    "undo": "Undo",
+    "redo": "Redo",
+    "handle": "Waypoint {{index}}",
+    "endpoint": "Leg endpoint — cannot be moved",
+    "removeHandle": "Remove waypoint",
+    "editedBadge": "corrected by hand",
+    "saveFailed": "Could not save. The line on the map is still yours — try again?",
+    "discardConfirm": "Discard the changes to this leg?"
   },
   "filter": {
     "title": "Filter",

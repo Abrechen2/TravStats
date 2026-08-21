@@ -1044,6 +1044,7 @@ model Cruise {
   booking       Booking?     @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   stops         CruiseStop[]
   legs          CruiseLeg[]
+  legRoutes     CruiseLegRoute[]
 
   /// Where this row came from, so a second import of the same file recognises
   /// it instead of duplicating it (#84). Format `<source>:<stable key>`; the
@@ -1092,6 +1093,51 @@ model CruiseLeg {
   @@index([toPortId])
   @@index([method])
   @@map("cruise_legs")
+}
+
+/// A hand-corrected route for one leg of one cruise.
+///
+/// Keyed by the leg's two ENDPOINTS, never by its ordinal: keying by position
+/// means inserting a port shifts every stored line one leg along, and the map
+/// then looks like the router broke. With endpoint keying an itinerary change
+/// simply leaves the row unmatched and inert.
+///
+/// Consequence accepted on purpose: if the same directed pair occurs twice in
+/// one itinerary, both occurrences render the same corrected line — which is
+/// almost always what the user meant.
+///
+/// A row is never deleted by an itinerary change, only unmatched — so
+/// undoing the change (e.g. removing a stop, then re-adding it with the same
+/// endpoints) brings the old corrected line back automatically. Nothing
+/// tells the user this resurrection happened.
+model CruiseLegRoute {
+  id       String @id @default(uuid())
+  cruiseId String @map("cruise_id")
+
+  /// 'port' today. 'place' arrives with the private-place stage; the column
+  /// exists now so that stage adds rows rather than migrating every stored line.
+  fromKind String @map("from_kind")
+  /// The endpoint's id as text — a Port id today.
+  fromRef  String @map("from_ref")
+  toKind   String @map("to_kind")
+  toRef    String @map("to_ref")
+
+  /// `[[lon, lat], ...]` in GeoJSON order, 2..64 points, first and last equal
+  /// to the leg's endpoints (within 1 km, to allow for coordinate rounding).
+  /// Zod (`routeOverrideSchema`) validates count and coordinate ranges; the
+  /// endpoint anchor itself is checked in the `PUT` handler
+  /// (`routes/cruises.ts`), because it needs the leg's port coordinates from
+  /// the database — something a Zod schema cannot see.
+  waypoints Json
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  cruise Cruise @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+
+  @@unique([cruiseId, fromKind, fromRef, toKind, toRef])
+  @@index([cruiseId])
+  @@map("cruise_leg_routes")
 }
 
 model CruiseStop {

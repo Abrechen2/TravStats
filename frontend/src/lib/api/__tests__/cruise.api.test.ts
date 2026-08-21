@@ -6,6 +6,7 @@ vi.mock("../client", () => ({
   api: {
     get: vi.fn(),
     post: vi.fn(),
+    put: vi.fn(),
     patch: vi.fn(),
     delete: vi.fn(),
   },
@@ -66,6 +67,39 @@ describe("cruiseApi", () => {
     const result = await cruiseApi.getGeometry("c1");
     expect(api.get).toHaveBeenCalledWith("/cruises/c1/geometry");
     expect(result).toEqual(fc);
+  });
+});
+
+describe("route override", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const key = { fromKind: "port" as const, fromRef: "10", toKind: "port" as const, toRef: "11" };
+
+  it("PUTs the waypoints for one leg", async () => {
+    vi.mocked(api.put).mockResolvedValue({});
+    const waypoints: Array<[number, number]> = [
+      [9.99, 53.55],
+      [-9.14, 38.72],
+    ];
+    await cruiseApi.saveRouteOverride("c1", key, waypoints);
+    expect(api.put).toHaveBeenCalledWith("/cruises/c1/route-override", {
+      fromKind: "port",
+      fromRef: "10",
+      toKind: "port",
+      toRef: "11",
+      waypoints: [
+        [9.99, 53.55],
+        [-9.14, 38.72],
+      ],
+    });
+  });
+
+  it("DELETEs with the key as query parameters, not a body", async () => {
+    vi.mocked(api.delete).mockResolvedValue({});
+    await cruiseApi.clearRouteOverride("c1", key);
+    expect(api.delete).toHaveBeenCalledWith("/cruises/c1/route-override", {
+      params: { fromKind: "port", fromRef: "10", toKind: "port", toRef: "11" },
+    });
   });
 });
 

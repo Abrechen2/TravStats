@@ -13,7 +13,9 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../../db";
 import { buildEffectivePortSequence } from "../../shared/cruise/portSequence";
+import { buildLegRouteOverrideMap, portLegRouteKey } from "../../shared/cruise/legRouteKey";
 import { computeLegDistance } from "./index";
+import { polylineDistanceKm } from "./polylineDistance";
 import type { PortPoint } from "./types";
 
 /** Bumps when the orchestrator's calculator chain or chaining logic changes. */
@@ -25,7 +27,7 @@ export async function recomputeLegsForCruise(
 ): Promise<number> {
   const client = tx ?? prisma;
 
-  const [cruise, stops] = await Promise.all([
+  const [cruise, stops, overrides] = await Promise.all([
     client.cruise.findUnique({
       where: { id: cruiseId },
       include: { departurePort: true, arrivalPort: true },
@@ -34,6 +36,10 @@ export async function recomputeLegsForCruise(
       where: { cruiseId, isAtSea: false, portId: { not: null } },
       orderBy: { dayNumber: "asc" },
       include: { port: true },
+    }),
+    client.cruiseLegRoute.findMany({
+      where: { cruiseId },
+      select: { fromKind: true, fromRef: true, toKind: true, toRef: true, waypoints: true },
     }),
   ]);
 
@@ -69,10 +75,34 @@ export async function recomputeLegsForCruise(
 
   if (sequence.length < 2) return 0;
 
+  // A hand-corrected line wins over the router, and keeps winning: this lookup
+  // is why a routerVersion bump cannot silently reset the user's kilometres
+  // while the map still shows their line (spec §6, "The trap").
+  const overrideByLeg = buildLegRouteOverrideMap(overrides);
+
   const rows: Prisma.CruiseLegCreateManyInput[] = [];
   for (let i = 1; i < sequence.length; i++) {
     const from = sequence[i - 1];
     const to = sequence[i];
+
+    const manual = overrideByLeg.get(portLegRouteKey(from.id, to.id));
+    if (manual && manual.length >= 2) {
+      rows.push({
+        cruiseId,
+        ordinal: i - 1,
+        fromPortId: from.id,
+        toPortId: to.id,
+        distanceKm: polylineDistanceKm(manual),
+        // A first-class method, not a faked router result: anything reading
+        // cruise_legs can tell a drawn line from a computed one.
+        method: "manual_polyline",
+        routerVersion: ORCHESTRATOR_VERSION,
+        dataVersion: null,
+        confidence: "high",
+        notes: null,
+      });
+      continue;
+    }
 
     const computed = await computeLegDistance(from, to);
     rows.push({

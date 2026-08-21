@@ -7,6 +7,7 @@ import { AppError } from '../middleware/errorHandler';
 import { createCruiseSchema, updateCruiseSchema, cruiseQuerySchema } from '../schemas/cruise';
 import { checkAndUpdateAchievements } from '../utils/achievements';
 import { buildEffectivePortSequence } from '../shared/cruise/portSequence';
+import { buildLegRouteOverrideMap, portLegRouteKey } from '../shared/cruise/legRouteKey';
 import { computeSchematicRoute } from '../services/schematicRouter';
 import { recomputeLegsForCruise } from '../services/cruiseDistance/cruiseLegService';
 import { cruiseExternalRef } from '../services/importProvenance';
@@ -24,7 +25,7 @@ interface GeometryFeature {
     routed: boolean;
     protectedPrefixCount: number;
     protectedSuffixCount: number;
-    method: 'short_hop' | 'maritime_graph' | 'coarse_a_star' | 'direct';
+    method: 'short_hop' | 'maritime_graph' | 'coarse_a_star' | 'direct' | 'manual_polyline';
   };
 }
 
@@ -40,6 +41,13 @@ interface CruiseGeometryInput {
   stops: CruiseStopWithPort[];
   departurePort: PortRow | null;
   arrivalPort: PortRow | null;
+  legRoutes?: Array<{
+    fromKind: string;
+    fromRef: string;
+    toKind: string;
+    toRef: string;
+    waypoints: unknown;
+  }>;
 }
 
 /**
@@ -62,9 +70,32 @@ async function buildCruiseGeometry(
   let routedLegs = 0;
   let directLegs = 0;
 
+  // The stored line wins. It has to be the same source the distance came from
+  // (services/cruiseDistance/cruiseLegService.ts), or the map and the
+  // statistics would quietly disagree.
+  const overrideByLeg = buildLegRouteOverrideMap(cruise.legRoutes ?? []);
+
   for (let i = 0; i < ordered.length - 1; i++) {
     const a = ordered[i];
     const b = ordered[i + 1];
+
+    const manual = overrideByLeg.get(portLegRouteKey(a.id, b.id));
+    if (manual && manual.length >= 2) {
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: manual },
+        properties: {
+          fromPortId: a.id,
+          toPortId: b.id,
+          routed: false,
+          protectedPrefixCount: 0,
+          protectedSuffixCount: 0,
+          method: 'manual_polyline',
+        },
+      });
+      directLegs++;
+      continue;
+    }
 
     const route = await computeSchematicRoute(
       { id: a.id, name: a.name, city: a.city, country: a.country, unlocode: a.unlocode, lat: a.lat, lon: a.lon },
@@ -206,6 +237,7 @@ router.post('/geometry/batch', async (req: AuthRequest, res: Response, next: Nex
         stops: { include: { port: true }, orderBy: { dayNumber: 'asc' as const } },
         departurePort: true,
         arrivalPort: true,
+        legRoutes: true,
       },
     });
 
@@ -251,6 +283,7 @@ router.get('/:id/geometry', async (req: AuthRequest, res: Response, next: NextFu
         stops: { include: { port: true }, orderBy: { dayNumber: 'asc' as const } },
         departurePort: true,
         arrivalPort: true,
+        legRoutes: true,
       },
     });
     if (!cruise) throw new AppError('Cruise not found', 404);
