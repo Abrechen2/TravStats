@@ -46,7 +46,9 @@ function getOllamaTimeoutMs(): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_OLLAMA_TIMEOUT_MS;
 }
 
-const SYSTEM_PROMPT = `You extract structured data from hotel booking confirmations (German or English).
+// Exported for the prompt-contract tests — date-anchoring and
+// booking-number rules are pinned there (HX booking, 2026-08-21).
+export const LODGING_SYSTEM_PROMPT = `You extract structured data from hotel booking confirmations (German or English).
 
 Return ONLY this JSON, with no prose before or after: {"bookings":[ BOOKING ]}.
 There is almost always exactly ONE booking — return a single-element array.
@@ -55,7 +57,7 @@ Copy every value VERBATIM from the document. If a value is not in the text, use 
 
 A BOOKING object has these fields:
 - hotelName: the property's name, e.g. "Novina Sleep Inn Herzogenaurach".
-- checkIn, checkOut: ISO "YYYY-MM-DD". German "04.06.2026" or "4. Juni 2026" -> "2026-06-04".
+- checkIn, checkOut: ISO "YYYY-MM-DD". German "04.06.2026" or "4. Juni 2026" -> "2026-06-04". A two-digit year is the STAY's century year: "18. Februar 27" -> "2027-02-18". Resolve every date against the stay/travel period stated in the document, never against the letter, print or booking date — a confirmation written in January 26 routinely describes a stay in 2027.
 - nights: number of nights as an integer.
 - roomCategory: the room type as printed, e.g. "Deluxe Zimmer mit Kingsize-Bett".
 - address: street and house number only.
@@ -68,7 +70,7 @@ A BOOKING object has these fields:
 - currency: 3-letter ISO code; "€" -> "EUR", "CHF" -> "CHF".
 - board: meal plan as printed, else null.
 - adults, children: integers if stated, else null.
-- confirmationNumber: the booking/confirmation number as printed, digits only.
+- confirmationNumber: the number explicitly labelled as the booking/confirmation number ("Buchungsnummer", "Booking number", "Reservierung", "Confirmation"), digits only. NEVER a document, print or customer number that merely appears in headers, footers or page margins.
 - type: what KIND of place this is — "hotel", "campsite", "guesthouse",
   "apartment" or "hostel". Judge it from the name and the text (a KOA or
   "Campingplatz" is a campsite, a "Ferienwohnung" an apartment). Default "hotel".
@@ -315,7 +317,7 @@ async function parseWithOllama(
   const snippet = text.slice(0, 12_000);
   const body = JSON.stringify({
     model,
-    system: SYSTEM_PROMPT,
+    system: LODGING_SYSTEM_PROMPT,
     prompt: `Extract every hotel booking from this confirmation. Output JSON in the shape shown in the EXAMPLE OUTPUT block. If you cannot find a value, use null.\n\nDOCUMENT:\n${snippet}`,
     stream: false,
     think: false,

@@ -1,6 +1,6 @@
 import http from "http";
 import type { AddressInfo } from "net";
-import { CruiseBookingParser } from "../cruiseBookingParser";
+import { CruiseBookingParser, CRUISE_SYSTEM_PROMPT } from "../cruiseBookingParser";
 
 // Spin up a tiny stand-in for the Ollama HTTP API so the parser can be
 // exercised end-to-end (request body → response normalization) without
@@ -275,3 +275,94 @@ describe("CruiseBookingParser", () => {
     expect(cruise.deck).toBeUndefined();
   });
 });
+
+/**
+ * Extraction truthfulness (the HX Antarctica booking, 2026-08-21): the parser
+ * offered flight "LH2080" although the document contains NO flight numbers —
+ * the number had bled through from the prompt's own format example. And the
+ * price came back as one guest's pre-discount fare instead of the booking
+ * total.
+ */
+describe("CruiseBookingParser — extraction truthfulness", () => {
+  let mock: MockOllamaServer;
+  let parser: CruiseBookingParser;
+
+  beforeAll(async () => {
+    mock = await startMockOllama();
+    parser = new CruiseBookingParser({ url: mock.url, model: "gemma3:12b" });
+  });
+
+  afterAll(async () => {
+    await mock.close();
+  });
+
+  const cruiseWithFlight = (flightNumber: string) => ({
+    cruises: [
+      {
+        shipName: "MS Roald Amundsen",
+        startDate: "2027-02-19",
+        endDate: "2027-03-05",
+        flights: [
+          {
+            flightNumber,
+            direction: "outbound",
+            date: "2027-02-17",
+            departureAirport: "Munich International Airport",
+            arrivalAirport: "Pistarini Buenos Aires Airport",
+          },
+        ],
+      },
+    ],
+  });
+
+  it("strips a flight number that does not appear in the source text", async () => {
+    mock.setResponse({ response: JSON.stringify(cruiseWithFlight("LH2080")) });
+    const result = await parser.parseText(
+      "FLUG VOR DER SEEREISE: ABFLUG 17. FEBRUAR 27 Munich International Airport - Pistarini Buenos Aires Airport"
+    );
+    expect(result[0].flights).toHaveLength(1);
+    expect(result[0].flights[0].flightNumber).toBeUndefined();
+    expect(result[0].flights[0].arrivalAirport).toBe("Pistarini Buenos Aires Airport");
+  });
+
+  it("keeps a flight number that appears verbatim, even spelled with a space", async () => {
+    mock.setResponse({ response: JSON.stringify(cruiseWithFlight("LH2080")) });
+    const result = await parser.parseText(
+      "Ihr Flug LH 2080 am 17.02.2027 von Muenchen nach Buenos Aires"
+    );
+    expect(result[0].flights[0].flightNumber).toBe("LH2080");
+  });
+
+  it("drops the flight entirely when nothing verifiable remains", async () => {
+    mock.setResponse({
+      response: JSON.stringify({
+        cruises: [
+          {
+            shipName: "MS Roald Amundsen",
+            flights: [{ flightNumber: "LH2080" }],
+          },
+        ],
+      }),
+    });
+    const result = await parser.parseText("Beleg ohne Flugnummern");
+    expect(result[0].flights).toHaveLength(0);
+  });
+
+  describe("system prompt contract", () => {
+    it("no longer uses a realistic flight number as its format example", () => {
+      expect(CRUISE_SYSTEM_PROMPT).not.toContain("LH 2080");
+      expect(CRUISE_SYSTEM_PROMPT).not.toContain("LH2080");
+    });
+
+    it("demands verbatim flight numbers only", () => {
+      expect(CRUISE_SYSTEM_PROMPT).toMatch(/flightNumber[\s\S]{0,200}verbatim/i);
+    });
+
+    it("asks for the grand total of the whole booking, all guests, after discounts", () => {
+      expect(CRUISE_SYSTEM_PROMPT).toMatch(/price[\s\S]{0,400}(all guests|whole booking)/i);
+      expect(CRUISE_SYSTEM_PROMPT).toMatch(/after discounts/i);
+      expect(CRUISE_SYSTEM_PROMPT).toMatch(/Insgesamt|Gesamtpreis/);
+    });
+  });
+});
+

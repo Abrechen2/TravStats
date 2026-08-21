@@ -71,7 +71,9 @@ export interface CruiseParseResult {
   ollamaAvailable: boolean;
 }
 
-const SYSTEM_PROMPT = `You extract structured data from German cruise booking confirmations (TUI "Mein Schiff", AIDA, and similar).
+// Exported for the prompt-contract tests — extraction truthfulness rules
+// (verbatim flight numbers, booking grand total) are pinned there.
+export const CRUISE_SYSTEM_PROMPT = `You extract structured data from German cruise booking confirmations (TUI "Mein Schiff", AIDA, and similar).
 
 Return ONLY this JSON, with no prose before or after: {"cruises":[ CRUISE ]}.
 There is almost always exactly ONE cruise — return a single-element array. Return more than one cruise ONLY if the document clearly lists separate voyages, each with its own date range.
@@ -85,10 +87,10 @@ A CRUISE object has these fields:
 - startDate, endDate: ISO "YYYY-MM-DD". German "08.10.2027" -> "2027-10-08". A range like "Ihr Reisedatum: 08.10. - 29.10.2027" means startDate "2027-10-08", endDate "2027-10-29".
 - bookingReference: found near "Vorgang-Nr.", "Buchungsnummer", "Reservierung"; drop any "/x" suffix ("4507252/4" -> "4507252").
 - cabinNumber, deck (a number), cabinType: map "Innen"/"Innenkabine" -> "inside"; "Außen"/"Meerblick" -> "oceanview"; "Balkon"/"Veranda" -> "balcony"; "Suite"/"Junior Suite" -> "suite".
-- price: the total cruise price as a number. If only a per-person price is shown ("pro Person") for 2 travellers, multiply by 2.
+- price: the grand total actually charged for the WHOLE booking, all guests together, after discounts — prefer an explicit total line ("Insgesamt", "Gesamtpreis", "Total", a payment-plan total). NEVER a per-person or per-guest amount and never a pre-discount subtotal. Only if the document shows nothing but a per-person price ("pro Person") for N travellers, multiply by N.
 - currency: 3-letter ISO code; "€" -> "EUR".
 - stops: the itinerary IN ORDER, one object per day. Each stop is {"portName","date","isAtSea","arrivalTime","departureTime"}. A real port ("Bayonne","Halifax","Funchal","Miami") has isAtSea=false and portName set to the place name. A day labelled "Seetag" / "Auf See" / "Erholung auf See" / "Sea Day" has isAtSea=true and portName=null. date is the stop's calendar date as ISO "YYYY-MM-DD" (German "10.10.2027" -> "2027-10-10"); ALWAYS fill it from the itinerary (e.g. "08.10.2027 Bayonne - 09.10.2027 Seetag" -> first stop date "2027-10-08", second "2027-10-09"), even when no clock times are given. arrivalTime/departureTime are ISO "YYYY-MM-DDTHH:mm" or null.
-- flights: bundled fly & cruise flights, otherwise []. Each flight is {"flightNumber" (no spaces, "LH 2080" -> "LH2080"),"airline","direction" ("outbound" = to the cruise before embarkation, "return" = home after disembarkation),"date","departureAirport","arrivalAirport","cabinClass" ("economy"|"premium_economy"|"business"|"first")}.
+- flights: bundled fly & cruise flights, otherwise []. Each flight is {"flightNumber","airline","direction" ("outbound" = to the cruise before embarkation, "return" = home after disembarkation),"date","departureAirport","arrivalAirport","cabinClass" ("economy"|"premium_economy"|"business"|"first")}. flightNumber only when it appears verbatim in the document (write it without spaces); many confirmations list flights WITHOUT numbers — then use null, NEVER invent one.
 
 EXAMPLE OUTPUT:
 {"cruises":[{"shipName":"Mein Schiff 4","cruiseLine":"TUI Cruises","routeName":"Norwegen mit Lofoten","startDate":"2025-11-19","endDate":"2025-12-03","cabinNumber":"7102","cabinType":"inside","deck":7,"bookingReference":"1234567","price":2498.00,"currency":"EUR","stops":[{"portName":"Hamburg","date":"2025-11-19","isAtSea":false,"departureTime":"2025-11-19T18:00"},{"portName":null,"date":"2025-11-20","isAtSea":true},{"portName":"Bergen","date":"2025-11-21","isAtSea":false,"arrivalTime":"2025-11-21T08:00","departureTime":"2025-11-21T17:00"}],"flights":[]}]}`;
@@ -233,11 +235,24 @@ function isFlightCabin(v: unknown): v is FlightCabinClass {
   return typeof v === "string" && (FLIGHT_CABINS as readonly string[]).includes(v);
 }
 
-function normalizeFlight(raw: RawCruiseFlight): ParsedFlight | null {
-  const flightNumber = asString(raw.flightNumber);
+function normalizeFlight(raw: RawCruiseFlight, sourceText: string): ParsedFlight | null {
+  let flightNumber = asString(raw.flightNumber);
+  // A flight number the DOCUMENT never states is an invention, however
+  // plausible it looks — the HX Antarctica booking (2026-08-21) came back
+  // with "LH2080" bled through from this prompt's own former format example.
+  // Verbatim-check against the whitespace-stripped source; the flight itself
+  // (airports, date, direction) may still be real and is kept.
+  if (flightNumber) {
+    const needle = flightNumber.replace(/\s+/g, "").toUpperCase();
+    const haystack = sourceText.replace(/\s+/g, "").toUpperCase();
+    if (!haystack.includes(needle)) flightNumber = undefined;
+  }
   const airline = asString(raw.airline);
-  // Drop pure noise: a "flight" with neither a number nor an airline is unusable.
-  if (!flightNumber && !airline) return null;
+  const departureAirport = asString(raw.departureAirport);
+  const arrivalAirport = asString(raw.arrivalAirport);
+  // Drop pure noise: with neither a (verified) number nor an airline nor any
+  // airport, nothing about this "flight" is verifiable.
+  if (!flightNumber && !airline && !departureAirport && !arrivalAirport) return null;
   const dir = asString(raw.direction);
   const direction = dir === "return" ? "return" : dir === "outbound" ? "outbound" : undefined;
   return {
@@ -246,8 +261,8 @@ function normalizeFlight(raw: RawCruiseFlight): ParsedFlight | null {
     airline,
     direction,
     date: asString(raw.date),
-    departureAirport: asString(raw.departureAirport),
-    arrivalAirport: asString(raw.arrivalAirport),
+    departureAirport,
+    arrivalAirport,
     cabinClass: isFlightCabin(raw.cabinClass) ? raw.cabinClass : undefined,
   };
 }
@@ -283,7 +298,7 @@ function normalizeStop(raw: RawCruiseStop, index: number): ParsedCruiseStop {
   };
 }
 
-function normalizeCruise(raw: RawCruise): ParsedCruise {
+function normalizeCruise(raw: RawCruise, sourceText: string): ParsedCruise {
   const stopsArray = Array.isArray(raw.stops) ? (raw.stops as unknown[]) : [];
   const stops = stopsArray.map((entry, index) =>
     normalizeStop((entry ?? {}) as RawCruiseStop, index),
@@ -296,7 +311,7 @@ function normalizeCruise(raw: RawCruise): ParsedCruise {
 
   const flightsArray = Array.isArray(raw.flights) ? (raw.flights as unknown[]) : [];
   const flights = flightsArray
-    .map((entry) => normalizeFlight((entry ?? {}) as RawCruiseFlight))
+    .map((entry) => normalizeFlight((entry ?? {}) as RawCruiseFlight, sourceText))
     .filter((f): f is ParsedFlight => f !== null);
 
   const cruise: ParsedCruise = {
@@ -372,7 +387,7 @@ export class CruiseBookingParser {
     // either a top-level array or a single object/wrapper and unwrap below.
     const body = JSON.stringify({
       model: this.model,
-      system: SYSTEM_PROMPT,
+      system: CRUISE_SYSTEM_PROMPT,
       prompt: `Extract every cruise from this booking confirmation text. Output JSON in the shape shown in the EXAMPLE OUTPUT block in the system prompt — a top-level object with a "cruises" array. If you cannot find a value, use null. Do NOT emit placeholder strings.\n\nDOCUMENT:\n${snippet}`,
       stream: false,
       think: false,
@@ -444,7 +459,7 @@ export class CruiseBookingParser {
       throw new Error("Ollama response did not contain a cruise array");
     }
 
-    const normalized = cruises.map((entry) => normalizeCruise((entry ?? {}) as RawCruise));
+    const normalized = cruises.map((entry) => normalizeCruise((entry ?? {}) as RawCruise, snippet));
     logger.info({ count: normalized.length }, "[Cruise Parser] Extracted cruises");
     return normalized;
   }
