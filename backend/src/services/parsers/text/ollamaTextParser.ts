@@ -23,6 +23,8 @@ Return a JSON array. Each element is one flight leg with these fields:
 - operatingAirline: string or null (actual operator if different from marketing carrier)
 - pnr: string or null (booking reference / PNR)
 - ticketNumber: string or null
+- totalPrice: number or null (the TOTAL price of the whole booking — the final amount actually charged, including taxes and fees, e.g. "Endpreis" / "Total"; NOT the per-leg fare. Repeat the same value on every leg that belongs to the same booking. Output a plain JSON number with a dot as decimal separator — "EUR 4,359.14" means 4359.14, "1.234,56 €" means 1234.56. If no total is stated, use null — never compute or guess one)
+- currency: string or null (ISO 4217 code of totalPrice, e.g. "EUR", "USD"; map symbols: € → EUR, $ → USD, £ → GBP)
 - inferredFields: array of field names that you HAD TO GUESS or DEFAULT because the source text did not state them explicitly (see "Inference reporting" below)
 
 Rules:
@@ -125,6 +127,8 @@ interface RawFlight {
   operatingAirline?: string | null;
   pnr?: string | null;
   ticketNumber?: string | null;
+  totalPrice?: unknown;
+  currency?: unknown;
   inferredFields?: string[];
 }
 
@@ -287,6 +291,15 @@ export class OllamaTextParser implements ITextParser {
       if (f.operatingAirline) booking.operatingAirline = f.operatingAirline;
       if (f.pnr) { booking.pnr = f.pnr; booking.bookingReference = f.pnr; }
       if (f.ticketNumber) booking.ticketNumber = f.ticketNumber;
+      // The prompt demands a JSON number (dot-decimal), so a string here means
+      // the model ignored the format rule — drop it rather than risk the
+      // "4,359.14"-as-4 misread downstream (parseFloat stops at the comma).
+      if (typeof f.totalPrice === "number" && Number.isFinite(f.totalPrice) && f.totalPrice > 0) {
+        booking.price = String(f.totalPrice);
+      }
+      if (typeof f.currency === "string" && /^[A-Za-z]{3}$/.test(f.currency)) {
+        booking.currency = f.currency.toUpperCase();
+      }
 
       const inferred = sanitizeInferredFields(f.inferredFields);
       if (inferred) booking.inferredFields = inferred;
