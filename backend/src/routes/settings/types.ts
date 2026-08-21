@@ -71,6 +71,8 @@ export interface SettingsResponse extends SettingsDataJson {
   historicalEnrichment: HistoricalEnrichmentResponseSettings;
   enabledDomains: string[];
   baseCurrency: string;
+  /** Silent trip auto-creation during flight import (column-backed). */
+  autoCreateTrips: boolean;
   /**
    * READ-ONLY mirror of the instance-level beta gate (AdminSettings row).
    * It is NOT part of the user's own settings and deliberately absent from
@@ -93,6 +95,7 @@ export interface UserSettingsUpdateData {
   boardingPassParserStrategy?: string | null;
   enabledDomains?: string[];
   baseCurrency?: string;
+  autoCreateTrips?: boolean;
 }
 
 export interface ParserSettingsUpdateData {
