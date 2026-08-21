@@ -26,7 +26,15 @@ vi.mock("../../../lib/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
 
+// The global setup (src/__tests__/setup.ts) replaces `useSettingsStore` with a
+// static selector shim (no setState/getState). This suite needs the REAL
+// Zustand store: the component under test writes the saved flag into it, and
+// the sync assertion reads it back. useTranslation is mocked separately above,
+// so nothing here depends on the shim.
+vi.unmock("../../../store/settingsStore");
+
 import InstanceSettings from "../InstanceSettings";
+import { useSettingsStore } from "../../../store/settingsStore";
 
 /**
  * `betaFeaturesEnabled` was accepted by PATCH /admin/instance-settings and read
@@ -90,5 +98,21 @@ describe("InstanceSettings — beta features toggle", () => {
     expect(updateInstanceSettings.mock.calls[0][0]).toMatchObject({
       betaFeaturesEnabled: true,
     });
+  });
+
+  it("syncs the saved flag into the settings store so gates apply without a reload", async () => {
+    // The store's copy is what every beta gate reads (useBetaFeatures). Before
+    // this sync existed, a saved toggle only reached the gates after a full
+    // page reload re-ran the remote settings load.
+    useSettingsStore.setState({ betaFeaturesEnabled: false });
+    const user = userEvent.setup();
+    render(<InstanceSettings />);
+
+    await user.click(await screen.findByLabelText(/betaFeatures/i));
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() =>
+      expect(useSettingsStore.getState().betaFeaturesEnabled).toBe(true),
+    );
   });
 });

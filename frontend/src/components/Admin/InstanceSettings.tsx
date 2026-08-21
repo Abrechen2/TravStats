@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { adminApi } from "../../lib/api";
+import { useSettingsStore } from "../../store/settingsStore";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
@@ -52,6 +53,7 @@ function parseOrigins(text: string): string[] {
 export default function InstanceSettings(): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
   const addToast = useToastStore((s) => s.addToast);
+  const syncBetaFeaturesEnabled = useSettingsStore((s) => s.syncBetaFeaturesEnabled);
 
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -129,6 +131,10 @@ export default function InstanceSettings(): JSX.Element {
         webauthnOrigins: (settings.webauthnOrigins ?? []).join("\n"),
       });
       setPasskeyStatus(status);
+      // Mirror the server-confirmed flag into the settings store, so gated UI
+      // (Devices entry, POI tab, trip AI card) reacts immediately — before
+      // this, the gates only saw the new value after a full page reload.
+      syncBetaFeaturesEnabled(settings.betaFeaturesEnabled);
       addToast("success", t("admin:instance.saved"));
     } catch (err) {
       logger.error("Failed to save instance settings", err);

@@ -137,11 +137,21 @@ export interface SettingsState {
   /**
    * Instance-level beta gate, mirrored read-only from `GET /settings`.
    * `null` = not loaded yet → consumers must treat it as OFF (see
-   * `hooks/useBetaFeatures.ts`). There is deliberately no setter and it is
-   * never persisted or sent back: only an admin can change it, through
-   * `PUT /admin/instance-settings`.
+   * `hooks/useBetaFeatures.ts`). It is never persisted or sent back: only an
+   * admin can change it, through `PUT /admin/instance-settings`. The ONLY
+   * sanctioned writer besides the remote load is `syncBetaFeaturesEnabled`
+   * below, which carries the server-confirmed value out of that PUT's
+   * response — never a client-side guess.
    */
   betaFeaturesEnabled: boolean | null;
+  /**
+   * Mirrors the beta gate from a `PUT /admin/instance-settings` RESPONSE into
+   * this store, so gated UI (Devices entry, POI tab, trip AI card) reacts
+   * without a full page reload. Callers must pass the value the server
+   * returned, not the value the admin submitted — the server stays the
+   * authority on instance state.
+   */
+  syncBetaFeaturesEnabled: (enabled: boolean) => void;
   setProfile: SettingsUpdater<ProfileSettings>;
   setDisplay: SettingsUpdater<DisplaySettings>;
   setUnits: SettingsUpdater<UnitsSettings>;
@@ -242,6 +252,7 @@ const defaultSettings: Omit<
   | "setFeatures"
   | "setCruise"
   | "setApiKeys"
+  | "syncBetaFeaturesEnabled"
   | "setEnabledDomains"
   | "setBaseCurrency"
   | "setAutoCreateTrips"
@@ -327,6 +338,7 @@ export const useSettingsStore = create<SettingsState>()(
         set(() => ({
           apiKeys: status,
         })),
+      syncBetaFeaturesEnabled: (enabled) => set({ betaFeaturesEnabled: enabled }),
       setEnabledDomains: (keys) => {
         set({ enabledDomains: keys });
         void settingsApi.update({ enabledDomains: keys });
