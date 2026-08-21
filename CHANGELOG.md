@@ -12,6 +12,26 @@ now be written in the currency it was actually paid in. Two-factor
 authentication and passkeys arrive alongside.
 
 ### Added
+- **The sea route of a cruise can be corrected by hand.** Enter edit mode on
+  the detail map, tap a leg, and drag its waypoints — insert new ones on the
+  guide line, remove them on hover, undo and redo the whole gesture chain. The
+  corrected line is stored with the cruise, its distance replaces the routed
+  one, and "back to automatic" returns the leg to the router at any time. A
+  leg arriving with dozens of raw router points presents at most 25 handles —
+  the ones that carry the shape.
+- **Pick a point on the map, everywhere.** Every address input — lodgings,
+  trip stops, custom ports, special-flight venues — now opens one large map
+  modal: search, click, or drag the pin, and the resolved address underneath
+  is filled into the form on apply. It replaces the cramped inline mini-map.
+- **The booking total is read from the mail.** The LLM parser now extracts the
+  final price and its currency from a booking confirmation; the total lands on
+  the booking, not on each flight segment — "Endpreis EUR 4,359.14" no longer
+  arrives as an empty price.
+- **Trips from imports are optional — and dated.** A new switch on the import
+  hub controls whether flights sharing a booking reference silently become a
+  trip; switched off, the booking reference is kept so "detect trips" can
+  group them later. Auto-created trips now carry the date range of their
+  flights instead of none.
 - **Hotels and other stays are a full domain.** A lodging carries its type
   (hotel, guesthouse, apartment, hostel, campsite), its chain, its position on
   the map and its own stays; a stay carries dates, room, board, per-category
@@ -103,6 +123,9 @@ authentication and passkeys arrive alongside.
   moment the date turns.
 
 ### Changed
+- **The three domain lists are one family.** Flights, cruises and lodging
+  share the same table now: status pills, sortable column headers, a column
+  picker, and more width.
 - **The next upcoming entry moved into the domain strip.** It used to float
   over the map and covered the map-mode switcher completely. It now sits beside
   the tabs, follows the active tab, and names the trip it belongs to.
@@ -125,6 +148,9 @@ authentication and passkeys arrive alongside.
   statistics, where figures belong.
 
 ### Fixed
+- **Map markers anchor correctly on every map.** MapLibre's stylesheet is now
+  loaded globally; a lone marker used to sit only roughly right, and several
+  markers stacked down the page as blocks.
 - **A country field that names no country is filled from the pin.** A booking
   confirmation that prints only "Downtown Dubai" left a city standing in the
   country filter as its own country — no flag, one country too many in every
