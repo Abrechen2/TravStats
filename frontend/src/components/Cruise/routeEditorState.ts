@@ -38,6 +38,73 @@ const remember = (state: RouteEditorState): LonLat[][] => {
   return next.length > HISTORY_LIMIT ? next.slice(next.length - HISTORY_LIMIT) : next;
 };
 
+/** Perpendicular distance from `p` to the segment `a`–`b`, in degrees.
+ *  Planar approximation — fine for ranking which handle carries shape. */
+const perpendicularDistance = (p: LonLat, a: LonLat, b: LonLat): number => {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(p[0] - a[0], p[1] - a[1]);
+  const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / lenSq));
+  return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
+};
+
+/** How many handles an entered leg may present at most (owner decision
+ *  2026-08-21 — a raw marnet leg arrived with 178). */
+export const EDITOR_HANDLE_BUDGET = 25;
+
+/**
+ * Douglas-Peucker, budgeted: keep the endpoints plus the most
+ * shape-carrying points until the budget is spent. Points come out in their
+ * original order and are always members of the input — nothing is invented.
+ *
+ * Applied on EDITOR ENTRY only. The stored route stays raw until the user
+ * actually edits and saves; an entered-but-untouched leg is not dirty, so
+ * simplification alone never writes anything.
+ */
+export function simplifyForEditing(
+  points: LonLat[],
+  maxHandles: number = EDITOR_HANDLE_BUDGET
+): LonLat[] {
+  if (points.length <= maxHandles) return points;
+
+  interface Segment {
+    start: number;
+    end: number;
+    farthest: number;
+    distance: number;
+  }
+  const measure = (start: number, end: number): Segment => {
+    let farthest = -1;
+    let distance = -1;
+    for (let i = start + 1; i < end; i++) {
+      const d = perpendicularDistance(points[i], points[start], points[end]);
+      if (d > distance) {
+        distance = d;
+        farthest = i;
+      }
+    }
+    return { start, end, farthest, distance };
+  };
+
+  const keep = new Set<number>([0, points.length - 1]);
+  const segments: Segment[] = [measure(0, points.length - 1)];
+  while (keep.size < maxHandles) {
+    let bestIdx = -1;
+    for (let i = 0; i < segments.length; i++) {
+      if (segments[i].farthest < 0) continue;
+      if (bestIdx < 0 || segments[i].distance > segments[bestIdx].distance) bestIdx = i;
+    }
+    if (bestIdx < 0) break; // every remaining point is on a kept segment
+    const seg = segments.splice(bestIdx, 1)[0];
+    keep.add(seg.farthest);
+    if (seg.farthest - seg.start > 1) segments.push(measure(seg.start, seg.farthest));
+    if (seg.end - seg.farthest > 1) segments.push(measure(seg.farthest, seg.end));
+  }
+
+  return [...keep].sort((a, b) => a - b).map((i) => points[i]);
+}
+
 export function initRouteEditor(waypoints: LonLat[]): RouteEditorState {
   return {
     waypoints: clone(waypoints),

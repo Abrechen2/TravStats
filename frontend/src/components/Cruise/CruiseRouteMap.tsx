@@ -28,6 +28,7 @@ import {
   redo,
   removeWaypoint,
   selectWaypoint,
+  simplifyForEditing,
   undo,
   type LonLat,
   type RouteEditorState,
@@ -231,7 +232,12 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
       );
       if (!feature) return;
       setEditing({ fromPortId: clicked.fromPortId, toPortId: clicked.toPortId });
-      setEditorState(initRouteEditor(feature.geometry.coordinates));
+      // A raw marnet leg can arrive with 178 waypoints — an unusable
+      // caterpillar of handles (Nassau→Vancouver, owner decision 2026-08-21).
+      // Simplify to the handle budget ON ENTRY; the stored route stays raw
+      // unless the user actually edits, because an untouched simplified line
+      // is the editor's `original` and therefore never dirty.
+      setEditorState(initRouteEditor(simplifyForEditing(feature.geometry.coordinates)));
     },
     [editMode, editing, geometry]
   );

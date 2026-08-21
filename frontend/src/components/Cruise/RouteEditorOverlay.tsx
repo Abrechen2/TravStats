@@ -62,7 +62,7 @@ export function RouteEditorOverlay({
             onDrag={(e): void => onDrag(index, [e.lngLat.lng, e.lngLat.lat])}
             onDragEnd={(e): void => onDrag(index, [e.lngLat.lng, e.lngLat.lat])}
           >
-            <div className="relative">
+            <div className="group relative">
               <button
                 type="button"
                 aria-label={handleLabel(index)}
@@ -115,12 +115,23 @@ export function RouteEditorOverlay({
                       : "h-4 w-4 cursor-grab rounded-full border-2 border-(--accent) bg-(--bg-base)"
                 }
               />
-              {selected && !endpoint && (
+              {/* Spec §6.1: the ✕ appears on HOVER (review finding M1 — it
+                  was select-only first). It stays in the DOM for every
+                  removable handle and is revealed by CSS, so a mouse user
+                  skips the select click; a selected handle keeps it visible
+                  for keyboard users. pointer-events gate along with opacity —
+                  an invisible button must not swallow the handle's clicks. */}
+              {!endpoint && (
                 <button
                   type="button"
                   aria-label={removeLabel}
                   onClick={(): void => onRemove(index)}
-                  className="absolute -top-3 -right-3 h-5 w-5 rounded-full bg-(--accent) text-xs leading-none text-white"
+                  className={
+                    "absolute -top-3 -right-3 h-5 w-5 rounded-full bg-(--accent) text-xs leading-none text-white" +
+                    (selected
+                      ? ""
+                      : " pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100")
+                  }
                 >
                   ✕
                 </button>
