@@ -6,7 +6,7 @@
 
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import {
   getPendingUpdates,
@@ -23,6 +23,10 @@ const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
+// Method-aware: GET passes through, so read-only PATs keep read access but
+// cannot apply/edit/reject/delete — applying MUTATES the underlying flight.
+// Consistent with routes/flights.ts and routes/lodging.ts.
+router.use(requireWriteScope);
 
 // Schema for updating pending update
 const updatePendingUpdateSchema = z.object({
