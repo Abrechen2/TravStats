@@ -4,6 +4,7 @@ import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
 import { testSmtpConnection } from '../../services/emailService';
 import { encryptApiKey } from '../../utils/encryption';
+import logger from '../../utils/logger';
 
 export const SMTP_CONFIG_ID = 1 as const;
 
@@ -86,6 +87,30 @@ smtpRouter.put('/', async (req: AuthRequest, res: Response, next: NextFunction):
       fromName: config.fromName,
       enabled: config.enabled,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Removes the stored SMTP credentials entirely (#255). Deleting is the only way
+ * to take a password back out of the instance — `PUT` can overwrite it but never
+ * clear it, and the toggle only stops sending. Idempotent on purpose: an admin
+ * pressing delete on an instance that has no config gets the same `configured:
+ * false` answer as one that just cleared it.
+ *
+ * Nothing caches the row (`emailService` reads it per send), so the next
+ * reminder, invitation or reset mail sees an unconfigured instance immediately.
+ */
+smtpRouter.delete('/', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { count } = await prisma.smtpConfig.deleteMany({ where: { id: SMTP_CONFIG_ID } });
+    logger.info({
+      operation: 'smtp_config_deleted',
+      message: count > 0 ? 'SMTP configuration deleted' : 'SMTP delete on an unconfigured instance',
+      userId: req.userId,
+    });
+    res.json({ configured: false, deleted: count > 0 });
   } catch (error) {
     next(error);
   }

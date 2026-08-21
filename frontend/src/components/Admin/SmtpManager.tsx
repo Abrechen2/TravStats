@@ -3,6 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { adminApi, type SmtpConfigInput } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import InlineHelp from "../Help/InlineHelp";
+import ConfirmModal from "../Training/ConfirmModal";
 
 const DEFAULT_CONFIG: SmtpConfigInput = {
   host: "",
@@ -16,20 +17,26 @@ const DEFAULT_CONFIG: SmtpConfigInput = {
 };
 
 export default function SmtpManager(): JSX.Element {
-  const { t } = useTranslation(["settings"]);
+  const { t } = useTranslation(["settings", "common"]);
   const addToast = useToastStore((state) => state.addToast);
 
   const [config, setConfig] = useState<SmtpConfigInput>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [passwordChanged, setPasswordChanged] = useState(false);
+  // Whether the SERVER holds a config (#255). The form is filled either way, so
+  // only this decides whether there is anything to delete.
+  const [configured, setConfigured] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
     const load = async (): Promise<void> => {
       try {
         const data = await adminApi.getSmtpConfig();
         if (data.configured) {
+          setConfigured(true);
           setConfig({
             host: data.host ?? "",
             port: data.port ?? 587,
@@ -68,11 +75,30 @@ export default function SmtpManager(): JSX.Element {
     try {
       await adminApi.saveSmtpConfig(config);
       setPasswordChanged(false);
+      setConfigured(true);
       addToast("success", t("settings:notifications.saved"));
     } catch (error) {
       addToast("error", error instanceof Error ? error.message : "Failed to save SMTP config");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async (): Promise<void> => {
+    setDeleting(true);
+    try {
+      await adminApi.deleteSmtpConfig();
+      setConfig(DEFAULT_CONFIG);
+      setPasswordChanged(false);
+      setConfigured(false);
+      addToast("success", t("settings:notifications.smtpDeleted"));
+    } catch (error) {
+      addToast(
+        "error",
+        error instanceof Error ? error.message : t("settings:notifications.smtpDeleteFailed")
+      );
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -244,12 +270,12 @@ export default function SmtpManager(): JSX.Element {
       </label>
 
       {/* Actions */}
-      <div className="flex gap-3 pt-2">
+      <div className="flex flex-wrap gap-3 pt-2">
         <button
           type="button"
           className="btn btn-secondary"
           onClick={() => void handleTest()}
-          disabled={testing || saving}
+          disabled={testing || saving || deleting}
         >
           {testing ? "Testing..." : t("settings:notifications.testConnection")}
         </button>
@@ -257,11 +283,37 @@ export default function SmtpManager(): JSX.Element {
           type="button"
           className="btn btn-primary"
           onClick={() => void handleSave()}
-          disabled={saving || testing}
+          disabled={saving || testing || deleting}
         >
           {saving ? "Saving..." : t("settings:notifications.save")}
         </button>
+        {/* Only offered once something is actually stored (#255) — a delete on an
+            empty instance would promise to undo a thing that never happened. */}
+        {configured && (
+          <button
+            type="button"
+            className="btn btn-danger sm:ml-auto"
+            onClick={() => setDeleteConfirmOpen(true)}
+            disabled={saving || testing || deleting}
+          >
+            {t("settings:notifications.smtpDelete")}
+          </button>
+        )}
       </div>
+
+      <ConfirmModal
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={() => {
+          setDeleteConfirmOpen(false);
+          void handleDelete();
+        }}
+        title={t("settings:notifications.smtpDeleteConfirm.title")}
+        message={t("settings:notifications.smtpDeleteConfirm.message")}
+        confirmText={t("settings:notifications.smtpDeleteConfirm.confirm")}
+        cancelText={t("common:buttons.cancel")}
+        confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500 text-white"
+      />
     </div>
   );
 }

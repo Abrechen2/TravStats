@@ -534,6 +534,11 @@ export const adminApi = {
     return data;
   },
 
+  deleteSmtpConfig: async (): Promise<SmtpConfigResponse> => {
+    const { data } = await api.delete<SmtpConfigResponse>("/admin/smtp");
+    return data;
+  },
+
   testSmtpConnection: async (
     config: SmtpConfigInput
   ): Promise<{ success: boolean; error?: string }> => {

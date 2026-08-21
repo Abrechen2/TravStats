@@ -231,6 +231,14 @@
     "testConnection": "Verbindung testen",
     "testSuccess": "Verbindung erfolgreich!",
     "testFailed": "Verbindung fehlgeschlagen: {{error}}",
+    "smtpDelete": "Zugangsdaten löschen",
+    "smtpDeleted": "SMTP-Zugangsdaten gelöscht",
+    "smtpDeleteFailed": "Zugangsdaten konnten nicht gelöscht werden",
+    "smtpDeleteConfirm": {
+      "title": "SMTP-Zugangsdaten löschen?",
+      "message": "Host, Benutzername und Passwort werden von dieser Instanz entfernt. Danach verschickt TravStats keine E-Mails mehr — keine Erinnerungen, keine Einladungen, keine Passwort-Zurücksetzung. Du kannst die Daten jederzeit neu eintragen.",
+      "confirm": "Endgültig löschen"
+    },
     "loadError": "Konfiguration konnte nicht geladen werden",
     "smtpHelp": {
       "title": "SMTP-Server einrichten",

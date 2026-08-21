@@ -231,6 +231,14 @@
     "testConnection": "Test connection",
     "testSuccess": "Connection successful!",
     "testFailed": "Connection failed: {{error}}",
+    "smtpDelete": "Delete credentials",
+    "smtpDeleted": "SMTP credentials deleted",
+    "smtpDeleteFailed": "Could not delete the credentials",
+    "smtpDeleteConfirm": {
+      "title": "Delete the SMTP credentials?",
+      "message": "Host, username and password are removed from this instance. TravStats will then send no e-mail at all — no reminders, no invitations, no password resets. You can enter them again at any time.",
+      "confirm": "Delete permanently"
+    },
     "loadError": "Failed to load configuration",
     "smtpHelp": {
       "title": "Set up SMTP server",
