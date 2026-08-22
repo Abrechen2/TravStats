@@ -115,9 +115,59 @@ describe("aggregate", () => {
     });
   });
 
-  it("year-scoped activeDays sum yearlyActiveDays per domain (no double-count)", () => {
-    const result = aggregate(baseMap, { flight: true, cruise: true }, 2024);
-    expect(result.activeDays).toBe(20);
+  describe("activeDays counts DAYS, not one tally per domain", () => {
+    // The KPI is contracted as "distinct travel days (any visible domain
+    // active)" and labelled "Tage mit mind. einer Aktivität". It used to ADD
+    // each domain's own tally, so a day with a flight AND a hotel night
+    // counted twice — and the figure could pass 365 in a year. The union has
+    // to be taken over the day keys, which every domain already supplies as
+    // `dailyActiveDays` (the heatmap has always used them).
+    const overlapping: DomainStatsMap = {
+      flight: {
+        ...flightStats,
+        yearlyActiveDays: { 2024: 2 },
+        dailyActiveDays: { "2024-03-15": 1, "2024-03-16": 1 },
+      },
+      lodging: {
+        ...cruiseStats,
+        domain: "lodging",
+        yearlyActiveDays: { 2024: 2 },
+        // 03-16 is the same day: flown in, slept there.
+        dailyActiveDays: { "2024-03-16": 1, "2024-03-17": 1 },
+      },
+    };
+
+    it("counts a day shared by two domains once", () => {
+      const result = aggregate(overlapping, { flight: true, lodging: true }, 2024);
+      expect(result.activeDays).toBe(3);
+    });
+
+    it("counts the same days once over the lifetime too", () => {
+      const result = aggregate(overlapping, { flight: true, lodging: true }, null);
+      expect(result.activeDays).toBe(3);
+    });
+
+    it("keeps a year selection to that year's days", () => {
+      const spanning: DomainStatsMap = {
+        flight: {
+          ...flightStats,
+          dailyActiveDays: { "2023-12-31": 1, "2024-01-01": 1, "2024-01-02": 1 },
+        },
+      };
+      expect(aggregate(spanning, { flight: true }, 2024).activeDays).toBe(2);
+      expect(aggregate(spanning, { flight: true }, 2023).activeDays).toBe(1);
+      expect(aggregate(spanning, { flight: true }, null).activeDays).toBe(3);
+    });
+
+    it("falls back to the domain's own tally when it has no day index", () => {
+      // Same reasoning as the country fallback right above: a domain that
+      // predates `dailyActiveDays` must not contribute zero. Over-reporting
+      // is visible, under-reporting silently loses days.
+      const legacy = {
+        flight: { ...flightStats, dailyActiveDays: undefined },
+      } as unknown as DomainStatsMap;
+      expect(aggregate(legacy, { flight: true }, 2024).activeDays).toBe(6);
+    });
   });
 
   it("ignores hasData=false domain entries", () => {

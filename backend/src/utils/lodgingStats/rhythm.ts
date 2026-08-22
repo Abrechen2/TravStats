@@ -44,6 +44,11 @@ export function computeRhythmStats(
   // Every date the user was away, deduplicated. Keyed by UTC midnight in ms so
   // consecutive-run detection is plain arithmetic.
   const nightDays = new Set<number>();
+  // The nights that COULD land on a calendar. `nightsAway` deduplicates them,
+  // so the difference between the two is the genuine overlap — nights booked
+  // twice. Comparing `nightsAway` against the grand total instead would mix
+  // in every undated stay, and the screen reported those as double bookings.
+  let walkableNights = 0;
 
   for (const { stay, timing } of entries) {
     // Only a stay with two real dates has days to contribute. An undated one,
@@ -51,6 +56,7 @@ export function computeRhythmStats(
     // it on its placeholder would invent a weekday, and could bridge a gap
     // between two real runs that never touched.
     if (!timing.walkable || stay.checkIn === null || stay.checkOut === null) continue;
+    walkableNights += stay.nights ?? 0;
     let cursor = Date.UTC(
       stay.checkIn.getUTCFullYear(),
       stay.checkIn.getUTCMonth(),
@@ -139,6 +145,7 @@ export function computeRhythmStats(
 
   return {
     nightsAway: nightDays.size,
+    walkableNights,
     nightsByWeekday,
     nightsByMonthOfYear,
     nightsBySeason,

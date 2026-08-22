@@ -367,6 +367,18 @@ export interface LodgingRhythmStats {
    * overlap — and the difference is the interesting part, so both are reported.
    */
   nightsAway: number;
+  /**
+   * Nights from stays that CAN be placed on a calendar. `nightsAway`
+   * deduplicates those same nights, so `walkableNights - nightsAway` is the
+   * genuine overlap — nights booked twice.
+   *
+   * The screen used to compute that overlap as `totalNights - nightsAway`,
+   * which is a different quantity: `totalNights` includes undated stays, and
+   * those can never enter `nightsAway`. A stay recorded as "July 2011, 5
+   * nights" was therefore reported as five nights double-booked. The figure
+   * measured missing data and called it an overlap.
+   */
+  walkableNights: number;
   /** Seven entries, index 0 = Sunday, matching `Date.getUTCDay()`. */
   nightsByWeekday: number[];
   /** Twelve entries, index 0 = January — a histogram across all years, unlike `nightsByMonth`. */

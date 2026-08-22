@@ -56,7 +56,16 @@ export default function LodgingRhythmSection({ stats }: Props): JSX.Element {
       hint: null,
     }));
 
-  const overlapNights = stats.totalNights - rhythm.nightsAway;
+  // Overlap is what deduplication REMOVED: nights that could be placed on a
+  // calendar, minus the distinct dates left after merging them. Measuring it
+  // against `totalNights` instead mixed in every undated stay — a stay
+  // recorded as "July 2011, 5 nights" was announced as five nights
+  // double-booked, because an undated stay can never enter `nightsAway`.
+  const overlapNights = Math.max(0, (rhythm.walkableNights ?? 0) - rhythm.nightsAway);
+  // What the section leaves out, said out loud. The geo and money sections
+  // already name their gaps; this one stayed silent and turned its own gap
+  // into the wrong claim above.
+  const undatedStays = stats.undatedStays ?? 0;
 
   return (
     <section className="mt-8">
@@ -76,7 +85,9 @@ export default function LodgingRhythmSection({ stats }: Props): JSX.Element {
           footnote={
             overlapNights > 0
               ? t("lodging:stats.rhythm.overlap", { count: overlapNights })
-              : undefined
+              : undatedStays > 0
+                ? t("lodging:stats.rhythm.undated", { count: undatedStays })
+                : undefined
           }
         />
         <StatCard

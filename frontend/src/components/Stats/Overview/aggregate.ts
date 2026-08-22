@@ -37,8 +37,17 @@ export function aggregate(
 ): YearScopedAgg {
   const perDomainEvents: Partial<Record<DomainKey, number>> = {};
   const countries = new Set<string>();
+  // The KPI is "distinct travel days (any visible domain active)", so the day
+  // KEYS are unioned. Adding each domain's own tally counted a day with a
+  // flight and a hotel night twice, and could push the figure past 365 in a
+  // year — the more domains a user keeps, the further off it read.
+  const activeDayKeys = new Set<string>();
   let totalEvents = 0;
-  let activeDays = 0;
+  // Only for domains that predate `dailyActiveDays`: their own tally is added
+  // instead. Same trade as the country fallback below — over-reporting is
+  // visible, under-reporting silently loses days.
+  let activeDaysWithoutIndex = 0;
+
 
   for (const [key, stats] of Object.entries(statsMap)) {
     const domain = key as DomainKey;
@@ -48,10 +57,20 @@ export function aggregate(
     let events = 0;
     if (year === null) {
       events = stats.totalEvents;
-      activeDays += sumValues(stats.yearlyActiveDays);
     } else {
       events = stats.yearlyEvents[year] ?? 0;
-      activeDays += stats.yearlyActiveDays[year] ?? 0;
+    }
+
+    const daily = stats.dailyActiveDays as Record<string, number> | undefined;
+    if (daily === undefined) {
+      activeDaysWithoutIndex +=
+        year === null ? sumValues(stats.yearlyActiveDays) : (stats.yearlyActiveDays[year] ?? 0);
+    } else {
+      const prefix = year === null ? null : `${year}-`;
+      for (const day of Object.keys(daily)) {
+        if (prefix !== null && !day.startsWith(prefix)) continue;
+        activeDayKeys.add(day);
+      }
     }
     perDomainEvents[domain] = events;
     totalEvents += events;
@@ -78,7 +97,7 @@ export function aggregate(
     totalEvents,
     perDomainEvents,
     countriesCount: countries.size,
-    activeDays,
+    activeDays: activeDayKeys.size + activeDaysWithoutIndex,
   };
 }
 

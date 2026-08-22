@@ -58,6 +58,7 @@ export const EMPTY_LODGING_GEO_STATS: LodgingGeoStats = {
 
 export const EMPTY_LODGING_RHYTHM_STATS: LodgingRhythmStats = {
   nightsAway: 0,
+  walkableNights: 0,
   nightsByWeekday: [0, 0, 0, 0, 0, 0, 0],
   nightsByMonthOfYear: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   nightsBySeason: { winter: 0, spring: 0, summer: 0, autumn: 0 },

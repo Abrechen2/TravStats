@@ -61,19 +61,47 @@ describe("LodgingRhythmSection", () => {
   });
 
   it("mentions double-booked nights only when stays actually overlap", () => {
+    // Overlap is measured against the nights that CAN be placed on a calendar,
+    // never against the grand total: an undated stay never enters `nightsAway`,
+    // so the total would report it as a double booking.
     const { rerender } = render(
       <LodgingRhythmSection
-        stats={{ ...base, totalNights: 11, rhythm: { ...base.rhythm, nightsAway: 11 } }}
+        stats={{
+          ...base,
+          totalNights: 11,
+          rhythm: { ...base.rhythm, walkableNights: 11, nightsAway: 11 },
+        }}
       />
     );
     expect(screen.queryByText(/lodging:stats\.rhythm\.overlap/)).toBeNull();
 
     rerender(
       <LodgingRhythmSection
-        stats={{ ...base, totalNights: 11, rhythm: { ...base.rhythm, nightsAway: 9 } }}
+        stats={{
+          ...base,
+          totalNights: 11,
+          rhythm: { ...base.rhythm, walkableNights: 11, nightsAway: 9 },
+        }}
       />
     );
     expect(screen.getByText(/lodging:stats\.rhythm\.overlap/)).toBeTruthy();
+  });
+
+  it("does not call an undated stay a double booking", () => {
+    // The regression: five nights recorded as "July 2011" are five nights the
+    // calendar cannot hold. They must not be announced as booked twice.
+    render(
+      <LodgingRhythmSection
+        stats={{
+          ...base,
+          totalNights: 11,
+          undatedStays: 1,
+          rhythm: { ...base.rhythm, walkableNights: 6, nightsAway: 6 },
+        }}
+      />
+    );
+    expect(screen.queryByText(/lodging:stats\.rhythm\.overlap/)).toBeNull();
+    expect(screen.getByText(/lodging:stats\.rhythm\.undated/)).toBeTruthy();
   });
 
   it("shows a dash for the busiest month when no night was ever recorded", () => {
