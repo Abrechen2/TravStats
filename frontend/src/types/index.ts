@@ -745,7 +745,12 @@ export interface AirlineRankingItem {
 
 export interface AirlineRankingResponse {
   airlines: AirlineRankingItem[];
+  /** Flights that carry an airline — the denominator of every percentage. */
   total: number;
+  /** Flights with no airline at all. They used to be ranked as a carrier
+   *  called "Unknown" and to sit in the denominator, diluting every real
+   *  airline's share. Reported so the gap can be named instead. */
+  flightsWithoutAirline?: number;
 }
 
 export interface CountryStat {

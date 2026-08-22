@@ -166,6 +166,10 @@ export interface CruiseStatsResponse {
   longestLegKm: number;
   // Trip-shape derivations
   totalPortCalls: number;
+  /** Port calls that matched a catalogue port. Unresolved calls count towards
+   *  `totalPortCalls` but can never enter `cruisePortsUnique`, so a ratio
+   *  between those two needs this denominator or it reads them as revisits. */
+  resolvedPortCalls: number;
   totalCruiseDays: number;
   // Cabin / deck
   hasBalconyCabin: boolean;

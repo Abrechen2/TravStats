@@ -90,11 +90,25 @@ export default function CruiseStatsSection(): JSX.Element {
   }
 
   const avgPortsPerCruise = stats.cruisesCount > 0 ? stats.totalPortCalls / stats.cruisesCount : 0;
+  // `seaDays` counts stop rows across every cruise; `totalCruiseDays` counts
+  // calendar days and is 0 for a cruise with no dates. A cruise recorded
+  // without dates but with sea days therefore fed the numerator and not the
+  // denominator, and the donut drew past a full circle. Capped, because a
+  // share of the days sailed cannot exceed those days.
   const seaDayRatioPct =
-    stats.totalCruiseDays > 0 ? Math.round((stats.seaDays / stats.totalCruiseDays) * 100) : 0;
+    stats.totalCruiseDays > 0
+      ? Math.min(100, Math.round((stats.seaDays / stats.totalCruiseDays) * 100))
+      : 0;
+  // Revisits are measured over the calls that CAN be identified. An imported
+  // port name nothing matched is a real call — it counts in `totalPortCalls` —
+  // but it has no catalogue id, so it can never appear in `cruisePortsUnique`.
+  // Dividing by the total therefore counted every unresolved call as a
+  // revisit: five calls, three of them unresolved, read as "60 % revisited"
+  // for someone who never returned anywhere.
+  const identifiableCalls = stats.resolvedPortCalls ?? stats.totalPortCalls;
   const revisitRatePct =
-    stats.totalPortCalls > 0
-      ? Math.round(((stats.totalPortCalls - stats.cruisePortsUnique) / stats.totalPortCalls) * 100)
+    identifiableCalls > 0
+      ? Math.round(((identifiableCalls - stats.cruisePortsUnique) / identifiableCalls) * 100)
       : 0;
 
   const heroKpis: Array<{ label: string; value: string | number }> = [

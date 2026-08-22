@@ -111,6 +111,15 @@ export interface CruiseStats {
    * `cruisePortsUnique` is the de-duplicated set; this is the gross
    * tally — needed for revisit-rate and average-ports-per-cruise. */
   totalPortCalls: number;
+  /**
+   * Port calls whose stop matched a catalogue port. `totalPortCalls` also
+   * counts unresolved ones — an imported name nothing matched. They are real
+   * calls, so they belong in the total, but they can never appear in
+   * `cruisePortsUnique`, which is keyed by catalogue id. Any ratio comparing
+   * the two therefore needs THIS denominator, or unresolved calls read as
+   * revisits.
+   */
+  resolvedPortCalls: number;
   /** Sum of (endDate − startDate + 1) days across cruises that have
    * both timestamps. Cruises missing dates contribute zero. */
   totalCruiseDays: number;
@@ -154,6 +163,7 @@ export function calculateCruiseStats(
   let hasEquatorCrossing = false;
   let insideCabinCount = 0;
   let totalPortCalls = 0;
+  let resolvedPortCalls = 0;
   let totalCruiseDays = 0;
   const regionVisitCounts: Record<string, number> = {};
 
@@ -228,6 +238,7 @@ export function calculateCruiseStats(
           portIds.add(stop.port.id);
           cruisePortCount += 1;
           totalPortCalls += 1;
+          resolvedPortCalls += 1;
           if (stop.port.country) {
             countries.add(stop.port.country);
             yearCountries?.add(stop.port.country);
@@ -342,6 +353,7 @@ export function calculateCruiseStats(
     shipLoyaltyMax,
     insideCabinCount,
     totalPortCalls,
+    resolvedPortCalls,
     totalCruiseDays,
     regionVisitCounts,
   };

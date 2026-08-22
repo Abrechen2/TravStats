@@ -44,6 +44,7 @@ const baseStats: CruiseStatsResponse = {
   totalDistanceKm: 0,
   longestLegKm: 0,
   totalPortCalls: 0,
+  resolvedPortCalls: 0,
   totalCruiseDays: 0,
   hasBalconyCabin: false,
   hasSuiteCabin: false,

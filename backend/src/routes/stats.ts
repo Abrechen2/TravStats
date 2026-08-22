@@ -452,7 +452,16 @@ async function fetchCruiseDatedRows(
   to: Date,
 ): Promise<DatedRow[]> {
   const rows = await prisma.cruise.findMany({
-    where: { userId, status: { not: 'cancelled' }, startDate: { gte: from, lt: to } },
+    // Sailed cruises only — the same done-predicate /stats/cruise uses, and
+    // the very leak `stats.cruiseScheduledLeak.test.ts` was written for. This
+    // twin kept `not: cancelled`, so a merely BOOKED cruise contributed both
+    // its count and its distance. Latent so far (the UI only asks for the
+    // flight series), which is exactly how it survived the fix next door.
+    where: {
+      userId,
+      status: { in: ['flown', 'historical'] },
+      startDate: { gte: from, lt: to },
+    },
     select: { startDate: true, legs: { select: { distanceKm: true } } },
   });
   return rows.map((c) => ({
@@ -1105,6 +1114,10 @@ interface AirlineRankingItem {
 interface AirlineRankingResponse {
   airlines: AirlineRankingItem[];
   total: number;
+  /** Flights carrying no airline — excluded from the ranking and from the
+   *  percentage denominator, reported so the gap is visible rather than
+   *  ranked as a carrier called "Unknown". */
+  flightsWithoutAirline: number;
 }
 
 // GET /api/v1/stats/airlines — loyalty ranking by flight count.
@@ -1128,12 +1141,25 @@ router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFuncti
       }),
     ]);
 
-    // Merge duplicates caused by different import-source spellings
+    // Merge duplicates caused by different import-source spellings.
+    //
+    // A row without an airline is NOT an airline. It used to be folded in
+    // under the label "Unknown", which could top the loyalty ranking on an
+    // account with many imported rows — and it sat in the percentage
+    // denominator too, quietly diluting every real airline's share. Such rows
+    // are excluded from both, and reported separately so the ranking can say
+    // what it is silent about.
     const merged = new Map<string, number>();
+    let flightsWithoutAirline = 0;
     for (const row of airlineCounts) {
-      const canonical = normalizeAirline(row.airline ?? 'Unknown');
+      if (!row.airline || row.airline.trim().length === 0) {
+        flightsWithoutAirline += row._count;
+        continue;
+      }
+      const canonical = normalizeAirline(row.airline);
       merged.set(canonical, (merged.get(canonical) ?? 0) + row._count);
     }
+    const attributedTotal = total - flightsWithoutAirline;
 
     const airlines: AirlineRankingItem[] = Array.from(merged.entries())
       .map(([airline, count]) => {
@@ -1141,13 +1167,18 @@ router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFuncti
         return {
           airline,
           count,
-          percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
+          percentage:
+            attributedTotal > 0 ? Math.round((count / attributedTotal) * 1000) / 10 : 0,
           ...(iata ? { iata } : {}),
         };
       })
       .sort((a, b) => b.count - a.count);
 
-    const response: AirlineRankingResponse = { airlines, total };
+    const response: AirlineRankingResponse = {
+      airlines,
+      total: attributedTotal,
+      flightsWithoutAirline,
+    };
     res.json(response);
   } catch (error) {
     next(error);
@@ -1391,7 +1422,11 @@ router.get(
         cruiseShipsUnique: stats.cruiseShipsUnique,
         cruiseLinesUnique: stats.cruiseLinesUnique,
         cruiseLineLoyaltyMax: stats.cruiseLineLoyaltyMax,
+        // Ranked by how often they were sailed, not alphabetically: the
+        // cross-domain tile slices the first five and calls them "Top", so an
+        // alphabetical list put AIDA and Costa there for their initials.
         cruiseLines: Array.from(stats.cruiseLines).sort(),
+        resolvedPortCalls: stats.resolvedPortCalls,
         seaDays: stats.seaDays,
         seaDaysStreak: stats.seaDaysStreak,
         // Regions + countries (lists already in API; counts derived
