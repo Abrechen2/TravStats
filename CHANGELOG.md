@@ -339,6 +339,54 @@ authentication and passkeys arrive alongside.
   discounts, not one guest's pre-discount fare; a two-digit year in a hotel
   confirmation is read against the travel period rather than the letter date,
   and only an explicitly labelled booking number is taken as one.
+- **Countries are counted once, however they were spelled.** The lodging
+  statistics grouped by the country text a booking mail happened to use, so
+  "Deutschland" and "Germany" appeared as two countries with the nights and the
+  money split between them — in the country list, the price and rating
+  rankings, and the cross-domain "countries visited" tile, where flights and
+  cruises had always contributed codes. Continents were affected too: the
+  lookup understands codes and English names, so German text fell back to a
+  coarse coordinate guess, and a house without coordinates lost its continent
+  entirely.
+- **Flight totals count flights that happened.** The year card put a flight
+  count covering booked and cancelled flights next to a distance and a flight
+  time covering only the flown ones, and the mobile app's home board could
+  report one flight with zero kilometres and zero airports. Every headline
+  figure now describes the same set, and what is merely booked is reported
+  beside it instead of inside it.
+- **"Aktive Reisetage" counts days, not one tally per domain.** A day with a
+  flight and a hotel night counted twice, and the figure could pass 365 in a
+  year.
+- **A stay without a date is no longer called a double booking.** The rhythm
+  section reported undated stays as "n Nächte doppelt gebucht"; it now measures
+  overlap against the nights that can be placed on a calendar at all, and says
+  plainly how many stays it had to leave out.
+- **The lodging statistics page stopped covering itself.** The figures strip
+  and the currency card float over the dashboard map by design; on the
+  statistics page they sat on top of the tiles below, and the translucent
+  currency card let the hotel names show through.
+- **Confirmation dialogs answer the mouse again.** An invisible backdrop lay
+  over every dialog built on the shared component: the click landed on the
+  backdrop, which closes the dialog, so confirming looked like it had worked
+  while nothing happened — including the SMTP deletion this release
+  introduces. Dialogs also close on Escape now and announce themselves to
+  screen readers.
+- **The map picker opens where the point is** — it showed the world view
+  whenever the position arrived while the picker was shut, leaving the pin off
+  screen — and it lists the places around a pin the search placed, not just one
+  the map placed.
+- **Amounts follow the interface language.** Only seven currencies carried a
+  locale, so for the other 148 the amount was written in the browser's language
+  while the exchange rate beneath it followed the interface — two number
+  formats in one card.
+- **Smaller counting corrections.** Round trips are limited by the thinner
+  direction (three flights out and one back is one round trip, not two); the
+  continent tile stopped counting its own "other" bucket as a continent; the
+  revisit rate no longer treats an unresolved port as a return visit; the
+  sea-day share cannot exceed the days sailed; a flight with no airline is not
+  ranked as an airline called "Unknown"; cruise lines are ordered by how often
+  they were sailed; and the country distribution card says "origin and
+  destination", which is what it has counted since 2.5.
 - **Achievements react to catalogue edits again.** Points, tiers and wording
   were frozen on any installation whose stored achievement count happened to
   match the seed count. Two badges also corrected themselves: the loyalty badge

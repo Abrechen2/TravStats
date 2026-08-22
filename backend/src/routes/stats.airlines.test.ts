@@ -79,15 +79,24 @@ describe('GET /api/v1/stats/airlines', () => {
     );
   });
 
-  it('handles null airline as Unknown', async () => {
-    mockCount.mockResolvedValue(2);
+  it('does not rank a missing airline as one', async () => {
+    // A flight without an airline used to be folded in under the label
+    // "Unknown", which could top the loyalty ranking on an account full of
+    // imported rows — and it sat in the percentage denominator, diluting
+    // every real airline's share. It is reported beside the ranking instead.
+    mockCount.mockResolvedValue(3);
     mockGroupBy.mockResolvedValue([
       { airline: null, _count: 2 },
+      { airline: 'Lufthansa', _count: 1 },
     ]);
 
     const res = await request(app).get('/api/v1/stats/airlines');
     expect(res.status).toBe(200);
-    expect(res.body.airlines[0].airline).toBe('Unknown');
+    expect(res.body.airlines.map((a: { airline: string }) => a.airline)).toEqual(['Lufthansa']);
+    expect(res.body.flightsWithoutAirline).toBe(2);
+    // The one attributed flight is 100 % of what can be attributed, not 33 %.
+    expect(res.body.airlines[0].percentage).toBe(100);
+    expect(res.body.total).toBe(1);
   });
 
   it('carries the resolved IATA code when the catalogue knows the airline', async () => {
