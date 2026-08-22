@@ -50,13 +50,16 @@ export function computeRhythmStats(
   // in every undated stay, and the screen reported those as double bookings.
   let walkableNights = 0;
 
-  for (const { stay, timing } of entries) {
+  for (const { stay, nights, timing } of entries) {
     // Only a stay with two real dates has days to contribute. An undated one,
     // or one known only to the month, has no position on a calendar — placing
     // it on its placeholder would invent a weekday, and could bridge a gap
     // between two real runs that never touched.
     if (!timing.walkable || stay.checkIn === null || stay.checkOut === null) continue;
-    walkableNights += stay.nights ?? 0;
+    // The night count lives on the WRAPPER, not on the stay — `stay.nights`
+    // is always undefined, which left this field at 0 for every account and
+    // made the overlap unreportable.
+    walkableNights += nights;
     let cursor = Date.UTC(
       stay.checkIn.getUTCFullYear(),
       stay.checkIn.getUTCMonth(),
