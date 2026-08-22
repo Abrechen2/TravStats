@@ -62,6 +62,7 @@ export function LocationMapModal({
   const [activeIndex, setActiveIndex] = useState(-1);
   const [focusNonce, setFocusNonce] = useState(0);
   const reverseIdRef = useRef(0);
+  const poiIdRef = useRef(0);
 
   // Re-seed the draft each time the modal opens — an earlier session's
   // abandoned pin must not leak into the next one.
@@ -80,17 +81,14 @@ export function LocationMapModal({
   const lang = i18n.language?.split("-")[0];
   const { results, isSearching, searchError, reset } = useLocationSearch(open ? query : "", lang);
 
-  // Reverse lookup for a pin the MAP placed (a search hit already knows its
-  // address — no lookup needed, its fields win on confirm anyway).
+  // Reverse ADDRESS lookup, only for a pin the MAP placed: a search hit already
+  // carries its address, and its fields win on confirm anyway.
   useEffect(() => {
     if (!open || !draft || hit) return;
     const requestId = reverseIdRef.current + 1;
     reverseIdRef.current = requestId;
     setResolving(true);
     const timer = window.setTimeout(() => {
-      // Address and nearby-POI lookups run in parallel — the address is the
-      // fallback line, the POIs are the Google-Maps-like "what is here?"
-      // selection. Either failing alone must not take the other down.
       void (async (): Promise<void> => {
         try {
           const parts = await reverseGeocode(draft.lat, draft.lon);
@@ -104,21 +102,36 @@ export function LocationMapModal({
           if (reverseIdRef.current === requestId) setResolving(false);
         }
       })();
+    }, REVERSE_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [open, draft, hit, i18n.language]);
+
+  // The "what is here?" list runs for EVERY pin, including one a search placed.
+  // It deliberately does not share the address lookup's `hit` guard: knowing
+  // the name of the place you searched for says nothing about what stands
+  // around it, and searching first is exactly how one looks for a hotel. The
+  // list is an offer — until a place is tapped, the search hit stays the
+  // answer, so this never overwrites what the user chose.
+  useEffect(() => {
+    if (!open || !draft) return;
+    const requestId = poiIdRef.current + 1;
+    poiIdRef.current = requestId;
+    const timer = window.setTimeout(() => {
       void (async (): Promise<void> => {
         try {
           const lang = i18n.language?.split("-")[0];
           const nearby = await reversePlaces(draft.lat, draft.lon, lang);
-          if (reverseIdRef.current !== requestId) return;
+          if (poiIdRef.current !== requestId) return;
           setPois(nearby.results);
         } catch (err) {
-          if (reverseIdRef.current !== requestId) return;
+          if (poiIdRef.current !== requestId) return;
           logger.warn("LocationMapModal: reverse places failed", err);
           setPois([]);
         }
       })();
     }, REVERSE_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
-  }, [open, draft, hit, i18n.language]);
+  }, [open, draft, i18n.language]);
 
   const placeFromMap = useCallback((lat: number, lon: number): void => {
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
@@ -273,9 +286,16 @@ export function LocationMapModal({
         <div className="mt-3">
           <LocationMiniMap
             value={draft}
+            // Seeded from the PROP, not from `draft`. The map reads this once,
+            // when it mounts — which is the render that opens the modal, and in
+            // that render `draft` can still hold the previous session's value:
+            // the re-seeding effect below only runs after the commit. Reading
+            // `draft` therefore opened the picker on the world view whenever
+            // the position arrived while the modal was shut (a stay loaded, an
+            // address geocoded), leaving the pin off screen.
             initialViewState={
-              draft
-                ? { longitude: draft.lon, latitude: draft.lat, zoom: PICKED_ZOOM }
+              value
+                ? { longitude: value.lon, latitude: value.lat, zoom: PICKED_ZOOM }
                 : DEFAULT_VIEW
             }
             focusNonce={focusNonce}

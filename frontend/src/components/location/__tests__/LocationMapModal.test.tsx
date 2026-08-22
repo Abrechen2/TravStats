@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useRef } from "react";
 import type { JSX, ReactNode } from "react";
 import { LocationMapModal } from "../LocationMapModal";
 import { reverseGeocode, reversePlaces, searchPlaces } from "../../../lib/api/geo";
@@ -27,19 +28,38 @@ vi.mock("../../../hooks/useTranslation", () => ({
 interface MockMapProps {
   children?: ReactNode;
   onClick?: (e: { lngLat: { lng: number; lat: number } }) => void;
+  /** Read ONCE at mount by react-map-gl — the mock exposes it so a test can
+   *  assert which section of the world the picker actually opened on. */
+  initialViewState?: { longitude: number; latitude: number; zoom: number };
 }
 interface MockMarkerProps {
   children?: ReactNode;
   onDragEnd?: (e: { lngLat: { lng: number; lat: number } }) => void;
 }
 
-vi.mock("react-map-gl/maplibre", () => ({
-  __esModule: true,
-  default: ({ children, onClick }: MockMapProps): JSX.Element => (
-    <div data-testid="mock-map" onClick={() => onClick?.({ lngLat: { lng: 13.38, lat: 52.516 } })}>
+/**
+ * react-map-gl treats `initialViewState` as UNCONTROLLED: it is read once, at
+ * mount, and later changes are ignored. The mock freezes it the same way — one
+ * that re-read it on every render would report the corrected viewport of the
+ * second render and hide exactly the one-render lag this suite exists to catch.
+ */
+function MockMap({ children, onClick, initialViewState }: MockMapProps): JSX.Element {
+  const frozen = useRef(initialViewState);
+  const v = frozen.current;
+  return (
+    <div
+      data-testid="mock-map"
+      data-initial-view={v ? `${v.longitude},${v.latitude},${v.zoom}` : ""}
+      onClick={() => onClick?.({ lngLat: { lng: 13.38, lat: 52.516 } })}
+    >
       {children}
     </div>
-  ),
+  );
+}
+
+vi.mock("react-map-gl/maplibre", () => ({
+  __esModule: true,
+  default: MockMap,
   Marker: ({ children, onDragEnd }: MockMarkerProps): JSX.Element => (
     <div
       data-testid="mock-marker"
@@ -267,6 +287,78 @@ describe("LocationMapModal", () => {
       await new Promise((r) => setTimeout(r, 700));
 
       expect(screen.queryByTestId("map-modal-poi-list")).not.toBeInTheDocument();
+    });
+  });
+  describe("the section of the world it opens on", () => {
+    it("opens on an existing point, even when that point arrived while it was shut", async () => {
+      // The real sequence: the form mounts the modal closed and without a
+      // position, the position arrives (a stay is loaded, or an address is
+      // geocoded), and only then does the user open the picker. The map reads
+      // its viewport ONCE at mount, so a one-render lag leaves it on the world
+      // view with the pin somewhere off screen.
+      const { rerender } = render(
+        <LocationMapModal open={false} value={null} onClose={vi.fn()} onConfirm={vi.fn()} />
+      );
+
+      rerender(
+        <LocationMapModal
+          open={true}
+          value={{ lat: 47.3769, lon: 8.5417 }}
+          onClose={vi.fn()}
+          onConfirm={vi.fn()}
+        />
+      );
+
+      expect(screen.getByTestId("mock-map").getAttribute("data-initial-view")).toBe(
+        "8.5417,47.3769,9"
+      );
+    });
+
+    it("opens on the world view when there is no point yet", () => {
+      render(<LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={vi.fn()} />);
+
+      expect(screen.getByTestId("mock-map").getAttribute("data-initial-view")).toBe("10,50,3");
+    });
+  });
+
+  describe("what is here — after a search hit too", () => {
+    it("lists the places around a pin the SEARCH placed", async () => {
+      // Knowing the name of the place you searched for says nothing about what
+      // stands around it. The address may already be known; the neighbours are
+      // not, and finding a hotel is exactly the search-first path.
+      vi.mocked(searchPlaces).mockResolvedValue({ results: [zurich], degraded: false });
+      vi.mocked(reversePlaces).mockResolvedValue({
+        results: [{ ...zurich, name: "Hotel St. Gotthard" }],
+        degraded: false,
+      });
+      render(<LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={vi.fn()} />);
+
+      await userEvent.type(screen.getByRole("combobox"), "Zurich");
+      await userEvent.click(await screen.findByText(/Zürich/));
+
+      await waitFor(() => expect(reversePlaces).toHaveBeenCalledWith(47.3769, 8.5417, "en"), {
+        timeout: 2000,
+      });
+      expect(await screen.findByText("Hotel St. Gotthard")).toBeInTheDocument();
+    });
+
+    it("keeps the search hit's own address as the line under the map", async () => {
+      // The list is an offer, not an override: until a place is tapped, the
+      // hit the user chose stays the answer.
+      vi.mocked(searchPlaces).mockResolvedValue({ results: [zurich], degraded: false });
+      vi.mocked(reversePlaces).mockResolvedValue({
+        results: [{ ...zurich, name: "Hotel St. Gotthard" }],
+        degraded: false,
+      });
+      const onConfirm = vi.fn();
+      render(<LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={onConfirm} />);
+
+      await userEvent.type(screen.getByRole("combobox"), "Zurich");
+      await userEvent.click(await screen.findByText(/Zürich/));
+      await screen.findByText("Hotel St. Gotthard");
+
+      await userEvent.click(screen.getByText("location:mapModal.confirm"));
+      expect(onConfirm).toHaveBeenCalledWith(expect.objectContaining({ name: "Zürich" }));
     });
   });
 });

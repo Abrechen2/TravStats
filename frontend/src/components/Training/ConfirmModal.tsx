@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 
 interface ConfirmModalProps {
@@ -26,14 +27,42 @@ export default function ConfirmModal({
   const { t } = useTranslation(["training", "common"]);
   const defaultConfirmText = confirmText || t("common:buttons.confirm");
   const defaultCancelText = cancelText || t("common:buttons.cancel");
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === "Escape" && !isLoading) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, isLoading, onClose]);
+
   if (!isOpen) return null;
 
+  const titleId = "confirm-modal-title";
+
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+    >
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        {/* Background overlay */}
+        {/*
+          The backdrop is `fixed`, which outranks an unpositioned sibling in the
+          stacking order no matter the DOM order — so the dialog body below MUST
+          carry its own `relative z-10`. Without it the backdrop covered the
+          buttons: every click hit the backdrop, which closes the dialog, so
+          confirming looked like it had worked while nothing happened. The old
+          class `bg-[var(--bg-base)]0` was a typo that rendered no colour, which
+          is why an invisible blocker went unnoticed for months (found in the
+          2.6.0-rc.9 browser UAT). Verify changes here in a browser:
+          `document.elementFromPoint` on a button's centre must return the button.
+        */}
         <div
-          className="fixed inset-0 transition-opacity bg-[var(--bg-base)]0 bg-opacity-75"
+          data-testid="confirm-modal-backdrop"
+          className="fixed inset-0 transition-opacity bg-black/70"
           onClick={onClose}
         ></div>
 
@@ -42,11 +71,14 @@ export default function ConfirmModal({
           &#8203;
         </span>
 
-        <div className="inline-block align-bottom bg-(--bg-surface) rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+        <div className="relative z-10 inline-block align-bottom bg-(--bg-surface) rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
           <div className="bg-(--bg-surface) px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="sm:flex sm:items-start">
               <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                <h3 className="text-lg leading-6 font-medium text-(--text-primary) mb-2">
+                <h3
+                  id={titleId}
+                  className="text-lg leading-6 font-medium text-(--text-primary) mb-2"
+                >
                   {title}
                 </h3>
                 <div className="mt-2">
