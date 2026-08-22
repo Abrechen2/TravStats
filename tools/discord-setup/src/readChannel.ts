@@ -5,14 +5,44 @@ const MAX_FORUM_THREADS = 15;
 const DEFAULT_READ_LIMIT = 20;
 const MAX_READ_LIMIT = 100;
 
+/** The parts of an embed this reader shows. Structural subset of discord.js'
+ *  `Embed`, so a fetched message can be passed straight in. */
+export interface ReadableEmbed {
+  title?: string | null;
+  description?: string | null;
+}
+
 /**
- * Format a single fetched message as one readable line. Falls back to a
+ * Format a single fetched message as readable lines. Falls back to a
  * placeholder when the content is empty (which happens if the bot lacks the
  * Message Content intent and the message does not mention it).
+ *
+ * EMBEDS ARE INCLUDED, and that is the point: every announcement this tool
+ * posts is entirely an embed with no message content, so a reader that showed
+ * only `content` rendered each one as "(no text content)". Reading the channel
+ * back was therefore no verification at all — it could not distinguish a
+ * complete announcement from an empty post. Found on 2026-08-22, after
+ * reporting an announcement as "verified by reading the channel".
  */
-export function formatMessage(authorTag: string, iso: string, content: string): string {
-  const body = content.trim().length > 0 ? content : "(no text content)";
-  return `[${iso}] ${authorTag}: ${body}`;
+export function formatMessage(
+  authorTag: string,
+  iso: string,
+  content: string,
+  embeds: ReadableEmbed[] = []
+): string {
+  const hasContent = content.trim().length > 0;
+  const body = hasContent ? content : embeds.length > 0 ? "(embed only)" : "(no text content)";
+  const lines = [`[${iso}] ${authorTag}: ${body}`];
+  embeds.forEach((embed, index) => {
+    lines.push(`  embed[${index}] title: ${embed.title ?? "(none)"}`);
+    const description = embed.description?.trim();
+    if (description) {
+      for (const line of description.split(/\r?\n/)) lines.push(`    ${line}`);
+    } else {
+      lines.push("    (no description)");
+    }
+  });
+  return lines.join("\n");
 }
 
 /**
@@ -62,7 +92,14 @@ async function readForum(forum: ForumChannel, perThreadLimit: number): Promise<v
     log(`\n--- post: "${thread.name}" ---`);
     const messages = await thread.messages.fetch({ limit: perThreadLimit });
     for (const message of [...messages.values()].reverse()) {
-      log(formatMessage(message.author.tag, message.createdAt.toISOString(), message.content));
+      log(
+        formatMessage(
+          message.author.tag,
+          message.createdAt.toISOString(),
+          message.content,
+          [...message.embeds]
+        )
+      );
     }
   }
 }
@@ -110,7 +147,12 @@ export async function runRead(
             log(`=== last ${messages.size} message(s) in #${channelName} (oldest first) ===`);
             for (const message of [...messages.values()].reverse()) {
               log(
-                formatMessage(message.author.tag, message.createdAt.toISOString(), message.content),
+                formatMessage(
+                  message.author.tag,
+                  message.createdAt.toISOString(),
+                  message.content,
+                  [...message.embeds]
+                ),
               );
             }
           }

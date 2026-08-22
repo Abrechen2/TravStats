@@ -2,6 +2,39 @@ import { describe, it, expect, vi } from "vitest";
 import type { Client } from "discord.js";
 import { formatMessage, parseLimit, runRead } from "../src/readChannel.js";
 
+describe("formatMessage and embeds", () => {
+  // Every announcement this tool posts is an embed with no message content.
+  // A reader that showed only `content` rendered each one as "(no text
+  // content)", so reading the channel back could not tell a complete
+  // announcement from an empty post — and was reported as verification.
+  it("prints an embed's title and description", () => {
+    const out = formatMessage("bot#1", "2026-08-22T15:23:36.684Z", "", [
+      { title: "Release Candidate 2.6.0-rc.10", description: "line one\nline two" },
+    ]);
+    expect(out).toContain("(embed only)");
+    expect(out).toContain("embed[0] title: Release Candidate 2.6.0-rc.10");
+    expect(out).toContain("line one");
+    expect(out).toContain("line two");
+  });
+
+  it("still says (no text content) when there is nothing at all", () => {
+    expect(formatMessage("bot#1", "2026-08-22T15:23:36.684Z", "")).toContain("(no text content)");
+  });
+
+  it("names an embed that carries no description instead of printing nothing", () => {
+    const out = formatMessage("bot#1", "2026-08-22T15:23:36.684Z", "", [{ title: "Bare" }]);
+    expect(out).toContain("(no description)");
+  });
+
+  it("keeps the message text when both are present", () => {
+    const out = formatMessage("bot#1", "2026-08-22T15:23:36.684Z", "see below", [
+      { title: "T", description: "D" },
+    ]);
+    expect(out).toContain("see below");
+    expect(out).toContain("embed[0] title: T");
+  });
+});
+
 describe("formatMessage", () => {
   it("renders author, timestamp and content on one line", () => {
     expect(formatMessage("alice#0", "2026-07-04T10:00:00.000Z", "hello there")).toBe(
