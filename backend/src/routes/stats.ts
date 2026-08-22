@@ -19,6 +19,7 @@ import {
   resolveStayProgramme,
 } from '../services/lodging/stayMembership';
 import { normalizeHistory } from '../utils/homeAirport';
+import { resolveCountryCode } from '../shared/geo/countryCode';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
 import { tzAwareDurationMinutes, localYearOf, type FlightTimeSemantics } from '../utils/timezone';
@@ -1469,11 +1470,35 @@ router.get(
       ]);
       const baseCurrency = settings?.baseCurrency ?? 'EUR';
       const membershipContext = buildMembershipContext(memberships);
+      /**
+       * The key everything GROUPS or COUNTS on — never the free text.
+       *
+       * `schema.prisma` states this at `Lodging.isoCountryCode`: the text
+       * field keeps whatever the source wrote ("Deutschland", "Germany",
+       * "Schweiz/Suisse/Svizzera/Svizra"); grouping joins on the code. The
+       * write paths obeyed it, this one did not, and the statistics page
+       * listed "Deutschland" and "Germany" as two countries with the nights
+       * and money split between them.
+       *
+       * The stored column wins. When it is empty the text is resolved on the
+       * fly — the column arrived after some rows did, and an old row belongs
+       * in the same bucket as a new one. When nothing resolves, the text
+       * survives as its own key: "Dubai" is a city, and a row that names no
+       * country is a finding worth seeing, not one to drop.
+       *
+       * It also repairs the continents: `continentForCountry` understands ISO
+       * codes and English names, so German text used to fall through to the
+       * deliberately coarse coordinate guess — and a house without
+       * coordinates lost its continent altogether.
+       */
+      const countryKey = (l: { country: string | null; isoCountryCode: string | null }): string | null =>
+        l.isoCountryCode ?? resolveCountryCode(l.country) ?? l.country;
+
       const lodgingRecords: LodgingRecord[] = lodgings.map((l) => ({
         id: l.id,
         chainId: l.chainId,
         type: l.type,
-        country: l.country,
+        country: countryKey(l),
         city: l.city,
         visited: l.visited,
       }));
@@ -1484,7 +1509,7 @@ router.get(
         lodgingId: s.lodgingId,
         lodgingName: s.lodging.name,
         type: s.lodging.type,
-        country: s.lodging.country,
+        country: countryKey(s.lodging),
         city: s.lodging.city,
         chainId: s.lodging.chainId,
         chainName: s.lodging.chain?.name ?? null,
