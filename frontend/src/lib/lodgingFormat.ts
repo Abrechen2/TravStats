@@ -144,7 +144,9 @@ export function formatStayPriceDisplay(
 ): StayPriceDisplay {
   const locale = localeForLanguage(language);
   const original =
-    stay.totalPrice !== null ? formatCurrency(stay.totalPrice, stay.currency) : FALLBACK;
+    stay.totalPrice !== null
+      ? formatCurrency(stay.totalPrice, stay.currency, { language })
+      : FALLBACK;
 
   // Destructure into locals so TypeScript can narrow each field from the
   // null checks below — narrowing a combined boolean doesn't propagate back
@@ -173,7 +175,7 @@ export function formatStayPriceDisplay(
     return { original, fxReadout: null, marker: null };
   }
 
-  const base = formatCurrency(totalPriceBase, fxBaseCurrency);
+  const base = formatCurrency(totalPriceBase, fxBaseCurrency, { language });
   const rate = formatRate(fxRate, locale);
   const date = formatShortDate(fxRateDate, locale);
   const isManual = stay.fxSource === "manual";

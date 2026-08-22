@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { minorUnits } from "../shared/currencies";
 export type DistanceUnit = "kilometers" | "miles" | "nautical_miles";
 
@@ -35,6 +36,19 @@ function localeForLanguage(language: string | undefined): string {
   if (lower.startsWith("de")) return "de-DE";
   if (lower.startsWith("en")) return "en-US";
   return language;
+}
+
+/**
+ * The language i18next is currently serving, for the call sites that cannot
+ * thread it through (#264). Read lazily from the singleton rather than the
+ * app's own i18n config, which would make this module import the whole
+ * resource bundle — and would be a cycle, since the config imports stores
+ * that import this file. Before init, `language` is undefined and
+ * `localeForLanguage` answers with one stable default; that is the point —
+ * a fixed answer instead of the host's.
+ */
+function activeLanguage(): string | undefined {
+  return i18next.language;
 }
 
 /**
@@ -156,11 +170,23 @@ const LOCALE_HINTS: Record<string, string> = {
 export function formatCurrency(
   value: number,
   currency: Currency,
-  opts?: { compact?: boolean }
+  opts?: { compact?: boolean; language?: string }
 ): string {
   if (value === undefined || value === null || isNaN(value)) return "";
 
-  const locale = LOCALE_HINTS[currency] || undefined;
+  // The UI language decides, never the host (#264). Passing `undefined` to
+  // Intl resolves to the RUNTIME locale, so an English-locale browser wrote
+  // "AED 11,662" while the exchange rate one line below — which does honour
+  // the language — wrote "4,0100". Two number formats in one card.
+  //
+  // `LOCALE_HINTS` stays, but only as a refinement WITHIN the chosen
+  // language: it is consulted when the currency's own country formats it
+  // distinctively and the UI language does not contradict that. It covered
+  // seven currencies; 2.6.0 accepts all 155, so it can never be the primary
+  // source. Falling back to i18next's active language keeps the 35 existing
+  // call sites correct without each having to thread the language through.
+  const language = opts?.language ?? activeLanguage();
+  const locale = localeForLanguage(language);
   const digits = opts?.compact ? 0 : minorUnits(currency);
 
   try {
