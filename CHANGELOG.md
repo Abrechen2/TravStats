@@ -121,6 +121,19 @@ authentication and passkeys arrive alongside.
   conversion keep reading the dates. The "Next up" line counts down to the real
   15:00 check-in instead of midnight, and no longer drops today's stay the
   moment the date turns.
+- **The map modal answers "what is here?".** Dropping a pin now lists the named
+  places around it — the hotel, the snack bar, the station. Tapping one snaps
+  the pin there and carries that place's full details into the form, while
+  confirming without picking keeps the plain reverse-geocoded address as
+  before. Address and place lookups run in parallel, so one failing never takes
+  the other down.
+- **19 more achievements**, this time for the curious corners: Friday the 13th,
+  a Christmas flight, a palindrome date, flight number 666, a 777 flown on a
+  777, three flights in one day, a same-day out-and-back, a single flight
+  across eight time zones, the aisle-seat streak that completes the
+  window/middle trilogy, a flight below the Antarctic Circle, an equator
+  crossing at sea, same-ship loyalty, and the diamond rungs of the airline and
+  aircraft ladders.
 
 ### Changed
 - **The three domain lists are one family.** Flights, cruises and lodging
@@ -311,11 +324,36 @@ authentication and passkeys arrive alongside.
   auto-save only where auto-save exists; the whole domain tile toggles; the
   flight-number search date field got a real label; the support menu speaks
   the UI's language.
+- **SMTP credentials can be deleted again.** The mail settings offered no way
+  to take a stored password back out — the toggle only stops sending, and
+  saving can overwrite the secret but never clear it. A delete button now
+  appears wherever something is actually stored, behind a confirmation that
+  names the consequence, and clearing the configuration empties the form with
+  it.
+- **The beta-features switch applies immediately.** Turning it on or off used
+  to reach the gated surfaces — the Devices entry, the POI dashboard tab, the
+  trip summary card — only after a full page reload.
+- **The parsers stopped filling in what the document does not say.** A cruise
+  confirmation without any flight numbers no longer arrives with an invented
+  one; a booking's price is the total actually charged for everyone after
+  discounts, not one guest's pre-discount fare; a two-digit year in a hotel
+  confirmation is read against the travel period rather than the letter date,
+  and only an explicitly labelled booking number is taken as one.
+- **Achievements react to catalogue edits again.** Points, tiers and wording
+  were frozen on any installation whose stored achievement count happened to
+  match the seed count. Two badges also corrected themselves: the loyalty badge
+  sat at gold between the bronze and silver rungs of its own ladder, and a
+  distance badge claimed 50,000 km is the Earth's circumference.
 
 ### Security
 - Closed an IDOR in the lodging import commit path, scoped receipt access to the
   owner, and hardened the import HTTP surface (four findings from a scoped
   review).
+- **A read-only access token could change flights.** The pending-updates routes
+  checked only that a caller was authenticated, so a token issued for reading
+  could apply, edit or delete a pending update — and applying one writes to the
+  flight underneath. Those routes now require write scope like every other
+  mutating route; read tokens keep their read access.
 
 ## [2.5.2] - 2026-08-12
 
