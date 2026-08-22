@@ -447,7 +447,7 @@
     "countryCount": "Countries visited",
     "countryCountDesc": "Distinct countries on your flight map.",
     "continentCount": "Continents",
-    "continentCountDesc": "How many of the 6 continents you've flown to.",
+    "continentCountDesc": "How many of the 7 continents you've flown to.",
     "topAirports": "Most visited airports",
     "topCountries": "Top countries",
     "rarestAirports": "Visited only once",
@@ -528,7 +528,7 @@
     "topN": "Top {{n}} Aircraft"
   },
   "countryDist": {
-    "title": "Country Distribution (Departure)",
+    "title": "Country Distribution (Origin and Destination)",
     "country": "Country",
     "flights": "Flights",
     "noData": "No flights yet",

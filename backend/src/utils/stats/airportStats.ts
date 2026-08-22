@@ -244,7 +244,10 @@ export async function calculateAirportStats(
   return {
     airportCount: visits.size,
     countryCount: countryCount.size,
-    continentCount: continentCount.size,
+    // "Other" is the fallback for a country the table does not list — it is
+    // the ABSENCE of a continent, not a seventh one. Counting it let a flight
+    // to Bermuda or Curaçao push the tile to "7 of 6".
+    continentCount: [...continentCount.keys()].filter((c) => c !== 'Other').length,
     topAirports,
     rarestAirports,
     newThisYear,

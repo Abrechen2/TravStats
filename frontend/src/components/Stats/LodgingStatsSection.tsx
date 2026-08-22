@@ -59,8 +59,14 @@ export default function LodgingStatsSection(): JSX.Element {
 
   return (
     <div className="relative flex flex-col gap-4">
-      <LodgingStatStrip stats={stats} />
-      <LodgingCurrencyBreakdown stats={stats} />
+      {/* Both of these were built to float over the Dashboard MAP, where a
+          card sitting on top is the point. On a page that flows top to bottom
+          they took themselves out of the flow and covered the tiles below —
+          the currency card is translucent, so the hotel names showed through
+          it. The list page always passed "inline"; this one passed nothing and
+          got the overlay default. */}
+      <LodgingStatStrip stats={stats} variant="inline" />
+      <LodgingCurrencyBreakdown stats={stats} variant="inline" />
       <LodgingMoneySection stats={stats} />
       <LodgingQualitySection stats={stats} />
       <LodgingGeoSection stats={stats} />

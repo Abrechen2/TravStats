@@ -6,9 +6,17 @@ import type { LodgingStats } from "../../../../types/lodging";
 
 interface LodgingCurrencyBreakdownProps {
   stats: LodgingStats;
+  /**
+   * "overlay" (default) is the floating card on the Dashboard map tab.
+   * "inline" is a plain card in the document flow, for the statistics page —
+   * the same split `LodgingStatStrip` already makes. Without it this card was
+   * absolutely positioned everywhere, and on the statistics page it covered
+   * the tiles underneath while letting their text show through.
+   */
+  variant?: "overlay" | "inline";
 }
 
-const CARD_STYLE: CSSProperties = {
+const OVERLAY_CARD_STYLE: CSSProperties = {
   position: "absolute",
   top: 70,
   right: 12,
@@ -33,7 +41,20 @@ const CARD_STYLE: CSSProperties = {
  * but not to `spendBaseTotal` — so these numbers legitimately don't
  * reconcile. That's surfaced via a hint rather than hidden.
  */
-export function LodgingCurrencyBreakdown({ stats }: LodgingCurrencyBreakdownProps): JSX.Element {
+const INLINE_CARD_STYLE: CSSProperties = {
+  ...OVERLAY_CARD_STYLE,
+  position: "static",
+  top: undefined,
+  right: undefined,
+  zIndex: undefined,
+  maxWidth: undefined,
+  background: "var(--bg-surface)",
+};
+
+export function LodgingCurrencyBreakdown({
+  stats,
+  variant = "overlay",
+}: LodgingCurrencyBreakdownProps): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const entries = Object.entries(stats.spendByCurrency).sort(([a], [b]) => a.localeCompare(b));
@@ -45,7 +66,10 @@ export function LodgingCurrencyBreakdown({ stats }: LodgingCurrencyBreakdownProp
     .sort(([a], [b]) => a.localeCompare(b));
 
   return (
-    <div style={CARD_STYLE} data-testid="lodging-currency-breakdown">
+    <div
+      style={variant === "inline" ? INLINE_CARD_STYLE : OVERLAY_CARD_STYLE}
+      data-testid="lodging-currency-breakdown"
+    >
       <div
         style={{
           fontSize: 10,

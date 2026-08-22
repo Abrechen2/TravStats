@@ -485,27 +485,36 @@ export async function calculateUniqueStats(
 
   // Round trip master — count complete round trips (A->B->A). Airport-pair
   // based, time-insensitive.
-  const roundTrips = new Map<string, number>();
+  // A round trip needs one leg in EACH direction, so a direction pair yields
+  // as many round trips as its THINNER side — min(there, back).
+  //
+  // The previous count added up every leg that had any counterpart and halved
+  // the sum: three A->B against one B->A gave (3+1)/2 = 2 round trips where
+  // only one exists. Legs cannot be paired more often than the scarcer
+  // direction allows.
+  const legsByDirection = new Map<string, number>();
   countableFlights.forEach(f => {
     const depCode = f.depIata || f.depIcao;
     const arrCode = f.arrIata || f.arrIcao;
-
-    if (depCode && arrCode) {
-      const routeKey = `${depCode}-${arrCode}`;
-
-      // Check if return flight exists
-      const hasReturn = countableFlights.some(flight => {
-        const fDep = flight.depIata || flight.depIcao;
-        const fArr = flight.arrIata || flight.arrIcao;
-        return fDep === arrCode && fArr === depCode;
-      });
-
-      if (hasReturn) {
-        roundTrips.set(routeKey, (roundTrips.get(routeKey) || 0) + 1);
-      }
-    }
+    if (!depCode || !arrCode) return;
+    const key = `${depCode}-${arrCode}`;
+    legsByDirection.set(key, (legsByDirection.get(key) || 0) + 1);
   });
-  const roundTripCount = Math.floor(Array.from(roundTrips.values()).reduce((a, b) => a + b, 0) / 2);
+
+  const countedPairs = new Set<string>();
+  let roundTripCount = 0;
+  for (const [key, thereCount] of legsByDirection.entries()) {
+    const [dep, arr] = key.split('-');
+    const reverseKey = `${arr}-${dep}`;
+    const backCount = legsByDirection.get(reverseKey);
+    if (backCount === undefined) continue;
+    // Each unordered pair once — otherwise A-B and B-A both add the same
+    // round trips.
+    const pairKey = [key, reverseKey].sort().join('|');
+    if (countedPairs.has(pairKey)) continue;
+    countedPairs.add(pairKey);
+    roundTripCount += Math.min(thereCount, backCount);
+  }
 
   return {
     timeTravelIndex: timeTravelFlights,
