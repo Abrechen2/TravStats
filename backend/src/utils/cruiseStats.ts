@@ -60,6 +60,12 @@ export interface CruiseStats {
   cruisePortsSingleMax: number;
   cruiseShipsUnique: number;
   cruiseLines: Set<string>;
+  /**
+   * How often each line was sailed. The set alone cannot answer "top lines" —
+   * the cross-domain tile slices the first five entries and labels them Top,
+   * so an alphabetical list put AIDA and Costa there for their initials.
+   */
+  cruiseLineCounts: Record<string, number>;
   cruiseLinesUnique: number;
   cruiseLineLoyaltyMax: number;
   seaDays: number;
@@ -141,6 +147,7 @@ export function calculateCruiseStats(
   const shipIds = new Set<number>();
   const shipCounts = new Map<number, number>();
   const cruiseLines = new Set<string>();
+  const cruiseLineCounts = new Map<string, number>();
   const regions = new Set<string>();
   const countries = new Set<string>();
   const countriesByYear = new Map<number, Set<string>>();
@@ -175,6 +182,7 @@ export function calculateCruiseStats(
     if (cruise.cabinType === 'inside') insideCabinCount += 1;
     if (cruise.cruiseLine) {
       cruiseLines.add(cruise.cruiseLine);
+      cruiseLineCounts.set(cruise.cruiseLine, (cruiseLineCounts.get(cruise.cruiseLine) ?? 0) + 1);
       lineCounts.set(cruise.cruiseLine, (lineCounts.get(cruise.cruiseLine) ?? 0) + 1);
     }
     if (cruise.cabinType === 'balcony' || cruise.cabinType === 'suite') hasBalconyCabin = true;
@@ -354,6 +362,7 @@ export function calculateCruiseStats(
     insideCabinCount,
     totalPortCalls,
     resolvedPortCalls,
+    cruiseLineCounts: Object.fromEntries(cruiseLineCounts),
     totalCruiseDays,
     regionVisitCounts,
   };

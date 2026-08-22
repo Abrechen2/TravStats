@@ -1422,10 +1422,14 @@ router.get(
         cruiseShipsUnique: stats.cruiseShipsUnique,
         cruiseLinesUnique: stats.cruiseLinesUnique,
         cruiseLineLoyaltyMax: stats.cruiseLineLoyaltyMax,
-        // Ranked by how often they were sailed, not alphabetically: the
-        // cross-domain tile slices the first five and calls them "Top", so an
-        // alphabetical list put AIDA and Costa there for their initials.
-        cruiseLines: Array.from(stats.cruiseLines).sort(),
+        // Ranked by how often they were sailed, ties alphabetical. The
+        // cross-domain tile slices the first five and labels them "Top", so a
+        // purely alphabetical list put AIDA and Costa there for their
+        // initials rather than for having been sailed.
+        cruiseLines: Array.from(stats.cruiseLines).sort((a, b) => {
+          const diff = (stats.cruiseLineCounts[b] ?? 0) - (stats.cruiseLineCounts[a] ?? 0);
+          return diff !== 0 ? diff : a.localeCompare(b);
+        }),
         resolvedPortCalls: stats.resolvedPortCalls,
         seaDays: stats.seaDays,
         seaDaysStreak: stats.seaDaysStreak,
