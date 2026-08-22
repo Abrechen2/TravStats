@@ -136,7 +136,9 @@ describe("GET /api/v1/stats/lodging", () => {
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data.countries)).toBe(true);
-    expect(res.body.data.countries).toEqual(["Switzerland"]);
+    // ISO codes, not the free text a booking mail happened to use: grouping
+    // joins on the code, so "Schweiz" and "Switzerland" are one country.
+    expect(res.body.data.countries).toEqual(["CH"]);
     // A plain Set silently serializes to `{}` — guard against regressing to that.
     expect(res.body.data.countries).not.toEqual({});
   });
@@ -151,14 +153,16 @@ describe("GET /api/v1/stats/lodging", () => {
     // 9-night EUR stay must not be summed in.
     expect(res.body.data.totalNights).toBe(3);
     expect(res.body.data.spendBaseTotal).toBeCloseTo(424.45, 2);
-    expect(res.body.data.countries).toEqual(["Switzerland"]);
+    // ISO codes, not the free text a booking mail happened to use: grouping
+    // joins on the code, so "Schweiz" and "Switzerland" are one country.
+    expect(res.body.data.countries).toEqual(["CH"]);
 
     const otherRes = await request(app)
       .get("/api/v1/stats/lodging")
       .set("Cookie", otherAuthCookie);
     expect(otherRes.status).toBe(200);
     expect(otherRes.body.data.totalNights).toBe(9);
-    expect(otherRes.body.data.countries).toEqual(["France"]);
+    expect(otherRes.body.data.countries).toEqual(["FR"]);
   });
 
   it("returns sane zeros/empty values for a user with no lodgings", async () => {
@@ -250,7 +254,7 @@ describe("GET /api/v1/stats/lodging", () => {
       expect(res.body.data.lodgingsCount).toBe(2);
       expect(res.body.data.chainsUnique).toBe(1);
       expect(res.body.data.staysCount).toBe(1);
-      expect(res.body.data.countries.sort()).toEqual(["Austria", "Germany"]);
+      expect(res.body.data.countries.sort()).toEqual(["AT", "DE"]);
     });
   });
 

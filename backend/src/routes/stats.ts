@@ -74,6 +74,8 @@ const TimeseriesQuerySchema = z.object({
 
 interface SummaryStats {
   totalFlights: number;
+  /** Booked but not yet flown — reported beside the total, never inside it. */
+  plannedFlights: number;
   totalDistance: number;
   totalFlightTime: number;
   avgDistance: number;
@@ -110,11 +112,30 @@ function buildWhere(
 }
 
 async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummaryStats> {
-  // Distance and flight time only count flown+historical flights; totalFlights, status/airline/category
-  // counts use the original where so that planned and cancelled flights are visible.
+  // EVERY headline figure describes the same population: flights that actually
+  // happened. `totalFlights` and `totalCost` used to run on the unfiltered
+  // `where`, so the year card put "14 flights" next to a distance covering ten
+  // of them, and /hero answered "1 flight, 0 km, 0 airports" for an account
+  // holding a single BOOKED flight.
+  //
+  // The old design justified that by a `byStatus` breakdown shown next to the
+  // number — but its only renderer is imported nowhere, and /hero never
+  // carried it. The context was gone; the bare number stayed.
+  //
+  // `byStatus`/`byAirline`/`byCategory` still run on the unfiltered `where`:
+  // a breakdown BY status that hid statuses would be pointless. What is merely
+  // booked is reported as `plannedFlights` instead of being folded in.
   const geoWhere: Prisma.FlightWhereInput = { ...where, status: { in: ['flown', 'historical'] } };
 
-  const [flownFlights, totalFlights, statusCounts, airlineCounts, categoryCounts, costFlights] = await Promise.all([
+  const [
+    flownFlights,
+    totalFlights,
+    plannedFlights,
+    statusCounts,
+    airlineCounts,
+    categoryCounts,
+    costFlights,
+  ] = await Promise.all([
     prisma.flight.findMany({
       where: geoWhere,
       select: {
@@ -132,7 +153,8 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
         arrTimeSemantics: true,
       },
     }),
-    prisma.flight.count({ where }),
+    prisma.flight.count({ where: geoWhere }),
+    prisma.flight.count({ where: { ...where, status: 'scheduled' } }),
     prisma.flight.groupBy({
       by: ['status'],
       where,
@@ -149,7 +171,9 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
       _count: true,
     }),
     prisma.flight.findMany({
-      where,
+      // Same population as the count above: a cost total that included flights
+      // still to come could not be read next to "flights" or "distance".
+      where: geoWhere,
       select: {
         price: true,
         taxes: true,
@@ -238,6 +262,7 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
 
   return {
     totalFlights,
+    plannedFlights,
     totalDistance: Math.round(totalDistance),
     totalFlightTime: Math.round(totalFlightTime),
     avgDistance: Math.round(avgDistance),
