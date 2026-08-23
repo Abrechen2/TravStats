@@ -2,15 +2,16 @@
 //
 // Each domain runs in its own try/catch so a single 500 (e.g. cruise
 // endpoint down) doesn't blank the entire overview — the failing
-// domain's slot stays empty, the rest renders. POI is still handled by a
-// stub adapter (`available: false` in shared/domains.ts); lodging has a
-// real adapter (`adaptLodging`) fed by `/stats/lodging` + the raw lodging
-// list.
+// domain's slot stays empty, the rest renders. Lodging is fed by
+// `/stats/lodging` + the raw lodging list; POI has no rollup endpoint at all
+// and derives everything from places, lists and the checklist catalog.
 import { useEffect, useState } from "react";
 import type { Flight } from "../../../types";
 import { statsApi } from "../../api";
 import { cruiseApi } from "../../api/cruise";
 import { listLodgings, getLodgingStats } from "../../api/lodging";
+import { listPlaces } from "../../api/places";
+import { listCuratedChecklists, listPlaceLists } from "../../api/placeLists";
 import { logger } from "../../logger";
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import type { DomainKey } from "../../../shared/domains";
@@ -98,7 +99,13 @@ async function loadDomain(domain: DomainKey, flights: Flight[]): Promise<DomainS
       ]);
       return adaptLodging({ stats: lodgingStats, lodgings });
     }
-    case "poi":
-      return adaptPoi();
+    case "poi": {
+      const [places, lists, curated] = await Promise.all([
+        listPlaces({}),
+        listPlaceLists(),
+        listCuratedChecklists(),
+      ]);
+      return adaptPoi({ places, lists, curated });
+    }
   }
 }

@@ -8,10 +8,12 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { cruiseApi } from "../../../lib/api/cruise";
 import { flightsApi } from "../../../lib/api/flights";
 import { listLodgings } from "../../../lib/api/lodging";
+import { listPlaces } from "../../../lib/api/places";
 import { tripsApi } from "../../../lib/api/trips";
 import { buildCruiseLegend, type CruiseLegendRow } from "../../../lib/cruiseColor";
 import { buildFlightLegend, rgbCss, type FlightLegendRow } from "../../../lib/flightColor";
 import { buildLodgingLegend, type LodgingLegendRow } from "../../../lib/lodgingColor";
+import { buildPlaceLegend, type PlaceLegendRow } from "../../../lib/placeColor";
 import { PORT_RGB } from "../../layers/cruisePortsLayer";
 import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
 import { logger } from "../../../lib/logger";
@@ -20,6 +22,8 @@ import { useThemeStore } from "../../../store/themeStore";
 import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
 import { useFlightColorStore } from "../../../store/flightColorStore";
 import { useLodgingColorStore } from "../../../store/lodgingColorStore";
+import { usePlaceColorStore } from "../../../store/placeColorStore";
+import { usePlacesVisible } from "../../../hooks/usePlacesVisible";
 import {
   intervalOverlapsRange,
   useDashboardFilterStore,
@@ -28,10 +32,13 @@ import { useFlightSelectionStore } from "../../../store/flightSelectionStore";
 import type { Flight, FlightInput, GeoJSONFeature, Trip } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
 import type { Lodging } from "../../../types/lodging";
+import type { Place } from "../../../types/place";
 import type { AllMode } from "../../../types/dashboard";
 import { ALL_MODES } from "../../../types/dashboard";
 import FlightEditModal from "../../FlightEditModal";
 import MapContainer3D, { type MapMode } from "../../MapContainer3D";
+import { buildPlacePins } from "../../layers/placePinsLayer";
+import { classifyVisit } from "../../../shared/placeCounting";
 import { buildJourneyLayers, groupByTripId } from "../modes/buildJourneyLayers";
 import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
 import type { Layer } from "@deck.gl/core";
@@ -61,6 +68,15 @@ const LODGING_LEGEND_LABEL_KEY: Record<LodgingLegendRow["slot"], string> = {
   unrated: "dashboard:legend.lodgingUnrated",
   chain: "dashboard:legend.lodgingChain",
   independent: "dashboard:legend.lodgingIndependent",
+};
+
+// Place rows on this tab are always the mode's built-in slots — `list` mode's
+// user-named rows are a POI-tab thing, where a list filter sits beside them.
+const PLACE_LEGEND_LABEL_KEY: Record<string, string> = {
+  solid: "dashboard:poi.legend.solid",
+  visited: "dashboard:poi.legend.visited",
+  wishlist: "dashboard:poi.legend.wishlist",
+  unlisted: "dashboard:poi.legend.unlisted",
 };
 
 const CRUISE_LEGEND_LABEL_KEY: Record<CruiseLegendRow["slot"], string> = {
@@ -117,6 +133,7 @@ export function AllTab(): JSX.Element {
   const setSelection = useFlightSelectionStore((s) => s.setSelection);
   const setCruiseSelection = useCruiseSelectionStore((s) => s.setSelection);
   const navigate = useNavigate();
+  const [places, setPlaces] = useState<Place[]>([]);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
 
   // Global dashboard filter — year populates `time.from/to`, domain
@@ -130,6 +147,12 @@ export function AllTab(): JSX.Element {
   const flightsVisible = filterDomains.includes("flight") && isEnabled("flight");
   const cruisesVisible = filterDomains.includes("cruise") && isEnabled("cruise");
   const lodgingsVisible = filterDomains.includes("lodging") && isEnabled("lodging");
+  const placeColorConfig = usePlaceColorStore((st) => st.config);
+  // POI carries a second gate on top of the domain switch — the instance-level
+  // beta flag. `usePlacesVisible` combines both, and hiding chrome fails closed
+  // on "don't know yet" so a tab never flashes pins in and then loses them.
+  const placesAllowed = usePlacesVisible();
+  const placesVisible = filterDomains.includes("poi") && placesAllowed;
 
   // Filter flights by departureTime within the year/time range.
   // Flights without a departureTime stay visible (treat NaN as
@@ -180,6 +203,37 @@ export function AllTab(): JSX.Element {
       )
     );
   }, [lodgings, lodgingsVisible, filterTime.from, filterTime.to]);
+
+  // Places filtered by VISIT date. Same policy as an undated lodging stay: a
+  // place whose visits carry no date occupies no known day, so it steps aside
+  // while a range is set and returns the moment it is cleared — rather than
+  // being shown under a year it may not belong to.
+  const visiblePlaces = useMemo<Place[]>(() => {
+    if (!placesVisible) return [];
+    if (!filterTime.from && !filterTime.to) return places;
+    return places.filter((place) =>
+      place.visits.some(
+        (visit) =>
+          visit.visitedAt !== null &&
+          classifyVisit(visit) === "visited" &&
+          intervalOverlapsRange(visit.visitedAt, visit.visitedAt, filterTime.from, filterTime.to)
+      )
+    );
+  }, [places, placesVisible, filterTime.from, filterTime.to]);
+
+  const placeLayers = useMemo<Layer[]>(() => {
+    if (visiblePlaces.length === 0) return [];
+    return (
+      buildPlacePins(visiblePlaces, 1, 4, {
+        onPinClick: (placeId) => navigate(`/places/${placeId}`),
+        colors: placeColorConfig,
+        // The ringed mark, not the plain dot: on this map a place shares the
+        // canvas with airport, port and lodging dots, and POI teal against
+        // cruise blue is below the colour-separation floor.
+        mark: "target",
+      }) ?? []
+    );
+  }, [visiblePlaces, placeColorConfig, navigate]);
 
   // Map click → selection store. DeckGLMap handles dim/highlight + tooltip.
   const handleFlightClick = useCallback(
@@ -298,6 +352,24 @@ export function AllTab(): JSX.Element {
     };
   }, [isEnabled]);
 
+  // Places — gated on `placesAllowed` rather than `isEnabled("poi")`, because
+  // the instance beta flag can hide the domain from a user who has it on.
+  // Never fetched while hidden, not merely not drawn.
+  useEffect(() => {
+    if (!placesAllowed) return;
+    let cancelled = false;
+    listPlaces({})
+      .then((list) => {
+        if (!cancelled) setPlaces(list);
+      })
+      .catch((err: unknown) => {
+        logger.error("AllTab: failed to load places", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [placesAllowed]);
+
   // Trips power the journey-mode selector (label = trip name).
   useEffect(() => {
     let cancelled = false;
@@ -379,6 +451,10 @@ export function AllTab(): JSX.Element {
    *   "dot"   a place — a lodging is a pin, not a line (Alex, 2026-08-09:
    *           "Da Unterkünfte keine 'Strecken' sind sollte hier auch in der
    *           Legende ein Kreis sein.")
+   *   "ring"  a POI place — the ringed mark the pin layer draws on THIS tab,
+   *           where a plain dot could not be told from a port. The key has to
+   *           show the mark, not merely its colour, or it describes something
+   *           that is not on the map.
    *
    * `background` takes any CSS colour OR gradient, so all three share one
    * renderer.
@@ -387,16 +463,18 @@ export function AllTab(): JSX.Element {
     background: string,
     label: string,
     key: string,
-    shape: "line" | "ramp" | "dot" = "line",
+    shape: "line" | "ramp" | "dot" | "ring" = "line",
   ): JSX.Element => (
     <span key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <span
         aria-hidden
         style={{
-          width: shape === "ramp" ? 24 : shape === "dot" ? 8 : 14,
-          height: shape === "ramp" ? 4 : shape === "dot" ? 8 : 2,
-          background,
-          borderRadius: shape === "dot" ? "50%" : 2,
+          width: shape === "ramp" ? 24 : shape === "dot" ? 8 : shape === "ring" ? 11 : 14,
+          height: shape === "ramp" ? 4 : shape === "dot" ? 8 : shape === "ring" ? 11 : 2,
+          background: shape === "ring" ? "transparent" : background,
+          border: shape === "ring" ? `1.5px solid ${background}` : undefined,
+          boxSizing: "border-box",
+          borderRadius: shape === "dot" || shape === "ring" ? "50%" : 2,
           flexShrink: 0,
         }}
       />
@@ -445,6 +523,17 @@ export function AllTab(): JSX.Element {
     )
   );
 
+  // POI rows come from the same `buildPlaceLegend` the pin layer resolves
+  // through, and are drawn as RINGS, because that is the mark on this map.
+  const poiLegendRows = buildPlaceLegend(placeColorConfig).map((row: PlaceLegendRow) =>
+    legendRow(
+      rgbCss(row.color),
+      row.label ?? t(PLACE_LEGEND_LABEL_KEY[row.slot] ?? "dashboard:poi.legend.solid"),
+      `poi-${row.slot}`,
+      "ring"
+    )
+  );
+
   // Airports and ports are the only marks on this map that are ONLY marks:
   // an arc explains itself by connecting two places, a dot does not. They were
   // drawn and never named, which is the one thing a legend exists for (Alex,
@@ -477,7 +566,7 @@ export function AllTab(): JSX.Element {
   // require the credit to stay visible, so covering it is a licence question,
   // not a cosmetic one. The other three map overlays in this app sit
   // bottom-LEFT and are unaffected.
-  const legendTable = (flightsVisible || cruisesVisible || lodgingsVisible) && (
+  const legendTable = (flightsVisible || cruisesVisible || lodgingsVisible || placesVisible) && (
     <div
       style={{
         position: "absolute",
@@ -499,6 +588,7 @@ export function AllTab(): JSX.Element {
       {flightsVisible && flightLegendRows}
       {cruisesVisible && cruiseLegendRows}
       {lodgingsVisible && lodgingLegendRows}
+      {placesVisible && poiLegendRows}
       {placeLegendRows}
     </div>
   );
@@ -583,9 +673,9 @@ export function AllTab(): JSX.Element {
         <MapContainer3D
           flights={[]}
           visMode="routes"
-          extraLayers={journeyLayers}
+          extraLayers={[...journeyLayers, ...placeLayers]}
           showInternalCruises={false}
-          appearanceDomains={["flight", "cruise", "lodging"]}
+          appearanceDomains={["flight", "cruise", "lodging", "poi"]}
           onFlightClick={handleFlightClick}
           onRouteClick={handleRouteClick}
           onFlightOpen={handlePanelFlightDetails}
@@ -609,7 +699,8 @@ export function AllTab(): JSX.Element {
       <MapContainer3D
         flights={visibleFlights}
         visMode={visMode}
-        appearanceDomains={["flight", "cruise", "lodging"]}
+        extraLayers={placeLayers}
+        appearanceDomains={["flight", "cruise", "lodging", "poi"]}
         onFlightClick={handleFlightClick}
         onRouteClick={handleRouteClick}
         onFlightOpen={handlePanelFlightDetails}

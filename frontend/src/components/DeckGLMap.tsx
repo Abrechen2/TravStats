@@ -14,6 +14,7 @@ import { loadFlightRouteShape, loadMapAppearance, saveMapAppearance } from "./ma
 import type { FlightRouteShape } from "../lib/flightRouteShape";
 import { useFlightColorStore } from "../store/flightColorStore";
 import { useLodgingColorStore } from "../store/lodgingColorStore";
+import { usePlaceColorStore } from "../store/placeColorStore";
 import { FLAT_BASEMAPS, resolveFlatStyle, type FlatStyleId } from "./map/basemapStyles";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
@@ -196,6 +197,11 @@ export function DeckGLMap({
   const lodgingColorConfig = useLodgingColorStore((s) => s.config);
   const setLodgingColorMode = useLodgingColorStore((s) => s.setMode);
   const setLodgingColor = useLodgingColorStore((s) => s.setColor);
+  // POI has no marker-size slider of its own — place pins share the airport/
+  // port dot sizing — so only mode + colours travel to the panel.
+  const placeColorConfig = usePlaceColorStore((s) => s.config);
+  const setPlaceColorMode = usePlaceColorStore((s) => s.setMode);
+  const setPlaceColor = usePlaceColorStore((s) => s.setColor);
   const setCruiseColorMode = useCruiseColorStore((s) => s.setMode);
   const setCruiseColor = useCruiseColorStore((s) => s.setColor);
   const mapRef = useRef<MapRef>(null);
@@ -892,6 +898,11 @@ export function DeckGLMap({
             colorConfig: lodgingColorConfig,
             onColorModeChange: setLodgingColorMode,
             onColorChange: setLodgingColor,
+          }}
+          placeAppearance={{
+            colorConfig: placeColorConfig,
+            onColorModeChange: setPlaceColorMode,
+            onColorChange: setPlaceColor,
           }}
         />
       </div>

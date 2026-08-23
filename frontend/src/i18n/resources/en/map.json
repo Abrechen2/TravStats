@@ -144,6 +144,28 @@
           "chain": "Chain",
           "independent": "Independent"
         }
+      },
+      "domainPlace": "Places",
+      "placeColorMode": {
+        "label": "Colour by",
+        "solid": {
+          "label": "Single colour",
+          "hint": "Every place in the same colour."
+        },
+        "visited": {
+          "label": "Visited",
+          "hint": "Visited or on the wishlist. Wishlist pins are also drawn hollow."
+        },
+        "list": {
+          "label": "List",
+          "hint": "The colour of the list a place is in. In several lists, the first one wins."
+        },
+        "swatch": {
+          "solid": "All places",
+          "visited": "Visited",
+          "wishlist": "Wishlist",
+          "unlisted": "In no list"
+        }
       }
     },
     "timesFlown": "Flown {{count}}×",

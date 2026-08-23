@@ -144,6 +144,28 @@
           "chain": "Kette",
           "independent": "Unabhängig"
         }
+      },
+      "domainPlace": "Orte",
+      "placeColorMode": {
+        "label": "Farbe nach",
+        "solid": {
+          "label": "Einfarbig",
+          "hint": "Jeder Ort in derselben Farbe."
+        },
+        "visited": {
+          "label": "Besucht",
+          "hint": "Besucht oder auf der Merkliste. Merklisten-Pins sind zusätzlich hohl gezeichnet."
+        },
+        "list": {
+          "label": "Liste",
+          "hint": "Die Farbe der Liste, in der ein Ort liegt. Steckt er in mehreren, gewinnt die erste."
+        },
+        "swatch": {
+          "solid": "Alle Orte",
+          "visited": "Besucht",
+          "wishlist": "Merkliste",
+          "unlisted": "In keiner Liste"
+        }
       }
     },
     "timesFlown": "{{count}}× geflogen",

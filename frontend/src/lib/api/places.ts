@@ -1,5 +1,6 @@
 import { api } from "./client";
 import type { Place, PlaceInput, PlaceVisit, VisitInput, PlaceListQuery } from "../../types/place";
+import type { PlaceVisitPhoto } from "../../types/placeList";
 
 interface Envelope<T> {
   success: boolean;
@@ -81,6 +82,35 @@ export async function deleteVisit(visitId: string): Promise<void> {
   await api.delete(`/places/visits/${visitId}`);
 }
 
+// ---------------------------------------------------------------- photo proof
+
+export async function listVisitPhotos(visitId: string): Promise<PlaceVisitPhoto[]> {
+  const res = await api.get<Envelope<PlaceVisitPhoto[]>>(`/places/visits/${visitId}/photos`);
+  return res.data.data;
+}
+
+/**
+ * Upload proof for a visit.
+ *
+ * No explicit `Content-Type` header: the browser has to set it, because only it
+ * knows the multipart boundary it just generated. Writing `multipart/form-data`
+ * by hand here yields a request with no boundary and a 400 that reads like a
+ * server bug.
+ */
+export async function uploadVisitPhotos(
+  visitId: string,
+  files: readonly File[]
+): Promise<PlaceVisitPhoto[]> {
+  const form = new FormData();
+  for (const file of files) form.append("photos", file);
+  const res = await api.post<Envelope<PlaceVisitPhoto[]>>(`/places/visits/${visitId}/photos`, form);
+  return res.data.data;
+}
+
+export async function deleteVisitPhoto(visitId: string, photoId: string): Promise<void> {
+  await api.delete(`/places/visits/${visitId}/photos/${photoId}`);
+}
+
 export const placesApi = {
   list: listPlaces,
   count: countPlaces,
@@ -91,4 +121,7 @@ export const placesApi = {
   createVisit,
   updateVisit,
   deleteVisit,
+  listVisitPhotos,
+  uploadVisitPhotos,
+  deleteVisitPhoto,
 };

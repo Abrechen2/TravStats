@@ -231,7 +231,9 @@ describe("AllTab: the lodging domain chip actually does something", () => {
     });
     await waitFor(() => {
       const last = mapProps[mapProps.length - 1];
-      expect(last.appearanceDomains).toEqual(["flight", "cruise", "lodging"]);
+      // POI joined the list when places started drawing on this tab — a domain
+      // that paints marks here has to be steerable from the panel here.
+      expect(last.appearanceDomains).toEqual(["flight", "cruise", "lodging", "poi"]);
     });
   });
 });

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import NavigationBar from "../components/NavigationBar";
 import PageTransition from "../components/PageTransition";
 import { SkeletonTable } from "../components/SkeletonLoader";
@@ -323,6 +323,16 @@ export default function PlacesListPage(): JSX.Element {
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            {/* The only entry point to lists and checklists. Deliberately here
+                rather than in the nav: a list is a view OF the logbook, so it
+                hangs off the logbook rather than competing with it. */}
+            <Link
+              to="/places/lists"
+              className="rounded-lg px-4 py-2 text-sm"
+              style={{ border: "1px solid var(--color-border)", color: "var(--text-secondary)" }}
+            >
+              {t("places:lists.title")}
+            </Link>
             <button
               type="button"
               onClick={() => setCreating(true)}
