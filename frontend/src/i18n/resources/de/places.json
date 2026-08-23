@@ -140,5 +140,13 @@
     "untickItem": "Haken bei „{{name}}“ entfernen",
     "tickFailed": "Das Abhaken hat nicht geklappt.",
     "subscribeFailed": "Das Abo konnte nicht geändert werden."
+  },
+  "photos": {
+    "add": "Foto",
+    "uploading": "Wird hochgeladen …",
+    "alt": "Foto zum Besuch",
+    "delete": "Foto löschen",
+    "uploadFailed": "Das Foto konnte nicht hochgeladen werden.",
+    "deleteFailed": "Das Foto konnte nicht gelöscht werden."
   }
 }

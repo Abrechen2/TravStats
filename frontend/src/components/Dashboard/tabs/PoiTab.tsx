@@ -18,6 +18,13 @@ import { classifyPlace } from "../../../shared/placeCounting";
 import MapContainer3D from "../../MapContainer3D";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
 
+/**
+ * Bottom offset for overlays in MapLibre's attribution corner — the same
+ * measurement the All tab documents: a 44 px bar plus the 8 px breathing room
+ * the rest of the overlay set uses.
+ */
+const ATTRIBUTION_CLEARANCE = 52;
+
 interface HeatDatum {
   position: [number, number];
   weight: number;
@@ -166,8 +173,14 @@ export function PoiTab(): JSX.Element {
         <div
           style={{
             position: "absolute",
-            left: 12,
-            bottom: 12,
+            // BOTTOM-RIGHT, not bottom-left. The appearance panel is anchored
+            // `bottom-4 left-4`, and this overlay sat straight on top of it the
+            // moment the tab started offering a POI section — found by looking
+            // at the map, not by any test. The offset clears MapLibre's
+            // attribution bar, whose credit must stay legible for licence
+            // reasons (same 52 px the All tab's legend uses).
+            right: 12,
+            bottom: ATTRIBUTION_CLEARANCE,
             zIndex: 30,
             padding: "11px 13px",
             borderRadius: 10,

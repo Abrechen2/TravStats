@@ -1,4 +1,5 @@
 import type { PlaceCategory } from "../shared/placeCategories";
+import type { PlaceVisitPhoto } from "./placeList";
 
 // Frontend view of the `poi` domain (Places). Mirrors
 // backend/prisma/schema.prisma (`Place`, `PlaceVisit`) and
@@ -19,6 +20,13 @@ export interface PlaceVisit {
   rating: number | null;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Photo proof. Present on the DETAIL response only — the list endpoint omits
+   * it deliberately, because a gallery per row is a page of joins nobody asked
+   * for. Optional here rather than in a second type so a detail payload and a
+   * list payload stay the same shape everywhere else.
+   */
+  photos?: PlaceVisitPhoto[];
 }
 
 export interface Place {

@@ -140,5 +140,13 @@
     "untickItem": "Untick “{{name}}”",
     "tickFailed": "Ticking that did not work.",
     "subscribeFailed": "The subscription could not be changed."
+  },
+  "photos": {
+    "add": "Photo",
+    "uploading": "Uploading …",
+    "alt": "Photo of this visit",
+    "delete": "Delete photo",
+    "uploadFailed": "The photo could not be uploaded.",
+    "deleteFailed": "The photo could not be deleted."
   }
 }

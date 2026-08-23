@@ -126,7 +126,8 @@ describe("adaptPoi", () => {
       ],
     });
     if (!result.hasData) throw new Error("expected data");
-    expect(result.summary.headlineKpis.at(-1)).toEqual({
+    const kpis = result.summary.headlineKpis;
+    expect(kpis[kpis.length - 1]).toEqual({
       label: "Beste Checkliste",
       value: "3/7",
     });

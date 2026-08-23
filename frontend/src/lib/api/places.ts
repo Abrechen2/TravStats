@@ -92,10 +92,13 @@ export async function listVisitPhotos(visitId: string): Promise<PlaceVisitPhoto[
 /**
  * Upload proof for a visit.
  *
- * No explicit `Content-Type` header: the browser has to set it, because only it
- * knows the multipart boundary it just generated. Writing `multipart/form-data`
- * by hand here yields a request with no boundary and a 400 that reads like a
- * server bug.
+ * The `Content-Type` override is REQUIRED, and browser UAT is what proved it.
+ * The shared axios instance sets `application/json` for every request; leaving
+ * it alone here sends a multipart body under a JSON header, multer parses no
+ * files, and the route answers "No photos uploaded" — a 400 that reads like a
+ * server bug and is entirely a client one. Naming `multipart/form-data` lets
+ * axios recognise the FormData and fill in the boundary itself. Same line the
+ * trip-photo uploader carries, for the same reason.
  */
 export async function uploadVisitPhotos(
   visitId: string,
@@ -103,7 +106,11 @@ export async function uploadVisitPhotos(
 ): Promise<PlaceVisitPhoto[]> {
   const form = new FormData();
   for (const file of files) form.append("photos", file);
-  const res = await api.post<Envelope<PlaceVisitPhoto[]>>(`/places/visits/${visitId}/photos`, form);
+  const res = await api.post<Envelope<PlaceVisitPhoto[]>>(
+    `/places/visits/${visitId}/photos`,
+    form,
+    { headers: { "Content-Type": "multipart/form-data" } }
+  );
   return res.data.data;
 }
 
