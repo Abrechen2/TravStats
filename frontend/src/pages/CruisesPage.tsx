@@ -5,6 +5,10 @@ import type { Cruise, CruiseStatus } from "../types";
 import { CruiseRow, type CruiseColumnId } from "../components/Cruise/CruiseRow";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
+import ListFilterBar, {
+  FilterField,
+  PANEL_SELECT_CLASS,
+} from "../components/table/ListFilterBar";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import CruiseRowActions from "../components/Cruise/CruiseRowActions";
 import DomainImportPanel from "../components/import/DomainImportPanel";
@@ -80,6 +84,10 @@ export default function CruisesPage(): JSX.Element {
   const [search, setSearch] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [yearFilter, setYearFilter] = useState<YearFilter>("all");
+  // The one filter only cruises have. It lives behind the "Filter" button,
+  // which is what that button is for — search/status/year stay open because
+  // every domain has them.
+  const [lineFilter, setLineFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<CruiseSortKey>("date");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const columnPrefs = useColumnPrefs("cruise-list", CRUISE_ALWAYS_VISIBLE);
@@ -139,10 +147,24 @@ export default function CruisesPage(): JSX.Element {
     return Array.from(years).sort((a, b) => b - a);
   }, [cruises]);
 
+  /** One entry per cruise line, read from the FULL list so the options do not
+   *  shrink as the other filters narrow the table. */
+  const availableLines = useMemo(() => {
+    const names = new Set<string>();
+    for (const c of cruises) {
+      const line = c.cruiseLine ?? c.ship?.cruiseLine ?? "";
+      if (line.trim().length > 0) names.add(line);
+    }
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [cruises]);
+
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return cruises.filter((c) => {
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
+      if (lineFilter !== "all" && (c.cruiseLine ?? c.ship?.cruiseLine ?? "") !== lineFilter) {
+        return false;
+      }
       if (yearFilter !== "all") {
         const year = c.startDate ? new Date(c.startDate).getFullYear() : null;
         if (year !== yearFilter) return false;
@@ -155,7 +177,7 @@ export default function CruisesPage(): JSX.Element {
       }
       return true;
     });
-  }, [cruises, search, statusFilter, yearFilter]);
+  }, [cruises, search, statusFilter, yearFilter, lineFilter]);
 
   const sorted = useMemo(
     () => sortCruises(filtered, sortBy, sortOrder),
@@ -166,76 +188,59 @@ export default function CruisesPage(): JSX.Element {
     setSearch("");
     setStatusFilter("all");
     setYearFilter("all");
+    setLineFilter("all");
   };
 
-  const hasActiveFilter = search.length > 0 || statusFilter !== "all" || yearFilter !== "all";
+  const extraActiveCount = lineFilter === "all" ? 0 : 1;
+  const hasActiveFilter =
+    search.length > 0 || statusFilter !== "all" || yearFilter !== "all" || extraActiveCount > 0;
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
       <NavigationBar />
 
-      {/* Sticky filter bar — mirrors FlightsTablePage layout */}
-      <div
-        className="sticky top-14 z-10 px-4 py-3 backdrop-blur-md"
-        style={{
-          background: "rgba(13,17,23,0.85)",
-          borderBottom: "1px solid var(--color-border)",
+      <ListFilterBar
+        search={{
+          value: search,
+          onChange: setSearch,
+          placeholder: t("filter.searchPlaceholder"),
         }}
-      >
-        <div className="mx-auto flex max-w-(--breakpoint-2xl) flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-1 flex-col gap-2 md:flex-row md:items-center">
-            <input
-              type="search"
-              value={search}
-              onChange={(e): void => setSearch(e.target.value)}
-              placeholder={t("filter.searchPlaceholder")}
-              className="w-full rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden md:max-w-xs"
-            />
+        status={{
+          label: t("filter.status"),
+          value: statusFilter,
+          onChange: (v): void => setStatusFilter(v as StatusFilter),
+          allLabel: t("filter.allStatuses"),
+          options: STATUSES.map((st) => ({ value: st, label: t(`status.${st}`) })),
+        }}
+        year={{
+          label: t("filter.year"),
+          value: yearFilter === "all" ? "all" : String(yearFilter),
+          onChange: (v): void =>
+            setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
+          allLabel: t("filter.allYears"),
+          options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
+        }}
+        extraActiveCount={extraActiveCount}
+        extra={
+          <FilterField label={t("filter.line")}>
             <select
-              value={statusFilter}
-              onChange={(e): void => setStatusFilter(e.target.value as StatusFilter)}
-              aria-label={t("filter.status")}
-              className="rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary)"
+              value={lineFilter}
+              onChange={(e): void => setLineFilter(e.target.value)}
+              className={PANEL_SELECT_CLASS}
             >
-              <option value="all">{t("filter.allStatuses")}</option>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {t(`status.${s}`)}
+              <option value="all">{t("filter.allLines")}</option>
+              {availableLines.map((line) => (
+                <option key={line} value={line}>
+                  {line}
                 </option>
               ))}
             </select>
-            <select
-              value={yearFilter === "all" ? "all" : String(yearFilter)}
-              onChange={(e): void =>
-                setYearFilter(
-                  e.target.value === "all" ? "all" : Number.parseInt(e.target.value, 10)
-                )
-              }
-              aria-label={t("filter.year")}
-              className="rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary)"
-            >
-              <option value="all">{t("filter.allYears")}</option>
-              {availableYears.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-            {hasActiveFilter && (
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="rounded-md border border-border px-3 py-2 text-xs text-(--text-muted) hover:text-(--text-primary)"
-              >
-                {t("filter.reset")}
-              </button>
-            )}
-          </div>
-          <div className="text-xs text-(--text-muted)">
-            {t("filter.showing", { count: filtered.length })}
-          </div>
-        </div>
-      </div>
+          </FilterField>
+        }
+        hasActiveFilter={hasActiveFilter}
+        onReset={resetFilters}
+        resultLabel={t("common:filters.showing", { count: filtered.length })}
+      />
 
       {/* Same width budget as the flights table page — owner principle:
           the domain list pages look the same, only the content differs. */}
@@ -368,7 +373,6 @@ export default function CruisesPage(): JSX.Element {
                 color: "var(--text-muted)",
               }}
             >
-              <span>{t("list.showing", { count: sorted.length })}</span>
               <span>
                 {t("list.sortedBy", {
                   col: t(`list.columns.${SORT_KEY_TO_COLUMN[sortBy] ?? sortBy}`),

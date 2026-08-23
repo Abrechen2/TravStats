@@ -66,7 +66,8 @@
       "rating": "Bewertung",
       "spend": "Ausgaben"
     },
-    "showing": "{{count}} angezeigt"
+    "showing": "{{count}} angezeigt",
+    "allStatuses": "Alle Status"
   },
   "add": {
     "title": "Hotel hinzufügen"

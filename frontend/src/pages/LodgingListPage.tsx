@@ -10,6 +10,7 @@ import { ChainNameLink } from "../components/lodging/ChainNameLink";
 import { LodgingStatusTag } from "../components/lodging/LodgingStatusTag";
 import { StayStatusPill } from "../components/lodging/StayStatusPill";
 import { lodgingLifecycleStatus } from "../components/lodging/lodgingLifecycle";
+import type { StayStatus } from "../types/lodging";
 import {
   LODGING_SORT_DEFAULT_ASC,
   sortLodgingRows,
@@ -17,6 +18,10 @@ import {
 } from "../components/lodging/sortLodgingRows";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
+import ListFilterBar, {
+  FilterField,
+  PANEL_SELECT_CLASS,
+} from "../components/table/ListFilterBar";
 import { RowActionButton, RowActions } from "../components/table/RowActionButton";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import ConfirmModal from "../components/Training/ConfirmModal";
@@ -43,6 +48,12 @@ import type { Lodging, LodgingListQuery, LodgingStats, LodgingType } from "../ty
 type TypeFilter = LodgingType | "all";
 type YearFilter = number | "all";
 type CountryFilter = string | "all";
+type StatusFilter = StayStatus | "all";
+
+/** The lifecycle values a lodging row can show, in the order the pill ranks
+ *  them. `null` (a house with no stays at all) is not a filterable state —
+ *  the list marks those "vorgemerkt" in the name column instead. */
+const STATUSES: readonly StayStatus[] = ["in_progress", "scheduled", "completed", "cancelled"];
 
 const TYPES: LodgingType[] = ["hotel", "campsite", "guesthouse", "apartment", "hostel"];
 
@@ -115,6 +126,7 @@ export default function LodgingListPage(): JSX.Element {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [yearFilter, setYearFilter] = useState<YearFilter>("all");
   const [countryFilter, setCountryFilter] = useState<CountryFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortBy, setSortBy] = useState<LodgingSortKey>("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const columnPrefs = useColumnPrefs("lodging-list", ALWAYS_VISIBLE);
@@ -236,25 +248,35 @@ export default function LodgingListPage(): JSX.Element {
   // bug the old server-side-only sorting guarded against.
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    const visible =
-      needle.length === 0
-        ? rows
-        : rows.filter((l) => {
-            const haystack = `${l.name} ${l.chain?.name ?? ""} ${l.city ?? ""}`.toLowerCase();
-            return haystack.includes(needle);
-          });
+    const visible = rows.filter((l) => {
+      // Status is DERIVED from the stays (see lodgingLifecycle), so unlike
+      // type/year/country it cannot be a query parameter — it is decided here,
+      // over the complete set the server already returned.
+      if (statusFilter !== "all" && lodgingLifecycleStatus(l.stays) !== statusFilter) return false;
+      if (needle.length > 0) {
+        const haystack = `${l.name} ${l.chain?.name ?? ""} ${l.city ?? ""}`.toLowerCase();
+        if (!haystack.includes(needle)) return false;
+      }
+      return true;
+    });
     return sortLodgingRows(visible, sortBy, sortOrder);
-  }, [rows, search, sortBy, sortOrder]);
+  }, [rows, search, statusFilter, sortBy, sortOrder]);
 
   const resetFilters = (): void => {
     setSearch("");
     setTypeFilter("all");
     setYearFilter("all");
     setCountryFilter("all");
+    setStatusFilter("all");
   };
 
+  // Type and country are the two only lodging has; they sit behind the button.
+  const extraActiveCount = (typeFilter === "all" ? 0 : 1) + (countryFilter === "all" ? 0 : 1);
   const hasActiveFilter =
-    search.length > 0 || typeFilter !== "all" || yearFilter !== "all" || countryFilter !== "all";
+    search.length > 0 ||
+    statusFilter !== "all" ||
+    yearFilter !== "all" ||
+    extraActiveCount > 0;
 
   const importAdapter = useLodgingImportAdapter();
 
@@ -263,82 +285,66 @@ export default function LodgingListPage(): JSX.Element {
     <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
       <NavigationBar />
 
-      <div
-        className="sticky top-14 z-10 px-4 py-3 backdrop-blur-md"
-        style={{
-          background: "rgba(13,17,23,0.85)",
-          borderBottom: "1px solid var(--color-border)",
+      <ListFilterBar
+        search={{
+          value: search,
+          onChange: setSearch,
+          placeholder: t("lodging:filter.searchPlaceholder"),
         }}
-      >
-        <div className="mx-auto flex max-w-(--breakpoint-2xl) flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-1 flex-col gap-2 md:flex-row md:items-center">
-            <input
-              type="search"
-              value={search}
-              onChange={(e): void => setSearch(e.target.value)}
-              placeholder={t("lodging:filter.searchPlaceholder")}
-              className="w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none md:max-w-xs"
-            />
-            <select
-              value={typeFilter}
-              onChange={(e): void => setTypeFilter(e.target.value as TypeFilter)}
-              aria-label={t("lodging:filter.type")}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
-            >
-              <option value="all">{t("lodging:filter.allTypes")}</option>
-              {TYPES.map((ty) => (
-                <option key={ty} value={ty}>
-                  {t(`lodging:type.${ty}`)}
-                </option>
-              ))}
-            </select>
-            <select
-              value={yearFilter === "all" ? "all" : String(yearFilter)}
-              onChange={(e): void =>
-                setYearFilter(
-                  e.target.value === "all" ? "all" : Number.parseInt(e.target.value, 10)
-                )
-              }
-              aria-label={t("lodging:filter.year")}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
-            >
-              <option value="all">{t("lodging:filter.allYears")}</option>
-              {availableYears.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-            <select
-              value={countryFilter}
-              onChange={(e): void => setCountryFilter(e.target.value)}
-              aria-label={t("lodging:filter.country")}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
-            >
-              <option value="all">{t("lodging:filter.allCountries")}</option>
-              {availableCountries.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-            {/* The sort dropdown is gone — sorting moved into the column
-                headers, flights-table style (owner ask, 2026-08-20). */}
-            {hasActiveFilter && (
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="rounded-md border border-[var(--color-border)] px-3 py-2 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+        status={{
+          label: t("lodging:list.status.label"),
+          value: statusFilter,
+          onChange: (v): void => setStatusFilter(v as StatusFilter),
+          allLabel: t("lodging:filter.allStatuses"),
+          options: STATUSES.map((st) => ({
+            value: st,
+            label: t(`lodging:stayStatus.${st}`),
+          })),
+        }}
+        year={{
+          label: t("lodging:filter.year"),
+          value: yearFilter === "all" ? "all" : String(yearFilter),
+          onChange: (v): void => setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
+          allLabel: t("lodging:filter.allYears"),
+          options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
+        }}
+        extraActiveCount={extraActiveCount}
+        extra={
+          <>
+            <FilterField label={t("lodging:filter.type")}>
+              <select
+                value={typeFilter}
+                onChange={(e): void => setTypeFilter(e.target.value as TypeFilter)}
+                className={PANEL_SELECT_CLASS}
               >
-                {t("common:buttons.reset")}
-              </button>
-            )}
-          </div>
-          <div className="text-xs text-[var(--text-muted)]">
-            {t("lodging:filter.showing", { count: filtered.length })}
-          </div>
-        </div>
-      </div>
+                <option value="all">{t("lodging:filter.allTypes")}</option>
+                {TYPES.map((ty) => (
+                  <option key={ty} value={ty}>
+                    {t(`lodging:type.${ty}`)}
+                  </option>
+                ))}
+              </select>
+            </FilterField>
+            <FilterField label={t("lodging:filter.country")}>
+              <select
+                value={countryFilter}
+                onChange={(e): void => setCountryFilter(e.target.value)}
+                className={PANEL_SELECT_CLASS}
+              >
+                <option value="all">{t("lodging:filter.allCountries")}</option>
+                {availableCountries.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </FilterField>
+          </>
+        }
+        hasActiveFilter={hasActiveFilter}
+        onReset={resetFilters}
+        resultLabel={t("common:filters.showing", { count: filtered.length })}
+      />
 
       {/* Same width budget as the flights table page (max-w 2xl breakpoint) —
           the old max-w-6xl squeezed the table into two thirds of the screen. */}
@@ -585,7 +591,6 @@ export default function LodgingListPage(): JSX.Element {
                   borderTop: "1px solid var(--color-border)",
                 }}
               >
-                <span>{t("lodging:list.footer.showing", { count: filtered.length })}</span>
                 <span>
                   {t("lodging:list.footer.sortedBy", {
                     label: columnLabel(t, sortBy),

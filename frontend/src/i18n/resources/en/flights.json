@@ -406,5 +406,17 @@
     "earlyMinutes": "{{minutes}} min early",
     "co2Label": "CO₂",
     "co2Value": "{{kg}} kg CO₂"
+  },
+  "filter": {
+    "searchPlaceholder": "Airline, flight number or airport …",
+    "allStatuses": "All statuses",
+    "year": "Year",
+    "allYears": "All years",
+    "month": "Month",
+    "allMonths": "All months",
+    "allAirlines": "All airlines",
+    "allTrips": "All trips",
+    "withTrip": "With trip",
+    "withoutTrip": "Without trip"
   }
 }

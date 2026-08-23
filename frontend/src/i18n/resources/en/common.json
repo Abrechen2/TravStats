@@ -201,5 +201,10 @@
     "donateAria": "Donate via PayPal",
     "star": "Star",
     "starAria": "Star on GitHub"
+  },
+  "filters": {
+    "more": "Filters",
+    "reset": "Reset filters",
+    "showing": "{{count}} shown"
   }
 }

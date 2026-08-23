@@ -34,14 +34,6 @@ vi.mock("../../components/Training/ConfirmModal", () => ({
   default: () => <div data-testid="confirm-modal-stub" />,
 }));
 
-vi.mock("../../components/Flights/TripFilterBar", () => ({
-  TripFilterBar: () => <div data-testid="trip-filter-bar-stub" />,
-}));
-
-vi.mock("../../components/specialFlights/SpecialFlightFilter", () => ({
-  default: () => <div data-testid="special-flight-filter-stub" />,
-}));
-
 vi.mock("../../components/SkeletonLoader", () => ({
   SkeletonTable: () => <div data-testid="skeleton-table-stub" />,
 }));

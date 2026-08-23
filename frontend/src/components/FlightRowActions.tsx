@@ -1,13 +1,20 @@
 /**
- * Edit / Duplicate / Delete button cluster rendered on each flight row
- * in FlightsTablePage. Extracted from the page component so it stays
- * under CLAUDE.md's 800-line hard maximum.
+ * Edit / duplicate / delete on a flight row.
  *
- * The dropdown is controlled — the page owns `openDuplicateMenuFor`
- * and toggles it from the outside-click listener + the toggle button.
+ * The icons come from the shared component every list uses now
+ * (components/table/RowActionButton) — this file used to draw its own copies
+ * of the same three glyphs. That mattered for more than tidiness: the row
+ * navigates since 2026-08-22, and these buttons did not stop propagation, so
+ * clicking "löschen" ALSO opened the flight it was about to remove. Found in
+ * the browser; every unit test was green while it happened.
+ *
+ * Duplicate keeps its own button because it opens a menu rather than acting,
+ * and the menu's two entries stop propagation for the same reason.
  */
+import type { JSX, MouseEvent } from "react";
 import type { Flight } from "../types";
 import { useTranslation } from "../hooks/useTranslation";
+import { RowActionButton, RowActions } from "./table/RowActionButton";
 
 interface Props {
   flight: Flight;
@@ -29,35 +36,22 @@ export default function FlightRowActions({
   const { t } = useTranslation(["flights", "common"]);
   const menuOpen = openDuplicateMenuFor === flight.id;
 
-  return (
-    <div className="flex items-center justify-end gap-2">
-      {/* Edit button */}
-      <button
-        onClick={() => onEdit(flight)}
-        className="inline-flex items-center justify-center w-7 h-7 rounded-sm hover:bg-(--bg-muted) hover:text-[#388bfd]"
-        style={{ color: "var(--text-muted)" }}
-        aria-label={t("common:buttons.edit")}
-        title={t("common:buttons.edit")}
-      >
-        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-        </svg>
-      </button>
+  const stop = (e: MouseEvent): void => e.stopPropagation();
 
-      {/* Duplicate button with dropdown */}
-      <div className="relative" data-duplicate-menu>
-        <button
+  return (
+    <RowActions>
+      <RowActionButton
+        icon="edit"
+        label={t("common:buttons.edit")}
+        onClick={() => onEdit(flight)}
+      />
+
+      <div className="relative" data-duplicate-menu onClick={stop}>
+        <RowActionButton
+          icon="duplicate"
+          label={t("flights:table.duplicate.label")}
           onClick={() => onToggleDuplicateMenu(menuOpen ? null : flight.id)}
-          className="inline-flex items-center justify-center w-7 h-7 rounded-sm hover:bg-(--bg-muted) hover:text-(--text-primary)"
-          style={{ color: "var(--text-muted)" }}
-          aria-label={t("flights:table.duplicate.label")}
-          title={t("flights:table.duplicate.label")}
-        >
-          <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-            <rect x="9" y="9" width="13" height="13" rx="2" />
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-          </svg>
-        </button>
+        />
         {menuOpen && (
           <div
             className="absolute right-0 mt-1 rounded-sm shadow-lg z-20 min-w-[180px]"
@@ -67,14 +61,22 @@ export default function FlightRowActions({
             }}
           >
             <button
-              onClick={() => onDuplicate(flight, "same")}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDuplicate(flight, "same");
+              }}
               className="block w-full text-left px-3 py-2 text-xs hover:bg-(--bg-elevated)"
               style={{ color: "var(--text-primary)" }}
             >
               {t("flights:table.duplicate.same")}
             </button>
             <button
-              onClick={() => onDuplicate(flight, "return")}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDuplicate(flight, "return");
+              }}
               className="block w-full text-left px-3 py-2 text-xs hover:bg-(--bg-elevated)"
               style={{ color: "var(--text-primary)" }}
             >
@@ -84,18 +86,11 @@ export default function FlightRowActions({
         )}
       </div>
 
-      {/* Delete button */}
-      <button
+      <RowActionButton
+        icon="delete"
+        label={t("common:buttons.delete")}
         onClick={() => onDelete(flight.id)}
-        className="inline-flex items-center justify-center w-7 h-7 rounded-sm hover:bg-(--bg-muted) hover:text-(--danger)"
-        style={{ color: "var(--text-muted)" }}
-        aria-label={t("common:buttons.delete")}
-        title={t("common:buttons.delete")}
-      >
-        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-        </svg>
-      </button>
-    </div>
+      />
+    </RowActions>
   );
 }

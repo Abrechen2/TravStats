@@ -201,5 +201,10 @@
     "donateAria": "Über PayPal spenden",
     "star": "Stern",
     "starAria": "Auf GitHub einen Stern geben"
+  },
+  "filters": {
+    "more": "Filter",
+    "reset": "Filter zurücksetzen",
+    "showing": "{{count}} angezeigt"
   }
 }

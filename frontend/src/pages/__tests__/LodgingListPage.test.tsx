@@ -169,6 +169,15 @@ function makeLodging(overrides: Partial<Lodging> = {}): Lodging {
   };
 }
 
+/**
+ * Type and country moved behind the "Filter" button (owner ask, 2026-08-22):
+ * search, status and year stay open because every domain has them, everything
+ * one domain owns sits in the panel. The controls are the same controls.
+ */
+async function openFilterPanel(): Promise<void> {
+  await userEvent.click(await screen.findByTestId("list-filter-more"));
+}
+
 function renderListPage(): ReturnType<typeof render> {
   return render(
     <MemoryRouter>
@@ -250,6 +259,7 @@ describe("LodgingListPage", () => {
 
     renderListPage();
 
+    await openFilterPanel();
     const select = (await screen.findByLabelText("lodging:filter.type")) as HTMLSelectElement;
     const values = Array.from(select.options).map((o) => o.value);
     expect(values).toEqual(["all", "hotel", "campsite", "guesthouse", "apartment", "hostel"]);
@@ -281,6 +291,7 @@ describe("LodgingListPage", () => {
     await screen.findByRole("option", { name: "2024" });
     listLodgingsMock.mockClear();
 
+    await openFilterPanel();
     await user.selectOptions(screen.getByLabelText("lodging:filter.type"), "campsite");
     await waitFor(() => {
       expect(listLodgingsMock).toHaveBeenCalledWith(
@@ -297,6 +308,7 @@ describe("LodgingListPage", () => {
     });
 
     listLodgingsMock.mockClear();
+    await openFilterPanel();
     await user.selectOptions(screen.getByLabelText("lodging:filter.country"), "US");
     await waitFor(() => {
       expect(listLodgingsMock).toHaveBeenCalledWith(

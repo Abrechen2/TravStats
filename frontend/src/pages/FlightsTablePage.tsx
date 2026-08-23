@@ -10,22 +10,25 @@ import { flightsApi, tripsApi } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
+import ListFilterBar, {
+  FilterField,
+  PANEL_SELECT_CLASS,
+} from "../components/table/ListFilterBar";
 import { statusPillStyle } from "../components/table/statusPillStyle";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
-import type { Flight, FlightFilters, FlightInput, Trip } from "../types";
-import Filters from "../components/Filters";
+import type { Flight, FlightInput, Trip } from "../types";
 import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
 import SpecialFlightModal from "../components/SpecialFlightModal";
 import FlightEditModal from "../components/FlightEditModal";
 import FlightRowActions from "../components/FlightRowActions";
 import SpecialTypeBadge from "../components/specialFlights/SpecialTypeBadge";
 import { buildDuplicateInput } from "../lib/flightDuplicate";
-import type { SpecialType } from "../components/specialFlights/specialTypeMeta";
-import SpecialFlightFilter, {
+import {
+  SPECIAL_TYPES,
+  type SpecialType,
   type SpecialTypeFilter,
-} from "../components/specialFlights/SpecialFlightFilter";
+} from "../components/specialFlights/specialTypeMeta";
 import ConfirmModal from "../components/Training/ConfirmModal";
-import { TripFilterBar } from "../components/Flights/TripFilterBar";
 import { useToastStore } from "../store/toastStore";
 import { API_LIMITS } from "../lib/constants";
 import { getFlightDuration, getFlightDurationMinutes } from "../lib/flightDuration";
@@ -84,6 +87,24 @@ function flightColumnLabel(t: (key: string) => string, id: FlightColumnId): stri
   return t(`flights:table.${id}`);
 }
 
+type FlightStatusFilter = Flight["status"] | "all";
+
+/** The statuses a flight can carry. `historical` and `duplicated` are real
+ *  states, not hidden ones — the old checkbox panel force-added them to every
+ *  selection, so picking "nur geflogen" quietly kept them in the table. */
+const FLIGHT_STATUSES: ReadonlyArray<Flight["status"]> = [
+  "flown",
+  "scheduled",
+  "cancelled",
+  "historical",
+  "duplicated",
+];
+
+const MONTH_KEYS = [
+  "jan", "feb", "mar", "apr", "may", "jun",
+  "jul", "aug", "sep", "oct", "nov", "dec",
+] as const;
+
 export default function FlightsTablePage(): JSX.Element {
   const { t } = useTranslation([
     "flights",
@@ -97,7 +118,16 @@ export default function FlightsTablePage(): JSX.Element {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripFilter, setTripFilter] = useState<"all" | "with" | "without" | string>("all");
   const [specialFilter, setSpecialFilter] = useState<SpecialTypeFilter>("all");
-  const [filters, setFilters] = useState<FlightFilters>({});
+  // Every filter on this page is now decided HERE, over the complete list.
+  // It used to be split: year/month/airline/status went to the server as a
+  // query (re-fetching every flight on every change, while a second component
+  // paginated through all of them AGAIN just to build its dropdown options),
+  // and trip/special were applied in memory. One source, one pass.
+  const [search, setSearch] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<FlightStatusFilter>("all");
+  const [yearFilter, setYearFilter] = useState<string>("all");
+  const [monthFilter, setMonthFilter] = useState<string>("all");
+  const [airlineFilter, setAirlineFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
@@ -132,7 +162,7 @@ export default function FlightsTablePage(): JSX.Element {
 
   useEffect(() => {
     loadFlights();
-  }, [filters]);
+  }, []);
 
   useEffect(() => {
     void loadTrips();
@@ -159,7 +189,7 @@ export default function FlightsTablePage(): JSX.Element {
       let pages = 0;
       while (pages < MAX_PAGES) {
         pages++;
-        const data = await flightsApi.getAll({ ...filters, limit, offset });
+        const data = await flightsApi.getAll({ limit, offset });
         allFlights = [...allFlights, ...data.flights];
 
         if (data.flights.length < limit) {
@@ -324,9 +354,60 @@ export default function FlightsTablePage(): JSX.Element {
     }
   };
 
+  const searchNeedle = useMemo(() => search.trim().toLowerCase(), [search]);
+
+  /** Years and airlines read from the COMPLETE list, so the options never
+   *  shrink as the other filters narrow the table. */
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    for (const f of flights) {
+      if (!f.departureTime) continue;
+      const y = new Date(f.departureTime).getFullYear();
+      if (!Number.isNaN(y)) years.add(y);
+    }
+    return Array.from(years).sort((a, b) => b - a);
+  }, [flights]);
+
+  const availableAirlines = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const f of flights) {
+      if (!f.airline) continue;
+      counts.set(f.airline, (counts.get(f.airline) ?? 0) + 1);
+    }
+    return Array.from(counts, ([name, count]) => ({ name, count })).sort(
+      (a, b) => b.count - a.count
+    );
+  }, [flights]);
+
   const displayedFlights = useMemo(
     () =>
       sortedFlights.filter((f) => {
+        if (statusFilter !== "all" && f.status !== statusFilter) return false;
+
+        if (yearFilter !== "all" || monthFilter !== "all") {
+          if (!f.departureTime) return false;
+          const dep = new Date(f.departureTime);
+          if (yearFilter !== "all" && dep.getFullYear() !== Number(yearFilter)) return false;
+          if (monthFilter !== "all" && dep.getMonth() + 1 !== Number(monthFilter)) return false;
+        }
+
+        if (airlineFilter !== "all" && f.airline !== airlineFilter) return false;
+
+        if (searchNeedle.length > 0) {
+          const haystack = [
+            f.airline,
+            f.flightNumber,
+            f.depIata,
+            f.arrIata,
+            f.depName,
+            f.arrName,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          if (!haystack.includes(searchNeedle)) return false;
+        }
+
         // Trip filter
         if (tripFilter === "with" && !f.tripId) return false;
         if (tripFilter === "without" && f.tripId) return false;
@@ -351,8 +432,36 @@ export default function FlightsTablePage(): JSX.Element {
 
         return true;
       }),
-    [sortedFlights, tripFilter, specialFilter]
+    [
+      sortedFlights,
+      tripFilter,
+      specialFilter,
+      statusFilter,
+      yearFilter,
+      monthFilter,
+      airlineFilter,
+      searchNeedle,
+    ]
   );
+
+  const resetFilters = (): void => {
+    setSearch("");
+    setStatusFilter("all");
+    setYearFilter("all");
+    setMonthFilter("all");
+    setAirlineFilter("all");
+    setTripFilter("all");
+    setSpecialFilter("all");
+  };
+
+  // Month, airline, trip and special type are the four this domain owns.
+  const extraActiveCount =
+    (monthFilter === "all" ? 0 : 1) +
+    (airlineFilter === "all" ? 0 : 1) +
+    (tripFilter === "all" ? 0 : 1) +
+    (specialFilter === "all" ? 0 : 1);
+  const hasActiveFilter =
+    search.length > 0 || statusFilter !== "all" || yearFilter !== "all" || extraActiveCount > 0;
 
   const formatFlightDurationCell = (flight: Flight) => {
     const d = getFlightDuration(flight);
@@ -376,16 +485,100 @@ export default function FlightsTablePage(): JSX.Element {
       <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
         <NavigationBar />
 
-        {/* Sticky filter bar */}
-        <div
-          className="sticky top-14 z-10 px-4 py-3 backdrop-blur-md"
-          style={{
-            background: "rgba(13,17,23,0.85)",
-            borderBottom: "1px solid var(--color-border)",
+        <ListFilterBar
+          search={{
+            value: search,
+            onChange: setSearch,
+            placeholder: t("flights:filter.searchPlaceholder"),
           }}
-        >
-          <Filters onFilterChange={setFilters} showMapOnlyFilters={false} />
-        </div>
+          status={{
+            label: t("flights:table.status"),
+            value: statusFilter,
+            onChange: (v): void => setStatusFilter(v as FlightStatusFilter),
+            allLabel: t("flights:filter.allStatuses"),
+            options: FLIGHT_STATUSES.map((st) => ({
+              value: st,
+              label: t(`flights:status.${st}`),
+            })),
+          }}
+          year={{
+            label: t("flights:filter.year"),
+            value: yearFilter,
+            onChange: setYearFilter,
+            allLabel: t("flights:filter.allYears"),
+            options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
+          }}
+          extraActiveCount={extraActiveCount}
+          extra={
+            <>
+              <FilterField label={t("flights:filter.month")}>
+                <select
+                  value={monthFilter}
+                  onChange={(e): void => setMonthFilter(e.target.value)}
+                  className={PANEL_SELECT_CLASS}
+                >
+                  <option value="all">{t("flights:filter.allMonths")}</option>
+                  {MONTH_KEYS.map((key, i) => (
+                    <option key={key} value={String(i + 1)}>
+                      {t(`stats:months.${key}`)}
+                    </option>
+                  ))}
+                </select>
+              </FilterField>
+              <FilterField label={t("flights:table.airline")}>
+                <select
+                  value={airlineFilter}
+                  onChange={(e): void => setAirlineFilter(e.target.value)}
+                  className={PANEL_SELECT_CLASS}
+                >
+                  <option value="all">{t("flights:filter.allAirlines")}</option>
+                  {availableAirlines.map((a) => (
+                    <option key={a.name} value={a.name}>
+                      {a.name} ({a.count})
+                    </option>
+                  ))}
+                </select>
+              </FilterField>
+              <FilterField label={t("trips:tab")}>
+                <select
+                  value={tripFilter}
+                  onChange={(e): void => setTripFilter(e.target.value)}
+                  className={PANEL_SELECT_CLASS}
+                >
+                  <option value="all">{t("flights:filter.allTrips")}</option>
+                  <option value="with">{t("flights:filter.withTrip")}</option>
+                  <option value="without">{t("flights:filter.withoutTrip")}</option>
+                  {trips.map((trip) => (
+                    <option key={trip.id} value={trip.id}>
+                      {trip.name}
+                    </option>
+                  ))}
+                </select>
+              </FilterField>
+              {/* Special flights used to be a row of pills above the table —
+                  the only place in the app where a filter was a pill. */}
+              <FilterField label={t("specialFlights:filter.label")}>
+                <select
+                  value={specialFilter}
+                  onChange={(e): void => setSpecialFilter(e.target.value as SpecialTypeFilter)}
+                  className={PANEL_SELECT_CLASS}
+                >
+                  <option value="all">{t("specialFlights:filter.all")}</option>
+                  <option value="standard">{t("specialFlights:filter.standardOnly")}</option>
+                  <option value="special">{t("specialFlights:filter.allSpecial")}</option>
+                  {SPECIAL_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {t(`specialFlights:specialType.${type}`)}
+                    </option>
+                  ))}
+                </select>
+              </FilterField>
+            </>
+          }
+          hasActiveFilter={hasActiveFilter}
+          onReset={resetFilters}
+          resultLabel={t("common:filters.showing", { count: displayedFlights.length })}
+        />
 
         {/* Main Content */}
         <div className="container mx-auto px-4 py-6 max-w-(--breakpoint-2xl)">
@@ -444,12 +637,6 @@ export default function FlightsTablePage(): JSX.Element {
             style={{ border: "1px solid var(--color-border)" }}
           >
             <>
-              {/* Trip filter — quick chips + searchable popover */}
-              <TripFilterBar trips={trips} value={tripFilter} onChange={setTripFilter} />
-
-              {/* Special-type filter chips */}
-              <SpecialFlightFilter value={specialFilter} onChange={setSpecialFilter} />
-
               <div className="overflow-x-auto">
                 {loading ? (
                   <SkeletonTable rows={10} />
@@ -681,10 +868,7 @@ export default function FlightsTablePage(): JSX.Element {
                     color: "var(--text-muted)",
                   }}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm">
-                      {t("flights:table.footer.showing", { count: displayedFlights.length })}
-                    </div>
+                  <div className="flex items-center justify-end">
                     <div className="text-sm">
                       {t("flights:table.footer.sortedBy", {
                         label: sortLabels[sortBy],

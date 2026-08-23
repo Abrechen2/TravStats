@@ -55,3 +55,11 @@ export const SPECIAL_TYPE_META: Record<SpecialType, SpecialTypeMeta> = {
 export function rgbToCss(rgb: readonly [number, number, number], alpha = 1): string {
   return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
 }
+
+/**
+ * What the flights list is filtered down to: everything, only ordinary
+ * flights, every special one, or one particular kind. It lived in the chip-row
+ * component that used to sit above the table; the filter is a control in the
+ * list's filter panel now, and the chip row is gone.
+ */
+export type SpecialTypeFilter = "all" | "standard" | "special" | SpecialType;

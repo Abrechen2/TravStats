@@ -164,7 +164,9 @@
     "allStatuses": "Alle Status",
     "allYears": "Alle Jahre",
     "reset": "Zurücksetzen",
-    "showing": "{{count}} angezeigt"
+    "showing": "{{count}} angezeigt",
+    "line": "Reederei",
+    "allLines": "Alle Reedereien"
   },
   "form": {
     "title": "Kreuzfahrt",

@@ -164,7 +164,9 @@
     "allStatuses": "All statuses",
     "allYears": "All years",
     "reset": "Reset",
-    "showing": "{{count}} shown"
+    "showing": "{{count}} shown",
+    "line": "Cruise line",
+    "allLines": "All cruise lines"
   },
   "form": {
     "title": "Cruise",
