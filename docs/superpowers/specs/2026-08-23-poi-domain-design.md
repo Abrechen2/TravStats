@@ -474,18 +474,41 @@ resolve colour through a store, never hardcoded*. So `lib/placeColor.ts` +
 `placeColorStore`, mirroring `lodgingColor.ts`, with modes:
 
 ```ts
-export const PLACE_COLOR_MODES = ["category", "list", "visited"] as const;
+export const PLACE_COLOR_MODES = ["list", "visited"] as const;
 ```
 
-- `category` — restaurant / landmark / nature / … (the default)
 - `list` — each `PlaceList.color`; a place in several lists takes its
   lowest-`sortIdx` list, and the tooltip names all of them
 - `visited` — visited vs. wishlist, the checklist-progress view
 
-Ghost pins for unticked curated items are a **separate sub-layer**, not a colour
-mode: hollow, lower opacity, never counted, toggled by a checkbox on the
-checklist page. Keeping them out of the colour model is what stops an unvisited
-target from ever being mistaken for a visit.
+**There is deliberately no `category` colour mode.** Map pins are a *scatter*
+case — any two categories can land next to each other, so every pair must
+separate, not just adjacent ones in a legend. Measured against that bar, only
+the first three slots of a categorical palette clear the floors, so seven place
+categories cannot be seven hues. **Category is encoded as the pin's icon**
+(🍟 🏛 🌲 🖼) instead, which also survives greyscale, print and forced-colours.
+
+Two further measurements that constrain the layer (run with the palette
+validator, dark surface, `--pairs all`):
+
+- **POI teal `#5ec2b2` vs. cruise blue `#6fa0d6` — normal-vision ΔE 12.4,
+  below the floor of 15.** On the **All** tab, place dots sit beside cruise-port
+  dots: same mark, near-same hue. A place pin there therefore carries a distinct
+  glyph, and the existing label pass is load-bearing rather than decorative.
+  This is *not* a proposal to repaint the brand — those hexes are canonical in
+  BRAND.md and shared with TravStatsWeb — it constrains only how the new layer
+  draws.
+- **Teal vs. muted grey — ΔE 12.7, also below the floor.** So ghost pins for
+  unticked curated items are **hollow and dashed**: shape carries the
+  distinction, colour merely agrees. They are a separate sub-layer, never
+  counted, toggled from the checklist page — which is also what stops an
+  unvisited target from being mistaken for a visit.
+
+The list-colour picker offers a **fixed set of validated slots** rather than a
+free colour wheel, which guarantees nothing. `#3987e5, #d95926, #199e70` passes
+all-pairs on the card surface; past three lists on screen, identity comes from
+the legend and direct labels (already implemented via `pickLabelled`) or the
+view folds to "Other".
 
 ### 7.2 Dashboard POI tab
 
