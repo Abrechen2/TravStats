@@ -4,13 +4,31 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TravStats — POI Domain: Plan &amp; UI Mockups (2026-08-23)</title>
+
+<!-- The app's own three faces, loaded exactly as frontend/index.html loads them. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap">
+
 <style>
 /* ---------------------------------------------------------------------------
-   Tokens lifted verbatim from frontend/src/index.css (dark theme) so the
-   mockups are the real design system, not an invented one.
+   Tokens and type lifted verbatim from frontend/src/index.css (dark theme) and
+   frontend/index.html. This page is drawn in the product's own design system,
+   not an approximation of it:
+     --font-display  Syne            headings
+     --font-sans     Inter           body + the wordmark
+     --font-mono     IBM Plex Mono   data, codes, labels
+   Brand accent is AMBER. Teal is the POI *domain* colour and appears only on
+   domain surfaces (pins, legends, domain badges) — never on app chrome.
    --------------------------------------------------------------------------- */
 :root {
   color-scheme: dark;
+
+  --font-display: Syne, sans-serif;
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
   --bg-base: #0d1117;
   --bg-surface: #161b22;
   --bg-elevated: #1c2128;
@@ -21,6 +39,8 @@
   --text-muted: #8b949e;
 
   --accent: #f0a947;
+  --accent-dim: #c8842a;
+  --accent-glow: rgba(240, 169, 71, 0.18);
   --accent-soft: rgba(240, 169, 71, 0.1);
 
   --domain-flight: #f0a947;
@@ -34,47 +54,65 @@
   --success: #3fb950;
   --warning: #d29922;
 
-  /* List-colour picker — the three slots validated all-pairs on this surface.
-     See §Colour findings. */
+  /* List-colour picker — the three slots validated all-pairs on this surface. */
   --list-1: #3987e5;
   --list-2: #d95926;
   --list-3: #199e70;
 
-  --radius: 12px;
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --shadow-glow-accent: 0 0 20px var(--accent-glow);
+  --noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  background: var(--bg-base);
+  background: var(--bg-base) var(--noise);
   color: var(--text-primary);
-  font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font: 15px/1.65 var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
-.wrap { max-width: 1180px; margin: 0 auto; padding: 40px 24px 96px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px 96px; }
 
-/* --- page header ---------------------------------------------------------- */
+/* --- brand lockup --------------------------------------------------------- */
+.wordmark {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  line-height: 1;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+}
+.wordmark svg { margin: 0 .14em; flex-shrink: 0; }
+
+/* --- page masthead -------------------------------------------------------- */
 .masthead {
   border-bottom: 1px solid var(--color-border);
-  padding-bottom: 28px;
+  padding: 44px 0 30px;
   margin-bottom: 36px;
 }
+.lockup { display: flex; align-items: center; gap: 13px; margin-bottom: 26px; }
 .eyebrow {
-  font: 600 11px/1 var(--mono);
-  letter-spacing: .14em;
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: .16em;
   text-transform: uppercase;
   color: var(--domain-poi);
   margin-bottom: 14px;
 }
-h1 { font-size: 30px; line-height: 1.2; margin: 0 0 12px; letter-spacing: -.015em; }
-.lede { color: var(--text-secondary); max-width: 68ch; margin: 0 0 18px; }
+h1 {
+  font: 700 34px/1.15 var(--font-display);
+  letter-spacing: -.02em;
+  margin: 0 0 14px;
+}
+.lede { color: var(--text-secondary); max-width: 68ch; margin: 0 0 20px; }
 .meta { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
-  font: 500 12px/1 var(--mono);
-  padding: 6px 10px;
+  font: 500 11.5px/1 var(--font-mono);
+  padding: 6px 11px;
   border: 1px solid var(--color-border);
   border-radius: 999px;
   color: var(--text-muted);
@@ -83,13 +121,12 @@ h1 { font-size: 30px; line-height: 1.2; margin: 0 0 12px; letter-spacing: -.015e
 .chip.on { color: var(--domain-poi); border-color: var(--domain-poi-locked); background: var(--domain-poi-soft); }
 
 h2 {
-  font-size: 21px;
-  margin: 56px 0 6px;
-  letter-spacing: -.01em;
-  scroll-margin-top: 20px;
+  font: 600 23px/1.25 var(--font-display);
+  letter-spacing: -.015em;
+  margin: 58px 0 6px;
 }
-h2 .num { color: var(--text-muted); font: 500 15px/1 var(--mono); margin-right: 10px; }
-h3 { font-size: 16px; margin: 32px 0 8px; }
+h2 .num { color: var(--accent); font: 500 14px/1 var(--font-mono); margin-right: 12px; letter-spacing: .1em; }
+h3 { font: 600 16.5px/1.3 var(--font-display); margin: 32px 0 8px; letter-spacing: -.01em; }
 .sub { color: var(--text-muted); margin: 0 0 22px; max-width: 74ch; }
 p { max-width: 78ch; }
 a { color: var(--domain-poi); }
@@ -98,7 +135,7 @@ a { color: var(--domain-poi); }
 .panel {
   background: var(--bg-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border-radius: 12px;
   padding: 20px;
 }
 .note {
@@ -113,120 +150,129 @@ a { color: var(--domain-poi); }
 .note.warn { border-left-color: var(--warning); background: rgba(210,153,34,.09); }
 .note.bad  { border-left-color: var(--danger);  background: rgba(248,81,73,.08); }
 
-code {
-  font: 13px/1.5 var(--mono);
-  background: var(--bg-muted);
-  padding: 1px 6px;
-  border-radius: 5px;
-  color: var(--text-secondary);
-}
+code { font: 12.5px/1.5 var(--font-mono); background: var(--bg-muted); padding: 1px 6px; border-radius: 5px; color: var(--text-secondary); }
 
 table { border-collapse: collapse; width: 100%; margin: 18px 0; font-size: 14px; }
-th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
-th { color: var(--text-muted); font: 600 11px/1.4 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
+th { color: var(--text-muted); font: 500 10.5px/1.4 var(--font-mono); letter-spacing: .09em; text-transform: uppercase; }
 tbody tr:last-child td { border-bottom: none; }
 
-/* --- mockup shell --------------------------------------------------------- */
+/* --- mockup switcher ------------------------------------------------------ */
 .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 24px 0 18px; }
 .tab {
-  font: 500 13px/1 inherit;
-  padding: 9px 14px;
-  border-radius: 8px;
+  font: 500 13px/1 var(--font-sans);
+  padding: 9px 14px; border-radius: 8px;
   border: 1px solid var(--color-border);
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  cursor: pointer;
+  background: var(--bg-surface); color: var(--text-secondary); cursor: pointer;
 }
 .tab:hover { color: var(--text-primary); border-color: #45505c; }
 .tab[aria-selected="true"] {
-  background: var(--domain-poi-soft);
-  border-color: var(--domain-poi-locked);
-  color: var(--domain-poi);
+  background: var(--bg-elevated); border-color: var(--accent);
+  color: var(--accent); font-weight: 600; box-shadow: var(--shadow-glow-accent);
 }
-
 .screen { display: none; }
 .screen.active { display: block; }
 
-.caption {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin: 12px 2px 0;
-  max-width: 82ch;
-}
+.caption { font-size: 13px; color: var(--text-muted); margin: 12px 2px 0; max-width: 82ch; }
 .caption b { color: var(--text-secondary); font-weight: 600; }
 
-/* the fake browser/app chrome */
+/* --- app frame ------------------------------------------------------------ */
 .app {
   border: 1px solid var(--color-border);
-  border-radius: 14px;
-  overflow: hidden;
-  background: var(--bg-base);
-  box-shadow: 0 18px 46px rgba(0,0,0,.42);
+  border-radius: 14px; overflow: hidden;
+  background: var(--bg-base) var(--noise);
+  box-shadow: 0 18px 46px rgba(0,0,0,.45);
 }
-.app-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  background: var(--bg-elevated);
+.chrome {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: var(--bg-elevated);
   border-bottom: 1px solid var(--color-border);
 }
 .dots { display: flex; gap: 6px; }
 .dots i { width: 10px; height: 10px; border-radius: 50%; background: #3a434e; display: block; }
 .url {
-  font: 12px/1 var(--mono);
-  color: var(--text-muted);
-  background: var(--bg-base);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 6px 12px;
-  flex: 1;
+  font: 12px/1 var(--font-mono); color: var(--text-muted);
+  background: var(--bg-base); border: 1px solid var(--color-border);
+  border-radius: 6px; padding: 7px 12px; flex: 1;
 }
-.app-body { display: grid; grid-template-columns: 186px 1fr; min-height: 470px; }
 
-.side { border-right: 1px solid var(--color-border); padding: 14px 10px; background: var(--bg-surface); }
-.side .brand {
-  font: 700 14px/1 inherit;
-  padding: 6px 10px 16px;
-  color: var(--text-primary);
-  letter-spacing: -.01em;
+/* the product's real top navigation: sticky, h-14, blurred surface */
+.tnav {
+  height: 56px; display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 0 20px;
+  background: var(--bg-surface); border-bottom: 1px solid var(--color-border);
+  position: relative;
 }
-.nav { display: flex; flex-direction: column; gap: 2px; }
-.nav a {
+.tnav .grp { display: flex; align-items: center; gap: 3px; }
+.tnav .item {
+  position: relative; padding: 7px 12px; border-radius: 6px;
+  font: 500 13.5px/1 var(--font-sans); color: var(--text-muted); white-space: nowrap;
+}
+.tnav .item.on {
+  color: var(--accent); font-weight: 600; background: var(--bg-elevated);
+}
+.tnav .item.on::after {
+  content: ""; position: absolute; left: 8px; right: 8px; bottom: -8px;
+  height: 3px; border-radius: 999px; background: var(--accent);
+}
+.tnav .item .caret { color: var(--text-muted); font-size: 9px; margin-left: 5px; }
+.tnav .right { display: flex; align-items: center; gap: 10px; }
+.tnav .who { font: 500 12.5px/1 var(--font-mono); color: var(--text-muted); }
+.tnav .icobtn {
+  width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center;
+  color: var(--text-muted); border: 1px solid transparent; font-size: 13px;
+}
+
+/* The Logbuch dropdown — revealed on hover, so it shows where Orte lives
+   without permanently covering the page content underneath. */
+.dd-host { position: relative; display: inline-flex; }
+.dropdown {
+  position: absolute; top: 44px; left: 0; z-index: 5; min-width: 178px;
+  background: var(--bg-elevated); border: 1px solid var(--color-border);
+  border-radius: 10px; padding: 6px; box-shadow: 0 14px 32px rgba(0,0,0,.5);
+  opacity: 0; visibility: hidden; transition: opacity .12s;
+}
+.dd-host:hover .dropdown { opacity: 1; visibility: visible; }
+.dd-hint {
+  font: 500 10px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-muted); margin-left: 8px; align-self: center; white-space: nowrap;
+}
+.dropdown .d {
   display: flex; align-items: center; gap: 9px;
-  padding: 8px 10px; border-radius: 8px;
-  color: var(--text-secondary); text-decoration: none; font-size: 13.5px;
+  padding: 8px 10px; border-radius: 7px;
+  font: 500 13px/1 var(--font-sans); color: var(--text-secondary);
 }
-.nav a .ico { width: 18px; text-align: center; font-size: 14px; }
-.nav a.sel { background: var(--domain-poi-soft); color: var(--domain-poi); font-weight: 600; }
-.nav a.dim { color: var(--text-muted); }
+.dropdown .d .sw { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.dropdown .d.on { background: var(--domain-poi-soft); color: var(--domain-poi); font-weight: 600; }
 
-.main { padding: 20px; overflow: hidden; }
-.head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
-.head-row h4 { margin: 0 0 4px; font-size: 19px; letter-spacing: -.01em; }
+.page { padding: 22px 24px 26px; min-height: 430px; }
+
+.head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.head-row h4 {
+  margin: 0 0 5px; font: 600 22px/1.2 var(--font-display); letter-spacing: -.015em;
+  display: flex; align-items: center; gap: 10px;
+}
 .head-row .where { color: var(--text-muted); font-size: 13px; }
 
 .btn {
-  font: 600 13px/1 inherit; padding: 9px 14px; border-radius: 8px; cursor: pointer;
-  background: var(--domain-poi); color: #08221e; border: 1px solid transparent; white-space: nowrap;
+  font: 600 13px/1 var(--font-sans); padding: 9px 15px; border-radius: 8px; cursor: pointer;
+  background: var(--accent); color: #1a1206; border: 1px solid transparent; white-space: nowrap;
 }
 .btn.ghost { background: transparent; color: var(--text-secondary); border-color: var(--color-border); }
+.btn.poi { background: var(--domain-poi); color: #08221e; }
 
-/* mode switcher (the dashboard tab's markers/heatmap) */
 .segmented { display: inline-flex; border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
-.segmented span { padding: 7px 13px; font-size: 12.5px; color: var(--text-muted); border-right: 1px solid var(--color-border); }
+.segmented span { padding: 7px 14px; font: 500 12.5px/1 var(--font-sans); color: var(--text-muted); border-right: 1px solid var(--color-border); }
 .segmented span:last-child { border-right: none; }
-.segmented span.on { background: var(--domain-poi-soft); color: var(--domain-poi); font-weight: 600; }
+.segmented span.on { background: var(--bg-elevated); color: var(--accent); font-weight: 600; }
 
 /* --- stat tiles ----------------------------------------------------------- */
-/* Bare stat tiles: hero number in text ink, a coloured mark beside the label
-   carries identity. No hover layer (skill: a bare tile with no plot skips it). */
 .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
-.tile { background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 10px; padding: 13px 14px; }
-.tile .lab { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--text-muted); margin-bottom: 7px; }
+.tile { background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 10px; padding: 13px 15px; }
+.tile .lab { display: flex; align-items: center; gap: 7px; font: 500 11px/1.3 var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 9px; }
 .tile .lab .mk { width: 8px; height: 8px; border-radius: 2px; background: var(--domain-poi); flex: none; }
-.tile .val { font-size: 25px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
-.tile .val small { font-size: 13px; font-weight: 500; color: var(--text-muted); margin-left: 3px; }
+.tile .val { font: 700 27px/1.05 var(--font-display); letter-spacing: -.025em; }
+.tile .val small { font: 500 13px/1 var(--font-mono); color: var(--text-muted); margin-left: 4px; }
 
 /* --- map ------------------------------------------------------------------ */
 .mapwrap { position: relative; border: 1px solid var(--color-border); border-radius: 10px; overflow: hidden; background: #0a1117; }
@@ -237,156 +283,114 @@ tbody tr:last-child td { border-bottom: none; }
 .pin { cursor: pointer; }
 .pin circle.dot { stroke: #0a1117; stroke-width: 1.4; }
 .pin text {
-  font: 500 9px/1 -apple-system, "Segoe UI", sans-serif;
-  fill: var(--text-secondary);
-  paint-order: stroke;
-  stroke: #0a1117;
-  stroke-width: 2.4px;
-  stroke-linejoin: round;
+  font: 500 9px/1 Inter, sans-serif; fill: var(--text-secondary);
+  paint-order: stroke; stroke: #0a1117; stroke-width: 2.4px; stroke-linejoin: round;
 }
-/* ghost = unticked curated target. Hollow fill is the PRIMARY encoding —
-   colour alone would not clear the normal-vision floor (see §Colour findings). */
 .pin.ghost circle.dot { fill: none; stroke: var(--domain-poi); stroke-width: 1.6; stroke-dasharray: 2.5 2; }
 .pin.ghost text { fill: var(--text-muted); }
-
 .pin .tip { opacity: 0; pointer-events: none; transition: opacity .12s; }
 .pin:hover .tip { opacity: 1; }
 .tip rect { fill: #0f151c; stroke: var(--color-border); }
-.tip text { font: 10px/1 var(--mono); fill: var(--text-primary); stroke: none; }
+.tip text { font: 10px/1 "IBM Plex Mono", monospace; fill: var(--text-primary); stroke: none; }
 .tip text.d { fill: var(--text-muted); }
 
 .legend {
   position: absolute; left: 12px; bottom: 12px;
-  background: rgba(13,17,23,.92);
-  border: 1px solid var(--color-border);
-  border-radius: 9px; padding: 10px 12px; font-size: 11.5px;
-  backdrop-filter: blur(6px);
+  background: rgba(13,17,23,.92); border: 1px solid var(--color-border);
+  border-radius: 9px; padding: 11px 13px; font-size: 11.5px; backdrop-filter: blur(6px);
 }
-.legend .lt { color: var(--text-muted); font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px; }
-.legend ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.legend .lt { color: var(--text-muted); font: 500 10px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 9px; }
+.legend ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .legend li { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); }
 .legend .sw { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .legend .sw.hollow { background: none; border: 1.5px dashed var(--domain-poi); }
 
-/* --- lists / rows --------------------------------------------------------- */
+/* --- rows ----------------------------------------------------------------- */
 .rows { border: 1px solid var(--color-border); border-radius: 10px; overflow: hidden; }
-.row {
-  display: grid; align-items: center; gap: 12px;
-  padding: 11px 14px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--bg-surface);
-  font-size: 13.5px;
-}
+.row { display: grid; align-items: center; gap: 12px; padding: 11px 15px; border-bottom: 1px solid var(--color-border); background: var(--bg-surface); font-size: 13.5px; }
 .row:last-child { border-bottom: none; }
-.row.hd { background: var(--bg-elevated); color: var(--text-muted); font: 600 10.5px/1.4 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
-.row.hd .srt::after { content: " ↑"; color: var(--domain-poi); }
-.row .nm { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.row.hd { background: var(--bg-elevated); color: var(--text-muted); font: 500 10.5px/1.4 var(--font-mono); letter-spacing: .09em; text-transform: uppercase; }
+.row.hd .srt::after { content: " ↑"; color: var(--accent); }
+.row .nm { font-weight: 600; display: flex; align-items: center; gap: 9px; }
 .row .mut { color: var(--text-muted); font-size: 12.5px; }
+.row .num { font-family: var(--font-mono); font-size: 12.5px; }
 .row.ghosted { background: repeating-linear-gradient(135deg, var(--bg-surface) 0 6px, #131922 6px 12px); }
 .row.ghosted .nm { color: var(--text-muted); font-weight: 500; }
 
-.catico {
-  width: 22px; height: 22px; border-radius: 6px; flex: none;
-  display: grid; place-items: center; font-size: 12px;
-  background: var(--domain-poi-soft); border: 1px solid var(--domain-poi-locked);
-}
+.catico { width: 23px; height: 23px; border-radius: 6px; flex: none; display: grid; place-items: center; font-size: 12px; background: var(--domain-poi-soft); border: 1px solid var(--domain-poi-locked); }
 
-.badge { font: 600 10.5px/1 var(--mono); padding: 4px 7px; border-radius: 5px; border: 1px solid var(--color-border); color: var(--text-muted); white-space: nowrap; }
+.badge { font: 500 10.5px/1 var(--font-mono); padding: 5px 8px; border-radius: 5px; border: 1px solid var(--color-border); color: var(--text-muted); white-space: nowrap; }
 .badge.ok { color: var(--success); border-color: rgba(63,185,80,.35); background: rgba(63,185,80,.08); }
 .badge.wish { color: var(--text-muted); border-style: dashed; }
 .badge.soon { color: var(--warning); border-color: rgba(210,153,34,.35); background: rgba(210,153,34,.08); }
+.badge.beta { color: var(--accent); border-color: rgba(240,169,71,.3); background: var(--accent-soft); }
 
-/* filter bar — the shared one from e2cafa09 */
 .filters { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-.fld {
-  background: var(--bg-surface); border: 1px solid var(--color-border);
-  border-radius: 8px; padding: 8px 11px; font-size: 13px; color: var(--text-secondary);
-  display: flex; align-items: center; gap: 7px;
-}
+.fld { background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 9px 12px; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 7px; }
 .fld.grow { flex: 1; min-width: 150px; color: var(--text-muted); }
 .fld .cv { color: var(--text-primary); font-weight: 600; }
 
 /* --- progress meter ------------------------------------------------------- */
-/* Single hue, value stated in text beside it — never colour-alone. */
-.prog { display: flex; align-items: center; gap: 14px; }
-.prog .track { flex: 1; height: 8px; border-radius: 999px; background: var(--bg-muted); overflow: hidden; display: flex; gap: 2px; }
+.prog { display: flex; align-items: center; gap: 15px; }
+.prog .track { flex: 1; height: 8px; display: flex; gap: 3px; }
 .prog .track i { display: block; height: 100%; background: var(--domain-poi); border-radius: 2px; flex: 1; }
 .prog .track i.off { background: #262d36; }
-.prog .n { font: 700 15px/1 var(--mono); white-space: nowrap; }
-.prog .n small { color: var(--text-muted); font-weight: 500; }
+.prog .n { font: 700 17px/1 var(--font-display); white-space: nowrap; letter-spacing: -.02em; }
+.prog .n small { color: var(--text-muted); font: 500 13px/1 var(--font-mono); }
 
 /* --- timeline ------------------------------------------------------------- */
 .tl { position: relative; padding-left: 26px; }
 .tl::before { content: ""; position: absolute; left: 7px; top: 6px; bottom: 6px; width: 2px; background: var(--color-border); }
-.tl .day { font: 600 11px/1 var(--mono); color: var(--text-muted); letter-spacing: .08em; margin: 18px 0 10px; }
+.tl .day { font: 500 11px/1 var(--font-mono); color: var(--text-muted); letter-spacing: .12em; margin: 20px 0 10px; }
 .tl .day:first-child { margin-top: 0; }
-.tl .ev { position: relative; margin-bottom: 8px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 9px; padding: 10px 13px; }
-.tl .ev::before {
-  content: ""; position: absolute; left: -23px; top: 15px;
-  width: 10px; height: 10px; border-radius: 50%;
-  background: var(--k); border: 2px solid var(--bg-base);
-}
-.tl .ev .t { font: 600 11px/1 var(--mono); color: var(--text-muted); }
-.tl .ev .ti { font-weight: 600; margin-top: 3px; display: flex; align-items: center; gap: 8px; }
-.tl .ev .kind { font: 600 9.5px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--k); }
+.tl .ev { position: relative; margin-bottom: 8px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 9px; padding: 11px 14px; }
+.tl .ev::before { content: ""; position: absolute; left: -23px; top: 16px; width: 10px; height: 10px; border-radius: 50%; background: var(--k); border: 2px solid var(--bg-base); }
+.tl .ev .t { font: 500 11px/1 var(--font-mono); color: var(--text-muted); }
+.tl .ev .ti { font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 9px; }
+.tl .ev .kind { font: 500 9.5px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--k); }
 
 /* --- picker --------------------------------------------------------------- */
 .sug { border: 1px solid var(--color-border); border-radius: 10px; overflow: hidden; background: var(--bg-elevated); }
-.sug .s {
-  padding: 10px 13px; border-bottom: 1px solid var(--color-border);
-  display: flex; align-items: center; gap: 10px; font-size: 13.5px;
-}
+.sug .s { padding: 11px 14px; border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 11px; font-size: 13.5px; }
 .sug .s:last-child { border-bottom: none; }
 .sug .s.hl { background: var(--domain-poi-soft); }
 .sug .s .a { color: var(--text-muted); font-size: 12px; }
 
 .photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.ph {
-  aspect-ratio: 4/3; border-radius: 8px; border: 1px solid var(--color-border);
-  background: linear-gradient(135deg, #1d2731, #172029);
-  display: grid; place-items: center; color: #3d4a57; font-size: 22px;
-}
+.ph { aspect-ratio: 4/3; border-radius: 8px; border: 1px solid var(--color-border); background: linear-gradient(135deg, #1d2731, #172029); display: grid; place-items: center; color: #3d4a57; font-size: 22px; }
 .ph.add { border-style: dashed; color: var(--text-muted); font-size: 13px; cursor: pointer; }
 
 .two { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; }
-.stack { display: flex; flex-direction: column; gap: 14px; }
-.kv { display: grid; grid-template-columns: auto 1fr; gap: 7px 14px; font-size: 13px; }
+.stack { display: flex; flex-direction: column; gap: 15px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 15px; font-size: 13px; margin: 0; }
 .kv dt { color: var(--text-muted); }
 .kv dd { margin: 0; }
 
 .pillrow { display: flex; gap: 6px; flex-wrap: wrap; }
-.pill { font-size: 12px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--color-border); display: flex; align-items: center; gap: 6px; }
+.pill { font-size: 12px; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--color-border); display: flex; align-items: center; gap: 7px; }
 .pill .sw { width: 8px; height: 8px; border-radius: 50%; }
 
 .mini { font-size: 12.5px; color: var(--text-muted); }
-.sec-title { font: 600 10.5px/1 var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+.sec-title { font: 500 10.5px/1 var(--font-mono); letter-spacing: .11em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 11px; }
 
 .phases { display: grid; gap: 10px; }
-.phase { display: grid; grid-template-columns: 84px 1fr; gap: 16px; padding: 14px 16px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--bg-surface); }
-.phase .p { font: 700 13px/1.3 var(--mono); color: var(--domain-poi); }
-.phase .p small { display: block; color: var(--text-muted); font-weight: 500; margin-top: 4px; font-size: 11px; }
-.phase h5 { margin: 0 0 5px; font-size: 14px; }
+.phase { display: grid; grid-template-columns: 88px 1fr; gap: 18px; padding: 15px 18px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--bg-surface); }
+.phase .p { font: 700 15px/1.3 var(--font-display); color: var(--domain-poi); letter-spacing: -.01em; }
+.phase .p small { display: block; color: var(--text-muted); font: 500 11px/1.4 var(--font-mono); margin-top: 5px; letter-spacing: .04em; }
+.phase h5 { margin: 0 0 5px; font: 600 15px/1.3 var(--font-display); }
 .phase p { margin: 0; font-size: 13px; color: var(--text-secondary); }
 
-pre.val {
-  font: 12px/1.65 var(--mono);
-  background: var(--bg-base);
-  border: 1px solid var(--color-border);
-  border-radius: 9px;
-  padding: 14px 16px;
-  overflow-x: auto;
-  color: var(--text-secondary);
-  margin: 14px 0;
-}
+pre.val { font: 12px/1.7 var(--font-mono); background: var(--bg-base); border: 1px solid var(--color-border); border-radius: 9px; padding: 15px 17px; overflow-x: auto; color: var(--text-secondary); margin: 14px 0; }
 pre.val .f { color: var(--danger); }
 pre.val .w { color: var(--warning); }
 pre.val .p { color: var(--success); }
 
-@media (max-width: 900px) {
+.foot { margin-top: 46px; padding-top: 22px; border-top: 1px solid var(--color-border); display: flex; align-items: center; gap: 14px; justify-content: space-between; flex-wrap: wrap; }
+
+@media (max-width: 940px) {
   .tiles { grid-template-columns: repeat(2, 1fr); }
   .two { grid-template-columns: 1fr; }
-  .app-body { grid-template-columns: 1fr; }
-  .side { display: none; }
+  .tnav .grp.center { display: none; }
 }
 </style>
 </head>
@@ -394,6 +398,26 @@ pre.val .p { color: var(--success); }
 <div class="wrap">
 
 <header class="masthead">
+  <div class="lockup">
+    <!-- LogoMark — luggage-tag outline with TS monogram (Brand/Logo.tsx, locked 2026-04-18) -->
+    <svg viewBox="0 0 120 140" width="30" height="35" role="img" aria-label="TravStats">
+      <path d="M 28 36 L 60 10 L 92 36 L 92 126 Q 92 132 86 132 L 34 132 Q 28 132 28 126 Z"
+            fill="none" stroke="var(--accent)" stroke-width="4" stroke-linejoin="round"/>
+      <circle cx="60" cy="28" r="5" fill="none" stroke="var(--accent)" stroke-width="3"/>
+      <path d="M 38 52 L 82 52 M 38 62 L 82 62" stroke="var(--accent)" stroke-width="1.5" stroke-opacity="0.5"/>
+      <text x="60" y="96" text-anchor="middle" font-family="Inter, sans-serif" font-size="32"
+            font-weight="700" fill="var(--accent)" letter-spacing="-1">TS</text>
+    </svg>
+    <span class="wordmark" style="font-size:19px">
+      <span>TRAV</span>
+      <svg width="10" height="10" viewBox="0 0 20 20" aria-hidden="true">
+        <line x1="10" y1="3" x2="10" y2="17" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/>
+        <line x1="3" y1="10" x2="17" y2="10" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span>STATS</span>
+    </span>
+  </div>
+
   <div class="eyebrow">Design Plan · Domain 4 of 4</div>
   <h1>POI Domain — Places, Lists &amp; Checklists</h1>
   <p class="lede">
@@ -403,7 +427,7 @@ pre.val .p { color: var(--success); }
   </p>
   <div class="meta">
     <span class="chip">2026-08-23</span>
-    <span class="chip on">domain key <code style="background:none;padding:0;color:inherit">poi</code></span>
+    <span class="chip on">domain key · poi</span>
     <span class="chip">closes #177</span>
     <span class="chip">spec: 2026-08-23-poi-domain-design.md</span>
     <span class="chip">status: awaiting 3 decisions</span>
@@ -411,10 +435,12 @@ pre.val .p { color: var(--success); }
 </header>
 
 <div class="note">
-  <strong>Language split in this document.</strong> Annotations and structure are English
-  per the repo policy; every string <em>inside</em> a mockup is German, because that is
-  user-facing copy. The English mirror ships in the same change — that is the i18n rule,
-  shown rather than described.
+  <strong>Two conventions this page follows.</strong> Annotations and structure are English per
+  the repo policy; every string <em>inside</em> a mockup is German, because that is user-facing
+  copy — the English mirror ships in the same change. And the chrome is the product's real one:
+  Syne for display, Inter for text, IBM Plex Mono for data, the luggage-tag mark, the amber
+  accent. <strong>Teal is the POI domain colour and appears only on domain surfaces</strong> —
+  pins, legends, badges — never on app chrome. That separation is itself part of the design.
 </div>
 
 <!-- ===================================================================== -->
@@ -431,8 +457,8 @@ pre.val .p { color: var(--success); }
 </div>
 
 <p style="margin-top:20px">
-  Today a POI is a <code>TripStop</code> with <code>domain: "poi"</code> — it exists only
-  as an attachment to a trip. Two ways forward:
+  Today a POI is a <code>TripStop</code> with <code>domain: "poi"</code> — it exists only as an
+  attachment to a trip. Two ways forward:
 </p>
 
 <table>
@@ -441,9 +467,9 @@ pre.val .p { color: var(--success); }
     <tr>
       <td><b>(a)</b> Draw trip stops on the global map</td>
       <td>~2 days</td>
-      <td>A place only exists if it has a trip, so “every McDonald’s worldwide” is
-          inexpressible. The same restaurant on two trips is two unrelated rows that
-          no count can reconcile. <b style="color:var(--danger)">Dead end.</b></td>
+      <td>A place only exists if it has a trip, so “every McDonald’s worldwide” is inexpressible.
+          The same restaurant on two trips is two unrelated rows that no count can reconcile.
+          <b style="color:var(--danger)">Dead end.</b></td>
     </tr>
     <tr>
       <td><b>(b)</b> Promote the place; the trip becomes a <em>view</em> of it</td>
@@ -456,12 +482,12 @@ pre.val .p { color: var(--success); }
 </table>
 
 <div class="note">
-  Option (a) is not a cheaper version of (b). It is a detour that has to be undone —
-  building the brief later means doing (b) anyway, on top of more data.
+  Option (a) is not a cheaper version of (b). It is a detour that has to be undone — building the
+  brief later means doing (b) anyway, on top of more data.
 </div>
 
 <h3>The model, in one line each</h3>
-<div class="panel" style="font:13.5px/1.8 var(--mono);color:var(--text-secondary);overflow-x:auto">
+<div class="panel" style="font:13px/1.9 var(--font-mono);color:var(--text-secondary);overflow-x:auto">
 <div><span style="color:var(--domain-lodging)">Lodging</span>  ──&lt; <span style="color:var(--domain-lodging)">LodgingStay</span> &gt;──  Trip        <span style="color:var(--text-muted)">// shipped, reviewed, understood</span></div>
 <div><span style="color:var(--domain-poi)">Place</span>    ──&lt; <span style="color:var(--domain-poi)">PlaceVisit</span>  &gt;──  Trip        <span style="color:var(--text-muted)">// this plan, mirrored 1:1</span></div>
 <div style="margin-top:14px"><span style="color:var(--domain-poi)">Place</span> &gt;──&lt; <span style="color:var(--domain-poi)">PlaceList</span>                        <span style="color:var(--text-muted)">// your own lists — many-to-many</span></div>
@@ -481,17 +507,15 @@ pre.val .p { color: var(--success); }
 <div class="note warn">
   <strong><code>Place.visited</code> defaults to <code>false</code></strong> — deliberately the
   opposite of <code>Lodging.visited</code>. Lodging chose <code>true</code> because every row
-  predating the column was a real stay. Here the dominant creation path is <em>adding a target
-  to a list</em>, and a wishlist entry silently counted as visited would inflate the headline
-  number on day one. Counts follow the shipped rule: from data and dates, never a status
-  string — a visit dated next month is not a visit.
+  predating the column was a real stay. Here the dominant creation path is <em>adding a target to
+  a list</em>, and a wishlist entry silently counted as visited would inflate the headline number
+  on day one. Counts follow the shipped rule: from data and dates, never a status string — a visit
+  dated next month is not a visit.
 </div>
 
 <!-- ===================================================================== -->
 <h2><span class="num">02</span>UI mockups</h2>
-<p class="sub">
-  Six screens, in the app’s own tokens. Switch between them:
-</p>
+<p class="sub">Six screens, drawn in the product's own chrome. Switch between them:</p>
 
 <div class="tabs" role="tablist">
   <button class="tab" role="tab" aria-selected="true"  data-s="m1">1 · Dashboard POI-Tab</button>
@@ -502,254 +526,247 @@ pre.val .p { color: var(--success); }
   <button class="tab" role="tab" aria-selected="false" data-s="m6">6 · Reise-Timeline</button>
 </div>
 
-<!-- ---------------- M1 : dashboard poi tab ---------------- -->
+<!-- ---------------- M1 ---------------- -->
 <section class="screen active" id="m1">
 <div class="app">
-  <div class="app-bar">
-    <div class="dots"><i></i><i></i><i></i></div>
-    <div class="url">travstats.local / dashboard/poi?mode=markers</div>
+  <div class="chrome"><div class="dots"><i></i><i></i><i></i></div>
+    <div class="url">travstats.local / dashboard/poi?mode=markers</div></div>
+
+  <div class="tnav">
+    <div class="grp">
+      <svg viewBox="0 0 120 140" width="22" height="26" aria-hidden="true">
+        <path d="M 28 36 L 60 10 L 92 36 L 92 126 Q 92 132 86 132 L 34 132 Q 28 132 28 126 Z" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linejoin="round"/>
+        <circle cx="60" cy="28" r="5" fill="none" stroke="var(--accent)" stroke-width="3"/>
+        <path d="M 38 52 L 82 52 M 38 62 L 82 62" stroke="var(--accent)" stroke-width="1.5" stroke-opacity="0.5"/>
+        <text x="60" y="96" text-anchor="middle" font-family="Inter, sans-serif" font-size="32" font-weight="700" fill="var(--accent)" letter-spacing="-1">TS</text>
+      </svg>
+      <span class="wordmark" style="font-size:14px;margin-left:2px">
+        <span>TRAV</span>
+        <svg width="7" height="7" viewBox="0 0 20 20" aria-hidden="true"><line x1="10" y1="3" x2="10" y2="17" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/><line x1="3" y1="10" x2="17" y2="10" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/></svg>
+        <span>STATS</span>
+      </span>
+    </div>
+    <div class="grp center">
+      <span class="item">Dashboard</span>
+      <span class="dd-host">
+        <span class="item on">Logbuch<span class="caret">▼</span></span>
+        <div class="dropdown">
+          <div class="d"><span class="sw" style="background:var(--domain-flight)"></span>Flüge</div>
+          <div class="d"><span class="sw" style="background:var(--domain-cruise)"></span>Kreuzfahrten</div>
+          <div class="d"><span class="sw" style="background:var(--domain-lodging)"></span>Unterkünfte</div>
+          <div class="d on"><span class="sw" style="background:var(--domain-poi)"></span>Orte</div>
+        </div>
+      </span>
+      <span class="item">Reisen</span>
+      <span class="item">Statistiken</span>
+      <span class="item">Erfolge</span>
+      <span class="dd-hint">← hover</span>
+    </div>
+    <div class="right">
+      <span class="icobtn">🐞</span>
+      <span class="item" style="padding:7px 10px">System<span class="caret">▼</span></span>
+      <span class="who">dennis</span>
+    </div>
   </div>
-  <div class="app-body">
-    <aside class="side">
-      <div class="brand">TravStats</div>
-      <nav class="nav">
-        <a href="#m1"><span class="ico">▦</span>Dashboard</a>
-        <a href="#m1" class="dim"><span class="ico">✈</span>Flüge</a>
-        <a href="#m1" class="dim"><span class="ico">🚢</span>Kreuzfahrten</a>
-        <a href="#m1" class="dim"><span class="ico">🏨</span>Unterkünfte</a>
-        <a href="#m1" class="sel"><span class="ico">📍</span>Orte</a>
-        <a href="#m1" class="dim"><span class="ico">🧳</span>Reisen</a>
-        <a href="#m1" class="dim"><span class="ico">🏆</span>Erfolge</a>
-      </nav>
-    </aside>
-    <div class="main">
-      <div class="head-row">
-        <div>
-          <h4>Orte</h4>
-          <div class="where">Alle · Flüge · Kreuzfahrten · <b style="color:var(--domain-poi)">Orte</b> · Unterkünfte</div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <div class="segmented"><span class="on">Marker</span><span>Heatmap</span></div>
-          <button class="btn">+ Ort</button>
-        </div>
+
+  <div class="page">
+    <div class="head-row">
+      <div>
+        <h4>Orte</h4>
+        <div class="where">Alle · Flüge · Kreuzfahrten · <b style="color:var(--domain-poi)">Orte</b> · Unterkünfte</div>
       </div>
-
-      <div class="tiles">
-        <div class="tile">
-          <div class="lab"><span class="mk"></span>Orte besucht</div>
-          <div class="val">128</div>
-        </div>
-        <div class="tile">
-          <div class="lab"><span class="mk"></span>Länder mit Ort</div>
-          <div class="val">31</div>
-        </div>
-        <div class="tile">
-          <div class="lab"><span class="mk"></span>Listen</div>
-          <div class="val">4</div>
-        </div>
-        <div class="tile">
-          <div class="lab"><span class="mk"></span>Weltwunder</div>
-          <div class="val">4<small>/ 7</small></div>
-        </div>
+      <div style="display:flex;gap:9px;align-items:center">
+        <div class="segmented"><span class="on">Marker</span><span>Heatmap</span></div>
+        <button class="btn poi">+ Ort</button>
       </div>
+    </div>
 
-      <div class="mapwrap">
-        <svg viewBox="0 0 800 372" role="img" aria-label="Weltkarte mit besuchten Orten">
-          <rect width="800" height="372" fill="#0a1117"/>
-          <g class="grat">
-            <line x1="0" y1="93" x2="800" y2="93"/><line x1="0" y1="186" x2="800" y2="186"/><line x1="0" y1="279" x2="800" y2="279"/>
-            <line x1="200" y1="0" x2="200" y2="372"/><line x1="400" y1="0" x2="400" y2="372"/><line x1="600" y1="0" x2="600" y2="372"/>
-          </g>
-          <!-- schematic landmasses: a mockup backdrop, not cartography -->
-          <g class="land">
-            <path d="M96 78 L168 56 L246 62 L262 92 L232 118 L238 150 L208 166 L186 148 L160 152 L138 126 L104 110 Z"/>
-            <path d="M186 148 L214 152 L228 176 L212 186 L190 178 Z"/>
-            <path d="M292 44 L340 38 L352 62 L322 76 L296 66 Z"/>
-            <path d="M236 196 L272 186 L296 202 L306 240 L292 288 L268 316 L250 302 L252 258 L234 226 Z"/>
-            <path d="M378 74 L432 62 L462 74 L452 98 L420 108 L392 100 Z"/>
-            <path d="M372 140 L418 130 L458 140 L472 178 L458 226 L432 268 L406 288 L390 262 L382 216 L368 178 Z"/>
-            <path d="M462 74 L534 58 L620 54 L698 66 L724 92 L688 118 L636 122 L596 140 L556 132 L520 142 L486 124 L466 100 Z"/>
-            <path d="M556 132 L586 138 L596 168 L578 182 L560 164 Z"/>
-            <path d="M646 236 L700 228 L730 246 L722 280 L678 290 L648 268 Z"/>
-          </g>
+    <div class="tiles">
+      <div class="tile"><div class="lab"><span class="mk"></span>Orte besucht</div><div class="val">128</div></div>
+      <div class="tile"><div class="lab"><span class="mk"></span>Länder mit Ort</div><div class="val">31</div></div>
+      <div class="tile"><div class="lab"><span class="mk"></span>Listen</div><div class="val">4</div></div>
+      <div class="tile"><div class="lab"><span class="mk"></span>Weltwunder</div><div class="val">4<small>/ 7</small></div></div>
+    </div>
 
-          <!-- ==== visited places (filled teal dots + selective labels) ==== -->
-          <g class="pin">
-            <circle class="dot" cx="706" cy="121" r="4.5" fill="#5ec2b2"/>
-            <text x="706" y="137" text-anchor="middle">McDonald’s Shibuya</text>
-            <g class="tip" transform="translate(600,144)">
-              <rect x="0" y="0" width="184" height="46" rx="6"/>
-              <text x="10" y="17">McDonald’s Shibuya</text>
-              <text class="d" x="10" y="31">Tokio, JP · Restaurant</text>
-              <text class="d" x="10" y="41">2 Besuche · Liste: Maccis weltweit</text>
-            </g>
-          </g>
-          <g class="pin">
-            <circle class="dot" cx="428" cy="107" r="4.5" fill="#5ec2b2"/>
-            <text x="428" y="98" text-anchor="middle">Kolosseum</text>
-            <g class="tip" transform="translate(336,114)">
-              <rect x="0" y="0" width="184" height="46" rx="6"/>
-              <text x="10" y="17">Kolosseum</text>
-              <text class="d" x="10" y="31">Rom, IT · Wahrzeichen</text>
-              <text class="d" x="10" y="41">1 Besuch · Neue 7 Weltwunder ✓</text>
-            </g>
-          </g>
-          <g class="pin">
-            <circle class="dot" cx="452" cy="120" r="4.5" fill="#5ec2b2"/>
-          </g>
-          <g class="pin">
-            <circle class="dot" cx="659" cy="110" r="4.5" fill="#5ec2b2"/>
-            <text x="659" y="101" text-anchor="middle">Chinesische Mauer</text>
-          </g>
-          <g class="pin">
-            <circle class="dot" cx="573" cy="140" r="4.5" fill="#5ec2b2"/>
-            <text x="573" y="131" text-anchor="middle">Taj Mahal</text>
-          </g>
-          <g class="pin">
-            <circle class="dot" cx="203" cy="154" r="4.5" fill="#5ec2b2"/>
-            <text x="203" y="145" text-anchor="middle">Chichén Itzá</text>
-          </g>
-          <g class="pin"><circle class="dot" cx="176" cy="122" r="4.5" fill="#5ec2b2"/></g>
-          <g class="pin"><circle class="dot" cx="398" cy="86"  r="4.5" fill="#5ec2b2"/></g>
-          <g class="pin"><circle class="dot" cx="410" cy="124" r="4.5" fill="#5ec2b2"/></g>
-          <g class="pin"><circle class="dot" cx="612" cy="100" r="4.5" fill="#5ec2b2"/></g>
-          <g class="pin"><circle class="dot" cx="712" cy="258" r="4.5" fill="#5ec2b2"/></g>
+    <div class="mapwrap">
+      <svg viewBox="0 0 800 360" role="img" aria-label="Weltkarte mit besuchten Orten">
+        <rect width="800" height="360" fill="#0a1117"/>
+        <g class="grat">
+          <line x1="0" y1="90" x2="800" y2="90"/><line x1="0" y1="180" x2="800" y2="180"/><line x1="0" y1="270" x2="800" y2="270"/>
+          <line x1="200" y1="0" x2="200" y2="360"/><line x1="400" y1="0" x2="400" y2="360"/><line x1="600" y1="0" x2="600" y2="360"/>
+        </g>
+        <g class="land">
+          <path d="M96 78 L168 56 L246 62 L262 92 L232 118 L238 150 L208 166 L186 148 L160 152 L138 126 L104 110 Z"/>
+          <path d="M186 148 L214 152 L228 176 L212 186 L190 178 Z"/>
+          <path d="M292 44 L340 38 L352 62 L322 76 L296 66 Z"/>
+          <path d="M236 196 L272 186 L296 202 L306 240 L292 288 L268 316 L250 302 L252 258 L234 226 Z"/>
+          <path d="M378 74 L432 62 L462 74 L452 98 L420 108 L392 100 Z"/>
+          <path d="M372 140 L418 130 L458 140 L472 178 L458 226 L432 268 L406 288 L390 262 L382 216 L368 178 Z"/>
+          <path d="M462 74 L534 58 L620 54 L698 66 L724 92 L688 118 L636 122 L596 140 L556 132 L520 142 L486 124 L466 100 Z"/>
+          <path d="M556 132 L586 138 L596 168 L578 182 L560 164 Z"/>
+          <path d="M646 236 L700 228 L730 246 L722 280 L678 290 L648 268 Z"/>
+        </g>
 
-          <!-- ==== ghost = unticked checklist target ==== -->
-          <g class="pin ghost">
-            <circle class="dot" cx="239" cy="229" r="4.5"/>
-            <text x="239" y="220" text-anchor="middle">Machu Picchu</text>
-            <g class="tip" transform="translate(150,236)">
-              <rect x="0" y="0" width="184" height="36" rx="6"/>
-              <text x="10" y="17">Machu Picchu</text>
-              <text class="d" x="10" y="29">Noch nicht abgehakt · PE</text>
-            </g>
+        <g class="pin">
+          <circle class="dot" cx="706" cy="121" r="4.5" fill="#5ec2b2"/>
+          <text x="706" y="137" text-anchor="middle">McDonald’s Shibuya</text>
+          <g class="tip" transform="translate(600,144)">
+            <rect x="0" y="0" width="184" height="46" rx="6"/>
+            <text x="10" y="17">McDonald’s Shibuya</text>
+            <text class="d" x="10" y="31">Tokio, JP · Restaurant</text>
+            <text class="d" x="10" y="41">2 Besuche · Liste: Maccis weltweit</text>
           </g>
-          <g class="pin ghost">
-            <circle class="dot" cx="304" cy="251" r="4.5"/>
-            <text x="304" y="242" text-anchor="middle">Christus-Statue</text>
+        </g>
+        <g class="pin">
+          <circle class="dot" cx="428" cy="107" r="4.5" fill="#5ec2b2"/>
+          <text x="428" y="98" text-anchor="middle">Kolosseum</text>
+          <g class="tip" transform="translate(336,114)">
+            <rect x="0" y="0" width="184" height="46" rx="6"/>
+            <text x="10" y="17">Kolosseum</text>
+            <text class="d" x="10" y="31">Rom, IT · Wahrzeichen</text>
+            <text class="d" x="10" y="41">1 Besuch · Neue 7 Weltwunder ✓</text>
           </g>
-          <g class="pin ghost">
-            <circle class="dot" cx="479" cy="133" r="4.5"/>
-            <text x="479" y="124" text-anchor="middle">Petra</text>
-          </g>
-        </svg>
+        </g>
+        <g class="pin"><circle class="dot" cx="452" cy="120" r="4.5" fill="#5ec2b2"/></g>
+        <g class="pin">
+          <circle class="dot" cx="659" cy="110" r="4.5" fill="#5ec2b2"/>
+          <text x="659" y="101" text-anchor="middle">Chinesische Mauer</text>
+        </g>
+        <g class="pin">
+          <circle class="dot" cx="573" cy="140" r="4.5" fill="#5ec2b2"/>
+          <text x="573" y="131" text-anchor="middle">Taj Mahal</text>
+        </g>
+        <g class="pin">
+          <circle class="dot" cx="203" cy="154" r="4.5" fill="#5ec2b2"/>
+          <text x="203" y="145" text-anchor="middle">Chichén Itzá</text>
+        </g>
+        <g class="pin"><circle class="dot" cx="176" cy="122" r="4.5" fill="#5ec2b2"/></g>
+        <g class="pin"><circle class="dot" cx="398" cy="86"  r="4.5" fill="#5ec2b2"/></g>
+        <g class="pin"><circle class="dot" cx="410" cy="124" r="4.5" fill="#5ec2b2"/></g>
+        <g class="pin"><circle class="dot" cx="612" cy="100" r="4.5" fill="#5ec2b2"/></g>
+        <g class="pin"><circle class="dot" cx="712" cy="258" r="4.5" fill="#5ec2b2"/></g>
 
-        <div class="legend">
-          <div class="lt">Ansicht: Besucht</div>
-          <ul>
-            <li><span class="sw" style="background:var(--domain-poi)"></span>Besucht <span style="color:var(--text-muted)">· 128</span></li>
-            <li><span class="sw hollow"></span>Offenes Ziel <span style="color:var(--text-muted)">· 3</span></li>
-          </ul>
-        </div>
+        <g class="pin ghost">
+          <circle class="dot" cx="239" cy="229" r="4.5"/>
+          <text x="239" y="220" text-anchor="middle">Machu Picchu</text>
+          <g class="tip" transform="translate(150,236)">
+            <rect x="0" y="0" width="184" height="36" rx="6"/>
+            <text x="10" y="17">Machu Picchu</text>
+            <text class="d" x="10" y="29">Noch nicht abgehakt · PE</text>
+          </g>
+        </g>
+        <g class="pin ghost">
+          <circle class="dot" cx="304" cy="251" r="4.5"/>
+          <text x="304" y="242" text-anchor="middle">Christus-Statue</text>
+        </g>
+        <g class="pin ghost">
+          <circle class="dot" cx="479" cy="133" r="4.5"/>
+          <text x="479" y="124" text-anchor="middle">Petra</text>
+        </g>
+      </svg>
+
+      <div class="legend">
+        <div class="lt">Ansicht: Besucht</div>
+        <ul>
+          <li><span class="sw" style="background:var(--domain-poi)"></span>Besucht <span style="color:var(--text-muted)">· 128</span></li>
+          <li><span class="sw hollow"></span>Offenes Ziel <span style="color:var(--text-muted)">· 3</span></li>
+        </ul>
       </div>
     </div>
   </div>
 </div>
 <p class="caption">
-  <b>What is already built:</b> the tab and its two modes (<code>markers</code>, <code>heatmap</code>)
-  are <em>already registered</em> in <code>types/dashboard.ts</code> — the stub left them behind, so
-  no change is needed there. <b>Hover a pin</b> to see the tooltip contract.
-  Unticked checklist targets are <b>hollow and dashed</b>, never merely a paler teal — §04 shows why
-  that is a measurement, not a preference.
+  <b>Where POI lives in the nav:</b> under <em>Logbuch</em>, beside the other three domains —
+  <b>hover “Logbuch”</b> to open the dropdown. The nav's active state is <b>amber</b>, the brand
+  accent; teal only starts at the domain content. <b>Already built:</b> the tab and its two modes
+  (<code>markers</code>, <code>heatmap</code>) are already registered in
+  <code>types/dashboard.ts</code>. <b>Hover a pin</b> for the tooltip contract. Unticked targets
+  are <b>hollow and dashed</b>, never a paler teal — §04 shows why that is a measurement.
 </p>
 </section>
 
-<!-- ---------------- M2 : place picker ---------------- -->
+<!-- ---------------- M2 ---------------- -->
 <section class="screen" id="m2">
 <div class="app">
-  <div class="app-bar">
-    <div class="dots"><i></i><i></i><i></i></div>
-    <div class="url">travstats.local / places/new</div>
+  <div class="chrome"><div class="dots"><i></i><i></i><i></i></div>
+    <div class="url">travstats.local / places/new</div></div>
+  <div class="tnav">
+    <div class="grp">
+      <svg viewBox="0 0 120 140" width="22" height="26" aria-hidden="true">
+        <path d="M 28 36 L 60 10 L 92 36 L 92 126 Q 92 132 86 132 L 34 132 Q 28 132 28 126 Z" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linejoin="round"/>
+        <circle cx="60" cy="28" r="5" fill="none" stroke="var(--accent)" stroke-width="3"/>
+        <text x="60" y="96" text-anchor="middle" font-family="Inter, sans-serif" font-size="32" font-weight="700" fill="var(--accent)" letter-spacing="-1">TS</text>
+      </svg>
+      <span class="wordmark" style="font-size:14px;margin-left:2px"><span>TRAV</span><svg width="7" height="7" viewBox="0 0 20 20"><line x1="10" y1="3" x2="10" y2="17" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/><line x1="3" y1="10" x2="17" y2="10" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/></svg><span>STATS</span></span>
+    </div>
+    <div class="grp center">
+      <span class="item">Dashboard</span><span class="item on">Logbuch<span class="caret">▼</span></span>
+      <span class="item">Reisen</span><span class="item">Statistiken</span><span class="item">Erfolge</span>
+    </div>
+    <div class="right"><span class="icobtn">🐞</span><span class="item" style="padding:7px 10px">System<span class="caret">▼</span></span><span class="who">dennis</span></div>
   </div>
-  <div class="app-body">
-    <aside class="side">
-      <div class="brand">TravStats</div>
-      <nav class="nav">
-        <a href="#m2" class="dim"><span class="ico">▦</span>Dashboard</a>
-        <a href="#m2" class="dim"><span class="ico">✈</span>Flüge</a>
-        <a href="#m2" class="dim"><span class="ico">🚢</span>Kreuzfahrten</a>
-        <a href="#m2" class="dim"><span class="ico">🏨</span>Unterkünfte</a>
-        <a href="#m2" class="sel"><span class="ico">📍</span>Orte</a>
-        <a href="#m2" class="dim"><span class="ico">🧳</span>Reisen</a>
-      </nav>
-    </aside>
-    <div class="main">
-      <div class="head-row">
-        <div><h4>Ort erfassen</h4><div class="where">Orte → Neu</div></div>
+
+  <div class="page">
+    <div class="head-row"><div><h4>Ort erfassen</h4><div class="where">Orte → Neu</div></div></div>
+
+    <div class="two">
+      <div class="stack">
+        <div>
+          <div class="sec-title">Suche</div>
+          <div class="fld grow" style="margin-bottom:10px"><span>🔍</span><span class="cv">McDonald's Shibuya</span></div>
+          <div class="sug">
+            <div class="s hl"><span class="catico">🍟</span>
+              <div><div style="font-weight:600">McDonald’s Shibuya Center-Gai</div>
+                   <div class="a">Udagawacho 25-4, Shibuya, Tokio, JP</div></div></div>
+            <div class="s"><span class="catico">🍟</span>
+              <div><div style="font-weight:600">McDonald’s Shibuya Dogenzaka</div>
+                   <div class="a">Dogenzaka 2-29, Shibuya, Tokio, JP</div></div></div>
+            <div class="s"><span class="catico">🍟</span>
+              <div><div style="font-weight:600">McDonald’s Shibuya Station South</div>
+                   <div class="a">Shibuya 3-chome, Tokio, JP</div></div></div>
+          </div>
+          <div class="mini" style="margin-top:9px">
+            Kein Treffer dabei? <a href="#m2">Position auf der Karte wählen</a> oder Koordinaten eingeben.
+          </div>
+        </div>
+        <div>
+          <div class="sec-title">Wenn der Geocoder nicht erreichbar ist</div>
+          <div class="note bad" style="margin:0">
+            <strong>Suche derzeit nicht verfügbar.</strong> Der Ortsdienst antwortet nicht —
+            das heißt <em>nicht</em>, dass es keine Treffer gibt. Du kannst den Ort weiterhin
+            über die Karte oder per Koordinate anlegen.
+          </div>
+        </div>
       </div>
 
-      <div class="two">
-        <div class="stack">
-          <div>
-            <div class="sec-title">Suche</div>
-            <div class="fld grow" style="margin-bottom:10px">
-              <span>🔍</span><span class="cv">McDonald's Shibuya</span>
-            </div>
-            <div class="sug">
-              <div class="s hl">
-                <span class="catico">🍟</span>
-                <div><div style="font-weight:600">McDonald’s Shibuya Center-Gai</div>
-                     <div class="a">Udagawacho 25-4, Shibuya, Tokio, JP</div></div>
-              </div>
-              <div class="s">
-                <span class="catico">🍟</span>
-                <div><div style="font-weight:600">McDonald’s Shibuya Dogenzaka</div>
-                     <div class="a">Dogenzaka 2-29, Shibuya, Tokio, JP</div></div>
-              </div>
-              <div class="s">
-                <span class="catico">🍟</span>
-                <div><div style="font-weight:600">McDonald’s Shibuya Station South</div>
-                     <div class="a">Shibuya 3-chome, Tokio, JP</div></div>
-              </div>
-            </div>
-            <div class="mini" style="margin-top:8px">
-              Kein Treffer dabei? <a href="#m2">Position auf der Karte wählen</a> oder Koordinaten eingeben.
-            </div>
+      <div class="stack">
+        <div class="panel">
+          <div class="sec-title">Details</div>
+          <dl class="kv">
+            <dt>Name</dt><dd><b>McDonald’s Shibuya Center-Gai</b></dd>
+            <dt>Kategorie</dt><dd>🍟 Restaurant</dd>
+            <dt>Ort</dt><dd>Tokio, Japan 🇯🇵</dd>
+            <dt>Position</dt><dd style="font-family:var(--font-mono);font-size:12px">35.6595, 139.6987</dd>
+            <dt>Quelle</dt><dd class="mini">osm:node/240109189</dd>
+          </dl>
+        </div>
+        <div class="panel">
+          <div class="sec-title">Status</div>
+          <div class="pillrow" style="margin-bottom:12px">
+            <span class="pill" style="border-color:var(--domain-poi);color:var(--domain-poi);background:var(--domain-poi-soft)">✓ War ich schon</span>
+            <span class="pill" style="color:var(--text-muted)">☆ Merkliste</span>
           </div>
-
-          <div>
-            <div class="sec-title">Wenn der Geocoder nicht erreichbar ist</div>
-            <div class="note bad" style="margin:0">
-              <strong>Suche derzeit nicht verfügbar.</strong> Der Ortsdienst antwortet nicht —
-              das heißt <em>nicht</em>, dass es keine Treffer gibt. Du kannst den Ort weiterhin
-              über die Karte oder per Koordinate anlegen.
-            </div>
+          <div class="mini">Besuchsdatum optional — ein Ort, den du sicher kennst, aber nicht datieren kannst, zählt trotzdem.</div>
+        </div>
+        <div class="panel">
+          <div class="sec-title">Zu Listen hinzufügen</div>
+          <div class="pillrow">
+            <span class="pill" style="border-color:var(--list-2)"><span class="sw" style="background:var(--list-2)"></span>Maccis weltweit ✓</span>
+            <span class="pill"><span class="sw" style="background:var(--list-1)"></span>Tokio 2026</span>
+            <span class="pill" style="color:var(--text-muted)">+ Neue Liste</span>
           </div>
         </div>
-
-        <div class="stack">
-          <div class="panel">
-            <div class="sec-title">Details</div>
-            <div class="kv">
-              <dt>Name</dt><dd><b>McDonald’s Shibuya Center-Gai</b></dd>
-              <dt>Kategorie</dt><dd>🍟 Restaurant</dd>
-              <dt>Ort</dt><dd>Tokio, Japan 🇯🇵</dd>
-              <dt>Position</dt><dd style="font-family:var(--mono);font-size:12px">35.6595, 139.6987</dd>
-              <dt>Quelle</dt><dd class="mini">osm:node/240109189</dd>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="sec-title">Status</div>
-            <div class="pillrow" style="margin-bottom:12px">
-              <span class="pill" style="border-color:var(--domain-poi);color:var(--domain-poi);background:var(--domain-poi-soft)">✓ War ich schon</span>
-              <span class="pill" style="color:var(--text-muted)">☆ Merkliste</span>
-            </div>
-            <div class="mini">Besuchsdatum optional — ein Ort, den du sicher kennst, aber nicht datieren kannst, zählt trotzdem.</div>
-          </div>
-
-          <div class="panel">
-            <div class="sec-title">Zu Listen hinzufügen</div>
-            <div class="pillrow">
-              <span class="pill" style="border-color:var(--list-2)"><span class="sw" style="background:var(--list-2)"></span>Maccis weltweit ✓</span>
-              <span class="pill"><span class="sw" style="background:var(--list-1)"></span>Tokio 2026</span>
-              <span class="pill" style="color:var(--text-muted)">+ Neue Liste</span>
-            </div>
-          </div>
-
-          <button class="btn" style="width:100%">Ort speichern</button>
-        </div>
+        <button class="btn poi" style="width:100%">Ort speichern</button>
       </div>
     </div>
   </div>
@@ -757,200 +774,190 @@ pre.val .p { color: var(--success); }
 <p class="caption">
   <b>No new search endpoint.</b> <code>/api/v1/geo/places/search</code> already exists and already
   reports a <code>degraded</code> flag. The red panel is that flag rendered. Ignoring it would
-  reintroduce <b>#263</b> — the self-hoster with blocked egress who was told “no results” when the
-  truth was “search is down”. <b>Category is picked here, and it drives the pin’s icon</b> —
-  see §04 for why it must not drive the pin’s hue.
+  reintroduce <b>#263</b> — the self-hoster with blocked egress told “no results” when the truth
+  was “search is down”. <b>Category is picked here and drives the pin's icon</b> — §04 explains
+  why it must not drive the pin's hue.
 </p>
 </section>
 
-<!-- ---------------- M3 : custom list ---------------- -->
+<!-- ---------------- M3 ---------------- -->
 <section class="screen" id="m3">
 <div class="app">
-  <div class="app-bar">
-    <div class="dots"><i></i><i></i><i></i></div>
-    <div class="url">travstats.local / places/lists/maccis-weltweit</div>
+  <div class="chrome"><div class="dots"><i></i><i></i><i></i></div>
+    <div class="url">travstats.local / places/lists/maccis-weltweit</div></div>
+  <div class="tnav">
+    <div class="grp">
+      <svg viewBox="0 0 120 140" width="22" height="26" aria-hidden="true">
+        <path d="M 28 36 L 60 10 L 92 36 L 92 126 Q 92 132 86 132 L 34 132 Q 28 132 28 126 Z" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linejoin="round"/>
+        <circle cx="60" cy="28" r="5" fill="none" stroke="var(--accent)" stroke-width="3"/>
+        <text x="60" y="96" text-anchor="middle" font-family="Inter, sans-serif" font-size="32" font-weight="700" fill="var(--accent)" letter-spacing="-1">TS</text>
+      </svg>
+      <span class="wordmark" style="font-size:14px;margin-left:2px"><span>TRAV</span><svg width="7" height="7" viewBox="0 0 20 20"><line x1="10" y1="3" x2="10" y2="17" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/><line x1="3" y1="10" x2="17" y2="10" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/></svg><span>STATS</span></span>
+    </div>
+    <div class="grp center">
+      <span class="item">Dashboard</span><span class="item on">Logbuch<span class="caret">▼</span></span>
+      <span class="item">Reisen</span><span class="item">Statistiken</span><span class="item">Erfolge</span>
+    </div>
+    <div class="right"><span class="icobtn">🐞</span><span class="item" style="padding:7px 10px">System<span class="caret">▼</span></span><span class="who">dennis</span></div>
   </div>
-  <div class="app-body">
-    <aside class="side">
-      <div class="brand">TravStats</div>
-      <nav class="nav">
-        <a href="#m3" class="dim"><span class="ico">▦</span>Dashboard</a>
-        <a href="#m3" class="dim"><span class="ico">✈</span>Flüge</a>
-        <a href="#m3" class="dim"><span class="ico">🏨</span>Unterkünfte</a>
-        <a href="#m3" class="sel"><span class="ico">📍</span>Orte</a>
-        <a href="#m3" class="dim"><span class="ico">🧳</span>Reisen</a>
-      </nav>
-    </aside>
-    <div class="main">
-      <div class="head-row">
-        <div>
-          <h4><span style="color:var(--list-2)">●</span> Maccis weltweit 🍟</h4>
-          <div class="where">Orte → Listen → Maccis weltweit · 23 Orte · 14 Länder</div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn ghost">Liste bearbeiten</button>
-          <button class="btn">+ Ort</button>
-        </div>
-      </div>
 
-      <div class="filters">
-        <div class="fld grow"><span>🔍</span> Namen oder Stadt suchen…</div>
-        <div class="fld">Land: <span class="cv">Alle</span> ▾</div>
-        <div class="fld">Status: <span class="cv">Alle</span> ▾</div>
-        <div class="fld">Kategorie: <span class="cv">Restaurant</span> ▾</div>
+  <div class="page">
+    <div class="head-row">
+      <div>
+        <h4><span style="color:var(--list-2);font-size:15px">●</span> Maccis weltweit 🍟</h4>
+        <div class="where">Orte → Listen → Maccis weltweit · 23 Orte · 14 Länder</div>
       </div>
+      <div style="display:flex;gap:9px">
+        <button class="btn ghost">Liste bearbeiten</button>
+        <button class="btn poi">+ Ort</button>
+      </div>
+    </div>
 
-      <div class="rows">
-        <div class="row hd" style="grid-template-columns:2.4fr 1.3fr .9fr .8fr auto">
-          <span class="srt">Name</span><span>Ort</span><span>Besuche</span><span>Zuletzt</span><span>Status</span>
-        </div>
-        <div class="row" style="grid-template-columns:2.4fr 1.3fr .9fr .8fr auto">
-          <span class="nm"><span class="catico">🍟</span>McDonald’s Shibuya Center-Gai</span>
-          <span class="mut">Tokio 🇯🇵</span><span>2</span><span class="mut">12.06.2026</span>
-          <span class="badge ok">Besucht</span>
-        </div>
-        <div class="row" style="grid-template-columns:2.4fr 1.3fr .9fr .8fr auto">
-          <span class="nm"><span class="catico">🍟</span>McDonald’s Piazza di Spagna</span>
-          <span class="mut">Rom 🇮🇹</span><span>1</span><span class="mut">03.05.2025</span>
-          <span class="badge ok">Besucht</span>
-        </div>
-        <div class="row" style="grid-template-columns:2.4fr 1.3fr .9fr .8fr auto">
-          <span class="nm"><span class="catico">🍟</span>McDonald’s Champs-Élysées</span>
-          <span class="mut">Paris 🇫🇷</span><span>1</span><span class="mut">—</span>
-          <span class="badge ok">Besucht</span>
-        </div>
-        <div class="row" style="grid-template-columns:2.4fr 1.3fr .9fr .8fr auto">
-          <span class="nm"><span class="catico">🍟</span>McDonald’s Times Square</span>
-          <span class="mut">New York 🇺🇸</span><span>3</span><span class="mut">21.09.2024</span>
-          <span class="badge ok">Besucht</span>
-        </div>
-        <div class="row" style="grid-template-columns:2.4fr 1.3fr .9fr .8fr auto">
-          <span class="nm"><span class="catico">🍟</span>McDonald’s Rovaniemi</span>
-          <span class="mut">Rovaniemi 🇫🇮</span><span>0</span><span class="mut">—</span>
-          <span class="badge wish">Merkliste</span>
-        </div>
-      </div>
+    <div class="filters">
+      <div class="fld grow"><span>🔍</span> Namen oder Stadt suchen…</div>
+      <div class="fld">Land: <span class="cv">Alle</span> ▾</div>
+      <div class="fld">Status: <span class="cv">Alle</span> ▾</div>
+      <div class="fld">Kategorie: <span class="cv">Restaurant</span> ▾</div>
+    </div>
 
-      <div class="mini" style="margin-top:12px;display:flex;gap:18px;flex-wrap:wrap">
-        <span><b style="color:var(--text-secondary)">22</b> besucht</span>
-        <span><b style="color:var(--text-secondary)">1</b> auf der Merkliste — zählt nicht mit</span>
-        <span><b style="color:var(--text-secondary)">14</b> Länder</span>
-        <span><b style="color:var(--text-secondary)">31</b> Besuche insgesamt</span>
+    <div class="rows">
+      <div class="row hd" style="grid-template-columns:2.4fr 1.3fr .9fr .9fr auto">
+        <span class="srt">Name</span><span>Ort</span><span>Besuche</span><span>Zuletzt</span><span>Status</span>
       </div>
+      <div class="row" style="grid-template-columns:2.4fr 1.3fr .9fr .9fr auto">
+        <span class="nm"><span class="catico">🍟</span>McDonald’s Shibuya Center-Gai</span>
+        <span class="mut">Tokio 🇯🇵</span><span class="num">2</span><span class="mut num">12.06.2026</span>
+        <span class="badge ok">Besucht</span>
+      </div>
+      <div class="row" style="grid-template-columns:2.4fr 1.3fr .9fr .9fr auto">
+        <span class="nm"><span class="catico">🍟</span>McDonald’s Piazza di Spagna</span>
+        <span class="mut">Rom 🇮🇹</span><span class="num">1</span><span class="mut num">03.05.2025</span>
+        <span class="badge ok">Besucht</span>
+      </div>
+      <div class="row" style="grid-template-columns:2.4fr 1.3fr .9fr .9fr auto">
+        <span class="nm"><span class="catico">🍟</span>McDonald’s Champs-Élysées</span>
+        <span class="mut">Paris 🇫🇷</span><span class="num">1</span><span class="mut num">—</span>
+        <span class="badge ok">Besucht</span>
+      </div>
+      <div class="row" style="grid-template-columns:2.4fr 1.3fr .9fr .9fr auto">
+        <span class="nm"><span class="catico">🍟</span>McDonald’s Times Square</span>
+        <span class="mut">New York 🇺🇸</span><span class="num">3</span><span class="mut num">21.09.2024</span>
+        <span class="badge ok">Besucht</span>
+      </div>
+      <div class="row" style="grid-template-columns:2.4fr 1.3fr .9fr .9fr auto">
+        <span class="nm"><span class="catico">🍟</span>McDonald’s Rovaniemi</span>
+        <span class="mut">Rovaniemi 🇫🇮</span><span class="num">0</span><span class="mut num">—</span>
+        <span class="badge wish">Merkliste</span>
+      </div>
+    </div>
+
+    <div class="mini" style="margin-top:13px;display:flex;gap:20px;flex-wrap:wrap">
+      <span><b style="color:var(--text-secondary)">22</b> besucht</span>
+      <span><b style="color:var(--text-secondary)">1</b> auf der Merkliste — zählt nicht mit</span>
+      <span><b style="color:var(--text-secondary)">14</b> Länder</span>
+      <span><b style="color:var(--text-secondary)">31</b> Besuche insgesamt</span>
     </div>
   </div>
 </div>
 <p class="caption">
-  <b>Row 4 is the whole argument for the model.</b> Times Square, 3 visits, still <em>one</em> place —
-  “Orte besucht” counts 23, “Besuche” counts 31. Option (a) from §01 could never express that.
-  <b>Row 5</b> is the wishlist case: on the list, on the map in <em>Besucht</em> mode only, and excluded
-  from every count. The filter bar and the sort header are the <b>shared</b> ones from
-  <code>e2cafa09</code>/<code>9d52bd82</code> — POI is the fourth consumer, not a new implementation.
+  <b>Row 4 is the whole argument for the model.</b> Times Square, 3 visits, still <em>one</em>
+  place — “Orte besucht” counts 23, “Besuche” counts 31. Option (a) from §01 could never express
+  that. <b>Row 5</b> is the wishlist case: on the list, on the map in <em>Besucht</em> mode only,
+  excluded from every count. The filter bar and sort header are the <b>shared</b> ones from
+  <code>e2cafa09</code>/<code>9d52bd82</code> — POI is the fourth consumer, not a new
+  implementation.
 </p>
 </section>
 
-<!-- ---------------- M4 : curated checklist ---------------- -->
+<!-- ---------------- M4 ---------------- -->
 <section class="screen" id="m4">
 <div class="app">
-  <div class="app-bar">
-    <div class="dots"><i></i><i></i><i></i></div>
-    <div class="url">travstats.local / places/lists/world-wonders-new7</div>
+  <div class="chrome"><div class="dots"><i></i><i></i><i></i></div>
+    <div class="url">travstats.local / places/lists/world-wonders-new7</div></div>
+  <div class="tnav">
+    <div class="grp">
+      <svg viewBox="0 0 120 140" width="22" height="26" aria-hidden="true">
+        <path d="M 28 36 L 60 10 L 92 36 L 92 126 Q 92 132 86 132 L 34 132 Q 28 132 28 126 Z" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linejoin="round"/>
+        <circle cx="60" cy="28" r="5" fill="none" stroke="var(--accent)" stroke-width="3"/>
+        <text x="60" y="96" text-anchor="middle" font-family="Inter, sans-serif" font-size="32" font-weight="700" fill="var(--accent)" letter-spacing="-1">TS</text>
+      </svg>
+      <span class="wordmark" style="font-size:14px;margin-left:2px"><span>TRAV</span><svg width="7" height="7" viewBox="0 0 20 20"><line x1="10" y1="3" x2="10" y2="17" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/><line x1="3" y1="10" x2="17" y2="10" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/></svg><span>STATS</span></span>
+    </div>
+    <div class="grp center">
+      <span class="item">Dashboard</span><span class="item on">Logbuch<span class="caret">▼</span></span>
+      <span class="item">Reisen</span><span class="item">Statistiken</span><span class="item">Erfolge</span>
+    </div>
+    <div class="right"><span class="icobtn">🐞</span><span class="item" style="padding:7px 10px">System<span class="caret">▼</span></span><span class="who">dennis</span></div>
   </div>
-  <div class="app-body">
-    <aside class="side">
-      <div class="brand">TravStats</div>
-      <nav class="nav">
-        <a href="#m4" class="dim"><span class="ico">▦</span>Dashboard</a>
-        <a href="#m4" class="dim"><span class="ico">✈</span>Flüge</a>
-        <a href="#m4" class="dim"><span class="ico">🏨</span>Unterkünfte</a>
-        <a href="#m4" class="sel"><span class="ico">📍</span>Orte</a>
-        <a href="#m4" class="dim"><span class="ico">🏆</span>Erfolge</a>
-      </nav>
-    </aside>
-    <div class="main">
-      <div class="head-row">
-        <div>
-          <h4>🏛 Neue 7 Weltwunder</h4>
-          <div class="where">Orte → Listen → Mitgelieferte Checkliste</div>
-        </div>
-        <button class="btn ghost">Ziele auf Karte zeigen ✓</button>
+
+  <div class="page">
+    <div class="head-row">
+      <div>
+        <h4>🏛 Neue 7 Weltwunder</h4>
+        <div class="where">Orte → Listen → Mitgelieferte Checkliste</div>
       </div>
+      <button class="btn ghost">Ziele auf Karte zeigen ✓</button>
+    </div>
 
-      <div class="panel" style="margin-bottom:16px">
-        <div class="prog">
-          <div class="track">
-            <i></i><i></i><i></i><i></i><i class="off"></i><i class="off"></i><i class="off"></i>
-          </div>
-          <div class="n">4 <small>/ 7</small></div>
-        </div>
-        <div class="mini" style="margin-top:10px">
-          Noch offen: Machu Picchu, Christus-Statue, Petra.
-          Erfolg <b style="color:var(--text-secondary)">„Neue 7 Weltwunder“</b> wird bei 7/7 freigeschaltet.
-        </div>
+    <div class="panel" style="margin-bottom:16px">
+      <div class="prog">
+        <div class="track"><i></i><i></i><i></i><i></i><i class="off"></i><i class="off"></i><i class="off"></i></div>
+        <div class="n">4 <small>/ 7</small></div>
       </div>
-
-      <div class="rows">
-        <div class="row hd" style="grid-template-columns:auto 2.2fr 1.1fr 1fr auto">
-          <span></span><span>Ziel</span><span>Land</span><span>Besucht am</span><span>Beweis</span>
-        </div>
-
-        <div class="row" style="grid-template-columns:auto 2.2fr 1.1fr 1fr auto">
-          <span style="color:var(--domain-poi);font-size:16px">☑</span>
-          <span class="nm">Kolosseum</span>
-          <span class="mut">Italien 🇮🇹</span>
-          <span class="mut">03.05.2025, 14:30</span>
-          <span class="badge ok">2 Fotos</span>
-        </div>
-        <div class="row" style="grid-template-columns:auto 2.2fr 1.1fr 1fr auto">
-          <span style="color:var(--domain-poi);font-size:16px">☑</span>
-          <span class="nm">Chinesische Mauer</span>
-          <span class="mut">China 🇨🇳</span>
-          <span class="mut">18.04.2023</span>
-          <span class="badge ok">5 Fotos</span>
-        </div>
-        <div class="row" style="grid-template-columns:auto 2.2fr 1.1fr 1fr auto">
-          <span style="color:var(--domain-poi);font-size:16px">☑</span>
-          <span class="nm">Taj Mahal</span>
-          <span class="mut">Indien 🇮🇳</span>
-          <span class="mut">—</span>
-          <span class="badge">kein Foto</span>
-        </div>
-        <div class="row" style="grid-template-columns:auto 2.2fr 1.1fr 1fr auto">
-          <span style="color:var(--domain-poi);font-size:16px">☑</span>
-          <span class="nm">Chichén Itzá</span>
-          <span class="mut">Mexiko 🇲🇽</span>
-          <span class="mut">27.02.2022</span>
-          <span class="badge ok">3 Fotos</span>
-        </div>
-
-        <div class="row ghosted" style="grid-template-columns:auto 2.2fr 1.1fr 1fr auto">
-          <span style="color:var(--text-muted);font-size:16px">☐</span>
-          <span class="nm">Machu Picchu</span>
-          <span class="mut">Peru 🇵🇪</span>
-          <span class="mut">—</span>
-          <button class="btn" style="padding:6px 11px;font-size:12px">War ich</button>
-        </div>
-        <div class="row ghosted" style="grid-template-columns:auto 2.2fr 1.1fr 1fr auto">
-          <span style="color:var(--text-muted);font-size:16px">☐</span>
-          <span class="nm">Christus-Statue</span>
-          <span class="mut">Brasilien 🇧🇷</span>
-          <span class="mut">—</span>
-          <button class="btn" style="padding:6px 11px;font-size:12px">War ich</button>
-        </div>
-        <div class="row ghosted" style="grid-template-columns:auto 2.2fr 1.1fr 1fr auto">
-          <span style="color:var(--text-muted);font-size:16px">☐</span>
-          <span class="nm">Petra</span>
-          <span class="mut">Jordanien 🇯🇴</span>
-          <span class="mut">—</span>
-          <button class="btn" style="padding:6px 11px;font-size:12px">War ich</button>
-        </div>
+      <div class="mini" style="margin-top:11px">
+        Noch offen: Machu Picchu, Christus-Statue, Petra.
+        Erfolg <b style="color:var(--text-secondary)">„Neue 7 Weltwunder“</b> wird bei 7/7 freigeschaltet.
       </div>
+    </div>
 
-      <div class="mini" style="margin-top:14px">
-        Beim Abhaken entsteht ein echter Ort in deinem Logbuch — ab dann verhält er sich wie
-        jeder andere: eigene Notizen, eigene Fotos, eigene Besuche, auf dem Globus nicht mehr
-        von einem selbst angelegten Ort zu unterscheiden.
+    <div class="rows">
+      <div class="row hd" style="grid-template-columns:auto 2.2fr 1.1fr 1fr auto">
+        <span></span><span>Ziel</span><span>Land</span><span>Besucht am</span><span>Beweis</span>
       </div>
+      <div class="row" style="grid-template-columns:auto 2.2fr 1.1fr 1fr auto">
+        <span style="color:var(--domain-poi);font-size:16px">☑</span>
+        <span class="nm">Kolosseum</span><span class="mut">Italien 🇮🇹</span>
+        <span class="mut num">03.05.2025, 14:30</span><span class="badge ok">2 Fotos</span>
+      </div>
+      <div class="row" style="grid-template-columns:auto 2.2fr 1.1fr 1fr auto">
+        <span style="color:var(--domain-poi);font-size:16px">☑</span>
+        <span class="nm">Chinesische Mauer</span><span class="mut">China 🇨🇳</span>
+        <span class="mut num">18.04.2023</span><span class="badge ok">5 Fotos</span>
+      </div>
+      <div class="row" style="grid-template-columns:auto 2.2fr 1.1fr 1fr auto">
+        <span style="color:var(--domain-poi);font-size:16px">☑</span>
+        <span class="nm">Taj Mahal</span><span class="mut">Indien 🇮🇳</span>
+        <span class="mut num">—</span><span class="badge">kein Foto</span>
+      </div>
+      <div class="row" style="grid-template-columns:auto 2.2fr 1.1fr 1fr auto">
+        <span style="color:var(--domain-poi);font-size:16px">☑</span>
+        <span class="nm">Chichén Itzá</span><span class="mut">Mexiko 🇲🇽</span>
+        <span class="mut num">27.02.2022</span><span class="badge ok">3 Fotos</span>
+      </div>
+      <div class="row ghosted" style="grid-template-columns:auto 2.2fr 1.1fr 1fr auto">
+        <span style="color:var(--text-muted);font-size:16px">☐</span>
+        <span class="nm">Machu Picchu</span><span class="mut">Peru 🇵🇪</span>
+        <span class="mut num">—</span>
+        <button class="btn poi" style="padding:6px 12px;font-size:12px">War ich</button>
+      </div>
+      <div class="row ghosted" style="grid-template-columns:auto 2.2fr 1.1fr 1fr auto">
+        <span style="color:var(--text-muted);font-size:16px">☐</span>
+        <span class="nm">Christus-Statue</span><span class="mut">Brasilien 🇧🇷</span>
+        <span class="mut num">—</span>
+        <button class="btn poi" style="padding:6px 12px;font-size:12px">War ich</button>
+      </div>
+      <div class="row ghosted" style="grid-template-columns:auto 2.2fr 1.1fr 1fr auto">
+        <span style="color:var(--text-muted);font-size:16px">☐</span>
+        <span class="nm">Petra</span><span class="mut">Jordanien 🇯🇴</span>
+        <span class="mut num">—</span>
+        <button class="btn poi" style="padding:6px 12px;font-size:12px">War ich</button>
+      </div>
+    </div>
+
+    <div class="mini" style="margin-top:15px">
+      Beim Abhaken entsteht ein echter Ort in deinem Logbuch — ab dann verhält er sich wie jeder
+      andere: eigene Notizen, eigene Fotos, eigene Besuche, auf dem Globus nicht mehr von einem
+      selbst angelegten Ort zu unterscheiden.
     </div>
   </div>
 </div>
@@ -958,102 +965,97 @@ pre.val .p { color: var(--success); }
   <b>This is the one screen in the app that renders two kinds of row</b>, and that is deliberate.
   The hatched ghost rows are <code>CuratedPlace</code> targets; the solid ones are real
   <code>Place</code> rows. Subscribing creates <em>one</em> row, not seven copies — see the
-  lazy-vs-copy decision in §05, which is the one call that gets expensive to reverse.
-  The meter states <b>4 / 7</b> in text; colour is never the only carrier.
+  lazy-vs-copy decision in §05, the one call that gets expensive to reverse. The meter states
+  <b>4 / 7</b> in text; colour is never the only carrier.
 </p>
 </section>
 
-<!-- ---------------- M5 : place detail ---------------- -->
+<!-- ---------------- M5 ---------------- -->
 <section class="screen" id="m5">
 <div class="app">
-  <div class="app-bar">
-    <div class="dots"><i></i><i></i><i></i></div>
-    <div class="url">travstats.local / places/8f2a…/kolosseum</div>
+  <div class="chrome"><div class="dots"><i></i><i></i><i></i></div>
+    <div class="url">travstats.local / places/8f2a…/kolosseum</div></div>
+  <div class="tnav">
+    <div class="grp">
+      <svg viewBox="0 0 120 140" width="22" height="26" aria-hidden="true">
+        <path d="M 28 36 L 60 10 L 92 36 L 92 126 Q 92 132 86 132 L 34 132 Q 28 132 28 126 Z" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linejoin="round"/>
+        <circle cx="60" cy="28" r="5" fill="none" stroke="var(--accent)" stroke-width="3"/>
+        <text x="60" y="96" text-anchor="middle" font-family="Inter, sans-serif" font-size="32" font-weight="700" fill="var(--accent)" letter-spacing="-1">TS</text>
+      </svg>
+      <span class="wordmark" style="font-size:14px;margin-left:2px"><span>TRAV</span><svg width="7" height="7" viewBox="0 0 20 20"><line x1="10" y1="3" x2="10" y2="17" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/><line x1="3" y1="10" x2="17" y2="10" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/></svg><span>STATS</span></span>
+    </div>
+    <div class="grp center">
+      <span class="item">Dashboard</span><span class="item on">Logbuch<span class="caret">▼</span></span>
+      <span class="item">Reisen</span><span class="item">Statistiken</span><span class="item">Erfolge</span>
+    </div>
+    <div class="right"><span class="icobtn">🐞</span><span class="item" style="padding:7px 10px">System<span class="caret">▼</span></span><span class="who">dennis</span></div>
   </div>
-  <div class="app-body">
-    <aside class="side">
-      <div class="brand">TravStats</div>
-      <nav class="nav">
-        <a href="#m5" class="dim"><span class="ico">▦</span>Dashboard</a>
-        <a href="#m5" class="dim"><span class="ico">✈</span>Flüge</a>
-        <a href="#m5" class="dim"><span class="ico">🏨</span>Unterkünfte</a>
-        <a href="#m5" class="sel"><span class="ico">📍</span>Orte</a>
-        <a href="#m5" class="dim"><span class="ico">🧳</span>Reisen</a>
-      </nav>
-    </aside>
-    <div class="main">
-      <div class="head-row">
+
+  <div class="page">
+    <div class="head-row">
+      <div>
+        <h4>🏛 Kolosseum</h4>
+        <div class="where">Rom, Italien 🇮🇹 · Wahrzeichen · <span class="badge ok" style="margin-left:5px">Besucht</span></div>
+      </div>
+      <div style="display:flex;gap:9px">
+        <button class="btn ghost">Bearbeiten</button>
+        <button class="btn poi">+ Besuch</button>
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="stack">
         <div>
-          <h4>🏛 Kolosseum</h4>
-          <div class="where">Rom, Italien 🇮🇹 · Wahrzeichen · <span class="badge ok" style="margin-left:4px">Besucht</span></div>
+          <div class="sec-title">Besuche</div>
+          <div class="rows">
+            <div class="row" style="grid-template-columns:1.15fr 1.5fr auto">
+              <span class="nm num" style="font-weight:600">03.05.2025, 14:30</span>
+              <span class="mut">Reise „Rom 2025“ · ★★★★★</span><span class="badge ok">2 Fotos</span>
+            </div>
+            <div class="row" style="grid-template-columns:1.15fr 1.5fr auto">
+              <span class="nm num" style="font-weight:600">11.09.2019</span>
+              <span class="mut">ohne Reise · keine Uhrzeit</span><span class="badge">—</span>
+            </div>
+            <div class="row" style="grid-template-columns:1.15fr 1.5fr auto">
+              <span class="nm num" style="font-weight:600;color:var(--warning)">14.09.2026, 10:00</span>
+              <span class="mut">Reise „Italien 2026“ · geplant</span><span class="badge soon">zählt noch nicht</span>
+            </div>
+          </div>
+          <div class="mini" style="margin-top:10px">
+            Ein in der Zukunft datierter Besuch erscheint in der Reise, wird aber nicht als Besuch
+            gezählt — dieselbe Regel wie beim Check-out einer Unterkunft.
+          </div>
         </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn ghost">Bearbeiten</button>
-          <button class="btn">+ Besuch</button>
+        <div>
+          <div class="sec-title">Fotobeweis</div>
+          <div class="photos"><div class="ph">🖼</div><div class="ph">🖼</div><div class="ph add">+ Foto</div></div>
+          <div class="mini" style="margin-top:10px">Upload oder aus einem verknüpften Immich-Album.</div>
         </div>
       </div>
 
-      <div class="two">
-        <div class="stack">
-          <div>
-            <div class="sec-title">Besuche</div>
-            <div class="rows">
-              <div class="row" style="grid-template-columns:1.1fr 1.5fr auto">
-                <span class="nm" style="font-weight:600">03.05.2025, 14:30</span>
-                <span class="mut">Reise „Rom 2025“ · ★★★★★</span>
-                <span class="badge ok">2 Fotos</span>
-              </div>
-              <div class="row" style="grid-template-columns:1.1fr 1.5fr auto">
-                <span class="nm" style="font-weight:600">11.09.2019</span>
-                <span class="mut">ohne Reise · keine Uhrzeit</span>
-                <span class="badge">—</span>
-              </div>
-              <div class="row" style="grid-template-columns:1.1fr 1.5fr auto">
-                <span class="nm" style="font-weight:600;color:var(--warning)">14.09.2026, 10:00</span>
-                <span class="mut">Reise „Italien 2026“ · geplant</span>
-                <span class="badge soon">zählt noch nicht</span>
-              </div>
-            </div>
-            <div class="mini" style="margin-top:9px">
-              Ein in der Zukunft datierter Besuch erscheint in der Reise, wird aber nicht
-              als Besuch gezählt — dieselbe Regel wie beim Check-out einer Unterkunft.
-            </div>
-          </div>
-
-          <div>
-            <div class="sec-title">Fotobeweis</div>
-            <div class="photos">
-              <div class="ph">🖼</div><div class="ph">🖼</div>
-              <div class="ph add">+ Foto</div>
-            </div>
-            <div class="mini" style="margin-top:9px">Upload oder aus einem verknüpften Immich-Album.</div>
+      <div class="stack">
+        <div class="panel">
+          <div class="sec-title">Auf Listen</div>
+          <div class="pillrow">
+            <span class="pill" style="border-color:var(--domain-poi)"><span class="sw" style="background:var(--domain-poi)"></span>Neue 7 Weltwunder</span>
+            <span class="pill"><span class="sw" style="background:var(--list-1)"></span>Rom 2025</span>
+            <span class="pill" style="color:var(--text-muted)">+ hinzufügen</span>
           </div>
         </div>
-
-        <div class="stack">
-          <div class="panel">
-            <div class="sec-title">Auf Listen</div>
-            <div class="pillrow">
-              <span class="pill" style="border-color:var(--domain-poi)"><span class="sw" style="background:var(--domain-poi)"></span>Neue 7 Weltwunder</span>
-              <span class="pill"><span class="sw" style="background:var(--list-1)"></span>Rom 2025</span>
-              <span class="pill" style="color:var(--text-muted)">+ hinzufügen</span>
-            </div>
-          </div>
-          <div class="panel">
-            <div class="sec-title">Stammdaten</div>
-            <div class="kv">
-              <dt>Kategorie</dt><dd>Wahrzeichen</dd>
-              <dt>Adresse</dt><dd>Piazza del Colosseo 1</dd>
-              <dt>Land</dt><dd>Italien · <code>IT</code></dd>
-              <dt>Position</dt><dd style="font-family:var(--mono);font-size:12px">41.8902, 12.4922</dd>
-              <dt>Herkunft</dt><dd class="mini">Checkliste · <code>world-wonders-new7:colosseum</code></dd>
-            </div>
-          </div>
-          <div class="panel">
-            <div class="sec-title">Notiz</div>
-            <div class="mini" style="color:var(--text-secondary)">
-              Untergeschoss-Tour lohnt sich, aber Wochen vorher buchen.
-            </div>
+        <div class="panel">
+          <div class="sec-title">Stammdaten</div>
+          <dl class="kv">
+            <dt>Kategorie</dt><dd>Wahrzeichen</dd>
+            <dt>Adresse</dt><dd>Piazza del Colosseo 1</dd>
+            <dt>Land</dt><dd>Italien · <code>IT</code></dd>
+            <dt>Position</dt><dd style="font-family:var(--font-mono);font-size:12px">41.8902, 12.4922</dd>
+            <dt>Herkunft</dt><dd class="mini">Checkliste · <code>world-wonders-new7:colosseum</code></dd>
+          </dl>
+        </div>
+        <div class="panel">
+          <div class="sec-title">Notiz</div>
+          <div class="mini" style="color:var(--text-secondary)">
+            Untergeschoss-Tour lohnt sich, aber Wochen vorher buchen.
           </div>
         </div>
       </div>
@@ -1063,79 +1065,83 @@ pre.val .p { color: var(--success); }
 <p class="caption">
   The third visit row is <b>use case 8</b>: dated in the future, visible where it belongs, excluded
   from every count. The second is <b>use case 7</b>: a visit without a date still counts — the
-  Lodging 2.7 precedent. <code>Herkunft</code> shows <code>curatedItemId</code>, which is what keeps a
-  ticked wonder from ever being duplicated by ticking it twice.
+  Lodging 2.7 precedent. <code>Herkunft</code> shows <code>curatedItemId</code>, which is what keeps
+  a ticked wonder from ever being duplicated by ticking it twice.
 </p>
 </section>
 
-<!-- ---------------- M6 : trip timeline ---------------- -->
+<!-- ---------------- M6 ---------------- -->
 <section class="screen" id="m6">
 <div class="app">
-  <div class="app-bar">
-    <div class="dots"><i></i><i></i><i></i></div>
-    <div class="url">travstats.local / trips/rom-2025</div>
+  <div class="chrome"><div class="dots"><i></i><i></i><i></i></div>
+    <div class="url">travstats.local / trips/rom-2025</div></div>
+  <div class="tnav">
+    <div class="grp">
+      <svg viewBox="0 0 120 140" width="22" height="26" aria-hidden="true">
+        <path d="M 28 36 L 60 10 L 92 36 L 92 126 Q 92 132 86 132 L 34 132 Q 28 132 28 126 Z" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linejoin="round"/>
+        <circle cx="60" cy="28" r="5" fill="none" stroke="var(--accent)" stroke-width="3"/>
+        <text x="60" y="96" text-anchor="middle" font-family="Inter, sans-serif" font-size="32" font-weight="700" fill="var(--accent)" letter-spacing="-1">TS</text>
+      </svg>
+      <span class="wordmark" style="font-size:14px;margin-left:2px"><span>TRAV</span><svg width="7" height="7" viewBox="0 0 20 20"><line x1="10" y1="3" x2="10" y2="17" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/><line x1="3" y1="10" x2="17" y2="10" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/></svg><span>STATS</span></span>
+    </div>
+    <div class="grp center">
+      <span class="item">Dashboard</span><span class="item">Logbuch<span class="caret">▼</span></span>
+      <span class="item on">Reisen</span><span class="item">Statistiken</span><span class="item">Erfolge</span>
+    </div>
+    <div class="right"><span class="icobtn">🐞</span><span class="item" style="padding:7px 10px">System<span class="caret">▼</span></span><span class="who">dennis</span></div>
   </div>
-  <div class="app-body">
-    <aside class="side">
-      <div class="brand">TravStats</div>
-      <nav class="nav">
-        <a href="#m6" class="dim"><span class="ico">▦</span>Dashboard</a>
-        <a href="#m6" class="dim"><span class="ico">✈</span>Flüge</a>
-        <a href="#m6" class="dim"><span class="ico">📍</span>Orte</a>
-        <a href="#m6" class="sel"><span class="ico">🧳</span>Reisen</a>
-      </nav>
-    </aside>
-    <div class="main">
-      <div class="head-row">
-        <div><h4>🧳 Rom 2025</h4><div class="where">02.05. – 06.05.2025 · 4 Orte · 1 Unterkunft · 2 Flüge</div></div>
-        <button class="btn">+ Ort zur Reise</button>
+
+  <div class="page">
+    <div class="head-row">
+      <div><h4>🧳 Rom 2025</h4>
+        <div class="where">02.05. – 06.05.2025 · 4 Orte · 1 Unterkunft · 2 Flüge</div></div>
+      <button class="btn poi">+ Ort zur Reise</button>
+    </div>
+
+    <div class="tl">
+      <div class="day">FR · 02.05.2025</div>
+      <div class="ev" style="--k:var(--domain-flight)">
+        <div class="t">09:15 — 11:05</div>
+        <div class="ti">HAM → FCO <span class="kind">Flug</span></div>
+      </div>
+      <div class="ev" style="--k:var(--domain-lodging)">
+        <div class="t">15:00</div>
+        <div class="ti">Check-in · Hotel Artemide <span class="kind">Unterkunft</span></div>
       </div>
 
-      <div class="tl">
-        <div class="day">FR · 02.05.2025</div>
-        <div class="ev" style="--k:var(--domain-flight)">
-          <div class="t">09:15 — 11:05</div>
-          <div class="ti">HAM → FCO <span class="kind">Flug</span></div>
-        </div>
-        <div class="ev" style="--k:var(--domain-lodging)">
-          <div class="t">15:00</div>
-          <div class="ti">Check-in · Hotel Artemide <span class="kind">Unterkunft</span></div>
-        </div>
-
-        <div class="day">SA · 03.05.2025</div>
-        <div class="ev" style="--k:var(--domain-poi)">
-          <div class="t">10:00</div>
-          <div class="ti">Trevi-Brunnen <span class="kind">Ort</span></div>
-        </div>
-        <div class="ev" style="--k:var(--domain-poi)">
-          <div class="t">12:30</div>
-          <div class="ti">McDonald’s Piazza di Spagna <span class="kind">Ort</span></div>
-        </div>
-        <div class="ev" style="--k:var(--domain-poi)">
-          <div class="t">14:30</div>
-          <div class="ti">Kolosseum <span class="kind">Ort</span>
-            <span class="badge ok" style="margin-left:auto">Weltwunder ✓</span></div>
-        </div>
-        <div class="ev" style="--k:var(--text-muted)">
-          <div class="t">— </div>
-          <div class="ti">Tagebuch: „Viel zu heiß, trotzdem großartig.“ <span class="kind">Tagebuch</span></div>
-        </div>
+      <div class="day">SA · 03.05.2025</div>
+      <div class="ev" style="--k:var(--domain-poi)">
+        <div class="t">10:00</div>
+        <div class="ti">Trevi-Brunnen <span class="kind">Ort</span></div>
       </div>
-
-      <div class="note" style="margin-top:20px">
-        <strong>#175, gelöst durch das Modell.</strong> Drei Orte am selben Tag stehen in der
-        richtigen Reihenfolge, weil <code>PlaceVisit.visitedAt</code> eine Uhrzeit trägt.
-        Der Tagebucheintrag bleibt das letzte Wort des Tages — diese Regel steht schon in
-        <code>tripTimeline.ts</code> und wird nicht angefasst.
+      <div class="ev" style="--k:var(--domain-poi)">
+        <div class="t">12:30</div>
+        <div class="ti">McDonald’s Piazza di Spagna <span class="kind">Ort</span></div>
       </div>
+      <div class="ev" style="--k:var(--domain-poi)">
+        <div class="t">14:30</div>
+        <div class="ti">Kolosseum <span class="kind">Ort</span>
+          <span class="badge ok" style="margin-left:auto">Weltwunder ✓</span></div>
+      </div>
+      <div class="ev" style="--k:var(--text-muted)">
+        <div class="t">—</div>
+        <div class="ti">Tagebuch: „Viel zu heiß, trotzdem großartig.“ <span class="kind">Tagebuch</span></div>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:22px">
+      <strong>#175, gelöst durch das Modell.</strong> Drei Orte am selben Tag stehen in der
+      richtigen Reihenfolge, weil <code>PlaceVisit.visitedAt</code> eine Uhrzeit trägt. Der
+      Tagebucheintrag bleibt das letzte Wort des Tages — diese Regel steht schon in
+      <code>tripTimeline.ts</code> und wird nicht angefasst.
     </div>
   </div>
 </div>
 <p class="caption">
   A place visit is a new <code>kind</code> in the existing timeline merge, exactly as
   <code>lodging-checkin</code> already is — not a new timeline. The same three POI rows appear on
-  the <b>global</b> dashboard map (mockup 1) because they are the same rows. That is #177,
-  closed as a consequence of the model rather than as a feature.
+  the <b>global</b> dashboard map (mockup 1) because they are the same rows. That is #177, closed
+  as a consequence of the model rather than as a feature.
 </p>
 </section>
 
@@ -1144,16 +1150,16 @@ pre.val .p { color: var(--success); }
 <p class="sub">The lodging spec promised in July that POI would have something to dock onto. It kept the promise.</p>
 
 <table>
-  <thead><tr><th style="width:26%">Piece</th><th style="width:12%">State</th><th>Where</th></tr></thead>
+  <thead><tr><th style="width:26%">Piece</th><th style="width:13%">State</th><th>Where</th></tr></thead>
   <tbody>
     <tr><td>POI dashboard modes</td><td style="color:var(--success)">already registered</td><td><code>types/dashboard.ts</code> — <code>["markers","heatmap"]</code>, default <code>markers</code></td></tr>
-    <tr><td>Place search + <code>degraded</code> flag</td><td style="color:var(--success)">ships</td><td><code>services/geo/photon.ts</code>, <code>routes/geo.ts</code> → <code>/api/v1/geo</code></td></tr>
+    <tr><td>Place search + <code>degraded</code></td><td style="color:var(--success)">ships</td><td><code>services/geo/photon.ts</code>, <code>routes/geo.ts</code> → <code>/api/v1/geo</code></td></tr>
     <tr><td>Search-as-you-type UI</td><td style="color:var(--success)">ships</td><td><code>components/location/</code> — input, suggestions, map modal</td></tr>
     <tr><td>Pin layer w/ label declutter</td><td style="color:var(--success)">ships</td><td><code>layers/lodgingPinsLayer.ts</code> + <code>markerDotStyle.ts</code></td></tr>
     <tr><td>Shared list furniture</td><td style="color:var(--success)">ships</td><td>filter bar, sort header, row-click — <code>e2cafa09</code>, <code>9d52bd82</code></td></tr>
     <tr><td>Timeline merge by <code>kind</code></td><td style="color:var(--success)">ships</td><td><code>lib/tripTimeline.ts</code></td></tr>
     <tr><td>Photos + Immich proxy</td><td style="color:var(--success)">ships</td><td><code>TripPhoto</code>, <code>routes/immich/assetProxy.ts</code></td></tr>
-    <tr><td>Idempotent CSV catalog seeds</td><td style="color:var(--success)">ships</td><td><code>seedPortsFromCSV.ts</code>, <code>seedShipsFromCSV.ts</code></td></tr>
+    <tr><td>Idempotent CSV seeds</td><td style="color:var(--success)">ships</td><td><code>seedPortsFromCSV.ts</code>, <code>seedShipsFromCSV.ts</code></td></tr>
     <tr><td>POI tab body</td><td style="color:var(--warning)">stub</td><td><code>PoiTab.tsx</code> — emoji + one line, gated as <code>poiDashboardTab</code></td></tr>
     <tr><td>POIs themselves</td><td style="color:var(--danger)">trip-only</td><td><code>TripStop</code> where <code>domain='poi'</code> — the thing being migrated</td></tr>
   </tbody>
@@ -1178,14 +1184,12 @@ pre.val .p { color: var(--success); }
 
 <!-- ===================================================================== -->
 <h2><span class="num">04</span>Colour findings — computed, not eyeballed</h2>
-<p class="sub">
-  Two encoding rules below are measurements, not taste. Both changed the design.
-</p>
+<p class="sub">Two encoding rules below are measurements, not taste. Both changed the design.</p>
 
 <p>
-  Map pins are a <em>scatter</em> case: any two categories can end up adjacent, so every pair
-  must separate, not just neighbouring ones. Running the shipped domain palette against that
-  bar, on the dark surface:
+  Map pins are a <em>scatter</em> case: any two categories can end up adjacent, so every pair must
+  separate, not just neighbouring ones. Running the shipped domain palette against that bar, on the
+  dark surface:
 </p>
 
 <pre class="val">$ validate_palette.js "#f0a947,#6fa0d6,#d4778f,#5ec2b2" --mode dark --surface #0d1117 --pairs all
@@ -1196,27 +1200,26 @@ pre.val .p { color: var(--success); }
 
 <div class="note bad">
   <strong>Finding 1 — POI teal and cruise blue are the hardest pair in the product.</strong>
-  ΔE 12.4 for <em>normal</em> colour vision, below the floor of 15. On the <b>All</b> tab, place dots
-  would sit beside cruise-port dots: same mark, near-same hue. So a place pin there carries a
+  ΔE 12.4 for <em>normal</em> colour vision, below the floor of 15. On the <b>All</b> tab, place
+  dots would sit beside cruise-port dots: same mark, near-same hue. So a place pin there carries a
   <b>distinct glyph</b>, and the existing label pass is doing load-bearing work, not decoration.
-  This is not a request to repaint the brand — those hexes are canonical in BRAND.md — it is a
-  constraint on how the new layer is drawn.
+  This is not a request to repaint the brand — those hexes are canonical in BRAND.md and shared
+  with TravStatsWeb — it is a constraint on how the new layer is drawn.
 </div>
 
 <div class="note bad">
-  <strong>Finding 2 — “colour by category” cannot work on a map.</strong> Only the
-  <em>first three</em> slots of a categorical palette clear the all-pairs floors. Seven place
-  categories cannot be seven hues. <b>Category is therefore encoded as the pin’s icon</b>
-  (🍟 🏛 🌲 🖼), and the colour modes stay low-cardinality: <code>list</code> and
-  <code>visited</code>. Ghost targets are <b>hollow and dashed</b> because
-  <code>#5ec2b2</code> vs. muted grey measures ΔE 12.7 — also below the floor. Shape carries it;
-  colour merely agrees.
+  <strong>Finding 2 — “colour by category” cannot work on a map.</strong> Only the <em>first
+  three</em> slots of a categorical palette clear the all-pairs floors. Seven place categories
+  cannot be seven hues. <b>Category is therefore encoded as the pin's icon</b> (🍟 🏛 🌲 🖼),
+  which also survives greyscale, print and forced-colours. Ghost targets are <b>hollow and
+  dashed</b> because <code>#5ec2b2</code> vs. muted grey measures ΔE 12.7 — also below the floor.
+  Shape carries it; colour merely agrees.
 </div>
 
 <p>
-  The one palette that does pass all-pairs cleanly is a small fixed set — so the list-colour
-  picker offers <b>validated slots in a fixed order</b> rather than a free colour wheel, which
-  guarantees nothing:
+  The one palette that does pass all-pairs cleanly is a small fixed set — so the list-colour picker
+  offers <b>validated slots in a fixed order</b> rather than a free colour wheel, which guarantees
+  nothing:
 </p>
 
 <pre class="val">$ validate_palette.js "#3987e5,#d95926,#199e70" --mode dark --surface #161b22 --pairs all
@@ -1251,24 +1254,27 @@ pre.val .p { color: var(--success); }
     <div class="p">B<small>small</small></div>
     <div>
       <h5>Listen</h5>
-      <p><code>PlaceList</code> / <code>PlaceListEntry</code>, list pages, the <code>list</code> colour
-      mode with the validated picker, list filter on the POI tab. <b>This is the Maccis list.</b></p>
+      <p><code>PlaceList</code> / <code>PlaceListEntry</code>, list pages, the <code>list</code>
+      colour mode with the validated picker, list filter on the POI tab.
+      <b>This is the Maccis list.</b></p>
     </div>
   </div>
   <div class="phase">
     <div class="p">C<small>medium</small></div>
     <div>
       <h5>Checklisten &amp; Beweis</h5>
-      <p><code>CuratedList</code> / <code>CuratedPlace</code> + CSV seed + subscribe/tick + ghost pins +
-      <code>PlaceVisitPhoto</code> + POI achievements + stat tiles. <b>This is the Weltwunder list.</b></p>
+      <p><code>CuratedList</code> / <code>CuratedPlace</code> + CSV seed + subscribe/tick + ghost
+      pins + <code>PlaceVisitPhoto</code> + POI achievements + stat tiles.
+      <b>This is the Weltwunder list.</b></p>
     </div>
   </div>
   <div class="phase">
     <div class="p" style="color:var(--text-muted)">D<small>later</small></div>
     <div>
       <h5>Import &amp; Anreicherung</h5>
-      <p>CSV / Google Takeout / Maps saved places via <code>ImportBatch</code>; place suggestions from
-      trip-photo EXIF (<code>TripPhoto.lat/lon</code> is already populated). Own spec — not promised here.</p>
+      <p>CSV / Google Takeout / Maps saved places via <code>ImportBatch</code>; place suggestions
+      from trip-photo EXIF (<code>TripPhoto.lat/lon</code> is already populated). Own spec — not
+      promised here.</p>
     </div>
   </div>
 </div>
@@ -1289,25 +1295,25 @@ pre.val .p { color: var(--success); }
       <td><b>1</b></td>
       <td><b>Lazy materialisation</b> vs. <b>copy-on-subscribe</b> for checklists</td>
       <td><b>Lazy</b> — because of the lists that come next. UNESCO (~1200 sites), national parks,
-          Michelin stars: copy-on-subscribe hands every subscriber a full catalog they mostly have not
-          visited, and a coordinate corrected in 2.9 never reaches anyone who subscribed in 2.8.
+          Michelin stars: copy-on-subscribe hands every subscriber a full catalog they mostly have
+          not visited, and a coordinate corrected in 2.9 never reaches anyone who subscribed in 2.8.
           Cost of lazy: the one screen in mockup 4 that renders two kinds of row.
-          <b style="color:var(--warning)">Hard to reverse once Phase C ships</b> — it changes what the
-          user's own rows mean. Worth settling before C starts, not during.</td>
+          <b style="color:var(--warning)">Hard to reverse once Phase C ships</b> — it changes what
+          the user's own rows mean. Worth settling before C starts, not during.</td>
     </tr>
     <tr>
       <td><b>2</b></td>
       <td>Which checklists ship in v1?</td>
       <td>The two seven-item wonder lists only (New 7 + Ancient 7). Enough to prove the mechanism
-          without curating a 1200-row CSV nobody has asked for. Anything bulk-derived needs a licence
-          line first — OSM extracts are ODbL, a hand-curated 7-row CSV is not.</td>
+          without curating a 1200-row CSV nobody has asked for. Anything bulk-derived needs a
+          licence line first — OSM extracts are ODbL, a hand-curated 7-row CSV is not.</td>
     </tr>
     <tr>
       <td><b>3</b></td>
       <td>Standalone places, or trip-only?</td>
       <td><b>Standalone with an optional trip</b>, like flights and lodging. This is the assumption
-          that makes “every McDonald’s, worldwide” possible without inventing fake trips — confirm it,
-          because everything else rests on it.</td>
+          that makes “every McDonald’s, worldwide” possible without inventing fake trips — confirm
+          it, because everything else rests on it.</td>
     </tr>
   </tbody>
 </table>
@@ -1319,11 +1325,17 @@ pre.val .p { color: var(--success); }
   recoverable rather than final.
 </div>
 
-<p class="mini" style="margin-top:44px;padding-top:20px;border-top:1px solid var(--color-border)">
-  Full written spec: <code>docs/superpowers/specs/2026-08-23-poi-domain-design.md</code> ·
-  This page: <code>docs/superpowers/specs/2026-08-23-poi-domain-mockups.html</code> ·
-  Mockups are static HTML in the app’s own tokens — no build step, open the file.
-</p>
+<div class="foot">
+  <span class="wordmark" style="font-size:12px;color:var(--text-muted)">
+    <span>TRAV</span>
+    <svg width="6" height="6" viewBox="0 0 20 20" aria-hidden="true"><line x1="10" y1="3" x2="10" y2="17" stroke="var(--accent-dim)" stroke-width="3" stroke-linecap="round"/><line x1="3" y1="10" x2="17" y2="10" stroke="var(--accent-dim)" stroke-width="3" stroke-linecap="round"/></svg>
+    <span>STATS</span>
+  </span>
+  <span class="mini">
+    Spec: <code>2026-08-23-poi-domain-design.md</code> ·
+    This page: <code>2026-08-23-poi-domain-mockups.html</code> · no build step, open the file
+  </span>
+</div>
 
 </div>
 
