@@ -46,6 +46,8 @@ import cruiseRouteOverrideRoutes from './routes/cruises/routeOverride';
 import currenciesRouter from './routes/currencies';
 import lodgingRouter from './routes/lodging';
 import placesRouter from './routes/places';
+import placeListsRouter from './routes/placeLists';
+import curatedListsRouter from './routes/placeLists/curated';
 import lodgingChainsRouter from './routes/lodgingChains';
 import lodgingMembershipsRouter from './routes/lodgingMemberships';
 import lodgingImportRoutes from './routes/lodgingImport';
@@ -305,6 +307,10 @@ app.use('/api/v1/cruises', cruiseRouteOverrideRoutes);
 app.use('/api/v1/currencies', currenciesRouter);
 app.use('/api/v1/lodging', lodgingRouter);
 app.use('/api/v1/places', placesRouter);
+// Curated checklists mount FIRST on the same path: '/curated' would
+// otherwise be captured by the lists router's '/:id' and answered 404.
+app.use('/api/v1/place-lists/curated', curatedListsRouter);
+app.use('/api/v1/place-lists', placeListsRouter);
 app.use('/api/v1/lodging-chains', lodgingChainsRouter);
 app.use('/api/v1/lodging-memberships', lodgingMembershipsRouter);
 app.use('/api/v1/lodging-import', lodgingImportRoutes);

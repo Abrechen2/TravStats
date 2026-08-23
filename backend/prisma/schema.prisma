@@ -76,6 +76,7 @@ model User {
   lodgingMemberships   LodgingMembership[]
   places               Place[]
   placeVisits          PlaceVisit[]
+  placeLists           PlaceList[]
   importBatches        ImportBatch[]
   companions           Companion[]
   photoJourneys        PhotoJourney[]
@@ -1499,9 +1500,10 @@ model Place {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  batch  ImportBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
-  visits PlaceVisit[]
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  batch       ImportBatch?     @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  visits      PlaceVisit[]
+  listEntries PlaceListEntry[]
 
   @@unique([userId, externalRef])
   @@unique([userId, curatedItemId])
@@ -1547,11 +1549,166 @@ model PlaceVisit {
   /// evidence that the user stood in front of the Colosseum.
   trip  Trip? @relation(fields: [tripId], references: [id], onDelete: SetNull)
 
+  photos PlaceVisitPhoto[]
+
   @@index([userId])
   @@index([placeId])
   @@index([tripId])
   @@index([userId, visitedAt])
   @@map("place_visits")
+}
+
+/// Photo proof for one visit.
+///
+/// Deliberately a MIRROR of TripPhoto rather than a generalisation of it.
+/// Making TripPhoto polymorphic would touch the shipped Immich import job, the
+/// album-resync ordering invariant and the asset proxy's ownership check —
+/// three things CLAUDE.md flags as load-bearing. A parallel table costs one
+/// small file and risks none of them.
+model PlaceVisitPhoto {
+  id           String  @id @default(uuid())
+  placeVisitId String  @map("place_visit_id")
+  filename     String
+  mimetype     String
+  sizeBytes    Int     @map("size_bytes")
+  caption      String?
+  sortIdx      Int     @default(0) @map("sort_idx")
+
+  /// Immich provenance, set only when imported from a linked album.
+  immichAssetId String? @map("immich_asset_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  visit PlaceVisit @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
+
+  @@index([placeVisitId])
+  @@map("place_visit_photos")
+}
+
+/// A user's own grouping of places — "Maccis weltweit", "Rom 2024".
+///
+/// Also the row that represents a SUBSCRIPTION to a shipped checklist: then
+/// `curatedKey` is non-null and the name and membership come from the catalog
+/// rather than the user. Both are the same kind of thing to everything that
+/// renders a list, which is why they share one table.
+model PlaceList {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+
+  name        String
+  description String?
+  /// Defaults to the POI domain colour. What `list` colour mode resolves — the
+  /// reason that mode could not exist before this table did.
+  color   String  @default("#5ec2b2")
+  icon    String?
+  sortIdx Int     @default(0) @map("sort_idx")
+
+  /// Non-null when this list is the user's subscription to a shipped checklist
+  /// (e.g. "world-wonders-new7"). A subscribed list's name and membership are
+  /// not user-editable; its colour is.
+  curatedKey String? @map("curated_key")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries PlaceListEntry[]
+
+  @@unique([userId, curatedKey])
+  @@index([userId])
+  @@map("place_lists")
+}
+
+/// Membership. Its own table because a place belongs to MANY lists — the
+/// McDonald's at the Trevi Fountain is in "Maccis" and in "Rom" at once, which
+/// a column on `places` could never express.
+model PlaceListEntry {
+  id      String @id @default(uuid())
+  listId  String @map("list_id")
+  placeId String @map("place_id")
+  sortIdx Int    @default(0) @map("sort_idx")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  list  PlaceList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  place Place     @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, placeId])
+  @@index([listId])
+  @@index([placeId])
+  @@map("place_list_entries")
+}
+
+/// NOT application data — the receipt of the POI backfill.
+///
+/// `20260823150500_poi_backfill_from_trip_stops` copies POI trip stops into
+/// places and deliberately deletes nothing; this table records which stop
+/// became which visit, so the contract migration one release later can delete
+/// exactly those and nothing else. On production the backfill runs for the
+/// first time at the 2.6.0 promote, which makes this the ONLY record of it.
+///
+/// It is declared here purely so `prisma migrate dev` stops proposing to drop
+/// it. It was created by raw SQL and had no model, so the very next generated
+/// migration led with `DROP TABLE "_poi_backfill_audit"` — which would have
+/// left the contract half with nothing to work from. Nothing reads it through
+/// the client; the contract migration drops both the table and this model.
+model PoiBackfillAudit {
+  tripStopId   String   @id @map("trip_stop_id")
+  placeVisitId String   @map("place_visit_id")
+  migratedAt   DateTime @default(now()) @map("migrated_at")
+
+  @@map("_poi_backfill_audit")
+}
+
+/// A checklist the INSTANCE ships — the same category of thing as Port, Ship
+/// and LodgingChain, all of which seed from CSV idempotently. Global and
+/// read-only; a user's progress against it lives in their own Place rows, never
+/// here.
+model CuratedList {
+  key String @id
+
+  /// User-facing, so it follows the project language rule: German is the
+  /// primary copy and English is mirrored beside it. A catalog row cannot go
+  /// through i18n resource files the way UI copy does, so the pair lives in
+  /// the table and the client picks by locale, falling back to `name`.
+  name        String
+  nameEn      String? @map("name_en")
+  description String?
+  descriptionEn String? @map("description_en")
+
+  icon    String?
+  sortIdx Int     @default(0) @map("sort_idx")
+
+  items CuratedPlace[]
+
+  @@map("curated_lists")
+}
+
+/// One target inside a shipped checklist. A target, NOT a pin: it becomes a
+/// drawable place only when the user ticks it, which is what keeps the promise
+/// that every pin on the globe is a real Place.
+model CuratedPlace {
+  id      String @id
+  listKey String @map("list_key")
+
+  /// German primary, English mirrored — see CuratedList.name. Most landmark
+  /// names are identical in both ("Machu Picchu", "Petra"); `nameEn` is null
+  /// for those rather than a duplicate, and the client falls back.
+  name    String
+  nameEn  String? @map("name_en")
+  blurb   String?
+  blurbEn String? @map("blurb_en")
+
+  lat            Float
+  lon            Float
+  country        String?
+  isoCountryCode String? @map("iso_country_code")
+  sortIdx        Int     @default(0) @map("sort_idx")
+
+  list CuratedList @relation(fields: [listKey], references: [key], onDelete: Cascade)
+
+  @@index([listKey])
+  @@map("curated_places")
 }
 
 /// One import run (CSV file, e-mail or PDF). Every row it created carries its
