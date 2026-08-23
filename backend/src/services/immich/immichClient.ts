@@ -46,7 +46,35 @@ export interface ImmichClient {
   whoami(): Promise<ImmichIdentity>;
   listAlbums(): Promise<ImmichAlbum[]>;
   listAlbumAssets(albumId: string): Promise<ImmichAsset[]>;
+  /**
+   * Every image in a date range, across the whole library.
+   *
+   * The album search above answers "what is in this album"; the journey
+   * scan needs "what was taken while nothing was recorded", which no
+   * album expresses. Same endpoint, no `albumIds`, plus Immich's own
+   * `takenAfter` / `takenBefore` so the range is filtered server-side
+   * rather than by pulling the library and discarding most of it.
+   */
+  searchAssetsByDate(range: ImmichDateRange): Promise<ImmichAssetPage>;
   fetchAssetStream(assetId: string, size: ImmichAssetSize): Promise<ImmichAssetStream>;
+}
+
+/** Inclusive on both ends, as Immich treats them. */
+export interface ImmichDateRange {
+  takenAfter: Date;
+  takenBefore: Date;
+}
+
+export interface ImmichAssetPage {
+  assets: ImmichAsset[];
+  /**
+   * Immich had more to give and we stopped at the page cap.
+   *
+   * Surfaced rather than logged and swallowed: a scan that silently saw
+   * two thirds of a library would report "no forgotten journeys" with
+   * the same confidence as one that saw all of it.
+   */
+  truncated: boolean;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -223,6 +251,65 @@ export function createImmichClient(conn: ImmichConnection): ImmichClient {
       }
 
       return collected;
+    },
+
+    async searchAssetsByDate({
+      takenAfter,
+      takenBefore,
+    }: ImmichDateRange): Promise<ImmichAssetPage> {
+      const collected: ImmichAsset[] = [];
+      let truncated = false;
+
+      for (let page = 1; page <= MAX_PAGES; page += 1) {
+        let data: unknown;
+        try {
+          ({ data } = await axios.post(
+            url("/search/metadata"),
+            {
+              takenAfter: takenAfter.toISOString(),
+              takenBefore: takenBefore.toISOString(),
+              // Videos cluster like photos but weigh far more per item and
+              // add nothing the timestamps do not already say.
+              type: "IMAGE",
+              // Coordinates live in the EXIF block; without this the scan
+              // gets timestamps and no places at all.
+              withExif: true,
+              page,
+              size: PAGE_SIZE,
+            },
+            jsonConfig,
+          ));
+        } catch (error) {
+          throw toImmichError(error, "search/metadata by date");
+        }
+
+        const assets = isRecord(data) && isRecord(data.assets) ? data.assets : undefined;
+        if (!assets || !Array.isArray(assets.items)) {
+          throw new ImmichError("protocol", "Immich returned an unexpected search payload");
+        }
+
+        for (const raw of assets.items) {
+          const mapped = mapAsset(raw);
+          if (mapped) collected.push(mapped);
+        }
+
+        if (typeof assets.nextPage !== "string") break;
+        if (page === MAX_PAGES) truncated = true;
+      }
+
+      if (truncated) {
+        logger.warn({
+          message: "immich_date_search_truncated",
+          context: {
+            maxPages: MAX_PAGES,
+            collectedCount: collected.length,
+            takenAfter: takenAfter.toISOString(),
+            takenBefore: takenBefore.toISOString(),
+          },
+        });
+      }
+
+      return { assets: collected, truncated };
     },
 
     /**
