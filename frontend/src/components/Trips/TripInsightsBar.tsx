@@ -26,14 +26,17 @@ export function TripInsightsBar({ trips }: { trips: Trip[] }): JSX.Element | nul
 
   if (tiles.every((tile) => tile.win === null)) return null;
 
-  // Same width budget as its two neighbours on the page — the heading above
-  // (max-w-7xl mx-auto px-4) and the trip list below (px-4 > max-w-7xl
-  // mx-auto). Without it these three tiles were the only thing on the page
-  // running to the browser edge, which on a wide screen reads as a different
-  // page (#271, reported against 2.6.0-rc.11).
+  // The SAME grid as the trip cards below, not merely the same width budget:
+  // identical breakpoints (1 → md:2 → lg:3) and identical gap, so the column
+  // edges line up down the page at every size. With its own `sm:grid-cols-3
+  // gap-3` the tiles were three-across while the cards below were still one,
+  // and even at full width the right edge missed theirs by 3 px.
+  //
+  // The width budget itself is the other half of #271: without it these tiles
+  // were the only thing on the page running to the browser edge.
   return (
     <div className="px-4">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
       {tiles.map(({ key, label, win }) =>
         win ? (
           <button
