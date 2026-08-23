@@ -12,7 +12,6 @@ import { setupApi, usageStatsApi } from "./lib/api";
 import i18n from "./i18n/config";
 import { useTranslation } from "./hooks/useTranslation";
 import { useEnabledDomains } from "./hooks/useEnabledDomains";
-import { usePlacesVisible } from "./hooks/usePlacesVisible";
 import { useWhatsNew } from "./hooks/useWhatsNew";
 import { useSessionValidation } from "./hooks/useSessionValidation";
 import WhatsNewModal from "./components/WhatsNewModal";
@@ -28,6 +27,7 @@ const CruiseDetailPage = lazy(() => import("./pages/CruiseDetailPage"));
 const LodgingListPage = lazy(() => import("./pages/LodgingListPage"));
 const PlacesListPage = lazy(() => import("./pages/PlacesListPage"));
 const PlaceDetailPage = lazy(() => import("./pages/PlaceDetailPage"));
+import { PlacesRouteGuard } from "./components/places/PlacesRouteGuard";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
@@ -73,7 +73,6 @@ function AppContent() {
   const location = useLocation();
   const { t } = useTranslation("common");
   const { isEnabled } = useEnabledDomains();
-  const placesVisible = usePlacesVisible();
   // A persisted user is only a CLAIM until the server confirms the cookie.
   // Nothing authenticated may be fetched or rendered before it does — hence
   // every authenticated effect below is gated on `sessionChecked`, not just
@@ -311,20 +310,30 @@ function AppContent() {
               <Route
                 path="/places"
                 element={
-                  isAuthenticated && placesVisible ? (
-                    <PlacesListPage />
+                  isAuthenticated ? (
+                    // Not a boolean guard: the beta flag is unknown for one
+                    // request on a cold load, and redirecting on "unknown"
+                    // bounced every refresh and bookmark. See PlacesRouteGuard.
+                    <PlacesRouteGuard>
+                      <PlacesListPage />
+                    </PlacesRouteGuard>
                   ) : (
-                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                    <Navigate to="/login" />
                   )
                 }
               />
               <Route
                 path="/places/:id"
                 element={
-                  isAuthenticated && placesVisible ? (
-                    <PlaceDetailPage />
+                  isAuthenticated ? (
+                    // Not a boolean guard: the beta flag is unknown for one
+                    // request on a cold load, and redirecting on "unknown"
+                    // bounced every refresh and bookmark. See PlacesRouteGuard.
+                    <PlacesRouteGuard>
+                      <PlaceDetailPage />
+                    </PlacesRouteGuard>
                   ) : (
-                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                    <Navigate to="/login" />
                   )
                 }
               />

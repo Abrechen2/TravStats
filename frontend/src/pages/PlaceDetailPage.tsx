@@ -8,7 +8,7 @@ import { LocationMiniMap } from "../components/location/LocationMiniMap";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import { RowActionButton, RowActions } from "../components/table/RowActionButton";
 import { useTranslation } from "../hooks/useTranslation";
-import { usePlacesVisible } from "../hooks/usePlacesVisible";
+import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { FlagImg } from "../lib/countryFlag";
 import { logger } from "../lib/logger";
 import { createVisit, deletePlace, deleteVisit, getPlace } from "../lib/api/places";
@@ -23,7 +23,7 @@ export default function PlaceDetailPage(): JSX.Element {
   const { t, i18n } = useTranslation(["places", "common"]);
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
-  const placesVisible = usePlacesVisible();
+  const access = usePlacesAccess();
 
   const [place, setPlace] = useState<Place | null>(null);
   const [loading, setLoading] = useState(true);
@@ -133,7 +133,7 @@ export default function PlaceDetailPage(): JSX.Element {
     [i18n.language, t]
   );
 
-  if (!placesVisible) {
+  if (access === "denied") {
     return (
       <PageTransition>
         <NavigationBar />

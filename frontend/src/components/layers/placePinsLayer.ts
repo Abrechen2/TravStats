@@ -6,7 +6,7 @@ import {
   resolvePlaceColor,
   type PlaceColorConfig,
 } from "../../lib/placeColor";
-import { PLACE_CATEGORY_ICONS, type PlaceCategory } from "../../shared/placeCategories";
+import type { PlaceCategory } from "../../shared/placeCategories";
 import { markerDotRadiusProps } from "./markerDotStyle";
 import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
 
@@ -17,8 +17,6 @@ interface PlacePinDatum {
   /** Truncated display label rendered by the name TextLayer — see `toPlaceLabel`. */
   shortLabel: string;
   category: PlaceCategory;
-  /** The category glyph, drawn as its own layer above the dot. */
-  icon: string;
   city: string | null;
   /**
    * Free text, exactly as `Lodging.country` is — deliberately NOT pre-resolved
@@ -55,17 +53,13 @@ export interface PlacePinsAppearance {
   onPinClick?: (placeId: string) => void;
   colors?: PlaceColorConfig;
   labelsMode?: LabelsMode;
-  /** Draw the category glyph above each dot. On the All tab this is what keeps
-   *  a place distinguishable from a cruise port — see the note on
-   *  `buildPlacePins`. */
-  showIcons?: boolean;
 }
 
 /**
- * Place pins: a dot per place, an optional category glyph, and budgeted name
- * labels — the same three-part construction the lodging and cruise-port
- * layers use, sharing `markerDotStyle` so a place dot cannot drift in size
- * from an airport, port or lodging dot (pinned by dotSizeParity.test.ts).
+ * Place pins: a dot per place plus budgeted name labels — the same
+ * construction the lodging and cruise-port layers use, sharing
+ * `markerDotStyle` so a place dot cannot drift in size from an airport, port
+ * or lodging dot (pinned by dotSizeParity.test.ts).
  *
  * TWO ENCODINGS HERE ARE MEASUREMENTS, NOT PREFERENCES:
  *
@@ -74,12 +68,27 @@ export interface PlacePinsAppearance {
  *    floor, so colour alone would not distinguish them for anyone. The shape
  *    does; the colour merely agrees.
  *
- * 2. **The category glyph is not decoration.** POI teal and cruise blue are
- *    the closest pair in the product's palette — also below that floor — and
- *    on the All tab place dots sit beside cruise-port dots at the same size.
- *    `showIcons` defaults to true for that reason. Turning it off inside the
- *    POI tab is safe (nothing else is on screen); turning it off on a shared
- *    map is not.
+ * 2. **There is no category glyph on the map, and that is a measurement too.**
+ *    The plan called for one — category encoded as an icon rather than a hue,
+ *    because only about three categorical colours survive the all-pairs
+ *    separation test and there are eight categories. It was built, and then a
+ *    browser showed what no unit test could: deck.gl's `TextLayer` renders
+ *    text through a canvas-built font atlas, which cannot produce COLOUR
+ *    EMOJI. Every glyph came out as an opaque black box drawn ON TOP of the
+ *    dot, so the pin was not merely unlabelled, it was invisible. The whole
+ *    suite was green throughout — the same trap the airline-logo work
+ *    documents in CLAUDE.md, and the reason that note says to take a browser
+ *    look rather than trust the tests.
+ *
+ *    Category therefore lives where it renders as ordinary DOM and is legible:
+ *    the list rows, the detail page and the tooltip. Bringing it back to the
+ *    map needs an `IconLayer` with a real sprite atlas, not a font.
+ *
+ *    CONSEQUENCE STILL OPEN: this was also the mark meant to separate a place
+ *    from a cruise-port dot on the All tab (teal vs blue measures below the
+ *    normal-vision floor). Places are not on the All tab yet, so nothing is
+ *    wrong today — but that layer needs its own distinct mark before they are,
+ *    and a colour will not do it.
  *
  * Returns `null` when nothing qualifies, so callers omit the layers entirely
  * rather than mounting a no-op — the convention `createCruisePortsLayer` and
@@ -95,7 +104,6 @@ export function buildPlacePins(
     onPinClick,
     labelsMode = "important",
     colors = DEFAULT_PLACE_COLOR_CONFIG,
-    showIcons = true,
   } = appearance;
 
   const data: PlacePinDatum[] = [];
@@ -110,7 +118,6 @@ export function buildPlacePins(
       name: place.name,
       shortLabel: toPlaceLabel(place.name),
       category: place.category,
-      icon: PLACE_CATEGORY_ICONS[place.category] ?? PLACE_CATEGORY_ICONS.other,
       city: place.city,
       country: place.country,
       visitCount: place.visitCount,
@@ -153,26 +160,6 @@ export function buildPlacePins(
         : undefined,
     })
   );
-
-  if (showIcons) {
-    layers.push(
-      new TextLayer<PlacePinDatum>({
-        id: "place-pins-icons",
-        data,
-        getPosition: (d) => d.position,
-        getText: (d) => d.icon,
-        getSize: 13,
-        getPixelOffset: [0, -2],
-        sizeUnits: "pixels",
-        billboard: true,
-        pickable: false,
-        // Emoji live far outside deck.gl's default ASCII 32-127 atlas, which
-        // would silently drop every glyph (the #185 class of bug). Declaring
-        // the set explicitly is what makes them render at all.
-        characterSet: new Set(Object.values(PLACE_CATEGORY_ICONS)),
-      })
-    );
-  }
 
   // Priority label reveal, same as cruise ports and lodging: the most-visited
   // places keep their label even zoomed out, the rest fill in as the zoom

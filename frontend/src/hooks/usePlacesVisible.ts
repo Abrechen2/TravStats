@@ -23,7 +23,32 @@ import { useEnabledDomains } from "./useEnabledDomains";
  * reappear when it comes back on.
  */
 export function usePlacesVisible(): boolean {
+  return usePlacesAccess() === "allowed";
+}
+
+/**
+ * The same rule as a THREE-state answer, for callers that must not treat
+ * "don't know yet" as "no".
+ *
+ * `betaFeaturesEnabled` is instance state and is deliberately never persisted
+ * to localStorage (see the `partialize` in store/settingsStore.ts), so on a
+ * cold load it is `null` until `GET /settings` answers. `enabledDomains` IS
+ * persisted, which is why the other domains' routes survive a refresh and this
+ * one did not: a hard navigation to /places evaluated the guard while the flag
+ * was still unknown and redirected to the dashboard. Bookmarking the page,
+ * hitting reload on it, or opening a place link in a new tab all bounced.
+ * Found by driving a browser; every unit test passed throughout.
+ *
+ * So: hiding CHROME fails closed (a tab must never flash into view and then
+ * vanish — that is what `usePlacesVisible` is for), while a ROUTE waits.
+ * Redirecting on "unknown" throws the user off a page they asked for; showing
+ * a spinner for one request costs nothing and cannot be wrong.
+ */
+export type PlacesAccess = "pending" | "allowed" | "denied";
+
+export function usePlacesAccess(): PlacesAccess {
   const { isEnabled } = useEnabledDomains();
-  const { isFeatureVisible } = useBetaFeatures();
-  return isEnabled("poi") && isFeatureVisible("poiDomain");
+  const { betaFeaturesEnabled, isFeatureVisible } = useBetaFeatures();
+  if (betaFeaturesEnabled === null) return "pending";
+  return isEnabled("poi") && isFeatureVisible("poiDomain") ? "allowed" : "denied";
 }

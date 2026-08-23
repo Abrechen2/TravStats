@@ -12,7 +12,7 @@ import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import { useTranslation } from "../hooks/useTranslation";
-import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { FlagImg } from "../lib/countryFlag";
 import { logger } from "../lib/logger";
 import { deletePlace, listPlaces } from "../lib/api/places";
@@ -91,7 +91,7 @@ export default function PlacesListPage(): JSX.Element {
   const { t, i18n } = useTranslation(["places", "common"]);
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
-  const { isEnabled } = useEnabledDomains();
+  const access = usePlacesAccess();
 
   const [rows, setRows] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
@@ -195,7 +195,7 @@ export default function PlacesListPage(): JSX.Element {
     [i18n.language]
   );
 
-  if (!isEnabled("poi")) {
+  if (access === "denied") {
     return (
       <PageTransition>
         <NavigationBar />
