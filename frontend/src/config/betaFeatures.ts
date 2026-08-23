@@ -65,6 +65,28 @@ export const BETA_FEATURES = Object.freeze({
     returnsWhen: "The mobile app (TravStatsApp) is released.",
   }),
 
+  /**
+   * The whole Places (POI) domain — dashboard tab, /places list, nav entry,
+   * the module toggle, and place visits on the trip timeline.
+   *
+   * This is NOT the old `poiDashboardTab` stub gate. The domain is real now:
+   * Place + PlaceVisit, a migration off the old trip stops, an API, a map
+   * layer and a list. What it is not yet is FINISHED — see `returnsWhen`.
+   *
+   * READ THIS BEFORE REMOVING THE GATE: hiding the domain must not orphan the
+   * data. A user who created places on a beta instance and then upgrades to a
+   * build with the flag off still owns those rows; they simply stop being
+   * shown. Nothing here deletes or migrates anything, and the backend
+   * endpoints stay reachable (this is a visibility gate — see the file header),
+   * so a place visited on a trip keeps its `PlaceVisit` row and reappears
+   * intact the moment the flag comes back on.
+   */
+  poiDomain: Object.freeze({
+    reason: "beta",
+    why: "The domain works end-to-end but is incomplete: there is no place detail page, no UI to create a place (only the API), no POI section in the map appearance panel, and neither custom lists nor the shipped checklists exist yet. Showing it now would advertise a logbook the user cannot actually write to.",
+    returnsWhen:
+      "A place can be created and edited from the UI, has a detail page, and the custom lists (phase B) have shipped.",
+  }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 
 export type BetaFeatureKey = keyof typeof BETA_FEATURES;

@@ -4,6 +4,7 @@ import { DashboardLayout } from "../components/Dashboard/DashboardLayout";
 import { useDashboardRoute } from "../hooks/useDashboardRoute";
 import { useClearMapSelectionsOnTabChange } from "../hooks/useClearMapSelectionsOnTabChange";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { usePlacesVisible } from "../hooks/usePlacesVisible";
 import { flightsApi } from "../lib/api/flights";
 import { cruiseApi } from "../lib/api/cruise";
 import { getLodgingStats } from "../lib/api/lodging";
@@ -51,6 +52,7 @@ export default function DashboardPage(): JSX.Element {
   // another domain's map.
   useClearMapSelectionsOnTabChange(tab);
   const { isEnabled } = useEnabledDomains();
+  const placesVisible = usePlacesVisible();
   const [counts, setCounts] = useState({ flight: 0, cruise: 0, poi: 0, lodging: 0 });
   // How many of the counted entries are merely planned (B6): shown as a
   // "(n geplant)" hint so the tab count and the flown-only statistics stop
@@ -87,7 +89,7 @@ export default function DashboardPage(): JSX.Element {
         // `visited: true` so the tab count matches "Orte besucht" on the tab
         // itself. Counting wishlist entries here would make the strip disagree
         // with every figure inside the tab (shared/placeCounting.ts).
-        const placesPromise = isEnabled("poi")
+        const placesPromise = placesVisible
           ? placesApi.count({ visited: true })
           : Promise.resolve(0);
         const [flights, scheduledFlights, cruises, lodgingStats, placeCount] = await Promise.all([
@@ -117,7 +119,7 @@ export default function DashboardPage(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [isEnabled, refreshToken]);
+  }, [isEnabled, placesVisible, refreshToken]);
 
   return (
     <DashboardLayout
@@ -129,7 +131,9 @@ export default function DashboardPage(): JSX.Element {
       {tab === "all" && <AllTab key={refreshToken} />}
       {tab === "flight" && <FlightsTab key={refreshToken} />}
       {tab === "cruise" && <CruisesTab key={refreshToken} />}
-      {tab === "poi" && <PoiTab key={refreshToken} />}
+      {/* Gated with its tab-strip entry, so /dashboard/poi renders nothing
+          on an instance where the domain is hidden. */}
+      {tab === "poi" && placesVisible && <PoiTab key={refreshToken} />}
       {tab === "lodging" && <LodgingTab key={refreshToken} />}
     </DashboardLayout>
   );

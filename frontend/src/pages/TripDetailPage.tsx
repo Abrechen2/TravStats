@@ -12,6 +12,7 @@ import { computeRailStates } from "../lib/timelineRail";
 import { stripMarkdown } from "../lib/markdownPreview";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { usePlacesVisible } from "../hooks/usePlacesVisible";
 import { useTranslation } from "../hooks/useTranslation";
 import type { Booking, Trip, TripJournalEntry, TripStatus, TripStop } from "../types";
 import PageTransition from "../components/PageTransition";
@@ -572,8 +573,9 @@ interface TimelineTabProps {
 
 function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
-  const { isEnabled } = useEnabledDomains();
-  const poiEnabled = isEnabled("poi");
+  // Both the user's domain choice and the instance beta flag, via the one
+  // hook that combines them — see hooks/usePlacesVisible.ts.
+  const poiEnabled = usePlacesVisible();
   const id = trip.id;
   /** Places visited on THIS trip, with the visit that ties them to it. A place
    *  is a first-class row of its own now, so the trip READS it rather than

@@ -12,6 +12,7 @@ import { setupApi, usageStatsApi } from "./lib/api";
 import i18n from "./i18n/config";
 import { useTranslation } from "./hooks/useTranslation";
 import { useEnabledDomains } from "./hooks/useEnabledDomains";
+import { usePlacesVisible } from "./hooks/usePlacesVisible";
 import { useWhatsNew } from "./hooks/useWhatsNew";
 import { useSessionValidation } from "./hooks/useSessionValidation";
 import WhatsNewModal from "./components/WhatsNewModal";
@@ -71,6 +72,7 @@ function AppContent() {
   const location = useLocation();
   const { t } = useTranslation("common");
   const { isEnabled } = useEnabledDomains();
+  const placesVisible = usePlacesVisible();
   // A persisted user is only a CLAIM until the server confirms the cookie.
   // Nothing authenticated may be fetched or rendered before it does — hence
   // every authenticated effect below is gated on `sessionChecked`, not just
@@ -308,7 +310,7 @@ function AppContent() {
               <Route
                 path="/places"
                 element={
-                  isAuthenticated && isEnabled("poi") ? (
+                  isAuthenticated && placesVisible ? (
                     <PlacesListPage />
                   ) : (
                     <Navigate to={isAuthenticated ? "/" : "/login"} />

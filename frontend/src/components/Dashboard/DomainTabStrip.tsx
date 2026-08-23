@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import type { DashboardTab } from "../../types/dashboard";
 import type { UpcomingEntry } from "../../lib/api/upcoming";
 import { NextUpEntry } from "./NextUpEntry";
@@ -46,12 +47,20 @@ export function DomainTabStrip({
   nowMs = Date.now(),
 }: DomainTabStripProps): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
+  const { isFeatureVisible } = useBetaFeatures();
 
-  // Every tab is real now — the POI stub that used to hide behind
-  // `poiDashboardTab` was replaced by the Places domain, so the gate and its
-  // registry entry are gone. Domain visibility is the user's own
-  // enabled-domains setting, which DashboardLayout already applies.
-  const visibleTabs = DASHBOARD_TABS;
+  // The instance beta flag ALONE, deliberately not `usePlacesVisible`. This
+  // strip already receives `enabled` as a prop, and its contract is that a
+  // domain the user has switched off is DIMMED, not hidden — that is what lets
+  // them click through to the "coming soon" screen and turn it back on. Mixing
+  // the enabled state in here would hide the tab instead and break that.
+  //
+  // The Places domain is real but unfinished, so it ships to beta instances
+  // only — a different gate from the `poiDashboardTab` stub one it replaced,
+  // and hidden for a different reason. See config/betaFeatures.ts.
+  const visibleTabs = DASHBOARD_TABS.filter(
+    (tab) => tab !== "poi" || isFeatureVisible("poiDomain")
+  );
 
   // On a domain tab, that domain's next entry; on "Alle", the soonest of all —
   // including the trip, which belongs to no single tab. `upcoming` arrives

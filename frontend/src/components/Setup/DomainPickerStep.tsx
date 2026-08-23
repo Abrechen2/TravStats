@@ -1,5 +1,6 @@
 import { JSX, KeyboardEvent } from "react";
 import { DOMAIN_KEYS, DOMAINS, type DomainKey } from "../../shared/domains";
+import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useTranslation } from "../../hooks/useTranslation";
 
 export interface DomainPickerStepProps {
@@ -23,6 +24,14 @@ export default function DomainPickerStep({ value, onChange }: DomainPickerStepPr
     }
   };
 
+  const { isFeatureVisible } = useBetaFeatures();
+  // On a fresh install the settings request has not happened yet, so the flag
+  // is unknown and reads as OFF — which is the right answer here: a brand-new
+  // instance should not be offered a domain that is still in beta.
+  const visibleKeys = DOMAIN_KEYS.filter(
+    (key) => key !== "poi" || isFeatureVisible("poiDomain")
+  );
+
   return (
     <div className="space-y-4">
       <div>
@@ -34,7 +43,7 @@ export default function DomainPickerStep({ value, onChange }: DomainPickerStepPr
         </p>
       </div>
       <ul className="space-y-2">
-        {DOMAIN_KEYS.map((key) => {
+        {visibleKeys.map((key) => {
           const d = DOMAINS[key];
           const selected = value.includes(key);
           const locked = !d.available;

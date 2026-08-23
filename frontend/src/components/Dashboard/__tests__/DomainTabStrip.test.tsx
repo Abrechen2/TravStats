@@ -94,13 +94,13 @@ describe("DomainTabStrip", () => {
     expect(onSelect).toHaveBeenCalledWith("poi");
   });
 
-  // The POI tab used to hide behind `poiDashboardTab` while it was a stub.
-  // The Places domain replaced that stub, so the gate — and its registry entry
-  // — are gone. What is worth pinning now is the opposite of what these tests
-  // used to assert: the tab is there whatever the beta flag says, because a
-  // real domain's visibility is the user's enabled-domains setting, never an
-  // instance-wide beta switch.
-  describe("the POI tab is no longer beta-gated", () => {
+  // The POI tab hides behind `poiDomain` — a DIFFERENT gate from the
+  // `poiDashboardTab` one it replaced, and hidden for a different reason. That
+  // one hid a stub: an emoji and a "nothing here yet" line. This one hides a
+  // real domain (Place + PlaceVisit, a migration off the old trip stops, an
+  // API, a map layer, a list) that is not FINISHED — no detail page, no way to
+  // create a place from the UI, no lists yet. See config/betaFeatures.ts.
+  describe("beta gate: poiDomain", () => {
     const renderStrip = (): void => {
       render(
         <DomainTabStrip
@@ -115,13 +115,19 @@ describe("DomainTabStrip", () => {
     it.each([
       ["off", false],
       ["unknown (not loaded yet)", null],
-      ["on", true],
-    ])("shows the POI tab when the beta flag is %s", (_label, flag) => {
+    ])("hides the POI tab when the beta flag is %s", (_label, flag) => {
       useSettingsStore.setState({ betaFeaturesEnabled: flag });
       renderStrip();
-      expect(screen.getByRole("tab", { name: /poi/i })).toBeTruthy();
+      expect(screen.queryByRole("tab", { name: /poi/i })).toBeNull();
+      // the ungated tabs are untouched
       expect(screen.getByRole("tab", { name: /flights/i })).toBeTruthy();
       expect(screen.getByRole("tab", { name: /cruises/i })).toBeTruthy();
+    });
+
+    it("shows the POI tab when the beta flag is on", () => {
+      useSettingsStore.setState({ betaFeaturesEnabled: true });
+      renderStrip();
+      expect(screen.getByRole("tab", { name: /poi/i })).toBeTruthy();
     });
   });
 });
