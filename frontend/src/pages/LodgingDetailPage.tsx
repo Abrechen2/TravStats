@@ -21,6 +21,7 @@ import {
   singleOriginalCurrencySpend,
 } from "../lib/lodgingFormat";
 import { logger } from "../lib/logger";
+import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { deriveStayMembership } from "../shared/membershipDerivation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
@@ -38,7 +39,12 @@ export default function LodgingDetailPage(): JSX.Element {
 
   const [lodging, setLodging] = useState<Lodging | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [notFound, setNotFound] = useState<boolean>(false);
+  // See CruiseDetailPage: a 404 is "gone", everything else is "could not
+  // ask". Collapsing the two made a network drop claim the house was
+  // deleted.
+  const [failure, setFailure] = useState<LoadFailure | null>(null);
+  /** Bumped by the retry button; the fetch effect watches it. */
+  const [reloadKey, setReloadKey] = useState<number>(0);
   const [editing, setEditing] = useState<boolean>(false);
   const [confirmingDelete, setConfirmingDelete] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
@@ -61,12 +67,13 @@ export default function LodgingDetailPage(): JSX.Element {
     let cancelled = false;
     void (async () => {
       setLoading(true);
+      setFailure(null);
       try {
         const data = await getLodging(id);
         if (!cancelled) setLodging(data);
       } catch (err: unknown) {
         logger.error("LodgingDetailPage: failed to load lodging", err);
-        if (!cancelled) setNotFound(true);
+        if (!cancelled) setFailure(classifyLoadFailure(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -74,7 +81,7 @@ export default function LodgingDetailPage(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, reloadKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -129,7 +136,8 @@ export default function LodgingDetailPage(): JSX.Element {
     );
   }
 
-  if (notFound || !lodging) {
+  if (failure !== null || !lodging) {
+    const isLoadError = failure === "loadError";
     return (
       <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
         <NavigationBar />
@@ -140,9 +148,21 @@ export default function LodgingDetailPage(): JSX.Element {
           >
             ← {t("lodging:list.title")}
           </button>
-          <div className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]">
-            {t("lodging:detail.notFound")}
+          <div
+            role="alert"
+            className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]"
+          >
+            {isLoadError ? t("lodging:detail.loadError") : t("lodging:detail.notFound")}
           </div>
+          {isLoadError && (
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="mt-3 rounded-md border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            >
+              {t("common:buttons.retry")}
+            </button>
+          )}
         </div>
       </div>
     );

@@ -51,7 +51,8 @@
     "deleteConfirm": "Endgültig löschen",
     "deleteCancel": "Abbrechen",
     "deleteSuccess": "Kreuzfahrt gelöscht",
-    "deleteError": "Kreuzfahrt konnte nicht gelöscht werden"
+    "deleteError": "Kreuzfahrt konnte nicht gelöscht werden",
+    "loadError": "Die Kreuzfahrt konnte nicht geladen werden."
   },
   "field": {
     "ship": "Schiff",

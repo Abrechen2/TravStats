@@ -90,7 +90,8 @@
     "deleteConfirmMessage_one": "This lodging and its {{count}} stay will be permanently deleted. This action cannot be undone.",
     "deleteConfirmMessage_other": "This lodging and its {{count}} stays will be permanently deleted. This action cannot be undone.",
     "deleteSuccess": "Lodging deleted",
-    "deleteError": "Could not delete lodging"
+    "deleteError": "Could not delete lodging",
+    "loadError": "The stay could not be loaded."
   },
   "field": {
     "name": "Name",

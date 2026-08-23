@@ -51,7 +51,8 @@
     "deleteConfirm": "Delete permanently",
     "deleteCancel": "Cancel",
     "deleteSuccess": "Cruise deleted",
-    "deleteError": "Could not delete the cruise"
+    "deleteError": "Could not delete the cruise",
+    "loadError": "The cruise could not be loaded."
   },
   "field": {
     "ship": "Ship",

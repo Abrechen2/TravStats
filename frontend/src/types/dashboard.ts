@@ -13,7 +13,12 @@ export type CruiseMode = (typeof CRUISE_MODES)[number];
 export const POI_MODES = ["markers", "heatmap"] as const;
 export type PoiMode = (typeof POI_MODES)[number];
 
-export const LODGING_MODES = ["map", "nights", "chains"] as const;
+// `globe` is a PROJECTION, not a data view — it only says "show me the same
+// thing on a sphere". Flights and cruises offered it, lodging did not, even
+// though the map component has always been able to draw hotel pins that way;
+// LodgingTab simply passed a hardcoded "routes" through. That was an
+// oversight, not a decision.
+export const LODGING_MODES = ["map", "nights", "chains", "globe"] as const;
 export type LodgingMode = (typeof LODGING_MODES)[number];
 
 export type DashboardMode = AllMode | FlightMode | CruiseMode | PoiMode | LodgingMode;

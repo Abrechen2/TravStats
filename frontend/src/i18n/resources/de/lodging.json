@@ -90,7 +90,8 @@
     "deleteConfirmMessage_one": "Diese Unterkunft mit {{count}} Aufenthalt wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
     "deleteConfirmMessage_other": "Diese Unterkunft mit {{count}} Aufenthalten wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
     "deleteSuccess": "Unterkunft gelöscht",
-    "deleteError": "Unterkunft konnte nicht gelöscht werden"
+    "deleteError": "Unterkunft konnte nicht gelöscht werden",
+    "loadError": "Die Unterkunft konnte nicht geladen werden."
   },
   "field": {
     "name": "Name",
