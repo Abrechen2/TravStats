@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { statsApi, type CruiseStatsResponse } from "../../lib/api/stats";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
+import { convertDistance, getDistanceLabel } from "../../lib/units";
+import { useSettingsStore } from "../../store/settingsStore";
 
 type TFunction = (key: string, options?: Record<string, unknown>) => string;
 
@@ -18,6 +20,8 @@ type TFunction = (key: string, options?: Record<string, unknown>) => string;
  */
 export default function CruiseStatsSection(): JSX.Element {
   const { t } = useTranslation(["stats", "cruise", "common"]);
+  const distanceUnit = useSettingsStore((state) => state.units.distanceUnit);
+  const distanceLabel = getDistanceLabel(distanceUnit, t);
   const [stats, setStats] = useState<CruiseStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -115,7 +119,10 @@ export default function CruiseStatsSection(): JSX.Element {
     { label: t("stats:cruiseSection.count"), value: stats.cruisesCount },
     {
       label: t("stats:cruiseSection.totalDistance"),
-      value: `${formatNumber(stats.totalDistanceKm)} km`,
+      // Was a hardcoded "km". The flight sections have always honoured
+      // Einheiten & Formate, so a user on miles got miles for flights and
+      // kilometres for cruises on the same page.
+      value: `${formatNumber(convertDistance(stats.totalDistanceKm, distanceUnit))} ${distanceLabel}`,
     },
     { label: t("stats:cruiseSection.seaDays"), value: stats.seaDays },
     { label: t("stats:cruiseSection.ports"), value: stats.cruisePortsUnique },
@@ -124,7 +131,10 @@ export default function CruiseStatsSection(): JSX.Element {
     { label: t("stats:cruiseSection.avgPortsPerCruise"), value: avgPortsPerCruise.toFixed(1) },
     {
       label: t("stats:cruiseSection.longestLeg"),
-      value: stats.longestLegKm > 0 ? `${formatNumber(stats.longestLegKm)} km` : "—",
+      value:
+        stats.longestLegKm > 0
+          ? `${formatNumber(convertDistance(stats.longestLegKm, distanceUnit))} ${distanceLabel}`
+          : "—",
     },
   ];
 

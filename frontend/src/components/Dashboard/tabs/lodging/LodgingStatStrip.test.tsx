@@ -44,7 +44,7 @@ describe("LodgingStatStrip", () => {
     // leak between cases.
     useSettingsStore.setState({
       baseCurrency: "EUR",
-      units: { distanceUnit: "kilometers", currency: "EUR" },
+      units: { distanceUnit: "kilometers" },
     });
   });
 
@@ -55,7 +55,7 @@ describe("LodgingStatStrip", () => {
     // for flight costs. The spend figure must be labeled CHF, never USD.
     useSettingsStore.setState({
       baseCurrency: "CHF",
-      units: { distanceUnit: "kilometers", currency: "USD" },
+      units: { distanceUnit: "kilometers" },
     });
 
     render(<LodgingStatStrip stats={stats} />);

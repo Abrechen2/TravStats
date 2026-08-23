@@ -16,7 +16,7 @@ interface StatsProps {
 
 export default function Stats({ filters = {} }: StatsProps): JSX.Element {
   const { t, i18n } = useTranslation(["stats", "common"]);
-  const { units } = useSettingsStore();
+  const { units, baseCurrency } = useSettingsStore();
   const lang = i18n.language;
   const [stats, setStats] = useState<StatsType | null>(null);
   const [routes, setRoutes] = useState<Route[]>([]);
@@ -180,7 +180,7 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
               {t("stats:overview.totalCost")}
             </p>
             <p className="text-3xl font-bold" style={{ color: "var(--accent)" }}>
-              {formatCurrencyUtil(stats.totalCost, units.currency)}
+              {formatCurrencyUtil(stats.totalCost, baseCurrency)}
             </p>
           </div>
         )}

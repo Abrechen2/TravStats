@@ -16,6 +16,8 @@ import { flightsApi, tripsApi } from "../lib/api";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { getFlightDuration } from "../lib/flightDuration";
+import { convertDistance, getDistanceLabel } from "../lib/units";
+import { useSettingsStore } from "../store/settingsStore";
 import { formatDurationWithEstimate } from "../lib/formatters";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
@@ -82,6 +84,7 @@ export default function FlightDetailPage(): JSX.Element {
   const navigate = useNavigate();
   const { t } = useTranslation(["flights", "common", "trips", "specialFlights"]);
   const addToast = useToastStore((s) => s.addToast);
+  const distanceUnit = useSettingsStore((state) => state.units.distanceUnit);
 
   const [flight, setFlight] = useState<Flight | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -344,7 +347,9 @@ export default function FlightDetailPage(): JSX.Element {
                     label: t("flights:detail.distance"),
                     value:
                       flight.routeDistance != null
-                        ? `${Math.round(flight.routeDistance).toLocaleString()} km`
+                        ? `${Math.round(
+                            convertDistance(flight.routeDistance, distanceUnit)
+                          ).toLocaleString()} ${getDistanceLabel(distanceUnit, t)}`
                         : null,
                   },
                   {

@@ -11,7 +11,7 @@ export default function StatsBusinessSection({
   businessStats,
 }: StatsBusinessSectionProps): JSX.Element {
   const { t, i18n } = useTranslation(["stats"]);
-  const { units } = useSettingsStore();
+  const { units, baseCurrency } = useSettingsStore();
   const lang = i18n.language;
 
   return (
@@ -31,7 +31,7 @@ export default function StatsBusinessSection({
             {t("stats:business.costPerKm")}
           </h3>
           <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-            {formatCurrency(businessStats.costPerKm, units.currency)}
+            {formatCurrency(businessStats.costPerKm, baseCurrency)}
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
             {t("stats:business.costPerKmDesc", {
@@ -51,7 +51,7 @@ export default function StatsBusinessSection({
             {t("stats:business.costPerHour")}
           </h3>
           <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-            {formatCurrency(businessStats.costPerHour, units.currency)}
+            {formatCurrency(businessStats.costPerHour, baseCurrency)}
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
             {t("stats:business.costPerHourDesc", {
@@ -71,7 +71,7 @@ export default function StatsBusinessSection({
             {t("stats:business.totalCost")}
           </h3>
           <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-            {formatCurrency(businessStats.totalCost, units.currency)}
+            {formatCurrency(businessStats.totalCost, baseCurrency)}
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
             {t("stats:business.totalCostDesc", {

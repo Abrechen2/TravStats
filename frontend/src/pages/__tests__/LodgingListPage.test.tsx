@@ -193,7 +193,7 @@ describe("LodgingListPage", () => {
     getLodgingStatsMock.mockResolvedValue(defaultStats);
     useSettingsStore.setState({
       baseCurrency: "EUR",
-      units: { distanceUnit: "kilometers", currency: "EUR" },
+      units: { distanceUnit: "kilometers" },
     });
   });
 
@@ -204,7 +204,7 @@ describe("LodgingListPage", () => {
     // leak into this column.
     useSettingsStore.setState({
       baseCurrency: "CHF",
-      units: { distanceUnit: "kilometers", currency: "USD" },
+      units: { distanceUnit: "kilometers" },
     });
     listLodgingsMock.mockResolvedValue([
       makeLodging({

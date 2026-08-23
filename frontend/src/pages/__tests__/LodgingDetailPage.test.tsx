@@ -131,7 +131,7 @@ describe("LodgingDetailPage", () => {
     tripsGetAllMock.mockResolvedValue([]);
     useSettingsStore.setState({
       baseCurrency: "EUR",
-      units: { distanceUnit: "kilometers", currency: "EUR" },
+      units: { distanceUnit: "kilometers" },
     });
   });
 
@@ -230,7 +230,7 @@ describe("LodgingDetailPage", () => {
     // leak into this label.
     useSettingsStore.setState({
       baseCurrency: "CHF",
-      units: { distanceUnit: "kilometers", currency: "USD" },
+      units: { distanceUnit: "kilometers" },
     });
     getLodgingMock.mockResolvedValue(makeLodging({ totalSpendBase: 883 }));
 

@@ -7,7 +7,7 @@ vi.mock("../lib/api");
 vi.mock("../store/settingsStore", () => ({
   useSettingsStore: vi.fn().mockReturnValue({
     features: { enableCostTracking: true },
-    units: { distanceUnit: "kilometers", currency: "EUR" },
+    units: { distanceUnit: "kilometers" },
     defaults: {
       flightStatus: "scheduled",
       seatClass: "economy",

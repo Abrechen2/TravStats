@@ -91,7 +91,7 @@ describe("LodgingCurrencyBreakdown", () => {
   it("labels the converted total with the real baseCurrency, not units.currency", () => {
     useSettingsStore.setState({
       baseCurrency: "CHF",
-      units: { distanceUnit: "kilometers", currency: "USD" },
+      units: { distanceUnit: "kilometers" },
     });
     const stats: LodgingStats = { ...baseStats, spendBaseTotal: 1234, spendByCurrency: {} };
 
