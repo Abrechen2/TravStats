@@ -83,9 +83,8 @@ export const BETA_FEATURES = Object.freeze({
    */
   poiDomain: Object.freeze({
     reason: "beta",
-    why: "The domain works end-to-end but is incomplete: there is no place detail page, no UI to create a place (only the API), no POI section in the map appearance panel, and neither custom lists nor the shipped checklists exist yet. Showing it now would advertise a logbook the user cannot actually write to.",
-    returnsWhen:
-      "A place can be created and edited from the UI, has a detail page, and the custom lists (phase B) have shipped.",
+    why: "The domain works end-to-end — create, edit, detail page, list, map — but is incomplete: there is no POI section in the map appearance panel, places are absent from the All tab, and neither custom lists (phase B) nor the shipped checklists (phase C) exist yet. The owner's own case, \"every McDonald's I have been to\", is exactly what custom lists are for and is the reason to keep this hidden.",
+    returnsWhen: "Custom lists (phase B) have shipped.",
   }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 

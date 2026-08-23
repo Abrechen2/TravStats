@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
 import type { JSX } from "react";
 import { DashboardLayout } from "../components/Dashboard/DashboardLayout";
 import { useDashboardRoute } from "../hooks/useDashboardRoute";
 import { useClearMapSelectionsOnTabChange } from "../hooks/useClearMapSelectionsOnTabChange";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
-import { usePlacesVisible } from "../hooks/usePlacesVisible";
+import { usePlacesAccess, usePlacesVisible } from "../hooks/usePlacesVisible";
 import { flightsApi } from "../lib/api/flights";
 import { cruiseApi } from "../lib/api/cruise";
 import { getLodgingStats } from "../lib/api/lodging";
@@ -53,6 +54,7 @@ export default function DashboardPage(): JSX.Element {
   useClearMapSelectionsOnTabChange(tab);
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
+  const placesAccess = usePlacesAccess();
   const [counts, setCounts] = useState({ flight: 0, cruise: 0, poi: 0, lodging: 0 });
   // How many of the counted entries are merely planned (B6): shown as a
   // "(n geplant)" hint so the tab count and the flown-only statistics stop
@@ -121,6 +123,18 @@ export default function DashboardPage(): JSX.Element {
     };
   }, [isEnabled, placesVisible, refreshToken]);
 
+  // `/dashboard/poi` on a hidden instance used to render the SHELL with the
+  // tab hidden from the strip — which still drew the shell's per-tab
+  // "+ POI hinzufügen" button over an empty page, because that button follows
+  // `tab` and never asked whether the tab is visible. Suppressing the tab body
+  // alone was not enough. Same answer the /places route already gives, and
+  // three-state for the same reason: the beta flag is `null` for one request
+  // on a cold load, and treating that as "no" is what made /places bounce on
+  // every refresh (defect 1 in the branch's own handover).
+  if (tab === "poi" && placesAccess === "denied") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <DashboardLayout
       counts={counts}
@@ -131,8 +145,6 @@ export default function DashboardPage(): JSX.Element {
       {tab === "all" && <AllTab key={refreshToken} />}
       {tab === "flight" && <FlightsTab key={refreshToken} />}
       {tab === "cruise" && <CruisesTab key={refreshToken} />}
-      {/* Gated with its tab-strip entry, so /dashboard/poi renders nothing
-          on an instance where the domain is hidden. */}
       {tab === "poi" && placesVisible && <PoiTab key={refreshToken} />}
       {tab === "lodging" && <LodgingTab key={refreshToken} />}
     </DashboardLayout>
