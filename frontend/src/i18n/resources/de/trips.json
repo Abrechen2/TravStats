@@ -15,7 +15,7 @@
   "editTrip": "Reise bearbeiten",
   "deleteTrip": "Reise löschen",
   "removeFromTrip": "Aus Reise entfernen",
-  "deleteTripConfirm": "Reise \"{{name}}\" löschen? Die zugehörigen Flüge & Kreuzfahrten bleiben erhalten.",
+  "deleteTripConfirm": "„{{name}}“ wird dauerhaft gelöscht, samt Fotos, Stationen und Mitreisenden. Flüge, Kreuzfahrten und Unterkünfte bleiben erhalten.",
   "showOnMap": "Auf Karte",
   "flightCount_one": "{{count}} Flug",
   "flightCount_other": "{{count}} Flüge",
@@ -285,5 +285,6 @@
     "longest": "Längste Reise",
     "mostExpensive": "Teuerste Reise",
     "mostCountries": "Meiste Länder"
-  }
+  },
+  "deleteTripConfirmTitle": "Reise löschen?"
 }

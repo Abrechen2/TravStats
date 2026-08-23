@@ -86,12 +86,13 @@
     "noLocation": "No location on file",
     "setLocationNow": "Find location now",
     "deleteConfirmTitle": "Delete lodging?",
-    "deleteConfirmMessage": "This lodging and its {{count}} stays will be permanently deleted. This action cannot be undone.",
-    "deleteConfirmMessage_one": "This lodging and its {{count}} stay will be permanently deleted. This action cannot be undone.",
-    "deleteConfirmMessage_other": "This lodging and its {{count}} stays will be permanently deleted. This action cannot be undone.",
+    "deleteConfirmMessage": "“{{name}}” will be permanently deleted, along with its {{count}} stays. Trips it belongs to are kept.",
+    "deleteConfirmMessage_one": "“{{name}}” will be permanently deleted, along with its one stay. Trips it belongs to are kept.",
+    "deleteConfirmMessage_other": "“{{name}}” will be permanently deleted, along with its {{count}} stays. Trips it belongs to are kept.",
     "deleteSuccess": "Lodging deleted",
     "deleteError": "Could not delete lodging",
-    "loadError": "The stay could not be loaded."
+    "loadError": "The stay could not be loaded.",
+    "deleteConfirmMessageNoStays": "“{{name}}” will be permanently deleted."
   },
   "field": {
     "name": "Name",

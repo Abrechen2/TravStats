@@ -15,7 +15,7 @@
   "editTrip": "Edit Journey",
   "deleteTrip": "Delete Journey",
   "removeFromTrip": "Remove from journey",
-  "deleteTripConfirm": "Delete journey \"{{name}}\"? Linked flights & cruises will be kept.",
+  "deleteTripConfirm": "“{{name}}” will be permanently deleted, along with its photos, stops and companions. Flights, cruises and stays are kept.",
   "showOnMap": "Show on Map",
   "flightCount_one": "{{count}} Flight",
   "flightCount_other": "{{count}} Flights",
@@ -285,5 +285,6 @@
     "longest": "Longest trip",
     "mostExpensive": "Most expensive trip",
     "mostCountries": "Most countries"
-  }
+  },
+  "deleteTripConfirmTitle": "Delete trip?"
 }

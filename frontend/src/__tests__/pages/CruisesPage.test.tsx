@@ -141,6 +141,13 @@ describe("CruisesPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "common:buttons.delete" }));
 
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText(/list\.delete\.confirm/)).toBeInTheDocument();
+    // The list and the detail page share these keys now — deleting a cruise
+    // used to read differently depending on which of the two you stood on.
+    // `…NoStops` rather than the counted form because this fixture has none:
+    // asserting WHICH key appeared proves the count branch was taken, which
+    // the raw-key test harness cannot show through the rendered number.
+    const message = within(dialog).getByText(/deleteConfirmMessageNoStops/);
+    // …and it names the ship, which this dialog never did before.
+    expect(message.textContent).toContain("Solo Ship");
   });
 });

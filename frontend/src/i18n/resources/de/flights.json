@@ -200,7 +200,7 @@
     "actions": "Aktionen",
     "deleteConfirm": {
       "title": "Flug löschen?",
-      "message": "Möchtest du diesen Flug wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
+      "message": "„{{name}}“ wird dauerhaft gelöscht. Eine zugehörige Reise bleibt erhalten.",
       "confirm": "Ja, löschen",
       "cancel": "Abbrechen"
     },

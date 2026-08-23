@@ -11,6 +11,7 @@ import NavigationBar from "../components/NavigationBar";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ListEmptyState from "../components/table/ListEmptyState";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import ListFilterBar, {
   FilterField,
   PANEL_SELECT_CLASS,
@@ -134,7 +135,7 @@ export default function FlightsTablePage(): JSX.Element {
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   const [editingSpecialFlight, setEditingSpecialFlight] = useState<Flight | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [flightToDelete, setFlightToDelete] = useState<string | null>(null);
+  const [flightToDelete, setFlightToDelete] = useState<Flight | null>(null);
   const [duplicateMenuFor, setDuplicateMenuFor] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"departureTime" | "airline" | "status" | "duration">(
     "departureTime"
@@ -223,8 +224,14 @@ export default function FlightsTablePage(): JSX.Element {
     }
   };
 
+  /** "LH2462 MUC → CPH" — enough to recognise the row you clicked. */
+  const flightLabel = (f: Flight): string => {
+    const route = [f.depIata, f.arrIata].filter(Boolean).join(" → ");
+    return [f.flightNumber, route].filter(Boolean).join(" ") || t("common:labels.unknown");
+  };
+
   const handleDeleteClick = (id: string) => {
-    setFlightToDelete(id);
+    setFlightToDelete(flights.find((f) => f.id === id) ?? null);
     setDeleteConfirmOpen(true);
   };
 
@@ -232,7 +239,7 @@ export default function FlightsTablePage(): JSX.Element {
     if (!flightToDelete) return;
 
     try {
-      await flightsApi.delete(flightToDelete);
+      await flightsApi.delete(flightToDelete.id);
       addToast("success", t("flights:table.toast.deleted"));
       setDeleteConfirmOpen(false);
       setFlightToDelete(null);
@@ -936,10 +943,15 @@ export default function FlightsTablePage(): JSX.Element {
           }}
           onConfirm={handleDelete}
           title={t("flights:table.deleteConfirm.title")}
-          message={t("flights:table.deleteConfirm.message")}
+          // Names the flight, like the other five dialogs do now. "Diesen
+          // Flug" was fine on a detail page and wrong in a list, where the
+          // row you clicked may not be the row you meant.
+          message={t("flights:table.deleteConfirm.message", {
+            name: flightToDelete ? flightLabel(flightToDelete) : "",
+          })}
           confirmText={t("flights:table.deleteConfirm.confirm")}
           cancelText={t("flights:table.deleteConfirm.cancel")}
-          confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500"
+          confirmButtonClass={DELETE_BUTTON_CLASS}
         />
       </div>
     </PageTransition>

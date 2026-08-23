@@ -86,12 +86,13 @@
     "noLocation": "Kein Standort hinterlegt",
     "setLocationNow": "Standort jetzt suchen",
     "deleteConfirmTitle": "Unterkunft löschen?",
-    "deleteConfirmMessage": "Diese Unterkunft mit {{count}} Aufenthalten wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
-    "deleteConfirmMessage_one": "Diese Unterkunft mit {{count}} Aufenthalt wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
-    "deleteConfirmMessage_other": "Diese Unterkunft mit {{count}} Aufenthalten wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteConfirmMessage": "„{{name}}“ wird mit {{count}} Aufenthalten dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
+    "deleteConfirmMessage_one": "„{{name}}“ wird mit einem Aufenthalt dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
+    "deleteConfirmMessage_other": "„{{name}}“ wird mit {{count}} Aufenthalten dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
     "deleteSuccess": "Unterkunft gelöscht",
     "deleteError": "Unterkunft konnte nicht gelöscht werden",
-    "loadError": "Die Unterkunft konnte nicht geladen werden."
+    "loadError": "Die Unterkunft konnte nicht geladen werden.",
+    "deleteConfirmMessageNoStays": "„{{name}}“ wird dauerhaft gelöscht."
   },
   "field": {
     "name": "Name",

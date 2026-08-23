@@ -200,7 +200,7 @@
     "actions": "Actions",
     "deleteConfirm": {
       "title": "Delete flight?",
-      "message": "Are you sure you want to delete this flight?\n\nThis action cannot be undone.",
+      "message": "“{{name}}” will be permanently deleted. A trip it belongs to is kept.",
       "confirm": "Yes, delete",
       "cancel": "Cancel"
     },

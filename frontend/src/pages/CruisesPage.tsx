@@ -5,6 +5,7 @@ import type { Cruise, CruiseStatus } from "../types";
 import { CruiseRow, type CruiseColumnId } from "../components/Cruise/CruiseRow";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
+import ConfirmModal from "../components/Training/ConfirmModal";
 import ListEmptyState from "../components/table/ListEmptyState";
 import ListFilterBar, {
   FilterField,
@@ -19,6 +20,8 @@ import NavigationBar from "../components/NavigationBar";
 import PageTransition from "../components/PageTransition";
 import { SkeletonTable } from "../components/SkeletonLoader";
 import { useTranslation } from "../hooks/useTranslation";
+import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { countPortCalls } from "../components/Cruise/cruisePorts";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
 import { sortCruises, type CruiseSortKey, type SortOrder } from "../components/Cruise/sortCruises";
@@ -79,6 +82,7 @@ export default function CruisesPage(): JSX.Element {
   const importAdapter = useCruiseImportAdapter();
   const [editingCruise, setEditingCruise] = useState<Cruise | null>(null);
   const [cruiseToDelete, setCruiseToDelete] = useState<Cruise | null>(null);
+  const [deleting, setDeleting] = useState<boolean>(false);
   const [duplicateSource, setDuplicateSource] = useState<Cruise | null>(null);
 
   // Filter state — mirrors the flights filter panel conceptually but the
@@ -101,6 +105,26 @@ export default function CruisesPage(): JSX.Element {
       setSortBy(col);
       // date/price/ports default to desc (biggest/newest first); text asc.
       setSortOrder(col === "ship" || col === "line" || col === "status" ? "asc" : "desc");
+    }
+  };
+
+  /** Ship name, falling back to the free-text override the parser may set. */
+  const cruiseName = (c: Cruise): string =>
+    c.ship?.name ?? c.shipNameOverride ?? t("list.unnamedShip");
+
+  const confirmDelete = async (): Promise<void> => {
+    if (!cruiseToDelete) return;
+    setDeleting(true);
+    try {
+      await cruiseApi.remove(cruiseToDelete.id);
+      addToast("success", t("list.delete.done"));
+      setCruiseToDelete(null);
+      await reload();
+    } catch (err: unknown) {
+      logger.error("CruisesPage: delete failed", err);
+      addToast("error", t("list.delete.error"));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -427,51 +451,32 @@ export default function CruisesPage(): JSX.Element {
             }}
           />
         )}
-        {cruiseToDelete && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ background: "rgba(0,0,0,0.6)" }}
-          >
-            <div
-              className="w-full max-w-sm rounded-xl p-6 space-y-4"
-              style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-              role="dialog"
-              aria-modal="true"
-            >
-              <h2 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
-                {t("list.delete.confirm", {
-                  ship: cruiseToDelete.ship?.name ?? cruiseToDelete.shipNameOverride ?? "",
-                })}
-              </h2>
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setCruiseToDelete(null)}
-                  className="px-4 py-2 rounded-lg text-sm"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  {t("common:buttons.cancel")}
-                </button>
-                <button
-                  onClick={async () => {
-                    try {
-                      await cruiseApi.remove(cruiseToDelete.id);
-                      addToast("success", t("list.delete.done"));
-                    } catch {
-                      addToast("error", t("list.delete.error"));
-                    } finally {
-                      setCruiseToDelete(null);
-                      await reload();
-                    }
-                  }}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-white"
-                  style={{ background: "var(--danger, #f85149)" }}
-                >
-                  {t("common:buttons.delete")}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* The same dialog, the same sentence and the same keys the cruise
+            DETAIL page uses. Deleting a cruise used to read differently
+            depending on which of the two you were standing on — and the
+            version here never mentioned that it was permanent. */}
+        <ConfirmModal
+          isOpen={cruiseToDelete !== null}
+          onClose={() => setCruiseToDelete(null)}
+          onConfirm={() => void confirmDelete()}
+          isLoading={deleting}
+          title={t("detail.deleteConfirmTitle")}
+          message={
+            cruiseToDelete
+              ? countedDeleteMessage(
+                  t,
+                  {
+                    counted: "cruise:detail.deleteConfirmMessage",
+                    empty: "cruise:detail.deleteConfirmMessageNoStops",
+                  },
+                  cruiseName(cruiseToDelete),
+                  countPortCalls(cruiseToDelete)
+                )
+              : ""
+          }
+          confirmText={t("common:buttons.delete")}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
+        />
       </div>
     </div>
     </PageTransition>

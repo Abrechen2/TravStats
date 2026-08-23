@@ -22,6 +22,8 @@ import {
 } from "../lib/lodgingFormat";
 import { logger } from "../lib/logger";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
+import ConfirmModal from "../components/Training/ConfirmModal";
+import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { deriveStayMembership } from "../shared/membershipDerivation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
@@ -425,46 +427,27 @@ export default function LodgingDetailPage(): JSX.Element {
           />
         )}
 
-        {confirmingDelete && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="w-full max-w-md rounded-lg border border-[var(--color-border)] bg-[var(--bg-elevated)] p-6 shadow-xl">
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-                {t("lodging:detail.deleteConfirmTitle")}
-              </h3>
-              <p
-                className="mt-2 text-sm text-[var(--text-muted)]"
-                data-testid="lodging-delete-message"
-                data-stay-count={lodging.stayCount}
-              >
-                {t("lodging:detail.deleteConfirmMessage", { count: lodging.stayCount })}
-              </p>
-              <div className="mt-5 flex justify-end gap-2">
-                <button
-                  type="button"
-                  data-testid="lodging-delete-cancel"
-                  onClick={() => setConfirmingDelete(false)}
-                  disabled={deleting}
-                  className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50"
-                >
-                  {t("common:buttons.cancel")}
-                </button>
-                <button
-                  type="button"
-                  data-testid="lodging-delete-confirm"
-                  onClick={() => void handleDelete()}
-                  disabled={deleting}
-                  className="rounded-md bg-[var(--danger)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-                >
-                  {t("common:buttons.delete")}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Same component and same keys as the lodging LIST — this was the
+            clearest case of the six: deleting a house looked different
+            depending on whether you did it from the list or from here. */}
+        <ConfirmModal
+          isOpen={confirmingDelete}
+          onClose={() => setConfirmingDelete(false)}
+          onConfirm={() => void handleDelete()}
+          isLoading={deleting}
+          title={t("lodging:detail.deleteConfirmTitle")}
+          message={countedDeleteMessage(
+            t,
+            {
+              counted: "lodging:detail.deleteConfirmMessage",
+              empty: "lodging:detail.deleteConfirmMessageNoStays",
+            },
+            lodging.name,
+            lodging.stayCount
+          )}
+          confirmText={t("common:buttons.delete")}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
+        />
       </div>
     </div>
   );

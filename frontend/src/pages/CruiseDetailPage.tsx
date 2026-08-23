@@ -6,6 +6,7 @@ import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
 import { CruiseRouteMap } from "../components/Cruise/CruiseRouteMap";
 import {
   buildEffectiveTimeline,
+  countPortCalls,
   countUniquePorts,
   countUnresolvedPorts,
 } from "../components/Cruise/cruisePorts";
@@ -15,6 +16,8 @@ import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
 import { formatDateInTimezone } from "../lib/dateUtils";
 import { useToastStore } from "../store/toastStore";
+import ConfirmModal from "../components/Training/ConfirmModal";
+import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { logger } from "../lib/logger";
 
@@ -327,40 +330,29 @@ export default function CruiseDetailPage(): JSX.Element {
           />
         )}
 
-        {confirmingDelete && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="w-full max-w-md rounded-lg border border-border bg-(--bg-elevated) p-6 shadow-xl">
-              <h3 className="text-lg font-semibold text-(--text-primary)">
-                {t("detail.deleteConfirmTitle")}
-              </h3>
-              <p className="mt-2 text-sm text-(--text-muted)">
-                {t("detail.deleteConfirmMessage")}
-              </p>
-              <div className="mt-5 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setConfirmingDelete(false)}
-                  disabled={deleting}
-                  className="rounded-md border border-border px-4 py-2 text-sm text-(--text-muted) hover:bg-(--bg-surface) disabled:opacity-50"
-                >
-                  {t("detail.deleteCancel")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDelete()}
-                  disabled={deleting}
-                  className="rounded-md bg-(--danger) px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-                >
-                  {t("detail.deleteConfirm")}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Same component, same keys and same sentence as the cruise LIST.
+            The two used to disagree: the list named the ship without warning
+            that it was permanent, this one warned without naming the ship,
+            and neither mentioned the port calls that go with it. */}
+        <ConfirmModal
+          isOpen={confirmingDelete}
+          onClose={() => setConfirmingDelete(false)}
+          onConfirm={() => void handleDelete()}
+          isLoading={deleting}
+          title={t("detail.deleteConfirmTitle")}
+          message={countedDeleteMessage(
+            t,
+            {
+              counted: "cruise:detail.deleteConfirmMessage",
+              empty: "cruise:detail.deleteConfirmMessageNoStops",
+            },
+            cruise.ship?.name ?? cruise.shipNameOverride ?? t("list.unnamedShip"),
+            countPortCalls(cruise)
+          )}
+          confirmText={t("detail.deleteConfirm")}
+          cancelText={t("detail.deleteCancel")}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
+        />
       </div>
     </div>
   );

@@ -197,25 +197,25 @@ describe("LodgingDetailPage", () => {
     await user.click(screen.getByTestId("lodging-delete-button"));
 
     const dialog = await screen.findByRole("dialog");
-    // Confirmation must name the stay count (2 stays here). The count is
-    // asserted via `data-stay-count` rather than the rendered text because
-    // the actual DE/EN copy ("Dieses Hotel hat {{count}} Übernachtungen…")
-    // ships in Task 20 — this proves the wiring independent of translation
-    // content, the same way `data-lodging-count` is used elsewhere in this
-    // codebase's tests (see LodgingTab.test.tsx).
-    const message = within(dialog).getByTestId("lodging-delete-message");
-    expect(message.getAttribute("data-stay-count")).toBe("2");
+    // The dialog is the shared ConfirmModal now — the same one the LIST uses,
+    // which is the whole point: deleting a house looked different depending on
+    // where you did it. This file's i18n stub returns the bare key, so the
+    // assertion is WHICH key was chosen: `deleteConfirmMessage` is the
+    // count-carrying form, `…NoStays` the one for a house with no stays. The
+    // choice itself is unit-tested in lib/__tests__/deleteConfirm.test.ts.
+    const message = within(dialog).getByText("lodging:detail.deleteConfirmMessage");
+    expect(message).toBeInTheDocument();
     expect(deleteLodgingMock).not.toHaveBeenCalled();
 
     // Cancelling must not delete either.
-    await user.click(within(dialog).getByTestId("lodging-delete-cancel"));
+    await user.click(within(dialog).getByRole("button", { name: "common:buttons.cancel" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(deleteLodgingMock).not.toHaveBeenCalled();
 
     // Only the explicit confirm click calls deleteLodging.
     await user.click(screen.getByTestId("lodging-delete-button"));
     const dialog2 = await screen.findByRole("dialog");
-    await user.click(within(dialog2).getByTestId("lodging-delete-confirm"));
+    await user.click(within(dialog2).getByRole("button", { name: "common:buttons.delete" }));
 
     await waitFor(() => {
       expect(deleteLodgingMock).toHaveBeenCalledTimes(1);
