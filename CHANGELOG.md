@@ -12,6 +12,25 @@ now be written in the currency it was actually paid in. Two-factor
 authentication and passkeys arrive alongside.
 
 ### Added
+- **Places become a domain of their own — hidden behind the beta switch.** A
+  place is a first-class entry with its own list, detail page, form and map
+  layer; a trip is a *view* of it rather than its owner, so "every McDonald's
+  I have been to" is expressible and the same place on two trips is one entry
+  with two visits. A place is visited, planned or on the wishlist — planned is
+  derived from a dated future visit, never stored. Invisible to ordinary users:
+  the domain, its routes and its dashboard tab all sit behind the instance beta
+  flag, and turning the flag off hides the data without touching it. Two
+  migrations ship with it; the second copies coordinate-carrying POI trip stops
+  into places and deletes nothing.
+- **A flight has a page to read it on.** A flight carries around 58 fields and
+  the table shows nine columns; everything else — seat, gate, terminal, booking
+  reference, companions, baggage allowance, overflown countries — was readable
+  only by opening the edit form, which meant putting the record into an
+  editable state to look something up. The row now opens `/flights/:id` the way
+  a cruise row and a lodging row always have.
+- **Every list summarises the rows it is showing** — count, and the figures
+  that matter for that domain — marked "filtered" when a filter is narrowing
+  them, and silent while nothing is known.
 - **The sea route of a cruise can be corrected by hand.** Enter edit mode on
   the detail map, tap a leg, and drag its waypoints — insert new ones on the
   guide line, remove them on hover, undo and redo the whole gesture chain. The
@@ -136,6 +155,25 @@ authentication and passkeys arrive alongside.
   aircraft ladders.
 
 ### Changed
+- **One currency, one distance unit.** There were two currency settings: one
+  under Einheiten & Formate that only flight surfaces read, and one under
+  Unterkunfts-Präferenzen that lodging, statistics and achievements read — the
+  general one was domain-specific and the domain-specific one was general.
+  There is one now, under Einheiten & Formate, and it applies everywhere.
+  Conversions already recorded keep the rate they were taken at. The distance
+  unit now also governs cruise distances, which were fixed to kilometres while
+  flight distances followed the setting.
+- **Funktionen and Automatische Updates moved to the Flug tab**, where their
+  only consumers are: both Funktionen toggles are read by flight surfaces
+  alone, and auto-update runs entirely against flights. Existing links to those
+  sections keep working.
+- **The three domain lists behave alike.** The same actions as icons, the same
+  message when loading fails, a clickable row on every list, and one filter
+  bar — search, status and year open everywhere, everything a single domain
+  owns behind one button carrying a count.
+- **Six delete dialogs said six different things.** One shape now: what is
+  deleted, how much goes with it, and what survives. Deleting a trip says for
+  the first time that its photos go with it.
 - **The three domain lists are one family.** Flights, cruises and lodging
   share the same table now: status pills, sortable column headers, a column
   picker, and more width.
@@ -161,6 +199,25 @@ authentication and passkeys arrive alongside.
   statistics, where figures belong.
 
 ### Fixed
+- **An empty list no longer denies the data behind the filter.** A library of
+  22 cruises, searched for a word none of them carries, answered "no cruises
+  recorded yet". The list now says nothing matches, and offers to clear the
+  filter.
+- **A dropped connection no longer claims the entry was deleted.** Every load
+  failure on a detail page was reported as "not found". Only a real 404 says
+  that now; everything else says it could not be loaded and offers a retry.
+- **The map key no longer covers the attribution** (#273). Covering it is a
+  licence question rather than a tidiness one — CARTO and OpenStreetMap both
+  require the credit to stay visible.
+- **The map key reads plural throughout** (#272). Its domain rows were plural
+  while the two marker rows were singular.
+- **The trip insight tiles line up with the trip cards** (#271). They ran to
+  the browser edge on a grid of their own.
+- **Blocking dialogs answer the keyboard.** They share one frame now: Escape
+  closes them, the page behind stops scrolling, and focus returns to whatever
+  opened them.
+- **"Duplicated" stops posing as a travel status.** It sits beside the real
+  status as a data-quality note.
 - **Map markers anchor correctly on every map.** MapLibre's stylesheet is now
   loaded globally; a lone marker used to sit only roughly right, and several
   markers stacked down the page as blocks.
