@@ -18,6 +18,7 @@ import {
 } from "../components/lodging/sortLodgingRows";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
+import ListEmptyState from "../components/table/ListEmptyState";
 import ListFilterBar, {
   FilterField,
   PANEL_SELECT_CLASS,
@@ -412,9 +413,12 @@ export default function LodgingListPage(): JSX.Element {
               {loading ? (
                 <SkeletonTable rows={10} />
               ) : filtered.length === 0 ? (
-                <div className="bg-[var(--bg-surface)] px-4 py-8 text-center text-[var(--text-muted)]">
-                  {t("lodging:list.empty")}
-                </div>
+                <ListEmptyState
+                  filtered={hasActiveFilter}
+                  emptyTitle={t("lodging:list.empty")}
+                  emptyHint={t("lodging:list.emptyHint")}
+                  onReset={resetFilters}
+                />
               ) : (
                 <table className="w-full min-w-[960px] text-sm">
                   <thead

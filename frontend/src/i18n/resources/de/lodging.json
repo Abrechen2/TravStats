@@ -49,7 +49,8 @@
       "bareHint": "Weder Adresse noch Ort noch Punkt auf der Karte — hier ist nichts ausser dem Namen bekannt.",
       "unknownCountry": "Land unklar",
       "unknownCountryHint": "Der Eintrag im Länderfeld ist kein Land, das sich zuordnen lässt."
-    }
+    },
+    "emptyHint": "Füge deine erste Unterkunft hinzu oder lies eine Buchung ein."
   },
   "filter": {
     "searchPlaceholder": "Suche nach Name oder Ort …",

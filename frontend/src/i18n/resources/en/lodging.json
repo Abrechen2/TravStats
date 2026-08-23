@@ -49,7 +49,8 @@
       "bareHint": "No address, no city, no point on the map — nothing is known here beyond the name.",
       "unknownCountry": "Unclear country",
       "unknownCountryHint": "The country field holds something that is not a country anyone can place."
-    }
+    },
+    "emptyHint": "Add your first stay, or read in a booking."
   },
   "filter": {
     "searchPlaceholder": "Search by name or location …",

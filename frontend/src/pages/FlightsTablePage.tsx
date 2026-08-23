@@ -10,6 +10,7 @@ import { flightsApi, tripsApi } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
+import ListEmptyState from "../components/table/ListEmptyState";
 import ListFilterBar, {
   FilterField,
   PANEL_SELECT_CLASS,
@@ -624,14 +625,14 @@ export default function FlightsTablePage(): JSX.Element {
           </p>
 
           {/* Table */}
-          {loadError && (
+          {loadError ? (
             <div
               role="alert"
-              className="mb-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-4 py-4 text-sm text-[var(--danger)]"
+              className="rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-4 py-4 text-sm text-[var(--danger)]"
             >
               {t("flights:table.loadError")}
             </div>
-          )}
+          ) : (
           <div
             className="rounded-lg shadow-xs overflow-hidden"
             style={{ border: "1px solid var(--color-border)" }}
@@ -641,10 +642,12 @@ export default function FlightsTablePage(): JSX.Element {
                 {loading ? (
                   <SkeletonTable rows={10} />
                 ) : displayedFlights.length === 0 ? (
-                  <div className="text-center py-12" style={{ color: "var(--text-muted)" }}>
-                    <p className="text-lg mb-2">{t("flights:table.noFlights")}</p>
-                    <p className="text-sm">{t("flights:table.noFlightsHint")}</p>
-                  </div>
+                  <ListEmptyState
+                    filtered={hasActiveFilter}
+                    emptyTitle={t("flights:table.noFlights")}
+                    emptyHint={t("flights:table.noFlightsHint")}
+                    onReset={resetFilters}
+                  />
                 ) : (
                   <table className="w-full min-w-[960px]">
                     <thead
@@ -883,6 +886,7 @@ export default function FlightsTablePage(): JSX.Element {
               )}
             </>
           </div>
+          )}
         </div>
 
         {/* Edit Modal */}

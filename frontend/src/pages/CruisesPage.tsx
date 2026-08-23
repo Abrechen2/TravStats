@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { cruiseApi } from "../lib/api";
 import type { Cruise, CruiseStatus } from "../types";
 import { CruiseRow, type CruiseColumnId } from "../components/Cruise/CruiseRow";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
+import ListEmptyState from "../components/table/ListEmptyState";
 import ListFilterBar, {
   FilterField,
   PANEL_SELECT_CLASS,
@@ -15,6 +16,7 @@ import DomainImportPanel from "../components/import/DomainImportPanel";
 import { useCruiseImportAdapter } from "../components/import/adapters/cruiseAdapter";
 import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
 import NavigationBar from "../components/NavigationBar";
+import PageTransition from "../components/PageTransition";
 import { SkeletonTable } from "../components/SkeletonLoader";
 import { useTranslation } from "../hooks/useTranslation";
 import { useToastStore } from "../store/toastStore";
@@ -67,7 +69,7 @@ const CRUISE_SORT_KEY_BY_COLUMN: Partial<Record<CruiseColumnId, CruiseSortKey>> 
 };
 
 export default function CruisesPage(): JSX.Element {
-  const { t } = useTranslation(["cruise", "common"]);
+  const { t } = useTranslation(["cruise", "common", "settings"]);
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
   const [cruises, setCruises] = useState<Cruise[]>([]);
@@ -196,6 +198,7 @@ export default function CruisesPage(): JSX.Element {
     search.length > 0 || statusFilter !== "all" || yearFilter !== "all" || extraActiveCount > 0;
 
   return (
+    <PageTransition>
     <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
       <NavigationBar />
 
@@ -267,26 +270,36 @@ export default function CruisesPage(): JSX.Element {
           </div>
         </div>
 
-        {loadError ? (
-
-          <div
-
-            role="alert"
-
-            className="rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-4 py-4 text-sm text-[var(--danger)]"
-
+        <p className="mb-4 text-xs text-(--text-muted)">
+          {t("list.wholeListHint")}{" "}
+          <Link
+            to="/settings?section=import"
+            className="underline underline-offset-4 hover:text-(--text-primary)"
           >
+            {t("settings:import.openHub")}
+          </Link>
+        </p>
 
+        {loadError ? (
+          <div
+            role="alert"
+            className="rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-4 py-4 text-sm text-[var(--danger)]"
+          >
             {t("list.loadError")}
-
           </div>
-
         ) : loading ? (
-
           <SkeletonTable rows={10} />
         ) : filtered.length === 0 ? (
-          <div className="rounded-md border border-border bg-(--bg-surface) px-4 py-8 text-center text-(--text-muted)">
-            {t("list.empty")}
+          <div
+            className="overflow-hidden rounded-lg shadow-xs"
+            style={{ border: "1px solid var(--color-border)" }}
+          >
+            <ListEmptyState
+              filtered={hasActiveFilter}
+              emptyTitle={t("list.empty")}
+              emptyHint={t("list.emptyHint")}
+              onReset={resetFilters}
+            />
           </div>
         ) : (
           <div
@@ -461,5 +474,6 @@ export default function CruisesPage(): JSX.Element {
         )}
       </div>
     </div>
+    </PageTransition>
   );
 }

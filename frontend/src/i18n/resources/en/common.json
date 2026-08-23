@@ -205,6 +205,7 @@
   "filters": {
     "more": "Filters",
     "reset": "Reset filters",
-    "showing": "{{count}} shown"
+    "showing": "{{count}} shown",
+    "noMatch": "Nothing matches your filters"
   }
 }

@@ -31,7 +31,9 @@
     "sortedBy": "sortiert nach {{col}}, {{dir}}",
     "ascending": "aufsteigend",
     "descending": "absteigend",
-    "loadError": "Die Kreuzfahrten konnten nicht geladen werden."
+    "loadError": "Die Kreuzfahrten konnten nicht geladen werden.",
+    "emptyHint": "Füge deine erste Kreuzfahrt hinzu oder lies eine Buchung ein.",
+    "wholeListHint": "Eine ganze Liste auf einmal?"
   },
   "detail": {
     "loading": "Kreuzfahrt wird geladen …",

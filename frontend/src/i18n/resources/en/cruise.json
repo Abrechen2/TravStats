@@ -31,7 +31,9 @@
     "sortedBy": "sorted by {{col}}, {{dir}}",
     "ascending": "ascending",
     "descending": "descending",
-    "loadError": "The cruises could not be loaded."
+    "loadError": "The cruises could not be loaded.",
+    "emptyHint": "Add your first cruise, or read in a booking.",
+    "wholeListHint": "A whole list at once?"
   },
   "detail": {
     "loading": "Loading cruise …",

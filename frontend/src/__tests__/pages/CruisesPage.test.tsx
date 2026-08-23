@@ -36,6 +36,8 @@ vi.mock("../../store/toastStore", () => ({
 }));
 
 const mockNavigate = vi.fn();
+import { MemoryRouter } from "react-router-dom";
+
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
   return { ...actual, useNavigate: () => mockNavigate };
@@ -99,7 +101,11 @@ describe("CruisesPage", () => {
     });
     vi.mocked(cruiseApi.list).mockResolvedValue([early, late]);
 
-    render(<CruisesPage />);
+    render(
+      <MemoryRouter>
+        <CruisesPage />
+      </MemoryRouter>
+    );
 
     await screen.findByRole("table");
 
@@ -124,7 +130,11 @@ describe("CruisesPage", () => {
     });
     vi.mocked(cruiseApi.list).mockResolvedValue([cruise]);
 
-    render(<CruisesPage />);
+    render(
+      <MemoryRouter>
+        <CruisesPage />
+      </MemoryRouter>
+    );
 
     await screen.findByRole("table");
 
