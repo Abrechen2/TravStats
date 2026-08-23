@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { cruiseApi } from "../lib/api";
 import type { Cruise, CruiseStatus } from "../types";
 import { CruiseRow, type CruiseColumnId } from "../components/Cruise/CruiseRow";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
+import ConfirmModal from "../components/Training/ConfirmModal";
+import ListSummaryStrip from "../components/table/ListSummaryStrip";
+import ListEmptyState from "../components/table/ListEmptyState";
 import ListFilterBar, {
   FilterField,
   PANEL_SELECT_CLASS,
@@ -15,8 +18,11 @@ import DomainImportPanel from "../components/import/DomainImportPanel";
 import { useCruiseImportAdapter } from "../components/import/adapters/cruiseAdapter";
 import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
 import NavigationBar from "../components/NavigationBar";
+import PageTransition from "../components/PageTransition";
 import { SkeletonTable } from "../components/SkeletonLoader";
 import { useTranslation } from "../hooks/useTranslation";
+import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { countPortCalls } from "../components/Cruise/cruisePorts";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
 import { sortCruises, type CruiseSortKey, type SortOrder } from "../components/Cruise/sortCruises";
@@ -67,7 +73,7 @@ const CRUISE_SORT_KEY_BY_COLUMN: Partial<Record<CruiseColumnId, CruiseSortKey>> 
 };
 
 export default function CruisesPage(): JSX.Element {
-  const { t } = useTranslation(["cruise", "common"]);
+  const { t } = useTranslation(["cruise", "common", "settings"]);
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
   const [cruises, setCruises] = useState<Cruise[]>([]);
@@ -77,6 +83,7 @@ export default function CruisesPage(): JSX.Element {
   const importAdapter = useCruiseImportAdapter();
   const [editingCruise, setEditingCruise] = useState<Cruise | null>(null);
   const [cruiseToDelete, setCruiseToDelete] = useState<Cruise | null>(null);
+  const [deleting, setDeleting] = useState<boolean>(false);
   const [duplicateSource, setDuplicateSource] = useState<Cruise | null>(null);
 
   // Filter state — mirrors the flights filter panel conceptually but the
@@ -99,6 +106,26 @@ export default function CruisesPage(): JSX.Element {
       setSortBy(col);
       // date/price/ports default to desc (biggest/newest first); text asc.
       setSortOrder(col === "ship" || col === "line" || col === "status" ? "asc" : "desc");
+    }
+  };
+
+  /** Ship name, falling back to the free-text override the parser may set. */
+  const cruiseName = (c: Cruise): string =>
+    c.ship?.name ?? c.shipNameOverride ?? t("list.unnamedShip");
+
+  const confirmDelete = async (): Promise<void> => {
+    if (!cruiseToDelete) return;
+    setDeleting(true);
+    try {
+      await cruiseApi.remove(cruiseToDelete.id);
+      addToast("success", t("list.delete.done"));
+      setCruiseToDelete(null);
+      await reload();
+    } catch (err: unknown) {
+      logger.error("CruisesPage: delete failed", err);
+      addToast("error", t("list.delete.error"));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -184,6 +211,24 @@ export default function CruisesPage(): JSX.Element {
     [filtered, sortBy, sortOrder]
   );
 
+  const summaryFigures = useMemo(() => {
+    let portCalls = 0;
+    let seaDays = 0;
+    const lines = new Set<string>();
+    for (const c of filtered) {
+      portCalls += countPortCalls(c);
+      seaDays += c.stops.filter((stop) => stop.isAtSea).length;
+      const line = c.cruiseLine ?? c.ship?.cruiseLine ?? "";
+      if (line.trim().length > 0) lines.add(line);
+    }
+    return [
+      { key: "cruises", value: String(filtered.length), label: t("common:summary.cruises") },
+      { key: "portCalls", value: String(portCalls), label: t("common:summary.portCalls") },
+      { key: "seaDays", value: String(seaDays), label: t("common:summary.seaDays") },
+      { key: "lines", value: String(lines.size), label: t("common:summary.lines") },
+    ];
+  }, [filtered, t]);
+
   const resetFilters = (): void => {
     setSearch("");
     setStatusFilter("all");
@@ -196,6 +241,7 @@ export default function CruisesPage(): JSX.Element {
     search.length > 0 || statusFilter !== "all" || yearFilter !== "all" || extraActiveCount > 0;
 
   return (
+    <PageTransition>
     <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
       <NavigationBar />
 
@@ -239,7 +285,9 @@ export default function CruisesPage(): JSX.Element {
         }
         hasActiveFilter={hasActiveFilter}
         onReset={resetFilters}
-        resultLabel={t("common:filters.showing", { count: filtered.length })}
+        resultLabel={
+          loading || loadError ? "" : t("common:filters.showing", { count: filtered.length })
+        }
       />
 
       {/* Same width budget as the flights table page — owner principle:
@@ -267,26 +315,43 @@ export default function CruisesPage(): JSX.Element {
           </div>
         </div>
 
-        {loadError ? (
+        <ListSummaryStrip
+          figures={summaryFigures}
+          filtered={hasActiveFilter}
+          filteredLabel={t("common:filters.filtered")}
+          unknown={loading || loadError}
+        />
 
-          <div
-
-            role="alert"
-
-            className="rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-4 py-4 text-sm text-[var(--danger)]"
-
+        <p className="mb-4 text-xs text-(--text-muted)">
+          {t("list.wholeListHint")}{" "}
+          <Link
+            to="/settings?section=import"
+            className="underline underline-offset-4 hover:text-(--text-primary)"
           >
+            {t("settings:import.openHub")}
+          </Link>
+        </p>
 
+        {loadError ? (
+          <div
+            role="alert"
+            className="rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-4 py-4 text-sm text-[var(--danger)]"
+          >
             {t("list.loadError")}
-
           </div>
-
         ) : loading ? (
-
           <SkeletonTable rows={10} />
         ) : filtered.length === 0 ? (
-          <div className="rounded-md border border-border bg-(--bg-surface) px-4 py-8 text-center text-(--text-muted)">
-            {t("list.empty")}
+          <div
+            className="overflow-hidden rounded-lg shadow-xs"
+            style={{ border: "1px solid var(--color-border)" }}
+          >
+            <ListEmptyState
+              filtered={hasActiveFilter}
+              emptyTitle={t("list.empty")}
+              emptyHint={t("list.emptyHint")}
+              onReset={resetFilters}
+            />
           </div>
         ) : (
           <div
@@ -414,52 +479,34 @@ export default function CruisesPage(): JSX.Element {
             }}
           />
         )}
-        {cruiseToDelete && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ background: "rgba(0,0,0,0.6)" }}
-          >
-            <div
-              className="w-full max-w-sm rounded-xl p-6 space-y-4"
-              style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-              role="dialog"
-              aria-modal="true"
-            >
-              <h2 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
-                {t("list.delete.confirm", {
-                  ship: cruiseToDelete.ship?.name ?? cruiseToDelete.shipNameOverride ?? "",
-                })}
-              </h2>
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setCruiseToDelete(null)}
-                  className="px-4 py-2 rounded-lg text-sm"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  {t("common:buttons.cancel")}
-                </button>
-                <button
-                  onClick={async () => {
-                    try {
-                      await cruiseApi.remove(cruiseToDelete.id);
-                      addToast("success", t("list.delete.done"));
-                    } catch {
-                      addToast("error", t("list.delete.error"));
-                    } finally {
-                      setCruiseToDelete(null);
-                      await reload();
-                    }
-                  }}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-white"
-                  style={{ background: "var(--danger, #f85149)" }}
-                >
-                  {t("common:buttons.delete")}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* The same dialog, the same sentence and the same keys the cruise
+            DETAIL page uses. Deleting a cruise used to read differently
+            depending on which of the two you were standing on — and the
+            version here never mentioned that it was permanent. */}
+        <ConfirmModal
+          isOpen={cruiseToDelete !== null}
+          onClose={() => setCruiseToDelete(null)}
+          onConfirm={() => void confirmDelete()}
+          isLoading={deleting}
+          title={t("detail.deleteConfirmTitle")}
+          message={
+            cruiseToDelete
+              ? countedDeleteMessage(
+                  t,
+                  {
+                    counted: "cruise:detail.deleteConfirmMessage",
+                    empty: "cruise:detail.deleteConfirmMessageNoStops",
+                  },
+                  cruiseName(cruiseToDelete),
+                  countPortCalls(cruiseToDelete)
+                )
+              : ""
+          }
+          confirmText={t("common:buttons.delete")}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
+        />
       </div>
     </div>
+    </PageTransition>
   );
 }

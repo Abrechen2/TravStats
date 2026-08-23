@@ -16,6 +16,8 @@ import { usePlacesVisible } from "../hooks/usePlacesVisible";
 import { useTranslation } from "../hooks/useTranslation";
 import type { Booking, Trip, TripJournalEntry, TripStatus, TripStop } from "../types";
 import PageTransition from "../components/PageTransition";
+import ConfirmModal from "../components/Training/ConfirmModal";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import NavigationBar from "../components/NavigationBar";
 import TripModal from "../components/Trips/TripModal";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
@@ -224,39 +226,20 @@ export default function TripDetailPage(): JSX.Element {
         />
       )}
 
-      {confirmDelete && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.6)" }}
-        >
-          <div
-            className="w-full max-w-sm rounded-xl shadow-2xl p-6 space-y-4"
-            style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-            role="dialog"
-            aria-modal="true"
-          >
-            <h2 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
-              {t("trips:deleteTripConfirm", { name: trip.name })}
-            </h2>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="px-4 py-2 rounded-lg text-sm"
-                style={{ color: "var(--text-muted)" }}
-              >
-                {t("trips:modal.cancel")}
-              </button>
-              <button
-                onClick={() => void handleDelete()}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-white"
-                style={{ background: "var(--danger, #f87171)" }}
-              >
-                {t("trips:deleteTrip")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* The old sentence named two of the three survivors and none of the
+          losses. Deleting a trip cascades its PHOTOS — real files on disk —
+          plus its stops and companions, and said nothing about any of them.
+          That was the most expensive silence among the six dialogs. */}
+      <ConfirmModal
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={() => void handleDelete()}
+        title={t("trips:deleteTripConfirmTitle")}
+        message={t("trips:deleteTripConfirm", { name: trip.name })}
+        confirmText={t("trips:deleteTrip")}
+        cancelText={t("trips:modal.cancel")}
+        confirmButtonClass={DELETE_BUTTON_CLASS}
+      />
     </PageTransition>
   );
 }

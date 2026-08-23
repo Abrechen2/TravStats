@@ -163,7 +163,8 @@
       "distance": "Kilometers (EU standard), miles (US) or nautical miles (as used by airlines). The underlying calculation stays the same — only the display changes.",
       "currencyTitle": "Currency:",
       "currency": "Used for ticket prices and cost statistics. No automatic conversion of existing flights — old values remain stored in their original currency."
-    }
+    },
+    "currencyHint": "Applies everywhere. Conversions already recorded are kept as they were."
   },
   "defaults": {
     "title": "Default Values",

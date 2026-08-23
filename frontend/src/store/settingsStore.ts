@@ -8,8 +8,6 @@ import { useAuthStore } from "./authStore";
 type ThemePreference = "light" | "dark";
 type LanguagePreference = "de" | "en";
 type DistanceUnit = "kilometers" | "miles" | "nautical_miles";
-/** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
-type Currency = string;
 // "" = no default: the flight form starts unclassified (#256).
 type FlightCategory = "" | "business" | "private" | "vacation";
 type SeatClass = "" | "economy" | "premium_economy" | "business" | "first";
@@ -54,7 +52,15 @@ export interface DisplaySettings {
 
 export interface UnitsSettings {
   distanceUnit: DistanceUnit;
-  currency: Currency;
+  // `currency` is GONE from here on purpose (2026-08-23). The app had two
+  // currency settings: this one, in the settings JSON, read only by flight
+  // surfaces — and `baseCurrency`, a real column, read by lodging, stats and
+  // achievements. So the "general" one was domain-specific and the
+  // "lodging" one was general, exactly swapped, and three comments in the
+  // codebase existed only to warn readers apart. There is one currency now,
+  // `baseCurrency`, and it lives under Einheiten & Formate where it always
+  // belonged. Removing the field rather than leaving it unread is deliberate:
+  // a stale setting that used to control something is a trap.
 }
 
 export interface DefaultsSettings {
@@ -119,12 +125,12 @@ export interface SettingsState {
   apiKeys: ApiKeysStatus | null;
   enabledDomains: DomainKey[];
   /**
-   * The user's actual base currency (`UserSettings.baseCurrency`, ECB rate
-   * applied per stay's check-in day) — used by the backend to compute
-   * `spendBaseTotal` / `totalSpendBase` figures in the lodging domain. This is
-   * NOT `units.currency` (a separate, user-configurable *display* preference
-   * for flight-cost figures elsewhere) — the two are independent and must
-   * not be conflated when labeling a base-currency figure.
+   * The user's currency — the ONE the app has. Every lodging stay is
+   * converted into it at the ECB rate for its check-in day, and stats,
+   * achievements and flight costs all report in it.
+   *
+   * It used to share the job with `units.currency`; see UnitsSettings
+   * above for why that is gone.
    */
   baseCurrency: string;
   /**
@@ -279,7 +285,6 @@ const defaultSettings: Omit<
   },
   units: {
     distanceUnit: "kilometers",
-    currency: "EUR",
   },
   defaults: {
     flightStatus: "scheduled",

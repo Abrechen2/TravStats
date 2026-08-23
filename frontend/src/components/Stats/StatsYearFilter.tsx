@@ -30,7 +30,7 @@ export default function StatsYearFilter({
   onCompareEnabledChange,
 }: StatsYearFilterProps): JSX.Element {
   const { t } = useTranslation(["stats"]);
-  const { units } = useSettingsStore();
+  const { units, baseCurrency } = useSettingsStore();
 
   return (
     <>
@@ -264,7 +264,7 @@ export default function StatsYearFilter({
               </h3>
               <div className="flex items-end gap-2 mt-2">
                 <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-                  {formatCurrency(yearSummary.totalCost, units.currency)}
+                  {formatCurrency(yearSummary.totalCost, baseCurrency)}
                 </p>
                 {compareSummary !== null && (
                   <TrendDelta current={yearSummary.totalCost} previous={compareSummary.totalCost} />
@@ -272,7 +272,7 @@ export default function StatsYearFilter({
               </div>
               {compareSummary !== null && (
                 <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                  {formatCurrency(compareSummary.totalCost, units.currency)} ({compareYear})
+                  {formatCurrency(compareSummary.totalCost, baseCurrency)} ({compareYear})
                 </p>
               )}
             </div>

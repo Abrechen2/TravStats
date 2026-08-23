@@ -31,7 +31,10 @@
     "sortedBy": "sortiert nach {{col}}, {{dir}}",
     "ascending": "aufsteigend",
     "descending": "absteigend",
-    "loadError": "Die Kreuzfahrten konnten nicht geladen werden."
+    "loadError": "Die Kreuzfahrten konnten nicht geladen werden.",
+    "emptyHint": "Füge deine erste Kreuzfahrt hinzu oder lies eine Buchung ein.",
+    "wholeListHint": "Eine ganze Liste auf einmal?",
+    "unnamedShip": "Unbenanntes Schiff"
   },
   "detail": {
     "loading": "Kreuzfahrt wird geladen …",
@@ -45,11 +48,15 @@
     "edit": "Bearbeiten",
     "delete": "Löschen",
     "deleteConfirmTitle": "Kreuzfahrt löschen?",
-    "deleteConfirmMessage": "Diese Kreuzfahrt wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteConfirmMessage": "„{{name}}“ wird mit {{count}} Hafenanläufen dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
     "deleteConfirm": "Endgültig löschen",
     "deleteCancel": "Abbrechen",
     "deleteSuccess": "Kreuzfahrt gelöscht",
-    "deleteError": "Kreuzfahrt konnte nicht gelöscht werden"
+    "deleteError": "Kreuzfahrt konnte nicht gelöscht werden",
+    "loadError": "Die Kreuzfahrt konnte nicht geladen werden.",
+    "deleteConfirmMessage_one": "„{{name}}“ wird mit einem Hafenanlauf dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
+    "deleteConfirmMessage_other": "„{{name}}“ wird mit {{count}} Hafenanläufen dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
+    "deleteConfirmMessageNoStops": "„{{name}}“ wird dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten."
   },
   "field": {
     "ship": "Schiff",

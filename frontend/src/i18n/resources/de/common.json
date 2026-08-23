@@ -31,7 +31,8 @@
     "no": "Nein",
     "later": "Später",
     "details": "Details",
-    "dismiss": "Verwerfen"
+    "dismiss": "Verwerfen",
+    "retry": "Erneut versuchen"
   },
   "dismiss": "Verwerfen",
   "app": {
@@ -205,6 +206,24 @@
   "filters": {
     "more": "Filter",
     "reset": "Filter zurücksetzen",
-    "showing": "{{count}} angezeigt"
+    "showing": "{{count}} angezeigt",
+    "noMatch": "Nichts passt zu deinen Filtern",
+    "filtered": "gefiltert"
+  },
+  "summary": {
+    "flights": "Flüge",
+    "airlines": "Airlines",
+    "airports": "Flughäfen",
+    "cruises": "Kreuzfahrten",
+    "portCalls": "Hafenanläufe",
+    "seaDays": "Seetage",
+    "lines": "Reedereien",
+    "lodgings": "Unterkünfte",
+    "stays": "Aufenthalte",
+    "nights": "Übernachtungen",
+    "chains": "Ketten",
+    "places": "Orte",
+    "visited": "Besucht",
+    "countries": "Länder"
   }
 }

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import type { Flight } from "../types";
 import TimesFields from "./FlightForm/fields/TimesFields";
+import Modal from "./Modal";
 import RouteFields from "./FlightForm/fields/RouteFields";
 import HistoricalDateFields, {
   historicalDateShape,
@@ -465,45 +466,29 @@ export default function FlightEditModal({
     }
   };
 
-  if (!isOpen) return null;
-
+  // The shared frame brings the close button, Escape, the scroll lock and the
+  // focus return. The action buttons stay INSIDE the form rather than moving
+  // to the frame's footer, because the submit button belongs to the form that
+  // owns it — pulling it out would need an id-and-`form=` dance for nothing.
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-100 p-4">
-      <div
-        className="rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-        style={{ background: "var(--bg-surface)" }}
-      >
-        <div
-          className="sticky top-0 px-6 py-4"
-          style={{ background: "var(--bg-surface)", borderBottom: "1px solid var(--color-border)" }}
-        >
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-              {t("flights:edit.title")}
-            </h2>
-            <button
-              onClick={onClose}
-              className="transition-colors"
-              style={{ color: "var(--text-muted)" }}
-              aria-label={t("common:buttons.close")}
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-            {departureAirport?.iata || departureAirport?.icao} {t("common:labels.routeSeparator")}{" "}
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      busy={loading}
+      widthClass="max-w-2xl"
+      closeLabel={t("common:buttons.close")}
+      title={
+        <span className="flex flex-col">
+          <span className="text-xl font-bold">{t("flights:edit.title")}</span>
+          <span className="text-sm font-normal" style={{ color: "var(--text-muted)" }}>
+            {departureAirport?.iata || departureAirport?.icao}{" "}
+            {t("common:labels.routeSeparator")}{" "}
             {arrivalAirport?.iata || arrivalAirport?.icao}
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          </span>
+        </span>
+      }
+    >
+        <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-sm">
               {error}
@@ -803,7 +788,6 @@ export default function FlightEditModal({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

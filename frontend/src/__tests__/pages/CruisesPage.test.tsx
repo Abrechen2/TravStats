@@ -36,6 +36,8 @@ vi.mock("../../store/toastStore", () => ({
 }));
 
 const mockNavigate = vi.fn();
+import { MemoryRouter } from "react-router-dom";
+
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
   return { ...actual, useNavigate: () => mockNavigate };
@@ -99,7 +101,11 @@ describe("CruisesPage", () => {
     });
     vi.mocked(cruiseApi.list).mockResolvedValue([early, late]);
 
-    render(<CruisesPage />);
+    render(
+      <MemoryRouter>
+        <CruisesPage />
+      </MemoryRouter>
+    );
 
     await screen.findByRole("table");
 
@@ -124,13 +130,24 @@ describe("CruisesPage", () => {
     });
     vi.mocked(cruiseApi.list).mockResolvedValue([cruise]);
 
-    render(<CruisesPage />);
+    render(
+      <MemoryRouter>
+        <CruisesPage />
+      </MemoryRouter>
+    );
 
     await screen.findByRole("table");
 
     await userEvent.click(screen.getByRole("button", { name: "common:buttons.delete" }));
 
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText(/list\.delete\.confirm/)).toBeInTheDocument();
+    // The list and the detail page share these keys now — deleting a cruise
+    // used to read differently depending on which of the two you stood on.
+    // `…NoStops` rather than the counted form because this fixture has none:
+    // asserting WHICH key appeared proves the count branch was taken, which
+    // the raw-key test harness cannot show through the rendered number.
+    const message = within(dialog).getByText(/deleteConfirmMessageNoStops/);
+    // …and it names the ship, which this dialog never did before.
+    expect(message.textContent).toContain("Solo Ship");
   });
 });

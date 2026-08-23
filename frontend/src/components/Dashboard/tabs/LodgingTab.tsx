@@ -120,7 +120,7 @@ export function LodgingTab(): JSX.Element {
           domains. Mirrors how CruisesTab/FlightsTab scope their own domain. */}
       <MapContainer3D
         flights={[]}
-        visMode="routes"
+        visMode={mode === "globe" ? "globe" : "routes"}
         lodgingsOverride={visibleLodgings}
         onLodgingClick={handleLodgingPinClick}
         appearanceDomains={["lodging"]}

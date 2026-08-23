@@ -58,11 +58,11 @@ export default function FlightList({
     );
   };
 
-  const { units } = useSettingsStore();
+  const { baseCurrency } = useSettingsStore();
 
   const formatCurrency = (value?: number, currency?: string): string => {
     if (value === undefined || value === null) return "";
-    return formatCurrencyUtil(value, currency || units.currency);
+    return formatCurrencyUtil(value, currency || baseCurrency);
   };
 
   if (flights.length === 0) {
@@ -204,7 +204,7 @@ export default function FlightList({
                       className="px-2 py-1 rounded-full"
                       style={{ background: "var(--bg-elevated)", color: "var(--accent)" }}
                     >
-                      {formatCurrency(flight.price, flight.currency || units.currency)}
+                      {formatCurrency(flight.price, flight.currency || baseCurrency)}
                     </span>
                   )}
                   <DataSourceBadges flight={flight} />

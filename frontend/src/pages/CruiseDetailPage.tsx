@@ -6,6 +6,7 @@ import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
 import { CruiseRouteMap } from "../components/Cruise/CruiseRouteMap";
 import {
   buildEffectiveTimeline,
+  countPortCalls,
   countUniquePorts,
   countUnresolvedPorts,
 } from "../components/Cruise/cruisePorts";
@@ -15,6 +16,9 @@ import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
 import { formatDateInTimezone } from "../lib/dateUtils";
 import { useToastStore } from "../store/toastStore";
+import ConfirmModal from "../components/Training/ConfirmModal";
+import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { logger } from "../lib/logger";
 
 const fmtDate = (iso: string | null): string => {
@@ -28,7 +32,12 @@ export default function CruiseDetailPage(): JSX.Element {
   const { t } = useTranslation("cruise");
   const [cruise, setCruise] = useState<Cruise | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [notFound, setNotFound] = useState<boolean>(false);
+  // Two states, not one: a 404 means the cruise is gone, anything else
+  // means we could not ask. The page used to answer "nicht gefunden" to
+  // both, denying a record that a dropped connection had merely hidden.
+  const [failure, setFailure] = useState<LoadFailure | null>(null);
+  /** Bumped by the retry button; the fetch effect watches it. */
+  const [reloadKey, setReloadKey] = useState<number>(0);
   const [editing, setEditing] = useState<boolean>(false);
   const [confirmingDelete, setConfirmingDelete] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
@@ -54,11 +63,13 @@ export default function CruiseDetailPage(): JSX.Element {
     let cancelled = false;
     void (async () => {
       setLoading(true);
+      setFailure(null);
       try {
         const c = await cruiseApi.get(id);
         if (!cancelled) setCruise(c);
-      } catch {
-        if (!cancelled) setNotFound(true);
+      } catch (err: unknown) {
+        logger.error("CruiseDetailPage: failed to load cruise", err);
+        if (!cancelled) setFailure(classifyLoadFailure(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -66,7 +77,7 @@ export default function CruiseDetailPage(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, reloadKey]);
 
   if (loading) {
     return (
@@ -76,7 +87,10 @@ export default function CruiseDetailPage(): JSX.Element {
       </div>
     );
   }
-  if (notFound || !cruise) {
+  if (failure !== null || !cruise) {
+    // A load error is a state you get out of, so it offers the retry that
+    // "not found" must not pretend to have.
+    const isLoadError = failure === "loadError";
     return (
       <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
         <NavigationBar />
@@ -87,9 +101,21 @@ export default function CruiseDetailPage(): JSX.Element {
           >
             ← {t("list.title")}
           </button>
-          <div className="mt-4 rounded-md border border-(--danger)/50 bg-(--danger)/10 p-4 text-sm text-(--danger)">
-            {t("detail.notFound")}
+          <div
+            role="alert"
+            className="mt-4 rounded-md border border-(--danger)/50 bg-(--danger)/10 p-4 text-sm text-(--danger)"
+          >
+            {isLoadError ? t("detail.loadError") : t("detail.notFound")}
           </div>
+          {isLoadError && (
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="mt-3 rounded-md border border-(--color-border) px-3 py-2 text-sm text-(--text-secondary) hover:text-(--text-primary)"
+            >
+              {t("common:buttons.retry")}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -304,40 +330,29 @@ export default function CruiseDetailPage(): JSX.Element {
           />
         )}
 
-        {confirmingDelete && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="w-full max-w-md rounded-lg border border-border bg-(--bg-elevated) p-6 shadow-xl">
-              <h3 className="text-lg font-semibold text-(--text-primary)">
-                {t("detail.deleteConfirmTitle")}
-              </h3>
-              <p className="mt-2 text-sm text-(--text-muted)">
-                {t("detail.deleteConfirmMessage")}
-              </p>
-              <div className="mt-5 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setConfirmingDelete(false)}
-                  disabled={deleting}
-                  className="rounded-md border border-border px-4 py-2 text-sm text-(--text-muted) hover:bg-(--bg-surface) disabled:opacity-50"
-                >
-                  {t("detail.deleteCancel")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDelete()}
-                  disabled={deleting}
-                  className="rounded-md bg-(--danger) px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-                >
-                  {t("detail.deleteConfirm")}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Same component, same keys and same sentence as the cruise LIST.
+            The two used to disagree: the list named the ship without warning
+            that it was permanent, this one warned without naming the ship,
+            and neither mentioned the port calls that go with it. */}
+        <ConfirmModal
+          isOpen={confirmingDelete}
+          onClose={() => setConfirmingDelete(false)}
+          onConfirm={() => void handleDelete()}
+          isLoading={deleting}
+          title={t("detail.deleteConfirmTitle")}
+          message={countedDeleteMessage(
+            t,
+            {
+              counted: "cruise:detail.deleteConfirmMessage",
+              empty: "cruise:detail.deleteConfirmMessageNoStops",
+            },
+            cruise.ship?.name ?? cruise.shipNameOverride ?? t("list.unnamedShip"),
+            countPortCalls(cruise)
+          )}
+          confirmText={t("detail.deleteConfirm")}
+          cancelText={t("detail.deleteCancel")}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
+        />
       </div>
     </div>
   );

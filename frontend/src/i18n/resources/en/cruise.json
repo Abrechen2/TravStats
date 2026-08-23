@@ -31,7 +31,10 @@
     "sortedBy": "sorted by {{col}}, {{dir}}",
     "ascending": "ascending",
     "descending": "descending",
-    "loadError": "The cruises could not be loaded."
+    "loadError": "The cruises could not be loaded.",
+    "emptyHint": "Add your first cruise, or read in a booking.",
+    "wholeListHint": "A whole list at once?",
+    "unnamedShip": "Unnamed ship"
   },
   "detail": {
     "loading": "Loading cruise …",
@@ -45,11 +48,15 @@
     "edit": "Edit",
     "delete": "Delete",
     "deleteConfirmTitle": "Delete cruise?",
-    "deleteConfirmMessage": "This cruise will be permanently deleted. This action cannot be undone.",
+    "deleteConfirmMessage": "“{{name}}” will be permanently deleted, along with its {{count}} port calls. Trips it belongs to are kept.",
     "deleteConfirm": "Delete permanently",
     "deleteCancel": "Cancel",
     "deleteSuccess": "Cruise deleted",
-    "deleteError": "Could not delete the cruise"
+    "deleteError": "Could not delete the cruise",
+    "loadError": "The cruise could not be loaded.",
+    "deleteConfirmMessage_one": "“{{name}}” will be permanently deleted, along with its one port call. Trips it belongs to are kept.",
+    "deleteConfirmMessage_other": "“{{name}}” will be permanently deleted, along with its {{count}} port calls. Trips it belongs to are kept.",
+    "deleteConfirmMessageNoStops": "“{{name}}” will be permanently deleted. Trips it belongs to are kept."
   },
   "field": {
     "ship": "Ship",

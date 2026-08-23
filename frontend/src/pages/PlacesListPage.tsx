@@ -7,9 +7,13 @@ import { SkeletonTable } from "../components/SkeletonLoader";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
+import ListEmptyState from "../components/table/ListEmptyState";
+import ListSummaryStrip from "../components/table/ListSummaryStrip";
+import { STATUS_PILL_CLASS, statusPillStyle } from "../components/table/statusPillStyle";
 import { RowActionButton, RowActions } from "../components/table/RowActionButton";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import ConfirmModal from "../components/Training/ConfirmModal";
+import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
@@ -18,6 +22,7 @@ import { logger } from "../lib/logger";
 import { deletePlace, listPlaces } from "../lib/api/places";
 import { useToastStore } from "../store/toastStore";
 import { PLACE_CATEGORIES, PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
+import { classifyPlace } from "../shared/placeCounting";
 import type { PlaceCategory } from "../shared/placeCategories";
 import type { Place } from "../types/place";
 
@@ -25,7 +30,24 @@ type CategoryFilter = PlaceCategory | "all";
 type CountryFilter = string | "all";
 /** Tri-state on the wire; "all" means the list shows wishlist entries too, so
  *  the one view meant to contain them never hides them. */
-type VisitedFilter = "all" | "visited" | "wishlist";
+/** Three states, like every other domain: been there, going there, want to
+ *  go. `planned` is derived from a dated future visit, never stored. */
+/** Place state -> the shared status vocabulary. "excluded" is a wishlist
+ *  entry, which has no equivalent elsewhere and falls through to the neutral
+ *  style — deliberately: wanting to go somewhere is not a problem. */
+const PLACE_PILL_STATUS = {
+  visited: "completed",
+  planned: "scheduled",
+  excluded: "wishlist",
+} as const;
+
+const PLACE_STATUS_KEY = {
+  visited: "visited",
+  planned: "planned",
+  excluded: "wishlist",
+} as const;
+
+type VisitedFilter = "all" | "visited" | "planned" | "wishlist";
 
 type PlaceSortKey = "name" | "category" | "location" | "visits" | "lastVisit";
 type PlaceColumnId = PlaceSortKey | "status" | "actions";
@@ -142,8 +164,12 @@ export default function PlacesListPage(): JSX.Element {
     const out = rows.filter((p) => {
       if (category !== "all" && p.category !== category) return false;
       if (country !== "all" && p.isoCountryCode !== country) return false;
-      if (visited === "visited" && !p.visited) return false;
-      if (visited === "wishlist" && p.visited) return false;
+      if (visited !== "all") {
+        const state = classifyPlace(p);
+        const wanted =
+          visited === "visited" ? "visited" : visited === "planned" ? "planned" : "excluded";
+        if (state !== wanted) return false;
+      }
       if (!q) return true;
       return (
         p.name.toLowerCase().includes(q) ||
@@ -168,6 +194,23 @@ export default function PlacesListPage(): JSX.Element {
 
   const hasActiveFilter =
     search.trim() !== "" || category !== "all" || country !== "all" || visited !== "all";
+
+  /** Read straight off the visible rows, like the other three lists. Visits
+   *  are counted from data and dates (shared/placeCounting), never from a
+   *  status string — a visit dated in the future is not one. */
+  const summaryFigures = useMemo(() => {
+    const countries = new Set<string>();
+    let visited = 0;
+    for (const p of filtered) {
+      if (p.country) countries.add(p.country);
+      if (p.visited) visited += 1;
+    }
+    return [
+      { key: "places", value: String(filtered.length), label: t("common:summary.places") },
+      { key: "visited", value: String(visited), label: t("common:summary.visited") },
+      { key: "countries", value: String(countries.size), label: t("common:summary.countries") },
+    ];
+  }, [filtered, t]);
 
   const resetFilters = useCallback((): void => {
     setSearch("");
@@ -209,18 +252,75 @@ export default function PlacesListPage(): JSX.Element {
   return (
     <PageTransition>
       <NavigationBar />
+      {/* The shared filter bar sits directly under the navigation, the way
+          it does on the other three domain lists — it is `sticky top-14`, so
+          its place in the flow is what the page reads like before you scroll.
+          Search and status stay open because every domain has them; category
+          and country sit behind "Filter". */}
+      <ListFilterBar
+        search={{
+          value: search,
+          onChange: setSearch,
+          placeholder: t("places:list.searchPlaceholder"),
+        }}
+        status={{
+          label: t("places:list.filters.status"),
+          value: visited,
+          onChange: (v) => setVisited(v as VisitedFilter),
+          allLabel: t("places:filter.allStatuses"),
+          options: [
+            { value: "visited", label: t("places:list.status.visited") },
+            { value: "planned", label: t("places:list.status.planned") },
+            { value: "wishlist", label: t("places:list.status.wishlist") },
+          ],
+        }}
+        extra={
+          <>
+            <FilterField label={t("places:list.filters.category")}>
+              <select
+                className={PANEL_SELECT_CLASS}
+                value={category}
+                onChange={(e) => setCategory(e.target.value as CategoryFilter)}
+              >
+                <option value="all">{t("places:filter.allCategories")}</option>
+                {PLACE_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {t(`places:categories.${c}`)}
+                  </option>
+                ))}
+              </select>
+            </FilterField>
+            <FilterField label={t("places:list.filters.country")}>
+              <select
+                className={PANEL_SELECT_CLASS}
+                value={country}
+                onChange={(e) => setCountry(e.target.value as CountryFilter)}
+              >
+                <option value="all">{t("places:filter.allCountries")}</option>
+                {countryOptions.map(([code, label]) => (
+                  <option key={code} value={code}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </FilterField>
+          </>
+        }
+        extraActiveCount={(category !== "all" ? 1 : 0) + (country !== "all" ? 1 : 0)}
+        hasActiveFilter={hasActiveFilter}
+        onReset={resetFilters}
+        resultLabel={
+          loading || loadError
+            ? ""
+            : t("places:list.resultCount", { shown: filtered.length, total: rows.length })
+        }
+      />
       <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h1 className="font-display text-2xl font-semibold tracking-tight">
               {t("places:list.title")}
             </h1>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
-              {t("places:list.subtitle", {
-                count: rows.filter((p) => p.visited).length,
-                countries: countryOptions.length,
-              })}
-            </p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -242,64 +342,12 @@ export default function PlacesListPage(): JSX.Element {
           </div>
         </div>
 
-        {/* The shared filter bar — search and status stay open because every
-            domain has them; category and country sit behind "Filter", which is
-            what keeps this bar the same width as the other three lists. */}
-        <ListFilterBar
-          search={{
-            value: search,
-            onChange: setSearch,
-            placeholder: t("places:list.searchPlaceholder"),
-          }}
-          status={{
-            label: t("places:list.filters.status"),
-            value: visited,
-            onChange: (v) => setVisited(v as VisitedFilter),
-            allLabel: t("places:filter.allStatuses"),
-            options: [
-              { value: "visited", label: t("places:list.status.visited") },
-              { value: "wishlist", label: t("places:list.status.wishlist") },
-            ],
-          }}
-          extra={
-            <>
-              <FilterField label={t("places:list.filters.category")}>
-                <select
-                  className={PANEL_SELECT_CLASS}
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as CategoryFilter)}
-                >
-                  <option value="all">{t("places:filter.allCategories")}</option>
-                  {PLACE_CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {t(`places:categories.${c}`)}
-                    </option>
-                  ))}
-                </select>
-              </FilterField>
-              <FilterField label={t("places:list.filters.country")}>
-                <select
-                  className={PANEL_SELECT_CLASS}
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value as CountryFilter)}
-                >
-                  <option value="all">{t("places:filter.allCountries")}</option>
-                  {countryOptions.map(([code, label]) => (
-                    <option key={code} value={code}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </FilterField>
-            </>
-          }
-          extraActiveCount={(category !== "all" ? 1 : 0) + (country !== "all" ? 1 : 0)}
-          hasActiveFilter={hasActiveFilter}
-          onReset={resetFilters}
-          resultLabel={t("places:list.resultCount", {
-            shown: filtered.length,
-            total: rows.length,
-          })}
+
+        <ListSummaryStrip
+          figures={summaryFigures}
+          filtered={hasActiveFilter}
+          filteredLabel={t("common:filters.filtered")}
+          unknown={loading || loadError}
         />
 
         <div
@@ -322,9 +370,15 @@ export default function PlacesListPage(): JSX.Element {
                 </button>
               </div>
             ) : filtered.length === 0 ? (
-              <div className="bg-[var(--bg-surface)] px-4 py-8 text-center text-[var(--text-muted)]">
-                {rows.length === 0 ? t("places:list.empty") : t("places:list.noMatches")}
-              </div>
+              /* Was its own inline ternary saying the same thing the other
+                 three lists say — the shared component so the wording and the
+                 offer to clear the filter cannot drift apart again. */
+              <ListEmptyState
+                filtered={hasActiveFilter}
+                emptyTitle={t("places:list.empty")}
+                emptyHint={t("places:list.emptyHint")}
+                onReset={resetFilters}
+              />
             ) : (
               <table className="w-full min-w-[900px] text-sm">
                 <thead
@@ -420,24 +474,16 @@ export default function PlacesListPage(): JSX.Element {
                       )}
                       {columnPrefs.isVisible("status") && (
                         <td className="px-4 py-3">
+                          {/* The shared palette every other list resolves its
+                              status through — green for happened, blue for
+                              still ahead, muted for a wishlist entry. It used
+                              to carry its own two colours, which is how a
+                              fourth shade of "done" gets into an app. */}
                           <span
-                            className="rounded px-2 py-1 text-xs"
-                            style={
-                              p.visited
-                                ? {
-                                    color: "var(--success)",
-                                    background: "rgba(63,185,80,0.08)",
-                                    border: "1px solid rgba(63,185,80,0.35)",
-                                  }
-                                : {
-                                    color: "var(--text-muted)",
-                                    border: "1px dashed var(--color-border)",
-                                  }
-                            }
+                            className={STATUS_PILL_CLASS}
+                            style={statusPillStyle(PLACE_PILL_STATUS[classifyPlace(p)])}
                           >
-                            {p.visited
-                              ? t("places:list.status.visited")
-                              : t("places:list.status.wishlist")}
+                            {t(`places:list.status.${PLACE_STATUS_KEY[classifyPlace(p)]}`)}
                           </span>
                         </td>
                       )}
@@ -481,9 +527,21 @@ export default function PlacesListPage(): JSX.Element {
         <ConfirmModal
           isOpen
           title={t("places:list.deleteTitle")}
-          message={t("places:list.deleteMessage", { name: pendingDelete.name })}
+          // Same shape as the other five delete dialogs: what · how much goes
+          // with it · what stays. It already named the place and the visits;
+          // it lacked the COUNT and the reassurance that trips survive.
+          message={countedDeleteMessage(
+            t,
+            {
+              counted: "places:list.deleteMessage",
+              empty: "places:list.deleteMessageNoVisits",
+            },
+            pendingDelete.name,
+            pendingDelete.visitCount
+          )}
           confirmText={t("common:buttons.delete")}
           cancelText={t("common:buttons.cancel")}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
           onConfirm={() => void confirmDelete()}
           onClose={() => setPendingDelete(null)}
         />

@@ -184,8 +184,8 @@
     "description": "Here you can see all your flights in a clear table. You can sort, filter and edit or delete flights.",
     "backToDashboard": "Back to Dashboard",
     "loading": "Loading flights...",
-    "noFlights": "No flights found",
-    "noFlightsHint": "Try adjusting your filters or add your first flight.",
+    "noFlights": "No flights recorded yet",
+    "noFlightsHint": "Add your first flight, or read in a booking.",
     "airline": "Airline",
     "flightNumber": "Flight #",
     "route": "Route",
@@ -200,7 +200,7 @@
     "actions": "Actions",
     "deleteConfirm": {
       "title": "Delete flight?",
-      "message": "Are you sure you want to delete this flight?\n\nThis action cannot be undone.",
+      "message": "“{{name}}” will be permanently deleted. A trip it belongs to is kept.",
       "confirm": "Yes, delete",
       "cancel": "Cancel"
     },
@@ -266,7 +266,8 @@
     "landed": "Landed",
     "historical": "Historical",
     "duplicated": "Duplicated",
-    "cancelledCheckbox": "Cancelled"
+    "cancelledCheckbox": "Cancelled",
+    "duplicatedHint": "Recognised as a duplicate on import. The entry is kept, but counts towards no statistic."
   },
   "historicalCheckbox": "Historical flight (route only)",
   "historicalHint": "Only departure and arrival airports required. Year, month, and all other fields are optional.",
@@ -418,5 +419,17 @@
     "allTrips": "All trips",
     "withTrip": "With trip",
     "withoutTrip": "Without trip"
+  },
+  "detail": {
+    "loadError": "The flight could not be loaded.",
+    "notFound": "Flight not found",
+    "times": "Times",
+    "booking": "Booking & seat",
+    "costs": "Costs",
+    "route": "Route",
+    "registration": "Registration",
+    "distance": "Distance",
+    "overflownCountries": "Countries overflown",
+    "openTrip": "Open trip"
   }
 }

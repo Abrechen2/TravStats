@@ -223,7 +223,9 @@ export function useFlightForm(
     setDepartureDate(today);
     setArrivalDate(today);
 
-    if (settings?.units?.currency) setCurrency(settings.units.currency);
+    // The one currency the app has (see UnitsSection). Was
+    // `units.currency`, which governed flights alone.
+    if (settings?.baseCurrency) setCurrency(settings.baseCurrency);
     if (settings?.defaults?.flightCategory) setCategory(settings.defaults.flightCategory);
     if (settings?.defaults?.seatClass) setSeatClass(settings.defaults.seatClass);
   }, [settings]);

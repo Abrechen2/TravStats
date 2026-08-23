@@ -48,7 +48,7 @@ describe("LodgingMoneySection", () => {
   beforeEach(() => {
     useSettingsStore.setState({
       baseCurrency: EUR,
-      units: { distanceUnit: "kilometers", currency: EUR },
+      units: { distanceUnit: "kilometers" },
     });
   });
 
@@ -112,7 +112,7 @@ describe("LodgingMoneySection", () => {
     // converted these amounts into.
     useSettingsStore.setState({
       baseCurrency: "CHF",
-      units: { distanceUnit: "kilometers", currency: "USD" },
+      units: { distanceUnit: "kilometers" },
     });
     render(
       <LodgingMoneySection
@@ -131,7 +131,7 @@ describe("LodgingQualitySection", () => {
   beforeEach(() => {
     useSettingsStore.setState({
       baseCurrency: EUR,
-      units: { distanceUnit: "kilometers", currency: EUR },
+      units: { distanceUnit: "kilometers" },
     });
   });
 

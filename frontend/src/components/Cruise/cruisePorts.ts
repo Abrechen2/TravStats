@@ -33,6 +33,28 @@ export function countUniquePorts(cruise: Cruise): number {
 }
 
 /**
+ * Port CALLS — how many times the ship tied up, not how many different places.
+ *
+ * Distinct from `countUniquePorts`: a round trip that leaves and returns to
+ * Kiel calls twice at one port. The delete dialog wants this number, because
+ * it is counting the rows that go away, not the places visited.
+ *
+ * Sea days are excluded, matching the backend's `totalPortCalls` and the
+ * three-state stop invariant in CLAUDE.md — a sea day is not a call.
+ * Unresolved stops ARE counted: they are real calls whose name simply did not
+ * match the catalogue.
+ *
+ * This lives here rather than at the call site for the reason in this file's
+ * header: every time a surface counted ports on its own, it produced a number
+ * that disagreed with the one next to it. The delete dialog did exactly that
+ * on its first day — it said "7 Hafenanläufe" for a cruise whose row said
+ * "5 Häfen", because it counted the raw stops including a sea day.
+ */
+export function countPortCalls(cruise: Cruise): number {
+  return cruise.stops.filter((stop) => !stop.isAtSea).length;
+}
+
+/**
  * Distinct unresolved port names, trimmed and compared case-insensitively.
  * Shown next to `countUniquePorts`, never merged into it — see that function
  * for why.

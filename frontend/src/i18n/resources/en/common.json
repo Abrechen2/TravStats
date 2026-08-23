@@ -31,7 +31,8 @@
     "no": "No",
     "later": "Later",
     "details": "Details",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "retry": "Try again"
   },
   "dismiss": "Dismiss",
   "app": {
@@ -205,6 +206,24 @@
   "filters": {
     "more": "Filters",
     "reset": "Reset filters",
-    "showing": "{{count}} shown"
+    "showing": "{{count}} shown",
+    "noMatch": "Nothing matches your filters",
+    "filtered": "filtered"
+  },
+  "summary": {
+    "flights": "Flights",
+    "airlines": "Airlines",
+    "airports": "Airports",
+    "cruises": "Cruises",
+    "portCalls": "Port calls",
+    "seaDays": "Sea days",
+    "lines": "Cruise lines",
+    "lodgings": "Stays",
+    "stays": "Bookings",
+    "nights": "Nights",
+    "chains": "Chains",
+    "places": "Places",
+    "visited": "Visited",
+    "countries": "Countries"
   }
 }

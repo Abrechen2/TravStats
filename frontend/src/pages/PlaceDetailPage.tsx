@@ -11,6 +11,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { FlagImg } from "../lib/countryFlag";
 import { logger } from "../lib/logger";
+import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { createVisit, deletePlace, deleteVisit, getPlace } from "../lib/api/places";
 import { useToastStore } from "../store/toastStore";
 import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
@@ -27,7 +28,11 @@ export default function PlaceDetailPage(): JSX.Element {
 
   const [place, setPlace] = useState<Place | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  // Two states, not one: a 404 means the place is gone, anything else means
+  // we could not ask. Same distinction the flight, cruise and lodging detail
+  // pages make — collapsing them told a user with a dropped connection that
+  // their place had been deleted.
+  const [failure, setFailure] = useState<LoadFailure | null>(null);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [addingVisit, setAddingVisit] = useState(false);
@@ -38,12 +43,12 @@ export default function PlaceDetailPage(): JSX.Element {
   const load = useCallback(async (): Promise<void> => {
     if (!id) return;
     setLoading(true);
-    setLoadError(false);
+    setFailure(null);
     try {
       setPlace(await getPlace(id));
     } catch (err: unknown) {
       logger.error({ err }, "PlaceDetailPage: failed to load place");
-      setLoadError(true);
+      setFailure(classifyLoadFailure(err));
     } finally {
       setLoading(false);
     }
@@ -155,12 +160,25 @@ export default function PlaceDetailPage(): JSX.Element {
     );
   }
 
-  if (loadError || !place) {
+  if (failure !== null || !place) {
+    const isLoadError = failure === "loadError";
     return (
       <PageTransition>
         <NavigationBar />
         <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-          <p style={{ color: "var(--danger)" }}>{t("places:detail.notFound")}</p>
+          <p role="alert" style={{ color: "var(--danger)" }}>
+            {isLoadError ? t("places:detail.loadError") : t("places:detail.notFound")}
+          </p>
+          {isLoadError && (
+            <button
+              type="button"
+              onClick={() => void load()}
+              className="mt-3 block w-full text-sm underline"
+              style={{ color: "var(--accent)" }}
+            >
+              {t("common:buttons.retry")}
+            </button>
+          )}
           <Link to="/places" className="mt-3 inline-block text-sm underline" style={{ color: "var(--accent)" }}>
             {t("places:detail.backToList")}
           </Link>

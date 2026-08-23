@@ -29,6 +29,11 @@ export type PlaceCountState = "visited" | "planned" | "excluded";
 
 export interface CountablePlace {
   visited: boolean;
+  /**
+   * Visits still in the future, as the server derives them. Optional so a
+   * caller that only has the stored row can still ask the visited question.
+   */
+  plannedVisitCount?: number;
 }
 
 export interface CountableVisit {
@@ -64,7 +69,15 @@ export function classifyVisit(visit: CountableVisit, now: Date = new Date()): Pl
  * dated future visit attached is still not one.
  */
 export function classifyPlace(place: CountablePlace): PlaceCountState {
-  return place.visited ? "visited" : "excluded";
+  if (place.visited) return "visited";
+  // A place nobody has been to yet, but that a dated future visit points at,
+  // is PLANNED rather than a bare wishlist entry — the same distinction a
+  // flight before departure and a stay before check-in already carry. It is
+  // derived, never stored: the date says it, exactly as this file's header
+  // demands. `plannedVisitCount` comes from the server, which excludes those
+  // visits from every total already.
+  if ((place.plannedVisitCount ?? 0) > 0) return "planned";
+  return "excluded";
 }
 
 /** Count of places that actually happened. */

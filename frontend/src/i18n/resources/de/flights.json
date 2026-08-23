@@ -184,8 +184,8 @@
     "description": "Hier siehst du alle deine Flüge in einer übersichtlichen Tabelle. Du kannst sortieren, filtern und Flüge bearbeiten oder löschen.",
     "backToDashboard": "Zurück zum Dashboard",
     "loading": "Flüge werden geladen...",
-    "noFlights": "Keine Flüge gefunden",
-    "noFlightsHint": "Passe deine Filter an oder füge deinen ersten Flug hinzu.",
+    "noFlights": "Noch keine Flüge erfasst",
+    "noFlightsHint": "Füge deinen ersten Flug hinzu oder lies eine Buchung ein.",
     "airline": "Airline",
     "flightNumber": "Flugnummer",
     "route": "Route",
@@ -200,7 +200,7 @@
     "actions": "Aktionen",
     "deleteConfirm": {
       "title": "Flug löschen?",
-      "message": "Möchtest du diesen Flug wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
+      "message": "„{{name}}“ wird dauerhaft gelöscht. Eine zugehörige Reise bleibt erhalten.",
       "confirm": "Ja, löschen",
       "cancel": "Abbrechen"
     },
@@ -266,7 +266,8 @@
     "landed": "Gelandet",
     "historical": "Historisch",
     "duplicated": "Dupliziert",
-    "cancelledCheckbox": "Storniert"
+    "cancelledCheckbox": "Storniert",
+    "duplicatedHint": "Beim Import als Dublette erkannt. Der Eintrag bleibt erhalten, zählt aber in keiner Statistik mit."
   },
   "historicalCheckbox": "Historischer Flug (nur Route bekannt)",
   "historicalHint": "Nur Abflug- und Ankunftsflughafen erforderlich. Jahr, Monat und alle weiteren Angaben sind optional.",
@@ -418,5 +419,17 @@
     "allTrips": "Alle Reisen",
     "withTrip": "Mit Reise",
     "withoutTrip": "Ohne Reise"
+  },
+  "detail": {
+    "loadError": "Der Flug konnte nicht geladen werden.",
+    "notFound": "Flug nicht gefunden",
+    "times": "Zeiten",
+    "booking": "Buchung & Sitz",
+    "costs": "Kosten",
+    "route": "Strecke",
+    "registration": "Kennzeichen",
+    "distance": "Distanz",
+    "overflownCountries": "Überflogene Länder",
+    "openTrip": "Reise öffnen"
   }
 }

@@ -21,6 +21,9 @@ import {
   singleOriginalCurrencySpend,
 } from "../lib/lodgingFormat";
 import { logger } from "../lib/logger";
+import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
+import ConfirmModal from "../components/Training/ConfirmModal";
+import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { deriveStayMembership } from "../shared/membershipDerivation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
@@ -38,7 +41,12 @@ export default function LodgingDetailPage(): JSX.Element {
 
   const [lodging, setLodging] = useState<Lodging | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [notFound, setNotFound] = useState<boolean>(false);
+  // See CruiseDetailPage: a 404 is "gone", everything else is "could not
+  // ask". Collapsing the two made a network drop claim the house was
+  // deleted.
+  const [failure, setFailure] = useState<LoadFailure | null>(null);
+  /** Bumped by the retry button; the fetch effect watches it. */
+  const [reloadKey, setReloadKey] = useState<number>(0);
   const [editing, setEditing] = useState<boolean>(false);
   const [confirmingDelete, setConfirmingDelete] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
@@ -61,12 +69,13 @@ export default function LodgingDetailPage(): JSX.Element {
     let cancelled = false;
     void (async () => {
       setLoading(true);
+      setFailure(null);
       try {
         const data = await getLodging(id);
         if (!cancelled) setLodging(data);
       } catch (err: unknown) {
         logger.error("LodgingDetailPage: failed to load lodging", err);
-        if (!cancelled) setNotFound(true);
+        if (!cancelled) setFailure(classifyLoadFailure(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -74,7 +83,7 @@ export default function LodgingDetailPage(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, reloadKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -129,7 +138,8 @@ export default function LodgingDetailPage(): JSX.Element {
     );
   }
 
-  if (notFound || !lodging) {
+  if (failure !== null || !lodging) {
+    const isLoadError = failure === "loadError";
     return (
       <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
         <NavigationBar />
@@ -140,9 +150,21 @@ export default function LodgingDetailPage(): JSX.Element {
           >
             ← {t("lodging:list.title")}
           </button>
-          <div className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]">
-            {t("lodging:detail.notFound")}
+          <div
+            role="alert"
+            className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]"
+          >
+            {isLoadError ? t("lodging:detail.loadError") : t("lodging:detail.notFound")}
           </div>
+          {isLoadError && (
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="mt-3 rounded-md border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            >
+              {t("common:buttons.retry")}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -405,46 +427,27 @@ export default function LodgingDetailPage(): JSX.Element {
           />
         )}
 
-        {confirmingDelete && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="w-full max-w-md rounded-lg border border-[var(--color-border)] bg-[var(--bg-elevated)] p-6 shadow-xl">
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-                {t("lodging:detail.deleteConfirmTitle")}
-              </h3>
-              <p
-                className="mt-2 text-sm text-[var(--text-muted)]"
-                data-testid="lodging-delete-message"
-                data-stay-count={lodging.stayCount}
-              >
-                {t("lodging:detail.deleteConfirmMessage", { count: lodging.stayCount })}
-              </p>
-              <div className="mt-5 flex justify-end gap-2">
-                <button
-                  type="button"
-                  data-testid="lodging-delete-cancel"
-                  onClick={() => setConfirmingDelete(false)}
-                  disabled={deleting}
-                  className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50"
-                >
-                  {t("common:buttons.cancel")}
-                </button>
-                <button
-                  type="button"
-                  data-testid="lodging-delete-confirm"
-                  onClick={() => void handleDelete()}
-                  disabled={deleting}
-                  className="rounded-md bg-[var(--danger)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-                >
-                  {t("common:buttons.delete")}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Same component and same keys as the lodging LIST — this was the
+            clearest case of the six: deleting a house looked different
+            depending on whether you did it from the list or from here. */}
+        <ConfirmModal
+          isOpen={confirmingDelete}
+          onClose={() => setConfirmingDelete(false)}
+          onConfirm={() => void handleDelete()}
+          isLoading={deleting}
+          title={t("lodging:detail.deleteConfirmTitle")}
+          message={countedDeleteMessage(
+            t,
+            {
+              counted: "lodging:detail.deleteConfirmMessage",
+              empty: "lodging:detail.deleteConfirmMessageNoStays",
+            },
+            lodging.name,
+            lodging.stayCount
+          )}
+          confirmText={t("common:buttons.delete")}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
+        />
       </div>
     </div>
   );

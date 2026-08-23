@@ -308,24 +308,42 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
     const input = parsed.data;
     await assertTripOwned(input.tripId, userId);
 
-    // Recording a visit is the statement "I was here", so it promotes the
-    // place out of the wishlist in the SAME transaction. Leaving `visited`
-    // untouched here is the silent-wrong-count bug the default guards against:
-    // it is invisible until a headline number is wrong.
-    const [visit] = await prisma.$transaction([
+    // Recording a visit that HAPPENED is the statement "I was here", so it
+    // promotes the place out of the wishlist in the SAME transaction. Leaving
+    // `visited` untouched there is the silent-wrong-count bug the default
+    // guards against: invisible until a headline number is wrong.
+    //
+    // A FUTURE-dated visit is the opposite statement — "I will be here" — and
+    // must not promote anything. Flipping the flag for it made the place read
+    // "Besucht" the moment a plan was entered, which is how a place you have
+    // never been to ends up in the visited count. The rule comes from
+    // `classifyVisit`, the same one that already keeps future visits out of
+    // every total, so the flag and the figures cannot disagree.
+    //
+    // One-directional on purpose: nothing here ever sets `visited` back to
+    // false. A place may legitimately be visited with no visit rows at all
+    // ("I have been to that Maccis, no idea when"), and recomputing the flag
+    // from the visits would erase exactly that.
+    const visitedAt = input.visitedAt ? new Date(input.visitedAt) : null;
+    const happened = classifyVisit({ visitedAt }) === "visited";
+
+    const writes: Prisma.PrismaPromise<unknown>[] = [
       prisma.placeVisit.create({
         data: {
           placeId: place.id,
           userId,
           tripId: input.tripId ?? null,
-          visitedAt: input.visitedAt ? new Date(input.visitedAt) : null,
+          visitedAt,
           orderIdx: input.orderIdx ?? 0,
           notes: input.notes ?? null,
           rating: input.rating ?? null,
         },
       }),
-      prisma.place.update({ where: { id: place.id }, data: { visited: true } }),
-    ]);
+    ];
+    if (happened && !place.visited) {
+      writes.push(prisma.place.update({ where: { id: place.id }, data: { visited: true } }));
+    }
+    const [visit] = await prisma.$transaction(writes);
 
     checkAndUpdateAchievements(userId).catch((error) => {
       logger.error({ error, userId }, "Failed to update achievements after visit create");
@@ -362,6 +380,16 @@ router.patch("/visits/:visitId", async (req: AuthRequest, res: Response, next: N
     }
 
     const visit = await prisma.placeVisit.update({ where: { id: existing.id }, data });
+
+    // Moving a planned visit into the past is the same statement as recording
+    // one, so it promotes the place too. The reverse does NOT demote it — see
+    // the create handler for why the flag is one-directional.
+    if (classifyVisit({ visitedAt: visit.visitedAt }) === "visited") {
+      await prisma.place.updateMany({
+        where: { id: visit.placeId, userId, visited: false },
+        data: { visited: true },
+      });
+    }
 
     checkAndUpdateAchievements(userId).catch((error) => {
       logger.error({ error, userId }, "Failed to update achievements after visit update");

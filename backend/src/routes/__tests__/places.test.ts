@@ -125,6 +125,47 @@ describe("Places API", () => {
       expect(place.body.data.lastVisitAt).toBeNull();
     });
 
+    it("a future-dated visit does NOT promote the place — a plan is not a visit", async () => {
+      // The counterpart to the promotion test above, and the case that made
+      // the wishlist/planned/visited distinction unusable: entering a plan
+      // marked the place "Besucht" on the spot, so a place nobody had been to
+      // sat in the visited count. The rule is `classifyVisit`, the same one
+      // that already keeps future visits out of every figure.
+      const future = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+      await addVisit({ visitedAt: future });
+      const place = await request(app).get(`/api/v1/places/${placeId}`).set("Cookie", authCookie);
+      expect(place.body.data.visited).toBe(false);
+      expect(place.body.data.plannedVisitCount).toBe(1);
+    });
+
+    it("moving a planned visit into the past promotes the place", async () => {
+      const future = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+      const created = await addVisit({ visitedAt: future });
+      await request(app)
+        .patch(`/api/v1/places/visits/${created.body.data.id}`)
+        .set("Cookie", authCookie)
+        .send({ visitedAt: "2024-03-01T09:00:00.000Z" });
+      const place = await request(app).get(`/api/v1/places/${placeId}`).set("Cookie", authCookie);
+      expect(place.body.data.visited).toBe(true);
+      expect(place.body.data.visitCount).toBe(1);
+    });
+
+    it("never demotes a place — the flag is one-directional", async () => {
+      // A place may be visited with no dated visit at all ("I have been to
+      // that Maccis, no idea when"). Recomputing the flag from the visits
+      // would erase exactly that, so moving the only visit into the FUTURE
+      // must leave `visited` alone.
+      const created = await addVisit({ visitedAt: "2024-03-01T09:00:00.000Z" });
+      const future = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+      await request(app)
+        .patch(`/api/v1/places/visits/${created.body.data.id}`)
+        .set("Cookie", authCookie)
+        .send({ visitedAt: future });
+      const place = await request(app).get(`/api/v1/places/${placeId}`).set("Cookie", authCookie);
+      expect(place.body.data.visited).toBe(true);
+      expect(place.body.data.visitCount).toBe(0);
+    });
+
     it("does NOT count a future-dated visit", async () => {
       const future = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
       await addVisit({ visitedAt: future });

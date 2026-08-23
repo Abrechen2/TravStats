@@ -27,7 +27,6 @@ import AboutSection from "../components/Settings/AboutSection";
 import ImportSection from "../components/Settings/ImportSection";
 import FeaturesSection from "../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../components/Settings/CruisePreferencesSection";
-import LodgingPreferencesSection from "../components/Settings/LodgingPreferencesSection";
 import MembershipsSection from "../components/Settings/MembershipsSection";
 import GeocoderSettingsCard from "../components/Settings/GeocoderSettingsCard";
 import ImmichConnectionCard from "../components/Settings/ImmichConnectionCard";
@@ -130,10 +129,8 @@ export default function SettingsPage(): JSX.Element {
       { id: "modules", label: t("common:settings.modules.title") || "Modules" },
       { id: "units", label: t("settings:units.title") || "Units" },
       { id: "notifications", label: t("settings:notifications.title") || "Notifications" },
-      { id: "features", label: t("settings:features.title") || "Features" },
       { id: "backup", label: t("settings:backup.title") || "Backup" },
       { id: "import", label: t("settings:import.title") || "Import" },
-      { id: "autoupdate", label: t("settings:autoUpdate.title") || "Auto-Update" },
       {
         id: "externalServices",
         label: t("settings:externalServices.title") || "External services",
@@ -149,10 +146,21 @@ export default function SettingsPage(): JSX.Element {
       // surface owns what.
       { id: "about", label: "About" },
     ];
+    // `features` and `autoupdate` moved here from `general` on 2026-08-23.
+    // Both are flight-only and nothing else reads them: the two Funktionen
+    // toggles are consumed by the flight form and the flight cost breakdown,
+    // and auto-update runs entirely inside `services/flightAutoUpdate.ts`
+    // against the `PendingFlightUpdate` table — one of its own fields is
+    // called `autoUpdateOnlyDuringFlight`. Their sibling `enrichment`, which
+    // pulls the same kind of flight data from the same kind of API, was
+    // already here. Deep links keep working: the cross-tab effect below
+    // resolves a bare `?section=` across every tab.
     const flight: SectionRef[] = [
       { id: "homeAirport", label: t("settings:homeAirport.title") || "Home airport" },
       { id: "defaults", label: t("settings:defaults.title") || "Defaults" },
+      { id: "features", label: t("settings:features.title") || "Features" },
       { id: "enrichment", label: t("settings:historicalEnrichment.title") || "Enrichment" },
+      { id: "autoupdate", label: t("settings:autoUpdate.title") || "Auto-Update" },
     ];
     const cruiseTab: SectionRef[] = [
       {
@@ -162,8 +170,16 @@ export default function SettingsPage(): JSX.Element {
     ];
     const lodgingTab: SectionRef[] = [
       {
+        // Holds ONLY the admin geocoder card since the base currency moved to
+        // Einheiten & Formate (it governs every domain, not just lodging).
+        // Hidden from the nav for non-admins below — the card renders null for
+        // them, and a nav entry leading to an empty page is worse than none.
         id: "lodgingPreferences",
-        label: t("settings:lodgingPreferences.title") || "Präferenzen",
+        // Named after what it now HOLDS. It used to be "Präferenzen" because
+        // it carried the base currency; that moved to Einheiten & Formate, and
+        // a nav entry promising preferences that shows only an admin geocoder
+        // is a label describing the past.
+        label: t("settings:lodgingPreferences.geocoder.title") || "Geocoder",
       },
       {
         id: "lodgingMemberships",
@@ -179,14 +195,15 @@ export default function SettingsPage(): JSX.Element {
   // reads this; validation and deep-linking never do.
   const navSectionsByTab = useMemo<Record<TabId, SectionRef[]>>(() => {
     const isHidden = (id: string): boolean =>
-      id === "devices" && !isFeatureVisible("devicePairing");
+      (id === "devices" && !isFeatureVisible("devicePairing")) ||
+      (id === "lodgingPreferences" && !(user?.isAdmin ?? false));
     return {
       general: sectionsByTab.general.filter((s) => !isHidden(s.id)),
       flight: sectionsByTab.flight.filter((s) => !isHidden(s.id)),
       cruise: sectionsByTab.cruise.filter((s) => !isHidden(s.id)),
       lodging: sectionsByTab.lodging.filter((s) => !isHidden(s.id)),
     };
-  }, [sectionsByTab, isFeatureVisible]);
+  }, [sectionsByTab, isFeatureVisible, user?.isAdmin]);
 
   // Visible tabs + active-tab state + URL sync + drift guard now live
   // in the shared useDomainTabs hook. Hotel / POI tabs plug in via the
@@ -496,17 +513,6 @@ export default function SettingsPage(): JSX.Element {
             {activeSection === "cruisePreferences" && (
               <CruisePreferencesSection cruise={cruise} onSetCruise={setCruise} />
             )}
-            {activeSection === "lodgingPreferences" && (
-              <>
-                <LodgingPreferencesSection
-                  baseCurrency={baseCurrency}
-                  onSetBaseCurrency={setBaseCurrency}
-                />
-                {/* Admin-only; the card itself renders null for non-admins so
-                    the Präferenzen section stays unchanged for everyone else. */}
-                <GeocoderSettingsCard isAdmin={user?.isAdmin ?? false} />
-              </>
-            )}
             {activeSection === "lodgingMemberships" && <MembershipsSection />}
 
             {activeSection === "profile" && (
@@ -527,7 +533,18 @@ export default function SettingsPage(): JSX.Element {
               <DisplaySection display={display} onSetDisplay={setDisplay} />
             )}
             {activeSection === "modules" && <ModuleSection />}
-            {activeSection === "units" && <UnitsSection units={units} onSetUnits={setUnits} />}
+            {activeSection === "lodgingPreferences" && (
+              /* Admin-only; the card itself renders null for non-admins. */
+              <GeocoderSettingsCard isAdmin={user?.isAdmin ?? false} />
+            )}
+            {activeSection === "units" && (
+              <UnitsSection
+                units={units}
+                onSetUnits={setUnits}
+                baseCurrency={baseCurrency}
+                onSetBaseCurrency={setBaseCurrency}
+              />
+            )}
             {activeSection === "defaults" && (
               <DefaultsSection defaults={defaults} onSetDefaults={setDefaults} />
             )}

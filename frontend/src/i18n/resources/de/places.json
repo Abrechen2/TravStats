@@ -22,8 +22,8 @@
     "plannedSuffix": "(+{{count}} geplant)",
     "deleted": "„{{name}}“ wurde gelöscht.",
     "deleteFailed": "Der Ort konnte nicht gelöscht werden.",
-    "deleteTitle": "Ort löschen",
-    "deleteMessage": "„{{name}}“ und alle zugehörigen Besuche werden gelöscht. Das lässt sich nicht rückgängig machen.",
+    "deleteTitle": "Ort löschen?",
+    "deleteMessage": "„{{name}}“ wird mit {{count}} Besuchen dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
     "columns": {
       "name": "Name",
       "category": "Kategorie",
@@ -40,10 +40,15 @@
     },
     "status": {
       "visited": "Besucht",
-      "wishlist": "Merkliste"
+      "wishlist": "Merkliste",
+      "planned": "Geplant"
     },
     "retry": "Erneut versuchen",
-    "addPlace": "Ort"
+    "addPlace": "Ort",
+    "emptyHint": "Füge deinen ersten Ort hinzu.",
+    "deleteMessage_one": "„{{name}}“ wird mit einem Besuch dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
+    "deleteMessage_other": "„{{name}}“ wird mit {{count}} Besuchen dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
+    "deleteMessageNoVisits": "„{{name}}“ wird dauerhaft gelöscht."
   },
   "filter": {
     "allStatuses": "Alle Status",
@@ -90,6 +95,7 @@
     "position": "Position",
     "source": "Herkunft",
     "mapLabel": "Karte mit der Position von {{name}}",
-    "deletePlace": "Ort löschen"
+    "deletePlace": "Ort löschen",
+    "loadError": "Der Ort konnte nicht geladen werden."
   }
 }

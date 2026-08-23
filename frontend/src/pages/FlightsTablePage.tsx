@@ -5,16 +5,19 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { flightsApi, tripsApi } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
+import ListSummaryStrip from "../components/table/ListSummaryStrip";
+import ListEmptyState from "../components/table/ListEmptyState";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import ListFilterBar, {
   FilterField,
   PANEL_SELECT_CLASS,
 } from "../components/table/ListFilterBar";
-import { statusPillStyle } from "../components/table/statusPillStyle";
+import FlightStatusCell from "../components/flightsTable/FlightStatusCell";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import type { Flight, FlightInput, Trip } from "../types";
 import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
@@ -133,7 +136,7 @@ export default function FlightsTablePage(): JSX.Element {
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   const [editingSpecialFlight, setEditingSpecialFlight] = useState<Flight | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [flightToDelete, setFlightToDelete] = useState<string | null>(null);
+  const [flightToDelete, setFlightToDelete] = useState<Flight | null>(null);
   const [duplicateMenuFor, setDuplicateMenuFor] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"departureTime" | "airline" | "status" | "duration">(
     "departureTime"
@@ -147,6 +150,7 @@ export default function FlightsTablePage(): JSX.Element {
   // `?import=email` — kept for old bookmarks. It simply opens the add dialog:
   // the drop zone is its first route now, so there is no separate email view
   // left to jump to. The param is stripped so a reload does not reopen it.
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
     if (searchParams.get("import") !== "email") return;
@@ -210,20 +214,23 @@ export default function FlightsTablePage(): JSX.Element {
   };
 
   /**
-   * Opening a flight from the row. Mirrors what the edit icon does — a special
-   * flight goes to its own modal, because the generic one hides the fields
-   * that make it special.
+   * The row opens the flight's PAGE now, like a cruise row and a lodging row
+   * always did. It used to open the edit form, which was the only way to read
+   * the ~50 fields the table has no column for — reading meant entering an
+   * editable state. The edit icon still goes straight to the form.
    */
   const openFlight = (f: Flight): void => {
-    if (f.specialType) {
-      setEditingSpecialFlight(f);
-    } else {
-      setEditingFlight(f);
-    }
+    navigate(`/flights/${f.id}`);
+  };
+
+  /** "LH2462 MUC → CPH" — enough to recognise the row you clicked. */
+  const flightLabel = (f: Flight): string => {
+    const route = [f.depIata, f.arrIata].filter(Boolean).join(" → ");
+    return [f.flightNumber, route].filter(Boolean).join(" ") || t("common:labels.unknown");
   };
 
   const handleDeleteClick = (id: string) => {
-    setFlightToDelete(id);
+    setFlightToDelete(flights.find((f) => f.id === id) ?? null);
     setDeleteConfirmOpen(true);
   };
 
@@ -231,7 +238,7 @@ export default function FlightsTablePage(): JSX.Element {
     if (!flightToDelete) return;
 
     try {
-      await flightsApi.delete(flightToDelete);
+      await flightsApi.delete(flightToDelete.id);
       addToast("success", t("flights:table.toast.deleted"));
       setDeleteConfirmOpen(false);
       setFlightToDelete(null);
@@ -444,6 +451,24 @@ export default function FlightsTablePage(): JSX.Element {
     ]
   );
 
+  /** Read straight off the visible rows — nothing estimated. Flight time and
+   *  distance are both derived and marked as estimates wherever they show, so
+   *  they have no business being silently summed into a headline. */
+  const summaryFigures = useMemo(() => {
+    const airlines = new Set<string>();
+    const airports = new Set<string>();
+    for (const f of displayedFlights) {
+      if (f.airline) airlines.add(f.airline);
+      if (f.depIata) airports.add(f.depIata);
+      if (f.arrIata) airports.add(f.arrIata);
+    }
+    return [
+      { key: "flights", value: String(displayedFlights.length), label: t("common:summary.flights") },
+      { key: "airlines", value: String(airlines.size), label: t("common:summary.airlines") },
+      { key: "airports", value: String(airports.size), label: t("common:summary.airports") },
+    ];
+  }, [displayedFlights, t]);
+
   const resetFilters = (): void => {
     setSearch("");
     setStatusFilter("all");
@@ -577,7 +602,13 @@ export default function FlightsTablePage(): JSX.Element {
           }
           hasActiveFilter={hasActiveFilter}
           onReset={resetFilters}
-          resultLabel={t("common:filters.showing", { count: displayedFlights.length })}
+          // Silent while nothing is known: "0 angezeigt" over a failed load is
+          // a count of a list nobody could read.
+          resultLabel={
+            loading || loadError
+              ? ""
+              : t("common:filters.showing", { count: displayedFlights.length })
+          }
         />
 
         {/* Main Content */}
@@ -613,6 +644,13 @@ export default function FlightsTablePage(): JSX.Element {
             </div>
           </div>
 
+          <ListSummaryStrip
+            figures={summaryFigures}
+            filtered={hasActiveFilter}
+            filteredLabel={t("common:filters.filtered")}
+            unknown={loading || loadError}
+          />
+
           <p className="mb-4 text-xs text-(--text-muted)">
             {t("flights:list.wholeListHint")}{" "}
             <Link
@@ -624,14 +662,14 @@ export default function FlightsTablePage(): JSX.Element {
           </p>
 
           {/* Table */}
-          {loadError && (
+          {loadError ? (
             <div
               role="alert"
-              className="mb-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-4 py-4 text-sm text-[var(--danger)]"
+              className="rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-4 py-4 text-sm text-[var(--danger)]"
             >
               {t("flights:table.loadError")}
             </div>
-          )}
+          ) : (
           <div
             className="rounded-lg shadow-xs overflow-hidden"
             style={{ border: "1px solid var(--color-border)" }}
@@ -641,10 +679,12 @@ export default function FlightsTablePage(): JSX.Element {
                 {loading ? (
                   <SkeletonTable rows={10} />
                 ) : displayedFlights.length === 0 ? (
-                  <div className="text-center py-12" style={{ color: "var(--text-muted)" }}>
-                    <p className="text-lg mb-2">{t("flights:table.noFlights")}</p>
-                    <p className="text-sm">{t("flights:table.noFlightsHint")}</p>
-                  </div>
+                  <ListEmptyState
+                    filtered={hasActiveFilter}
+                    emptyTitle={t("flights:table.noFlights")}
+                    emptyHint={t("flights:table.noFlightsHint")}
+                    onReset={resetFilters}
+                  />
                 ) : (
                   <table className="w-full min-w-[960px]">
                     <thead
@@ -750,18 +790,7 @@ export default function FlightsTablePage(): JSX.Element {
                             )}
                             {flightColumnPrefs.isVisible("status") && (
                             <td className="px-4 py-3">
-                              <span
-                                className="px-2 py-1 text-xs font-semibold rounded-full"
-                                // Shared palette. The ternary this replaces had
-                                // an else branch that caught everything except
-                                // flown and scheduled, so a `historical` flight
-                                // was painted in the cancelled red.
-                                style={statusPillStyle(flight.status)}
-                              >
-                                {t(`flights:status.${flight.status}`, {
-                                  defaultValue: flight.status,
-                                })}
-                              </span>
+                              <FlightStatusCell flight={flight} />
                             </td>
                             )}
                             {flightColumnPrefs.isVisible("duration") && (
@@ -883,6 +912,7 @@ export default function FlightsTablePage(): JSX.Element {
               )}
             </>
           </div>
+          )}
         </div>
 
         {/* Edit Modal */}
@@ -932,10 +962,15 @@ export default function FlightsTablePage(): JSX.Element {
           }}
           onConfirm={handleDelete}
           title={t("flights:table.deleteConfirm.title")}
-          message={t("flights:table.deleteConfirm.message")}
+          // Names the flight, like the other five dialogs do now. "Diesen
+          // Flug" was fine on a detail page and wrong in a list, where the
+          // row you clicked may not be the row you meant.
+          message={t("flights:table.deleteConfirm.message", {
+            name: flightToDelete ? flightLabel(flightToDelete) : "",
+          })}
           confirmText={t("flights:table.deleteConfirm.confirm")}
           cancelText={t("flights:table.deleteConfirm.cancel")}
-          confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500"
+          confirmButtonClass={DELETE_BUTTON_CLASS}
         />
       </div>
     </PageTransition>

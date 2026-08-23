@@ -163,7 +163,8 @@
       "distance": "Kilometer (Standard in DE/EU), Meilen (US) oder Nautische Meilen (wie bei Airlines üblich). Die zugrunde liegende Berechnung bleibt gleich — nur die Anzeige ändert sich.",
       "currencyTitle": "Währung:",
       "currency": "Wird für Ticketpreise und Kostenstatistiken verwendet. Keine automatische Umrechnung bestehender Flüge — alte Werte bleiben in der ursprünglichen Währung gespeichert."
-    }
+    },
+    "currencyHint": "Gilt für alle Bereiche. Bestehende Umrechnungen bleiben, wie sie erfasst wurden."
   },
   "defaults": {
     "title": "Standard-Werte",
