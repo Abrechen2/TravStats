@@ -40,7 +40,8 @@
     },
     "status": {
       "visited": "Besucht",
-      "wishlist": "Merkliste"
+      "wishlist": "Merkliste",
+      "planned": "Geplant"
     },
     "retry": "Erneut versuchen",
     "addPlace": "Ort",

@@ -40,7 +40,8 @@
     },
     "status": {
       "visited": "Visited",
-      "wishlist": "Wishlist"
+      "wishlist": "Wishlist",
+      "planned": "Planned"
     },
     "retry": "Try again",
     "addPlace": "Place",

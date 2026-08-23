@@ -9,6 +9,7 @@ import { SortableHeader } from "../components/table/SortableHeader";
 import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
 import ListEmptyState from "../components/table/ListEmptyState";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
+import { STATUS_PILL_CLASS, statusPillStyle } from "../components/table/statusPillStyle";
 import { RowActionButton, RowActions } from "../components/table/RowActionButton";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import ConfirmModal from "../components/Training/ConfirmModal";
@@ -21,6 +22,7 @@ import { logger } from "../lib/logger";
 import { deletePlace, listPlaces } from "../lib/api/places";
 import { useToastStore } from "../store/toastStore";
 import { PLACE_CATEGORIES, PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
+import { classifyPlace } from "../shared/placeCounting";
 import type { PlaceCategory } from "../shared/placeCategories";
 import type { Place } from "../types/place";
 
@@ -28,7 +30,24 @@ type CategoryFilter = PlaceCategory | "all";
 type CountryFilter = string | "all";
 /** Tri-state on the wire; "all" means the list shows wishlist entries too, so
  *  the one view meant to contain them never hides them. */
-type VisitedFilter = "all" | "visited" | "wishlist";
+/** Three states, like every other domain: been there, going there, want to
+ *  go. `planned` is derived from a dated future visit, never stored. */
+/** Place state -> the shared status vocabulary. "excluded" is a wishlist
+ *  entry, which has no equivalent elsewhere and falls through to the neutral
+ *  style — deliberately: wanting to go somewhere is not a problem. */
+const PLACE_PILL_STATUS = {
+  visited: "completed",
+  planned: "scheduled",
+  excluded: "wishlist",
+} as const;
+
+const PLACE_STATUS_KEY = {
+  visited: "visited",
+  planned: "planned",
+  excluded: "wishlist",
+} as const;
+
+type VisitedFilter = "all" | "visited" | "planned" | "wishlist";
 
 type PlaceSortKey = "name" | "category" | "location" | "visits" | "lastVisit";
 type PlaceColumnId = PlaceSortKey | "status" | "actions";
@@ -145,8 +164,12 @@ export default function PlacesListPage(): JSX.Element {
     const out = rows.filter((p) => {
       if (category !== "all" && p.category !== category) return false;
       if (country !== "all" && p.isoCountryCode !== country) return false;
-      if (visited === "visited" && !p.visited) return false;
-      if (visited === "wishlist" && p.visited) return false;
+      if (visited !== "all") {
+        const state = classifyPlace(p);
+        const wanted =
+          visited === "visited" ? "visited" : visited === "planned" ? "planned" : "excluded";
+        if (state !== wanted) return false;
+      }
       if (!q) return true;
       return (
         p.name.toLowerCase().includes(q) ||
@@ -247,6 +270,7 @@ export default function PlacesListPage(): JSX.Element {
           allLabel: t("places:filter.allStatuses"),
           options: [
             { value: "visited", label: t("places:list.status.visited") },
+            { value: "planned", label: t("places:list.status.planned") },
             { value: "wishlist", label: t("places:list.status.wishlist") },
           ],
         }}
@@ -450,24 +474,16 @@ export default function PlacesListPage(): JSX.Element {
                       )}
                       {columnPrefs.isVisible("status") && (
                         <td className="px-4 py-3">
+                          {/* The shared palette every other list resolves its
+                              status through — green for happened, blue for
+                              still ahead, muted for a wishlist entry. It used
+                              to carry its own two colours, which is how a
+                              fourth shade of "done" gets into an app. */}
                           <span
-                            className="rounded px-2 py-1 text-xs"
-                            style={
-                              p.visited
-                                ? {
-                                    color: "var(--success)",
-                                    background: "rgba(63,185,80,0.08)",
-                                    border: "1px solid rgba(63,185,80,0.35)",
-                                  }
-                                : {
-                                    color: "var(--text-muted)",
-                                    border: "1px dashed var(--color-border)",
-                                  }
-                            }
+                            className={STATUS_PILL_CLASS}
+                            style={statusPillStyle(PLACE_PILL_STATUS[classifyPlace(p)])}
                           >
-                            {p.visited
-                              ? t("places:list.status.visited")
-                              : t("places:list.status.wishlist")}
+                            {t(`places:list.status.${PLACE_STATUS_KEY[classifyPlace(p)]}`)}
                           </span>
                         </td>
                       )}
