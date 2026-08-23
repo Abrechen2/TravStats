@@ -65,12 +65,6 @@ export const BETA_FEATURES = Object.freeze({
     returnsWhen: "The mobile app (TravStatsApp) is released.",
   }),
 
-  /** The POI tab in the dashboard tab bar + its placeholder panel. */
-  poiDashboardTab: Object.freeze({
-    reason: "beta",
-    why: "Pure stub — an emoji and a 'nothing here yet' line. Advertising a feature that does not exist.",
-    returnsWhen: "The POI / Lodging domain ships.",
-  }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 
 export type BetaFeatureKey = keyof typeof BETA_FEATURES;

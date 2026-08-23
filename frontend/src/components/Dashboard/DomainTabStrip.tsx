@@ -1,6 +1,5 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import type { DashboardTab } from "../../types/dashboard";
 import type { UpcomingEntry } from "../../lib/api/upcoming";
 import { NextUpEntry } from "./NextUpEntry";
@@ -47,13 +46,12 @@ export function DomainTabStrip({
   nowMs = Date.now(),
 }: DomainTabStripProps): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
-  const { isFeatureVisible } = useBetaFeatures();
 
-  // The POI tab is a stub (an emoji and "nothing here yet") — don't advertise
-  // it unless the instance is flagged beta. See config/betaFeatures.ts.
-  const visibleTabs = DASHBOARD_TABS.filter(
-    (tab) => tab !== "poi" || isFeatureVisible("poiDashboardTab")
-  );
+  // Every tab is real now — the POI stub that used to hide behind
+  // `poiDashboardTab` was replaced by the Places domain, so the gate and its
+  // registry entry are gone. Domain visibility is the user's own
+  // enabled-domains setting, which DashboardLayout already applies.
+  const visibleTabs = DASHBOARD_TABS;
 
   // On a domain tab, that domain's next entry; on "Alle", the soonest of all —
   // including the trip, which belongs to no single tab. `upcoming` arrives

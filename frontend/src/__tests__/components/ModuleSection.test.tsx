@@ -19,6 +19,7 @@ vi.unmock("../../store/settingsStore");
 
 import ModuleSection from "../../components/Settings/ModuleSection";
 import { useSettingsStore } from "../../store/settingsStore";
+import { DOMAINS } from "../../shared/domains";
 
 describe("ModuleSection", () => {
   beforeEach(() => {
@@ -34,9 +35,23 @@ describe("ModuleSection", () => {
   });
 
   it("disables unavailable domains", () => {
+    // No domain is `available: false` any more — poi was the last one and the
+    // Places domain replaced it. The disabled branch (`disabled={!d.available}`)
+    // is still live and is what a future stubbed domain will lean on, so
+    // availability is forced here instead of dropping the test.
+    const restore = DOMAINS.poi.available;
+    DOMAINS.poi.available = false;
+    try {
+      render(<ModuleSection />);
+      expect(screen.getByRole("switch", { name: /domain\.poi/ })).toBeDisabled();
+    } finally {
+      DOMAINS.poi.available = restore;
+    }
+  });
+
+  it("does not disable the now-available poi domain", () => {
     render(<ModuleSection />);
-    const poiToggle = screen.getByRole("switch", { name: /domain\.poi/ });
-    expect(poiToggle).toBeDisabled();
+    expect(screen.getByRole("switch", { name: /domain\.poi/ })).not.toBeDisabled();
   });
 
   it("does not disable the now-available lodging domain", () => {

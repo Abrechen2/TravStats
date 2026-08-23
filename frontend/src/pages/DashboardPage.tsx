@@ -4,10 +4,10 @@ import { DashboardLayout } from "../components/Dashboard/DashboardLayout";
 import { useDashboardRoute } from "../hooks/useDashboardRoute";
 import { useClearMapSelectionsOnTabChange } from "../hooks/useClearMapSelectionsOnTabChange";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
-import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { flightsApi } from "../lib/api/flights";
 import { cruiseApi } from "../lib/api/cruise";
 import { getLodgingStats } from "../lib/api/lodging";
+import { placesApi } from "../lib/api/places";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
 import { useToastStore } from "../store/toastStore";
@@ -51,7 +51,6 @@ export default function DashboardPage(): JSX.Element {
   // another domain's map.
   useClearMapSelectionsOnTabChange(tab);
   const { isEnabled } = useEnabledDomains();
-  const { isFeatureVisible } = useBetaFeatures();
   const [counts, setCounts] = useState({ flight: 0, cruise: 0, poi: 0, lodging: 0 });
   // How many of the counted entries are merely planned (B6): shown as a
   // "(n geplant)" hint so the tab count and the flown-only statistics stop
@@ -85,17 +84,24 @@ export default function DashboardPage(): JSX.Element {
         const lodgingPromise = isEnabled("lodging")
           ? getLodgingStats()
           : Promise.resolve(null);
-        const [flights, scheduledFlights, cruises, lodgingStats] = await Promise.all([
+        // `visited: true` so the tab count matches "Orte besucht" on the tab
+        // itself. Counting wishlist entries here would make the strip disagree
+        // with every figure inside the tab (shared/placeCounting.ts).
+        const placesPromise = isEnabled("poi")
+          ? placesApi.count({ visited: true })
+          : Promise.resolve(0);
+        const [flights, scheduledFlights, cruises, lodgingStats, placeCount] = await Promise.all([
           flightsPromise,
           scheduledFlightsPromise,
           cruisesPromise,
           lodgingPromise,
+          placesPromise,
         ]);
         if (cancelled) return;
         setCounts({
           flight: flights.total,
           cruise: cruises.length,
-          poi: 0,
+          poi: placeCount,
           lodging: lodgingStats?.lodgingsCount ?? 0,
         });
         setScheduledCounts({
@@ -123,9 +129,7 @@ export default function DashboardPage(): JSX.Element {
       {tab === "all" && <AllTab key={refreshToken} />}
       {tab === "flight" && <FlightsTab key={refreshToken} />}
       {tab === "cruise" && <CruisesTab key={refreshToken} />}
-      {/* POI is a placeholder panel — hidden with its tab-bar entry behind the
-          beta gate, so /dashboard/poi renders nothing on a gated instance. */}
-      {tab === "poi" && isFeatureVisible("poiDashboardTab") && <PoiTab key={refreshToken} />}
+      {tab === "poi" && <PoiTab key={refreshToken} />}
       {tab === "lodging" && <LodgingTab key={refreshToken} />}
     </DashboardLayout>
   );

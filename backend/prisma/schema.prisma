@@ -74,6 +74,8 @@ model User {
   lodgings             Lodging[]
   lodgingStays         LodgingStay[]
   lodgingMemberships   LodgingMembership[]
+  places               Place[]
+  placeVisits          PlaceVisit[]
   importBatches        ImportBatch[]
   companions           Companion[]
 
@@ -858,6 +860,7 @@ model Trip {
   journalEntries TripJournalEntry[]
   photos         TripPhoto[]
   lodgingStays   LodgingStay[]
+  placeVisits    PlaceVisit[]
   immichAlbums   TripImmichAlbum[]
   companionLinks TripCompanion[]
 
@@ -1436,6 +1439,120 @@ model LodgingMembershipLodging {
   @@map("lodging_membership_lodgings")
 }
 
+/// A point of interest in the user's own world — the thing, not the visit.
+///
+/// Mirrors the Lodging/LodgingStay split one-for-one, and for the same reason:
+/// a place visited twice must stay ONE row, or "places visited" can never be
+/// counted. That is the whole argument of #177, which warned that a trip-scoped
+/// POI and a global POI would be "two different kinds of POI" — here there is
+/// only this one, and a trip is a VIEW of it via PlaceVisit.
+///
+/// Per-user, like Lodging: on a shared instance one user's list of McDonald's
+/// is nobody else's business. Curated checklist targets live in their own
+/// global tables and only become a Place once the user ticks them off.
+model Place {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+
+  name String
+  /// Drives the pin ICON, deliberately not the pin hue: on a map any two
+  /// categories can end up adjacent, and only ~3 categorical hues survive that
+  /// all-pairs separation test. Mirrored in frontend/src/shared/placeCategories.ts.
+  category String @default("other")
+
+  /// REQUIRED, unlike Lodging.lat/lon — a place that cannot be drawn defeats
+  /// the point of the domain, and every creation path (search hit, map click,
+  /// manual entry) already yields a position. The migration honours this by
+  /// NOT migrating coordinate-less trip stops rather than inventing a position.
+  lat Float
+  lon Float
+
+  address        String?
+  city           String?
+  country        String?
+  /// ISO 3166-1 alpha-2 derived from `country`, same contract as Lodging: the
+  /// text field keeps whatever the source wrote, everything that GROUPS or
+  /// COUNTS joins on this instead.
+  isoCountryCode String? @map("iso_country_code")
+
+  /// Geocoder provenance, e.g. "osm:node/240109189". The dedup key: picking the
+  /// same restaurant out of search twice yields one row.
+  externalRef String? @map("external_ref")
+
+  /// Set when this place was materialised by ticking a curated checklist item.
+  /// Null for anything the user created themselves. Reserved for Phase C; the
+  /// column ships now so the unique index does not need a later table rewrite.
+  curatedItemId String? @map("curated_item_id")
+
+  /// Logbook or wishlist? Same question Lodging.visited answers — but note the
+  /// OPPOSITE default. Lodging chose `true` because every row predating the
+  /// column described a real stay; here the dominant creation path is "add a
+  /// target to a list", and a wishlist entry silently counted as visited would
+  /// inflate the headline number on day one.
+  visited Boolean @default(false)
+
+  notes      String?
+  dataSource String? @map("data_source") // manual | import | curated
+  batchId    String? @map("batch_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  batch  ImportBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  visits PlaceVisit[]
+
+  @@unique([userId, externalRef])
+  @@unique([userId, curatedItemId])
+  @@index([userId])
+  @@index([userId, category])
+  @@index([userId, visited])
+  @@map("places")
+}
+
+/// One visit to a Place. Replaces `TripStop` rows with `domain = 'poi'`.
+///
+/// This is what makes a trip a view rather than an owner, and it is also the
+/// fix for #175 (several POIs on one day needed a time to sort by) — carrying
+/// a DateTime instead of a date is the whole change.
+model PlaceVisit {
+  id      String  @id @default(uuid())
+  placeId String  @map("place_id")
+  userId  String  @map("user_id")
+  tripId  String? @map("trip_id")
+
+  /// Local wall-clock at the place — do NOT normalize to UTC. There is no
+  /// timezone column and inventing one would be worse than the honest local
+  /// reading; tripTimeline.ts already documents this for TripStop.
+  ///
+  /// Nullable: a place you know you visited but cannot date is still a visit
+  /// (the LodgingStay 2.7 precedent). A visit dated in the FUTURE is not a
+  /// visit yet and is excluded from every count — see shared/placeCounting.ts.
+  visitedAt DateTime? @map("visited_at")
+
+  /// Tie-break inside a day when two visits share a timestamp, or when
+  /// visitedAt is null and the user dragged them into an order.
+  orderIdx Int @default(0) @map("order_idx")
+
+  notes  String?
+  rating Int?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// SetNull, matching Booking.tripId: deleting a trip must not delete the
+  /// evidence that the user stood in front of the Colosseum.
+  trip  Trip? @relation(fields: [tripId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([placeId])
+  @@index([tripId])
+  @@index([userId, visitedAt])
+  @@map("place_visits")
+}
+
 /// One import run (CSV file, e-mail or PDF). Every row it created carries its
 /// id, so a 232-row import that turns out wrong is revertible as a unit.
 /// One import, as a unit the user can take back.
@@ -1459,6 +1576,7 @@ model ImportBatch {
   stays    LodgingStay[]
   flights  Flight[]
   cruises  Cruise[]
+  places   Place[]
 
   @@index([userId])
   @@index([userId, domain])

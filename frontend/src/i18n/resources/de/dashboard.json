@@ -224,9 +224,21 @@
     "chains": "Ketten"
   },
   "poi": {
-    "title": "POIs kommen bald",
+    "title": "Orte",
+    "loading": "Orte werden geladen …",
+    "loadError": "Orte konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "empty": "Noch keine Orte erfasst. Lege deinen ersten Ort an.",
+    "colorMode": {
+      "solid": "Einfarbig",
+      "visited": "Besucht"
+    },
+    "legend": {
+      "all": "Orte",
+      "visited": "Besucht",
+      "wishlist": "Merkliste"
+    },
     "disabled": "Die POI-Domain ist noch nicht aktiviert. Schalte sie unter Einstellungen → Domains frei.",
-    "enabledEmpty": "Noch keine POIs erfasst.",
     "goToSettings": "Zu den Einstellungen"
   },
   "tabDisabled": {

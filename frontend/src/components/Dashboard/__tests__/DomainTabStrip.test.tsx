@@ -94,7 +94,13 @@ describe("DomainTabStrip", () => {
     expect(onSelect).toHaveBeenCalledWith("poi");
   });
 
-  describe("beta gate: poiDashboardTab", () => {
+  // The POI tab used to hide behind `poiDashboardTab` while it was a stub.
+  // The Places domain replaced that stub, so the gate — and its registry entry
+  // — are gone. What is worth pinning now is the opposite of what these tests
+  // used to assert: the tab is there whatever the beta flag says, because a
+  // real domain's visibility is the user's enabled-domains setting, never an
+  // instance-wide beta switch.
+  describe("the POI tab is no longer beta-gated", () => {
     const renderStrip = (): void => {
       render(
         <DomainTabStrip
@@ -106,25 +112,16 @@ describe("DomainTabStrip", () => {
       );
     };
 
-    it("hides the POI tab when the beta flag is OFF", () => {
-      useSettingsStore.setState({ betaFeaturesEnabled: false });
-      renderStrip();
-      expect(screen.queryByRole("tab", { name: /poi/i })).toBeNull();
-      // the non-gated tabs are untouched
-      expect(screen.getByRole("tab", { name: /flights/i })).toBeTruthy();
-      expect(screen.getByRole("tab", { name: /cruises/i })).toBeTruthy();
-    });
-
-    it("hides the POI tab while the flag is still unknown (not loaded yet)", () => {
-      useSettingsStore.setState({ betaFeaturesEnabled: null });
-      renderStrip();
-      expect(screen.queryByRole("tab", { name: /poi/i })).toBeNull();
-    });
-
-    it("shows the POI tab when the beta flag is ON", () => {
-      useSettingsStore.setState({ betaFeaturesEnabled: true });
+    it.each([
+      ["off", false],
+      ["unknown (not loaded yet)", null],
+      ["on", true],
+    ])("shows the POI tab when the beta flag is %s", (_label, flag) => {
+      useSettingsStore.setState({ betaFeaturesEnabled: flag });
       renderStrip();
       expect(screen.getByRole("tab", { name: /poi/i })).toBeTruthy();
+      expect(screen.getByRole("tab", { name: /flights/i })).toBeTruthy();
+      expect(screen.getByRole("tab", { name: /cruises/i })).toBeTruthy();
     });
   });
 });

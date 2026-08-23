@@ -224,9 +224,21 @@
     "chains": "Chains"
   },
   "poi": {
-    "title": "POIs coming soon",
+    "title": "Places",
+    "loading": "Loading places …",
+    "loadError": "Places could not be loaded.",
+    "retry": "Try again",
+    "empty": "No places yet. Add your first one.",
+    "colorMode": {
+      "solid": "Single colour",
+      "visited": "Visited"
+    },
+    "legend": {
+      "all": "Places",
+      "visited": "Visited",
+      "wishlist": "Wishlist"
+    },
     "disabled": "The POI domain is not yet enabled. Activate it under Settings → Domains.",
-    "enabledEmpty": "No POIs yet.",
     "goToSettings": "Open settings"
   },
   "tabDisabled": {
