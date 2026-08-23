@@ -22,8 +22,8 @@
     "plannedSuffix": "(+{{count}} planned)",
     "deleted": "“{{name}}” was deleted.",
     "deleteFailed": "The place could not be deleted.",
-    "deleteTitle": "Delete place",
-    "deleteMessage": "“{{name}}” and all of its visits will be deleted. This cannot be undone.",
+    "deleteTitle": "Delete place?",
+    "deleteMessage": "“{{name}}” will be permanently deleted, along with its {{count}} visits. Trips it belongs to are kept.",
     "columns": {
       "name": "Name",
       "category": "Category",
@@ -43,7 +43,11 @@
       "wishlist": "Wishlist"
     },
     "retry": "Try again",
-    "addPlace": "Place"
+    "addPlace": "Place",
+    "emptyHint": "Add your first place.",
+    "deleteMessage_one": "“{{name}}” will be permanently deleted, along with its one visit. Trips it belongs to are kept.",
+    "deleteMessage_other": "“{{name}}” will be permanently deleted, along with its {{count}} visits. Trips it belongs to are kept.",
+    "deleteMessageNoVisits": "“{{name}}” will be permanently deleted."
   },
   "filter": {
     "allStatuses": "All statuses",
@@ -90,6 +94,7 @@
     "position": "Position",
     "source": "Source",
     "mapLabel": "Map showing the position of {{name}}",
-    "deletePlace": "Delete place"
+    "deletePlace": "Delete place",
+    "loadError": "The place could not be loaded."
   }
 }

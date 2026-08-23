@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import type { JSX } from "react";
 import { LocationInput, type LocationSelection } from "../location/LocationInput";
 import type { LocationCoordinates } from "../location/LocationInput";
 import { useTranslation } from "../../hooks/useTranslation";
+import Modal from "../Modal";
 import { logger } from "../../lib/logger";
 import { createPlace, updatePlace } from "../../lib/api/places";
 import { useToastStore } from "../../store/toastStore";
@@ -53,14 +54,6 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
   // Carried through unchanged on edit.
   const externalRef = place?.externalRef ?? "";
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   const position: LocationCoordinates | null = lat !== null && lon !== null ? { lat, lon } : null;
 
@@ -118,25 +111,45 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
     externalRef, isEdit, place, addToast, t, onSaved,
   ]);
 
+  // The shared frame the three other domain edit dialogs use. This one already
+  // brought its own Escape handler and its own backdrop — which is exactly the
+  // duplication the frame exists to end. It also gains the scroll lock and the
+  // focus return to whatever opened it.
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4"
-      style={{ background: "rgba(0,0,0,0.6)" }}
-      onClick={onClose}
-      role="presentation"
+    <Modal
+      open
+      onClose={onClose}
+      busy={saving}
+      widthClass="max-w-2xl"
+      closeLabel={t("common:buttons.close")}
+      title={isEdit ? t("places:form.editTitle") : t("places:form.createTitle")}
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg px-4 py-2 text-sm"
+            style={{ border: "1px solid var(--color-border)", color: "var(--text-secondary)" }}
+          >
+            {t("common:buttons.cancel")}
+          </button>
+          <button
+            type="button"
+            onClick={() => void submit()}
+            disabled={!canSave}
+            className="rounded-lg px-4 py-2 text-sm font-semibold"
+            style={{
+              background: canSave ? "var(--domain-poi)" : "var(--bg-muted)",
+              color: canSave ? "#08221e" : "var(--text-muted)",
+              cursor: canSave ? "pointer" : "not-allowed",
+            }}
+          >
+            {saving ? t("common:buttons.saving") : t("common:buttons.save")}
+          </button>
+        </>
+      }
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={isEdit ? t("places:form.editTitle") : t("places:form.createTitle")}
-        className="my-8 w-full max-w-2xl rounded-xl p-5"
-        style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="font-display mb-4 text-lg font-semibold">
-          {isEdit ? t("places:form.editTitle") : t("places:form.createTitle")}
-        </h2>
-
+      <>
         <div className="space-y-4">
           <Field label={t("places:form.name")}>
             <input
@@ -220,36 +233,13 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
           </Field>
         </div>
 
-        <div className="mt-6 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm"
-            style={{ border: "1px solid var(--color-border)", color: "var(--text-secondary)" }}
-          >
-            {t("common:buttons.cancel")}
-          </button>
-          <button
-            type="button"
-            onClick={() => void submit()}
-            disabled={!canSave}
-            className="rounded-lg px-4 py-2 text-sm font-semibold"
-            style={{
-              background: canSave ? "var(--domain-poi)" : "var(--bg-muted)",
-              color: canSave ? "#08221e" : "var(--text-muted)",
-              cursor: canSave ? "pointer" : "not-allowed",
-            }}
-          >
-            {saving ? t("common:buttons.saving") : t("common:buttons.save")}
-          </button>
-        </div>
         {position === null && (
           <p className="mt-2 text-right text-xs" style={{ color: "var(--text-muted)" }}>
             {t("places:form.positionRequired")}
           </p>
         )}
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }
 

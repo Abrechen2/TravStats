@@ -221,6 +221,9 @@
     "lodgings": "Stays",
     "stays": "Bookings",
     "nights": "Nights",
-    "chains": "Chains"
+    "chains": "Chains",
+    "places": "Places",
+    "visited": "Visited",
+    "countries": "Countries"
   }
 }

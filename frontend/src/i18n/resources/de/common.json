@@ -221,6 +221,9 @@
     "lodgings": "Unterkünfte",
     "stays": "Aufenthalte",
     "nights": "Übernachtungen",
-    "chains": "Ketten"
+    "chains": "Ketten",
+    "places": "Orte",
+    "visited": "Besucht",
+    "countries": "Länder"
   }
 }
