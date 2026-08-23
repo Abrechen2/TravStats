@@ -1,6 +1,7 @@
-import type { JSX, MouseEvent } from "react";
+import type { JSX } from "react";
 import type { Cruise } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
+import { RowActionButton, RowActions } from "../table/RowActionButton";
 
 export interface CruiseRowActionsProps {
   cruise: Cruise;
@@ -9,8 +10,15 @@ export interface CruiseRowActionsProps {
   onDelete: (id: string) => void;
 }
 
-// Edit / Duplicate / Delete cluster on each cruise row. Mirrors FlightRowActions.
-// Every handler stops propagation so the row's onOpen navigation never fires.
+/**
+ * Edit / duplicate / delete on a cruise row.
+ *
+ * These were tinted text buttons — three words that took roughly half a column
+ * of width on the narrowest of the three tables. Icons say the same thing in a
+ * quarter of the space, and every list now uses the same ones. The shared
+ * component stops propagation, which matters here because the row navigates to
+ * the cruise underneath.
+ */
 export default function CruiseRowActions({
   cruise,
   onEdit,
@@ -18,33 +26,23 @@ export default function CruiseRowActions({
   onDelete,
 }: CruiseRowActionsProps): JSX.Element {
   const { t } = useTranslation(["cruise", "common"]);
-  const stop = (fn: () => void) => (e: MouseEvent) => {
-    e.stopPropagation();
-    fn();
-  };
   return (
-    <div className="flex items-center justify-end gap-2">
-      <button
-        onClick={stop(() => onEdit(cruise))}
-        className="px-3 py-1 text-xs font-medium rounded-sm"
-        style={{ background: "rgba(56,139,253,0.15)", color: "#388bfd" }}
-      >
-        {t("common:buttons.edit")}
-      </button>
-      <button
-        onClick={stop(() => onDuplicate(cruise))}
-        className="px-3 py-1 text-xs font-medium rounded-sm"
-        style={{ background: "rgba(139,148,158,0.15)", color: "var(--text-muted)" }}
-      >
-        {t("cruise:list.duplicate")}
-      </button>
-      <button
-        onClick={stop(() => onDelete(cruise.id))}
-        className="px-3 py-1 text-xs font-medium rounded-sm"
-        style={{ background: "rgba(248,81,73,0.15)", color: "var(--danger, #f85149)" }}
-      >
-        {t("common:buttons.delete")}
-      </button>
-    </div>
+    <RowActions>
+      <RowActionButton
+        icon="edit"
+        label={t("common:buttons.edit")}
+        onClick={() => onEdit(cruise)}
+      />
+      <RowActionButton
+        icon="duplicate"
+        label={t("cruise:list.duplicate")}
+        onClick={() => onDuplicate(cruise)}
+      />
+      <RowActionButton
+        icon="delete"
+        label={t("common:buttons.delete")}
+        onClick={() => onDelete(cruise.id)}
+      />
+    </RowActions>
   );
 }

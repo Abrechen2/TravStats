@@ -30,7 +30,8 @@
     "showing_one": "{{count}} cruise",
     "sortedBy": "sorted by {{col}}, {{dir}}",
     "ascending": "ascending",
-    "descending": "descending"
+    "descending": "descending",
+    "loadError": "The cruises could not be loaded."
   },
   "detail": {
     "loading": "Loading cruise …",

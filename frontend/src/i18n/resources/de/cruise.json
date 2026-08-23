@@ -30,7 +30,8 @@
     "showing_one": "{{count}} Kreuzfahrt",
     "sortedBy": "sortiert nach {{col}}, {{dir}}",
     "ascending": "aufsteigend",
-    "descending": "absteigend"
+    "descending": "absteigend",
+    "loadError": "Die Kreuzfahrten konnten nicht geladen werden."
   },
   "detail": {
     "loading": "Kreuzfahrt wird geladen …",

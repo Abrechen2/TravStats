@@ -226,7 +226,8 @@
       "showing": "Zeige {{count}} Flüge",
       "sortedBy": "Sortiert nach {{label}} ({{direction}})"
     },
-    "sortBy": "Nach {{col}} sortieren"
+    "sortBy": "Nach {{col}} sortieren",
+    "loadError": "Die Flüge konnten nicht geladen werden."
   },
   "review": {
     "title": "Flug überprüfen",

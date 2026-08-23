@@ -25,7 +25,8 @@
       "stays": "Stays",
       "nights": "Nights",
       "rating": "Rating",
-      "spend": "Spend"
+      "spend": "Spend",
+      "actions": "Actions"
     },
     "otherCurrencyHint": "Includes further amounts in an older base currency, not counted here.",
     "bookmarked": "bookmarked",

@@ -1,11 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import type { Lodging, LodgingStats, LodgingStay } from "../../types/lodging";
 
 const listLodgingsMock = vi.fn();
 const getLodgingStatsMock = vi.fn();
+const deleteLodgingMock = vi.fn();
+const navigateMock = vi.fn();
+
+// The row navigates, so proving that a row action does NOT navigate needs a
+// spy on the navigator itself — MemoryRouter alone would swallow the move.
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return { ...actual, useNavigate: () => navigateMock };
+});
 
 const defaultStats: LodgingStats = {
   lodgingsCount: 1,
@@ -37,6 +46,7 @@ const defaultStats: LodgingStats = {
 vi.mock("../../lib/api/lodging", () => ({
   listLodgings: (...args: unknown[]) => listLodgingsMock(...args),
   getLodgingStats: () => getLodgingStatsMock(),
+  deleteLodging: (...args: unknown[]) => deleteLodgingMock(...args),
 }));
 
 vi.mock("../../components/NavigationBar", () => ({
@@ -485,5 +495,46 @@ describe("LodgingListPage", () => {
     expect(
       screen.queryByRole("button", { name: /settings:import\.openHub/ })
     ).not.toBeInTheDocument();
+  });
+  // The list had no actions at all: editing meant opening the house first,
+  // and deleting was only possible from the detail page. Flights and cruises
+  // both acted from the row, so the same job took a different number of
+  // clicks depending on which list you were standing in.
+  describe("row actions", () => {
+    it("edits and deletes from the row", async () => {
+      const lodging = makeLodging({ id: "l1", name: "Hotel Adlon", stayCount: 3 });
+      listLodgingsMock.mockResolvedValue([lodging]);
+      deleteLodgingMock.mockResolvedValue(undefined);
+      renderListPage();
+
+      await screen.findByText("Hotel Adlon");
+      expect(screen.getByTestId("lodging-edit-l1")).toBeInTheDocument();
+
+      await userEvent.click(screen.getByTestId("lodging-delete-l1"));
+
+      // The dialog must name the stays that go with the house — deleting one
+      // takes its whole history, and the list is where a mis-click is easiest.
+      const dialog = await screen.findByRole("dialog");
+      expect(dialog).toBeInTheDocument();
+      expect(deleteLodgingMock).not.toHaveBeenCalled();
+
+      // Scoped to the dialog: the row's own delete icon carries the same name.
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: /common:buttons\.delete/ })
+      );
+      await waitFor(() => expect(deleteLodgingMock).toHaveBeenCalledWith("l1"));
+    });
+
+    it("does not open the lodging when an action is clicked", async () => {
+      listLodgingsMock.mockResolvedValue([makeLodging({ id: "l1", name: "Hotel Adlon" })]);
+      renderListPage();
+
+      await screen.findByText("Hotel Adlon");
+      await userEvent.click(screen.getByTestId("lodging-delete-l1"));
+
+      // The row navigates; without stopPropagation the delete click would
+      // also open the very lodging it is about to remove.
+      expect(navigateMock).not.toHaveBeenCalled();
+    });
   });
 });

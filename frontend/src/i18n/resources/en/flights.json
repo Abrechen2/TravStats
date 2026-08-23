@@ -226,7 +226,8 @@
       "showing": "Showing {{count}} flights",
       "sortedBy": "Sorted by {{label}} ({{direction}})"
     },
-    "sortBy": "Sort by {{col}}"
+    "sortBy": "Sort by {{col}}",
+    "loadError": "The flights could not be loaded."
   },
   "review": {
     "title": "Review Flight",

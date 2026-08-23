@@ -99,6 +99,7 @@ export default function FlightsTablePage(): JSX.Element {
   const [specialFilter, setSpecialFilter] = useState<SpecialTypeFilter>("all");
   const [filters, setFilters] = useState<FlightFilters>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   const [editingSpecialFlight, setEditingSpecialFlight] = useState<Flight | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -149,6 +150,7 @@ export default function FlightsTablePage(): JSX.Element {
   const loadFlights = async () => {
     try {
       setLoading(true);
+      setLoadError(false);
       let allFlights: Flight[] = [];
       let offset = 0;
       const limit = API_LIMITS.MAX_PAGE_SIZE;
@@ -168,9 +170,25 @@ export default function FlightsTablePage(): JSX.Element {
 
       setFlights(allFlights);
     } catch (error) {
+      // Logged only, until now: a network failure left an empty table that
+      // looked exactly like an account with no flights.
       logger.error("Failed to load flights:", error);
+      setLoadError(true);
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * Opening a flight from the row. Mirrors what the edit icon does — a special
+   * flight goes to its own modal, because the generic one hides the fields
+   * that make it special.
+   */
+  const openFlight = (f: Flight): void => {
+    if (f.specialType) {
+      setEditingSpecialFlight(f);
+    } else {
+      setEditingFlight(f);
     }
   };
 
@@ -413,6 +431,14 @@ export default function FlightsTablePage(): JSX.Element {
           </p>
 
           {/* Table */}
+          {loadError && (
+            <div
+              role="alert"
+              className="mb-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-4 py-4 text-sm text-[var(--danger)]"
+            >
+              {t("flights:table.loadError")}
+            </div>
+          )}
           <div
             className="rounded-lg shadow-xs overflow-hidden"
             style={{ border: "1px solid var(--color-border)" }}
@@ -486,7 +512,12 @@ export default function FlightsTablePage(): JSX.Element {
                         return (
                           <tr
                             key={flight.id}
-                            className="transition-colors"
+                            // The row opens the flight, like the cruise and
+                            // lodging rows already did. Every control inside
+                            // the actions cell stops propagation, so deleting
+                            // does not also navigate.
+                            onClick={() => openFlight(flight)}
+                            className="cursor-pointer transition-colors"
                             style={{
                               background:
                                 index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)",

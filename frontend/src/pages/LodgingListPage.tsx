@@ -17,12 +17,15 @@ import {
 } from "../components/lodging/sortLodgingRows";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
+import { RowActionButton, RowActions } from "../components/table/RowActionButton";
+import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
+import ConfirmModal from "../components/Training/ConfirmModal";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import DomainImportPanel from "../components/import/DomainImportPanel";
 import { useLodgingImportAdapter } from "../components/import/adapters/lodgingAdapter";
 import { useTranslation } from "../hooks/useTranslation";
 import { countryName } from "../shared/geo/countryCode";
-import { getLodgingStats, listLodgings } from "../lib/api/lodging";
+import { deleteLodging, getLodgingStats, listLodgings } from "../lib/api/lodging";
 import { formatCurrency } from "../lib/units";
 import {
   countUnconvertedStays,
@@ -34,6 +37,7 @@ import {
 import { FlagImg, resolveCountryCode } from "../lib/countryFlag";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
+import { useToastStore } from "../store/toastStore";
 import type { Lodging, LodgingListQuery, LodgingStats, LodgingType } from "../types/lodging";
 
 type TypeFilter = LodgingType | "all";
@@ -44,7 +48,10 @@ const TYPES: LodgingType[] = ["hotel", "campsite", "guesthouse", "apartment", "h
 
 // Column ids double as sort keys and as visibility-preference ids. The name
 // column is the row's identity and can't be hidden.
-const COLUMN_IDS = [
+/** Every column, sortable or not. `actions` carries no value to sort by. */
+type LodgingColumnId = LodgingSortKey | "actions";
+
+const COLUMN_IDS: readonly LodgingColumnId[] = [
   "name",
   "chain",
   "location",
@@ -53,15 +60,30 @@ const COLUMN_IDS = [
   "nights",
   "rating",
   "spend",
-] as const satisfies readonly LodgingSortKey[];
-const ALWAYS_VISIBLE = ["name"] as const;
-const NUMERIC_COLUMNS: readonly LodgingSortKey[] = ["stays", "nights", "spend"];
+  "actions",
+];
+const ALWAYS_VISIBLE = ["name", "actions"] as const;
+const NUMERIC_COLUMNS: readonly LodgingColumnId[] = ["stays", "nights", "spend"];
+
+/** Column id -> sort key. Identity, except that `actions` has none. */
+const SORT_KEY_BY_COLUMN: Partial<Record<LodgingColumnId, LodgingSortKey>> = {
+  name: "name",
+  chain: "chain",
+  location: "location",
+  status: "status",
+  stays: "stays",
+  nights: "nights",
+  rating: "rating",
+  spend: "spend",
+};
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 /** One label source for header, picker, aria and footer — they must agree. */
-function columnLabel(t: Translate, id: LodgingSortKey): string {
-  return id === "status" ? t("lodging:list.status.label") : t(`lodging:list.columns.${id}`);
+function columnLabel(t: Translate, id: LodgingColumnId): string {
+  if (id === "status") return t("lodging:list.status.label");
+  if (id === "actions") return t("lodging:list.columns.actions");
+  return t(`lodging:list.columns.${id}`);
 }
 
 export default function LodgingListPage(): JSX.Element {
@@ -71,6 +93,7 @@ export default function LodgingListPage(): JSX.Element {
   // currency (`UserSettings.baseCurrency`) — NOT `units.currency`, which is an
   // independent display preference used elsewhere for flight-cost figures.
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  const addToast = useToastStore((s) => s.addToast);
 
   // `baseline` is an UNFILTERED fetch, used only to derive the year/country
   // dropdown option sets so they don't shrink as the user narrows other
@@ -85,6 +108,9 @@ export default function LodgingListPage(): JSX.Element {
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<boolean>(false);
   const [showAdd, setShowAdd] = useState<boolean>(false);
+  const [editing, setEditing] = useState<Lodging | null>(null);
+  const [toDelete, setToDelete] = useState<Lodging | null>(null);
+  const [deleting, setDeleting] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [yearFilter, setYearFilter] = useState<YearFilter>("all");
@@ -144,6 +170,27 @@ export default function LodgingListPage(): JSX.Element {
         .catch((err: unknown) => logger.error("LodgingListPage: stats reload failed", err)),
     ]);
   }, [reload]);
+
+  /**
+   * Deleting from the list. The dialog names the number of stays that go with
+   * the house, exactly as the detail page does — the list is the place where a
+   * mis-click is cheapest to make and most expensive to discover.
+   */
+  const confirmDelete = async (): Promise<void> => {
+    if (!toDelete) return;
+    setDeleting(true);
+    try {
+      await deleteLodging(toDelete.id);
+      addToast("success", t("lodging:detail.deleteSuccess"));
+      setToDelete(null);
+      await reloadAll();
+    } catch (err: unknown) {
+      logger.error("LodgingListPage: delete failed", err);
+      addToast("error", t("lodging:detail.deleteError"));
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const availableYears = useMemo(() => {
     const years = new Set<number>();
@@ -371,31 +418,36 @@ export default function LodgingListPage(): JSX.Element {
                     }}
                   >
                     <tr>
-                      {COLUMN_IDS.filter((id) => columnPrefs.isVisible(id)).map((id) => (
-                        <th
-                          key={id}
-                          className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider ${
-                            NUMERIC_COLUMNS.includes(id) ? "text-right" : "text-left"
-                          }`}
-                          style={{ color: "var(--text-muted)" }}
-                        >
-                          <span
-                            className={
-                              NUMERIC_COLUMNS.includes(id) ? "flex justify-end" : undefined
-                            }
+                      {COLUMN_IDS.filter((id) => columnPrefs.isVisible(id)).map((id) => {
+                        const right = NUMERIC_COLUMNS.includes(id) || id === "actions";
+                        const sortKey = SORT_KEY_BY_COLUMN[id];
+                        const label = columnLabel(t, id);
+                        return (
+                          <th
+                            key={id}
+                            className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider ${
+                              right ? "text-right whitespace-nowrap" : "text-left"
+                            }`}
+                            style={{ color: "var(--text-muted)" }}
                           >
-                            <SortableHeader
-                              column={id}
-                              sortBy={sortBy}
-                              sortOrder={sortOrder}
-                              onSort={handleSort}
-                              ariaLabel={t("lodging:list.sortBy", { col: columnLabel(t, id) })}
-                            >
-                              {columnLabel(t, id)}
-                            </SortableHeader>
-                          </span>
-                        </th>
-                      ))}
+                            {sortKey === undefined ? (
+                              label
+                            ) : (
+                              <span className={right ? "flex justify-end" : undefined}>
+                                <SortableHeader
+                                  column={sortKey}
+                                  sortBy={sortBy}
+                                  sortOrder={sortOrder}
+                                  onSort={handleSort}
+                                  ariaLabel={t("lodging:list.sortBy", { col: label })}
+                                >
+                                  {label}
+                                </SortableHeader>
+                              </span>
+                            )}
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody>
@@ -501,6 +553,24 @@ export default function LodgingListPage(): JSX.Element {
                             )}
                           </td>
                         )}
+                        {columnPrefs.isVisible("actions") && (
+                          <td className="px-4 py-3">
+                            <RowActions>
+                              <RowActionButton
+                                icon="edit"
+                                label={t("common:buttons.edit")}
+                                testId={`lodging-edit-${l.id}`}
+                                onClick={() => setEditing(l)}
+                              />
+                              <RowActionButton
+                                icon="delete"
+                                label={t("common:buttons.delete")}
+                                testId={`lodging-delete-${l.id}`}
+                                onClick={() => setToDelete(l)}
+                              />
+                            </RowActions>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -547,6 +617,31 @@ export default function LodgingListPage(): JSX.Element {
           onClose={() => setShowAdd(false)}
           onItemsCreated={reloadAll}
           adapter={importAdapter}
+        />
+
+        {editing && (
+          <LodgingFormModal
+            mode="edit"
+            lodging={editing}
+            onClose={() => setEditing(null)}
+            onSaved={async () => {
+              setEditing(null);
+              await reloadAll();
+            }}
+          />
+        )}
+
+        <ConfirmModal
+          isOpen={toDelete !== null}
+          onClose={() => setToDelete(null)}
+          onConfirm={() => void confirmDelete()}
+          isLoading={deleting}
+          title={t("lodging:detail.deleteConfirmTitle")}
+          message={t("lodging:detail.deleteConfirmMessage", {
+            count: toDelete?.stayCount ?? 0,
+          })}
+          confirmText={t("common:buttons.delete")}
+          confirmButtonClass="bg-[var(--danger)] hover:opacity-90"
         />
       </div>
     </div>

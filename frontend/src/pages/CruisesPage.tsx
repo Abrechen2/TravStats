@@ -11,8 +11,10 @@ import DomainImportPanel from "../components/import/DomainImportPanel";
 import { useCruiseImportAdapter } from "../components/import/adapters/cruiseAdapter";
 import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
 import NavigationBar from "../components/NavigationBar";
+import { SkeletonTable } from "../components/SkeletonLoader";
 import { useTranslation } from "../hooks/useTranslation";
 import { useToastStore } from "../store/toastStore";
+import { logger } from "../lib/logger";
 import { sortCruises, type CruiseSortKey, type SortOrder } from "../components/Cruise/sortCruises";
 
 type StatusFilter = CruiseStatus | "all";
@@ -66,6 +68,7 @@ export default function CruisesPage(): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
   const [cruises, setCruises] = useState<Cruise[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<boolean>(false);
   const [showAdd, setShowAdd] = useState<boolean>(false);
   const importAdapter = useCruiseImportAdapter();
   const [editingCruise, setEditingCruise] = useState<Cruise | null>(null);
@@ -106,9 +109,15 @@ export default function CruisesPage(): JSX.Element {
 
   const reload = useCallback(async (): Promise<void> => {
     setLoading(true);
+    setLoadError(false);
     try {
       const data = await cruiseApi.list();
       setCruises(data);
+    } catch (err) {
+      // Without this the list simply stayed empty on a network failure —
+      // indistinguishable from an account that has no cruises yet.
+      logger.error("CruisesPage: failed to load cruises", err);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -253,8 +262,23 @@ export default function CruisesPage(): JSX.Element {
           </div>
         </div>
 
-        {loading ? (
-          <div className="text-(--text-muted)">{t("list.loading")}</div>
+        {loadError ? (
+
+          <div
+
+            role="alert"
+
+            className="rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-4 py-4 text-sm text-[var(--danger)]"
+
+          >
+
+            {t("list.loadError")}
+
+          </div>
+
+        ) : loading ? (
+
+          <SkeletonTable rows={10} />
         ) : filtered.length === 0 ? (
           <div className="rounded-md border border-border bg-(--bg-surface) px-4 py-8 text-center text-(--text-muted)">
             {t("list.empty")}
