@@ -6,6 +6,7 @@ import { CruiseRow, type CruiseColumnId } from "../components/Cruise/CruiseRow";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ConfirmModal from "../components/Training/ConfirmModal";
+import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
 import ListFilterBar, {
   FilterField,
@@ -210,6 +211,24 @@ export default function CruisesPage(): JSX.Element {
     [filtered, sortBy, sortOrder]
   );
 
+  const summaryFigures = useMemo(() => {
+    let portCalls = 0;
+    let seaDays = 0;
+    const lines = new Set<string>();
+    for (const c of filtered) {
+      portCalls += countPortCalls(c);
+      seaDays += c.stops.filter((stop) => stop.isAtSea).length;
+      const line = c.cruiseLine ?? c.ship?.cruiseLine ?? "";
+      if (line.trim().length > 0) lines.add(line);
+    }
+    return [
+      { key: "cruises", value: String(filtered.length), label: t("common:summary.cruises") },
+      { key: "portCalls", value: String(portCalls), label: t("common:summary.portCalls") },
+      { key: "seaDays", value: String(seaDays), label: t("common:summary.seaDays") },
+      { key: "lines", value: String(lines.size), label: t("common:summary.lines") },
+    ];
+  }, [filtered, t]);
+
   const resetFilters = (): void => {
     setSearch("");
     setStatusFilter("all");
@@ -293,6 +312,12 @@ export default function CruisesPage(): JSX.Element {
             </button>
           </div>
         </div>
+
+        <ListSummaryStrip
+          figures={summaryFigures}
+          filtered={hasActiveFilter}
+          filteredLabel={t("common:filters.filtered")}
+        />
 
         <p className="mb-4 text-xs text-(--text-muted)">
           {t("list.wholeListHint")}{" "}

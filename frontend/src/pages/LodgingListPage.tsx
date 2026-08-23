@@ -4,7 +4,6 @@ import { Link, useNavigate } from "react-router-dom";
 import NavigationBar from "../components/NavigationBar";
 import PageTransition from "../components/PageTransition";
 import { SkeletonTable } from "../components/SkeletonLoader";
-import { LodgingStatStrip } from "../components/Dashboard/tabs/lodging/LodgingStatStrip";
 import { StarRating } from "../components/lodging/StarRating";
 import { ChainNameLink } from "../components/lodging/ChainNameLink";
 import { LodgingStatusTag } from "../components/lodging/LodgingStatusTag";
@@ -18,6 +17,7 @@ import {
 } from "../components/lodging/sortLodgingRows";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
+import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
 import ListFilterBar, {
   FilterField,
@@ -31,7 +31,7 @@ import DomainImportPanel from "../components/import/DomainImportPanel";
 import { useLodgingImportAdapter } from "../components/import/adapters/lodgingAdapter";
 import { useTranslation } from "../hooks/useTranslation";
 import { countryName } from "../shared/geo/countryCode";
-import { deleteLodging, getLodgingStats, listLodgings } from "../lib/api/lodging";
+import { deleteLodging, listLodgings } from "../lib/api/lodging";
 import { formatCurrency } from "../lib/units";
 import {
   countUnconvertedStays,
@@ -44,7 +44,7 @@ import { FlagImg, resolveCountryCode } from "../lib/countryFlag";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
-import type { Lodging, LodgingListQuery, LodgingStats, LodgingType } from "../types/lodging";
+import type { Lodging, LodgingListQuery, LodgingType } from "../types/lodging";
 
 type TypeFilter = LodgingType | "all";
 type YearFilter = number | "all";
@@ -116,7 +116,6 @@ export default function LodgingListPage(): JSX.Element {
   // never one paginated slice.
   const [baseline, setBaseline] = useState<Lodging[]>([]);
   const [rows, setRows] = useState<Lodging[]>([]);
-  const [stats, setStats] = useState<LodgingStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<boolean>(false);
   const [showAdd, setShowAdd] = useState<boolean>(false);
@@ -145,9 +144,6 @@ export default function LodgingListPage(): JSX.Element {
     void listLodgings({})
       .then(setBaseline)
       .catch((err: unknown) => logger.error("LodgingListPage: baseline fetch failed", err));
-    void getLodgingStats()
-      .then(setStats)
-      .catch((err: unknown) => logger.error("LodgingListPage: stats fetch failed", err));
   }, []);
 
   const reload = useCallback(async (): Promise<void> => {
@@ -178,9 +174,6 @@ export default function LodgingListPage(): JSX.Element {
       listLodgings({})
         .then(setBaseline)
         .catch((err: unknown) => logger.error("LodgingListPage: baseline reload failed", err)),
-      getLodgingStats()
-        .then(setStats)
-        .catch((err: unknown) => logger.error("LodgingListPage: stats reload failed", err)),
     ]);
   }, [reload]);
 
@@ -262,6 +255,23 @@ export default function LodgingListPage(): JSX.Element {
     });
     return sortLodgingRows(visible, sortBy, sortOrder);
   }, [rows, search, statusFilter, sortBy, sortOrder]);
+
+  const summaryFigures = useMemo(() => {
+    let stays = 0;
+    let nights = 0;
+    const chains = new Set<string>();
+    for (const l of filtered) {
+      stays += l.stayCount;
+      nights += l.nights;
+      if (l.chain?.name) chains.add(l.chain.name);
+    }
+    return [
+      { key: "lodgings", value: String(filtered.length), label: t("common:summary.lodgings") },
+      { key: "stays", value: String(stays), label: t("common:summary.stays") },
+      { key: "nights", value: String(nights), label: t("common:summary.nights") },
+      { key: "chains", value: String(chains.size), label: t("common:summary.chains") },
+    ];
+  }, [filtered, t]);
 
   const resetFilters = (): void => {
     setSearch("");
@@ -393,7 +403,16 @@ export default function LodgingListPage(): JSX.Element {
           </Link>
         </p>
 
-        {stats && <LodgingStatStrip stats={stats} variant="inline" />}
+        {/* Was `LodgingStatStrip`, which renders the backend rollup over the
+            WHOLE library — correct on the dashboard, contradictory here: it
+            showed the spend of 60 hotels above a table filtered down to seven,
+            next to a filter-aware "7 angezeigt" in the bar. The strip keeps its
+            home on the dashboard tab; this list summarises the rows it shows. */}
+        <ListSummaryStrip
+          figures={summaryFigures}
+          filtered={hasActiveFilter}
+          filteredLabel={t("common:filters.filtered")}
+        />
 
         {loadError ? (
           <div

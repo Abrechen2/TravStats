@@ -207,6 +207,20 @@
     "more": "Filter",
     "reset": "Filter zurücksetzen",
     "showing": "{{count}} angezeigt",
-    "noMatch": "Nichts passt zu deinen Filtern"
+    "noMatch": "Nichts passt zu deinen Filtern",
+    "filtered": "gefiltert"
+  },
+  "summary": {
+    "flights": "Flüge",
+    "airlines": "Airlines",
+    "airports": "Flughäfen",
+    "cruises": "Kreuzfahrten",
+    "portCalls": "Hafenanläufe",
+    "seaDays": "Seetage",
+    "lines": "Reedereien",
+    "lodgings": "Unterkünfte",
+    "stays": "Aufenthalte",
+    "nights": "Übernachtungen",
+    "chains": "Ketten"
   }
 }

@@ -10,6 +10,7 @@ import { flightsApi, tripsApi } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
+import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import ListFilterBar, {
@@ -452,6 +453,24 @@ export default function FlightsTablePage(): JSX.Element {
     ]
   );
 
+  /** Read straight off the visible rows — nothing estimated. Flight time and
+   *  distance are both derived and marked as estimates wherever they show, so
+   *  they have no business being silently summed into a headline. */
+  const summaryFigures = useMemo(() => {
+    const airlines = new Set<string>();
+    const airports = new Set<string>();
+    for (const f of displayedFlights) {
+      if (f.airline) airlines.add(f.airline);
+      if (f.depIata) airports.add(f.depIata);
+      if (f.arrIata) airports.add(f.arrIata);
+    }
+    return [
+      { key: "flights", value: String(displayedFlights.length), label: t("common:summary.flights") },
+      { key: "airlines", value: String(airlines.size), label: t("common:summary.airlines") },
+      { key: "airports", value: String(airports.size), label: t("common:summary.airports") },
+    ];
+  }, [displayedFlights, t]);
+
   const resetFilters = (): void => {
     setSearch("");
     setStatusFilter("all");
@@ -620,6 +639,12 @@ export default function FlightsTablePage(): JSX.Element {
               </button>
             </div>
           </div>
+
+          <ListSummaryStrip
+            figures={summaryFigures}
+            filtered={hasActiveFilter}
+            filteredLabel={t("common:filters.filtered")}
+          />
 
           <p className="mb-4 text-xs text-(--text-muted)">
             {t("flights:list.wholeListHint")}{" "}

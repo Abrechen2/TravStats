@@ -207,6 +207,20 @@
     "more": "Filters",
     "reset": "Reset filters",
     "showing": "{{count}} shown",
-    "noMatch": "Nothing matches your filters"
+    "noMatch": "Nothing matches your filters",
+    "filtered": "filtered"
+  },
+  "summary": {
+    "flights": "Flights",
+    "airlines": "Airlines",
+    "airports": "Airports",
+    "cruises": "Cruises",
+    "portCalls": "Port calls",
+    "seaDays": "Sea days",
+    "lines": "Cruise lines",
+    "lodgings": "Stays",
+    "stays": "Bookings",
+    "nights": "Nights",
+    "chains": "Chains"
   }
 }
