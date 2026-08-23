@@ -80,10 +80,15 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
 
     res.json({
       success: true,
+      // DE primary with the EN mirror beside it. Catalog copy is user-facing
+      // text that cannot go through the i18n resource files, so both sides
+      // travel to the client and it picks by locale, falling back to `name`.
       data: lists.map((l) => ({
         key: l.key,
         name: l.name,
+        nameEn: l.nameEn,
         description: l.description,
+        descriptionEn: l.descriptionEn,
         icon: l.icon,
         itemCount: l._count.items,
         tickedCount: tickedByList.get(l.key) ?? 0,
@@ -181,11 +186,13 @@ router.get("/:key/progress", async (req: AuthRequest, res: Response, next: NextF
       return {
         itemId: item.id,
         name: item.name,
+        nameEn: item.nameEn,
         lat: item.lat,
         lon: item.lon,
         country: item.country,
         isoCountryCode: item.isoCountryCode,
         blurb: item.blurb,
+        blurbEn: item.blurbEn,
         // The two-kinds-of-row split, made explicit for the client rather than
         // left to be inferred from a null: a ghost is a catalog target, a
         // ticked item is a real place in the logbook.
@@ -200,7 +207,9 @@ router.get("/:key/progress", async (req: AuthRequest, res: Response, next: NextF
       data: {
         key: curated.key,
         name: curated.name,
+        nameEn: curated.nameEn,
         description: curated.description,
+        descriptionEn: curated.descriptionEn,
         icon: curated.icon,
         subscribed: subscription !== null,
         listId: subscription?.id ?? null,

@@ -68,6 +68,7 @@ import { templateRegistry } from './services/parsers/templates/registry';
 import { seedPortsFromCSV } from './seedPortsFromCSV';
 import { seedShipsFromCSV } from './seedShipsFromCSV';
 import { seedLodgingChainsFromCSV } from './seedLodgingChainsFromCSV';
+import { seedCuratedPlacesFromCSV } from './seedCuratedPlacesFromCSV';
 import { seedAirlinesFromData } from './seedAirlinesFromData';
 import { seedAircraftFromData } from './seedAircraftFromData';
 
@@ -445,6 +446,23 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({
         operation: 'server_start_seed_lodging_chains_error',
         message: 'Failed to seed lodging chains from CSV',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+
+    // Seed the shipped POI checklists. Unlike the catalogs above this one
+    // UPDATES existing rows — the targets are reference data nobody can edit,
+    // and lazy materialisation makes a corrected coordinate here the only way a
+    // fix reaches an existing subscriber. Ticked places are never touched.
+    try {
+      await seedCuratedPlacesFromCSV();
+      logger.info({ operation: 'server_start_seed_curated_places', message: 'Curated checklists seeded' });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_seed_curated_places_error',
+        message: 'Failed to seed curated checklists from CSV',
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
         },
