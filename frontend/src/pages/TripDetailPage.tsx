@@ -12,6 +12,7 @@ import { computeRailStates } from "../lib/timelineRail";
 import { stripMarkdown } from "../lib/markdownPreview";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { usePlacesVisible } from "../hooks/usePlacesVisible";
 import { useTranslation } from "../hooks/useTranslation";
 import type { Booking, Trip, TripJournalEntry, TripStatus, TripStop } from "../types";
 import PageTransition from "../components/PageTransition";
@@ -25,7 +26,14 @@ import BookingEditModal from "../components/Trips/BookingEditModal";
 import TripMap from "../components/Trips/TripMap";
 import TripGallery from "../components/Trips/TripGallery";
 import TripSummaryPanel from "../components/Trips/TripSummaryPanel";
-import { compareTimelineEvents, formatTimelineDate } from "../lib/tripTimeline";
+import {
+  compareTimelineEvents,
+  formatTimelineDate,
+  isSupersededByPlaceVisit,
+} from "../lib/tripTimeline";
+import { listPlaces } from "../lib/api/places";
+import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
+import type { Place, PlaceVisit } from "../types/place";
 
 type TabKey = "overview" | "timeline" | "map" | "gallery" | "logistics";
 const TABS: TabKey[] = ["overview", "timeline", "map", "gallery", "logistics"];
@@ -109,6 +117,7 @@ export default function TripDetailPage(): JSX.Element {
   useEffect(() => {
     void load();
   }, [id]);
+
 
   const handleDelete = async (): Promise<void> => {
     if (!trip) return;
@@ -534,6 +543,13 @@ type TimelineEvent =
       kind: "lodging-checkin" | "lodging-checkout";
       date: string;
       stay: NonNullable<Trip["lodgingStays"]>[number];
+    }
+  | {
+      id: string;
+      kind: "place-visit";
+      date: string;
+      place: Place;
+      visit: PlaceVisit;
     };
 
 const STOP_DOMAIN_ICON: Record<string, string> = {
@@ -557,6 +573,45 @@ interface TimelineTabProps {
 
 function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
+  // Both the user's domain choice and the instance beta flag, via the one
+  // hook that combines them — see hooks/usePlacesVisible.ts.
+  const poiEnabled = usePlacesVisible();
+  const id = trip.id;
+  /** Places visited on THIS trip, with the visit that ties them to it. A place
+   *  is a first-class row of its own now, so the trip READS it rather than
+   *  owning it — which is what #177 asked for. */
+  const [placeVisits, setPlaceVisits] = useState<{ place: Place; visit: PlaceVisit }[]>([]);
+
+  // Places are their own domain, so they are fetched separately rather than
+  // embedded in the trip payload. A failure here must not blank the trip: the
+  // timeline simply shows no places, which is what it did before they existed.
+  useEffect(() => {
+    if (!id || !poiEnabled) {
+      setPlaceVisits([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const places = await listPlaces({ tripId: id });
+        if (cancelled) return;
+        setPlaceVisits(
+          places.flatMap((place) =>
+            place.visits
+              .filter((v) => v.tripId === id)
+              .map((visit) => ({ place, visit }))
+          )
+        );
+      } catch (err: unknown) {
+        logger.error({ err }, "TripDetailPage: failed to load place visits");
+        if (!cancelled) setPlaceVisits([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, poiEnabled]);
+
   const [adding, setAdding] = useState<null | "journal" | "stop">(null);
   const [editingJournal, setEditingJournal] = useState<TripJournalEntry | null>(null);
   const [viewingJournal, setViewingJournal] = useState<TripJournalEntry | null>(null);
@@ -596,11 +651,27 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
       });
     }
     for (const s of trip.stops ?? []) {
+      // A migrated POI stop is drawn as its PlaceVisit instead. Both rows
+      // exist between the backfill and the delete release, so without this
+      // every migrated POI would appear twice — see isSupersededByPlaceVisit.
+      if (isSupersededByPlaceVisit(s)) continue;
       out.push({
         id: `stop-${s.id}`,
         kind: "stop",
         date: s.startDate ?? s.createdAt,
         stop: s,
+      });
+    }
+    for (const { place, visit } of placeVisits) {
+      // An undated visit has no place on a chronology; it still shows on the
+      // place itself. Same rule an undated lodging stay already follows.
+      if (!visit.visitedAt) continue;
+      out.push({
+        id: `place-visit-${visit.id}`,
+        kind: "place-visit",
+        date: visit.visitedAt,
+        place,
+        visit,
       });
     }
     for (const e of trip.journalEntries ?? []) {
@@ -635,7 +706,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
     // compareTimelineEvents — the tie-break rules and the reason they exist
     // live there, not here.
     return out.sort(compareTimelineEvents);
-  }, [trip]);
+  }, [trip, placeVisits]);
 
   // Cross-domain geo sanity (#6): a stay whose hotel sits far from every trip
   // leg is almost certainly an import/typo error. Compute the set of such stay
@@ -800,6 +871,9 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
                     onDelete={() => void handleDeleteStop(ev.stop)}
                   />
                 )}
+                {ev.kind === "place-visit" && (
+                  <PlaceVisitCard ev={ev} language={language} />
+                )}
                 {ev.kind === "journal" && (
                   <JournalCard
                     ev={ev}
@@ -868,6 +942,7 @@ function dotColor(ev: TimelineEvent): string {
     case "cruise":
       return "var(--domain-cruise, #6fa0d6)";
     case "stop":
+    case "place-visit":
       return "var(--domain-poi, #5ec2b2)";
     case "journal":
       return "#60a5fa";
@@ -1061,6 +1136,38 @@ function StopCard({
       date={ev.date}
       dateLabel={formatTimelineDate(ev.date, language)}
       actions={<RowActions onEdit={onEdit} onDelete={onDelete} />}
+    />
+  );
+}
+
+/**
+ * A place visited on this trip. Deliberately has no edit/delete actions: the
+ * place is not owned by the trip, so deleting it here would be deleting it
+ * from every other trip and from the globe. Editing happens on the place.
+ */
+function PlaceVisitCard({
+  ev,
+  language,
+}: {
+  ev: Extract<TimelineEvent, { kind: "place-visit" }>;
+  language: string | undefined;
+}): JSX.Element {
+  const { place, visit } = ev;
+  const where = [place.city, place.country].filter(Boolean).join(", ");
+  return (
+    <EventCard
+      icon={PLACE_CATEGORY_ICONS[place.category] ?? PLACE_CATEGORY_ICONS.other}
+      bg="rgba(94,194,178,0.15)"
+      iconColor="var(--domain-poi, #5ec2b2)"
+      title={place.name}
+      subtitle={where || null}
+      meta={visit.notes ?? undefined}
+      date={ev.date}
+      // A visit time is a WALL CLOCK at the place, exactly like a stop's —
+      // formatted in UTC for the reason lib/tripTimeline.ts documents at
+      // length. Using toLocaleString here would shift #175's ordering off by
+      // the reader's offset.
+      dateLabel={formatTimelineDate(ev.date, language)}
     />
   );
 }

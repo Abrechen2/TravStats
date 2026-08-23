@@ -28,6 +28,12 @@ import {
   type FlightColorMode,
   type FlightColors,
 } from "../../lib/flightColor";
+import {
+  placeColorFromStored,
+  type PlaceColorConfig,
+  type PlaceColorMode,
+  type PlaceColors,
+} from "../../lib/placeColor";
 import { flightRouteShapeFromStored, type FlightRouteShape } from "../../lib/flightRouteShape";
 
 /** The 6 tokenless basemaps — same id set on the globe and the flat map. */
@@ -92,6 +98,13 @@ export interface MapAppearance {
    *  No legacy single-colour field to migrate: pins were always brand rose. */
   lodgingColorMode?: LodgingColorMode;
   lodgingColors?: LodgingColors;
+  // POI domain
+  /** How place pins are coloured + the user's colour per slot. Owned by
+   *  `store/placeColorStore.ts`, the same shape the other three domains use.
+   *  Note there is no "by category" mode to persist — category is encoded as
+   *  the pin icon, for the separation reason documented in lib/placeColor.ts. */
+  placeColorMode?: PlaceColorMode;
+  placeColors?: PlaceColors;
   /** Whether the lodging LIST panel is open (its own state, not the map
    *  control panel's `panelExpanded`). It used to open on every mount, so
    *  switching domain and coming back always sprang it open again. */
@@ -227,6 +240,10 @@ export function loadLodgingColorConfig(): LodgingColorConfig {
 
 export function loadCruiseColorConfig(): CruiseColorConfig {
   return cruiseColorFromStored(loadMapAppearance() as unknown as Record<string, unknown>);
+}
+
+export function loadPlaceColorConfig(): PlaceColorConfig {
+  return placeColorFromStored(loadMapAppearance() as unknown as Record<string, unknown>);
 }
 
 /**

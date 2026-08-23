@@ -25,6 +25,9 @@ const FlightsTablePage = lazy(() => import("./pages/FlightsTablePage"));
 const CruisesPage = lazy(() => import("./pages/CruisesPage"));
 const CruiseDetailPage = lazy(() => import("./pages/CruiseDetailPage"));
 const LodgingListPage = lazy(() => import("./pages/LodgingListPage"));
+const PlacesListPage = lazy(() => import("./pages/PlacesListPage"));
+const PlaceDetailPage = lazy(() => import("./pages/PlaceDetailPage"));
+import { PlacesRouteGuard } from "./components/places/PlacesRouteGuard";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
@@ -301,6 +304,36 @@ function AppContent() {
                     <LodgingListPage />
                   ) : (
                     <Navigate to={isAuthenticated ? "/" : "/login"} />
+                  )
+                }
+              />
+              <Route
+                path="/places"
+                element={
+                  isAuthenticated ? (
+                    // Not a boolean guard: the beta flag is unknown for one
+                    // request on a cold load, and redirecting on "unknown"
+                    // bounced every refresh and bookmark. See PlacesRouteGuard.
+                    <PlacesRouteGuard>
+                      <PlacesListPage />
+                    </PlacesRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
+              <Route
+                path="/places/:id"
+                element={
+                  isAuthenticated ? (
+                    // Not a boolean guard: the beta flag is unknown for one
+                    // request on a cold load, and redirecting on "unknown"
+                    // bounced every refresh and bookmark. See PlacesRouteGuard.
+                    <PlacesRouteGuard>
+                      <PlaceDetailPage />
+                    </PlacesRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
                   )
                 }
               />

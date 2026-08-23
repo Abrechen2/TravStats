@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
 import type { JSX } from "react";
 import { DashboardLayout } from "../components/Dashboard/DashboardLayout";
 import { useDashboardRoute } from "../hooks/useDashboardRoute";
 import { useClearMapSelectionsOnTabChange } from "../hooks/useClearMapSelectionsOnTabChange";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
-import { useBetaFeatures } from "../hooks/useBetaFeatures";
+import { usePlacesAccess, usePlacesVisible } from "../hooks/usePlacesVisible";
 import { flightsApi } from "../lib/api/flights";
 import { cruiseApi } from "../lib/api/cruise";
 import { getLodgingStats } from "../lib/api/lodging";
+import { placesApi } from "../lib/api/places";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
 import { useToastStore } from "../store/toastStore";
@@ -51,7 +53,8 @@ export default function DashboardPage(): JSX.Element {
   // another domain's map.
   useClearMapSelectionsOnTabChange(tab);
   const { isEnabled } = useEnabledDomains();
-  const { isFeatureVisible } = useBetaFeatures();
+  const placesVisible = usePlacesVisible();
+  const placesAccess = usePlacesAccess();
   const [counts, setCounts] = useState({ flight: 0, cruise: 0, poi: 0, lodging: 0 });
   // How many of the counted entries are merely planned (B6): shown as a
   // "(n geplant)" hint so the tab count and the flown-only statistics stop
@@ -85,17 +88,24 @@ export default function DashboardPage(): JSX.Element {
         const lodgingPromise = isEnabled("lodging")
           ? getLodgingStats()
           : Promise.resolve(null);
-        const [flights, scheduledFlights, cruises, lodgingStats] = await Promise.all([
+        // `visited: true` so the tab count matches "Orte besucht" on the tab
+        // itself. Counting wishlist entries here would make the strip disagree
+        // with every figure inside the tab (shared/placeCounting.ts).
+        const placesPromise = placesVisible
+          ? placesApi.count({ visited: true })
+          : Promise.resolve(0);
+        const [flights, scheduledFlights, cruises, lodgingStats, placeCount] = await Promise.all([
           flightsPromise,
           scheduledFlightsPromise,
           cruisesPromise,
           lodgingPromise,
+          placesPromise,
         ]);
         if (cancelled) return;
         setCounts({
           flight: flights.total,
           cruise: cruises.length,
-          poi: 0,
+          poi: placeCount,
           lodging: lodgingStats?.lodgingsCount ?? 0,
         });
         setScheduledCounts({
@@ -111,7 +121,19 @@ export default function DashboardPage(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [isEnabled, refreshToken]);
+  }, [isEnabled, placesVisible, refreshToken]);
+
+  // `/dashboard/poi` on a hidden instance used to render the SHELL with the
+  // tab hidden from the strip — which still drew the shell's per-tab
+  // "+ POI hinzufügen" button over an empty page, because that button follows
+  // `tab` and never asked whether the tab is visible. Suppressing the tab body
+  // alone was not enough. Same answer the /places route already gives, and
+  // three-state for the same reason: the beta flag is `null` for one request
+  // on a cold load, and treating that as "no" is what made /places bounce on
+  // every refresh (defect 1 in the branch's own handover).
+  if (tab === "poi" && placesAccess === "denied") {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <DashboardLayout
@@ -123,9 +145,7 @@ export default function DashboardPage(): JSX.Element {
       {tab === "all" && <AllTab key={refreshToken} />}
       {tab === "flight" && <FlightsTab key={refreshToken} />}
       {tab === "cruise" && <CruisesTab key={refreshToken} />}
-      {/* POI is a placeholder panel — hidden with its tab-bar entry behind the
-          beta gate, so /dashboard/poi renders nothing on a gated instance. */}
-      {tab === "poi" && isFeatureVisible("poiDashboardTab") && <PoiTab key={refreshToken} />}
+      {tab === "poi" && placesVisible && <PoiTab key={refreshToken} />}
       {tab === "lodging" && <LodgingTab key={refreshToken} />}
     </DashboardLayout>
   );

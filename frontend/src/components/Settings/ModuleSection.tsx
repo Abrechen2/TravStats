@@ -3,11 +3,21 @@ import { SectionCard, SectionTitle } from "./SettingsShared";
 import { DOMAIN_KEYS, DOMAINS, type DomainKey } from "../../shared/domains";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 
 export default function ModuleSection(): JSX.Element {
   const { t } = useTranslation("common");
   const enabledDomains = useSettingsStore((s) => s.enabledDomains);
   const setEnabledDomains = useSettingsStore((s) => s.setEnabledDomains);
+  const { isFeatureVisible } = useBetaFeatures();
+
+  // The FLAG alone, not usePlacesVisible: this list is where the user turns
+  // the domain on, so gating it on "already enabled" would make it
+  // permanently unreachable. Offering a switch that turns on something the
+  // instance then refuses to render is the confusing half-state this avoids.
+  const visibleKeys = DOMAIN_KEYS.filter(
+    (key) => key !== "poi" || isFeatureVisible("poiDomain")
+  );
 
   const toggle = (key: DomainKey): void => {
     if (!DOMAINS[key].available) return;
@@ -21,7 +31,7 @@ export default function ModuleSection(): JSX.Element {
     <SectionCard>
       <SectionTitle title={t("settings.modules.title")} description={t("settings.modules.desc")} />
       <ul className="space-y-2">
-        {DOMAIN_KEYS.map((key) => {
+        {visibleKeys.map((key) => {
           const d = DOMAINS[key];
           const enabled = enabledDomains.includes(key);
           return (

@@ -65,11 +65,26 @@ export const BETA_FEATURES = Object.freeze({
     returnsWhen: "The mobile app (TravStatsApp) is released.",
   }),
 
-  /** The POI tab in the dashboard tab bar + its placeholder panel. */
-  poiDashboardTab: Object.freeze({
+  /**
+   * The whole Places (POI) domain — dashboard tab, /places list, nav entry,
+   * the module toggle, and place visits on the trip timeline.
+   *
+   * This is NOT the old `poiDashboardTab` stub gate. The domain is real now:
+   * Place + PlaceVisit, a migration off the old trip stops, an API, a map
+   * layer and a list. What it is not yet is FINISHED — see `returnsWhen`.
+   *
+   * READ THIS BEFORE REMOVING THE GATE: hiding the domain must not orphan the
+   * data. A user who created places on a beta instance and then upgrades to a
+   * build with the flag off still owns those rows; they simply stop being
+   * shown. Nothing here deletes or migrates anything, and the backend
+   * endpoints stay reachable (this is a visibility gate — see the file header),
+   * so a place visited on a trip keeps its `PlaceVisit` row and reappears
+   * intact the moment the flag comes back on.
+   */
+  poiDomain: Object.freeze({
     reason: "beta",
-    why: "Pure stub — an emoji and a 'nothing here yet' line. Advertising a feature that does not exist.",
-    returnsWhen: "The POI / Lodging domain ships.",
+    why: "The domain works end-to-end — create, edit, detail page, list, map — but is incomplete: there is no POI section in the map appearance panel, places are absent from the All tab, and neither custom lists (phase B) nor the shipped checklists (phase C) exist yet. The owner's own case, \"every McDonald's I have been to\", is exactly what custom lists are for and is the reason to keep this hidden.",
+    returnsWhen: "Custom lists (phase B) have shipped.",
   }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 

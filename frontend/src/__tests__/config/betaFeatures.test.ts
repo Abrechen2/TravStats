@@ -76,9 +76,9 @@ describe("beta feature registry", () => {
     ).toEqual([]);
   });
 
-  it("gates all three currently hidden features", () => {
+  it("gates every currently hidden feature", () => {
     const used = new Set(gateKeysInSource().map(({ key }) => key));
-    const expected: BetaFeatureKey[] = ["tripAiSummary", "devicePairing", "poiDashboardTab"];
+    const expected: BetaFeatureKey[] = ["tripAiSummary", "devicePairing", "poiDomain"];
     for (const key of expected) {
       expect(used.has(key), `${key} is registered but nothing gates it`).toBe(true);
     }

@@ -46,7 +46,7 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
   },
   poi: {
     key: "poi",
-    available: false,
+    available: true,
     i18nKey: "domain.poi",
     icon: "📍",
     color: "#5ec2b2",
