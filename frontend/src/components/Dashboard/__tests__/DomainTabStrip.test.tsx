@@ -94,7 +94,13 @@ describe("DomainTabStrip", () => {
     expect(onSelect).toHaveBeenCalledWith("poi");
   });
 
-  describe("beta gate: poiDashboardTab", () => {
+  // The POI tab hides behind `poiDomain` — a DIFFERENT gate from the
+  // `poiDashboardTab` one it replaced, and hidden for a different reason. That
+  // one hid a stub: an emoji and a "nothing here yet" line. This one hides a
+  // real domain (Place + PlaceVisit, a migration off the old trip stops, an
+  // API, a map layer, a list) that is not FINISHED — no detail page, no way to
+  // create a place from the UI, no lists yet. See config/betaFeatures.ts.
+  describe("beta gate: poiDomain", () => {
     const renderStrip = (): void => {
       render(
         <DomainTabStrip
@@ -106,22 +112,19 @@ describe("DomainTabStrip", () => {
       );
     };
 
-    it("hides the POI tab when the beta flag is OFF", () => {
-      useSettingsStore.setState({ betaFeaturesEnabled: false });
+    it.each([
+      ["off", false],
+      ["unknown (not loaded yet)", null],
+    ])("hides the POI tab when the beta flag is %s", (_label, flag) => {
+      useSettingsStore.setState({ betaFeaturesEnabled: flag });
       renderStrip();
       expect(screen.queryByRole("tab", { name: /poi/i })).toBeNull();
-      // the non-gated tabs are untouched
+      // the ungated tabs are untouched
       expect(screen.getByRole("tab", { name: /flights/i })).toBeTruthy();
       expect(screen.getByRole("tab", { name: /cruises/i })).toBeTruthy();
     });
 
-    it("hides the POI tab while the flag is still unknown (not loaded yet)", () => {
-      useSettingsStore.setState({ betaFeaturesEnabled: null });
-      renderStrip();
-      expect(screen.queryByRole("tab", { name: /poi/i })).toBeNull();
-    });
-
-    it("shows the POI tab when the beta flag is ON", () => {
+    it("shows the POI tab when the beta flag is on", () => {
       useSettingsStore.setState({ betaFeaturesEnabled: true });
       renderStrip();
       expect(screen.getByRole("tab", { name: /poi/i })).toBeTruthy();

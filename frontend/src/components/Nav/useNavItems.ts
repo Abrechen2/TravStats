@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useAuthStore } from "../../store/authStore";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
+import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
 
 export interface NavLeaf {
@@ -53,10 +54,16 @@ export function useNavItems(
   const { t } = useTranslation(["dashboard", "common", "trips"]);
   const user = useAuthStore((s) => s.user);
   const { isEnabled } = useEnabledDomains();
+  const placesVisible = usePlacesVisible();
   const isAdmin = user?.isAdmin ?? false;
 
   return useMemo(() => {
-    const domainChildren: NavLeaf[] = AVAILABLE_DOMAINS.filter(isEnabled).map((key) => ({
+    // `poi` is available but still behind the instance beta gate, so it needs
+    // BOTH checks — the user's own enabled-domains choice and the flag. See
+    // hooks/usePlacesVisible.ts.
+    const domainChildren: NavLeaf[] = AVAILABLE_DOMAINS.filter((key) =>
+      key === "poi" ? placesVisible : isEnabled(key)
+    ).map((key) => ({
       kind: "leaf",
       id: `domain-${key}`,
       path: DOMAINS[key].routePrefix,
@@ -123,5 +130,5 @@ export function useNavItems(
     });
 
     return { center, system };
-  }, [t, isEnabled, isAdmin, pendingUpdatesCount, pathname]);
+  }, [t, isEnabled, placesVisible, isAdmin, pendingUpdatesCount, pathname]);
 }

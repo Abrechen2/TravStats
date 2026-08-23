@@ -152,3 +152,34 @@ export function compareTimelineEvents(a: SortableEvent, b: SortableEvent): numbe
   if (Number.isNaN(ta) || Number.isNaN(tb)) return 0;
   return ta - tb;
 }
+
+/**
+ * Whether a `TripStop` has already been replaced by a `PlaceVisit` and must
+ * therefore NOT be drawn — otherwise the migrated POI appears twice.
+ *
+ * The POI backfill (`20260823150500_poi_backfill_from_trip_stops`) is the
+ * EXPAND half of an expand/contract pair: it copies every qualifying
+ * `domain='poi'` stop into Place + PlaceVisit and deliberately leaves the
+ * original rows in place, so a bad backfill stays recoverable. The DELETE
+ * ships a release later. Between those two releases both rows exist, and
+ * something has to decide which one the timeline shows.
+ *
+ * The rule mirrors the migration's own WHERE clause exactly, which is what
+ * makes it correct rather than approximate: a POI stop was migrated **if and
+ * only if** it had both coordinates. Coordinate-less POI stops were neither
+ * migrated nor deleted — `places.lat/lon` is NOT NULL and deleting the user's
+ * text to satisfy a schema was not acceptable — so those keep rendering as
+ * ordinary stops, which is exactly what this returns.
+ *
+ * Once the contract migration has run this becomes a no-op rather than a lie:
+ * there will be no `domain='poi'` stops left with coordinates. Delete it then,
+ * together with the audit table.
+ */
+export function isSupersededByPlaceVisit(stop: {
+  domain?: string | null;
+  lat?: number | null;
+  lon?: number | null;
+}): boolean {
+  return stop.domain === "poi" && stop.lat !== null && stop.lat !== undefined &&
+    stop.lon !== null && stop.lon !== undefined;
+}

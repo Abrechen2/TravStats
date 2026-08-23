@@ -49,10 +49,17 @@ export function DomainTabStrip({
   const { t } = useTranslation(["dashboard"]);
   const { isFeatureVisible } = useBetaFeatures();
 
-  // The POI tab is a stub (an emoji and "nothing here yet") — don't advertise
-  // it unless the instance is flagged beta. See config/betaFeatures.ts.
+  // The instance beta flag ALONE, deliberately not `usePlacesVisible`. This
+  // strip already receives `enabled` as a prop, and its contract is that a
+  // domain the user has switched off is DIMMED, not hidden — that is what lets
+  // them click through to the "coming soon" screen and turn it back on. Mixing
+  // the enabled state in here would hide the tab instead and break that.
+  //
+  // The Places domain is real but unfinished, so it ships to beta instances
+  // only — a different gate from the `poiDashboardTab` stub one it replaced,
+  // and hidden for a different reason. See config/betaFeatures.ts.
   const visibleTabs = DASHBOARD_TABS.filter(
-    (tab) => tab !== "poi" || isFeatureVisible("poiDashboardTab")
+    (tab) => tab !== "poi" || isFeatureVisible("poiDomain")
   );
 
   // On a domain tab, that domain's next entry; on "Alle", the soonest of all —

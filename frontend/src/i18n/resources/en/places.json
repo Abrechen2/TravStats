@@ -1,0 +1,95 @@
+{
+  "categories": {
+    "restaurant": "Restaurant",
+    "landmark": "Landmark",
+    "nature": "Nature",
+    "museum": "Museum",
+    "entertainment": "Entertainment",
+    "shopping": "Shopping",
+    "viewpoint": "Viewpoint",
+    "other": "Other"
+  },
+  "list": {
+    "title": "Places",
+    "subtitle": "{{count}} visited · {{countries}} countries",
+    "searchPlaceholder": "Search name or city …",
+    "resultCount": "{{shown}} of {{total}}",
+    "sortBy": "Sort by {{col}}",
+    "empty": "No places yet.",
+    "noMatches": "No places match the filters.",
+    "loadError": "Places could not be loaded.",
+    "domainDisabled": "The Places domain is not enabled. Turn it on under Settings → Modules.",
+    "plannedSuffix": "(+{{count}} planned)",
+    "deleted": "“{{name}}” was deleted.",
+    "deleteFailed": "The place could not be deleted.",
+    "deleteTitle": "Delete place",
+    "deleteMessage": "“{{name}}” and all of its visits will be deleted. This cannot be undone.",
+    "columns": {
+      "name": "Name",
+      "category": "Category",
+      "location": "Location",
+      "visits": "Visits",
+      "lastVisit": "Last visit",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "filters": {
+      "status": "Status",
+      "category": "Category",
+      "country": "Country"
+    },
+    "status": {
+      "visited": "Visited",
+      "wishlist": "Wishlist"
+    },
+    "retry": "Try again",
+    "addPlace": "Place"
+  },
+  "filter": {
+    "allStatuses": "All statuses",
+    "allCategories": "All categories",
+    "allCountries": "All countries"
+  },
+  "form": {
+    "createTitle": "Add place",
+    "editTitle": "Edit place",
+    "name": "Name",
+    "namePlaceholder": "e.g. McDonald’s Shibuya Center-Gai",
+    "category": "Category",
+    "location": "Position",
+    "address": "Address",
+    "city": "City",
+    "country": "Country",
+    "status": "Status",
+    "wasHere": "✓ I’ve been here",
+    "onWishlist": "☆ Wishlist",
+    "statusHint": "New places go on the wishlist by default and only start counting once you pick “I’ve been here” or record a visit.",
+    "notes": "Note",
+    "positionRequired": "A place cannot be saved without a position — search for it, click it on the map, or enter coordinates.",
+    "created": "Place added.",
+    "updated": "Place saved.",
+    "saveFailed": "The place could not be saved."
+  },
+  "detail": {
+    "backToList": "Back to the list",
+    "notFound": "This place no longer exists.",
+    "visits": "Visits",
+    "noVisits": "No visit recorded yet.",
+    "addVisit": "Visit",
+    "date": "Date",
+    "time": "Time",
+    "visitNotes": "Visit note",
+    "dateHint": "The date is optional — a place you know you visited but cannot date still counts. A date in the future does not count yet.",
+    "undated": "undated",
+    "notCountedYet": "not counted yet",
+    "visitAdded": "Visit recorded.",
+    "visitFailed": "The visit could not be recorded.",
+    "visitDeleteFailed": "The visit could not be deleted.",
+    "notes": "Note",
+    "masterData": "Details",
+    "position": "Position",
+    "source": "Source",
+    "mapLabel": "Map showing the position of {{name}}",
+    "deletePlace": "Delete place"
+  }
+}
