@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { deriveLodgingStatus } from "../statusDerivation";
+import { deriveFlightStatus, deriveLodgingStatus } from "../statusDerivation";
 
 /**
  * The SAME truth table as backend/src/shared/__tests__/statusDerivation.test.ts.
@@ -59,5 +59,77 @@ describe("deriveLodgingStatus (frontend mirror)", () => {
     expect(deriveLodgingStatus({ checkIn: now, checkOut: now, current: "scheduled", now })).toBe(
       "completed"
     );
+  });
+});
+
+/**
+ * The flight half of the mirror. The truth table below is copied from
+ * `backend/src/shared/__tests__/statusDerivation.test.ts` on purpose: the two
+ * files exist to disagree loudly if the rules ever drift apart.
+ */
+describe("deriveFlightStatus (mirror of the backend rules)", () => {
+  const H = 60 * 60 * 1000;
+  const now = new Date("2026-07-17T12:00:00Z");
+  const past = (h: number): Date => new Date(now.getTime() - h * H);
+  const future = (h: number): Date => new Date(now.getTime() + h * H);
+
+  it("passes through cancelled/historical/duplicated untouched", () => {
+    for (const s of ["cancelled", "historical", "duplicated"]) {
+      expect(
+        deriveFlightStatus({ departureTime: past(100), arrivalTime: past(99), current: s, now })
+      ).toBe(s);
+    }
+  });
+
+  it("arrival more than 6h past -> flown; within slack -> scheduled", () => {
+    expect(
+      deriveFlightStatus({ departureTime: past(9), arrivalTime: past(7), current: "scheduled", now })
+    ).toBe("flown");
+    expect(
+      deriveFlightStatus({ departureTime: past(7), arrivalTime: past(5), current: "scheduled", now })
+    ).toBe("scheduled");
+  });
+
+  it("future-dated 'flown' reverts to scheduled", () => {
+    expect(
+      deriveFlightStatus({
+        departureTime: future(24),
+        arrivalTime: future(26),
+        current: "flown",
+        now,
+      })
+    ).toBe("scheduled");
+  });
+
+  it("null arrival falls back to departure + 30h", () => {
+    expect(
+      deriveFlightStatus({ departureTime: past(31), arrivalTime: null, current: "scheduled", now })
+    ).toBe("flown");
+    expect(
+      deriveFlightStatus({ departureTime: past(29), arrivalTime: null, current: "scheduled", now })
+    ).toBe("scheduled");
+  });
+
+  it("with passthrough off, a duplicate is placed by its dates", () => {
+    // The one thing the backend never asks, because it stores the marker
+    // rather than drawing it: what does this row's TIME say?
+    expect(
+      deriveFlightStatus({
+        departureTime: past(100),
+        arrivalTime: past(99),
+        current: "duplicated",
+        now,
+        passthrough: false,
+      })
+    ).toBe("flown");
+    expect(
+      deriveFlightStatus({
+        departureTime: future(48),
+        arrivalTime: future(50),
+        current: "duplicated",
+        now,
+        passthrough: false,
+      })
+    ).toBe("scheduled");
   });
 });

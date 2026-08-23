@@ -10,7 +10,7 @@ import type { SpecialType } from "../components/specialFlights/specialTypeMeta";
 import FlightEditModal from "../components/FlightEditModal";
 import SpecialFlightModal from "../components/SpecialFlightModal";
 import ConfirmModal from "../components/Training/ConfirmModal";
-import { statusPillStyle, STATUS_PILL_CLASS } from "../components/table/statusPillStyle";
+import FlightStatusCell from "../components/flightsTable/FlightStatusCell";
 import { useTranslation } from "../hooks/useTranslation";
 import { flightsApi, tripsApi } from "../lib/api";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
@@ -237,9 +237,7 @@ export default function FlightDetailPage(): JSX.Element {
               {flight.specialType && (
                 <SpecialTypeBadge type={flight.specialType as SpecialType} />
               )}
-              <span className={STATUS_PILL_CLASS} style={statusPillStyle(flight.status)}>
-                {t(`flights:status.${flight.status}`)}
-              </span>
+              <FlightStatusCell flight={flight} />
               <button
                 type="button"
                 onClick={() => (flight.specialType ? setEditingSpecial(true) : setEditing(true))}

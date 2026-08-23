@@ -266,7 +266,8 @@
     "landed": "Gelandet",
     "historical": "Historisch",
     "duplicated": "Dupliziert",
-    "cancelledCheckbox": "Storniert"
+    "cancelledCheckbox": "Storniert",
+    "duplicatedHint": "Beim Import als Dublette erkannt. Der Eintrag bleibt erhalten, zählt aber in keiner Statistik mit."
   },
   "historicalCheckbox": "Historischer Flug (nur Route bekannt)",
   "historicalHint": "Nur Abflug- und Ankunftsflughafen erforderlich. Jahr, Monat und alle weiteren Angaben sind optional.",

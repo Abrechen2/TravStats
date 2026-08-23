@@ -17,7 +17,7 @@ import ListFilterBar, {
   FilterField,
   PANEL_SELECT_CLASS,
 } from "../components/table/ListFilterBar";
-import { statusPillStyle } from "../components/table/statusPillStyle";
+import FlightStatusCell from "../components/flightsTable/FlightStatusCell";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import type { Flight, FlightInput, Trip } from "../types";
 import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
@@ -790,18 +790,7 @@ export default function FlightsTablePage(): JSX.Element {
                             )}
                             {flightColumnPrefs.isVisible("status") && (
                             <td className="px-4 py-3">
-                              <span
-                                className="px-2 py-1 text-xs font-semibold rounded-full"
-                                // Shared palette. The ternary this replaces had
-                                // an else branch that caught everything except
-                                // flown and scheduled, so a `historical` flight
-                                // was painted in the cancelled red.
-                                style={statusPillStyle(flight.status)}
-                              >
-                                {t(`flights:status.${flight.status}`, {
-                                  defaultValue: flight.status,
-                                })}
-                              </span>
+                              <FlightStatusCell flight={flight} />
                             </td>
                             )}
                             {flightColumnPrefs.isVisible("duration") && (

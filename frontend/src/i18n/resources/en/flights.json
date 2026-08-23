@@ -266,7 +266,8 @@
     "landed": "Landed",
     "historical": "Historical",
     "duplicated": "Duplicated",
-    "cancelledCheckbox": "Cancelled"
+    "cancelledCheckbox": "Cancelled",
+    "duplicatedHint": "Recognised as a duplicate on import. The entry is kept, but counts towards no statistic."
   },
   "historicalCheckbox": "Historical flight (route only)",
   "historicalHint": "Only departure and arrival airports required. Year, month, and all other fields are optional.",
