@@ -27,6 +27,7 @@ const CruisesPage = lazy(() => import("./pages/CruisesPage"));
 const CruiseDetailPage = lazy(() => import("./pages/CruiseDetailPage"));
 const LodgingListPage = lazy(() => import("./pages/LodgingListPage"));
 const PlacesListPage = lazy(() => import("./pages/PlacesListPage"));
+const PlaceDetailPage = lazy(() => import("./pages/PlaceDetailPage"));
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
@@ -312,6 +313,16 @@ function AppContent() {
                 element={
                   isAuthenticated && placesVisible ? (
                     <PlacesListPage />
+                  ) : (
+                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                  )
+                }
+              />
+              <Route
+                path="/places/:id"
+                element={
+                  isAuthenticated && placesVisible ? (
+                    <PlaceDetailPage />
                   ) : (
                     <Navigate to={isAuthenticated ? "/" : "/login"} />
                   )

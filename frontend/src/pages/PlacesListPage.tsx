@@ -10,6 +10,7 @@ import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/ta
 import { RowActionButton, RowActions } from "../components/table/RowActionButton";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import ConfirmModal from "../components/Training/ConfirmModal";
+import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import { useTranslation } from "../hooks/useTranslation";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { FlagImg } from "../lib/countryFlag";
@@ -96,6 +97,7 @@ export default function PlacesListPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Place | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<CategoryFilter>("all");
@@ -221,6 +223,14 @@ export default function PlacesListPage(): JSX.Element {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className="rounded-lg px-4 py-2 text-sm font-semibold"
+              style={{ background: "var(--domain-poi)", color: "#08221e" }}
+            >
+              + {t("places:list.addPlace")}
+            </button>
             <ColumnPicker
               columns={COLUMN_IDS.map((id) => ({
                 id,
@@ -455,6 +465,17 @@ export default function PlacesListPage(): JSX.Element {
           </div>
         </div>
       </div>
+
+      {creating && (
+        <PlaceFormModal
+          place={null}
+          onClose={() => setCreating(false)}
+          onSaved={(saved) => {
+            setCreating(false);
+            navigate(`/places/${saved.id}`);
+          }}
+        />
+      )}
 
       {pendingDelete && (
         <ConfirmModal

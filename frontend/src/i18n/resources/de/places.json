@@ -42,11 +42,54 @@
       "visited": "Besucht",
       "wishlist": "Merkliste"
     },
-    "retry": "Erneut versuchen"
+    "retry": "Erneut versuchen",
+    "addPlace": "Ort"
   },
   "filter": {
     "allStatuses": "Alle Status",
     "allCategories": "Alle Kategorien",
     "allCountries": "Alle Länder"
+  },
+  "form": {
+    "createTitle": "Ort anlegen",
+    "editTitle": "Ort bearbeiten",
+    "name": "Name",
+    "namePlaceholder": "z. B. McDonald’s Shibuya Center-Gai",
+    "category": "Kategorie",
+    "location": "Position",
+    "address": "Adresse",
+    "city": "Stadt",
+    "country": "Land",
+    "status": "Status",
+    "wasHere": "✓ War ich schon",
+    "onWishlist": "☆ Merkliste",
+    "statusHint": "Neue Orte landen standardmäßig auf der Merkliste und zählen erst mit, wenn du „War ich schon“ wählst oder einen Besuch einträgst.",
+    "notes": "Notiz",
+    "positionRequired": "Ohne Position lässt sich der Ort nicht speichern — such ihn, klick ihn auf der Karte an oder gib Koordinaten ein.",
+    "created": "Ort angelegt.",
+    "updated": "Ort gespeichert.",
+    "saveFailed": "Der Ort konnte nicht gespeichert werden."
+  },
+  "detail": {
+    "backToList": "Zurück zur Übersicht",
+    "notFound": "Dieser Ort existiert nicht (mehr).",
+    "visits": "Besuche",
+    "noVisits": "Noch kein Besuch eingetragen.",
+    "addVisit": "Besuch",
+    "date": "Datum",
+    "time": "Uhrzeit",
+    "visitNotes": "Notiz zum Besuch",
+    "dateHint": "Datum ist optional — ein Ort, den du sicher kennst, aber nicht datieren kannst, zählt trotzdem. Ein Datum in der Zukunft zählt noch nicht mit.",
+    "undated": "ohne Datum",
+    "notCountedYet": "zählt noch nicht",
+    "visitAdded": "Besuch eingetragen.",
+    "visitFailed": "Der Besuch konnte nicht eingetragen werden.",
+    "visitDeleteFailed": "Der Besuch konnte nicht gelöscht werden.",
+    "notes": "Notiz",
+    "masterData": "Stammdaten",
+    "position": "Position",
+    "source": "Herkunft",
+    "mapLabel": "Karte mit der Position von {{name}}",
+    "deletePlace": "Ort löschen"
   }
 }
