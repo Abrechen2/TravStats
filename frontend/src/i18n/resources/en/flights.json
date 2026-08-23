@@ -225,7 +225,8 @@
     "footer": {
       "showing": "Showing {{count}} flights",
       "sortedBy": "Sorted by {{label}} ({{direction}})"
-    }
+    },
+    "sortBy": "Sort by {{col}}"
   },
   "review": {
     "title": "Review Flight",

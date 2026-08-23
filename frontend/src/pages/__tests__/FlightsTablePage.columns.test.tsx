@@ -25,7 +25,13 @@ describe("FlightsTablePage column composition", () => {
 
   it("merges the two date columns into a single Zeit/Time column", () => {
     expect(src).not.toContain("table.arrival");
-    expect(src).toContain("flights:table.time");
+    // The column id, not the i18n key: since the header became one loop over
+    // FLIGHT_COLUMN_IDS, the key is composed (`flights:table.${id}`) and no
+    // longer appears verbatim. Asserting the literal string was really
+    // asserting how the label is spelled in source, which is not what this
+    // test is about.
+    expect(src).toContain('"time"');
+    expect(src).toContain("FLIGHT_SORT_KEY_BY_COLUMN");
   });
 
   it("keeps the actions cell + SourceInfoDot in one right-aligned flex container", () => {

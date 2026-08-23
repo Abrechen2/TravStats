@@ -4,6 +4,7 @@ import { cruiseApi } from "../lib/api";
 import type { Cruise, CruiseStatus } from "../types";
 import { CruiseRow, type CruiseColumnId } from "../components/Cruise/CruiseRow";
 import { ColumnPicker } from "../components/table/ColumnPicker";
+import { SortableHeader } from "../components/table/SortableHeader";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import CruiseRowActions from "../components/Cruise/CruiseRowActions";
 import DomainImportPanel from "../components/import/DomainImportPanel";
@@ -33,6 +34,20 @@ const CRUISE_COLUMN_IDS: readonly CruiseColumnId[] = [
   "actions",
 ];
 const CRUISE_ALWAYS_VISIBLE = ["ship", "actions"] as const;
+/** Columns whose values line up on the right. */
+const CRUISE_NUMERIC_COLUMNS: readonly CruiseColumnId[] = ["ports", "price"];
+/**
+ * Column id -> sort key. Mostly identity; `dates` sorts on `date`, and the
+ * two columns that carry no key (cabin, actions) are not sortable.
+ */
+const CRUISE_SORT_KEY_BY_COLUMN: Partial<Record<CruiseColumnId, CruiseSortKey>> = {
+  ship: "ship",
+  line: "line",
+  dates: "date",
+  ports: "ports",
+  status: "status",
+  price: "price",
+};
 
 export default function CruisesPage(): JSX.Element {
   const { t } = useTranslation(["cruise", "common"]);
@@ -236,120 +251,40 @@ export default function CruisesPage(): JSX.Element {
             <table className="w-full text-sm min-w-[640px]">
               <thead className="bg-(--bg-surface) text-(--text-muted)">
                 <tr>
-                  {columnPrefs.isVisible("ship") && (
-                  <th className="px-3 py-2 text-left">
-                    <button
-                      type="button"
-                      onClick={() => handleSort("ship")}
-                      className="inline-flex items-center gap-1 hover:text-(--text-primary)"
-                      aria-label={t("list.sortBy", { col: t("list.columns.ship") })}
-                    >
-                      {t("list.columns.ship")}
-                      <span
-                        aria-hidden
-                        className={sortBy === "ship" ? "text-(--accent)" : "opacity-0"}
+                  {/*
+                    One loop instead of six copied blocks. Each of those built
+                    its own sort button — and showed ▼ for ascending, the
+                    opposite of the shared component the lodging table uses.
+                    The same sort state read differently depending on which
+                    page you were on.
+                  */}
+                  {CRUISE_COLUMN_IDS.filter((id) => columnPrefs.isVisible(id)).map((id) => {
+                    const numeric = CRUISE_NUMERIC_COLUMNS.includes(id);
+                    const label = t(`list.columns.${id}`);
+                    const sortKey = CRUISE_SORT_KEY_BY_COLUMN[id];
+                    return (
+                      <th
+                        key={id}
+                        className={`px-3 py-2 ${numeric ? "text-right" : "text-left"}`}
                       >
-                        {sortBy === "ship" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
-                      </span>
-                    </button>
-                  </th>
-                  )}
-                  {columnPrefs.isVisible("line") && (
-                  <th className="px-3 py-2 text-left">
-                    <button
-                      type="button"
-                      onClick={() => handleSort("line")}
-                      className="inline-flex items-center gap-1 hover:text-(--text-primary)"
-                      aria-label={t("list.sortBy", { col: t("list.columns.line") })}
-                    >
-                      {t("list.columns.line")}
-                      <span
-                        aria-hidden
-                        className={sortBy === "line" ? "text-(--accent)" : "opacity-0"}
-                      >
-                        {sortBy === "line" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
-                      </span>
-                    </button>
-                  </th>
-                  )}
-                  {columnPrefs.isVisible("dates") && (
-                  <th className="px-3 py-2 text-left">
-                    <button
-                      type="button"
-                      onClick={() => handleSort("date")}
-                      className="inline-flex items-center gap-1 hover:text-(--text-primary)"
-                      aria-label={t("list.sortBy", { col: t("list.columns.dates") })}
-                    >
-                      {t("list.columns.dates")}
-                      <span
-                        aria-hidden
-                        className={sortBy === "date" ? "text-(--accent)" : "opacity-0"}
-                      >
-                        {sortBy === "date" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
-                      </span>
-                    </button>
-                  </th>
-                  )}
-                  {columnPrefs.isVisible("ports") && (
-                  <th className="px-3 py-2 text-right">
-                    <button
-                      type="button"
-                      onClick={() => handleSort("ports")}
-                      className="inline-flex items-center justify-end gap-1 hover:text-(--text-primary)"
-                      aria-label={t("list.sortBy", { col: t("list.columns.ports") })}
-                    >
-                      {t("list.columns.ports")}
-                      <span
-                        aria-hidden
-                        className={sortBy === "ports" ? "text-(--accent)" : "opacity-0"}
-                      >
-                        {sortBy === "ports" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
-                      </span>
-                    </button>
-                  </th>
-                  )}
-                  {columnPrefs.isVisible("status") && (
-                  <th className="px-3 py-2 text-left">
-                    <button
-                      type="button"
-                      onClick={() => handleSort("status")}
-                      className="inline-flex items-center gap-1 hover:text-(--text-primary)"
-                      aria-label={t("list.sortBy", { col: t("list.columns.status") })}
-                    >
-                      {t("list.columns.status")}
-                      <span
-                        aria-hidden
-                        className={sortBy === "status" ? "text-(--accent)" : "opacity-0"}
-                      >
-                        {sortBy === "status" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
-                      </span>
-                    </button>
-                  </th>
-                  )}
-                  {columnPrefs.isVisible("cabin") && (
-                  <th className="px-3 py-2 text-left">{t("list.columns.cabin")}</th>
-                  )}
-                  {columnPrefs.isVisible("price") && (
-                  <th className="px-3 py-2 text-right">
-                    <button
-                      type="button"
-                      onClick={() => handleSort("price")}
-                      className="inline-flex items-center justify-end gap-1 hover:text-(--text-primary)"
-                      aria-label={t("list.sortBy", { col: t("list.columns.price") })}
-                    >
-                      {t("list.columns.price")}
-                      <span
-                        aria-hidden
-                        className={sortBy === "price" ? "text-(--accent)" : "opacity-0"}
-                      >
-                        {sortBy === "price" ? (sortOrder === "asc" ? "▼" : "▲") : "▲"}
-                      </span>
-                    </button>
-                  </th>
-                  )}
-                  {columnPrefs.isVisible("actions") && (
-                  <th className="px-3 py-2 text-right">{t("list.columns.actions")}</th>
-                  )}
+                        {sortKey === undefined ? (
+                          label
+                        ) : (
+                          <span className={numeric ? "flex justify-end" : undefined}>
+                            <SortableHeader
+                              column={sortKey}
+                              sortBy={sortBy}
+                              sortOrder={sortOrder}
+                              onSort={handleSort}
+                              ariaLabel={t("list.sortBy", { col: label })}
+                            >
+                              {label}
+                            </SortableHeader>
+                          </span>
+                        )}
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>

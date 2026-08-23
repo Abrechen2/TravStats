@@ -9,6 +9,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { flightsApi, tripsApi } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
 import { ColumnPicker } from "../components/table/ColumnPicker";
+import { SortableHeader } from "../components/table/SortableHeader";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import type { Flight, FlightFilters, FlightInput, Trip } from "../types";
 import Filters from "../components/Filters";
@@ -55,6 +56,32 @@ const FLIGHT_COLUMN_IDS = [
   "actions",
 ] as const;
 const FLIGHT_ALWAYS_VISIBLE = ["route", "actions"] as const;
+
+type FlightColumnId = (typeof FLIGHT_COLUMN_IDS)[number];
+type FlightSortKey = "departureTime" | "airline" | "status" | "duration";
+
+/**
+ * Column id -> sort key. Columns without an entry are not sortable — which is
+ * six of ten, the widest gap of the three list pages (cruises sort six of
+ * eight, lodging all eight).
+ */
+const FLIGHT_SORT_KEY_BY_COLUMN: Partial<Record<FlightColumnId, FlightSortKey>> = {
+  airline: "airline",
+  time: "departureTime",
+  status: "status",
+  duration: "duration",
+};
+
+/**
+ * One label source for header, column picker and footer. The page used to
+ * hold three separate copies of these names, which is how a column could end
+ * up called one thing in the picker and another in the footer.
+ */
+function flightColumnLabel(t: (key: string) => string, id: FlightColumnId): string {
+  if (id === "trip") return t("trips:tab");
+  if (id === "duration") return t("flights:table.flightTime");
+  return t(`flights:table.${id}`);
+}
 
 export default function FlightsTablePage(): JSX.Element {
   const { t } = useTranslation([
@@ -324,10 +351,6 @@ export default function FlightsTablePage(): JSX.Element {
     color: "var(--text-muted)",
   };
 
-  const activeSortStyle: React.CSSProperties = {
-    color: "var(--accent)",
-    borderBottom: "2px solid var(--accent)",
-  };
 
   return (
     <PageTransition>
@@ -417,113 +440,42 @@ export default function FlightsTablePage(): JSX.Element {
                       }}
                     >
                       <tr>
-                        {flightColumnPrefs.isVisible("airline") && (
-                        <th
-                          className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                          style={thStyle}
-                        >
-                          <button
-                            onClick={() => handleSort("airline")}
-                            className="flex items-center gap-1"
-                            style={sortBy === "airline" ? activeSortStyle : undefined}
-                          >
-                            {t("flights:table.airline")}
-                            {sortBy === "airline" && (sortOrder === "asc" ? "▼" : "▲")}
-                          </button>
-                        </th>
-                        )}
-                        {flightColumnPrefs.isVisible("flightNumber") && (
-                        <th
-                          className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                          style={thStyle}
-                        >
-                          {t("flights:table.flightNumber")}
-                        </th>
-                        )}
-                        {flightColumnPrefs.isVisible("route") && (
-                        <th
-                          className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                          style={thStyle}
-                        >
-                          {t("flights:table.route")}
-                        </th>
-                        )}
-                        {flightColumnPrefs.isVisible("time") && (
-                        <th
-                          className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                          style={thStyle}
-                        >
-                          <button
-                            onClick={() => handleSort("departureTime")}
-                            className="flex items-center gap-1"
-                            style={sortBy === "departureTime" ? activeSortStyle : undefined}
-                          >
-                            {t("flights:table.time")}
-                            {sortBy === "departureTime" && (sortOrder === "asc" ? "▼" : "▲")}
-                          </button>
-                        </th>
-                        )}
-                        {flightColumnPrefs.isVisible("status") && (
-                        <th
-                          className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                          style={thStyle}
-                        >
-                          <button
-                            onClick={() => handleSort("status")}
-                            className="flex items-center gap-1"
-                            style={sortBy === "status" ? activeSortStyle : undefined}
-                          >
-                            {t("flights:table.status")}
-                            {sortBy === "status" && (sortOrder === "asc" ? "▼" : "▲")}
-                          </button>
-                        </th>
-                        )}
-                        {flightColumnPrefs.isVisible("duration") && (
-                        <th
-                          className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                          style={thStyle}
-                        >
-                          <button
-                            onClick={() => handleSort("duration")}
-                            className="flex items-center gap-1"
-                            style={sortBy === "duration" ? activeSortStyle : undefined}
-                          >
-                            {t("flights:table.flightTime")}
-                            {sortBy === "duration" && (sortOrder === "asc" ? "▼" : "▲")}
-                          </button>
-                        </th>
-                        )}
-                        {flightColumnPrefs.isVisible("aircraft") && (
-                        <th
-                          className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                          style={thStyle}
-                        >
-                          {t("flights:table.aircraft")}
-                        </th>
-                        )}
-                        {flightColumnPrefs.isVisible("price") && (
-                        <th
-                          className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                          style={thStyle}
-                        >
-                          {t("flights:table.price")}
-                        </th>
-                        )}
-                        {flightColumnPrefs.isVisible("trip") && (
-                        <th
-                          className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider"
-                          style={thStyle}
-                        >
-                          {t("trips:tab")}
-                        </th>
-                        )}
-                        {flightColumnPrefs.isVisible("actions") && (
-                        <th
-                          className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider whitespace-nowrap"
-                          style={thStyle}
-                        >
-                          {t("flights:table.actions")}
-                        </th>
+                        {/*
+                          One loop instead of ten copied blocks. Each sortable
+                          one built its own button and showed ▼ for ascending —
+                          the opposite of the shared component, and of this
+                          page's own footer, which wrote "aufsteigend" beside
+                          that ▼.
+                        */}
+                        {FLIGHT_COLUMN_IDS.filter((id) => flightColumnPrefs.isVisible(id)).map(
+                          (id) => {
+                            const right = id === "actions";
+                            const label = flightColumnLabel(t, id);
+                            const sortKey = FLIGHT_SORT_KEY_BY_COLUMN[id];
+                            return (
+                              <th
+                                key={id}
+                                className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider ${
+                                  right ? "text-right whitespace-nowrap" : "text-left"
+                                }`}
+                                style={thStyle}
+                              >
+                                {sortKey === undefined ? (
+                                  label
+                                ) : (
+                                  <SortableHeader
+                                    column={sortKey}
+                                    sortBy={sortBy}
+                                    sortOrder={sortOrder}
+                                    onSort={handleSort}
+                                    ariaLabel={t("flights:table.sortBy", { col: label })}
+                                  >
+                                    {label}
+                                  </SortableHeader>
+                                )}
+                              </th>
+                            );
+                          }
                         )}
                       </tr>
                     </thead>

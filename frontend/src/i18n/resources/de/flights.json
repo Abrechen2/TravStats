@@ -225,7 +225,8 @@
     "footer": {
       "showing": "Zeige {{count}} Flüge",
       "sortedBy": "Sortiert nach {{label}} ({{direction}})"
-    }
+    },
+    "sortBy": "Nach {{col}} sortieren"
   },
   "review": {
     "title": "Flug überprüfen",

@@ -31,7 +31,13 @@ export function SortableHeader<K extends string>({
       onClick={() => onSort(column)}
       aria-label={ariaLabel}
       className="flex items-center gap-1 text-left uppercase tracking-wider"
-      style={active ? { color: "var(--accent)" } : undefined}
+      // Colour AND underline for the active column. The underline came from
+      // the flights table, which marked its sorted column most clearly of the
+      // three; lifting it here gives every list the same signal instead of
+      // three different ones (accent + underline, accent alone, arrow alone).
+      style={
+        active ? { color: "var(--accent)", borderBottom: "2px solid var(--accent)" } : undefined
+      }
     >
       {children}
       <span className={active ? "" : "opacity-0"} aria-hidden>
