@@ -418,5 +418,17 @@
     "allTrips": "All trips",
     "withTrip": "With trip",
     "withoutTrip": "Without trip"
+  },
+  "detail": {
+    "loadError": "The flight could not be loaded.",
+    "notFound": "Flight not found",
+    "times": "Times",
+    "booking": "Booking & seat",
+    "costs": "Costs",
+    "route": "Route",
+    "registration": "Registration",
+    "distance": "Distance",
+    "overflownCountries": "Countries overflown",
+    "openTrip": "Open trip"
   }
 }

@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { flightsApi, tripsApi } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
 import { ColumnPicker } from "../components/table/ColumnPicker";
@@ -150,6 +150,7 @@ export default function FlightsTablePage(): JSX.Element {
   // `?import=email` — kept for old bookmarks. It simply opens the add dialog:
   // the drop zone is its first route now, so there is no separate email view
   // left to jump to. The param is stripped so a reload does not reopen it.
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
     if (searchParams.get("import") !== "email") return;
@@ -213,16 +214,13 @@ export default function FlightsTablePage(): JSX.Element {
   };
 
   /**
-   * Opening a flight from the row. Mirrors what the edit icon does — a special
-   * flight goes to its own modal, because the generic one hides the fields
-   * that make it special.
+   * The row opens the flight's PAGE now, like a cruise row and a lodging row
+   * always did. It used to open the edit form, which was the only way to read
+   * the ~50 fields the table has no column for — reading meant entering an
+   * editable state. The edit icon still goes straight to the form.
    */
   const openFlight = (f: Flight): void => {
-    if (f.specialType) {
-      setEditingSpecialFlight(f);
-    } else {
-      setEditingFlight(f);
-    }
+    navigate(`/flights/${f.id}`);
   };
 
   /** "LH2462 MUC → CPH" — enough to recognise the row you clicked. */

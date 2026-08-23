@@ -418,5 +418,17 @@
     "allTrips": "Alle Reisen",
     "withTrip": "Mit Reise",
     "withoutTrip": "Ohne Reise"
+  },
+  "detail": {
+    "loadError": "Der Flug konnte nicht geladen werden.",
+    "notFound": "Flug nicht gefunden",
+    "times": "Zeiten",
+    "booking": "Buchung & Sitz",
+    "costs": "Kosten",
+    "route": "Strecke",
+    "registration": "Kennzeichen",
+    "distance": "Distanz",
+    "overflownCountries": "Überflogene Länder",
+    "openTrip": "Reise öffnen"
   }
 }
