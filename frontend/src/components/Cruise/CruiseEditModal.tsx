@@ -1,4 +1,5 @@
 import { minorUnits } from "../../shared/currencies";
+import Modal from "../Modal";
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useState } from "react";
@@ -82,7 +83,7 @@ const DARK_PICKER_STYLE: React.CSSProperties = { colorScheme: "dark" };
  * so this modal no longer carries its own import chooser.
  */
 export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.Element {
-  const { t } = useTranslation("cruise");
+  const { t } = useTranslation(["cruise", "common"]);
 
   const [ship, setShip] = useState<Ship | null>(cruise?.ship ?? null);
   const [cruiseLine, setCruiseLine] = useState<string>(cruise?.cruiseLine ?? "");
@@ -179,20 +180,41 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
 
   const headerTitle = mode === "create" ? t("form.createTitle") : t("form.editTitle");
 
+  // In the shared frame: header and buttons stay put, the body scrolls, and
+  // Escape closes it — which it did not do before.
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-auto rounded-lg border border-border bg-(--bg-base) shadow-xl">
-        {/* Header */}
-        <div className="sticky top-0 z-10 border-b border-border bg-(--bg-base) px-6 py-4">
-          <h2 className="text-xl font-semibold text-(--text-primary)">{headerTitle}</h2>
-        </div>
-
+    <Modal
+      open
+      onClose={onClose}
+      busy={saving}
+      closeLabel={t("common:buttons.close")}
+      title={headerTitle}
+      widthClass="max-w-2xl"
+      footer={
         <>
-          <div className="p-6">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-md border border-border px-4 py-2 text-sm text-(--text-muted) hover:bg-(--bg-surface) disabled:opacity-50"
+          >
+            {t("form.cancel")}
+          </button>
+          <button
+            type="button"
+            onClick={(): void => {
+              void submit();
+            }}
+            disabled={saving}
+            className="rounded-md bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base) hover:bg-(--accent-dim) disabled:opacity-50"
+          >
+            {saving ? t("form.saving") : t("form.save")}
+          </button>
+        </>
+      }
+    >
+      <>
+          <div>
             <Section title={`${t("field.ship")} & ${t("field.line")}`}>
               <ShipPicker value={ship} onChange={onShipPicked} />
               <input
@@ -400,30 +422,8 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
             )}
           </div>
 
-          {/* Footer with action buttons — only on manual step */}
-          <div className="sticky bottom-0 flex justify-end gap-2 border-t border-border bg-(--bg-base) px-6 py-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="rounded-md border border-border px-4 py-2 text-sm text-(--text-muted) hover:bg-(--bg-surface) disabled:opacity-50"
-            >
-              {t("form.cancel")}
-            </button>
-            <button
-              type="button"
-              onClick={(): void => {
-                void submit();
-              }}
-              disabled={saving}
-              className="rounded-md bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base) hover:bg-(--accent-dim) disabled:opacity-50"
-            >
-              {saving ? t("form.saving") : t("form.save")}
-            </button>
-          </div>
         </>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import Modal from "../Modal";
 import { createLodging, updateLodging } from "../../lib/api/lodging";
 import type { Lodging, LodgingChain, LodgingInput, LodgingType } from "../../types/lodging";
 import { logger } from "../../lib/logger";
@@ -120,20 +121,39 @@ export function LodgingFormModal({
 
   const title = mode === "create" ? t("lodging:form.createTitle") : t("lodging:form.editTitle");
 
+  // The shared frame keeps the header and the buttons in place and scrolls
+  // only the body — which this form needs the moment its map picker opens.
+  // It also brings the Escape key, which this dialog did not have: measured in
+  // the browser on 23.08., right after the lodging list made it reachable.
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      role="dialog"
-      aria-modal="true"
+    <Modal
+      open
+      onClose={onClose}
+      busy={saving}
+      closeLabel={t("common:buttons.close")}
+      title={title}
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50"
+          >
+            {t("common:buttons.cancel")}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={saving || name.trim().length === 0}
+            className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)] disabled:opacity-50"
+          >
+            {saving ? t("common:buttons.saving") : t("common:buttons.save")}
+          </button>
+        </>
+      }
     >
-      {/* max-h + overflow: the form grows past the viewport as soon as the map
-          picker or the advanced panel is open, and a centred flex child with
-          no height limit simply overflows the screen with nothing to scroll —
-          the save button ends up unreachable. Same shape the cruise and flight
-          modals already use. */}
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-[var(--color-border)] bg-[var(--bg-elevated)] p-6 shadow-xl">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h3>
-
+      <>
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {/* FIRST field, and named "Unterkunft suchen" (Alex, Discord
               2026-07-12). It sat below the name field, but a search hit fills
@@ -239,26 +259,7 @@ export function LodgingFormModal({
         </div>
 
         {error && <p className="mt-3 text-sm text-[var(--danger)]">{error}</p>}
-
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50"
-          >
-            {t("common:buttons.cancel")}
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleSave()}
-            disabled={saving || name.trim().length === 0}
-            className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)] disabled:opacity-50"
-          >
-            {saving ? t("common:buttons.saving") : t("common:buttons.save")}
-          </button>
-        </div>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }
