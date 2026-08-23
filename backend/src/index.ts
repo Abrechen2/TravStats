@@ -46,6 +46,7 @@ import cruiseRouteOverrideRoutes from './routes/cruises/routeOverride';
 import currenciesRouter from './routes/currencies';
 import lodgingRouter from './routes/lodging';
 import placesRouter from './routes/places';
+import placeVisitPhotoRouter from './routes/places/visitPhotos';
 import placeListsRouter from './routes/placeLists';
 import curatedListsRouter from './routes/placeLists/curated';
 import lodgingChainsRouter from './routes/lodgingChains';
@@ -307,6 +308,10 @@ app.use('/api/v1/cruises', cruisesRouter);
 app.use('/api/v1/cruises', cruiseRouteOverrideRoutes);
 app.use('/api/v1/currencies', currenciesRouter);
 app.use('/api/v1/lodging', lodgingRouter);
+// Photo proof for a visit — same prefix, own file, split out before places.ts
+// approaches the 800-line max. Mounted first so nothing depends on segment
+// counts to keep the two routers apart.
+app.use('/api/v1/places', placeVisitPhotoRouter);
 app.use('/api/v1/places', placesRouter);
 // Curated checklists mount FIRST on the same path: '/curated' would
 // otherwise be captured by the lists router's '/:id' and answered 404.

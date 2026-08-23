@@ -5,6 +5,18 @@ import type { Achievement } from '@prisma/client';
 import { calculateDistance } from './geo';
 import type { FlightData, UserStats } from './achievementStats';
 
+/**
+ * A checklist achievement has to name WHICH checklist, and `Achievement` has no
+ * column to carry that. So the key travels inside the requirement type:
+ * `curated_list_complete:world-wonders-new7`.
+ *
+ * The alternative was a code→key table in a third file, kept in step by hand
+ * with both the seed and `seedData/curated_lists.csv`. This way a new checklist
+ * badge is one seed row that says out loud what it measures, and a typo shows
+ * up as a badge stuck at 0/7 rather than as one silently tracking another list.
+ */
+const CURATED_LIST_PREFIX = 'curated_list_complete:';
+
 export function checkAchievement(
   achievement: Achievement,
   stats: UserStats,
@@ -12,6 +24,12 @@ export function checkAchievement(
 ): { isUnlocked: boolean; progress: number } {
   let progress = 0;
   let isUnlocked = false;
+
+  if (achievement.requirementType.startsWith(CURATED_LIST_PREFIX)) {
+    const listKey = achievement.requirementType.slice(CURATED_LIST_PREFIX.length);
+    progress = stats.curatedTickedByList.get(listKey) ?? 0;
+    return { isUnlocked: progress >= achievement.requirement, progress };
+  }
 
   switch (achievement.requirementType) {
     case 'flights_count':
@@ -649,6 +667,27 @@ export function checkAchievement(
 
     case 'grand_tour':
       progress = stats.grandTour ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    // --- POI cases ---
+    case 'places_count':
+      progress = stats.placesCount;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'place_visits_count':
+      progress = stats.placeVisitsCount;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'place_countries':
+      progress = stats.placeCountries.size;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'places_in_category':
+      progress = stats.placesInCategoryMax;
       isUnlocked = progress >= achievement.requirement;
       break;
 

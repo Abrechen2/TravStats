@@ -29,6 +29,15 @@ const requireUser = (req: AuthRequest): string => {
 export const PLACE_INCLUDE = { visits: true } satisfies Prisma.PlaceInclude;
 export type PlaceRow = Prisma.PlaceGetPayload<{ include: typeof PLACE_INCLUDE }>;
 
+/**
+ * The DETAIL view additionally carries each visit's photo proof. Deliberately
+ * not folded into `PLACE_INCLUDE`: the list endpoint uses that for every row,
+ * and a gallery per row is a page of joins nobody asked for.
+ */
+const PLACE_DETAIL_INCLUDE = {
+  visits: { include: { photos: { orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }] } } },
+} satisfies Prisma.PlaceInclude;
+
 interface PlaceAggregates {
   /** Visits that actually happened — future-dated ones excluded. */
   visitCount: number;
@@ -58,7 +67,15 @@ function computeAggregates(visits: PlaceRow["visits"], now = new Date()): PlaceA
 
 type DecoratedPlace = PlaceRow & PlaceAggregates;
 
-function decorate(place: PlaceRow, now = new Date()): DecoratedPlace {
+/**
+ * Generic over the include shape so the detail view keeps its photos in the
+ * TYPE and not only at runtime — a spread that silently widens the payload
+ * while the signature claims otherwise is how a field ends up undocumented.
+ */
+function decorate<T extends { visits: PlaceRow["visits"] }>(
+  place: T,
+  now = new Date()
+): T & PlaceAggregates {
   return { ...place, ...computeAggregates(place.visits, now) };
 }
 
@@ -159,7 +176,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     const userId = requireUser(req);
     const place = await prisma.place.findFirst({
       where: { id: req.params.id, userId },
-      include: PLACE_INCLUDE,
+      include: PLACE_DETAIL_INCLUDE,
     });
     if (!place) throw new AppError("Place not found", 404);
     res.json({ success: true, data: decorate(place) });

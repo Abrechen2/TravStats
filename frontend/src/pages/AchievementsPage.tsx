@@ -390,6 +390,14 @@ export default function AchievementsPage(): JSX.Element {
                             },
                           ]
                         : []),
+                      ...(enabled.includes("poi" as DomainKey)
+                        ? [
+                            {
+                              id: "poi",
+                              label: `📍 ${t("achievements:filters.domainPoi")}`,
+                            },
+                          ]
+                        : []),
                       { id: "shared", label: t("achievements:filters.domainShared") },
                     ] as Array<{ id: "all" | "shared" | DomainKey; label: string }>
                   ).map((chip) => (
