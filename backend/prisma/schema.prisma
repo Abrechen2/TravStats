@@ -76,6 +76,7 @@ model User {
   lodgingMemberships   LodgingMembership[]
   importBatches        ImportBatch[]
   companions           Companion[]
+  photoJourneys        PhotoJourney[]
 
   @@map("users")
 }
@@ -1546,4 +1547,67 @@ model CruiseCompanion {
   @@id([cruiseId, companionId])
   @@index([companionId])
   @@map("cruise_companions")
+}
+
+/// A stretch of photos that looks like travel nobody recorded.
+///
+/// Derived from the user's own Immich library: photos cluster in time,
+/// the clusters that no flight, cruise, trip or stay explains are
+/// reverse-geocoded, and what comes back is offered as a suggestion.
+///
+/// Never a fact and never applied on its own. A photo proves where a
+/// CAMERA was, which is usually but not always where its owner was — a
+/// shared album, a picture taken by someone else, an import from a
+/// friend. So every row here waits for a person to accept it.
+model PhotoJourney {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+
+  /// pending | accepted | dismissed
+  status String @default("pending")
+
+  /// The cluster's span, from the first photo to the last.
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+
+  photoCount Int @map("photo_count")
+  /// How many of those carried a coordinate. A cluster located by two
+  /// photos out of sixty deserves less trust than one located by all of
+  /// them, and the UI should be able to say so.
+  locatedCount Int @map("located_count")
+
+  /// Representative position — the median of the located photos.
+  lat Float
+  lon Float
+
+  /// What the reverse lookup made of that position. Null when it
+  /// answered nothing: an ocean, a desert, or Nominatim being down. The
+  /// row still stands, because the DATES are the find.
+  countryCode String? @map("country_code")
+  countryName String? @map("country_name")
+  city        String?
+
+  /// Immich asset ids for the preview strip, capped when written.
+  /// Ids rather than images: the proxy already streams thumbnails and
+  /// copying bytes into our own database would duplicate the library.
+  previewAssetIds String[] @map("preview_asset_ids")
+
+  /// Stable across re-scans, so a nightly job updates a row instead of
+  /// stacking a new copy of the same journey every night. Derived from
+  /// the user, the start date and the rounded position.
+  fingerprint String
+
+  /// Set when the user accepted it and something was created from it.
+  createdTripId String? @map("created_trip_id")
+
+  resolvedAt DateTime? @map("resolved_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fingerprint])
+  @@index([userId, status])
+  @@index([startDate])
+  @@map("photo_journeys")
 }
