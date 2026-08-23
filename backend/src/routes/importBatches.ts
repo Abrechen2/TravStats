@@ -10,6 +10,7 @@ import {
   createImportBatch,
   listImportBatches,
   revertImportBatch,
+  listImportBatchItems,
 } from "../services/importBatchService";
 
 /**
@@ -43,6 +44,17 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
     res.json({ success: true, data: await listImportBatches(userId) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/:id/items", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const parsed = idParamsSchema.safeParse(req.params);
+    if (!parsed.success) throw new AppError("Invalid batch id", 400);
+    res.json({ success: true, data: await listImportBatchItems(userId, parsed.data.id) });
   } catch (err) {
     next(err);
   }

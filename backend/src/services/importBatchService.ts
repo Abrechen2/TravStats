@@ -91,6 +91,139 @@ export async function listImportBatches(userId: string): Promise<ImportBatchSumm
   }));
 }
 
+/** One row an import brought in, flattened across the domains. */
+export interface ImportBatchItem {
+  kind: "flight" | "cruise" | "lodging" | "stay";
+  id: string;
+  /** What to call it on screen: flight number, ship, hotel name. */
+  label: string;
+  /** The date the row is about — departure, sailing, check-in. Null when the
+   *  row carries no date at all, which a lodging may not. */
+  date: string | null;
+  /** A second line of context: route, ports, city. Empty when there is none. */
+  detail: string | null;
+}
+
+export interface ImportBatchItems {
+  items: ImportBatchItem[];
+  /** Rows this batch owns, before the cap below. */
+  total: number;
+  /** True when `items` is a prefix of `total` — an import of thousands of rows
+   *  must not turn one panel into a thousand-row page. */
+  truncated: boolean;
+}
+
+/**
+ * The rows themselves, so "undo this import" stops being a decision made blind.
+ *
+ * The log has always been able to say "12 flights" — the counts are `_count`
+ * aggregates — but never WHICH twelve. The only way to find out was to revert
+ * and look at what disappeared.
+ *
+ * Both column names are queried on purpose: flights and cruises reference the
+ * batch as `importBatchId`, lodgings and stays as `batchId`. A route that knew
+ * only one of them would report half of a mixed import as empty, which reads
+ * exactly like an import that failed.
+ */
+const ITEM_CAP = 50;
+
+export async function listImportBatchItems(
+  userId: string,
+  batchId: string,
+): Promise<ImportBatchItems> {
+  // Ownership first: a batch belonging to someone else must be indistinguishable
+  // from one that does not exist.
+  const batch = await prisma.importBatch.findFirst({
+    where: { id: batchId, userId },
+    select: { id: true },
+  });
+  if (!batch) throw new AppError("Import batch not found", 404);
+
+  const [flights, cruises, lodgings, stays] = await Promise.all([
+    prisma.flight.findMany({
+      where: { userId, importBatchId: batchId },
+      select: {
+        id: true,
+        flightNumber: true,
+        airline: true,
+        depIata: true,
+        arrIata: true,
+        departureTime: true,
+      },
+      orderBy: { departureTime: "asc" },
+      take: ITEM_CAP,
+    }),
+    prisma.cruise.findMany({
+      where: { userId, importBatchId: batchId },
+      select: { id: true, cruiseLine: true, startDate: true, ship: { select: { name: true } } },
+      orderBy: { startDate: "asc" },
+      take: ITEM_CAP,
+    }),
+    prisma.lodging.findMany({
+      where: { userId, batchId },
+      select: { id: true, name: true, city: true, country: true },
+      orderBy: { name: "asc" },
+      take: ITEM_CAP,
+    }),
+    prisma.lodgingStay.findMany({
+      where: { userId, batchId },
+      select: {
+        id: true,
+        checkIn: true,
+        nights: true,
+        lodging: { select: { name: true, city: true } },
+      },
+      orderBy: { checkIn: "asc" },
+      take: ITEM_CAP,
+    }),
+  ]);
+
+  const counts = await prisma.importBatch.findFirst({
+    where: { id: batchId, userId },
+    select: {
+      _count: { select: { flights: true, cruises: true, lodgings: true, stays: true } },
+    },
+  });
+  const total =
+    (counts?._count.flights ?? 0) +
+    (counts?._count.cruises ?? 0) +
+    (counts?._count.lodgings ?? 0) +
+    (counts?._count.stays ?? 0);
+
+  const items: ImportBatchItem[] = [
+    ...flights.map((f) => ({
+      kind: "flight" as const,
+      id: f.id,
+      label: f.flightNumber ?? f.airline ?? "—",
+      date: f.departureTime ? f.departureTime.toISOString() : null,
+      detail: f.depIata && f.arrIata ? `${f.depIata} → ${f.arrIata}` : null,
+    })),
+    ...cruises.map((c) => ({
+      kind: "cruise" as const,
+      id: c.id,
+      label: c.ship?.name ?? c.cruiseLine ?? "—",
+      date: c.startDate ? c.startDate.toISOString() : null,
+      detail: c.ship?.name ? c.cruiseLine : null,
+    })),
+    ...lodgings.map((l) => ({
+      kind: "lodging" as const,
+      id: l.id,
+      label: l.name,
+      date: null,
+      detail: [l.city, l.country].filter(Boolean).join(", ") || null,
+    })),
+    ...stays.map((s) => ({
+      kind: "stay" as const,
+      id: s.id,
+      label: s.lodging?.name ?? "—",
+      date: s.checkIn ? s.checkIn.toISOString() : null,
+      detail: s.lodging?.city ?? null,
+    })),
+  ];
+
+  return { items, total, truncated: items.length < total };
+}
+
 export interface RevertSummary {
   domain: ImportDomain;
   deleted: number;

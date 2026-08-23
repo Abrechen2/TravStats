@@ -658,7 +658,14 @@
       "reverted_other": "{{count}} entries removed.",
       "revertedWithKept": "{{count}} entries removed. {{kept}} kept, because other data still hangs from them.",
       "revertedWithKept_one": "{{count}} entry removed. {{kept}} kept, because other data still hangs from them.",
-      "revertedWithKept_other": "{{count}} entries removed. {{kept}} kept, because other data still hangs from them."
+      "revertedWithKept_other": "{{count}} entries removed. {{kept}} kept, because other data still hangs from them.",
+      "items": {
+        "toggle": "What came in?",
+        "loading": "Loading …",
+        "error": "The rows could not be loaded.",
+        "empty": "This import left nothing behind.",
+        "truncated": "showing {{shown}} of {{total}}"
+      }
     },
     "tile": {
       "fr24": {

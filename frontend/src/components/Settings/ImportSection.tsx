@@ -52,6 +52,8 @@ export default function ImportSection(): JSX.Element {
     [handleImported]
   );
 
+  const [logOpen, setLogOpen] = useState(false);
+
   const groups = AVAILABLE_DOMAINS.filter((key) => isEnabled(key));
 
   return (
@@ -109,8 +111,34 @@ export default function ImportSection(): JSX.Element {
           );
         })}
       </div>
-      {/* One log for every list import, below the tiles that produce them. */}
-      <ImportLogSection reloadKey={importToken} />
+      {/*
+        One log for every list import — behind a button, not unrolled beneath
+        the tiles. It grows with every run, and an always-open log pushed the
+        tiles (the thing one comes here to USE) further down the page with each
+        import. Deliberately NOT remembered across visits: this is a place one
+        comes to import, and the log is the smaller question. A plain expander
+        rather than a modal, because the revert confirmation inside the log is
+        itself an overlay — and an overlay over an overlay is how a dialog
+        became unclickable once already.
+      */}
+      <div className="mt-6">
+        <button
+          type="button"
+          data-testid="import-log-toggle"
+          aria-expanded={logOpen}
+          aria-controls="import-log-panel"
+          onClick={() => setLogOpen((open) => !open)}
+          className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm font-medium text-(--text-primary) hover:bg-(--bg-inset)"
+        >
+          <span aria-hidden="true">{logOpen ? "▾" : "▸"}</span>{" "}
+          {t("settings:import.log.title")}
+        </button>
+        {logOpen && (
+          <div id="import-log-panel">
+            <ImportLogSection reloadKey={importToken} />
+          </div>
+        )}
+      </div>
     </SectionCard>
   );
 }

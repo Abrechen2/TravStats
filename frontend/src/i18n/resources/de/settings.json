@@ -658,7 +658,14 @@
       "reverted_other": "{{count}} Einträge entfernt.",
       "revertedWithKept": "{{count}} Einträge entfernt. {{kept}} behalten, weil andere Daten daran hängen.",
       "revertedWithKept_one": "{{count}} Eintrag entfernt. {{kept}} behalten, weil andere Daten daran hängen.",
-      "revertedWithKept_other": "{{count}} Einträge entfernt. {{kept}} behalten, weil andere Daten daran hängen."
+      "revertedWithKept_other": "{{count}} Einträge entfernt. {{kept}} behalten, weil andere Daten daran hängen.",
+      "items": {
+        "toggle": "Was kam rein?",
+        "loading": "Wird geladen …",
+        "error": "Die Positionen konnten nicht geladen werden.",
+        "empty": "Dieser Import hat nichts hinterlassen.",
+        "truncated": "{{shown}} von {{total}} angezeigt"
+      }
     },
     "tile": {
       "fr24": {

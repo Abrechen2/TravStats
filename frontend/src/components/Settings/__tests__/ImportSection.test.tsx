@@ -100,14 +100,37 @@ describe("ImportSection — the log learns about a fresh import", () => {
     useSettingsStore.setState({ enabledDomains: ["flight", "lodging"] });
   });
 
-  it("renders the import log", () => {
+  it("keeps the log behind a button instead of unrolling it under the tiles", async () => {
+    // The log grows with every import and pushed the tiles — the thing one
+    // comes here to USE — further up the page with each run.
     render(<ImportSection />);
+    expect(screen.queryByTestId("import-log")).toBeNull();
+
+    await userEvent.setup().click(screen.getByTestId("import-log-toggle"));
     expect(screen.getByTestId("import-log")).toBeTruthy();
+  });
+
+  it("starts closed on every visit", () => {
+    // Deliberately not remembered: the hub is a place one comes to IMPORT,
+    // and the log is the smaller question.
+    const { unmount } = render(<ImportSection />);
+    unmount();
+    render(<ImportSection />);
+    expect(screen.queryByTestId("import-log")).toBeNull();
+  });
+
+  it("marks the toggle as expanded for assistive tech", async () => {
+    render(<ImportSection />);
+    const toggle = screen.getByTestId("import-log-toggle");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await userEvent.setup().click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
   });
 
   it("bumps the log's reload key when a lodging import commits", async () => {
     const user = userEvent.setup();
     render(<ImportSection />);
+    await user.click(screen.getByTestId("import-log-toggle"));
     const before = screen.getByTestId("import-log").textContent;
 
     await user.click(screen.getByTestId("tile-lodging-csv"));

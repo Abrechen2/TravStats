@@ -3,8 +3,12 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
-import { listImportBatches, revertImportBatch } from "../../lib/api/importBatches";
-import type { ImportBatchSummary } from "../../lib/api/importBatches";
+import {
+  listImportBatches,
+  listImportBatchItems,
+  revertImportBatch,
+} from "../../lib/api/importBatches";
+import type { ImportBatchSummary, ImportBatchItems } from "../../lib/api/importBatches";
 import { DOMAINS } from "../../shared/domains";
 
 interface Props {
@@ -58,6 +62,40 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<boolean>(false);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  /**
+   * Which entries are open, and what their rows are. Loaded on FIRST open and
+   * kept: a log with ten runs would otherwise fire ten requests for lists
+   * nobody looked at, and re-fetch each one on every collapse.
+   */
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [itemsByBatch, setItemsByBatch] = useState<Record<string, ImportBatchItems>>({});
+  const [itemsLoading, setItemsLoading] = useState<string | null>(null);
+  const [itemsError, setItemsError] = useState<Record<string, boolean>>({});
+
+  const toggleItems = useCallback(
+    async (batchId: string): Promise<void> => {
+      if (expandedId === batchId) {
+        setExpandedId(null);
+        return;
+      }
+      setExpandedId(batchId);
+      if (itemsByBatch[batchId] !== undefined) return;
+      setItemsLoading(batchId);
+      setItemsError((prev) => ({ ...prev, [batchId]: false }));
+      try {
+        const loaded = await listImportBatchItems(batchId);
+        setItemsByBatch((prev) => ({ ...prev, [batchId]: loaded }));
+      } catch (err) {
+        // An empty list and a failed request look identical on screen unless
+        // one of them says so.
+        logger.error("ImportLogSection: failed to load batch items", err);
+        setItemsError((prev) => ({ ...prev, [batchId]: true }));
+      } finally {
+        setItemsLoading(null);
+      }
+    },
+    [expandedId, itemsByBatch],
+  );
   const [reverting, setReverting] = useState<boolean>(false);
 
   const load = useCallback(async (): Promise<void> => {
@@ -119,10 +157,11 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
       className="mt-6 rounded-lg p-4"
       style={{ background: "var(--bg-elevated)", border: "1px solid var(--color-border)" }}
     >
-      <h3 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
-        {t("settings:import.log.title")}
-      </h3>
-      <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
+      {/* No heading of its own: the button that opens this panel carries the
+          title, and repeating it put "Import-Logbuch" on screen twice, one
+          line apart. The scope hint stays — it says what the log does and does
+          not cover, which the title alone never did. */}
+      <p className="text-xs" style={{ color: "var(--text-muted)" }}>
         {t("settings:import.log.scopeHint")}
       </p>
 
@@ -146,8 +185,9 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
           {batches.map((batch) => (
             <li
               key={batch.id}
-              className="flex items-center justify-between gap-3 rounded-md border border-[var(--color-border)] px-3 py-2 text-sm"
+              className="rounded-md border border-[var(--color-border)] px-3 py-2 text-sm"
             >
+              <div className="flex items-center justify-between gap-3">
               <div>
                 <div
                   className="flex items-center gap-2 font-medium"
@@ -172,14 +212,71 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
                   <span>{describeCounts(batch, t)}</span>
                 </div>
               </div>
-              <button
-                type="button"
-                data-testid={`batch-revert-${batch.id}`}
-                onClick={() => setConfirmingId(batch.id)}
-                className="whitespace-nowrap rounded-md border border-[var(--danger)]/50 px-2 py-1 text-xs font-medium text-[var(--danger)] hover:bg-[var(--danger)]/10"
-              >
-                {t("lodging:import.batches.revert")}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  data-testid={`batch-items-toggle-${batch.id}`}
+                  aria-expanded={expandedId === batch.id}
+                  aria-controls={`batch-items-${batch.id}`}
+                  onClick={() => void toggleItems(batch.id)}
+                  className="whitespace-nowrap rounded-md border border-[var(--color-border)] px-2 py-1 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-base)]"
+                >
+                  <span aria-hidden="true">{expandedId === batch.id ? "▾" : "▸"}</span>{" "}
+                  {t("settings:import.log.items.toggle")}
+                </button>
+                <button
+                  type="button"
+                  data-testid={`batch-revert-${batch.id}`}
+                  onClick={() => setConfirmingId(batch.id)}
+                  className="whitespace-nowrap rounded-md border border-[var(--danger)]/50 px-2 py-1 text-xs font-medium text-[var(--danger)] hover:bg-[var(--danger)]/10"
+                >
+                  {t("lodging:import.batches.revert")}
+                </button>
+              </div>
+              </div>
+              {expandedId === batch.id && (
+                <div id={`batch-items-${batch.id}`} className="mt-2 border-t border-[var(--color-border)] pt-2">
+                  {itemsLoading === batch.id ? (
+                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                      {t("settings:import.log.items.loading")}
+                    </p>
+                  ) : itemsError[batch.id] ? (
+                    <p role="alert" className="text-xs text-[var(--danger)]">
+                      {t("settings:import.log.items.error")}
+                    </p>
+                  ) : (itemsByBatch[batch.id]?.items.length ?? 0) === 0 ? (
+                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                      {t("settings:import.log.items.empty")}
+                    </p>
+                  ) : (
+                    <>
+                      <ul className="flex flex-col gap-1">
+                        {itemsByBatch[batch.id]!.items.map((item) => (
+                          <li
+                            key={`${item.kind}-${item.id}`}
+                            className="flex items-baseline justify-between gap-3 text-xs"
+                          >
+                            <span style={{ color: "var(--text-primary)" }}>{item.label}</span>
+                            <span style={{ color: "var(--text-muted)" }}>
+                              {[item.detail, item.date ? new Date(item.date).toLocaleDateString() : null]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      {itemsByBatch[batch.id]!.truncated && (
+                        <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
+                          {t("settings:import.log.items.truncated", {
+                            shown: itemsByBatch[batch.id]!.items.length,
+                            total: itemsByBatch[batch.id]!.total,
+                          })}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </li>
           ))}
         </ul>

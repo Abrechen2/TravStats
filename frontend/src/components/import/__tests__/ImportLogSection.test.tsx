@@ -2,12 +2,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ImportLogSection } from "../ImportLogSection";
-import { listImportBatches, revertImportBatch } from "../../../lib/api/importBatches";
+import {
+  listImportBatches,
+  listImportBatchItems,
+  revertImportBatch,
+} from "../../../lib/api/importBatches";
 import { logger } from "../../../lib/logger";
 import type { ImportBatchSummary } from "../../../lib/api/importBatches";
 
 vi.mock("../../../lib/api/importBatches", () => ({
   listImportBatches: vi.fn(),
+  listImportBatchItems: vi.fn(),
   revertImportBatch: vi.fn(),
 }));
 
@@ -115,7 +120,9 @@ describe("ImportLogSection", () => {
     renderList();
 
     expect(await screen.findByText("lodging:import.batches.empty")).toBeInTheDocument();
-    expect(screen.getByText("settings:import.log.title")).toBeInTheDocument();
+    // No heading here: the button that opens the panel carries the title, and
+    // repeating it showed "Import-Logbuch" twice, one line apart.
+    expect(screen.queryByText("settings:import.log.title")).toBeNull();
     // The log must SAY what it does and does not cover — an unqualified
     // "import log" listing only lodging runs would read as "no flight
     // imports happened", which is not what the data means.
@@ -263,5 +270,88 @@ describe("ImportLogSection", () => {
 
     rerender(<ImportLogSection onReverted={vi.fn()} reloadKey={2} />);
     await waitFor(() => expect(listImportBatches).toHaveBeenCalledTimes(2));
+  });
+
+  describe("what an import brought in", () => {
+    const batch: ImportBatchSummary = {
+      id: "b-items",
+      domain: "flight",
+      source: "csv",
+      fileName: "logbook.csv",
+      createdAt: "2026-08-14T21:03:00.000Z",
+      counts: { lodgings: 0, stays: 0, flights: 2, cruises: 0 },
+    };
+
+    beforeEach(() => {
+      vi.mocked(listImportBatches).mockResolvedValue([batch]);
+      vi.mocked(listImportBatchItems).mockResolvedValue({
+        items: [
+          { kind: "flight", id: "f1", label: "LH100", date: "2024-05-01T08:00:00.000Z", detail: "FRA → LHR" },
+          { kind: "flight", id: "f2", label: "LH200", date: "2024-05-03T08:00:00.000Z", detail: "LHR → FRA" },
+        ],
+        total: 2,
+        truncated: false,
+      });
+    });
+
+    it("asks for nothing until the entry is opened", async () => {
+      // Ten runs in the log would otherwise fire ten requests for lists
+      // nobody looked at.
+      render(<ImportLogSection />);
+      await screen.findByTestId("batch-revert-b-items");
+      expect(listImportBatchItems).not.toHaveBeenCalled();
+    });
+
+    it("lists the rows once opened", async () => {
+      render(<ImportLogSection />);
+      await userEvent.click(await screen.findByTestId("batch-items-toggle-b-items"));
+
+      expect(await screen.findByText("LH100")).toBeInTheDocument();
+      expect(screen.getByText("LH200")).toBeInTheDocument();
+      expect(listImportBatchItems).toHaveBeenCalledWith("b-items");
+    });
+
+    it("fetches once, not on every toggle", async () => {
+      render(<ImportLogSection />);
+      const toggle = await screen.findByTestId("batch-items-toggle-b-items");
+      await userEvent.click(toggle);
+      await screen.findByText("LH100");
+      await userEvent.click(toggle);
+      await userEvent.click(toggle);
+      await screen.findByText("LH100");
+
+      expect(listImportBatchItems).toHaveBeenCalledTimes(1);
+    });
+
+    it("says the list is shortened rather than pretending it is complete", async () => {
+      vi.mocked(listImportBatchItems).mockResolvedValue({
+        items: [
+          { kind: "flight", id: "f1", label: "LH100", date: null, detail: null },
+        ],
+        total: 900,
+        truncated: true,
+      });
+      render(<ImportLogSection />);
+      await userEvent.click(await screen.findByTestId("batch-items-toggle-b-items"));
+
+      expect(await screen.findByText(/settings:import\.log\.items\.truncated/)).toBeInTheDocument();
+    });
+
+    it("says so when the rows cannot be loaded, instead of showing an empty list", async () => {
+      vi.mocked(listImportBatchItems).mockRejectedValue(new Error("boom"));
+      render(<ImportLogSection />);
+      await userEvent.click(await screen.findByTestId("batch-items-toggle-b-items"));
+
+      expect(await screen.findByText("settings:import.log.items.error")).toBeInTheDocument();
+    });
+
+    it("marks the toggle as expanded for assistive tech", async () => {
+      render(<ImportLogSection />);
+      const toggle = await screen.findByTestId("batch-items-toggle-b-items");
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      await userEvent.click(toggle);
+      await screen.findByText("LH100");
+      expect(toggle).toHaveAttribute("aria-expanded", "true");
+    });
   });
 });
