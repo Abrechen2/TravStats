@@ -28,6 +28,7 @@ import enUsageStats from "./resources/en/usageStats.json";
 import enLodging from "./resources/en/lodging.json";
 import enLocation from "./resources/en/location.json";
 import enCompanions from "./resources/en/companions.json";
+import enPlaces from "./resources/en/places.json";
 
 import deCommon from "./resources/de/common.json";
 import deDashboard from "./resources/de/dashboard.json";
@@ -54,6 +55,7 @@ import deUsageStats from "./resources/de/usageStats.json";
 import deLodging from "./resources/de/lodging.json";
 import deLocation from "./resources/de/location.json";
 import deCompanions from "./resources/de/companions.json";
+import dePlaces from "./resources/de/places.json";
 
 // Get initial language: stored preference → browser language → fallback "en"
 const getInitialLanguage = (): string => {
@@ -103,6 +105,7 @@ const resources = {
     lodging: enLodging,
     location: enLocation,
     companions: enCompanions,
+    places: enPlaces,
   },
   de: {
     common: deCommon,
@@ -130,6 +133,7 @@ const resources = {
     lodging: deLodging,
     location: deLocation,
     companions: deCompanions,
+    places: dePlaces,
   },
 };
 
@@ -166,6 +170,7 @@ i18n.use(initReactI18next).init({
     "lodging",
     "location",
     "companions",
+    "places",
   ],
   interpolation: {
     escapeValue: false, // React already escapes values

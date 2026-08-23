@@ -1,0 +1,52 @@
+{
+  "categories": {
+    "restaurant": "Restaurant",
+    "landmark": "Landmark",
+    "nature": "Nature",
+    "museum": "Museum",
+    "entertainment": "Entertainment",
+    "shopping": "Shopping",
+    "viewpoint": "Viewpoint",
+    "other": "Other"
+  },
+  "list": {
+    "title": "Places",
+    "subtitle": "{{count}} visited · {{countries}} countries",
+    "searchPlaceholder": "Search name or city …",
+    "resultCount": "{{shown}} of {{total}}",
+    "sortBy": "Sort by {{col}}",
+    "empty": "No places yet.",
+    "noMatches": "No places match the filters.",
+    "loadError": "Places could not be loaded.",
+    "domainDisabled": "The Places domain is not enabled. Turn it on under Settings → Modules.",
+    "plannedSuffix": "(+{{count}} planned)",
+    "deleted": "“{{name}}” was deleted.",
+    "deleteFailed": "The place could not be deleted.",
+    "deleteTitle": "Delete place",
+    "deleteMessage": "“{{name}}” and all of its visits will be deleted. This cannot be undone.",
+    "columns": {
+      "name": "Name",
+      "category": "Category",
+      "location": "Location",
+      "visits": "Visits",
+      "lastVisit": "Last visit",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "filters": {
+      "status": "Status",
+      "category": "Category",
+      "country": "Country"
+    },
+    "status": {
+      "visited": "Visited",
+      "wishlist": "Wishlist"
+    },
+    "retry": "Try again"
+  },
+  "filter": {
+    "allStatuses": "All statuses",
+    "allCategories": "All categories",
+    "allCountries": "All countries"
+  }
+}

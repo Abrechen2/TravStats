@@ -1,0 +1,52 @@
+{
+  "categories": {
+    "restaurant": "Restaurant",
+    "landmark": "Wahrzeichen",
+    "nature": "Natur",
+    "museum": "Museum",
+    "entertainment": "Unterhaltung",
+    "shopping": "Einkaufen",
+    "viewpoint": "Aussichtspunkt",
+    "other": "Sonstiges"
+  },
+  "list": {
+    "title": "Orte",
+    "subtitle": "{{count}} besucht · {{countries}} Länder",
+    "searchPlaceholder": "Namen oder Stadt suchen …",
+    "resultCount": "{{shown}} von {{total}}",
+    "sortBy": "Nach {{col}} sortieren",
+    "empty": "Noch keine Orte erfasst.",
+    "noMatches": "Keine Orte passen zu den Filtern.",
+    "loadError": "Orte konnten nicht geladen werden.",
+    "domainDisabled": "Die Orte-Domain ist nicht aktiviert. Schalte sie unter Einstellungen → Module frei.",
+    "plannedSuffix": "(+{{count}} geplant)",
+    "deleted": "„{{name}}“ wurde gelöscht.",
+    "deleteFailed": "Der Ort konnte nicht gelöscht werden.",
+    "deleteTitle": "Ort löschen",
+    "deleteMessage": "„{{name}}“ und alle zugehörigen Besuche werden gelöscht. Das lässt sich nicht rückgängig machen.",
+    "columns": {
+      "name": "Name",
+      "category": "Kategorie",
+      "location": "Ort",
+      "visits": "Besuche",
+      "lastVisit": "Zuletzt",
+      "status": "Status",
+      "actions": "Aktionen"
+    },
+    "filters": {
+      "status": "Status",
+      "category": "Kategorie",
+      "country": "Land"
+    },
+    "status": {
+      "visited": "Besucht",
+      "wishlist": "Merkliste"
+    },
+    "retry": "Erneut versuchen"
+  },
+  "filter": {
+    "allStatuses": "Alle Status",
+    "allCategories": "Alle Kategorien",
+    "allCountries": "Alle Länder"
+  }
+}

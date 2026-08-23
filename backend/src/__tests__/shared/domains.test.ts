@@ -14,11 +14,12 @@ describe('domain registry', () => {
   });
 
   it('only lists available domains in AVAILABLE_DOMAINS', () => {
-    expect(AVAILABLE_DOMAINS).toEqual(['flight', 'cruise', 'lodging']);
-    expect(DOMAINS.flight.available).toBe(true);
-    expect(DOMAINS.cruise.available).toBe(true);
-    expect(DOMAINS.lodging.available).toBe(true);
-    expect(DOMAINS.poi.available).toBe(false);
+    // All four ship now — `poi` joined when the Places domain replaced the
+    // stub. Assert the RELATIONSHIP rather than a frozen list: this test
+    // exists to catch a descriptor and the derived list disagreeing, not to
+    // count domains. Mirrors frontend/src/__tests__/shared/domains.test.ts.
+    expect(AVAILABLE_DOMAINS).toEqual(DOMAIN_KEYS.filter((k) => DOMAINS[k].available));
+    expect(AVAILABLE_DOMAINS).toEqual(['flight', 'cruise', 'lodging', 'poi']);
   });
 
   it('every descriptor has required fields', () => {
