@@ -84,6 +84,17 @@ function isAllMode(mode: unknown): mode is AllMode {
   return typeof mode === "string" && (ALL_MODES as readonly string[]).includes(mode);
 }
 
+/**
+ * Bottom offset for map overlays in the attribution corner.
+ *
+ * MapLibre's attribution bar measured 44 px tall on the dashboard map; 52
+ * leaves the same 8 px breathing room the rest of the overlay set uses. If the
+ * bar ever grows (a second attribution line, a taller control), this is the one
+ * number to change — verify by measuring, not by eye: compare the legend's
+ * `getBoundingClientRect().bottom` against `.maplibregl-ctrl-bottom-right`.
+ */
+const ATTRIBUTION_CLEARANCE = 52;
+
 export function AllTab(): JSX.Element {
   const { mode } = useDashboardRoute();
   const { t } = useTranslation(["dashboard"]);
@@ -458,11 +469,19 @@ export function AllTab(): JSX.Element {
   // Colour key as a compact table pinned bottom-right — out of the top band
   // so it never collides with the globe's time histogram or the top-left
   // controls. Renders only the visible domains' rows.
+  //
+  // The bottom offset clears MapLibre's attribution bar, which occupies the
+  // same corner. At `bottom: 12` the key's lower rows sat ON the line reading
+  // "MapLibre | © CARTO, © OpenStreetMap contributors" — measured at 32 px of
+  // overlap (#273). That is not only untidy: CARTO and OpenStreetMap both
+  // require the credit to stay visible, so covering it is a licence question,
+  // not a cosmetic one. The other three map overlays in this app sit
+  // bottom-LEFT and are unaffected.
   const legendTable = (flightsVisible || cruisesVisible || lodgingsVisible) && (
     <div
       style={{
         position: "absolute",
-        bottom: 12,
+        bottom: ATTRIBUTION_CLEARANCE,
         right: 12,
         zIndex: 30,
         display: "flex",

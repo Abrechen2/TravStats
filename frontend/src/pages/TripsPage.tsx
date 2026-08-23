@@ -41,11 +41,17 @@ export default function TripsPage(): JSX.Element {
         style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
       >
         <NavigationBar />
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-2xl font-display font-bold mb-1">{t("trips:tab")}</h1>
+        {/* px-4 OUTSIDE the max-width, the same order the insights bar and the
+            trip list use. With the padding inside, the heading sat 16 px
+            further in than everything below it — visible the moment the tiles
+            below stopped running to the browser edge (#271). */}
+        <div className="px-4 py-6">
+          <div className="max-w-7xl mx-auto">
+            <h1 className="text-2xl font-display font-bold mb-1">{t("trips:tab")}</h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
             {t("trips:count", { count: trips.length })}
-          </p>
+            </p>
+          </div>
         </div>
         <TripInsightsBar trips={trips} />
         <TripsTab trips={trips} onTripsChange={() => void loadTrips()} />

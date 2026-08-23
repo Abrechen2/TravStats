@@ -26,8 +26,14 @@ export function TripInsightsBar({ trips }: { trips: Trip[] }): JSX.Element | nul
 
   if (tiles.every((tile) => tile.win === null)) return null;
 
+  // Same width budget as its two neighbours on the page — the heading above
+  // (max-w-7xl mx-auto px-4) and the trip list below (px-4 > max-w-7xl
+  // mx-auto). Without it these three tiles were the only thing on the page
+  // running to the browser edge, which on a wide screen reads as a different
+  // page (#271, reported against 2.6.0-rc.11).
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+    <div className="px-4">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
       {tiles.map(({ key, label, win }) =>
         win ? (
           <button
@@ -68,6 +74,7 @@ export function TripInsightsBar({ trips }: { trips: Trip[] }): JSX.Element | nul
           </div>
         )
       )}
+      </div>
     </div>
   );
 }
