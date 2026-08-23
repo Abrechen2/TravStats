@@ -1,4 +1,5 @@
-import type { CSSProperties, JSX } from "react";
+import { STATUS_PILL_CLASS, statusPillStyle } from "../table/statusPillStyle";
+import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { StayStatus } from "../../types/lodging";
 
@@ -8,12 +9,11 @@ import type { StayStatus } from "../../types/lodging";
  * pages read as one family: green = done, blue = booked, accent = running,
  * red = cancelled.
  */
-const PILL_STYLE: Record<StayStatus, CSSProperties> = {
-  completed: { background: "rgba(63,185,80,0.15)", color: "var(--success)" },
-  scheduled: { background: "rgba(56,139,253,0.15)", color: "#388bfd" },
-  in_progress: { background: "rgba(240,169,71,0.18)", color: "var(--accent)" },
-  cancelled: { background: "rgba(248,81,73,0.15)", color: "var(--danger)" },
-};
+// Colours and geometry now come from the shared palette, so the three lists
+// cannot drift apart again. Two things changed here: `in_progress` was the
+// brand accent, which already means "the thing you are looking at" everywhere
+// else and clashed with the purple cruises use for the same state; and the
+// pill was flatter than the other two (py-0.5 against py-1).
 
 export function StayStatusPill({
   status,
@@ -26,8 +26,8 @@ export function StayStatusPill({
   return (
     <span
       data-testid={testId}
-      className="whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold"
-      style={PILL_STYLE[status]}
+      className={STATUS_PILL_CLASS}
+      style={statusPillStyle(status)}
     >
       {t(`lodging:stayStatus.${status}`)}
     </span>

@@ -25,7 +25,12 @@
       "confirm": "Delete cruise \"{{ship}}\"?",
       "done": "Cruise deleted",
       "error": "Failed to delete cruise"
-    }
+    },
+    "showing": "{{count}} cruises",
+    "showing_one": "{{count}} cruise",
+    "sortedBy": "sorted by {{col}}, {{dir}}",
+    "ascending": "ascending",
+    "descending": "descending"
   },
   "detail": {
     "loading": "Loading cruise …",

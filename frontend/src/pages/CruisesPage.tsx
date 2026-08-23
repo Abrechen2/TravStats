@@ -36,6 +36,17 @@ const CRUISE_COLUMN_IDS: readonly CruiseColumnId[] = [
 const CRUISE_ALWAYS_VISIBLE = ["ship", "actions"] as const;
 /** Columns whose values line up on the right. */
 const CRUISE_NUMERIC_COLUMNS: readonly CruiseColumnId[] = ["ports", "price"];
+/** Sort key -> column id, so the footer can name the column the way the
+ *  header and the picker do rather than keeping its own copy. */
+const SORT_KEY_TO_COLUMN: Partial<Record<string, CruiseColumnId>> = {
+  ship: "ship",
+  line: "line",
+  date: "dates",
+  ports: "ports",
+  status: "status",
+  price: "price",
+};
+
 /**
  * Column id -> sort key. Mostly identity; `dates` sorts on `date`, and the
  * two columns that carry no key (cabin, actions) are not sortable.
@@ -107,8 +118,10 @@ export default function CruisesPage(): JSX.Element {
     void reload();
   }, [reload]);
 
-  // Derive year dropdown options from loaded cruises so we only ever show
-  // years the user actually has data for. Sorted descending (newest first).
+  // Year options come from ALL loaded cruises (`cruises`), never from the
+  // filtered set — otherwise picking a year would remove the other years from
+  // the dropdown, leaving the choice changeable only by resetting. It reads
+  // from the full list already; the note is here so it stays that way.
   const availableYears = useMemo(() => {
     const years = new Set<number>();
     for (const c of cruises) {
@@ -247,9 +260,18 @@ export default function CruisesPage(): JSX.Element {
             {t("list.empty")}
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-md border border-border">
-            <table className="w-full text-sm min-w-[640px]">
-              <thead className="bg-(--bg-surface) text-(--text-muted)">
+          <div
+            className="overflow-hidden rounded-lg shadow-xs"
+            style={{ border: "1px solid var(--color-border)" }}
+          >
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[960px]">
+              <thead
+                style={{
+                  background: "var(--bg-elevated)",
+                  borderBottom: "1px solid var(--color-border)",
+                }}
+              >
                 <tr>
                   {/*
                     One loop instead of six copied blocks. Each of those built
@@ -265,7 +287,10 @@ export default function CruisesPage(): JSX.Element {
                     return (
                       <th
                         key={id}
-                        className={`px-3 py-2 ${numeric ? "text-right" : "text-left"}`}
+                        className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider ${
+                          numeric ? "text-right" : "text-left"
+                        }`}
+                        style={{ color: "var(--text-muted)" }}
                       >
                         {sortKey === undefined ? (
                           label
@@ -288,9 +313,10 @@ export default function CruisesPage(): JSX.Element {
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((c) => (
+                {sorted.map((c, i) => (
                   <CruiseRow
                     key={c.id}
+                    index={i}
                     cruise={c}
                     isColumnVisible={columnPrefs.isVisible}
                     onOpen={() => navigate(`/cruises/${c.id}`)}
@@ -306,6 +332,26 @@ export default function CruisesPage(): JSX.Element {
                 ))}
               </tbody>
             </table>
+            </div>
+            {/* Same closing line the flights and lodging tables carry: how many
+                rows, and what they are sorted by. The count used to sit only in
+                the filter bar, so the table simply stopped. */}
+            <div
+              className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-xs"
+              style={{
+                background: "var(--bg-elevated)",
+                borderTop: "1px solid var(--color-border)",
+                color: "var(--text-muted)",
+              }}
+            >
+              <span>{t("list.showing", { count: sorted.length })}</span>
+              <span>
+                {t("list.sortedBy", {
+                  col: t(`list.columns.${SORT_KEY_TO_COLUMN[sortBy] ?? sortBy}`),
+                  dir: t(sortOrder === "asc" ? "list.ascending" : "list.descending"),
+                })}
+              </span>
+            </div>
           </div>
         )}
 

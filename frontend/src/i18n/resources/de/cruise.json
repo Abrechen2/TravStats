@@ -25,7 +25,12 @@
       "confirm": "Kreuzfahrt „{{ship}}“ wirklich löschen?",
       "done": "Kreuzfahrt gelöscht",
       "error": "Löschen fehlgeschlagen"
-    }
+    },
+    "showing": "{{count}} Kreuzfahrten",
+    "showing_one": "{{count}} Kreuzfahrt",
+    "sortedBy": "sortiert nach {{col}}, {{dir}}",
+    "ascending": "aufsteigend",
+    "descending": "absteigend"
   },
   "detail": {
     "loading": "Kreuzfahrt wird geladen …",

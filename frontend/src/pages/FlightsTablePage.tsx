@@ -10,6 +10,7 @@ import { flightsApi, tripsApi } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
+import { statusPillStyle } from "../components/table/statusPillStyle";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import type { Flight, FlightFilters, FlightInput, Trip } from "../types";
 import Filters from "../components/Filters";
@@ -533,22 +534,11 @@ export default function FlightsTablePage(): JSX.Element {
                             <td className="px-4 py-3">
                               <span
                                 className="px-2 py-1 text-xs font-semibold rounded-full"
-                                style={
-                                  flight.status === "flown"
-                                    ? {
-                                        background: "rgba(63,185,80,0.15)",
-                                        color: "var(--success)",
-                                      }
-                                    : flight.status === "scheduled"
-                                      ? {
-                                          background: "rgba(56,139,253,0.15)",
-                                          color: "#388bfd",
-                                        }
-                                      : {
-                                          background: "rgba(248,81,73,0.15)",
-                                          color: "var(--danger)",
-                                        }
-                                }
+                                // Shared palette. The ternary this replaces had
+                                // an else branch that caught everything except
+                                // flown and scheduled, so a `historical` flight
+                                // was painted in the cancelled red.
+                                style={statusPillStyle(flight.status)}
                               >
                                 {t(`flights:status.${flight.status}`, {
                                   defaultValue: flight.status,
