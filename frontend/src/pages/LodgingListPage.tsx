@@ -19,6 +19,7 @@ import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
+import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import ListFilterBar, {
   FilterField,
   PANEL_SELECT_CLASS,
@@ -354,7 +355,9 @@ export default function LodgingListPage(): JSX.Element {
         }
         hasActiveFilter={hasActiveFilter}
         onReset={resetFilters}
-        resultLabel={t("common:filters.showing", { count: filtered.length })}
+        resultLabel={
+          loading || loadError ? "" : t("common:filters.showing", { count: filtered.length })
+        }
       />
 
       {/* Same width budget as the flights table page (max-w 2xl breakpoint) —
@@ -412,6 +415,7 @@ export default function LodgingListPage(): JSX.Element {
           figures={summaryFigures}
           filtered={hasActiveFilter}
           filteredLabel={t("common:filters.filtered")}
+          unknown={loading || loadError}
         />
 
         {loadError ? (
@@ -665,11 +669,25 @@ export default function LodgingListPage(): JSX.Element {
           onConfirm={() => void confirmDelete()}
           isLoading={deleting}
           title={t("lodging:detail.deleteConfirmTitle")}
-          message={t("lodging:detail.deleteConfirmMessage", {
-            count: toDelete?.stayCount ?? 0,
-          })}
+          // Through the shared helper, like the DETAIL page — this call site
+          // was left behind when the six sentences were unified, so the list
+          // rendered a literal "{{name}}" and said "mit 0 Aufenthalten" for a
+          // house that has none. Exactly the drift the helper exists to stop.
+          message={
+            toDelete
+              ? countedDeleteMessage(
+                  t,
+                  {
+                    counted: "lodging:detail.deleteConfirmMessage",
+                    empty: "lodging:detail.deleteConfirmMessageNoStays",
+                  },
+                  toDelete.name,
+                  toDelete.stayCount
+                )
+              : ""
+          }
           confirmText={t("common:buttons.delete")}
-          confirmButtonClass="bg-[var(--danger)] hover:opacity-90"
+          confirmButtonClass={DELETE_BUTTON_CLASS}
         />
       </div>
     </div>

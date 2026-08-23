@@ -285,7 +285,9 @@ export default function CruisesPage(): JSX.Element {
         }
         hasActiveFilter={hasActiveFilter}
         onReset={resetFilters}
-        resultLabel={t("common:filters.showing", { count: filtered.length })}
+        resultLabel={
+          loading || loadError ? "" : t("common:filters.showing", { count: filtered.length })
+        }
       />
 
       {/* Same width budget as the flights table page — owner principle:
@@ -317,6 +319,7 @@ export default function CruisesPage(): JSX.Element {
           figures={summaryFigures}
           filtered={hasActiveFilter}
           filteredLabel={t("common:filters.filtered")}
+          unknown={loading || loadError}
         />
 
         <p className="mb-4 text-xs text-(--text-muted)">

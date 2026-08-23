@@ -602,7 +602,13 @@ export default function FlightsTablePage(): JSX.Element {
           }
           hasActiveFilter={hasActiveFilter}
           onReset={resetFilters}
-          resultLabel={t("common:filters.showing", { count: displayedFlights.length })}
+          // Silent while nothing is known: "0 angezeigt" over a failed load is
+          // a count of a list nobody could read.
+          resultLabel={
+            loading || loadError
+              ? ""
+              : t("common:filters.showing", { count: displayedFlights.length })
+          }
         />
 
         {/* Main Content */}
@@ -642,6 +648,7 @@ export default function FlightsTablePage(): JSX.Element {
             figures={summaryFigures}
             filtered={hasActiveFilter}
             filteredLabel={t("common:filters.filtered")}
+            unknown={loading || loadError}
           />
 
           <p className="mb-4 text-xs text-(--text-muted)">

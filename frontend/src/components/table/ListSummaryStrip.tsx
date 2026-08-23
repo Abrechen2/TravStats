@@ -34,14 +34,27 @@ interface Props {
   filtered: boolean;
   /** "gefiltert" — shown only while that is true. */
   filteredLabel: string;
+  /**
+   * True while the list has nothing trustworthy to summarise — still loading,
+   * or the load failed. Then the strip renders NOTHING.
+   *
+   * Found in UAT: with the API unreachable, the cruise list showed
+   * "0 Kreuzfahrten · 0 Hafenanläufe · 0 Seetage · 0 Reedereien" directly above
+   * "Die Kreuzfahrten konnten nicht geladen werden." Four zeros read as facts
+   * about an empty logbook, sitting on top of a sentence saying we do not know
+   * — the same contradiction this page spent the day removing from the empty
+   * state, reintroduced one element higher up.
+   */
+  unknown?: boolean;
 }
 
 export default function ListSummaryStrip({
   figures,
   filtered,
   filteredLabel,
+  unknown = false,
 }: Props): JSX.Element | null {
-  if (figures.length === 0) return null;
+  if (unknown || figures.length === 0) return null;
 
   return (
     <div className="mb-4 flex flex-wrap items-end gap-x-8 gap-y-3">
