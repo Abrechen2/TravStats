@@ -3,6 +3,7 @@ import { getCachedAirports } from '../../services/airportCache';
 import { tzAwareDurationMinutes, toLocalDateString, type FlightTimeSemantics } from '../timezone';
 import logger from '../logger';
 import { getContinent } from '../continents';
+import { departureClockOf } from './departureClock';
 import type { AirportData } from '../../services/airportLookup';
 import type { FlightData, UniqueStats } from './types';
 import { HomeAirportEntry, getHomeAirportAt } from '../homeAirport';
@@ -244,9 +245,14 @@ export async function calculateUniqueStats(
   });
 
   // Most countries in one day
+  // Grouped by the calendar day at the DEPARTURE airport, so a day that ends
+  // after midnight UTC is still one day for the traveller. Two figures on the
+  // same screen used to disagree about which day a flight belonged to: the
+  // same-day and midnight counters below already read the local clock.
   const flightsByDate: Record<string, FlightData[]> = {};
   flownFlights.forEach(f => {
-    const dateKey = new Date(f.departureTime).toISOString().split('T')[0];
+    const dateKey = departureClockOf(f)?.date;
+    if (!dateKey) return;
     if (!flightsByDate[dateKey]) {
       flightsByDate[dateKey] = [];
     }
@@ -404,8 +410,9 @@ export async function calculateUniqueStats(
   // bias toward winter (month defaults to 01) but the volume is small.
   const seasons = new Set<number>();
   countableFlights.forEach(f => {
-    if (!f.departureTime) return;
-    const month = new Date(f.departureTime).getMonth(); // 0-11
+    const clock = departureClockOf(f);
+    if (!clock) return;
+    const month = clock.month; // 0-11
     // Northern hemisphere seasons
     if (month >= 2 && month <= 4) seasons.add(0); // Spring (Mar-May)
     if (month >= 5 && month <= 7) seasons.add(1); // Summer (Jun-Aug)

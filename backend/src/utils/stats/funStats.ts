@@ -3,6 +3,7 @@ import { calculateCo2Kg, toSeatClass } from '../../services/co2Calculator';
 import { getCachedAirports } from '../../services/airportCache';
 import { normalizeAirline } from '../airlineNormalize';
 import logger from '../logger';
+import { departureClockOf } from './departureClock';
 import type { FlightData, FunStats } from './types';
 
 /**
@@ -58,25 +59,20 @@ export async function calculateFunStats(flights: FlightData[]): Promise<FunStats
     logger.error({ operation: 'calculate_fun_stats', message: 'Failed to fetch airports for timezone calculation', error });
   }
 
-  // Early bird vs night owl — needs precise local hour, flown-only.
-  const morningFlights = flownFlights.filter(f => {
-    const hour = new Date(f.departureTime).getHours();
-    return hour >= 6 && hour < 12;
-  }).length;
+  // Early bird vs night owl — the hour on the clock at the departure airport,
+  // flown-only. A DATE_ONLY row has no real hour and is left out entirely
+  // rather than counted as an afternoon flight on its 12:00 placeholder.
+  const departureHours = flownFlights
+    .map(f => departureClockOf(f)?.hour ?? null)
+    .filter((h): h is number => h !== null);
 
-  const afternoonFlights = flownFlights.filter(f => {
-    const hour = new Date(f.departureTime).getHours();
-    return hour >= 12 && hour < 18;
-  }).length;
+  const morningFlights = departureHours.filter(h => h >= 6 && h < 12).length;
+  const afternoonFlights = departureHours.filter(h => h >= 12 && h < 18).length;
+  const eveningFlights = departureHours.filter(h => h >= 18 || h < 6).length;
 
-  const eveningFlights = flownFlights.filter(f => {
-    const hour = new Date(f.departureTime).getHours();
-    return hour >= 18 || hour < 6;
-  }).length;
-
-  // Weekend warrior — needs precise local weekday, flown-only.
+  // Weekend warrior — the weekday on that same clock, flown-only.
   const weekendFlights = flownFlights.filter(f => {
-    const day = new Date(f.departureTime).getDay();
+    const day = departureClockOf(f)?.weekday;
     return day === 0 || day === 6;
   }).length;
 
@@ -113,9 +109,9 @@ export async function calculateFunStats(flights: FlightData[]): Promise<FunStats
   // for historical too (the date is what the user remembers).
   const flightsByDate: Record<string, number> = {};
   countableFlights.forEach(f => {
-    if (!f.departureTime) return;
-    const dateKey = new Date(f.departureTime).toISOString().split('T')[0];
-    flightsByDate[dateKey] = (flightsByDate[dateKey] || 0) + 1;
+    const clock = departureClockOf(f);
+    if (!clock) return;
+    flightsByDate[clock.date] = (flightsByDate[clock.date] || 0) + 1;
   });
 
   const maxFlightsOnDay = Math.max(0, ...Object.values(flightsByDate));
@@ -144,9 +140,9 @@ export async function calculateFunStats(flights: FlightData[]): Promise<FunStats
   // historical flights too.
   const flightsByYear: Record<number, number> = {};
   countableFlights.forEach(f => {
-    if (!f.departureTime) return;
-    const year = new Date(f.departureTime).getFullYear();
-    flightsByYear[year] = (flightsByYear[year] || 0) + 1;
+    const clock = departureClockOf(f);
+    if (!clock) return;
+    flightsByYear[clock.year] = (flightsByYear[clock.year] || 0) + 1;
   });
 
   const topYear = Object.entries(flightsByYear)

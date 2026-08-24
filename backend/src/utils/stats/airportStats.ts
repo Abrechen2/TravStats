@@ -3,6 +3,7 @@ import { getCachedAirports } from '../../services/airportCache';
 import logger from '../logger';
 import type { AirportData } from '../../services/airportLookup';
 import type { FlightData } from './types';
+import { departureClockOf } from './departureClock';
 import { HomeAirportEntry, getHomeAirportAt } from '../homeAirport';
 
 export interface AirportStats {
@@ -147,11 +148,9 @@ export async function calculateAirportStats(
     if (dep) bump(visits, dep);
     if (arr) bump(visits, arr);
 
-    // Track first visit dates using the earliest known timestamp per airport.
-    const dayIso =
-      f.departureTime instanceof Date
-        ? f.departureTime.toISOString().slice(0, 10)
-        : null;
+    // Track first visit dates using the earliest known timestamp per airport,
+    // read on the clock at the departure airport rather than in UTC (#266).
+    const dayIso = departureClockOf(f)?.date ?? null;
     if (dayIso) {
       for (const code of [dep, arr]) {
         if (!code) continue;
@@ -210,10 +209,7 @@ export async function calculateAirportStats(
   for (const f of flownFlights) {
     const arrCode = f.arrIata || f.arrIcao;
     if (!arrCode) continue;
-    const flightDay =
-      f.departureTime instanceof Date
-        ? f.departureTime.toISOString().slice(0, 10)
-        : new Date().toISOString().slice(0, 10);
+    const flightDay = departureClockOf(f)?.date ?? new Date().toISOString().slice(0, 10);
     const homeCode = getHomeAirportAt(homeAirportHistory, flightDay);
     if (!homeCode) continue;
     if (homeCode === arrCode) continue;
