@@ -12,6 +12,20 @@ now be written in the currency it was actually paid in. Two-factor
 authentication and passkeys arrive alongside.
 
 ### Added
+- **A place list you build yourself, and checklists we ship.** Group places into
+  named lists — a wishlist, a route, "the ones worth the detour" — and reorder
+  them by hand. Alongside them come curated checklists: the New 7 Wonders, the
+  Seven Wonders of the Ancient World, and the complete UNESCO World Heritage
+  List with 1,247 sites. Subscribing writes one row, not 1,247: a catalogue
+  target becomes a real place only when you tick it, so a corrected coordinate
+  still reaches someone who subscribed a release ago. Ticking never happens by
+  itself — the suggestion logic proposes and you confirm, because a wrongly set
+  tick is indistinguishable from a real one afterwards.
+- **Proof for a visit, with a caption.** Photographs attach to a single visit
+  and carry a caption you can type.
+- **Places have a place in the map settings**, and on the "All" tab they wear a
+  ring rather than a colour of their own — turquoise against harbour blue sits
+  below what an eye can separate.
 - **Places become a domain of their own — hidden behind the beta switch.** A
   place is a first-class entry with its own list, detail page, form and map
   layer; a trip is a *view* of it rather than its owner, so "every McDonald's
@@ -199,6 +213,30 @@ authentication and passkeys arrive alongside.
   statistics, where figures belong.
 
 ### Fixed
+- **A backup no longer loses every photograph.** The file archive carried three
+  of the six upload directories, so trip photos, place photos and profile
+  pictures were never in it. Photo records store only a filename, so a restore
+  brought back every record with none of the images — silently, Immich-imported
+  originals included. Backups taken before this release are incomplete and
+  cannot be repaired after the fact.
+- **"Export all data" now exports all data.** It selected flights, achievements
+  and settings while calling itself a backup in its own filename. It covers
+  twelve domains now.
+- **Cruise badges and the statistics page measure the same distance.** The badge
+  ladder measured straight lines across the map, including across land, while
+  the statistics page measured the sea route.
+- **Total flight time is one number, and it says when it is estimated.** The
+  same figure appeared three times on one screen with three results, and the
+  average appeared twice under one label with two denominators. A flight with
+  only a date now contributes a great-circle estimate that is counted and
+  labelled as one, instead of counting as zero in one place and as an unmarked
+  estimate in another. Expect these figures to rise.
+- **Flight costs are no longer added across currencies.** 300 USD and 300 EUR
+  were reported as "600 €", with your own display symbol on it. Amounts are
+  converted at the rate for the day they were spent; what cannot be converted
+  honestly is reported per currency instead of being folded into a total.
+- **"Lufthansa" and "Deutsche Lufthansa" are one airline** in the headline tile,
+  as they always were in the ranking below it.
 - **An empty list no longer denies the data behind the filter.** A library of
   22 cruises, searched for a word none of them carries, answered "no cruises
   recorded yet". The list now says nothing matches, and offers to clear the
@@ -451,6 +489,10 @@ authentication and passkeys arrive alongside.
   distance badge claimed 50,000 km is the Earth's circumference.
 
 ### Security
+- **The data export no longer carries stored API keys.** It pulled the entire
+  settings record into a downloadable file, including OpenAI, Claude, AirLabs,
+  Aviationstack, AeroDataBox, OpenSky and Immich credentials. They are encrypted
+  at rest, but nothing in an export needs them.
 - Closed an IDOR in the lodging import commit path, scoped receipt access to the
   owner, and hardened the import HTTP surface (four findings from a scoped
   review).
