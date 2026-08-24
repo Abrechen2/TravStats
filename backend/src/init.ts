@@ -118,7 +118,11 @@ async function init() {
       });
     }
 
-    // Step 2.6: Pre-migration backup on major-version bump
+    // Step 2.6: Pre-migration backup. Fires on ANY version change on an
+    // install that already carries migrations — see `shouldBackupBeforeMigrating`.
+    // These lines used to say "major-version bump", which is what the rule did
+    // long ago; the wording outlived it and sent at least one reader (me) to
+    // the wrong conclusion about when a snapshot is taken.
     console.log('2️⃣.6 Checking upgrade-backup trigger...');
     const upgradeCtx = await maybeRunPreMigrationBackup();
     if (upgradeCtx.shouldBackup) {

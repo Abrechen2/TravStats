@@ -14,6 +14,8 @@ import { FlagImg } from "../lib/countryFlag";
 import { logger } from "../lib/logger";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { createVisit, deletePlace, deleteVisit, getPlace } from "../lib/api/places";
+import { tripsApi } from "../lib/api/trips";
+import type { Trip } from "../types";
 import { useToastStore } from "../store/toastStore";
 import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
 import { classifyVisit } from "../shared/placeCounting";
@@ -40,6 +42,13 @@ export default function PlaceDetailPage(): JSX.Element {
   const [visitDate, setVisitDate] = useState("");
   const [visitTime, setVisitTime] = useState("");
   const [visitNotes, setVisitNotes] = useState("");
+  /* Which trip this visit belongs to. `PlaceVisit.tripId` has been accepted by
+   * the API since the visit routes were written — create and update both take
+   * it and `assertTripOwned` even checks the ownership — but no component ever
+   * SET it, so a place could never be attached to a trip from the interface.
+   * Lodging offers the same choice on a stay. */
+  const [visitTripId, setVisitTripId] = useState("");
+  const [trips, setTrips] = useState<Trip[]>([]);
 
   const load = useCallback(async (): Promise<void> => {
     if (!id) return;
@@ -88,18 +97,41 @@ export default function PlaceDetailPage(): JSX.Element {
       const visitedAt = visitDate
         ? `${visitDate}T${visitTime || "00:00"}:00.000Z`
         : null;
-      await createVisit(place.id, { visitedAt, notes: visitNotes.trim() || null });
+      await createVisit(place.id, {
+        visitedAt,
+        notes: visitNotes.trim() || null,
+        tripId: visitTripId || null,
+      });
       addToast("success", t("places:detail.visitAdded"));
       setAddingVisit(false);
       setVisitDate("");
       setVisitTime("");
       setVisitNotes("");
+      setVisitTripId("");
       await load();
     } catch (err: unknown) {
       logger.error({ err }, "PlaceDetailPage: add visit failed");
       addToast("error", t("places:detail.visitFailed"));
     }
-  }, [place, visitDate, visitTime, visitNotes, addToast, t, load]);
+  }, [place, visitDate, visitTime, visitNotes, visitTripId, addToast, t, load]);
+
+  // The trip list for the selector above. Loaded once, not per open: the
+  // choice is offered on every visit form and re-fetching on each toggle
+  // would flash an empty dropdown.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const rows = await tripsApi.getAll();
+        if (!cancelled) setTrips(rows);
+      } catch (err: unknown) {
+        logger.error({ err }, "PlaceDetailPage: failed to load trips");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const removeVisit = useCallback(
     async (visitId: string): Promise<void> => {
@@ -270,6 +302,23 @@ export default function PlaceDetailPage(): JSX.Element {
                   </span>
                   <input className={INPUT} value={visitNotes} onChange={(e) => setVisitNotes(e.target.value)} />
                 </label>
+                <label className="mt-3 flex flex-col gap-1">
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    {t("places:detail.visitTrip")}
+                  </span>
+                  <select
+                    className={INPUT}
+                    value={visitTripId}
+                    onChange={(e) => setVisitTripId(e.target.value)}
+                  >
+                    <option value="">{t("places:detail.visitNoTrip")}</option>
+                    {trips.map((trip) => (
+                      <option key={trip.id} value={trip.id}>
+                        {trip.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 {/* Both halves of the rule, said plainly, because both surprise
                     people: a date is optional, and a future one does not count. */}
                 <p className="mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
@@ -301,8 +350,16 @@ export default function PlaceDetailPage(): JSX.Element {
                 {t("places:detail.visits")} · {completed.length}
               </h2>
               {completed.length === 0 && planned.length === 0 ? (
+                /* A place ticked off a curated checklist carries `visited` and
+                 * no visit row — that is deliberate, since a checklist tick
+                 * says "I have been here" without claiming a date. But "no
+                 * visit recorded" sitting under a "Visited" badge reads as a
+                 * contradiction, and it hides that photo proof hangs off a
+                 * visit. Say which of the two states this actually is. */
                 <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  {t("places:detail.noVisits")}
+                  {place.visited
+                    ? t("places:detail.visitedWithoutVisit")
+                    : t("places:detail.noVisits")}
                 </p>
               ) : (
                 <ul className="space-y-2">

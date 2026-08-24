@@ -15,6 +15,8 @@ export interface UpgradeBackupContext {
   shouldBackup: boolean;
   firstUpgradeFromPreMarker: boolean;
   backupCreated: string | null;
+  /** Why the decision went the way it did, in words the console can print. */
+  reason: string;
 }
 
 /**
@@ -183,6 +185,7 @@ export async function maybeRunPreMigrationBackup(): Promise<UpgradeBackupContext
     shouldBackup,
     firstUpgradeFromPreMarker,
     backupCreated: null,
+    reason: decision.reason,
   };
 
   if (!shouldBackup) {

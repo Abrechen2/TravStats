@@ -431,5 +431,9 @@
     "distance": "Distance",
     "overflownCountries": "Countries overflown",
     "openTrip": "Open trip"
+  },
+  "price": {
+    "package": "Package",
+    "packageHint": "The price is held on the booking, not on this flight."
   }
 }

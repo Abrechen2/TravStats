@@ -98,7 +98,10 @@
     "source": "Herkunft",
     "mapLabel": "Karte mit der Position von {{name}}",
     "deletePlace": "Ort löschen",
-    "loadError": "Der Ort konnte nicht geladen werden."
+    "loadError": "Der Ort konnte nicht geladen werden.",
+    "visitedWithoutVisit": "Als besucht markiert, aber ohne datierten Besuch. Trage einen ein, wenn du Datum, Notiz oder ein Beleg-Foto hinterlegen willst.",
+    "visitTrip": "Reise",
+    "visitNoTrip": "Keiner Reise zugeordnet"
   },
   "lists": {
     "title": "Listen",
