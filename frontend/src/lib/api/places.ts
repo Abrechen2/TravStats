@@ -114,6 +114,26 @@ export async function uploadVisitPhotos(
   return res.data.data;
 }
 
+/**
+ * Set or clear a photo's caption.
+ *
+ * `PATCH …/photos/:id` was built with the photo-proof route and had no client
+ * function at all — the interface only ever READ `caption` as an image's alt
+ * text, so a caption could exist in the database and never be typed by anyone.
+ * An empty string clears it; the route stores exactly what it is given.
+ */
+export async function updateVisitPhoto(
+  visitId: string,
+  photoId: string,
+  input: { caption?: string | null; sortIdx?: number }
+): Promise<PlaceVisitPhoto> {
+  const res = await api.patch<Envelope<PlaceVisitPhoto>>(
+    `/places/visits/${visitId}/photos/${photoId}`,
+    input
+  );
+  return res.data.data;
+}
+
 export async function deleteVisitPhoto(visitId: string, photoId: string): Promise<void> {
   await api.delete(`/places/visits/${visitId}/photos/${photoId}`);
 }
@@ -130,5 +150,6 @@ export const placesApi = {
   deleteVisit,
   listVisitPhotos,
   uploadVisitPhotos,
+  updateVisitPhoto,
   deleteVisitPhoto,
 };
