@@ -95,7 +95,13 @@ describe('GET /api/v1/stats/hero', () => {
       booking: null,
     };
 
-    // Flight B: FRA -> JFK, historical, 1989-03-15 12:00-20:00 UTC (480 min).
+    // Flight B: FRA -> JFK, historical. Its clocks say ONE hour for a
+    // transatlantic crossing — a placeholder, which is what historical rows
+    // routinely carry. Since #268 those clocks are never measured: the row
+    // contributes a great-circle estimate instead (~479 min for FRA→JFK), so
+    // the total below is 60 + 479 and not 60 + 60. The old fixture said
+    // 12:00-20:00, whose 480 min happened to sit one minute from the estimate
+    // and so could not tell the two behaviours apart.
     const flightB = {
       ...flightA,
       id: 'b',
@@ -104,7 +110,7 @@ describe('GET /api/v1/stats/hero', () => {
       arrLat: AIRPORT_DB.JFK.lat,
       arrLon: AIRPORT_DB.JFK.lon,
       departureTime: new Date('1989-03-15T12:00:00Z'),
-      arrivalTime: new Date('1989-03-15T20:00:00Z'),
+      arrivalTime: new Date('1989-03-15T13:00:00Z'),
       status: 'historical',
     };
 
@@ -155,7 +161,7 @@ describe('GET /api/v1/stats/hero', () => {
       countries: 2, // DE, US
       airports: 3, // FRA, MUC, JFK
       co2Kg: expectedCo2Kg,
-      flightTimeMinutes: 540, // 60 + 480, UTC semantics = naive diff
+      flightTimeMinutes: 539, // 60 measured + 479 estimated (#268)
     });
   });
 });

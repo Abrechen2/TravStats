@@ -205,7 +205,8 @@
     "totalCost": "Gesamtkosten",
     "airlines": "Fluggesellschaften",
     "scopeLabel": "── Gesamt (alle Jahre) ──",
-    "scopeHint": "unabhängig vom Jahres-Filter oben"
+    "scopeHint": "unabhängig vom Jahres-Filter oben",
+    "flightTimeEstimatedNote": "davon {{hours}} h geschätzt — {{count}} Flüge ohne Uhrzeiten"
   },
   "noStatsAvailable": "Keine Statistiken verfügbar",
   "yearFilter": {

@@ -205,7 +205,8 @@
     "totalCost": "Total Cost",
     "airlines": "Airlines",
     "scopeLabel": "── All-time totals ──",
-    "scopeHint": "independent of the year filter above"
+    "scopeHint": "independent of the year filter above",
+    "flightTimeEstimatedNote": "{{hours}} h of it estimated — {{count}} flights without times"
   },
   "noStatsAvailable": "No statistics available",
   "yearFilter": {

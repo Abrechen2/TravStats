@@ -238,20 +238,34 @@ describe('calculateBusinessStats — historical flights', () => {
     expect(stats.totalDistance).toBeGreaterThan(6000);
   });
 
-  it('does NOT count historical flights toward avgFlightDuration', () => {
+  // Superseded by #268. The rule this test guards — a historical row's
+  // placeholder clocks must never be measured — is UNCHANGED and asserted
+  // below. What changed is the consequence: contributing 0 made this average
+  // disagree with the overview card, which showed the identical German label on
+  // the same screen and estimated the very same flights. The row now
+  // contributes a great-circle estimate, so both places answer alike.
+  it("never measures a historical row's placeholder times, but does estimate it", () => {
     const flights: FlightData[] = [
       // Historical with a placeholder 8-hour "duration".
       makeFlight({
         status: 'historical',
         depIata: 'FRA',
         arrIata: 'JFK',
+        // A one-hour placeholder for a transatlantic crossing. Deliberately
+        // absurd: the great-circle estimate for FRA→JFK lands on ~8 h, so a
+        // plausible-looking placeholder would make this test pass either way.
         departureTime: new Date('1989-03-15T12:00:00Z'),
-        arrivalTime: new Date('1989-03-15T20:00:00Z'),
+        arrivalTime: new Date('1989-03-15T13:00:00Z'),
       }),
     ];
     const stats = calculateBusinessStats(flights);
-    // No flown flights → no duration stats.
-    expect(stats.avgFlightDuration).toBe(0);
+    // NOT the 1 h the placeholder timestamps would have measured — that is the
+    // fiction this test exists to keep out.
+    expect(stats.avgFlightDuration).not.toBe(1);
+    // FRA→JFK is ~6200 km; at the estimator's 800 km/h plus 15 min of ground
+    // that is right around 8 h. A real figure, derived from coordinates.
+    expect(stats.avgFlightDuration).toBeGreaterThan(7);
+    expect(stats.avgFlightDuration).toBeLessThan(9);
   });
 });
 

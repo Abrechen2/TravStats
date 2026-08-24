@@ -14,7 +14,13 @@ import type {
   SeatStats,
 } from "../types";
 import { API_LIMITS } from "../lib/constants";
-import { getFlightDuration } from "../lib/flightDuration";
+import { getFlightDuration, measureFlightMinutes } from "../lib/flightDuration";
+import { normalizeAirline } from "../shared/airlineNormalize";
+import {
+  addFlightDuration,
+  averageDurationMinutes,
+  emptyDurationTotals,
+} from "../shared/flightDuration";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useAuthStore } from "../store/authStore";
@@ -282,15 +288,19 @@ export default function AdvancedStatsPage(): JSX.Element {
     return R * c;
   };
 
-  // Airline statistics
+  // Airline statistics. Grouped by the CANONICAL name (#268): this used to
+  // group the raw string, so "Lufthansa" and "Deutsche Lufthansa" counted as
+  // two carriers in the KPI tile and as one in the loyalty ranking directly
+  // below — same screen, same question, two answers.
   const airlineStats = flights.reduce(
     (acc, flight) => {
-      if (!acc[flight.airline]) {
-        acc[flight.airline] = { count: 0, totalDuration: 0, flights: [] };
+      const airline = normalizeAirline(flight.airline ?? "");
+      if (!acc[airline]) {
+        acc[airline] = { count: 0, totalDuration: 0, flights: [] };
       }
-      acc[flight.airline].count++;
-      acc[flight.airline].totalDuration += calculateDuration(flight);
-      acc[flight.airline].flights.push(flight);
+      acc[airline].count++;
+      acc[airline].totalDuration += calculateDuration(flight);
+      acc[airline].flights.push(flight);
       return acc;
     },
     {} as Record<string, { count: number; totalDuration: number; flights: Flight[] }>
@@ -331,12 +341,32 @@ export default function AdvancedStatsPage(): JSX.Element {
     {} as Record<string, number>
   );
 
-  const totalFlightTime = flights.reduce((sum, flight) => {
-    const dur = calculateDuration(flight);
-    return isNaN(dur) || dur <= 0 ? sum : sum + dur;
-  }, 0);
+  // #268 — one definition, shared with the server. The measured value is the
+  // backend's tz-aware `durationMinutes` where the row has one, otherwise this
+  // page's own reading of the timestamps; a row with neither contributes a
+  // labelled great-circle estimate instead of a silent zero.
+  const durationTotals = flights.reduce((totals, flight) => {
+    const backendMinutes =
+      flight.durationMinutes != null && flight.durationMinutes > 0
+        ? flight.durationMinutes
+        : null;
+    return addFlightDuration(totals, {
+      measuredMinutes: backendMinutes ?? measureFlightMinutes(flight),
+      depLat: flight.depLat ?? null,
+      depLon: flight.depLon ?? null,
+      arrLat: flight.arrLat ?? null,
+      arrLon: flight.arrLon ?? null,
+    });
+  }, emptyDurationTotals());
 
-  const avgFlightDuration = flights.length > 0 ? totalFlightTime / flights.length : 0;
+  const totalFlightTime = durationTotals.totalMinutes / 60;
+
+  // Divided by the flights that CONTRIBUTED a duration, not by every flight.
+  // The old denominator (`flights.length`) counted rows that added zero hours,
+  // so this figure was systematically lower than the business block's average
+  // sitting on the same screen under the identical German label.
+  const avgFlightDurationMinutes = averageDurationMinutes(durationTotals);
+  const avgFlightDuration = avgFlightDurationMinutes === null ? 0 : avgFlightDurationMinutes / 60;
 
   const flightDurations = flights
     .map((f) => ({ flight: f, duration: calculateDuration(f) }))
@@ -729,6 +759,8 @@ export default function AdvancedStatsPage(): JSX.Element {
               <StatsOverviewCards
                 totalFlights={flights.length}
                 totalFlightTime={totalFlightTime}
+                estimatedHours={durationTotals.estimatedMinutes / 60}
+                estimatedFlightCount={durationTotals.estimatedCount}
                 avgFlightDuration={avgFlightDuration}
                 airlineCount={Object.keys(airlineStats).length}
               />

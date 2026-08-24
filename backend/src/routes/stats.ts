@@ -23,6 +23,12 @@ import { resolveCountryCode } from '../shared/geo/countryCode';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
 import { tzAwareDurationMinutes, localYearOf, type FlightTimeSemantics } from '../utils/timezone';
+import {
+  addFlightDuration,
+  averageDurationMinutes,
+  emptyDurationTotals,
+  resolveFlightDuration,
+} from '../shared/flightDuration';
 import { isoCountryCode } from '../utils/continents';
 import {
   normalizeAirline,
@@ -77,7 +83,25 @@ interface SummaryStats {
   /** Booked but not yet flown — reported beside the total, never inside it. */
   plannedFlights: number;
   totalDistance: number;
+  /**
+   * Minutes in the air: measured where the row carries times, estimated from
+   * the airport coordinates where it does not (#268). Used to be measured-only,
+   * which reported 0 for every DATE_ONLY row while the overview card — showing
+   * the SAME label on the SAME screen — estimated them.
+   */
   totalFlightTime: number;
+  /** The measured part of `totalFlightTime`. */
+  flightTimeMeasured: number;
+  /** The estimated part. Shown so a total can say how much of it is guessed. */
+  flightTimeEstimated: number;
+  /** How many flights contributed an estimate rather than a measurement. */
+  flightTimeEstimatedCount: number;
+  /**
+   * Average minutes per flight that CONTRIBUTED a duration — not per flight.
+   * Dividing by every flight is what made the overview's average too low.
+   * Null when nothing contributed, so the caller renders a dash, not a zero.
+   */
+  avgFlightTime: number | null;
   avgDistance: number;
   byStatus: Record<string, number>;
   byAirline: Record<string, number>;
@@ -151,6 +175,7 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
         arrivalTime: true,
         depTimeSemantics: true,
         arrTimeSemantics: true,
+        status: true,
       },
     }),
     prisma.flight.count({ where: geoWhere }),
@@ -185,7 +210,8 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
   ]);
 
   let totalDistance = 0;
-  let totalFlightTime = 0;
+  let distanceFlightCount = 0;
+  let durationTotals = emptyDurationTotals();
 
   // Build timezone map for all airports referenced in flown flights
   const allCodes = new Set<string>();
@@ -213,6 +239,7 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
       flight.arrLon
     );
     totalDistance += distance;
+    if (distance > 0) distanceFlightCount += 1;
 
     const depTz = (flight.depIata && tzMap.get(flight.depIata))
       || (flight.depIcao && tzMap.get(flight.depIcao))
@@ -220,7 +247,10 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
     const arrTz = (flight.arrIata && tzMap.get(flight.arrIata))
       || (flight.arrIcao && tzMap.get(flight.arrIcao))
       || null;
-    const flightTime = (flight.departureTime && flight.arrivalTime)
+    // A `historical` row's clocks are placeholders, not evidence — see
+    // `businessStats.ts` for the same guard and the reason. It contributes a
+    // coordinate estimate below instead.
+    const flightTime = (flight.status === 'flown' && flight.departureTime && flight.arrivalTime)
       ? tzAwareDurationMinutes(
           flight.departureTime,
           flight.arrivalTime,
@@ -230,12 +260,24 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
           flight.arrTimeSemantics as FlightTimeSemantics,
         )
       : null;
-    // null durations (DATE_ONLY rows) are skipped — they would otherwise
-    // poison the aggregate with placeholder-time fictions (issue #106A).
-    totalFlightTime += flightTime ?? 0;
+    // #106A still holds: a DATE_ONLY row must never contribute its placeholder
+    // times, so `flightTime` stays null for it and no fiction is measured. What
+    // changed in #268 is what happens NEXT — instead of silently adding 0, the
+    // row contributes a coordinate-derived estimate that is counted separately
+    // and labelled as such. A guess the reader can see beats a zero they cannot.
+    durationTotals = addFlightDuration(durationTotals, {
+      measuredMinutes: flightTime,
+      depLat: flight.depLat,
+      depLon: flight.depLon,
+      arrLat: flight.arrLat,
+      arrLon: flight.arrLon,
+    });
   });
 
-  const avgDistance = flownFlights.length > 0 ? totalDistance / flownFlights.length : 0;
+  // Divided by flights that HAVE a distance. A row without coordinates
+  // contributes no kilometres, so counting it in the denominator only drags the
+  // average down — the client already divided this way, the server did not.
+  const avgDistance = distanceFlightCount > 0 ? totalDistance / distanceFlightCount : 0;
 
   const byStatus = statusCounts.reduce((acc, item) => {
     acc[item.status] = item._count;
@@ -264,7 +306,14 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
     totalFlights,
     plannedFlights,
     totalDistance: Math.round(totalDistance),
-    totalFlightTime: Math.round(totalFlightTime),
+    totalFlightTime: Math.round(durationTotals.totalMinutes),
+    flightTimeMeasured: Math.round(durationTotals.measuredMinutes),
+    flightTimeEstimated: Math.round(durationTotals.estimatedMinutes),
+    flightTimeEstimatedCount: durationTotals.estimatedCount,
+    avgFlightTime: (() => {
+      const avg = averageDurationMinutes(durationTotals);
+      return avg === null ? null : Math.round(avg);
+    })(),
     avgDistance: Math.round(avgDistance),
     byStatus,
     byAirline,
@@ -424,20 +473,30 @@ async function fetchFlightDatedRows(
       arrIata: true, arrIcao: true, arrLat: true, arrLon: true,
       departureTime: true, arrivalTime: true,
       depTimeSemantics: true, arrTimeSemantics: true,
+      status: true,
     },
   });
   const tzMap = await buildTzMap(rows);
   return rows.map((f) => {
     const depTz = (f.depIata && tzMap.get(f.depIata)) || (f.depIcao && tzMap.get(f.depIcao)) || null;
     const arrTz = (f.arrIata && tzMap.get(f.arrIata)) || (f.arrIcao && tzMap.get(f.arrIcao)) || null;
-    const durationMin =
-      f.departureTime && f.arrivalTime
+    const measuredMin =
+      f.status === 'flown' && f.departureTime && f.arrivalTime
         ? tzAwareDurationMinutes(
             f.departureTime, f.arrivalTime, depTz, arrTz,
             f.depTimeSemantics as FlightTimeSemantics,
             f.arrTimeSemantics as FlightTimeSemantics,
-          ) ?? 0
-        : 0;
+          )
+        : null;
+    // Same rule as `/stats/summary` and the overview card (#268): measured
+    // where there are clocks, estimated from the coordinates where there are
+    // not. This used to be a bare 0, which is why the scorecard tile and the
+    // card above it reported different totals for the same flights.
+    const durationMin =
+      resolveFlightDuration({
+        measuredMinutes: measuredMin,
+        depLat: f.depLat, depLon: f.depLon, arrLat: f.arrLat, arrLon: f.arrLon,
+      })?.minutes ?? 0;
     return {
       date: f.departureTime as Date,
       distanceKm: calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon),

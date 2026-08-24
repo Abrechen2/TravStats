@@ -15,22 +15,10 @@
 
 import { getAirlineCatalogSync, type CachedAirline } from '../services/airlineCatalogCache';
 import { AIRLINES } from '../data/airlines';
-
-/**
- * Lowercased variant → canonical display name. Only add entries known to
- * actually appear in the database (different import sources, user typos).
- * NOT used for IATA/ICAO resolution — that goes through ALIAS_TO_AIRLINE.
- */
-const AIRLINE_ALIASES: Record<string, string> = {
-  'egyptair': 'EgyptAir',
-  'egypt air': 'EgyptAir',
-  'air canada': 'Air Canada',
-  'vietnam airline': 'Vietnam Airlines',
-  'vietnam airlines': 'Vietnam Airlines',
-  'dba': 'dba',
-  'sas scandinavian airlines': 'SAS Scandinavian Airlines',
-  'lot polish airlines': 'LOT Polish Airlines',
-};
+// The canonical-spelling half now lives in `shared/` so the browser groups
+// carriers exactly as the server does (#268). Re-exported here because every
+// existing import site names this module.
+export { normalizeAirline, mergeAirlineCounts } from '../shared/airlineNormalize';
 
 /**
  * Extra alias → IATA mapping for names users actually type that don't
@@ -111,15 +99,6 @@ function currentLookups(): ReturnType<typeof buildLookups> {
 }
 
 /**
- * Normalize an airline name to its canonical display form. Returns the
- * input trimmed (unchanged casing) if no alias maps it.
- */
-export function normalizeAirline(name: string): string {
-  const key = name.trim().toLowerCase();
-  return AIRLINE_ALIASES[key] ?? name.trim();
-}
-
-/**
  * Resolve a free-text airline name to its IATA + ICAO codes via strict
  * exact lookup. Returns null when nothing matches — never guesses.
  *
@@ -163,19 +142,4 @@ export function resolveAirlineCodes(
   }
 
   return null;
-}
-
-/**
- * Merge airline counts that differ only by spelling/casing. Groups are
- * collapsed into the canonical name.
- */
-export function mergeAirlineCounts(
-  counts: Record<string, number>,
-): Record<string, number> {
-  const merged: Record<string, number> = {};
-  for (const [name, count] of Object.entries(counts)) {
-    const canonical = normalizeAirline(name);
-    merged[canonical] = (merged[canonical] || 0) + count;
-  }
-  return merged;
 }
