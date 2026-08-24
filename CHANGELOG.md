@@ -12,6 +12,9 @@ now be written in the currency it was actually paid in. Two-factor
 authentication and passkeys arrive alongside.
 
 ### Added
+- **A place can be attached to a trip.** The visit form offers the trip, the way
+  a lodging stay always has. The interface never set it, though the API had
+  accepted it from the day the visit routes were written.
 - **A place list you build yourself, and checklists we ship.** Group places into
   named lists — a wishlist, a route, "the ones worth the detour" — and reorder
   them by hand. Alongside them come curated checklists: the New 7 Wonders, the
@@ -213,6 +216,21 @@ authentication and passkeys arrive alongside.
   statistics, where figures belong.
 
 ### Fixed
+- **A stay's trip field is where you would look for it.** It sat unlabelled at
+  the bottom of "Loyalty programme", between membership numbers — the word
+  "trip" existed only for screen readers, so the sole thing visible was the
+  option "Not linked to a trip". It has its own section now.
+- **A price held on the booking no longer reads as unknown.** A flight in a
+  package booking has no price of its own on purpose; the booking carries one
+  all-in figure. The column said "k.A.", which claims the number is missing. It
+  says "Pauschal" now, with the reason on hover.
+- **A place ticked off a checklist no longer says "Visited" above "Visits · 0".**
+  Ticking records that you have been somewhere without claiming a date —
+  deliberate — but the empty text denied it, and hid that photo proof attaches
+  to a visit.
+- **The startup log no longer reports the wrong backup rule.** It said "no
+  major-version bump" while the rule takes a snapshot before any version change
+  on an existing install. It prints the actual reason now.
 - **A backup no longer loses every photograph.** The file archive carried three
   of the six upload directories, so trip photos, place photos and profile
   pictures were never in it. Photo records store only a filename, so a restore
