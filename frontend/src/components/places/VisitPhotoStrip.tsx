@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
-import { deleteVisitPhoto, uploadVisitPhotos } from "../../lib/api/places";
+import { deleteVisitPhoto, updateVisitPhoto, uploadVisitPhotos } from "../../lib/api/places";
 import { useToastStore } from "../../store/toastStore";
 import type { PlaceVisitPhoto } from "../../types/placeList";
 
@@ -29,6 +29,8 @@ export function VisitPhotoStrip({ visitId, photos }: Props): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<PlaceVisitPhoto[]>(photos);
   const [busy, setBusy] = useState(false);
+  /** Photo currently being captioned, and the text as typed so far. */
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
 
   const handleUpload = useCallback(
     async (files: FileList | null): Promise<void> => {
@@ -63,10 +65,40 @@ export function VisitPhotoStrip({ visitId, photos }: Props): JSX.Element {
     [visitId, addToast, t]
   );
 
+  /**
+   * Save a caption. `PATCH …/photos/:id` accepted one from the day the route
+   * was built and nothing ever sent one — the caption was readable as an
+   * image's alt text and not typeable anywhere.
+   *
+   * An empty box CLEARS the caption rather than storing "": a photo with no
+   * caption and a photo captioned with nothing are the same thing, and only
+   * one of them should end up in the database.
+   */
+  const handleCaption = useCallback(
+    async (photoId: string, text: string): Promise<void> => {
+      const caption = text.trim() === "" ? null : text.trim();
+      setEditing(null);
+      const current = rows.find((p) => p.id === photoId);
+      if (current && (current.caption ?? null) === caption) return;
+      try {
+        const saved = await updateVisitPhoto(visitId, photoId, { caption });
+        setRows((prev) => prev.map((p) => (p.id === photoId ? saved : p)));
+      } catch (err: unknown) {
+        logger.error({ err }, "VisitPhotoStrip: caption failed");
+        addToast("error", t("places:photos.captionFailed"));
+      }
+    },
+    [visitId, rows, addToast, t]
+  );
+
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-2">
+    <div className="mt-2 flex flex-wrap items-end gap-2">
       {rows.map((photo) => (
-        <span key={photo.id} style={{ position: "relative", display: "inline-block" }}>
+        <span
+          key={photo.id}
+          style={{ display: "inline-flex", flexDirection: "column", gap: 2, width: 64 }}
+        >
+          <span style={{ position: "relative", display: "inline-block" }}>
           <img
             src={photo.url}
             alt={photo.caption ?? t("places:photos.alt")}
@@ -102,6 +134,44 @@ export function VisitPhotoStrip({ visitId, photos }: Props): JSX.Element {
           >
             ✕
           </button>
+          </span>
+
+          {editing?.id === photo.id ? (
+            <input
+              autoFocus
+              value={editing.text}
+              aria-label={t("places:photos.caption")}
+              onChange={(e) => setEditing({ id: photo.id, text: e.target.value })}
+              onBlur={() => void handleCaption(photo.id, editing.text)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleCaption(photo.id, editing.text);
+                if (e.key === "Escape") setEditing(null);
+              }}
+              className="w-full rounded px-1 text-[10px]"
+              style={{
+                background: "var(--bg-surface)",
+                border: "1px solid var(--color-border)",
+                color: "var(--text-primary)",
+              }}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditing({ id: photo.id, text: photo.caption ?? "" })}
+              className="w-full truncate text-left text-[10px]"
+              style={{
+                color: photo.caption ? "var(--text-muted)" : "var(--text-subtle, var(--text-muted))",
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                opacity: photo.caption ? 1 : 0.6,
+              }}
+              title={photo.caption ?? t("places:photos.captionAdd")}
+            >
+              {photo.caption ?? t("places:photos.captionAdd")}
+            </button>
+          )}
         </span>
       ))}
 

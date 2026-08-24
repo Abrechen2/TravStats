@@ -15,6 +15,7 @@ import {
   deletePlaceList,
   getPlaceList,
   removePlaceFromList,
+  reorderPlaceList,
   updatePlaceList,
 } from "../lib/api/placeLists";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
@@ -109,6 +110,37 @@ export default function PlaceListDetailPage(): JSX.Element {
       }
     },
     [list, addToast, t]
+  );
+
+  /**
+   * Move one entry up or down. `PUT /place-lists/:id/entries/order` was built
+   * and tested when the list feature landed, and nothing ever called it — the
+   * list could only ever be in the order things were added.
+   *
+   * Up/down buttons rather than a drag handle: `CruiseStopsEditor` already
+   * reorders this way, no drag-and-drop library is installed, and buttons work
+   * with a keyboard without any extra work.
+   *
+   * The whole order is sent, not a pair of indices: the route takes the list of
+   * place ids and rewrites the positions from it, so a half-applied swap cannot
+   * happen.
+   */
+  const handleMove = useCallback(
+    async (index: number, delta: number): Promise<void> => {
+      if (!list) return;
+      const target = index + delta;
+      if (target < 0 || target >= entries.length) return;
+
+      const ids = entries.map((e) => e.placeId);
+      [ids[index], ids[target]] = [ids[target], ids[index]];
+      try {
+        setList(await reorderPlaceList(list.id, ids));
+      } catch (err: unknown) {
+        logger.error({ err }, "PlaceListDetailPage: failed to reorder");
+        addToast("error", t("places:lists.reorderFailed"));
+      }
+    },
+    [list, entries, addToast, t]
   );
 
   const handleRemove = useCallback(
@@ -369,7 +401,7 @@ export default function PlaceListDetailPage(): JSX.Element {
           </p>
         ) : (
           <ul style={{ listStyle: "none", padding: 0 }} className="grid gap-2">
-            {entries.map((entry) => {
+            {entries.map((entry, index) => {
               const p = entry.place;
               return (
                 <li
@@ -411,6 +443,28 @@ export default function PlaceListDetailPage(): JSX.Element {
                       ? t("places:list.status.visited")
                       : t("places:list.status.wishlist")}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => void handleMove(index, -1)}
+                    disabled={index === 0}
+                    aria-label={t("places:lists.moveUp", { name: p.name })}
+                    title={t("places:lists.moveUp", { name: p.name })}
+                    className="px-1 text-sm disabled:opacity-30"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleMove(index, 1)}
+                    disabled={index === entries.length - 1}
+                    aria-label={t("places:lists.moveDown", { name: p.name })}
+                    title={t("places:lists.moveDown", { name: p.name })}
+                    className="px-1 text-sm disabled:opacity-30"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    ↓
+                  </button>
                   <button
                     type="button"
                     onClick={() => void handleRemove(p.id)}

@@ -131,7 +131,10 @@
     "deleteFailed": "Die Liste konnte nicht gelöscht werden.",
     "addFailed": "Der Ort konnte nicht hinzugefügt werden.",
     "removeFailed": "Der Ort konnte nicht entfernt werden.",
-    "subscribeFailed": "Der Checkliste konnte nicht gefolgt werden."
+    "subscribeFailed": "Der Checkliste konnte nicht gefolgt werden.",
+    "moveUp": "„{{name}}“ nach oben schieben",
+    "moveDown": "„{{name}}“ nach unten schieben",
+    "reorderFailed": "Die Reihenfolge konnte nicht gespeichert werden."
   },
   "checklist": {
     "notFound": "Diese Checkliste gibt es nicht.",
@@ -183,6 +186,9 @@
     "alt": "Foto zum Besuch",
     "delete": "Foto löschen",
     "uploadFailed": "Das Foto konnte nicht hochgeladen werden.",
-    "deleteFailed": "Das Foto konnte nicht gelöscht werden."
+    "deleteFailed": "Das Foto konnte nicht gelöscht werden.",
+    "caption": "Bildunterschrift",
+    "captionAdd": "Unterschrift…",
+    "captionFailed": "Die Bildunterschrift konnte nicht gespeichert werden."
   }
 }

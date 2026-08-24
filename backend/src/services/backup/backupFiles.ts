@@ -3,6 +3,7 @@ import * as path from 'path';
 import archiver from 'archiver';
 import { prisma } from '../../db';
 import { getInstanceSettings } from '../instanceSettingsService';
+import { BACKED_UP_UPLOAD_DIRS } from '../../config/uploadDirs';
 import logger from '../../utils/logger';
 
 /**
@@ -31,9 +32,14 @@ export async function archiveUploads(outputPath: string): Promise<number> {
 
     archive.pipe(output);
 
-    // Add all upload directories
-    const dirs = ['receipts', 'emails', 'training'];
-    dirs.forEach((dir) => {
+    // Every upload directory, from the single registry in
+    // `config/uploadDirs.ts`. This list used to be hardcoded to three of the
+    // six that exist, so `trip-photos`, `place-photos` and `profile-pictures`
+    // were never archived — and since photo rows store only a `filename`, a
+    // restore brought back every row with none of the images. A test in
+    // `config/__tests__/uploadDirs.test.ts` fails when a new directory is
+    // added to the source without being added to the registry.
+    BACKED_UP_UPLOAD_DIRS.forEach((dir) => {
       const dirPath = path.join(uploadsDir, dir);
       if (fs.existsSync(dirPath)) {
         archive.directory(dirPath, `uploads/${dir}`);

@@ -177,28 +177,77 @@ router.get('/system/info', async (req: AuthRequest, res: Response, next: NextFun
   }
 });
 
-// Export all data (for backup)
+/**
+ * Export every domain the instance holds, as JSON.
+ *
+ * This route used to select `flights`, achievements and settings only, while
+ * calling itself "export all data" and downloading as `travstats-backup-…json`.
+ * Cruises, lodging, trips, places, bookings and companions were all missing —
+ * anyone who used it as a backup lost five domains without being told.
+ *
+ * It is NOT the restore path (that is a pg_dump, see `services/backup/`). It is
+ * a human-readable dump someone downloads, so credential material is left out
+ * on purpose: password hashes, reset/change/2FA tokens and secrets, WebAuthn
+ * credentials, API tokens and pairing codes never appear. `UserSettings` is
+ * selected field by field for the same reason — `settings: true` used to carry
+ * every stored API key into the file. They are encrypted at rest, but a
+ * downloadable file is not the place for them and nothing here needs them.
+ */
 router.get('/export/all-data', adminExportLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const users = await prisma.user.findMany({
       select: {
         id: true,
         username: true,
+        firstName: true,
+        lastName: true,
         isAdmin: true,
         isActive: true,
         invitedBy: true,
         createdAt: true,
+        birthdate: true,
         notificationEmail: true,
         notifyBefore24h: true,
         notifyBefore2h: true,
-        // Deliberately excluded: passwordHash, resetToken, changeToken, resetTokenExpiry, changeTokenExpiry, mustChangePassword
+        // Deliberately excluded: passwordHash, resetToken/changeToken and their
+        // expiries, every twoFactor* column, webauthnCredentials,
+        // twoFactorRecoveryCodes, apiTokens, pairingCodes.
+
+        // Travel data — the point of the export.
         flights: true,
+        cruises: { include: { stops: true, legs: true } },
+        trips: { include: { stops: true, journalEntries: true, photos: true } },
+        bookings: true,
+        lodgings: true,
+        lodgingStays: true,
+        lodgingMemberships: true,
+        places: true,
+        placeVisits: { include: { photos: true } },
+        placeLists: { include: { entries: true } },
+        companions: true,
         userAchievements: {
           include: {
             achievement: true,
           },
         },
-        settings: true,
+        // Field-by-field: the stored API keys are not part of a data export.
+        settings: {
+          select: {
+            enabledDomains: true,
+            baseCurrency: true,
+            data: true,
+            appPrefs: true,
+            autoCreateTrips: true,
+            preferredVisionParser: true,
+            preferredTextParser: true,
+            immichDefaultMode: true,
+            autoUpdateEnabled: true,
+            autoUpdateRequireApproval: true,
+            historicalEnrichmentEnabled: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
       },
     });
 

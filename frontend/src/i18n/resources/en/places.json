@@ -131,7 +131,10 @@
     "deleteFailed": "The list could not be deleted.",
     "addFailed": "The place could not be added.",
     "removeFailed": "The place could not be removed.",
-    "subscribeFailed": "Could not follow that checklist."
+    "subscribeFailed": "Could not follow that checklist.",
+    "moveUp": "Move “{{name}}” up",
+    "moveDown": "Move “{{name}}” down",
+    "reorderFailed": "The new order could not be saved."
   },
   "checklist": {
     "notFound": "There is no such checklist.",
@@ -183,6 +186,9 @@
     "alt": "Photo of this visit",
     "delete": "Delete photo",
     "uploadFailed": "The photo could not be uploaded.",
-    "deleteFailed": "The photo could not be deleted."
+    "deleteFailed": "The photo could not be deleted.",
+    "caption": "Caption",
+    "captionAdd": "Caption…",
+    "captionFailed": "The caption could not be saved."
   }
 }
