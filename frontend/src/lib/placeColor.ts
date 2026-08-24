@@ -30,15 +30,21 @@ import { hexToRgb } from "../components/map/controlPanelKit";
  *              opens the panel sees one consistent domain colour.
  *  - `visited` logbook vs. wishlist. The only split that changes what a pin
  *              MEANS, which is why it is a mode rather than a filter.
+ *  - `list`    the colour of the list the place belongs to. Arrived with the
+ *              lists phase, because only then did a list have a colour to
+ *              resolve; the slot was deliberately not reserved earlier, which
+ *              would have shipped a mode that always rendered one colour.
  *
- * A `list` mode arrives with the Places-lists phase, where a list finally has
- * a colour to resolve. Adding the slot before the feature would ship a mode
- * that always renders one colour.
+ * `list` is the one mode whose colour does NOT come from `colors` — it comes
+ * from the user's own lists, so the CALLER resolves membership and hands the
+ * hue in (`PlaceColorInput.listColor`). Keeping the lookup out of here is what
+ * lets the resolver stay a pure function of its arguments; the layer already
+ * has the membership map, and this file has no business fetching one.
  */
-export type PlaceColorMode = "solid" | "visited";
+export type PlaceColorMode = "solid" | "visited" | "list";
 
 /** Render order of the mode picker. */
-export const PLACE_COLOR_MODES = ["solid", "visited"] as const;
+export const PLACE_COLOR_MODES = ["solid", "visited", "list"] as const;
 
 /**
  * User-settable slots, independent on purpose: switching mode must never
@@ -49,6 +55,10 @@ export interface PlaceColors {
   solid: Rgb;
   visited: Rgb;
   wishlist: Rgb;
+  /** Fallback in `list` mode for a place that is in no list at all. Muted for
+   *  the same reason `wishlist` is: "not filed anywhere" is an absence of
+   *  information, not a category competing with the user's own colours. */
+  unlisted: Rgb;
 }
 
 export type PlaceColorSlot = keyof PlaceColors;
@@ -69,6 +79,7 @@ export const DEFAULT_PLACE_COLORS: PlaceColors = {
   // yet", not a category of its own. The layer also draws it hollow, which is
   // what actually carries the distinction.
   wishlist: [110, 116, 128],
+  unlisted: [110, 116, 128],
 };
 
 export const DEFAULT_PLACE_COLOR_CONFIG: PlaceColorConfig = {
@@ -89,6 +100,17 @@ export const PLACE_COLOR_PRESETS: readonly Rgb[] = [
 /** The minimum a colour resolver needs to know about a place. */
 export interface PlaceColorInput {
   visited?: boolean;
+  /**
+   * The colour of the list this place belongs to, already resolved by the
+   * caller. Undefined means "in no list" in `list` mode, and is ignored in
+   * every other mode.
+   *
+   * A place can be in MANY lists — that is the whole reason membership is its
+   * own table — so the caller also decides WHICH one wins. The rule lives in
+   * `resolvePlaceListColors` next door, in one place, rather than being
+   * re-invented per layer.
+   */
+  listColor?: Rgb;
 }
 
 /**
@@ -100,12 +122,23 @@ export function resolvePlaceColor(place: PlaceColorInput, cfg: PlaceColorConfig)
   if (mode === "visited") {
     return place.visited ? colors.visited : colors.wishlist;
   }
+  if (mode === "list") {
+    return place.listColor ?? colors.unlisted;
+  }
   return colors.solid;
 }
 
-/** The slots a given mode actually uses — the panel renders only these. */
+/**
+ * The slots a given mode actually uses — the panel renders only these.
+ *
+ * `list` yields ONLY the fallback: the other colours in that mode are the
+ * user's own list colours, which they edit on the list, not in a map panel.
+ * Offering a picker here would be a second place to set the same thing.
+ */
 export function slotsForPlaceMode(mode: PlaceColorMode): readonly PlaceColorSlot[] {
-  return mode === "visited" ? (["visited", "wishlist"] as const) : (["solid"] as const);
+  if (mode === "visited") return ["visited", "wishlist"] as const;
+  if (mode === "list") return ["unlisted"] as const;
+  return ["solid"] as const;
 }
 
 function isRgb(v: unknown): v is Rgb {
@@ -143,25 +176,93 @@ export function placeColorFromStored(raw: Record<string, unknown>): PlaceColorCo
   return DEFAULT_PLACE_COLOR_CONFIG;
 }
 
+// ---------------------------------------------------------------- list mode
+
+/** The little a list has to expose for its colour to reach a pin. */
+export interface PlaceListColorSource {
+  id: string;
+  name: string;
+  /** Hex, as stored on `PlaceList.color`. */
+  color: string;
+  entries?: readonly { placeId: string }[];
+}
+
+export interface PlaceListColorResolution {
+  /** Place id → the list colour that won. Places in no list are absent. */
+  byPlaceId: Map<string, Rgb>;
+  /** Lists that actually colour at least one pin, in the order given. */
+  used: Array<{ id: string; name: string; color: Rgb }>;
+}
+
+/**
+ * Resolve list membership into one colour per place.
+ *
+ * **A place can be in many lists** — the McDonald's at the Trevi Fountain is in
+ * "Maccis" and in "Rom", which is exactly why membership is its own table. A
+ * pin still has one colour, so something has to win, and the rule is: the FIRST
+ * list in the order given. Lists arrive sorted by `sortIdx` then name, so the
+ * winner is the one the user themselves ordered first — a rule they can change
+ * by dragging, rather than one hidden in a layer.
+ *
+ * The alternative, blending or striping, was not attempted: two hues averaged
+ * are a third hue that matches no legend row.
+ */
+export function resolvePlaceListColors(
+  lists: readonly PlaceListColorSource[]
+): PlaceListColorResolution {
+  const byPlaceId = new Map<string, Rgb>();
+  const used: PlaceListColorResolution["used"] = [];
+
+  for (const list of lists) {
+    const rgb = hexToRgb(list.color);
+    let colouredAny = false;
+    for (const entry of list.entries ?? []) {
+      if (byPlaceId.has(entry.placeId)) continue; // first list wins
+      byPlaceId.set(entry.placeId, rgb);
+      colouredAny = true;
+    }
+    if (colouredAny) used.push({ id: list.id, name: list.name, color: rgb });
+  }
+
+  return { byPlaceId, used };
+}
+
 /** One row of the map legend. Shape mirrors `LodgingLegendRow` /
  *  `FlightLegendRow` so `AllTab` renders every domain through one renderer. */
 export interface PlaceLegendRow {
   kind: "swatch";
-  slot: PlaceColorSlot;
+  /** Stable key. For the built-in slots it is also the i18n suffix; a list row
+   *  carries `list:<id>` and its own `label`, which has no translation. */
+  slot: PlaceColorSlot | `list:${string}`;
   color: Rgb;
+  /** A user-authored name (a list). Absent → the caller translates `slot`. */
+  label?: string;
 }
 
 /**
  * Legend rows for place pins, DERIVED from the same config the pin layer
  * resolves through — which is what makes it structurally impossible for the
  * legend and the map to disagree.
+ *
+ * In `list` mode the rows are the user's lists, so they have to be passed in;
+ * with none, the mode still renders its honest single row ("in no list").
  */
 export function buildPlaceLegend(
-  cfg: PlaceColorConfig = DEFAULT_PLACE_COLOR_CONFIG
+  cfg: PlaceColorConfig = DEFAULT_PLACE_COLOR_CONFIG,
+  usedLists: PlaceListColorResolution["used"] = []
 ): PlaceLegendRow[] {
-  return slotsForPlaceMode(cfg.mode).map((slot) => ({
-    kind: "swatch" as const,
-    slot,
-    color: cfg.colors[slot],
-  }));
+  const rows: PlaceLegendRow[] =
+    cfg.mode === "list"
+      ? usedLists.map((l) => ({
+          kind: "swatch" as const,
+          slot: `list:${l.id}` as const,
+          color: l.color,
+          label: l.name,
+        }))
+      : [];
+
+  for (const slot of slotsForPlaceMode(cfg.mode)) {
+    rows.push({ kind: "swatch", slot, color: cfg.colors[slot] });
+  }
+  return rows;
 }

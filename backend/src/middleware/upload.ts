@@ -308,6 +308,70 @@ export function deleteTripPhotoFile(filename: string): void {
   }
 }
 
+// =============== Place visit photos (POI phase C) ===============
+//
+// Its OWN directory rather than a shared one with trip photos. The two have
+// different owners and different lifetimes — a place photo dies with its visit,
+// a trip photo with its trip — and a shared directory would make a future
+// cleanup sweep have to know which rows point where before it may delete a
+// byte. Same storage and filter rules otherwise; a photo is a photo.
+
+const PLACE_PHOTO_DIR = path.join(__dirname, '../../uploads/place-photos');
+
+try {
+  if (!fs.existsSync(PLACE_PHOTO_DIR)) {
+    fs.mkdirSync(PLACE_PHOTO_DIR, { recursive: true });
+  }
+} catch (error: unknown) {
+  const errMsg = error instanceof Error ? error.message : String(error);
+  logger.warn({
+    operation: 'upload_place_photo_dir_creation_failed',
+    message: `Could not create place photo directory: ${PLACE_PHOTO_DIR}`,
+    context: { directory: PLACE_PHOTO_DIR, error: errMsg },
+  });
+}
+
+const placePhotoStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, PLACE_PHOTO_DIR);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+    const ext = path.extname(file.originalname).toLowerCase();
+    const basename = path.basename(file.originalname, ext);
+    const sanitized = basename.replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 40);
+    cb(null, `${uniqueSuffix}-${sanitized}${ext}`);
+  },
+});
+
+export const uploadPlacePhotos = multer({
+  storage: placePhotoStorage,
+  fileFilter: tripPhotoFilter,
+  limits: {
+    fileSize: FILE_LIMITS.TRIP_PHOTO_MAX_SIZE,
+    files: FILE_LIMITS.TRIP_PHOTO_MAX_COUNT,
+  },
+});
+
+export function getPlacePhotoDir(): string {
+  return PLACE_PHOTO_DIR;
+}
+
+export function deletePlacePhotoFile(filename: string): void {
+  const filePath = path.join(PLACE_PHOTO_DIR, path.basename(filename));
+  if (fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath);
+    } catch (error) {
+      logger.warn({
+        operation: 'upload_place_photo_delete_error',
+        message: `Failed to delete place photo file: ${filename}`,
+        context: { filename, error: error instanceof Error ? error.message : 'Unknown error' },
+      });
+    }
+  }
+}
+
 // =============== Profile pictures (issue #186) ===============
 
 const PROFILE_PICTURE_DIR = path.join(__dirname, '../../uploads/profile-pictures');

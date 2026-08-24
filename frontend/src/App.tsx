@@ -28,6 +28,9 @@ const CruiseDetailPage = lazy(() => import("./pages/CruiseDetailPage"));
 const LodgingListPage = lazy(() => import("./pages/LodgingListPage"));
 const PlacesListPage = lazy(() => import("./pages/PlacesListPage"));
 const PlaceDetailPage = lazy(() => import("./pages/PlaceDetailPage"));
+const PlaceListsPage = lazy(() => import("./pages/PlaceListsPage"));
+const PlaceListDetailPage = lazy(() => import("./pages/PlaceListDetailPage"));
+const CuratedChecklistPage = lazy(() => import("./pages/CuratedChecklistPage"));
 import { PlacesRouteGuard } from "./components/places/PlacesRouteGuard";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
@@ -327,6 +330,46 @@ function AppContent() {
                     // bounced every refresh and bookmark. See PlacesRouteGuard.
                     <PlacesRouteGuard>
                       <PlacesListPage />
+                    </PlacesRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
+              {/* Static segments before the dynamic one. React Router ranks
+                  them higher regardless of order, but keeping them adjacent is
+                  what makes the relationship readable — a place can never be
+                  shadowed by being named "lists". */}
+              <Route
+                path="/places/lists"
+                element={
+                  isAuthenticated ? (
+                    <PlacesRouteGuard>
+                      <PlaceListsPage />
+                    </PlacesRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
+              <Route
+                path="/places/lists/:id"
+                element={
+                  isAuthenticated ? (
+                    <PlacesRouteGuard>
+                      <PlaceListDetailPage />
+                    </PlacesRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
+              <Route
+                path="/places/checklists/:key"
+                element={
+                  isAuthenticated ? (
+                    <PlacesRouteGuard>
+                      <CuratedChecklistPage />
                     </PlacesRouteGuard>
                   ) : (
                     <Navigate to="/login" />

@@ -46,6 +46,9 @@ import cruiseRouteOverrideRoutes from './routes/cruises/routeOverride';
 import currenciesRouter from './routes/currencies';
 import lodgingRouter from './routes/lodging';
 import placesRouter from './routes/places';
+import placeVisitPhotoRouter from './routes/places/visitPhotos';
+import placeListsRouter from './routes/placeLists';
+import curatedListsRouter from './routes/placeLists/curated';
 import lodgingChainsRouter from './routes/lodgingChains';
 import lodgingMembershipsRouter from './routes/lodgingMemberships';
 import lodgingImportRoutes from './routes/lodgingImport';
@@ -66,6 +69,7 @@ import { templateRegistry } from './services/parsers/templates/registry';
 import { seedPortsFromCSV } from './seedPortsFromCSV';
 import { seedShipsFromCSV } from './seedShipsFromCSV';
 import { seedLodgingChainsFromCSV } from './seedLodgingChainsFromCSV';
+import { seedCuratedPlacesFromCSV } from './seedCuratedPlacesFromCSV';
 import { seedAirlinesFromData } from './seedAirlinesFromData';
 import { seedAircraftFromData } from './seedAircraftFromData';
 
@@ -304,7 +308,15 @@ app.use('/api/v1/cruises', cruisesRouter);
 app.use('/api/v1/cruises', cruiseRouteOverrideRoutes);
 app.use('/api/v1/currencies', currenciesRouter);
 app.use('/api/v1/lodging', lodgingRouter);
+// Photo proof for a visit — same prefix, own file, split out before places.ts
+// approaches the 800-line max. Mounted first so nothing depends on segment
+// counts to keep the two routers apart.
+app.use('/api/v1/places', placeVisitPhotoRouter);
 app.use('/api/v1/places', placesRouter);
+// Curated checklists mount FIRST on the same path: '/curated' would
+// otherwise be captured by the lists router's '/:id' and answered 404.
+app.use('/api/v1/place-lists/curated', curatedListsRouter);
+app.use('/api/v1/place-lists', placeListsRouter);
 app.use('/api/v1/lodging-chains', lodgingChainsRouter);
 app.use('/api/v1/lodging-memberships', lodgingMembershipsRouter);
 app.use('/api/v1/lodging-import', lodgingImportRoutes);
@@ -439,6 +451,23 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({
         operation: 'server_start_seed_lodging_chains_error',
         message: 'Failed to seed lodging chains from CSV',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+
+    // Seed the shipped POI checklists. Unlike the catalogs above this one
+    // UPDATES existing rows — the targets are reference data nobody can edit,
+    // and lazy materialisation makes a corrected coordinate here the only way a
+    // fix reaches an existing subscriber. Ticked places are never touched.
+    try {
+      await seedCuratedPlacesFromCSV();
+      logger.info({ operation: 'server_start_seed_curated_places', message: 'Curated checklists seeded' });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_seed_curated_places_error',
+        message: 'Failed to seed curated checklists from CSV',
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
         },

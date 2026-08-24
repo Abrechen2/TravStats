@@ -231,15 +231,19 @@
     "empty": "No places yet. Add your first one.",
     "colorMode": {
       "solid": "Single colour",
-      "visited": "Visited"
+      "visited": "Visited",
+      "list": "List"
     },
     "legend": {
       "solid": "Places",
       "visited": "Visited",
-      "wishlist": "Wishlist"
+      "wishlist": "Wishlist",
+      "unlisted": "In no list"
     },
     "disabled": "The POI domain is not yet enabled. Activate it under Settings → Domains.",
-    "goToSettings": "Open settings"
+    "goToSettings": "Open settings",
+    "listFilter": "Filter by list",
+    "allLists": "All places"
   },
   "tabDisabled": {
     "title": "Domain disabled",

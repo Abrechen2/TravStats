@@ -7,14 +7,23 @@ import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { listPlaces } from "../../../lib/api/places";
+import { listPlaceLists } from "../../../lib/api/placeLists";
 import { logger } from "../../../lib/logger";
 import type { Place } from "../../../types/place";
+import type { PlaceList } from "../../../types/placeList";
 import { buildPlacePins } from "../../layers/placePinsLayer";
-import { buildPlaceLegend, PLACE_COLOR_MODES } from "../../../lib/placeColor";
+import { buildPlaceLegend, resolvePlaceListColors } from "../../../lib/placeColor";
 import { usePlaceColorStore } from "../../../store/placeColorStore";
 import { classifyPlace } from "../../../shared/placeCounting";
 import MapContainer3D from "../../MapContainer3D";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
+
+/**
+ * Bottom offset for overlays in MapLibre's attribution corner — the same
+ * measurement the All tab documents: a 44 px bar plus the 8 px breathing room
+ * the rest of the overlay set uses.
+ */
+const ATTRIBUTION_CLEARANCE = 52;
 
 interface HeatDatum {
   position: [number, number];
@@ -35,9 +44,12 @@ export function PoiTab(): JSX.Element {
   const poiEnabled = isEnabled("poi");
   const { t } = useTranslation(["dashboard"]);
   const colorConfig = usePlaceColorStore((s) => s.config);
-  const setMode = usePlaceColorStore((s) => s.setMode);
 
   const [places, setPlaces] = useState<Place[]>([]);
+  const [lists, setLists] = useState<PlaceList[]>([]);
+  /** `null` = every place. A filter, not a mode: it changes WHICH pins are
+   *  drawn, never what one means. */
+  const [listFilter, setListFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
@@ -45,7 +57,12 @@ export function PoiTab(): JSX.Element {
     setLoading(true);
     setLoadError(false);
     try {
-      setPlaces(await listPlaces({}));
+      // Lists come WITH their entries: both the filter and `list` colour mode
+      // need membership, and asking for it twice would be two round trips for
+      // one answer.
+      const [rows, listRows] = await Promise.all([listPlaces({}), listPlaceLists(true)]);
+      setPlaces(rows);
+      setLists(listRows);
     } catch (err: unknown) {
       logger.error({ err }, "PoiTab: failed to load places");
       setLoadError(true);
@@ -71,15 +88,25 @@ export function PoiTab(): JSX.Element {
     [navigate]
   );
 
+  const listColors = useMemo(() => resolvePlaceListColors(lists), [lists]);
+
+  const visiblePlaces = useMemo(() => {
+    if (listFilter === null) return places;
+    const members = new Set(
+      (lists.find((l) => l.id === listFilter)?.entries ?? []).map((e) => e.placeId)
+    );
+    return places.filter((p) => members.has(p.id));
+  }, [places, lists, listFilter]);
+
   const layers = useMemo<Layer[]>(() => {
-    if (places.length === 0) return [];
+    if (visiblePlaces.length === 0) return [];
 
     if (mode === "heatmap") {
       // Only places that actually count feed the heat map. A wishlist entry is
       // somewhere the user has NOT been, and letting it warm the map would
       // make the picture say the opposite of the truth
       // (shared/placeCounting.ts).
-      const data: HeatDatum[] = places
+      const data: HeatDatum[] = visiblePlaces
         .filter((p) => classifyPlace(p) === "visited")
         .map((p) => ({
           position: [p.lon, p.lat],
@@ -102,14 +129,18 @@ export function PoiTab(): JSX.Element {
     }
 
     return (
-      buildPlacePins(places, 1, 4, {
+      buildPlacePins(visiblePlaces, 1, 4, {
         onPinClick: handlePinClick,
         colors: colorConfig,
+        listColors: listColors.byPlaceId,
       }) ?? []
     );
-  }, [places, mode, colorConfig, handlePinClick]);
+  }, [visiblePlaces, mode, colorConfig, listColors, handlePinClick]);
 
-  const legend = useMemo(() => buildPlaceLegend(colorConfig), [colorConfig]);
+  const legend = useMemo(
+    () => buildPlaceLegend(colorConfig, listColors.used),
+    [colorConfig, listColors]
+  );
 
   if (!poiEnabled) {
     return <DomainDisabledNotice domain="poi" />;
@@ -126,9 +157,12 @@ export function PoiTab(): JSX.Element {
         // No flight or cruise geometry belongs on this tab; without this the
         // map fetches and draws every cruise route under the place pins.
         showInternalCruises={false}
-        // The appearance panel has no POI section yet, so offer none rather
-        // than a section belonging to another domain.
-        appearanceDomains={[]}
+        // The appearance panel now carries a POI section (colour mode +
+        // colours), so this tab offers it rather than nothing. The overlay
+        // below deliberately no longer duplicates the mode picker: two
+        // controls for one setting is the drift the colour-mode contract
+        // exists to prevent, even when both go through the same store.
+        appearanceDomains={["poi"]}
         hideInfoPill
       />
 
@@ -139,8 +173,14 @@ export function PoiTab(): JSX.Element {
         <div
           style={{
             position: "absolute",
-            left: 12,
-            bottom: 12,
+            // BOTTOM-RIGHT, not bottom-left. The appearance panel is anchored
+            // `bottom-4 left-4`, and this overlay sat straight on top of it the
+            // moment the tab started offering a POI section — found by looking
+            // at the map, not by any test. The offset clears MapLibre's
+            // attribution bar, whose credit must stay legible for licence
+            // reasons (same 52 px the All tab's legend uses).
+            right: 12,
+            bottom: ATTRIBUTION_CLEARANCE,
             zIndex: 30,
             padding: "11px 13px",
             borderRadius: 10,
@@ -149,27 +189,31 @@ export function PoiTab(): JSX.Element {
             fontSize: 12,
           }}
         >
-          <div style={{ display: "flex", gap: 4, marginBottom: 9 }}>
-            {PLACE_COLOR_MODES.map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMode(m)}
-                style={{
-                  padding: "4px 9px",
-                  borderRadius: 6,
-                  fontSize: 11,
-                  border: "1px solid var(--color-border)",
-                  background: colorConfig.mode === m ? "var(--bg-elevated)" : "transparent",
-                  color: colorConfig.mode === m ? "var(--accent)" : "var(--text-muted)",
-                  fontWeight: colorConfig.mode === m ? 600 : 400,
-                  cursor: "pointer",
-                }}
-              >
-                {t(`dashboard:poi.colorMode.${m}`)}
-              </button>
-            ))}
-          </div>
+          {lists.length > 0 && (
+            <select
+              value={listFilter ?? ""}
+              onChange={(e) => setListFilter(e.target.value === "" ? null : e.target.value)}
+              aria-label={t("dashboard:poi.listFilter")}
+              style={{
+                marginBottom: 9,
+                width: "100%",
+                padding: "4px 6px",
+                borderRadius: 6,
+                fontSize: 11,
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--color-border)",
+                color: "var(--text-secondary)",
+              }}
+            >
+              <option value="">{t("dashboard:poi.allLists")}</option>
+              {lists.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          )}
+
           <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 5 }}>
             {legend.map((row) => (
               <li
@@ -195,7 +239,7 @@ export function PoiTab(): JSX.Element {
                         : "none",
                   }}
                 />
-                {t(`dashboard:poi.legend.${row.slot}`)}
+                {row.label ?? t(`dashboard:poi.legend.${row.slot}`)}
               </li>
             ))}
           </ul>

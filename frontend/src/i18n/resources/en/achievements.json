@@ -39,6 +39,7 @@
     "domainFlight": "Flight",
     "domainCruise": "Cruise",
     "domainLodging": "Lodging",
+    "domainPoi": "Places",
     "domainShared": "Shared",
     "showUnlockedOnly": "Show unlocked only"
   },
@@ -78,6 +79,54 @@
     "awesome": "Awesome!"
   },
   "codes": {
+    "HERITAGE_10": {
+      "name": "Heritage Collector",
+      "description": "Visited 10 UNESCO World Heritage sites"
+    },
+    "HERITAGE_50": {
+      "name": "Heritage Connoisseur",
+      "description": "Visited 50 UNESCO World Heritage sites"
+    },
+    "HERITAGE_100": {
+      "name": "Heritage Chronicler",
+      "description": "Visited 100 UNESCO World Heritage sites"
+    },
+    "PLACES_10": {
+      "name": "Local Knowledge",
+      "description": "10 visited places in the logbook"
+    },
+    "PLACES_50": {
+      "name": "Street Map in Your Head",
+      "description": "50 visited places in the logbook"
+    },
+    "PLACES_250": {
+      "name": "Gazetteer",
+      "description": "250 visited places in the logbook"
+    },
+    "PLACE_COUNTRIES_10": {
+      "name": "Ten Countries, Ten Places",
+      "description": "Visited places in 10 different countries"
+    },
+    "PLACE_COUNTRIES_25": {
+      "name": "A Favourite Spot Everywhere",
+      "description": "Visited places in 25 different countries"
+    },
+    "PLACE_VISITS_100": {
+      "name": "Regular",
+      "description": "100 recorded visits — return visits count separately"
+    },
+    "PLACES_CATEGORY_25": {
+      "name": "Always the Same",
+      "description": "25 visited places in one category"
+    },
+    "WONDERS_NEW7": {
+      "name": "New 7 Wonders of the World",
+      "description": "Visited all seven new wonders of the world"
+    },
+    "WONDERS_ANCIENT": {
+      "name": "Seven Wonders of the Ancient World",
+      "description": "Stood at all seven ancient wonders — six of them in your mind's eye"
+    },
     "FIRST_FLIGHT": {
       "name": "Taking Off",
       "description": "Complete your first flight"

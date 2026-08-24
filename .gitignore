@@ -28,6 +28,12 @@ CLAUDE.local.md
 !SECURITY.md
 !docs/**/*.md
 !backend/OLLAMA_OPTIMIZATION.md
+# Provenance of the seeded catalogs. The POI spec REQUIRES the source and
+# licence of any bulk-derived catalog to be recorded next to the data, so this
+# one is not optional — the blanket *.md above had silently swallowed it, which
+# would have shipped 1247 rows of vendored data with no record of where they
+# came from.
+!backend/src/seedData/*.md
 
 # Private: audit findings, internal plans, personal notes — never commit
 .private/

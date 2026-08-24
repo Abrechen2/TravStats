@@ -23,6 +23,7 @@ import {
   resolveStayProgramme,
 } from '../services/lodging/stayMembership';
 import { classifyStay } from '../shared/lodgingCounting';
+import { calculatePlaceStats } from './placeStats';
 
 /** Shared "did this actually happen" check for flights and cruises alike —
  * both domains use the same status vocabulary (`flown` / `historical` are
@@ -70,7 +71,7 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     // + lodging stays (all statuses — calculateLodgingStats filters cancelled itself)
     // + per-trip domain counts (flights/cruises/lodgingStays) for the
     //   cross-domain Fly & Stay / Grand Tour flags.
-    const [flights, allFlights, cruises, lodgingStays, lodgings, lodgingMemberships, trips, userSettings] = await Promise.all([
+    const [flights, allFlights, cruises, lodgingStays, lodgings, lodgingMemberships, trips, userSettings, places] = await Promise.all([
       prisma.flight.findMany({
         where: { userId, status: { in: ['flown', 'historical'] } },
         orderBy: { departureTime: 'asc' },
@@ -119,6 +120,19 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
         },
       }),
       prisma.userSettings.findUnique({ where: { userId }, select: { baseCurrency: true } }),
+      // Places with their visits. ALL of them, not only `visited: true` — which
+      // ones count is `classifyPlace`'s decision, and asking that question once
+      // in SQL and once again in JS is how two answers start to disagree.
+      prisma.place.findMany({
+        where: { userId },
+        select: {
+          visited: true,
+          category: true,
+          isoCountryCode: true,
+          curatedItemId: true,
+          visits: { select: { visitedAt: true } },
+        },
+      }),
     ]);
     // Same rule as routes/lodging.ts: a stay's FX snapshot is a permanent
     // record of the base currency active WHEN IT WAS SAVED, so the spend-based
@@ -353,6 +367,13 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       flightDates.some((fd) => Math.abs(fd.getTime() - cd.getTime()) <= SEVEN_DAYS_MS),
     );
 
+    // POI stats. Places carry their own country codes, but they are NOT unioned
+    // into the shared `countries` set below: the cross-domain country badges
+    // mean "I travelled there", and a place is a pin — a wishlist-free but
+    // still very local thing. Mixing them would let a McDonald's around the
+    // corner move a travel badge.
+    const placeStats = calculatePlaceStats(places);
+
     // Union flight + cruise + lodging countries into the shared countries Set.
     // Same for continents — map each cruise port to its continent via getContinent().
     // Ports store the country as an English NAME ("Germany"), airports as an ISO-3166
@@ -466,6 +487,13 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       // Cross-domain (lodging)
       flyAndStay,
       grandTour,
+      // POI — every figure via shared/placeCounting, so a badge and the stats
+      // page cannot disagree about whether an undated visit happened.
+      placesCount: placeStats.placesCount,
+      placeVisitsCount: placeStats.placeVisitsCount,
+      placeCountries: placeStats.placeCountries,
+      placesInCategoryMax: placeStats.placesInCategoryMax,
+      curatedTickedByList: placeStats.curatedTickedByList,
     };
 
     // Prepare all updates/creates to execute in a single transaction

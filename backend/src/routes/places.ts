@@ -4,6 +4,7 @@ import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import { resolveCountryCode } from "../shared/geo/countryCode";
+import { getContinent } from "../utils/continents";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { classifyVisit } from "../shared/placeCounting";
 import {
@@ -29,6 +30,15 @@ const requireUser = (req: AuthRequest): string => {
 export const PLACE_INCLUDE = { visits: true } satisfies Prisma.PlaceInclude;
 export type PlaceRow = Prisma.PlaceGetPayload<{ include: typeof PLACE_INCLUDE }>;
 
+/**
+ * The DETAIL view additionally carries each visit's photo proof. Deliberately
+ * not folded into `PLACE_INCLUDE`: the list endpoint uses that for every row,
+ * and a gallery per row is a page of joins nobody asked for.
+ */
+const PLACE_DETAIL_INCLUDE = {
+  visits: { include: { photos: { orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }] } } },
+} satisfies Prisma.PlaceInclude;
+
 interface PlaceAggregates {
   /** Visits that actually happened — future-dated ones excluded. */
   visitCount: number;
@@ -36,9 +46,19 @@ interface PlaceAggregates {
   plannedVisitCount: number;
   /** Most recent COMPLETED visit; null when undated or never visited. */
   lastVisitAt: Date | null;
+  /**
+   * Derived, never stored. Resolved from the country code with the coordinates
+   * as the fallback, through the same module the achievement engine uses — so
+   * a continent on a list row and a continent behind a badge cannot disagree.
+   */
+  continent: string | null;
 }
 
-function computeAggregates(visits: PlaceRow["visits"], now = new Date()): PlaceAggregates {
+function computeAggregates(
+  place: { lat: number; lon: number; isoCountryCode: string | null },
+  visits: PlaceRow["visits"],
+  now = new Date()
+): PlaceAggregates {
   let visitCount = 0;
   let plannedVisitCount = 0;
   let lastVisitAt: Date | null = null;
@@ -53,13 +73,30 @@ function computeAggregates(visits: PlaceRow["visits"], now = new Date()): PlaceA
       lastVisitAt = v.visitedAt;
     }
   }
-  return { visitCount, plannedVisitCount, lastVisitAt };
+  return {
+    visitCount,
+    plannedVisitCount,
+    lastVisitAt,
+    continent: getContinent(place.lat, place.lon, place.isoCountryCode),
+  };
 }
 
 type DecoratedPlace = PlaceRow & PlaceAggregates;
 
-function decorate(place: PlaceRow, now = new Date()): DecoratedPlace {
-  return { ...place, ...computeAggregates(place.visits, now) };
+/**
+ * Generic over the include shape so the detail view keeps its photos in the
+ * TYPE and not only at runtime — a spread that silently widens the payload
+ * while the signature claims otherwise is how a field ends up undocumented.
+ */
+function decorate<
+  T extends {
+    visits: PlaceRow["visits"];
+    lat: number;
+    lon: number;
+    isoCountryCode: string | null;
+  },
+>(place: T, now = new Date()): T & PlaceAggregates {
+  return { ...place, ...computeAggregates(place, place.visits, now) };
 }
 
 /**
@@ -159,7 +196,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     const userId = requireUser(req);
     const place = await prisma.place.findFirst({
       where: { id: req.params.id, userId },
-      include: PLACE_INCLUDE,
+      include: PLACE_DETAIL_INCLUDE,
     });
     if (!place) throw new AppError("Place not found", 404);
     res.json({ success: true, data: decorate(place) });

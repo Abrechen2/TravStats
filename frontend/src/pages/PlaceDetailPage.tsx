@@ -6,6 +6,7 @@ import PageTransition from "../components/PageTransition";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { LocationMiniMap } from "../components/location/LocationMiniMap";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
+import { VisitPhotoStrip } from "../components/places/VisitPhotoStrip";
 import { RowActionButton, RowActions } from "../components/table/RowActionButton";
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
@@ -306,18 +307,24 @@ export default function PlaceDetailPage(): JSX.Element {
               ) : (
                 <ul className="space-y-2">
                   {completed.map((v) => (
-                    <li key={v.id} className="flex items-center justify-between gap-3 rounded-md px-3 py-2" style={ROW}>
-                      <span className="font-mono text-sm">{formatVisit(v)}</span>
-                      <span className="flex-1 truncate text-xs" style={{ color: "var(--text-muted)" }}>
-                        {v.notes ?? ""}
-                      </span>
-                      <RowActions>
-                        <RowActionButton
-                          icon="delete"
-                          label={t("common:buttons.delete")}
-                          onClick={() => void removeVisit(v.id)}
-                        />
-                      </RowActions>
+                    <li key={v.id} className="rounded-md px-3 py-2" style={ROW}>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-mono text-sm">{formatVisit(v)}</span>
+                        <span className="flex-1 truncate text-xs" style={{ color: "var(--text-muted)" }}>
+                          {v.notes ?? ""}
+                        </span>
+                        <RowActions>
+                          <RowActionButton
+                            icon="delete"
+                            label={t("common:buttons.delete")}
+                            onClick={() => void removeVisit(v.id)}
+                          />
+                        </RowActions>
+                      </div>
+                      {/* Proof hangs off the VISIT, not the place: "I was here
+                          in 2019" and "I was here last week" are two different
+                          sets of pictures. */}
+                      <VisitPhotoStrip visitId={v.id} photos={v.photos ?? []} />
                     </li>
                   ))}
                   {planned.map((v) => (

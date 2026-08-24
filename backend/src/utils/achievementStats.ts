@@ -230,6 +230,19 @@ export interface UserStats {
   /** True when a single trip links a flight, a cruise, AND a lodging
    * stay. Strictly stronger than `flyAndStay`. */
   grandTour: boolean;
+  // --- POI (places) ---
+  /** Places that count — `Place.visited`; wishlist entries excluded. */
+  placesCount: number;
+  /** Visits that happened. Three trips to one McDonald's are three. */
+  placeVisitsCount: number;
+  /** Distinct ISO country codes among the places that count. */
+  placeCountries: Set<string>;
+  /** Size of the biggest single category — "25 of one kind". */
+  placesInCategoryMax: number;
+  /** Ticked targets per checklist, keyed by `CuratedList.key`. Kept per list
+   * rather than as one maximum, or every wonders badge would report the same
+   * progress. Read by the `curated_list_ticked:<key>` checks. */
+  curatedTickedByList: Map<string, number>;
 }
 
 // The coordinate-box implementation that used to live here called the Arctic
@@ -374,6 +387,11 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     tripsFullyDocumented: 0,
     flyAndStay: false,
     grandTour: false,
+    placesCount: 0,
+    placeVisitsCount: 0,
+    placeCountries: new Set<string>(),
+    placesInCategoryMax: 0,
+    curatedTickedByList: new Map<string, number>(),
   };
 
   // Collect all unique airport codes from flights

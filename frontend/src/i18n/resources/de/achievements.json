@@ -39,6 +39,7 @@
     "domainFlight": "Flug",
     "domainCruise": "Kreuzfahrt",
     "domainLodging": "Unterkunft",
+    "domainPoi": "Orte",
     "domainShared": "Übergreifend",
     "showUnlockedOnly": "Nur freigeschaltete anzeigen"
   },
@@ -78,6 +79,54 @@
     "awesome": "Großartig!"
   },
   "codes": {
+    "HERITAGE_10": {
+      "name": "Welterbe-Sammler",
+      "description": "10 Stätten der UNESCO-Welterbeliste besucht"
+    },
+    "HERITAGE_50": {
+      "name": "Welterbe-Kenner",
+      "description": "50 Stätten der UNESCO-Welterbeliste besucht"
+    },
+    "HERITAGE_100": {
+      "name": "Welterbe-Chronist",
+      "description": "100 Stätten der UNESCO-Welterbeliste besucht"
+    },
+    "PLACES_10": {
+      "name": "Ortskundig",
+      "description": "10 besuchte Orte im Logbuch"
+    },
+    "PLACES_50": {
+      "name": "Stadtplan im Kopf",
+      "description": "50 besuchte Orte im Logbuch"
+    },
+    "PLACES_250": {
+      "name": "Ortsregister",
+      "description": "250 besuchte Orte im Logbuch"
+    },
+    "PLACE_COUNTRIES_10": {
+      "name": "Zehn Länder, zehn Orte",
+      "description": "Besuchte Orte in 10 verschiedenen Ländern"
+    },
+    "PLACE_COUNTRIES_25": {
+      "name": "Überall ein Lieblingsplatz",
+      "description": "Besuchte Orte in 25 verschiedenen Ländern"
+    },
+    "PLACE_VISITS_100": {
+      "name": "Stammgast",
+      "description": "100 erfasste Besuche — Wiederbesuche zählen einzeln"
+    },
+    "PLACES_CATEGORY_25": {
+      "name": "Immer dasselbe",
+      "description": "25 besuchte Orte derselben Kategorie"
+    },
+    "WONDERS_NEW7": {
+      "name": "Neue 7 Weltwunder",
+      "description": "Alle sieben neuen Weltwunder besucht"
+    },
+    "WONDERS_ANCIENT": {
+      "name": "Sieben Weltwunder der Antike",
+      "description": "An allen sieben antiken Weltwundern gestanden — sechs davon in Gedanken"
+    },
     "FIRST_FLIGHT": {
       "name": "Abgehoben",
       "description": "Absolviere deinen ersten Flug"

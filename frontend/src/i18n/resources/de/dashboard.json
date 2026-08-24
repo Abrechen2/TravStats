@@ -231,15 +231,19 @@
     "empty": "Noch keine Orte erfasst. Lege deinen ersten Ort an.",
     "colorMode": {
       "solid": "Einfarbig",
-      "visited": "Besucht"
+      "visited": "Besucht",
+      "list": "Liste"
     },
     "legend": {
       "solid": "Orte",
       "visited": "Besucht",
-      "wishlist": "Merkliste"
+      "wishlist": "Merkliste",
+      "unlisted": "In keiner Liste"
     },
     "disabled": "Die POI-Domain ist noch nicht aktiviert. Schalte sie unter Einstellungen → Domains frei.",
-    "goToSettings": "Zu den Einstellungen"
+    "goToSettings": "Zu den Einstellungen",
+    "listFilter": "Nach Liste filtern",
+    "allLists": "Alle Orte"
   },
   "tabDisabled": {
     "title": "Bereich deaktiviert",
