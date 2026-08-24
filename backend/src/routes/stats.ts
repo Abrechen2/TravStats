@@ -22,7 +22,7 @@ import { normalizeHistory } from '../utils/homeAirport';
 import { resolveCountryCode } from '../shared/geo/countryCode';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
-import { tzAwareDurationMinutes, localYearOf, type FlightTimeSemantics } from '../utils/timezone';
+import { tzAwareDurationMinutes, localWallClockOf, type FlightTimeSemantics } from '../utils/timezone';
 import {
   addFlightDuration,
   averageDurationMinutes,
@@ -1361,7 +1361,7 @@ interface CountryStatsResponse {
    * zero — a comparison that could not exist, presented as data.
    *
    * The year is the one on the clock at the DEPARTURE airport (see
-   * localYearOf), not the UTC instant. A flight without a departure time
+   * localWallClockOf), not the UTC instant. A flight without a departure time
    * still counts towards `countries` but belongs to no year.
    */
   byYear: Record<string, string[]>;
@@ -1380,6 +1380,7 @@ router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunct
         arrIata: true,
         arrIcao: true,
         departureTime: true,
+        depTimeSemantics: true,
       },
     });
 
@@ -1426,7 +1427,11 @@ router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunct
       // DEPARTURE year: a red-eye that lands after midnight is still one
       // journey, and splitting its two ends across two years would count a
       // country as visited in a year the traveller never flew.
-      const year = localYearOf(f.departureTime, depAirport?.timezone ?? null);
+      const year = localWallClockOf(
+        f.departureTime,
+        depAirport?.timezone ?? null,
+        f.depTimeSemantics as FlightTimeSemantics,
+      ).year;
       if (!Number.isFinite(year)) continue;
       const bucket = countriesByYear.get(year) ?? new Set<string>();
       for (const country of touched) bucket.add(country);

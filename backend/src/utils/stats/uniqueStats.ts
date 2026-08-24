@@ -582,7 +582,7 @@ function toLocalMinutes(date: Date, timezone: string): number {
   }
 }
 
-// toLocalDateString now lives in utils/timezone alongside localYearOf — it
+// toLocalDateString now lives in utils/timezone alongside localWallClockOf —
 // had been copied here, and a second copy was about to be written for the
 // year-scoped country index.
 

@@ -33,18 +33,6 @@ export function toLocalDateString(date: Date, timezone: string | null): string {
   }
 }
 
-/**
- * Calendar YEAR of an instant as seen in `timezone`.
- *
- * "Which countries did I visit in 2025" has to be answered on the clock at
- * the airport, not on the UTC instant and not in the viewer's browser: a
- * 22:30 departure from New York on 31 December is already 1 January in UTC,
- * and filing it under the following year would be wrong for the traveller.
- */
-export function localYearOf(date: Date, timezone: string | null): number {
-  return Number.parseInt(toLocalDateString(date, timezone).slice(0, 4), 10);
-}
-
 /** The clock as it read at the airport when the flight left. */
 export interface LocalWallClock {
   /** Calendar date, YYYY-MM-DD. */
@@ -146,6 +134,10 @@ function zonedComponents(stored: Date, timezone: string): Components | null {
  *
  * DATE_ONLY rows carry a 12:00 placeholder, so `hour` is null for them: the
  * date is real, the time is not.
+ *
+ * The same reading answers "which countries did I visit in 2025": a 22:30
+ * departure from New York on 31 December is already 1 January in UTC, and
+ * filing it under the following year would be wrong for the traveller.
  */
 export function localWallClockOf(
   stored: Date,
