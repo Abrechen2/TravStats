@@ -79,6 +79,18 @@
     "awesome": "Awesome!"
   },
   "codes": {
+    "HERITAGE_10": {
+      "name": "Heritage Collector",
+      "description": "Visited 10 UNESCO World Heritage sites"
+    },
+    "HERITAGE_50": {
+      "name": "Heritage Connoisseur",
+      "description": "Visited 50 UNESCO World Heritage sites"
+    },
+    "HERITAGE_100": {
+      "name": "Heritage Chronicler",
+      "description": "Visited 100 UNESCO World Heritage sites"
+    },
     "PLACES_10": {
       "name": "Local Knowledge",
       "description": "10 visited places in the logbook"

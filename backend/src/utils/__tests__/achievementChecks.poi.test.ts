@@ -6,7 +6,7 @@
 // unlocked), and the badge is then simply unreachable — silently, forever.
 //
 // POI adds a second one. Its checklist badges do NOT use a plain case: the list
-// key rides inside the requirement type (`curated_list_complete:<key>`). So the
+// key rides inside the requirement type (`curated_list_ticked:<key>`). So the
 // test has to prove both that the prefix is honoured AND that two checklists
 // report SEPARATE progress — a single shared maximum would make every wonders
 // badge show the same number, which is exactly what the per-list map exists to
@@ -90,7 +90,7 @@ describe("checkAchievement — POI requirement types", () => {
     ).toEqual({ isUnlocked: true, progress: 3 });
   });
 
-  describe("curated_list_complete:<key>", () => {
+  describe("curated_list_ticked:<key>", () => {
     const stats = async (): Promise<UserStats> => ({
       ...(await baseStats()),
       curatedTickedByList: new Map([
@@ -102,7 +102,7 @@ describe("checkAchievement — POI requirement types", () => {
     it("reads the key out of the requirement type", async () => {
       const result = checkAchievement(
         fakeAchievement({
-          requirementType: "curated_list_complete:world-wonders-new7",
+          requirementType: "curated_list_ticked:world-wonders-new7",
           requirement: 7,
         }),
         await stats(),
@@ -114,7 +114,7 @@ describe("checkAchievement — POI requirement types", () => {
     it("keeps two checklists' progress apart", async () => {
       const result = checkAchievement(
         fakeAchievement({
-          requirementType: "curated_list_complete:world-wonders-ancient",
+          requirementType: "curated_list_ticked:world-wonders-ancient",
           requirement: 7,
         }),
         await stats(),
@@ -126,7 +126,7 @@ describe("checkAchievement — POI requirement types", () => {
     it("reports 0 for a key nobody has ticked — never a crash, never a default", async () => {
       const result = checkAchievement(
         fakeAchievement({
-          requirementType: "curated_list_complete:not-shipped-yet",
+          requirementType: "curated_list_ticked:not-shipped-yet",
           requirement: 7,
         }),
         await stats(),
@@ -150,6 +150,7 @@ describe("checkAchievement — POI requirement types", () => {
       curatedTickedByList: new Map([
         ["world-wonders-new7", 7],
         ["world-wonders-ancient", 7],
+        ["world-heritage", 1000],
       ]),
     };
 

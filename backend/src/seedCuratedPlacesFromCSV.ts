@@ -33,7 +33,24 @@ type ListRow = Omit<CuratedList, "key">;
 type PlaceRow = Omit<CuratedPlace, "id">;
 
 const LISTS_CSV_PATH = path.resolve(__dirname, "seedData", "curated_lists.csv");
-const PLACES_CSV_PATH = path.resolve(__dirname, "seedData", "curated_places.csv");
+
+/**
+ * Every file the targets come from, in order.
+ *
+ * An explicit list, not a glob: a glob would also pick up the backup somebody
+ * leaves behind while editing, and seed it. Adding a catalog is one line here
+ * plus one row in `curated_lists.csv`.
+ *
+ * The world-heritage file is GENERATED — see `curated_places.SOURCES.md` and
+ * `scripts/build-world-heritage-csv.mjs`. Keeping it separate is what lets it
+ * be regenerated wholesale without touching the hand-written wonder rows.
+ */
+const PLACES_CSV_FILES = ["curated_places.csv", "curated_places.world-heritage.csv"] as const;
+const placesCsvPath = (file: string): string => path.resolve(__dirname, "seedData", file);
+
+/** Rows per bulk insert. Keeps a first boot's INSERT off the parameter limit
+ *  without turning it back into a round-trip per row. */
+const CREATE_CHUNK = 250;
 
 const text = (value: string | undefined): string | null => {
   const trimmed = value?.trim();
@@ -79,7 +96,7 @@ function placeDiffers(stored: CuratedPlace, next: PlaceRow): boolean {
 
 /**
  * Idempotent seeder for the shipped checklists — `CuratedList` and its
- * `CuratedPlace` targets, from two CSVs beside this file.
+ * `CuratedPlace` targets, from the CSVs beside this file.
  *
  * ## Why this one UPDATES, when ports/ships/chains do not
  *
@@ -113,31 +130,41 @@ function placeDiffers(stored: CuratedPlace, next: PlaceRow): boolean {
  * logbook but missing from the checklist it belongs to. Retiring a list is a
  * migration with a decision behind it, not a side effect of editing a CSV.
  *
- * Content provenance: the two lists are hand-written, 14 rows in total, from
- * common knowledge and coordinates read off the sites themselves. Nothing is
- * derived in bulk from OSM or any other database, so no attribution obligation
- * attaches. That changes the moment a list is generated rather than typed —
- * see the licensing note in the POI design spec before adding one.
+ * Content provenance lives in `seedData/curated_places.SOURCES.md`, which the
+ * POI design spec (§5) asks for by name: the wonder lists are hand-written and
+ * carry no attribution obligation, the world-heritage catalog is generated from
+ * Wikidata under CC0. A CSV read with `columns: true` cannot hold a comment
+ * header — a leading `#` would become the header row — which is why the record
+ * is a sibling file rather than the header the spec imagined.
  */
 export async function seedCuratedPlacesFromCSV(): Promise<number> {
-  if (!fs.existsSync(LISTS_CSV_PATH) || !fs.existsSync(PLACES_CSV_PATH)) {
+  const placesPaths = PLACES_CSV_FILES.map(placesCsvPath).filter((p) => fs.existsSync(p));
+  if (!fs.existsSync(LISTS_CSV_PATH) || placesPaths.length === 0) {
     logger.warn({
       operation: "seed_curated_places_skip",
       reason: "csv_missing",
       lists: LISTS_CSV_PATH,
-      places: PLACES_CSV_PATH,
+      places: PLACES_CSV_FILES.map(placesCsvPath),
     });
     return 0;
+  }
+  if (placesPaths.length < PLACES_CSV_FILES.length) {
+    // One catalog missing is not a reason to seed none of them, but it IS a
+    // reason to say so — a silently absent world-heritage file looks exactly
+    // like a checklist nobody has ticked yet.
+    logger.warn({
+      operation: "seed_curated_places_partial",
+      missing: PLACES_CSV_FILES.map(placesCsvPath).filter((p) => !fs.existsSync(p)),
+    });
   }
 
   // `as const` matters: without the literal `columns: true`, csv-parse's
   // overload resolves to `string[][]` and the header row is lost.
   const parseOptions = { columns: true, skip_empty_lines: true, trim: true } as const;
   const listRows = parse(fs.readFileSync(LISTS_CSV_PATH, "utf-8"), parseOptions) as CSVCuratedList[];
-  const placeRows = parse(
-    fs.readFileSync(PLACES_CSV_PATH, "utf-8"),
-    parseOptions
-  ) as CSVCuratedPlace[];
+  const placeRows = placesPaths.flatMap(
+    (file) => parse(fs.readFileSync(file, "utf-8"), parseOptions) as CSVCuratedPlace[]
+  );
 
   const lists = new Map<string, ListRow>();
   for (const row of listRows) {
@@ -213,14 +240,33 @@ export async function seedCuratedPlacesFromCSV(): Promise<number> {
     written += 1;
   }
 
+  // Two paths on purpose. A first boot inserts ~1250 world-heritage rows, and
+  // 1250 round-trips is several seconds of boot; one `createMany` is one. Rows
+  // that EXIST and differ still go through `upsert` individually, because
+  // `createMany` cannot update and the changed set is normally tiny — a
+  // corrected coordinate, not a new catalog.
+  const toCreate: CuratedPlace[] = [];
+  const toUpdate: Array<[string, PlaceRow]> = [];
   for (const [id, next] of places) {
     const stored = storedPlaceById.get(id);
-    if (stored && !placeDiffers(stored, next)) continue;
-    await prisma.curatedPlace.upsert({
-      where: { id },
-      create: { id, ...next },
-      update: next,
-    });
+    if (!stored) {
+      toCreate.push({ id, ...next });
+    } else if (placeDiffers(stored, next)) {
+      toUpdate.push([id, next]);
+    }
+  }
+
+  for (let i = 0; i < toCreate.length; i += CREATE_CHUNK) {
+    const chunk = toCreate.slice(i, i + CREATE_CHUNK);
+    // `skipDuplicates` is the safety net for a concurrent boot inserting the
+    // same ids between our SELECT and this INSERT — the pre-filter does the
+    // work, this just keeps us crash-free.
+    const result = await prisma.curatedPlace.createMany({ data: chunk, skipDuplicates: true });
+    written += result.count;
+  }
+
+  for (const [id, next] of toUpdate) {
+    await prisma.curatedPlace.update({ where: { id }, data: next });
     written += 1;
   }
 

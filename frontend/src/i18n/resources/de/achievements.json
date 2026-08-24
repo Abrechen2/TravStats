@@ -79,6 +79,18 @@
     "awesome": "Großartig!"
   },
   "codes": {
+    "HERITAGE_10": {
+      "name": "Welterbe-Sammler",
+      "description": "10 Stätten der UNESCO-Welterbeliste besucht"
+    },
+    "HERITAGE_50": {
+      "name": "Welterbe-Kenner",
+      "description": "50 Stätten der UNESCO-Welterbeliste besucht"
+    },
+    "HERITAGE_100": {
+      "name": "Welterbe-Chronist",
+      "description": "100 Stätten der UNESCO-Welterbeliste besucht"
+    },
     "PLACES_10": {
       "name": "Ortskundig",
       "description": "10 besuchte Orte im Logbuch"

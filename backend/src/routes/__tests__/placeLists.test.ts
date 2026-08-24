@@ -357,4 +357,124 @@ describe("Place lists API", () => {
       expect(res.status).toBe(404);
     });
   });
+
+  // -------------------------------------------------------------- suggestions
+
+  describe("suggestions", () => {
+    const suggestions = () =>
+      request(app).get(`/api/v1/place-lists/curated/${NEW7}/suggestions`).set("Cookie", authCookie);
+
+    /** A stay in Rome, 3 km from the Colosseum. */
+    const stayInRome = async (checkIn = "2024-06-10", checkOut = "2024-06-14") => {
+      const lodging = await prisma.lodging.create({
+        data: { userId, name: "Hotel Roma", type: "hotel", lat: 41.9009, lon: 12.4833 },
+      });
+      await prisma.lodgingStay.create({
+        data: {
+          lodgingId: lodging.id,
+          userId,
+          checkIn: new Date(checkIn),
+          checkOut: new Date(checkOut),
+        },
+      });
+    };
+
+    afterEach(async () => {
+      await prisma.lodgingStay.deleteMany({ where: { userId } });
+      await prisma.lodging.deleteMany({ where: { userId } });
+    });
+
+    it("says nothing when the user has recorded no travel at all", async () => {
+      const res = await suggestions();
+      expect(res.status).toBe(200);
+      expect(res.body.data).toMatchObject({ anchorCount: 0, suggestions: [] });
+      // openCount still travels, so the UI can tell "no travel yet" apart from
+      // "nothing of yours is near an open target".
+      expect(res.body.data.openCount).toBe(7);
+    });
+
+    it("proposes the Colosseum from a hotel in Rome, with the reason attached", async () => {
+      await stayInRome();
+      const res = await suggestions();
+
+      const hit = res.body.data.suggestions.find(
+        (s: { itemId: string }) => s.itemId === COLOSSEUM
+      );
+      expect(hit).toMatchObject({
+        confidence: "high",
+        anchorKind: "lodging",
+        anchorLabel: "Hotel Roma",
+      });
+      expect(hit.distanceKm).toBeLessThan(10);
+      expect(hit.visitedAt).toContain("2024-06-10");
+    });
+
+    it("never proposes something already ticked", async () => {
+      await stayInRome();
+      await request(app)
+        .post(`/api/v1/place-lists/curated/items/${COLOSSEUM}/tick`)
+        .set("Cookie", authCookie)
+        .send({});
+
+      const res = await suggestions();
+      expect(
+        res.body.data.suggestions.some((s: { itemId: string }) => s.itemId === COLOSSEUM)
+      ).toBe(false);
+    });
+
+    it("ignores a stay that has not happened yet", async () => {
+      const future = new Date(Date.now() + 60 * 24 * 3600 * 1000);
+      await stayInRome(future.toISOString(), new Date(future.getTime() + 86400000).toISOString());
+      const res = await suggestions();
+      expect(res.body.data.anchorCount).toBe(0);
+    });
+
+    it("keeps one user's travel out of another's suggestions", async () => {
+      await stayInRome();
+      const res = await request(app)
+        .get(`/api/v1/place-lists/curated/${NEW7}/suggestions`)
+        .set("Cookie", otherCookie);
+      expect(res.body.data.anchorCount).toBe(0);
+    });
+
+    it("accepting a suggestion records the visit ON that date", async () => {
+      await stayInRome();
+      const res = await request(app)
+        .post(`/api/v1/place-lists/curated/items/${COLOSSEUM}/tick`)
+        .set("Cookie", authCookie)
+        .send({ visitedAt: new Date("2024-06-10").toISOString() });
+      expect(res.status).toBe(201);
+
+      const place = await prisma.place.findFirst({
+        where: { userId, curatedItemId: COLOSSEUM },
+        include: { visits: true },
+      });
+      expect(place?.visits).toHaveLength(1);
+      expect(place?.visits[0].visitedAt?.toISOString()).toContain("2024-06-10");
+    });
+
+    it("does not stack a second identical visit when a tick is repeated", async () => {
+      await stayInRome();
+      const body = { visitedAt: new Date("2024-06-10").toISOString() };
+      for (let i = 0; i < 2; i += 1) {
+        await request(app)
+          .post(`/api/v1/place-lists/curated/items/${COLOSSEUM}/tick`)
+          .set("Cookie", authCookie)
+          .send(body);
+      }
+      const place = await prisma.place.findFirst({
+        where: { userId, curatedItemId: COLOSSEUM },
+        include: { visits: true },
+      });
+      expect(place?.visits).toHaveLength(1);
+    });
+
+    it("rejects a malformed date rather than storing a broken visit", async () => {
+      const res = await request(app)
+        .post(`/api/v1/place-lists/curated/items/${COLOSSEUM}/tick`)
+        .set("Cookie", authCookie)
+        .send({ visitedAt: "irgendwann" });
+      expect(res.status).toBe(400);
+    });
+  });
 });

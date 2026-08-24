@@ -1,24 +1,43 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import NavigationBar from "../components/NavigationBar";
 import PageTransition from "../components/PageTransition";
+import { ChecklistRow } from "../components/places/ChecklistRow";
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
-import { FlagImg } from "../lib/countryFlag";
 import { curatedText } from "../lib/curatedCopy";
 import { logger } from "../lib/logger";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import {
   getCuratedProgress,
+  getCuratedSuggestions,
   subscribeChecklist,
   tickCuratedItem,
   unsubscribeChecklist,
   untickCuratedItem,
 } from "../lib/api/placeLists";
+import { countryName } from "../shared/geo/countryCode";
 import { DOMAINS } from "../shared/domains";
 import { useToastStore } from "../store/toastStore";
-import type { CuratedProgress, CuratedProgressItem } from "../types/placeList";
+import type {
+  CuratedProgress,
+  CuratedProgressItem,
+  VisitSuggestion,
+} from "../types/placeList";
+
+type RowFilter = "all" | "open" | "ticked" | "suggested";
+
+/**
+ * How many rows are drawn at once.
+ *
+ * The World Heritage checklist is 1247 targets. Rendering all of them costs
+ * about a second of scripting on every filter keystroke, for a page nobody
+ * scrolls to the bottom of. The cap is paired with a line saying exactly how
+ * many are hidden — a silent truncation would be the checklist lying about its
+ * own length, which is the one thing it may not do.
+ */
+const RENDER_CAP = 250;
 
 /**
  * The progress screen — the ONE screen in the app that renders two kinds of row.
@@ -26,8 +45,17 @@ import type { CuratedProgress, CuratedProgressItem } from "../types/placeList";
  * That is the acknowledged cost of lazy materialisation, and it is the point:
  * an unticked target is a GHOST, drawn hollow and dashed, because it is not in
  * the logbook. If it looked like a ticked one the checklist would mean nothing.
- * A ticked row is an ordinary place — it links into the logbook like any other,
- * because from the moment it is ticked that is exactly what it is.
+ *
+ * ## Two things the World Heritage list forced
+ *
+ * 1. **Filters.** Seven wonders need none; 1247 sites are unusable without a
+ *    search box and a country picker, so both live here rather than in a
+ *    "later" that never comes.
+ * 2. **Suggestions.** With a list that long, the interesting question stops
+ *    being "what is on it" and becomes "which of these have I already seen?".
+ *    The server answers that from the user's own travel — and only ever
+ *    proposes. Accepting one is an ordinary tick that carries the date the
+ *    evidence gave it.
  */
 export default function CuratedChecklistPage(): JSX.Element {
   const { key } = useParams<{ key: string }>();
@@ -37,16 +65,33 @@ export default function CuratedChecklistPage(): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
 
   const [progress, setProgress] = useState<CuratedProgress | null>(null);
+  const [suggestions, setSuggestions] = useState<VisitSuggestion[]>([]);
+  const [anchorCount, setAnchorCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<LoadFailure | null>(null);
   const [busyItem, setBusyItem] = useState<string | null>(null);
+
+  const [search, setSearch] = useState("");
+  const [country, setCountry] = useState<string>("all");
+  const [rowFilter, setRowFilter] = useState<RowFilter>("all");
 
   const load = useCallback(async (): Promise<void> => {
     if (!key) return;
     setLoading(true);
     setFailure(null);
     try {
-      setProgress(await getCuratedProgress(key));
+      // Both at once. Suggestions are advisory, so a failure there must not
+      // cost the user the checklist itself — hence the separate catch.
+      const [next, hints] = await Promise.all([
+        getCuratedProgress(key),
+        getCuratedSuggestions(key).catch((err: unknown) => {
+          logger.warn({ err }, "CuratedChecklistPage: suggestions unavailable");
+          return null;
+        }),
+      ]);
+      setProgress(next);
+      setSuggestions(hints?.suggestions ?? []);
+      setAnchorCount(hints?.anchorCount ?? 0);
     } catch (err: unknown) {
       logger.error({ err }, "CuratedChecklistPage: failed to load progress");
       setFailure(classifyLoadFailure(err));
@@ -60,14 +105,19 @@ export default function CuratedChecklistPage(): JSX.Element {
     void load();
   }, [access, load]);
 
+  const suggestionById = useMemo(
+    () => new Map(suggestions.map((s) => [s.itemId, s])),
+    [suggestions]
+  );
+
   const handleToggle = useCallback(
-    async (item: CuratedProgressItem): Promise<void> => {
+    async (item: CuratedProgressItem, visitedAt?: string | null): Promise<void> => {
       setBusyItem(item.itemId);
       try {
         if (item.ticked) {
           await untickCuratedItem(item.itemId);
         } else {
-          await tickCuratedItem(item.itemId);
+          await tickCuratedItem(item.itemId, visitedAt ?? null);
         }
         // Re-fetch rather than patch locally: ticking also creates a place and
         // files it in the subscription, so the row, the counter AND the
@@ -97,6 +147,49 @@ export default function CuratedChecklistPage(): JSX.Element {
       addToast("error", t("places:checklist.subscribeFailed"));
     }
   }, [progress, key, load, addToast, t]);
+
+  // Country options come from the ITEMS, localised through the shared resolver
+  // — never from a list of names baked into the catalog, which would render
+  // English in a German UI.
+  const countryOptions = useMemo(() => {
+    const codes = new Set<string>();
+    for (const item of progress?.items ?? []) {
+      if (item.isoCountryCode) codes.add(item.isoCountryCode.toUpperCase());
+    }
+    return [...codes]
+      .map((code) => ({ code, label: countryName(code, i18n.language) ?? code }))
+      .sort((a, b) => a.label.localeCompare(b.label, i18n.language));
+  }, [progress?.items, i18n.language]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const rows = (progress?.items ?? []).filter((item) => {
+      if (rowFilter === "open" && item.ticked) return false;
+      if (rowFilter === "ticked" && !item.ticked) return false;
+      if (rowFilter === "suggested" && !suggestionById.has(item.itemId)) return false;
+      if (country !== "all" && item.isoCountryCode?.toUpperCase() !== country) return false;
+      if (q.length > 0) {
+        const haystack = `${item.name} ${item.nameEn ?? ""}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+
+    // Catalog order is alphabetical, which is right for browsing and wrong for
+    // judging: it put a 43 km airport guess above a ship that docked in the
+    // town. In the suggestion view the strongest evidence goes first.
+    if (rowFilter !== "suggested") return rows;
+    const rank: Record<string, number> = { high: 0, medium: 1, low: 2 };
+    return [...rows].sort((a, b) => {
+      const sa = suggestionById.get(a.itemId);
+      const sb = suggestionById.get(b.itemId);
+      if (!sa || !sb) return 0;
+      return rank[sa.confidence] - rank[sb.confidence] || sa.distanceKm - sb.distanceKm;
+    });
+  }, [progress?.items, search, country, rowFilter, suggestionById]);
+
+  const shown = filtered.slice(0, RENDER_CAP);
+  const hidden = filtered.length - shown.length;
 
   if (access === "pending" || loading) {
     return (
@@ -144,12 +237,27 @@ export default function CuratedChecklistPage(): JSX.Element {
   const accent = progress.color ?? DOMAINS.poi.color;
   const pct =
     progress.itemCount > 0 ? Math.round((progress.tickedCount / progress.itemCount) * 100) : 0;
-  const dateFormat = new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium" });
+  const title = curatedText(progress.name, progress.nameEn, i18n.language);
+
+  const FILTERS: Array<{ id: RowFilter; label: string; count: number }> = [
+    { id: "all", label: t("places:checklist.filterAll"), count: progress.itemCount },
+    {
+      id: "open",
+      label: t("places:checklist.filterOpen"),
+      count: progress.itemCount - progress.tickedCount,
+    },
+    { id: "ticked", label: t("places:checklist.filterTicked"), count: progress.tickedCount },
+    {
+      id: "suggested",
+      label: t("places:checklist.filterSuggested"),
+      count: suggestions.length,
+    },
+  ];
 
   return (
     <PageTransition>
       <NavigationBar />
-      <div className="mx-auto max-w-[900px] px-4 py-6 sm:px-6">
+      <div className="mx-auto max-w-[960px] px-4 py-6 sm:px-6">
         <Link to="/places/lists" className="text-sm" style={{ color: "var(--text-muted)" }}>
           ← {t("places:lists.backToLists")}
         </Link>
@@ -158,7 +266,7 @@ export default function CuratedChecklistPage(): JSX.Element {
           <div>
             <h1 className="font-display flex items-center gap-3 text-2xl font-semibold tracking-tight">
               {progress.icon && <span aria-hidden>{progress.icon}</span>}
-              {curatedText(progress.name, progress.nameEn, i18n.language)}
+              {title}
             </h1>
             {progress.description && (
               <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
@@ -176,19 +284,17 @@ export default function CuratedChecklistPage(): JSX.Element {
                 : { background: "var(--accent)", color: "#0d1117", fontWeight: 500 }
             }
           >
-            {progress.subscribed
-              ? t("places:checklist.unsubscribe")
-              : t("places:lists.subscribe")}
+            {progress.subscribed ? t("places:checklist.unsubscribe") : t("places:lists.subscribe")}
           </button>
         </div>
 
-        <div className="mb-6">
+        <div className="mb-4">
           <div
             role="progressbar"
             aria-valuenow={progress.tickedCount}
             aria-valuemin={0}
             aria-valuemax={progress.itemCount}
-            aria-label={curatedText(progress.name, progress.nameEn, i18n.language)}
+            aria-label={title}
             style={{ height: 8, borderRadius: 4, background: "var(--bg-elevated)", overflow: "hidden" }}
           >
             <div style={{ width: `${pct}%`, height: "100%", background: accent }} />
@@ -201,92 +307,121 @@ export default function CuratedChecklistPage(): JSX.Element {
           </p>
         </div>
 
-        {/* Unsubscribing keeps every ticked place — said out loud, because
-            "Nicht mehr folgen" reads like it might take them along. */}
+        {/* The suggestion headline. Two different empty states on purpose: no
+            recorded travel at all is a different thing to say than travel that
+            happens to be nowhere near an open target. */}
+        {suggestions.length > 0 ? (
+          <p
+            className="mb-4 rounded-lg px-3 py-2 text-sm"
+            style={{
+              background: "rgba(63,185,80,0.08)",
+              border: "1px solid rgba(63,185,80,0.3)",
+              color: "var(--text-secondary)",
+            }}
+          >
+            {t("places:checklist.suggestionHeadline", { count: suggestions.length })}{" "}
+            <button
+              type="button"
+              onClick={() => setRowFilter("suggested")}
+              className="underline"
+              style={{ color: "var(--accent)" }}
+            >
+              {t("places:checklist.showSuggestions")}
+            </button>
+          </p>
+        ) : (
+          anchorCount === 0 && (
+            <p className="mb-4 text-xs" style={{ color: "var(--text-muted)" }}>
+              {t("places:checklist.noAnchors")}
+            </p>
+          )
+        )}
+
         {progress.subscribed && (
           <p className="mb-4 text-xs" style={{ color: "var(--text-muted)" }}>
             {t("places:checklist.unsubscribeHint")}
           </p>
         )}
 
-        <ul style={{ listStyle: "none", padding: 0 }} className="grid gap-2">
-          {progress.items.map((item) => {
-            const busy = busyItem === item.itemId;
-            return (
-              <li
+        {/* Filters. A seven-item list does not need them; a 1247-item one is
+            unusable without them, and one page serves both. */}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("places:checklist.searchPlaceholder")}
+            aria-label={t("places:checklist.searchPlaceholder")}
+            className="rounded-lg px-3 py-2 text-sm"
+            style={{
+              background: "var(--bg-elevated)",
+              border: "1px solid var(--color-border)",
+              color: "var(--text-primary)",
+              minWidth: 220,
+            }}
+          />
+          {countryOptions.length > 1 && (
+            <select
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              aria-label={t("places:checklist.countryFilter")}
+              className="rounded-lg px-3 py-2 text-sm"
+              style={{
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--color-border)",
+                color: "var(--text-secondary)",
+              }}
+            >
+              <option value="all">{t("places:checklist.allCountries")}</option>
+              {countryOptions.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          )}
+          {FILTERS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setRowFilter(f.id)}
+              disabled={f.id === "suggested" && suggestions.length === 0}
+              className="rounded-full px-3 py-1.5 text-xs disabled:opacity-40"
+              style={{
+                border: "1px solid var(--color-border)",
+                background: rowFilter === f.id ? "var(--bg-elevated)" : "transparent",
+                color: rowFilter === f.id ? "var(--accent)" : "var(--text-muted)",
+                fontWeight: rowFilter === f.id ? 600 : 400,
+              }}
+            >
+              {f.label} · {f.count}
+            </button>
+          ))}
+        </div>
+
+        {filtered.length === 0 ? (
+          <p className="py-10 text-center text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("places:checklist.noMatches")}
+          </p>
+        ) : (
+          <ul style={{ listStyle: "none", padding: 0 }} className="grid gap-2">
+            {shown.map((item) => (
+              <ChecklistRow
                 key={item.itemId}
-                className="flex items-start gap-3 rounded-xl px-4 py-3"
-                style={
-                  item.ticked
-                    ? { background: "var(--bg-surface)", border: "1px solid var(--color-border)" }
-                    : {
-                        // The ghost: no fill, a dashed edge. Shape carries it,
-                        // not colour — the same measurement the pin layer
-                        // makes for hollow wishlist pins.
-                        background: "transparent",
-                        border: "1px dashed var(--color-border)",
-                      }
-                }
-              >
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void handleToggle(item)}
-                  aria-pressed={item.ticked}
-                  aria-label={
-                    item.ticked
-                      ? t("places:checklist.untickItem", { name: item.name })
-                      : t("places:checklist.tickItem", { name: item.name })
-                  }
-                  style={{
-                    width: 22,
-                    height: 22,
-                    flex: "none",
-                    marginTop: 2,
-                    borderRadius: 6,
-                    cursor: busy ? "wait" : "pointer",
-                    background: item.ticked ? accent : "transparent",
-                    border: item.ticked ? "none" : "1.5px dashed var(--color-border)",
-                    color: "#0d1117",
-                    fontSize: 13,
-                    lineHeight: "22px",
-                  }}
-                >
-                  {item.ticked ? "✓" : ""}
-                </button>
+                item={item}
+                suggestion={suggestionById.get(item.itemId) ?? null}
+                accent={accent}
+                busy={busyItem === item.itemId}
+                onToggle={handleToggle}
+              />
+            ))}
+          </ul>
+        )}
 
-                <div className="min-w-0 flex-1">
-                  <p
-                    className="flex items-center gap-2 text-sm"
-                    style={{ color: item.ticked ? "var(--text-primary)" : "var(--text-muted)" }}
-                  >
-                    {item.ticked && item.placeId ? (
-                      <Link to={`/places/${item.placeId}`} style={{ color: "inherit" }}>
-                        {curatedText(item.name, item.nameEn, i18n.language)}
-                      </Link>
-                    ) : (
-                      curatedText(item.name, item.nameEn, i18n.language)
-                    )}
-                    {item.country && <FlagImg country={item.country} />}
-                  </p>
-                  {item.blurb && (
-                    <p className="mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
-                      {curatedText(item.blurb, item.blurbEn, i18n.language)}
-                    </p>
-                  )}
-                </div>
-
-                <span className="shrink-0 text-xs" style={{ color: "var(--text-muted)" }}>
-                  {item.ticked
-                    ? item.lastVisitAt
-                      ? dateFormat.format(new Date(item.lastVisitAt))
-                      : t("places:detail.undated")
-                    : t("places:checklist.notYet")}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+        {hidden > 0 && (
+          <p className="mt-3 text-center text-xs" style={{ color: "var(--text-muted)" }}>
+            {t("places:checklist.moreHidden", { count: hidden })}
+          </p>
+        )}
 
         <button
           type="button"

@@ -139,7 +139,35 @@
     "tickItem": "„{{name}}“ abhaken",
     "untickItem": "Haken bei „{{name}}“ entfernen",
     "tickFailed": "Das Abhaken hat nicht geklappt.",
-    "subscribeFailed": "Das Abo konnte nicht geändert werden."
+    "subscribeFailed": "Das Abo konnte nicht geändert werden.",
+    "searchPlaceholder": "Stätte suchen …",
+    "countryFilter": "Nach Land filtern",
+    "allCountries": "Alle Länder",
+    "filterAll": "Alle",
+    "filterOpen": "Offen",
+    "filterTicked": "Abgehakt",
+    "filterSuggested": "Vorschläge",
+    "noMatches": "Nichts passt zu Suche und Filtern.",
+    "moreHidden": "{{count}} weitere — grenze die Suche ein.",
+    "suggestionHeadline_one": "Bei einem Ziel warst du wahrscheinlich schon.",
+    "suggestionHeadline_other": "Bei {{count}} Zielen warst du wahrscheinlich schon.",
+    "showSuggestions": "Anzeigen",
+    "noAnchors": "Sobald Flüge, Kreuzfahrten oder Unterkünfte erfasst sind, schlägt TravStats hier vor, wo du wahrscheinlich schon warst.",
+    "acceptSuggestion": "War ich",
+    "anchorUnnamed": "einem erfassten Ort",
+    "anchor": {
+      "lodging": "Du hast {{distance}} übernachtet — {{label}}",
+      "cruise_port": "Dein Schiff lag {{distance}} — {{label}}",
+      "flight": "Du bist {{distance}} geflogen — {{label}}",
+      "place": "Du warst {{distance}} — {{label}}"
+    },
+    "confidence": {
+      "high": "sehr wahrscheinlich",
+      "medium": "wahrscheinlich",
+      "low": "vielleicht"
+    },
+    "rightThere": "direkt vor Ort",
+    "kmAway": "{{km}} km entfernt"
   },
   "photos": {
     "add": "Foto",

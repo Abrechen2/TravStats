@@ -2,6 +2,7 @@ import { api } from "./client";
 import type {
   CuratedListSummary,
   CuratedProgress,
+  CuratedSuggestions,
   PlaceList,
   PlaceListInput,
 } from "../../types/placeList";
@@ -91,11 +92,27 @@ export async function unsubscribeChecklist(key: string): Promise<void> {
 }
 
 /**
+ * Suggestions for the targets still open on a checklist, derived from the
+ * user's own recorded travel. Read-only — accepting one is an ordinary tick.
+ */
+export async function getCuratedSuggestions(key: string): Promise<CuratedSuggestions> {
+  const res = await api.get<Envelope<CuratedSuggestions>>(
+    `/place-lists/curated/${key}/suggestions`
+  );
+  return res.data.data;
+}
+
+/**
  * Tick a target — the moment a catalog row becomes a real place in the logbook.
  * Answers with that place, so the caller can navigate straight to it.
+ *
+ * `visitedAt` is what accepting a suggestion passes: the visit then lands with
+ * the date the evidence gave it instead of as another undated one.
  */
-export async function tickCuratedItem(itemId: string): Promise<Place> {
-  const res = await api.post<Envelope<Place>>(`/place-lists/curated/items/${itemId}/tick`, {});
+export async function tickCuratedItem(itemId: string, visitedAt?: string | null): Promise<Place> {
+  const res = await api.post<Envelope<Place>>(`/place-lists/curated/items/${itemId}/tick`, {
+    ...(visitedAt ? { visitedAt } : {}),
+  });
   return res.data.data;
 }
 
@@ -119,6 +136,7 @@ export const placeListsApi = {
   curated: {
     list: listCuratedChecklists,
     progress: getCuratedProgress,
+    suggestions: getCuratedSuggestions,
     subscribe: subscribeChecklist,
     unsubscribe: unsubscribeChecklist,
     tick: tickCuratedItem,

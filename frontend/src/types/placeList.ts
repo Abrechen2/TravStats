@@ -119,6 +119,38 @@ export interface CuratedProgress {
   items: CuratedProgressItem[];
 }
 
+/** How strong the evidence is that the user already stood there. */
+export type SuggestionConfidence = "high" | "medium" | "low";
+
+/** What kind of recorded travel produced a suggestion. */
+export type SuggestionAnchorKind = "place" | "lodging" | "cruise_port" | "flight";
+
+/**
+ * "You were probably here", with its reason attached.
+ *
+ * A suggestion is never a tick. It carries the anchor that produced it so the
+ * user can judge it — "Hotel Roma, 3 km" is checkable, "wahrscheinlich" alone
+ * is not.
+ */
+export interface VisitSuggestion {
+  itemId: string;
+  confidence: SuggestionConfidence;
+  distanceKm: number;
+  anchorKind: SuggestionAnchorKind;
+  anchorLabel: string;
+  /** What a tick would record as the visit date. Null when the anchor had none. */
+  visitedAt: string | null;
+}
+
+export interface CuratedSuggestions {
+  key: string;
+  /** How much recorded travel there was to match against. Zero means "add some
+   *  travel first", which is a different empty state from "nothing matched". */
+  anchorCount: number;
+  openCount: number;
+  suggestions: VisitSuggestion[];
+}
+
 export interface PlaceVisitPhoto {
   id: string;
   /** Server-built path — always use this, never rebuild it from the id. */

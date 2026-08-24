@@ -1,9 +1,11 @@
 import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { checkAndUpdateAchievements } from "../../utils/achievements";
 import { classifyVisit } from "../../shared/placeCounting";
+import { buildAnchors, suggestVisits } from "../../services/places/visitSuggestions";
 import logger from "../../utils/logger";
 
 /**
@@ -224,11 +226,140 @@ router.get("/:key/progress", async (req: AuthRequest, res: Response, next: NextF
   }
 });
 
+// ---------------------------------------------------------------- suggestions
+
+/**
+ * "You were probably here" for the targets still open on this checklist.
+ *
+ * READ-ONLY on purpose. The service proposes; the user ticks. Auto-ticking
+ * would put places nobody has been to into the visited count, invisibly — see
+ * the header of `services/places/visitSuggestions.ts`.
+ *
+ * Anchors are the user's OWN recorded travel, and only travel that happened:
+ * stays that are over, port calls on sailed cruises, flown legs, logged places.
+ */
+router.get("/:key/suggestions", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const curated = await prisma.curatedList.findUnique({
+      where: { key: req.params.key },
+      include: { items: true },
+    });
+    if (!curated) throw new AppError("Checklist not found", 404);
+
+    const [ticked, stays, stops, flights, places] = await Promise.all([
+      prisma.place.findMany({
+        where: { userId, curatedItemId: { in: curated.items.map((i) => i.id) } },
+        select: { curatedItemId: true, visited: true },
+      }),
+      prisma.lodgingStay.findMany({
+        where: { userId },
+        select: {
+          status: true,
+          checkIn: true,
+          checkOut: true,
+          lodging: { select: { name: true, lat: true, lon: true } },
+        },
+      }),
+      prisma.cruiseStop.findMany({
+        where: { cruise: { userId, status: { in: ["flown", "historical"] } }, isAtSea: false },
+        select: {
+          date: true,
+          arrivalTime: true,
+          port: { select: { name: true, lat: true, lon: true } },
+        },
+      }),
+      prisma.flight.findMany({
+        where: { userId, status: { in: ["flown", "historical"] } },
+        select: {
+          status: true,
+          depIata: true,
+          arrIata: true,
+          depLat: true,
+          depLon: true,
+          arrLat: true,
+          arrLon: true,
+          departureTime: true,
+          arrivalTime: true,
+        },
+      }),
+      prisma.place.findMany({
+        where: { userId, visited: true },
+        select: {
+          name: true,
+          lat: true,
+          lon: true,
+          visited: true,
+          visits: { select: { visitedAt: true } },
+        },
+      }),
+    ]);
+
+    // Only OPEN targets. Suggesting something the user already ticked is noise
+    // that makes the list of suggestions untrustworthy.
+    const tickedIds = new Set(ticked.filter((p) => p.visited).map((p) => p.curatedItemId));
+    const targets = curated.items
+      .filter((i) => !tickedIds.has(i.id))
+      .map((i) => ({ itemId: i.id, name: i.name, lat: i.lat, lon: i.lon }));
+
+    const anchors = buildAnchors({
+      lodgings: stays
+        .filter((s) => s.lodging !== null)
+        .map((s) => ({
+          name: s.lodging.name,
+          lat: s.lodging.lat,
+          lon: s.lodging.lon,
+          checkIn: s.checkIn,
+          checkOut: s.checkOut,
+          status: s.status,
+        })),
+      cruiseStops: stops
+        .filter((s) => s.port !== null)
+        .map((s) => ({
+          portName: s.port?.name ?? null,
+          lat: s.port?.lat ?? null,
+          lon: s.port?.lon ?? null,
+          at: s.arrivalTime ?? s.date,
+        })),
+      flights,
+      places,
+    });
+
+    const suggestions = suggestVisits(targets, anchors);
+
+    res.json({
+      success: true,
+      data: {
+        key: curated.key,
+        // Both numbers travel so the UI can say something honest when the list
+        // is empty: no anchors at all is "record some travel first", while
+        // anchors with no hits is "nothing of yours is near an open target".
+        anchorCount: anchors.length,
+        openCount: targets.length,
+        suggestions,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // ---------------------------------------------------------------- tick
+
+/** A tick may carry the date it happened — that is what accepting a suggestion
+ *  does, so the visit lands with the date the evidence gave it rather than as
+ *  another undated one. */
+const tickSchema = z.object({
+  visitedAt: z.string().datetime().nullable().optional(),
+});
 
 router.post("/items/:itemId/tick", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
+    const parsed = tickSchema.safeParse(req.body ?? {});
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    const visitedAt = parsed.data.visitedAt ? new Date(parsed.data.visitedAt) : null;
+
     const item = await prisma.curatedPlace.findUnique({ where: { id: req.params.itemId } });
     if (!item) throw new AppError("Checklist item not found", 404);
 
@@ -274,6 +405,19 @@ router.post("/items/:itemId/tick", async (req: AuthRequest, res: Response, next:
       create: { listId: list.id, placeId: place.id, sortIdx: item.sortIdx },
       update: {},
     });
+
+    // A dated tick records the visit too, once. `createMany` with a guard
+    // rather than a blind create: re-ticking after an untick must not stack a
+    // second identical visit onto the same day.
+    if (visitedAt) {
+      const already = await prisma.placeVisit.findFirst({
+        where: { placeId: place.id, userId, visitedAt },
+        select: { id: true },
+      });
+      if (!already) {
+        await prisma.placeVisit.create({ data: { placeId: place.id, userId, visitedAt } });
+      }
+    }
 
     checkAndUpdateAchievements(userId).catch((error) => {
       logger.error({ error, userId }, "Failed to update achievements after checklist tick");

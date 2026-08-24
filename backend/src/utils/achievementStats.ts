@@ -241,7 +241,7 @@ export interface UserStats {
   placesInCategoryMax: number;
   /** Ticked targets per checklist, keyed by `CuratedList.key`. Kept per list
    * rather than as one maximum, or every wonders badge would report the same
-   * progress. Read by the `curated_list_complete:<key>` checks. */
+   * progress. Read by the `curated_list_ticked:<key>` checks. */
   curatedTickedByList: Map<string, number>;
 }
 

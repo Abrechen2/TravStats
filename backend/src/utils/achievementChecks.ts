@@ -8,14 +8,21 @@ import type { FlightData, UserStats } from './achievementStats';
 /**
  * A checklist achievement has to name WHICH checklist, and `Achievement` has no
  * column to carry that. So the key travels inside the requirement type:
- * `curated_list_complete:world-wonders-new7`.
+ * `curated_list_ticked:world-wonders-new7`.
  *
  * The alternative was a code→key table in a third file, kept in step by hand
  * with both the seed and `seedData/curated_lists.csv`. This way a new checklist
  * badge is one seed row that says out loud what it measures, and a typo shows
  * up as a badge stuck at 0/7 rather than as one silently tracking another list.
+ *
+ * The POI spec called this `curated_list_complete`, and that name stopped being
+ * true the moment a 1247-site checklist shipped: nobody completes the World
+ * Heritage list, so its badges are rungs (10, 50, 100) rather than a finish
+ * line. The measure is "how many are ticked"; completion is just the case where
+ * the requirement happens to equal the list size, which is what the two wonder
+ * badges are.
  */
-const CURATED_LIST_PREFIX = 'curated_list_complete:';
+const CURATED_LIST_PREFIX = 'curated_list_ticked:';
 
 export function checkAchievement(
   achievement: Achievement,

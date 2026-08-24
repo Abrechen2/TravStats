@@ -139,7 +139,35 @@
     "tickItem": "Tick “{{name}}”",
     "untickItem": "Untick “{{name}}”",
     "tickFailed": "Ticking that did not work.",
-    "subscribeFailed": "The subscription could not be changed."
+    "subscribeFailed": "The subscription could not be changed.",
+    "searchPlaceholder": "Search a site …",
+    "countryFilter": "Filter by country",
+    "allCountries": "All countries",
+    "filterAll": "All",
+    "filterOpen": "Open",
+    "filterTicked": "Ticked",
+    "filterSuggested": "Suggestions",
+    "noMatches": "Nothing matches the search and filters.",
+    "moreHidden": "{{count}} more — narrow the search.",
+    "suggestionHeadline_one": "You have probably already been to one of these.",
+    "suggestionHeadline_other": "You have probably already been to {{count}} of these.",
+    "showSuggestions": "Show them",
+    "noAnchors": "Once you have recorded flights, cruises or stays, TravStats will suggest here which of these you have probably already seen.",
+    "acceptSuggestion": "I was there",
+    "anchorUnnamed": "a recorded place",
+    "anchor": {
+      "lodging": "You slept {{distance}} — {{label}}",
+      "cruise_port": "Your ship called {{distance}} — {{label}}",
+      "flight": "You flew {{distance}} — {{label}}",
+      "place": "You were {{distance}} — {{label}}"
+    },
+    "confidence": {
+      "high": "very likely",
+      "medium": "likely",
+      "low": "maybe"
+    },
+    "rightThere": "right there",
+    "kmAway": "{{km}} km away"
   },
   "photos": {
     "add": "Photo",

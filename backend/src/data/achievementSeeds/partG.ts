@@ -6,7 +6,7 @@
 // stats page obeys, which is the point of routing both through one module.
 //
 // The checklist badges name their list INSIDE the requirement type
-// (`curated_list_complete:<key>`); `utils/achievementChecks.ts` explains why
+// (`curated_list_ticked:<key>`); `utils/achievementChecks.ts` explains why
 // that beats a code→key table in a third file.
 //
 // Copy is German (user-facing; see the language policy). English lives in
@@ -118,7 +118,7 @@ export const seedsPartG: AchievementDefinition[] = [
     icon: '🌍',
     tier: 'diamond',
     requirement: 7,
-    requirementType: 'curated_list_complete:world-wonders-new7',
+    requirementType: 'curated_list_ticked:world-wonders-new7',
     points: 250,
   },
   {
@@ -132,7 +132,50 @@ export const seedsPartG: AchievementDefinition[] = [
     icon: '🏛',
     tier: 'diamond',
     requirement: 7,
-    requirementType: 'curated_list_complete:world-wonders-ancient',
+    requirementType: 'curated_list_ticked:world-wonders-ancient',
     points: 250,
+  },
+
+  // ── UNESCO World Heritage — rungs, not a finish line ─────────────
+  //
+  // 1247 sites. Nobody completes this list, and a single badge at 1247 would be
+  // a number that only ever reads as failure. Three rungs give it a shape: a
+  // handful, a serious collection, and a hundred — which is already more than
+  // most people will ever stand in front of.
+  {
+    code: 'HERITAGE_10',
+    name: 'Welterbe-Sammler',
+    description: '10 Stätten der UNESCO-Welterbeliste besucht',
+    category: 'collector',
+    domain: 'poi',
+    icon: '🏺',
+    tier: 'bronze',
+    requirement: 10,
+    requirementType: 'curated_list_ticked:world-heritage',
+    points: 40,
+  },
+  {
+    code: 'HERITAGE_50',
+    name: 'Welterbe-Kenner',
+    description: '50 Stätten der UNESCO-Welterbeliste besucht',
+    category: 'collector',
+    domain: 'poi',
+    icon: '🗿',
+    tier: 'gold',
+    requirement: 50,
+    requirementType: 'curated_list_ticked:world-heritage',
+    points: 150,
+  },
+  {
+    code: 'HERITAGE_100',
+    name: 'Welterbe-Chronist',
+    description: '100 Stätten der UNESCO-Welterbeliste besucht',
+    category: 'collector',
+    domain: 'poi',
+    icon: '📜',
+    tier: 'diamond',
+    requirement: 100,
+    requirementType: 'curated_list_ticked:world-heritage',
+    points: 400,
   },
 ];
