@@ -45,6 +45,7 @@ import {
 import { computeDedupedTotalCost } from '../utils/stats/dedupedCost';
 import { buildTravelAccount } from '../services/stats/travelAccount';
 import { buildTripAccount } from '../services/stats/tripAccount';
+import { getBaseCurrency } from '../services/fx/snapshot';
 
 const router = Router();
 
@@ -105,7 +106,19 @@ interface SummaryStats {
   avgDistance: number;
   byStatus: Record<string, number>;
   byAirline: Record<string, number>;
+  /**
+   * Total in `totalCostCurrency`. Contains ONLY amounts that carry an FX
+   * snapshot in that currency (#267) — this used to add every price together
+   * regardless of currency and was then rendered with the user's display
+   * symbol, so 300 USD + 300 EUR read as "600 €".
+   */
   totalCost: number;
+  totalCostCurrency: string;
+  /**
+   * What could not be converted, in the currency it was paid in. Reported
+   * BESIDE the total, never folded into it. Lodging reports the same way.
+   */
+  totalCostUnconverted: Record<string, number>;
   byCategory: Record<string, number>;
 }
 
@@ -135,7 +148,10 @@ function buildWhere(
   return where;
 }
 
-async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummaryStats> {
+async function computeSummary(
+  where: Prisma.FlightWhereInput,
+  baseCurrency: string,
+): Promise<SummaryStats> {
   // EVERY headline figure describes the same population: flights that actually
   // happened. `totalFlights` and `totalCost` used to run on the unfiltered
   // `where`, so the year card put "14 flights" next to a distance covering ten
@@ -203,8 +219,13 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
         price: true,
         taxes: true,
         fees: true,
+        currency: true,
+        priceBase: true,
+        fxBaseCurrency: true,
         bookingId: true,
-        booking: { select: { price: true } },
+        booking: {
+          select: { price: true, currency: true, priceBase: true, fxBaseCurrency: true },
+        },
       },
     }),
   ]);
@@ -300,7 +321,7 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
   // Booking-aware: a booking's price counts once, not once per segment —
   // and grouped segments (price nulled by the import) still contribute
   // their booking's total (spec 2026-07-17-cost-booking-price §4).
-  const totalCost = computeDedupedTotalCost(costFlights);
+  const cost = computeDedupedTotalCost(costFlights, baseCurrency);
 
   return {
     totalFlights,
@@ -317,7 +338,9 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
     avgDistance: Math.round(avgDistance),
     byStatus,
     byAirline,
-    totalCost,
+    totalCost: cost.base,
+    totalCostCurrency: baseCurrency,
+    totalCostUnconverted: cost.unconvertedByCurrency,
     byCategory,
   };
 }
@@ -338,17 +361,18 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
       return;
     }
     const { fromDate, toDate, year, compareYear } = parsed.data;
+    const baseCurrency = await getBaseCurrency(userId);
 
     if (year !== undefined && compareYear !== undefined) {
       // Return comparison response: { current, compare }
       const [current, compare] = await Promise.all([
-        computeSummary(buildWhere(userId, fromDate, toDate, year)),
-        computeSummary(buildWhere(userId, fromDate, toDate, compareYear)),
+        computeSummary(buildWhere(userId, fromDate, toDate, year), baseCurrency),
+        computeSummary(buildWhere(userId, fromDate, toDate, compareYear), baseCurrency),
       ]);
       res.json({ current, compare });
     } else {
       // Return flat summary (backward-compatible)
-      const summary = await computeSummary(buildWhere(userId, fromDate, toDate, year));
+      const summary = await computeSummary(buildWhere(userId, fromDate, toDate, year), baseCurrency);
       res.json(summary);
     }
   } catch (error) {
@@ -380,9 +404,10 @@ router.get('/hero', async (req: AuthRequest, res: Response, next: NextFunction):
       userId,
       status: { in: ['flown', 'historical'] },
     };
+    const baseCurrency = await getBaseCurrency(userId);
 
     const [summary, flights] = await Promise.all([
-      computeSummary(buildWhere(userId, undefined, undefined)),
+      computeSummary(buildWhere(userId, undefined, undefined), baseCurrency),
       prisma.flight.findMany({
         where: flightsWhere,
         select: {
@@ -795,11 +820,22 @@ router.get('/business', async (req: AuthRequest, res: Response, next: NextFuncti
         price: true,
         taxes: true,
         fees: true,
+        currency: true,
+        priceBase: true,
+        fxBaseCurrency: true,
         category: true,
         seatClass: true,
         createdAt: true,
         bookingId: true,
-        booking: { select: { id: true, price: true, currency: true } },
+        booking: {
+          select: {
+            id: true,
+            price: true,
+            currency: true,
+            priceBase: true,
+            fxBaseCurrency: true,
+          },
+        },
       },
     });
 
@@ -807,7 +843,7 @@ router.get('/business', async (req: AuthRequest, res: Response, next: NextFuncti
     // But wrap in try-catch for safety
     let businessStats;
     try {
-      businessStats = calculateBusinessStats(flights);
+      businessStats = calculateBusinessStats(flights, await getBaseCurrency(userId));
     } catch (statsError) {
       logger.error({
         operation: 'calculate_business_stats_error',

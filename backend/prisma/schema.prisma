@@ -271,6 +271,18 @@ model Flight {
   currency           String?   @default("EUR") @map("currency")
   taxes              Float?    @map("taxes")
   fees               Float?    @map("fees")
+  /// FX snapshot (#267). `price + taxes + fees` converted into the user's base
+  /// currency at the rate for the DEPARTURE day, with the rate, its day and its
+  /// source kept alongside. Statistics used to sum `price` across currencies
+  /// with no conversion at all and render the result with the user's display
+  /// symbol, so 300 USD + 300 EUR was reported as "600 €". Null where no
+  /// honest conversion was possible (no date, no currency, no rate) — those
+  /// amounts are reported per currency instead of being folded into a total.
+  priceBase          Float?    @map("price_base")
+  fxRate             Float?    @map("fx_rate")
+  fxRateDate         DateTime? @map("fx_rate_date")
+  fxBaseCurrency     String?   @map("fx_base_currency")
+  fxSource           String?   @map("fx_source")
   // No column default: category is genuinely optional. The old
   // @default("private") silently classified every API import that omitted
   // the field, while the UI suggested "business" — two systems, two
@@ -991,6 +1003,17 @@ model Booking {
   pnr      String?
   price    Float?
   currency String? @default("EUR")
+
+  /// FX snapshot (#267) — same contract as `Flight`. A booking's price counts
+  /// once for the whole booking rather than once per segment, so the cost
+  /// aggregates read this instead of the segments' own prices; without a
+  /// snapshot here a multi-currency logbook could not be totalled honestly
+  /// either. Dated by `createdAt`, the only day a booking carries.
+  priceBase      Float?    @map("price_base")
+  fxRate         Float?    @map("fx_rate")
+  fxRateDate     DateTime? @map("fx_rate_date")
+  fxBaseCurrency String?   @map("fx_base_currency")
+  fxSource       String?   @map("fx_source")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

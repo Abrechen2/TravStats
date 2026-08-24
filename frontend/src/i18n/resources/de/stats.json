@@ -377,11 +377,11 @@
   "business": {
     "title": "💼 Business-Statistiken",
     "costPerKm": "Kosten pro Kilometer",
-    "costPerKmDesc": "€{{cost}} pro km",
+    "costPerKmDesc": "{{cost}} pro km",
     "costPerHour": "Kosten pro Flugstunde",
-    "costPerHourDesc": "€{{cost}} pro Stunde",
+    "costPerHourDesc": "{{cost}} pro Stunde",
     "totalCost": "Gesamtkosten",
-    "totalCostDesc": "€{{cost}} für {{distance}} km",
+    "totalCostDesc": "{{cost}} für {{distance}}",
     "seatClassDistribution": "Sitzklassen-Verteilung",
     "mostCommonCategory": "Häufigste Kategorie",
     "airportDiversity": "Flughafen-Diversität",
@@ -389,7 +389,8 @@
     "avgFlightDuration": "Durchschnittliche Flugdauer",
     "avgFlightDurationDesc": "{{hours}} Stunden",
     "busiestMonth": "Reisestärkster Monat",
-    "busiestMonthDesc": "{{month}} mit {{count}} Flügen"
+    "busiestMonthDesc": "{{month}} mit {{count}} Flügen",
+    "unconvertedNote": "Nicht umgerechnet: {{amounts}}"
   },
   "unique": {
     "title": "🌟 Einzigartige Statistiken",

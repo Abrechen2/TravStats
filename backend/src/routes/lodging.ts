@@ -25,6 +25,10 @@ import {
 } from "../schemas/lodging";
 import { minorUnits } from "../shared/currencies";
 import logger from "../utils/logger";
+import { snapshotFx, getBaseCurrency } from "../services/fx/snapshot";
+
+// Re-exported: every existing import site names this module.
+export { getBaseCurrency };
 
 const router = Router();
 router.use(authenticate);
@@ -221,29 +225,36 @@ export async function applyFxSnapshot(
   input: { totalPrice?: number | null; currency?: string | null; checkIn?: string | Date | null },
   baseCurrency: string,
 ): Promise<FxSnapshotOutcome> {
-  if (input.totalPrice == null) return { status: "priceRemoved" };
-  // A rate is a rate ON A DAY. An undated stay has no day to look one up for,
-  // and picking today's rate for a hotel from 2011 would produce a number that
-  // looks converted and is not. The amount is kept in its own currency and
-  // reported by `spendByCurrency`, exactly like a failed lookup.
-  if (input.checkIn == null) return { status: "lookupFailed" };
-  // No `?? "EUR"`. An amount whose unit we never learned is not a euro amount;
-  // guessing one is how 11,662 AED became €11,662 (see the 2026-08-13 spec).
-  if (!input.currency) return { status: "missingCurrency" };
-  const currency = input.currency;
-  const checkInDate = new Date(input.checkIn);
-  const conv = await fx.convertToBase(input.totalPrice, currency, baseCurrency, checkInDate);
-  if (conv === null) return { status: "lookupFailed" };
-  return {
-    status: "snapshotted",
-    fields: {
-      totalPriceBase: conv.baseAmount,
-      fxRate: conv.rate,
-      fxRateDate: new Date(conv.rateDate),
-      fxBaseCurrency: baseCurrency,
-      fxSource: conv.source,
-    },
-  };
+  // Thin adapter over the domain-neutral core in `services/fx/snapshot.ts`
+  // (#267): the rule is shared with flights and bookings, the COLUMN NAMES are
+  // this domain's. `missingDate` maps onto the same `lookupFailed` the callers
+  // already handle — an undated stay has always been treated as "no rate to be
+  // had", and splitting that here would change behaviour this move must not.
+  const outcome = await snapshotFx(
+    { amount: input.totalPrice, currency: input.currency, date: input.checkIn },
+    baseCurrency,
+  );
+  switch (outcome.status) {
+    case "amountRemoved":
+      return { status: "priceRemoved" };
+    case "missingDate":
+      return { status: "lookupFailed" };
+    case "missingCurrency":
+      return { status: "missingCurrency" };
+    case "lookupFailed":
+      return { status: "lookupFailed" };
+    case "snapshotted":
+      return {
+        status: "snapshotted",
+        fields: {
+          totalPriceBase: outcome.snapshot.baseAmount,
+          fxRate: outcome.snapshot.rate,
+          fxRateDate: outcome.snapshot.rateDate,
+          fxBaseCurrency: outcome.snapshot.baseCurrency,
+          fxSource: outcome.snapshot.source,
+        },
+      };
+  }
 }
 
 /**
@@ -291,16 +302,6 @@ export function applyManualRate(
     fxBaseCurrency: baseCurrency,
     fxSource: "manual",
   };
-}
-
-export async function getBaseCurrency(userId: string): Promise<string> {
-  const settings = await prisma.userSettings.findUnique({
-    where: { userId },
-    select: { baseCurrency: true },
-  });
-  // The column is NOT NULL with a DB default of 'EUR' once a settings row
-  // exists; the fallback only covers a user with no UserSettings row at all.
-  return settings?.baseCurrency ?? "EUR";
 }
 
 // Query shape for GET /fx-preview — a live, read-only rate lookup for the

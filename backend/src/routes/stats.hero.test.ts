@@ -14,6 +14,12 @@ jest.mock('../db', () => ({
       count: mockCount,
       groupBy: mockGroupBy,
     },
+    // The summary resolves the user's base currency before it can report a
+    // cost total (#267). No row means "no settings yet", which falls back to
+    // EUR — the same path a brand-new account takes.
+    userSettings: {
+      findUnique: jest.fn().mockResolvedValue(null),
+    },
   },
 }));
 jest.mock('../services/airportCache', () => ({

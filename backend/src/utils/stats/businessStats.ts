@@ -21,7 +21,10 @@ import {
  *                          reliable enough), totalDistance, totalCost,
  *                          categoryDistribution.
  */
-export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
+export function calculateBusinessStats(
+  flights: FlightData[],
+  baseCurrency: string,
+): BusinessStats {
   // Time-sensitive subset — both times must be present.
   const flownFlights = flights.filter(
     (f): f is typeof f & { departureTime: Date; arrivalTime: Date } =>
@@ -36,6 +39,29 @@ export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
 
   // Cost per kilometer — only consider flights that have a cost entry so the denominator
   // (distance) is not inflated by cost-free flights.
+  /**
+   * The cost of one flight IN THE BASE CURRENCY, or null when no honest
+   * conversion exists (#267). Everything below turns cost into a RATE — per
+   * kilometre, per hour — and a rate built from mixed currencies is worse than
+   * a mixed sum: it looks like a unit price. An amount without a usable
+   * snapshot is therefore left out of both the numerator AND its denominator,
+   * rather than silently counted as if it were euros.
+   */
+  const baseCost = (f: FlightData): number | null => {
+    const usesBooking = Boolean(f.booking?.price);
+    const own = usesBooking
+      ? (f.booking?.price ?? 0)
+      : (f.price ?? 0) + (f.taxes ?? 0) + (f.fees ?? 0);
+    const ownCurrency = usesBooking ? f.booking?.currency : f.currency;
+    // Already in the base currency: no conversion needed, and no snapshot
+    // required either — which is what keeps every pre-#267 row counting.
+    if (ownCurrency === baseCurrency) return own;
+    const snapshot = usesBooking ? f.booking?.priceBase : f.priceBase;
+    const snapshotCurrency = usesBooking ? f.booking?.fxBaseCurrency : f.fxBaseCurrency;
+    if (snapshot == null || snapshotCurrency !== baseCurrency) return null;
+    return snapshot;
+  };
+
   // Deduplicate costs: if flights share a booking, count the booking price once.
   let totalDistance = 0;
   let totalCost = 0;
@@ -54,16 +80,17 @@ export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
       totalDistance += dist;
     }
 
+    const converted = baseCost(f);
     let flightCost = 0;
     if (f.bookingId && f.booking?.price) {
       // Use booking price — count only once per booking
       if (!seenBookingIds.has(f.bookingId)) {
         seenBookingIds.add(f.bookingId);
-        flightCost = f.booking.price;
+        flightCost = converted ?? 0;
       }
     } else {
       // No booking — use per-flight price (legacy)
-      flightCost = (f.price ?? 0) + (f.taxes ?? 0) + (f.fees ?? 0);
+      flightCost = converted ?? 0;
     }
 
     if (flightCost > 0) {
@@ -93,14 +120,15 @@ export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
   for (const f of flownFlights) {
     const hours = (new Date(f.arrivalTime).getTime() - new Date(f.departureTime).getTime()) / (1000 * 60 * 60);
     if (hours > 0) {
+      const convertedHours = baseCost(f);
       let flightCost = 0;
       if (f.bookingId && f.booking?.price) {
         if (!seenBookingIdsHours.has(f.bookingId)) {
           seenBookingIdsHours.add(f.bookingId);
-          flightCost = f.booking.price;
+          flightCost = convertedHours ?? 0;
         }
       } else {
-        flightCost = (f.price ?? 0) + (f.taxes ?? 0) + (f.fees ?? 0);
+        flightCost = convertedHours ?? 0;
       }
 
       if (flightCost > 0) {
