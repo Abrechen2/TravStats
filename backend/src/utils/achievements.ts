@@ -87,6 +87,12 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
           trip: { include: { flights: true, cruises: true } },
           departurePort: true,
           arrivalPort: true,
+          // #269 — without the legs `calculateCruiseStats` falls back to a
+          // haversine chord for every leg, so a distance badge unlocked at a
+          // different point than the kilometres on the user's own statistics
+          // page. The statistics route loads them the same way; both now read
+          // the routed (or hand-corrected) length.
+          legs: { orderBy: { ordinal: 'asc' }, select: { distanceKm: true } },
         },
       }),
       prisma.lodgingStay.findMany({
@@ -249,9 +255,15 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
         isAtSea: s.isAtSea,
         arrivalTime: s.arrivalTime,
         departureTime: s.departureTime,
+        // Carried so the achievement input matches what the statistics page
+        // sees. No ladder reads `totalPortCalls` today, so nothing changes on
+        // screen — but an input that silently differs is how the distance
+        // divergence above started.
+        unresolvedPortName: s.unresolvedPortName,
       })),
       departurePort: c.departurePort,
       arrivalPort: c.arrivalPort,
+      legDistancesKm: c.legs.map((l) => l.distanceKm),
     }));
 
     const cruiseStats = calculateCruiseStats(cruiseStatsInput, userBirthday);

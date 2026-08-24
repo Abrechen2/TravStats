@@ -35,7 +35,7 @@ export default function StatsBusinessSection({
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
             {t("stats:business.costPerKmDesc", {
-              cost: businessStats.costPerKm.toFixed(2),
+              cost: formatCurrency(businessStats.costPerKm, baseCurrency),
             })}
           </p>
         </div>
@@ -55,7 +55,7 @@ export default function StatsBusinessSection({
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
             {t("stats:business.costPerHourDesc", {
-              cost: businessStats.costPerHour.toFixed(2),
+              cost: formatCurrency(businessStats.costPerHour, baseCurrency),
             })}
           </p>
         </div>
@@ -75,7 +75,7 @@ export default function StatsBusinessSection({
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
             {t("stats:business.totalCostDesc", {
-              cost: businessStats.totalCost.toLocaleString(),
+              cost: formatCurrency(businessStats.totalCost, baseCurrency),
               distance: formatDistance(businessStats.totalDistance, units.distanceUnit, t, lang),
             })}
           </p>

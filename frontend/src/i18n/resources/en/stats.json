@@ -205,7 +205,8 @@
     "totalCost": "Total Cost",
     "airlines": "Airlines",
     "scopeLabel": "── All-time totals ──",
-    "scopeHint": "independent of the year filter above"
+    "scopeHint": "independent of the year filter above",
+    "flightTimeEstimatedNote": "{{hours}} h of it estimated — {{count}} flights without times"
   },
   "noStatsAvailable": "No statistics available",
   "yearFilter": {
@@ -376,11 +377,11 @@
   "business": {
     "title": "💼 Business Statistics",
     "costPerKm": "Cost per Kilometer",
-    "costPerKmDesc": "€{{cost}} per km",
+    "costPerKmDesc": "{{cost}} per km",
     "costPerHour": "Cost per Flight Hour",
-    "costPerHourDesc": "€{{cost}} per hour",
+    "costPerHourDesc": "{{cost}} per hour",
     "totalCost": "Total Cost",
-    "totalCostDesc": "€{{cost}} for {{distance}} km",
+    "totalCostDesc": "{{cost}} for {{distance}}",
     "seatClassDistribution": "Seat Class Distribution",
     "mostCommonCategory": "Most Common Category",
     "airportDiversity": "Airport Diversity",
@@ -388,7 +389,8 @@
     "avgFlightDuration": "Average Flight Duration",
     "avgFlightDurationDesc": "{{hours}} hours",
     "busiestMonth": "Busiest Month",
-    "busiestMonthDesc": "{{month}} with {{count}} flights"
+    "busiestMonthDesc": "{{month}} with {{count}} flights",
+    "unconvertedNote": "Not converted: {{amounts}}"
   },
   "unique": {
     "title": "🌟 Unique Statistics",

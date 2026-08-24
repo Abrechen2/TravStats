@@ -5,6 +5,15 @@ interface StatsOverviewCardsProps {
   totalFlightTime: number;
   avgFlightDuration: number;
   airlineCount: number;
+  /**
+   * Hours of `totalFlightTime` that came from a great-circle estimate rather
+   * than from clocks, and how many flights those were (#268). Rows that carry
+   * only a date have no times to measure; leaving them out understated the
+   * total, and folding them in silently made a guess look measured. Shown as a
+   * footnote so the figure stays one number and still says what it is.
+   */
+  estimatedHours?: number;
+  estimatedFlightCount?: number;
 }
 
 export default function StatsOverviewCards({
@@ -12,6 +21,8 @@ export default function StatsOverviewCards({
   totalFlightTime,
   avgFlightDuration,
   airlineCount,
+  estimatedHours = 0,
+  estimatedFlightCount = 0,
 }: StatsOverviewCardsProps): JSX.Element {
   const { t } = useTranslation(["stats"]);
 
@@ -38,6 +49,14 @@ export default function StatsOverviewCards({
         <p className="text-3xl font-bold mt-2" style={{ color: "var(--text-primary)" }}>
           {totalFlightTime.toFixed(1)}h
         </p>
+        {estimatedFlightCount > 0 && (
+          <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+            {t("stats:overview.flightTimeEstimatedNote", {
+              hours: estimatedHours.toFixed(1),
+              count: estimatedFlightCount,
+            })}
+          </p>
+        )}
       </div>
       <div
         className="rounded-lg shadow-sm p-6"

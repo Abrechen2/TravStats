@@ -87,9 +87,20 @@ export interface FlightData {
   price?: number | null;
   taxes?: number | null;
   fees?: number | null;
+  currency?: string | null;
+  /** Base-currency value snapshotted on write (#267). */
+  priceBase?: number | null;
+  /** Which base currency that snapshot is in. */
+  fxBaseCurrency?: string | null;
   category?: string | null;
   seatClass?: string | null;
   createdAt: Date;
   bookingId?: string | null;
-  booking?: { id: string; price?: number | null; currency?: string | null } | null;
+  booking?: {
+    id: string;
+    price?: number | null;
+    currency?: string | null;
+    priceBase?: number | null;
+    fxBaseCurrency?: string | null;
+  } | null;
 }

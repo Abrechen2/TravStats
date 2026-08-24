@@ -45,6 +45,7 @@ import {
 } from "../middleware/upload";
 import path from "path";
 import fs from "fs";
+import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 
 /**
  * Airport facts (country + IANA zone) for a trip's flights, keyed by IATA.
@@ -358,13 +359,24 @@ router.post(
         if (!trip) throw new AppError("Trip not found", 404);
       }
 
+      // FX snapshot (#267). A booking carries no travel date of its own, so the
+      // rate is taken for the day it was recorded. That is the only day it has,
+      // and it is honest as long as it is stored alongside the rate rather than
+      // implied.
+      const bookingCurrency = body.currency ?? "EUR";
+      const bookingFx = await fxColumnsFor(
+        { amount: body.price ?? null, currency: bookingCurrency, date: new Date() },
+        await getBaseCurrency(userId),
+      );
+
       const booking = await prisma.booking.create({
         data: {
           userId,
           tripId: body.tripId ?? null,
           pnr: body.pnr ?? null,
           price: body.price ?? null,
-          currency: body.currency ?? "EUR",
+          currency: bookingCurrency,
+          ...bookingFx,
         },
       });
 
@@ -412,6 +424,21 @@ router.patch(
       if (body.pnr !== undefined) data.pnr = body.pnr;
       if (body.price !== undefined) data.price = body.price;
       if (body.currency !== undefined) data.currency = body.currency;
+
+      // Re-snapshot only when the amount or its unit actually moved (#267).
+      if (body.price !== undefined || body.currency !== undefined) {
+        Object.assign(
+          data,
+          await fxColumnsFor(
+            {
+              amount: body.price !== undefined ? body.price : existing.price,
+              currency: body.currency !== undefined ? body.currency : existing.currency,
+              date: existing.createdAt,
+            },
+            await getBaseCurrency(userId),
+          ),
+        );
+      }
 
       const booking = await prisma.booking.update({
         where: { id: existing.id },

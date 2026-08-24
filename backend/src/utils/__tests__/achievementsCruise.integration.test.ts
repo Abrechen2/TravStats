@@ -110,4 +110,45 @@ describe('checkAndUpdateAchievements — cruise integration', () => {
     const unlocked = await checkAndUpdateAchievements(userId);
     expect(unlocked.map((u) => u.achievement.code)).toContain('CRUISE_MEDITERRANEAN');
   });
+  // #269 — the achievement ladder used to load cruises WITHOUT their legs, so
+  // `calculateCruiseStats` fell back to a haversine chord for every leg while
+  // the statistics page reported the routed sea distance. Two ports 6 km apart
+  // with a 6000 km leg stored between them make the two numbers impossible to
+  // confuse: only the leg-based figure crosses the 5000 km badge.
+  it('measures cruise distance from the stored legs, not the straight-line chord', async () => {
+    const near = await prisma.port.create({
+      data: { name: 'Badalona', lat: 41.4, lon: 2.2, isUserAdded: true },
+    });
+    const cruise = await prisma.cruise.create({
+      data: {
+        userId,
+        cruiseLine: 'AIDA Cruises',
+        status: 'flown',
+        stops: {
+          create: [
+            { portId, dayNumber: 1, isAtSea: false },
+            { portId: near.id, dayNumber: 2, isAtSea: false },
+          ],
+        },
+      },
+    });
+    await prisma.cruiseLeg.create({
+      data: {
+        cruiseId: cruise.id,
+        ordinal: 0,
+        fromPortId: portId,
+        toPortId: near.id,
+        distanceKm: 6000,
+        method: 'marnet',
+        routerVersion: 'test',
+      },
+    });
+
+    const unlocked = await checkAndUpdateAchievements(userId);
+    expect(unlocked.map((u) => u.achievement.code)).toContain('CRUISE_DISTANCE_5000');
+
+    await prisma.cruise.delete({ where: { id: cruise.id } });
+    await prisma.port.delete({ where: { id: near.id } });
+  });
+
 });

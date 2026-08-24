@@ -39,11 +39,19 @@ import batchRouter from './flightsBatch';
 import { flightExternalRef, isDocumentImport } from '../services/importProvenance';
 import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from '../shared/statusDerivation';
 import { resolveCompanions, linkRowsFor } from '../services/companionService';
+import { fxColumnsFor, flightOwnAmount, getBaseCurrency } from '../services/fx/snapshot';
 
 const router = Router();
 
 // Interface for flight update data
 interface FlightUpdateData {
+  // FX snapshot columns (#267) — written together by `fxColumnsFor`, never
+  // individually, so a rate can never end up belonging to a different amount.
+  priceBase?: number | null;
+  fxRate?: number | null;
+  fxRateDate?: Date | null;
+  fxBaseCurrency?: string | null;
+  fxSource?: string | null;
   airline?: string | null;
   airlineIata?: string | null;
   airlineIcao?: string | null;
@@ -457,6 +465,15 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
     const companionNames = data.companions ?? [];
     const resolvedCompanions = await resolveCompanions(userId, companionNames);
 
+    const fxColumns = await fxColumnsFor(
+      {
+        amount: flightOwnAmount(data),
+        currency: data.currency,
+        date: departureUtc,
+      },
+      await getBaseCurrency(userId),
+    );
+
     const flight = await prisma.$transaction(async (tx) => {
       const created = await tx.flight.create({
         data: {
@@ -520,6 +537,11 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
           taxes: data.taxes,
           fees: data.fees,
           currency: data.currency,
+          // FX snapshot (#267). Converted at write time against the DEPARTURE
+          // day, so a historical total never moves when the ECB publishes.
+          // All-null where no honest rate exists — the statistics then report
+          // this amount in its own currency rather than folding it into a sum.
+          ...fxColumns,
           category: data.category,
           // Persist the cabin, do not merely price its CO2. This column was
           // missing here while `toSeatClass(data.seatClass)` fed calculateCo2Kg
@@ -1342,6 +1364,34 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
         effectiveStatus,
         effectiveFn,
       );
+    }
+
+    // FX snapshot (#267). Recomputed only when an input to it actually moved —
+    // price, taxes, fees, currency or the departure day. Rewriting it on every
+    // PATCH would re-date a snapshot that has not changed, and a snapshot's
+    // whole value is that its rate belongs to a specific day.
+    const fxInputsChanged =
+      data.price !== undefined ||
+      data.taxes !== undefined ||
+      data.fees !== undefined ||
+      data.currency !== undefined ||
+      updateData.departureTime !== undefined;
+    if (fxInputsChanged) {
+      const merged = {
+        price: data.price !== undefined ? data.price : existingFlight.price,
+        taxes: data.taxes !== undefined ? data.taxes : existingFlight.taxes,
+        fees: data.fees !== undefined ? data.fees : existingFlight.fees,
+      };
+      const fxColumns = await fxColumnsFor(
+        {
+          amount: flightOwnAmount(merged),
+          currency:
+            data.currency !== undefined ? data.currency : existingFlight.currency,
+          date: updateData.departureTime ?? existingFlight.departureTime,
+        },
+        await getBaseCurrency(userId),
+      );
+      Object.assign(updateData, fxColumns);
     }
 
     const flight = await prisma.$transaction(async (tx) => {
