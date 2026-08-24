@@ -98,7 +98,10 @@
     "source": "Source",
     "mapLabel": "Map showing the position of {{name}}",
     "deletePlace": "Delete place",
-    "loadError": "The place could not be loaded."
+    "loadError": "The place could not be loaded.",
+    "visitedWithoutVisit": "Marked as visited, with no dated visit. Add one if you want to record a date, a note or a photograph.",
+    "visitTrip": "Trip",
+    "visitNoTrip": "Not linked to a trip"
   },
   "lists": {
     "title": "Lists",

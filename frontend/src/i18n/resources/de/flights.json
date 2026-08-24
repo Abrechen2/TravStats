@@ -431,5 +431,9 @@
     "distance": "Distanz",
     "overflownCountries": "Überflogene Länder",
     "openTrip": "Reise öffnen"
+  },
+  "price": {
+    "package": "Pauschal",
+    "packageHint": "Der Preis steht auf der Buchung, nicht auf diesem Flug."
   }
 }

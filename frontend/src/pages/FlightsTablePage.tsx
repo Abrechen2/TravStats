@@ -38,6 +38,7 @@ import { getFlightDuration, getFlightDurationMinutes } from "../lib/flightDurati
 import { formatDurationWithEstimate } from "../lib/formatters";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
+import { priceCellState } from "../lib/flightPriceCell";
 import PageTransition from "../components/PageTransition";
 import { SkeletonTable } from "../components/SkeletonLoader";
 import AirlineWordmarkCell from "../components/flightsTable/AirlineWordmarkCell";
@@ -817,13 +818,17 @@ export default function FlightsTablePage(): JSX.Element {
                                 fontVariantNumeric: "tabular-nums",
                               }}
                             >
-                              {flight.price ? (
+                              {priceCellState(flight) === "amount" ? (
                                 <>
-                                  {flight.price.toFixed(2)}
+                                  {flight.price!.toFixed(2)}
                                   <span className="ml-1 text-[11px]">
                                     {flight.currency || "EUR"}
                                   </span>
                                 </>
+                              ) : priceCellState(flight) === "package" ? (
+                                <span title={t("flights:price.packageHint")}>
+                                  {t("flights:price.package")}
+                                </span>
                               ) : (
                                 t("common:labels.notAvailable")
                               )}

@@ -641,9 +641,25 @@ export function StayEditor({
                 ))}
               </select>
             )}
+          </Section>
+
+          {/* Its own section. This select used to sit unlabelled at the bottom
+            * of "Loyalty programme", between membership numbers — the word
+            * "trip" existed only as an aria-label, so the sole thing on screen
+            * was the option text "Not linked to a trip". Nobody looking for
+            * how to attach a stay to a trip searches under loyalty, and they
+            * would be right not to. */}
+          <Section title={t("lodging:stayEditor.tripSection")}>
+            <label
+              htmlFor="stay-editor-trip"
+              className="mb-1 block text-xs text-[var(--text-muted)]"
+            >
+              {t("lodging:field.trip")}
+            </label>
             <select
+              id="stay-editor-trip"
               aria-label={t("lodging:field.trip")}
-              className={`mt-3 ${INPUT_CLASS}`}
+              className={INPUT_CLASS}
               value={tripId}
               onChange={(e): void => setTripId(e.target.value)}
             >
