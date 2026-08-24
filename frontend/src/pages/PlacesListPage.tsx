@@ -18,6 +18,8 @@ import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { FlagImg } from "../lib/countryFlag";
+import { continentLabel } from "../lib/continentLabel";
+import { countryName } from "../shared/geo/countryCode";
 import { logger } from "../lib/logger";
 import { deletePlace, listPlaces } from "../lib/api/places";
 import { useToastStore } from "../store/toastStore";
@@ -49,13 +51,15 @@ const PLACE_STATUS_KEY = {
 
 type VisitedFilter = "all" | "visited" | "planned" | "wishlist";
 
-type PlaceSortKey = "name" | "category" | "location" | "visits" | "lastVisit";
+type PlaceSortKey = "name" | "category" | "location" | "country" | "continent" | "visits" | "lastVisit";
 type PlaceColumnId = PlaceSortKey | "status" | "actions";
 
 const COLUMN_IDS: readonly PlaceColumnId[] = [
   "name",
   "category",
   "location",
+  "country",
+  "continent",
   "visits",
   "lastVisit",
   "status",
@@ -68,11 +72,22 @@ const SORT_KEY_BY_COLUMN: Partial<Record<PlaceColumnId, PlaceSortKey>> = {
   name: "name",
   category: "category",
   location: "location",
+  country: "country",
+  continent: "continent",
   visits: "visits",
   lastVisit: "lastVisit",
 };
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/** The country as a reader sees it — localised from the ISO code, falling back
+ *  to whatever text the source wrote. */
+function countryLabel(place: Place, locale: string): string {
+  if (place.isoCountryCode) {
+    return countryName(place.isoCountryCode, locale) ?? place.isoCountryCode;
+  }
+  return place.country ?? "";
+}
 
 /** One label source for header, picker, aria and footer — they must agree. */
 function columnLabel(t: Translate, id: PlaceColumnId): string {
@@ -85,16 +100,33 @@ const SORT_DEFAULT_ASC: Record<PlaceSortKey, boolean> = {
   name: true,
   category: true,
   location: true,
+  country: true,
+  continent: true,
   visits: false,
   lastVisit: false,
 };
 
-function compareRows(a: Place, b: Place, key: PlaceSortKey, locale: string): number {
+function compareRows(
+  a: Place,
+  b: Place,
+  key: PlaceSortKey,
+  locale: string,
+  t: Translate
+): number {
   switch (key) {
     case "category":
       return a.category.localeCompare(b.category);
     case "location":
       return (a.city ?? "").localeCompare(b.city ?? "", locale);
+    // Country and continent sort on the LOCALISED label, not the raw code: a
+    // German reader expects Ägypten by Ä, and "EG" would file it under E.
+    case "country":
+      return countryLabel(a, locale).localeCompare(countryLabel(b, locale), locale);
+    case "continent":
+      return continentLabel(a.continent, t, "").localeCompare(
+        continentLabel(b.continent, t, ""),
+        locale
+      );
     case "visits":
       return a.visitCount - b.visitCount;
     case "lastVisit": {
@@ -178,7 +210,7 @@ export default function PlacesListPage(): JSX.Element {
       );
     });
     const dir = sortOrder === "asc" ? 1 : -1;
-    return [...out].sort((a, b) => compareRows(a, b, sortBy, i18n.language) * dir);
+    return [...out].sort((a, b) => compareRows(a, b, sortBy, i18n.language, t) * dir);
   }, [rows, search, category, country, visited, sortBy, sortOrder, i18n.language]);
 
   const handleSort = useCallback((key: PlaceSortKey): void => {
@@ -462,6 +494,16 @@ export default function PlacesListPage(): JSX.Element {
                               <FlagImg country={p.country} />
                             )}
                           </span>
+                        </td>
+                      )}
+                      {columnPrefs.isVisible("country") && (
+                        <td className="px-4 py-3 text-[var(--text-muted)]">
+                          {countryLabel(p, i18n.language) || "—"}
+                        </td>
+                      )}
+                      {columnPrefs.isVisible("continent") && (
+                        <td className="px-4 py-3 text-[var(--text-muted)]">
+                          {continentLabel(p.continent, t)}
                         </td>
                       )}
                       {columnPrefs.isVisible("visits") && (

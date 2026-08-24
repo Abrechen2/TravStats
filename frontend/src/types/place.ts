@@ -59,6 +59,13 @@ export interface Place {
   plannedVisitCount: number;
   /** Most recent completed visit, or null when undated / never visited. */
   lastVisitAt: string | null;
+  /**
+   * Resolved by the SERVER from the country code, coordinates as the fallback.
+   * One of the seven `Continent` values, or null when neither could answer.
+   * Not mirrored as a union here: the client only sorts and labels it, and a
+   * second copy of that vocabulary is a second thing to keep in step.
+   */
+  continent: string | null;
 }
 
 export interface PlaceInput {

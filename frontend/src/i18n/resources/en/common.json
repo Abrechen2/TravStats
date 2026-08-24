@@ -225,5 +225,14 @@
     "places": "Places",
     "visited": "Visited",
     "countries": "Countries"
+  },
+  "continents": {
+    "africa": "Africa",
+    "antarctica": "Antarctica",
+    "asia": "Asia",
+    "europe": "Europe",
+    "northAmerica": "North America",
+    "oceania": "Oceania",
+    "southAmerica": "South America"
   }
 }

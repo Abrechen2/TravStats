@@ -37,6 +37,7 @@ const place = (over: Partial<Place> = {}): Place => ({
   visitCount: 1,
   plannedVisitCount: 0,
   lastVisitAt: "2024-06-12T10:00:00.000Z",
+  continent: "Europe",
   ...over,
 });
 

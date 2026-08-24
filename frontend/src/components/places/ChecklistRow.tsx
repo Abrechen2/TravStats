@@ -12,6 +12,9 @@ interface Props {
   /** The checklist's colour — the tick box fills with it. */
   accent: string;
   busy: boolean;
+  /** The country or continent this row was sorted into, or null when the list
+   *  is in its own catalog order. Shown so the ordering is visible. */
+  groupLabel?: string | null;
   onToggle: (item: CuratedProgressItem, visitedAt?: string | null) => void;
 }
 
@@ -26,7 +29,14 @@ interface Props {
  * a target that is not in the logbook. The same measurement the pin layer makes
  * for wishlist pins, and for the same reason.
  */
-export function ChecklistRow({ item, suggestion, accent, busy, onToggle }: Props): JSX.Element {
+export function ChecklistRow({
+  item,
+  suggestion,
+  accent,
+  busy,
+  groupLabel = null,
+  onToggle,
+}: Props): JSX.Element {
   const { t, i18n } = useTranslation(["places", "common"]);
   const dateFormat = new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium" });
   const name = curatedText(item.name, item.nameEn, i18n.language);
@@ -102,6 +112,14 @@ export function ChecklistRow({ item, suggestion, accent, busy, onToggle }: Props
           )}
           {(item.isoCountryCode ?? item.country) && (
             <FlagImg country={item.isoCountryCode ?? item.country ?? ""} />
+          )}
+          {groupLabel && (
+            <span
+              className="rounded px-1.5 py-0.5 text-[11px]"
+              style={{ border: "1px solid var(--color-border)", color: "var(--text-muted)" }}
+            >
+              {groupLabel}
+            </span>
           )}
         </p>
         {item.blurb && (

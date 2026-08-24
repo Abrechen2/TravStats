@@ -31,7 +31,9 @@
       "visits": "Visits",
       "lastVisit": "Last visit",
       "status": "Status",
-      "actions": "Actions"
+      "actions": "Actions",
+      "country": "Country",
+      "continent": "Continent"
     },
     "filters": {
       "status": "Status",
@@ -167,7 +169,13 @@
       "low": "maybe"
     },
     "rightThere": "right there",
-    "kmAway": "{{km}} km away"
+    "kmAway": "{{km}} km away",
+    "continentFilter": "Filter by continent",
+    "allContinents": "All continents",
+    "sortBy": "Sort order",
+    "sortName": "By name",
+    "sortCountry": "By country",
+    "sortContinent": "By continent"
   },
   "photos": {
     "add": "Photo",

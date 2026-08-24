@@ -4,6 +4,7 @@ import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import { resolveCountryCode } from "../shared/geo/countryCode";
+import { getContinent } from "../utils/continents";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { classifyVisit } from "../shared/placeCounting";
 import {
@@ -45,9 +46,19 @@ interface PlaceAggregates {
   plannedVisitCount: number;
   /** Most recent COMPLETED visit; null when undated or never visited. */
   lastVisitAt: Date | null;
+  /**
+   * Derived, never stored. Resolved from the country code with the coordinates
+   * as the fallback, through the same module the achievement engine uses — so
+   * a continent on a list row and a continent behind a badge cannot disagree.
+   */
+  continent: string | null;
 }
 
-function computeAggregates(visits: PlaceRow["visits"], now = new Date()): PlaceAggregates {
+function computeAggregates(
+  place: { lat: number; lon: number; isoCountryCode: string | null },
+  visits: PlaceRow["visits"],
+  now = new Date()
+): PlaceAggregates {
   let visitCount = 0;
   let plannedVisitCount = 0;
   let lastVisitAt: Date | null = null;
@@ -62,7 +73,12 @@ function computeAggregates(visits: PlaceRow["visits"], now = new Date()): PlaceA
       lastVisitAt = v.visitedAt;
     }
   }
-  return { visitCount, plannedVisitCount, lastVisitAt };
+  return {
+    visitCount,
+    plannedVisitCount,
+    lastVisitAt,
+    continent: getContinent(place.lat, place.lon, place.isoCountryCode),
+  };
 }
 
 type DecoratedPlace = PlaceRow & PlaceAggregates;
@@ -72,11 +88,15 @@ type DecoratedPlace = PlaceRow & PlaceAggregates;
  * TYPE and not only at runtime — a spread that silently widens the payload
  * while the signature claims otherwise is how a field ends up undocumented.
  */
-function decorate<T extends { visits: PlaceRow["visits"] }>(
-  place: T,
-  now = new Date()
-): T & PlaceAggregates {
-  return { ...place, ...computeAggregates(place.visits, now) };
+function decorate<
+  T extends {
+    visits: PlaceRow["visits"];
+    lat: number;
+    lon: number;
+    isoCountryCode: string | null;
+  },
+>(place: T, now = new Date()): T & PlaceAggregates {
+  return { ...place, ...computeAggregates(place, place.visits, now) };
 }
 
 /**

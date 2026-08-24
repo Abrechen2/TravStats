@@ -96,6 +96,9 @@ export interface CuratedProgressItem {
   lon: number;
   country: string | null;
   isoCountryCode: string | null;
+  /** Server-resolved. Istanbul's historic areas come back as Europe and
+   *  Cappadocia as Asia, which a country code alone could not tell apart. */
+  continent: string | null;
   blurb: string | null;
   blurbEn: string | null;
   ticked: boolean;

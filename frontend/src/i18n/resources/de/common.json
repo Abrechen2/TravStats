@@ -225,5 +225,14 @@
     "places": "Orte",
     "visited": "Besucht",
     "countries": "Länder"
+  },
+  "continents": {
+    "africa": "Afrika",
+    "antarctica": "Antarktis",
+    "asia": "Asien",
+    "europe": "Europa",
+    "northAmerica": "Nordamerika",
+    "oceania": "Ozeanien",
+    "southAmerica": "Südamerika"
   }
 }

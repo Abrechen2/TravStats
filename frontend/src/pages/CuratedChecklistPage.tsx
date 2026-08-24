@@ -17,6 +17,7 @@ import {
   unsubscribeChecklist,
   untickCuratedItem,
 } from "../lib/api/placeLists";
+import { continentLabel } from "../lib/continentLabel";
 import { countryName } from "../shared/geo/countryCode";
 import { DOMAINS } from "../shared/domains";
 import { useToastStore } from "../store/toastStore";
@@ -29,6 +30,17 @@ import type {
 type RowFilter = "all" | "open" | "ticked" | "suggested";
 
 /**
+ * How the rows are ordered.
+ *
+ * `name` is the catalog's own order and stays the default — it is the one you
+ * can navigate by typing. The other two answer the question a world-spanning
+ * list actually provokes: what is near me, and what is on the continent I keep
+ * going back to. Both fall back to the name inside a group, so a country's
+ * sites still read alphabetically.
+ */
+type SortKey = "name" | "country" | "continent";
+
+/**
  * How many rows are drawn at once.
  *
  * The World Heritage checklist is 1247 targets. Rendering all of them costs
@@ -38,6 +50,13 @@ type RowFilter = "all" | "open" | "ticked" | "suggested";
  * own length, which is the one thing it may not do.
  */
 const RENDER_CAP = 250;
+
+/** Shared look for the three pickers in the filter bar. */
+const SELECT_STYLE = {
+  background: "var(--bg-elevated)",
+  border: "1px solid var(--color-border)",
+  color: "var(--text-secondary)",
+} as const;
 
 /**
  * The progress screen — the ONE screen in the app that renders two kinds of row.
@@ -73,7 +92,9 @@ export default function CuratedChecklistPage(): JSX.Element {
 
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState<string>("all");
+  const [continent, setContinent] = useState<string>("all");
   const [rowFilter, setRowFilter] = useState<RowFilter>("all");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
 
   const load = useCallback(async (): Promise<void> => {
     if (!key) return;
@@ -148,18 +169,39 @@ export default function CuratedChecklistPage(): JSX.Element {
     }
   }, [progress, key, load, addToast, t]);
 
-  // Country options come from the ITEMS, localised through the shared resolver
-  // — never from a list of names baked into the catalog, which would render
-  // English in a German UI.
+  // Continent options come from the ITEMS, so a list that touches three
+  // continents offers three — never the full seven as dead entries.
+  const continentOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const item of progress?.items ?? []) {
+      if (item.continent) names.add(item.continent);
+    }
+    return [...names]
+      .map((value) => ({ value, label: continentLabel(value, t) }))
+      .sort((a, b) => a.label.localeCompare(b.label, i18n.language));
+  }, [progress?.items, t, i18n.language]);
+
+  // Country options are localised through the shared resolver — never from a
+  // list of names baked into the catalog, which would render English in a
+  // German UI. NARROWED by the chosen continent: 172 countries in one dropdown
+  // is a scroll, 40 is a choice.
   const countryOptions = useMemo(() => {
     const codes = new Set<string>();
     for (const item of progress?.items ?? []) {
+      if (continent !== "all" && item.continent !== continent) continue;
       if (item.isoCountryCode) codes.add(item.isoCountryCode.toUpperCase());
     }
     return [...codes]
       .map((code) => ({ code, label: countryName(code, i18n.language) ?? code }))
       .sort((a, b) => a.label.localeCompare(b.label, i18n.language));
-  }, [progress?.items, i18n.language]);
+  }, [progress?.items, continent, i18n.language]);
+
+  // A country picked under one continent has no meaning under another, so it
+  // clears rather than silently emptying the list.
+  useEffect(() => {
+    if (country === "all") return;
+    if (!countryOptions.some((c) => c.code === country)) setCountry("all");
+  }, [countryOptions, country]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -167,6 +209,7 @@ export default function CuratedChecklistPage(): JSX.Element {
       if (rowFilter === "open" && item.ticked) return false;
       if (rowFilter === "ticked" && !item.ticked) return false;
       if (rowFilter === "suggested" && !suggestionById.has(item.itemId)) return false;
+      if (continent !== "all" && item.continent !== continent) return false;
       if (country !== "all" && item.isoCountryCode?.toUpperCase() !== country) return false;
       if (q.length > 0) {
         const haystack = `${item.name} ${item.nameEn ?? ""}`.toLowerCase();
@@ -177,16 +220,41 @@ export default function CuratedChecklistPage(): JSX.Element {
 
     // Catalog order is alphabetical, which is right for browsing and wrong for
     // judging: it put a 43 km airport guess above a ship that docked in the
-    // town. In the suggestion view the strongest evidence goes first.
-    if (rowFilter !== "suggested") return rows;
-    const rank: Record<string, number> = { high: 0, medium: 1, low: 2 };
+    // town. In the suggestion view the strongest evidence goes first, and that
+    // beats the sort picker — the whole point of that view is the ranking.
+    if (rowFilter === "suggested") {
+      const rank: Record<string, number> = { high: 0, medium: 1, low: 2 };
+      return [...rows].sort((a, b) => {
+        const sa = suggestionById.get(a.itemId);
+        const sb = suggestionById.get(b.itemId);
+        if (!sa || !sb) return 0;
+        return rank[sa.confidence] - rank[sb.confidence] || sa.distanceKm - sb.distanceKm;
+      });
+    }
+
+    if (sortKey === "name") return rows;
+
+    const byName = (a: CuratedProgressItem, b: CuratedProgressItem): number =>
+      a.name.localeCompare(b.name, i18n.language);
+    // A row with no country or continent sorts LAST rather than first: an
+    // empty string would otherwise collate before "Ägypten" and open the list
+    // with the handful of rows that know least about themselves.
+    const groupOf = (item: CuratedProgressItem): string =>
+      sortKey === "continent"
+        ? continentLabel(item.continent, t, "")
+        : item.isoCountryCode
+          ? (countryName(item.isoCountryCode, i18n.language) ?? item.isoCountryCode)
+          : "";
+
     return [...rows].sort((a, b) => {
-      const sa = suggestionById.get(a.itemId);
-      const sb = suggestionById.get(b.itemId);
-      if (!sa || !sb) return 0;
-      return rank[sa.confidence] - rank[sb.confidence] || sa.distanceKm - sb.distanceKm;
+      const ga = groupOf(a);
+      const gb = groupOf(b);
+      if (ga === gb) return byName(a, b);
+      if (ga === "") return 1;
+      if (gb === "") return -1;
+      return ga.localeCompare(gb, i18n.language) || byName(a, b);
     });
-  }, [progress?.items, search, country, rowFilter, suggestionById]);
+  }, [progress?.items, search, country, continent, rowFilter, sortKey, suggestionById, t, i18n.language]);
 
   const shown = filtered.slice(0, RENDER_CAP);
   const hidden = filtered.length - shown.length;
@@ -359,17 +427,29 @@ export default function CuratedChecklistPage(): JSX.Element {
               minWidth: 220,
             }}
           />
+          {continentOptions.length > 1 && (
+            <select
+              value={continent}
+              onChange={(e) => setContinent(e.target.value)}
+              aria-label={t("places:checklist.continentFilter")}
+              className="rounded-lg px-3 py-2 text-sm"
+              style={SELECT_STYLE}
+            >
+              <option value="all">{t("places:checklist.allContinents")}</option>
+              {continentOptions.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          )}
           {countryOptions.length > 1 && (
             <select
               value={country}
               onChange={(e) => setCountry(e.target.value)}
               aria-label={t("places:checklist.countryFilter")}
               className="rounded-lg px-3 py-2 text-sm"
-              style={{
-                background: "var(--bg-elevated)",
-                border: "1px solid var(--color-border)",
-                color: "var(--text-secondary)",
-              }}
+              style={SELECT_STYLE}
             >
               <option value="all">{t("places:checklist.allCountries")}</option>
               {countryOptions.map((c) => (
@@ -379,6 +459,20 @@ export default function CuratedChecklistPage(): JSX.Element {
               ))}
             </select>
           )}
+          {/* Ordering. Disabled in the suggestion view, where the ranking IS
+              the content and a picker that did nothing would be a lie. */}
+          <select
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as SortKey)}
+            disabled={rowFilter === "suggested"}
+            aria-label={t("places:checklist.sortBy")}
+            className="rounded-lg px-3 py-2 text-sm disabled:opacity-40"
+            style={SELECT_STYLE}
+          >
+            <option value="name">{t("places:checklist.sortName")}</option>
+            <option value="country">{t("places:checklist.sortCountry")}</option>
+            <option value="continent">{t("places:checklist.sortContinent")}</option>
+          </select>
           {FILTERS.map((f) => (
             <button
               key={f.id}
@@ -411,6 +505,17 @@ export default function CuratedChecklistPage(): JSX.Element {
                 suggestion={suggestionById.get(item.itemId) ?? null}
                 accent={accent}
                 busy={busyItem === item.itemId}
+                // Sorting by something invisible looks like sorting by nothing,
+                // so the key being sorted on is shown on the row.
+                groupLabel={
+                  rowFilter === "suggested" || sortKey === "name"
+                    ? null
+                    : sortKey === "continent"
+                      ? continentLabel(item.continent, t)
+                      : item.isoCountryCode
+                        ? (countryName(item.isoCountryCode, i18n.language) ?? item.isoCountryCode)
+                        : "—"
+                }
                 onToggle={handleToggle}
               />
             ))}

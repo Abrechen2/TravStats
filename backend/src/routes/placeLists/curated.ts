@@ -5,6 +5,7 @@ import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/a
 import { AppError } from "../../middleware/errorHandler";
 import { checkAndUpdateAchievements } from "../../utils/achievements";
 import { classifyVisit } from "../../shared/placeCounting";
+import { getContinent } from "../../utils/continents";
 import { buildAnchors, suggestVisits } from "../../services/places/visitSuggestions";
 import logger from "../../utils/logger";
 
@@ -193,6 +194,12 @@ router.get("/:key/progress", async (req: AuthRequest, res: Response, next: NextF
         lon: item.lon,
         country: item.country,
         isoCountryCode: item.isoCountryCode,
+        // Resolved HERE, not in the client. The one careful implementation
+        // lives on this side and knows the cases a country code alone cannot
+        // answer — Istanbul's historic areas are Europe, Cappadocia is Asia,
+        // and both are on this very list. Mirroring a 250-row table into the
+        // bundle to get that wrong differently is not an improvement.
+        continent: getContinent(item.lat, item.lon, item.isoCountryCode),
         blurb: item.blurb,
         blurbEn: item.blurbEn,
         // The two-kinds-of-row split, made explicit for the client rather than

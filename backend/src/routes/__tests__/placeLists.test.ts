@@ -350,6 +350,25 @@ describe("Place lists API", () => {
       expect(res.body.data.color).toBe("#e3b341");
     });
 
+    it("resolves a continent for every target, splitting the transcontinental ones", async () => {
+      const res = await request(app)
+        .get("/api/v1/place-lists/curated/world-heritage/progress")
+        .set("Cookie", authCookie);
+
+      const items: Array<{ name: string; continent: string | null; isoCountryCode: string }> =
+        res.body.data.items;
+      expect(items.length).toBeGreaterThan(1000);
+      expect(items.every((i) => i.continent !== null)).toBe(true);
+
+      // The reason this is resolved on the SERVER: a country code alone cannot
+      // answer Turkey. Istanbul is on the European side of the Bosphorus and
+      // Cappadocia is not, and both are on this list.
+      const istanbul = items.find((i) => /Istanbul/i.test(i.name));
+      const goreme = items.find((i) => /Cappadocia/i.test(i.name));
+      expect(istanbul?.continent).toBe("Europe");
+      expect(goreme?.continent).toBe("Asia");
+    });
+
     it("404s on an unknown checklist rather than inventing an empty one", async () => {
       const res = await request(app)
         .get("/api/v1/place-lists/curated/does-not-exist/progress")
