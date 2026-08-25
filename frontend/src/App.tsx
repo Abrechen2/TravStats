@@ -12,6 +12,7 @@ import { setupApi, usageStatsApi } from "./lib/api";
 import i18n from "./i18n/config";
 import { useTranslation } from "./hooks/useTranslation";
 import { useEnabledDomains } from "./hooks/useEnabledDomains";
+import { DomainRouteGuard } from "./components/DomainRouteGuard";
 import { useWhatsNew } from "./hooks/useWhatsNew";
 import { useSessionValidation } from "./hooks/useSessionValidation";
 import WhatsNewModal from "./components/WhatsNewModal";
@@ -274,10 +275,15 @@ function AppContent() {
               <Route
                 path="/flights"
                 element={
-                  isAuthenticated && isEnabled("flight") ? (
-                    <FlightsTablePage />
+                  isAuthenticated ? (
+                    // Not a boolean guard — see DomainRouteGuard: the domain
+                    // list is unknown for one request on a cold load, and
+                    // deciding then bounced every bookmark and refresh.
+                    <DomainRouteGuard domain="flight">
+                      <FlightsTablePage />
+                    </DomainRouteGuard>
                   ) : (
-                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                    <Navigate to="/login" />
                   )
                 }
               />
@@ -294,10 +300,15 @@ function AppContent() {
               <Route
                 path="/cruises"
                 element={
-                  isAuthenticated && isEnabled("cruise") ? (
-                    <CruisesPage />
+                  isAuthenticated ? (
+                    // Not a boolean guard — see DomainRouteGuard: the domain
+                    // list is unknown for one request on a cold load, and
+                    // deciding then bounced every bookmark and refresh.
+                    <DomainRouteGuard domain="cruise">
+                      <CruisesPage />
+                    </DomainRouteGuard>
                   ) : (
-                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                    <Navigate to="/login" />
                   )
                 }
               />
@@ -314,10 +325,15 @@ function AppContent() {
               <Route
                 path="/lodging"
                 element={
-                  isAuthenticated && isEnabled("lodging") ? (
-                    <LodgingListPage />
+                  isAuthenticated ? (
+                    // Not a boolean guard — see DomainRouteGuard: the domain
+                    // list is unknown for one request on a cold load, and
+                    // deciding then bounced every bookmark and refresh.
+                    <DomainRouteGuard domain="lodging">
+                      <LodgingListPage />
+                    </DomainRouteGuard>
                   ) : (
-                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                    <Navigate to="/login" />
                   )
                 }
               />
