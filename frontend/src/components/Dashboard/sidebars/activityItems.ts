@@ -1,5 +1,5 @@
 import { formatDateInTimezone } from "../../../lib/dateUtils";
-import { resolveStayTiming } from "../../../shared/lodgingTiming";
+import { latestStayDayOf } from "../../../lib/lodgingLatestStay";
 import type { GeoJSONFeature } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
 import type { Lodging } from "../../../types/lodging";
@@ -119,18 +119,7 @@ export function cruiseToItem(cruise: Cruise): ActivityItem {
  * and that reader is where the project keeps the rules for it.
  */
 export function lodgingToItem(lodging: Lodging): ActivityItem {
-  let newest: string = "";
-  for (const stay of lodging.stays ?? []) {
-    const timing = resolveStayTiming({
-      checkIn: stay.checkIn ? new Date(stay.checkIn) : null,
-      checkOut: stay.checkOut ? new Date(stay.checkOut) : null,
-      datePrecision: stay.datePrecision ?? "DAY",
-      nights: stay.nights ?? null,
-    });
-    if (!timing.anchor) continue;
-    const day = timing.anchor.toISOString().slice(0, 10);
-    if (day > newest) newest = day;
-  }
+  const newest = latestStayDayOf(lodging);
 
   const nights = lodging.nights ?? 0;
   return {

@@ -27,6 +27,7 @@ import { PLACE_CATEGORIES, PLACE_CATEGORY_ICONS } from "../shared/placeCategorie
 import { classifyPlace } from "../shared/placeCounting";
 import type { PlaceCategory } from "../shared/placeCategories";
 import type { Place } from "../types/place";
+import { useSortPrefs } from "../components/table/useSortPrefs";
 
 type CategoryFilter = PlaceCategory | "all";
 type CountryFilter = string | "all";
@@ -157,8 +158,9 @@ export default function PlacesListPage(): JSX.Element {
   const [category, setCategory] = useState<CategoryFilter>("all");
   const [country, setCountry] = useState<CountryFilter>("all");
   const [visited, setVisited] = useState<VisitedFilter>("all");
-  const [sortBy, setSortBy] = useState<PlaceSortKey>("name");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  // Newest first everywhere, and the choice survives a reload — the
+  // column choice already did (useColumnPrefs), the sort never had.
+  const { sortBy, sortOrder, setSort } = useSortPrefs("places-list", "lastVisit", "desc", ["name","category","location","country","continent","visits","lastVisit"] as const);
 
   const columnPrefs = useColumnPrefs("places", ALWAYS_VISIBLE);
 
@@ -213,16 +215,16 @@ export default function PlacesListPage(): JSX.Element {
     return [...out].sort((a, b) => compareRows(a, b, sortBy, i18n.language, t) * dir);
   }, [rows, search, category, country, visited, sortBy, sortOrder, i18n.language]);
 
-  const handleSort = useCallback((key: PlaceSortKey): void => {
-    setSortBy((prev) => {
-      if (prev === key) {
-        setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
-        return prev;
+  const handleSort = useCallback(
+    (key: PlaceSortKey): void => {
+      if (sortBy === key) {
+        setSort(key, sortOrder === "asc" ? "desc" : "asc");
+      } else {
+        setSort(key, SORT_DEFAULT_ASC[key] ? "asc" : "desc");
       }
-      setSortOrder(SORT_DEFAULT_ASC[key] ? "asc" : "desc");
-      return key;
-    });
-  }, []);
+    },
+    [sortBy, sortOrder, setSort]
+  );
 
   const hasActiveFilter =
     search.trim() !== "" || category !== "all" || country !== "all" || visited !== "all";
