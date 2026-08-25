@@ -70,6 +70,32 @@ export interface SeedAirportsOptions {
   closedOnly?: boolean;
 }
 
+/**
+ * Antarctic airfields that the type filter would otherwise drop.
+ *
+ * Antarctica has no large or medium airports because it has no commercial
+ * aviation, so OurAirports types nearly every runway there `small_airport`.
+ * Wolf's Fang (WFR) is the single exception — which is why "Seven Continents
+ * Master" was in practice reachable through exactly one airfield, while the
+ * fields tourists actually fly to (Teniente Marsh on King George Island,
+ * Union Glacier, Marambio, Rothera, Novolazarevskaya) were invisible.
+ *
+ * Admitting every `small_airport` worldwide would bury the picker in tens of
+ * thousands of airstrips, so this is scoped to the one continent whose
+ * reality the type taxonomy does not describe.
+ *
+ * A real code is required. OurAirports gives unaddressable Antarctic features
+ * synthetic idents like `AQ-0012` ("Navaid"), and the `ident` fallback used
+ * elsewhere in this file would put those in the picker as if they were codes.
+ */
+export function isAntarcticAirfield(airport: Pick<CSVAirport, 'iso_country' | 'type' | 'iata_code' | 'gps_code'>): boolean {
+  return (
+    airport.iso_country === 'AQ' &&
+    airport.type === 'small_airport' &&
+    Boolean(airport.iata_code || airport.gps_code)
+  );
+}
+
 export async function seedAirportsFromCSV(options: SeedAirportsOptions = {}) {
   const { closedOnly = false } = options;
   logger.info({
@@ -120,7 +146,11 @@ export async function seedAirportsFromCSV(options: SeedAirportsOptions = {}) {
     ? ['closed']
     : ['large_airport', 'medium_airport', 'closed'];
   const filteredAirports = records.filter((airport) => {
-    if (!allowedTypes.includes(airport.type)) {
+    // `closedOnly` is the historical-backfill mode and stays exactly as narrow
+    // as its name says.
+    const admitted =
+      allowedTypes.includes(airport.type) || (!closedOnly && isAntarcticAirfield(airport));
+    if (!admitted) {
       return false;
     }
     if (!airport.latitude_deg || !airport.longitude_deg) {
