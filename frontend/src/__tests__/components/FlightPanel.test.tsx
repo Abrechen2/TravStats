@@ -49,6 +49,36 @@ const flights: Flight[] = [
   },
 ];
 
+const twoFlights: Flight[] = [
+  { ...flights[0], id: "old", depIata: "MUC", arrIata: "JFK", departureTime: "2024-03-14T10:00:00Z" },
+  { ...flights[0], id: "new", depIata: "BER", arrIata: "LHR", departureTime: "2025-06-01T08:00:00Z" },
+];
+
+describe("FlightPanel sort order", () => {
+  // The default sort is labelled `date-desc`, and the label has to be true:
+  // the newest flight belongs at the top. `groupFlights` sorts ASCENDING and
+  // the `date-desc` branch used to `break` without touching it, so the panel
+  // opened on the OLDEST flight while claiming the opposite.
+  it("puts the newest flight first by default", () => {
+    render(
+      <FlightPanel
+        flights={twoFlights}
+        totalCount={2}
+        isOpen
+        onClose={vi.fn()}
+        onEdit={vi.fn()}
+        onDuplicate={vi.fn()}
+        onDelete={vi.fn()}
+        onAddFlight={vi.fn()}
+      />
+    );
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("BER");
+    expect(body).toContain("MUC");
+    expect(body.indexOf("BER")).toBeLessThan(body.indexOf("MUC"));
+  });
+});
+
 describe("FlightPanel", () => {
   it("renders flight list when open", () => {
     render(

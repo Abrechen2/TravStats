@@ -54,11 +54,16 @@ export function FlightPanel({
       g.type === "single" ? g.flight : g.flights[0];
 
     switch (sortMode) {
+      // `groupFlights` sorts ASCENDING by departure time and must keep doing so —
+      // its multi-leg chaining only works on adjacent-after-sort flights. So
+      // "newest first" is the reversal here, not the pass-through. These two
+      // branches used to be the other way round: `date-desc` fell through
+      // untouched and `date-asc` reversed, which meant the panel's DEFAULT
+      // opened on the oldest flight while the control said `date-desc`.
       case "date-desc":
-        // Default: chronological (groupFlights already sorts by departure)
+        grouped.reverse();
         break;
       case "date-asc":
-        grouped.reverse();
         break;
       case "route":
         grouped.sort((a, b) => {
