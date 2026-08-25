@@ -592,9 +592,45 @@ Der zweite Befehl ist der entscheidende. Am 1. August 2026 existierten
 15 Branches ueber vier Repositories ausschliesslich lokal, obwohl alle ein
 GitHub-Remote hatten.
 
-**Dateien, die `.gitignore` hier ausschliesst** (`CLAUDE.md`, `AGENTS.md`,
-Roadmaps, Pentest-Notizen), liegen im Begleitrepo **`TravStats-local`** auf
-Forgejo. Git kennt keine Ignore-Regeln pro Remote, deshalb der Umweg.
+**Dateien, die `.gitignore` hier ausschliesst** (`AGENTS.md`, `CLAUDE.local.md`,
+`roadmap.local.yaml`, `ROADMAP.local.md`, Pentest-Notizen), liegen im Begleitrepo
+**`TravStats-local`** auf Forgejo. Git kennt keine Ignore-Regeln pro Remote,
+deshalb der Umweg.
+
+> **`CLAUDE.md` gehoert NICHT dazu** — sie ist hier getrackt und oeffentlich, trotz
+> der `*.md`-Regel in `.gitignore`. Sie reist also als normaler Commit nach GitHub
+> und Forgejo. Eine Kopie im Spiegel waere eine dritte Quelle, die nur driften kann;
+> am 25.08.2026 war genau das der Fall. Gemessen: `CLAUDE.md` und `README.md` sind
+> die einzigen zwei Dateien, die beide Repos tracken — beide sind vom Spiegeln
+> ausgenommen.
+
+### Der Spiegel wird von JEDEM Rechner gepflegt (seit 2026-08-25)
+
+`TravStats-local` liegt als Schwester-Checkout **neben** diesem Repo
+(`../TravStats-local`) und traegt `sync-local-mirror.sh`:
+
+```bash
+cd ../TravStats-local
+./sync-local-mirror.sh status   # was weicht ab, wer ist voraus
+./sync-local-mirror.sh pull     # Spiegel -> Arbeits-Checkout (Sitzungsanfang)
+./sync-local-mirror.sh push     # Arbeits-Checkout -> Spiegel (Sitzungsende)
+```
+
+**`pull` beim Sitzungsanfang, `push` am Ende — auf beiden Rechnern.** Das ist
+kein Ritual, sondern die einzige Absicherung: ein `git pull` traegt diese
+Dateien nie, weil sie hier ignoriert sind.
+
+**Warum die Regel existiert:** bis zum 25.08.2026 pushte nur CT142 in den
+Spiegel, der PC kuratierte still seine eigene Fassung. Gemessen an dem Tag:
+`roadmap.local.yaml` hatte 50 gemeinsame Item-Ids, **120 nur auf dem PC und 18
+nur im Spiegel** — keine Seite war Obermenge, ein Kopieren haette also in jede
+Richtung echte Kuratierung geloescht. Das Zusammenfuehren kostete eine Sitzung.
+Deshalb bricht das Skript ab, wenn beide Seiten sich bewegt haben, statt zu
+kopieren.
+
+Nicht gespiegelt, mit Absicht: `README.md` (gehoert dem Spiegel),
+`.roadmap/*` (Leitstand-Build-Artefakte), `.claude/settings.local.json` und
+`.claude/worktrees/*` (maschinenspezifisch).
 
 **Secrets gehoeren in keines von beiden** — dafuer ist Infisical zustaendig
 (CT 141, `192.168.178.145`).
