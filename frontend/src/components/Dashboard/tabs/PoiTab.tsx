@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
+import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
+import type { ActivityItem } from "../sidebars/activityItems";
+import { usePlaceSelectionStore } from "../../../store/placeSelectionStore";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
 import type { Layer } from "@deck.gl/core";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
@@ -40,6 +43,10 @@ interface HeatDatum {
 export function PoiTab(): JSX.Element {
   const { mode } = useDashboardRoute();
   const navigate = useNavigate();
+  // POI was the ONE tab with no entries list at all — there was nothing to
+  // pick from, so "select it on the map" had no starting point here.
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const setPlaceSelection = usePlaceSelectionStore((st) => st.setSelection);
   const { isEnabled } = useEnabledDomains();
   const poiEnabled = isEnabled("poi");
   const { t } = useTranslation(["dashboard"]);
@@ -164,6 +171,39 @@ export function PoiTab(): JSX.Element {
         // exists to prevent, even when both go through the same store.
         appearanceDomains={["poi"]}
         hideInfoPill
+      />
+
+      <button
+        type="button"
+        onClick={() => setSidebarOpen((prev) => !prev)}
+        style={{
+          position: "absolute",
+          top: 12,
+          left: sidebarOpen ? 340 : 12,
+          zIndex: 30,
+          padding: "6px 12px",
+          borderRadius: 10,
+          background: "rgba(22,27,34,0.85)",
+          border: "1px solid var(--color-border)",
+          color: "var(--text-primary)",
+          cursor: "pointer",
+          fontSize: 13,
+        }}
+      >
+        ☰ {t("dashboard:sidebar.places")}
+      </button>
+      <UnifiedActivityPanel
+        places={visiblePlaces}
+        lockedKind="poi"
+        title={t("dashboard:sidebar.places")}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onSelect={(item: ActivityItem) => {
+          if ("place" in item.payload) setPlaceSelection(item.payload.place);
+        }}
+        onDetails={(item: ActivityItem) => {
+          if ("place" in item.payload) navigate(`/places/${item.payload.place.id}`);
+        }}
       />
 
       {/* Colour-mode + legend. Both derive from the SAME store the pin layer

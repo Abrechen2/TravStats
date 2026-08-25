@@ -16,7 +16,8 @@ import {
 import type { Cruise } from "../../../types/cruise";
 import MapContainer3D from "../../MapContainer3D";
 import { buildPortFrequencyLayer } from "../modes/buildPortFrequencyLayer";
-import { CruiseListPanel } from "../sidebars/CruiseListPanel";
+import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
+import type { ActivityItem } from "../sidebars/activityItems";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
 
 interface ItineraryDot {
@@ -182,12 +183,21 @@ export function CruisesTab(): JSX.Element {
       >
         ☰ {t("dashboard:sidebar.cruises")}
       </button>
-      <CruiseListPanel
+      {/* Same sidebar as every other tab, pinned to this domain. The bespoke
+          CruiseListPanel is gone: it never sorted at all and only looked right
+          because the API happened to return startDate desc. */}
+      <UnifiedActivityPanel
         cruises={visibleCruises}
+        lockedKind="cruise"
+        title={t("dashboard:sidebar.cruises")}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        onSelect={handleSelectCruise}
-        onDetails={handleCruiseDetails}
+        onSelect={(item: ActivityItem) => {
+          if ("cruise" in item.payload) handleSelectCruise(item.payload.cruise);
+        }}
+        onDetails={(item: ActivityItem) => {
+          if ("cruise" in item.payload) handleCruiseDetails(item.payload.cruise);
+        }}
       />
       {loading && (
         <div

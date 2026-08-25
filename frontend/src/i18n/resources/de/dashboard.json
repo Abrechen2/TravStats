@@ -261,7 +261,9 @@
       "all": "Alle",
       "flight": "Flüge",
       "cruise": "Kreuzfahrten"
-    }
+    },
+    "notOnMap": "Nicht auf der Karte",
+    "places": "Orte"
   },
   "legend": {
     "flightPast": "Flüge (geflogen)",

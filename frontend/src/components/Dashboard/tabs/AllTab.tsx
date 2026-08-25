@@ -41,6 +41,9 @@ import { buildPlacePins } from "../../layers/placePinsLayer";
 import { classifyVisit } from "../../../shared/placeCounting";
 import { buildJourneyLayers, groupByTripId } from "../modes/buildJourneyLayers";
 import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
+import type { ActivityItem } from "../sidebars/activityItems";
+import { useLodgingSelectionStore } from "../../../store/lodgingSelectionStore";
+import { usePlaceSelectionStore } from "../../../store/placeSelectionStore";
 import type { Layer } from "@deck.gl/core";
 
 // Legend row → i18n key. The COLOURS never appear here — they come from
@@ -132,6 +135,8 @@ export function AllTab(): JSX.Element {
   const { lookup, lookupMany } = useFlightLookup();
   const setSelection = useFlightSelectionStore((s) => s.setSelection);
   const setCruiseSelection = useCruiseSelectionStore((s) => s.setSelection);
+  const setLodgingSelection = useLodgingSelectionStore((s) => s.setSelection);
+  const setPlaceSelection = usePlaceSelectionStore((s) => s.setSelection);
   const navigate = useNavigate();
   const [places, setPlaces] = useState<Place[]>([]);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
@@ -251,32 +256,52 @@ export function AllTab(): JSX.Element {
     [lookupMany, setSelection]
   );
 
-  // Aktivität-sidebar row wiring.
-  const handlePanelFlightSelect = useCallback(
-    (flightId: string): void => {
-      const f = lookup(flightId);
-      if (f) setSelection([f]);
+  // Aktivität-sidebar row wiring. One click means the same thing in every
+  // domain — focus and highlight on the map, never navigate. The arrow is what
+  // leaves the dashboard. Lodgings used to break that rule: their rows were
+  // plain links, so clicking a hotel threw the user off the map entirely.
+  const handleActivitySelect = useCallback(
+    (item: ActivityItem): void => {
+      if ("flightId" in item.payload) {
+        const f = lookup(item.payload.flightId);
+        if (f) setSelection([f]);
+      } else if ("cruise" in item.payload) {
+        setCruiseSelection(item.payload.cruise);
+      } else if ("lodging" in item.payload) {
+        // A hotel whose location never resolved has no pin to focus. Selecting
+        // it would silently do nothing, so the row says so instead (see the
+        // `mappable` marker) and the click is a no-op rather than a lie.
+        if (item.mappable) setLodgingSelection(item.payload.lodging);
+      } else {
+        setPlaceSelection(item.payload.place);
+      }
     },
-    [lookup, setSelection]
+    [lookup, setSelection, setCruiseSelection, setLodgingSelection, setPlaceSelection]
   );
-  const handlePanelFlightDetails = useCallback(
+
+  /** The map speaks flight ids, the sidebar speaks activity rows — separate doors. */
+  const handleFlightOpen = useCallback(
     (flightId: string): void => {
       const f = lookup(flightId);
       if (f) setEditingFlight(f);
     },
     [lookup]
   );
-  const handlePanelCruiseSelect = useCallback(
-    (cruise: Cruise): void => {
-      setCruiseSelection(cruise);
+
+  const handleActivityDetails = useCallback(
+    (item: ActivityItem): void => {
+      if ("flightId" in item.payload) {
+        const f = lookup(item.payload.flightId);
+        if (f) setEditingFlight(f);
+      } else if ("cruise" in item.payload) {
+        navigate(`/cruises/${item.payload.cruise.id}`);
+      } else if ("lodging" in item.payload) {
+        navigate(`/lodging/${item.payload.lodging.id}`);
+      } else {
+        navigate(`/places/${item.payload.place.id}`);
+      }
     },
-    [setCruiseSelection]
-  );
-  const handlePanelCruiseDetails = useCallback(
-    (cruise: Cruise): void => {
-      navigate(`/cruises/${cruise.id}`);
-    },
-    [navigate]
+    [lookup, navigate]
   );
 
   // Lodging pin click → detail page, same route LodgingTab's map pins and
@@ -593,16 +618,19 @@ export function AllTab(): JSX.Element {
     </div>
   );
 
+  // The panel takes the same `visible*` collections the map does, so the domain
+  // pills keep applying to both — that intersection is the "Alle" tab's own
+  // contract and is deliberately NOT what a single-domain tab does.
   const activityPanel = (
     <UnifiedActivityPanel
       flights={visibleFlights}
       cruises={visibleCruises}
+      lodgings={visibleLodgings}
+      places={visiblePlaces}
       isOpen={sidebarOpen}
       onClose={() => setSidebarOpen(false)}
-      onFlightSelect={handlePanelFlightSelect}
-      onFlightDetails={handlePanelFlightDetails}
-      onCruiseSelect={handlePanelCruiseSelect}
-      onCruiseDetails={handlePanelCruiseDetails}
+      onSelect={handleActivitySelect}
+      onDetails={handleActivityDetails}
     />
   );
 
@@ -678,7 +706,7 @@ export function AllTab(): JSX.Element {
           appearanceDomains={["flight", "cruise", "lodging", "poi"]}
           onFlightClick={handleFlightClick}
           onRouteClick={handleRouteClick}
-          onFlightOpen={handlePanelFlightDetails}
+          onFlightOpen={handleFlightOpen}
           onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
           cruisesOverride={visibleCruises}
           lodgingsOverride={visibleLodgings}
@@ -703,7 +731,7 @@ export function AllTab(): JSX.Element {
         appearanceDomains={["flight", "cruise", "lodging", "poi"]}
         onFlightClick={handleFlightClick}
         onRouteClick={handleRouteClick}
-        onFlightOpen={handlePanelFlightDetails}
+        onFlightOpen={handleFlightOpen}
         onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
         cruisesOverride={visibleCruises}
         lodgingsOverride={visibleLodgings}

@@ -1,141 +1,100 @@
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { formatDateInTimezone } from "../../../lib/dateUtils";
+import { DOMAINS } from "../../../shared/domains";
 import type { GeoJSONFeature } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
-
-type Kind = "flight" | "cruise";
-
-interface ActivityItem {
-  id: string;
-  kind: Kind;
-  label: string;
-  sublabel: string | null;
-  /** ISO-sortable date string "YYYY-MM-DD" — empty means unknown */
-  sortDate: string;
-  /** human-readable date shown in the UI */
-  displayDate: string;
-  /** Stable key pointing back to the source object — flight id or cruise. */
-  payload: { flightId: string } | { cruise: Cruise };
-}
+import type { Lodging } from "../../../types/lodging";
+import type { Place } from "../../../types/place";
+import {
+  cruiseToItem,
+  flightToItem,
+  lodgingToItem,
+  placeToItem,
+  sortActivityItems,
+  type ActivityItem,
+  type ActivityKind,
+} from "./activityItems";
 
 interface UnifiedActivityPanelProps {
-  flights: GeoJSONFeature[];
-  cruises: Cruise[];
+  flights?: GeoJSONFeature[];
+  cruises?: Cruise[];
+  lodgings?: readonly Lodging[];
+  places?: readonly Place[];
   isOpen: boolean;
   onClose(): void;
-  /** Single click on a flight row — called with the GeoJSON feature id. */
-  onFlightSelect?(flightId: string): void;
-  /** Details button on a flight row — opens the edit modal. */
-  onFlightDetails?(flightId: string): void;
-  /** Single click on a cruise row — selects the cruise on the map. */
-  onCruiseSelect?(cruise: Cruise): void;
-  /** Details button on a cruise row — navigates to the detail page. */
-  onCruiseDetails?(cruise: Cruise): void;
+  /**
+   * Pins the list to one domain and hides the filter chips. A domain tab has
+   * already made that choice in the tab strip above; offering it twice would
+   * be two controls for one decision.
+   */
+  lockedKind?: ActivityKind;
+  /** Row click — focus and highlight on the map. Never navigates. */
+  onSelect?(item: ActivityItem): void;
+  /** The row's arrow — opens the detail view for that entry. */
+  onDetails?(item: ActivityItem): void;
+  /** Heading; a domain tab passes its own. */
+  title?: string;
 }
 
-function readProp<T>(obj: Record<string, unknown>, key: string): T | undefined {
-  return obj[key] as T | undefined;
-}
+const CHIP_ORDER: readonly ActivityKind[] = ["flight", "cruise", "lodging", "poi"];
 
-function flightToItem(feature: GeoJSONFeature, index: number): ActivityItem {
-  const props = (feature.properties ?? {}) as Record<string, unknown>;
-  const dep = readProp<{ iata?: string }>(props, "departureAirport");
-  const arr = readProp<{ iata?: string }>(props, "arrivalAirport");
-  const airline = readProp<string>(props, "airline") ?? "";
-  const flightNumber = readProp<string>(props, "flightNumber") ?? "";
-  const flightId = readProp<string>(props, "id") ?? "";
-  // Flights store an ISO timestamp on departureTime; historical entries
-  // can have it null, in which case we leave sortDate empty so the date
-  // filter doesn't silently drop the flight from the list.
-  const departureTime = readProp<string | null>(props, "departureTime") ?? "";
-  const sortDate = typeof departureTime === "string" ? departureTime.slice(0, 10) : "";
-  const displayDate = sortDate ? formatDateInTimezone(departureTime, "UTC") : "—";
-
-  return {
-    id: `f-${flightId || index}`,
-    kind: "flight",
-    label: `${dep?.iata ?? "?"} → ${arr?.iata ?? "?"}`,
-    sublabel: `${airline} ${flightNumber}`.trim() || null,
-    sortDate,
-    displayDate,
-    payload: { flightId },
-  };
-}
-
-function cruiseToItem(cruise: Cruise): ActivityItem {
-  const startIso = cruise.startDate ?? "";
-  const sortDate = typeof startIso === "string" ? startIso.slice(0, 10) : "";
-  const displayDate = sortDate ? formatDateInTimezone(startIso, "UTC") : "—";
-  return {
-    id: `c-${cruise.id}`,
-    kind: "cruise",
-    label: cruise.ship?.name ?? cruise.shipNameOverride ?? cruise.cruiseLine ?? "Cruise",
-    sublabel: cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? null,
-    sortDate,
-    displayDate,
-    payload: { cruise },
-  };
-}
-
+/**
+ * The dashboard's activity sidebar — one component for every tab.
+ *
+ * It used to know only flights and cruises, so lodgings and places had
+ * bespoke sidebars of their own, sorted differently (or not at all) and the
+ * lodging rows navigated away from the map instead of selecting on it. The
+ * filter-by-kind machinery was already here; it simply never grew past two
+ * domains. Everything domain-specific now lives in `activityItems.ts`.
+ */
 export function UnifiedActivityPanel({
   flights,
   cruises,
+  lodgings,
+  places,
   isOpen,
   onClose,
-  onFlightSelect,
-  onFlightDetails,
-  onCruiseSelect,
-  onCruiseDetails,
+  lockedKind,
+  onSelect,
+  onDetails,
+  title,
 }: UnifiedActivityPanelProps): JSX.Element | null {
   const { t } = useTranslation(["dashboard", "common"]);
-  const [filter, setFilter] = useState<"all" | Kind>("all");
+  const [filter, setFilter] = useState<"all" | ActivityKind>("all");
 
-  const handleItemClick = (item: ActivityItem): void => {
-    if ("flightId" in item.payload) {
-      onFlightSelect?.(item.payload.flightId);
-    } else {
-      onCruiseSelect?.(item.payload.cruise);
-    }
-  };
+  const allItems = useMemo<ActivityItem[]>(
+    () =>
+      sortActivityItems([
+        ...(flights ?? []).map(flightToItem),
+        ...(cruises ?? []).map(cruiseToItem),
+        ...(lodgings ?? []).map(lodgingToItem),
+        ...(places ?? []).map(placeToItem),
+      ]),
+    [flights, cruises, lodgings, places]
+  );
 
-  const handleItemDetails = (item: ActivityItem): void => {
-    if ("flightId" in item.payload) {
-      onFlightDetails?.(item.payload.flightId);
-    } else {
-      onCruiseDetails?.(item.payload.cruise);
-    }
-  };
-
-  const allItems = useMemo<ActivityItem[]>(() => {
-    const flightItems = flights.map(flightToItem);
-    const cruiseItems = cruises.map(cruiseToItem);
-    // Sort descending by date. Items with no date land at the bottom so
-    // they don't dominate the first screenful of the panel.
-    return [...flightItems, ...cruiseItems].sort((a, b) => {
-      if (a.sortDate === b.sortDate) return 0;
-      if (a.sortDate === "") return 1;
-      if (b.sortDate === "") return -1;
-      return a.sortDate < b.sortDate ? 1 : -1;
-    });
-  }, [flights, cruises]);
+  const effectiveFilter: "all" | ActivityKind = lockedKind ?? filter;
 
   const visible = useMemo(
-    () => (filter === "all" ? allItems : allItems.filter((item) => item.kind === filter)),
-    [allItems, filter]
+    () =>
+      effectiveFilter === "all"
+        ? allItems
+        : allItems.filter((item) => item.kind === effectiveFilter),
+    [allItems, effectiveFilter]
   );
 
-  const counts = useMemo(
-    () => ({
-      all: allItems.length,
-      flight: allItems.filter((i) => i.kind === "flight").length,
-      cruise: allItems.filter((i) => i.kind === "cruise").length,
-    }),
-    [allItems]
-  );
+  const counts = useMemo(() => {
+    const byKind = { flight: 0, cruise: 0, lodging: 0, poi: 0 };
+    for (const item of allItems) byKind[item.kind] += 1;
+    return { all: allItems.length, ...byKind };
+  }, [allItems]);
 
   if (!isOpen) return null;
+
+  // Only offer a chip for a domain that actually has rows — a permanently
+  // empty "0" chip is a control that can never do anything.
+  const chips = CHIP_ORDER.filter((kind) => counts[kind] > 0);
 
   return (
     <div
@@ -160,7 +119,7 @@ export function UnifiedActivityPanel({
           borderBottom: "1px solid var(--color-border)",
         }}
       >
-        <strong>{t("dashboard:sidebar.activity")}</strong>
+        <strong>{title ?? t("dashboard:sidebar.activity")}</strong>
         <button
           type="button"
           onClick={onClose}
@@ -177,44 +136,41 @@ export function UnifiedActivityPanel({
         </button>
       </div>
 
-      <div
-        role="tablist"
-        aria-label={t("dashboard:sidebar.activity")}
-        style={{
-          display: "flex",
-          gap: 6,
-          padding: "8px 16px",
-          borderBottom: "1px solid var(--color-border)",
-        }}
-      >
-        {(
-          [
-            ["all", t("dashboard:sidebar.filters.all"), counts.all],
-            ["flight", `✈ ${t("dashboard:sidebar.filters.flight")}`, counts.flight],
-            ["cruise", `⚓ ${t("dashboard:sidebar.filters.cruise")}`, counts.cruise],
-          ] as const
-        ).map(([key, label, count]) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={filter === key}
-            onClick={() => setFilter(key)}
-            style={{
-              flex: 1,
-              padding: "6px 8px",
-              borderRadius: 6,
-              border: "1px solid var(--color-border)",
-              background: filter === key ? "var(--bg-muted)" : "transparent",
-              color: "var(--text-primary)",
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
-            {label} <span style={{ color: "var(--text-muted)" }}>{count}</span>
-          </button>
-        ))}
-      </div>
+      {lockedKind === undefined && chips.length > 1 && (
+        <div
+          role="tablist"
+          aria-label={t("dashboard:sidebar.activity")}
+          style={{
+            display: "flex",
+            gap: 6,
+            padding: "8px 16px",
+            borderBottom: "1px solid var(--color-border)",
+          }}
+        >
+          {(["all", ...chips] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={filter === key}
+              onClick={() => setFilter(key)}
+              style={{
+                flex: 1,
+                padding: "6px 8px",
+                borderRadius: 6,
+                border: "1px solid var(--color-border)",
+                background: filter === key ? "var(--bg-muted)" : "transparent",
+                color: "var(--text-primary)",
+                cursor: "pointer",
+                fontSize: 12,
+              }}
+            >
+              {key === "all" ? t("dashboard:sidebar.filters.all") : DOMAINS[key].icon}{" "}
+              <span style={{ color: "var(--text-muted)" }}>{counts[key]}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {visible.length === 0 ? (
         <p style={{ padding: 16, color: "var(--text-muted)" }}>
@@ -226,11 +182,11 @@ export function UnifiedActivityPanel({
             key={item.id}
             role="button"
             tabIndex={0}
-            onClick={() => handleItemClick(item)}
+            onClick={() => onSelect?.(item)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                handleItemClick(item);
+                onSelect?.(item);
               }
             }}
             className="activity-row hover:bg-white/4"
@@ -242,14 +198,16 @@ export function UnifiedActivityPanel({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span aria-hidden>{item.kind === "flight" ? "✈" : "⚓"}</span>
+              <span aria-hidden style={{ color: DOMAINS[item.kind].color }}>
+                {DOMAINS[item.kind].icon}
+              </span>
               <strong style={{ flex: 1 }}>{item.label}</strong>
               <span style={{ color: "var(--text-muted)", fontSize: 11 }}>{item.displayDate}</span>
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleItemDetails(item);
+                  onDetails?.(item);
                 }}
                 aria-label={t("common:buttons.details", { defaultValue: "Details" })}
                 title={t("common:buttons.details", { defaultValue: "Details" })}
@@ -267,11 +225,26 @@ export function UnifiedActivityPanel({
                 →
               </button>
             </div>
-            {item.sublabel !== null && (
+            {(item.sublabel !== null || item.meta !== null || !item.mappable) && (
               <div
-                style={{ color: "var(--text-muted)", fontSize: 11, marginTop: 2, marginLeft: 20 }}
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  color: "var(--text-muted)",
+                  fontSize: 11,
+                  marginTop: 2,
+                  marginLeft: 20,
+                }}
               >
-                {item.sublabel}
+                {item.sublabel !== null && <span style={{ flex: 1 }}>{item.sublabel}</span>}
+                {item.meta !== null && <span>{item.meta}</span>}
+                {!item.mappable && (
+                  // The map cannot focus this row. Saying so beats a click that
+                  // looks broken — the arrow still leads to where it gets fixed.
+                  <span title={t("dashboard:sidebar.notOnMap")}>
+                    ⌀
+                  </span>
+                )}
               </div>
             )}
           </div>
