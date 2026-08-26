@@ -14,6 +14,7 @@
     "subtitle": "{{count}} besucht · {{countries}} Länder",
     "searchPlaceholder": "Namen oder Stadt suchen …",
     "resultCount": "{{shown}} von {{total}}",
+    "visitsCount": "{{count}} Besuche",
     "sortBy": "Nach {{col}} sortieren",
     "empty": "Noch keine Orte erfasst.",
     "noMatches": "Keine Orte passen zu den Filtern.",

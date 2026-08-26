@@ -66,12 +66,17 @@ export function UnifiedActivityPanel({
   const allItems = useMemo<ActivityItem[]>(
     () =>
       sortActivityItems([
-        ...(flights ?? []).map(flightToItem),
-        ...(cruises ?? []).map(cruiseToItem),
-        ...(lodgings ?? []).map(lodgingToItem),
-        ...(places ?? []).map(placeToItem),
+        // Passed explicitly rather than point-free: `.map(flightToItem)` hands
+        // the mapper the ARRAY INDEX as its next argument, which is exactly
+        // where the translator sits now.
+        ...(flights ?? []).map((f, i) => flightToItem(f, i, t)),
+        ...(cruises ?? []).map((c) => cruiseToItem(c, t)),
+        ...(lodgings ?? []).map((l) => lodgingToItem(l, t)),
+        ...(places ?? []).map((pl) => placeToItem(pl, t)),
       ]),
-    [flights, cruises, lodgings, places]
+    // `t` is referentially stable per language (see hooks/useTranslation), so
+    // this recomputes on a language switch and on nothing else.
+    [flights, cruises, lodgings, places, t]
   );
 
   const effectiveFilter: "all" | ActivityKind = lockedKind ?? filter;
