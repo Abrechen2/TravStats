@@ -12,6 +12,16 @@ now be written in the currency it was actually paid in. Two-factor
 authentication and passkeys arrive alongside.
 
 ### Added
+- **Every dashboard tab has the same activity list.** Four tabs carried four
+  different panels, places carried none, and "All" listed flights and cruises
+  while the tab bar above it counted four domains. One list serves all of them
+  now, and picking an entry focuses it on the map instead of navigating away
+  from the dashboard — a hotel used to throw you off the dashboard entirely.
+- **The lodging list has a "Last stay" column, and it sorts.** A hotel is dated
+  by its newest stay, planned ones included, rather than by the order the
+  hotels were typed in.
+- **A list remembers how it was sorted.** The choice survives a reload instead
+  of springing back to the name column.
 - **A place can be attached to a trip.** The visit form offers the trip, the way
   a lodging stay always has. The interface never set it, though the API had
   accepted it from the day the visit routes were written.
@@ -172,6 +182,13 @@ authentication and passkeys arrive alongside.
   aircraft ladders.
 
 ### Changed
+- **Newest first, everywhere.** What is coming up stands above what is past,
+  and an entry with no date sits at the bottom rather than sorting as though it
+  happened in 1970.
+- **The cruise route editor opens in a dialog.** "Edit route" used to arm an
+  editor inside the small preview card in the page margin, where a leg is a
+  hairline: hitting one took three attempts, so the button read as one that
+  does nothing. Same editor, same handles, six times the canvas.
 - **One currency, one distance unit.** There were two currency settings: one
   under Einheiten & Formate that only flight surfaces read, and one under
   Unterkunfts-Präferenzen that lodging, statistics and achievements read — the
@@ -216,6 +233,14 @@ authentication and passkeys arrive alongside.
   statistics, where figures belong.
 
 ### Fixed
+- **The flight sidebar opened on the oldest flight.** The two sort labels were
+  swapped, and "newest first" — the default — did nothing at all.
+- **A bookmark to a domain page no longer bounces to the dashboard.** Opening
+  or reloading /flights, /cruises or /lodging redirected to the start page,
+  because the check for whether a domain is switched on ran before the list of
+  switched-on domains had arrived.
+- **The dashboard no longer offers a tab and an "add" button for domains that
+  are switched off.**
 - **A stay's trip field is where you would look for it.** It sat unlabelled at
   the bottom of "Loyalty programme", between membership numbers — the word
   "trip" existed only for screen readers, so the sole thing visible was the
