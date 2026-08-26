@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, act, waitFor, within } from "@testing-library/react";
 import type { JSX, ReactNode } from "react";
 
 /**
@@ -92,43 +92,57 @@ describe("CruiseRouteMap — the route editor is a dialog", () => {
   /**
    * The regression this file exists for.
    *
-   * Moving the map into the dialog destroys one maplibre instance and builds
-   * another. `mapLoaded` gates the deck.gl overlay; left true from the map
-   * that just went away, the overlay attached to a map that had not loaded
-   * its style yet and every layer died with "deck.gl: assertion failed" — a
-   * dialog with a basemap and no route on it, which is what the owner saw.
+   * The editor first opened by rendering the map a second time inside a dialog
+   * frame — a different place in the tree, which is an unmount plus a mount.
+   * maplibre threw its WebGL context away and deck.gl's overlay met the new
+   * one with every layer failing to initialise ("deck.gl: assertion failed"):
+   * the editor opened onto a bare basemap with no route on it. Gating the
+   * overlay on a freshly reset "loaded" flag papered over it in the dev server
+   * and did NOT hold in a production build — it shipped to an RC that way.
+   *
+   * So the contract is not "re-attach correctly". It is: the map does not move.
+   * One mount for the life of the component, whichever appearance it wears.
    */
-  it("waits for the NEW map to load before attaching the deck overlay", async () => {
+  it("does not rebuild the map when the editor opens", async () => {
     render(<CruiseRouteMap cruise={cruise} />);
-    expect(useControlSpy).not.toHaveBeenCalled();
-
+    expect(pendingLoads).toHaveLength(1);
     flushPendingLoads();
     await waitFor(() => expect(useControlSpy).toHaveBeenCalled());
 
-    const attachedToTheCardMap = useControlSpy.mock.calls.length;
     fireEvent.click(screen.getByRole("button", { name: "cruise:routeEditor.edit" }));
     await screen.findByRole("dialog");
 
-    // The dialog's map has mounted but has not reported load yet.
-    expect(pendingLoads).toHaveLength(1);
-    expect(useControlSpy.mock.calls.length).toBe(attachedToTheCardMap);
-
-    flushPendingLoads();
-    await waitFor(() =>
-      expect(useControlSpy.mock.calls.length).toBeGreaterThan(attachedToTheCardMap)
-    );
+    // A second mount would have registered a second onLoad.
+    expect(pendingLoads).toHaveLength(0);
+    expect(screen.getAllByTestId("map-instance")).toHaveLength(1);
   });
 
-  it("returns the map to the page card when the dialog is dismissed", async () => {
+  it("does not rebuild the map when the editor closes either", async () => {
+    render(<CruiseRouteMap cruise={cruise} />);
+    flushPendingLoads();
+
+    fireEvent.click(screen.getByRole("button", { name: "cruise:routeEditor.edit" }));
+    await screen.findByRole("dialog");
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(pendingLoads).toHaveLength(0);
+    expect(screen.getAllByTestId("map-instance")).toHaveLength(1);
+  });
+
+  it("returns the map to the page card when the editor is dismissed", async () => {
     render(<CruiseRouteMap cruise={cruise} />);
     flushPendingLoads();
 
     fireEvent.click(screen.getByRole("button", { name: "cruise:routeEditor.edit" }));
     const dialog = await screen.findByRole("dialog");
 
-    fireEvent.click(
-      dialog.querySelector("button[type='button']:last-of-type") as HTMLButtonElement
-    );
+    // Two controls dismiss the editor — the ✕ in the header and the action
+    // row's Cancel. The action row is the one a mouse user reaches for.
+    const dismiss = within(dialog).getAllByRole("button", {
+      name: "cruise:routeEditor.cancel",
+    });
+    fireEvent.click(dismiss[dismiss.length - 1]);
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(screen.getAllByTestId("map-instance")).toHaveLength(1);

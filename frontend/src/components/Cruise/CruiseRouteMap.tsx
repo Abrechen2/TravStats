@@ -16,7 +16,6 @@ import { DEFAULT_CRUISE_COLORS, type CruiseColorConfig } from "../../lib/cruiseC
 import { computeBbox } from "../../utils/mapAnimationHelpers";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
-import Modal from "../Modal";
 import { RouteEditorOverlay } from "./RouteEditorOverlay";
 import {
   beginDrag,
@@ -114,21 +113,24 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   const [saveError, setSaveError] = useState(false);
 
   /**
-   * Moving the map between the page card and the editor dialog throws the old
-   * maplibre instance away and builds a new one, so BOTH flags that describe
-   * "the map on screen" have to be reset with it — in the same batch as the
-   * switch, not in an effect afterwards.
+   * Opening the editor only changes what the map's container LOOKS like — it
+   * does not move the map.
    *
-   * `mapLoaded` is the one that bites: it gates the deck.gl overlay. Left
-   * true from the previous instance, the overlay attaches to a map that has
-   * not loaded its style yet, every layer fails to initialise with
-   * "deck.gl: assertion failed", and the dialog shows a bare basemap with no
-   * route on it. `didFit` is the harmless one: a fit computed for a 410x254
-   * thumbnail means nothing on a canvas ten times its area.
+   * The first version of this dialog rendered the map in a second place in the
+   * tree (inside `Modal`), which is an unmount plus a mount: maplibre threw its
+   * WebGL context away and deck.gl's overlay came up against the new one with
+   * every layer failing to initialise ("deck.gl: assertion failed") — the
+   * dialog opened onto a bare basemap with no route on it. Resetting the
+   * "loaded" flag hid that in the dev server and did NOT hold in a production
+   * build, which is how it reached an RC. So the map now stays exactly where it
+   * is and its container is restyled to fill the screen. Nothing unmounts,
+   * nothing re-initialises, and there is no flag to get wrong.
+   *
+   * The bounds fit is the one thing that must run again: it is computed for the
+   * container size, and the container just changed by an order of magnitude.
    */
   const switchMapSurface = useCallback((toEditor: boolean): void => {
     didFit.current = false;
-    setMapLoaded(false);
     setEditMode(toEditor);
   }, []);
 
@@ -337,10 +339,28 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     switchMapSurface(false);
   }, [editorState, t, switchMapSurface]);
 
-  // Esc still leaves the editor without saving (spec §6.1) — the dialog frame
-  // owns that key now and routes it to `onClose`, which is `onCancel`. A
-  // second listener here would run the same handler twice on ONE keypress,
-  // and with a dirty route that means asking the discard question twice.
+  /**
+   * Esc leaves the editor without saving (spec §6.1), same path as Cancel, and
+   * the page behind the editor must not scroll away under it.
+   *
+   * Both are what a dialog frame would normally provide. This editor cannot
+   * use one: a frame owns its children's place in the tree, and moving the map
+   * there is precisely what broke it. Exactly ONE listener — the same handler
+   * bound twice would ask a dirty route's discard question twice on one key.
+   */
+  useEffect(() => {
+    if (!editMode) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return (): void => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [editMode, onCancel]);
 
   const layers: Layer[] = useMemo(() => {
     // The cruise DETAIL map, not a dashboard view: it shows exactly one cruise,
@@ -420,6 +440,10 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
 
   useEffect(() => {
     if (!mapLoaded || didFit.current) return;
+    // The container grew or shrank a frame ago; maplibre reads its own size
+    // from a ResizeObserver, and the fit must not be computed against the old
+    // one.
+    mapRef.current?.getMap()?.resize();
     const bbox = computeBbox(bboxPoints);
     if (!bbox) return;
     const [west, south, east, north] = bbox;
@@ -444,8 +468,12 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
    * WebGL contexts for one route, and the browser drops old contexts without
    * warning when it runs out.
    */
-  const renderMap = (heightClass: string): JSX.Element => (
-    <div className={`relative ${heightClass} w-full overflow-hidden rounded-md border border-border`}>
+  const mapPanel = (
+    <div
+      className={`relative w-full overflow-hidden rounded-md border border-border ${
+        editMode ? "min-h-0 flex-1" : "h-64"
+      }`}
+    >
       <MapGL
         reuseMaps
         ref={mapRef}
@@ -539,11 +567,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   return (
     <div>
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          className={barButton}
-          onClick={(): void => switchMapSurface(true)}
-        >
+        <button type="button" className={barButton} onClick={(): void => switchMapSurface(true)}>
           {t("cruise:routeEditor.edit")}
         </button>
         {editedLegKeys.size > 0 && (
@@ -553,21 +577,59 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
           <span className="text-sm text-(--danger)">{t("cruise:routeEditor.saveFailed")}</span>
         )}
       </div>
-      {/* The card keeps the preview; the editor gets a dialog-sized canvas.
-          A leg is a hairline: picking one out of a 410x254 thumbnail took
-          three tries in the browser, which is why "Route bearbeiten" read as
-          a button that does nothing. */}
-      {!editMode && renderMap("h-64")}
-      <Modal
-        open={editMode}
-        onClose={onCancel}
-        title={t("cruise:routeEditor.edit")}
-        widthClass="max-w-6xl"
-        footer={editorActions}
-        testId="cruise-route-editor"
+
+      {/*
+        ONE container, two appearances. In the page it is a preview card; in
+        edit mode the very same element becomes the full-screen editor. The map
+        below it never changes its place in the tree — see `switchMapSurface`
+        for what moving it cost.
+
+        A leg is a hairline with a five-pixel pick radius: picking one out of
+        the 410x254 preview took three clicks in the browser, two of which
+        landed 13 and 20 pixels off the line and did nothing at all. That is
+        why "Route bearbeiten" read as a button that does nothing.
+      */}
+      <div
+        className={editMode ? "fixed inset-0 z-50 bg-black/70 p-4" : undefined}
+        {...(editMode
+          ? {
+              role: "dialog" as const,
+              "aria-modal": true,
+              "aria-label": t("cruise:routeEditor.edit"),
+            }
+          : {})}
       >
-        {renderMap("h-[70vh]")}
-      </Modal>
+        {/* The panel is ALWAYS rendered, and so are the slots inside it. A
+            conditional sibling that appears BEFORE the map would shift the
+            map's position among its siblings, and React reconciles children by
+            position — which is the remount this whole design exists to avoid.
+            `{cond && …}` keeps the slot occupied by `false`. */}
+        <div
+          className={
+            editMode
+              ? "flex h-full w-full flex-col gap-3 rounded-lg border border-border bg-(--bg-surface) p-4"
+              : undefined
+          }
+        >
+          {editMode && (
+            <div className="flex shrink-0 items-center justify-between">
+              <strong className="text-(--text-primary)">{t("cruise:routeEditor.edit")}</strong>
+              <button
+                type="button"
+                className={barButton}
+                onClick={onCancel}
+                aria-label={t("cruise:routeEditor.cancel")}
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          {mapPanel}
+          {editMode && (
+            <div className="flex shrink-0 flex-wrap items-center gap-2">{editorActions}</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
