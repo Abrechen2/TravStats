@@ -254,7 +254,9 @@
     "cruises": "Kreuzfahrten",
     "activity": "Aktivität",
     "flights": "Flüge",
-    "ports": "Häfen",
+    "portsCount": "{{count}} Häfen",
+    "portsCount_one": "{{count}} Hafen",
+    "portsCount_other": "{{count}} Häfen",
     "emptyCruises": "Noch keine Kreuzfahrten.",
     "emptyActivity": "Noch keine Aktivität.",
     "filters": {

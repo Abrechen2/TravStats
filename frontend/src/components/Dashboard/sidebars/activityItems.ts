@@ -14,6 +14,17 @@ import type { Place } from "../../../types/place";
  * lives in the mappers below; the panel renders `label / sublabel / meta /
  * displayDate` and never asks what kind of thing it is drawing.
  */
+/**
+ * The mappers TRANSLATE, they do not return finished German.
+ *
+ * Each of the four bespoke sidebars this file replaced went through `t` for
+ * its meta line — `dashboard:sidebar.ports`, `lodging:field.nightsCount`. When
+ * the four collapsed into one mapper the strings came along as literals, and
+ * a literal here is German text on an English reader's dashboard. The shape is
+ * the project wrapper's `t` so a component can pass its own straight through.
+ */
+export type Translate = (key: string, options?: Record<string, unknown>) => string;
+
 export type ActivityKind = "flight" | "cruise" | "lodging" | "poi";
 
 export type ActivityPayload =
@@ -66,7 +77,7 @@ function joinParts(...parts: (string | null | undefined)[]): string | null {
   return kept.length > 0 ? kept.join(" · ") : null;
 }
 
-export function flightToItem(feature: GeoJSONFeature, index: number): ActivityItem {
+export function flightToItem(feature: GeoJSONFeature, index: number, t: Translate): ActivityItem {
   const props = (feature.properties ?? {}) as Record<string, unknown>;
   const dep = readProp<{ iata?: string }>(props, "departureAirport");
   const arr = readProp<{ iata?: string }>(props, "arrivalAirport");
@@ -84,7 +95,7 @@ export function flightToItem(feature: GeoJSONFeature, index: number): ActivityIt
     kind: "flight",
     label: `${dep?.iata ?? "?"} → ${arr?.iata ?? "?"}`,
     sublabel: joinParts(airline, flightNumber),
-    meta: status === "scheduled" ? "geplant" : null,
+    meta: status === "scheduled" ? t("flights:status.scheduled") : null,
     sortDate,
     displayDate: display(sortDate, departureTime),
     mappable: true,
@@ -92,15 +103,19 @@ export function flightToItem(feature: GeoJSONFeature, index: number): ActivityIt
   };
 }
 
-export function cruiseToItem(cruise: Cruise): ActivityItem {
+export function cruiseToItem(cruise: Cruise, t: Translate): ActivityItem {
   const sortDate = isoDay(cruise.startDate);
   const ports = cruise.stops?.filter((s) => !s.isAtSea).length ?? 0;
   return {
     id: `c-${cruise.id}`,
     kind: "cruise",
-    label: cruise.ship?.name ?? cruise.shipNameOverride ?? cruise.cruiseLine ?? "Cruise",
+    label:
+      cruise.ship?.name ??
+      cruise.shipNameOverride ??
+      cruise.cruiseLine ??
+      t("cruise:map.fallbackTitle"),
     sublabel: cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? null,
-    meta: ports > 0 ? `${ports} Häfen` : null,
+    meta: ports > 0 ? t("dashboard:sidebar.portsCount", { count: ports }) : null,
     sortDate,
     displayDate: display(sortDate, cruise.startDate ?? null),
     mappable: true,
@@ -118,7 +133,7 @@ export function cruiseToItem(cruise: Cruise): ActivityItem {
  * `checkIn` directly, because a stay may be dated to a month or a year only,
  * and that reader is where the project keeps the rules for it.
  */
-export function lodgingToItem(lodging: Lodging): ActivityItem {
+export function lodgingToItem(lodging: Lodging, t: Translate): ActivityItem {
   const newest = latestStayDayOf(lodging);
 
   const nights = lodging.nights ?? 0;
@@ -127,7 +142,7 @@ export function lodgingToItem(lodging: Lodging): ActivityItem {
     kind: "lodging",
     label: lodging.name,
     sublabel: joinParts(lodging.chain?.name, lodging.city),
-    meta: nights > 0 ? `${nights} Nächte` : null,
+    meta: nights > 0 ? t("lodging:field.nightsCount", { count: nights }) : null,
     sortDate: newest,
     displayDate: display(newest, newest || null),
     // A hotel whose location never resolved has no pin to focus. The row stays
@@ -144,7 +159,7 @@ export function lodgingToItem(lodging: Lodging): ActivityItem {
  * visits are walked instead. A wishlist place with no dated visit gets no
  * date and sorts to the bottom, like an undated flight.
  */
-export function placeToItem(place: Place): ActivityItem {
+export function placeToItem(place: Place, t: Translate): ActivityItem {
   let newest = "";
   for (const visit of place.visits ?? []) {
     const day = isoDay(visit.visitedAt);
@@ -157,7 +172,12 @@ export function placeToItem(place: Place): ActivityItem {
     kind: "poi",
     label: place.name,
     sublabel: joinParts(place.city, place.country),
-    meta: visits > 0 ? `${visits} Besuche` : place.visited ? null : "Wunschliste",
+    meta:
+      visits > 0
+        ? t("places:list.visitsCount", { count: visits })
+        : place.visited
+          ? null
+          : t("places:list.status.wishlist"),
     sortDate: newest,
     displayDate: display(newest, newest || null),
     // lat/lon are NOT NULL on Place — a place that cannot be drawn is not creatable.

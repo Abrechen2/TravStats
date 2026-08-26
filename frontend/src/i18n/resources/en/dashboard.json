@@ -254,7 +254,9 @@
     "cruises": "Cruises",
     "activity": "Activity",
     "flights": "Flights",
-    "ports": "ports",
+    "portsCount": "{{count}} ports",
+    "portsCount_one": "{{count}} port",
+    "portsCount_other": "{{count}} ports",
     "emptyCruises": "No cruises yet.",
     "emptyActivity": "No activity yet.",
     "filters": {

@@ -1,7 +1,19 @@
 import { describe, it, expect } from "vitest";
-import { lodgingToItem, placeToItem, sortActivityItems } from "../activityItems";
+import { cruiseToItem, lodgingToItem, placeToItem, sortActivityItems } from "../activityItems";
+import type { Cruise } from "../../../../types/cruise";
 import type { Lodging } from "../../../../types/lodging";
 import type { Place } from "../../../../types/place";
+
+/**
+ * Echoes the key it was handed instead of translating.
+ *
+ * Deliberately NOT a lookup table of German strings: a fake that knows the
+ * copy would pass whether the mapper translated or hardcoded the same words,
+ * which is how the German literals survived the first round of these tests.
+ * The key coming back out is the whole proof.
+ */
+const t = (key: string, options?: Record<string, unknown>): string =>
+  options ? `${key}|${JSON.stringify(options)}` : key;
 
 const lodging = (over: Partial<Lodging> = {}): Lodging =>
   ({
@@ -40,7 +52,8 @@ const place = (over: Partial<Place> = {}): Place =>
 describe("lodgingToItem", () => {
   it("dates a hotel by its most recent stay", () => {
     const item = lodgingToItem(
-      lodging({ stays: [stay("2024-02-01"), stay("2026-05-20"), stay("2023-08-08")] })
+      lodging({ stays: [stay("2024-02-01"), stay("2026-05-20"), stay("2023-08-08")] }),
+      t
     );
     expect(item.sortDate).toBe("2026-05-20");
   });
@@ -49,26 +62,26 @@ describe("lodgingToItem", () => {
   // left last year. So the date is the newest stay including planned ones —
   // NOT `lastVisit`-style "most recent completed".
   it("counts a planned stay as the newest one", () => {
-    const item = lodgingToItem(lodging({ stays: [stay("2024-02-01"), stay("2099-01-15")] }));
+    const item = lodgingToItem(lodging({ stays: [stay("2024-02-01"), stay("2099-01-15")] }), t);
     expect(item.sortDate).toBe("2099-01-15");
   });
 
   // Stays are datable-optional since 2.7. A hotel with none is still a hotel.
   it("leaves the date empty when no stay carries one", () => {
-    const item = lodgingToItem(lodging({ stays: [stay(null)] }));
+    const item = lodgingToItem(lodging({ stays: [stay(null)] }), t);
     expect(item.sortDate).toBe("");
     expect(item.displayDate).toBe("—");
   });
 
   it("carries city and chain as the subtitle", () => {
-    const item = lodgingToItem(lodging({ chain: { id: 1, name: "Hilton" } as never }));
+    const item = lodgingToItem(lodging({ chain: { id: 1, name: "Hilton" } as never }), t);
     expect(item.sublabel).toContain("Hilton");
     expect(item.sublabel).toContain("Berlin");
   });
 
   it("marks a hotel without coordinates as unmappable", () => {
-    expect(lodgingToItem(lodging({ lat: null, lon: null })).mappable).toBe(false);
-    expect(lodgingToItem(lodging()).mappable).toBe(true);
+    expect(lodgingToItem(lodging({ lat: null, lon: null }), t).mappable).toBe(false);
+    expect(lodgingToItem(lodging(), t).mappable).toBe(true);
   });
 });
 
@@ -83,19 +96,72 @@ describe("placeToItem", () => {
           { id: "v1", visitedAt: "2024-03-01T00:00:00Z" },
           { id: "v2", visitedAt: "2099-07-04T00:00:00Z" },
         ] as never,
-      })
+      }),
+      t
     );
     expect(item.sortDate).toBe("2099-07-04");
   });
 
   it("leaves the date empty for a wishlist place with no dated visit", () => {
-    const item = placeToItem(place({ visited: false, visits: [] }));
+    const item = placeToItem(place({ visited: false, visits: [] }), t);
     expect(item.sortDate).toBe("");
   });
 
   // Every place has coordinates by construction (lat/lon are NOT NULL).
   it("is always mappable", () => {
-    expect(placeToItem(place()).mappable).toBe(true);
+    expect(placeToItem(place(), t).mappable).toBe(true);
+  });
+});
+
+/**
+ * The meta line and the cruise fallback title are USER-FACING COPY, and this
+ * app ships German and English. The four sidebars that this mapper replaced
+ * each went through `t`; the strings turned into German literals during the
+ * merge into one file, which put German meta text on an English dashboard.
+ * These assert the key reaches the translator — nothing about what it says.
+ */
+describe("meta copy goes through the translator", () => {
+  const cruise = (over: Partial<Cruise> = {}): Cruise =>
+    ({
+      id: "c1",
+      ship: null,
+      shipNameOverride: null,
+      cruiseLine: null,
+      startDate: "2025-04-01T00:00:00Z",
+      stops: [],
+      ...over,
+    }) as unknown as Cruise;
+
+  it("counts a hotel's nights via the shared lodging key", () => {
+    expect(lodgingToItem(lodging({ nights: 3 }), t).meta).toBe(
+      'lodging:field.nightsCount|{"count":3}'
+    );
+  });
+
+  it("counts a place's visits via the places key", () => {
+    expect(placeToItem(place({ visitCount: 2 }), t).meta).toBe(
+      'places:list.visitsCount|{"count":2}'
+    );
+  });
+
+  it("labels an unvisited place as a wishlist entry via the places key", () => {
+    expect(placeToItem(place({ visited: false, visitCount: 0 }), t).meta).toBe(
+      "places:list.status.wishlist"
+    );
+  });
+
+  // Counted, not `${n} ${noun}`: the sidebar's port label was a bare plural
+  // noun, so a one-port cruise read "1 Häfen". Every other counted string in
+  // the app (nights, visits) carries _one/_other, and now this one does too.
+  it("counts a cruise's port calls via the sidebar key", () => {
+    const stops = [{ isAtSea: false }, { isAtSea: true }, { isAtSea: false }] as never;
+    expect(cruiseToItem(cruise({ stops }), t).meta).toBe(
+      'dashboard:sidebar.portsCount|{"count":2}'
+    );
+  });
+
+  it("falls back to the translated cruise title, not the English word", () => {
+    expect(cruiseToItem(cruise(), t).label).toBe("cruise:map.fallbackTitle");
   });
 });
 
