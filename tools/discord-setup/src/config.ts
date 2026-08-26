@@ -81,7 +81,7 @@ export const CATEGORIES: readonly CategoryDef[] = [
       {
         name: "release-candidate",
         kind: "text",
-        topic: "Release candidates (-rc.N) validated against prod data, lined up to ship.",
+        topic: "Release candidates (-rc.N) — the build lined up to ship, final testing.",
       },
       { name: "beta-feedback", kind: "text", topic: "Feedback + bug reports for beta and RC builds." },
     ],

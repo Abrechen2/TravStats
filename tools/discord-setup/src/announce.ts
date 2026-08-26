@@ -33,9 +33,14 @@ const STYLE: Record<AnnounceType, AnnounceStyle> = {
     channel: "release-candidate",
     color: 0x7bc47f,
     title: (v) => `🚦 Release Candidate ${v}`,
+    // Says what an RC IS, not what was done to it. The old wording claimed
+    // every RC had been "validated against prod data"; staging a prod clone is
+    // a per-round decision, and since 2.6.0-rc.13 it has deliberately not run.
+    // A template must not make a claim only some releases can honour.
     intro:
-      "A release candidate has been validated against prod data and is lined up " +
-      "to ship. Final testing — report anything in **#beta-feedback**.",
+      "A release candidate is the build lined up to ship — the final tags are cut " +
+      "from this exact image, unchanged. Final testing — report anything in " +
+      "**#beta-feedback**.",
   },
   release: {
     channel: "announcements",
