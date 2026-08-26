@@ -185,10 +185,10 @@ authentication and passkeys arrive alongside.
 - **Newest first, everywhere.** What is coming up stands above what is past,
   and an entry with no date sits at the bottom rather than sorting as though it
   happened in 1970.
-- **The cruise route editor opens in a dialog.** "Edit route" used to arm an
+- **The cruise route editor opens full-screen.** "Edit route" used to arm an
   editor inside the small preview card in the page margin, where a leg is a
   hairline: hitting one took three attempts, so the button read as one that
-  does nothing. Same editor, same handles, six times the canvas.
+  does nothing. Same editor, same handles, on the whole window.
 - **One currency, one distance unit.** There were two currency settings: one
   under Einheiten & Formate that only flight surfaces read, and one under
   Unterkunfts-Präferenzen that lodging, statistics and achievements read — the
