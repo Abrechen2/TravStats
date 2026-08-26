@@ -150,9 +150,14 @@ describe("meta copy goes through the translator", () => {
     );
   });
 
+  // Counted, not `${n} ${noun}`: the sidebar's port label was a bare plural
+  // noun, so a one-port cruise read "1 Häfen". Every other counted string in
+  // the app (nights, visits) carries _one/_other, and now this one does too.
   it("counts a cruise's port calls via the sidebar key", () => {
     const stops = [{ isAtSea: false }, { isAtSea: true }, { isAtSea: false }] as never;
-    expect(cruiseToItem(cruise({ stops }), t).meta).toBe("2 dashboard:sidebar.ports");
+    expect(cruiseToItem(cruise({ stops }), t).meta).toBe(
+      'dashboard:sidebar.portsCount|{"count":2}'
+    );
   });
 
   it("falls back to the translated cruise title, not the English word", () => {

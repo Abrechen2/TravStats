@@ -115,7 +115,7 @@ export function cruiseToItem(cruise: Cruise, t: Translate): ActivityItem {
       cruise.cruiseLine ??
       t("cruise:map.fallbackTitle"),
     sublabel: cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? null,
-    meta: ports > 0 ? `${ports} ${t("dashboard:sidebar.ports")}` : null,
+    meta: ports > 0 ? t("dashboard:sidebar.portsCount", { count: ports }) : null,
     sortDate,
     displayDate: display(sortDate, cruise.startDate ?? null),
     mappable: true,
