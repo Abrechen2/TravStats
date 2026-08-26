@@ -16,6 +16,7 @@ import { DEFAULT_CRUISE_COLORS, type CruiseColorConfig } from "../../lib/cruiseC
 import { computeBbox } from "../../utils/mapAnimationHelpers";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
+import Modal from "../Modal";
 import { RouteEditorOverlay } from "./RouteEditorOverlay";
 import {
   beginDrag,
@@ -111,6 +112,25 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   const [editorState, setEditorState] = useState<RouteEditorState | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [saveError, setSaveError] = useState(false);
+
+  /**
+   * Moving the map between the page card and the editor dialog throws the old
+   * maplibre instance away and builds a new one, so BOTH flags that describe
+   * "the map on screen" have to be reset with it — in the same batch as the
+   * switch, not in an effect afterwards.
+   *
+   * `mapLoaded` is the one that bites: it gates the deck.gl overlay. Left
+   * true from the previous instance, the overlay attaches to a map that has
+   * not loaded its style yet, every layer fails to initialise with
+   * "deck.gl: assertion failed", and the dialog shows a bare basemap with no
+   * route on it. `didFit` is the harmless one: a fit computed for a 410x254
+   * thumbnail means nothing on a canvas ten times its area.
+   */
+  const switchMapSurface = useCallback((toEditor: boolean): void => {
+    didFit.current = false;
+    setMapLoaded(false);
+    setEditMode(toEditor);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -280,7 +300,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
       await cruiseApi.saveRouteOverride(cruise.id, legKey(editing), editorState.waypoints);
       await refetchGeometry();
       closeEditor();
-      setEditMode(false);
+      switchMapSurface(false);
     } catch (err) {
       // Keep the editor open and the user's line intact. Discarding someone's
       // work because a request failed is the one thing this must never do.
@@ -295,7 +315,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
       await cruiseApi.clearRouteOverride(cruise.id, legKey(editing));
       await refetchGeometry();
       closeEditor();
-      setEditMode(false);
+      switchMapSurface(false);
     } catch (err) {
       logger.warn("CruiseRouteMap: clearing the route override failed", err);
       setSaveError(true);
@@ -314,18 +334,13 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     setEditing(null);
     setEditorState(null);
     setSaveError(false);
-    setEditMode(false);
-  }, [editorState, t]);
+    switchMapSurface(false);
+  }, [editorState, t, switchMapSurface]);
 
-  /** Esc leaves the editor without saving (spec §6.1), same path as Cancel. */
-  useEffect(() => {
-    if (!editMode) return;
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") onCancel();
-    };
-    window.addEventListener("keydown", onKey);
-    return (): void => window.removeEventListener("keydown", onKey);
-  }, [editMode, onCancel]);
+  // Esc still leaves the editor without saving (spec §6.1) — the dialog frame
+  // owns that key now and routes it to `onClose`, which is `onCancel`. A
+  // second listener here would run the same handler twice on ONE keypress,
+  // and with a dirty route that means asking the discard question twice.
 
   const layers: Layer[] = useMemo(() => {
     // The cruise DETAIL map, not a dashboard view: it shows exactly one cruise,
@@ -402,6 +417,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     return pts;
   }, [cruise.departurePort, cruise.arrivalPort, cruise.stops, geometry]);
 
+
   useEffect(() => {
     if (!mapLoaded || didFit.current) return;
     const bbox = computeBbox(bboxPoints);
@@ -417,107 +433,141 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
       { padding: 40, duration: 0 }
     );
     didFit.current = true;
-  }, [mapLoaded, bboxPoints]);
+  }, [mapLoaded, bboxPoints, editMode]);
 
   const barButton =
     "rounded-md border border-border px-2 py-1 text-xs text-(--text-muted) hover:bg-(--bg-surface) disabled:opacity-50";
 
+  /**
+   * The map itself, rendered EITHER in the page card as a preview OR inside
+   * the editor dialog — never both at once. Two `<MapGL>` mounts mean two
+   * WebGL contexts for one route, and the browser drops old contexts without
+   * warning when it runs out.
+   */
+  const renderMap = (heightClass: string): JSX.Element => (
+    <div className={`relative ${heightClass} w-full overflow-hidden rounded-md border border-border`}>
+      <MapGL
+        reuseMaps
+        ref={mapRef}
+        initialViewState={INITIAL_VIEW}
+        mapStyle={DARK_MAP_STYLE}
+        style={{ position: "absolute", inset: "0" }}
+        onLoad={(): void => setMapLoaded(true)}
+        onMove={(evt): void => {
+          const nextZoom = Math.round(evt.viewState.zoom);
+          setZoom((prev) => (prev === nextZoom ? prev : nextZoom));
+        }}
+      >
+        {mapLoaded && (
+          <DeckGLOverlay layers={layers} getTooltip={getTooltip} onClick={handleMapClick} />
+        )}
+        {editing && editorState && (
+          <RouteEditorOverlay
+            state={editorState}
+            onDragStart={onEditorDragStart}
+            onDrag={onEditorDrag}
+            onSelect={onEditorSelect}
+            onRemove={onEditorRemove}
+            onNudge={onEditorNudge}
+            onUndo={onEditorUndo}
+            onRedo={onEditorRedo}
+            nudgeStep={nudgeStep}
+            removeLabel={t("cruise:routeEditor.removeHandle")}
+            handleLabel={(index): string =>
+              isEndpoint(editorState, index)
+                ? t("cruise:routeEditor.endpoint")
+                : t("cruise:routeEditor.handle", { index: index + 1 })
+            }
+          />
+        )}
+      </MapGL>
+    </div>
+  );
+
+  /** The dialog's action row: what can be done to the leg under the cursor. */
+  const editorActions = (
+    <>
+      {!editing && (
+        <span className="mr-auto text-sm text-(--text-muted)">
+          {t("cruise:routeEditor.pickLeg")}
+        </span>
+      )}
+      {saveError && (
+        <span className="mr-auto text-sm text-(--danger)">
+          {t("cruise:routeEditor.saveFailed")}
+        </span>
+      )}
+      {editing && editorState && (
+        <>
+          <button
+            type="button"
+            className={barButton}
+            disabled={editorState.history.length === 0}
+            onClick={onEditorUndo}
+          >
+            {t("cruise:routeEditor.undo")}
+          </button>
+          <button
+            type="button"
+            className={barButton}
+            disabled={editorState.future.length === 0}
+            onClick={onEditorRedo}
+          >
+            {t("cruise:routeEditor.redo")}
+          </button>
+          {editedLegKeys.has(`${editing.fromPortId}:${editing.toPortId}`) && (
+            <button type="button" className={barButton} onClick={(): void => void onReset()}>
+              {t("cruise:routeEditor.reset")}
+            </button>
+          )}
+          <button
+            type="button"
+            className={barButton}
+            disabled={!isDirty(editorState)}
+            onClick={(): void => void onSave()}
+          >
+            {t("cruise:routeEditor.save")}
+          </button>
+        </>
+      )}
+      <button type="button" className={barButton} onClick={onCancel}>
+        {t("cruise:routeEditor.cancel")}
+      </button>
+    </>
+  );
+
   return (
     <div>
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        {!editMode && (
-          <button type="button" className={barButton} onClick={(): void => setEditMode(true)}>
-            {t("cruise:routeEditor.edit")}
-          </button>
-        )}
-        {editMode && !editing && (
-          <>
-            <span className="text-sm text-(--text-muted)">{t("cruise:routeEditor.pickLeg")}</span>
-            <button type="button" className={barButton} onClick={onCancel}>
-              {t("cruise:routeEditor.cancel")}
-            </button>
-          </>
-        )}
-        {editing && editorState && (
-          <>
-            <button
-              type="button"
-              className={barButton}
-              disabled={editorState.history.length === 0}
-              onClick={onEditorUndo}
-            >
-              {t("cruise:routeEditor.undo")}
-            </button>
-            <button
-              type="button"
-              className={barButton}
-              disabled={editorState.future.length === 0}
-              onClick={onEditorRedo}
-            >
-              {t("cruise:routeEditor.redo")}
-            </button>
-            <button
-              type="button"
-              className={barButton}
-              disabled={!isDirty(editorState)}
-              onClick={(): void => void onSave()}
-            >
-              {t("cruise:routeEditor.save")}
-            </button>
-            <button type="button" className={barButton} onClick={onCancel}>
-              {t("cruise:routeEditor.cancel")}
-            </button>
-            {editedLegKeys.has(`${editing.fromPortId}:${editing.toPortId}`) && (
-              <button type="button" className={barButton} onClick={(): void => void onReset()}>
-                {t("cruise:routeEditor.reset")}
-              </button>
-            )}
-          </>
-        )}
-        {!editing && editedLegKeys.size > 0 && (
+        <button
+          type="button"
+          className={barButton}
+          onClick={(): void => switchMapSurface(true)}
+        >
+          {t("cruise:routeEditor.edit")}
+        </button>
+        {editedLegKeys.size > 0 && (
           <span className="text-xs text-(--text-muted)">{t("cruise:routeEditor.editedBadge")}</span>
         )}
-        {saveError && (
+        {saveError && !editMode && (
           <span className="text-sm text-(--danger)">{t("cruise:routeEditor.saveFailed")}</span>
         )}
       </div>
-      <div className="relative h-64 w-full overflow-hidden rounded-md border border-border">
-        <MapGL
-          ref={mapRef}
-          reuseMaps
-          initialViewState={INITIAL_VIEW}
-          mapStyle={DARK_MAP_STYLE}
-          style={{ position: "absolute", inset: "0" }}
-          onLoad={(): void => setMapLoaded(true)}
-          onMove={(evt): void => {
-            const nextZoom = Math.round(evt.viewState.zoom);
-            setZoom((prev) => (prev === nextZoom ? prev : nextZoom));
-          }}
-        >
-          {mapLoaded && (
-            <DeckGLOverlay layers={layers} getTooltip={getTooltip} onClick={handleMapClick} />
-          )}
-          {editing && editorState && (
-            <RouteEditorOverlay
-              state={editorState}
-              onDragStart={onEditorDragStart}
-              onDrag={onEditorDrag}
-              onSelect={onEditorSelect}
-              onRemove={onEditorRemove}
-              onNudge={onEditorNudge}
-              onUndo={onEditorUndo}
-              onRedo={onEditorRedo}
-              nudgeStep={nudgeStep}
-              removeLabel={t("cruise:routeEditor.removeHandle")}
-              handleLabel={(index): string =>
-                isEndpoint(editorState, index)
-                  ? t("cruise:routeEditor.endpoint")
-                  : t("cruise:routeEditor.handle", { index: index + 1 })
-              }
-            />
-          )}
-        </MapGL>
-      </div>
+      {/* The card keeps the preview; the editor gets a dialog-sized canvas.
+          A leg is a hairline: picking one out of a 410x254 thumbnail took
+          three tries in the browser, which is why "Route bearbeiten" read as
+          a button that does nothing. */}
+      {!editMode && renderMap("h-64")}
+      <Modal
+        open={editMode}
+        onClose={onCancel}
+        title={t("cruise:routeEditor.edit")}
+        widthClass="max-w-6xl"
+        footer={editorActions}
+        testId="cruise-route-editor"
+      >
+        {renderMap("h-[70vh]")}
+      </Modal>
     </div>
   );
 }
