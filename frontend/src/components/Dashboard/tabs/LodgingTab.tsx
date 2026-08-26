@@ -13,12 +13,15 @@ import {
 } from "../../../store/dashboardFilterStore";
 import type { Lodging, LodgingStats } from "../../../types/lodging";
 import MapContainer3D from "../../MapContainer3D";
-import { LodgingListPanel } from "../sidebars/LodgingListPanel";
+import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
+import type { ActivityItem } from "../sidebars/activityItems";
+import { useLodgingSelectionStore } from "../../../store/lodgingSelectionStore";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
 import { LodgingChainsView } from "./lodging/LodgingChainsView";
 import { LodgingNightsChart } from "./lodging/LodgingNightsChart";
 
 export function LodgingTab(): JSX.Element {
+  const setLodgingSelection = useLodgingSelectionStore((st) => st.setSelection);
   const { mode } = useDashboardRoute();
   const navigate = useNavigate();
   const { isEnabled } = useEnabledDomains();
@@ -147,10 +150,25 @@ export function LodgingTab(): JSX.Element {
       >
         ☰ {t("dashboard:lodgingTab.listTitle")}
       </button>
-      <LodgingListPanel
+      {/* Same sidebar as every other tab, pinned to this domain. The bespoke
+          LodgingListPanel is gone: it did not sort at all (so the API's
+          `createdAt desc` decided the order — the sequence hotels were TYPED
+          IN, not stayed in), and every row was a plain link, so clicking a
+          hotel threw the user off the map instead of focusing it. */}
+      <UnifiedActivityPanel
         lodgings={visibleLodgings}
+        lockedKind="lodging"
+        title={t("dashboard:lodgingTab.listTitle")}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        onSelect={(item: ActivityItem) => {
+          if ("lodging" in item.payload && item.mappable) {
+            setLodgingSelection(item.payload.lodging);
+          }
+        }}
+        onDetails={(item: ActivityItem) => {
+          if ("lodging" in item.payload) navigate(`/lodging/${item.payload.lodging.id}`);
+        }}
       />
 
       {/* The stat strip and the currency breakdown used to sit HERE, floating

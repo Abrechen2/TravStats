@@ -261,7 +261,9 @@
       "all": "All",
       "flight": "Flights",
       "cruise": "Cruises"
-    }
+    },
+    "notOnMap": "Not on the map",
+    "places": "Places"
   },
   "legend": {
     "flightPast": "Flights (flown)",

@@ -15,6 +15,8 @@ import {
   sortLodgingRows,
   type LodgingSortKey,
 } from "../components/lodging/sortLodgingRows";
+import { formatDateInTimezone } from "../lib/dateUtils";
+import { latestStayDayOf } from "../lib/lodgingLatestStay";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
@@ -46,6 +48,7 @@ import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
 import type { Lodging, LodgingListQuery, LodgingType } from "../types/lodging";
+import { useSortPrefs } from "../components/table/useSortPrefs";
 
 type TypeFilter = LodgingType | "all";
 type YearFilter = number | "all";
@@ -69,6 +72,7 @@ const COLUMN_IDS: readonly LodgingColumnId[] = [
   "chain",
   "location",
   "status",
+  "lastStay",
   "stays",
   "nights",
   "rating",
@@ -84,6 +88,7 @@ const SORT_KEY_BY_COLUMN: Partial<Record<LodgingColumnId, LodgingSortKey>> = {
   chain: "chain",
   location: "location",
   status: "status",
+  lastStay: "lastStay",
   stays: "stays",
   nights: "nights",
   rating: "rating",
@@ -128,16 +133,16 @@ export default function LodgingListPage(): JSX.Element {
   const [yearFilter, setYearFilter] = useState<YearFilter>("all");
   const [countryFilter, setCountryFilter] = useState<CountryFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [sortBy, setSortBy] = useState<LodgingSortKey>("name");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  // Newest first everywhere, and the choice survives a reload — the
+  // column choice already did (useColumnPrefs), the sort never had.
+  const { sortBy, sortOrder, setSort } = useSortPrefs("lodging-list", "lastStay", "desc", ["lastStay","name","chain","location","status","stays","nights","rating","spend"] as const);
   const columnPrefs = useColumnPrefs("lodging-list", ALWAYS_VISIBLE);
 
   const handleSort = (column: LodgingSortKey): void => {
     if (sortBy === column) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      setSort(column, sortOrder === "asc" ? "desc" : "asc");
     } else {
-      setSortBy(column);
-      setSortOrder(LODGING_SORT_DEFAULT_ASC.includes(column) ? "asc" : "desc");
+      setSort(column, LODGING_SORT_DEFAULT_ASC.includes(column) ? "asc" : "desc");
     }
   };
 
@@ -560,6 +565,17 @@ export default function LodgingListPage(): JSX.Element {
                               })()}
                               <LodgingStatusTag lodging={l} />
                             </span>
+                          </td>
+                        )}
+                        {columnPrefs.isVisible("lastStay") && (
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {(() => {
+                              // The hotel's own date: newest stay, planned ones
+                              // included — same helper the activity sidebar uses,
+                              // so the two cannot drift apart.
+                              const day = latestStayDayOf(l);
+                              return day ? formatDateInTimezone(day, "UTC") : "—";
+                            })()}
                           </td>
                         )}
                         {columnPrefs.isVisible("stays") && (

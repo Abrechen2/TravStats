@@ -125,6 +125,18 @@ export interface SettingsState {
   apiKeys: ApiKeysStatus | null;
   enabledDomains: DomainKey[];
   /**
+   * Whether the SERVER has answered about the domains in this session.
+   *
+   * `enabledDomains` starts as ["flight"] and is persisted, so before the
+   * settings fetch returns it holds either that initial value or whatever a
+   * previous session left behind. A route guard that reads it too early
+   * redirects a domain the user actually has — measured: a direct load of
+   * /cruises bounced to / with only ["flight"] persisted, while the server
+   * said cruises were on. Deliberately NOT persisted: every session has to
+   * wait for its own answer.
+   */
+  enabledDomainsLoaded: boolean;
+  /**
    * The user's currency — the ONE the app has. Every lodging stay is
    * converted into it at the ECB rate for its check-in day, and stats,
    * achievements and flight costs all report in it.
@@ -308,6 +320,7 @@ const defaultSettings: Omit<
   },
   apiKeys: null,
   enabledDomains: ["flight"],
+  enabledDomainsLoaded: false,
   baseCurrency: "EUR",
   autoCreateTrips: true,
   betaFeaturesEnabled: null,
@@ -455,6 +468,7 @@ export const useSettingsStore = create<SettingsState>()(
                   (DOMAIN_KEYS as readonly string[]).includes(k as string)
                 );
                 newState.enabledDomains = filtered;
+                newState.enabledDomainsLoaded = true;
               }
               // baseCurrency is a plain top-level field (like enabledDomains),
               // not part of any of the settings-group objects merged above.
@@ -542,7 +556,12 @@ export const useSettingsStore = create<SettingsState>()(
         // The beta gate is instance state; `remoteSnapshot` is a belief about
         // the live server. Persisting either would let a stale value from a
         // previous session decide what we skip writing today.
-        const { betaFeaturesEnabled: _beta, remoteSnapshot: _snapshot, ...rest } = state;
+        const {
+          betaFeaturesEnabled: _beta,
+          remoteSnapshot: _snapshot,
+          enabledDomainsLoaded: _domainsLoaded,
+          ...rest
+        } = state;
         return rest as unknown as Record<string, unknown>;
       },
       // Strip removed fields from persisted state so stale localStorage doesn't crash the app

@@ -45,6 +45,7 @@ import AirlineWordmarkCell from "../components/flightsTable/AirlineWordmarkCell"
 import RouteCell from "../components/flightsTable/RouteCell";
 import TimeCell from "../components/flightsTable/TimeCell";
 import SourceInfoDot from "../components/flightsTable/SourceInfoDot";
+import { useSortPrefs } from "../components/table/useSortPrefs";
 
 // Trips moved to their own /trips top-level page (Phase-1 redesign).
 // This page now focuses purely on the flight table; the trip badge in
@@ -139,10 +140,9 @@ export default function FlightsTablePage(): JSX.Element {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [flightToDelete, setFlightToDelete] = useState<Flight | null>(null);
   const [duplicateMenuFor, setDuplicateMenuFor] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<"departureTime" | "airline" | "status" | "duration">(
-    "departureTime"
-  );
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  // Newest first everywhere, and the choice survives a reload — the
+  // column choice already did (useColumnPrefs), the sort never had.
+  const { sortBy, sortOrder, setSort } = useSortPrefs("flights-list", "departureTime", "desc", ["departureTime","airline","status","duration"] as const);
   const flightColumnPrefs = useColumnPrefs("flights-list", FLIGHT_ALWAYS_VISIBLE);
   const [showAddFlight, setShowAddFlight] = useState(false);
   const [showSpecialModal, setShowSpecialModal] = useState(false);
@@ -354,12 +354,7 @@ export default function FlightsTablePage(): JSX.Element {
   );
 
   const handleSort = (column: typeof sortBy) => {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(column);
-      setSortOrder("desc");
-    }
+    setSort(column, sortBy === column ? (sortOrder === "asc" ? "desc" : "asc") : "desc");
   };
 
   const searchNeedle = useMemo(() => search.trim().toLowerCase(), [search]);

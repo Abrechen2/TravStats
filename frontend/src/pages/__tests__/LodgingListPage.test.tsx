@@ -324,14 +324,21 @@ describe("LodgingListPage", () => {
     }
   });
 
-  it("sorts client-side: name ascending by default, header click re-sorts", async () => {
+  it("sorts client-side: newest stay first by default, header click re-sorts", async () => {
     // Owner ask (2026-08-20): sorting moved into the column headers,
     // flights-table style. Client-side is safe here because listLodgings
     // returns the COMPLETE set, never one paginated slice.
+    //
+    // The DEFAULT changed on 2026-08-25 from "name ascending" to "newest stay
+    // first", so every domain list opens the same way. A hotel carries no date
+    // of its own, so the stay supplies it — and a PLANNED stay counts as the
+    // newest, which is why Zebra (2099) leads and not Alpha (2024).
+    const stay = (checkIn: string) =>
+      ({ id: `s-${checkIn}`, checkIn, checkOut: null, datePrecision: "DAY", nights: null }) as never;
     const ordered: Lodging[] = [
-      makeLodging({ id: "l-1", name: "Zebra Lodge", nights: 1, totalSpendBase: 500 }),
-      makeLodging({ id: "l-2", name: "Alpha Inn", nights: 9, totalSpendBase: 10 }),
-      makeLodging({ id: "l-3", name: "Mid Motel", nights: 4, totalSpendBase: 250 }),
+      makeLodging({ id: "l-1", name: "Zebra Lodge", nights: 1, totalSpendBase: 500, stays: [stay("2099-01-01")] }),
+      makeLodging({ id: "l-2", name: "Alpha Inn", nights: 9, totalSpendBase: 10, stays: [stay("2024-01-01")] }),
+      makeLodging({ id: "l-3", name: "Mid Motel", nights: 4, totalSpendBase: 250, stays: [stay("2026-01-01")] }),
     ];
     listLodgingsMock.mockResolvedValue(ordered);
 
@@ -346,9 +353,9 @@ describe("LodgingListPage", () => {
       Array.from(container.querySelectorAll("tbody tr")).map(
         (row) => row.querySelector("td")?.textContent ?? ""
       );
-    expect(rowNames()[0]).toContain("Alpha Inn");
+    expect(rowNames()[0]).toContain("Zebra Lodge");
     expect(rowNames()[1]).toContain("Mid Motel");
-    expect(rowNames()[2]).toContain("Zebra Lodge");
+    expect(rowNames()[2]).toContain("Alpha Inn");
 
     // Clicking the nights header sorts by nights, descending first. (The
     // global t-mock is identity, so every header button shares the same
@@ -455,7 +462,10 @@ describe("LodgingListPage", () => {
     const row = screen.getByText("Hotel Test Ludwigsburg").closest("tr");
     // The spend cell must read "—", never a false "0 €" (a cleared price is
     // not the same as a confirmed free stay).
-    const spendCell = row?.querySelectorAll("td")[6];
+    // Positional index — it moved by one when the "Letzter Aufenthalt" column
+    // was added on 2026-08-25. Indexing cells by number is brittle; it is kept
+    // only because this assertion is about the spend cell's CONTENT.
+    const spendCell = row?.querySelectorAll("td")[7];
     expect(spendCell?.textContent).toBe("—");
   });
 

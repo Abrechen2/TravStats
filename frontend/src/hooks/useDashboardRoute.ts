@@ -7,6 +7,9 @@ import {
   isDashboardTab,
   isModeForTab,
 } from "../types/dashboard";
+import { useEnabledDomains } from "./useEnabledDomains";
+import { useSettingsStore } from "../store/settingsStore";
+import { DOMAIN_KEYS, type DomainKey } from "../shared/domains";
 
 const LAST_MODE_KEY = "travstats:dashboard:lastMode";
 
@@ -44,15 +47,36 @@ export function useDashboardRoute(): DashboardRouteState {
   const [search, setSearch] = useSearchParams();
   const navigate = useNavigate();
 
+  const { isEnabled } = useEnabledDomains();
+  const domainsLoaded = useSettingsStore((st) => st.enabledDomainsLoaded);
+
   const tab: DashboardTab = isDashboardTab(rawTab) ? rawTab : "all";
 
   // If the URL tab was invalid, normalise it once so the URL doesn't stick
   // at /dashboard/spaceship.
+  //
+  // A tab naming a domain the user does NOT have is the same class of problem
+  // and was not caught: /dashboard/lodging rendered the lodging tab, its tab
+  // strip entry and its "+ Hotel hinzufügen" button even with lodging switched
+  // off — measured with enabledDomains ["flight","cruise"].
+  //
+  // The `enabledDomainsLoaded` check is what keeps this from becoming the
+  // route-guard bug in a new place: before the settings fetch answers, the
+  // store still holds its initial ["flight"], and normalising then would throw
+  // the user off a tab they really have.
   useEffect(() => {
-    if (rawTab !== undefined && !isDashboardTab(rawTab)) {
+    if (rawTab === undefined) return;
+    if (!isDashboardTab(rawTab)) {
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+    const asDomain = (DOMAIN_KEYS as readonly string[]).includes(rawTab)
+      ? (rawTab as DomainKey)
+      : null;
+    if (asDomain !== null && domainsLoaded && !isEnabled(asDomain)) {
       navigate("/dashboard", { replace: true });
     }
-  }, [rawTab, navigate]);
+  }, [rawTab, navigate, domainsLoaded, isEnabled]);
 
   // Single-tab semantics: changes from another tab/window propagate only on the
   // next URL change in this tab — we do not listen for `storage` events.

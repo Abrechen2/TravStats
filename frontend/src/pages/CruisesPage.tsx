@@ -25,7 +25,8 @@ import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm"
 import { countPortCalls } from "../components/Cruise/cruisePorts";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
-import { sortCruises, type CruiseSortKey, type SortOrder } from "../components/Cruise/sortCruises";
+import { sortCruises, type CruiseSortKey } from "../components/Cruise/sortCruises";
+import { useSortPrefs } from "../components/table/useSortPrefs";
 
 type StatusFilter = CruiseStatus | "all";
 type YearFilter = number | "all";
@@ -95,17 +96,17 @@ export default function CruisesPage(): JSX.Element {
   // which is what that button is for — search/status/year stay open because
   // every domain has them.
   const [lineFilter, setLineFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<CruiseSortKey>("date");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  // Newest first everywhere, and the choice survives a reload — the
+  // column choice already did (useColumnPrefs), the sort never had.
+  const { sortBy, sortOrder, setSort } = useSortPrefs("cruises-list", "date", "desc", ["date","ship","line","ports","status","price"] as const);
   const columnPrefs = useColumnPrefs("cruise-list", CRUISE_ALWAYS_VISIBLE);
 
   const handleSort = (col: CruiseSortKey): void => {
     if (col === sortBy) {
-      setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
+      setSort(col, sortOrder === "asc" ? "desc" : "asc");
     } else {
-      setSortBy(col);
       // date/price/ports default to desc (biggest/newest first); text asc.
-      setSortOrder(col === "ship" || col === "line" || col === "status" ? "asc" : "desc");
+      setSort(col, col === "ship" || col === "line" || col === "status" ? "asc" : "desc");
     }
   };
 

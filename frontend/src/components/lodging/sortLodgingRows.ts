@@ -1,4 +1,5 @@
 import type { Lodging } from "../../types/lodging";
+import { latestStayDayOf } from "../../lib/lodgingLatestStay";
 import { LIFECYCLE_SORT_RANK, lodgingLifecycleStatus } from "./lodgingLifecycle";
 
 /**
@@ -9,6 +10,7 @@ import { LIFECYCLE_SORT_RANK, lodgingLifecycleStatus } from "./lodgingLifecycle"
  * paginated slice (the trap the old server-side-only comment warned about).
  */
 export type LodgingSortKey =
+  | "lastStay"
   | "name"
   | "chain"
   | "location"
@@ -33,6 +35,18 @@ export function sortLodgingRows(
 ): Lodging[] {
   const compare = (a: Lodging, b: Lodging): number => {
     switch (sortBy) {
+      case "lastStay": {
+        // The one date a hotel has: its newest stay, planned ones included.
+        // Undated houses sort last in BOTH directions rather than pretending
+        // to be the oldest — the same rule the activity sidebar follows,
+        // through the same helper.
+        const da = latestStayDayOf(a);
+        const db = latestStayDayOf(b);
+        if (da === db) return 0;
+        if (da === "") return sortOrder === "asc" ? 1 : -1;
+        if (db === "") return sortOrder === "asc" ? -1 : 1;
+        return da < db ? -1 : 1;
+      }
       case "name":
         return a.name.localeCompare(b.name);
       case "chain":

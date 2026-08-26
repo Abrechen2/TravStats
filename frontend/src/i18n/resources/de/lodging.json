@@ -26,7 +26,8 @@
       "nights": "Übernachtungen",
       "rating": "Bewertung",
       "spend": "Ausgaben",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "lastStay": "Letzter Aufenthalt"
     },
     "otherCurrencyHint": "Enthält weitere Beträge in einer älteren Basiswährung, die hier nicht mitgezählt sind.",
     "bookmarked": "vorgemerkt",
