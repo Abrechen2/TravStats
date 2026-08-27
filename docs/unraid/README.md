@@ -5,13 +5,14 @@ Community Apps templates for TravStats live in their own dedicated repo
 
 👉 **[github.com/Abrechen2/docker-templates](https://github.com/Abrechen2/docker-templates)**
 
-Two XMLs are published from there:
+Two XMLs are published from there. The `my-` prefix is Unraid's convention
+for user-added templates and is part of the filename:
 
-- [`travstats.xml`](https://raw.githubusercontent.com/Abrechen2/docker-templates/main/travstats.xml)
-- [`travstats-db.xml`](https://raw.githubusercontent.com/Abrechen2/docker-templates/main/travstats-db.xml)
+- [`my-travstats.xml`](https://raw.githubusercontent.com/Abrechen2/docker-templates/main/my-travstats.xml)
+- [`my-travstats-db.xml`](https://raw.githubusercontent.com/Abrechen2/docker-templates/main/my-travstats-db.xml)
 
-This page covers install order, dependency containers, and submission to
-the CA feed.
+This page covers install order, dependency containers, and how the templates
+reach the CA feed.
 
 ## Install on an existing Unraid box
 
@@ -19,12 +20,21 @@ TravStats is a single-container app but **requires** a separate PostGIS
 database. A local Ollama LLM container is optional but recommended for email
 import.
 
+Both containers sit on the default `bridge` network and talk **through the
+Unraid host**, not to each other directly: the TravStats template ships
+`--add-host=host.docker.internal:host-gateway`, and every cross-container
+address below is `host.docker.internal:<published-port>`. Docker's default
+bridge has no DNS, so container names such as `travstats-db` do **not**
+resolve — that is why the database must publish its port on the host.
+
 ### 1. Install PostGIS
 
-Use our companion template [`travstats-db.xml`](travstats-db.xml) — it pre-fills
-the container name, DB name and user so the default `DATABASE_URL` in the
-TravStats template matches without extra editing. Just pick a strong password
-(`openssl rand -base64 32`) and keep it for step 3.
+Use our companion template
+[`my-travstats-db.xml`](https://raw.githubusercontent.com/Abrechen2/docker-templates/main/my-travstats-db.xml)
+(**Apps** tab → search **travstats-db**) — it pre-fills the container name,
+DB name, user and the published host port `5432`, so the default
+`DATABASE_URL` in the TravStats template matches without extra editing. Just
+pick a strong password (`openssl rand -base64 32`) and keep it for step 3.
 
 If you prefer to install PostGIS manually instead, use image
 `postgis/postgis:15-3.4` with:
@@ -32,7 +42,9 @@ If you prefer to install PostGIS manually instead, use image
 - `POSTGRES_DB` = `flights`
 - `POSTGRES_USER` = `flights`
 - `POSTGRES_PASSWORD` = *(strong — `openssl rand -base64 32`)*
+- `PGDATA` = `/var/lib/postgresql/data/pgdata`
 - Persistent volume mapped to `/mnt/user/appdata/travstats-db`
+- Port `5432` **published on the host** — TravStats connects through it
 
 Plain `postgres:15` does **not** work — TravStats migrations require the
 PostGIS spatial extension.
@@ -41,7 +53,8 @@ PostGIS spatial extension.
 
 1. **Apps** tab → **Ollama**
 2. Persistent volume to `/mnt/user/appdata/ollama`
-3. Inside the container console, pull the default model:
+3. Keep port `11434` published on the host
+4. Inside the container console, pull the default model:
    ```sh
    ollama pull gemma3:12b
    ```
@@ -49,15 +62,18 @@ PostGIS spatial extension.
 ### 3. Install TravStats
 
 1. **Apps** tab → search **TravStats**, click **Install**
-2. Set `DATABASE_URL` to
-   `postgresql://flights:<your-password>@travstats-db:5432/flights`
+2. In `DATABASE_URL`, replace only the `CHANGEME` part with the password
+   from step 1 — the rest of the prefilled value already matches the
+   companion template:
+   `postgresql://flights:<your-password>@host.docker.internal:5432/flights`
+   *(If PostGIS publishes a different host port, adjust `:5432` to match.)*
 3. Apply. When the container is healthy, open
    `http://<unraid-ip>:<port>/setup` — the first-run wizard captures
    instance name, public URL, user cap and registration mode. Everything
    else (API keys, backup schedule, WebDAV, Ollama endpoint + model) is
    configurable from **Admin → Settings** in the UI after login. On
-   Unraid, point Ollama at `http://ollama:11434` from the admin UI if
-   you installed the CA in step 2.
+   Unraid, point Ollama at `http://host.docker.internal:11434` from the
+   admin UI if you installed the CA in step 2.
 
 The JWT secret and encryption key are auto-generated on first boot and
 persisted inside the `/mnt/user/appdata/travstats/secrets/` subdirectory
@@ -66,28 +82,56 @@ about.
 
 ## Template maintenance (for the maintainer)
 
-The canonical template URL is
+The canonical template URLs — the ones the CA feed reads — are:
 
 ```
-https://raw.githubusercontent.com/Abrechen2/TravStats/main/docs/unraid/travstats.xml
+https://raw.githubusercontent.com/Abrechen2/docker-templates/main/my-travstats.xml
+https://raw.githubusercontent.com/Abrechen2/docker-templates/main/my-travstats-db.xml
 ```
 
-### Submit to Community Apps
+There are no copies of these XMLs in this repo, deliberately: two sources of
+truth drift, and the drifted one is the one a stranger installs from.
 
-1. Fork [community-apps-templates](https://github.com/Squidly271/AppFeed)
-   *(or follow the current CA submission instructions at
-   <https://forums.unraid.net/topic/57181-community-applications/>)*
-2. Open a PR pointing at the `travstats.xml` raw URL above
-3. Respond to the reviewer's feedback — common asks are:
-   - Pin a specific image tag instead of `latest` for the default (you can
-     override this per-release if CA requires reproducible installs)
-   - Confirm `Privileged=false` is enough
-   - Provide a logo on a non-transparent background
+### Community Apps feed
+
+`Abrechen2/docker-templates` is **already registered** in the CA feed as
+*"Abrechen2's Repository"* — no per-template PR is needed. CA re-scrapes the
+repo periodically, so a pushed change to an XML reaches the store on its own
+within hours; users then see it after their next Apps refresh.
+
+To verify what CA actually serves — as opposed to what the repo says —
+read the live feed rather than trusting the template:
+
+```sh
+curl -s https://raw.githubusercontent.com/Squidly271/AppFeed/master/applicationFeed.json \
+  | python3 -c "import json,sys; \
+      [print(a['Name'], a.get('Icon')) for a in json.load(sys.stdin)['applist'] \
+       if 'travstats' in a.get('Name','').lower()]"
+```
+
+Reviewer feedback on submission, if it ever comes up again, has historically
+asked to pin a specific image tag instead of `latest`, and to confirm
+`Privileged=false` is enough.
 
 ### Icon
 
-The TravStats brand mark lives at `docs/images/logo.svg`. Community Apps
-requires a PNG on a non-transparent background, so render a square PNG
-export (e.g. 512 × 512 on the dark ink `#0b0d10` surface) and commit it
-to `docs/unraid/icon.png`, then point the `<Icon>` URL in `travstats.xml`
-at the GitHub raw URL of that PNG.
+The brand mark is **vendored into the template repo** as
+[`icon.svg`](https://raw.githubusercontent.com/Abrechen2/docker-templates/main/icon.svg),
+byte-identical to `docs/images/logo.svg` here. Template and icon live in the
+same repo on purpose — the `<Icon>` URL then cannot be broken by a
+restructure of the application repo. `my-travstats-db.xml` follows the same
+rule with `icon-travstats-db.svg`.
+
+SVG is fine: around 120 of the ~4100 apps in the CA feed ship an SVG icon.
+A PNG on a non-transparent background is only worth producing for looks —
+the current mark is 120 × 140, so Unraid's square tile letterboxes it.
+
+**The trap that already cost us a logo:** the `<Icon>` URL pointed at branch
+`Main` on `Abrechen2/TravStats` while the default branch is `main`.
+`raw.githubusercontent.com` is case-sensitive, so it returned 404 and CA
+listed TravStats with no logo — silently, because nothing validates an icon
+URL. After changing any URL in a template, curl it:
+
+```sh
+curl -sI -o /dev/null -w '%{http_code} %{content_type}\n' "<url>"
+```
