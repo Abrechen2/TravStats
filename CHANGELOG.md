@@ -25,6 +25,11 @@ authentication and passkeys arrive alongside.
 - **A place can be attached to a trip.** The visit form offers the trip, the way
   a lodging stay always has. The interface never set it, though the API had
   accepted it from the day the visit routes were written.
+- **A cruise can be attached to a trip.** The cruise form offers the trip, the
+  way a flight, a lodging stay and a place visit already did — a cruise was the
+  last entry whose trip could only be set through the API. The list and the
+  cruise page name the trip it belongs to, and the trip counts the cruise and
+  its price.
 - **A place list you build yourself, and checklists we ship.** Group places into
   named lists — a wishlist, a route, "the ones worth the detour" — and reorder
   them by hand. Alongside them come curated checklists: the New 7 Wonders, the
