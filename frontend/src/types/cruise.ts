@@ -70,6 +70,13 @@ export interface Cruise {
   tags: string[];
   companions: string[];
   tripId: string | null;
+  /**
+   * The linked trip, id + name + colour only — what the list cell and the
+   * detail header need to name and colour it. Included by the API alongside
+   * ship/ports (CRUISE_INCLUDE), so nothing has to resolve tripId separately.
+   * Optional because older fixtures and the create payload never carry it.
+   */
+  trip?: { id: string; name: string; color: string } | null;
   bookingId: string | null;
   stops: CruiseStop[];
   createdAt: string;

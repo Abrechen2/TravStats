@@ -1,4 +1,5 @@
 import type { Cruise } from "../../types";
+import TripPill from "../Trips/TripPill";
 import { useTranslation } from "../../hooks/useTranslation";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import { countUniquePorts, countUnresolvedPorts } from "./cruisePorts";
@@ -12,6 +13,7 @@ export type CruiseColumnId =
   | "status"
   | "cabin"
   | "price"
+  | "trip"
   | "actions";
 
 interface Props {
@@ -107,6 +109,11 @@ export function CruiseRow({
       )}
       {visible("price") && (
         <td className="px-4 py-3 text-right text-sm text-(--text-muted)">{price}</td>
+      )}
+      {visible("trip") && (
+        <td className="px-4 py-3 text-sm" data-testid={`cruise-trip-cell-${cruise.id}`}>
+          <TripPill trip={cruise.trip} />
+        </td>
       )}
       {visible("actions") && (
         <td className="px-4 py-3 text-right text-sm" onClick={(e) => e.stopPropagation()}>

@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { CruiseRow } from "../../../components/Cruise/CruiseRow";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
+import { CruiseRow, type CruiseColumnId } from "../../../components/Cruise/CruiseRow";
 import type { Cruise, CruiseStop, Port } from "../../../types";
 
 // Same mock pattern as CruiseEditModal.test.tsx: t(key) => key, so assertions
@@ -132,5 +134,79 @@ describe("CruiseRow", () => {
     const { container } = renderRow(cruise);
 
     expect(container.textContent).not.toMatch(/\(\+\d+\)/);
+  });
+
+  // The flight table has carried a "trip" column since #199; the cruise table
+  // never did, so a cruise could belong to a trip with nothing in the list
+  // saying so. The trip rides along on the cruise payload (CRUISE_INCLUDE),
+  // so the cell needs no second request and no page-level trip map.
+  describe("trip column", () => {
+    const renderRowInRouter = (cruise: Cruise, isColumnVisible?: (id: CruiseColumnId) => boolean) =>
+      render(
+        <MemoryRouter>
+          <table>
+            <tbody>
+              <CruiseRow cruise={cruise} onOpen={() => {}} isColumnVisible={isColumnVisible} />
+            </tbody>
+          </table>
+        </MemoryRouter>
+      );
+
+    it("links the trip name to its trip page", () => {
+      const cruise = baseCruise({
+        tripId: "trip-9",
+        trip: { id: "trip-9", name: "Mittelmeer 2026", color: "#e88374" },
+      });
+      renderRowInRouter(cruise);
+
+      const link = screen.getByRole("link", { name: /Mittelmeer 2026/ });
+      expect(link).toHaveAttribute("href", "/trips/trip-9");
+    });
+
+    // Asserted through the cell's own testid, not the row text: every other
+    // column renders a dash for an empty value too, so a plain textContent
+    // check would pass with no trip cell in the table at all.
+    it("shows a dash in the trip cell when the cruise belongs to no trip", () => {
+      renderRowInRouter(baseCruise({ tripId: null, trip: null }));
+
+      const cell = screen.getByTestId("cruise-trip-cell-c1");
+      expect(cell.textContent).toContain("—");
+      expect(screen.queryByRole("link")).toBeNull();
+    });
+
+    // Opening the trip must not also open the cruise: the whole row is
+    // clickable, so a link inside it has to stop the click from bubbling —
+    // the same defect that made "delete" open the flight it was deleting.
+    it("does not trigger the row's onOpen when the trip link is clicked", async () => {
+      const onOpen = vi.fn();
+      const cruise = baseCruise({
+        tripId: "trip-9",
+        trip: { id: "trip-9", name: "Mittelmeer 2026", color: "#e88374" },
+      });
+      render(
+        <MemoryRouter>
+          <table>
+            <tbody>
+              <CruiseRow cruise={cruise} onOpen={onOpen} />
+            </tbody>
+          </table>
+        </MemoryRouter>
+      );
+
+      await userEvent.click(screen.getByRole("link", { name: /Mittelmeer 2026/ }));
+
+      expect(onOpen).not.toHaveBeenCalled();
+    });
+
+    it("hides the cell when the column picker turns the column off", () => {
+      const cruise = baseCruise({
+        tripId: "trip-9",
+        trip: { id: "trip-9", name: "Mittelmeer 2026", color: "#e88374" },
+      });
+      renderRowInRouter(cruise, (id) => id !== "trip");
+
+      expect(screen.queryByTestId("cruise-trip-cell-c1")).toBeNull();
+      expect(screen.queryByRole("link", { name: /Mittelmeer 2026/ })).toBeNull();
+    });
   });
 });

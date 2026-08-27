@@ -2,14 +2,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CruiseEditModal } from "../../../components/Cruise/CruiseEditModal";
-import { cruiseApi, companionsApi } from "../../../lib/api";
-import type { Cruise } from "../../../types";
+import { cruiseApi, companionsApi, tripsApi } from "../../../lib/api";
+import type { Cruise, Trip } from "../../../types";
 
 vi.mock("../../../lib/api", () => ({
   cruiseApi: { create: vi.fn(), update: vi.fn() },
   portsApi: { search: vi.fn().mockResolvedValue([]), create: vi.fn() },
   shipsApi: { search: vi.fn().mockResolvedValue([]), create: vi.fn() },
   companionsApi: { list: vi.fn() },
+  tripsApi: { getAll: vi.fn() },
 }));
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -23,6 +24,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
 describe("CruiseEditModal", () => {
   beforeEach(() => {
     vi.mocked(companionsApi.list).mockReset().mockResolvedValue([]);
+    vi.mocked(tripsApi.getAll).mockReset().mockResolvedValue([]);
   });
 
   // Create mode opens directly on the manual form now — email/PDF import is a
@@ -257,5 +259,86 @@ describe("CruiseEditModal", () => {
     const payload = stopCalls[stopCalls.length - 1][1];
     // [] deletes all stops server-side; undefined would silently keep them.
     expect(payload.stops).toEqual([]);
+  });
+
+  // Cruise → Trip assignment (#general, 2026-08-26: "How do I link a cruise
+  // to a Journey?"). Every other domain already offers this — flights via
+  // TripSelectField, stays via StayEditor's select, place visits via
+  // PlaceDetailPage — and the whole chain below the form was already built:
+  // Cruise.tripId exists, Zod accepts it on create and update, and the PUT
+  // handler recomputes the status of BOTH the old and the new trip. Only the
+  // control was missing, so a cruise could be linked through the API and by
+  // the import preview, but never by hand.
+  //
+  // Unlike flights, the assignment goes in the cruise's OWN payload: a flight
+  // reaches its trip through tripsApi.assignFlights after the save, because
+  // Flight.tripId is owned by the Trip relation. Cruise.tripId is owned by the
+  // cruise, exactly like LodgingStay.tripId, so the select feeds the payload.
+  describe("trip assignment", () => {
+    const trips = [
+      { id: "trip-1", name: "Mittelmeer 2026" },
+      { id: "trip-2", name: "Karibik 2027" },
+    ] as unknown as Trip[];
+
+    it("lists the user's trips and preselects the one the cruise belongs to", async () => {
+      vi.mocked(tripsApi.getAll).mockResolvedValue(trips);
+      const linked: Cruise = { ...baseCruise, tripId: "trip-2" };
+
+      render(<CruiseEditModal mode="edit" cruise={linked} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+      const select = await screen.findByLabelText("field.trip");
+      await waitFor(() => expect(screen.getByRole("option", { name: "Karibik 2027" })).toBeInTheDocument());
+      expect(screen.getByRole("option", { name: "Mittelmeer 2026" })).toBeInTheDocument();
+      expect((select as HTMLSelectElement).value).toBe("trip-2");
+    });
+
+    it("submits the chosen tripId", async () => {
+      vi.mocked(tripsApi.getAll).mockResolvedValue(trips);
+      vi.mocked(cruiseApi.update).mockResolvedValue(baseCruise);
+
+      render(<CruiseEditModal mode="edit" cruise={baseCruise} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+      const select = await screen.findByLabelText("field.trip");
+      await waitFor(() => expect(screen.getByRole("option", { name: "Mittelmeer 2026" })).toBeInTheDocument());
+      await userEvent.selectOptions(select, "trip-1");
+
+      await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+
+      await waitFor(() => expect(cruiseApi.update).toHaveBeenCalled());
+      const calls = vi.mocked(cruiseApi.update).mock.calls;
+      expect(calls[calls.length - 1][1].tripId).toBe("trip-1");
+    });
+
+    // The same explicit-clear rule the rest of this form follows: undefined
+    // tells the server "keep the old value", so unlinking has to send null or
+    // it is a silent no-op and the cruise stays on the trip.
+    it("submits null, not undefined, when the cruise is unlinked from its trip", async () => {
+      vi.mocked(tripsApi.getAll).mockResolvedValue(trips);
+      vi.mocked(cruiseApi.update).mockResolvedValue(baseCruise);
+      const linked: Cruise = { ...baseCruise, tripId: "trip-1" };
+
+      render(<CruiseEditModal mode="edit" cruise={linked} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+      const select = await screen.findByLabelText("field.trip");
+      await waitFor(() => expect(screen.getByRole("option", { name: "Mittelmeer 2026" })).toBeInTheDocument());
+      await userEvent.selectOptions(select, "");
+
+      await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+
+      await waitFor(() => expect(cruiseApi.update).toHaveBeenCalled());
+      const calls = vi.mocked(cruiseApi.update).mock.calls;
+      expect(calls[calls.length - 1][1].tripId).toBeNull();
+    });
+
+    // Non-fatal on purpose, mirroring TripSelectField: a failed trip list must
+    // not take the whole edit dialog down. The field just offers "no trip".
+    it("still renders the form when the trip list fails to load", async () => {
+      vi.mocked(tripsApi.getAll).mockRejectedValue(new Error("network"));
+
+      render(<CruiseEditModal mode="edit" cruise={baseCruise} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+      expect(await screen.findByLabelText("field.trip")).toBeInTheDocument();
+      expect(screen.getByLabelText("field.line")).toBeInTheDocument();
+    });
   });
 });

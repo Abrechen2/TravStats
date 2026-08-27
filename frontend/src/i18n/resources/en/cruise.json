@@ -19,6 +19,7 @@
       "status": "Status",
       "cabin": "Cabin",
       "price": "Price",
+      "trip": "Trip",
       "actions": "Actions"
     },
     "delete": {
@@ -82,6 +83,8 @@
     "notes": "Notes",
     "tags": "Tags",
     "companions": "Companions",
+    "trip": "Trip",
+    "noTrip": "Not linked to a trip",
     "status": "Status",
     "currency": "Currency",
     "departure_port": "Departure port",

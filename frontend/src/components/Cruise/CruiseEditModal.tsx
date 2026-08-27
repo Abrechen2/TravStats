@@ -2,17 +2,19 @@ import { minorUnits } from "../../shared/currencies";
 import Modal from "../Modal";
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type {
   Cruise,
   CruiseInput,
+  Trip,
   CruiseStopInput,
   Ship,
   Port,
   CabinType,
   CruiseStatus,
 } from "../../types";
-import { cruiseApi } from "../../lib/api";
+import { cruiseApi, tripsApi } from "../../lib/api";
+import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ShipPicker } from "./ShipPicker";
 import { PortPicker } from "./PortPicker";
@@ -122,6 +124,30 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
   const [companions, setCompanions] = useState<string[]>(cruise?.companions ?? []);
   const [notes, setNotes] = useState<string>(cruise?.notes ?? "");
 
+  // Trip assignment. Unlike a flight — whose tripId is owned by the Trip
+  // relation and applied through tripsApi.assignFlights AFTER the save — a
+  // cruise owns its own tripId, so the choice travels in the cruise payload
+  // (the same shape LodgingStay uses). Loading the list is non-fatal on
+  // purpose: with no list the field simply offers "no trip", which is better
+  // than taking the whole edit dialog down over a side lookup.
+  const [tripId, setTripId] = useState<string>(cruise?.tripId ?? "");
+  const [trips, setTrips] = useState<Trip[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    tripsApi
+      .getAll()
+      .then((all) => {
+        if (!cancelled) setTrips(all);
+      })
+      .catch((err: unknown) => {
+        logger.warn("CruiseEditModal: failed to load trips", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -156,6 +182,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
         tags: splitCsv(tagsInput),
         companions,
         notes: notes || null,
+        tripId: tripId || null,
         // Strip the UI-only `port` object from each stop before sending —
         // the backend only wants portId/isAtSea/times/note. Always sent,
         // including as []: omitting the field when the user removed every
@@ -404,6 +431,25 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
               <div className="mt-3">
                 <label className="label">{t("field.companions")}</label>
                 <CompanionPicker value={companions} onChange={setCompanions} />
+              </div>
+              <div className="mt-3">
+                <label className="label" htmlFor="cruise-edit-trip">
+                  {t("field.trip")}
+                </label>
+                <select
+                  id="cruise-edit-trip"
+                  aria-label={t("field.trip")}
+                  className={INPUT_CLASS}
+                  value={tripId}
+                  onChange={(e): void => setTripId(e.target.value)}
+                >
+                  <option value="">{t("field.noTrip")}</option>
+                  {trips.map((trip) => (
+                    <option key={trip.id} value={trip.id}>
+                      {trip.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <textarea
                 aria-label={t("field.notes")}

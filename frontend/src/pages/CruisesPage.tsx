@@ -44,6 +44,7 @@ const CRUISE_COLUMN_IDS: readonly CruiseColumnId[] = [
   "status",
   "cabin",
   "price",
+  "trip",
   "actions",
 ];
 const CRUISE_ALWAYS_VISIBLE = ["ship", "actions"] as const;
