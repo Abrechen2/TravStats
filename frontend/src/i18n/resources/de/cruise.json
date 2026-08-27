@@ -19,6 +19,7 @@
       "status": "Status",
       "cabin": "Kabine",
       "price": "Preis",
+      "trip": "Reise",
       "actions": "Aktionen"
     },
     "delete": {
@@ -82,6 +83,8 @@
     "notes": "Notizen",
     "tags": "Tags",
     "companions": "Mitreisende",
+    "trip": "Reise",
+    "noTrip": "Keiner Reise zugeordnet",
     "status": "Status",
     "currency": "Währung",
     "departure_port": "Abfahrtshafen",

@@ -12,6 +12,7 @@ import {
 } from "../components/Cruise/cruisePorts";
 import { cruiseStatusPillStyle } from "../components/Cruise/cruiseStatusStyle";
 import TripTimeline, { type TimelineEvent } from "../components/Trip/TripTimeline";
+import TripPill from "../components/Trips/TripPill";
 import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
 import { formatDateInTimezone } from "../lib/dateUtils";
@@ -177,6 +178,11 @@ export default function CruiseDetailPage(): JSX.Element {
               </p>
               {cruise.routeName && (
                 <p className="text-sm font-medium text-(--text-primary)">{cruise.routeName}</p>
+              )}
+              {cruise.trip && (
+                <p className="mt-1 text-sm" data-testid="cruise-detail-trip">
+                  <TripPill trip={cruise.trip} />
+                </p>
               )}
             </div>
           </div>

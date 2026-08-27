@@ -367,4 +367,48 @@ describe('Cruises API', () => {
       expect(still).not.toBeNull();
     });
   });
+
+  // The cruise API returned tripId but never the trip itself, so a list row or
+  // the detail page could tell THAT a cruise belonged to a trip but not WHICH
+  // one — and a name is what a reader needs. Included alongside ship/ports
+  // rather than fetched per row on the frontend, so the list stays one query.
+  describe('trip on the cruise payload', () => {
+    it('includes the linked trip name in the list and the detail response', async () => {
+      const trip = await prisma.trip.create({
+        data: { userId, name: 'Mittelmeer 2026', color: '#e88374' },
+      });
+      const linked = await prisma.cruise.create({
+        data: { userId, status: 'scheduled', tripId: trip.id },
+      });
+
+      try {
+        const list = await request(app).get('/api/v1/cruises').set('Cookie', authCookie);
+        expect(list.status).toBe(200);
+        const row = list.body.data.find((c: { id: string }) => c.id === linked.id);
+        expect(row.trip).toEqual(
+          expect.objectContaining({ id: trip.id, name: 'Mittelmeer 2026', color: '#e88374' })
+        );
+
+        const detail = await request(app)
+          .get(`/api/v1/cruises/${linked.id}`)
+          .set('Cookie', authCookie);
+        expect(detail.status).toBe(200);
+        expect(detail.body.data.trip).toEqual(
+          expect.objectContaining({ id: trip.id, name: 'Mittelmeer 2026', color: '#e88374' })
+        );
+      } finally {
+        await prisma.cruise.delete({ where: { id: linked.id } });
+        await prisma.trip.delete({ where: { id: trip.id } });
+      }
+    });
+
+    it('reports trip as null for an unlinked cruise', async () => {
+      const res = await request(app)
+        .get(`/api/v1/cruises/${seedCruiseId}`)
+        .set('Cookie', authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data.tripId).toBeNull();
+      expect(res.body.data.trip).toBeNull();
+    });
+  });
 });
