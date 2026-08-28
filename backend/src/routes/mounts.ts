@@ -1,0 +1,156 @@
+/**
+ * The API mount table — the single source of truth for what is served
+ * under /api/v1 and in which order.
+ *
+ * This used to be ~60 `app.use(...)` lines inline in index.ts. It moved
+ * here so that the OpenAPI coverage guard (`services/openapi/coverage.ts`)
+ * can walk exactly the same table the running app mounts. Enumerating
+ * routes by re-parsing index.ts, or by hand-listing routers in a test,
+ * both drift the moment someone adds a router — which is precisely the
+ * failure this table exists to make impossible.
+ *
+ * ORDER IS SIGNIFICANT and load-bearing in several places; the comments
+ * below record why. Express matches mounts in array order, so moving an
+ * entry can silently change which router answers a request.
+ */
+
+import type { Router } from 'express';
+
+import authRoutes from './auth';
+import twoFactorRoutes from './auth/twoFactor';
+import passkeyRoutes from './auth/passkeys';
+import flightRoutes from './flights';
+import upcomingRoutes from './upcoming';
+import photoJourneyRoutes from './photoJourneys';
+import flightLookupRoutes from './flightLookup';
+import statsRoutes from './stats';
+import airportRoutes from './airports';
+import airlineLogoRoutes from './airlineLogos';
+import achievementRoutes from './achievements';
+import settingsRoutes from './settings';
+import analyticsRoutes from './analytics';
+import uploadsRoutes from './uploads';
+import emailParseRoutes from './emailParse';
+import boardingpassParseRoutes from './boardingpassParse';
+import boardingpassMatchRoutes from './boardingpassMatch';
+import pdfParseRoutes from './pdfParse';
+import diagnosticExportRoutes from './diagnosticExport';
+import diagnosticsRoutes from './diagnostics';
+import setupRoutes from './setup';
+import adminRoutes from './admin';
+import backupRoutes from './backup';
+import pendingUpdatesRoutes from './pendingUpdates';
+import templateStatusRoutes from './templateStatus';
+import parserTemplatesRoutes from './parserTemplates';
+import trainingRoutes from './training';
+import tripsRoutes from './trips';
+import immichTripRoutes from './immich/tripAlbums';
+import immichAssetProxyRoutes from './immich/assetProxy';
+import immichTripCoverRoutes from './immich/tripCover';
+import passwordResetRoutes from './passwordReset';
+import suggestionsRoutes from './suggestions';
+import portsRoutes from './ports';
+import shipsRoutes from './ships';
+import airlinesRoutes from './airlines';
+import aircraftRoutes from './aircraft';
+import cruisesRouter from './cruises';
+import cruiseRouteOverrideRoutes from './cruises/routeOverride';
+import currenciesRouter from './currencies';
+import lodgingRouter from './lodging';
+import placesRouter from './places';
+import placeVisitPhotoRouter from './places/visitPhotos';
+import placeListsRouter from './placeLists';
+import curatedListsRouter from './placeLists/curated';
+import lodgingChainsRouter from './lodgingChains';
+import lodgingMembershipsRouter from './lodgingMemberships';
+import lodgingImportRoutes from './lodgingImport';
+import importBatchRoutes from './importBatches';
+import companionRoutes from './companions';
+import openapiRoutes from './openapi';
+import importRoutes from './import';
+import pairingRoutes from './pairing';
+import appSettingsRoutes from './appSettings';
+import geoRoutes from './geo';
+
+export interface ApiMount {
+  /** Mount path, always absolute and always under /api/v1. */
+  base: string;
+  router: Router;
+  /**
+   * Stable identifier used by the OpenAPI coverage guard to classify a
+   * mount. Must be unique across the table — several routers share a
+   * `base`, so `base` alone cannot address an entry.
+   */
+  id: string;
+}
+
+export const apiMounts: ApiMount[] = [
+  // OpenAPI spec + Swagger UI mounted FIRST so /api/v1/docs and
+  // /api/v1/openapi.json don't fall through into authenticated routers.
+  { id: 'openapi', base: '/api/v1', router: openapiRoutes },
+  { id: 'setup', base: '/api/v1/setup', router: setupRoutes },
+  { id: 'admin', base: '/api/v1/admin', router: adminRoutes },
+  // Mounted BEFORE the generic /api/v1/auth routers so a future catch-all there
+  // can never swallow the two-factor endpoints.
+  { id: 'auth.twoFactor', base: '/api/v1/auth/2fa', router: twoFactorRoutes },
+  { id: 'auth.passkeys', base: '/api/v1/auth/passkeys', router: passkeyRoutes },
+  { id: 'auth', base: '/api/v1/auth', router: authRoutes },
+  { id: 'auth.passwordReset', base: '/api/v1/auth', router: passwordResetRoutes },
+  { id: 'flights', base: '/api/v1/flights', router: flightRoutes },
+  // The dashboard tab strip's "next up" line — one route for every domain,
+  // so the strip never depends on which tab happens to have loaded.
+  { id: 'upcoming', base: '/api/v1/upcoming', router: upcomingRoutes },
+  { id: 'photoJourneys', base: '/api/v1/photo-journeys', router: photoJourneyRoutes },
+  { id: 'flightLookup', base: '/api/v1/flight-lookup', router: flightLookupRoutes },
+  { id: 'stats', base: '/api/v1/stats', router: statsRoutes },
+  { id: 'airports', base: '/api/v1/airports', router: airportRoutes },
+  { id: 'airlineLogos', base: '/api/v1/airline-logos', router: airlineLogoRoutes },
+  { id: 'achievements', base: '/api/v1/achievements', router: achievementRoutes },
+  { id: 'settings', base: '/api/v1/settings', router: settingsRoutes },
+  { id: 'analytics', base: '/api/v1/analytics', router: analyticsRoutes },
+  { id: 'uploads', base: '/api/v1/uploads', router: uploadsRoutes },
+  { id: 'emailParse', base: '/api/v1', router: emailParseRoutes },
+  { id: 'boardingpassParse', base: '/api/v1', router: boardingpassParseRoutes },
+  { id: 'boardingpassMatch', base: '/api/v1/boardingpass', router: boardingpassMatchRoutes },
+  { id: 'pdfParse', base: '/api/v1', router: pdfParseRoutes },
+  { id: 'diagnosticExport', base: '/api/v1', router: diagnosticExportRoutes },
+  { id: 'diagnostics', base: '/api/v1', router: diagnosticsRoutes },
+  { id: 'parserTemplates', base: '/api/v1/parser-templates', router: parserTemplatesRoutes },
+  { id: 'backup', base: '/api/v1/backup', router: backupRoutes },
+  { id: 'pendingUpdates', base: '/api/v1/pending-updates', router: pendingUpdatesRoutes },
+  { id: 'templateStatus', base: '/api/v1/template-status', router: templateStatusRoutes },
+  { id: 'training', base: '/api/v1/training', router: trainingRoutes },
+  { id: 'trips', base: '/api/v1', router: tripsRoutes },
+  { id: 'immich.tripAlbums', base: '/api/v1', router: immichTripRoutes },
+  { id: 'immich.assetProxy', base: '/api/v1', router: immichAssetProxyRoutes },
+  { id: 'immich.tripCover', base: '/api/v1', router: immichTripCoverRoutes },
+  { id: 'suggestions', base: '/api/v1/suggestions', router: suggestionsRoutes },
+  { id: 'ports', base: '/api/v1/ports', router: portsRoutes },
+  { id: 'ships', base: '/api/v1/ships', router: shipsRoutes },
+  { id: 'airlines', base: '/api/v1/airlines', router: airlinesRoutes },
+  { id: 'aircraft', base: '/api/v1/aircraft', router: aircraftRoutes },
+  { id: 'cruises', base: '/api/v1/cruises', router: cruisesRouter },
+  // Same-prefix satellite router, same pattern as authRoutes + passwordResetRoutes
+  // above — split out of cruises.ts once that file crossed the 800-line max.
+  { id: 'cruises.routeOverride', base: '/api/v1/cruises', router: cruiseRouteOverrideRoutes },
+  { id: 'currencies', base: '/api/v1/currencies', router: currenciesRouter },
+  { id: 'lodging', base: '/api/v1/lodging', router: lodgingRouter },
+  // Photo proof for a visit — same prefix, own file, split out before places.ts
+  // approaches the 800-line max. Mounted first so nothing depends on segment
+  // counts to keep the two routers apart.
+  { id: 'places.visitPhotos', base: '/api/v1/places', router: placeVisitPhotoRouter },
+  { id: 'places', base: '/api/v1/places', router: placesRouter },
+  // Curated checklists mount FIRST on the same path: '/curated' would
+  // otherwise be captured by the lists router's '/:id' and answered 404.
+  { id: 'placeLists.curated', base: '/api/v1/place-lists/curated', router: curatedListsRouter },
+  { id: 'placeLists', base: '/api/v1/place-lists', router: placeListsRouter },
+  { id: 'lodgingChains', base: '/api/v1/lodging-chains', router: lodgingChainsRouter },
+  { id: 'lodgingMemberships', base: '/api/v1/lodging-memberships', router: lodgingMembershipsRouter },
+  { id: 'lodgingImport', base: '/api/v1/lodging-import', router: lodgingImportRoutes },
+  { id: 'importBatches', base: '/api/v1/import-batches', router: importBatchRoutes },
+  { id: 'companions', base: '/api/v1/companions', router: companionRoutes },
+  { id: 'import', base: '/api/v1/import', router: importRoutes },
+  { id: 'pairing', base: '/api/v1/pairing', router: pairingRoutes },
+  { id: 'appSettings', base: '/api/v1/app-settings', router: appSettingsRoutes },
+  { id: 'geo', base: '/api/v1/geo', router: geoRoutes },
+];

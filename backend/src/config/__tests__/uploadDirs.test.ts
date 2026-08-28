@@ -13,10 +13,16 @@ import { BACKED_UP_UPLOAD_DIRS } from '../uploadDirs';
 function collectUploadDirNamesFromSource(): Set<string> {
   const root = path.join(__dirname, '../..');
   const found = new Set<string>();
-  // Only the constant form — `path.join(__dirname, '../../uploads/<name>')`.
-  // A route path in a comment ("POST /api/v1/uploads/receipt") is not a
-  // directory and must not be mistaken for one.
-  const pattern = /['"][^'"]*\/uploads\/([a-z0-9-]+)['"]/g;
+  // Only the constant form — `path.join(__dirname, '../../uploads/<name>')`,
+  // anchored on the `../../` prefix that form always carries.
+  //
+  // A route path is not a directory and must not be mistaken for one. That
+  // holds whether it sits in a comment ("POST /api/v1/uploads/receipt") or in
+  // a string, as the OpenAPI endpoint inventory lists it: "POST
+  // /uploads/receipt" names an endpoint, while the directory behind it is
+  // `receipts`. Matching any string that merely ends in `/uploads/<name>`
+  // demanded a backup entry for a directory that does not exist.
+  const pattern = /['"]\.\.\/\.\.\/uploads\/([a-z0-9-]+)['"]/g;
 
   const walk = (dir: string): void => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
