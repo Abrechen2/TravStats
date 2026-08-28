@@ -12,6 +12,27 @@ import { resolveCountryCode } from "../../shared/geo/countryCode";
 // `portGeocoder.ts`.
 const USER_AGENT = "TravStats/2.0 (self-hosted travel logbook; +https://travstats.de)";
 const MIN_INTERVAL_MS = 1000;
+
+/**
+ * Which language the geocoder should answer in.
+ *
+ * Without this Nominatim replies in the LOCAL language of the place, so a
+ * German logbook filled itself with 日光市, مصر and Հայաստան — text most of
+ * its readers cannot read, sort, or type into a search box. Measured on a real
+ * instance: 21 of 54 places and 15 of 284 properties came back in a script the
+ * owner does not read.
+ *
+ * German first, English as the fallback for everything German has no exonym
+ * for. Both are Latin script, which is the actual requirement — the point is
+ * not the language, it is that the answer stays readable in the alphabet the
+ * rest of the app is written in.
+ *
+ * Deliberately NOT the user's UI language: these strings are stored, shared by
+ * every reader of the instance, and used for grouping. A field that changed
+ * script depending on who last saved a row would be worse than one that is
+ * consistently wrong.
+ */
+const GEOCODER_LANGUAGES = "de,en";
 const REQUEST_TIMEOUT_MS = 5000;
 
 export interface Coordinates {
@@ -207,9 +228,13 @@ async function fetchAddress(
 ): Promise<GeocodeParts | null> {
   const url =
     `${baseUrl}/reverse?lat=${encodeURIComponent(String(lat))}` +
-    `&lon=${encodeURIComponent(String(lon))}&format=json&zoom=18&addressdetails=1`;
+    `&lon=${encodeURIComponent(String(lon))}&format=json&zoom=18&addressdetails=1` +
+    `&accept-language=${encodeURIComponent(GEOCODER_LANGUAGES)}`;
   const res = await fetch(url, {
-    headers: { "User-Agent": USER_AGENT },
+    // Nominatim reads the language from the header as well, and honours
+    // whichever it sees — sending both is what makes a self-hosted instance
+    // behave like the public one.
+    headers: { "User-Agent": USER_AGENT, "Accept-Language": GEOCODER_LANGUAGES },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!res.ok) {

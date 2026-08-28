@@ -160,3 +160,87 @@ describe("place address backfill", () => {
     expect(result.attempted).toBe(2);
   });
 });
+
+/**
+ * Rows recorded before the geocoder was asked for `de,en` hold text in the
+ * local script. They are refetched — the one case where this pass replaces a
+ * stored value rather than filling a gap.
+ */
+describe("unreadable fields are refetched", () => {
+  let scriptUserId: string;
+
+  beforeAll(async () => {
+    await prisma.user.deleteMany({ where: { username: "scriptuser" } });
+    const u = await prisma.user.create({
+      data: { username: "scriptuser", passwordHash: await hashPassword("password123") },
+    });
+    scriptUserId = u.id;
+  });
+
+  beforeEach(async () => {
+    mockComplete.mockReset();
+    await prisma.place.deleteMany({ where: { userId: scriptUserId } });
+  });
+
+  afterAll(async () => {
+    await prisma.place.deleteMany({ where: { userId: scriptUserId } });
+    await prisma.user.deleteMany({ where: { id: scriptUserId } });
+  });
+
+  const mkPlace = (over: Record<string, unknown>) =>
+    prisma.place.create({
+      data: {
+        userId: scriptUserId,
+        name: "Ort",
+        category: "landmark",
+        lat: 35.7,
+        lon: 139.8,
+        visited: true,
+        ...over,
+      },
+    });
+
+  it("treats a field in another script as missing, so the geocoder refills it", async () => {
+    const place = await mkPlace({ city: "日光市", country: "日本", address: "長橋" });
+    mockComplete.mockResolvedValue({ city: "Nikko", country: "Japan", address: "Nagabashi" });
+
+    await completeMissingPlaceAddresses(scriptUserId);
+
+    // The helper is handed nulls for the unreadable fields — that is what makes
+    // a fill-only-gaps function replace them.
+    expect(mockComplete).toHaveBeenCalledWith(
+      expect.objectContaining({ city: null, country: null, address: null }),
+    );
+    const after = await prisma.place.findUnique({ where: { id: place.id } });
+    expect(after?.city).toBe("Nikko");
+    expect(after?.country).toBe("Japan");
+  });
+
+  it("passes accented Latin text through untouched while filling a gap beside it", async () => {
+    // The rule is about the script, never the wording. This row IS a candidate
+    // — its address is missing — so the helper is consulted, and the readable
+    // fields must reach it as they are stored rather than as nulls. A row that
+    // is complete AND readable is not consulted at all; that is the next test.
+    const place = await mkPlace({ city: "Lëtzebuerg", country: "Lëtzebuerg", address: null });
+    mockComplete.mockResolvedValue({ address: "Rue du Marché" });
+
+    await completeMissingPlaceAddresses(scriptUserId);
+
+    expect(mockComplete).toHaveBeenCalledWith(
+      expect.objectContaining({ city: "Lëtzebuerg", country: "Lëtzebuerg", address: null }),
+    );
+    const after = await prisma.place.findUnique({ where: { id: place.id } });
+    expect(after?.city).toBe("Lëtzebuerg");
+    expect(after?.address).toBe("Rue du Marché");
+  });
+
+  it("does not consult the geocoder for a row that is complete and readable", async () => {
+    await mkPlace({ city: "Roma", country: "Italien", address: "Via Roma 1" });
+    mockComplete.mockResolvedValue({ city: "X" });
+
+    const result = await completeMissingPlaceAddresses(scriptUserId);
+
+    expect(result.attempted).toBe(0);
+    expect(mockComplete).not.toHaveBeenCalled();
+  });
+});

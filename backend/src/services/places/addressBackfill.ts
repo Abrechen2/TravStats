@@ -28,6 +28,7 @@ import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import { completeAddressFromCoordinates } from "../geo/nominatim";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
+import { anyNonLatin, hasNonLatinScript } from "../../shared/geo/latinScript";
 
 /**
  * Upper bound per run. Nominatim is throttled to 1 request/second
@@ -73,17 +74,27 @@ export async function completeMissingPlaceAddresses(
   let filled = 0;
 
   try {
+    // Two kinds of row need this pass: one that never got a description, and
+    // one that got an UNREADABLE one. Until the geocoder was asked for `de,en`
+    // it answered in the local language, so rows recorded earlier hold 日光市
+    // and مصر — text the reader cannot read, sort or type. Those are refetched
+    // rather than left, which is the one case where this pass overwrites
+    // instead of filling. See `writeCompletion`.
     const rows = await prisma.place.findMany({
-      where: {
-        userId,
-        OR: [{ address: null }, { city: null }, { country: null }],
-      },
+      where: { userId },
       select: SELECT,
       orderBy: { createdAt: "asc" },
       take: limit,
     });
+    const candidates = rows.filter(
+      (r) =>
+        r.address === null ||
+        r.city === null ||
+        r.country === null ||
+        anyNonLatin(r.address, r.city, r.country),
+    );
 
-    for (const row of rows) {
+    for (const row of candidates) {
       attempted++;
       try {
         if (await writeCompletion(row)) filled++;
@@ -133,12 +144,19 @@ async function writeCompletion(row: {
   city: string | null;
   country: string | null;
 }): Promise<boolean> {
+  // A field in a script the reader cannot read is treated as ABSENT, so the
+  // geo helper — which only ever fills gaps — refetches it. That is the single
+  // exception to "never overwrite what is stored", and it is narrow on
+  // purpose: it applies to the script, never to the wording. "Lëtzebuerg" and
+  // "Đà Nẵng" are Latin and therefore left exactly as they are.
+  const readable = (v: string | null): string | null => (hasNonLatinScript(v) ? null : v);
+
   const filled = await completeAddressFromCoordinates({
     lat: row.lat,
     lon: row.lon,
-    address: row.address,
-    city: row.city,
-    country: row.country,
+    address: readable(row.address),
+    city: readable(row.city),
+    country: readable(row.country),
   });
   if (!filled) return false;
 
