@@ -875,19 +875,31 @@ export interface PlaceAppearanceState {
   colorConfig?: PlaceColorConfig;
   onColorModeChange?: (m: PlaceColorMode) => void;
   onColorChange?: (slot: PlaceColorSlot, c: Rgb) => void;
+  /** Marker-size multiplier and its setter, threaded down from
+   *  `MapContainer3D` exactly as the lodging pair is. Optional so a panel with
+   *  no size story — or a test rendering only the colour controls — still gets
+   *  a valid section instead of a dead slider. */
+  markerSize?: number;
+  onMarkerSizeChange?: (s: number) => void;
 }
 
 export interface PlaceAppearanceSectionProps extends PlaceAppearanceState {
   /** Uppercase section header ("Orte"). */
   title: string;
+  /** Caption for the size slider. Required only when the slider is shown. */
+  sizeLabel?: string;
 }
 
 /**
  * The POI domain's appearance controls: colour MODE and the colours it uses.
  *
- * NO marker-size slider, unlike lodging — place pins share the airport/port dot
- * sizing and have no size store of their own, so a slider here would be a
- * control that does nothing. That is the one thing this panel exists to avoid.
+ * The marker-size slider was missing here until 2026-08-28, on the reasoning
+ * that place pins share the airport/port dot sizing and had no size store of
+ * their own — true at the time, and the reason both callers passed a hardcoded
+ * `1`. But every neighbouring domain offers one, so the panel answered "how big
+ * are my places" with silence. Places now own the same `markerSize` pair
+ * lodging does, persisted through `mapAppearance`; the dot still shares
+ * `markerDotStyle`, so a place at 1x remains exactly an airport dot's size.
  *
  * `list` mode shows only its FALLBACK colour: the rest of that mode's colours
  * are the user's own list colours, edited on the list itself. A second place to
@@ -898,13 +910,18 @@ export function PlaceAppearanceSection({
   colorConfig = DEFAULT_PLACE_COLOR_CONFIG,
   onColorModeChange,
   onColorChange,
+  markerSize,
+  onMarkerSizeChange,
+  sizeLabel,
 }: PlaceAppearanceSectionProps): JSX.Element | null {
   const { t } = useTranslation();
   const { mode, colors } = colorConfig;
 
-  // Nothing to offer without both handlers — render nothing rather than a
-  // dead header.
-  if (!onColorModeChange || !onColorChange) return null;
+  const showColors = Boolean(onColorModeChange && onColorChange);
+  const showSize = markerSize !== undefined && onMarkerSizeChange !== undefined;
+
+  // Nothing to offer at all — render nothing rather than a dead header.
+  if (!showColors && !showSize) return null;
 
   const modeOptions = PLACE_COLOR_MODES.map((m) => ({
     value: m,
@@ -915,27 +932,46 @@ export function PlaceAppearanceSection({
     <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
       <SectionLabel>{title}</SectionLabel>
 
-      <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
-        {t("map:globe.panel.placeColorMode.label")}
-      </div>
-      <SegControl<PlaceColorMode>
-        value={mode}
-        onChange={onColorModeChange}
-        options={modeOptions}
-      />
-      <div className="mt-1 text-[10px] leading-snug" style={{ color: "rgba(241,245,249,0.45)" }}>
-        {t(`map:globe.panel.placeColorMode.${mode}.hint`)}
-      </div>
+      {showColors && onColorModeChange && onColorChange && (
+        <>
+          <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
+            {t("map:globe.panel.placeColorMode.label")}
+          </div>
+          <SegControl<PlaceColorMode>
+            value={mode}
+            onChange={onColorModeChange}
+            options={modeOptions}
+          />
+          <div
+            className="mt-1 text-[10px] leading-snug"
+            style={{ color: "rgba(241,245,249,0.45)" }}
+          >
+            {t(`map:globe.panel.placeColorMode.${mode}.hint`)}
+          </div>
 
-      {slotsForPlaceMode(mode).map((slot) => (
-        <ColorRow
-          key={slot}
-          caption={t(`map:globe.panel.placeColorMode.swatch.${slot}`)}
-          value={colors[slot]}
-          presets={PLACE_COLOR_PRESETS}
-          onChange={(c) => onColorChange(slot, c)}
+          {slotsForPlaceMode(mode).map((slot) => (
+            <ColorRow
+              key={slot}
+              caption={t(`map:globe.panel.placeColorMode.swatch.${slot}`)}
+              value={colors[slot]}
+              presets={PLACE_COLOR_PRESETS}
+              onChange={(c) => onColorChange(slot, c)}
+            />
+          ))}
+        </>
+      )}
+
+      {showSize && onMarkerSizeChange && (
+        <Slider
+          label={sizeLabel ?? t("map:globe.panel.size")}
+          value={markerSize}
+          min={0}
+          max={1.6}
+          step={0.1}
+          onChange={onMarkerSizeChange}
+          format={(v) => (v <= 0 ? t("map:globe.panel.off") : `${v.toFixed(1)}×`)}
         />
-      ))}
+      )}
     </div>
   );
 }
