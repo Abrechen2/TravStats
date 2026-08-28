@@ -4,61 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
-import authRoutes from './routes/auth';
-import twoFactorRoutes from './routes/auth/twoFactor';
-import passkeyRoutes from './routes/auth/passkeys';
-import flightRoutes from './routes/flights';
-import upcomingRoutes from './routes/upcoming';
-import photoJourneyRoutes from './routes/photoJourneys';
-import flightLookupRoutes from './routes/flightLookup';
-import statsRoutes from './routes/stats';
-import airportRoutes from './routes/airports';
-import airlineLogoRoutes from './routes/airlineLogos';
-import achievementRoutes from './routes/achievements';
-import settingsRoutes from './routes/settings';
-import analyticsRoutes from './routes/analytics';
-import uploadsRoutes from './routes/uploads';
-import emailParseRoutes from './routes/emailParse';
-import boardingpassParseRoutes from './routes/boardingpassParse';
-import boardingpassMatchRoutes from './routes/boardingpassMatch';
-import pdfParseRoutes from './routes/pdfParse';
-import diagnosticExportRoutes from './routes/diagnosticExport';
-import diagnosticsRoutes from './routes/diagnostics';
-import setupRoutes from './routes/setup';
-import adminRoutes from './routes/admin';
-import backupRoutes from './routes/backup';
-import pendingUpdatesRoutes from './routes/pendingUpdates';
-import templateStatusRoutes from './routes/templateStatus';
-import parserTemplatesRoutes from './routes/parserTemplates';
-import trainingRoutes from './routes/training';
-import tripsRoutes from './routes/trips';
-import immichTripRoutes from './routes/immich/tripAlbums';
-import immichAssetProxyRoutes from './routes/immich/assetProxy';
-import immichTripCoverRoutes from './routes/immich/tripCover';
-import passwordResetRoutes from './routes/passwordReset';
-import suggestionsRoutes from './routes/suggestions';
-import portsRoutes from './routes/ports';
-import shipsRoutes from './routes/ships';
-import airlinesRoutes from './routes/airlines';
-import aircraftRoutes from './routes/aircraft';
-import cruisesRouter from './routes/cruises';
-import cruiseRouteOverrideRoutes from './routes/cruises/routeOverride';
-import currenciesRouter from './routes/currencies';
-import lodgingRouter from './routes/lodging';
-import placesRouter from './routes/places';
-import placeVisitPhotoRouter from './routes/places/visitPhotos';
-import placeListsRouter from './routes/placeLists';
-import curatedListsRouter from './routes/placeLists/curated';
-import lodgingChainsRouter from './routes/lodgingChains';
-import lodgingMembershipsRouter from './routes/lodgingMemberships';
-import lodgingImportRoutes from './routes/lodgingImport';
-import importBatchRoutes from './routes/importBatches';
-import companionRoutes from './routes/companions';
-import openapiRoutes from './routes/openapi';
-import importRoutes from './routes/import';
-import pairingRoutes from './routes/pairing';
-import appSettingsRoutes from './routes/appSettings';
-import geoRoutes from './routes/geo';
+import { apiMounts } from './routes/mounts';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { prisma } from './db';
@@ -257,75 +203,12 @@ app.get('/api/v1/parser-capabilities', async (_req, res, next) => {
   }
 });
 
-// API routes
-// OpenAPI spec + Swagger UI mounted FIRST so /api/v1/docs and
-// /api/v1/openapi.json don't fall through into authenticated routers.
-app.use('/api/v1', openapiRoutes);
-app.use('/api/v1/setup', setupRoutes);
-app.use('/api/v1/admin', adminRoutes);
-// Mounted BEFORE the generic /api/v1/auth routers so a future catch-all there
-// can never swallow the two-factor endpoints.
-app.use('/api/v1/auth/2fa', twoFactorRoutes);
-app.use('/api/v1/auth/passkeys', passkeyRoutes);
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/auth', passwordResetRoutes);
-app.use('/api/v1/flights', flightRoutes);
-// The dashboard tab strip's "next up" line — one route for every domain,
-// so the strip never depends on which tab happens to have loaded.
-app.use('/api/v1/upcoming', upcomingRoutes);
-app.use('/api/v1/photo-journeys', photoJourneyRoutes);
-app.use('/api/v1/flight-lookup', flightLookupRoutes);
-app.use('/api/v1/stats', statsRoutes);
-app.use('/api/v1/airports', airportRoutes);
-app.use('/api/v1/airline-logos', airlineLogoRoutes);
-app.use('/api/v1/achievements', achievementRoutes);
-app.use('/api/v1/settings', settingsRoutes);
-app.use('/api/v1/analytics', analyticsRoutes);
-app.use('/api/v1/uploads', uploadsRoutes);
-app.use('/api/v1', emailParseRoutes);
-app.use('/api/v1', boardingpassParseRoutes);
-app.use('/api/v1/boardingpass', boardingpassMatchRoutes);
-app.use('/api/v1', pdfParseRoutes);
-app.use('/api/v1', diagnosticExportRoutes);
-app.use('/api/v1', diagnosticsRoutes);
-app.use('/api/v1/parser-templates', parserTemplatesRoutes);
-app.use('/api/v1/backup', backupRoutes);
-app.use('/api/v1/pending-updates', pendingUpdatesRoutes);
-app.use('/api/v1/template-status', templateStatusRoutes);
-app.use('/api/v1/training', trainingRoutes);
-app.use('/api/v1', tripsRoutes);
-app.use('/api/v1', immichTripRoutes);
-app.use('/api/v1', immichAssetProxyRoutes);
-app.use('/api/v1', immichTripCoverRoutes);
-app.use('/api/v1/suggestions', suggestionsRoutes);
-app.use('/api/v1/ports', portsRoutes);
-app.use('/api/v1/ships', shipsRoutes);
-app.use('/api/v1/airlines', airlinesRoutes);
-app.use('/api/v1/aircraft', aircraftRoutes);
-app.use('/api/v1/cruises', cruisesRouter);
-// Same-prefix satellite router, same pattern as authRoutes + passwordResetRoutes
-// above — split out of cruises.ts once that file crossed the 800-line max.
-app.use('/api/v1/cruises', cruiseRouteOverrideRoutes);
-app.use('/api/v1/currencies', currenciesRouter);
-app.use('/api/v1/lodging', lodgingRouter);
-// Photo proof for a visit — same prefix, own file, split out before places.ts
-// approaches the 800-line max. Mounted first so nothing depends on segment
-// counts to keep the two routers apart.
-app.use('/api/v1/places', placeVisitPhotoRouter);
-app.use('/api/v1/places', placesRouter);
-// Curated checklists mount FIRST on the same path: '/curated' would
-// otherwise be captured by the lists router's '/:id' and answered 404.
-app.use('/api/v1/place-lists/curated', curatedListsRouter);
-app.use('/api/v1/place-lists', placeListsRouter);
-app.use('/api/v1/lodging-chains', lodgingChainsRouter);
-app.use('/api/v1/lodging-memberships', lodgingMembershipsRouter);
-app.use('/api/v1/lodging-import', lodgingImportRoutes);
-app.use('/api/v1/import-batches', importBatchRoutes);
-app.use('/api/v1/companions', companionRoutes);
-app.use('/api/v1/import', importRoutes);
-app.use('/api/v1/pairing', pairingRoutes);
-app.use('/api/v1/app-settings', appSettingsRoutes);
-app.use('/api/v1/geo', geoRoutes);
+// API routes — the ordered mount table lives in routes/mounts.ts so the
+// OpenAPI coverage guard can walk exactly what the app serves. Order is
+// significant; the reasons are documented next to each entry there.
+for (const { base, router } of apiMounts) {
+  app.use(base, router);
+}
 
 // 404 handler for unmatched routes (must be before errorHandler)
 app.use(notFoundHandler);
