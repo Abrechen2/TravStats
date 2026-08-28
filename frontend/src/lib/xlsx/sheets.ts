@@ -18,6 +18,7 @@ import type { Cruise, CruiseStop } from "../../types/cruise";
 import type { Lodging, LodgingStay } from "../../types/lodging";
 import type { Place, PlaceVisit } from "../../types/place";
 import { refCell, type SheetSpec } from "./sheetSpec";
+import { placeCountryLabel } from "../placeCountry";
 
 /** Translator shape, so this module needs no react-i18next import. */
 type T = (key: string) => string;
@@ -195,7 +196,9 @@ export function lodgingStaySheet(t: T): SheetSpec<LodgingStayRow> {
 
 // ---------------------------------------------------------------- places
 
-export function placeSheet(t: T): SheetSpec<Place> {
+/** `locale` resolves the country name; the workbook is written in the
+ *  reader's language, same as its sheet names and headers. */
+export function placeSheet(t: T, locale = "de"): SheetSpec<Place> {
   return {
     key: "places",
     name: t("xlsx:sheets.places"),
@@ -211,7 +214,13 @@ export function placeSheet(t: T): SheetSpec<Place> {
       { key: "city", header: t("xlsx:columns.city"), kind: "text", width: 18,
         value: (p) => p.city },
       { key: "country", header: t("xlsx:columns.country"), kind: "text", width: 16,
-        value: (p) => p.country },
+        // Resolved from the ISO code rather than printed as stored. Reverse
+        // geocoding writes the country in its own language, so the raw column
+        // held "Egypt" and "مصر" for the same country — four spellings for two
+        // countries in one sheet, which is exactly what a filter cannot group.
+        // Re-importing this writes the resolved name back, which unifies the
+        // stored value; that is a wanted side effect, not a lost one.
+        value: (p) => placeCountryLabel(p, locale) || p.country },
       { key: "lat", header: t("xlsx:columns.lat"), kind: "number", width: 12,
         value: (p) => p.lat },
       { key: "lon", header: t("xlsx:columns.lon"), kind: "number", width: 12,

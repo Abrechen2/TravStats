@@ -19,7 +19,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { FlagImg } from "../lib/countryFlag";
 import { continentLabel } from "../lib/continentLabel";
-import { placeCountryLabel } from "../lib/placeCountry";
+import { placeCountryCode, placeCountryLabel } from "../lib/placeCountry";
 import { logger } from "../lib/logger";
 import { deletePlace, listPlaces } from "../lib/api/places";
 import { useToastStore } from "../store/toastStore";
@@ -182,7 +182,9 @@ export default function PlacesListPage(): JSX.Element {
     const seen = new Map<string, string>();
     for (const p of rows) {
       if (!p.isoCountryCode) continue;
-      seen.set(p.isoCountryCode, p.country ?? p.isoCountryCode);
+      // Label from the code, not from the row's own spelling — otherwise the
+      // dropdown reads "مصر" for a German reader whenever that row sorted first.
+      seen.set(p.isoCountryCode, placeCountryLabel(p, i18n.language) || p.isoCountryCode);
     }
     return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1], i18n.language));
   }, [rows, i18n.language]);
@@ -230,7 +232,11 @@ export default function PlacesListPage(): JSX.Element {
     const countries = new Set<string>();
     let visited = 0;
     for (const p of filtered) {
-      if (p.country) countries.add(p.country);
+      // Count by ISO, never by the stored text. Reverse geocoding writes the
+      // country in ITS OWN language — "Egypt" from one row and "مصر" from the
+      // next are the same country, and counting the strings made it two.
+      const cc = placeCountryCode(p);
+      if (cc) countries.add(cc);
       if (p.visited) visited += 1;
     }
     return [

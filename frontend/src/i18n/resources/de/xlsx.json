@@ -101,6 +101,29 @@
       "lodging_needs_id": "Eine neue Unterkunft lässt sich nicht aus der Tabelle anlegen — dafür gibt es das Formular.",
       "unknown_trip": "Die angegebene Reise gibt es in deinem Konto nicht.",
       "too_many_rows": "Das Blatt hat zu viele Zeilen."
-    }
+    },
+    "modeLabel": "Was soll mit vorhandenen Einträgen passieren?",
+    "modes": {
+      "add": {
+        "label": "Nur hinzufügen",
+        "hint": "Legt neue Einträge an. Was schon da ist, bleibt unverändert — auch wenn die Datei etwas anderes sagt."
+      },
+      "merge": {
+        "label": "Zusammenlegen",
+        "hint": "Zeilen mit ID ändern den vorhandenen Eintrag, Zeilen ohne ID werden neu angelegt. Nichts wird gelöscht."
+      },
+      "replace": {
+        "label": "Bestand ersetzen",
+        "hint": "Wie Zusammenlegen — und löscht zusätzlich alles, was in der Datei fehlt."
+      }
+    },
+    "replaceWarningTitle": "Das löscht Einträge, die du gerade nicht siehst",
+    "replaceWarning": "Alles, was in der Datei nicht vorkommt, wird gelöscht. Diese Einträge stehen nicht in der Tabelle, die du geöffnet hast — sie fehlen darin. Vor dem Schreiben wird automatisch ein vollständiges Backup angelegt, mit dem sich der Import rückgängig machen lässt.",
+    "willDelete": "{{count}} Einträge werden gelöscht",
+    "willDelete_one": "1 Eintrag wird gelöscht",
+    "confirmReplace": "Ich habe verstanden, dass {{count}} Einträge gelöscht werden",
+    "backupTaken": "Backup vorher angelegt: {{id}}",
+    "backupFailed": "Das Sicherheits-Backup ist fehlgeschlagen — es wurde nichts geändert.",
+    "emptySheetNote": "Ein leeres Blatt löscht nichts. Zum Leeren müssen die Zeilen einzeln entfernt werden."
   }
 }

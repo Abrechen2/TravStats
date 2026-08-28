@@ -21,8 +21,23 @@
  * the other row exists.
  */
 
+/**
+ * How an import treats the rows already in the database.
+ *
+ *  - `add`     only creates. A row carrying an id is SKIPPED, never written.
+ *              Nothing existing can change, which makes this the mode to
+ *              reach for when a file's provenance is uncertain.
+ *  - `merge`   the default. A row with an id updates the record it names, a
+ *              row without one is created. Rows absent from the file are left
+ *              alone.
+ *  - `replace` merge, and then DELETES every row of the imported sheets that
+ *              the file did not mention. This is the only destructive mode,
+ *              and the only one that takes a full backup first.
+ */
+export type ImportMode = "add" | "merge" | "replace";
+
 /** What the importer intends to do with one spreadsheet row. */
-export type RowAction = "create" | "update" | "skip" | "error";
+export type RowAction = "create" | "update" | "skip" | "error" | "delete";
 
 export interface RowOutcome {
   /** 1-based row number in the sheet, as the user sees it in Excel. */
@@ -44,14 +59,28 @@ export interface SheetOutcome {
   updated: number;
   skipped: number;
   errors: number;
+  /**
+   * Rows that exist in the database and are NOT in the file — deleted in
+   * `replace` mode, counted but untouched in every other mode and in a dry
+   * run. This number is what the confirmation dialog has to show: it is the
+   * damage, and it is invisible in the sheet the user is looking at.
+   */
+  deleted: number;
   rows: RowOutcome[];
 }
 
 export interface ImportOutcome {
   dryRun: boolean;
+  mode: ImportMode;
   sheets: SheetOutcome[];
   /** True when no sheet produced an error — what the UI gates "Apply" on. */
   clean: boolean;
+  /**
+   * Id of the backup taken before a destructive import, so the answer to
+   * "undo this" is a restore rather than an apology. Null in every
+   * non-destructive case, and in a dry run.
+   */
+  backupId: string | null;
 }
 
 /** One sheet as it arrives from the client: rows of column-key → cell text. */
@@ -61,13 +90,14 @@ export interface IncomingSheet {
 }
 
 /** Tally a list of row outcomes into the counts the preview shows. */
-export function summarise(key: string, rows: RowOutcome[]): SheetOutcome {
+export function summarise(key: string, rows: RowOutcome[], deleted = 0): SheetOutcome {
   return {
     key,
     created: rows.filter((r) => r.action === "create").length,
     updated: rows.filter((r) => r.action === "update").length,
     skipped: rows.filter((r) => r.action === "skip").length,
     errors: rows.filter((r) => r.action === "error").length,
+    deleted,
     rows,
   };
 }
