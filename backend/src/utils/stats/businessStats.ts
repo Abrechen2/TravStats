@@ -1,4 +1,5 @@
 import { calculateDistance } from '../geo';
+import { departureClockOf } from './departureClock';
 import type { FlightData, BusinessStats } from './types';
 import {
   addFlightDuration,
@@ -219,9 +220,9 @@ export function calculateBusinessStats(
   // but the absolute number of such entries is expected to be tiny.
   const flightsByMonth: Record<number, number> = {};
   countableFlights.forEach(f => {
-    if (!f.departureTime) return;
-    const month = new Date(f.departureTime).getMonth(); // 0-11
-    flightsByMonth[month] = (flightsByMonth[month] || 0) + 1;
+    const clock = departureClockOf(f);
+    if (!clock) return;
+    flightsByMonth[clock.month] = (flightsByMonth[clock.month] || 0) + 1;
   });
 
   const busiestMonth = Object.entries(flightsByMonth)

@@ -22,7 +22,7 @@ import { normalizeHistory } from '../utils/homeAirport';
 import { resolveCountryCode } from '../shared/geo/countryCode';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
-import { tzAwareDurationMinutes, localYearOf, type FlightTimeSemantics } from '../utils/timezone';
+import { tzAwareDurationMinutes, localWallClockOf, type FlightTimeSemantics } from '../utils/timezone';
 import {
   addFlightDuration,
   averageDurationMinutes,
@@ -424,6 +424,7 @@ router.get('/hero', async (req: AuthRequest, res: Response, next: NextFunction):
           aircraft: true,
           departureTime: true,
           arrivalTime: true,
+          depTimeSemantics: true,
           status: true,
           price: true,
           taxes: true,
@@ -434,14 +435,15 @@ router.get('/hero', async (req: AuthRequest, res: Response, next: NextFunction):
         },
       }),
     ]);
+    const datedFlights = await withDepartureClock(flights);
 
     // homeAirportHistory=[] is deliberate: this endpoint only reads
     // countryCount/airportCount, which don't depend on home-airport history —
     // only the unused farthestFromHome field does. Skips /airports's extra
     // userSettings.findUnique lookup.
     const [airportStats, funStats] = await Promise.all([
-      calculateAirportStats(flights, []),
-      calculateFunStats(flights),
+      calculateAirportStats(datedFlights, []),
+      calculateFunStats(datedFlights),
     ]);
 
     const hero: HeroStats = {
@@ -480,6 +482,35 @@ async function buildTzMap(
     // timezone lookup failed — durations fall back to naïve diff
   }
   return map;
+}
+
+/**
+ * Attach the departure airport's timezone to each row.
+ *
+ * The flight table stores instants; the clock a departure happened on lives on
+ * the airport. Every "when did I fly" figure — time of day, weekday, month,
+ * which calendar day or year a flight belongs to — has to be read on that
+ * clock, so it travels with the row into the stats modules (#266) rather than
+ * each of them resolving it, or forgetting to.
+ */
+async function withDepartureClock<
+  T extends {
+    depIata: string | null;
+    depIcao: string | null;
+    arrIata: string | null;
+    arrIcao: string | null;
+    depTimeSemantics: string;
+  },
+>(rows: T[]): Promise<Array<T & { depTimezone: string | null; depTimeSemantics: FlightTimeSemantics }>> {
+  const tzMap = await buildTzMap(rows);
+  return rows.map((f) => ({
+    ...f,
+    depTimezone:
+      (f.depIata ? tzMap.get(f.depIata) : undefined) ??
+      (f.depIcao ? tzMap.get(f.depIcao) : undefined) ??
+      null,
+    depTimeSemantics: f.depTimeSemantics as FlightTimeSemantics,
+  }));
 }
 
 async function fetchFlightDatedRows(
@@ -722,6 +753,7 @@ router.get('/fun', async (req: AuthRequest, res: Response, next: NextFunction): 
         aircraft: true,
         departureTime: true,
         arrivalTime: true,
+        depTimeSemantics: true,
         status: true,
         price: true,
         taxes: true,
@@ -735,7 +767,7 @@ router.get('/fun', async (req: AuthRequest, res: Response, next: NextFunction): 
     // Calculate stats with error handling - continue even if airport data fails
     let funStats;
     try {
-      funStats = await calculateFunStats(flights);
+      funStats = await calculateFunStats(await withDepartureClock(flights));
     } catch (statsError) {
       // If stats calculation fails (e.g., database issues), return partial stats
       // This prevents the entire endpoint from failing
@@ -816,6 +848,7 @@ router.get('/business', async (req: AuthRequest, res: Response, next: NextFuncti
         aircraft: true,
         departureTime: true,
         arrivalTime: true,
+        depTimeSemantics: true,
         status: true,
         price: true,
         taxes: true,
@@ -843,7 +876,10 @@ router.get('/business', async (req: AuthRequest, res: Response, next: NextFuncti
     // But wrap in try-catch for safety
     let businessStats;
     try {
-      businessStats = calculateBusinessStats(flights, await getBaseCurrency(userId));
+      businessStats = calculateBusinessStats(
+        await withDepartureClock(flights),
+        await getBaseCurrency(userId),
+      );
     } catch (statsError) {
       logger.error({
         operation: 'calculate_business_stats_error',
@@ -915,6 +951,7 @@ router.get('/unique', async (req: AuthRequest, res: Response, next: NextFunction
         aircraft: true,
         departureTime: true,
         arrivalTime: true,
+        depTimeSemantics: true,
         status: true,
         price: true,
         taxes: true,
@@ -939,7 +976,7 @@ router.get('/unique', async (req: AuthRequest, res: Response, next: NextFunction
     // Calculate unique stats with error handling - continue even if airport data fails
     let uniqueStats;
     try {
-      uniqueStats = await calculateUniqueStats(flights, homeHistory);
+      uniqueStats = await calculateUniqueStats(await withDepartureClock(flights), homeHistory);
     } catch (statsError) {
       // If stats calculation fails (e.g., database issues), return partial stats
       logger.error({
@@ -1022,6 +1059,7 @@ router.get(
           aircraft: true,
           departureTime: true,
           arrivalTime: true,
+          depTimeSemantics: true,
           status: true,
           price: true,
           taxes: true,
@@ -1042,7 +1080,7 @@ router.get(
           : undefined;
       const homeHistory = normalizeHistory(historyData);
 
-      const stats = await calculateAirportStats(flights, homeHistory);
+      const stats = await calculateAirportStats(await withDepartureClock(flights), homeHistory);
       res.json(stats);
     } catch (error) {
       next(error);
@@ -1323,7 +1361,7 @@ interface CountryStatsResponse {
    * zero — a comparison that could not exist, presented as data.
    *
    * The year is the one on the clock at the DEPARTURE airport (see
-   * localYearOf), not the UTC instant. A flight without a departure time
+   * localWallClockOf), not the UTC instant. A flight without a departure time
    * still counts towards `countries` but belongs to no year.
    */
   byYear: Record<string, string[]>;
@@ -1342,6 +1380,7 @@ router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunct
         arrIata: true,
         arrIcao: true,
         departureTime: true,
+        depTimeSemantics: true,
       },
     });
 
@@ -1388,7 +1427,11 @@ router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunct
       // DEPARTURE year: a red-eye that lands after midnight is still one
       // journey, and splitting its two ends across two years would count a
       // country as visited in a year the traveller never flew.
-      const year = localYearOf(f.departureTime, depAirport?.timezone ?? null);
+      const year = localWallClockOf(
+        f.departureTime,
+        depAirport?.timezone ?? null,
+        f.depTimeSemantics as FlightTimeSemantics,
+      ).year;
       if (!Number.isFinite(year)) continue;
       const bucket = countriesByYear.get(year) ?? new Set<string>();
       for (const country of touched) bucket.add(country);
