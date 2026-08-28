@@ -41,7 +41,9 @@
     "filters": {
       "status": "Status",
       "category": "Category",
-      "country": "Country"
+      "country": "Country",
+      "list": "List",
+      "allLists": "All lists"
     },
     "status": {
       "visited": "Visited",
