@@ -7,6 +7,7 @@ import { checkAndUpdateAchievements } from "../../utils/achievements";
 import { classifyVisit } from "../../shared/placeCounting";
 import { getContinent } from "../../utils/continents";
 import { buildAnchors, suggestVisits } from "../../services/places/visitSuggestions";
+import { completePlaceAddress } from "../../services/places/addressBackfill";
 import logger from "../../utils/logger";
 
 /**
@@ -393,6 +394,16 @@ router.post("/items/:itemId/tick", async (req: AuthRequest, res: Response, next:
       // Re-ticking an untickd row promotes it again without touching the name,
       // notes or coordinates the user may have corrected in the meantime.
       update: { visited: true },
+    });
+
+    // The catalogue has no address column and names a country for only 14 of
+    // its rows, so a ticked place arrives located but undescribed. Derive the
+    // rest from the pin — deliberately NOT awaited: the geocoder is throttled
+    // to 1 request/second, and someone ticking their way down the World
+    // Heritage list must not wait a second per tick for a field they did not
+    // ask for. It fills only empty columns and never throws.
+    completePlaceAddress(place.id).catch((error) => {
+      logger.error({ error, placeId: place.id }, "Failed to complete address after tick");
     });
 
     const list = await prisma.placeList.upsert({

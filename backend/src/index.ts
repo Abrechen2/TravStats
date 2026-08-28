@@ -255,6 +255,8 @@ process.on('SIGINT', async () => {
   stopAirlineLogoRefreshScheduler();
   const { stopStatusSweepScheduler } = await import('./jobs/statusSweepScheduler');
   stopStatusSweepScheduler();
+  const { stopPlaceAddressBackfillScheduler } = await import('./jobs/placeAddressBackfillScheduler');
+  stopPlaceAddressBackfillScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -273,6 +275,8 @@ process.on('SIGTERM', async () => {
   stopAirlineLogoRefreshScheduler();
   const { stopStatusSweepScheduler } = await import('./jobs/statusSweepScheduler');
   stopStatusSweepScheduler();
+  const { stopPlaceAddressBackfillScheduler } = await import('./jobs/placeAddressBackfillScheduler');
+  stopPlaceAddressBackfillScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -654,6 +658,13 @@ if (process.env.NODE_ENV !== 'test') {
       logger.info({
         operation: 'server_start_status_sweep_scheduler',
         message: 'Status sweep scheduler started',
+      });
+
+      const { startPlaceAddressBackfillScheduler } = await import('./jobs/placeAddressBackfillScheduler');
+      startPlaceAddressBackfillScheduler();
+      logger.info({
+        operation: 'server_start_place_address_backfill_scheduler',
+        message: 'Place address backfill scheduler started',
       });
     } catch (error) {
       logger.warn({

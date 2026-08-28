@@ -4,6 +4,7 @@ import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import { resolveCountryCode } from "../shared/geo/countryCode";
+import { completeAddressFromCoordinates } from "../services/geo/nominatim";
 import { getContinent } from "../utils/continents";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { classifyVisit } from "../shared/placeCounting";
@@ -228,6 +229,22 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
       }
     }
 
+    // Whatever the input method, the row ends up with a complete location —
+    // the same rule lodging follows (`routes/lodgingGeocode.ts`). A place
+    // entered by dropping a pin has a name and nothing else; the city and
+    // country it needs to be grouped, filtered and flagged come from the pin.
+    // Awaited here, unlike on the checklist tick: this is one row on an
+    // explicit save, so the address is present in the response the form gets
+    // back rather than appearing a second later.
+    const completed = await completeAddressFromCoordinates({
+      lat: input.lat,
+      lon: input.lon,
+      address: input.address,
+      city: input.city,
+      country: input.country,
+    });
+    const country = input.country ?? completed?.country ?? null;
+
     const place = await prisma.place.create({
       data: {
         userId,
@@ -235,10 +252,10 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
         category: input.category,
         lat: input.lat,
         lon: input.lon,
-        address: input.address ?? null,
-        city: input.city ?? null,
-        country: input.country ?? null,
-        isoCountryCode: resolveCountryCode(input.country ?? null),
+        address: input.address ?? completed?.address ?? null,
+        city: input.city ?? completed?.city ?? null,
+        country,
+        isoCountryCode: resolveCountryCode(country),
         externalRef: input.externalRef ?? null,
         notes: input.notes ?? null,
         visited: input.visited,

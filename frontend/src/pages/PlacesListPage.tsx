@@ -19,7 +19,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { FlagImg } from "../lib/countryFlag";
 import { continentLabel } from "../lib/continentLabel";
-import { countryName } from "../shared/geo/countryCode";
+import { placeCountryLabel } from "../lib/placeCountry";
 import { logger } from "../lib/logger";
 import { deletePlace, listPlaces } from "../lib/api/places";
 import { useToastStore } from "../store/toastStore";
@@ -83,12 +83,6 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 /** The country as a reader sees it — localised from the ISO code, falling back
  *  to whatever text the source wrote. */
-function countryLabel(place: Place, locale: string): string {
-  if (place.isoCountryCode) {
-    return countryName(place.isoCountryCode, locale) ?? place.isoCountryCode;
-  }
-  return place.country ?? "";
-}
 
 /** One label source for header, picker, aria and footer — they must agree. */
 function columnLabel(t: Translate, id: PlaceColumnId): string {
@@ -122,7 +116,7 @@ function compareRows(
     // Country and continent sort on the LOCALISED label, not the raw code: a
     // German reader expects Ägypten by Ä, and "EG" would file it under E.
     case "country":
-      return countryLabel(a, locale).localeCompare(countryLabel(b, locale), locale);
+      return placeCountryLabel(a, locale).localeCompare(placeCountryLabel(b, locale), locale);
     case "continent":
       return continentLabel(a.continent, t, "").localeCompare(
         continentLabel(b.continent, t, ""),
@@ -500,7 +494,7 @@ export default function PlacesListPage(): JSX.Element {
                       )}
                       {columnPrefs.isVisible("country") && (
                         <td className="px-4 py-3 text-[var(--text-muted)]">
-                          {countryLabel(p, i18n.language) || "—"}
+                          {placeCountryLabel(p, i18n.language) || "—"}
                         </td>
                       )}
                       {columnPrefs.isVisible("continent") && (

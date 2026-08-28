@@ -11,6 +11,7 @@ import { RowActionButton, RowActions } from "../components/table/RowActionButton
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { FlagImg } from "../lib/countryFlag";
+import { placeCountryLabel, placeCountryCode } from "../lib/placeCountry";
 import { logger } from "../lib/logger";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { createVisit, deletePlace, deleteVisit, getPlace } from "../lib/api/places";
@@ -235,8 +236,9 @@ export default function PlaceDetailPage(): JSX.Element {
               {place.name}
             </h1>
             <div className="mt-1 flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
-              {[place.city, place.country].filter(Boolean).join(", ") || "—"}
-              {place.country && <FlagImg country={place.country} />}
+              {[place.city, placeCountryLabel(place, i18n.language)].filter(Boolean).join(", ") ||
+                "—"}
+              {placeCountryCode(place) && <FlagImg country={placeCountryCode(place)} />}
               <span>·</span>
               <span>{t(`places:categories.${place.category}`)}</span>
               <span
@@ -454,7 +456,7 @@ export default function PlaceDetailPage(): JSX.Element {
                 <dd>{place.address ?? "—"}</dd>
                 <dt style={{ color: "var(--text-muted)" }}>{t("places:form.country")}</dt>
                 <dd>
-                  {place.country ?? "—"}
+                  {placeCountryLabel(place, i18n.language) || "—"}
                   {place.isoCountryCode && (
                     <code className="ml-2 text-xs">{place.isoCountryCode}</code>
                   )}
