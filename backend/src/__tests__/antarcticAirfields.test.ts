@@ -1,4 +1,4 @@
-import { isAntarcticAirfield } from '../seedAirportsFromCSV';
+import { admitsAirport, isAntarcticAirfield } from '../shared/antarcticAirfields';
 
 /**
  * Rows quoted verbatim from the OurAirports CSV
@@ -72,6 +72,82 @@ describe('isAntarcticAirfield', () => {
     ).toBe(false);
     expect(
       isAntarcticAirfield(row({ type: 'closed', ident: 'AQ-0013', name: 'McMurdo Ice Runway' })),
+    ).toBe(false);
+  });
+});
+
+/**
+ * The admission rule the catalogue is actually built from.
+ *
+ * Why this exists: the Antarctic exception first lived only in the CLI seed
+ * script, while the admin re-seed — the one path a user can trigger — kept its
+ * own hardcoded type list. The fix shipped in three release candidates and the
+ * catalogue still came back with twelve Antarctic entries, because the button
+ * ran the other filter. Both paths now call this function, so a rule added on
+ * one side cannot go missing on the other.
+ */
+function catalogueRow(over: Partial<Record<string, string>>) {
+  return {
+    ident: 'EDDM',
+    type: 'large_airport',
+    iso_country: 'DE',
+    iata_code: 'MUC',
+    gps_code: 'EDDM',
+    latitude_deg: '48.35',
+    longitude_deg: '11.78',
+    ...over,
+  };
+}
+
+describe('admitsAirport', () => {
+  it('admits an Antarctic station on the ordinary seed path', () => {
+    // The case the admin re-seed dropped: typed small_airport, real IATA.
+    expect(
+      admitsAirport(
+        catalogueRow({
+          type: 'small_airport',
+          iso_country: 'AQ',
+          ident: 'SCRM',
+          iata_code: 'TNM',
+          gps_code: 'SCRM',
+          latitude_deg: '-62.1907',
+          longitude_deg: '-58.9866',
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('keeps closed commercial airports so historical flights stay loggable', () => {
+    expect(
+      admitsAirport(catalogueRow({ type: 'closed', ident: 'EDDI', iata_code: 'THF' })),
+    ).toBe(true);
+  });
+
+  it('does not widen the closed-only backfill to Antarctica', () => {
+    // closedOnly is the historical backfill; widening it would pull stations
+    // into a run whose whole point is to touch nothing else.
+    const station = catalogueRow({
+      type: 'small_airport',
+      iso_country: 'AQ',
+      iata_code: 'TNM',
+    });
+    expect(admitsAirport(station)).toBe(true);
+    expect(admitsAirport(station, { closedOnly: true })).toBe(false);
+  });
+
+  it("still drops the world's small airstrips", () => {
+    expect(
+      admitsAirport(catalogueRow({ type: 'small_airport', iso_country: 'DE', iata_code: '' })),
+    ).toBe(false);
+  });
+
+  it('drops a row without a position', () => {
+    expect(admitsAirport(catalogueRow({ latitude_deg: '', longitude_deg: '' }))).toBe(false);
+  });
+
+  it('drops a row with no code at all', () => {
+    expect(
+      admitsAirport(catalogueRow({ ident: '', iata_code: '', gps_code: '' })),
     ).toBe(false);
   });
 });

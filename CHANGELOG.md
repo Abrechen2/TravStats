@@ -321,7 +321,9 @@ authentication and passkeys arrive alongside.
   recorded at all. The seed admitted only large, medium and closed airports, and
   Antarctica — having no scheduled traffic — is listed almost entirely as small.
   Wolf's Fang was the lone exception, which meant "Seven Continents" effectively
-  ran through a single airfield. 23 entries added.
+  ran through a single airfield. The catalogue now carries 34 Antarctic fields
+  instead of 12. Existing installations pick them up on the next airport
+  re-sync in the admin settings.
 - **The Unraid install guide matched no longer-existing files.** Both template
   links pointed at the pre-move filenames and returned 404, and the documented
   `DATABASE_URL` used the database container's name — the custom Docker network
