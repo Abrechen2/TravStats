@@ -198,8 +198,9 @@ Report vulnerabilities via
 ## API for external tools
 
 TravStats ships an authenticated REST API for AI agents, automation
-scripts and integrations. Every flight, trip, airport and stat the
-web UI shows is reachable programmatically.
+scripts and integrations. Everything the web UI shows — flights,
+cruises, lodging, places, trips and the statistics over them — is
+reachable programmatically with the same token.
 
 **1. Mint a Personal Access Token**: in the app, go to **Settings →
 API Tokens**, give it a label and a scope (`read`, `write`, `admin`),
@@ -208,8 +209,12 @@ only the bcrypt hash is persisted.
 
 **2. Browse the spec**: open `https://<your-host>/api/v1/docs`
 (Swagger UI) or fetch `/api/v1/openapi.json` for the raw OpenAPI 3.0
-document. The spec is auto-generated from the same Zod schemas the
-backend uses for validation, so it never drifts.
+document. Request and response shapes come from the same Zod schemas
+the backend validates with, so a documented field cannot describe a
+shape the server rejects. Coverage is enforced separately: a test walks
+the live route table and fails the build when an endpoint ships without
+a spec entry. The admin API and the first-boot wizard are excluded on
+purpose and named as such — they are not integration surfaces.
 
 **3. Call it**: every endpoint accepts the token via the standard
 `Authorization` header.

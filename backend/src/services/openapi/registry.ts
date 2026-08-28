@@ -43,17 +43,17 @@ export function buildOpenApiDocument() {
       title: "TravStats API",
       version: appVersion,
       description:
-        "Programmatic access to flights, trips, airports, and stats.\n\n" +
-        "**Scope of this spec.** This document covers the curated stable " +
-        "public API surface — the endpoints external tools, AI agents, " +
-        "and integrations are expected to depend on. The TravStats web " +
-        "frontend talks to additional internal endpoints (admin actions, " +
-        "parser feedback, bulk-import staging, settings management, " +
-        "diagnostics) that are deliberately omitted here so they can " +
-        "evolve without breaking external consumers. Full coverage is " +
-        "a non-goal; if you find yourself reverse-engineering an internal " +
-        "route, please open an issue and we'll either promote it into " +
-        "the spec or expose an equivalent stable surface.\n\n" +
+        "Programmatic access to your travel log: flights, cruises, " +
+        "lodging, places, trips, and the statistics derived from them.\n\n" +
+        "**Scope of this spec.** Everything a normal user token can reach " +
+        "is documented here, and a test fails the build when an endpoint " +
+        "ships without an entry. Two areas are deliberately outside that " +
+        "promise: the admin console API, which is admin-scope only and " +
+        "changes between minor versions, and the first-boot setup wizard, " +
+        "which is unauthenticated and single-use. Neither is an " +
+        "integration surface. If you need something from either, please " +
+        "open an issue rather than reverse-engineering it — the answer is " +
+        "usually a stable endpoint we should have exposed.\n\n" +
         "**Authentication.** Authenticate every request with a Personal " +
         "Access Token in the `Authorization` header. Tokens are managed " +
         "via `/settings/tokens` in the web UI and respect their declared " +
