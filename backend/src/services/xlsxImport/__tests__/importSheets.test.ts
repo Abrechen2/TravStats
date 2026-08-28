@@ -493,3 +493,194 @@ describe("place visits", () => {
     expect(await prisma.placeVisit.count({ where: { userId: ownerId } })).toBe(0);
   });
 });
+
+
+/**
+ * Flights, and the airport resolution that makes creating one possible.
+ *
+ * The case this was built for: a mailbox review found two flights missing from
+ * the logbook (MUC-HEL and back, September 2021). Adding them by hand is two
+ * forms; adding them from the sheet is two rows — but only if a bare IATA code
+ * can become a real airport with a position, because the coordinates on a
+ * flight are non-null.
+ */
+describe("flights", () => {
+  let flightUserId: string;
+  let flightStrangerId: string;
+
+  beforeAll(async () => {
+    await prisma.user.deleteMany({
+      where: { username: { in: ["flightimp", "flightstranger"] } },
+    });
+    const u = await prisma.user.create({
+      data: { username: "flightimp", passwordHash: await hashPassword("password123") },
+    });
+    flightUserId = u.id;
+    const st = await prisma.user.create({
+      data: { username: "flightstranger", passwordHash: await hashPassword("password123") },
+    });
+    flightStrangerId = st.id;
+  });
+
+  beforeEach(async () => {
+    await prisma.flight.deleteMany({
+      where: { userId: { in: [flightUserId, flightStrangerId] } },
+    });
+  });
+
+  afterAll(async () => {
+    await prisma.flight.deleteMany({
+      where: { userId: { in: [flightUserId, flightStrangerId] } },
+    });
+    await prisma.user.deleteMany({ where: { id: { in: [flightUserId, flightStrangerId] } } });
+  });
+
+  const runFlights = (
+    rows: Record<string, string>[],
+    mode: "add" | "merge" | "replace" = "merge",
+    dryRun = false,
+  ) => importSheets([{ key: "flights", rows }], { userId: flightUserId, dryRun, mode });
+
+  it("creates a flight from IATA codes, resolving both airports", async () => {
+    const [r] = await runFlights([
+      {
+        id: "",
+        airline: "Lufthansa",
+        flightNumber: "LH2460",
+        depIata: "MUC",
+        arrIata: "HEL",
+        departureTime: "2021-09-24T06:00:00Z",
+        status: "flown",
+      },
+    ]);
+
+    expect(r.errors).toBe(0);
+    expect(r.created).toBe(1);
+
+    const flight = await prisma.flight.findFirst({ where: { userId: flightUserId } });
+    expect(flight?.depIata).toBe("MUC");
+    expect(flight?.arrIata).toBe("HEL");
+    // The point of resolving: a flight without coordinates cannot be drawn.
+    expect(flight?.depLat).not.toBeNull();
+    expect(flight?.arrLon).not.toBeNull();
+  });
+
+  it("refuses an unknown IATA code instead of storing a flight nowhere", async () => {
+    const [r] = await runFlights([
+      {
+        id: "",
+        airline: "Lufthansa",
+        flightNumber: "LH1",
+        depIata: "MUC",
+        arrIata: "ZZZZ9",
+        departureTime: "2021-09-24T06:00:00Z",
+      },
+    ]);
+
+    expect(r.errors).toBe(1);
+    expect(r.rows[0].message).toBe("unknown_airport");
+    expect(await prisma.flight.count({ where: { userId: flightUserId } })).toBe(0);
+  });
+
+  it("refuses a new flight with no route", async () => {
+    const [r] = await runFlights([{ id: "", airline: "Lufthansa" }]);
+    expect(r.errors).toBe(1);
+    expect(r.rows[0].message).toBe("flight_needs_route");
+  });
+
+  it("refuses an unknown status rather than coercing it", async () => {
+    // Silently turning a typo into "flown" would change what is counted.
+    const [r] = await runFlights([
+      {
+        id: "",
+        airline: "Lufthansa",
+        flightNumber: "LH1",
+        depIata: "MUC",
+        arrIata: "HEL",
+        status: "geflogen",
+      },
+    ]);
+    expect(r.errors).toBe(1);
+    expect(r.rows[0].message).toBe("invalid_status");
+  });
+
+  it("moves a flight when its airport code is changed", async () => {
+    const created = await runFlights([
+      {
+        id: "",
+        airline: "Lufthansa",
+        flightNumber: "LH2460",
+        depIata: "MUC",
+        arrIata: "HEL",
+        departureTime: "2021-09-24T06:00:00Z",
+      },
+    ]);
+    const id = created[0].rows[0].id as string;
+
+    await runFlights([{ id, arrIata: "ARN" }]);
+
+    const after = await prisma.flight.findUnique({ where: { id } });
+    expect(after?.arrIata).toBe("ARN");
+    expect(after?.depIata).toBe("MUC");
+  });
+
+  it("leaves the route alone when the sheet carries no codes", async () => {
+    const created = await runFlights([
+      {
+        id: "",
+        airline: "Lufthansa",
+        flightNumber: "LH2460",
+        depIata: "MUC",
+        arrIata: "HEL",
+      },
+    ]);
+    const id = created[0].rows[0].id as string;
+
+    await runFlights([{ id, notes: "nur eine Notiz" }]);
+
+    const after = await prisma.flight.findUnique({ where: { id } });
+    expect(after?.depIata).toBe("MUC");
+    expect(after?.arrIata).toBe("HEL");
+    expect(after?.notes).toBe("nur eine Notiz");
+  });
+
+  it("refuses a flight id belonging to another account", async () => {
+    const foreign = await prisma.flight.create({
+      data: {
+        userId: flightStrangerId,
+        airline: "Fremd",
+        flightNumber: "XX1",
+        depIata: "MUC",
+        depLat: 48.35,
+        depLon: 11.78,
+        arrIata: "HEL",
+        arrLat: 60.31,
+        arrLon: 24.96,
+        status: "flown",
+      },
+    });
+
+    const [r] = await runFlights([{ id: foreign.id, airline: "Uebernommen" }]);
+
+    expect(r.errors).toBe(1);
+    expect((await prisma.flight.findUnique({ where: { id: foreign.id } }))?.airline).toBe("Fremd");
+  });
+
+  it("writes nothing on a dry run", async () => {
+    const [r] = await runFlights(
+      [
+        {
+          id: "",
+          airline: "Lufthansa",
+          flightNumber: "LH2461",
+          depIata: "HEL",
+          arrIata: "MUC",
+        },
+      ],
+      "merge",
+      true,
+    );
+    expect(r.created).toBe(1);
+    expect(await prisma.flight.count({ where: { userId: flightUserId } })).toBe(0);
+  });
+});

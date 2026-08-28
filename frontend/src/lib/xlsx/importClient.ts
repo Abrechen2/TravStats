@@ -10,7 +10,13 @@
 
 import api from "./../api/client";
 import { parseWorkbook } from "./workbook";
-import { cruiseSheet, lodgingSheet, placeSheet, placeVisitSheet } from "./sheets";
+import {
+  cruiseSheet,
+  flightSheet,
+  lodgingSheet,
+  placeSheet,
+  placeVisitSheet,
+} from "./sheets";
 import type { SheetSpec } from "./sheetSpec";
 
 type T = (key: string) => string;
@@ -66,6 +72,7 @@ export interface ImportOutcome {
  */
 function importableSpecs(t: T): SheetSpec<never>[] {
   return [
+    flightSheet(t),
     placeSheet(t),
     placeVisitSheet(t),
     cruiseSheet(t),

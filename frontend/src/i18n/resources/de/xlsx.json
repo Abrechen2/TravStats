@@ -23,7 +23,8 @@
     "lodging": "Eine Zeile je Unterkunft. Aufenthalte stehen im eigenen Blatt, weil eine Unterkunft beliebig viele haben kann.",
     "lodgingStays": "Eine Zeile je Aufenthalt. Die Spalte „Unterkunft“ verweist über die ID in eckigen Klammern auf das Blatt „Unterkünfte“. Nächte werden berechnet und lassen sich hier nicht setzen.",
     "places": "Eine Zeile je Ort. Besuche stehen im eigenen Blatt.",
-    "placeVisits": "Eine Zeile je Besuch. Die Spalte „Ort“ verweist über die ID in eckigen Klammern auf das Blatt „Orte“."
+    "placeVisits": "Eine Zeile je Besuch. Die Spalte „Ort“ verweist über die ID in eckigen Klammern auf das Blatt „Orte“.",
+    "flights": "Eine Zeile je Flug. Die ID in Spalte A nicht ändern – sie ordnet die Zeile beim Import wieder ihrem Eintrag zu. Flughäfen stehen als IATA-Code; wird ein Code geändert, verschiebt das den Flug. Zeilen ohne ID werden als neuer Flug angelegt."
   },
   "columns": {
     "id": "ID",
@@ -75,7 +76,17 @@
     "totalPrice": "Gesamtpreis",
     "place": "Ort",
     "visitedAt": "Besucht am",
-    "rating": "Bewertung"
+    "rating": "Bewertung",
+    "airline": "Airline",
+    "flightNumber": "Flugnummer",
+    "from": "Von",
+    "to": "Nach",
+    "departure": "Abflug",
+    "arrival": "Ankunft",
+    "aircraft": "Flugzeug",
+    "registration": "Kennzeichen",
+    "seat": "Sitz",
+    "seatClass": "Klasse"
   },
   "import": {
     "title": "Excel-Import",
@@ -103,7 +114,10 @@
       "too_many_rows": "Das Blatt hat zu viele Zeilen.",
       "visit_needs_place": "Ein neuer Besuch muss einen Ort nennen — die ID in eckigen Klammern in der Spalte „Ort“.",
       "unknown_place": "Den angegebenen Ort gibt es in deinem Konto nicht.",
-      "invalid_rating": "Die Bewertung muss zwischen 1 und 5 liegen."
+      "invalid_rating": "Die Bewertung muss zwischen 1 und 5 liegen.",
+      "unknown_airport": "Der IATA-Code ist unbekannt.",
+      "flight_needs_route": "Ein neuer Flug braucht Von, Nach, Airline und Flugnummer.",
+      "invalid_status": "Unbekannter Status."
     },
     "modeLabel": "Was soll mit vorhandenen Einträgen passieren?",
     "modes": {

@@ -16,6 +16,7 @@
  */
 
 import { prisma } from "../../db";
+import { findOrCreateAirport } from "../airportLookup";
 import logger from "../../utils/logger";
 import { createPlaceSchema } from "../../schemas/place";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
@@ -69,7 +70,7 @@ function keepDespiteError(seen: Set<string>, id: string | undefined): void {
  * refused row is not permission to delete the record it named.
  */
 async function pruneMissing(
-  model: "place" | "cruise" | "lodging",
+  model: "place" | "cruise" | "lodging" | "flight",
   seen: Set<string>,
   ctx: Ctx,
 ): Promise<number> {
@@ -82,11 +83,13 @@ async function pruneMissing(
   const count = async (): Promise<number> => {
     if (model === "place") return prisma.place.count({ where });
     if (model === "cruise") return prisma.cruise.count({ where });
+    if (model === "flight") return prisma.flight.count({ where });
     return prisma.lodging.count({ where });
   };
   const removeAll = async (): Promise<void> => {
     if (model === "place") await prisma.place.deleteMany({ where });
     else if (model === "cruise") await prisma.cruise.deleteMany({ where });
+    else if (model === "flight") await prisma.flight.deleteMany({ where });
     else await prisma.lodging.deleteMany({ where });
   };
 
@@ -500,6 +503,202 @@ async function pruneMissingVisits(seen: Set<string>, ctx: Ctx): Promise<number> 
   return doomed;
 }
 
+// ----------------------------------------------------------------- flights
+
+/** Statuses a spreadsheet may set. Anything else is refused rather than
+ *  coerced — silently turning a typo into "flown" changes what is counted. */
+const FLIGHT_STATUSES = ["scheduled", "flown", "cancelled", "historical"] as const;
+
+/**
+ * Flights, with airports resolved from their IATA codes.
+ *
+ * The sheet carries codes rather than coordinates, because a code is what a
+ * person can type and check. `findOrCreateAirport` turns one into a real
+ * airport with a position — the same path the flight form uses, so an
+ * imported flight cannot end up in a shape the form would reject.
+ *
+ * Consequence worth stating: changing a code MOVES the flight. That is the
+ * intended way to correct a wrong airport from the table, and the reason an
+ * unknown code is refused rather than silently leaving the old position.
+ */
+async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutcome> {
+  const out: RowOutcome[] = [];
+  const seen = new Set<string>();
+
+  for (const [index, raw] of sheet.rows.entries()) {
+    const rowNo = index + 2;
+    const id = cell.text(raw.id);
+    const airline = cell.text(raw.airline);
+    const flightNumber = cell.text(raw.flightNumber);
+    const label = [airline, flightNumber].filter(Boolean).join(" ") || `#${rowNo}`;
+
+    const status = cell.text(raw.status);
+    if (status && !FLIGHT_STATUSES.includes(status as (typeof FLIGHT_STATUSES)[number])) {
+      keepDespiteError(seen, id);
+      out.push(errorRow(rowNo, label, "invalid_status"));
+      continue;
+    }
+
+    const departureTime = cell.isoDateTime(raw.departureTime);
+    const arrivalTime = cell.isoDateTime(raw.arrivalTime);
+    if (departureTime === null || arrivalTime === null) {
+      keepDespiteError(seen, id);
+      out.push(errorRow(rowNo, label, "invalid_date"));
+      continue;
+    }
+
+    const price = cell.num(raw.price);
+    if (price !== undefined && Number.isNaN(price)) {
+      keepDespiteError(seen, id);
+      out.push(errorRow(rowNo, label, "invalid_number"));
+      continue;
+    }
+
+    // Airports are only touched when the sheet actually carries a code, so an
+    // untouched column can never move a flight.
+    const depIata = cell.text(raw.depIata);
+    const arrIata = cell.text(raw.arrIata);
+    let dep: Awaited<ReturnType<typeof findOrCreateAirport>> = null;
+    let arr: Awaited<ReturnType<typeof findOrCreateAirport>> = null;
+    if (depIata) {
+      dep = await findOrCreateAirport(depIata);
+      if (!dep) {
+        keepDespiteError(seen, id);
+        out.push(errorRow(rowNo, label, "unknown_airport"));
+        continue;
+      }
+    }
+    if (arrIata) {
+      arr = await findOrCreateAirport(arrIata);
+      if (!arr) {
+        keepDespiteError(seen, id);
+        out.push(errorRow(rowNo, label, "unknown_airport"));
+        continue;
+      }
+    }
+
+    const fields: Record<string, unknown> = {
+      airline,
+      flightNumber,
+      status,
+      departureTime: departureTime ? new Date(departureTime) : undefined,
+      arrivalTime: arrivalTime ? new Date(arrivalTime) : undefined,
+      aircraft: cell.text(raw.aircraft),
+      aircraftRegistration: cell.text(raw.aircraftRegistration),
+      seatNumber: cell.text(raw.seatNumber),
+      seatClass: cell.text(raw.seatClass),
+      bookingReference: cell.text(raw.bookingReference),
+      price,
+      currency: cell.text(raw.currency),
+      category: cell.text(raw.category),
+      notes: cell.text(raw.notes),
+      ...(dep
+        ? {
+            depIata: dep.iata,
+            depIcao: dep.icao,
+            depName: dep.name,
+            depLat: dep.lat,
+            depLon: dep.lon,
+          }
+        : {}),
+      ...(arr
+        ? {
+            arrIata: arr.iata,
+            arrIcao: arr.icao,
+            arrName: arr.name,
+            arrLat: arr.lat,
+            arrLon: arr.lon,
+          }
+        : {}),
+    };
+
+    const tripId = cell.ref(raw.tripId);
+    if (tripId) {
+      const trip = await prisma.trip.findFirst({
+        where: { id: tripId, userId: ctx.userId },
+        select: { id: true },
+      });
+      if (!trip) {
+        keepDespiteError(seen, id);
+        out.push(errorRow(rowNo, label, "unknown_trip"));
+        continue;
+      }
+      fields.tripId = tripId;
+    }
+
+    if (id) {
+      const existing = await prisma.flight.findFirst({
+        where: { id, userId: ctx.userId },
+        select: { id: true },
+      });
+      if (!existing) {
+        out.push(errorRow(rowNo, label, UNKNOWN_ID));
+        continue;
+      }
+      seen.add(id);
+      if (ctx.mode === "add") {
+        out.push({ row: rowNo, action: "skip", id, label, message: "exists" });
+        continue;
+      }
+
+      const data = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined));
+      if (Object.keys(data).length === 0) {
+        out.push({ row: rowNo, action: "skip", id, label });
+        continue;
+      }
+      if (!ctx.dryRun) await prisma.flight.update({ where: { id }, data });
+      out.push({ row: rowNo, action: "update", id, label });
+      continue;
+    }
+
+    // A new flight needs a route and an identity. Without those it is not a
+    // flight, and the model cannot hold it — the coordinates are non-null.
+    if (!dep || !arr || !airline || !flightNumber) {
+      out.push(errorRow(rowNo, label, "flight_needs_route"));
+      continue;
+    }
+
+    let newId: string | null = null;
+    if (!ctx.dryRun) {
+      const created = await prisma.flight.create({
+        data: {
+          userId: ctx.userId,
+          airline,
+          flightNumber,
+          depIata: dep.iata,
+          depIcao: dep.icao,
+          depName: dep.name,
+          depLat: dep.lat,
+          depLon: dep.lon,
+          arrIata: arr.iata,
+          arrIcao: arr.icao,
+          arrName: arr.name,
+          arrLat: arr.lat,
+          arrLon: arr.lon,
+          departureTime: departureTime ? new Date(departureTime) : null,
+          arrivalTime: arrivalTime ? new Date(arrivalTime) : null,
+          status: status ?? "flown",
+          aircraft: cell.text(raw.aircraft) ?? null,
+          seatNumber: cell.text(raw.seatNumber) ?? null,
+          bookingReference: cell.text(raw.bookingReference) ?? null,
+          price: price ?? null,
+          currency: cell.text(raw.currency) ?? null,
+          notes: cell.text(raw.notes) ?? null,
+          dataSource: "xlsx",
+          ...(fields.tripId ? { tripId: fields.tripId as string } : {}),
+        },
+        select: { id: true },
+      });
+      newId = created.id;
+      seen.add(created.id);
+    }
+    out.push({ row: rowNo, action: "create", id: newId, label });
+  }
+
+  const deleted = await pruneMissing("flight", seen, ctx);
+  return summarise(sheet.key, out, deleted);
+}
+
 // ------------------------------------------------------------------ router
 
 type Handler = (sheet: IncomingSheet, ctx: Ctx) => Promise<SheetOutcome>;
@@ -507,6 +706,7 @@ type Handler = (sheet: IncomingSheet, ctx: Ctx) => Promise<SheetOutcome>;
 /** Sheets this importer understands. A sheet key that is not here is ignored
  *  rather than rejected — someone may keep their own tab in the file. */
 const HANDLERS: Record<string, Handler> = {
+  flights: importFlights,
   // Order matters: places before their visits, so a sheet that creates a place
   // and a visit to it in the same file works in one pass.
   places: importPlaces,

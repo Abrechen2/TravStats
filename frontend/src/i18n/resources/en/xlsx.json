@@ -23,7 +23,8 @@
     "lodging": "One row per property. Stays live on their own sheet, because one property can have any number of them.",
     "lodgingStays": "One row per stay. The \"Lodging\" column points at the \"Lodging\" sheet through the ID in square brackets. Nights are calculated and cannot be set here.",
     "places": "One row per place. Visits live on their own sheet.",
-    "placeVisits": "One row per visit. The \"Place\" column points at the \"Places\" sheet through the ID in square brackets."
+    "placeVisits": "One row per visit. The \"Place\" column points at the \"Places\" sheet through the ID in square brackets.",
+    "flights": "One row per flight. Do not change the ID in column A — it is what matches the row back to its record on import. Airports travel as IATA codes; changing a code moves the flight. A row without an ID is created as a new flight."
   },
   "columns": {
     "id": "ID",
@@ -75,7 +76,17 @@
     "totalPrice": "Total price",
     "place": "Place",
     "visitedAt": "Visited on",
-    "rating": "Rating"
+    "rating": "Rating",
+    "airline": "Airline",
+    "flightNumber": "Flight number",
+    "from": "From",
+    "to": "To",
+    "departure": "Departure",
+    "arrival": "Arrival",
+    "aircraft": "Aircraft",
+    "registration": "Registration",
+    "seat": "Seat",
+    "seatClass": "Class"
   },
   "import": {
     "title": "Excel import",
@@ -103,7 +114,10 @@
       "too_many_rows": "That sheet has too many rows.",
       "visit_needs_place": "A new visit has to name a place — the ID in square brackets in the “Place” column.",
       "unknown_place": "There is no such place in your account.",
-      "invalid_rating": "A rating has to be between 1 and 5."
+      "invalid_rating": "A rating has to be between 1 and 5.",
+      "unknown_airport": "That IATA code is not known.",
+      "flight_needs_route": "A new flight needs From, To, airline and flight number.",
+      "invalid_status": "Unknown status."
     },
     "modeLabel": "What should happen to entries that already exist?",
     "modes": {

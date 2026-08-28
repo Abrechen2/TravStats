@@ -14,6 +14,7 @@
 import { useCallback, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { cruiseApi } from "../../lib/api/cruise";
+import { flightsApi } from "../../lib/api/flights";
 import { listLodgings } from "../../lib/api/lodging";
 import { placesApi } from "../../lib/api/places";
 import { exportFilename, exportWorkbook } from "../../lib/xlsx/exportAll";
@@ -52,13 +53,22 @@ export default function SpreadsheetSection(): JSX.Element {
       // Only domains this instance actually runs. Asking the cruise endpoint
       // on an instance with cruises switched off would 404 and fail the whole
       // export over data the user does not have.
-      const [cruises, lodging, places] = await Promise.all([
+      const [flights, cruises, lodging, places] = await Promise.all([
+        // The list endpoint pages; one large page is enough for an export and
+        // keeps this to a single request.
+        isEnabled("flight")
+          ? flightsApi.getAll({ limit: 5000, offset: 0 }).then((r) => r.flights)
+          : Promise.resolve([]),
         isEnabled("cruise") ? cruiseApi.list() : Promise.resolve([]),
         isEnabled("lodging") ? listLodgings() : Promise.resolve([]),
         isEnabled("poi") ? placesApi.list() : Promise.resolve([]),
       ]);
 
-      const blob = await exportWorkbook(t, { cruises, lodging, places }, i18n.language);
+      const blob = await exportWorkbook(
+        t,
+        { flights, cruises, lodging, places },
+        i18n.language,
+      );
       if (!blob) {
         setStatus("empty");
         return;

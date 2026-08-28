@@ -7,10 +7,12 @@
  * about — the file describes what is there, not what the schema allows.
  */
 
+import type { Flight } from "../../types";
 import type { Cruise } from "../../types/cruise";
 import type { Lodging } from "../../types/lodging";
 import type { Place } from "../../types/place";
 import {
+  flightSheet,
   cruiseSheet,
   cruiseStopSheet,
   lodgingSheet,
@@ -26,6 +28,7 @@ import { buildWorkbookBlob, sheet, type AnySheetData } from "./workbook";
 type T = (key: string) => string;
 
 export interface ExportInput {
+  flights?: readonly Flight[];
   cruises?: readonly Cruise[];
   lodging?: readonly Lodging[];
   places?: readonly Place[];
@@ -77,6 +80,9 @@ function placeVisitRows(places: readonly Place[]): PlaceVisitRow[] {
  *  the sheet list without going through a Blob. */
 export function buildSheets(t: T, input: ExportInput, locale = "de"): AnySheetData[] {
   const sheets: AnySheetData[] = [];
+
+  const flights = input.flights ?? [];
+  if (flights.length > 0) sheets.push(sheet(flightSheet(t), flights));
 
   const cruises = input.cruises ?? [];
   if (cruises.length > 0) {

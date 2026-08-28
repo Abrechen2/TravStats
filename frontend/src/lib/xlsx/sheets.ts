@@ -14,6 +14,7 @@
  * child row points back at its parent by id.
  */
 
+import type { Flight } from "../../types";
 import type { Cruise, CruiseStop } from "../../types/cruise";
 import type { Lodging, LodgingStay } from "../../types/lodging";
 import type { Place, PlaceVisit } from "../../types/place";
@@ -31,6 +32,64 @@ const id = <R extends { id: string }>(header: string) => ({
   locked: true,
   value: (r: R) => r.id,
 });
+
+
+// ---------------------------------------------------------------- flights
+
+/**
+ * A flight carries around 58 fields; this sheet carries the ones a person
+ * edits in a table. The rest — enrichment history, live-tracking state,
+ * derived durations and CO2 — is written by the app and reading it back from
+ * a spreadsheet would let a stale copy overwrite what the server computed.
+ *
+ * Airports travel as IATA codes rather than coordinates: a code is what a
+ * person can type and check, and the server resolves it on import. Editing a
+ * code therefore MOVES the flight, which is the intended way to correct one.
+ */
+export function flightSheet(t: T): SheetSpec<Flight> {
+  return {
+    key: "flights",
+    name: t("xlsx:sheets.flights"),
+    hint: t("xlsx:hints.flights"),
+    columns: [
+      id<Flight>(t("xlsx:columns.id")),
+      { key: "airline", header: t("xlsx:columns.airline"), kind: "text", width: 22,
+        value: (f) => f.airline },
+      { key: "flightNumber", header: t("xlsx:columns.flightNumber"), kind: "text", width: 12,
+        value: (f) => f.flightNumber },
+      { key: "depIata", header: t("xlsx:columns.from"), kind: "text", width: 8,
+        value: (f) => f.depIata ?? null },
+      { key: "arrIata", header: t("xlsx:columns.to"), kind: "text", width: 8,
+        value: (f) => f.arrIata ?? null },
+      { key: "departureTime", header: t("xlsx:columns.departure"), kind: "datetime", width: 18,
+        value: (f) => f.departureTime },
+      { key: "arrivalTime", header: t("xlsx:columns.arrival"), kind: "datetime", width: 18,
+        value: (f) => f.arrivalTime },
+      { key: "status", header: t("xlsx:columns.status"), kind: "text", width: 12,
+        value: (f) => f.status },
+      { key: "aircraft", header: t("xlsx:columns.aircraft"), kind: "text", width: 18,
+        value: (f) => f.aircraft ?? null },
+      { key: "aircraftRegistration", header: t("xlsx:columns.registration"), kind: "text", width: 12,
+        value: (f) => f.aircraftRegistration ?? null },
+      { key: "seatNumber", header: t("xlsx:columns.seat"), kind: "text", width: 8,
+        value: (f) => f.seatNumber ?? null },
+      { key: "seatClass", header: t("xlsx:columns.seatClass"), kind: "text", width: 16,
+        value: (f) => f.seatClass ?? null },
+      { key: "bookingReference", header: t("xlsx:columns.bookingReference"), kind: "text", width: 14,
+        value: (f) => f.bookingReference ?? null },
+      { key: "price", header: t("xlsx:columns.price"), kind: "number", width: 12,
+        value: (f) => f.price ?? null },
+      { key: "currency", header: t("xlsx:columns.currency"), kind: "text", width: 10,
+        value: (f) => f.currency ?? null },
+      { key: "category", header: t("xlsx:columns.category"), kind: "text", width: 12,
+        value: (f) => f.category ?? null },
+      { key: "tripId", header: t("xlsx:columns.trip"), kind: "text", width: 26, reference: true,
+        value: (f) => refCell(f.trip?.name, f.tripId) },
+      { key: "notes", header: t("xlsx:columns.notes"), kind: "text", width: 36,
+        value: (f) => f.notes ?? null },
+    ],
+  };
+}
 
 // ---------------------------------------------------------------- cruises
 
