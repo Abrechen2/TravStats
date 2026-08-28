@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import ApiKeyCard from "./ApiKeyCard";
 import BulkRefreshCard from "./BulkRefreshCard";
-import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 import { settingsApi } from "../../lib/api";
 import type { ApiKeyQuotasResponse, ProviderQuota } from "../../lib/api/settings";
@@ -63,27 +62,6 @@ export default function ApiKeysSection({
       <SectionTitle
         title={t("settings:apiKeys.title")}
         description={t("settings:apiKeys.description")}
-      />
-      <InlineHelp
-        title={t("settings:apiKeys.help.title")}
-        category="advanced"
-        content={
-          <div className="space-y-2">
-            <p>{t("settings:apiKeys.help.description")}</p>
-            <div>
-              <p className="font-semibold">{t("settings:apiKeys.help.sharedTitle")}</p>
-              <p className="ml-2 text-sm">{t("settings:apiKeys.help.shared")}</p>
-            </div>
-            <div>
-              <p className="font-semibold">{t("settings:apiKeys.help.providersTitle")}</p>
-              <p className="ml-2 text-sm">{t("settings:apiKeys.help.providers")}</p>
-            </div>
-            <div>
-              <p className="font-semibold">{t("settings:apiKeys.help.securityTitle")}</p>
-              <p className="ml-2 text-sm">{t("settings:apiKeys.help.security")}</p>
-            </div>
-          </div>
-        }
       />
       <div className="space-y-6">
         <div>

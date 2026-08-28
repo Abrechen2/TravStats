@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { SectionCard, SectionTitle } from "./SettingsShared";
+import { FieldLabel, SectionCard, SectionTitle } from "./SettingsShared";
 import AirportAutocomplete from "../AirportAutocomplete";
-import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 import { settingsApi, type HomeAirportEntry } from "../../lib/api";
 import type { Airport } from "../../lib/api";
@@ -89,16 +88,6 @@ export default function HomeAirportSection(): JSX.Element {
         description={t("settings:homeAirport.description")}
       />
 
-      <InlineHelp
-        title={t("settings:homeAirport.help.title")}
-        category="basic"
-        content={
-          <div className="space-y-2">
-            <p>{t("settings:homeAirport.help.description")}</p>
-            <p className="text-sm">{t("settings:homeAirport.help.historyExplained")}</p>
-          </div>
-        }
-      />
 
       {loading ? (
         <p className="text-sm text-(--text-muted)">{t("common:loading.default")}</p>
@@ -146,7 +135,7 @@ export default function HomeAirportSection(): JSX.Element {
           {/* History */}
           {past.length > 0 && (
             <div>
-              <label className="label">{t("settings:homeAirport.historyLabel")}</label>
+              <FieldLabel help={t("settings:homeAirport.help.historyExplained")}>{t("settings:homeAirport.historyLabel")}</FieldLabel>
               <ul className="space-y-1">
                 {past.map((entry) => {
                   const trueIndex = history.indexOf(entry);
