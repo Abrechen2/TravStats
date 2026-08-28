@@ -12,6 +12,15 @@ now be written in the currency it was actually paid in. Two-factor
 authentication and passkeys arrive alongside.
 
 ### Added
+- **The spreadsheet import asks what to do with what is already there.**
+  *Add only* creates and never touches an existing entry. *Merge* — the
+  default — updates the rows the file names and creates the rest. *Replace
+  contents* additionally deletes everything the file leaves out, and is the
+  only mode that can lose data: it takes a full backup before writing a single
+  row, shows how many entries would disappear, and will not proceed unless you
+  confirm that number. If the backup cannot be made, the import does not run.
+  An empty sheet deletes nothing at all — clearing a domain has to be asked for
+  row by row, never by handing over a blank tab.
 - **The whole logbook exports to one spreadsheet, and comes back.** A sheet per
   table — cruises and their stops, properties and their stays, places and their
   visits — readable, filterable, and re-importable. Column A carries the row's
@@ -260,6 +269,13 @@ authentication and passkeys arrive alongside.
   statistics, where figures belong.
 
 ### Fixed
+- **A country is one country, however it is spelled.** Filling in a place's
+  address asks a geocoder, and it answers in the country's own language — so
+  the same country arrived as "Egypt" on one row and "مصر" on the next. The
+  places summary counted the spellings rather than the countries and reported
+  20 as 23, the country filter offered whichever spelling happened to sort
+  first, and an export sheet could hold four spellings for two countries. All
+  three now read the country code, and show its name in your language.
 - **Help sits on the field it explains.** The settings and the admin area opened
   with collapsible boxes that explained three or four fields at once, from above
   the form — so the sentence about a control sat rows away from the control, and
