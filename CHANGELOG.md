@@ -12,6 +12,18 @@ now be written in the currency it was actually paid in. Two-factor
 authentication and passkeys arrive alongside.
 
 ### Added
+- **Flights are part of the spreadsheet, in both directions.** The export
+  carried cruises, lodging and places but not the largest domain; now it does,
+  with the eighteen fields you would actually edit in a table. Airports travel
+  as IATA codes rather than coordinates — a code is what you can type and check
+  — and the server resolves one into a real airport, which is what makes adding
+  a missing flight from a row possible at all. Changing a code moves the flight;
+  an unknown code is refused rather than quietly leaving the old route.
+- **Visits can be imported.** The export always wrote a Visits sheet and the
+  import ignored it without a word, so editing visits and sending the file back
+  did nothing. A visit now imports against its place — several visits to the
+  same place on the same day stay several visits. Cruise stops and stays remain
+  export-only, and the import panel says so instead of leaving you to find out.
 - **The spreadsheet import asks what to do with what is already there.**
   *Add only* creates and never touches an existing entry. *Merge* — the
   default — updates the rows the file names and creates the rest. *Replace
@@ -269,6 +281,13 @@ authentication and passkeys arrive alongside.
   statistics, where figures belong.
 
 ### Fixed
+- **Addresses arrive in the alphabet you read.** Filling in an address asks a
+  geocoder, and it answered in the local language of the place — so a German
+  logbook collected entries in Japanese, Arabic, Armenian and Greek script:
+  text you cannot read, sort, or type into a search box. New entries now come
+  back in Latin script, and the nightly pass fetches the older ones again.
+  Accented names stay exactly as they are: the line is drawn at the script, not
+  the language, so Lëtzebuerg and Đà Nẵng are left alone.
 - **A country is one country, however it is spelled.** Filling in a place's
   address asks a geocoder, and it answers in the country's own language — so
   the same country arrived as "Egypt" on one row and "مصر" on the next. The
