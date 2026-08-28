@@ -580,7 +580,10 @@ describe("flights", () => {
     expect(r.errors).toBe(1);
     expect(r.rows[0].message).toBe("unknown_airport");
     expect(await prisma.flight.count({ where: { userId: flightUserId } })).toBe(0);
-  });
+    // A miss walks the whole resolution chain, including the external lookup,
+    // before it can honestly say "unknown" — that is slower than Jest's 5s
+    // default and has nothing to do with the assertion.
+  }, 30000);
 
   it("refuses a new flight with no route", async () => {
     const [r] = await runFlights([{ id: "", airline: "Lufthansa" }]);
