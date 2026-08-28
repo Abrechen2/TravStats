@@ -20,19 +20,8 @@
  */
 
 export const PENDING_DOCUMENTATION: readonly string[] = [
-  // achievements (4)
-  "GET /achievements",
-  "GET /achievements/leaderboard",
-  "GET /achievements/recent",
-  "POST /achievements/check",
-  // aircraft (2)
-  "GET /aircraft",
-  "POST /aircraft",
   // airlineLogos (1)
   "GET /airline-logos/{code}",
-  // airlines (2)
-  "GET /airlines",
-  "POST /airlines",
   // airports (4)
   "GET /airports/coords/nearest",
   "GET /airports/{code}",
@@ -90,19 +79,6 @@ export const PENDING_DOCUMENTATION: readonly string[] = [
   "GET /parse-boardingpass/availability",
   "GET /parse-boardingpass/check",
   "GET /parse-boardingpass/providers",
-  // cruises (7)
-  "DELETE /cruises/{id}",
-  "GET /cruises",
-  "GET /cruises/{id}",
-  "GET /cruises/{id}/geometry",
-  "PATCH /cruises/{id}",
-  "POST /cruises",
-  "POST /cruises/geometry/batch",
-  // cruises.routeOverride (2)
-  "DELETE /cruises/{id}/route-override",
-  "PUT /cruises/{id}/route-override",
-  // currencies (1)
-  "GET /currencies/recent",
   // diagnosticExport (1)
   "GET /diagnostic-export",
   // emailParse (1)
@@ -118,10 +94,6 @@ export const PENDING_DOCUMENTATION: readonly string[] = [
   "GET /flights/{id}/route-estimation",
   "POST /flights/refresh-historical-bulk",
   "POST /flights/{id}/enrich-historical",
-  // geo (3)
-  "GET /geo/reverse",
-  "GET /geo/reverse-places",
-  "GET /geo/search",
   // immich.assetProxy (1)
   "GET /trips/{id}/immich/albums/{linkId}/assets/{assetId}/file",
   // immich.tripAlbums (7)
@@ -225,10 +197,6 @@ export const PENDING_DOCUMENTATION: readonly string[] = [
   "GET /places/visits/{visitId}/photos/{photoId}/file",
   "PATCH /places/visits/{visitId}/photos/{photoId}",
   "POST /places/visits/{visitId}/photos",
-  // ports (3)
-  "GET /ports",
-  "GET /ports/geocode",
-  "POST /ports",
   // settings (25)
   "DELETE /settings/home-airports/{index}",
   "DELETE /settings/profile-picture",
@@ -255,9 +223,6 @@ export const PENDING_DOCUMENTATION: readonly string[] = [
   "PUT /settings/notifications",
   "PUT /settings/parser",
   "PUT /settings/profile",
-  // ships (2)
-  "GET /ships",
-  "POST /ships",
   // stats (16)
   "GET /stats/aircraft",
   "GET /stats/aircraft-types",
@@ -275,9 +240,6 @@ export const PENDING_DOCUMENTATION: readonly string[] = [
   "GET /stats/timeseries",
   "GET /stats/travel-account",
   "GET /stats/unique",
-  // suggestions (2)
-  "GET /suggestions/aircraft",
-  "GET /suggestions/airlines",
   // templateStatus (2)
   "GET /template-status",
   "POST /template-status/sync",
@@ -308,8 +270,6 @@ export const PENDING_DOCUMENTATION: readonly string[] = [
   "POST /trips/{id}/photos",
   "POST /trips/{id}/stops",
   "POST /trips/{id}/summarize",
-  // upcoming (1)
-  "GET /upcoming",
   // uploads (3)
   "DELETE /uploads/receipts/{filename}",
   "GET /uploads/receipts/{filename}",
