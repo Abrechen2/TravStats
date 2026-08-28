@@ -8,7 +8,7 @@ import {
 } from "../../lib/placeColor";
 import type { Rgb } from "../../lib/cruiseColor";
 import type { PlaceCategory } from "../../shared/placeCategories";
-import { markerDotRadiusProps, MARKER_DOT_MAX_PX, MARKER_DOT_MIN_PX } from "./markerDotStyle";
+import { markerDotRadiusProps } from "./markerDotStyle";
 import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
 
 interface PlacePinDatum {
@@ -50,11 +50,6 @@ function toPlaceLabel(name: string, maxLen: number = MAX_PLACE_LABEL_LEN): strin
  *  caller that does not thread a real zoom still gets a sane budget. */
 const PLACE_LABEL_DEFAULT_ZOOM = 4;
 
-/** How far the `target` ring sits outside the dot. 1.9× reads as a ring at
- *  every zoom the dot itself is clamped to, without colliding with a
- *  neighbouring pin at the tightest spacing the declutterer allows. */
-const RING_FACTOR = 1.9;
-
 export interface PlacePinsAppearance {
   /** Fired when a pin is clicked. Returning `true` from the deck.gl handler
    *  marks the click handled — the same contract the airport dot and the
@@ -71,22 +66,6 @@ export interface PlacePinsAppearance {
    * pin means.
    */
   listColors?: ReadonlyMap<string, Rgb>;
-  /**
-   * Which MARK a place draws as.
-   *
-   *  - `dot`    the plain marker dot, on a map where places are the only pins.
-   *  - `target` a ring around that dot. For the ALL tab, where a place shares
-   *             the map with airport, port and lodging dots and has to be
-   *             tellable apart from all three.
-   *
-   * A colour cannot do that job: POI teal against cruise-port blue measures
-   * below the normal-vision separation floor, so on the All tab the two would
-   * be one kind of dot in two barely-different shades. The intended answer was
-   * a category emoji glyph, and deck.gl cannot render one (see below), so the
-   * mark is geometry instead — which also survives greyscale and forced
-   * colours, exactly as the shape encoding for wishlist pins does.
-   */
-  mark?: "dot" | "target";
 }
 
 /**
@@ -118,12 +97,15 @@ export interface PlacePinsAppearance {
  *    the list rows, the detail page and the tooltip. Bringing it back to the
  *    map needs an `IconLayer` with a real sprite atlas, not a font.
  *
- *    CONSEQUENCE, NOW ANSWERED: the glyph was also the mark meant to separate
- *    a place from a cruise-port dot on the All tab (teal vs blue measures below
- *    the normal-vision floor). Places DO appear there now, and the answer is
- *    `mark: "target"` — a ring around the dot. Geometry, not hue, so it holds
- *    in greyscale and forced colours; and unlike an emoji it is drawn by the
- *    same ScatterplotLayer that already works.
+ *    CONSEQUENCE, STILL OPEN: the glyph was also the mark meant to separate a
+ *    place from a cruise-port dot on the All tab, where teal against port blue
+ *    measures below the normal-vision separation floor. A ring around the dot
+ *    (`mark: "target"`) shipped as that separator and was REMOVED on 2026-08-28
+ *    by owner decision — a place is to read as the same plain dot every other
+ *    domain draws. So on the All tab the two are again told apart by hue alone,
+ *    which is known to be below the floor. If that turns out to matter in use,
+ *    the fix is a distinguishable colour or a sprite-atlas IconLayer, not the
+ *    ring: it was removed on purpose.
  *
  * Returns `null` when nothing qualifies, so callers omit the layers entirely
  * rather than mounting a no-op — the convention `createCruisePortsLayer` and
@@ -140,7 +122,6 @@ export function buildPlacePins(
     labelsMode = "important",
     colors = DEFAULT_PLACE_COLOR_CONFIG,
     listColors,
-    mark = "dot",
   } = appearance;
 
   const data: PlacePinDatum[] = [];
@@ -165,36 +146,6 @@ export function buildPlacePins(
   if (data.length === 0) return null;
 
   const layers: Layer[] = [];
-
-  // The distinguishing ring goes UNDER the dot, so the dot keeps its exact
-  // size and every place stays the same size as an airport or port dot
-  // (pinned by dotSizeParity.test.ts) — the mark reads as "that dot, ringed"
-  // rather than as a bigger dot.
-  if (mark === "target") {
-    layers.push(
-      new ScatterplotLayer<PlacePinDatum>({
-        id: "place-pins-ring",
-        data,
-        getPosition: (d) => d.position,
-        getRadius: markerDotRadiusProps(sizeScale).getRadius,
-        radiusMinPixels: MARKER_DOT_MIN_PX * sizeScale * RING_FACTOR,
-        radiusMaxPixels: MARKER_DOT_MAX_PX * sizeScale * RING_FACTOR,
-        filled: false,
-        stroked: true,
-        lineWidthUnits: "pixels",
-        getLineWidth: 1.5,
-        getLineColor: (d) =>
-          [...resolvePlaceColor(d, colors), d.visited ? 205 : 150] as [
-            number,
-            number,
-            number,
-            number,
-          ],
-        pickable: false,
-        updateTriggers: { getLineColor: [colors.mode, colors.colors] },
-      })
-    );
-  }
 
   layers.push(
     new ScatterplotLayer<PlacePinDatum>({

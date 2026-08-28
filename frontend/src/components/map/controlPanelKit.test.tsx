@@ -6,6 +6,7 @@ import {
   CruiseAppearanceSection,
   FlightAppearanceSection,
   LodgingAppearanceSection,
+  PlaceAppearanceSection,
   usePanelExpanded,
 } from "./controlPanelKit";
 import { DEFAULT_FLIGHT_COLOR_CONFIG, FLIGHT_COLOR_MODES } from "../../lib/flightColor";
@@ -301,5 +302,60 @@ describe("LodgingAppearanceSection", () => {
   it("shows 'Aus' at 0 — the same off-semantics as flight/cruise marker sliders", () => {
     render(<LodgingAppearanceSection {...lodgingSectionProps} markerSize={0} />);
     expect(screen.getByText("map:globe.panel.off")).toBeTruthy();
+  });
+});
+
+// 2026-08-28: places were the only domain whose panel offered no marker size,
+// so the map answered "how big are my places" with silence. The section now
+// carries the same slider lodging does — and, unlike lodging, it must still
+// render when only ONE half is supplied, because a caller may want the colours
+// without the slider or the other way round.
+describe("PlaceAppearanceSection", () => {
+  const placeSectionProps = {
+    title: "Orte",
+    markerSize: 1,
+    onMarkerSizeChange: () => {},
+    sizeLabel: "Größe",
+    onColorModeChange: () => {},
+    onColorChange: () => {},
+  };
+
+  it("renders the marker-size slider", () => {
+    render(<PlaceAppearanceSection {...placeSectionProps} />);
+    expect(screen.getAllByRole("slider").length).toBe(1);
+    expect(screen.getByText("Orte")).toBeTruthy();
+  });
+
+  it("emits the size on change", () => {
+    const onMarkerSizeChange = vi.fn();
+    render(
+      <PlaceAppearanceSection {...placeSectionProps} onMarkerSizeChange={onMarkerSizeChange} />
+    );
+    fireEvent.change(screen.getByRole("slider"), { target: { value: "1.2" } });
+    expect(onMarkerSizeChange).toHaveBeenCalledWith(1.2);
+  });
+
+  it("shows 'Aus' at 0 — the same off-semantics the other domains use", () => {
+    render(<PlaceAppearanceSection {...placeSectionProps} markerSize={0} />);
+    expect(screen.getByText("map:globe.panel.off")).toBeTruthy();
+  });
+
+  it("still renders the slider when no colour handlers are given", () => {
+    // The old early-return bailed out on missing colour handlers, which would
+    // have swallowed the slider whole.
+    render(
+      <PlaceAppearanceSection
+        title="Orte"
+        markerSize={1}
+        onMarkerSizeChange={() => {}}
+        sizeLabel="Größe"
+      />
+    );
+    expect(screen.getAllByRole("slider").length).toBe(1);
+  });
+
+  it("renders nothing at all when neither colours nor a size are offered", () => {
+    const { container } = render(<PlaceAppearanceSection title="Orte" />);
+    expect(container.textContent).toBe("");
   });
 });

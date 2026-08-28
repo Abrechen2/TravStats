@@ -37,7 +37,6 @@ import type { AllMode } from "../../../types/dashboard";
 import { ALL_MODES } from "../../../types/dashboard";
 import FlightEditModal from "../../FlightEditModal";
 import MapContainer3D, { type MapMode } from "../../MapContainer3D";
-import { buildPlacePins } from "../../layers/placePinsLayer";
 import { classifyVisit } from "../../../shared/placeCounting";
 import { buildJourneyLayers, groupByTripId } from "../modes/buildJourneyLayers";
 import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
@@ -225,20 +224,6 @@ export function AllTab(): JSX.Element {
       )
     );
   }, [places, placesVisible, filterTime.from, filterTime.to]);
-
-  const placeLayers = useMemo<Layer[]>(() => {
-    if (visiblePlaces.length === 0) return [];
-    return (
-      buildPlacePins(visiblePlaces, 1, 4, {
-        onPinClick: (placeId) => navigate(`/places/${placeId}`),
-        colors: placeColorConfig,
-        // The ringed mark, not the plain dot: on this map a place shares the
-        // canvas with airport, port and lodging dots, and POI teal against
-        // cruise blue is below the colour-separation floor.
-        mark: "target",
-      }) ?? []
-    );
-  }, [visiblePlaces, placeColorConfig, navigate]);
 
   // Map click → selection store. DeckGLMap handles dim/highlight + tooltip.
   const handleFlightClick = useCallback(
@@ -701,9 +686,11 @@ export function AllTab(): JSX.Element {
         <MapContainer3D
           flights={[]}
           visMode="routes"
-          extraLayers={[...journeyLayers, ...placeLayers]}
+          extraLayers={journeyLayers}
           showInternalCruises={false}
           appearanceDomains={["flight", "cruise", "lodging", "poi"]}
+          placesOverride={visiblePlaces}
+          onPlaceClick={(placeId) => navigate(`/places/${placeId}`)}
           onFlightClick={handleFlightClick}
           onRouteClick={handleRouteClick}
           onFlightOpen={handleFlightOpen}
@@ -727,8 +714,9 @@ export function AllTab(): JSX.Element {
       <MapContainer3D
         flights={visibleFlights}
         visMode={visMode}
-        extraLayers={placeLayers}
         appearanceDomains={["flight", "cruise", "lodging", "poi"]}
+        placesOverride={visiblePlaces}
+        onPlaceClick={(placeId) => navigate(`/places/${placeId}`)}
         onFlightClick={handleFlightClick}
         onRouteClick={handleRouteClick}
         onFlightOpen={handleFlightOpen}

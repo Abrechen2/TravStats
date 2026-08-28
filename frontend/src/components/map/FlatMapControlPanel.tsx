@@ -201,6 +201,7 @@ export function FlatMapControlPanel({
             <PlaceAppearanceSection
               title={t("map:globe.panel.domainPlace")}
               {...placeAppearance}
+              sizeLabel={t("map:globe.panel.size")}
             />
           )}
         </div>

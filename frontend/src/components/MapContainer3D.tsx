@@ -3,6 +3,7 @@ import { DeckGLMap } from "./DeckGLMap";
 import { GlobeLoader } from "./GlobeLoader";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { Lodging } from "../types/lodging";
+import type { Place } from "../types/place";
 import type { Layer } from "@deck.gl/core";
 import type { AppearanceDomain } from "./map/controlPanelKit";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
@@ -92,6 +93,17 @@ interface MapContainer3DProps {
    */
   onLodgingClick?: (lodgingId: string) => void;
   /**
+   * Places to render as pins. Threaded straight through to DeckGLMap, which
+   * builds the layer for the same reason it builds the lodging one — it owns
+   * the zoom/labelsMode state the layer needs. Callers that don't pass it get
+   * no place layer.
+   */
+  placesOverride?: readonly Place[];
+  /** Fired when a place pin is clicked — receives the place id. */
+  onPlaceClick?: (placeId: string) => void;
+  /** Place-id → its list's colour, for the `list` colour mode. */
+  placeListColors?: ReadonlyMap<string, [number, number, number]>;
+  /**
    * Which domain appearance sections the map control panel exposes. The
    * Alle tab passes both; single-domain tabs pass just their own domain
    * so the panel only surfaces the relevant route/marker controls.
@@ -118,6 +130,9 @@ export default function MapContainer3D({
   cruisesOverride,
   lodgingsOverride,
   onLodgingClick,
+  placesOverride,
+  onPlaceClick,
+  placeListColors,
   appearanceDomains = ["flight", "cruise"],
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
@@ -180,6 +195,15 @@ export default function MapContainer3D({
   useEffect(() => {
     saveMapAppearance({ lodgingMarkerSize });
   }, [lodgingMarkerSize]);
+
+  // Same ownership for places, for the same reason: DeckGLMap builds the pin
+  // layer, this component owns and persists the size the slider edits.
+  const [placeMarkerSize, setPlaceMarkerSize] = useState<number>(
+    () => loadMapAppearance().placeMarkerSize ?? 1
+  );
+  useEffect(() => {
+    saveMapAppearance({ placeMarkerSize });
+  }, [placeMarkerSize]);
 
   const routeCount = useMemo(() => {
     if (visMode !== "routes") return null;
@@ -244,6 +268,11 @@ export default function MapContainer3D({
             lodgingMarkerSize={lodgingMarkerSize}
             onLodgingMarkerSizeChange={setLodgingMarkerSize}
             lodgingsOverride={lodgingsOverride}
+            placesOverride={placesOverride}
+            onPlaceClick={onPlaceClick}
+            placeListColors={placeListColors}
+            placeMarkerSize={placeMarkerSize}
+            onPlaceMarkerSizeChange={setPlaceMarkerSize}
             onLodgingClick={onLodgingClick}
           />
         )}
