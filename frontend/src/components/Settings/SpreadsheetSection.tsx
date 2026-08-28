@@ -32,7 +32,7 @@ type ImportStatus = "idle" | "checking" | "previewed" | "applying" | "applied" |
 type Pending = { key: string; rows: Record<string, string>[] }[];
 
 export default function SpreadsheetSection(): JSX.Element {
-  const { t } = useTranslation(["xlsx", "common"]);
+  const { t, i18n } = useTranslation(["xlsx", "common"]);
   const { isEnabled } = useEnabledDomains();
   const [status, setStatus] = useState<Status>("idle");
 
@@ -48,7 +48,7 @@ export default function SpreadsheetSection(): JSX.Element {
         isEnabled("poi") ? placesApi.list() : Promise.resolve([]),
       ]);
 
-      const blob = await exportWorkbook(t, { cruises, lodging, places });
+      const blob = await exportWorkbook(t, { cruises, lodging, places }, i18n.language);
       if (!blob) {
         setStatus("empty");
         return;
@@ -68,7 +68,7 @@ export default function SpreadsheetSection(): JSX.Element {
     } catch {
       setStatus("failed");
     }
-  }, [isEnabled, t]);
+  }, [isEnabled, t, i18n.language]);
 
   const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);

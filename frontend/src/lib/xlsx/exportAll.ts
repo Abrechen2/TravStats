@@ -75,7 +75,7 @@ function placeVisitRows(places: readonly Place[]): PlaceVisitRow[] {
 
 /** Assemble the sheets that have content. Exported for tests, which inspect
  *  the sheet list without going through a Blob. */
-export function buildSheets(t: T, input: ExportInput): AnySheetData[] {
+export function buildSheets(t: T, input: ExportInput, locale = "de"): AnySheetData[] {
   const sheets: AnySheetData[] = [];
 
   const cruises = input.cruises ?? [];
@@ -94,7 +94,7 @@ export function buildSheets(t: T, input: ExportInput): AnySheetData[] {
 
   const places = input.places ?? [];
   if (places.length > 0) {
-    sheets.push(sheet(placeSheet(t), places));
+    sheets.push(sheet(placeSheet(t, locale), places));
     const visits = placeVisitRows(places);
     if (visits.length > 0) sheets.push(sheet(placeVisitSheet(t), visits));
   }
@@ -104,8 +104,12 @@ export function buildSheets(t: T, input: ExportInput): AnySheetData[] {
 
 /** Build the file. Returns null when there is nothing at all to write, so the
  *  caller can say so rather than hand over an empty workbook. */
-export async function exportWorkbook(t: T, input: ExportInput): Promise<Blob | null> {
-  const sheets = buildSheets(t, input);
+export async function exportWorkbook(
+  t: T,
+  input: ExportInput,
+  locale = "de",
+): Promise<Blob | null> {
+  const sheets = buildSheets(t, input, locale);
   if (sheets.length === 0) return null;
   return buildWorkbookBlob(sheets);
 }
