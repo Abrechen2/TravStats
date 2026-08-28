@@ -12,6 +12,12 @@ now be written in the currency it was actually paid in. Two-factor
 authentication and passkeys arrive alongside.
 
 ### Added
+- **The API documentation covers cruises, catalogues, geography and
+  achievements.** It described flights and trips and claimed to be complete;
+  measured against what the server actually serves, 244 endpoints had no entry.
+  Coverage is now enforced by a test that walks the live route table, so an
+  endpoint can no longer ship undocumented. The remaining gaps are listed by
+  name rather than left to be discovered.
 - **Every dashboard tab has the same activity list.** Four tabs carried four
   different panels, places carried none, and "All" listed flights and cruises
   while the tab bar above it counted four domains. One list serves all of them
@@ -238,6 +244,26 @@ authentication and passkeys arrive alongside.
   statistics, where figures belong.
 
 ### Fixed
+- **Every "when did I fly" figure now reads the clock at the airport.** Eight of
+  them read the stored timestamp instead: the time-of-day buckets, weekend
+  warrior, fastest day, milestone year, busiest month, season explorer, most
+  countries in one day, and first airport visits — plus the year buckets on the
+  overview tab and the country year index. A flight leaving Bangkok late in the
+  evening could be counted onto the following day, so two figures on one screen
+  could disagree about the same flight. Rows stored as a wall clock are no longer
+  converted a second time, and a date-only row reports no hour at all rather than
+  being counted on its 12:00 placeholder.
+- **Antarctica's airfields can be flown to.** Rothera, Marambio, Union Glacier,
+  Novo and Teniente Marsh were not in the catalogue, so the flights could not be
+  recorded at all. The seed admitted only large, medium and closed airports, and
+  Antarctica — having no scheduled traffic — is listed almost entirely as small.
+  Wolf's Fang was the lone exception, which meant "Seven Continents" effectively
+  ran through a single airfield. 23 entries added.
+- **The Unraid install guide matched no longer-existing files.** Both template
+  links pointed at the pre-move filenames and returned 404, and the documented
+  `DATABASE_URL` used the database container's name — the custom Docker network
+  is gone and the default bridge has no DNS, so it never resolved. Same defect in
+  the Ollama endpoint.
 - **The flight sidebar opened on the oldest flight.** The two sort labels were
   swapped, and "newest first" — the default — did nothing at all.
 - **A bookmark to a domain page no longer bounces to the dashboard.** Opening
