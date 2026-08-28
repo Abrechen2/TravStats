@@ -58,6 +58,7 @@ import cruiseRouteOverrideRoutes from './cruises/routeOverride';
 import currenciesRouter from './currencies';
 import lodgingRouter from './lodging';
 import placesRouter from './places';
+import xlsxImportRouter from './xlsxImport';
 import placeVisitPhotoRouter from './places/visitPhotos';
 import placeListsRouter from './placeLists';
 import curatedListsRouter from './placeLists/curated';
@@ -140,6 +141,7 @@ export const apiMounts: ApiMount[] = [
   // counts to keep the two routers apart.
   { id: 'places.visitPhotos', base: '/api/v1/places', router: placeVisitPhotoRouter },
   { id: 'places', base: '/api/v1/places', router: placesRouter },
+  { id: 'xlsxImport', base: '/api/v1/xlsx-import', router: xlsxImportRouter },
   // Curated checklists mount FIRST on the same path: '/curated' would
   // otherwise be captured by the lists router's '/:id' and answered 404.
   { id: 'placeLists.curated', base: '/api/v1/place-lists/curated', router: curatedListsRouter },
