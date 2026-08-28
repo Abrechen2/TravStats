@@ -76,5 +76,31 @@
     "place": "Ort",
     "visitedAt": "Besucht am",
     "rating": "Bewertung"
+  },
+  "import": {
+    "title": "Excel-Import",
+    "description": "Eine bearbeitete Export-Datei zurückspielen. Zeilen mit ID ändern den vorhandenen Eintrag, Zeilen ohne ID werden neu angelegt. Es wird zuerst nur geprüft — geschrieben wird erst, wenn du bestätigst.",
+    "choose": "Datei wählen",
+    "checking": "Datei wird geprüft …",
+    "applying": "Wird übernommen …",
+    "apply": "Übernehmen",
+    "cancel": "Verwerfen",
+    "preview": "Das würde passieren:",
+    "applied": "Übernommen.",
+    "failed": "Die Datei konnte nicht gelesen werden.",
+    "nothing": "In der Datei stehen keine bekannten Blätter.",
+    "hasErrors": "Es gibt fehlerhafte Zeilen. Solange die drin sind, wird nichts übernommen.",
+    "counts": "{{created}} neu, {{updated}} geändert, {{skipped}} unverändert, {{errors}} fehlerhaft",
+    "rowError": "Zeile {{row}} ({{label}}): {{message}}",
+    "errors": {
+      "unknown_id": "Diese ID gibt es in deinem Konto nicht.",
+      "invalid_coordinates": "Breite oder Länge ist keine Zahl.",
+      "invalid_number": "Eine Zahl in dieser Zeile ist keine Zahl.",
+      "invalid_date": "Ein Datum in dieser Zeile ist unlesbar.",
+      "cruise_needs_id": "Eine neue Kreuzfahrt lässt sich nicht aus der Tabelle anlegen — dafür gibt es das Formular.",
+      "lodging_needs_id": "Eine neue Unterkunft lässt sich nicht aus der Tabelle anlegen — dafür gibt es das Formular.",
+      "unknown_trip": "Die angegebene Reise gibt es in deinem Konto nicht.",
+      "too_many_rows": "Das Blatt hat zu viele Zeilen."
+    }
   }
 }

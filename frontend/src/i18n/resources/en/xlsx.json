@@ -76,5 +76,31 @@
     "place": "Place",
     "visitedAt": "Visited on",
     "rating": "Rating"
+  },
+  "import": {
+    "title": "Excel import",
+    "description": "Send an edited export file back. Rows with an ID update the existing record, rows without one are created. Nothing is written until you confirm — the file is checked first.",
+    "choose": "Choose file",
+    "checking": "Checking the file …",
+    "applying": "Applying …",
+    "apply": "Apply",
+    "cancel": "Discard",
+    "preview": "This is what would happen:",
+    "applied": "Applied.",
+    "failed": "The file could not be read.",
+    "nothing": "The file holds no sheets we recognise.",
+    "hasErrors": "Some rows have problems. Nothing is applied while they are in there.",
+    "counts": "{{created}} new, {{updated}} changed, {{skipped}} unchanged, {{errors}} with problems",
+    "rowError": "Row {{row}} ({{label}}): {{message}}",
+    "errors": {
+      "unknown_id": "There is no such ID in your account.",
+      "invalid_coordinates": "Latitude or longitude is not a number.",
+      "invalid_number": "A number in this row is not a number.",
+      "invalid_date": "A date in this row cannot be read.",
+      "cruise_needs_id": "A new cruise cannot be created from the sheet — use the form for that.",
+      "lodging_needs_id": "A new property cannot be created from the sheet — use the form for that.",
+      "unknown_trip": "There is no such trip in your account.",
+      "too_many_rows": "That sheet has too many rows."
+    }
   }
 }
