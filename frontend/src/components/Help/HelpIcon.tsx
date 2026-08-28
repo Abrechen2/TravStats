@@ -21,7 +21,7 @@ export default function HelpIcon({
     position
   );
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
-  const iconRef = useRef<HTMLDivElement>(null);
+  const iconRef = useRef<HTMLButtonElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation("common");
 
@@ -277,7 +277,17 @@ export default function HelpIcon({
   return (
     <>
       <div className={`relative inline-flex items-center ${className}`}>
-        <div
+        {/* A BUTTON, not a div. This used to be a div carrying onClick and an
+            aria-label: clickable with a mouse, invisible to the keyboard and
+            announced as nothing. That was survivable while help icons were a
+            garnish on three flight fields; now that the settings carry their
+            explanations here, a non-focusable trigger would put ALL field help
+            out of reach of anyone not using a mouse.
+            `stopPropagation` because this sits inside a <label> — without it a
+            click would also activate the label and move focus into the input
+            the help is about. */}
+        <button
+          type="button"
           ref={iconRef}
           className="cursor-help transition-colors touch-manipulation"
           style={{ color: "var(--text-muted)" }}
@@ -287,9 +297,18 @@ export default function HelpIcon({
               setIsHovered(false);
             }
           }}
-          onClick={handleClick}
+          onFocus={() => setIsHovered(true)}
+          onBlur={() => {
+            if (!isExpanded) setIsHovered(false);
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleClick();
+          }}
           onTouchStart={handleTouchStart}
           aria-label={t("accessibility.showHelp")}
+          aria-expanded={isExpanded}
         >
           <svg
             className="w-4 h-4"
@@ -303,7 +322,7 @@ export default function HelpIcon({
               clipRule="evenodd"
             />
           </svg>
-        </div>
+        </button>
       </div>
       {tooltipContent && createPortal(tooltipContent, document.body)}
     </>

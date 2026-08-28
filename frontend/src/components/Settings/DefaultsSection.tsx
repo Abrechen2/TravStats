@@ -1,5 +1,4 @@
-import { SectionCard, SectionTitle } from "./SettingsShared";
-import InlineHelp from "../Help/InlineHelp";
+import { FieldLabel, SectionCard, SectionTitle } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { DefaultsSettings } from "../../store/settingsStore";
 
@@ -20,26 +19,9 @@ export default function DefaultsSection({
         title={t("settings:defaults.title")}
         description={t("settings:defaults.description")}
       />
-      <InlineHelp
-        title={t("settings:defaults.help.title")}
-        category="basic"
-        content={
-          <div className="space-y-2">
-            <p>{t("settings:defaults.help.description")}</p>
-            <div>
-              <p className="font-semibold">{t("settings:defaults.help.statusTitle")}</p>
-              <p className="ml-2 text-sm">{t("settings:defaults.help.status")}</p>
-            </div>
-            <div>
-              <p className="font-semibold">{t("settings:defaults.help.categoryTitle")}</p>
-              <p className="ml-2 text-sm">{t("settings:defaults.help.category")}</p>
-            </div>
-          </div>
-        }
-      />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="label">{t("settings:defaults.flightStatus")}</label>
+          <FieldLabel help={t("settings:defaults.help.status")}>{t("settings:defaults.flightStatus")}</FieldLabel>
           <select
             value={defaults.flightStatus}
             onChange={(e) =>
@@ -79,7 +61,7 @@ export default function DefaultsSection({
           />
         </div>
         <div>
-          <label className="label">{t("settings:defaults.flightCategory")}</label>
+          <FieldLabel help={t("settings:defaults.help.category")}>{t("settings:defaults.flightCategory")}</FieldLabel>
           <select
             value={defaults.flightCategory}
             onChange={(e) =>

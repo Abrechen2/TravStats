@@ -1,6 +1,5 @@
 import React from "react";
-import { SectionCard, SectionTitle } from "./SettingsShared";
-import InlineHelp from "../Help/InlineHelp";
+import { FieldLabel, SectionCard, SectionTitle } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
 
 interface ProfileSectionProps {
@@ -55,23 +54,6 @@ export default function ProfileSection({
         </button>
       </div>
 
-      <InlineHelp
-        title={t("settings:profile.help.title")}
-        category="basic"
-        content={
-          <div className="space-y-2">
-            <p>{t("settings:profile.help.description")}</p>
-            <div>
-              <p className="font-semibold">{t("settings:profile.help.avatarTitle")}</p>
-              <p className="ml-2 text-sm">{t("settings:profile.help.avatar")}</p>
-            </div>
-            <div>
-              <p className="font-semibold">{t("settings:profile.help.passwordTitle")}</p>
-              <p className="ml-2 text-sm">{t("settings:profile.help.password")}</p>
-            </div>
-          </div>
-        }
-      />
 
       <div className="flex items-center gap-4">
         <div
@@ -89,7 +71,7 @@ export default function ProfileSection({
           )}
         </div>
         <div>
-          <label className="label">{t("settings:profile.uploadAvatar")}</label>
+          <FieldLabel help={t("settings:profile.help.avatar")}>{t("settings:profile.uploadAvatar")}</FieldLabel>
           {/* Native <input type=file> shows the browser-locale "Choose File"
               label which conflicts with the app i18n. Hide it visually and
               drive it from a labelled button so the copy stays under our
