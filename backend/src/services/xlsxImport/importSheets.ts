@@ -16,10 +16,17 @@
  */
 
 import { prisma } from "../../db";
+import logger from "../../utils/logger";
 import { createPlaceSchema } from "../../schemas/place";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
 import * as cell from "./cells";
-import { summarise, type IncomingSheet, type RowOutcome, type SheetOutcome } from "./types";
+import {
+  summarise,
+  type ImportMode,
+  type IncomingSheet,
+  type RowOutcome,
+  type SheetOutcome,
+} from "./types";
 
 /** Cap per sheet. A spreadsheet is a hand-editing tool; anything larger is an
  *  import job, and one request should not sit in a transaction for minutes. */
@@ -28,6 +35,7 @@ export const MAX_ROWS_PER_SHEET = 5000;
 interface Ctx {
   userId: string;
   dryRun: boolean;
+  mode: ImportMode;
 }
 
 /** Same wording for "not yours" and "does not exist" — see the module note. */
@@ -37,10 +45,72 @@ function errorRow(row: number, label: string, message: string): RowOutcome {
   return { row, action: "error", id: null, label, message };
 }
 
+/**
+ * Mark an id as accounted for even though its row failed.
+ *
+ * Caught by a test: without this, a mistyped latitude in `replace` mode does
+ * not merely skip the row — it DELETES the record the row named, because the
+ * id never reached `seen`. A refused row means "this line is unreadable", it
+ * has never meant "destroy what it points at".
+ */
+function keepDespiteError(seen: Set<string>, id: string | undefined): void {
+  if (id) seen.add(id);
+}
+
+/**
+ * Delete the rows of one model that the file did not account for.
+ *
+ * Only in `replace` mode, only for the calling user, and only ever counted in
+ * a dry run — the count is the whole point of previewing a destructive
+ * import, because those rows are invisible in the sheet the user is looking
+ * at. They are about to lose data they cannot see.
+ *
+ * A row the file mentioned but FAILED on is in `seen` and therefore safe: a
+ * refused row is not permission to delete the record it named.
+ */
+async function pruneMissing(
+  model: "place" | "cruise" | "lodging",
+  seen: Set<string>,
+  ctx: Ctx,
+): Promise<number> {
+  if (ctx.mode !== "replace") return 0;
+
+  const where = { userId: ctx.userId, id: { notIn: [...seen] } };
+
+  // Written out per model rather than through a lookup: Prisma's delegates do
+  // not share a callable signature, and a union of them is not invocable.
+  const count = async (): Promise<number> => {
+    if (model === "place") return prisma.place.count({ where });
+    if (model === "cruise") return prisma.cruise.count({ where });
+    return prisma.lodging.count({ where });
+  };
+  const removeAll = async (): Promise<void> => {
+    if (model === "place") await prisma.place.deleteMany({ where });
+    else if (model === "cruise") await prisma.cruise.deleteMany({ where });
+    else await prisma.lodging.deleteMany({ where });
+  };
+
+  const doomed = await count();
+  if (doomed === 0) return 0;
+
+  if (!ctx.dryRun) {
+    await removeAll();
+    logger.warn(
+      { operation: "xlsx_import_replace_deleted", model, userId: ctx.userId, deleted: doomed },
+      "Spreadsheet import in replace mode deleted rows absent from the file",
+    );
+  }
+  return doomed;
+}
+
 // ------------------------------------------------------------------ places
 
 async function importPlaces(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutcome> {
   const out: RowOutcome[] = [];
+  /** Ids the file accounted for. Everything else is a deletion candidate in
+   *  `replace` mode — including rows the file merely FAILED on, because a
+   *  refused row is not permission to delete the record it named. */
+  const seen = new Set<string>();
 
   for (const [index, raw] of sheet.rows.entries()) {
     // +2: one for 1-based rows, one for the header. Matches what Excel shows.
@@ -51,6 +121,7 @@ async function importPlaces(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutcom
     const lat = cell.num(raw.lat);
     const lon = cell.num(raw.lon);
     if ((lat !== undefined && Number.isNaN(lat)) || (lon !== undefined && Number.isNaN(lon))) {
+      keepDespiteError(seen, id);
       out.push(errorRow(rowNo, label, "invalid_coordinates"));
       continue;
     }
@@ -77,6 +148,13 @@ async function importPlaces(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutcom
         out.push(errorRow(rowNo, label, UNKNOWN_ID));
         continue;
       }
+      // "add" only ever creates. A row naming an existing record is reported
+      // as skipped rather than refused: the file is fine, the mode simply
+      // says not to touch what is already there.
+      if (ctx.mode === "add") {
+        out.push({ row: rowNo, action: "skip", id, label, message: "exists" });
+        continue;
+      }
 
       // Only the keys the sheet actually carried. An untouched column must not
       // become a null that erases a stored value.
@@ -86,10 +164,12 @@ async function importPlaces(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutcom
       if (data.country) data.isoCountryCode = resolveCountryCode(String(data.country));
 
       if (Object.keys(data).length === 0) {
+        seen.add(id);
         out.push({ row: rowNo, action: "skip", id, label });
         continue;
       }
       if (!ctx.dryRun) await prisma.place.update({ where: { id }, data });
+      seen.add(id);
       out.push({ row: rowNo, action: "update", id, label });
       continue;
     }
@@ -124,11 +204,13 @@ async function importPlaces(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutcom
         select: { id: true },
       });
       newId = created.id;
+      seen.add(created.id);
     }
     out.push({ row: rowNo, action: "create", id: newId, label });
   }
 
-  return summarise(sheet.key, out);
+  const deleted = await pruneMissing("place", seen, ctx);
+  return summarise(sheet.key, out, deleted);
 }
 
 // ----------------------------------------------------------------- cruises
@@ -140,6 +222,7 @@ async function importPlaces(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutcom
  *  actual reason to open a spreadsheet — works fully. */
 async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutcome> {
   const out: RowOutcome[] = [];
+  const seen = new Set<string>();
 
   for (const [index, raw] of sheet.rows.entries()) {
     const rowNo = index + 2;
@@ -163,12 +246,14 @@ async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutco
     const startDate = cell.isoDate(raw.startDate);
     const endDate = cell.isoDate(raw.endDate);
     if (startDate === null || endDate === null) {
+      keepDespiteError(seen, id);
       out.push(errorRow(rowNo, label, "invalid_date"));
       continue;
     }
 
     const price = cell.num(raw.price);
     if (price !== undefined && Number.isNaN(price)) {
+      keepDespiteError(seen, id);
       out.push(errorRow(rowNo, label, "invalid_number"));
       continue;
     }
@@ -205,20 +290,24 @@ async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutco
 
     const data = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined));
     if (Object.keys(data).length === 0) {
+      seen.add(id);
       out.push({ row: rowNo, action: "skip", id, label });
       continue;
     }
     if (!ctx.dryRun) await prisma.cruise.update({ where: { id }, data });
+    seen.add(id);
     out.push({ row: rowNo, action: "update", id, label });
   }
 
-  return summarise(sheet.key, out);
+  const deleted = await pruneMissing("cruise", seen, ctx);
+  return summarise(sheet.key, out, deleted);
 }
 
 // ----------------------------------------------------------------- lodging
 
 async function importLodging(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutcome> {
   const out: RowOutcome[] = [];
+  const seen = new Set<string>();
 
   for (const [index, raw] of sheet.rows.entries()) {
     const rowNo = index + 2;
@@ -247,6 +336,8 @@ async function importLodging(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutco
       (lon !== undefined && Number.isNaN(lon)) ||
       (stars !== undefined && Number.isNaN(stars))
     ) {
+      keepDespiteError(seen, id);
+      keepDespiteError(seen, id);
       out.push(errorRow(rowNo, label, "invalid_number"));
       continue;
     }
@@ -268,14 +359,17 @@ async function importLodging(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutco
 
     const data = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined));
     if (Object.keys(data).length === 0) {
+      seen.add(id);
       out.push({ row: rowNo, action: "skip", id, label });
       continue;
     }
     if (!ctx.dryRun) await prisma.lodging.update({ where: { id }, data });
+    seen.add(id);
     out.push({ row: rowNo, action: "update", id, label });
   }
 
-  return summarise(sheet.key, out);
+  const deleted = await pruneMissing("lodging", seen, ctx);
+  return summarise(sheet.key, out, deleted);
 }
 
 // ------------------------------------------------------------------ router
@@ -308,9 +402,14 @@ export async function importSheets(
 
   for (const key of Object.keys(HANDLERS)) {
     const sheet = sheets.find((s) => s.key === key);
+    // A sheet that is absent, or present but empty, is left alone entirely —
+    // including in `replace` mode. Reading an empty sheet as "delete all of
+    // this domain" would turn a file someone cleared by accident, or a tab
+    // they never filled, into total data loss. Deleting everything has to be
+    // asked for by removing the rows one by one, not by handing over a blank.
     if (!sheet || sheet.rows.length === 0) continue;
     if (sheet.rows.length > MAX_ROWS_PER_SHEET) {
-      results.push(summarise(key, [errorRow(0, key, "too_many_rows")]));
+      results.push(summarise(key, [errorRow(0, key, "too_many_rows")], 0));
       continue;
     }
     results.push(await HANDLERS[key](sheet, ctx));

@@ -58,8 +58,12 @@ describe("spreadsheet import", () => {
     await prisma.$disconnect();
   });
 
-  const run = (rows: Record<string, string>[], dryRun = false, key = "places") =>
-    importSheets([{ key, rows }], { userId, dryRun });
+  const run = (
+    rows: Record<string, string>[],
+    dryRun = false,
+    key = "places",
+    mode: "add" | "merge" | "replace" = "merge",
+  ) => importSheets([{ key, rows }], { userId, dryRun, mode });
 
   // ------------------------------------------------------------- ownership
 
@@ -209,5 +213,153 @@ describe("spreadsheet import", () => {
 
     const after = await prisma.cruise.findUnique({ where: { id: own.id } });
     expect(Number(after?.price)).toBeCloseTo(1899.5);
+  });
+});
+
+/**
+ * The three modes, and above all what `replace` is allowed to destroy.
+ *
+ * The rows it deletes are the ones NOT in the file — which are, by definition,
+ * invisible in the sheet the user is looking at while they confirm. That makes
+ * the count in the preview the only warning they get, so it has to be right
+ * even in a dry run, and the deletion has to stay inside one account.
+ */
+describe("import modes", () => {
+  let modeUserId: string;
+  let modeVictimId: string;
+
+  beforeAll(async () => {
+    await prisma.user.deleteMany({ where: { username: { in: ["modeuser", "modevictim"] } } });
+    const u = await prisma.user.create({
+      data: { username: "modeuser", passwordHash: await hashPassword("password123") },
+    });
+    modeUserId = u.id;
+    const v = await prisma.user.create({
+      data: { username: "modevictim", passwordHash: await hashPassword("password123") },
+    });
+    modeVictimId = v.id;
+  });
+
+  beforeEach(async () => {
+    await prisma.place.deleteMany({ where: { userId: { in: [modeUserId, modeVictimId] } } });
+  });
+
+  afterAll(async () => {
+    await prisma.place.deleteMany({ where: { userId: { in: [modeUserId, modeVictimId] } } });
+    await prisma.user.deleteMany({ where: { id: { in: [modeUserId, modeVictimId] } } });
+  });
+
+  const mk = (name: string, owner?: string) =>
+    prisma.place.create({
+      data: {
+        userId: owner ?? modeUserId,
+        name,
+        category: "landmark",
+        lat: 1,
+        lon: 1,
+        visited: true,
+      },
+    });
+
+  const runMode = (
+    rows: Record<string, string>[],
+    mode: "add" | "merge" | "replace",
+    dryRun = false,
+  ) => importSheets([{ key: "places", rows }], { userId: modeUserId, dryRun, mode });
+
+  it("add: leaves an existing row untouched instead of updating it", async () => {
+    const own = await mk("Alt");
+    const [r] = await runMode([{ id: own.id, name: "Geaendert" }], "add");
+
+    expect(r.updated).toBe(0);
+    expect(r.skipped).toBe(1);
+    expect(r.rows[0].message).toBe("exists");
+    expect((await prisma.place.findUnique({ where: { id: own.id } }))?.name).toBe("Alt");
+  });
+
+  it("add: still creates rows that carry no id", async () => {
+    const [r] = await runMode([{ id: "", name: "Neu", lat: "5", lon: "5" }], "add");
+    expect(r.created).toBe(1);
+  });
+
+  it("merge: deletes nothing that the file omits", async () => {
+    await mk("Bleibt");
+    const [r] = await runMode([{ id: "", name: "Neu", lat: "5", lon: "5" }], "merge");
+
+    expect(r.deleted).toBe(0);
+    expect(await prisma.place.count({ where: { userId: modeUserId } })).toBe(2);
+  });
+
+  it("replace: deletes exactly the rows the file did not mention", async () => {
+    const kept = await mk("Genannt");
+    await mk("Nicht genannt");
+    await mk("Auch nicht");
+
+    const [r] = await runMode([{ id: kept.id, name: "Genannt" }], "replace");
+
+    expect(r.deleted).toBe(2);
+    const left = await prisma.place.findMany({
+      where: { userId: modeUserId },
+      select: { id: true },
+    });
+    expect(left.map((p) => p.id)).toEqual([kept.id]);
+  });
+
+  it("replace: a dry run reports the deletions and performs none", async () => {
+    const kept = await mk("Genannt");
+    await mk("A");
+    await mk("B");
+
+    const [r] = await runMode([{ id: kept.id, name: "Genannt" }], "replace", true);
+
+    expect(r.deleted).toBe(2);
+    expect(await prisma.place.count({ where: { userId: modeUserId } })).toBe(3);
+  });
+
+  it("replace: an EMPTY sheet deletes nothing at all", async () => {
+    // A file someone cleared by accident, or a tab they never filled, must not
+    // read as "delete this whole domain". Emptying has to be asked for row by
+    // row, never by handing over a blank.
+    await mk("A");
+    await mk("B");
+
+    const results = await runMode([], "replace");
+
+    expect(results).toHaveLength(0);
+    expect(await prisma.place.count({ where: { userId: modeUserId } })).toBe(2);
+  });
+
+  it("replace: never reaches another account's rows", async () => {
+    const kept = await mk("Meins");
+    await mk("Auch meins");
+    await mk("Fremd", modeVictimId);
+
+    await runMode([{ id: kept.id, name: "Meins" }], "replace");
+
+    // One of mine deleted, the stranger's untouched.
+    expect(await prisma.place.count({ where: { userId: modeUserId } })).toBe(1);
+    expect(await prisma.place.count({ where: { userId: modeVictimId } })).toBe(1);
+  });
+
+  it("replace: keeps a row whose line failed, rather than deleting it", async () => {
+    // A refused row is not permission to delete the record it named.
+    const own = await mk("Alt");
+    const [r] = await runMode([{ id: own.id, lat: "keine-zahl", lon: "5" }], "replace");
+
+    expect(r.errors).toBe(1);
+    expect(await prisma.place.count({ where: { id: own.id } })).toBe(1);
+  });
+
+  it("replace: a row created by the import survives its own run", async () => {
+    await mk("Alt");
+    const [r] = await runMode([{ id: "", name: "Frisch", lat: "5", lon: "5" }], "replace");
+
+    expect(r.created).toBe(1);
+    expect(r.deleted).toBe(1);
+    const left = await prisma.place.findMany({
+      where: { userId: modeUserId },
+      select: { name: true },
+    });
+    expect(left.map((p) => p.name)).toEqual(["Frisch"]);
   });
 });

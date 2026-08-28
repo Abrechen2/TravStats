@@ -18,14 +18,24 @@ import { listLodgings } from "../../lib/api/lodging";
 import { placesApi } from "../../lib/api/places";
 import { exportFilename, exportWorkbook } from "../../lib/xlsx/exportAll";
 import {
+  ImportRefused,
   readWorkbookForImport,
   sendImport,
+  type ImportMode,
   type ImportOutcome,
 } from "../../lib/xlsx/importClient";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 
 type Status = "idle" | "running" | "empty" | "failed";
-type ImportStatus = "idle" | "checking" | "previewed" | "applying" | "applied" | "failed" | "nothing";
+type ImportStatus =
+  | "idle"
+  | "checking"
+  | "previewed"
+  | "applying"
+  | "applied"
+  | "failed"
+  | "backupFailed"
+  | "nothing";
 
 /** Sheets held for the confirm step, so applying re-sends exactly what was
  *  previewed rather than re-reading a file that may have changed on disk. */
@@ -73,6 +83,11 @@ export default function SpreadsheetSection(): JSX.Element {
   const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
   const [pending, setPending] = useState<Pending>([]);
+  /** Defaults to the non-destructive middle option, never to `replace`. */
+  const [mode, setMode] = useState<ImportMode>("merge");
+  /** The extra tick `replace` demands. Reset on every new preview so it can
+   *  never carry over from a file the user already dismissed. */
+  const [replaceConfirmed, setReplaceConfirmed] = useState(false);
 
   const handleFile = useCallback(
     async (file: File | undefined) => {
@@ -86,7 +101,7 @@ export default function SpreadsheetSection(): JSX.Element {
           return;
         }
         // Preview first, always. An import can rewrite hundreds of rows.
-        const result = await sendImport(sheets, true);
+        const result = await sendImport(sheets, true, mode);
         setPending(sheets);
         setOutcome(result);
         setImportStatus("previewed");
@@ -94,29 +109,38 @@ export default function SpreadsheetSection(): JSX.Element {
         setImportStatus("failed");
       }
     },
-    [t],
+    [t, mode],
   );
 
   const handleApply = useCallback(async () => {
     setImportStatus("applying");
     try {
-      const result = await sendImport(pending, false);
+      const result = await sendImport(pending, false, mode);
       setOutcome(result);
       setImportStatus("applied");
-    } catch {
-      setImportStatus("failed");
+    } catch (err) {
+      // A refused safety backup is not a broken file — saying so would send
+      // the user to inspect a spreadsheet that is perfectly fine.
+      setImportStatus(
+        err instanceof ImportRefused && err.kind === "backupFailed" ? "backupFailed" : "failed",
+      );
     }
-  }, [pending]);
+  }, [pending, mode]);
 
   const reset = useCallback(() => {
     setImportStatus("idle");
     setOutcome(null);
     setPending([]);
+    setReplaceConfirmed(false);
   }, []);
 
   const errorRows = (outcome?.sheets ?? []).flatMap((s) =>
     s.rows.filter((r) => r.action === "error").map((r) => ({ ...r, sheet: s.key })),
   );
+  /** Rows that would be removed — the part of a replace the sheet cannot show. */
+  const deletionCount = (outcome?.sheets ?? []).reduce((n, s) => n + s.deleted, 0);
+  const needsConfirmation = mode === "replace" && deletionCount > 0;
+  const mayApply = Boolean(outcome?.clean) && (!needsConfirmation || replaceConfirmed);
 
   return (
     <>
@@ -153,6 +177,37 @@ export default function SpreadsheetSection(): JSX.Element {
       <p className="mb-3 text-xs" style={{ color: "var(--text-muted)" }}>
         {t("xlsx:import.description")}
       </p>
+
+      <fieldset className="mb-3 border-0 p-0">
+        <legend className="mb-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
+          {t("xlsx:import.modeLabel")}
+        </legend>
+        <div className="flex flex-col gap-1.5">
+          {(["add", "merge", "replace"] as const).map((m) => (
+            <label key={m} className="flex cursor-pointer items-start gap-2 text-sm">
+              <input
+                type="radio"
+                name="xlsx-import-mode"
+                value={m}
+                checked={mode === m}
+                onChange={() => {
+                  setMode(m);
+                  // A preview belongs to the mode it was made in — keep it and
+                  // the user could apply "replace" after previewing "merge".
+                  reset();
+                }}
+                className="mt-1"
+              />
+              <span>
+                <span className="font-medium">{t(`xlsx:import.modes.${m}.label`)}</span>
+                <span className="block text-xs" style={{ color: "var(--text-muted)" }}>
+                  {t(`xlsx:import.modes.${m}.hint`)}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       <label className="inline-block cursor-pointer rounded-md border border-[var(--border)] px-3 py-2 text-sm">
         {importStatus === "checking" ? t("xlsx:import.checking") : t("xlsx:import.choose")}
@@ -203,12 +258,47 @@ export default function SpreadsheetSection(): JSX.Element {
             </div>
           )}
 
+          {needsConfirmation && importStatus === "previewed" && (
+            <div
+              className="mt-3 rounded-md p-3"
+              style={{
+                border: "1px solid var(--danger, #f87171)",
+                background: "color-mix(in srgb, var(--danger, #f87171) 8%, transparent)",
+              }}
+            >
+              <p className="font-medium" style={{ color: "var(--danger, #f87171)" }}>
+                {t("xlsx:import.replaceWarningTitle")}
+              </p>
+              <p className="mt-1" style={{ color: "var(--text-muted)" }}>
+                {t("xlsx:import.replaceWarning")}
+              </p>
+              <p className="mt-2 font-medium" style={{ color: "var(--danger, #f87171)" }}>
+                {t("xlsx:import.willDelete", { count: deletionCount })}
+              </p>
+              <label className="mt-2 flex cursor-pointer items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={replaceConfirmed}
+                  onChange={(e) => setReplaceConfirmed(e.target.checked)}
+                  className="mt-1"
+                />
+                <span>{t("xlsx:import.confirmReplace", { count: deletionCount })}</span>
+              </label>
+            </div>
+          )}
+
+          {importStatus === "applied" && outcome.backupId && (
+            <p style={{ color: "var(--text-muted)" }}>
+              {t("xlsx:import.backupTaken", { id: outcome.backupId })}
+            </p>
+          )}
+
           {importStatus === "previewed" && (
             <div className="mt-3 flex gap-2">
               <button
                 type="button"
                 onClick={handleApply}
-                disabled={!outcome.clean}
+                disabled={!mayApply}
                 className="rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50"
                 style={{ background: "var(--accent)", color: "#0b0f14" }}
               >
@@ -234,6 +324,11 @@ export default function SpreadsheetSection(): JSX.Element {
       {importStatus === "failed" && (
         <p className="mt-2 text-xs" style={{ color: "var(--danger, #f87171)" }}>
           {t("xlsx:import.failed")}
+        </p>
+      )}
+      {importStatus === "backupFailed" && (
+        <p className="mt-2 text-xs" style={{ color: "var(--danger, #f87171)" }}>
+          {t("xlsx:import.backupFailed")}
         </p>
       )}
     </section>

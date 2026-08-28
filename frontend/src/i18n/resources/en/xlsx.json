@@ -101,6 +101,29 @@
       "lodging_needs_id": "A new property cannot be created from the sheet — use the form for that.",
       "unknown_trip": "There is no such trip in your account.",
       "too_many_rows": "That sheet has too many rows."
-    }
+    },
+    "modeLabel": "What should happen to entries that already exist?",
+    "modes": {
+      "add": {
+        "label": "Add only",
+        "hint": "Creates new entries. Anything already there is left as it is, even where the file says otherwise."
+      },
+      "merge": {
+        "label": "Merge",
+        "hint": "Rows with an ID update the existing entry, rows without one are created. Nothing is deleted."
+      },
+      "replace": {
+        "label": "Replace contents",
+        "hint": "Like merge — and additionally deletes everything the file leaves out."
+      }
+    },
+    "replaceWarningTitle": "This deletes entries you cannot see right now",
+    "replaceWarning": "Anything missing from the file will be deleted. Those entries are not in the sheet you opened — they are absent from it. A full backup is taken automatically before anything is written, so the import can be undone.",
+    "willDelete": "{{count}} entries will be deleted",
+    "willDelete_one": "1 entry will be deleted",
+    "confirmReplace": "I understand that {{count}} entries will be deleted",
+    "backupTaken": "Backup taken first: {{id}}",
+    "backupFailed": "The safety backup failed — nothing was changed.",
+    "emptySheetNote": "An empty sheet deletes nothing. To empty a domain, remove its rows one by one."
   }
 }
