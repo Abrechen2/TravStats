@@ -12,6 +12,22 @@ now be written in the currency it was actually paid in. Two-factor
 authentication and passkeys arrive alongside.
 
 ### Added
+- **The whole logbook exports to one spreadsheet, and comes back.** A sheet per
+  table — cruises and their stops, properties and their stays, places and their
+  visits — readable, filterable, and re-importable. Column A carries the row's
+  id: a row that returns with one updates the record it names, a row without one
+  is created. An import is previewed before anything is written, and shows what
+  it would change per sheet. A row carrying an id that is not yours is refused,
+  never applied.
+- **A place gets its address from its pin.** Places arrived located but
+  undescribed — the checklist catalogue has no address column and names a
+  country for 14 of its 1,261 entries. New places now fill in address, city and
+  country when they are saved or ticked, and a nightly pass fills in the ones
+  recorded earlier.
+- **Places can be sized on the map, like every other domain.** The map settings
+  had a size slider for flights, cruises and lodging but not for places; the
+  place dot was pinned at one size and its labels at one zoom level, so zooming
+  in never revealed another name.
 - **The API documentation covers cruises, catalogues, geography and
   achievements.** It described flights and trips and claimed to be complete;
   measured against what the server actually serves, 244 endpoints had no entry.
@@ -244,6 +260,18 @@ authentication and passkeys arrive alongside.
   statistics, where figures belong.
 
 ### Fixed
+- **Help sits on the field it explains.** The settings and the admin area opened
+  with collapsible boxes that explained three or four fields at once, from above
+  the form — so the sentence about a control sat rows away from the control, and
+  collapsing the box once hid it for good. Each explanation now hangs on its own
+  field, and what a section needs to say up front is simply visible. Anything
+  with consequences — a restore replaces everything, a deactivated account keeps
+  its data, debug logging costs disk — stays as standing text rather than
+  becoming a tooltip that cannot be reached on a phone. The help icons are
+  keyboard-reachable for the first time; they were clickable `div`s before.
+- **A place on the "All" map is a plain dot again**, the same mark every other
+  domain draws, and the country of a place shows its name rather than an em dash
+  next to a bare code.
 - **Every "when did I fly" figure now reads the clock at the airport.** Eight of
   them read the stored timestamp instead: the time-of-day buckets, weekend
   warrior, fastest day, milestone year, busiest month, season explorer, most
