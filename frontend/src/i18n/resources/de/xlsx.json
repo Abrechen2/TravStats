@@ -100,7 +100,10 @@
       "cruise_needs_id": "Eine neue Kreuzfahrt lässt sich nicht aus der Tabelle anlegen — dafür gibt es das Formular.",
       "lodging_needs_id": "Eine neue Unterkunft lässt sich nicht aus der Tabelle anlegen — dafür gibt es das Formular.",
       "unknown_trip": "Die angegebene Reise gibt es in deinem Konto nicht.",
-      "too_many_rows": "Das Blatt hat zu viele Zeilen."
+      "too_many_rows": "Das Blatt hat zu viele Zeilen.",
+      "visit_needs_place": "Ein neuer Besuch muss einen Ort nennen — die ID in eckigen Klammern in der Spalte „Ort“.",
+      "unknown_place": "Den angegebenen Ort gibt es in deinem Konto nicht.",
+      "invalid_rating": "Die Bewertung muss zwischen 1 und 5 liegen."
     },
     "modeLabel": "Was soll mit vorhandenen Einträgen passieren?",
     "modes": {
@@ -124,6 +127,7 @@
     "confirmReplace": "Ich habe verstanden, dass {{count}} Einträge gelöscht werden",
     "backupTaken": "Backup vorher angelegt: {{id}}",
     "backupFailed": "Das Sicherheits-Backup ist fehlgeschlagen — es wurde nichts geändert.",
-    "emptySheetNote": "Ein leeres Blatt löscht nichts. Zum Leeren müssen die Zeilen einzeln entfernt werden."
+    "emptySheetNote": "Ein leeres Blatt löscht nichts. Zum Leeren müssen die Zeilen einzeln entfernt werden.",
+    "readOnlySheets": "Kreuzfahrt-Stopps und Aufenthalte werden nur exportiert. Änderungen daran werden beim Import nicht übernommen."
   }
 }

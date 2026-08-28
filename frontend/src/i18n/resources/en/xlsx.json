@@ -100,7 +100,10 @@
       "cruise_needs_id": "A new cruise cannot be created from the sheet — use the form for that.",
       "lodging_needs_id": "A new property cannot be created from the sheet — use the form for that.",
       "unknown_trip": "There is no such trip in your account.",
-      "too_many_rows": "That sheet has too many rows."
+      "too_many_rows": "That sheet has too many rows.",
+      "visit_needs_place": "A new visit has to name a place — the ID in square brackets in the “Place” column.",
+      "unknown_place": "There is no such place in your account.",
+      "invalid_rating": "A rating has to be between 1 and 5."
     },
     "modeLabel": "What should happen to entries that already exist?",
     "modes": {
@@ -124,6 +127,7 @@
     "confirmReplace": "I understand that {{count}} entries will be deleted",
     "backupTaken": "Backup taken first: {{id}}",
     "backupFailed": "The safety backup failed — nothing was changed.",
-    "emptySheetNote": "An empty sheet deletes nothing. To empty a domain, remove its rows one by one."
+    "emptySheetNote": "An empty sheet deletes nothing. To empty a domain, remove its rows one by one.",
+    "readOnlySheets": "Cruise stops and stays are exported only. Changes to those sheets are not applied on import."
   }
 }

@@ -363,3 +363,133 @@ describe("import modes", () => {
     expect(left.map((p) => p.name)).toEqual(["Frisch"]);
   });
 });
+
+/**
+ * Visits are a child table, so they carry an ownership question their parents
+ * do not: a NEW visit names its place through a reference cell, and that place
+ * has to belong to the caller. Otherwise a spreadsheet could attach a visit to
+ * a stranger's place and read a date back out of it.
+ */
+describe("place visits", () => {
+  let ownerId: string;
+  let strangerId: string;
+  let ownPlaceId: string;
+  let strangerPlaceId: string;
+
+  beforeAll(async () => {
+    await prisma.user.deleteMany({ where: { username: { in: ["visitowner", "visitstranger"] } } });
+    const o = await prisma.user.create({
+      data: { username: "visitowner", passwordHash: await hashPassword("password123") },
+    });
+    ownerId = o.id;
+    const st = await prisma.user.create({
+      data: { username: "visitstranger", passwordHash: await hashPassword("password123") },
+    });
+    strangerId = st.id;
+
+    const own = await prisma.place.create({
+      data: { userId: ownerId, name: "McDonald's Eching", category: "restaurant", lat: 48.5, lon: 12.0, visited: true },
+    });
+    ownPlaceId = own.id;
+    const foreign = await prisma.place.create({
+      data: { userId: strangerId, name: "Fremder Ort", category: "landmark", lat: 1, lon: 1, visited: true },
+    });
+    strangerPlaceId = foreign.id;
+  });
+
+  beforeEach(async () => {
+    await prisma.placeVisit.deleteMany({ where: { userId: { in: [ownerId, strangerId] } } });
+  });
+
+  afterAll(async () => {
+    await prisma.placeVisit.deleteMany({ where: { userId: { in: [ownerId, strangerId] } } });
+    await prisma.place.deleteMany({ where: { userId: { in: [ownerId, strangerId] } } });
+    await prisma.user.deleteMany({ where: { id: { in: [ownerId, strangerId] } } });
+  });
+
+  const runVisits = (
+    rows: Record<string, string>[],
+    mode: "add" | "merge" | "replace" = "merge",
+    dryRun = false,
+  ) => importSheets([{ key: "placeVisits", rows }], { userId: ownerId, dryRun, mode });
+
+  it("creates a visit against the caller's own place", async () => {
+    const [r] = await runVisits([
+      { id: "", placeId: `McDonald's Eching [${ownPlaceId}]`, visitedAt: "2026-03-11", notes: "Bestellung" },
+    ]);
+
+    expect(r.created).toBe(1);
+    const visit = await prisma.placeVisit.findFirst({ where: { userId: ownerId } });
+    expect(visit?.placeId).toBe(ownPlaceId);
+    expect(visit?.notes).toBe("Bestellung");
+  });
+
+  it("refuses to hang a visit on someone else's place", async () => {
+    const [r] = await runVisits([
+      { id: "", placeId: `Fremder Ort [${strangerPlaceId}]`, visitedAt: "2026-03-11" },
+    ]);
+
+    expect(r.errors).toBe(1);
+    expect(r.rows[0].message).toBe("unknown_place");
+    expect(await prisma.placeVisit.count({ where: { placeId: strangerPlaceId } })).toBe(0);
+  });
+
+  it("refuses a new visit that names no place at all", async () => {
+    const [r] = await runVisits([{ id: "", visitedAt: "2026-03-11" }]);
+    expect(r.errors).toBe(1);
+    expect(r.rows[0].message).toBe("visit_needs_place");
+  });
+
+  it("reads several orders on the same day as several visits", async () => {
+    // The McDonald's case: seventeen orders across fifteen restaurants, more
+    // than one on some days.
+    const ref = `McDonald's Eching [${ownPlaceId}]`;
+    const [r] = await runVisits([
+      { id: "", placeId: ref, visitedAt: "2026-03-11", notes: "Mittag" },
+      { id: "", placeId: ref, visitedAt: "2026-03-11", notes: "Abend" },
+    ]);
+
+    expect(r.created).toBe(2);
+    expect(await prisma.placeVisit.count({ where: { placeId: ownPlaceId } })).toBe(2);
+  });
+
+  it("refuses a rating outside 1–5 instead of storing it", async () => {
+    const [r] = await runVisits([
+      { id: "", placeId: `x [${ownPlaceId}]`, visitedAt: "2026-03-11", rating: "9" },
+    ]);
+    expect(r.errors).toBe(1);
+    expect(r.rows[0].message).toBe("invalid_rating");
+  });
+
+  it("updates an existing visit by id", async () => {
+    const visit = await prisma.placeVisit.create({
+      data: { userId: ownerId, placeId: ownPlaceId, notes: "Alt" },
+    });
+
+    const [r] = await runVisits([{ id: visit.id, notes: "Neu" }]);
+
+    expect(r.updated).toBe(1);
+    expect((await prisma.placeVisit.findUnique({ where: { id: visit.id } }))?.notes).toBe("Neu");
+  });
+
+  it("refuses a visit id belonging to another account", async () => {
+    const foreign = await prisma.placeVisit.create({
+      data: { userId: strangerId, placeId: strangerPlaceId, notes: "Fremd" },
+    });
+
+    const [r] = await runVisits([{ id: foreign.id, notes: "Uebernommen" }]);
+
+    expect(r.errors).toBe(1);
+    expect((await prisma.placeVisit.findUnique({ where: { id: foreign.id } }))?.notes).toBe("Fremd");
+  });
+
+  it("writes nothing on a dry run", async () => {
+    const [r] = await runVisits(
+      [{ id: "", placeId: `x [${ownPlaceId}]`, visitedAt: "2026-03-11" }],
+      "merge",
+      true,
+    );
+    expect(r.created).toBe(1);
+    expect(await prisma.placeVisit.count({ where: { userId: ownerId } })).toBe(0);
+  });
+});

@@ -174,8 +174,13 @@ export default function SpreadsheetSection(): JSX.Element {
 
     <section className="rounded-lg border border-[var(--border)] p-4">
       <h3 className="mb-1 text-sm font-semibold">{t("xlsx:import.title")}</h3>
-      <p className="mb-3 text-xs" style={{ color: "var(--text-muted)" }}>
+      <p className="mb-1 text-xs" style={{ color: "var(--text-muted)" }}>
         {t("xlsx:import.description")}
+      </p>
+      {/* Named rather than left to be discovered: editing a sheet and watching
+          nothing happen is worse than knowing beforehand that it is read-only. */}
+      <p className="mb-3 text-xs" style={{ color: "var(--text-muted)" }}>
+        {t("xlsx:import.readOnlySheets")}
       </p>
 
       <fieldset className="mb-3 border-0 p-0">

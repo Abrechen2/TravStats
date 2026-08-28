@@ -10,11 +10,7 @@
 
 import api from "./../api/client";
 import { parseWorkbook } from "./workbook";
-import {
-  cruiseSheet,
-  lodgingSheet,
-  placeSheet,
-} from "./sheets";
+import { cruiseSheet, lodgingSheet, placeSheet, placeVisitSheet } from "./sheets";
 import type { SheetSpec } from "./sheetSpec";
 
 type T = (key: string) => string;
@@ -55,15 +51,26 @@ export interface ImportOutcome {
 }
 
 /**
- * Only the sheets the server can apply.
+ * The sheets the server can apply.
  *
- * The child sheets (stops, stays, visits) are exported for reading but not
- * imported yet: each one needs its own parent-scoped rules, and shipping half
- * of that would let someone edit a stop and see nothing happen — worse than
- * not offering it. They are simply not sent.
+ * Visits are here because a visit is the point of recording a place — the
+ * McDonald's case is fifteen restaurants and seventeen orders, and without
+ * this the seventeen had no way in.
+ *
+ * Cruise stops and lodging stays are still export-only. Each needs rules of
+ * its own that a place visit does not: a stop has to renumber its day index
+ * and keep the port/sea-day/unresolved invariant, and a stay must not
+ * overwrite the nights the server computes. Sending them before those exist
+ * would let someone edit a row and watch nothing happen, which is worse than
+ * not offering it — so they are not sent, and the sheet says so.
  */
 function importableSpecs(t: T): SheetSpec<never>[] {
-  return [placeSheet(t), cruiseSheet(t), lodgingSheet(t)] as unknown as SheetSpec<never>[];
+  return [
+    placeSheet(t),
+    placeVisitSheet(t),
+    cruiseSheet(t),
+    lodgingSheet(t),
+  ] as unknown as SheetSpec<never>[];
 }
 
 /** Read the workbook into the payload shape the server expects. */

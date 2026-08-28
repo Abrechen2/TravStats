@@ -372,6 +372,134 @@ async function importLodging(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutco
   return summarise(sheet.key, out, deleted);
 }
 
+// ----------------------------------------------------------- place visits
+
+/**
+ * Visits are a CHILD table: a visit only means something under one place.
+ *
+ * That changes the ownership question. The row's own id is checked the usual
+ * way, but a NEW visit names its parent through the reference cell, and that
+ * parent has to be the caller's too — otherwise a spreadsheet could attach a
+ * visit to a stranger's place and read back a date from it.
+ *
+ * Left out on purpose: `orderIdx`. It is a tie-break the UI maintains by drag
+ * order, and letting a sheet set it invites two visits claiming index 0. The
+ * server keeps its own.
+ */
+async function importPlaceVisits(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutcome> {
+  const out: RowOutcome[] = [];
+  const seen = new Set<string>();
+
+  for (const [index, raw] of sheet.rows.entries()) {
+    const rowNo = index + 2;
+    const id = cell.text(raw.id);
+    const label = cell.text(raw.placeId) ?? `#${rowNo}`;
+
+    const visitedAt = cell.isoDate(raw.visitedAt);
+    if (visitedAt === null) {
+      keepDespiteError(seen, id);
+      out.push(errorRow(rowNo, label, "invalid_date"));
+      continue;
+    }
+
+    const rating = cell.int(raw.rating);
+    if (rating !== undefined && (Number.isNaN(rating) || rating < 1 || rating > 5)) {
+      keepDespiteError(seen, id);
+      out.push(errorRow(rowNo, label, "invalid_rating"));
+      continue;
+    }
+
+    const fields: Record<string, unknown> = {
+      visitedAt: visitedAt ? new Date(visitedAt) : undefined,
+      rating,
+      notes: cell.text(raw.notes),
+    };
+
+    if (id) {
+      const existing = await prisma.placeVisit.findFirst({
+        where: { id, userId: ctx.userId },
+        select: { id: true },
+      });
+      if (!existing) {
+        out.push(errorRow(rowNo, label, UNKNOWN_ID));
+        continue;
+      }
+      if (ctx.mode === "add") {
+        seen.add(id);
+        out.push({ row: rowNo, action: "skip", id, label, message: "exists" });
+        continue;
+      }
+
+      const data = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined));
+      seen.add(id);
+      if (Object.keys(data).length === 0) {
+        out.push({ row: rowNo, action: "skip", id, label });
+        continue;
+      }
+      if (!ctx.dryRun) await prisma.placeVisit.update({ where: { id }, data });
+      out.push({ row: rowNo, action: "update", id, label });
+      continue;
+    }
+
+    // New visit: the parent reference is required and must be the caller's.
+    const placeId = cell.ref(raw.placeId);
+    if (!placeId) {
+      out.push(errorRow(rowNo, label, "visit_needs_place"));
+      continue;
+    }
+    const place = await prisma.place.findFirst({
+      where: { id: placeId, userId: ctx.userId },
+      select: { id: true },
+    });
+    if (!place) {
+      out.push(errorRow(rowNo, label, "unknown_place"));
+      continue;
+    }
+
+    let newId: string | null = null;
+    if (!ctx.dryRun) {
+      const created = await prisma.placeVisit.create({
+        data: {
+          userId: ctx.userId,
+          placeId,
+          visitedAt: visitedAt ? new Date(visitedAt) : null,
+          rating: rating ?? null,
+          notes: cell.text(raw.notes) ?? null,
+        },
+        select: { id: true },
+      });
+      newId = created.id;
+      seen.add(created.id);
+    }
+    out.push({ row: rowNo, action: "create", id: newId, label });
+  }
+
+  const deleted = await pruneMissingVisits(seen, ctx);
+  return summarise(sheet.key, out, deleted);
+}
+
+/**
+ * Replace-mode pruning for visits.
+ *
+ * Scoped to the caller like every other delete here. Separate from
+ * `pruneMissing` because visits are not one of the three top-level models and
+ * folding them into that union bought nothing but a wider signature.
+ */
+async function pruneMissingVisits(seen: Set<string>, ctx: Ctx): Promise<number> {
+  if (ctx.mode !== "replace") return 0;
+  const where = { userId: ctx.userId, id: { notIn: [...seen] } };
+  const doomed = await prisma.placeVisit.count({ where });
+  if (doomed === 0) return 0;
+  if (!ctx.dryRun) {
+    await prisma.placeVisit.deleteMany({ where });
+    logger.warn(
+      { operation: "xlsx_import_replace_deleted", model: "placeVisit", userId: ctx.userId, deleted: doomed },
+      "Spreadsheet import in replace mode deleted visits absent from the file",
+    );
+  }
+  return doomed;
+}
+
 // ------------------------------------------------------------------ router
 
 type Handler = (sheet: IncomingSheet, ctx: Ctx) => Promise<SheetOutcome>;
@@ -379,7 +507,10 @@ type Handler = (sheet: IncomingSheet, ctx: Ctx) => Promise<SheetOutcome>;
 /** Sheets this importer understands. A sheet key that is not here is ignored
  *  rather than rejected — someone may keep their own tab in the file. */
 const HANDLERS: Record<string, Handler> = {
+  // Order matters: places before their visits, so a sheet that creates a place
+  // and a visit to it in the same file works in one pass.
   places: importPlaces,
+  placeVisits: importPlaceVisits,
   cruises: importCruises,
   lodging: importLodging,
 };
