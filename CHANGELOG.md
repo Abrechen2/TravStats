@@ -12,6 +12,12 @@ now be written in the currency it was actually paid in. Two-factor
 authentication and passkeys arrive alongside.
 
 ### Added
+- **The places list can be filtered by list.** It could already be narrowed by
+  status, category and country, but not by the lists you build yourself — even
+  though the dashboard had offered exactly that all along. With 58 McDonald's
+  in one list sitting beside a hundred other places, "show me only that list"
+  is the filter that makes the page usable. A list with no entries yet shows
+  nothing, rather than quietly showing everything.
 - **Flights are part of the spreadsheet, in both directions.** The export
   carried cruises, lodging and places but not the largest domain; now it does,
   with the eighteen fields you would actually edit in a table. Airports travel
@@ -84,9 +90,8 @@ authentication and passkeys arrive alongside.
   tick is indistinguishable from a real one afterwards.
 - **Proof for a visit, with a caption.** Photographs attach to a single visit
   and carry a caption you can type.
-- **Places have a place in the map settings**, and on the "All" tab they wear a
-  ring rather than a colour of their own — turquoise against harbour blue sits
-  below what an eye can separate.
+- **Places have a place in the map settings**, and on the map they are drawn as
+  the same plain dot every other domain uses — including in the key beside it.
 - **Places become a domain of their own — hidden behind the beta switch.** A
   place is a first-class entry with its own list, detail page, form and map
   layer; a trip is a *view* of it rather than its owner, so "every McDonald's
