@@ -217,16 +217,9 @@
     },
     "loadError": "Konfiguration konnte nicht geladen werden",
     "smtpHelp": {
-      "title": "SMTP-Server einrichten",
-      "description": "TravStats versendet Passwort-Reset-Links und Benachrichtigungen über einen SMTP-Server. Ohne gültige SMTP-Konfiguration sind diese Funktionen deaktiviert.",
-      "portsTitle": "Ports & Verschlüsselung:",
       "ports": "587 + STARTTLS (Standard, \"Sicher (TLS)\" aus), 465 + implizites TLS (\"Sicher (TLS)\" an), 25 nur ohne Auth und lokal.",
-      "credentialsTitle": "Zugangsdaten:",
       "credentials": "Gmail/Outlook verlangen App-Passwörter statt des Kontopassworts (2FA vorausgesetzt). Self-hosted Postfix-Server erlauben meist SMTP-AUTH mit Systemnutzer.",
-      "senderTitle": "Absender:",
-      "sender": "Die Absender-E-Mail sollte zur Domain des SMTP-Servers passen — sonst werden Mails häufig als Spam markiert. SPF/DKIM-Einträge im DNS erhöhen die Zustellbarkeit.",
-      "testTitle": "Verbindung testen:",
-      "test": "\"Verbindung testen\" prüft Login und TLS-Handshake, ohne eine echte Mail zu versenden — nutzbar vor dem ersten Speichern."
+      "sender": "Die Absender-E-Mail sollte zur Domain des SMTP-Servers passen — sonst werden Mails häufig als Spam markiert. SPF/DKIM-Einträge im DNS erhöhen die Zustellbarkeit."
     }
   },
   "privacy": {

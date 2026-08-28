@@ -217,16 +217,9 @@
     },
     "loadError": "Failed to load configuration",
     "smtpHelp": {
-      "title": "Set up SMTP server",
-      "description": "TravStats sends password reset links and notifications through an SMTP server. Without a valid SMTP configuration these features are disabled.",
-      "portsTitle": "Ports & encryption:",
       "ports": "587 + STARTTLS (standard, leave \"Secure (TLS)\" off), 465 + implicit TLS (turn \"Secure (TLS)\" on), 25 only for local unauthenticated relays.",
-      "credentialsTitle": "Credentials:",
       "credentials": "Gmail/Outlook require app passwords instead of the account password (2FA is a prerequisite). Self-hosted Postfix servers typically allow SMTP-AUTH with a system user.",
-      "senderTitle": "Sender:",
-      "sender": "The From email should match the SMTP server's domain — otherwise mails are frequently flagged as spam. SPF/DKIM DNS records improve deliverability.",
-      "testTitle": "Test the connection:",
-      "test": "\"Test connection\" verifies login and TLS handshake without sending an actual mail — safe to use before the first save."
+      "sender": "The From email should match the SMTP server's domain — otherwise mails are frequently flagged as spam. SPF/DKIM DNS records improve deliverability."
     }
   },
   "privacy": {
