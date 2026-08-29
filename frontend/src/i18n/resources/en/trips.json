@@ -171,7 +171,20 @@
       "deletedStop": "Stop deleted",
       "deleteJournalConfirm": "Delete journal entry?",
       "deleteStopConfirm": "Delete stop \"{{title}}\"?",
-      "lodgingFarFromTrip": "Far from the trip's stops — check the address"
+      "lodgingFarFromTrip": "Far from the trip's stops — check the address",
+      "showDetails": "Show details",
+      "expandedHint": "Details open",
+      "openCruise": "Open cruise",
+      "openFlight": "Open flight",
+      "ship": "Ship",
+      "route": "Route",
+      "cabin": "Cabin",
+      "price": "Price",
+      "flightNumber": "Flight number",
+      "aircraft": "Aircraft",
+      "seat": "Seat",
+      "itinerary": "Itinerary",
+      "atSea": "Day at sea"
     }
   },
   "journalModal": {

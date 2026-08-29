@@ -171,7 +171,20 @@
       "deletedStop": "Stopp gelöscht",
       "deleteJournalConfirm": "Tagebuch-Eintrag löschen?",
       "deleteStopConfirm": "Stopp \"{{title}}\" löschen?",
-      "lodgingFarFromTrip": "Weit von den Reisezielen entfernt — Adresse prüfen"
+      "lodgingFarFromTrip": "Weit von den Reisezielen entfernt — Adresse prüfen",
+      "showDetails": "Details anzeigen",
+      "expandedHint": "Details geöffnet",
+      "openCruise": "Kreuzfahrt öffnen",
+      "openFlight": "Flug öffnen",
+      "ship": "Schiff",
+      "route": "Route",
+      "cabin": "Kabine",
+      "price": "Preis",
+      "flightNumber": "Flugnummer",
+      "aircraft": "Flugzeug",
+      "seat": "Sitzplatz",
+      "itinerary": "Etappen",
+      "atSea": "Seetag"
     }
   },
   "journalModal": {
