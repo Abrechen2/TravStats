@@ -12,6 +12,16 @@ now be written in the currency it was actually paid in. Two-factor
 authentication and passkeys arrive alongside.
 
 ### Added
+- **A places list can wear its own symbol on the map.** A list of fifty-eight
+  McDonald's spelled the same name fifty-eight times across the map, which reads
+  as noise rather than as a list. A list can now carry a symbol and ask for its
+  places to be labelled with that instead of their names. The dot underneath is
+  unchanged: it still carries the list's colour, and still tells a visited place
+  from one on the wishlist by being filled rather than hollow. A list without a
+  symbol keeps its names, and so does a place that belongs to no list. Above all
+  of it the map has one switch of its own — as each list says, always names, or
+  always symbols — so a single flip brings every name back for a moment without
+  editing a list.
 - **The places list can be filtered by list.** It could already be narrowed by
   status, category and country, but not by the lists you build yourself — even
   though the dashboard had offered exactly that all along. With 58 McDonald's
@@ -286,6 +296,17 @@ authentication and passkeys arrive alongside.
   statistics, where figures belong.
 
 ### Fixed
+- **Airports no longer carry "(Duplicate)" in their name.** The catalogue is
+  built from OurAirports, whose editors mark rows they suspect of being
+  duplicates by writing the marker into the name itself. The seeder passed those
+  through word for word, so the picker offered "(Duplicate)Vlora International
+  Airport" and "(Duplicate)Wolf's Fang Runway" as though that were their names —
+  a hundred and thirty-two such rows in the current file, in half a dozen bracket
+  shapes, some of them trailing rather than leading. The marker is now stripped
+  on import, and the entries already in your catalogue are repaired when the new
+  version starts. The rows are kept rather than discarded: for three of these
+  codes the marked row is the only one carrying that code at all, and one of them
+  is the airfield the seven-continents achievement depends on.
 - **Addresses arrive in the alphabet you read.** Filling in an address asks a
   geocoder, and it answered in the local language of the place — so a German
   logbook collected entries in Japanese, Arabic, Armenian and Greek script:
