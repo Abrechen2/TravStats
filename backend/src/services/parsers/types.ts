@@ -29,6 +29,20 @@ export interface IVisionParser {
 }
 
 /**
+ * Per-request parsing context.
+ *
+ * NOT parser configuration: a parser instance is cached and shared between
+ * requests, so anything that belongs to ONE email has to travel with the call.
+ */
+export interface TextParseOptions {
+  /**
+   * When the email was sent. A booking confirmation that writes "16 JUL" and
+   * no year is read against this. Omitted means today.
+   */
+  referenceDate?: Date;
+}
+
+/**
  * Common interface for all text parsers (email parsing)
  */
 export interface ITextParser {
@@ -49,7 +63,13 @@ export interface ITextParser {
    * @param html - Email HTML (optional)
    * @returns Array of parsed flights (multi-flight support)
    */
-  parseEmail(subject: string, text: string, html?: string, apiKey?: string): Promise<ParsedBooking[]>;
+  parseEmail(
+    subject: string,
+    text: string,
+    html?: string,
+    apiKey?: string,
+    options?: TextParseOptions,
+  ): Promise<ParsedBooking[]>;
 }
 
 /**
@@ -96,6 +116,15 @@ export interface ParserConfig {
    * Fallback chain for text parsing
    */
   textFallbacks: TextProvider[];
+
+  /**
+   * When the email being parsed was sent, if the caller knows.
+   *
+   * Strictly per-request rather than configuration, and it sits here only
+   * because this object is what already reaches every parser. See
+   * TextParseOptions.
+   */
+  referenceDate?: Date;
 
   /**
    * Ollama server URL — overrides OLLAMA_URL env var

@@ -69,6 +69,11 @@ export async function parseBookingEmail(
   html?: string,
   userSettings?: {
     userId?: string;
+    /**
+     * When the email was sent. A confirmation that writes a day and month but
+     * no year is read against this instead of against today (#285).
+     */
+    referenceDate?: Date;
   }
 ): Promise<ParseResult> {
   logger.debug({
@@ -84,7 +89,7 @@ export async function parseBookingEmail(
     subject || '',
     text || '',
     html,
-    config
+    { ...config, referenceDate: userSettings?.referenceDate }
   );
 
   logger.info({
