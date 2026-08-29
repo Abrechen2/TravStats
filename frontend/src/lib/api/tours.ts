@@ -1,0 +1,110 @@
+import { api } from "./client";
+import type {
+  TourRoute,
+  TourStop,
+  TourLeg,
+  TourGeometry,
+  LegMode,
+  LegSource,
+} from "../../types/tour";
+
+export interface CreateTourRouteInput {
+  name: string;
+  mode: LegMode;
+}
+
+// PATCH semantics: explicit `null` clears `color`, `undefined` leaves it
+// untouched — the same convention `UpdateTripInput` in `trips.ts` follows.
+export interface UpdateTourRouteInput {
+  name?: string;
+  mode?: LegMode;
+  color?: string | null;
+}
+
+// `drivingMinutes`/`tollCost`/`currency` are nullable AND optional: sending
+// `null` clears the field server-side, omitting the key leaves it
+// untouched. Collapsing the two into one `| null` type would make it
+// impossible to express "leave alone" — see `legOverrideSchema` in
+// `backend/src/schemas/tour.ts` and its `"drivingMinutes" in body` check.
+export interface SetTourLegInput {
+  source: LegSource;
+  mode?: LegMode;
+  waypoints?: Array<[number, number]>;
+  drivingMinutes?: number | null;
+  tollCost?: number | null;
+  currency?: string | null;
+}
+
+export const toursApi = {
+  list: async (tripId: string): Promise<TourRoute[]> => {
+    const { data } = await api.get<{ routes: TourRoute[] }>(`/trips/${tripId}/routes`);
+    return data.routes;
+  },
+
+  create: async (tripId: string, input: CreateTourRouteInput): Promise<TourRoute> => {
+    const { data } = await api.post<{ route: TourRoute }>(`/trips/${tripId}/routes`, input);
+    return data.route;
+  },
+
+  update: async (
+    tripId: string,
+    routeId: string,
+    input: UpdateTourRouteInput
+  ): Promise<TourRoute> => {
+    const { data } = await api.patch<{ route: TourRoute }>(
+      `/trips/${tripId}/routes/${routeId}`,
+      input
+    );
+    return data.route;
+  },
+
+  remove: async (tripId: string, routeId: string): Promise<void> => {
+    await api.delete(`/trips/${tripId}/routes/${routeId}`);
+  },
+
+  /**
+   * Replaces the section's ENTIRE stop membership with this ordered list.
+   * `stopIds` must contain no repeats — a loop is modelled as two distinct
+   * stops at the same place, never one stop id twice (the server rejects a
+   * repeat with 400; see `assignStopsSchema`).
+   */
+  assignStops: async (
+    tripId: string,
+    routeId: string,
+    stopIds: string[]
+  ): Promise<{ route: TourRoute; stops: TourStop[]; legs: TourLeg[] }> => {
+    const { data } = await api.put<{ route: TourRoute; stops: TourStop[]; legs: TourLeg[] }>(
+      `/trips/${tripId}/routes/${routeId}/stops`,
+      { stopIds }
+    );
+    return data;
+  },
+
+  setLeg: async (
+    tripId: string,
+    routeId: string,
+    fromStopId: string,
+    toStopId: string,
+    input: SetTourLegInput
+  ): Promise<TourLeg> => {
+    const { data } = await api.put<{ leg: TourLeg }>(
+      `/trips/${tripId}/routes/${routeId}/legs/${fromStopId}/${toStopId}`,
+      input
+    );
+    return data.leg;
+  },
+
+  clearLeg: async (
+    tripId: string,
+    routeId: string,
+    fromStopId: string,
+    toStopId: string
+  ): Promise<void> => {
+    await api.delete(`/trips/${tripId}/routes/${routeId}/legs/${fromStopId}/${toStopId}`);
+  },
+
+  geometry: async (tripId: string, routeId: string): Promise<TourGeometry> => {
+    const { data } = await api.get<TourGeometry>(`/trips/${tripId}/routes/${routeId}/geometry`);
+    return data;
+  },
+};
