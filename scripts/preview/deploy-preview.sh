@@ -10,7 +10,7 @@
 # stays on preview-net and is now the beta slot's admin-global instance.
 set -uo pipefail
 
-NODE1="${NODE1:-192.168.178.171}"
+NODE1="${NODE1:?set NODE1 to the Proxmox node that carries the DMZ bridge -- the concrete addresses live in CLAUDE.local.md, deliberately not in this public repo}"
 CTID="${CTID:-134}"
 DRY_RUN="${DRY_RUN:-0}"
 

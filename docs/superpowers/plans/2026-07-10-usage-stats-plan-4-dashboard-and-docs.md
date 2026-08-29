@@ -531,8 +531,8 @@ Use the standard TravStatsWeb recipe from `CLAUDE.local.md`:
 cd D:/TravStats_Projekt/TravStatsWeb
 npx astro build
 tar -czf /tmp/travstats-apex.tgz -C dist .
-scp /tmp/travstats-apex.tgz root@192.168.178.171:/tmp/
-ssh root@192.168.178.171 \
+scp /tmp/travstats-apex.tgz root@<pve-node1>:/tmp/
+ssh root@<pve-node1> \
   "pct push 133 /tmp/travstats-apex.tgz /tmp/dist.tgz && \
    pct exec 133 -- bash -c 'rm -rf /var/www/html/* /var/www/html/.[!.]*; \
      tar --no-same-owner -xzf /tmp/dist.tgz -C /var/www/html && \

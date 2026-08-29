@@ -14,9 +14,9 @@ anywhere. The only running non-prod instances are inside the secure LAN:
 
 | CT | Role | Address | Data |
 |---|---|---|---|
-| 100 | Prod | `192.168.178.120:3010` | real users |
-| 106 | Beta (forward dev line, app testers) | `192.168.178.123:3010`, `trav.abrechen2.de` | persistent beta data |
-| 107 | RC Server (prod-data mirror) | `192.168.178.187:3010` | re-cloned from prod each round |
+| 100 | Prod | `<prod-host>:3010` | real users |
+| 106 | Beta (forward dev line, app testers) | `<beta-host>:3010`, `<rc-hostname>` | persistent beta data |
+| 107 | RC Server (prod-data mirror) | `<rc-host>:3010` | re-cloned from prod each round |
 
 None of these may host strangers. This design adds a fourth, **separate** host
 outside the LAN. It does not modify CT100, CT106 or CT107 in any way.
@@ -31,7 +31,7 @@ outside the LAN. It does not modify CT100, CT106 or CT107 in any way.
 
 ## 3. Non-goals
 
-- Replacing or re-pointing `trav.abrechen2.de` (CT106 keeps its current role).
+- Replacing or re-pointing `<rc-hostname>` (CT106 keeps its current role).
 - Auto-deploy on push. Deploys are explicit, on request.
 - Prod-representative LLM parse quality (see §7).
 - Scheduled data resets. Instance data persists until manually cleaned.
@@ -39,15 +39,15 @@ outside the LAN. It does not modify CT100, CT106 or CT107 in any way.
 ## 4. Host
 
 New unprivileged LXC **CT 134** on **pve-node1** — the only node carrying the
-`vmbr2` bridge (`192.168.20.171/24`, `bridge-ports nic0.20`, gateway
-`192.168.20.1`). VMID 134 is free; it was released when `travstats-wiki` was
+`vmbr2` bridge (`<dmz-node1>/24`, `bridge-ports nic0.20`, gateway
+`<dmz-gateway>`). VMID 134 is free; it was released when `travstats-wiki` was
 destroyed on 2026-05-02.
 
 | Setting | Value |
 |---|---|
 | Hostname | `ct134-travstats-preview` |
 | Node | pve-node1 (pinned — `vmbr2` exists nowhere else) |
-| Network | `vmbr2`, static `192.168.20.134/24`, gw `192.168.20.1` |
+| Network | `vmbr2`, static `<preview-host>/24`, gw `<dmz-gateway>` |
 | Resources | 4 cores, 8 GB RAM, 30 GB `ceph-nvme` |
 | Features | unprivileged, `nesting=1` |
 | Docker | `get.docker.com` convenience script |
@@ -75,7 +75,7 @@ deltas:
 
 | Env | CT106 | Preview |
 |---|---|---|
-| `OLLAMA_URL` | `http://192.168.178.155:11434` | `http://ollama:11434` |
+| `OLLAMA_URL` | `http://<ollama-host>:11434` | `http://ollama:11434` |
 | `OLLAMA_MODEL` | `gemma3:12b` | `gemma3:4b` |
 | `POSTGRES_PASSWORD` | `flights` | generated per stack |
 | `FRONTEND_URL` | CT106 IP | the public hostname |
@@ -155,7 +155,7 @@ not return 403. An empty tunnel list never means "no tunnels exist".
 > it only if the previews move to dedicated hardware (see §12 risk row).
 
 The DMZ has no route to the LAN, so the Mac mini's Ollama at
-`192.168.178.155:11434` is unreachable. Rather than punching a hole in exactly
+`<ollama-host>:11434` is unreachable. Rather than punching a hole in exactly
 the isolation that makes public exposure acceptable, CT134 runs its own Ollama
 with `gemma3:4b` on CPU.
 
@@ -243,7 +243,7 @@ Provisioning is done when, for each of the three hostnames:
 5. `pct exec 134 -- docker exec <stack>-db psql -c 'select 1'` succeeds while
    no Postgres port is published to the host.
 
-Additionally, from inside CT134: `curl --max-time 5 http://192.168.178.155:11434`
+Additionally, from inside CT134: `curl --max-time 5 http://<ollama-host>:11434`
 must **fail**. If it succeeds, the DMZ isolation is broken and the design's
 core assumption is void.
 
