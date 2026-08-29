@@ -7,6 +7,8 @@ import { DOMAINS, type DomainKey } from "../../../shared/domains";
 import type { DomainStatsMap } from "../../../lib/stats/domain-stats";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { isWithData } from "./aggregate";
+import { useDomainColors } from "../../../hooks/useDomainColors";
+import { needsOutline } from "../../../lib/domainColor";
 
 interface Props {
   statsMap: DomainStatsMap;
@@ -23,6 +25,7 @@ const MONTH_KEY = "stats:overviewHeatmap.months";
 
 export default function CrossDomainHeatmap({ statsMap, visible, year }: Props): JSX.Element {
   const { t } = useTranslation(["stats", "common"]);
+  const { colorOf } = useDomainColors();
   const [hover, setHover] = useState<{ m: number; d: number } | null>(null);
 
   // Lookup per-day per-domain. Build once per render.
@@ -95,6 +98,7 @@ export default function CrossDomainHeatmap({ statsMap, visible, year }: Props): 
               hover={hover}
               setHover={setHover}
               t={t}
+              colorOf={colorOf}
             />
           );
         })}
@@ -133,6 +137,7 @@ function FragmentRow({
   hover,
   setHover,
   t,
+  colorOf,
 }: {
   mIndex: number;
   mLabel: string;
@@ -142,6 +147,8 @@ function FragmentRow({
   hover: { m: number; d: number } | null;
   setHover: (h: { m: number; d: number } | null) => void;
   t: (key: string, opts?: Record<string, unknown>) => string;
+  /** Handed down like `t` rather than re-read per row — one source, twelve rows. */
+  colorOf: (domain: DomainKey) => string;
 }): JSX.Element {
   return (
     <>
@@ -164,7 +171,7 @@ function FragmentRow({
           );
         }
         const dominant = pickDominant(cell.perDomain);
-        const color = DOMAINS[dominant].color;
+        const color = colorOf(dominant);
         const opacity = 0.25 + Math.min(cell.total / 3, 1) * 0.65;
         const showTip = hover && hover.m === mIndex && hover.d === dIndex;
         return (
@@ -173,7 +180,15 @@ function FragmentRow({
             className="relative cursor-default"
             onMouseEnter={(): void => setHover({ m: mIndex, d: dIndex })}
             onMouseLeave={(): void => setHover(null)}
-            style={{ aspectRatio: "1", borderRadius: 2, background: color, opacity }}
+            style={{
+              aspectRatio: "1",
+              borderRadius: 2,
+              background: color,
+              opacity,
+              // See the chart: the pick is honoured, an edge keeps it visible.
+              outline: needsOutline(color) ? "1px solid rgba(255,255,255,0.22)" : undefined,
+              outlineOffset: -1,
+            }}
           >
             {showTip && (
               <div

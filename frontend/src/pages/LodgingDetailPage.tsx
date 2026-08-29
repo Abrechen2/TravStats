@@ -253,6 +253,21 @@ export default function LodgingDetailPage(): JSX.Element {
           </div>
         )}
 
+        {/* The notes, under the same name the form gives them.
+            They were stored and never shown, so anything typed there
+            disappeared on save. Rendered only when there are some: an empty
+            heading over blank space is its own small untruth. */}
+        {lodging.notes !== null && lodging.notes.trim().length > 0 && (
+          <section className="mb-4">
+            <h2 className="mb-1 text-sm font-semibold text-[var(--text-muted)]">
+              {t("lodging:field.notes")}
+            </h2>
+            <p className="whitespace-pre-line text-sm text-[var(--text-primary)]">
+              {lodging.notes}
+            </p>
+          </section>
+        )}
+
         {/* Two-column body */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
           <div className="md:col-span-3">

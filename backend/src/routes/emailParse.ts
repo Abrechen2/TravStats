@@ -16,19 +16,11 @@ import { validateEmailFile } from '../utils/fileValidation';
 import { describeParserError } from '../utils/parserErrors';
 import { PARSER_SUPPORTED_DOMAINS } from '../shared/domains';
 
+import { parseEmailSchema } from '../schemas/parseEmail';
+
 const router = Router();
 
-const parseEmailSchema = z.object({
-  emailContent: z.string().min(1, 'Email content is required').refine(
-    (val) => val.length <= 10 * 1024 * 1024,
-    { message: 'Email content too large (max 10MB)' }
-  ),
-  subject: z.string().optional().refine(
-    (val) => !val || val.length <= 1000,
-    { message: 'Subject too long (max 1000 characters)' }
-  ),
-  domain: z.enum(PARSER_SUPPORTED_DOMAINS).optional().default('flight'),
-});
+
 
 /**
  * POST /api/v1/parse-email
@@ -86,11 +78,12 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
       });
     }
 
+    const referenceDate = parsed.referenceDate ? new Date(parsed.referenceDate) : undefined;
     const result = await parseBookingEmail(
       subject || undefined,
       emailContent,
       undefined,
-      userId ? { userId } : undefined
+      { ...(userId ? { userId } : {}), ...(referenceDate ? { referenceDate } : {}) }
     );
 
     logger.info(`[Email Parse] Parsing complete: ${result.flights.length} flight(s) found using ${result.parserUsed}`);

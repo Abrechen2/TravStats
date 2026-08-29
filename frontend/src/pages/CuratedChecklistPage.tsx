@@ -19,13 +19,14 @@ import {
 } from "../lib/api/placeLists";
 import { continentLabel } from "../lib/continentLabel";
 import { countryName } from "../shared/geo/countryCode";
-import { DOMAINS } from "../shared/domains";
+
 import { useToastStore } from "../store/toastStore";
 import type {
   CuratedProgress,
   CuratedProgressItem,
   VisitSuggestion,
 } from "../types/placeList";
+import { useDomainColors } from "../hooks/useDomainColors";
 
 type RowFilter = "all" | "open" | "ticked" | "suggested";
 
@@ -77,6 +78,7 @@ const SELECT_STYLE = {
  *    evidence gave it.
  */
 export default function CuratedChecklistPage(): JSX.Element {
+  const { colorOf } = useDomainColors();
   const { key } = useParams<{ key: string }>();
   const { t, i18n } = useTranslation(["places", "common"]);
   const navigate = useNavigate();
@@ -302,7 +304,7 @@ export default function CuratedChecklistPage(): JSX.Element {
     );
   }
 
-  const accent = progress.color ?? DOMAINS.poi.color;
+  const accent = progress.color ?? colorOf("poi");
   const pct =
     progress.itemCount > 0 ? Math.round((progress.tickedCount / progress.itemCount) * 100) : 0;
   const title = curatedText(progress.name, progress.nameEn, i18n.language);

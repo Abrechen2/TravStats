@@ -541,13 +541,22 @@ export function AllTab(): JSX.Element {
     )
   );
 
+  // Resolved once for the legend AND both maps below. "First list wins" lives
+  // in this one function, so a pin's colour, its symbol and its legend row can
+  // never name different lists.
+  const placeListContext = useMemo(() => resolvePlaceListColors(placeLists), [placeLists]);
+
   // POI rows come from the same `buildPlaceLegend` the pin layer resolves
   // through, and are drawn as plain DOTS, because that is the mark on this map.
   // They were rings until 2026-08-28, when the ring was removed from the pin
   // layer by owner decision; the legend kept drawing one and so described a
   // mark that is no longer there.
-  const poiLegendRows = buildPlaceLegend(placeColorConfig).map((row: PlaceLegendRow) =>
-    legendRow(
+  //
+  // The lists are passed in: in "by list" mode the key has to name them, or the
+  // only row is the negative one and every coloured pin stays unexplained.
+  const poiLegendRows = buildPlaceLegend(placeColorConfig, placeListContext.used).map(
+    (row: PlaceLegendRow) =>
+      legendRow(
       rgbCss(row.color),
       row.label ?? t(PLACE_LEGEND_LABEL_KEY[row.slot] ?? "dashboard:poi.legend.solid"),
       `poi-${row.slot}`,
@@ -687,10 +696,6 @@ export function AllTab(): JSX.Element {
       )}
     </div>
   );
-
-  // Resolved once for both maps below. "First list wins" lives in this one
-  // function, so a pin's colour and its symbol can never name different lists.
-  const placeListContext = useMemo(() => resolvePlaceListColors(placeLists), [placeLists]);
 
   // Journey mode takes over the map entirely: it injects its own cross-domain
   // layers and suppresses the internal cruise arcs that MapContainer3D would
