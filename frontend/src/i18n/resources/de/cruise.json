@@ -240,5 +240,46 @@
     "unmatchedTitle": "Häfen ohne Treffer",
     "unmatchedHint": "Diese Häfen wurden im Katalog nicht gefunden und als „nicht aufgelöst\" markiert – sie bleiben Häfen (keine Seetage). Wähle unten den passenden Hafen, oder löse sie später im Editor auf.",
     "alreadyImported": "{{count}} Buchung(en) waren schon eingelesen."
+  },
+  "stats": {
+    "rhythm": {
+      "title": "Rhythmus",
+      "season": "Häufigster Monat",
+      "seasonDesc": "{{count}} Kreuzfahrten begannen in diesem Monat",
+      "seasonDesc_one": "{{count}} Kreuzfahrt begann in diesem Monat",
+      "averageNights": "Ø Dauer",
+      "averageNightsDesc": "Nächte pro Kreuzfahrt",
+      "longest": "Längste",
+      "shortest": "Kürzeste",
+      "nightsCount": "{{count}} Nächte",
+      "nightsCount_one": "{{count}} Nacht",
+      "byYear": "Kreuzfahrten pro Jahr",
+      "byMonth": "Nach Startmonat",
+      "undatedNote": "{{count}} Kreuzfahrten ohne Startdatum sind in den Summen enthalten, aber in keinem Diagramm.",
+      "undatedNote_one": "Eine Kreuzfahrt ohne Startdatum ist in den Summen enthalten, aber in keinem Diagramm."
+    },
+    "money": {
+      "title": "Kosten",
+      "byCurrency": "Nach Währung",
+      "perNight": "{{amount}} pro Nacht",
+      "cruisesCount": "{{count}} Kreuzfahrten",
+      "cruisesCount_one": "{{count}} Kreuzfahrt",
+      "none": "Zu keiner Kreuzfahrt ist ein Preis hinterlegt.",
+      "coverage": "Aus {{priced}} von {{total}} Kreuzfahrten mit hinterlegtem Preis.",
+      "noTotalNote": "Bewusst keine Gesamtsumme: eine Kreuzfahrt speichert Preis und Währung, aber keinen Umrechnungskurs. Beträge verschiedener Währungen zu addieren ergäbe eine Zahl, die niemand je bezahlt hat."
+    },
+    "fun": {
+      "title": "Kurioses",
+      "first": "Erste Kreuzfahrt",
+      "mostPorts": "Meiste Häfen",
+      "highestDeck": "Höchstes Deck",
+      "onTrips": "In einer Reise",
+      "onTripsDesc": "Kreuzfahrten, die zu einer Reise gehören",
+      "cabinTypes": "Kabinenarten",
+      "noCabins": "Keine Kabinenart hinterlegt.",
+      "companions": "Mitreisende",
+      "noCompanions": "Keine Mitreisenden erfasst.",
+      "more": "+ {{count}} weitere"
+    }
   }
 }

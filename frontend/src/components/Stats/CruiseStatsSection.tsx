@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
 import { statsApi, type CruiseStatsResponse } from "../../lib/api/stats";
+import { cruiseApi } from "../../lib/api/cruise";
+import { deriveCruiseStats } from "../../lib/stats/cruiseStatsDetail";
+import { useDomainColors } from "../../hooks/useDomainColors";
+import {
+  CruiseRhythmSection,
+  CruiseMoneySection,
+  CruiseFunSection,
+} from "./cruise/CruiseDetailSections";
+import type { Cruise } from "../../types/cruise";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { convertDistance, getDistanceLabel } from "../../lib/units";
@@ -19,10 +28,14 @@ type TFunction = (key: string, options?: Record<string, unknown>) => string;
  *   5. Achievement-style boolean flag pills
  */
 export default function CruiseStatsSection(): JSX.Element {
-  const { t } = useTranslation(["stats", "cruise", "common"]);
+  const { t, i18n } = useTranslation(["stats", "cruise", "common"]);
   const distanceUnit = useSettingsStore((state) => state.units.distanceUnit);
   const distanceLabel = getDistanceLabel(distanceUnit, t);
   const [stats, setStats] = useState<CruiseStatsResponse | null>(null);
+  // The rollup answers the collection questions and carries no calendar, no
+  // money and no firsts — those live on the rows.
+  const [cruises, setCruises] = useState<Cruise[]>([]);
+  const { colorOf } = useDomainColors();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,8 +43,10 @@ export default function CruiseStatsSection(): JSX.Element {
     let cancelled = false;
     void (async () => {
       try {
-        const data = await statsApi.getCruiseStats();
-        if (!cancelled) setStats(data);
+        const [data, rows] = await Promise.all([statsApi.getCruiseStats(), cruiseApi.list()]);
+        if (cancelled) return;
+        setStats(data);
+        setCruises(rows);
       } catch (err) {
         logger.error("Failed to load cruise stats:", err);
         if (!cancelled) setError(t("stats:cruiseSection.loadError"));
@@ -155,6 +170,10 @@ export default function CruiseStatsSection(): JSX.Element {
     },
   ];
 
+  const detail = deriveCruiseStats(cruises);
+  const accent = colorOf("cruise");
+  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+
   return (
     <div className="space-y-6">
       {/* 1) Hero KPI grid */}
@@ -214,6 +233,10 @@ export default function CruiseStatsSection(): JSX.Element {
           <Flag label={t("stats:cruiseSection.flags.newYears")} emoji="🎇" />
         )}
       </div>
+
+      <CruiseRhythmSection detail={detail} accent={accent} locale={locale} />
+      <CruiseMoneySection detail={detail} accent={accent} locale={locale} />
+      <CruiseFunSection detail={detail} accent={accent} locale={locale} />
     </div>
   );
 }
