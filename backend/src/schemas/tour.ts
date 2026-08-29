@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { LEG_MODES } from "../services/tour/tourDistance";
+import { ROUTING_PROVIDER_IDS } from "../services/tour/routing/types";
 
 /**
  * Validation for the tour endpoints.
@@ -78,3 +79,69 @@ export type UpdateRouteInput = z.infer<typeof updateRouteSchema>;
 export type AssignStopsInput = z.infer<typeof assignStopsSchema>;
 export type LegOverrideInput = z.infer<typeof legOverrideSchema>;
 export type { LegMode, LegSource } from "../services/tour/tourDistance";
+
+/**
+ * Validate and canonicalise the operator-supplied "custom" routing base URL
+ * (`AdminSettings.routingCustomUrl`, used only when `routingProvider ==
+ * "custom"` — a self-hosted OSRM instance, see
+ * `services/tour/routing/customOsrm.ts`).
+ *
+ * DELIBERATE NON-RESTRICTION (SSRF egress): there is intentionally NO block
+ * on loopback / link-local / private / RFC1918 hosts here. This mirrors
+ * `normalizeImmichBaseUrl` (services/immich/types.ts) exactly, and for the
+ * same reason: a self-hosted OSRM instance lives on the operator's LAN by
+ * design (often a private RFC1918 or `.local` address), so a private-IP
+ * filter would break the primary use case. The URL is admin-supplied, not
+ * attacker-chosen, in the single-tenant deployment this targets. An operator
+ * who exposes this configuration to untrusted users on a multi-tenant
+ * instance MUST restrict egress at the network layer instead. Do not
+ * re-flag this without changing that threat model.
+ */
+export function normalizeRoutingCustomUrl(raw: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(raw.trim());
+  } catch {
+    throw new Error("Custom routing URL is not a valid URL");
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Custom routing URL must use http:// or https://");
+  }
+
+  const path = parsed.pathname.replace(/\/+$/, "");
+  return `${parsed.protocol}//${parsed.host}${path}`;
+}
+
+/** Zod wrapper around {@link normalizeRoutingCustomUrl} for use at a request boundary. */
+const routingCustomUrlSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .transform((raw, ctx) => {
+    try {
+      return normalizeRoutingCustomUrl(raw);
+    } catch (error) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: error instanceof Error ? error.message : "Invalid custom routing URL",
+      });
+      return z.NEVER;
+    }
+  });
+
+/**
+ * Admin-only routing configuration (Phase 3): which provider is active, and
+ * — only meaningful when `routingProvider === "custom"` — the self-hosted
+ * OSRM base URL. `null` clears the field; `undefined` (the key omitted
+ * entirely) leaves it unchanged, matching every other settings PUT in this
+ * codebase.
+ */
+export const routingSettingsSchema = z
+  .object({
+    routingProvider: z.enum(ROUTING_PROVIDER_IDS).nullable().optional(),
+    routingCustomUrl: routingCustomUrlSchema.nullable().optional(),
+  })
+  .partial();
+
+export type RoutingSettingsInput = z.infer<typeof routingSettingsSchema>;

@@ -559,6 +559,161 @@ export async function testGooglePlacesKey(
 }
 
 /**
+ * Test OpenRouteService API key
+ *
+ * Mirrors the real request `openRouteService.ts` (createOpenRouteService)
+ * makes: `POST /v2/directions/{profile}/geojson`, key in the raw
+ * `Authorization` header (no `Bearer` prefix). Uses the cheapest routable
+ * profile (`driving-car`, not the adapter's own `driving-hgv`, which some
+ * free-tier ORS accounts don't have enabled) over a two-point route a few
+ * hundred metres apart in central Berlin — a real, billed-against-quota
+ * request, same trade-off as the other "cheap real call" testers here.
+ */
+export async function testOpenRouteServiceKey(
+  apiKey: string,
+  userId?: string
+): Promise<ApiKeyTestResult> {
+  try {
+    const key = apiKey || (await getApiKey("openrouteservice", userId));
+    if (!key) {
+      return {
+        success: false,
+        message: "No API key provided",
+        messageKey: "noKey",
+      };
+    }
+
+    const response = await axios.post(
+      "https://api.openrouteservice.org/v2/directions/driving-car/geojson",
+      {
+        coordinates: [
+          [13.388, 52.517],
+          [13.397, 52.529],
+        ],
+      },
+      {
+        headers: {
+          Authorization: key,
+          "Content-Type": "application/json",
+        },
+        timeout: 10000,
+      }
+    );
+
+    if (response.status === 200) {
+      return {
+        success: true,
+        message: "API key is valid",
+        messageKey: "valid",
+      };
+    }
+
+    return {
+      success: false,
+      message: `Unexpected response: ${response.status}`,
+      messageKey: "unexpectedStatus",
+      messageParams: { status: response.status },
+    };
+  } catch (error: unknown) {
+    const errInfo = extractAxiosErrorInfo(error);
+    if (errInfo.status === 401 || errInfo.status === 403) {
+      return {
+        success: false,
+        message: "Invalid API key",
+        messageKey: "invalid",
+      };
+    }
+    if (errInfo.status === 429) {
+      return {
+        success: false,
+        message: "Rate limit exceeded",
+        messageKey: "rateLimited",
+      };
+    }
+    return {
+      success: false,
+      message: errInfo.message,
+    };
+  }
+}
+
+/**
+ * Test GraphHopper API key
+ *
+ * Mirrors the real request `graphHopper.ts` (createGraphHopper) makes:
+ * `GET /route` with repeated `point=lat,lon` params (GraphHopper's own
+ * coordinate order — the opposite of ORS/OSRM), `points_encoded=false`, and
+ * the key as a `key=` query param. Uses the `car` profile over the same
+ * short Berlin route as the ORS tester above.
+ */
+export async function testGraphHopperKey(
+  apiKey: string,
+  userId?: string
+): Promise<ApiKeyTestResult> {
+  try {
+    const key = apiKey || (await getApiKey("graphhopper", userId));
+    if (!key) {
+      return {
+        success: false,
+        message: "No API key provided",
+        messageKey: "noKey",
+      };
+    }
+
+    // Built as a raw query string rather than an axios `params` object:
+    // GraphHopper requires `point` to repeat as `point=lat,lon&point=lat,lon`
+    // (no array brackets), which is not how axios's default params serializer
+    // encodes a JS array — mirrors the adapter's own URLSearchParams build.
+    const params = new URLSearchParams();
+    params.append("point", "52.517,13.388");
+    params.append("point", "52.529,13.397");
+    params.append("profile", "car");
+    params.append("points_encoded", "false");
+    params.append("key", key);
+
+    const response = await axios.get(
+      `https://graphhopper.com/api/1/route?${params.toString()}`,
+      { timeout: 10000 }
+    );
+
+    if (response.status === 200) {
+      return {
+        success: true,
+        message: "API key is valid",
+        messageKey: "valid",
+      };
+    }
+
+    return {
+      success: false,
+      message: `Unexpected response: ${response.status}`,
+      messageKey: "unexpectedStatus",
+      messageParams: { status: response.status },
+    };
+  } catch (error: unknown) {
+    const errInfo = extractAxiosErrorInfo(error);
+    if (errInfo.status === 401 || errInfo.status === 403) {
+      return {
+        success: false,
+        message: "Invalid API key",
+        messageKey: "invalid",
+      };
+    }
+    if (errInfo.status === 429) {
+      return {
+        success: false,
+        message: "Rate limit exceeded",
+        messageKey: "rateLimited",
+      };
+    }
+    return {
+      success: false,
+      message: errInfo.message,
+    };
+  }
+}
+
+/**
  * Test OpenSky credentials (OAuth2 only - Client ID + Client Secret)
  */
 export async function testOpenSkyCredentials(

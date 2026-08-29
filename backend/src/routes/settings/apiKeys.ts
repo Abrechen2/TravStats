@@ -8,6 +8,8 @@ import {
   testAviationstackKey,
   testAerodataboxKey,
   testOpenSkyCredentials,
+  testOpenRouteServiceKey,
+  testGraphHopperKey,
 } from '../../services/apiKeyTester';
 import { getApiKey, getOpenSkyCredentials } from '../../services/apiKeyResolver';
 import { getAllProviderQuotas } from '../../services/apiQuota';
@@ -29,6 +31,10 @@ const apiKeysSchema = z.object({
   openskyClientSecret: z.string().optional().nullable(),
   openskyUsername: z.string().optional().nullable(),
   openskyPassword: z.string().optional().nullable(),
+  // Tour routing provider keys (Phase 3) — not gated by allowUserFlightApiKeys,
+  // which is specifically about flight-lookup providers.
+  openrouteserviceApiKey: z.string().optional().nullable(),
+  graphhopperApiKey: z.string().optional().nullable(),
 }).partial();
 
 const testApiKeySchema = z.object({
@@ -55,7 +61,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
   try {
     const userId = req.userId!;
 
-    let settings: Pick<UserApiKeySettings, 'airlabsApiKey' | 'aviationstackApiKey' | 'aerodataboxApiKey' | 'openskyClientId' | 'openskyClientSecret' | 'openskyUsername' | 'openskyPassword'> | null = null;
+    let settings: Pick<UserApiKeySettings, 'airlabsApiKey' | 'aviationstackApiKey' | 'aerodataboxApiKey' | 'openskyClientId' | 'openskyClientSecret' | 'openskyUsername' | 'openskyPassword' | 'openrouteserviceApiKey' | 'graphhopperApiKey'> | null = null;
     try {
       settings = await prisma.userSettings.findUnique({
         where: { userId },
@@ -67,6 +73,8 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
           openskyClientSecret: true,
           openskyUsername: true,
           openskyPassword: true,
+          openrouteserviceApiKey: true,
+          graphhopperApiKey: true,
         },
       });
     } catch (error: unknown) {
@@ -95,13 +103,17 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     let airlabsAccess = { hasAccess: false, isShared: false };
     let aviationstackAccess = { hasAccess: false, isShared: false };
     let aerodataboxAccess = { hasAccess: false, isShared: false };
+    let openrouteserviceAccess = { hasAccess: false, isShared: false };
+    let graphhopperAccess = { hasAccess: false, isShared: false };
 
     try {
       const { hasApiKeyAccess } = await import('../../services/apiKeyResolver');
-      [airlabsAccess, aviationstackAccess, aerodataboxAccess] = await Promise.all([
+      [airlabsAccess, aviationstackAccess, aerodataboxAccess, openrouteserviceAccess, graphhopperAccess] = await Promise.all([
         hasApiKeyAccess('airlabs', userId),
         hasApiKeyAccess('aviationstack', userId),
         hasApiKeyAccess('aerodatabox', userId),
+        hasApiKeyAccess('openrouteservice', userId),
+        hasApiKeyAccess('graphhopper', userId),
       ]);
     } catch (error: unknown) {
       logger.warn({
@@ -133,6 +145,16 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         hasKey: !!settings?.aerodataboxApiKey,
         isShared: aerodataboxAccess.isShared,
         hasAccess: aerodataboxAccess.hasAccess,
+      },
+      openrouteservice: {
+        hasKey: !!settings?.openrouteserviceApiKey,
+        isShared: openrouteserviceAccess.isShared,
+        hasAccess: openrouteserviceAccess.hasAccess,
+      },
+      graphhopper: {
+        hasKey: !!settings?.graphhopperApiKey,
+        isShared: graphhopperAccess.isShared,
+        hasAccess: graphhopperAccess.hasAccess,
       },
       opensky: {
         hasKey: !!hasUserOpensky,
@@ -206,6 +228,12 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       });
       return;
     }
+    if (payload.openrouteserviceApiKey !== undefined) {
+      updateData.openrouteserviceApiKey = encryptApiKey(payload.openrouteserviceApiKey);
+    }
+    if (payload.graphhopperApiKey !== undefined) {
+      updateData.graphhopperApiKey = encryptApiKey(payload.graphhopperApiKey);
+    }
 
     await prisma.userSettings.upsert({
       where: { userId },
@@ -218,10 +246,12 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     });
 
     const { hasApiKeyAccess } = await import('../../services/apiKeyResolver');
-    const [airlabsAccess, aviationstackAccess, aerodataboxAccess] = await Promise.all([
+    const [airlabsAccess, aviationstackAccess, aerodataboxAccess, openrouteserviceAccess, graphhopperAccess] = await Promise.all([
       hasApiKeyAccess('airlabs', userId),
       hasApiKeyAccess('aviationstack', userId),
       hasApiKeyAccess('aerodatabox', userId),
+      hasApiKeyAccess('openrouteservice', userId),
+      hasApiKeyAccess('graphhopper', userId),
     ]);
 
     const updatedSettings = await prisma.userSettings.findUnique({
@@ -249,6 +279,14 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         aerodatabox: {
           hasKey: !!updateData.aerodataboxApiKey || aerodataboxAccess.hasAccess,
           isShared: aerodataboxAccess.isShared,
+        },
+        openrouteservice: {
+          hasKey: !!updateData.openrouteserviceApiKey || openrouteserviceAccess.hasAccess,
+          isShared: openrouteserviceAccess.isShared,
+        },
+        graphhopper: {
+          hasKey: !!updateData.graphhopperApiKey || graphhopperAccess.hasAccess,
+          isShared: graphhopperAccess.isShared,
         },
         opensky: {
           hasKey: !!updatedSettings?.openskyClientId,
@@ -309,6 +347,42 @@ router.post('/test/aerodatabox', async (req: AuthRequest, res: Response, next: N
       return;
     }
     const result = await testAerodataboxKey(effective, req.userId!);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /test/openrouteservice
+router.post('/test/openrouteservice', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { apiKey } = testApiKeySchema.parse(req.body);
+    const effective = looksMasked(apiKey)
+      ? (await getApiKey('openrouteservice', req.userId!)) ?? ''
+      : apiKey!;
+    if (!effective) {
+      res.status(400).json({ success: false, message: 'No OpenRouteService key configured to test. Save one first.' });
+      return;
+    }
+    const result = await testOpenRouteServiceKey(effective, req.userId!);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /test/graphhopper
+router.post('/test/graphhopper', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { apiKey } = testApiKeySchema.parse(req.body);
+    const effective = looksMasked(apiKey)
+      ? (await getApiKey('graphhopper', req.userId!)) ?? ''
+      : apiKey!;
+    if (!effective) {
+      res.status(400).json({ success: false, message: 'No GraphHopper key configured to test. Save one first.' });
+      return;
+    }
+    const result = await testGraphHopperKey(effective, req.userId!);
     res.json(result);
   } catch (error) {
     next(error);

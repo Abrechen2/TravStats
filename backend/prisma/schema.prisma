@@ -449,6 +449,12 @@ model UserSettings {
   openskyUsername     String? @map("opensky_username")
   openskyPassword     String? @map("opensky_password")
 
+  // Tour routing provider API keys (encrypted at application level, Phase 3).
+  // The "custom" provider (a self-hosted OSRM) has no key column here — it
+  // takes no key at all, see AdminSettings.routingCustomUrl.
+  openrouteserviceApiKey String? @map("openrouteservice_api_key")
+  graphhopperApiKey      String? @map("graphhopper_api_key")
+
   // Immich connection (base URL plain, API key encrypted at application level)
   immichBaseUrl     String? @map("immich_base_url")
   immichApiKey      String? @map("immich_api_key")
@@ -553,6 +559,34 @@ model AdminSettings {
   globalOpenskyClientSecret String? @map("global_opensky_client_secret")
   globalOpenskyUsername     String? @map("global_opensky_username")
   globalOpenskyPassword     String? @map("global_opensky_password")
+
+  // Global tour routing provider API keys (encrypted at application level,
+  // Phase 3) — same per-user > global > ENV chain as the flight lookup keys.
+  globalOpenrouteserviceApiKey String? @map("global_openrouteservice_api_key")
+  globalGraphhopperApiKey      String? @map("global_graphhopper_api_key")
+
+  /// Which routing provider computes routed leg geometry for tour routes
+  /// (Phase 3): one of `"openrouteservice" | "graphhopper" | "custom"`
+  /// (`RoutingProviderId`, services/tour/routing/types.ts), or null when
+  /// routing is not configured at all. Deliberately a bare string rather than
+  /// a Prisma enum — `RoutingProviderId` already owns the closed set in
+  /// TypeScript, and Zod (`schemas/tour.ts`) validates it at the boundary; a
+  /// duplicate DB-level enum would be a second place for that list to drift.
+  routingProvider   String? @map("routing_provider")
+  /// Base URL of a self-hosted OSRM instance, used only when
+  /// `routingProvider == "custom"`. The "custom" provider takes no API key —
+  /// see UserSettings/AdminSettings `*OpenrouteserviceApiKey` /
+  /// `*GraphhopperApiKey` above, which have no "custom" counterpart.
+  ///
+  /// Validated as a plain http(s) URL by `normalizeRoutingCustomUrl`
+  /// (schemas/tour.ts) with DELIBERATELY NO egress restriction — no block on
+  /// loopback / link-local / private / RFC1918 hosts. This mirrors
+  /// `normalizeImmichBaseUrl` (services/immich/types.ts) exactly and for the
+  /// same reason: a self-hosted OSRM instance lives on the operator's LAN by
+  /// design, so a private-IP filter would break the primary use case. The URL
+  /// is admin-supplied, not attacker-chosen, in the single-tenant deployment
+  /// this targets. Do not re-flag without changing that threat model.
+  routingCustomUrl String? @map("routing_custom_url")
 
   // Global Immich connection (base URL plain, API key encrypted)
   globalImmichBaseUrl String? @map("global_immich_base_url")
