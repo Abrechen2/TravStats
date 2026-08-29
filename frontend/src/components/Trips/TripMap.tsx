@@ -99,7 +99,18 @@ interface TripMapProps {
   tourGeometries?: readonly { routeId: string; name: string; geometry: TourGeometry }[];
 }
 
-export default function TripMap({ trip, tourGeometries = [] }: TripMapProps): JSX.Element {
+// Stable module-level default. `tourGeometries = []` inline in the props
+// destructuring would allocate a NEW array reference on every render where
+// the caller omits the prop (TripDetailPage.tsx renders `<TripMap trip={...} />`
+// with no `tourGeometries` at all) — a fresh reference invalidates the
+// `layers` useMemo below every single render, defeating the dependency array
+// entirely even though it lists `tourGeometries` correctly.
+const NO_TOUR_GEOMETRIES: readonly { routeId: string; name: string; geometry: TourGeometry }[] = [];
+
+export default function TripMap({
+  trip,
+  tourGeometries = NO_TOUR_GEOMETRIES,
+}: TripMapProps): JSX.Element {
   const { t, i18n } = useTranslation(["trips", "map"]);
   const locale = i18n.language || "de";
   const getTooltip = useMemo(() => createMarkerTooltip(t, locale), [t, locale]);
@@ -376,19 +387,21 @@ export default function TripMap({ trip, tourGeometries = [] }: TripMapProps): JS
 
     // Tour route sections (Task 12). Coloured per LEG mode, never the
     // section's — a road tour with one ferry crossing must still show that
-    // one leg as a ferry line. `dashed` legs (an unrouted `straight` chord)
-    // have no dash support in deck.gl's PathLayer without an extension, so
-    // the placeholder look comes from a thinner, more transparent line
-    // instead of pulling in a new dependency.
+    // one leg as a ferry line. `isPlaceholder` legs (an unrouted `straight`
+    // chord) have no dash support in deck.gl's PathLayer without an
+    // extension, so they render as a clearly lighter, thinner line instead —
+    // alpha 70 vs. 230 and 1.5px vs. 3px pixel width (half the alpha's
+    // opacity headroom and half the line weight) so a placeholder chord
+    // cannot be mistaken for a measured route even at normal zoom.
     const tourPathData = buildTourPaths(tourGeometries);
     const tourPaths = new PathLayer<TourPathDatum>({
       id: "trip-tour-paths",
       data: tourPathData,
       getPath: (d) => d.path,
-      getColor: (d) => [...d.color, d.dashed ? 140 : 230] as [number, number, number, number],
-      getWidth: (d) => (d.dashed ? 2 : 3),
+      getColor: (d) => [...d.color, d.isPlaceholder ? 70 : 230] as [number, number, number, number],
+      getWidth: (d) => (d.isPlaceholder ? 1.5 : 3),
       widthUnits: "pixels",
-      widthMinPixels: 2,
+      widthMinPixels: 1,
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 255, 255, 80],

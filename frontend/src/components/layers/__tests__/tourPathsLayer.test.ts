@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { buildTourPaths, TOUR_MODE_RGB } from "../tourPathsLayer";
-import type { TourGeometry } from "../../../types/tour";
+import { buildTourPaths, TOUR_MODE_RGB, UNKNOWN_MODE_RGB } from "../tourPathsLayer";
+import type { LegMode, TourGeometry } from "../../../types/tour";
 
 const geo = (mode: "road" | "ferry", source: "straight" | "drawn"): TourGeometry => ({
   type: "FeatureCollection",
@@ -22,11 +22,33 @@ describe("buildTourPaths", () => {
     expect(ferry.color).toEqual(TOUR_MODE_RGB.ferry);
   });
 
-  it("marks a straight leg as dashed so a placeholder looks like one", () => {
+  it("marks a straight leg as a placeholder so it renders lighter, not measured", () => {
     const [straight] = buildTourPaths([{ routeId: "r1", name: "S", geometry: geo("road", "straight") }]);
     const [drawn] = buildTourPaths([{ routeId: "r1", name: "S", geometry: geo("road", "drawn") }]);
-    expect(straight.dashed).toBe(true);
-    expect(drawn.dashed).toBe(false);
+    expect(straight.isPlaceholder).toBe(true);
+    expect(drawn.isPlaceholder).toBe(false);
+  });
+
+  it("falls back to neutral grey for an unrecognised mode, never road's colour", () => {
+    const unknownMode: TourGeometry = {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: { type: "LineString", coordinates: [[8, 58], [5.3, 60.4]] },
+          properties: {
+            legId: "l1",
+            source: "drawn",
+            mode: "gondola" as unknown as LegMode,
+            confidence: "low",
+            distanceKm: 10,
+          },
+        },
+      ],
+    };
+    const [leg] = buildTourPaths([{ routeId: "r1", name: "S", geometry: unknownMode }]);
+    expect(leg.color).toEqual(UNKNOWN_MODE_RGB);
+    expect(leg.color).not.toEqual(TOUR_MODE_RGB.road);
   });
 
   it("drops a feature with fewer than two coordinates instead of crashing", () => {
