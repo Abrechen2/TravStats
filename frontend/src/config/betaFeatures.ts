@@ -86,6 +86,22 @@ export const BETA_FEATURES = Object.freeze({
     why: "The domain works end-to-end — create, edit, detail page, list, map — but is incomplete: there is no POI section in the map appearance panel, places are absent from the All tab, and neither custom lists (phase B) nor the shipped checklists (phase C) exist yet. The owner's own case, \"every McDonald's I have been to\", is exactly what custom lists are for and is the reason to keep this hidden.",
     returnsWhen: "Custom lists (phase B) have shipped.",
   }),
+
+  /**
+   * The "Touren" tab on the trip detail page (tour route sections: a named
+   * ordered chain of stops with driven legs — the road-trip counterpart to
+   * cruise itineraries).
+   *
+   * This is the FIRST user-visible surface for the feature. The list itself
+   * works — load, create, link to the editor — but the editor it links to
+   * (stop assignment, leg overrides, the map) does not exist yet, so the
+   * link is a dead end until that ships. Gate stays on until both land.
+   */
+  tourRoutes: Object.freeze({
+    reason: "beta",
+    why: "The section list is live but its editor (drag-assign stops, per-leg mode/source overrides, the route map) has not shipped yet, so every row link is currently a dead end.",
+    returnsWhen: "The route editor page (/trips/:id/route/:routeId) has shipped.",
+  }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 
 export type BetaFeatureKey = keyof typeof BETA_FEATURES;
