@@ -232,5 +232,10 @@
     "northAmerica": "North America",
     "oceania": "Oceania",
     "southAmerica": "South America"
+  },
+  "emojiPicker": {
+    "open": "Choose",
+    "clear": "Clear",
+    "unavailable": "The emoji picker cannot load here. You can still paste an emoji into the field."
   }
 }

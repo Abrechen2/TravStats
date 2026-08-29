@@ -6,6 +6,7 @@
 
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { EmojiPickerField } from "../common/EmojiPickerField";
 import type { PlaceLabelMode } from "../../lib/placeLabel";
 
 export interface PlaceListLabelFieldsProps {
@@ -57,24 +58,14 @@ export function PlaceListLabelFields({
         <span className="text-sm" style={{ color: "var(--text-muted)" }}>
           {t("places:lists.symbolLabel")}
         </span>
-        <input
+        <EmojiPickerField
           value={icon}
-          onChange={(e) => handleIconChange(e.target.value)}
-          onBlur={(e) => onIconCommit?.(e.target.value)}
-          aria-label={t("places:lists.symbolLabel")}
+          onChange={handleIconChange}
+          onCommit={onIconCommit}
+          label={t("places:lists.symbolLabel")}
           placeholder={t("places:lists.symbolPlaceholder")}
-          maxLength={16}
-          className="rounded-lg px-3 py-2 text-center text-lg"
-          style={{
-            width: 68,
-            background: "var(--bg-elevated)",
-            border: "1px solid var(--color-border)",
-            color: "var(--text-primary)",
-          }}
+          hint={t("places:lists.symbolHint")}
         />
-        <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-          {t("places:lists.symbolHint")}
-        </span>
       </div>
 
       <div className="mt-3">
