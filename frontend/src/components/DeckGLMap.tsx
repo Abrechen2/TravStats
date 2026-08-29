@@ -24,6 +24,7 @@ import type { MapMode } from "./MapContainer3D";
 import { buildRouteData, createRoutesLayers } from "./layers/routesLayer";
 import { buildLodgingPins } from "./layers/lodgingPinsLayer";
 import { buildPlacePins } from "./layers/placePinsLayer";
+import type { PlaceLabelList, PlaceLabelSource } from "../lib/placeLabel";
 import { createHeatmapLayer } from "./layers/heatmapLayer";
 import { createTripsLayer, buildTripsData, getTimeRange } from "./layers/tripsLayer";
 import { createSpecialFlightsLayers } from "./layers/specialFlightsLayer";
@@ -179,6 +180,10 @@ interface DeckGLMapProps {
    *  only). Passed through untouched: a layer resolving list membership itself
    *  would be a second place deciding what a pin means. */
   placeListColors?: ReadonlyMap<string, [number, number, number]>;
+  /** Place-id → the label default of the SAME list that gave it its colour,
+   *  resolved by the caller through `resolvePlaceListColors`. Passed through
+   *  untouched, for the reason `placeListColors` is. */
+  placeListLabels?: ReadonlyMap<string, PlaceLabelList>;
   /** Marker-size slider value + setter for places, owned by `MapContainer3D`
    *  exactly as the lodging pair is. */
   placeMarkerSize?: number;
@@ -204,6 +209,7 @@ export function DeckGLMap({
   placesOverride,
   onPlaceClick,
   placeListColors,
+  placeListLabels,
   placeMarkerSize = 1,
   onPlaceMarkerSizeChange,
 }: DeckGLMapProps): JSX.Element {
@@ -288,6 +294,10 @@ export function DeckGLMap({
   const [labelsMode, setLabelsMode] = useState<LabelsMode>(
     () => loadMapAppearance().labelsMode ?? "important"
   );
+  // Absent means "as each list says" — see the field's note in mapAppearance.
+  const [placeLabelSource, setPlaceLabelSource] = useState<PlaceLabelSource>(
+    () => loadMapAppearance().placeLabelSource ?? "list"
+  );
   useEffect(() => {
     saveMapAppearance({
       styleId,
@@ -302,6 +312,7 @@ export function DeckGLMap({
       showTerrain,
       showPlaceLabels,
       labelsMode,
+      placeLabelSource,
     });
   }, [
     styleId,
@@ -316,6 +327,7 @@ export function DeckGLMap({
     showTerrain,
     showPlaceLabels,
     labelsMode,
+    placeLabelSource,
   ]);
   // Apply the style-level overlays (relief hillshade + basemap place
   // names) once the map is loaded and whenever a toggle flips. Same
@@ -763,6 +775,8 @@ export function DeckGLMap({
         labelsMode,
         colors: placeColorConfig,
         listColors: placeListColors,
+        listLabels: placeListLabels,
+        labelSource: placeLabelSource,
       }) ?? [];
 
     return [
@@ -960,6 +974,8 @@ export function DeckGLMap({
             onColorChange: setPlaceColor,
             markerSize: placeMarkerSize,
             onMarkerSizeChange: onPlaceMarkerSizeChange ?? (() => {}),
+            labelSource: placeLabelSource,
+            onLabelSourceChange: setPlaceLabelSource,
           }}
         />
       </div>

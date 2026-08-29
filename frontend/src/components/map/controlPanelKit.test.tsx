@@ -6,9 +6,9 @@ import {
   CruiseAppearanceSection,
   FlightAppearanceSection,
   LodgingAppearanceSection,
-  PlaceAppearanceSection,
   usePanelExpanded,
 } from "./controlPanelKit";
+import { PlaceAppearanceSection } from "./PlaceAppearanceSection";
 import { DEFAULT_FLIGHT_COLOR_CONFIG, FLIGHT_COLOR_MODES } from "../../lib/flightColor";
 import { CRUISE_COLOR_MODES, DEFAULT_CRUISE_COLOR_CONFIG } from "../../lib/cruiseColor";
 

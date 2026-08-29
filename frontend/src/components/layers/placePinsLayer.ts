@@ -1,4 +1,4 @@
-import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
+import { IconLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import type { Place } from "../../types/place";
 import {
@@ -10,6 +10,13 @@ import type { Rgb } from "../../lib/cruiseColor";
 import type { PlaceCategory } from "../../shared/placeCategories";
 import { markerDotRadiusProps } from "./markerDotStyle";
 import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
+import {
+  resolvePlaceLabel,
+  type PlaceLabel,
+  type PlaceLabelList,
+  type PlaceLabelSource,
+} from "../../lib/placeLabel";
+import { emojiSprite, type EmojiSprite } from "./emojiSprite";
 
 interface PlacePinDatum {
   position: [number, number];
@@ -33,6 +40,12 @@ interface PlacePinDatum {
    *  Baked into the datum so the colour accessor stays a pure lookup rather
    *  than closing over a map it would then have to declare as a trigger. */
   listColor?: Rgb;
+  /**
+   * Name or symbol, already resolved through `resolvePlaceLabel`. Baked into
+   * the datum for the same reason `listColor` is: the split between the two
+   * label layers is then a pure read, and nothing downstream re-decides it.
+   */
+  label: PlaceLabel;
 }
 
 // Place names run long and unpredictable ("McDonald's Shibuya Center-Gai"),
@@ -66,6 +79,18 @@ export interface PlacePinsAppearance {
    * pin means.
    */
   listColors?: ReadonlyMap<string, Rgb>;
+  /**
+   * Place id → the label default of the list it belongs to. The SAME list that
+   * `listColors` resolved, so a pin's colour and its symbol can never point at
+   * two different lists.
+   */
+  listLabels?: ReadonlyMap<string, PlaceLabelList>;
+  /**
+   * The map-wide override. Absent means "as each list says" — an existing
+   * user's stored appearance predates this setting, and reading absence as
+   * "always names" would make turning a list to symbols appear to do nothing.
+   */
+  labelSource?: PlaceLabelSource;
 }
 
 /**
@@ -122,6 +147,8 @@ export function buildPlacePins(
     labelsMode = "important",
     colors = DEFAULT_PLACE_COLOR_CONFIG,
     listColors,
+    listLabels,
+    labelSource,
   } = appearance;
 
   const data: PlacePinDatum[] = [];
@@ -141,6 +168,7 @@ export function buildPlacePins(
       visitCount: place.visitCount,
       visited: place.visited,
       listColor: listColors?.get(place.id),
+      label: resolvePlaceLabel({ source: labelSource, list: listLabels?.get(place.id) ?? null }),
     });
   }
   if (data.length === 0) return null;
@@ -198,10 +226,70 @@ export function buildPlacePins(
           zoom
         );
 
+  // The budget above governs BOTH label kinds, and the split happens after it.
+  // Symbols exempt from the budget would pile into an unreadable heap exactly
+  // where a list is dense, while the names beside them thinned out politely.
+  //
+  // A glyph this environment cannot rasterise downgrades to its name here
+  // rather than vanishing: `emojiSprite` returns null, and an unlabelled pin
+  // would be a worse answer than the name we already have.
+  const sprites = new Map<string, EmojiSprite>();
+  const nameData: PlacePinDatum[] = [];
+  const symbolData: PlacePinDatum[] = [];
+  for (const datum of labelData) {
+    if (datum.label.kind === "icon") {
+      const glyph = datum.label.glyph;
+      let sprite = sprites.get(glyph);
+      if (!sprite) {
+        const made = emojiSprite(glyph);
+        if (made) {
+          sprite = made;
+          sprites.set(glyph, made);
+        }
+      }
+      if (sprite) {
+        symbolData.push(datum);
+        continue;
+      }
+    }
+    nameData.push(datum);
+  }
+
+  if (symbolData.length > 0) {
+    layers.push(
+      new IconLayer<PlacePinDatum>({
+        id: "place-pins-symbols",
+        data: symbolData,
+        getPosition: (d) => d.position,
+        // deck.gl packs its own atlas from the per-datum descriptors, so no
+        // pre-built sprite sheet has to be shipped or kept in step with the
+        // lists a user invents.
+        getIcon: (d) => sprites.get(d.label.kind === "icon" ? d.label.glyph : "")!,
+        getSize: 22,
+        sizeUnits: "pixels",
+        // Same lift the name label uses, so a symbol and a name sit at the
+        // same height above their dots on a mixed map.
+        getPixelOffset: [0, -8],
+        pickable: true,
+        billboard: true,
+        updateTriggers: {
+          getIcon: [labelSource, symbolData.length],
+        },
+        onClick: onPinClick
+          ? ({ object }: { object?: PlacePinDatum }) => {
+              if (!object?.placeId) return false;
+              onPinClick(object.placeId);
+              return true;
+            }
+          : undefined,
+      })
+    );
+  }
+
   layers.push(
     new TextLayer<PlacePinDatum>({
       id: "place-pins-labels",
-      data: labelData,
+      data: nameData,
       getPosition: (d) => d.position,
       getText: (d) => d.shortLabel,
       getColor: [241, 245, 249, 235],
