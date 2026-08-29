@@ -46,6 +46,22 @@ describe("no fabricated history", () => {
     await prisma.$disconnect();
   });
 
+  it("has the route-shaped bait the promise is about", async () => {
+    // Without this, the three assertions below would also pass on an empty
+    // database — they would prove nothing was inferred from data that was
+    // never there.
+    const stops = await prisma.tripStop.findMany({
+      where: { tripId },
+      orderBy: { title: "asc" },
+    });
+    expect(stops).toHaveLength(4);
+    expect(stops.map((s) => s.domain).sort()).toEqual(["ferry", "hotel", "road", "road"]);
+    for (const s of stops) {
+      expect(s.lat).not.toBeNull();
+      expect(s.lon).not.toBeNull();
+    }
+  });
+
   it("holds no route sections", async () => {
     const res = await request(app).get(`/api/v1/trips/${tripId}/routes`).set("Cookie", cookie);
     expect(res.status).toBe(200);
