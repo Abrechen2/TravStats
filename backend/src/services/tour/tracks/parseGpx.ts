@@ -140,6 +140,28 @@ function findGpxRoot(parsed: unknown): XmlNode | null {
   return isXmlNode(gpx) ? gpx : null;
 }
 
+/**
+ * The earliest and latest of a list of epoch-millisecond timestamps.
+ *
+ * Deliberately NOT `Math.min(...values)` / `Math.max(...values)`: spreading
+ * an array into a call's arguments has an engine call-argument ceiling
+ * (tens of thousands, well below a multi-day 1 Hz recording's point count).
+ * Past that ceiling the spread throws, the outer try/catch in `parseGpx`
+ * swallows it, and a perfectly valid file comes back `null` — indistinguishable
+ * from malformed XML to the caller. A single pass has no such ceiling.
+ */
+function timeWindow(values: readonly number[]): { min: number; max: number } | null {
+  if (values.length === 0) return null;
+  let min = values[0];
+  let max = values[0];
+  for (let i = 1; i < values.length; i++) {
+    const v = values[i];
+    if (v < min) min = v;
+    if (v > max) max = v;
+  }
+  return { min, max };
+}
+
 export function parseGpx(xml: string): ParsedTrack | null {
   if (typeof xml !== "string" || xml.trim() === "") return null;
 
@@ -162,8 +184,9 @@ export function parseGpx(xml: string): ParsedTrack | null {
       .filter((t): t is Date => t !== null)
       .map((t) => t.getTime());
 
-    const startedAt = timestamps.length > 0 ? new Date(Math.min(...timestamps)) : null;
-    const endedAt = timestamps.length > 0 ? new Date(Math.max(...timestamps)) : null;
+    const window = timeWindow(timestamps);
+    const startedAt = window ? new Date(window.min) : null;
+    const endedAt = window ? new Date(window.max) : null;
 
     return { points, startedAt, endedAt, name: collected.name };
   } catch {

@@ -172,4 +172,71 @@ describe("parseGpx", () => {
     expect(result?.startedAt).toEqual(new Date("2026-01-01T00:00:00Z"));
     expect(result?.endedAt).toEqual(new Date("2026-01-01T00:05:00Z"));
   });
+
+  it("case 8: TWO top-level <trk> elements (merged/concatenated exports) join into one ordered point list", () => {
+    const xml = `<gpx>
+  <trk>
+    <trkseg>
+      <trkpt lat="1" lon="2"><time>2026-01-01T00:00:00Z</time></trkpt>
+      <trkpt lat="1.1" lon="2.1"><time>2026-01-01T00:01:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+  <trk>
+    <trkseg>
+      <trkpt lat="5" lon="6"><time>2026-01-01T01:00:00Z</time></trkpt>
+      <trkpt lat="5.1" lon="6.1"><time>2026-01-01T01:01:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>`;
+
+    const result = parseGpx(xml);
+
+    expect(result).not.toBeNull();
+    // Content AND order, not just a length check — a parser that only reads
+    // the first <trk> would silently drop the second track's two points.
+    expect(result?.points).toEqual([
+      [2, 1],
+      [2.1, 1.1],
+      [6, 5],
+      [6.1, 5.1],
+    ]);
+    expect(result?.startedAt).toEqual(new Date("2026-01-01T00:00:00Z"));
+    expect(result?.endedAt).toEqual(new Date("2026-01-01T01:01:00Z"));
+  });
+
+  it("case 9: a point count past the Math.min/max spread argument ceiling still computes the correct time window, not null", () => {
+    const POINT_COUNT = 200_000;
+    const baseMs = Date.parse("2026-01-01T00:00:00Z");
+
+    // Two out-of-order timestamps planted mid-file (not first, not last) so
+    // this cannot pass by accident via a first/last shortcut either — only a
+    // real min/max over the whole array satisfies it.
+    const MIN_INDEX = 50_000;
+    const MAX_INDEX = 150_000;
+
+    const trkptParts: string[] = new Array(POINT_COUNT);
+    let expectedMinMs = Infinity;
+    let expectedMaxMs = -Infinity;
+
+    for (let i = 0; i < POINT_COUNT; i++) {
+      let timeMs = baseMs + i * 1000;
+      if (i === MIN_INDEX) timeMs = baseMs - 10_000_000_000;
+      if (i === MAX_INDEX) timeMs = baseMs + 10_000_000_000;
+      if (timeMs < expectedMinMs) expectedMinMs = timeMs;
+      if (timeMs > expectedMaxMs) expectedMaxMs = timeMs;
+
+      const lat = 50 + (i % 1000) * 0.0001;
+      const lon = 10 + (i % 1000) * 0.0001;
+      trkptParts[i] = `<trkpt lat="${lat}" lon="${lon}"><time>${new Date(timeMs).toISOString()}</time></trkpt>`;
+    }
+
+    const xml = `<gpx><trk><trkseg>${trkptParts.join("")}</trkseg></trk></gpx>`;
+
+    const result = parseGpx(xml);
+
+    expect(result).not.toBeNull();
+    expect(result?.points.length).toBe(POINT_COUNT);
+    expect(result?.startedAt).toEqual(new Date(expectedMinMs));
+    expect(result?.endedAt).toEqual(new Date(expectedMaxMs));
+  }, 30_000);
 });
