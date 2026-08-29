@@ -276,6 +276,35 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/trips/{id}/routes/{routeId}",
+  summary: "Get one route section with its stops and legs",
+  description:
+    "The same envelope `PUT .../stops` returns (`{ route, stops, legs }`), " +
+    "so a client can read the section once on load and reuse the exact " +
+    "response type it already has for the write. A pure read — no " +
+    "transaction, nothing written, unlike the write endpoint above (whose " +
+    "409 guard exists because concurrent claims on that path are expected).",
+  tags: ["Tours"],
+  request: { params: routeIdParams },
+  responses: {
+    200: {
+      description: "Section, its stops in order, and its legs",
+      content: {
+        "application/json": {
+          schema: z.object({
+            route: tourRoute,
+            stops: z.array(tourStop),
+            legs: z.array(tourLeg),
+          }),
+        },
+      },
+    },
+    404: { description: "Trip or section not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "delete",
   path: "/trips/{id}/routes/{routeId}",
   summary: "Delete a route section",

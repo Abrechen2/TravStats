@@ -100,4 +100,79 @@ describe("Tour route sections — CRUD", () => {
     expect(survivor?.routeId).toBeNull();
     expect(survivor?.routeOrderIdx).toBeNull();
   });
+
+  describe("GET /trips/:id/routes/:routeId", () => {
+    it("returns the section with its stops and legs, and never modifies anything", async () => {
+      const created = await request(app)
+        .post(`/api/v1/trips/${tripId}/routes`)
+        .set("Cookie", cookie)
+        .send({ name: "Fjordrunde", mode: "road" });
+      const routeId = created.body.route.id as string;
+
+      const stopA = await prisma.tripStop.create({
+        data: { tripId, title: "Kristiansand", lat: 58.15, lon: 8.0, routeId, routeOrderIdx: 0 },
+      });
+      const stopB = await prisma.tripStop.create({
+        data: { tripId, title: "Bergen", lat: 60.39, lon: 5.32, routeId, routeOrderIdx: 1 },
+      });
+      await prisma.tripRouteLeg.create({
+        data: {
+          routeId,
+          fromStopId: stopA.id,
+          toStopId: stopB.id,
+          distanceKm: 305.4,
+          source: "straight",
+          mode: "road",
+          confidence: "low",
+        },
+      });
+
+      // Capture the stops' `updatedAt` BEFORE the read — the whole point of
+      // this endpoint (fix round 1) is that a GET must never take a write
+      // lock or bump a row, the way re-sending the stop order through
+      // `PUT .../stops` as a no-op refresh used to.
+      const before = await prisma.tripStop.findMany({
+        where: { routeId },
+        orderBy: { routeOrderIdx: "asc" },
+        select: { id: true, updatedAt: true },
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/trips/${tripId}/routes/${routeId}`)
+        .set("Cookie", cookie);
+
+      expect(res.status).toBe(200);
+      expect(res.body.route).toMatchObject({ id: routeId, name: "Fjordrunde", stopCount: 2 });
+      expect(res.body.stops).toHaveLength(2);
+      expect(res.body.stops.map((s: { id: string }) => s.id)).toEqual([stopA.id, stopB.id]);
+      expect(res.body.legs).toHaveLength(1);
+      expect(res.body.legs[0]).toMatchObject({
+        fromStopId: stopA.id,
+        toStopId: stopB.id,
+        distanceKm: 305.4,
+        source: "straight",
+        mode: "road",
+      });
+
+      const after = await prisma.tripStop.findMany({
+        where: { routeId },
+        orderBy: { routeOrderIdx: "asc" },
+        select: { id: true, updatedAt: true },
+      });
+      expect(after).toEqual(before);
+    });
+
+    it("rejects a read on someone else's trip with 404", async () => {
+      const created = await request(app)
+        .post(`/api/v1/trips/${tripId}/routes`)
+        .set("Cookie", cookie)
+        .send({ name: "Privat", mode: "road" });
+      const routeId = created.body.route.id as string;
+
+      const res = await request(app)
+        .get(`/api/v1/trips/${tripId}/routes/${routeId}`)
+        .set("Cookie", otherCookie);
+      expect(res.status).toBe(404);
+    });
+  });
 });

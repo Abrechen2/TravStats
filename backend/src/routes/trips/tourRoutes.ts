@@ -280,6 +280,54 @@ router.delete(
 );
 
 /**
+ * GET /trips/:id/routes/:routeId
+ *
+ * One section together with its stops (ordered by `routeOrderIdx`) and its
+ * legs (ordered by `fromStop.routeOrderIdx`) — the SAME envelope shape
+ * `PUT .../stops` returns, so a client can read from one place and reuse
+ * the exact same response type it already has for the write.
+ *
+ * This exists because nothing else returns a leg WITH its `fromStopId`/
+ * `toStopId` — `GET .../geometry` carries a `legId` but not the stop pair.
+ * Before this endpoint existed, the only way to fetch that shape was to
+ * resubmit the section's own current stop order through the WRITE
+ * endpoint above as a deliberate no-op. That is unsound for a page load:
+ * `PUT .../stops` opens a transaction and takes a row lock on every one of
+ * the section's stops, and its 409 guard exists BECAUSE concurrent claims
+ * are expected — so merely opening the editor could fail on a lock
+ * collision, or race a genuine concurrent write. A read must never be
+ * able to lose someone else's write. This handler does neither: no
+ * transaction, no write, just three plain reads.
+ */
+router.get(
+  "/trips/:id/routes/:routeId",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const trip = await resolveTrip(userId, req.params.id);
+      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+
+      const [route, stops, legs] = await Promise.all([
+        prisma.tripRoute.findUniqueOrThrow({ where: { id: routeId }, include: ROUTE_SELECT }),
+        prisma.tripStop.findMany({
+          where: { routeId },
+          orderBy: { routeOrderIdx: "asc" },
+          select: { id: true, title: true, lat: true, lon: true, routeOrderIdx: true },
+        }),
+        prisma.tripRouteLeg.findMany({
+          where: { routeId },
+          orderBy: { fromStop: { routeOrderIdx: "asc" } },
+        }),
+      ]);
+
+      res.json({ route: toDto(route), stops, legs: legs.map(toLegDto) });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
  * PUT /trips/:id/routes/:routeId/stops
  *
  * The complete ordered stop list of one section, replacing whatever was

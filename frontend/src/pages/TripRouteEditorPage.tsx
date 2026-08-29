@@ -46,16 +46,18 @@ function apiErrorMessage(error: unknown): string | null {
  * becomes usable — assign stops, see the line on the map, adjust a leg's
  * source.
  *
- * There is no `GET` endpoint that returns one section's legs on their own
- * (`tourRoutes.ts` / `tourLegs.ts` only expose the list of sections, the
- * geometry, and the stops-assignment write). `PUT .../stops` is the only
- * response shape that carries legs WITH their `fromStopId`/`toStopId` —
- * `GET .../geometry`'s features carry a `legId` but not the stop pair. So
- * `load()` re-sends the section's OWN current stop order through
- * `assignStops` as a deliberate no-op refresh: sending the identical
- * ordered list changes nothing (`recomputeLegs` keeps every leg whose
- * endpoint pair survives, exactly as it is), and in return this page gets
- * back the one payload that actually has what the leg list needs to render.
+ * `load()` reads the section via `toursApi.get`, a plain `GET
+ * /trips/:id/routes/:routeId` (added in Task 14's fix round 1). Its `404`
+ * IS the "section not found" signal — no separate `list()` call is needed
+ * just to check the route exists. An earlier version of this page instead
+ * re-sent the section's own current stop order through the WRITE endpoint
+ * (`assignStops`) as a deliberate no-op just to get a payload shaped like
+ * this one back; that was unsound for a page LOAD — the write endpoint
+ * opens a transaction, takes a row lock on every one of the section's
+ * stops, and its 409 guard exists precisely because concurrent claims are
+ * expected, so merely opening the editor could fail on a lock collision or
+ * race a genuine concurrent write. A read must never be able to lose
+ * someone else's write.
  */
 export default function TripRouteEditorPage(): JSX.Element {
   const { id, routeId } = useParams<{ id: string; routeId: string }>();
@@ -86,37 +88,16 @@ export default function TripRouteEditorPage(): JSX.Element {
     if (!id || !routeId) return;
     setFailure(null);
     try {
-      const [tripData, routes, geometryData] = await Promise.all([
+      const [tripData, sectionData, geometryData] = await Promise.all([
         tripsApi.getById(id),
-        toursApi.list(id),
+        toursApi.get(id, routeId),
         toursApi.geometry(id, routeId),
       ]);
       if (!mountedRef.current) return;
 
-      const matchedRoute = routes.find((r) => r.id === routeId);
-      if (!matchedRoute) {
-        setFailure("notFound");
-        return;
-      }
-
-      const stopsWithRoute = (tripData.stops ?? []) as unknown as StopWithRoute[];
-      const orderedIds = stopsWithRoute
-        .filter((s) => s.routeId === routeId && s.routeOrderIdx !== null)
-        .sort((a, b) => (a.routeOrderIdx ?? 0) - (b.routeOrderIdx ?? 0))
-        .map((s) => s.id);
-
-      let finalRoute = matchedRoute;
-      let finalLegs: TourLeg[] = [];
-      if (orderedIds.length > 0) {
-        const synced = await toursApi.assignStops(id, routeId, orderedIds);
-        if (!mountedRef.current) return;
-        finalRoute = synced.route;
-        finalLegs = synced.legs;
-      }
-
       setTrip(tripData);
-      setRoute(finalRoute);
-      setLegs(finalLegs);
+      setRoute(sectionData.route);
+      setLegs(sectionData.legs);
       setGeometry(geometryData);
     } catch (err) {
       if (!mountedRef.current) return;

@@ -46,6 +46,26 @@ export const toursApi = {
     return data.route;
   },
 
+  /**
+   * One section with its stops (ordered) and its legs — the SAME envelope
+   * `assignStops` returns, so a caller can share one response type for
+   * both the read and the write. A plain GET: no transaction, nothing
+   * written server-side. Added in Task 14's fix round 1 to replace an
+   * earlier bug where the page re-sent the section's own stop order
+   * through `assignStops` (a write, with its own 409 concurrency guard)
+   * just to read this shape back — a read must never be able to trip a
+   * write's concurrency guard or take its row locks.
+   */
+  get: async (
+    tripId: string,
+    routeId: string
+  ): Promise<{ route: TourRoute; stops: TourStop[]; legs: TourLeg[] }> => {
+    const { data } = await api.get<{ route: TourRoute; stops: TourStop[]; legs: TourLeg[] }>(
+      `/trips/${tripId}/routes/${routeId}`
+    );
+    return data;
+  },
+
   update: async (
     tripId: string,
     routeId: string,

@@ -22,6 +22,19 @@ describe("toursApi", () => {
     expect(routes).toHaveLength(1);
   });
 
+  it("gets one section with its stops and legs", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: { route: { id: "r1", name: "S" }, stops: [{ id: "s1" }], legs: [{ id: "l1" }] },
+    });
+    const result = await toursApi.get("t1", "r1");
+    expect(api.get).toHaveBeenCalledWith("/trips/t1/routes/r1");
+    expect(result).toEqual({
+      route: { id: "r1", name: "S" },
+      stops: [{ id: "s1" }],
+      legs: [{ id: "l1" }],
+    });
+  });
+
   it("creates a section", async () => {
     vi.mocked(api.post).mockResolvedValue({ data: { route: { id: "r1", name: "S" } } });
     const route = await toursApi.create("t1", { name: "S", mode: "road" });
