@@ -26,6 +26,7 @@ import { estimateRoute } from '../services/routeEstimationService';
 import { calculateCo2Kg, haversineKm, toSeatClass } from '../services/co2Calculator';
 import { getCachedAirports, compareAirportAuthority } from '../services/airportCache';
 import { enrichFlightsWithAirportFacts } from '../services/flightAirportFacts';
+import { withAirportTimezones } from '../services/flightTimezoneDefaults';
 import {
   buildAirportCoordinateIndex,
   resolveAirportCoordinate,
@@ -251,7 +252,7 @@ const buildFlightWhere = (
 router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const data = createFlightSchema.parse(req.body);
+    const data = createFlightSchema.parse(await withAirportTimezones(req.body));
 
     // A mail carrying ONE flight comes through here rather than the batch
     // route, so provenance has to live in both places or half of every
@@ -1043,7 +1044,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const data = updateFlightSchema.parse(req.body);
+    const data = updateFlightSchema.parse(await withAirportTimezones(req.body));
 
     // Check if flight exists and belongs to user
     const existingFlight = await prisma.flight.findFirst({
