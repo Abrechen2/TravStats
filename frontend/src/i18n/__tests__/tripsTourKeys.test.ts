@@ -3,6 +3,7 @@ import deTrips from "../resources/de/trips.json";
 import enTrips from "../resources/en/trips.json";
 import deSettings from "../resources/de/settings.json";
 import enSettings from "../resources/en/settings.json";
+import { LEG_MODES, LEG_SOURCES, ROUTING_PROVIDER_IDS } from "../../types/tour";
 
 /**
  * Tour route sections (dev/tour-routes). The Touren tab rendered the raw
@@ -23,6 +24,22 @@ import enSettings from "../resources/en/settings.json";
  * (settings.json, not trips.json) but is part of the same tour-routing
  * feature and was written in the same task, so it gets the same coverage
  * here instead of a second near-duplicate test file.
+ *
+ * Fix round 1 of Task 8: the "every leaf that exists is non-empty" and
+ * "the two locales' key sets match" checks above both pass trivially when a
+ * key is missing from BOTH locales — and the keys most likely to go missing
+ * that way are exactly the ones no static grep can see, because the code
+ * builds them from a template literal (`` t(`trips:tours.mode.${mode}`) ``,
+ * `` t(`trips:tours.source.${source}`) ``,
+ * `` t(`settings:routing.provider.${id}`) ``). Add a `LegMode`, a
+ * displayable `LegSource`, or a `RoutingProviderId` later and nothing above
+ * fails — the UI just renders the raw key at the user. The blocks below fix
+ * that by binding to the TypeScript unions the frontend already keeps these
+ * three vocabularies in (`types/tour.ts`), the same way Task 1's invariant
+ * test binds `PROFILE_BY_MODE` to `isRoutableMode`: iterating what exists in
+ * the JSON only proves that what someone remembered to add is non-empty;
+ * iterating the union proves that everything the code can ask for has an
+ * answer, whether or not anyone remembered to add it.
  */
 
 const LOCALES = {
@@ -34,6 +51,16 @@ const SETTINGS_LOCALES = {
   de: deSettings,
   en: enSettings,
 } as const;
+
+/**
+ * `LEG_SOURCES` also contains `"track"`, reserved for phase 3b — no UI path
+ * can produce it yet (see `types/tour.ts`'s own doc comment and
+ * `TourLegList.tsx`'s `buildOptions()`, which never emits it). Demanding
+ * copy for a source the product cannot yet display would make this guard
+ * red for no reason, so the vocabulary check below iterates this
+ * UI-displayable subset instead of the full union.
+ */
+const DISPLAYABLE_LEG_SOURCES = LEG_SOURCES.filter((source) => source !== "track");
 
 function flatten(obj: unknown, prefix = ""): string[] {
   if (typeof obj !== "object" || obj === null) return [prefix];
@@ -118,4 +145,47 @@ describe("settings routing-provider copy", () => {
     ).sort();
     expect(deRoutingKeys).toEqual(enRoutingKeys);
   });
+});
+
+describe("tour vocabulary bound to its TypeScript union (fix round 1)", () => {
+  it.each(["de", "en"] as const)("%s: every LegMode has a tours.mode label", (locale) => {
+    const modes = (LOCALES[locale] as { tours: { mode: Record<string, unknown> } }).tours.mode;
+    for (const mode of LEG_MODES) {
+      expect(typeof modes[mode], `${locale}/trips.json is missing tours.mode.${mode}`).toBe(
+        "string"
+      );
+      expect((modes[mode] as string).trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it.each(["de", "en"] as const)(
+    "%s: every displayable LegSource has a tours.source label",
+    (locale) => {
+      const sources = (LOCALES[locale] as { tours: { source: Record<string, unknown> } }).tours
+        .source;
+      for (const source of DISPLAYABLE_LEG_SOURCES) {
+        expect(
+          typeof sources[source],
+          `${locale}/trips.json is missing tours.source.${source}`
+        ).toBe("string");
+        expect((sources[source] as string).trim().length).toBeGreaterThan(0);
+      }
+    }
+  );
+
+  it.each(["de", "en"] as const)(
+    "%s: every RoutingProviderId has a settings routing.provider label",
+    (locale) => {
+      const providers = (
+        SETTINGS_LOCALES[locale] as { routing: { provider: Record<string, unknown> } }
+      ).routing.provider;
+      for (const id of ROUTING_PROVIDER_IDS) {
+        expect(
+          typeof providers[id],
+          `${locale}/settings.json is missing routing.provider.${id}`
+        ).toBe("string");
+        expect((providers[id] as string).trim().length).toBeGreaterThan(0);
+      }
+    }
+  );
 });
