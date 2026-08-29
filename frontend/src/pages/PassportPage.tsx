@@ -7,6 +7,7 @@ import { statsApi } from "../lib/api";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { useTranslation } from "../hooks/useTranslation";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { useBetaFeatureAccess } from "../hooks/useBetaFeatures";
 import { logger } from "../lib/logger";
 import type { Passport, PassportContinentGroup } from "../types/passport";
 
@@ -45,11 +46,17 @@ const countryName = (code: string, locale: string): string => {
 export default function PassportPage(): JSX.Element {
   const { t, i18n } = useTranslation(["passport", "common"]);
   const { isEnabled } = useEnabledDomains();
+  const gate = useBetaFeatureAccess("passport");
   const [passport, setPassport] = useState<Passport | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<LoadFailure | null>(null);
 
+  // Only once the gate says yes. While it is still unknown there is nothing to
+  // show the answer in yet, and a refused user should not be sending the
+  // request at all — the endpoint being open is a deliberate property of the
+  // gate, not an invitation to call it from a page that will not render it.
   useEffect(() => {
+    if (gate !== "allowed" || !isEnabled("flight")) return;
     setLoading(true);
     setFailure(null);
     statsApi
@@ -60,7 +67,7 @@ export default function PassportPage(): JSX.Element {
         logger.error("Failed to load passport:", err);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [gate, isEnabled]);
 
   const quotaByGroup = useMemo(() => {
     if (!passport) return [];
@@ -76,7 +83,26 @@ export default function PassportPage(): JSX.Element {
 
   const locale = i18n.language === "de" ? "de-DE" : "en-GB";
 
-  if (!isEnabled("flight")) {
+  // While the instance flag is still unknown, wait rather than redirect: the
+  // flag is not persisted, so a cold load on this URL — a bookmark, a refresh,
+  // a link in a new tab — would otherwise bounce off a page the user asked for.
+  if (gate === "pending") {
+    return (
+      <PageTransition>
+        <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
+          <NavigationBar />
+          <div className="mx-auto max-w-5xl px-4 py-16 text-center text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("common:loading.default")}
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
+
+  // The nav entry is hidden behind the same gate; this closes the URL too, so
+  // the gate is not merely cosmetic. The ENDPOINT stays open on purpose — the
+  // Companion app is meant to read it whatever an instance's flag says.
+  if (gate === "denied" || !isEnabled("flight")) {
     return (
       <PageTransition>
         <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>

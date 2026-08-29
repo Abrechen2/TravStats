@@ -4,6 +4,7 @@ import { useAuthStore } from "../../store/authStore";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
+import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 
 export interface NavLeaf {
   kind: "leaf";
@@ -54,6 +55,7 @@ export function useNavItems(
   const { t } = useTranslation(["dashboard", "common", "trips", "passport"]);
   const user = useAuthStore((s) => s.user);
   const { isEnabled } = useEnabledDomains();
+  const { isFeatureVisible } = useBetaFeatures();
   const placesVisible = usePlacesVisible();
   const isAdmin = user?.isAdmin ?? false;
 
@@ -92,8 +94,8 @@ export function useNavItems(
       },
       // Built from flights alone, so it is offered only when flights are on —
       // an entry leading to a page that explains why it is empty is worse than
-      // no entry.
-      ...(isEnabled("flight")
+      // no entry. Behind the beta gate as well while 2.6.0 is a candidate.
+      ...(isFeatureVisible("passport") && isEnabled("flight")
         ? [
             {
               kind: "leaf" as const,
