@@ -5,8 +5,10 @@ import { isRoutableLegMode, type LegSource, type TourLeg } from "../../types/tou
  * The sources the MANUAL override endpoint accepts (see `MANUAL_LEG_SOURCES`
  * in `backend/src/schemas/tour.ts`). `routed` is deliberately excluded here —
  * it is never sent through `onSetSource`/the manual override endpoint, only
- * through `onRoute`/the routing endpoint (`POST .../route`). `track` stays
- * out entirely; no phase produces it yet.
+ * through `onRoute`/the routing endpoint (`POST .../route`). `track` is ALSO
+ * excluded: it goes through `onAdoptTrack`/the same override endpoint's
+ * discriminated `track` branch, which needs a `trackId` this type has no
+ * room for.
  */
 type ManualLegSource = "straight" | "drawn";
 
@@ -30,6 +32,20 @@ interface Props {
    *  a leg whose "routed" option is enabled — never for a disabled or
    *  absent one, since the control itself prevents that selection. */
   onRoute: (leg: TourLeg) => void;
+  /**
+   * legId -> id of the recorded track that covers it (phase 3b, task 8).
+   * Absent for a leg no uploaded track comes within anchor tolerance of —
+   * see `lib/trackCoverage.ts`. Gates the "track" option the same way
+   * `routingAvailable` gates "routed": never offered as usable unless a
+   * concrete track id is already known to cover this exact leg, because
+   * selecting it with no covering track can only 409.
+   */
+  trackCoverageByLegId: ReadonlyMap<string, string>;
+  /** Adopts the covering track's geometry onto this leg. Only ever invoked
+   *  for a leg whose "track" option is enabled, with the trackId this
+   *  component already resolved from `trackCoverageByLegId` — never a
+   *  caller-guessed one. */
+  onAdoptTrack: (leg: TourLeg, trackId: string) => void;
   onClear: (leg: TourLeg) => void;
   /** Routes every routable leg of the section in one call. */
   onRouteAll: () => void;
@@ -64,9 +80,17 @@ function formatKm(value: number): string {
  * Fix round 1 of Task 14 already established the rule this follows: a
  * control whose only possible outcome is an error is a broken control, not
  * an honest one. Task 7 extends the same rule to "routed" — never offer it
- * where selecting it can only 409.
+ * where selecting it can only 409. Phase 3b's task 8 extends it a second
+ * time to "track": always shown (any leg mode may have been recorded, not
+ * only a routable one — unlike "routed" this has no mode restriction), but
+ * disabled unless `coveringTrackId` is already known, exactly the same
+ * shape.
  */
-function buildOptions(leg: TourLeg, routingAvailable: boolean): LegSourceOption[] {
+function buildOptions(
+  leg: TourLeg,
+  routingAvailable: boolean,
+  coveringTrackId: string | undefined
+): LegSourceOption[] {
   const hasLine = leg.waypoints !== null && leg.waypoints.length >= 2;
   const options: LegSourceOption[] = [{ source: "straight", disabled: false }];
   if (hasLine) {
@@ -75,6 +99,7 @@ function buildOptions(leg: TourLeg, routingAvailable: boolean): LegSourceOption[
   if (isRoutableLegMode(leg.mode)) {
     options.push({ source: "routed", disabled: !routingAvailable });
   }
+  options.push({ source: "track", disabled: coveringTrackId === undefined });
   return options;
 }
 
@@ -88,6 +113,8 @@ export default function TourLegList({
   routingAvailable,
   onSetSource,
   onRoute,
+  trackCoverageByLegId,
+  onAdoptTrack,
   onClear,
   onRouteAll,
   routingAllInProgress = false,
@@ -117,7 +144,8 @@ export default function TourLegList({
         {legs.map((leg) => {
           const hasLine = leg.waypoints !== null && leg.waypoints.length >= 2;
           const isRoutable = isRoutableLegMode(leg.mode);
-          const options = buildOptions(leg, routingAvailable);
+          const coveringTrackId = trackCoverageByLegId.get(leg.id);
+          const options = buildOptions(leg, routingAvailable, coveringTrackId);
           const enabledCount = options.filter((o) => !o.disabled).length;
           return (
             <li
@@ -139,6 +167,15 @@ export default function TourLegList({
                   const value = e.target.value as LegSource;
                   if (value === "routed") {
                     onRoute(leg);
+                  } else if (value === "track") {
+                    // The option is disabled whenever `coveringTrackId` is
+                    // `undefined` (see `buildOptions`), so a `<select>`
+                    // change event can only carry this value when it is
+                    // defined — but the guard stays here rather than
+                    // asserting, so a future bug in that gating logs a
+                    // silent no-op instead of adopting a track that was
+                    // never actually confirmed to cover this leg.
+                    if (coveringTrackId !== undefined) onAdoptTrack(leg, coveringTrackId);
                   } else {
                     onSetSource(leg, value as ManualLegSource);
                   }
@@ -157,6 +194,11 @@ export default function TourLegList({
               {isRoutable && !routingAvailable && (
                 <span className="text-xs text-(--text-muted)">
                   {t("trips:tours.routing.unavailableReason")}
+                </span>
+              )}
+              {coveringTrackId === undefined && (
+                <span className="text-xs text-(--text-muted)">
+                  {t("trips:tours.tracks.noCoverageReason")}
                 </span>
               )}
               <button

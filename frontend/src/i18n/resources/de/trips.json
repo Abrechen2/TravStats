@@ -333,7 +333,8 @@
     "source": {
       "straight": "Luftlinie",
       "drawn": "gezogen",
-      "routed": "berechnet"
+      "routed": "berechnet",
+      "track": "aus der Spur"
     },
     "routing": {
       "routeAll": "Ganze Tour berechnen",
@@ -344,6 +345,54 @@
       "allError": "Die Tour konnte nicht berechnet werden",
       "fallback": "Es wurde keine Route gefunden — die Luftlinie bleibt bestehen",
       "result": "{{routed}} Etappen verarbeitet, {{skipped}} übersprungen"
+    },
+    "tracks": {
+      "heading": "Aufgezeichnete Tracks",
+      "loading": "Tracks werden geladen …",
+      "loadError": "Tracks konnten nicht geladen werden",
+      "empty": "Noch kein Track für diese Tour",
+      "uploadLabel": "GPX hochladen",
+      "uploading": "Wird hochgeladen …",
+      "uploadError": "Der Track konnte nicht hochgeladen werden",
+      "deleteLabel": "Löschen",
+      "deleteError": "Der Track konnte nicht gelöscht werden",
+      "pointCount_one": "{{count}} Punkt",
+      "pointCount_other": "{{count}} Punkte",
+      "noCoverageReason": "Kein aufgezeichneter Track deckt diese Etappe ab",
+      "source": {
+        "gpx": "GPX-Upload",
+        "dawarich": "Dawarich"
+      },
+      "dawarich": {
+        "pullLabel": "Aus Dawarich abrufen",
+        "pulling": "Wird abgerufen …",
+        "unavailableReason": "Keine Dawarich-Verbindung eingerichtet",
+        "error": "Der Track konnte nicht aus Dawarich abgerufen werden",
+        "errors": {
+          "notConfigured": "Keine Dawarich-Verbindung eingerichtet",
+          "unreachable": "Dawarich ist nicht erreichbar",
+          "auth": "Dawarich hat den Schlüssel abgelehnt",
+          "notFound": "Die Dawarich-Adresse wurde nicht gefunden",
+          "protocol": "Unerwartete Antwort von Dawarich",
+          "invalidUrl": "Die Dawarich-Adresse ist ungültig"
+        }
+      }
+    },
+    "dawarichSettings": {
+      "title": "Dawarich-Verbindung",
+      "subtitle": "Für den automatischen Track-Import aus Dawarich",
+      "baseUrl": "Server-Adresse",
+      "baseUrlPlaceholder": "https://dawarich.beispiel.de",
+      "apiKey": "API-Schlüssel",
+      "apiKeyPlaceholder": "API-Schlüssel eingeben",
+      "apiKeyStored": "Ein Schlüssel ist hinterlegt",
+      "clearKey": "Entfernen",
+      "shared": "Von einer globalen Verbindung bereitgestellt",
+      "save": "Speichern",
+      "saving": "Wird gespeichert …",
+      "test": "Verbindung testen",
+      "testing": "Wird getestet …",
+      "connected": "Verbunden (Version {{version}})"
     }
   }
 }

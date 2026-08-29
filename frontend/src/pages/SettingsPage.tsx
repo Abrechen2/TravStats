@@ -32,6 +32,7 @@ import MembershipsSection from "../components/Settings/MembershipsSection";
 import GeocoderSettingsCard from "../components/Settings/GeocoderSettingsCard";
 import RoutingProviderSection from "../components/Settings/RoutingProviderSection";
 import ImmichConnectionCard from "../components/Settings/ImmichConnectionCard";
+import DawarichConnectionCard from "../components/Settings/DawarichConnectionCard";
 import PasswordModal from "../components/Settings/PasswordModal";
 import { normalizeSectionId } from "../lib/sectionAliases";
 
@@ -593,6 +594,7 @@ export default function SettingsPage(): JSX.Element {
                 {/* Admin-only; the card itself renders null for non-admins. */}
                 <RoutingProviderSection isAdmin={user?.isAdmin ?? false} />
                 <ImmichConnectionCard />
+                <DawarichConnectionCard />
               </>
             )}
             {/* Intentionally NOT gated: the nav entry is hidden behind the

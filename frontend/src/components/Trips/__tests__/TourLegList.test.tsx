@@ -14,6 +14,8 @@ const STOP_TITLES = new Map([
   ["c", "Oslo"],
 ]);
 
+const NO_TRACK_COVERAGE: ReadonlyMap<string, string> = new Map();
+
 function makeLeg(overrides: Partial<TourLeg>): TourLeg {
   return {
     id: "leg-1",
@@ -35,6 +37,8 @@ interface RenderOverrides {
   routingAvailable?: boolean;
   onSetSource?: (leg: TourLeg, source: "straight" | "drawn") => void;
   onRoute?: (leg: TourLeg) => void;
+  trackCoverageByLegId?: ReadonlyMap<string, string>;
+  onAdoptTrack?: (leg: TourLeg, trackId: string) => void;
   onClear?: (leg: TourLeg) => void;
   onRouteAll?: () => void;
   routingAllInProgress?: boolean;
@@ -45,6 +49,8 @@ function renderList(legs: TourLeg[], overrides: RenderOverrides = {}) {
     routingAvailable: false,
     onSetSource: vi.fn(),
     onRoute: vi.fn(),
+    trackCoverageByLegId: NO_TRACK_COVERAGE,
+    onAdoptTrack: vi.fn(),
     onClear: vi.fn(),
     onRouteAll: vi.fn(),
     ...overrides,
@@ -54,22 +60,24 @@ function renderList(legs: TourLeg[], overrides: RenderOverrides = {}) {
 }
 
 describe("TourLegList", () => {
-  it("offers 'straight' and a disabled 'routed' for a routable leg with no stored line when routing is unavailable", () => {
+  it("offers 'straight' and disabled 'routed'/'track' for a routable leg with no stored line when neither is available", () => {
     const leg = makeLeg({ waypoints: null, mode: "road" });
     renderList([leg], { routingAvailable: false });
 
     const select = screen.getByRole("combobox");
     const options = within(select).getAllByRole("option");
-    expect(options.map((o) => o.getAttribute("value"))).toEqual(["straight", "routed"]);
+    expect(options.map((o) => o.getAttribute("value"))).toEqual(["straight", "routed", "track"]);
     expect(options.find((o) => o.getAttribute("value") === "routed")).toBeDisabled();
+    expect(options.find((o) => o.getAttribute("value") === "track")).toBeDisabled();
     // Only one enabled option ("straight") — the select as a whole has
     // nothing to switch to, same rule as before "routed" existed.
     expect(select).toBeDisabled();
     expect(screen.getByText("trips:tours.noLineYet")).toBeInTheDocument();
     expect(screen.getByText("trips:tours.routing.unavailableReason")).toBeInTheDocument();
+    expect(screen.getByText("trips:tours.tracks.noCoverageReason")).toBeInTheDocument();
   });
 
-  it("offers 'straight', 'drawn', and a disabled 'routed' for a leg with waypoints when routing is unavailable", () => {
+  it("offers 'straight', 'drawn', and disabled 'routed'/'track' for a leg with waypoints when neither is available", () => {
     const leg = makeLeg({
       source: "drawn",
       mode: "road",
@@ -86,8 +94,10 @@ describe("TourLegList", () => {
       "drawn",
       "routed",
       "straight",
+      "track",
     ]);
     expect(options.find((o) => o.getAttribute("value") === "routed")).toBeDisabled();
+    expect(options.find((o) => o.getAttribute("value") === "track")).toBeDisabled();
     // Two functional options ("straight", "drawn") — the select stays usable.
     expect(select).not.toBeDisabled();
     expect(screen.queryByText("trips:tours.noLineYet")).not.toBeInTheDocument();
@@ -102,7 +112,7 @@ describe("TourLegList", () => {
 
     const select = screen.getByRole("combobox");
     const options = within(select).getAllByRole("option");
-    expect(options.map((o) => o.getAttribute("value"))).toEqual(["straight", "routed"]);
+    expect(options.map((o) => o.getAttribute("value"))).toEqual(["straight", "routed", "track"]);
     expect(select).toBeDisabled();
   });
 
@@ -118,17 +128,31 @@ describe("TourLegList", () => {
     expect(screen.queryByText("trips:tours.routing.unavailableReason")).not.toBeInTheDocument();
   });
 
-  it("never offers 'routed' for a non-routable leg mode, even when routing is available", () => {
+  it("never offers 'routed' for a non-routable leg mode, even when routing is available — 'track' still shows, disabled", () => {
     const ferryLeg = makeLeg({ mode: "ferry", waypoints: null });
     renderList([ferryLeg], { routingAvailable: true });
 
     const select = screen.getByRole("combobox");
     const options = within(select).getAllByRole("option");
-    expect(options.map((o) => o.getAttribute("value"))).toEqual(["straight"]);
+    expect(options.map((o) => o.getAttribute("value"))).toEqual(["straight", "track"]);
     expect(screen.queryByText("trips:tours.routing.unavailableReason")).not.toBeInTheDocument();
+    expect(screen.getByText("trips:tours.tracks.noCoverageReason")).toBeInTheDocument();
   });
 
-  it("calls onSetSource (not onRoute) with the leg and the chosen manual value", () => {
+  it("enables 'track' (and hides the no-coverage reason) once a track is known to cover this leg", () => {
+    const leg = makeLeg({ id: "leg-covered", waypoints: null, mode: "road" });
+    const coverage = new Map([["leg-covered", "track-1"]]);
+    renderList([leg], { routingAvailable: false, trackCoverageByLegId: coverage });
+
+    const select = screen.getByRole("combobox");
+    const options = within(select).getAllByRole("option");
+    expect(options.find((o) => o.getAttribute("value") === "track")).not.toBeDisabled();
+    expect(screen.queryByText("trips:tours.tracks.noCoverageReason")).not.toBeInTheDocument();
+    // Two functional options now ("straight", "track") — the select is usable.
+    expect(select).not.toBeDisabled();
+  });
+
+  it("calls onSetSource (not onRoute/onAdoptTrack) with the leg and the chosen manual value", () => {
     const leg = makeLeg({
       source: "straight",
       mode: "road",
@@ -142,15 +166,28 @@ describe("TourLegList", () => {
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "drawn" } });
     expect(props.onSetSource).toHaveBeenCalledWith(leg, "drawn");
     expect(props.onRoute).not.toHaveBeenCalled();
+    expect(props.onAdoptTrack).not.toHaveBeenCalled();
   });
 
-  it("calls onRoute (not onSetSource) when 'routed' is selected", () => {
+  it("calls onRoute (not onSetSource/onAdoptTrack) when 'routed' is selected", () => {
     const leg = makeLeg({ source: "straight", mode: "road", waypoints: null });
     const props = renderList([leg], { routingAvailable: true });
 
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "routed" } });
     expect(props.onRoute).toHaveBeenCalledWith(leg);
     expect(props.onSetSource).not.toHaveBeenCalled();
+    expect(props.onAdoptTrack).not.toHaveBeenCalled();
+  });
+
+  it("calls onAdoptTrack with the leg and the covering track id when 'track' is selected", () => {
+    const leg = makeLeg({ id: "leg-covered", source: "straight", mode: "road", waypoints: null });
+    const coverage = new Map([["leg-covered", "track-42"]]);
+    const props = renderList([leg], { routingAvailable: true, trackCoverageByLegId: coverage });
+
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "track" } });
+    expect(props.onAdoptTrack).toHaveBeenCalledWith(leg, "track-42");
+    expect(props.onSetSource).not.toHaveBeenCalled();
+    expect(props.onRoute).not.toHaveBeenCalled();
   });
 
   it("disables the clear button when the leg is already straight, enables it otherwise", () => {
@@ -162,6 +199,8 @@ describe("TourLegList", () => {
         routingAvailable={false}
         onSetSource={vi.fn()}
         onRoute={vi.fn()}
+        trackCoverageByLegId={NO_TRACK_COVERAGE}
+        onAdoptTrack={vi.fn()}
         onClear={vi.fn()}
         onRouteAll={vi.fn()}
       />
@@ -182,6 +221,8 @@ describe("TourLegList", () => {
         routingAvailable={false}
         onSetSource={vi.fn()}
         onRoute={vi.fn()}
+        trackCoverageByLegId={NO_TRACK_COVERAGE}
+        onAdoptTrack={vi.fn()}
         onClear={vi.fn()}
         onRouteAll={vi.fn()}
       />

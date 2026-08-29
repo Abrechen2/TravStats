@@ -333,7 +333,8 @@
     "source": {
       "straight": "Straight line",
       "drawn": "Drawn",
-      "routed": "Routed"
+      "routed": "Routed",
+      "track": "From track"
     },
     "routing": {
       "routeAll": "Route the whole tour",
@@ -344,6 +345,54 @@
       "allError": "The tour could not be routed",
       "fallback": "No route could be found — kept the straight line",
       "result": "{{routed}} legs processed, {{skipped}} skipped"
+    },
+    "tracks": {
+      "heading": "Recorded tracks",
+      "loading": "Loading tracks …",
+      "loadError": "Tracks could not be loaded",
+      "empty": "No track for this tour yet",
+      "uploadLabel": "Upload GPX",
+      "uploading": "Uploading …",
+      "uploadError": "The track could not be uploaded",
+      "deleteLabel": "Delete",
+      "deleteError": "The track could not be deleted",
+      "pointCount_one": "{{count}} point",
+      "pointCount_other": "{{count}} points",
+      "noCoverageReason": "No recorded track covers this leg",
+      "source": {
+        "gpx": "GPX upload",
+        "dawarich": "Dawarich"
+      },
+      "dawarich": {
+        "pullLabel": "Pull from Dawarich",
+        "pulling": "Pulling …",
+        "unavailableReason": "No Dawarich connection configured",
+        "error": "The track could not be pulled from Dawarich",
+        "errors": {
+          "notConfigured": "No Dawarich connection configured",
+          "unreachable": "Dawarich is unreachable",
+          "auth": "Dawarich rejected the key",
+          "notFound": "The Dawarich address was not found",
+          "protocol": "Unexpected response from Dawarich",
+          "invalidUrl": "The Dawarich address is invalid"
+        }
+      }
+    },
+    "dawarichSettings": {
+      "title": "Dawarich connection",
+      "subtitle": "For automatic track import from Dawarich",
+      "baseUrl": "Server address",
+      "baseUrlPlaceholder": "https://dawarich.example.com",
+      "apiKey": "API key",
+      "apiKeyPlaceholder": "Enter API key",
+      "apiKeyStored": "A key is stored",
+      "clearKey": "Remove",
+      "shared": "Provided by a shared connection",
+      "save": "Save",
+      "saving": "Saving …",
+      "test": "Test connection",
+      "testing": "Testing …",
+      "connected": "Connected (version {{version}})"
     }
   }
 }

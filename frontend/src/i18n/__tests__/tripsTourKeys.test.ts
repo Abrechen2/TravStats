@@ -32,7 +32,7 @@ import { LEG_MODES, LEG_SOURCES, ROUTING_PROVIDER_IDS } from "../../types/tour";
  * builds them from a template literal (`` t(`trips:tours.mode.${mode}`) ``,
  * `` t(`trips:tours.source.${source}`) ``,
  * `` t(`settings:routing.provider.${id}`) ``). Add a `LegMode`, a
- * displayable `LegSource`, or a `RoutingProviderId` later and nothing above
+ * `LegSource`, or a `RoutingProviderId` later and nothing above
  * fails — the UI just renders the raw key at the user. The blocks below fix
  * that by binding to the TypeScript unions the frontend already keeps these
  * three vocabularies in (`types/tour.ts`), the same way Task 1's invariant
@@ -51,16 +51,6 @@ const SETTINGS_LOCALES = {
   de: deSettings,
   en: enSettings,
 } as const;
-
-/**
- * `LEG_SOURCES` also contains `"track"`, reserved for phase 3b — no UI path
- * can produce it yet (see `types/tour.ts`'s own doc comment and
- * `TourLegList.tsx`'s `buildOptions()`, which never emits it). Demanding
- * copy for a source the product cannot yet display would make this guard
- * red for no reason, so the vocabulary check below iterates this
- * UI-displayable subset instead of the full union.
- */
-const DISPLAYABLE_LEG_SOURCES = LEG_SOURCES.filter((source) => source !== "track");
 
 function flatten(obj: unknown, prefix = ""): string[] {
   if (typeof obj !== "object" || obj === null) return [prefix];
@@ -159,11 +149,11 @@ describe("tour vocabulary bound to its TypeScript union (fix round 1)", () => {
   });
 
   it.each(["de", "en"] as const)(
-    "%s: every displayable LegSource has a tours.source label",
+    "%s: every LegSource has a tours.source label",
     (locale) => {
       const sources = (LOCALES[locale] as { tours: { source: Record<string, unknown> } }).tours
         .source;
-      for (const source of DISPLAYABLE_LEG_SOURCES) {
+      for (const source of LEG_SOURCES) {
         expect(
           typeof sources[source],
           `${locale}/trips.json is missing tours.source.${source}`

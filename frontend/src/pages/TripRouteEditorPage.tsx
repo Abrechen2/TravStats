@@ -6,14 +6,18 @@ import PageTransition from "../components/PageTransition";
 import TripMap from "../components/Trips/TripMap";
 import TourStopAssigner from "../components/Trips/TourStopAssigner";
 import TourLegList from "../components/Trips/TourLegList";
+import TourTrackList from "../components/Trips/TourTrackList";
 import { useTranslation } from "../hooks/useTranslation";
+import { useTourTracks } from "../hooks/useTourTracks";
 import { tripsApi } from "../lib/api";
 import { toursApi } from "../lib/api/tours";
+import { dawarichFailureKey, dawarichFailureKind } from "../lib/api/dawarich";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
+import { findCoveringTrackId } from "../lib/trackCoverage";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { Trip, TripStop } from "../types";
-import type { TourGeometry, TourLeg, TourRoute, TourStop } from "../types/tour";
+import type { TourGeometry, TourLeg, TourRoute, TourStop, TourTrackMeta } from "../types/tour";
 
 /**
  * `TripStop` (`types/index.ts`) does not declare `routeId`/`routeOrderIdx` —
@@ -132,6 +136,26 @@ export default function TripRouteEditorPage(): JSX.Element {
     void load();
   }, [load]);
 
+  // Recorded tracks (phase 3b, task 8) — a genuinely separate concern from
+  // this page's own section/leg state, pulled into its own hook so this
+  // file stays readable. Loaded and reported INDEPENDENTLY of `failure`
+  // above, so a track-list hiccup never turns into "this section does not
+  // exist" — the track list gets its own honest loading/error/empty
+  // states instead of inheriting the page's.
+  const {
+    tracks,
+    tracksLoading,
+    tracksLoadError,
+    loadTracks,
+    tracksWithGeometry,
+    trackUploading,
+    uploadTrack,
+    trackPulling,
+    pullDawarichTrack,
+    deleteTrack,
+    dawarichAvailable,
+  } = useTourTracks(id, routeId);
+
   // Every trip stop, annotated for THIS section only. A stop assigned to a
   // DIFFERENT section still shows up (so the user can see it exists and try
   // to claim it), but its switch reads as "off" here — `routeOrderIdx` is
@@ -154,6 +178,33 @@ export default function TripRouteEditorPage(): JSX.Element {
     for (const s of assignerStops) map.set(s.id, s.title);
     return map;
   }, [assignerStops]);
+
+  const stopCoordById = useMemo(() => {
+    const map = new Map<string, { lat: number; lon: number }>();
+    for (const s of assignerStops) {
+      if (s.lat !== null && s.lon !== null) map.set(s.id, { lat: s.lat, lon: s.lon });
+    }
+    return map;
+  }, [assignerStops]);
+
+  /**
+   * legId -> id of the recorded track that covers it, powering
+   * `TourLegList`'s "track" option gate. See `lib/trackCoverage.ts` —
+   * `tracksWithGeometry` is already in `toursApi.tracks.list`'s
+   * oldest-started-first order, so "first match" there is a deterministic
+   * choice, not an arbitrary one.
+   */
+  const trackCoverageByLegId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const leg of legs) {
+      const from = stopCoordById.get(leg.fromStopId);
+      const to = stopCoordById.get(leg.toStopId);
+      if (!from || !to) continue;
+      const trackId = findCoveringTrackId(tracksWithGeometry, from, to);
+      if (trackId) map.set(leg.id, trackId);
+    }
+    return map;
+  }, [legs, stopCoordById, tracksWithGeometry]);
 
   // `TripMap` was specifically changed to protect its layer `useMemo` with a
   // stable default (`NO_TOUR_GEOMETRIES`) when no `tourGeometries` prop is
@@ -287,6 +338,87 @@ export default function TripRouteEditorPage(): JSX.Element {
     [id, routeId, load, addToast, t]
   );
 
+  /**
+   * Adopts a track's geometry onto a leg (phase 3b, task 8). Only ever
+   * invoked by `TourLegList` for a leg whose "track" option is enabled —
+   * gated client-side by `trackCoverageByLegId` — but the server re-checks
+   * coverage itself and answers 409 with an exact reason if it disagrees
+   * (a race: the track could have been deleted between render and click).
+   * `apiErrorMessage` already surfaces that 409's own prose, so no special
+   * status handling is needed here, unlike `handleRouteLeg`'s 409 case.
+   */
+  const handleAdoptTrack = useCallback(
+    (leg: TourLeg, trackId: string): void => {
+      if (!id || !routeId) return;
+      void (async (): Promise<void> => {
+        try {
+          await toursApi.setLeg(id, routeId, leg.fromStopId, leg.toStopId, {
+            source: "track",
+            trackId,
+          });
+          await load();
+        } catch (err) {
+          addToast("error", apiErrorMessage(err) ?? t("trips:tours.legError"));
+        }
+      })();
+    },
+    [id, routeId, load, addToast, t]
+  );
+
+  const handleUploadTrack = useCallback(
+    (file: File): void => {
+      void (async (): Promise<void> => {
+        try {
+          await uploadTrack(file);
+        } catch (err) {
+          // A malformed GPX and a GPX with no timestamps both 400 with
+          // DIFFERENT server messages (see `toursApi.tracks.upload`'s own
+          // doc comment) — surface whichever one the server sent.
+          addToast("error", apiErrorMessage(err) ?? t("trips:tours.tracks.uploadError"));
+        }
+      })();
+    },
+    [uploadTrack, addToast, t]
+  );
+
+  const handleDeleteTrack = useCallback(
+    (track: TourTrackMeta): void => {
+      void (async (): Promise<void> => {
+        try {
+          await deleteTrack(track.id);
+        } catch (err) {
+          addToast("error", apiErrorMessage(err) ?? t("trips:tours.tracks.deleteError"));
+        }
+      })();
+    },
+    [deleteTrack, addToast, t]
+  );
+
+  /**
+   * Pulls the section's own date span from Dawarich (an empty body — the
+   * server derives the window from the section's stops). Three failure
+   * shapes, per `toursApi.tracks.pullDawarich`'s doc comment: a fixed-kind
+   * 409 (`dawarichFailureKind` parses it, `notConfigured` included), or
+   * plain prose with no kind (an empty window, or no dated stops to derive
+   * one from) — the fallback branch surfaces that prose verbatim rather
+   * than a generic message.
+   */
+  const handlePullDawarich = useCallback((): void => {
+    void (async (): Promise<void> => {
+      try {
+        await pullDawarichTrack();
+      } catch (err) {
+        const kind = dawarichFailureKind(err);
+        addToast(
+          "error",
+          kind
+            ? t(dawarichFailureKey(kind))
+            : apiErrorMessage(err) ?? t("trips:tours.tracks.dawarich.error")
+        );
+      }
+    })();
+  }, [pullDawarichTrack, addToast, t]);
+
   if (loading) {
     return (
       <div className="min-h-screen" style={{ background: "var(--bg-base)", color: "var(--text-muted)" }}>
@@ -349,9 +481,27 @@ export default function TripRouteEditorPage(): JSX.Element {
               routingAvailable={routingAvailable}
               onSetSource={handleSetLegSource}
               onRoute={handleRouteLeg}
+              trackCoverageByLegId={trackCoverageByLegId}
+              onAdoptTrack={handleAdoptTrack}
               onClear={handleClearLeg}
               onRouteAll={handleRouteAll}
               routingAllInProgress={routingAllInProgress}
+            />
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold mb-3">{t("trips:tours.tracks.heading")}</h2>
+            <TourTrackList
+              tracks={tracks}
+              loading={tracksLoading}
+              loadError={tracksLoadError}
+              onRetry={loadTracks}
+              uploading={trackUploading}
+              onUpload={handleUploadTrack}
+              onDelete={handleDeleteTrack}
+              pulling={trackPulling}
+              dawarichAvailable={dawarichAvailable}
+              onPullDawarich={handlePullDawarich}
             />
           </section>
         </div>

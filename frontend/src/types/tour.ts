@@ -102,3 +102,44 @@ export interface TourGeometry {
   type: "FeatureCollection";
   features: TourGeometryFeature[];
 }
+
+/**
+ * `TripRouteTrack.source` vocabulary (phase 3b). Mirrors `TRACK_SOURCES` in
+ * `backend/src/schemas/tour.ts`: `gpx` (an uploaded GPX file) and `dawarich`
+ * (pulled from a Dawarich connection). Distinct from `LegSource` — a track
+ * is the RECORDING, `"track"` (a `LegSource`) is a LEG that adopted a
+ * segment of one.
+ */
+export const TRACK_SOURCES = ["gpx", "dawarich"] as const;
+export type TrackSource = (typeof TRACK_SOURCES)[number];
+
+/**
+ * Metadata for one recorded track, WITHOUT its geometry — the shape
+ * `GET .../tracks` returns (list call). Mirrors `TrackMetaRow`/
+ * `toTrackMetaDto` in `backend/src/routes/trips/tourTracks.ts`. Dates cross
+ * the wire as ISO strings, never `Date` objects, the same convention every
+ * other type in this file follows.
+ */
+export interface TourTrackMeta {
+  id: string;
+  routeId: string;
+  source: TrackSource;
+  /** Always comes from inside the GPX (or `null` for a Dawarich pull) —
+   *  there is no name override in the API, so no UI here builds one. */
+  name: string | null;
+  startedAt: string;
+  endedAt: string;
+  pointCount: number;
+  distanceKm: number;
+  createdAt: string;
+}
+
+/**
+ * One track WITH its simplified geometry — the shape
+ * `GET .../tracks/:trackId` returns. `geometry` is `[lon, lat]` tuples in
+ * travel order, the same GeoJSON coordinate order every other geometry in
+ * this file uses.
+ */
+export interface TourTrack extends TourTrackMeta {
+  geometry: Array<[number, number]>;
+}
