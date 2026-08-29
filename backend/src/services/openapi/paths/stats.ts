@@ -115,6 +115,19 @@ readOnlyStat("/stats/unique", "Firsts and unique counts");
 readOnlyStat("/stats/travel-account", "Everything, across all domains", "The cross-domain rollup the overview tab draws: flights, cruises, lodging and places in one answer.");
 readOnlyStat("/stats/cruise", "Cruise statistics", "Distance comes from the computed sea legs; a cruise the router never ran for contributes 0 rather than a straight-line guess.");
 readOnlyStat("/stats/lodging", "Lodging statistics", "A stay counts as nights only after its check-out, so a stay in progress is not yet in the totals.");
+readOnlyStat(
+  "/stats/passport",
+  "The passport: countries, their airports, and a continent quota",
+  "Derived server-side so several clients draw the same picture. A country counts " +
+    "if a flight began OR ended there, matching how countries are counted elsewhere; " +
+    "booked flights are excluded; each airport is stamped once, dated its first " +
+    "visit. Dates go out as dates, never as month names: the month belongs to the " +
+    "reader's language. `continentsVisited` counts real continents, while `groups` " +
+    "says how the rows are drawn — Africa and Antarctica share a row but are two " +
+    "continents, so reaching Antarctica moves the number. The per-continent " +
+    "denominator is the countries THIS catalogue knows, deliberately not one of the " +
+    "several competing counts of the world's countries, none of which is a fact."
+);
 
 registry.registerPath({
   method: "get",

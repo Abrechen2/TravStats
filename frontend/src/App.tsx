@@ -45,6 +45,7 @@ const AdminPage = lazy(() => import("./pages/AdminPage"));
 const ParserPage = lazy(() => import("./pages/ParserPage"));
 const PendingUpdatesPage = lazy(() => import("./pages/PendingUpdatesPage"));
 const AircraftPage = lazy(() => import("./pages/AircraftPage"));
+const PassportPage = lazy(() => import("./pages/PassportPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const ForceChangePasswordPage = lazy(() => import("./pages/ForceChangePasswordPage"));
 const TwoFactorChallengePage = lazy(() => import("./pages/TwoFactorChallengePage"));
@@ -468,6 +469,10 @@ function AppContent() {
               <Route
                 path="/aircraft/:registration"
                 element={isAuthenticated ? <AircraftPage /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/passport"
+                element={isAuthenticated ? <PassportPage /> : <Navigate to="/login" />}
               />
               <Route
                 path="*"

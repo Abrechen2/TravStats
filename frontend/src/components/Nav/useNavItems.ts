@@ -51,7 +51,7 @@ export function useNavItems(
   pendingUpdatesCount: number,
   pathname: string
 ): { center: NavNode[]; system: NavNode } {
-  const { t } = useTranslation(["dashboard", "common", "trips"]);
+  const { t } = useTranslation(["dashboard", "common", "trips", "passport"]);
   const user = useAuthStore((s) => s.user);
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
@@ -90,6 +90,19 @@ export function useNavItems(
         path: "/achievements",
         label: t("dashboard:achievements"),
       },
+      // Built from flights alone, so it is offered only when flights are on —
+      // an entry leading to a page that explains why it is empty is worse than
+      // no entry.
+      ...(isEnabled("flight")
+        ? [
+            {
+              kind: "leaf" as const,
+              id: "passport",
+              path: "/passport",
+              label: t("passport:title"),
+            },
+          ]
+        : []),
     ];
 
     const showPendingUpdates = pendingUpdatesCount > 0 || pathname === "/pending-updates";
