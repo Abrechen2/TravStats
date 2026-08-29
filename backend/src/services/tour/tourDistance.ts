@@ -35,16 +35,28 @@ export interface LegDistanceInput {
   waypoints?: Array<[number, number]> | null;
 }
 
+const finite = (n: number): boolean => Number.isFinite(n);
+
 export function legDistanceKm(input: LegDistanceInput): number {
+  if (!finite(input.from.lat) || !finite(input.from.lon) ||
+      !finite(input.to.lat) || !finite(input.to.lon)) {
+    throw new Error("legDistanceKm: leg endpoint has a non-finite coordinate");
+  }
   const chord = haversineKm(input.from, input.to);
   if (input.source === "straight") return chord;
 
   const line = input.waypoints;
-  // A line needs two points to have a length. Anything shorter is not a
-  // shorter route, it is a missing one — fall back to the chord rather than
-  // reporting zero kilometres for a leg that was certainly travelled.
   if (!line || line.length < 2) return chord;
-  return polylineDistanceKm(line);
+  for (const [lon, lat] of line) {
+    if (!finite(lon) || !finite(lat)) {
+      throw new Error("legDistanceKm: waypoint has a non-finite coordinate");
+    }
+  }
+  const measured = polylineDistanceKm(line);
+  // A line can have two or more points and still be zero-length — a drag
+  // that snapped back to its start. That is a missing route, not a short
+  // one, so it falls back to the chord exactly like a too-short line.
+  return measured > 0 ? measured : chord;
 }
 
 export function drivenKm(legs: readonly { mode: string; distanceKm: number }[]): number {

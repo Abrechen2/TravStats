@@ -33,6 +33,33 @@ describe("legDistanceKm", () => {
   it("is zero for a leg that starts and ends at the same point", () => {
     expect(legDistanceKm({ source: "straight", from: OSLO, to: OSLO })).toBeCloseTo(0, 6);
   });
+
+  it("falls back to the chord when a drawn line has length zero", () => {
+    const snapped: Array<[number, number]> = [
+      [OSLO.lon, OSLO.lat],
+      [OSLO.lon, OSLO.lat],
+    ];
+    const straight = legDistanceKm({ source: "straight", from: OSLO, to: GOTHENBURG });
+    expect(legDistanceKm({ source: "drawn", from: OSLO, to: GOTHENBURG, waypoints: snapped }))
+      .toBeCloseTo(straight, 6);
+  });
+
+  it("throws rather than returning NaN for a non-finite endpoint", () => {
+    expect(() =>
+      legDistanceKm({ source: "straight", from: { lat: Number.NaN, lon: 10 }, to: GOTHENBURG }),
+    ).toThrow(/non-finite/);
+  });
+
+  it("throws rather than returning NaN for a non-finite waypoint", () => {
+    expect(() =>
+      legDistanceKm({
+        source: "drawn",
+        from: OSLO,
+        to: GOTHENBURG,
+        waypoints: [[OSLO.lon, OSLO.lat], [Number.POSITIVE_INFINITY, 58], [GOTHENBURG.lon, GOTHENBURG.lat]],
+      }),
+    ).toThrow(/non-finite/);
+  });
 });
 
 describe("driven vs travelled", () => {
