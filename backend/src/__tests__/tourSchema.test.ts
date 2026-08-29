@@ -96,8 +96,48 @@ describe("legOverrideSchema", () => {
     expect(String(error)).toMatch(/route/i);
   });
 
-  it("still rejects track — phase 3b owns producing it, not this task", () => {
-    expect(() => legOverrideSchema.parse({ source: "track" })).toThrow();
+  it("accepts source \"track\" with a trackId — the geometry comes from the referenced track, not this body", () => {
+    const trackId = "e5e5f1f0-9b1a-4e2a-9b1a-4e2a9b1a4e2c";
+    expect(legOverrideSchema.parse({ source: "track", trackId })).toEqual({
+      source: "track",
+      trackId,
+    });
+  });
+
+  it("rejects source \"track\" with no trackId — trackId is required, track itself is NOT refused", () => {
+    // Fix round 1: this test used to be titled "still rejects track — phase
+    // 3b owns producing it, not this task", from before track was a
+    // valid source at all. Phase 3b IS this task now, and track IS
+    // produced (see the positive test above). This 400 is ONLY about the
+    // missing trackId - the assertion checks the error names trackId
+    // specifically, so a regression that rejected track outright (a
+    // discriminator mismatch on source instead) would fail this test
+    // rather than accidentally satisfy it.
+    let error: unknown;
+    try {
+      legOverrideSchema.parse({ source: "track" });
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeDefined();
+    expect(String(error)).toMatch(/trackId/);
+  });
+
+  it("a track leg strips any supplied waypoints — the geometry comes from the track, never the request body", () => {
+    // The single most important property the discriminated union exists
+    // to provide: one leg, one source of truth for its geometry. A caller
+    // attaching waypoints to a track leg must not smuggle them through -
+    // the track-branch shape has no waypoints field at all, so zod's
+    // default (non-strict) object parsing silently drops the unknown key
+    // rather than erroring, and the parsed result must reflect that.
+    const trackId = "e5e5f1f0-9b1a-4e2a-9b1a-4e2a9b1a4e2c";
+    const parsed = legOverrideSchema.parse({
+      source: "track",
+      trackId,
+      waypoints: line,
+    });
+    expect(parsed).not.toHaveProperty("waypoints");
+    expect(parsed).toEqual({ source: "track", trackId });
   });
 });
 

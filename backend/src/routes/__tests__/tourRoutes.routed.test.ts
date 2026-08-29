@@ -206,13 +206,26 @@ describe("Tour route sections — provider routing", () => {
     expect(legs.every((l) => l.source === "straight" && l.confidence === "low")).toBe(true);
   });
 
-  it("still rejects a leg override with source \"track\" (400) — phase 3b owns producing it", async () => {
+  it("rejects a leg override with source \"track\" and no trackId (400) — trackId is required, track itself is NOT refused", async () => {
+    // Fix round 1: this test used to be titled "still rejects ... track ...
+    // phase 3b owns producing it", from when `track` was not yet a valid
+    // source at all. Phase 3b IS this task now, and `track` IS produced by
+    // this same endpoint (see tourLegs.adopt.test.ts) — this 400 is ONLY
+    // about the missing `trackId`, not about `track` being rejected
+    // outright. The assertion below is written to actually distinguish the
+    // two: a 400 whose Zod issue lands on `trackId` (this case) vs. one
+    // that would land on `source` (a `track` rejected outright, the way
+    // `routed` still is below) — asserting merely `res.status === 400`
+    // would pass either way and prove nothing.
     const res = await request(app)
       .put(legUrl(osloId, kristiansandId))
       .set("Cookie", cookie)
       .send({ source: "track" });
 
     expect(res.status).toBe(400);
+    const details = res.body.details as Array<{ field: string; message: string }>;
+    expect(details.some((d) => d.field === "trackId")).toBe(true);
+    expect(details.some((d) => d.field === "source")).toBe(false);
   });
 
   it("refuses a leg override with source \"routed\" (400) — that geometry comes from the routing endpoint, not this one", async () => {

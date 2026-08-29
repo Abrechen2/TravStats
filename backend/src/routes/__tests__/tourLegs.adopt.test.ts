@@ -119,6 +119,39 @@ describe("Tour route legs — adopting a track", () => {
     expect(stored?.waypoints).toEqual(coveringTrack);
   });
 
+  it("a track leg cannot smuggle waypoints through the request body — the stored geometry is the adopted segment, never the supplied line", async () => {
+    // LOW fix round 1: the single most important property the discriminated
+    // union exists to provide is one leg, one source of truth for its
+    // geometry. `trackLegShape` (schemas/tour.ts) has no `waypoints` field
+    // at all, so zod silently strips one if a caller attaches it — but that
+    // guarantee is worthless unless something actually asserts the STORED
+    // leg ends up with the adopted segment, not the decoy. A decoy far away
+    // from both stops makes the two cases unmistakably different: if the
+    // decoy leaked through, `waypoints` would equal it and `distanceKm`
+    // would be wildly wrong for this leg.
+    const trackId = await createTrack(routeId, coveringTrack);
+    // Reuses nonCoveringTrack as the decoy line — any waypoints would do,
+    // but this one is convenient: already declared, and far enough from
+    // both stops that if it leaked through, distanceKm would be wildly
+    // wrong for this leg too.
+    const decoyWaypoints = nonCoveringTrack;
+
+    const res = await request(app)
+      .put(legUrl())
+      .set("Cookie", cookie)
+      .send({ source: "track", trackId, waypoints: decoyWaypoints });
+
+    expect(res.status).toBe(200);
+    expect(res.body.leg.waypoints).toEqual(coveringTrack);
+    expect(res.body.leg.waypoints).not.toEqual(decoyWaypoints);
+
+    const stored = await prisma.tripRouteLeg.findUnique({
+      where: { routeId_fromStopId_toStopId: { routeId, fromStopId: osloId, toStopId: kristiansandId } },
+    });
+    expect(stored?.waypoints).toEqual(coveringTrack);
+    expect(stored?.waypoints).not.toEqual(decoyWaypoints);
+  });
+
   it("a non-covering track 409s and leaves the leg completely unchanged", async () => {
     // Establish a known baseline: a plain straight chord, exactly what a
     // freshly-assigned leg starts as.
