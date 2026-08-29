@@ -65,13 +65,25 @@ function simplifyWithinCap(
   return simplified;
 }
 
+/**
+ * A zero, negative, or non-finite tolerance would defeat the doubling loop
+ * in `simplifyWithinCap` (`0 * TOLERANCE_GROWTH_FACTOR` is still `0`), so any
+ * value that isn't a genuine positive number is rejected in favour of the
+ * default — checked on the value itself (`Number.isFinite` + `> 0`), never
+ * via a comparison that a `NaN` could silently lose.
+ */
+function resolveToleranceDeg(toleranceDeg: number | undefined): number {
+  if (toleranceDeg === undefined) return DEFAULT_TOLERANCE_DEG;
+  return Number.isFinite(toleranceDeg) && toleranceDeg > 0 ? toleranceDeg : DEFAULT_TOLERANCE_DEG;
+}
+
 export function ingestTrack(
   parsed: ParsedTrack,
   opts?: { toleranceDeg?: number; maxPoints?: number }
 ): IngestedTrack | null {
   if (parsed.startedAt === null || parsed.endedAt === null) return null;
 
-  const toleranceDeg = opts?.toleranceDeg ?? DEFAULT_TOLERANCE_DEG;
+  const toleranceDeg = resolveToleranceDeg(opts?.toleranceDeg);
   const maxPoints = opts?.maxPoints ?? DEFAULT_MAX_POINTS;
 
   // Measure on the raw points BEFORE simplification — see module docstring.

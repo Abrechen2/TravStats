@@ -119,6 +119,21 @@ describe("ingestTrack", () => {
     expect(result?.pointCount).toBe(points.length);
   });
 
+  it("case 7: a zero toleranceDeg does not defeat the cap — the doubling loop must not stay stuck at 0", () => {
+    // 0 * TOLERANCE_GROWTH_FACTOR is still 0: a caller-supplied 0 (or a
+    // negative value) must be clamped to the default before the doubling
+    // loop runs, or the loop burns all its attempts at tolerance 0 and
+    // returns geometry ABOVE maxPoints — exactly what the cap exists to
+    // prevent, since it lands in a JSON column read on every map render.
+    const points = buildWigglyTrack(500);
+    const parsed = withTimestamps(points);
+
+    const result = ingestTrack(parsed, { toleranceDeg: 0, maxPoints: 100 });
+
+    expect(result).not.toBeNull();
+    expect(result?.geometry.length).toBeLessThanOrEqual(100);
+  });
+
   it("case 5: returns null when startedAt is missing — cannot be matched to a leg by time", () => {
     const parsed: ParsedTrack = {
       points: [
