@@ -9,6 +9,9 @@ import { cruiseApi } from "../../../lib/api/cruise";
 import { flightsApi } from "../../../lib/api/flights";
 import { listLodgings } from "../../../lib/api/lodging";
 import { listPlaces } from "../../../lib/api/places";
+import { listPlaceLists } from "../../../lib/api/placeLists";
+import { resolvePlaceListColors } from "../../../lib/placeColor";
+import type { PlaceList } from "../../../types/placeList";
 import { tripsApi } from "../../../lib/api/trips";
 import { buildCruiseLegend, type CruiseLegendRow } from "../../../lib/cruiseColor";
 import { buildFlightLegend, rgbCss, type FlightLegendRow } from "../../../lib/flightColor";
@@ -138,6 +141,7 @@ export function AllTab(): JSX.Element {
   const setPlaceSelection = usePlaceSelectionStore((s) => s.setSelection);
   const navigate = useNavigate();
   const [places, setPlaces] = useState<Place[]>([]);
+  const [placeLists, setPlaceLists] = useState<PlaceList[]>([]);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
 
   // Global dashboard filter — year populates `time.from/to`, domain
@@ -368,9 +372,14 @@ export function AllTab(): JSX.Element {
   useEffect(() => {
     if (!placesAllowed) return;
     let cancelled = false;
-    listPlaces({})
-      .then((list) => {
-        if (!cancelled) setPlaces(list);
+    // Lists come WITH their entries, for the same reason the places tab asks
+    // for them: a pin's colour and its symbol both come from the list it is in,
+    // and membership is the only way to know which list that is.
+    Promise.all([listPlaces({}), listPlaceLists(true)])
+      .then(([list, lists]) => {
+        if (cancelled) return;
+        setPlaces(list);
+        setPlaceLists(lists);
       })
       .catch((err: unknown) => {
         logger.error("AllTab: failed to load places", err);
@@ -679,6 +688,10 @@ export function AllTab(): JSX.Element {
     </div>
   );
 
+  // Resolved once for both maps below. "First list wins" lives in this one
+  // function, so a pin's colour and its symbol can never name different lists.
+  const placeListContext = useMemo(() => resolvePlaceListColors(placeLists), [placeLists]);
+
   // Journey mode takes over the map entirely: it injects its own cross-domain
   // layers and suppresses the internal cruise arcs that MapContainer3D would
   // otherwise render, so only the selected trip is shown.
@@ -692,6 +705,8 @@ export function AllTab(): JSX.Element {
           showInternalCruises={false}
           appearanceDomains={["flight", "cruise", "lodging", "poi"]}
           placesOverride={visiblePlaces}
+          placeListColors={placeListContext.byPlaceId}
+          placeListLabels={placeListContext.labelsByPlaceId}
           onPlaceClick={(placeId) => navigate(`/places/${placeId}`)}
           onFlightClick={handleFlightClick}
           onRouteClick={handleRouteClick}
@@ -718,6 +733,8 @@ export function AllTab(): JSX.Element {
         visMode={visMode}
         appearanceDomains={["flight", "cruise", "lodging", "poi"]}
         placesOverride={visiblePlaces}
+        placeListColors={placeListContext.byPlaceId}
+        placeListLabels={placeListContext.labelsByPlaceId}
         onPlaceClick={(placeId) => navigate(`/places/${placeId}`)}
         onFlightClick={handleFlightClick}
         onRouteClick={handleRouteClick}
