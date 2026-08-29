@@ -85,19 +85,56 @@ function toCoord([lon, lat]: [number, number]): Coord {
   return { lat, lon };
 }
 
+const finite = (n: number): boolean => Number.isFinite(n);
+
 /**
  * Whether a provider's returned line can be trusted as an answer to the leg
- * that was actually asked about, rather than discarded as a wrong-place or
- * wrong-magnitude response.
+ * that was actually asked about, rather than discarded as a wrong-place,
+ * wrong-magnitude, or outright malformed response.
+ *
+ * The finiteness check MUST run before the anchor/sanity comparisons below,
+ * not alongside them. `NaN > ANCHOR_TOLERANCE_KM` and
+ * `NaN > chordKm * SANITY_RATIO` are both `false` — a comparison against a
+ * NaN silently loses, so a line carrying one would otherwise sail through
+ * both guards and be persisted as `source: "routed"`. Every `drivenKm` /
+ * `travelledKm` sum that leg's distance later enters becomes NaN too. This
+ * is the same class of bug the hand-drawn path already had to close once
+ * (`legDistanceKm`'s own finite-guard) — that guard never sees provider
+ * data, because it only runs on the straight-fallback path, so this one
+ * has to exist here independently.
  */
-function isTrustworthy(result: RouteResult, from: Coord, to: Coord, chordKm: number): boolean {
+function isTrustworthy(
+  result: RouteResult,
+  from: Coord,
+  to: Coord,
+  chordKm: number,
+  providerId: string,
+): boolean {
   const line = result.waypoints;
   if (line.length < 2) {
     logger.warn(
-      { waypointCount: line.length },
+      { providerId, waypointCount: line.length },
       "routing provider returned fewer than two waypoints; falling back to straight line",
     );
     return false;
+  }
+
+  if (!finite(result.distanceKm) || result.distanceKm < 0) {
+    logger.warn(
+      { providerId, distanceKm: result.distanceKm },
+      "routing provider returned a non-finite or negative distance; falling back to straight line",
+    );
+    return false;
+  }
+
+  for (const [lon, lat] of line) {
+    if (!finite(lon) || !finite(lat)) {
+      logger.warn(
+        { providerId, lon, lat },
+        "routing provider returned a non-finite waypoint coordinate; falling back to straight line",
+      );
+      return false;
+    }
   }
 
   const head = toCoord(line[0]);
@@ -106,7 +143,7 @@ function isTrustworthy(result: RouteResult, from: Coord, to: Coord, chordKm: num
   const tailOff = haversineKm(tail, to);
   if (headOff > ANCHOR_TOLERANCE_KM || tailOff > ANCHOR_TOLERANCE_KM) {
     logger.warn(
-      { headOffKm: headOff, tailOffKm: tailOff, toleranceKm: ANCHOR_TOLERANCE_KM },
+      { providerId, headOffKm: headOff, tailOffKm: tailOff, toleranceKm: ANCHOR_TOLERANCE_KM },
       "routing provider's line does not anchor at the requested stops; falling back to straight line",
     );
     return false;
@@ -114,7 +151,7 @@ function isTrustworthy(result: RouteResult, from: Coord, to: Coord, chordKm: num
 
   if (chordKm >= MIN_CHORD_FOR_SANITY_KM && result.distanceKm > chordKm * SANITY_RATIO) {
     logger.warn(
-      { distanceKm: result.distanceKm, chordKm, ratio: result.distanceKm / chordKm },
+      { providerId, distanceKm: result.distanceKm, chordKm, ratio: result.distanceKm / chordKm },
       "routing provider's distance is implausible relative to the straight-line chord; falling back to straight line",
     );
     return false;
@@ -132,9 +169,10 @@ function isTrustworthy(result: RouteResult, from: Coord, to: Coord, chordKm: num
  *  2. No provider configured (`provider === null`) → straight chord.
  *  3. The provider answers `null` (its own contract: never throws, `null`
  *     means "could not route this") → straight chord.
- *  4. The provider answers with a line, but that line does not anchor at
- *     the requested stops, or its distance is implausible relative to the
- *     chord → the answer is discarded, straight chord.
+ *  4. The provider answers with a line, but that line carries a non-finite
+ *     coordinate or distance, does not anchor at the requested stops, or
+ *     its distance is implausible relative to the chord → the answer is
+ *     discarded, straight chord.
  *  5. Otherwise the provider's own line and distance are trusted verbatim —
  *     never recomputed from the polyline, because the provider's distance
  *     reflects the road network, not a geometric measurement of its own
@@ -160,7 +198,7 @@ export async function routeLegGeometry(
   }
 
   const chordKm = haversineKm(from, to);
-  if (!isTrustworthy(result, from, to, chordKm)) {
+  if (!isTrustworthy(result, from, to, chordKm, provider.id)) {
     return straightFallback({ from, to });
   }
 
