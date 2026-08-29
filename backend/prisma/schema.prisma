@@ -871,6 +871,7 @@ model Trip {
   bookings       Booking[]
   cruises        Cruise[]
   stops          TripStop[]
+  routes         TripRoute[]
   journalEntries TripJournalEntry[]
   photos         TripPhoto[]
   lodgingStays   LodgingStay[]
@@ -968,14 +969,99 @@ model TripStop {
   lat         Float?
   lon         Float?
   notes       String?
+  /// Route membership. NULL means what every stop is today: a timeline
+  /// point that produces no kilometres. Set means it is a vertex of that
+  /// route section. Nothing derives this — see the migration note.
+  routeId       String? @map("route_id")
+  /// Position WITHIN the route, 0-based and contiguous. Written only by
+  /// PUT /trips/:id/routes/:routeId/stops, never by a client.
+  routeOrderIdx Int?    @map("route_order_idx")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  trip     Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  route     TripRoute?     @relation(fields: [routeId], references: [id], onDelete: SetNull)
+  legsFrom  TripRouteLeg[] @relation("LegFrom")
+  legsTo    TripRouteLeg[] @relation("LegTo")
 
+  @@unique([routeId, routeOrderIdx])
   @@index([tripId])
   @@index([tripId, orderIdx])
+  @@index([routeId])
   @@map("trip_stops")
+}
+
+/// A named, ordered route section inside a trip: "Norwegen mit dem
+/// Wohnmobil", "Besseggen-Wanderung", "Fähre nach Hirtshals".
+///
+/// A trip may hold several. A section may be a LOOP — its first and last
+/// stop may be the same place — which is what makes a day hike from a base
+/// camp expressible. The vehicle link arrives with phase 2.
+model TripRoute {
+  id       String  @id @default(uuid())
+  tripId   String  @map("trip_id")
+  name     String
+  /// Default mode for legs created in this section:
+  /// road | ferry | rail | foot | bike
+  mode     String
+  orderIdx Int     @default(0) @map("order_idx")
+  color    String?
+  notes    String?
+
+  /// Odometer at section start and end. Deliberately NOT reconciled with
+  /// the sum of the legs: the difference is the finding.
+  startOdometerKm Int? @map("start_odometer_km")
+  endOdometerKm   Int? @map("end_odometer_km")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  trip  Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  stops TripStop[]
+  legs  TripRouteLeg[]
+
+  @@index([tripId])
+  @@map("trip_routes")
+}
+
+/// One leg of one section.
+///
+/// Keyed by its two ENDPOINT STOPS, never by an ordinal — the lesson
+/// `CruiseLegRoute` records: keying by position means inserting a stop
+/// shifts every stored line one leg along, and the map then looks like the
+/// router broke. With endpoint keying an inserted stop leaves its
+/// neighbours' stored geometry untouched.
+model TripRouteLeg {
+  id         String @id @default(uuid())
+  routeId    String @map("route_id")
+  fromStopId String @map("from_stop_id")
+  toStopId   String @map("to_stop_id")
+
+  distanceKm Float  @map("distance_km")
+  /// straight | drawn (phase 1). routed | track arrive in phase 3.
+  source     String
+  /// road | ferry | rail | foot | bike. Per LEG, not per section: a road
+  /// tour with one ferry crossing must not count it as motorway km.
+  mode       String
+  /// low | medium | high, mirroring CruiseLeg.
+  confidence String @default("medium")
+
+  /// `[[lon, lat], …]` in GeoJSON order. Null when source is `straight`.
+  waypoints      Json?
+  drivingMinutes Int?    @map("driving_minutes")
+  tollCost       Float?  @map("toll_cost")
+  currency       String?
+
+  computedAt DateTime @default(now()) @map("computed_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  route    TripRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  fromStop TripStop  @relation("LegFrom", fields: [fromStopId], references: [id], onDelete: Cascade)
+  toStop   TripStop  @relation("LegTo",   fields: [toStopId],   references: [id], onDelete: Cascade)
+
+  @@unique([routeId, fromStopId, toStopId])
+  @@index([routeId])
+  @@map("trip_route_legs")
 }
 
 model TripJournalEntry {
