@@ -239,6 +239,29 @@ export interface UserStats {
   placeCountries: Set<string>;
   /** Size of the biggest single category — "25 of one kind". */
   placesInCategoryMax: number;
+  /** Distinct cities among visited places. */
+  placeCities: Set<string>;
+  /** Distinct continents, resolved from the coordinates. */
+  placeContinents: Set<string>;
+  /** How many of the eight categories have been used at least once. */
+  placeCategoriesUnique: number;
+  /** Most visits to one place. */
+  placeSameRepeatMax: number;
+  /** Most distinct places on one calendar day. */
+  placesInOneDayMax: number;
+  /** Longest run of consecutive days carrying a visit. */
+  placeVisitStreakMax: number;
+  /** Most visits inside one calendar year. */
+  placeVisitsInYearMax: number;
+  /** Most countries reached inside one calendar year. */
+  placeCountriesInYearMax: number;
+  /** Visits carrying a rating. */
+  placeRatedVisits: number;
+  /** Visits attached to a trip. */
+  placeTripVisits: number;
+  /** Furthest north and south a place reaches, or null when there are none. */
+  placeNorthernLat: number | null;
+  placeSouthernLat: number | null;
   /** Ticked targets per checklist, keyed by `CuratedList.key`. Kept per list
    * rather than as one maximum, or every wonders badge would report the same
    * progress. Read by the `curated_list_ticked:<key>` checks. */
@@ -391,6 +414,18 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     placeVisitsCount: 0,
     placeCountries: new Set<string>(),
     placesInCategoryMax: 0,
+    placeCities: new Set(),
+    placeContinents: new Set(),
+    placeCategoriesUnique: 0,
+    placeSameRepeatMax: 0,
+    placesInOneDayMax: 0,
+    placeVisitStreakMax: 0,
+    placeVisitsInYearMax: 0,
+    placeCountriesInYearMax: 0,
+    placeRatedVisits: 0,
+    placeTripVisits: 0,
+    placeNorthernLat: null,
+    placeSouthernLat: null,
     curatedTickedByList: new Map<string, number>(),
   };
 
