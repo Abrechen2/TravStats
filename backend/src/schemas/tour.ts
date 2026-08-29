@@ -6,13 +6,20 @@ import { ROUTING_PROVIDER_IDS } from "../services/tour/routing/types";
 /**
  * Validation for the tour endpoints.
  *
- * Phase 1 accepts only `straight` and `drawn` as a leg source; `routed` and
- * `track` are in the shared enum already so that phase 3 adds a value here
- * rather than a migration. A source the server cannot yet produce is
- * rejected at the boundary instead of being stored and rendered as a lie.
+ * `ACCEPTED_LEG_SOURCES` names every leg source the SERVER can actually
+ * produce: `straight` (the default chord), `drawn` (a hand-drawn override,
+ * phase 1), and `routed` (a provider-computed line, phase 3 — see
+ * `routes/trips/tourRouting.ts`). `track` stays OUT — it is in the shared
+ * `LEG_SOURCES` enum already so a future phase adds a value here rather
+ * than a migration, but phase 3b owns producing it. A source the server
+ * cannot yet produce is rejected at the boundary instead of being stored
+ * and rendered as a lie.
+ *
+ * This was named `PHASE_1_SOURCES` before `routed` joined it — that name
+ * would now claim a phase boundary the set no longer marks.
  */
 
-const PHASE_1_SOURCES = ["straight", "drawn"] as const;
+const ACCEPTED_LEG_SOURCES = ["straight", "drawn", "routed"] as const;
 
 const coordinate = z
   .tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)])
@@ -58,7 +65,7 @@ export const assignStopsSchema = z.object({
 
 export const legOverrideSchema = z
   .object({
-    source: z.enum(PHASE_1_SOURCES),
+    source: z.enum(ACCEPTED_LEG_SOURCES),
     mode: z.enum(LEG_MODES).optional(),
     waypoints: z.array(coordinate).min(2).max(256).optional(),
     drivingMinutes: z.number().int().min(0).max(100_000).nullable().optional(),

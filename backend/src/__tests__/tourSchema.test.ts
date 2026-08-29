@@ -80,6 +80,14 @@ describe("legOverrideSchema", () => {
   it("accepts a straight leg with no waypoints", () => {
     expect(legOverrideSchema.parse({ source: "straight" }).source).toBe("straight");
   });
+
+  it("accepts a routed leg (task 6 — the server can now produce this source)", () => {
+    expect(legOverrideSchema.parse({ source: "routed" }).source).toBe("routed");
+  });
+
+  it("still rejects track — phase 3b owns producing it, not this task", () => {
+    expect(() => legOverrideSchema.parse({ source: "track" })).toThrow();
+  });
 });
 
 describe("updateRouteSchema", () => {

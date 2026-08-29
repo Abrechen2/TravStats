@@ -7,6 +7,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { assignStopsSchema, createRouteSchema, updateRouteSchema } from "../../schemas/tour";
 import { drivenKm, travelledKm } from "../../services/tour/tourDistance";
 import { recomputeLegs } from "../../services/tour/legRecompute";
+import { describeRoutingAvailability } from "../../services/tour/routing/resolveProvider";
 import { resolveTrip } from "../trips";
 import logger from "../../utils/logger";
 
@@ -24,7 +25,12 @@ interface LegRow {
   distanceKm: number;
 }
 
-function toDto(
+/**
+ * Exported for `routes/trips/tourRouting.ts` — `POST .../route-all` returns
+ * a `route` in the same shape every other section endpoint does, and this
+ * is the one function that builds it.
+ */
+export function toDto(
   route: {
     id: string;
     tripId: string;
@@ -84,7 +90,8 @@ export function toLegDto(leg: {
   };
 }
 
-const ROUTE_SELECT = {
+/** Exported for `routes/trips/tourRouting.ts` — see `toDto` above. */
+export const ROUTE_SELECT = {
   legs: { select: { mode: true, distanceKm: true } },
   _count: { select: { stops: true } },
 } as const;
@@ -234,6 +241,18 @@ router.delete(
  * collision, or race a genuine concurrent write. A read must never be
  * able to lose someone else's write. This handler does neither: no
  * transaction, no write, just three plain reads.
+ *
+ * `routingAvailable` (task 6, phase 3): whether the "Route this leg" /
+ * "Route the whole section" actions should be offered at all. This is the
+ * page the tour route editor loads to open one section — exactly where
+ * those actions live — so widening THIS response is one extra `Promise.all`
+ * member on an existing call, not a new round trip the editor would have to
+ * make on every section open. A dedicated `GET /settings/routing/availability`
+ * was the other option on the table; it was not taken because it is either
+ * redundant (fired every time regardless) or an extra request timed to
+ * "whenever the editor opens", which this endpoint already models exactly.
+ * `describeRoutingAvailability` never throws (see its own doc comment), so
+ * it needs no separate error handling here.
  */
 router.get(
   "/trips/:id/routes/:routeId",
@@ -245,7 +264,7 @@ router.get(
       const trip = await resolveTrip(userId, req.params.id);
       const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
 
-      const [route, stops, legs] = await Promise.all([
+      const [route, stops, legs, routing] = await Promise.all([
         prisma.tripRoute.findUniqueOrThrow({ where: { id: routeId }, include: ROUTE_SELECT }),
         prisma.tripStop.findMany({
           where: { routeId },
@@ -256,9 +275,15 @@ router.get(
           where: { routeId },
           orderBy: { fromStop: { routeOrderIdx: "asc" } },
         }),
+        describeRoutingAvailability(userId),
       ]);
 
-      res.json({ route: toDto(route), stops, legs: legs.map(toLegDto) });
+      res.json({
+        route: toDto(route),
+        stops,
+        legs: legs.map(toLegDto),
+        routingAvailable: routing.configured,
+      });
     } catch (error) {
       next(error);
     }

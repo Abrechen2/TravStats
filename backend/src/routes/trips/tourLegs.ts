@@ -35,7 +35,12 @@ interface LegWithStops {
   toStop: { lat: number | null; lon: number | null };
 }
 
-async function findLegOrThrow(
+/**
+ * Exported for `routes/trips/tourRouting.ts` (the routing endpoints split
+ * out alongside this file) — both need the same "leg between these two
+ * stops, with stop coordinates attached" lookup.
+ */
+export async function findLegOrThrow(
   routeId: string,
   fromStopId: string,
   toStopId: string,
@@ -64,7 +69,7 @@ async function findLegOrThrow(
  * `!` assertion — and it fails loudly (409) rather than crashing on a bad
  * haversine call.
  */
-function requireCoords(
+export function requireCoords(
   stop: { lat: number | null; lon: number | null },
   which: "from" | "to",
 ): { lat: number; lon: number } {

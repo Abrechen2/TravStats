@@ -1,9 +1,10 @@
 /**
  * Tour route section endpoints — a trip's "how did we get there" layer on
- * top of its stops. All eight live on the two same-prefix satellite
- * routers `routes/trips/tourRoutes.ts` and `routes/trips/tourLegs.ts`,
- * both mounted at the plain `/trips` base, which is why every path here
- * starts with `/trips/{id}/routes` rather than its own top-level segment.
+ * top of its stops. All ten live on the three same-prefix satellite routers
+ * `routes/trips/tourRoutes.ts`, `routes/trips/tourLegs.ts`, and
+ * `routes/trips/tourRouting.ts`, all mounted at the plain `/trips` base,
+ * which is why every path here starts with `/trips/{id}/routes` rather than
+ * its own top-level segment.
  *
  * None of these responses use the `{success, data}` envelope the cruise
  * endpoints use — they follow the older bare-object convention `trips.ts`
@@ -26,9 +27,11 @@ const legMode = z.enum(LEG_MODES).describe("Per-leg travel mode, not per section
 const legSource = z
   .enum(LEG_SOURCES)
   .describe(
-    "How the geometry was produced. Phase 1 writes only 'straight' (the " +
-      "default chord) and 'drawn' (a hand-drawn override); 'routed' and " +
-      "'track' are reserved for a later phase.",
+    "How the geometry was produced. The server writes 'straight' (the " +
+      "default chord), 'drawn' (a hand-drawn override), and, since phase 3 " +
+      "(task 6), 'routed' (computed by the configured routing provider via " +
+      "POST .../route or POST .../route-all). 'track' is reserved for a " +
+      "later phase — the leg-override input rejects it.",
   );
 const confidence = z.enum(["low", "medium", "high"]);
 
@@ -280,22 +283,30 @@ registry.registerPath({
   path: "/trips/{id}/routes/{routeId}",
   summary: "Get one route section with its stops and legs",
   description:
-    "The same envelope `PUT .../stops` returns (`{ route, stops, legs }`), " +
-    "so a client can read the section once on load and reuse the exact " +
-    "response type it already has for the write. A pure read — no " +
-    "transaction, nothing written, unlike the write endpoint above (whose " +
-    "409 guard exists because concurrent claims on that path are expected).",
+    "The same envelope `PUT .../stops` returns, widened with " +
+    "`routingAvailable` (task 6): whether a routing provider is configured " +
+    "for this instance, so the client can decide whether to offer " +
+    "'Route this leg' / 'Route the whole section' at all. This is exactly " +
+    "the page load the route editor already performs to open a section, " +
+    "so the flag rides along here rather than behind a dedicated endpoint " +
+    "the editor would otherwise have to call separately every time it " +
+    "opens. A pure read — no transaction, nothing written, unlike the " +
+    "write endpoint above (whose 409 guard exists because concurrent " +
+    "claims on that path are expected).",
   tags: ["Tours"],
   request: { params: routeIdParams },
   responses: {
     200: {
-      description: "Section, its stops in order, and its legs",
+      description: "Section, its stops in order, its legs, and routing availability",
       content: {
         "application/json": {
           schema: z.object({
             route: tourRoute,
             stops: z.array(tourStop),
             legs: z.array(tourLeg),
+            routingAvailable: z
+              .boolean()
+              .describe("Whether a routing provider is configured for this instance"),
           }),
         },
       },
@@ -398,6 +409,69 @@ registry.registerPath({
     204: { description: "Reverted to a straight chord" },
     404: { description: "Trip, section or leg not found", content: errorContent },
     409: { description: "The leg's stop lost its coordinates", content: errorContent },
+  },
+});
+
+/* ─────────────────────────────  provider routing  ─────────────────────── */
+
+registry.registerPath({
+  method: "post",
+  path: "/trips/{id}/routes/{routeId}/legs/{fromStopId}/{toStopId}/route",
+  summary: "Route one leg through the configured provider",
+  description:
+    "Computes this leg's geometry via whichever routing provider the " +
+    "instance has configured (admin settings, plus a per-user API key " +
+    "where the provider needs one) and stores the result. A ferry or rail " +
+    "leg, or a provider answer that does not anchor to the leg's stops or " +
+    "looks implausible, still comes back 200 — the leg falls back to its " +
+    "straight chord with `confidence: \"low\"`, an honest result rather " +
+    "than an error. Only a genuinely unconfigured instance (no provider at " +
+    "all) is refused, and with 409 rather than 400 — the request itself is " +
+    "fine, the instance just cannot answer it.",
+  tags: ["Tours"],
+  request: { params: legParams },
+  responses: {
+    200: { description: "Leg routed (or honestly left as a straight chord)", content: { "application/json": { schema: z.object({ leg: tourLeg }) } } },
+    404: { description: "Trip, section or leg not found", content: errorContent },
+    409: {
+      description:
+        "The leg's stop lost its coordinates, or no routing provider is configured",
+      content: errorContent,
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/trips/{id}/routes/{routeId}/route-all",
+  summary: "Route every routable leg of a section in one call",
+  description:
+    "Runs every leg whose mode a road router can answer (road, foot, bike) " +
+    "through the configured provider; a ferry or rail leg is left " +
+    "untouched. Unlike the single-leg endpoint above, an unconfigured " +
+    "provider does not 409 here — every routable leg simply falls back to " +
+    "its straight chord, same as an individual provider failure would, and " +
+    "the response says so honestly via `routedCount` (legs run through the " +
+    "routing pipeline, whatever the outcome) and `skippedCount` (legs left " +
+    "alone because their mode is not routable). This always answers 200: " +
+    "routing that did not produce a route is not a request error.",
+  tags: ["Tours"],
+  request: { params: routeIdParams },
+  responses: {
+    200: {
+      description: "Section, its updated legs, and how many were routed vs. skipped",
+      content: {
+        "application/json": {
+          schema: z.object({
+            route: tourRoute,
+            legs: z.array(tourLeg),
+            routedCount: z.number().int().describe("Legs run through the routing pipeline"),
+            skippedCount: z.number().int().describe("Legs left alone — ferry/rail, not routable"),
+          }),
+        },
+      },
+    },
+    404: { description: "Trip or section not found", content: errorContent },
   },
 });
 

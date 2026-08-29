@@ -46,6 +46,7 @@ import trainingRoutes from './training';
 import tripsRoutes from './trips';
 import tourRouteRoutes from './trips/tourRoutes';
 import tourLegRoutes from './trips/tourLegs';
+import tourRoutingRoutes from './trips/tourRouting';
 import immichTripRoutes from './immich/tripAlbums';
 import immichAssetProxyRoutes from './immich/assetProxy';
 import immichTripCoverRoutes from './immich/tripCover';
@@ -133,6 +134,11 @@ export const apiMounts: ApiMount[] = [
   // once that file crossed the 400-line ideal ceiling on its own. Mounted
   // right after `tourRoutes` for the same reason that one follows `trips`.
   { id: 'tourLegs', base: '/api/v1', router: tourLegRoutes },
+  // Provider-routing endpoints (task 6, phase 3) — same-prefix satellite
+  // router, split out of `tourLegs.ts` once it grew past the 400-line ideal
+  // ceiling. Mounted right after `tourLegs` for the same reason it follows
+  // `tourRoutes`.
+  { id: 'tourRouting', base: '/api/v1', router: tourRoutingRoutes },
   { id: 'immich.tripAlbums', base: '/api/v1', router: immichTripRoutes },
   { id: 'immich.assetProxy', base: '/api/v1', router: immichAssetProxyRoutes },
   { id: 'immich.tripCover', base: '/api/v1', router: immichTripCoverRoutes },
