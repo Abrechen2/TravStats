@@ -129,9 +129,15 @@ router.put(
             waypoints === null
               ? Prisma.DbNull
               : (waypoints as unknown as Prisma.InputJsonValue),
-          drivingMinutes: body.drivingMinutes ?? leg.drivingMinutes,
-          tollCost: body.tollCost ?? leg.tollCost,
-          currency: body.currency ?? leg.currency,
+          // `drivingMinutes`/`tollCost`/`currency` are `.nullable().optional()`
+          // in `legOverrideSchema` — a client may send an explicit `null` to
+          // CLEAR one of them. `body.x ?? leg.x` cannot tell "absent" from
+          // "present and null" apart (both are nullish), so it would silently
+          // keep the old value on a clear request. Zod omits an absent
+          // optional key entirely, so `in` is the reliable discriminator.
+          drivingMinutes: "drivingMinutes" in body ? body.drivingMinutes ?? null : leg.drivingMinutes,
+          tollCost: "tollCost" in body ? body.tollCost ?? null : leg.tollCost,
+          currency: "currency" in body ? body.currency ?? null : leg.currency,
           distanceKm: legDistanceKm({
             source: body.source,
             from: fromCoord,

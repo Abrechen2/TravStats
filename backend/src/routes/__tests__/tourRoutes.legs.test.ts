@@ -117,4 +117,36 @@ describe("Tour route sections — leg overrides", () => {
     expect(after.waypoints).toBeNull();
     expect(after.distanceKm).toBeCloseTo(straight.distanceKm, 6);
   });
+
+  it("clears an optional field when the client sends null", async () => {
+    await request(app)
+      .put(url())
+      .set("Cookie", cookie)
+      .send({ source: "straight", tollCost: 12.5, currency: "EUR" });
+
+    const res = await request(app)
+      .put(url())
+      .set("Cookie", cookie)
+      .send({ source: "straight", tollCost: null });
+
+    expect(res.status).toBe(200);
+    expect(res.body.leg.tollCost).toBeNull();
+    // currency was not mentioned this time, so it must survive untouched.
+    expect(res.body.leg.currency).toBe("EUR");
+  });
+
+  it("leaves an optional field alone when the client omits it", async () => {
+    await request(app)
+      .put(url())
+      .set("Cookie", cookie)
+      .send({ source: "straight", drivingMinutes: 90 });
+
+    const res = await request(app)
+      .put(url())
+      .set("Cookie", cookie)
+      .send({ source: "straight" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.leg.drivingMinutes).toBe(90);
+  });
 });
