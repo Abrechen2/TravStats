@@ -58,7 +58,7 @@ function toDto(
   };
 }
 
-function toLegDto(leg: {
+export function toLegDto(leg: {
   id: string;
   fromStopId: string;
   toStopId: string;
@@ -92,7 +92,7 @@ const ROUTE_SELECT = {
 } as const;
 
 /** Section must exist AND belong to a trip this user owns. */
-async function resolveRoute(userId: string, tripId: string, routeId: string): Promise<string> {
+export async function resolveRoute(userId: string, tripId: string, routeId: string): Promise<string> {
   await resolveTrip(userId, tripId);
   const route = await prisma.tripRoute.findFirst({
     where: { id: routeId, tripId },

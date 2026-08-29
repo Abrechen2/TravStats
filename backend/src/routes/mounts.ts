@@ -45,6 +45,7 @@ import parserTemplatesRoutes from './parserTemplates';
 import trainingRoutes from './training';
 import tripsRoutes from './trips';
 import tourRouteRoutes from './trips/tourRoutes';
+import tourLegRoutes from './trips/tourLegs';
 import immichTripRoutes from './immich/tripAlbums';
 import immichAssetProxyRoutes from './immich/assetProxy';
 import immichTripCoverRoutes from './immich/tripCover';
@@ -128,6 +129,10 @@ export const apiMounts: ApiMount[] = [
   // crossed the 800-line max. Mounted right after `trips` so `/trips/:id`
   // still resolves to the main router first.
   { id: 'tourRoutes', base: '/api/v1', router: tourRouteRoutes },
+  // Leg overrides — same-prefix satellite router, split out of tourRoutes
+  // once that file crossed the 400-line ideal ceiling on its own. Mounted
+  // right after `tourRoutes` for the same reason that one follows `trips`.
+  { id: 'tourLegs', base: '/api/v1', router: tourLegRoutes },
   { id: 'immich.tripAlbums', base: '/api/v1', router: immichTripRoutes },
   { id: 'immich.assetProxy', base: '/api/v1', router: immichAssetProxyRoutes },
   { id: 'immich.tripCover', base: '/api/v1', router: immichTripCoverRoutes },
