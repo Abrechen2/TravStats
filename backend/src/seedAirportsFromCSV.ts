@@ -8,6 +8,7 @@ import https from 'https';
 const prisma = new PrismaClient();
 
 import { admitsAirport } from './shared/antarcticAirfields';
+import { normalizeAirportName } from './shared/airportName';
 
 interface CSVAirport {
   id: string;
@@ -213,7 +214,7 @@ export async function seedAirportsFromCSV(options: SeedAirportsOptions = {}) {
       }
 
       const data = {
-        name: airport.name,
+        name: normalizeAirportName(airport.name),
         city: airport.municipality || null,
         country: airport.iso_country || null,
         lat,
