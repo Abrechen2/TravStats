@@ -7,7 +7,9 @@ import { ArcLayer, PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layer
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { Trip } from "../../types";
 import type { Lodging } from "../../types/lodging";
+import type { TourGeometry } from "../../types/tour";
 import { buildLodgingPins } from "../layers/lodgingPinsLayer";
+import { buildTourPaths, type TourPathDatum } from "../layers/tourPathsLayer";
 import { stayNights } from "../../lib/lodgingDateDisplay";
 import { declutterByDistance, pickLabelled } from "../map/labelPriority";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/cruise";
@@ -94,9 +96,10 @@ function DeckGLOverlay({
 
 interface TripMapProps {
   trip: Trip;
+  tourGeometries?: readonly { routeId: string; name: string; geometry: TourGeometry }[];
 }
 
-export default function TripMap({ trip }: TripMapProps): JSX.Element {
+export default function TripMap({ trip, tourGeometries = [] }: TripMapProps): JSX.Element {
   const { t, i18n } = useTranslation(["trips", "map"]);
   const locale = i18n.language || "de";
   const getTooltip = useMemo(() => createMarkerTooltip(t, locale), [t, locale]);
@@ -371,6 +374,26 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
       highlightColor: [255, 255, 255, 100],
     });
 
+    // Tour route sections (Task 12). Coloured per LEG mode, never the
+    // section's — a road tour with one ferry crossing must still show that
+    // one leg as a ferry line. `dashed` legs (an unrouted `straight` chord)
+    // have no dash support in deck.gl's PathLayer without an extension, so
+    // the placeholder look comes from a thinner, more transparent line
+    // instead of pulling in a new dependency.
+    const tourPathData = buildTourPaths(tourGeometries);
+    const tourPaths = new PathLayer<TourPathDatum>({
+      id: "trip-tour-paths",
+      data: tourPathData,
+      getPath: (d) => d.path,
+      getColor: (d) => [...d.color, d.dashed ? 140 : 230] as [number, number, number, number],
+      getWidth: (d) => (d.dashed ? 2 : 3),
+      widthUnits: "pixels",
+      widthMinPixels: 2,
+      pickable: true,
+      autoHighlight: true,
+      highlightColor: [255, 255, 255, 80],
+    });
+
     const stops = new ScatterplotLayer<PointDatum>({
       id: "trip-stops",
       data: stopPoints,
@@ -433,8 +456,8 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
     // hundreds the flat map's priority budget exists for.
     const lodgingPins = buildLodgingPins(lodgings, 1, zoom, { labelsMode: "important" }) ?? [];
 
-    return [paths, arcs, airports, stops, ...lodgingPins, stopLabels];
-  }, [flightArcs, cruisePaths, airportPoints, stopPoints, lodgings, zoom]);
+    return [paths, arcs, airports, tourPaths, stops, ...lodgingPins, stopLabels];
+  }, [flightArcs, cruisePaths, airportPoints, stopPoints, lodgings, zoom, tourGeometries]);
 
   /* ---- bbox fit ---- */
 
