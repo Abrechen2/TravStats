@@ -29,10 +29,11 @@ const legSource = z
   .enum(LEG_SOURCES)
   .describe(
     "How the geometry was produced. The server writes 'straight' (the " +
-      "default chord), 'drawn' (a hand-drawn override), and, since phase 3 " +
-      "(task 6), 'routed' (computed by the configured routing provider via " +
-      "POST .../route or POST .../route-all). 'track' is reserved for a " +
-      "later phase — the leg-override input rejects it.",
+      "default chord), 'drawn' (a hand-drawn override), 'routed' (computed " +
+      "by the configured routing provider via POST .../route or POST " +
+      ".../route-all, phase 3 task 6), and 'track' (a segment adopted from " +
+      "a recorded TripRouteTrack via the leg-override endpoint's `track` " +
+      "branch, phase 3b task 5).",
   );
 const confidence = z.enum(["low", "medium", "high"]);
 
@@ -212,6 +213,12 @@ const assignStopsInput = registry.register(
 const legOverrideInput = registry.register(
   "TourRouteLegOverrideInput",
   legOverrideSchema.openapi("TourRouteLegOverrideInput", {
+    description:
+      "A discriminated union on `source`. `straight`/`drawn` optionally " +
+      "carry hand-drawn `waypoints` (required for `drawn`, forbidden for " +
+      "`straight`). `track` carries a REQUIRED `trackId` instead — no " +
+      "`waypoints` — the geometry comes from the referenced " +
+      "TripRouteTrack via the adoption endpoint logic, not the request body.",
     example: {
       source: "drawn",
       mode: "road",
@@ -375,18 +382,23 @@ registry.registerPath({
 registry.registerPath({
   method: "put",
   path: "/trips/{id}/routes/{routeId}/legs/{fromStopId}/{toStopId}",
-  summary: "Hand-correct one leg's line",
+  summary: "Hand-correct one leg's line, or adopt a recorded track",
   description:
-    "Replaces the straight chord between two consecutive stops with a " +
-    "hand-drawn line. The leg must already exist between those two stops — " +
-    "there is no leg for a pair the itinerary doesn't contain. The drawn " +
-    "line's first and last points must land within 1 km of the leg's own " +
-    "stops (the anchor tolerance); anything looser is rejected rather than " +
-    "silently accepted. Only `source: \"straight\"` or `\"drawn\"` are " +
-    "accepted here — `\"routed\"` geometry comes from a provider, not a " +
-    "request body, so this endpoint refuses it (400) and names the routing " +
-    "endpoint (`POST .../route` / `.../route-all`) instead of silently " +
-    "accepting a caller-supplied line mislabelled as provider-routed.",
+    "Replaces the straight chord between two consecutive stops. The leg " +
+    "must already exist between those two stops — there is no leg for a " +
+    "pair the itinerary doesn't contain. Three shapes of `source`: " +
+    "`straight` (back to a plain chord) or `drawn` (a hand-drawn line — " +
+    "its first and last points must land within 1 km of the leg's own " +
+    "stops, the anchor tolerance; anything looser is rejected rather than " +
+    "silently accepted), or `track` (phase 3b, task 5 — adopts the " +
+    "segment of an already-uploaded TripRouteTrack that runs between this " +
+    "leg's two stops; the SAME 1 km anchor tolerance applies to both of " +
+    "the track's nearest points, and a non-covering track 409s rather " +
+    "than silently falling back to a straight chord). `\"routed\"` " +
+    "geometry comes from the routing provider, not a request body, so " +
+    "this endpoint refuses it (400) and names the routing endpoint " +
+    "(`POST .../route` / `.../route-all`) instead of silently accepting " +
+    "a caller-supplied line mislabelled as provider-routed.",
   tags: ["Tours"],
   request: {
     params: legParams,
@@ -396,12 +408,25 @@ registry.registerPath({
     200: { description: "Leg updated", content: { "application/json": { schema: z.object({ leg: tourLeg }) } } },
     400: {
       description:
-        "Validation failed (including source: \"routed\" or \"track\", both " +
-        "refused here), or the line doesn't anchor to the leg's stops",
+        "Validation failed — an unrecognised source (including " +
+        "\"routed\"), a `drawn` leg with fewer than two waypoints, a " +
+        "`straight` leg carrying waypoints, a `track` leg with no " +
+        "`trackId`, or a `drawn`/`straight` line that doesn't anchor to " +
+        "the leg's stops",
       content: errorContent,
     },
-    404: { description: "Trip, section or leg not found", content: errorContent },
-    409: { description: "The leg's stop lost its coordinates", content: errorContent },
+    404: {
+      description:
+        "Trip, section or leg not found, or (for source: \"track\") the " +
+        "trackId doesn't belong to this route",
+      content: errorContent,
+    },
+    409: {
+      description:
+        "The leg's stop lost its coordinates, or (for source: \"track\") " +
+        "the track doesn't come within the anchor tolerance of both stops",
+      content: errorContent,
+    },
   },
 });
 

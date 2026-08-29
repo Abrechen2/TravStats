@@ -79,7 +79,7 @@ function handleGpxUpload(req: Request, res: Response, next: NextFunction): void 
  */
 const trackSource = z.enum(TRACK_SOURCES);
 
-interface TrackMetaRow {
+export interface TrackMetaRow {
   id: string;
   routeId: string;
   source: string;
@@ -91,7 +91,7 @@ interface TrackMetaRow {
   createdAt: Date;
 }
 
-interface TrackRow extends TrackMetaRow {
+export interface TrackRow extends TrackMetaRow {
   geometry: Prisma.JsonValue;
 }
 
@@ -131,8 +131,13 @@ function toTrackDto(track: TrackRow): Record<string, unknown> {
   return { ...toTrackMetaDto(track), geometry: track.geometry };
 }
 
-/** Track must exist AND belong to this route (which `resolveRoute` already tied to this user). */
-async function resolveTrack(routeId: string, trackId: string): Promise<TrackRow> {
+/**
+ * Track must exist AND belong to this route (which `resolveRoute` already
+ * tied to this user). Exported for `routes/trips/tourLegs.ts`'s `track`
+ * leg-override branch — same ownership check, reused rather than
+ * reimplemented, so a track id from another user's route 404s there too.
+ */
+export async function resolveTrack(routeId: string, trackId: string): Promise<TrackRow> {
   const track = await prisma.tripRouteTrack.findFirst({ where: { id: trackId, routeId } });
   if (!track) throw new AppError("Track not found", 404);
   return track;

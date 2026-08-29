@@ -11,32 +11,43 @@ import { ROUTING_PROVIDER_IDS } from "../services/tour/routing/types";
  *
  * - `ACCEPTED_LEG_SOURCES` — what `tripRouteLegs.source` may hold at rest:
  *   `straight` (the default chord), `drawn` (a hand-drawn override, phase
- *   1), and `routed` (a provider-computed line, phase 3 — written only by
+ *   1), `routed` (a provider-computed line, phase 3 — written only by
  *   `routes/trips/tourRouting.ts`, never by the manual override endpoint
- *   below). `track` stays OUT — it is in the shared `LEG_SOURCES` enum
- *   already so a future phase adds a value here rather than a migration,
- *   but phase 3b owns producing it.
- * - `MANUAL_LEG_SOURCES` — what the manual leg-override endpoint (`PUT
- *   .../legs/{fromStopId}/{toStopId}` in `routes/trips/tourLegs.ts`)
- *   ACCEPTS from a caller: `straight` and `drawn` only. `routed` geometry
- *   comes from a provider, not a request body — a caller cannot hand-supply
- *   it, so this endpoint refuses it with a message pointing at the routing
- *   endpoint instead. This is deliberate, not an oversight: earlier this
- *   file let the override endpoint accept `source: "routed"` too, on the
- *   theory that a caller might resend it unchanged while editing an
- *   unrelated field (toll cost, say). That endpoint's semantics were never
- *   built to preserve stored geometry on a re-submit — an omitted
- *   `waypoints` clears the column for EVERY source — so accepting `routed`
- *   there let a caller produce a leg that claimed `source: "routed"` while
- *   holding a plain straight chord: a false provenance claim, worse than
- *   either honest state. Splitting the vocabulary closes that path: the
- *   override endpoint can no longer put the column into that shape at all.
+ *   below), and `track` (phase 3b, task 5 — a leg that adopted a segment
+ *   of a recorded `TripRouteTrack`, written only by the manual override
+ *   endpoint's `track` branch below via `adoptSegment`).
+ * - `MANUAL_LEG_SOURCES` — what the PLAIN (non-track) shape of the manual
+ *   leg-override endpoint (`PUT .../legs/{fromStopId}/{toStopId}` in
+ *   `routes/trips/tourLegs.ts`) accepts from a caller: `straight` and
+ *   `drawn` only. `routed` geometry comes from a provider, not a request
+ *   body — a caller cannot hand-supply it, so this endpoint refuses it
+ *   with a message pointing at the routing endpoint instead. This is
+ *   deliberate, not an oversight: earlier this file let the override
+ *   endpoint accept `source: "routed"` too, on the theory that a caller
+ *   might resend it unchanged while editing an unrelated field (toll
+ *   cost, say). That endpoint's semantics were never built to preserve
+ *   stored geometry on a re-submit — an omitted `waypoints` clears the
+ *   column for EVERY source — so accepting `routed` there let a caller
+ *   produce a leg that claimed `source: "routed"` while holding a plain
+ *   straight chord: a false provenance claim, worse than either honest
+ *   state. Splitting the vocabulary closes that path: the override
+ *   endpoint can no longer put the column into that shape at all.
+ *
+ *   `track` does NOT join `MANUAL_LEG_SOURCES` even though the override
+ *   endpoint now accepts it (see `legOverrideSchema` below): a bare
+ *   `{ source: "track" }` with no `trackId` would be a leg claiming track
+ *   geometry it does not have — exactly the false-provenance failure the
+ *   `routed` split above was created to prevent, one level down. Instead
+ *   `legOverrideSchema` is a discriminated union: the `MANUAL_LEG_SOURCES`
+ *   shape for `straight`/`drawn`, and a SEPARATE shape for `track` that
+ *   requires `trackId`. `ACCEPTED_LEG_SOURCES` still gains `track` because
+ *   a stored row may legitimately hold it once adopted.
  *
  * A source the server cannot (yet, or ever, from THIS endpoint) produce is
  * rejected at the boundary instead of being stored and rendered as a lie.
  */
 
-export const ACCEPTED_LEG_SOURCES = ["straight", "drawn", "routed"] as const;
+export const ACCEPTED_LEG_SOURCES = ["straight", "drawn", "routed", "track"] as const;
 
 const MANUAL_LEG_SOURCES = ["straight", "drawn"] as const;
 
@@ -55,22 +66,38 @@ export type TrackSource = (typeof TRACK_SOURCES)[number];
 /**
  * `z.enum`'s default "Invalid enum value" message doesn't tell a caller
  * WHY `routed` in particular is refused, or where to go instead — so
- * `routed` specifically gets a message naming the routing endpoint;
- * everything else (e.g. `track`) falls back to zod's normal message.
+ * `routed` specifically gets a message naming the routing endpoint.
+ *
+ * `track` used to fall into "everything else" here and get zod's normal
+ * message. That is no longer true, and not merely because `track` is
+ * valid now: `legOverrideSchema` below wraps this enum inside a
+ * `z.discriminatedUnion("source", ...)`, and a discriminated union picks
+ * a member by matching `source` against each member's OWN literal values
+ * BEFORE handing the rest of the body to that member's schema. `track`
+ * matches the OTHER member (`trackLegSource`, not this enum), so a
+ * `track` request never reaches this errorMap at all — same as it never
+ * reaches the two `.refine()` calls below. `ROUTED_REDIRECT_MESSAGE` is
+ * shared with the union-level errorMap for exactly the opposite reason:
+ * `routed` matches NEITHER member, so the union itself has to produce
+ * this message — this enum's own copy only fires if something calls
+ * `manualLegSource` directly, outside the union.
  */
+const ROUTED_REDIRECT_MESSAGE =
+  "This endpoint only accepts \"straight\", \"drawn\", or \"track\" — routing a leg " +
+  "through the configured provider is done via POST " +
+  ".../legs/{fromStopId}/{toStopId}/route or POST .../route-all, not this one.";
+
 const manualLegSource = z.enum(MANUAL_LEG_SOURCES, {
   errorMap: (issue, ctx) => {
     if (issue.code === z.ZodIssueCode.invalid_enum_value && issue.received === "routed") {
-      return {
-        message:
-          "This endpoint only accepts \"straight\" or \"drawn\" — routing a leg " +
-          "through the configured provider is done via POST " +
-          ".../legs/{fromStopId}/{toStopId}/route or POST .../route-all, not this one.",
-      };
+      return { message: ROUTED_REDIRECT_MESSAGE };
     }
     return { message: ctx.defaultError };
   },
 });
+
+/** The `source: "track"` half of `legOverrideSchema`'s discriminated union. */
+const trackLegSource = z.literal("track");
 
 const coordinate = z
   .tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)])
@@ -114,14 +141,63 @@ export const assignStopsSchema = z.object({
   path: ["stopIds"],
 });
 
+/**
+ * `straight` / `drawn` — the hand-corrected shape. `waypoints` stays
+ * REQUIRED-shaped for `drawn` and forbidden for `straight` via the two
+ * `.refine()` calls below, applied to the UNION rather than to this
+ * member alone: `z.discriminatedUnion` requires each option to be a plain
+ * `ZodObject` (it inspects `.shape` to collect discriminator literals), so
+ * a `.refine()`'d member — a `ZodEffects` wrapper — is rejected at
+ * construction time. Refining the union afterwards, instead, is exactly
+ * how the pre-union version of this schema worked, just moved one level
+ * up.
+ */
+const manualLegShape = z.object({
+  source: manualLegSource,
+  mode: z.enum(LEG_MODES).optional(),
+  waypoints: z.array(coordinate).min(2).max(256).optional(),
+  drivingMinutes: z.number().int().min(0).max(100_000).nullable().optional(),
+  tollCost: z.number().min(0).max(1_000_000).nullable().optional(),
+  currency: z.string().length(3).nullable().optional(),
+});
+
+/**
+ * `track` — adopt a segment of an already-uploaded `TripRouteTrack`.
+ * `trackId` is REQUIRED (no default, no fallback): a `track` leg with no
+ * `trackId` would be a leg claiming geometry it does not have. No
+ * `waypoints` field at all — the geometry comes from the track via
+ * `adoptSegment` (`services/tour/tracks/adoptTrack.ts`), and accepting a
+ * caller-supplied line here too would give the leg two disagreeing
+ * sources of truth for the same column.
+ */
+const trackLegShape = z.object({
+  source: trackLegSource,
+  trackId: z.string().uuid(),
+  mode: z.enum(LEG_MODES).optional(),
+});
+
 export const legOverrideSchema = z
-  .object({
-    source: manualLegSource,
-    mode: z.enum(LEG_MODES).optional(),
-    waypoints: z.array(coordinate).min(2).max(256).optional(),
-    drivingMinutes: z.number().int().min(0).max(100_000).nullable().optional(),
-    tollCost: z.number().min(0).max(1_000_000).nullable().optional(),
-    currency: z.string().length(3).nullable().optional(),
+  .discriminatedUnion("source", [manualLegShape, trackLegShape], {
+    /**
+     * `invalid_union_discriminator` fires when `source` matches NEITHER
+     * member's literal set (`straight` | `drawn` | `track`) — `routed` is
+     * the case that matters here, see `ROUTED_REDIRECT_MESSAGE`'s comment
+     * above. `ctx.data` is the whole request body (this errorMap runs
+     * before either member is chosen, so there is no narrower object to
+     * inspect), which is the only way to tell "routed" apart from any
+     * other unknown value at this point.
+     */
+    errorMap: (issue, ctx) => {
+      if (
+        issue.code === z.ZodIssueCode.invalid_union_discriminator &&
+        ctx.data &&
+        typeof ctx.data === "object" &&
+        (ctx.data as Record<string, unknown>).source === "routed"
+      ) {
+        return { message: ROUTED_REDIRECT_MESSAGE };
+      }
+      return { message: ctx.defaultError };
+    },
   })
   .refine((v) => v.source !== "drawn" || (v.waypoints !== undefined && v.waypoints.length >= 2), {
     message: "A drawn leg needs at least two waypoints",

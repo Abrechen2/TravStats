@@ -6,10 +6,12 @@ import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/a
 import { AppError } from "../../middleware/errorHandler";
 import { legOverrideSchema } from "../../schemas/tour";
 import { legDistanceKm } from "../../services/tour/tourDistance";
+import { adoptSegment, ANCHOR_TOLERANCE_KM } from "../../services/tour/tracks/adoptTrack";
 import { haversineKm } from "../../shared/geo/haversine";
 import { resolveTrip } from "../trips";
 import logger from "../../utils/logger";
 import { resolveRoute, toLegDto } from "./tourRoutes";
+import { resolveTrack } from "./tourTracks";
 
 /**
  * Tour route leg overrides — split out of `tourRoutes.ts`, which was
@@ -17,12 +19,15 @@ import { resolveRoute, toLegDto } from "./tourRoutes";
  * file existed. Mounted at the SAME `/trips` prefix as `tourRoutes.ts`,
  * the same pattern `routes/cruises/routeOverride.ts` uses alongside
  * `routes/cruises.ts`.
+ *
+ * `ANCHOR_TOLERANCE_KM` — how far a drawn line, OR an adopted track
+ * segment, may start or end from its leg's stop, in km — lives in
+ * `services/tour/tracks/adoptTrack.ts` (task 5) and is imported here
+ * rather than redefined, so the hand-drawn check below and the track
+ * adoption below it can never drift onto two different numbers.
  */
 
 const router = Router();
-
-/** How far a drawn line may start or end from its leg's stop, in km. */
-const ANCHOR_TOLERANCE_KM = 1;
 
 interface LegWithStops {
   id: string;
@@ -104,6 +109,46 @@ router.put(
       const leg = await findLegOrThrow(routeId, req.params.fromStopId, req.params.toStopId);
       const fromCoord = requireCoords(leg.fromStop, "from");
       const toCoord = requireCoords(leg.toStop, "to");
+
+      if (body.source === "track") {
+        // `resolveTrack` 404s if `trackId` doesn't belong to THIS route —
+        // a track id lifted from another route (another user's, or even
+        // a different section of this trip) must not adopt.
+        const track = await resolveTrack(routeId, body.trackId);
+        const trackGeometry = isCoordinatePolyline(track.geometry) ? track.geometry : [];
+        const adoption = adoptSegment(trackGeometry, fromCoord, toCoord, {
+          maxAnchorKm: ANCHOR_TOLERANCE_KM,
+        });
+        if (!adoption) {
+          throw new AppError(
+            `This track doesn't come within ${ANCHOR_TOLERANCE_KM} km of both of this leg's ` +
+              "stops — it likely covers a different day or place. Not adopted; the leg is unchanged.",
+            409,
+          );
+        }
+
+        const updatedFromTrack = await prisma.tripRouteLeg.update({
+          where: { id: leg.id },
+          data: {
+            source: "track",
+            mode: body.mode ?? leg.mode,
+            // A measured recording is the most trustworthy geometry this
+            // product can have — more so than a hand-drawn line.
+            confidence: "high",
+            waypoints: adoption.waypoints as unknown as Prisma.InputJsonValue,
+            distanceKm: adoption.distanceKm,
+          },
+        });
+
+        logger.info({
+          operation: "tour.leg.override",
+          legId: updatedFromTrack.id,
+          source: updatedFromTrack.source,
+          trackId: body.trackId,
+        });
+        res.json({ leg: toLegDto(updatedFromTrack) });
+        return;
+      }
 
       const waypoints = body.waypoints ?? null;
       if (waypoints) {
