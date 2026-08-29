@@ -44,6 +44,7 @@ import templateStatusRoutes from './templateStatus';
 import parserTemplatesRoutes from './parserTemplates';
 import trainingRoutes from './training';
 import tripsRoutes from './trips';
+import tourRouteRoutes from './trips/tourRoutes';
 import immichTripRoutes from './immich/tripAlbums';
 import immichAssetProxyRoutes from './immich/assetProxy';
 import immichTripCoverRoutes from './immich/tripCover';
@@ -122,6 +123,11 @@ export const apiMounts: ApiMount[] = [
   { id: 'templateStatus', base: '/api/v1/template-status', router: templateStatusRoutes },
   { id: 'training', base: '/api/v1/training', router: trainingRoutes },
   { id: 'trips', base: '/api/v1', router: tripsRoutes },
+  // Tour route sections — same-prefix satellite router, same pattern as
+  // cruises.routeOverride above — split out of trips.ts once that file
+  // crossed the 800-line max. Mounted right after `trips` so `/trips/:id`
+  // still resolves to the main router first.
+  { id: 'tourRoutes', base: '/api/v1', router: tourRouteRoutes },
   { id: 'immich.tripAlbums', base: '/api/v1', router: immichTripRoutes },
   { id: 'immich.assetProxy', base: '/api/v1', router: immichAssetProxyRoutes },
   { id: 'immich.tripCover', base: '/api/v1', router: immichTripCoverRoutes },
