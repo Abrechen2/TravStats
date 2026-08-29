@@ -12,6 +12,13 @@ now be written in the currency it was actually paid in. Two-factor
 authentication and passkeys arrive alongside.
 
 ### Added
+- **A list's symbol is picked, not typed.** The symbol field was a bare text
+  box: you had to know an emoji and then find one to paste. There is a picker
+  behind it now, with search — typing "pommes" finds the fries. Its emoji
+  database is served by your own instance rather than fetched from a content
+  network, so it works on an installation with no way out to the internet,
+  which is most of them. Pasting into the field still works, and if the picker
+  cannot load it says so instead of leaving a control that does nothing.
 - **A places list can wear its own symbol on the map.** A list of fifty-eight
   McDonald's spelled the same name fifty-eight times across the map, which reads
   as noise rather than as a list. A list can now carry a symbol and ask for its
