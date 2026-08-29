@@ -208,5 +208,25 @@
     "caption": "Bildunterschrift",
     "captionAdd": "Unterschrift…",
     "captionFailed": "Die Bildunterschrift konnte nicht gespeichert werden."
+  },
+  "stats": {
+    "empty": "Noch keine besuchten Orte — trage einen Besuch ein, dann füllt sich diese Seite.",
+    "visitedPlaces": "Orte besucht",
+    "visitedPlacesDesc": "{{wishlist}} weitere auf der Merkliste",
+    "visits": "Besuche",
+    "visitsDesc": "{{dated}} mit Datum · {{undated}} ohne",
+    "visitsAllDated": "alle mit Datum",
+    "countries": "Länder",
+    "citiesDesc": "in {{count}} Städten",
+    "lists": "Listen",
+    "listsDesc": "{{own}} eigene · {{checklists}} Checklisten",
+    "byCategory": "Nach Kategorie",
+    "byCountry": "Nach Land",
+    "byCity": "Nach Stadt",
+    "noCities": "Zu keinem Ort ist eine Stadt hinterlegt.",
+    "mostVisited": "Am häufigsten besucht",
+    "checklists": "Checklisten-Fortschritt",
+    "more": "+ {{count}} weitere",
+    "noVisitsYet": "Noch kein Besuch datiert."
   }
 }

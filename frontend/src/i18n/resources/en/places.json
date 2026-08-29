@@ -208,5 +208,25 @@
     "caption": "Caption",
     "captionAdd": "Caption…",
     "captionFailed": "The caption could not be saved."
+  },
+  "stats": {
+    "empty": "No visited places yet — record a visit and this page fills up.",
+    "visitedPlaces": "Places visited",
+    "visitedPlacesDesc": "{{wishlist}} more on the wishlist",
+    "visits": "Visits",
+    "visitsDesc": "{{dated}} dated · {{undated}} undated",
+    "visitsAllDated": "all dated",
+    "countries": "Countries",
+    "citiesDesc": "across {{count}} cities",
+    "lists": "Lists",
+    "listsDesc": "{{own}} own · {{checklists}} checklists",
+    "byCategory": "By category",
+    "byCountry": "By country",
+    "byCity": "By city",
+    "noCities": "No place has a city recorded.",
+    "mostVisited": "Most visited",
+    "checklists": "Checklist progress",
+    "more": "+ {{count}} more",
+    "noVisitsYet": "No visit recorded yet."
   }
 }

@@ -41,6 +41,7 @@ import StatsAirportsSection from "../components/Stats/StatsAirportsSection";
 import StatsSeatSection from "../components/Stats/StatsSeatSection";
 import CruiseStatsSection from "../components/Stats/CruiseStatsSection";
 import LodgingStatsSection from "../components/Stats/LodgingStatsSection";
+import PoiStatsSection from "../components/Stats/PoiStatsSection";
 import OverviewTab from "../components/Stats/Overview/OverviewTab";
 import KpiScorecard from "../components/Stats/scorecard/KpiScorecard";
 import type { ScorecardTileVM } from "../components/Stats/scorecard/ScorecardTile";
@@ -631,6 +632,9 @@ export default function AdvancedStatsPage(): JSX.Element {
           {/* Moved off the dashboard map, where these numbers floated on top of
               the world the user came to look at. */}
           {filter === "lodging" && <LodgingStatsSection />}
+          {/* The POI tab existed with no branch behind it since before 2.5.2 —
+              the strip offered it and the page rendered nothing. */}
+          {filter === "poi" && <PoiStatsSection />}
 
           {/* Generate Certificate + Year Report Buttons — flight-only now. */}
           {filter === "flight" && flights.length > 0 && (
