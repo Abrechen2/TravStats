@@ -1,10 +1,10 @@
 /**
  * Tour route section endpoints — a trip's "how did we get there" layer on
- * top of its stops. All ten live on the three same-prefix satellite routers
- * `routes/trips/tourRoutes.ts`, `routes/trips/tourLegs.ts`, and
- * `routes/trips/tourRouting.ts`, all mounted at the plain `/trips` base,
- * which is why every path here starts with `/trips/{id}/routes` rather than
- * its own top-level segment.
+ * top of its stops. All fourteen live on the four same-prefix satellite
+ * routers `routes/trips/tourRoutes.ts`, `routes/trips/tourLegs.ts`,
+ * `routes/trips/tourRouting.ts`, and `routes/trips/tourTracks.ts`, all
+ * mounted at the plain `/trips` base, which is why every path here starts
+ * with `/trips/{id}/routes` rather than its own top-level segment.
  *
  * None of these responses use the `{success, data}` envelope the cruise
  * endpoints use — they follow the older bare-object convention `trips.ts`
@@ -20,6 +20,7 @@ import {
   updateRouteSchema,
   assignStopsSchema,
   legOverrideSchema,
+  TRACK_SOURCES,
 } from "../../../schemas/tour";
 import { LEG_MODES, LEG_SOURCES } from "../../../services/tour/tourDistance";
 
@@ -495,5 +496,136 @@ registry.registerPath({
   responses: {
     200: { description: "Route geometry", content: { "application/json": { schema: tourRouteGeometry } } },
     404: { description: "Trip or section not found", content: errorContent },
+  },
+});
+
+/* ────────────────────────────────  tracks  ────────────────────────────── */
+
+const trackSource = z
+  .enum(TRACK_SOURCES)
+  .describe(
+    "How the track was captured. 'gpx' (task 4, this file's endpoints) — a " +
+      "user-uploaded GPX file. 'dawarich' (task 7, reserved) — pulled from a " +
+      "self-hosted Dawarich instance; not built yet.",
+  );
+
+const tourRouteTrackMeta = registry.register(
+  "TourRouteTrackMeta",
+  z
+    .object({
+      id: z.string().uuid(),
+      routeId: z.string().uuid(),
+      source: trackSource,
+      name: z.string().nullable(),
+      startedAt: z.string().datetime(),
+      endedAt: z.string().datetime(),
+      pointCount: z.number().int().describe("Point count of the RAW recording, before simplification"),
+      distanceKm: z.number().describe("Distance measured on the RAW recording, before simplification"),
+      createdAt: z.string().datetime(),
+    })
+    .openapi("TourRouteTrackMeta", {
+      example: {
+        id: "e5e5f1f0-9b1a-4e2a-9b1a-4e2a9b1a4e2c",
+        routeId: "b6b6f1f0-9b1a-4e2a-9b1a-4e2a9b1a4e2a",
+        source: "gpx",
+        name: "Fjord Loop",
+        startedAt: "2026-06-01T08:00:00.000Z",
+        endedAt: "2026-06-01T08:10:00.000Z",
+        pointCount: 3,
+        distanceKm: 1.7,
+        createdAt: "2026-06-02T09:00:00.000Z",
+      },
+    }),
+);
+
+const tourRouteTrack = registry.register(
+  "TourRouteTrack",
+  tourRouteTrackMeta
+    .extend({
+      geometry: z
+        .array(z.tuple([z.number(), z.number()]))
+        .describe("[[lon, lat], …], simplified on import — see pointCount for the raw count"),
+    })
+    .openapi("TourRouteTrack"),
+);
+
+const trackParams = z.object({
+  id: z.string().uuid(),
+  routeId: z.string().uuid(),
+  trackId: z.string().uuid(),
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/trips/{id}/routes/{routeId}/tracks",
+  summary: "Upload a recorded GPX track for a route section",
+  description:
+    "multipart/form-data; one GPX file under the field name 'file'. The " +
+    "pipeline is parseGpx -> ingestTrack -> store: a file that cannot be " +
+    "read as GPX at all is refused with one 400 message, a file that reads " +
+    "fine but has no timestamps is refused with a DIFFERENT 400 message " +
+    "(it cannot be placed in time) — the two are never collapsed into one. " +
+    "Distance and point count are measured on the raw recording before the " +
+    "stored geometry is simplified and capped.",
+  tags: ["Tours"],
+  request: { params: routeIdParams },
+  responses: {
+    201: {
+      description: "Stored",
+      content: { "application/json": { schema: z.object({ track: tourRouteTrack }) } },
+    },
+    400: {
+      description:
+        "No file uploaded, the file is too large, could not be read as GPX, or has no timestamps",
+      content: errorContent,
+    },
+    404: { description: "Trip or section not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/trips/{id}/routes/{routeId}/tracks",
+  summary: "List a section's recorded tracks",
+  description:
+    "Metadata only — no geometry. A track is location history: shipping it " +
+    "on a list call would mean megabytes per request and put a user's " +
+    "movements into a response an intermediary might cache. Fetch one " +
+    "track's geometry via the single-track endpoint below.",
+  tags: ["Tours"],
+  request: { params: routeIdParams },
+  responses: {
+    200: {
+      description: "Tracks, oldest first",
+      content: { "application/json": { schema: z.object({ tracks: z.array(tourRouteTrackMeta) }) } },
+    },
+    404: { description: "Trip or section not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/trips/{id}/routes/{routeId}/tracks/{trackId}",
+  summary: "Get one recorded track, with its geometry",
+  tags: ["Tours"],
+  request: { params: trackParams },
+  responses: {
+    200: {
+      description: "The track, including its simplified geometry",
+      content: { "application/json": { schema: z.object({ track: tourRouteTrack }) } },
+    },
+    404: { description: "Trip, section, or track not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/trips/{id}/routes/{routeId}/tracks/{trackId}",
+  summary: "Delete a recorded track",
+  tags: ["Tours"],
+  request: { params: trackParams },
+  responses: {
+    204: { description: "Deleted" },
+    404: { description: "Trip, section, or track not found", content: errorContent },
   },
 });

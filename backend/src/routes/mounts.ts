@@ -47,6 +47,7 @@ import tripsRoutes from './trips';
 import tourRouteRoutes from './trips/tourRoutes';
 import tourLegRoutes from './trips/tourLegs';
 import tourRoutingRoutes from './trips/tourRouting';
+import tourTrackRoutes from './trips/tourTracks';
 import immichTripRoutes from './immich/tripAlbums';
 import immichAssetProxyRoutes from './immich/assetProxy';
 import immichTripCoverRoutes from './immich/tripCover';
@@ -139,6 +140,12 @@ export const apiMounts: ApiMount[] = [
   // ceiling. Mounted right after `tourLegs` for the same reason it follows
   // `tourRoutes`.
   { id: 'tourRouting', base: '/api/v1', router: tourRoutingRoutes },
+  // Recorded tracks (task 4, phase 3b) — same-prefix satellite router, split
+  // out alongside the others above. Mounted right after `tourRouting`, last
+  // among the tour satellites: the plan originally said "after tourLegs",
+  // written before `tourRouting` existed; this ordering is a controller
+  // ruling made when `tourRouting` landed first.
+  { id: 'tourTracks', base: '/api/v1', router: tourTrackRoutes },
   { id: 'immich.tripAlbums', base: '/api/v1', router: immichTripRoutes },
   { id: 'immich.assetProxy', base: '/api/v1', router: immichAssetProxyRoutes },
   { id: 'immich.tripCover', base: '/api/v1', router: immichTripCoverRoutes },

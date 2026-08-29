@@ -41,6 +41,18 @@ export const ACCEPTED_LEG_SOURCES = ["straight", "drawn", "routed"] as const;
 const MANUAL_LEG_SOURCES = ["straight", "drawn"] as const;
 
 /**
+ * `TripRouteTrack.source` vocabulary (Phase 3b): `gpx` (task 4 — the upload
+ * endpoint in `routes/trips/tourTracks.ts`) and `dawarich` (task 7,
+ * reserved — the pull-from-Dawarich endpoint is not built yet). Used the
+ * same way `acceptedLegSource` guards `TripRouteLeg.source` in
+ * `routes/trips/tourRouting.ts`: a write-side boundary check, cheap
+ * insurance against a future writer putting the column into a shape this
+ * vocabulary doesn't describe.
+ */
+export const TRACK_SOURCES = ["gpx", "dawarich"] as const;
+export type TrackSource = (typeof TRACK_SOURCES)[number];
+
+/**
  * `z.enum`'s default "Invalid enum value" message doesn't tell a caller
  * WHY `routed` in particular is refused, or where to go instead — so
  * `routed` specifically gets a message naming the routing endpoint;
