@@ -10,6 +10,7 @@
 // night, performance mode) stays out of here — those live per map.
 
 import type { LabelsMode } from "./labelPriority";
+import type { PlaceLabelSource } from "../../lib/placeLabel";
 import {
   cruiseColorFromStored,
   type CruiseColorConfig,
@@ -119,6 +120,16 @@ export interface MapAppearance {
   // Layers
   showTerrain?: boolean;
   showPlaceLabels?: boolean;
+  /**
+   * Whether place pins are labelled with their name or their list's symbol,
+   * for the whole map at once.
+   *
+   * Each list carries its own default; this overrides all of them. ABSENT MUST
+   * KEEP MEANING "as each list says" — every existing user's stored blob
+   * predates this field, and reading absence as "always names" would make
+   * turning a list to symbols appear to do nothing at all.
+   */
+  placeLabelSource?: PlaceLabelSource;
   labelsMode?: LabelsMode;
   // Chrome
   /** Whether the control panel is expanded (#194). One value for both maps —

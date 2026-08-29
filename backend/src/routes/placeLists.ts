@@ -87,9 +87,9 @@ function present(list: ListRow, withEntries: boolean, now = new Date()) {
  *
  * Renaming "Neue 7 Weltwunder" locally would make the achievement that measures
  * it report against a list nobody recognises, and hand-editing its membership
- * would make progress meaningless. Colour, icon and sort order stay editable —
- * those are presentation, and a user colouring their wonders gold breaks
- * nothing.
+ * would make progress meaningless. Colour, icon, label mode and sort order stay
+ * editable — those are presentation, and a user colouring their wonders gold or
+ * labelling them with a symbol breaks nothing.
  */
 function assertEditableAs(list: { curatedKey: string | null }, what: "name" | "membership"): void {
   if (list.curatedKey === null) return;

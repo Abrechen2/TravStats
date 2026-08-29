@@ -115,6 +115,16 @@
     "nameLabel": "Name",
     "namePlaceholder": "z. B. Maccis weltweit",
     "colorLabel": "Farbe",
+    "symbolLabel": "Symbol",
+    "symbolPlaceholder": "🍟",
+    "symbolHint": "Ein Emoji, optional.",
+    "labelModeLabel": "Auf der Karte",
+    "labelMode": {
+      "name": "Ortsname",
+      "icon": "Symbol"
+    },
+    "labelModeHint": "Gilt als Standard dieser Liste. Die Karte kann davon abweichen.",
+    "labelModeNeedsSymbol": "Erst ein Symbol setzen, dann kann die Karte es statt der Namen zeigen.",
     "ownSection": "Eigene Listen",
     "ownEmpty": "Noch keine eigene Liste. Eine Liste gruppiert Orte, die du schon erfasst hast.",
     "curatedSection": "Mitgelieferte Checklisten",

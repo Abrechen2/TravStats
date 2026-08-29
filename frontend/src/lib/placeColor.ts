@@ -20,6 +20,7 @@
 // been enough.
 
 import type { Rgb } from "./cruiseColor";
+import type { PlaceLabelList, PlaceLabelMode } from "./placeLabel";
 import { DOMAINS } from "../shared/domains";
 import { hexToRgb } from "../components/map/controlPanelKit";
 
@@ -184,12 +185,24 @@ export interface PlaceListColorSource {
   name: string;
   /** Hex, as stored on `PlaceList.color`. */
   color: string;
+  /** The list's own label default, as stored on `PlaceList.labelMode`. */
+  labelMode?: PlaceLabelMode;
+  /** The list's symbol, as stored on `PlaceList.icon`. */
+  icon?: string | null;
   entries?: readonly { placeId: string }[];
 }
 
 export interface PlaceListColorResolution {
   /** Place id → the list colour that won. Places in no list are absent. */
   byPlaceId: Map<string, Rgb>;
+  /**
+   * Place id → the label default of the SAME list that won the colour.
+   *
+   * It rides along here rather than being resolved separately because
+   * "first list wins" is one rule, and a second copy of it would eventually
+   * hand a pin the colour of one list and the symbol of another.
+   */
+  labelsByPlaceId: Map<string, PlaceLabelList>;
   /** Lists that actually colour at least one pin, in the order given. */
   used: Array<{ id: string; name: string; color: Rgb }>;
 }
@@ -211,20 +224,23 @@ export function resolvePlaceListColors(
   lists: readonly PlaceListColorSource[]
 ): PlaceListColorResolution {
   const byPlaceId = new Map<string, Rgb>();
+  const labelsByPlaceId = new Map<string, PlaceLabelList>();
   const used: PlaceListColorResolution["used"] = [];
 
   for (const list of lists) {
     const rgb = hexToRgb(list.color);
+    const label: PlaceLabelList = { labelMode: list.labelMode ?? "name", icon: list.icon ?? null };
     let colouredAny = false;
     for (const entry of list.entries ?? []) {
       if (byPlaceId.has(entry.placeId)) continue; // first list wins
       byPlaceId.set(entry.placeId, rgb);
+      labelsByPlaceId.set(entry.placeId, label);
       colouredAny = true;
     }
     if (colouredAny) used.push({ id: list.id, name: list.name, color: rgb });
   }
 
-  return { byPlaceId, used };
+  return { byPlaceId, labelsByPlaceId, used };
 }
 
 /** One row of the map legend. Shape mirrors `LodgingLegendRow` /

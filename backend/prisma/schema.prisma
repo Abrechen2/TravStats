@@ -1625,6 +1625,11 @@ model PlaceList {
   color   String  @default("#5ec2b2")
   icon    String?
   sortIdx Int     @default(0) @map("sort_idx")
+  /// What this list's places are labelled with on the map: "name" or "icon".
+  /// Only ever the list's DEFAULT -- the map's own control overrides it for the
+  /// whole map, which is why this is a per-list column and not a user setting.
+  /// A list with no `icon` always renders names whatever this says.
+  labelMode String @default("name") @map("label_mode")
 
   /// Non-null when this list is the user's subscription to a shipped checklist
   /// (e.g. "world-wonders-new7"). A subscribed list's name and membership are

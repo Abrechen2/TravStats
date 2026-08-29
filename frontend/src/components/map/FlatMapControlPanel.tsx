@@ -12,7 +12,6 @@ import {
   CruiseAppearanceSection,
   FlightAppearanceSection,
   LodgingAppearanceSection,
-  PlaceAppearanceSection,
   PanelHeader,
   SectionLabel,
   SegControl,
@@ -27,8 +26,11 @@ import {
   type CruiseAppearanceState,
   type FlightAppearanceState,
   type LodgingAppearanceState,
-  type PlaceAppearanceState,
 } from "./controlPanelKit";
+import {
+  PlaceAppearanceSection,
+  type PlaceAppearanceState,
+} from "./PlaceAppearanceSection";
 import { MapChromeSections } from "./MapChromeSections";
 import type { LabelsMode } from "./labelPriority";
 

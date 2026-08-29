@@ -166,6 +166,21 @@
           "wishlist": "Wishlist",
           "unlisted": "In no list"
         }
+      },
+      "placeLabelSource": {
+        "label": "Labelled with",
+        "list": {
+          "label": "As the list says",
+          "hint": "Each list decides for itself. Without a symbol, the place name shows."
+        },
+        "name": {
+          "label": "Place name",
+          "hint": "The name everywhere, even for lists that have a symbol."
+        },
+        "icon": {
+          "label": "Symbol",
+          "hint": "The list's symbol everywhere. Lists without one keep the name."
+        }
       }
     },
     "timesFlown": "Flown {{count}}×",
