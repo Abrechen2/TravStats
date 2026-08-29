@@ -528,6 +528,24 @@
       "year": "Year",
       "nights": "Nights",
       "stays": "Stays"
+    },
+    "records": {
+      "title": "Records",
+      "longestStay": "Longest stay",
+      "longestStayDesc": "consecutive nights in one house",
+      "mostReturns": "Most returns",
+      "mostReturnsDesc": "stays in the same hotel",
+      "perfectStays": "Flawless stays",
+      "perfectStaysDesc": "top marks throughout · {{endured}} endured",
+      "oneNighters": "One-nighters",
+      "oneNightersDesc": "of {{total}} stays",
+      "byHotel": "Hotels by nights",
+      "nightsCount": "{{count}} nights",
+      "nightsCount_one": "{{count}} night",
+      "staysCount": "{{count}} stays",
+      "staysCount_one": "{{count}} stay",
+      "noHotels": "No completed stay yet.",
+      "more": "+ {{count}} more"
     }
   },
   "period": {
