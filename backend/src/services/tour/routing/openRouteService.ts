@@ -1,5 +1,5 @@
 import logger from "../../../utils/logger";
-import { isRoutableMode, PROFILE_BY_MODE, RouteProvider, RouteRequest, RouteResult } from "./types";
+import { isRoutableMode, RoutableMode, RouteProvider, RouteRequest, RouteResult } from "./types";
 
 /**
  * OpenRouteService adapter (https://openrouteservice.org/).
@@ -17,6 +17,23 @@ import { isRoutableMode, PROFILE_BY_MODE, RouteProvider, RouteRequest, RouteResu
  */
 
 const ORS_BASE_URL = "https://api.openrouteservice.org/v2/directions";
+
+/**
+ * ORS's own profile vocabulary (verified via WebSearch against the ORS
+ * community docs and the R client's `profiles.R`, which enumerates the full
+ * profile list: `driving-car`, `driving-hgv`, `cycling-regular`,
+ * `cycling-road`, `cycling-mountain`, `cycling-electric`, `foot-walking`,
+ * `foot-hiking`, `wheelchair`). `driving-hgv` is the documented heavy-vehicle
+ * profile — NOT the generic `hgv` string a prior draft of this adapter used,
+ * which ORS would have rejected outright. `cycling-regular` is the plain
+ * bike profile (as opposed to road/mountain/electric variants ORS does not
+ * distinguish for a motorhome-towed bike).
+ */
+export const ORS_PROFILE_BY_MODE: Record<RoutableMode, string> = {
+  road: "driving-hgv",
+  foot: "foot-walking",
+  bike: "cycling-regular",
+};
 
 interface OrsGeoJsonResponse {
   features: Array<{
@@ -72,7 +89,7 @@ export function createOpenRouteService(
       if (!isRoutableMode(req.mode)) {
         return null;
       }
-      const profile = PROFILE_BY_MODE[req.mode];
+      const profile = ORS_PROFILE_BY_MODE[req.mode];
       const url = `${ORS_BASE_URL}/${profile}/geojson`;
 
       let response: Response;

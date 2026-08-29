@@ -1,5 +1,5 @@
 import logger from "../../../utils/logger";
-import { isRoutableMode, PROFILE_BY_MODE, RouteProvider, RouteRequest, RouteResult } from "./types";
+import { isRoutableMode, RoutableMode, RouteProvider, RouteRequest, RouteResult } from "./types";
 
 /**
  * Custom/self-hosted OSRM adapter (http://project-osrm.org/).
@@ -7,7 +7,10 @@ import { isRoutableMode, PROFILE_BY_MODE, RouteProvider, RouteRequest, RouteResu
  * Verified against the OSRM HTTP API docs as of 2026-08:
  *   - `GET /route/v1/{profile}/{lon},{lat};{lon},{lat}?geometries=geojson&overview=full`
  *   - No API key — a self-hosted OSRM instance has none. `baseUrl` is the
- *     admin-configured instance root (e.g. `http://osrm.local:5000`).
+ *     admin-configured instance root (e.g. `http://osrm.local:5000`), which
+ *     may itself carry a path and/or a query string (e.g. a reverse proxy
+ *     in front of OSRM that expects `?token=...` on every request) — see
+ *     the URL-building note below.
  *   - `routes[0].geometry.coordinates` — `[lon,lat]` pairs, GeoJSON order.
  *   - `routes[0].distance` — metres.
  *   - `routes[0].duration` — seconds.
@@ -18,6 +21,24 @@ import { isRoutableMode, PROFILE_BY_MODE, RouteProvider, RouteRequest, RouteResu
  * fixed metric) — this adapter does not attempt to speak both. A
  * self-hosted Valhalla instance is not a supported "custom" backend here.
  */
+
+/**
+ * There is no single OSRM profile vocabulary the way ORS and GraphHopper
+ * each have one fixed list — a self-hosted OSRM instance's profile names are
+ * whatever the operator's `.lua` files were called when the graph was built
+ * (`osrm-extract --profile <name>.lua`). These three defaults match OSRM's
+ * own out-of-the-box profile filenames (`car.lua`, `foot.lua`,
+ * `bicycle.lua` — confirmed via `docs/profiles.md` in
+ * Project-OSRM/osrm-backend), which is the closest thing to a documented
+ * convention for an instance that has not renamed them. An operator who DID
+ * rename their profiles needs a differently-configured "custom" adapter —
+ * out of scope here, and called out so it is not mistaken for a guarantee.
+ */
+export const OSRM_PROFILE_BY_MODE: Record<RoutableMode, string> = {
+  road: "car",
+  foot: "foot",
+  bike: "bicycle",
+};
 
 interface OsrmResponse {
   routes: Array<{
@@ -64,7 +85,18 @@ export function createCustomOsrm(
   baseUrl: string,
   fetchImpl: typeof fetch = fetch,
 ): RouteProvider {
-  const root = baseUrl.replace(/\/+$/, "");
+  // Parsed eagerly: a baseUrl that isn't a valid absolute URL fails clearly
+  // and immediately at configuration time (URL's own descriptive error),
+  // rather than producing a silently-broken request string on the first
+  // route() call. A base URL that DOES parse but already carries a path
+  // and/or a query string (a reverse proxy in front of a self-hosted OSRM,
+  // with e.g. `?token=...`) is the case this adapter must not break: the
+  // route path is appended to the existing path, and the existing query
+  // string is preserved alongside `geometries`/`overview` below — never
+  // simply concatenated with `?`, which would either double up `?` or drop
+  // the operator's own query string entirely.
+  const base = new URL(baseUrl);
+  const basePath = base.pathname.replace(/\/+$/, "");
 
   return {
     id: "custom",
@@ -72,13 +104,17 @@ export function createCustomOsrm(
       if (!isRoutableMode(req.mode)) {
         return null;
       }
-      const profile = PROFILE_BY_MODE[req.mode];
+      const profile = OSRM_PROFILE_BY_MODE[req.mode];
       const coordinates = `${req.from.lon},${req.from.lat};${req.to.lon},${req.to.lat}`;
-      const url = `${root}/route/v1/${profile}/${coordinates}?geometries=geojson&overview=full`;
+
+      const url = new URL(base.toString());
+      url.pathname = `${basePath}/route/v1/${profile}/${coordinates}`;
+      url.searchParams.set("geometries", "geojson");
+      url.searchParams.set("overview", "full");
 
       let response: Response;
       try {
-        response = await fetchImpl(url);
+        response = await fetchImpl(url.toString());
       } catch (err) {
         logger.warn(
           { provider: "custom", error: err instanceof Error ? err.message : String(err) },

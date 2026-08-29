@@ -1,5 +1,5 @@
 import logger from "../../../utils/logger";
-import { isRoutableMode, PROFILE_BY_MODE, RouteProvider, RouteRequest, RouteResult } from "./types";
+import { isRoutableMode, RoutableMode, RouteProvider, RouteRequest, RouteResult } from "./types";
 
 /**
  * GraphHopper adapter (https://www.graphhopper.com/).
@@ -21,6 +21,22 @@ import { isRoutableMode, PROFILE_BY_MODE, RouteProvider, RouteRequest, RouteResu
  */
 
 const GRAPHHOPPER_BASE_URL = "https://graphhopper.com/api/1/route";
+
+/**
+ * GraphHopper's own profile vocabulary (verified: the pre-built profiles
+ * listed in GraphHopper's own blog posts on customizable routing and the
+ * routing API docs are `car`, `bike`, `foot`, `hike`, `mtb`, `racingbike`,
+ * `scooter`, `truck`, `small_truck` — there is NO `hgv` profile on
+ * GraphHopper's cloud API; that string is ORS's vocabulary, not theirs.
+ * `truck` is GraphHopper's documented heavy-vehicle profile (dimensions
+ * matching a rigid truck like a MAN/Mercedes-Benz Actros), the closest match
+ * to a motorhome of the pre-built options.
+ */
+export const GRAPHHOPPER_PROFILE_BY_MODE: Record<RoutableMode, string> = {
+  road: "truck",
+  foot: "foot",
+  bike: "bike",
+};
 
 interface GraphHopperResponse {
   paths: Array<{
@@ -73,7 +89,7 @@ export function createGraphHopper(
       if (!isRoutableMode(req.mode)) {
         return null;
       }
-      const profile = PROFILE_BY_MODE[req.mode];
+      const profile = GRAPHHOPPER_PROFILE_BY_MODE[req.mode];
       const params = new URLSearchParams();
       params.append("point", `${req.from.lat},${req.from.lon}`);
       params.append("point", `${req.to.lat},${req.to.lon}`);

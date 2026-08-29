@@ -69,7 +69,9 @@ describe("createOpenRouteService", () => {
     await provider.route(roadRequest());
 
     const [url, init] = fetchImpl.mock.calls[0];
-    expect(String(url)).toContain("/directions/hgv/geojson");
+    // Literal, spelled out — ORS's own documented heavy-vehicle profile is
+    // "driving-hgv", not a value imported back from the adapter under test.
+    expect(String(url)).toContain("/directions/driving-hgv/geojson");
     const body = JSON.parse((init as RequestInit).body as string);
     expect(body.coordinates).toEqual([
       [FROM.lon, FROM.lat],
@@ -183,7 +185,9 @@ describe("createGraphHopper", () => {
     const [url] = fetchImpl.mock.calls[0];
     const parsed = new URL(String(url));
     expect(parsed.searchParams.get("points_encoded")).toBe("false");
-    expect(parsed.searchParams.get("profile")).toBe("hgv");
+    // Literal — GraphHopper's cloud API has no "hgv" profile at all; its
+    // documented heavy-vehicle profile is "truck".
+    expect(parsed.searchParams.get("profile")).toBe("truck");
     expect(parsed.searchParams.getAll("point")).toEqual([
       `${FROM.lat},${FROM.lon}`,
       `${TO.lat},${TO.lon}`,
@@ -271,8 +275,25 @@ describe("createCustomOsrm", () => {
     await provider.route(roadRequest());
 
     const [url] = fetchImpl.mock.calls[0];
+    // Literal — "car" matches OSRM's own out-of-the-box car.lua profile
+    // filename convention, not a value imported back from the adapter.
     expect(String(url)).toBe(
-      `http://osrm.local:5000/route/v1/hgv/${FROM.lon},${FROM.lat};${TO.lon},${TO.lat}?geometries=geojson&overview=full`,
+      `http://osrm.local:5000/route/v1/car/${FROM.lon},${FROM.lat};${TO.lon},${TO.lat}?geometries=geojson&overview=full`,
+    );
+  });
+
+  it("preserves a base URL's own path and query string (e.g. a reverse-proxy token)", async () => {
+    const fetchImpl = jest.fn(async () => jsonResponse(200, osrmFixture));
+    const provider = createCustomOsrm(
+      "http://osrm.local:5000/proxy?token=abc123",
+      fetchImpl as unknown as typeof fetch,
+    );
+
+    await provider.route(roadRequest());
+
+    const [url] = fetchImpl.mock.calls[0];
+    expect(String(url)).toBe(
+      `http://osrm.local:5000/proxy/route/v1/car/${FROM.lon},${FROM.lat};${TO.lon},${TO.lat}?token=abc123&geometries=geojson&overview=full`,
     );
   });
 

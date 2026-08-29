@@ -50,24 +50,18 @@ export type RoutableMode = Extract<LegMode, "road" | "foot" | "bike">;
  * is silently wrong — the wrong answer looks right and gets added to the tour
  * total. This guard prevents that silent error by being a type guard: after
  * this check, TypeScript knows the mode is RoutableMode and can safely index
- * PROFILE_BY_MODE. Before the check, it cannot — forgetting the gate is a
- * compile error, not a silent road detour.
+ * a provider's own profile map. Before the check, it cannot — forgetting the
+ * gate is a compile error, not a silent road detour.
+ *
+ * There is deliberately no shared `PROFILE_BY_MODE` here: OpenRouteService,
+ * GraphHopper and a self-hosted OSRM each use their own profile vocabulary
+ * (e.g. ORS's heavy-vehicle profile is `driving-hgv`, GraphHopper's is
+ * `truck`, and a custom OSRM instance's is whatever the operator named it).
+ * A single shared string for "the heavy-vehicle profile" would be right for
+ * at most one provider and silently wrong for the others. Each adapter
+ * (`openRouteService.ts`, `graphHopper.ts`, `customOsrm.ts`) keeps its own
+ * `Record<RoutableMode, string>`, sourced from that provider's documentation.
  */
 export function isRoutableMode(mode: LegMode): mode is RoutableMode {
   return mode === "road" || mode === "foot" || mode === "bike";
 }
-
-/**
- * Map routable leg modes to the profile string each routing provider expects.
- * Deliberately has no entry for ferry or rail — calling code that forgets the
- * isRoutableMode gate will get a type error instead of a working-looking profile.
- *
- * A motorhome is not a car: where a provider offers a heavy-vehicle profile,
- * use it. Motorhomes have different speed/route characteristics (low clearance,
- * weight limits, fuel consumption) than light passenger cars.
- */
-export const PROFILE_BY_MODE: Record<RoutableMode, string> = {
-  road: "hgv",        // Heavy goods vehicle, not "car"
-  foot: "foot",
-  bike: "bike",
-};
