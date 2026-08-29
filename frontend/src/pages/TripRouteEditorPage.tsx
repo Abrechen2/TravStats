@@ -13,7 +13,7 @@ import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { Trip, TripStop } from "../types";
-import type { LegSource, TourGeometry, TourLeg, TourRoute, TourStop } from "../types/tour";
+import type { TourGeometry, TourLeg, TourRoute, TourStop } from "../types/tour";
 
 /**
  * `TripStop` (`types/index.ts`) does not declare `routeId`/`routeOrderIdx` —
@@ -39,6 +39,19 @@ function apiErrorMessage(error: unknown): string | null {
   const response = (error as { response?: { data?: { error?: unknown } } }).response;
   const message = response?.data?.error;
   return typeof message === "string" ? message : null;
+}
+
+/**
+ * The HTTP status of a failed request, if this is an axios-shaped error.
+ * Used to tell the routing endpoint's deliberate 409 ("instance not
+ * equipped to route at all") apart from every other failure — a network
+ * drop, a 404 for a leg that no longer exists, a 500. Only the 409 gets its
+ * own message; everything else falls back to the generic routing error.
+ */
+function apiErrorStatus(error: unknown): number | null {
+  if (typeof error !== "object" || error === null) return null;
+  const status = (error as { response?: { status?: unknown } }).response?.status;
+  return typeof status === "number" ? status : null;
 }
 
 /**
@@ -68,6 +81,12 @@ export default function TripRouteEditorPage(): JSX.Element {
   const [route, setRoute] = useState<TourRoute | null>(null);
   const [legs, setLegs] = useState<TourLeg[]>([]);
   const [geometry, setGeometry] = useState<TourGeometry | null>(null);
+  // Whether a routing provider is configured and usable right now — see
+  // `routingAvailable` on `toursApi.get()`. Defaults to `false` (never a
+  // guessed `true`) so a slow/failed load never briefly offers a control
+  // that would just 409.
+  const [routingAvailable, setRoutingAvailable] = useState(false);
+  const [routingAllInProgress, setRoutingAllInProgress] = useState(false);
   const [loading, setLoading] = useState(true);
   // `null` = loaded fine so far; a value distinguishes "record is gone"
   // (404) from "could not ask" (anything else) — same two-valued
@@ -98,6 +117,7 @@ export default function TripRouteEditorPage(): JSX.Element {
       setTrip(tripData);
       setRoute(sectionData.route);
       setLegs(sectionData.legs);
+      setRoutingAvailable(sectionData.routingAvailable);
       setGeometry(geometryData);
     } catch (err) {
       if (!mountedRef.current) return;
@@ -170,7 +190,7 @@ export default function TripRouteEditorPage(): JSX.Element {
   );
 
   const handleSetLegSource = useCallback(
-    (leg: TourLeg, source: LegSource): void => {
+    (leg: TourLeg, source: "straight" | "drawn"): void => {
       if (!id || !routeId) return;
       void (async (): Promise<void> => {
         try {
@@ -183,6 +203,74 @@ export default function TripRouteEditorPage(): JSX.Element {
     },
     [id, routeId, load, addToast, t]
   );
+
+  /**
+   * Routes ONE leg through the configured provider. The 409 "no provider
+   * configured" answer gets its OWN message — a generic
+   * "could not be changed" toast would read as a validation failure, but
+   * this is the instance not being equipped to answer at all, which
+   * `TourLegList` already prevents by disabling the option in the common
+   * case; this still guards the request directly (a second tab could have
+   * unconfigured routing between load and click). A 200 with a low-confidence
+   * fallback is not an error — `load()` picks up the honest result (source
+   * reverts to "straight") and a distinct info toast says so, rather than
+   * silently looking like nothing happened.
+   */
+  const handleRouteLeg = useCallback(
+    (leg: TourLeg): void => {
+      if (!id || !routeId) return;
+      void (async (): Promise<void> => {
+        try {
+          const routed = await toursApi.routeLeg(id, routeId, leg.fromStopId, leg.toStopId);
+          await load();
+          if (routed.confidence === "low") {
+            addToast("info", t("trips:tours.routing.fallback"));
+          }
+        } catch (err) {
+          if (apiErrorStatus(err) === 409) {
+            addToast("error", t("trips:tours.routing.notConfigured"));
+          } else {
+            addToast("error", apiErrorMessage(err) ?? t("trips:tours.routing.error"));
+          }
+        }
+      })();
+    },
+    [id, routeId, load, addToast, t]
+  );
+
+  /**
+   * Routes every routable leg of the section in one call. Never 409s (see
+   * `toursApi.routeAll`'s own doc comment), so the only failure path here
+   * is a genuine request error (network, 500). On success, `load()` is
+   * re-run rather than applying `result.legs` directly — routing can change
+   * `route.distanceKm`/`drivenKm` (the header) and the drawn line
+   * (`geometry`, fetched separately for the map), so only a full reload
+   * keeps every part of the page honest. The counts are then reported
+   * verbatim — never a blanket "done!" toast, which would hide a batch
+   * that quietly routed zero legs because no provider is configured.
+   */
+  const handleRouteAll = useCallback((): void => {
+    if (!id || !routeId) return;
+    setRoutingAllInProgress(true);
+    void (async (): Promise<void> => {
+      try {
+        const result = await toursApi.routeAll(id, routeId);
+        await load();
+        if (!mountedRef.current) return;
+        addToast(
+          "info",
+          t("trips:tours.routing.result", {
+            routed: result.routedCount,
+            skipped: result.skippedCount,
+          })
+        );
+      } catch (err) {
+        addToast("error", apiErrorMessage(err) ?? t("trips:tours.routing.allError"));
+      } finally {
+        if (mountedRef.current) setRoutingAllInProgress(false);
+      }
+    })();
+  }, [id, routeId, load, addToast, t]);
 
   const handleClearLeg = useCallback(
     (leg: TourLeg): void => {
@@ -258,8 +346,12 @@ export default function TripRouteEditorPage(): JSX.Element {
             <TourLegList
               legs={legs}
               stopTitleById={stopTitleById}
+              routingAvailable={routingAvailable}
               onSetSource={handleSetLegSource}
+              onRoute={handleRouteLeg}
               onClear={handleClearLeg}
+              onRouteAll={handleRouteAll}
+              routingAllInProgress={routingAllInProgress}
             />
           </section>
         </div>

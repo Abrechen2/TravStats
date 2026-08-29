@@ -156,12 +156,18 @@ export const settingsApi = {
     aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     aerodatabox: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    // Tour routing provider keys (Phase 3) — a user's own key takes
+    // precedence over the admin's global one; see `apiKeyResolver.getApiKey`.
+    openrouteservice: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    graphhopper: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   }> => {
     const { data } = await api.get<{
       airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       aerodatabox: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+      openrouteservice: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+      graphhopper: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     }>("/settings/api-keys");
     return data;
   },
@@ -177,12 +183,14 @@ export const settingsApi = {
     openskyClientSecret?: string | null;
     openskyUsername?: string | null;
     openskyPassword?: string | null;
+    openrouteserviceApiKey?: string | null;
+    graphhopperApiKey?: string | null;
   }): Promise<MessageResponse> => {
     const { data } = await api.put<MessageResponse>("/settings/api-keys", payload);
     return data;
   },
   testApiKey: async (
-    provider: "airlabs" | "aviationstack" | "aerodatabox" | "opensky",
+    provider: "airlabs" | "aviationstack" | "aerodatabox" | "opensky" | "openrouteservice" | "graphhopper",
     apiKey?: string,
     openskyCredentials?: {
       clientId?: string;

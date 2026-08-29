@@ -318,7 +318,18 @@
     },
     "source": {
       "straight": "Luftlinie",
-      "drawn": "gezogen"
+      "drawn": "gezogen",
+      "routed": "geroutet"
+    },
+    "routing": {
+      "routeAll": "Ganzen Abschnitt routen",
+      "routingAll": "Wird geroutet …",
+      "unavailableReason": "Kein Routing-Anbieter eingerichtet",
+      "notConfigured": "Für diese Instanz ist kein Routing-Anbieter eingerichtet",
+      "error": "Die Etappe konnte nicht geroutet werden",
+      "allError": "Der Abschnitt konnte nicht geroutet werden",
+      "fallback": "Es wurde keine Route gefunden — die Luftlinie bleibt bestehen",
+      "result": "{{routed}} Etappen geroutet, {{skipped}} übersprungen"
     }
   }
 }

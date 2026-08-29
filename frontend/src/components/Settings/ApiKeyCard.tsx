@@ -12,7 +12,15 @@ import type { ProviderQuota } from "../../lib/api/settings";
 export type ApiCardCapability = "historical365";
 
 export interface ApiKeyCardProps {
-  provider: "airlabs" | "aviationstack" | "aerodatabox" | "opensky" | "logostream" | "googlePlaces";
+  provider:
+    | "airlabs"
+    | "aviationstack"
+    | "aerodatabox"
+    | "opensky"
+    | "logostream"
+    | "googlePlaces"
+    | "openrouteservice"
+    | "graphhopper";
   label: string;
   description: string;
   getKeyUrl: string;

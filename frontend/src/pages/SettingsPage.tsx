@@ -30,6 +30,7 @@ import FeaturesSection from "../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../components/Settings/CruisePreferencesSection";
 import MembershipsSection from "../components/Settings/MembershipsSection";
 import GeocoderSettingsCard from "../components/Settings/GeocoderSettingsCard";
+import RoutingProviderSection from "../components/Settings/RoutingProviderSection";
 import ImmichConnectionCard from "../components/Settings/ImmichConnectionCard";
 import PasswordModal from "../components/Settings/PasswordModal";
 import { normalizeSectionId } from "../lib/sectionAliases";
@@ -589,6 +590,8 @@ export default function SettingsPage(): JSX.Element {
                   onSetApiKeys={setApiKeys}
                   onSave={saveApiKeys}
                 />
+                {/* Admin-only; the card itself renders null for non-admins. */}
+                <RoutingProviderSection isAdmin={user?.isAdmin ?? false} />
                 <ImmichConnectionCard />
               </>
             )}

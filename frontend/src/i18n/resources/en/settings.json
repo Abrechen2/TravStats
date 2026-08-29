@@ -493,6 +493,32 @@
       "or": "OR (use basic auth instead)"
     }
   },
+  "routing": {
+    "title": "Routing provider",
+    "description": "Determines how \"Route this leg\" and \"Route the whole section\" compute a path in the tours view. Without a provider, every leg stays a straight line.",
+    "providerLabel": "Provider",
+    "provider": {
+      "none": "No provider",
+      "openrouteservice": "OpenRouteService",
+      "graphhopper": "GraphHopper",
+      "custom": "Self-hosted OSRM server"
+    },
+    "noneHint": "Without a provider, \"Routed\" stays disabled in the tours view — every leg stays a straight line until one is set up here.",
+    "customUrlLabel": "Base URL",
+    "customUrlHint": "Address of a self-hosted OSRM server, e.g. https://osrm.example.com.",
+    "loadError": "Routing settings could not be loaded",
+    "retry": "Retry",
+    "saveSuccess": "Routing settings saved",
+    "saveError": "Routing settings could not be saved",
+    "openrouteservice": {
+      "label": "OpenRouteService API key",
+      "description": "Free: 2000 routing requests/day. Used as the shared key for everyone until someone sets their own."
+    },
+    "graphhopper": {
+      "label": "GraphHopper API key",
+      "description": "Free: 500 routing requests/day. Used as the shared key for everyone until someone sets their own."
+    }
+  },
   "import": {
     "title": "Import lists",
     "description": "Take over a whole collection at once — a one-off, not a running route. Single bookings go straight into the area they belong to.",

@@ -318,7 +318,18 @@
     },
     "source": {
       "straight": "Straight line",
-      "drawn": "Drawn"
+      "drawn": "Drawn",
+      "routed": "Routed"
+    },
+    "routing": {
+      "routeAll": "Route the whole section",
+      "routingAll": "Routing …",
+      "unavailableReason": "No routing provider configured",
+      "notConfigured": "No routing provider is configured for this instance",
+      "error": "The leg could not be routed",
+      "allError": "The section could not be routed",
+      "fallback": "No route could be found — kept the straight line",
+      "result": "{{routed}} legs routed, {{skipped}} skipped"
     }
   }
 }
