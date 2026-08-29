@@ -175,4 +175,38 @@ describe("Tour route sections — CRUD", () => {
       expect(res.status).toBe(404);
     });
   });
+
+  describe("auth middleware placement (regression)", () => {
+    // `tourRoutes.ts` and `tourLegs.ts` are mounted at the wide `/api/v1`
+    // base (see mounts.ts), not a narrow sub-path like `/api/v1/cruises`.
+    // Express runs a router's `router.use(...)` middleware for EVERY
+    // request that reaches that router, not only for requests matching one
+    // of its own routes. A router-level `router.use(authenticate)` here
+    // therefore intercepted every request to any endpoint mounted AFTER
+    // these two routers under `/api/v1` — e.g. `pairing.ts` — and rejected
+    // it with 401 before it ever reached its own router. The fix moved
+    // `authenticate`/`requireWriteScope` to per-route middleware, matching
+    // the convention `routes/trips.ts` already uses.
+    it("does not intercept a public endpoint mounted after it", async () => {
+      // POST /api/v1/pairing/claim is deliberately public (rate-limited,
+      // no `authenticate` at all — see pairing.ts) so the mobile app can
+      // exchange a pairing code before it has any credentials. An invalid
+      // code must fail with 400 ("Invalid or expired pairing code"), never
+      // 401 — a 401 here would mean a tour router swallowed the request.
+      const res = await request(app)
+        .post("/api/v1/pairing/claim")
+        .send({ code: "000000", deviceName: "test-device" });
+
+      expect(res.status).not.toBe(401);
+      expect(res.status).toBe(400);
+    });
+
+    it("still requires authentication on the tour endpoints themselves", async () => {
+      // The other half of the fix: moving auth from router.use(...) to
+      // per-route middleware must not have dropped it anywhere. An
+      // unauthenticated request to a tour endpoint must still be 401.
+      const res = await request(app).get(`/api/v1/trips/${tripId}/routes`);
+      expect(res.status).toBe(401);
+    });
+  });
 });

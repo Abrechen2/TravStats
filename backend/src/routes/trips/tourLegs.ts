@@ -20,8 +20,6 @@ import { resolveRoute, toLegDto } from "./tourRoutes";
  */
 
 const router = Router();
-router.use(authenticate);
-router.use(requireWriteScope);
 
 /** How far a drawn line may start or end from its leg's stop, in km. */
 const ANCHOR_TOLERANCE_KM = 1;
@@ -89,6 +87,8 @@ function requireCoords(
  */
 router.put(
   "/trips/:id/routes/:routeId/legs/:fromStopId/:toStopId",
+  authenticate,
+  requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
@@ -159,6 +159,8 @@ router.put(
 /** DELETE the override — back to a straight chord. */
 router.delete(
   "/trips/:id/routes/:routeId/legs/:fromStopId/:toStopId",
+  authenticate,
+  requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
@@ -247,6 +249,8 @@ function chordCoordinates(
  */
 router.get(
   "/trips/:id/routes/:routeId/geometry",
+  authenticate,
+  requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;

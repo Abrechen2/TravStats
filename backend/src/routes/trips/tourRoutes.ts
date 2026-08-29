@@ -18,8 +18,6 @@ import logger from "../../utils/logger";
  */
 
 const router = Router();
-router.use(authenticate);
-router.use(requireWriteScope);
 
 interface LegRow {
   mode: string;
@@ -105,6 +103,8 @@ export async function resolveRoute(userId: string, tripId: string, routeId: stri
 /** GET /trips/:id/routes */
 router.get(
   "/trips/:id/routes",
+  authenticate,
+  requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
@@ -124,6 +124,8 @@ router.get(
 /** POST /trips/:id/routes */
 router.post(
   "/trips/:id/routes",
+  authenticate,
+  requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
@@ -161,6 +163,8 @@ router.post(
 /** PATCH /trips/:id/routes/:routeId */
 router.patch(
   "/trips/:id/routes/:routeId",
+  authenticate,
+  requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
@@ -188,6 +192,8 @@ router.patch(
  */
 router.delete(
   "/trips/:id/routes/:routeId",
+  authenticate,
+  requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
@@ -231,6 +237,8 @@ router.delete(
  */
 router.get(
   "/trips/:id/routes/:routeId",
+  authenticate,
+  requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
@@ -284,6 +292,8 @@ router.get(
  */
 router.put(
   "/trips/:id/routes/:routeId/stops",
+  authenticate,
+  requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
