@@ -57,13 +57,14 @@ async function findLegOrThrow(
 
 /**
  * A leg's stop coordinates are non-null at creation time — `recomputeLegs`
- * in `tourRoutes.ts` refuses a coordinate-less stop before a leg row is
- * ever written. They can only go missing later if a stop is edited to
- * clear its coordinates while still assigned to a section, which nothing
- * in this codebase currently does. This guard exists anyway because the
- * Prisma column type is nullable, so it is the only way to keep the
- * handler `unknown`-safe without a false-positive `!` assertion — and it
- * fails loudly (409) rather than crashing on a bad haversine call.
+ * in `services/tour/legRecompute.ts` refuses a coordinate-less stop before
+ * a leg row is ever written. `PATCH /trips/:id/stops/:stopId` also refuses
+ * to null `lat`/`lon` on a stop whose `routeId` is set, so the normal write
+ * paths cannot produce a coordinate-less route member. This guard exists
+ * anyway as a backstop: the Prisma column type stays nullable, so this is
+ * the only way to keep the handler `unknown`-safe without a false-positive
+ * `!` assertion — and it fails loudly (409) rather than crashing on a bad
+ * haversine call.
  */
 function requireCoords(
   stop: { lat: number | null; lon: number | null },
@@ -232,8 +233,13 @@ function chordCoordinates(
  * One LineString per leg, so the map can colour each leg by its own mode
  * and dash the straight ones. A leg with stored waypoints emits them; a
  * leg without emits its two endpoint coordinates — exactly the chord its
- * `distanceKm` was computed from, so the picture and the number never
- * disagree.
+ * `distanceKm` was computed from, so the picture and the number agree as
+ * long as both endpoints still have coordinates. The write paths refuse to
+ * let that happen (see `requireCoords` above), so `chordCoordinates`
+ * returning `null` here is a backstop, not an expected case — if it ever
+ * fires, the leg is dropped from the FeatureCollection while its
+ * `distanceKm` still counts toward the section total, which is the one way
+ * this promise could still be broken.
  *
  * Ordered by `fromStop.routeOrderIdx` IN THE QUERY, the same clause the
  * stops endpoint in `tourRoutes.ts` already uses — no JS re-sort needed

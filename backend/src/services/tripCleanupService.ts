@@ -14,8 +14,10 @@
  *
  * Candidate criteria are deliberately conservative: a trip qualifies as
  * a micro-trip only when it carries NO user content beyond its flights
- * (no cruises, stops, journal entries, photos, notes, or description).
- * Anything curated by hand is never offered for dissolution.
+ * (no cruises, stops, route sections, journal entries, photos, notes, or
+ * description). Anything curated by hand is never offered for dissolution
+ * — a trip whose only content is a hand-made route section must not be
+ * offered either, since dissolving it cascades that section away.
  */
 
 import { prisma } from "../db";
@@ -50,7 +52,14 @@ export async function findMicroTripCandidates(userId: string): Promise<MicroTrip
       startDate: true,
       endDate: true,
       _count: {
-        select: { flights: true, cruises: true, stops: true, journalEntries: true, photos: true },
+        select: {
+          flights: true,
+          cruises: true,
+          stops: true,
+          routes: true,
+          journalEntries: true,
+          photos: true,
+        },
       },
     },
     orderBy: { startDate: "desc" },
@@ -62,6 +71,7 @@ export async function findMicroTripCandidates(userId: string): Promise<MicroTrip
         t._count.flights <= MICRO_TRIP_MAX_FLIGHTS &&
         t._count.cruises === 0 &&
         t._count.stops === 0 &&
+        t._count.routes === 0 &&
         t._count.journalEntries === 0 &&
         t._count.photos === 0 &&
         !t.notes &&

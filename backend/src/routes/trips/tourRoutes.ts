@@ -5,8 +5,8 @@ import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { assignStopsSchema, createRouteSchema, updateRouteSchema } from "../../schemas/tour";
-import { drivenKm, legDistanceKm, travelledKm, type LegSource } from "../../services/tour/tourDistance";
-import { planLegs } from "../../shared/tour/legPlan";
+import { drivenKm, travelledKm } from "../../services/tour/tourDistance";
+import { recomputeLegs } from "../../services/tour/legRecompute";
 import { resolveTrip } from "../trips";
 import logger from "../../utils/logger";
 
@@ -100,76 +100,6 @@ export async function resolveRoute(userId: string, tripId: string, routeId: stri
   });
   if (!route) throw new AppError("Route not found", 404);
   return route.id;
-}
-
-type Tx = Prisma.TransactionClient;
-
-interface StopCoords {
-  id: string;
-  lat: number | null;
-  lon: number | null;
-}
-
-/**
- * Bring a section's legs in line with its stop order, inside an existing
- * transaction.
- *
- * Legs whose endpoint pair survives keep their row — geometry, source and
- * manual costs included. Pairs that vanished are deleted; new pairs start
- * as `straight`. Nothing here consults the previous ORDER, only the pairs,
- * which is what makes an insertion cheap.
- */
-async function recomputeLegs(
-  tx: Tx,
-  routeId: string,
-  defaultMode: string,
-  orderedStops: readonly StopCoords[],
-): Promise<void> {
-  const existing = await tx.tripRouteLeg.findMany({
-    where: { routeId },
-    select: { id: true, fromStopId: true, toStopId: true },
-  });
-
-  const plan = planLegs(
-    orderedStops.map((s) => s.id),
-    existing,
-  );
-
-  if (plan.deleteIds.length > 0) {
-    await tx.tripRouteLeg.deleteMany({ where: { id: { in: plan.deleteIds } } });
-  }
-
-  // Built as a plain array and written with ONE createMany, not one create
-  // per pair: at the 512-stop cap this is up to 511 rows, and awaiting them
-  // one at a time inside an interactive transaction risks the 5s Prisma
-  // default (raised below, but there is no reason to spend the budget on
-  // round-trips the distances don't need — they're already computed in JS).
-  const byId = new Map(orderedStops.map((s) => [s.id, s]));
-  const rows: Prisma.TripRouteLegCreateManyInput[] = plan.create.map((pair) => {
-    const from = byId.get(pair.fromStopId);
-    const to = byId.get(pair.toStopId);
-    // Guarded by the caller, which rejects coordinate-less stops before
-    // reaching here; the check keeps the invariant local and typed.
-    if (!from || !to || from.lat === null || from.lon === null || to.lat === null || to.lon === null) {
-      throw new AppError("Every route stop needs a coordinate", 400);
-    }
-    return {
-      routeId,
-      fromStopId: pair.fromStopId,
-      toStopId: pair.toStopId,
-      source: "straight" satisfies LegSource,
-      mode: defaultMode,
-      confidence: "low",
-      distanceKm: legDistanceKm({
-        source: "straight",
-        from: { lat: from.lat, lon: from.lon },
-        to: { lat: to.lat, lon: to.lon },
-      }),
-    };
-  });
-  if (rows.length > 0) {
-    await tx.tripRouteLeg.createMany({ data: rows });
-  }
 }
 
 /** GET /trips/:id/routes */
