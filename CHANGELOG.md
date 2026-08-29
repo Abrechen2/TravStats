@@ -12,6 +12,12 @@ now be written in the currency it was actually paid in. Two-factor
 authentication and passkeys arrive alongside.
 
 ### Added
+- **A cruise or a flight on a trip's timeline opens where it stands.** They could
+  not be clicked at all — not viewed, not edited — while the hotel entry beside
+  them already led to its own page. A click now expands the entry inside the
+  trip: the cruise shows its ship, cabin, price and the itinerary day by day,
+  with sea days named as such; the flight shows airline and number, aircraft,
+  seat and class. A button in the panel opens the full page for editing.
 - **A list's symbol is picked, not typed.** The symbol field was a bare text
   box: you had to know an emoji and then find one to paste. There is a picker
   behind it now, with search — typing "pommes" finds the fries. Its emoji
