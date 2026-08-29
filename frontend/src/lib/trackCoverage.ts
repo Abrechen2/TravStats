@@ -1,3 +1,5 @@
+import { ANCHOR_TOLERANCE_KM } from "../shared/tour/anchorTolerance";
+
 /**
  * Client-side "does a recorded track cover this leg" check (phase 3b, task
  * 8). Gates the `track` option in `TourLegList` the same way
@@ -11,10 +13,15 @@
  * agree with the server's real 409 boundary, but is NOT a port of that
  * function: this only answers "yes, and which track", never cuts or
  * reverses a segment — the actual adoption still happens server-side, from
- * the track id this module picks. The frontend cannot import backend code,
- * so the tolerance constant is duplicated rather than shared — the same
- * convention `LEG_SOURCES`/`LEG_MODES` in `types/tour.ts` already follow
- * for their own backend mirrors.
+ * the track id this module picks.
+ *
+ * `ANCHOR_TOLERANCE_KM` itself comes from `shared/tour/anchorTolerance.ts`
+ * (fix round 1, phase 3b task 8) rather than a locally hand-copied number —
+ * a hand-copied tolerance is exactly what let the frontend silently offer
+ * `track` on a leg the server refuses, or hide it on one the server would
+ * accept, with every test on both sides staying green. A guard test on the
+ * backend side (`backend/src/shared/tour/__tests__/anchorTolerance.test.ts`)
+ * fails loudly if this mirror ever drifts from the backend's value.
  */
 
 export interface CoordLike {
@@ -22,8 +29,7 @@ export interface CoordLike {
   lon: number;
 }
 
-/** Mirrors `ANCHOR_TOLERANCE_KM` in `backend/src/services/tour/tracks/adoptTrack.ts`. */
-export const TRACK_ANCHOR_TOLERANCE_KM = 1;
+export { ANCHOR_TOLERANCE_KM };
 
 function haversineKm(a: CoordLike, b: CoordLike): number {
   const earthRadiusKm = 6371;
@@ -55,7 +61,7 @@ export function trackCoversLeg(
   track: ReadonlyArray<[number, number]>,
   from: CoordLike,
   to: CoordLike,
-  maxAnchorKm: number = TRACK_ANCHOR_TOLERANCE_KM
+  maxAnchorKm: number = ANCHOR_TOLERANCE_KM
 ): boolean {
   if (track.length < 2) return false;
   return nearestKm(track, from) <= maxAnchorKm && nearestKm(track, to) <= maxAnchorKm;

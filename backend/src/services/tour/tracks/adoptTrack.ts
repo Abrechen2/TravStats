@@ -1,5 +1,6 @@
 import type { Coord } from "../tourDistance";
 import { haversineKm } from "../../../shared/geo/haversine";
+import { ANCHOR_TOLERANCE_KM } from "../../../shared/tour/anchorTolerance";
 import { polylineDistanceKm } from "../../cruiseDistance/polylineDistance";
 
 /**
@@ -19,13 +20,16 @@ import { polylineDistanceKm } from "../../cruiseDistance/polylineDistance";
 
 /**
  * How far a track's nearest point may sit from a leg's stop and still
- * count as covering it, in kilometres. Exported from here (Task 5's own
- * module) rather than duplicated: `routes/trips/tourLegs.ts` already
- * enforces this exact tolerance for a hand-drawn line's anchor points, and
- * imports this constant instead of restating the number, so the two
- * checks can never drift apart.
+ * count as covering it, in kilometres. Re-exported from here (Task 5's
+ * own module, unchanged) so existing importers
+ * (`routes/trips/tourLegs.ts`, this module's own test) keep working —
+ * the canonical value now lives in `shared/tour/anchorTolerance.ts`,
+ * mirrored on the frontend at `frontend/src/shared/tour/anchorTolerance.ts`
+ * (the constant `frontend/src/lib/trackCoverage.ts` consumes), with a
+ * guard test that fails if the two diverge. See that shared module's own
+ * doc comment for the full reasoning.
  */
-export const ANCHOR_TOLERANCE_KM = 1;
+export { ANCHOR_TOLERANCE_KM };
 
 export interface AdoptionResult {
   /** `[[lon, lat], …]`, from the leg's `from` stop to its `to` stop. */
