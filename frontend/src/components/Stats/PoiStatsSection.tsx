@@ -4,7 +4,8 @@ import type { JSX } from "react";
 import { listPlaces } from "../../lib/api/places";
 import { listPlaceLists, listCuratedChecklists } from "../../lib/api/placeLists";
 import { adaptPoi } from "../../lib/stats/domain-stats/poiStatsAdapter";
-import { classifyPlace, classifyVisit } from "../../shared/placeCounting";
+import { derivePoiStats } from "../../lib/stats/poiStatsDetail";
+import { PLACE_CATEGORIES } from "../../shared/placeCategories";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { logger } from "../../lib/logger";
@@ -12,6 +13,9 @@ import type { Place } from "../../types/place";
 import type { CuratedListSummary, PlaceList } from "../../types/placeList";
 import StatCard from "./StatCard";
 import RankedBarList, { type RankedRow } from "./lodging/RankedBarList";
+import PoiRhythmSection from "./poi/PoiRhythmSection";
+import PoiFunSection from "./poi/PoiFunSection";
+import PoiQualitySection from "./poi/PoiQualitySection";
 
 /**
  * The places numbers, on the statistics page.
@@ -73,44 +77,12 @@ export default function PoiStatsSection(): JSX.Element {
     return adapted.hasData ? adapted : null;
   }, [places, lists, curated]);
 
-  const derived = useMemo(() => {
-    if (!places) return null;
-    const visited = places.filter((p) => classifyPlace(p) === "visited");
-
-    const byCategory = new Map<string, number>();
-    const byCountry = new Map<string, number>();
-    const byCity = new Map<string, number>();
-    const visitsPerPlace: Array<{ name: string; visits: number }> = [];
-    let datedVisits = 0;
-    let undatedVisits = 0;
-
-    for (const place of visited) {
-      byCategory.set(place.category, (byCategory.get(place.category) ?? 0) + 1);
-      const country = place.isoCountryCode?.toUpperCase();
-      if (country) byCountry.set(country, (byCountry.get(country) ?? 0) + 1);
-      if (place.city) byCity.set(place.city, (byCity.get(place.city) ?? 0) + 1);
-
-      let count = 0;
-      for (const visit of place.visits) {
-        if (classifyVisit(visit) !== "visited") continue;
-        count += 1;
-        if (visit.visitedAt) datedVisits += 1;
-        else undatedVisits += 1;
-      }
-      if (count > 0) visitsPerPlace.push({ name: place.name, visits: count });
-    }
-
-    return {
-      visited,
-      wishlist: places.length - visited.length,
-      byCategory,
-      byCountry,
-      byCity,
-      datedVisits,
-      undatedVisits,
-      mostVisited: visitsPerPlace.sort((a, b) => b.visits - a.visits || a.name.localeCompare(b.name)),
-    };
-  }, [places]);
+  // One derivation for the whole page, tested on its own. Nothing below counts
+  // rows itself — that is how two figures on one screen come to disagree.
+  const detail = useMemo(
+    () => (places ? derivePoiStats(places, PLACE_CATEGORIES.length) : null),
+    [places]
+  );
 
   if (loading) {
     return <p className="text-sm text-(--text-muted)">{t("common:loading.default")}</p>;
@@ -118,13 +90,15 @@ export default function PoiStatsSection(): JSX.Element {
   if (failed) {
     return <p className="text-sm text-(--text-muted)">{t("places:list.loadError")}</p>;
   }
-  if (!stats || !derived || derived.visited.length === 0) {
+  if (!stats || !detail || detail.visitedPlaces.length === 0) {
     return <p className="text-sm text-(--text-muted)">{t("places:stats.empty")}</p>;
   }
 
+  const locale = i18n.language === "de" ? "de-DE" : "en-GB";
+
   const regionNames =
     typeof Intl.DisplayNames === "function"
-      ? new Intl.DisplayNames([i18n.language === "de" ? "de-DE" : "en-GB"], { type: "region" })
+      ? new Intl.DisplayNames([locale], { type: "region" })
       : null;
 
   const toRows = (
@@ -142,16 +116,16 @@ export default function PoiStatsSection(): JSX.Element {
       }));
   };
 
-  const categoryRows = toRows(derived.byCategory, (key) => t(`places:categories.${key}`));
-  const countryRows = toRows(derived.byCountry, (code) => regionNames?.of(code) ?? code);
-  const cityRows = toRows(derived.byCity, (city) => city);
+  const categoryRows = toRows(detail.categories, (key) => t(`places:categories.${key}`));
+  const countryRows = toRows(detail.countries, (code) => regionNames?.of(code) ?? code);
+  const cityRows = toRows(detail.cities, (city) => city);
 
-  const mostVisitedMax = derived.mostVisited[0]?.visits ?? 1;
-  const placeRows: RankedRow[] = derived.mostVisited.map((p) => ({
-    key: p.name,
-    label: p.name,
-    weight: p.visits / mostVisitedMax,
-    value: String(p.visits),
+  const mostVisitedMax = detail.mostVisited[0]?.visits ?? 1;
+  const placeRows: RankedRow[] = detail.mostVisited.map(({ place, visits }) => ({
+    key: place.id,
+    label: place.name,
+    weight: visits / mostVisitedMax,
+    value: String(visits),
   }));
 
   // Checklists are ranked by SHARE, not by ticks: 3 of 7 is further along than
@@ -177,9 +151,9 @@ export default function PoiStatsSection(): JSX.Element {
           accent={accent}
           valueSize="md"
           title={t("places:stats.visitedPlaces")}
-          value={derived.visited.length}
+          value={detail.visitedPlaces.length}
           description={t("places:stats.visitedPlacesDesc", {
-            wishlist: derived.wishlist,
+            wishlist: detail.wishlistCount,
           })}
         />
         <StatCard
@@ -194,12 +168,12 @@ export default function PoiStatsSection(): JSX.Element {
             // true sentence that means nothing. And an undated visit is counted
             // in the total but cannot be placed on a day, which is worth saying
             // rather than leaving the chart below to look incomplete.
-            derived.datedVisits + derived.undatedVisits === 0
+            detail.visitsTotal === 0
               ? t("places:stats.noVisitsYet")
-              : derived.undatedVisits > 0
+              : detail.visitsUndated > 0
                 ? t("places:stats.visitsDesc", {
-                    dated: derived.datedVisits,
-                    undated: derived.undatedVisits,
+                    dated: detail.visitsDated,
+                    undated: detail.visitsUndated,
                   })
                 : t("places:stats.visitsAllDated")
           }
@@ -208,8 +182,8 @@ export default function PoiStatsSection(): JSX.Element {
           accent={accent}
           valueSize="md"
           title={t("places:stats.countries")}
-          value={derived.byCountry.size}
-          description={t("places:stats.citiesDesc", { count: derived.byCity.size })}
+          value={detail.countries.size}
+          description={t("places:stats.citiesDesc", { count: detail.cities.size })}
         />
         <StatCard
           accent={accent}
@@ -266,6 +240,10 @@ export default function PoiStatsSection(): JSX.Element {
           />
         </div>
       )}
+
+      <PoiRhythmSection detail={detail} accent={accent} locale={locale} />
+      <PoiQualitySection detail={detail} accent={accent} />
+      <PoiFunSection detail={detail} accent={accent} locale={locale} />
     </section>
   );
 }

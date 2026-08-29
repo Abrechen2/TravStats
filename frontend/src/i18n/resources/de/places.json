@@ -227,6 +227,42 @@
     "mostVisited": "Am häufigsten besucht",
     "checklists": "Checklisten-Fortschritt",
     "more": "+ {{count}} weitere",
-    "noVisitsYet": "Noch kein Besuch datiert."
+    "noVisitsYet": "Noch kein Besuch datiert.",
+    "rhythm": {
+      "title": "Rhythmus",
+      "busiestMonth": "Stärkster Monat",
+      "busiestWeekday": "Stärkster Wochentag",
+      "busiestDay": "Meiste Orte an einem Tag",
+      "busiestDayDesc": "am {{date}}",
+      "streak": "Längste Serie",
+      "streakDesc": "Tage hintereinander mit mindestens einem Besuch",
+      "visitsCount": "{{count}} Besuche",
+      "visitsCount_one": "{{count}} Besuch",
+      "byYear": "Besuche pro Jahr",
+      "byMonth": "Besuche pro Monat",
+      "byWeekday": "Besuche pro Wochentag",
+      "undatedNote": "{{count}} Besuche ohne Datum sind in den Summen enthalten, aber in keinem Diagramm — sie haben keinen Tag.",
+      "undatedNote_one": "Ein Besuch ohne Datum ist in den Summen enthalten, aber in keinem Diagramm — er hat keinen Tag."
+    },
+    "quality": {
+      "title": "Bewertungen",
+      "average": "Ø Bewertung",
+      "averageDesc": "aus {{rated}} von {{total}} Besuchen ({{share}} %)",
+      "bestRated": "Am besten bewertet",
+      "noRatings": "Noch keine Bewertung abgegeben."
+    },
+    "fun": {
+      "title": "Kurioses",
+      "firstVisit": "Erster Ort",
+      "favourite": "Am häufigsten zurück",
+      "favouriteDesc": "{{count}} Besuche",
+      "categoryCoverage": "Kategorien genutzt",
+      "categoryCoverageDesc": "noch {{count}} unentdeckt",
+      "categoryCoverageComplete": "alle Kategorien mindestens einmal",
+      "northernmost": "Nördlichster Ort",
+      "southernmost": "Südlichster Ort",
+      "onTrips": "Besuche in einer Reise",
+      "onTripsDesc": "von {{total}} insgesamt"
+    }
   }
 }
