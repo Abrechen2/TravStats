@@ -12,7 +12,6 @@ import { setupApi, usageStatsApi } from "./lib/api";
 import i18n from "./i18n/config";
 import { useTranslation } from "./hooks/useTranslation";
 import { useEnabledDomains } from "./hooks/useEnabledDomains";
-import { useBetaFeatures } from "./hooks/useBetaFeatures";
 import { DomainRouteGuard } from "./components/DomainRouteGuard";
 import { useWhatsNew } from "./hooks/useWhatsNew";
 import { useSessionValidation } from "./hooks/useSessionValidation";
@@ -34,6 +33,7 @@ const PlaceListsPage = lazy(() => import("./pages/PlaceListsPage"));
 const PlaceListDetailPage = lazy(() => import("./pages/PlaceListDetailPage"));
 const CuratedChecklistPage = lazy(() => import("./pages/CuratedChecklistPage"));
 import { PlacesRouteGuard } from "./components/places/PlacesRouteGuard";
+import { TripRouteGuard } from "./components/Trips/TripRouteGuard";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
@@ -80,7 +80,6 @@ function AppContent() {
   const location = useLocation();
   const { t } = useTranslation("common");
   const { isEnabled } = useEnabledDomains();
-  const { isFeatureVisible } = useBetaFeatures();
   // A persisted user is only a CLAIM until the server confirms the cookie.
   // Nothing authenticated may be fetched or rendered before it does — hence
   // every authenticated effect below is gated on `sessionChecked`, not just
@@ -444,11 +443,17 @@ function AppContent() {
                   // Gated the same way the Touren tab is gated
                   // (`isFeatureVisible("tourRoutes")` in TripDetailPage) —
                   // otherwise the editor stays reachable by URL with the tab,
-                  // and thus the flag, hidden.
-                  isAuthenticated && isFeatureVisible("tourRoutes") ? (
-                    <TripRouteEditorPage />
+                  // and thus the flag, hidden. NOT a boolean guard: the beta
+                  // flag is unknown for one request on a cold load, and
+                  // redirecting on "unknown" bounced every refresh and
+                  // bookmark of this URL to /trips. See TripRouteGuard and
+                  // PlacesRouteGuard (same fix, same reason).
+                  isAuthenticated ? (
+                    <TripRouteGuard>
+                      <TripRouteEditorPage />
+                    </TripRouteGuard>
                   ) : (
-                    <Navigate to={isAuthenticated ? "/trips" : "/login"} />
+                    <Navigate to="/login" />
                   )
                 }
               />

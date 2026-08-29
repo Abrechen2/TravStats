@@ -389,19 +389,23 @@ export default function TripMap({
     // section's — a road tour with one ferry crossing must still show that
     // one leg as a ferry line. `isPlaceholder` legs (an unrouted `straight`
     // chord) have no dash support in deck.gl's PathLayer without an
-    // extension, so they render as a clearly lighter, thinner line instead —
-    // alpha 70 vs. 230 and 1.5px vs. 3px pixel width (half the alpha's
-    // opacity headroom and half the line weight) so a placeholder chord
-    // cannot be mistaken for a measured route even at normal zoom.
+    // extension, so a placeholder is expressed as a thinner, more
+    // transparent line instead of a dash pattern — but it MUST stay clearly
+    // visible, because it still carries real distance that counts towards
+    // the tour's total. Measured in a browser against this dark basemap:
+    // alpha 70 at 1.5px was flat-out INVISIBLE, not just "subtle" — zero
+    // pixels drawn between two assigned stops at any zoom. Do not lower
+    // these again in the name of contrast; 170/2px is the floor that stays
+    // visible while still reading as weaker than a drawn route at 255/3.5px.
     const tourPathData = buildTourPaths(tourGeometries);
     const tourPaths = new PathLayer<TourPathDatum>({
       id: "trip-tour-paths",
       data: tourPathData,
       getPath: (d) => d.path,
-      getColor: (d) => [...d.color, d.isPlaceholder ? 70 : 230] as [number, number, number, number],
-      getWidth: (d) => (d.isPlaceholder ? 1.5 : 3),
+      getColor: (d) => [...d.color, d.isPlaceholder ? 170 : 255] as [number, number, number, number],
+      getWidth: (d) => (d.isPlaceholder ? 2 : 3.5),
       widthUnits: "pixels",
-      widthMinPixels: 1,
+      widthMinPixels: 2,
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 255, 255, 80],
