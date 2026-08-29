@@ -273,6 +273,45 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/settings/dawarich",
+  summary: "Get the Dawarich connection",
+  description: "Returns the base URL and whether a key is stored, never the key.",
+  tags: settingsTag,
+  responses: { 200: { description: "Dawarich settings" } },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/settings/dawarich",
+  summary: "Set the Dawarich connection",
+  description:
+    "A self-hosted Dawarich normally lives on the same LAN, so a private address is " +
+    "expressly allowed — blocking one would break the ordinary case. An instance " +
+    "that exposes this to untrusted users must restrict it at the deployment layer.",
+  tags: settingsTag,
+  responses: { 200: { description: "Saved" }, 400: badInput },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/settings/dawarich/test",
+  summary: "Try the Dawarich connection",
+  description:
+    "Failures come back with a fixed kind — notConfigured, unreachable, auth, " +
+    "notFound, protocol or invalidUrl — so a client can say something useful. " +
+    "`invalidUrl` means the address was rejected before anything was contacted; " +
+    "`protocol` means Dawarich answered but not in a shape we understood. The two " +
+    "are kept apart so a typo does not send someone debugging their server. " +
+    "Pull-only: this and every other Dawarich endpoint only ever reads from it.",
+  tags: settingsTag,
+  responses: {
+    200: { description: "Reachable" },
+    400: { description: "Failed, with a kind", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/settings/notifications",
   summary: "Get notification settings",
   tags: settingsTag,
