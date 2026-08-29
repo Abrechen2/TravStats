@@ -7,6 +7,7 @@ import https from 'https';
 import { AIRPORT_CATALOGUE } from '../config/constants';
 
 import { admitsAirport } from '../shared/antarcticAirfields';
+import { normalizeAirportName } from '../shared/airportName';
 
 interface CSVAirport {
   id: string;
@@ -278,7 +279,7 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
           : await prisma.airport.findFirst({ where: { icao, isClosed } });
 
         const data = {
-          name: airport.name,
+          name: normalizeAirportName(airport.name),
           city: airport.municipality || null,
           country: airport.iso_country || null,
           lat,
