@@ -495,7 +495,7 @@
   },
   "routing": {
     "title": "Routing provider",
-    "description": "Determines how \"Route this leg\" and \"Route the whole section\" compute a path in the tours view. Without a provider, every leg stays a straight line.",
+    "description": "Determines which provider computes a leg's route — one at a time, or for the whole tour at once. Without a provider, every leg stays a straight line. A selected provider receives the leg's coordinates to compute the route — they leave this instance to do so.",
     "providerLabel": "Provider",
     "provider": {
       "none": "No provider",

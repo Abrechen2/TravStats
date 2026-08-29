@@ -495,7 +495,7 @@
   },
   "routing": {
     "title": "Routing-Anbieter",
-    "description": "Bestimmt, wie „Diese Etappe routen“ und „Ganzen Abschnitt routen“ in der Touren-Ansicht eine Strecke berechnen. Ohne Anbieter bleibt jede Etappe eine Luftlinie.",
+    "description": "Bestimmt, welcher Anbieter eine Etappe berechnet — einzeln oder für die ganze Tour auf einmal. Ohne Anbieter bleibt jede Etappe eine Luftlinie. Ein ausgewählter Anbieter erhält die Koordinaten der Etappe, um die Strecke zu berechnen — sie verlassen damit diese Instanz.",
     "providerLabel": "Anbieter",
     "provider": {
       "none": "Kein Anbieter",
@@ -503,7 +503,7 @@
       "graphhopper": "GraphHopper",
       "custom": "Eigener OSRM-Server"
     },
-    "noneHint": "Ohne Anbieter bleibt „Geroutet“ in der Touren-Ansicht deaktiviert — jede Etappe bleibt eine Luftlinie, bis hier einer eingerichtet wird.",
+    "noneHint": "Ohne Anbieter bleibt „Berechnet“ in der Touren-Ansicht deaktiviert — jede Etappe bleibt eine Luftlinie, bis hier einer eingerichtet wird.",
     "customUrlLabel": "Basis-URL",
     "customUrlHint": "Adresse eines selbst gehosteten OSRM-Servers, z. B. https://osrm.example.com.",
     "loadError": "Routing-Einstellungen konnten nicht geladen werden",

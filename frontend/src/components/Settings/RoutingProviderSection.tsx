@@ -211,6 +211,9 @@ export default function RoutingProviderSection({
                 className="input"
                 value={customUrl}
                 onChange={(e) => setCustomUrl(e.target.value)}
+                // Deliberately not routed through t() (Task 8): an example
+                // domain is the same literal in every locale, and
+                // `customUrlHint` already spells it out in translated prose.
                 placeholder="https://osrm.example.com"
               />
               <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import deTrips from "../resources/de/trips.json";
 import enTrips from "../resources/en/trips.json";
+import deSettings from "../resources/de/settings.json";
+import enSettings from "../resources/en/settings.json";
 
 /**
  * Tour route sections (dev/tour-routes). The Touren tab rendered the raw
@@ -15,11 +17,22 @@ import enTrips from "../resources/en/trips.json";
  * What can actually break here is a key added to one language and forgotten
  * in the other — which is exactly what ships an untranslated raw key into
  * the UI.
+ *
+ * Task 8 (phase 3) extends this same guard to `settings:routing.*` — the
+ * admin-only routing-provider card lives in a different namespace file
+ * (settings.json, not trips.json) but is part of the same tour-routing
+ * feature and was written in the same task, so it gets the same coverage
+ * here instead of a second near-duplicate test file.
  */
 
 const LOCALES = {
   de: deTrips,
   en: enTrips,
+} as const;
+
+const SETTINGS_LOCALES = {
+  de: deSettings,
+  en: enSettings,
 } as const;
 
 function flatten(obj: unknown, prefix = ""): string[] {
@@ -71,5 +84,38 @@ describe("trips tour-section copy", () => {
     const deTourKeys = flatten((deTrips as { tours: Record<string, unknown> }).tours).sort();
     const enTourKeys = flatten((enTrips as { tours: Record<string, unknown> }).tours).sort();
     expect(deTourKeys).toEqual(enTourKeys);
+  });
+});
+
+describe("settings routing-provider copy", () => {
+  it.each(["de", "en"] as const)(
+    "%s: routing.* section exists and every leaf is a non-empty string",
+    (locale) => {
+      const routing = (SETTINGS_LOCALES[locale] as { routing?: Record<string, unknown> }).routing;
+      expect(routing, `${locale}/settings.json has no routing section`).toBeDefined();
+      const leafKeys = flatten(routing, "routing");
+      expect(leafKeys.length).toBeGreaterThan(0);
+      for (const key of leafKeys) {
+        const parts = key.split(".").slice(1); // drop the leading "routing"
+        let value: unknown = routing;
+        for (const part of parts) {
+          value = (value as Record<string, unknown> | undefined)?.[part];
+        }
+        expect(typeof value, `${locale}/settings.json is missing routing.${parts.join(".")}`).toBe(
+          "string"
+        );
+        expect((value as string).trim().length).toBeGreaterThan(0);
+      }
+    }
+  );
+
+  it("does not leave one language behind the other", () => {
+    const deRoutingKeys = flatten(
+      (deSettings as { routing: Record<string, unknown> }).routing
+    ).sort();
+    const enRoutingKeys = flatten(
+      (enSettings as { routing: Record<string, unknown> }).routing
+    ).sort();
+    expect(deRoutingKeys).toEqual(enRoutingKeys);
   });
 });
