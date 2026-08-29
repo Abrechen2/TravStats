@@ -314,6 +314,7 @@
     "stopsHeading": "Stops",
     "legsHeading": "Legs",
     "noLegs": "No leg yet — assign at least two stops",
+    "noStops": "No stop in this trip yet — add stops in the timeline first",
     "stopIsRoutePoint": "Route point",
     "needsCoordinate": "A stop without a coordinate cannot be part of a route",
     "notFound": "This tour does not exist",
@@ -342,7 +343,7 @@
       "error": "The leg could not be routed",
       "allError": "The tour could not be routed",
       "fallback": "No route could be found — kept the straight line",
-      "result": "{{routed}} legs routed, {{skipped}} skipped"
+      "result": "{{routed}} legs processed, {{skipped}} skipped"
     }
   }
 }

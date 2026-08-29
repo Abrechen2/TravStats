@@ -46,6 +46,14 @@ export default function TourStopAssigner({ stops, onChange }: Props): JSX.Elemen
     onChange(next);
   };
 
+  // A trip with no stops at all renders as a bare heading otherwise — the
+  // sibling `TourLegList` explains its own empty state, and a section that
+  // says nothing leaves the user with no way to learn that stops come from
+  // the trip journal first. Found in browser UAT, not by a test.
+  if (stops.length === 0) {
+    return <p className="text-sm text-(--text-muted)">{t("trips:tours.noStops")}</p>;
+  }
+
   return (
     <ul className="space-y-1">
       {stops.map((stop) => {

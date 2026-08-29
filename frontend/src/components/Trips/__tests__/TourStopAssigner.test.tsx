@@ -29,6 +29,16 @@ describe("TourStopAssigner", () => {
     expect(screen.getByText("trips:tours.needsCoordinate")).toBeInTheDocument();
   });
 
+  // Regression: a trip with no stops rendered a bare heading and nothing
+  // else, so the user had no way to learn where stops come from. The sibling
+  // leg list already explained its empty state; this one did not.
+  it("explains the empty state instead of rendering an empty list", () => {
+    const { container } = render(<TourStopAssigner stops={[]} onChange={vi.fn()} />);
+
+    expect(screen.getByText("trips:tours.noStops")).toBeInTheDocument();
+    expect(container.querySelector("ul")).toBeNull();
+  });
+
   it("adds a stop at the end when switched on", () => {
     const onChange = vi.fn();
     const stops = [...STOPS.slice(0, 2), { ...STOPS[2], lat: 1, lon: 1 }];

@@ -199,7 +199,9 @@ describe("TourLegList", () => {
 
   it("calls onRouteAll when the 'route the whole section' button is clicked", () => {
     const leg = makeLeg({});
-    const props = renderList([leg]);
+    // Needs a provider: without one the button is disabled on purpose, so
+    // the default `routingAvailable: false` would assert the old bug.
+    const props = renderList([leg], { routingAvailable: true });
 
     fireEvent.click(screen.getByRole("button", { name: "trips:tours.routing.routeAll" }));
     expect(props.onRouteAll).toHaveBeenCalledTimes(1);
@@ -207,12 +209,39 @@ describe("TourLegList", () => {
 
   it("shows a busy label and disables the 'route all' button while a batch request is in flight", () => {
     const leg = makeLeg({});
-    renderList([leg], { routingAllInProgress: true });
+    // `routingAvailable: true` is load-bearing: the button is also disabled
+    // without a provider, so leaving the default would make the assertion
+    // below pass for the wrong reason and stop testing the busy state.
+    renderList([leg], { routingAllInProgress: true, routingAvailable: true });
 
     const button = screen.getByRole("button", { name: "trips:tours.routing.routingAll" });
     expect(button).toBeDisabled();
     expect(
       screen.queryByRole("button", { name: "trips:tours.routing.routeAll" })
     ).not.toBeInTheDocument();
+  });
+
+  // Regression, found in browser UAT: the batch button ignored
+  // `routingAvailable`. With no provider configured every leg fell back to
+  // its straight chord, nothing was computed, and the toast still announced
+  // them as routed — a success message for work that never happened. The
+  // per-leg "routed" option was already gated; this button was not.
+  it("disables the whole-tour button when no routing provider is configured", () => {
+    const leg = makeLeg({ waypoints: null, mode: "road" });
+    const { onRouteAll } = renderList([leg], { routingAvailable: false });
+
+    const btn = screen.getByRole("button", { name: "trips:tours.routing.routeAll" });
+    expect(btn).toBeDisabled();
+    fireEvent.click(btn);
+    expect(onRouteAll).not.toHaveBeenCalled();
+  });
+
+  it("enables the whole-tour button once a provider is configured", () => {
+    const leg = makeLeg({ waypoints: null, mode: "road" });
+    renderList([leg], { routingAvailable: true });
+
+    expect(
+      screen.getByRole("button", { name: "trips:tours.routing.routeAll" })
+    ).toBeEnabled();
   });
 });

@@ -19,8 +19,11 @@ interface Props {
   legs: TourLeg[];
   stopTitleById: ReadonlyMap<string, string>;
   /** Whether a routing provider is configured and usable right now — see
-   *  `routingAvailable` on `toursApi.get()`. Gates the "routed" option
-   *  (per leg) and nothing else; "straight"/"drawn" work regardless. */
+   *  `routingAvailable` on `toursApi.get()`. Gates the "routed" option per
+   *  leg AND the "route the whole tour" button; "straight"/"drawn" work
+   *  regardless. The button used to ignore this, which let the batch run
+   *  with no provider: every leg fell back to its straight chord and the
+   *  toast still reported them as routed. Found in browser UAT. */
   routingAvailable: boolean;
   onSetSource: (leg: TourLeg, source: ManualLegSource) => void;
   /** Routes ONE leg through the configured provider. Only ever invoked for
@@ -100,7 +103,8 @@ export default function TourLegList({
       <div className="flex justify-end">
         <button
           type="button"
-          disabled={routingAllInProgress}
+          disabled={routingAllInProgress || !routingAvailable}
+          title={routingAvailable ? undefined : t("trips:tours.routing.unavailableReason")}
           className="rounded-sm border border-(--color-border) px-3 py-1.5 text-xs hover:bg-(--bg-surface) disabled:opacity-40"
           onClick={onRouteAll}
         >

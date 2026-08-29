@@ -314,6 +314,7 @@
     "stopsHeading": "Stopps",
     "legsHeading": "Etappen",
     "noLegs": "Noch keine Etappe — ordne mindestens zwei Stopps zu",
+    "noStops": "Noch kein Stopp in dieser Reise — lege zuerst in der Timeline Stopps an",
     "stopIsRoutePoint": "Streckenpunkt",
     "needsCoordinate": "Ohne Koordinate kein Streckenpunkt",
     "notFound": "Diese Tour gibt es nicht",
@@ -342,7 +343,7 @@
       "error": "Die Etappe konnte nicht berechnet werden",
       "allError": "Die Tour konnte nicht berechnet werden",
       "fallback": "Es wurde keine Route gefunden — die Luftlinie bleibt bestehen",
-      "result": "{{routed}} Etappen berechnet, {{skipped}} übersprungen"
+      "result": "{{routed}} Etappen verarbeitet, {{skipped}} übersprungen"
     }
   }
 }
