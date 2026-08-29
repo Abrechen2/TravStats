@@ -1,3 +1,4 @@
+import type { PlaceLabelList } from "../lib/placeLabel";
 import React, { lazy, Suspense, useState, useMemo, useEffect } from "react";
 import { DeckGLMap } from "./DeckGLMap";
 import { GlobeLoader } from "./GlobeLoader";
@@ -103,6 +104,7 @@ interface MapContainer3DProps {
   onPlaceClick?: (placeId: string) => void;
   /** Place-id → its list's colour, for the `list` colour mode. */
   placeListColors?: ReadonlyMap<string, [number, number, number]>;
+  placeListLabels?: ReadonlyMap<string, PlaceLabelList>;
   /**
    * Which domain appearance sections the map control panel exposes. The
    * Alle tab passes both; single-domain tabs pass just their own domain
@@ -133,6 +135,7 @@ export default function MapContainer3D({
   placesOverride,
   onPlaceClick,
   placeListColors,
+  placeListLabels,
   appearanceDomains = ["flight", "cruise"],
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
@@ -271,6 +274,7 @@ export default function MapContainer3D({
             placesOverride={placesOverride}
             onPlaceClick={onPlaceClick}
             placeListColors={placeListColors}
+            placeListLabels={placeListLabels}
             placeMarkerSize={placeMarkerSize}
             onPlaceMarkerSizeChange={setPlaceMarkerSize}
             onLodgingClick={onLodgingClick}

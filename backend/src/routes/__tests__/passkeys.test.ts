@@ -47,7 +47,7 @@ describe("passkey endpoints", () => {
   });
 
   it("reports them unavailable on a plain-http LAN origin, with the reason", async () => {
-    await setOrigin("http://192.168.178.120:3010");
+    await setOrigin("http://192.168.1.10:3010");
     const res = await request(app).get("/api/v1/auth/passkeys/availability");
     expect(res.body).toEqual({ available: false, reason: "insecureOrigin" });
   });
@@ -198,7 +198,7 @@ describe("passkey endpoints", () => {
   // A bare IP cannot be an rpId, and accepting one would mint credentials the
   // browser refuses to use.
   it("treats a bare-IP rpId as no passkey support at all", async () => {
-    await setOrigin("https://192.168.178.120:3010", "192.168.178.120");
+    await setOrigin("https://192.168.1.10:3010", "192.168.1.10");
     const res = await request(app)
       .post("/api/v1/auth/passkeys/register/options")
       .set("Cookie", cookie);

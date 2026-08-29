@@ -115,6 +115,16 @@
     "nameLabel": "Name",
     "namePlaceholder": "e.g. McDonald's worldwide",
     "colorLabel": "Colour",
+    "symbolLabel": "Symbol",
+    "symbolPlaceholder": "🍟",
+    "symbolHint": "One emoji, optional.",
+    "labelModeLabel": "On the map",
+    "labelMode": {
+      "name": "Place name",
+      "icon": "Symbol"
+    },
+    "labelModeHint": "This list's default. The map's own setting can override it.",
+    "labelModeNeedsSymbol": "Set a symbol first, then the map can show it instead of the names.",
     "ownSection": "Your lists",
     "ownEmpty": "No list yet. A list groups places you have already recorded.",
     "curatedSection": "Shipped checklists",

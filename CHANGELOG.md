@@ -12,6 +12,44 @@ now be written in the currency it was actually paid in. Two-factor
 authentication and passkeys arrive alongside.
 
 ### Added
+- **The route editor is worked with the mouse.** Clicking a different leg
+  switches to it, which it did not before: the click was swallowed and quietly
+  added a waypoint to the leg already open, so reaching for one leg edited
+  another. Right-clicking now offers what fits under the cursor — edit that leg,
+  delete this waypoint, delete the whole selection, simplify, close. A Select
+  tool turns the drag into a selection box, so several waypoints can be removed
+  at once, and the ports are never among them. One undo takes a box-delete back
+  whole.
+- **The API documentation is complete.** It described a curated subset while
+  claiming it could not drift; measured against what the server actually serves,
+  244 endpoints had no entry. All of them are documented now — 241 operations
+  covering every domain a normal account can reach — and the check that found
+  the gap has become a plain completeness test with no exception list left to
+  add to. An endpoint written from here on fails the build the day it is written
+  unless it is documented with it.
+- **A cruise or a flight on a trip's timeline opens where it stands.** They could
+  not be clicked at all — not viewed, not edited — while the hotel entry beside
+  them already led to its own page. A click now expands the entry inside the
+  trip: the cruise shows its ship, cabin, price and the itinerary day by day,
+  with sea days named as such; the flight shows airline and number, aircraft,
+  seat and class. A button in the panel opens the full page for editing.
+- **A list's symbol is picked, not typed.** The symbol field was a bare text
+  box: you had to know an emoji and then find one to paste. There is a picker
+  behind it now, with search — typing "pommes" finds the fries. Its emoji
+  database is served by your own instance rather than fetched from a content
+  network, so it works on an installation with no way out to the internet,
+  which is most of them. Pasting into the field still works, and if the picker
+  cannot load it says so instead of leaving a control that does nothing.
+- **A places list can wear its own symbol on the map.** A list of fifty-eight
+  McDonald's spelled the same name fifty-eight times across the map, which reads
+  as noise rather than as a list. A list can now carry a symbol and ask for its
+  places to be labelled with that instead of their names. The dot underneath is
+  unchanged: it still carries the list's colour, and still tells a visited place
+  from one on the wishlist by being filled rather than hollow. A list without a
+  symbol keeps its names, and so does a place that belongs to no list. Above all
+  of it the map has one switch of its own — as each list says, always names, or
+  always symbols — so a single flip brings every name back for a moment without
+  editing a list.
 - **The places list can be filtered by list.** It could already be narrowed by
   status, category and country, but not by the lists you build yourself — even
   though the dashboard had offered exactly that all along. With 58 McDonald's
@@ -286,6 +324,23 @@ authentication and passkeys arrive alongside.
   statistics, where figures belong.
 
 ### Fixed
+- **The "All" map knows what a place pin means.** It drew places without their
+  list's colour and, once lists could carry a symbol, without that either — so
+  a list styled on the places map looked untouched next to the flights and
+  cruises. The tab did not load the lists at all. Both maps in it now resolve
+  colour and symbol through the same step, so a pin cannot show one list's
+  colour and another's symbol.
+- **Airports no longer carry "(Duplicate)" in their name.** The catalogue is
+  built from OurAirports, whose editors mark rows they suspect of being
+  duplicates by writing the marker into the name itself. The seeder passed those
+  through word for word, so the picker offered "(Duplicate)Vlora International
+  Airport" and "(Duplicate)Wolf's Fang Runway" as though that were their names —
+  a hundred and thirty-two such rows in the current file, in half a dozen bracket
+  shapes, some of them trailing rather than leading. The marker is now stripped
+  on import, and the entries already in your catalogue are repaired when the new
+  version starts. The rows are kept rather than discarded: for three of these
+  codes the marked row is the only one carrying that code at all, and one of them
+  is the airfield the seven-continents achievement depends on.
 - **Addresses arrive in the alphabet you read.** Filling in an address asks a
   geocoder, and it answered in the local language of the place — so a German
   logbook collected entries in Japanese, Arabic, Armenian and Greek script:

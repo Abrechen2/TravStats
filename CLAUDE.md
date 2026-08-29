@@ -470,7 +470,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **TravStats** (7636 symbols, 19983 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **TravStats** (7688 symbols, 20170 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -578,7 +578,7 @@ Dieses Repository hat **zwei Remotes**:
 | Remote | Ziel | Rolle |
 |--------|------|-------|
 | `origin` | GitHub | Massgeblich fuer Oeffentliches — PRs, Actions, Dependabot, GHCR |
-| `forgejo` | `ssh://git@192.168.178.254:2222/dennis/TravStats.git` | Private Vollsicherung im Haus, inkl. aller lokalen Branches |
+| `forgejo` | `ssh://git@<forgejo-host>:2222/dennis/TravStats.git` | Private Vollsicherung im Haus, inkl. aller lokalen Branches |
 
 **Regel beim Pushen:**
 
@@ -597,6 +597,6 @@ Roadmaps, Pentest-Notizen), liegen im Begleitrepo **`TravStats-local`** auf
 Forgejo. Git kennt keine Ignore-Regeln pro Remote, deshalb der Umweg.
 
 **Secrets gehoeren in keines von beiden** — dafuer ist Infisical zustaendig
-(CT 141, `192.168.178.145`).
+(CT 141, `<secrets-host>`).
 
 Vollstaendiges Konzept: `D:\Projekte\CC\docs\git-konzept.md`

@@ -30,6 +30,8 @@
     "date-fns": "^3.0.6",
     "date-fns-tz": "^3.2.0",
     "deck.gl": "^9.2.11",
+    "emoji-picker-element": "^1.29.1",
+    "emoji-picker-element-data": "^1.8.0",
     "exceljs": "^4.4.0",
     "framer-motion": "^12.34.3",
     "i18next": "^23.7.16",

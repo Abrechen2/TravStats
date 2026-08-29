@@ -6,7 +6,7 @@ promoted to prod. Prod only ever runs **final** tags — an RC never touches pro
 
 > **Terminology (3-tier, since 2026-07-04):** three non-prod roles, split so a
 > hotfix RC can be validated without disturbing the forward feature line:
-> - **Beta** — CT106 (`ct106-travstats-beta`, `trav.abrechen2.de`). Rolling home
+> - **Beta** — CT106 (`ct106-travstats-beta`, `<rc-hostname>`). Rolling home
 >   of the **forward dev line** (`dev/vX.Y`, e.g. 2.3.0) and the external
 >   Mobile-App testers. Its own persistent data — **never** prod-cloned.
 > - **RC Server** — a dedicated CT, a **prod-data mirror**. Validates the
@@ -23,14 +23,14 @@ promoted to prod. Prod only ever runs **final** tags — an RC never touches pro
 | Stage | Host | Reachable | DB (container) | Role |
 |---|---|---|---|---|
 | **Local Dev** | dev machine | `8000` / `3000` | dev DB `:5433` (`flights_dev`) | Build, TDD, rehearse migrations |
-| **Beta** | CT106 (pve-node3) | `192.168.178.123:3010`, `trav.abrechen2.de` | `travstats-db-beta` | Forward dev line + external app testers; own persistent data, rolling |
+| **Beta** | CT106 (pve-node3) | `<beta-host>:3010`, `<rc-hostname>` | `travstats-db-beta` | Forward dev line + external app testers; own persistent data, rolling |
 | **Preview** | CT134 (pve-node1, DMZ) | `beta.travstats.de`, `immich-beta.…`, `poi-beta.…` | own, per slot | Public demo instances for external testers; demo data only, never a prod dump |
-| **RC Server** | CT107 (pve-node3) `ct107-travstats-rc` | `192.168.178.187:3010` | `travstats-db-rc` | **Prod-data mirror** — validate the imminent release before promote; re-cloned each round |
-| **Prod** | CT100 (pve-node3, HA) | `192.168.178.120:3010` | `travstats-db` (`flights`) | Real users; **final tags only**, on promote |
+| **RC Server** | CT107 (pve-node3) `ct107-travstats-rc` | `<rc-host>:3010` | `travstats-db-rc` | **Prod-data mirror** — validate the imminent release before promote; re-cloned each round |
+| **Prod** | CT100 (pve-node3, HA) | `<prod-host>:3010` | `travstats-db` (`flights`) | Real users; **final tags only**, on promote |
 | **Web** | CT133 | `travstats.de` | — | Marketing/Wiki, `version.ts` kept in lockstep |
-| **External** | Norbert (Unraid) | `192.168.178.202:3080` | own | Third-party user, pulls final `:latest` only |
+| **External** | Norbert (Unraid) | `<nas-host>:3080` | own | Third-party user, pulls final `:latest` only |
 
-SSH into a CT via the Proxmox node: `ssh -i ~/.ssh/id_ed25519 root@192.168.178.180 "pct exec <CT> -- <cmd>"`.
+SSH into a CT via the Proxmox node: `ssh -i ~/.ssh/id_ed25519 root@<pve-node3> "pct exec <CT> -- <cmd>"`.
 
 ## 2. Version numbering (SemVer + RC)
 

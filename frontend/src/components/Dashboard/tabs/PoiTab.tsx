@@ -162,6 +162,7 @@ export function PoiTab(): JSX.Element {
         placesOverride={mode === "heatmap" ? undefined : visiblePlaces}
         onPlaceClick={handlePinClick}
         placeListColors={listColors.byPlaceId}
+        placeListLabels={listColors.labelsByPlaceId}
         // No flight or cruise geometry belongs on this tab; without this the
         // map fetches and draws every cruise route under the place pins.
         showInternalCruises={false}

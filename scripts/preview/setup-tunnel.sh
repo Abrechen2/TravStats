@@ -8,7 +8,7 @@ TOKEN_FILE="${TOKEN_FILE:-$HOME/.cloudflare-travstats-token}"
 TOK=$(cat "$TOKEN_FILE")
 ZONE=8e34d30898073f3ee7e95bc0bdcb4022
 ACCT=9a4d9c86ff53f151156fc1361af434cf
-NODE1="${NODE1:-192.168.178.171}"
+NODE1="${NODE1:?set NODE1 to the Proxmox node that carries the DMZ bridge -- the concrete addresses live in CLAUDE.local.md, deliberately not in this public repo}"
 API=https://api.cloudflare.com/client/v4
 NAME=travstats-preview
 

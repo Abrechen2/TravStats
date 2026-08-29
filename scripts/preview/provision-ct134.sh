@@ -3,7 +3,7 @@
 # Idempotent: safe to re-run. Never run against any other CTID.
 set -euo pipefail
 
-NODE1="${NODE1:-192.168.178.171}"
+NODE1="${NODE1:?set NODE1 to the Proxmox node that carries the DMZ bridge -- the concrete addresses live in CLAUDE.local.md, deliberately not in this public repo}"
 CTID=134
 SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=no "root@${NODE1}")
 
@@ -19,7 +19,7 @@ else
       --hostname ct134-travstats-preview \
       --cores 4 --memory 8192 --swap 2048 \
       --rootfs ceph-nvme:30 \
-      --net0 name=eth0,bridge=vmbr2,ip=192.168.20.134/24,gw=192.168.20.1 \
+      --net0 name=eth0,bridge=vmbr2,ip=${CT_IP:?set CT_IP to the DMZ address for CT134 in CIDR form -- the concrete addresses live in CLAUDE.local.md, deliberately not in this public repo},gw=${CT_GW:?set CT_GW to the DMZ gateway -- the concrete addresses live in CLAUDE.local.md, deliberately not in this public repo} \
       --unprivileged 1 --features nesting=1 \
       --onboot 1 --start 1"
 fi

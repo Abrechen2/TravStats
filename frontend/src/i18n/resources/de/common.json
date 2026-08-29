@@ -232,5 +232,10 @@
     "northAmerica": "Nordamerika",
     "oceania": "Ozeanien",
     "southAmerica": "Südamerika"
+  },
+  "emojiPicker": {
+    "open": "Auswählen",
+    "clear": "Entfernen",
+    "unavailable": "Die Emoji-Auswahl lässt sich hier nicht laden. Du kannst ein Emoji weiterhin ins Feld einfügen."
   }
 }

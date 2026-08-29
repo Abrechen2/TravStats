@@ -5,7 +5,7 @@
  *
  * Usage:
  *   DATABASE_URL=postgresql://flights_dev:dev_password_change_me_123@localhost:5433/flights_dev \
- *   OLLAMA_URL=http://192.168.178.155:11434 \
+ *   OLLAMA_URL=http://<ollama-host>:11434 \
  *   npx tsx scripts/testCruisePdfParse.ts <path-to-pdf>
  */
 import { promises as fs } from "fs";

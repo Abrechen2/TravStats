@@ -1431,8 +1431,8 @@ its own — so verify the header is actually present on the apex response afterw
 ```bash
 cd D:/TravStats_Projekt/travstats-stats
 tar --exclude=node_modules --exclude=.git --exclude=stats.db -czf /tmp/travstats-stats-code.tar.gz .
-scp /tmp/travstats-stats-code.tar.gz root@192.168.178.171:/tmp/
-ssh root@192.168.178.171 "pct push 133 /tmp/travstats-stats-code.tar.gz /tmp/travstats-stats-code.tar.gz && \
+scp /tmp/travstats-stats-code.tar.gz root@<pve-node1>:/tmp/
+ssh root@<pve-node1> "pct push 133 /tmp/travstats-stats-code.tar.gz /tmp/travstats-stats-code.tar.gz && \
   pct exec 133 -- bash /opt/travstats-stats/deploy/stats-setup.sh"
 curl -s https://stats.travstats.de/health
 ```
@@ -1447,7 +1447,7 @@ This is a verification step, not a configuration step. Run it and read the outpu
 curl -s -X POST https://stats.travstats.de/v1/ping -H 'Content-Type: application/json' -d '{"install_id":"ffffffffffffffffffffffffffffffff","version":"0.0.0","arch":"amd64","enabled_domains":["flight"],"users_bucket":"1","flights_bucket":"<50","cruises_bucket":"0","distance_km":{"flight":0,"cruise":0},"achievements":{"unlocked_total":0,"keys":[]},"features":{"llm_parser":false,"backups":false,"webdav_sync":false,"historical_enrichment":false,"live_tracking":false},"flight_api_providers":[],"locale":"de","reported_at":"2026-07-10T12:00:00.000Z"}'
 
 MY_IP=$(curl -s https://api.ipify.org)
-ssh root@192.168.178.171 "pct exec 133 -- bash -c '
+ssh root@<pve-node1> "pct exec 133 -- bash -c '
   grep -r \"$MY_IP\" /var/log/nginx/ 2>/dev/null && echo \"FAIL: nginx logged the IP\" || echo \"OK: nginx clean\"
   journalctl -u cloudflared --since \"10 minutes ago\" | grep -q \"$MY_IP\" && echo \"FAIL: cloudflared logged the IP\" || echo \"OK: cloudflared clean\"
   journalctl -u travstats-stats --since \"10 minutes ago\" | grep -q \"$MY_IP\" && echo \"FAIL: app logged the IP\" || echo \"OK: app clean\"

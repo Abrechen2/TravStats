@@ -164,7 +164,25 @@
     "removeHandle": "Remove waypoint",
     "editedBadge": "corrected by hand",
     "saveFailed": "Could not save. The line on the map is still yours — try again?",
-    "discardConfirm": "Discard the changes to this leg?"
+    "discardConfirm": "Discard the changes to this leg?",
+    "tool": "Tool",
+    "toolPan": "Move map",
+    "toolSelect": "Select",
+    "simplify": "Simplify",
+    "removeSelected_other": "Delete ({{count}})",
+    "closeLeg": "Close leg",
+    "menu": {
+      "map": "Map",
+      "openLeg": "Open leg",
+      "otherLeg": "Another leg",
+      "editThisLeg": "Edit this leg",
+      "closeLeg": "Close leg",
+      "simplify": "Simplify route",
+      "removeHandle": "Delete waypoint",
+      "removeSelected": "Delete selected ({{count}})",
+      "clearSelection": "Clear selection"
+    },
+    "removeSelected_one": "Delete ({{count}})"
   },
   "filter": {
     "title": "Filter",

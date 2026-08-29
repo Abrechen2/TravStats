@@ -8,7 +8,7 @@
 
 **Tech Stack:** POSIX sh + supervisord + Docker `HEALTHCHECK`, Axios 1.15.2, Vitest 4.0.
 
-**Repro reference:** Norbert's instance on Unraid-2 (192.168.178.202:3080) showed empty data after the rc-latest pull on 2026-05-07. nginx access log showed 0 user-fetches of `/api/v1/flights` for 27 minutes after boot, while nginx error.log recorded `no live upstreams while connecting to upstream` at 15:58:18 — the smoking gun. DB had 226 flights and 71 trips intact. Hard reload (Ctrl+Shift+R) restored the UI without any data being lost.
+**Repro reference:** Norbert's instance on Unraid-2 (<nas-host>:3080) showed empty data after the rc-latest pull on 2026-05-07. nginx access log showed 0 user-fetches of `/api/v1/flights` for 27 minutes after boot, while nginx error.log recorded `no live upstreams while connecting to upstream` at 15:58:18 — the smoking gun. DB had 226 flights and 71 trips intact. Hard reload (Ctrl+Shift+R) restored the UI without any data being lost.
 
 **Out of scope:**
 - Splitting `/health` into liveness vs readiness probes — overkill; the simple Express-up gate is enough.
@@ -593,7 +593,7 @@ docker push ghcr.io/abrechen2/travstats:$VERSION
 - [ ] **Step 2: Deploy to Cardinal (CT 100) with the temporary tag**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.180 "pct exec 100 -- bash -c \
+ssh -i ~/.ssh/id_ed25519 root@<pve-node3> "pct exec 100 -- bash -c \
   'cd /opt/travstats && \
    sed -i \"s|image: ghcr.io/abrechen2/travstats:.*|image: ghcr.io/abrechen2/travstats:$VERSION|\" docker-compose.yml && \
    docker compose pull && docker compose up -d'"
@@ -602,7 +602,7 @@ ssh -i ~/.ssh/id_ed25519 root@192.168.178.180 "pct exec 100 -- bash -c \
 - [ ] **Step 3: Watch the boot in real time**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.180 "pct exec 100 -- bash -c \
+ssh -i ~/.ssh/id_ed25519 root@<pve-node3> "pct exec 100 -- bash -c \
   'docker logs -f TravStats 2>&1 | grep -E \"wait-then-nginx|migrat|airport|listening|Backend ready\" | head -30'"
 ```
 
@@ -618,7 +618,7 @@ Expected:
 Wait 60 s, then:
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.180 "pct exec 100 -- bash -c \
+ssh -i ~/.ssh/id_ed25519 root@<pve-node3> "pct exec 100 -- bash -c \
   'docker exec TravStats grep -c \"no live upstreams\" /var/log/nginx/error.log || echo 0'"
 ```
 
@@ -626,12 +626,12 @@ Expected: `0`.
 
 - [ ] **Step 5: Open the UI in a browser, confirm flights load on first paint**
 
-Visit `http://192.168.178.120:3010/` (Cardinal). Login. Dashboard should show flights immediately, no hard reload required.
+Visit `http://<prod-host>:3010/` (Cardinal). Login. Dashboard should show flights immediately, no hard reload required.
 
 - [ ] **Step 6: Restore Cardinal to its previous RC**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.180 "pct exec 100 -- bash -c \
+ssh -i ~/.ssh/id_ed25519 root@<pve-node3> "pct exec 100 -- bash -c \
   'cd /opt/travstats && git checkout docker-compose.yml && docker compose pull && docker compose up -d'"
 ```
 
@@ -654,7 +654,7 @@ The skill auto-determines the bump (a `feat:` and a `fix:` were committed → mi
 Once Unraid CA pulls `:rc-latest`:
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.202 \
+ssh -i ~/.ssh/id_ed25519 root@<nas-host> \
   'docker logs --tail 20 TravStats 2>&1 | grep wait-then-nginx; \
    docker exec TravStats grep -c "no live upstreams" /var/log/nginx/error.log'
 ```

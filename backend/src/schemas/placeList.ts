@@ -24,11 +24,21 @@ const colorField = z
  */
 const iconField = z.string().trim().min(1).max(16).nullable().optional();
 
+/**
+ * How the map labels this list's places -- the list's DEFAULT only.
+ *
+ * Not nullable and not clearable: every list has an answer, and "no answer"
+ * would just be a third spelling of "name". Absent means "leave it as it is",
+ * which is what a PATCH that only changes the colour has to mean.
+ */
+const labelModeField = z.enum(["name", "icon"]).optional();
+
 export const createPlaceListSchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().max(2000).nullable().optional(),
   color: colorField.optional(),
   icon: iconField,
+  labelMode: labelModeField,
   sortIdx: z.number().int().min(0).optional(),
 });
 
@@ -47,6 +57,7 @@ export const updatePlaceListSchema = z
     description: z.string().max(2000).nullable().optional(),
     color: colorField.optional(),
     icon: iconField,
+    labelMode: labelModeField,
     sortIdx: z.number().int().min(0).optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "No fields to update" });

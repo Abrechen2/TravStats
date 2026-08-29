@@ -166,6 +166,21 @@
           "wishlist": "Merkliste",
           "unlisted": "In keiner Liste"
         }
+      },
+      "placeLabelSource": {
+        "label": "Beschriftung",
+        "list": {
+          "label": "Wie in der Liste",
+          "hint": "Jede Liste entscheidet selbst. Ohne Symbol steht der Ortsname."
+        },
+        "name": {
+          "label": "Ortsname",
+          "hint": "Überall der Name, auch bei Listen mit Symbol."
+        },
+        "icon": {
+          "label": "Symbol",
+          "hint": "Überall das Listensymbol. Listen ohne Symbol behalten den Namen."
+        }
       }
     },
     "timesFlown": "{{count}}× geflogen",
