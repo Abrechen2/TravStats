@@ -139,8 +139,13 @@ async function recomputeLegs(
     await tx.tripRouteLeg.deleteMany({ where: { id: { in: plan.deleteIds } } });
   }
 
+  // Built as a plain array and written with ONE createMany, not one create
+  // per pair: at the 512-stop cap this is up to 511 rows, and awaiting them
+  // one at a time inside an interactive transaction risks the 5s Prisma
+  // default (raised below, but there is no reason to spend the budget on
+  // round-trips the distances don't need — they're already computed in JS).
   const byId = new Map(orderedStops.map((s) => [s.id, s]));
-  for (const pair of plan.create) {
+  const rows: Prisma.TripRouteLegCreateManyInput[] = plan.create.map((pair) => {
     const from = byId.get(pair.fromStopId);
     const to = byId.get(pair.toStopId);
     // Guarded by the caller, which rejects coordinate-less stops before
@@ -148,21 +153,22 @@ async function recomputeLegs(
     if (!from || !to || from.lat === null || from.lon === null || to.lat === null || to.lon === null) {
       throw new AppError("Every route stop needs a coordinate", 400);
     }
-    await tx.tripRouteLeg.create({
-      data: {
-        routeId,
-        fromStopId: pair.fromStopId,
-        toStopId: pair.toStopId,
-        source: "straight" satisfies LegSource,
-        mode: defaultMode,
-        confidence: "low",
-        distanceKm: legDistanceKm({
-          source: "straight",
-          from: { lat: from.lat, lon: from.lon },
-          to: { lat: to.lat, lon: to.lon },
-        }),
-      },
-    });
+    return {
+      routeId,
+      fromStopId: pair.fromStopId,
+      toStopId: pair.toStopId,
+      source: "straight" satisfies LegSource,
+      mode: defaultMode,
+      confidence: "low",
+      distanceKm: legDistanceKm({
+        source: "straight",
+        from: { lat: from.lat, lon: from.lon },
+        to: { lat: to.lat, lon: to.lon },
+      }),
+    };
+  });
+  if (rows.length > 0) {
+    await tx.tripRouteLeg.createMany({ data: rows });
   }
 }
 
@@ -288,7 +294,11 @@ router.delete(
  * A stop already belonging to a DIFFERENT section is rejected up front —
  * releasing it here would silently steal it from its current section and
  * leave that section's legs pointing at a stop that has moved out from
- * under them, with no recompute ever triggered for it. `routeId` and
+ * under them, with no recompute ever triggered for it. That pre-check
+ * reads on the plain client before the transaction opens, so it is
+ * check-then-act and can itself lose a race between two concurrent PUTs;
+ * the actual write inside the transaction re-checks ownership and rolls
+ * back with 409 if it lost (see the loop below). `routeId` and
  * `routeOrderIdx` are always written together (release: both to null,
  * assign: both set) because `@@unique([routeId, routeOrderIdx])` is
  * skipped by Postgres whenever either column is null — a half-state would
@@ -303,13 +313,14 @@ router.put(
       const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
       const { stopIds } = assignStopsSchema.parse(req.body);
 
-      const unique = [...new Set(stopIds)];
+      // No de-dup needed here: `assignStopsSchema` already rejects a
+      // repeated stop id (see the loop-modelling note on that schema).
       const stops = await prisma.tripStop.findMany({
-        where: { id: { in: unique }, tripId: trip.id },
+        where: { id: { in: stopIds }, tripId: trip.id },
         select: { id: true, lat: true, lon: true, title: true, routeId: true },
       });
 
-      if (stops.length !== unique.length) {
+      if (stops.length !== stopIds.length) {
         throw new AppError("Every stop must belong to this trip", 400);
       }
       const missing = stops.find((s) => s.lat === null || s.lon === null);
@@ -328,37 +339,55 @@ router.put(
       }
 
       const byId = new Map(stops.map((s) => [s.id, s]));
+      // `stopIds` is unique by schema (a loop is two distinct stops at the
+      // same coordinates, never one id twice) — see `assignStopsSchema` —
+      // so its index IS the final `routeOrderIdx`, contiguous from 0.
       const ordered = stopIds.map((id) => byId.get(id)!);
 
-      await prisma.$transaction(async (tx) => {
-        // Release first: `@@unique([routeId, routeOrderIdx])` would collide
-        // with the old numbering otherwise.
-        await tx.tripStop.updateMany({
-          where: { routeId },
-          data: { routeId: null, routeOrderIdx: null },
-        });
-        // A repeated id (a loop) must be numbered once — by its FIRST
-        // occurrence, so the section still starts where the user said.
-        const firstIdx = new Map<string, number>();
-        stopIds.forEach((id, i) => {
-          if (!firstIdx.has(id)) firstIdx.set(id, i);
-        });
-        for (const [id, idx] of firstIdx) {
-          await tx.tripStop.update({
-            where: { id },
-            data: { routeId, routeOrderIdx: idx },
+      await prisma.$transaction(
+        async (tx) => {
+          // Release first: `@@unique([routeId, routeOrderIdx])` would
+          // collide with the old numbering otherwise.
+          await tx.tripStop.updateMany({
+            where: { routeId },
+            data: { routeId: null, routeOrderIdx: null },
           });
-        }
-        const route = await tx.tripRoute.findUniqueOrThrow({
-          where: { id: routeId },
-          select: { mode: true },
-        });
-        await recomputeLegs(tx, routeId, route.mode, ordered);
-      });
+          // The pre-check above (decision 1) is check-then-act and can lose
+          // a race: a concurrent PUT on a sibling section could assign the
+          // same stop between that read and this write. So the write is
+          // ALSO self-guarding: it only succeeds if the row is still free
+          // or already ours. If a concurrent writer won the stop first,
+          // `count` comes back 0 and the whole transaction rolls back —
+          // nothing partially applied, and the caller finds out (409)
+          // instead of silently losing a leg's endpoint.
+          for (let idx = 0; idx < stopIds.length; idx++) {
+            const id = stopIds[idx];
+            const hit = await tx.tripStop.updateMany({
+              where: { id, tripId: trip.id, OR: [{ routeId: null }, { routeId }] },
+              data: { routeId, routeOrderIdx: idx },
+            });
+            if (hit.count !== 1) {
+              throw new AppError("A stop changed section while this request was in flight", 409);
+            }
+          }
+          const route = await tx.tripRoute.findUniqueOrThrow({
+            where: { id: routeId },
+            select: { mode: true },
+          });
+          await recomputeLegs(tx, routeId, route.mode, ordered);
+        },
+        // Default interactive-transaction timeout is 5000ms. At the
+        // 512-stop cap this loop is up to 512 awaited updates; comfortably
+        // inside 20s even over a non-local socket.
+        { timeout: 20_000 },
+      );
 
       const [route, legs, savedStops] = await Promise.all([
         prisma.tripRoute.findUniqueOrThrow({ where: { id: routeId }, include: ROUTE_SELECT }),
-        prisma.tripRouteLeg.findMany({ where: { routeId } }),
+        prisma.tripRouteLeg.findMany({
+          where: { routeId },
+          orderBy: { fromStop: { routeOrderIdx: "asc" } },
+        }),
         prisma.tripStop.findMany({
           where: { routeId },
           orderBy: { routeOrderIdx: "asc" },
@@ -366,7 +395,7 @@ router.put(
         }),
       ]);
 
-      logger.info({ operation: "tour.stops.assign", routeId, stopCount: unique.length });
+      logger.info({ operation: "tour.stops.assign", routeId, stopCount: stopIds.length });
       res.json({ route: toDto(route), stops: savedStops, legs: legs.map(toLegDto) });
     } catch (error) {
       next(error);

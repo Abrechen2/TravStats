@@ -152,9 +152,63 @@ describe("Tour route sections — stop assignment", () => {
     expect(await prisma.tripStop.count({ where: { tripId } })).toBe(5);
   });
 
-  it("supports a loop that returns to its first stop", async () => {
-    const res = await put([stopIds.lom, stopIds.bergen, stopIds.lom]);
+  it("models a loop as two distinct stops at the same place", async () => {
+    // A stop id may not repeat — routeOrderIdx is one Int per stop, so a
+    // loop is expressed as a SECOND stop at the same coordinates, not the
+    // same id listed twice.
+    const back = await prisma.tripStop.create({
+      data: { tripId, title: "lom-back", lat: 61.84, lon: 8.57 },
+    });
+    const res = await put([stopIds.lom, stopIds.bergen, back.id]);
     expect(res.status).toBe(200);
     expect(res.body.legs).toHaveLength(2);
+    expect(res.body.stops.map((s: { routeOrderIdx: number }) => s.routeOrderIdx)).toEqual([0, 1, 2]);
+  });
+
+  it("refuses the same stop twice", async () => {
+    const res = await put([stopIds.lom, stopIds.bergen, stopIds.lom]);
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects a stop stolen after the pre-check but before commit (race backstop)", async () => {
+    // Decision 1's up-front check reads on the plain client, before the
+    // transaction opens — it is check-then-act and can lose a race: a
+    // concurrent PUT on a sibling section could assign the same stop
+    // between that read and this request's write. Simulated deterministically
+    // here (rather than with real concurrent requests, whose interleaving
+    // isn't controllable) by hooking the pre-check's own read: right after
+    // it resolves with the stop still unassigned, a second "request" steals
+    // Bergen for another section before this request's transaction runs.
+    const otherRoute = await prisma.tripRoute.create({
+      data: { tripId, name: "Konkurrent", mode: "road" },
+    });
+
+    const originalFindMany = prisma.tripStop.findMany.bind(prisma.tripStop);
+    const spy = jest
+      .spyOn(prisma.tripStop, "findMany")
+      .mockImplementationOnce(async (...args: Parameters<typeof prisma.tripStop.findMany>) => {
+        const result = await originalFindMany(...args);
+        await prisma.tripStop.update({
+          where: { id: stopIds.bergen },
+          data: { routeId: otherRoute.id, routeOrderIdx: 0 },
+        });
+        return result;
+      });
+
+    try {
+      const res = await put([stopIds.kristiansand, stopIds.bergen]);
+      expect(res.status).toBe(409);
+
+      // Atomic: the transaction rolled back, so Kristiansand — assigned
+      // before the loop reached the stolen stop — was NOT left assigned.
+      const kris = await prisma.tripStop.findUnique({ where: { id: stopIds.kristiansand } });
+      expect(kris?.routeId).toBeNull();
+
+      // Bergen still belongs to whichever section actually won the race.
+      const bergen = await prisma.tripStop.findUnique({ where: { id: stopIds.bergen } });
+      expect(bergen?.routeId).toBe(otherRoute.id);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

@@ -26,9 +26,16 @@ describe("assignStopsSchema", () => {
   const A = "11111111-1111-4111-8111-111111111111";
   const B = "22222222-2222-4222-8222-222222222222";
 
-  it("accepts an ordered id list, including a repeated stop for a loop", () => {
-    const parsed = assignStopsSchema.parse({ stopIds: [A, B, A] });
-    expect(parsed.stopIds).toEqual([A, B, A]);
+  it("accepts an ordered id list of distinct stops", () => {
+    const parsed = assignStopsSchema.parse({ stopIds: [A, B] });
+    expect(parsed.stopIds).toEqual([A, B]);
+  });
+
+  it("rejects a repeated stop id — a loop is two distinct stops, not one twice", () => {
+    // routeOrderIdx is one Int per stop under @@unique([routeId, routeOrderIdx]);
+    // a stop cannot hold two positions. Model a loop with a second stop at the
+    // same coordinates instead.
+    expect(() => assignStopsSchema.parse({ stopIds: [A, B, A] })).toThrow();
   });
 
   it("accepts an empty list — that releases every stop", () => {

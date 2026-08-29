@@ -38,11 +38,21 @@ export const updateRouteSchema = z.object({
 
 /**
  * The complete ordered stop list of one section, replacing whatever was
- * there. An id may repeat — that is a loop, not a mistake. The cap is a
- * denial-of-service bound, not a product limit.
+ * there. The cap is a denial-of-service bound, not a product limit.
+ *
+ * A stop id may NOT repeat. `routeOrderIdx` is one Int per stop under
+ * `@@unique([routeId, routeOrderIdx])` — a stop cannot hold two positions
+ * at once. A loop is therefore modelled as two DISTINCT stops at the same
+ * coordinates (e.g. "Gjendesheim, Start" / "Gjendesheim, zurück"), never
+ * one stop listed twice; the return visit gets its own date and notes for
+ * free that way, and `routeOrderIdx` stays contiguous as the schema
+ * requires.
  */
 export const assignStopsSchema = z.object({
   stopIds: z.array(z.string().uuid()).max(512),
+}).refine((v) => new Set(v.stopIds).size === v.stopIds.length, {
+  message: "A stop may appear only once in a route; model a loop as two distinct stops at the same place",
+  path: ["stopIds"],
 });
 
 export const legOverrideSchema = z
