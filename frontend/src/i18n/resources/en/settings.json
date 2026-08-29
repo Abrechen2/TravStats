@@ -132,6 +132,13 @@
     "dateFormat": "Date Format",
     "timeFormat": "Time Format"
   },
+  "domainColors": {
+    "title": "Domain colours",
+    "description": "One colour per domain — used in the statistics, the trip timeline, the activity sidebar, the import log and everywhere else a domain is marked with a single colour.",
+    "mapNote": "The map is unaffected: there a route can be coloured by status or by frequency, a yearly bar cannot. Map colours stay in the map panel.",
+    "lowContrast": "A very dark colour barely separates from the background. It is used exactly as picked — affected marks get a hairline outline so they stay findable.",
+    "reset": "Reset to brand colours"
+  },
   "units": {
     "title": "Units & Formats",
     "description": "Define the standard units for statistics.",

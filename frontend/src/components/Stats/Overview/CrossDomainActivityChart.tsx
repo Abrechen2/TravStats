@@ -8,6 +8,8 @@ import { DOMAINS, type DomainKey } from "../../../shared/domains";
 import type { DomainStatsMap } from "../../../lib/stats/domain-stats";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { isWithData } from "./aggregate";
+import { useDomainColors } from "../../../hooks/useDomainColors";
+import { needsOutline } from "../../../lib/domainColor";
 
 interface Props {
   statsMap: DomainStatsMap;
@@ -34,6 +36,7 @@ export default function CrossDomainActivityChart({
   compareEnabled,
 }: Props): JSX.Element {
   const { t } = useTranslation(["stats", "common"]);
+  const { colorOf } = useDomainColors();
 
   const series: Series[] = useMemo(() => {
     const out: Series[] = [];
@@ -44,7 +47,7 @@ export default function CrossDomainActivityChart({
       if (visible[key] === false) continue;
       out.push({
         key,
-        color: DOMAINS[key].color,
+        color: colorOf(key),
         label: t(`common:${DOMAINS[key].i18nKey}`),
         data: stats.yearlyEvents,
       });
@@ -116,6 +119,12 @@ export default function CrossDomainActivityChart({
                         height: `${(v / max) * 100}%`,
                         background: s.color,
                         borderTop: "1px solid rgba(0,0,0,0.2)",
+                        // A colour the user picked near the panel's own darkness
+                        // stays that colour; it just gets an edge so the bar is
+                        // still findable. Brightening it would be overruling a
+                        // deliberate choice.
+                        outline: needsOutline(s.color) ? "1px solid rgba(255,255,255,0.28)" : undefined,
+                        outlineOffset: -1,
                       }}
                     />
                   );

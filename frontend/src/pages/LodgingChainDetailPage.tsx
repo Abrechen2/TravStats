@@ -11,8 +11,9 @@ import { hasAnyPrice, lodgingTypeIcon, singleOriginalCurrencySpend } from "../li
 import { FlagImg, resolveCountryCode } from "../lib/countryFlag";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
-import { DOMAINS } from "../shared/domains";
+
 import type { Lodging, LodgingChainDetail } from "../types/lodging";
+import { useDomainColors } from "../hooks/useDomainColors";
 
 /**
  * Chain detail page (collaborator request): click a chain name anywhere it
@@ -31,6 +32,7 @@ export default function LodgingChainDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation(["lodging", "common"]);
+  const { colorOf } = useDomainColors();
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
 
   const [detail, setDetail] = useState<LodgingChainDetail | null>(null);
@@ -117,7 +119,7 @@ export default function LodgingChainDetailPage(): JSX.Element {
   // the catalogue is a starting point and goes stale (it still said "NH
   // Rewards" two rebrands later).
   const programLabel = membership?.programName ?? chain.loyaltyProgram;
-  const accent = chain.brandColor ?? DOMAINS.lodging.color;
+  const accent = chain.brandColor ?? colorOf("lodging");
   const sharedWithLabel =
     programLabel && siblingChains.length > 0
       ? t("lodging:chainDetail.sharedWith", {

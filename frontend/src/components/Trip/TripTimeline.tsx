@@ -1,6 +1,7 @@
 import { JSX } from "react";
 import { DOMAINS, type DomainKey } from "../../shared/domains";
 import { formatDateInTimezone } from "../../lib/dateUtils";
+import { useDomainColors } from "../../hooks/useDomainColors";
 
 export interface TimelineEvent {
   id: string;
@@ -16,6 +17,7 @@ export interface TripTimelineProps {
 }
 
 export default function TripTimeline({ events }: TripTimelineProps): JSX.Element {
+  const { colorOf } = useDomainColors();
   const sorted = [...events].sort((a, b) => a.date.localeCompare(b.date));
   return (
     <ol className="flex flex-col gap-3 relative" style={{ listStyle: "none", paddingLeft: 0 }}>
@@ -34,8 +36,8 @@ export default function TripTimeline({ events }: TripTimelineProps): JSX.Element
               data-testid="timeline-event-badge"
               className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
               style={{
-                backgroundColor: `${d.color}22`,
-                color: d.color,
+                backgroundColor: `${colorOf(ev.domain)}22`,
+                color: colorOf(ev.domain),
                 fontSize: "18px",
               }}
               aria-label={d.key}
