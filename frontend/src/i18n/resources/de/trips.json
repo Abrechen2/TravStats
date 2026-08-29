@@ -286,5 +286,38 @@
     "mostExpensive": "Teuerste Reise",
     "mostCountries": "Meiste Länder"
   },
-  "deleteTripConfirmTitle": "Reise löschen?"
+  "deleteTripConfirmTitle": "Reise löschen?",
+  "tours": {
+    "title": "Touren",
+    "newSection": "Tour hinzufügen",
+    "namePlaceholder": "Name der Tour",
+    "save": "Speichern",
+    "empty": "Noch keine Tour in dieser Reise",
+    "loadError": "Touren konnten nicht geladen werden",
+    "createError": "Tour konnte nicht angelegt werden",
+    "stopCount_one": "{{count}} Halt",
+    "stopCount_other": "{{count}} Halte",
+    "stopsHeading": "Halte",
+    "legsHeading": "Etappen",
+    "noLegs": "Noch keine Etappe — ordne mindestens zwei Halte zu",
+    "stopIsRoutePoint": "Streckenpunkt",
+    "needsCoordinate": "Ohne Koordinate kein Streckenpunkt",
+    "notFound": "Diese Tour gibt es nicht",
+    "backToTrip": "Zurück zur Reise",
+    "assignError": "Die Halte konnten nicht gespeichert werden",
+    "legError": "Die Etappe konnte nicht geändert werden",
+    "clearLeg": "Linie entfernen",
+    "noLineYet": "Für diese Etappe gibt es noch keine gezeichnete Linie",
+    "mode": {
+      "road": "Straße",
+      "ferry": "Fähre",
+      "rail": "Bahn",
+      "foot": "zu Fuß",
+      "bike": "Rad"
+    },
+    "source": {
+      "straight": "Luftlinie",
+      "drawn": "gezogen"
+    }
+  }
 }

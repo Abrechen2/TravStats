@@ -286,5 +286,38 @@
     "mostExpensive": "Most expensive trip",
     "mostCountries": "Most countries"
   },
-  "deleteTripConfirmTitle": "Delete trip?"
+  "deleteTripConfirmTitle": "Delete trip?",
+  "tours": {
+    "title": "Tours",
+    "newSection": "Add tour",
+    "namePlaceholder": "Tour name",
+    "save": "Save",
+    "empty": "No tour in this trip yet",
+    "loadError": "Tours could not be loaded",
+    "createError": "The tour could not be created",
+    "stopCount_one": "{{count}} stop",
+    "stopCount_other": "{{count}} stops",
+    "stopsHeading": "Stops",
+    "legsHeading": "Legs",
+    "noLegs": "No leg yet — assign at least two stops",
+    "stopIsRoutePoint": "Route point",
+    "needsCoordinate": "A stop without a coordinate cannot be part of a route",
+    "notFound": "This tour does not exist",
+    "backToTrip": "Back to the trip",
+    "assignError": "The stops could not be saved",
+    "legError": "The leg could not be changed",
+    "clearLeg": "Remove line",
+    "noLineYet": "This leg has no drawn line yet",
+    "mode": {
+      "road": "Road",
+      "ferry": "Ferry",
+      "rail": "Rail",
+      "foot": "On foot",
+      "bike": "Bike"
+    },
+    "source": {
+      "straight": "Straight line",
+      "drawn": "Drawn"
+    }
+  }
 }
