@@ -143,7 +143,8 @@
       "timeline": "Timeline",
       "map": "Karte",
       "gallery": "Galerie",
-      "logistics": "Logistik"
+      "logistics": "Logistik",
+      "tours": "Touren"
     },
     "tabPlaceholder": {
       "gallery": "Galerie kommt in der nächsten Iteration — sobald Foto-Upload und Speicher-Backend stehen.",

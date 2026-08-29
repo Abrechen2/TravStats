@@ -143,7 +143,8 @@
       "timeline": "Timeline",
       "map": "Map",
       "gallery": "Gallery",
-      "logistics": "Logistics"
+      "logistics": "Logistics",
+      "tours": "Tours"
     },
     "tabPlaceholder": {
       "gallery": "Gallery comes in the next iteration once photo upload + storage are in place.",
