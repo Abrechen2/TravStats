@@ -189,4 +189,98 @@ router.delete(
   },
 );
 
+/**
+ * True iff `value` is a usable `[[lon, lat], ...]` polyline: an array of
+ * two-element numeric tuples. `waypoints` is a `Json?` column, so it can
+ * hold whatever was last written to it — `Array.isArray` alone would wave
+ * a malformed value through and hand the map `NaN` coordinates. Same guard
+ * shape as `shared/cruise/legRouteKey.ts`'s `isCoordinatePolyline`, kept
+ * local here rather than shared because the two domains have no other
+ * coupling.
+ */
+function isCoordinatePolyline(value: unknown): value is Array<[number, number]> {
+  if (!Array.isArray(value)) return false;
+  return value.every(
+    (point) =>
+      Array.isArray(point) &&
+      point.length === 2 &&
+      typeof point[0] === "number" &&
+      typeof point[1] === "number",
+  );
+}
+
+/**
+ * The chord a straight leg's distance was computed from: the two endpoint
+ * stops, in GeoJSON `[lon, lat]` order. Returns `null` if either stop lost
+ * its coordinates (see `requireCoords` above for why that can only happen
+ * to data written outside this codebase's own write paths).
+ */
+function chordCoordinates(
+  from: { lat: number | null; lon: number | null },
+  to: { lat: number | null; lon: number | null },
+): Array<[number, number]> | null {
+  if (from.lat === null || from.lon === null || to.lat === null || to.lon === null) return null;
+  return [
+    [from.lon, from.lat],
+    [to.lon, to.lat],
+  ];
+}
+
+/**
+ * GET /trips/:id/routes/:routeId/geometry
+ *
+ * One LineString per leg, so the map can colour each leg by its own mode
+ * and dash the straight ones. A leg with stored waypoints emits them; a
+ * leg without emits its two endpoint coordinates — exactly the chord its
+ * `distanceKm` was computed from, so the picture and the number never
+ * disagree.
+ *
+ * Ordered by `fromStop.routeOrderIdx` IN THE QUERY, the same clause the
+ * stops endpoint in `tourRoutes.ts` already uses — no JS re-sort needed
+ * once the database does the ordering.
+ */
+router.get(
+  "/trips/:id/routes/:routeId/geometry",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const trip = await resolveTrip(userId, req.params.id);
+      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+
+      const legs = await prisma.tripRouteLeg.findMany({
+        where: { routeId },
+        orderBy: { fromStop: { routeOrderIdx: "asc" } },
+        include: {
+          fromStop: { select: { lat: true, lon: true } },
+          toStop: { select: { lat: true, lon: true } },
+        },
+      });
+
+      const features = legs.flatMap((leg) => {
+        const coordinates = isCoordinatePolyline(leg.waypoints)
+          ? leg.waypoints
+          : chordCoordinates(leg.fromStop, leg.toStop);
+        if (!coordinates) return [];
+        return [
+          {
+            type: "Feature" as const,
+            geometry: { type: "LineString" as const, coordinates },
+            properties: {
+              legId: leg.id,
+              source: leg.source,
+              mode: leg.mode,
+              distanceKm: leg.distanceKm,
+              confidence: leg.confidence,
+            },
+          },
+        ];
+      });
+
+      res.json({ type: "FeatureCollection", features });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
 export default router;
