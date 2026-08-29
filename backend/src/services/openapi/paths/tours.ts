@@ -1,6 +1,6 @@
 /**
  * Tour route section endpoints — a trip's "how did we get there" layer on
- * top of its stops. All fourteen live on the four same-prefix satellite
+ * top of its stops. All fifteen live on the four same-prefix satellite
  * routers `routes/trips/tourRoutes.ts`, `routes/trips/tourLegs.ts`,
  * `routes/trips/tourRouting.ts`, and `routes/trips/tourTracks.ts`, all
  * mounted at the plain `/trips` base, which is why every path here starts
@@ -20,6 +20,7 @@ import {
   updateRouteSchema,
   assignStopsSchema,
   legOverrideSchema,
+  pullDawarichTrackSchema,
   TRACK_SOURCES,
 } from "../../../schemas/tour";
 import { LEG_MODES, LEG_SOURCES } from "../../../services/tour/tourDistance";
@@ -529,10 +530,21 @@ registry.registerPath({
 const trackSource = z
   .enum(TRACK_SOURCES)
   .describe(
-    "How the track was captured. 'gpx' (task 4, this file's endpoints) — a " +
-      "user-uploaded GPX file. 'dawarich' (task 7, reserved) — pulled from a " +
-      "self-hosted Dawarich instance; not built yet.",
+    "How the track was captured. 'gpx' (task 4) — a user-uploaded GPX " +
+      "file. 'dawarich' (task 7) — pulled from a self-hosted Dawarich " +
+      "instance via POST .../tracks/dawarich.",
   );
+
+const pullDawarichTrackInput = registry.register(
+  "PullDawarichTrackInput",
+  pullDawarichTrackSchema.openapi("PullDawarichTrackInput", {
+    description:
+      "Both sides optional — an omitted side falls back to the section's " +
+      "own date span, derived from its stops' dates, so an empty body " +
+      "pulls exactly the section's own window.",
+    example: {},
+  }),
+);
 
 const tourRouteTrackMeta = registry.register(
   "TourRouteTrackMeta",
@@ -605,6 +617,46 @@ registry.registerPath({
       content: errorContent,
     },
     404: { description: "Trip or section not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/trips/{id}/routes/{routeId}/tracks/dawarich",
+  summary: "Pull a Dawarich time window and store it as a track",
+  description:
+    "Same pipeline as the GPX upload above, fed by a self-hosted Dawarich " +
+    "instance instead of a file: fetch the window -> ingestTrack -> store, " +
+    "source 'dawarich'. An empty body pulls the section's own date span, " +
+    "derived from its stops — the common case is one click; either side " +
+    "of the window can be overridden explicitly. Every failure is a 409, " +
+    "never a 500 or a silently-stored empty track: no connection " +
+    "configured answers `{error: \"notConfigured\"}`; an upstream Dawarich " +
+    "failure answers `{error: <kind>}` using the same fixed kind " +
+    "vocabulary as POST /settings/dawarich/test (unreachable, auth, " +
+    "notFound, protocol, invalidUrl); a window with no points answers a " +
+    "plain message, no kind, because the connection itself worked fine.",
+  tags: ["Tours"],
+  request: {
+    params: routeIdParams,
+    body: { content: { "application/json": { schema: pullDawarichTrackInput } } },
+  },
+  responses: {
+    201: {
+      description: "Pulled and stored",
+      content: { "application/json": { schema: z.object({ track: tourRouteTrack }) } },
+    },
+    400: {
+      description:
+        "Invalid body, or no explicit window AND no dated stops to derive one from",
+      content: errorContent,
+    },
+    404: { description: "Trip or section not found", content: errorContent },
+    409: {
+      description:
+        "Not configured, an upstream Dawarich failure (with a kind), or an empty window",
+      content: errorContent,
+    },
   },
 });
 

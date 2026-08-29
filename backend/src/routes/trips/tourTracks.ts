@@ -7,9 +7,17 @@ import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { FILE_LIMITS } from "../../config/constants";
-import { TRACK_SOURCES } from "../../schemas/tour";
+import { TRACK_SOURCES, pullDawarichTrackSchema } from "../../schemas/tour";
 import { parseGpx } from "../../services/tour/tracks/parseGpx";
 import { ingestTrack } from "../../services/tour/tracks/ingestTrack";
+import {
+  EmptyDawarichWindowError,
+  pullDawarichWindow,
+  resolveDawarichWindow,
+} from "../../services/tour/tracks/pullDawarichTrack";
+import { createDawarichClient } from "../../services/dawarich/dawarichClient";
+import { getDawarichConnection } from "../../services/dawarich/dawarichResolver";
+import { DawarichError } from "../../services/dawarich/errors";
 import { resolveTrip } from "../trips";
 import { resolveRoute } from "./tourRoutes";
 import logger from "../../utils/logger";
@@ -199,6 +207,120 @@ router.post(
 
       logger.info({
         operation: "tour.track.create",
+        trackId: track.id,
+        routeId,
+        source,
+        pointCount: track.pointCount,
+      });
+      res.status(201).json({ track: toTrackDto(track) });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * POST /trips/:id/routes/:routeId/tracks/dawarich
+ *
+ * Pull a time window from the caller's Dawarich instance and store it as a
+ * track, same pipeline shape as the GPX upload above: fetch -> `ingestTrack`
+ * -> store. The pure parts (which window to pull, points -> `ParsedTrack`)
+ * live in `services/tour/tracks/pullDawarichTrack.ts`; this handler is the
+ * HTTP surface — resolve ownership, resolve the connection, run the
+ * pipeline, translate failures.
+ *
+ * Body is `{ startedAt?, endedAt? }`, both optional — the default window is
+ * the section's own date span (from its stops), so the common case is one
+ * click. `resolveDawarichWindow` does the actual fallback; `null` here
+ * means neither an override nor a dated stop could supply one of the two
+ * sides, which is a 400 (bad request), not a Dawarich failure.
+ *
+ * Three DIFFERENT failure shapes, deliberately not collapsed into one:
+ *  - No connection resolved at all -> 409, `{error: "notConfigured"}`.
+ *  - The connection is configured but Dawarich itself failed (unreachable,
+ *    rejected the key, …) -> 409, `{error: <DawarichErrorKind>}` — the
+ *    FIXED vocabulary `errors.ts` defines, which the frontend parses.
+ *  - The connection worked but the window has no points -> 409 with a
+ *    plain message (`EmptyDawarichWindowError`), no `kind` — this is not
+ *    an upstream failure, so it does not belong to that vocabulary.
+ * All three are 409 ("the request is fine, this instance/window cannot
+ * answer it right now"), never 502 — unlike the Immich album routes, which
+ * use 502 for an upstream failure; a single-shot import like this one has
+ * no "degraded panel" to fall back to, so 409 covers every case uniformly.
+ */
+router.post(
+  "/trips/:id/routes/:routeId/tracks/dawarich",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const trip = await resolveTrip(userId, req.params.id);
+      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const body = pullDawarichTrackSchema.parse(req.body);
+
+      const stops = await prisma.tripStop.findMany({
+        where: { routeId },
+        select: { startDate: true, endDate: true },
+      });
+      const window = resolveDawarichWindow(stops, {
+        startedAt: body.startedAt,
+        endedAt: body.endedAt,
+      });
+      if (!window) {
+        throw new AppError(
+          "This section has no dated stops to derive a time window from — provide startedAt/endedAt",
+          400,
+        );
+      }
+      if (window.startAt.getTime() > window.endAt.getTime()) {
+        throw new AppError("The resolved time window is invalid (end before start)", 400);
+      }
+
+      const connection = await getDawarichConnection(userId);
+      if (!connection) {
+        res.status(409).json({
+          error: "notConfigured",
+          message: "No Dawarich connection configured",
+        });
+        return;
+      }
+
+      const client = createDawarichClient(connection);
+
+      let ingested;
+      try {
+        ingested = await pullDawarichWindow(client, {
+          startAt: window.startAt,
+          endAt: window.endAt,
+        });
+      } catch (error) {
+        if (error instanceof DawarichError) {
+          res.status(409).json({ error: error.kind, message: error.message });
+          return;
+        }
+        if (error instanceof EmptyDawarichWindowError) {
+          throw new AppError(error.message, 409);
+        }
+        throw error;
+      }
+
+      const source = trackSource.parse("dawarich");
+      const track = await prisma.tripRouteTrack.create({
+        data: {
+          routeId,
+          source,
+          name: null,
+          startedAt: ingested.startedAt,
+          endedAt: ingested.endedAt,
+          geometry: ingested.geometry as unknown as Prisma.InputJsonValue,
+          pointCount: ingested.pointCount,
+          distanceKm: ingested.distanceKm,
+        },
+      });
+
+      logger.info({
+        operation: "tour.track.pullDawarich",
         trackId: track.id,
         routeId,
         source,

@@ -53,15 +53,37 @@ const MANUAL_LEG_SOURCES = ["straight", "drawn"] as const;
 
 /**
  * `TripRouteTrack.source` vocabulary (Phase 3b): `gpx` (task 4 — the upload
- * endpoint in `routes/trips/tourTracks.ts`) and `dawarich` (task 7,
- * reserved — the pull-from-Dawarich endpoint is not built yet). Used the
- * same way `acceptedLegSource` guards `TripRouteLeg.source` in
- * `routes/trips/tourRouting.ts`: a write-side boundary check, cheap
- * insurance against a future writer putting the column into a shape this
- * vocabulary doesn't describe.
+ * endpoint in `routes/trips/tourTracks.ts`) and `dawarich` (task 7 — the
+ * pull-from-Dawarich endpoint below). Used the same way `acceptedLegSource`
+ * guards `TripRouteLeg.source` in `routes/trips/tourRouting.ts`: a
+ * write-side boundary check, cheap insurance against a future writer
+ * putting the column into a shape this vocabulary doesn't describe.
  */
 export const TRACK_SOURCES = ["gpx", "dawarich"] as const;
 export type TrackSource = (typeof TRACK_SOURCES)[number];
+
+/**
+ * Body for `POST /trips/:id/routes/:routeId/tracks/dawarich` (task 7).
+ * Both sides are optional: an omitted side falls back to the section's
+ * own date span, derived from its stops (see `resolveDawarichWindow` in
+ * `services/tour/tracks/pullDawarichTrack.ts`) — the common case is one
+ * click with an empty body. When BOTH sides are given explicitly, an
+ * inverted range is rejected right here; a range built from one explicit
+ * side and one derived side is checked separately at the route, which is
+ * the only place that has the stops to derive the other side from.
+ */
+export const pullDawarichTrackSchema = z
+  .object({
+    startedAt: z.coerce.date().optional(),
+    endedAt: z.coerce.date().optional(),
+  })
+  .strict()
+  .refine((v) => !v.startedAt || !v.endedAt || v.endedAt.getTime() >= v.startedAt.getTime(), {
+    message: "endedAt must not be before startedAt",
+    path: ["endedAt"],
+  });
+
+export type PullDawarichTrackInput = z.infer<typeof pullDawarichTrackSchema>;
 
 /**
  * `z.enum`'s default "Invalid enum value" message doesn't tell a caller
