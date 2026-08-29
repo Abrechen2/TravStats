@@ -303,6 +303,12 @@ authentication and passkeys arrive alongside.
   statistics, where figures belong.
 
 ### Fixed
+- **The "All" map knows what a place pin means.** It drew places without their
+  list's colour and, once lists could carry a symbol, without that either — so
+  a list styled on the places map looked untouched next to the flights and
+  cruises. The tab did not load the lists at all. Both maps in it now resolve
+  colour and symbol through the same step, so a pin cannot show one list's
+  colour and another's symbol.
 - **Airports no longer carry "(Duplicate)" in their name.** The catalogue is
   built from OurAirports, whose editors mark rows they suspect of being
   duplicates by writing the marker into the name itself. The seeder passed those
