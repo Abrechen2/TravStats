@@ -340,24 +340,52 @@ The cruise route editor generalised to land. Waypoints are `[[lon,lat],…]`,
 anchor (first and last point within 1 km of the stop coordinates) is checked in
 the handler, which is where the stop coordinates are available.
 
-### 7.2 External router (approved)
+### 7.2 Routing providers (approved, revised 2026-08-29)
 
-Opt-in, **off by default**, admin-configured. Coordinates leave the instance, so
-this is a deliberate choice an operator makes, not a default.
+**Owner decision:** every route-building method is offered, and the user chooses
+per leg. Routing is therefore a SET of options, not one adapter.
 
-- First adapter: **OpenRouteService** — open source, self-hostable later, a
-  documented free tier. The adapter interface is provider-shaped so GraphHopper,
-  Valhalla or a self-hosted ORS can follow.
-- Key resolution reuses `services/apiKeyResolver.ts`: user key → admin global →
-  ENV, with `allowUserApiKeys` respected. New columns
-  `openrouteserviceApiKey` / `globalOpenrouteserviceApiKey` on the existing
-  settings tables, and an entry in `apiKeyTester.ts`.
-- Requests are per-leg, cached by endpoint pair plus profile. A failure returns
-  `null` and the leg falls back to `straight` with `confidence: low` — never a
-  fabricated number.
+Who decides what:
+
+| Choice | Decided by | Where |
+|---|---|---|
+| Which method a leg uses | the traveller, per leg | the leg's source control |
+| Which routing provider exists at all | the operator | admin settings |
+
+**The provider is pluggable, and one of the plugs is your own machine.** The
+adapter interface is provider-shaped; three concrete providers ship:
+
+- **OpenRouteService** — API key, documented free tier.
+- **GraphHopper** — API key.
+- **Custom URL** — a base URL with no key, so an operator can point at a
+  self-hosted OSRM or Valhalla on their own network. This is one extra text
+  field in settings and it is the whole reason a privacy-minded instance never
+  has to send a coordinate anywhere.
+
+We do NOT ship a routing container. A road graph cannot be vendored the way
+`marnet.geojson` is — Europe alone is gigabytes, with ongoing maintenance —
+so self-hosting a router is documented in the wiki and left to the operator.
+That asymmetry with the cruise router is deliberate and must stay written down,
+because the obvious question a reader asks is "why not do what the sea does".
+
+Rules that hold for every provider:
+
+- Opt-in, **off by default**. A key-based provider sends coordinates off the
+  instance; that is an operator's deliberate choice, never a default.
+- Key resolution reuses `services/apiKeyResolver.ts` — user key → admin global →
+  ENV, with `allowUserApiKeys` respected — plus an entry in `apiKeyTester.ts`.
+  The custom-URL provider has no key and skips that chain.
+- Requests are per-leg, cached by endpoint pair plus profile.
+- A failure returns `null` and the leg falls back to `straight` with
+  `confidence: low` — never a fabricated number.
 - Profiles map from leg mode: `road → driving-hgv` (a motorhome is not a car),
   `bike → cycling-regular`, `foot → foot-hiking`. `ferry` and `rail` are never
   routed.
+
+**The control must not offer what it cannot do.** `routed` is selectable only
+when a provider is configured, and `track` only when a track covers the leg;
+otherwise the option is disabled with the reason shown. A control whose only
+possible outcome is an error was a real finding in phase 1 and is not repeated.
 
 ### 7.3 Tracks: GPX and Dawarich (approved)
 
@@ -523,7 +551,8 @@ These were weighed against a fifth domain and accepted by the owner.
 |---|---|
 | **P1** | Migration, `TripRoute` + `TripStop` fields + derived legs, atomic stop assignment, straight and hand-drawn geometry, the `/trips/:id/route/:routeId` sub-route, the Touren tab, `TripMap` paths, the two defects in §12. |
 | **P2** | `Vehicle` catalog page, `FuelEntry`, consumption and cost statistics, odometer gap panel, tolls and ferry costs, achievements. |
-| **P3** | GPX import, the external router adapter and its key plumbing, leg adoption from tracks. |
+| **P3** | The routing providers: OpenRouteService, GraphHopper and a keyless custom URL for a self-hosted OSRM/Valhalla, behind one adapter interface; admin settings and the key chain; per-leg `routed` with the disabled-when-unavailable rule. |
+| **P3b** | GPX import, `TripRouteTrack`, and leg adoption from a track. Independent of P3 — either can ship first. |
 | **P4** | Dawarich pull. Parser for campsite and rental confirmations. Tour suggestion from photo clusters. |
 
 The release cut is the owner's decision. P1 is the smallest thing worth
