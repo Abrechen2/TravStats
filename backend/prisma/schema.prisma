@@ -1050,9 +1050,10 @@ model TripRoute {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  trip  Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  stops TripStop[]
-  legs  TripRouteLeg[]
+  trip   Trip                @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  stops  TripStop[]
+  legs   TripRouteLeg[]
+  tracks TripRouteTrack[]
 
   @@index([tripId])
   @@map("trip_routes")
@@ -1096,6 +1097,29 @@ model TripRouteLeg {
   @@unique([routeId, fromStopId, toStopId])
   @@index([routeId])
   @@map("trip_route_legs")
+}
+
+/// A recorded track. Hangs off the SECTION and a time window, never off a
+/// leg: a GPX file knows nothing about the user's stops, and forcing it
+/// into the leg structure on import loses data. Legs may later take their
+/// distance from an overlapping track (§7.3); the track itself stays whole.
+model TripRouteTrack {
+  id         String   @id @default(uuid())
+  routeId    String   @map("route_id")
+  source     String   // gpx | dawarich
+  name       String?
+  startedAt  DateTime @map("started_at")
+  endedAt    DateTime @map("ended_at")
+  /// GeoJSON LineString coordinates, already simplified on import.
+  geometry   Json
+  pointCount Int      @map("point_count")
+  distanceKm Float    @map("distance_km")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  route TripRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@index([routeId])
+  @@map("trip_route_tracks")
 }
 
 model TripJournalEntry {
