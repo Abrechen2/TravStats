@@ -163,6 +163,10 @@ export async function mergeTrips(
     await tx.cruise.updateMany(move);
     await tx.booking.updateMany(move);
     await tx.tripStop.updateMany(move);
+    // Sections move with their stops. Without this a section stays on a trip
+    // that is about to be deleted, and its stops end up on another trip —
+    // a route pointing at nothing.
+    await tx.tripRoute.updateMany(move);
     await tx.tripJournalEntry.updateMany(move);
     // Photo files live in a flat directory keyed by filename, so moving
     // the rows does not break file paths.
