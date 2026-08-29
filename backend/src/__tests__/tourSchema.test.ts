@@ -23,17 +23,26 @@ describe("createRouteSchema", () => {
 });
 
 describe("assignStopsSchema", () => {
+  const A = "11111111-1111-4111-8111-111111111111";
+  const B = "22222222-2222-4222-8222-222222222222";
+
   it("accepts an ordered id list, including a repeated stop for a loop", () => {
-    const parsed = assignStopsSchema.parse({ stopIds: ["a", "b", "a"] });
-    expect(parsed.stopIds).toEqual(["a", "b", "a"]);
+    const parsed = assignStopsSchema.parse({ stopIds: [A, B, A] });
+    expect(parsed.stopIds).toEqual([A, B, A]);
   });
 
   it("accepts an empty list — that releases every stop", () => {
     expect(assignStopsSchema.parse({ stopIds: [] }).stopIds).toEqual([]);
   });
 
+  it("rejects an id that is not a uuid", () => {
+    // TripStop.id is @default(uuid()); a non-uuid can never name a real
+    // stop, so the boundary refuses it instead of the database.
+    expect(() => assignStopsSchema.parse({ stopIds: [A, "not-a-stop"] })).toThrow();
+  });
+
   it("rejects a list longer than the cap", () => {
-    expect(() => assignStopsSchema.parse({ stopIds: Array(513).fill("a") })).toThrow();
+    expect(() => assignStopsSchema.parse({ stopIds: Array(513).fill(A) })).toThrow();
   });
 });
 

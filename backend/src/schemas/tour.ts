@@ -42,7 +42,7 @@ export const updateRouteSchema = z.object({
  * denial-of-service bound, not a product limit.
  */
 export const assignStopsSchema = z.object({
-  stopIds: z.array(z.string()).max(512),
+  stopIds: z.array(z.string().uuid()).max(512),
 });
 
 export const legOverrideSchema = z
