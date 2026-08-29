@@ -70,6 +70,12 @@ export default function TourSectionList({ tripId }: Props): JSX.Element {
       const route = await toursApi.create(tripId, { name, mode: newMode });
       if (!mountedRef.current) return;
       setRoutes((prev) => [...(prev ?? []), route]);
+      // A create can succeed even after the initial list() failed (the user
+      // created a section anyway while the error banner was showing) — clear
+      // the stale error together with the new data, never in `finally` (a
+      // FAILED create must leave an existing error banner in place, not wipe
+      // it and render an empty list as if nothing were wrong).
+      setLoadError(false);
       setNewName("");
       setNewMode(DEFAULT_MODE);
       setCreating(false);

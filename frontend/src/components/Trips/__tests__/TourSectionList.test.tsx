@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 import TourSectionList from "../TourSectionList";
@@ -53,5 +53,49 @@ describe("TourSectionList", () => {
     vi.mocked(toursApi.list).mockRejectedValue(new Error("boom"));
     renderList("t1");
     await waitFor(() => expect(screen.getByText("trips:tours.loadError")).toBeInTheDocument());
+  });
+
+  it("shows a section created after a failed load, and drops the error", async () => {
+    vi.mocked(toursApi.list).mockRejectedValueOnce(new Error("boom"));
+    renderList("t1");
+    await waitFor(() => expect(screen.getByText("trips:tours.loadError")).toBeInTheDocument());
+
+    vi.mocked(toursApi.create).mockResolvedValue({
+      id: "r1", tripId: "t1", name: "Südnorwegen", mode: "road", orderIdx: 0,
+      color: null, notes: null, startOdometerKm: null, endOdometerKm: null,
+      stopCount: 0, legCount: 0, distanceKm: 0, drivenKm: 0,
+    });
+
+    // Drive the create control the way a user would: open it, name the
+    // section, submit.
+    fireEvent.click(screen.getByText("trips:tours.newSection"));
+    fireEvent.change(screen.getByPlaceholderText("trips:tours.namePlaceholder"), {
+      target: { value: "Südnorwegen" },
+    });
+    fireEvent.click(screen.getByText("trips:tours.save"));
+
+    await waitFor(() => expect(screen.getByText("Südnorwegen")).toBeInTheDocument());
+    expect(screen.queryByText("trips:tours.loadError")).not.toBeInTheDocument();
+  });
+
+  it("keeps the error banner and never renders an empty list when a create fails", async () => {
+    vi.mocked(toursApi.list).mockRejectedValueOnce(new Error("boom"));
+    renderList("t1");
+    await waitFor(() => expect(screen.getByText("trips:tours.loadError")).toBeInTheDocument());
+
+    vi.mocked(toursApi.create).mockRejectedValue(new Error("nope"));
+
+    fireEvent.click(screen.getByText("trips:tours.newSection"));
+    fireEvent.change(screen.getByPlaceholderText("trips:tours.namePlaceholder"), {
+      target: { value: "Südnorwegen" },
+    });
+    fireEvent.click(screen.getByText("trips:tours.save"));
+
+    await waitFor(() => expect(toursApi.create).toHaveBeenCalled());
+
+    // The failed create must not clear the outage banner, and must not
+    // render an empty list as if the trip genuinely had no sections.
+    expect(screen.getByText("trips:tours.loadError")).toBeInTheDocument();
+    expect(screen.queryByText("trips:tours.empty")).not.toBeInTheDocument();
   });
 });
