@@ -12,6 +12,21 @@ now be written in the currency it was actually paid in. Two-factor
 authentication and passkeys arrive alongside.
 
 ### Added
+- **The route editor is worked with the mouse.** Clicking a different leg
+  switches to it, which it did not before: the click was swallowed and quietly
+  added a waypoint to the leg already open, so reaching for one leg edited
+  another. Right-clicking now offers what fits under the cursor — edit that leg,
+  delete this waypoint, delete the whole selection, simplify, close. A Select
+  tool turns the drag into a selection box, so several waypoints can be removed
+  at once, and the ports are never among them. One undo takes a box-delete back
+  whole.
+- **The API documentation is complete.** It described a curated subset while
+  claiming it could not drift; measured against what the server actually serves,
+  244 endpoints had no entry. All of them are documented now — 241 operations
+  covering every domain a normal account can reach — and the check that found
+  the gap has become a plain completeness test with no exception list left to
+  add to. An endpoint written from here on fails the build the day it is written
+  unless it is documented with it.
 - **A cruise or a flight on a trip's timeline opens where it stands.** They could
   not be clicked at all — not viewed, not edited — while the hotel entry beside
   them already led to its own page. A click now expands the entry inside the
