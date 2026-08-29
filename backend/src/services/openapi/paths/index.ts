@@ -26,3 +26,4 @@ import "./cruises";
 import "./catalog";
 import "./misc";
 import "./xlsxImport";
+import "./settingsRouting";

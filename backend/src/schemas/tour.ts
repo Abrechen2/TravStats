@@ -6,20 +6,59 @@ import { ROUTING_PROVIDER_IDS } from "../services/tour/routing/types";
 /**
  * Validation for the tour endpoints.
  *
- * `ACCEPTED_LEG_SOURCES` names every leg source the SERVER can actually
- * produce: `straight` (the default chord), `drawn` (a hand-drawn override,
- * phase 1), and `routed` (a provider-computed line, phase 3 — see
- * `routes/trips/tourRouting.ts`). `track` stays OUT — it is in the shared
- * `LEG_SOURCES` enum already so a future phase adds a value here rather
- * than a migration, but phase 3b owns producing it. A source the server
- * cannot yet produce is rejected at the boundary instead of being stored
- * and rendered as a lie.
+ * Two DIFFERENT vocabularies, because two DIFFERENT endpoints write this
+ * column and they have different capabilities:
  *
- * This was named `PHASE_1_SOURCES` before `routed` joined it — that name
- * would now claim a phase boundary the set no longer marks.
+ * - `ACCEPTED_LEG_SOURCES` — what `tripRouteLegs.source` may hold at rest:
+ *   `straight` (the default chord), `drawn` (a hand-drawn override, phase
+ *   1), and `routed` (a provider-computed line, phase 3 — written only by
+ *   `routes/trips/tourRouting.ts`, never by the manual override endpoint
+ *   below). `track` stays OUT — it is in the shared `LEG_SOURCES` enum
+ *   already so a future phase adds a value here rather than a migration,
+ *   but phase 3b owns producing it.
+ * - `MANUAL_LEG_SOURCES` — what the manual leg-override endpoint (`PUT
+ *   .../legs/{fromStopId}/{toStopId}` in `routes/trips/tourLegs.ts`)
+ *   ACCEPTS from a caller: `straight` and `drawn` only. `routed` geometry
+ *   comes from a provider, not a request body — a caller cannot hand-supply
+ *   it, so this endpoint refuses it with a message pointing at the routing
+ *   endpoint instead. This is deliberate, not an oversight: earlier this
+ *   file let the override endpoint accept `source: "routed"` too, on the
+ *   theory that a caller might resend it unchanged while editing an
+ *   unrelated field (toll cost, say). That endpoint's semantics were never
+ *   built to preserve stored geometry on a re-submit — an omitted
+ *   `waypoints` clears the column for EVERY source — so accepting `routed`
+ *   there let a caller produce a leg that claimed `source: "routed"` while
+ *   holding a plain straight chord: a false provenance claim, worse than
+ *   either honest state. Splitting the vocabulary closes that path: the
+ *   override endpoint can no longer put the column into that shape at all.
+ *
+ * A source the server cannot (yet, or ever, from THIS endpoint) produce is
+ * rejected at the boundary instead of being stored and rendered as a lie.
  */
 
-const ACCEPTED_LEG_SOURCES = ["straight", "drawn", "routed"] as const;
+export const ACCEPTED_LEG_SOURCES = ["straight", "drawn", "routed"] as const;
+
+const MANUAL_LEG_SOURCES = ["straight", "drawn"] as const;
+
+/**
+ * `z.enum`'s default "Invalid enum value" message doesn't tell a caller
+ * WHY `routed` in particular is refused, or where to go instead — so
+ * `routed` specifically gets a message naming the routing endpoint;
+ * everything else (e.g. `track`) falls back to zod's normal message.
+ */
+const manualLegSource = z.enum(MANUAL_LEG_SOURCES, {
+  errorMap: (issue, ctx) => {
+    if (issue.code === z.ZodIssueCode.invalid_enum_value && issue.received === "routed") {
+      return {
+        message:
+          "This endpoint only accepts \"straight\" or \"drawn\" — routing a leg " +
+          "through the configured provider is done via POST " +
+          ".../legs/{fromStopId}/{toStopId}/route or POST .../route-all, not this one.",
+      };
+    }
+    return { message: ctx.defaultError };
+  },
+});
 
 const coordinate = z
   .tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)])
@@ -65,7 +104,7 @@ export const assignStopsSchema = z.object({
 
 export const legOverrideSchema = z
   .object({
-    source: z.enum(ACCEPTED_LEG_SOURCES),
+    source: manualLegSource,
     mode: z.enum(LEG_MODES).optional(),
     waypoints: z.array(coordinate).min(2).max(256).optional(),
     drivingMinutes: z.number().int().min(0).max(100_000).nullable().optional(),

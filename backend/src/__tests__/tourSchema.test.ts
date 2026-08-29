@@ -81,8 +81,19 @@ describe("legOverrideSchema", () => {
     expect(legOverrideSchema.parse({ source: "straight" }).source).toBe("straight");
   });
 
-  it("accepts a routed leg (task 6 — the server can now produce this source)", () => {
-    expect(legOverrideSchema.parse({ source: "routed" }).source).toBe("routed");
+  it("refuses source \"routed\" — that geometry comes from the routing endpoint, not a request body", () => {
+    // Fix round 1: the manual override endpoint and the routing endpoint own
+    // DIFFERENT source vocabularies (MANUAL_LEG_SOURCES vs
+    // ACCEPTED_LEG_SOURCES) — see the doc comment on both in schemas/tour.ts.
+    // A caller cannot hand-supply provider geometry through this endpoint.
+    let error: unknown;
+    try {
+      legOverrideSchema.parse({ source: "routed" });
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeDefined();
+    expect(String(error)).toMatch(/route/i);
   });
 
   it("still rejects track — phase 3b owns producing it, not this task", () => {

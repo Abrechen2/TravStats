@@ -1,9 +1,11 @@
 import { Router, Response, NextFunction } from "express";
 import { Prisma } from "@prisma/client";
+import { z } from "zod";
 
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
+import { ACCEPTED_LEG_SOURCES } from "../../schemas/tour";
 import { LEG_MODES, LegMode } from "../../services/tour/tourDistance";
 import { resolveRouteProvider } from "../../services/tour/routing/resolveProvider";
 import { routeLegGeometry, RoutedLeg } from "../../services/tour/routing/routeLeg";
@@ -54,12 +56,27 @@ function requireLegMode(mode: string): LegMode {
   throw new AppError(`Leg has an unrecognised mode "${mode}"`, 409);
 }
 
+/**
+ * The write-side counterpart of `schemas/tour.ts`'s `MANUAL_LEG_SOURCES`
+ * split: this is the routing endpoints' own boundary check on what they
+ * persist, using `ACCEPTED_LEG_SOURCES` (`straight | drawn | routed` —
+ * everything the column may hold, as opposed to `MANUAL_LEG_SOURCES`,
+ * which is what a caller may hand the manual override endpoint). `routed.source`
+ * is already typed `"routed" | "straight"` by `RoutedLeg`, so this can never
+ * actually fail today — it is the same belt-and-suspenders backstop as
+ * `requireLegMode` above: cheap insurance against a future change to
+ * `routeLegGeometry` silently writing a value this column is not meant to
+ * hold, rather than an `as` cast past the `any`-forbidden rule.
+ */
+const acceptedLegSource = z.enum(ACCEPTED_LEG_SOURCES);
+
 /** Persist one leg's routing outcome — shared by both endpoints below. */
 async function applyRoutedLeg(legId: string, routed: RoutedLeg): Promise<void> {
+  const source = acceptedLegSource.parse(routed.source);
   await prisma.tripRouteLeg.update({
     where: { id: legId },
     data: {
-      source: routed.source,
+      source,
       confidence: routed.confidence,
       waypoints:
         routed.waypoints === null

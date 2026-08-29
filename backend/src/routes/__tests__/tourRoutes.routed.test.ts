@@ -214,4 +214,75 @@ describe("Tour route sections — provider routing", () => {
 
     expect(res.status).toBe(400);
   });
+
+  it("refuses a leg override with source \"routed\" (400) — that geometry comes from the routing endpoint, not this one", async () => {
+    // Fix round 1: the manual override endpoint and the routing endpoint own
+    // DIFFERENT source vocabularies now (MANUAL_LEG_SOURCES vs
+    // ACCEPTED_LEG_SOURCES). A caller cannot hand-supply "routed" here.
+    const res = await request(app)
+      .put(legUrl(osloId, kristiansandId))
+      .set("Cookie", cookie)
+      .send({ source: "routed" });
+
+    expect(res.status).toBe(400);
+    // The error handler puts Zod's per-field message in `details`, not the
+    // top-level `error` string (which is always the generic "Validation error").
+    const details = res.body.details as Array<{ field: string; message: string }>;
+    expect(details.some((d) => d.field === "source" && /route/i.test(d.message))).toBe(true);
+  });
+
+  it("a leg that was routed, then manually reverted to straight, ends up a consistent state — not a routed leg holding a chord", async () => {
+    // Pins the actual harm fix round 1 closed: before the split, sending
+    // source: "routed" through this endpoint (accepted then) without
+    // waypoints cleared the stored line while the column kept saying
+    // "routed" — a false provenance claim. Now the only way back from a
+    // routed leg through this endpoint is source: "straight", and that must
+    // leave EVERY field consistent: no leftover geometry, no leftover
+    // routed distance, no leftover "routed" label.
+    const original = await prisma.tripRouteLeg.findUniqueOrThrow({
+      where: {
+        routeId_fromStopId_toStopId: { routeId, fromStopId: osloId, toStopId: kristiansandId },
+      },
+    });
+    expect(original.source).toBe("straight");
+    expect(original.waypoints).toBeNull();
+
+    const line: Array<[number, number]> = [
+      [OSLO.lon, OSLO.lat],
+      [KRISTIANSAND.lon, KRISTIANSAND.lat],
+    ];
+    const routeImpl = jest.fn().mockResolvedValue({
+      waypoints: line,
+      distanceKm: 999,
+      drivingMinutes: 300,
+    });
+    mockResolveProvider.mockResolvedValue(fakeProvider(routeImpl));
+
+    const routedRes = await request(app)
+      .post(routeLegUrl(osloId, kristiansandId))
+      .set("Cookie", cookie)
+      .send();
+    expect(routedRes.status).toBe(200);
+    expect(routedRes.body.leg.source).toBe("routed");
+    expect(routedRes.body.leg.distanceKm).toBe(999);
+
+    const revertRes = await request(app)
+      .put(legUrl(osloId, kristiansandId))
+      .set("Cookie", cookie)
+      .send({ source: "straight" });
+
+    expect(revertRes.status).toBe(200);
+    expect(revertRes.body.leg.source).toBe("straight");
+    expect(revertRes.body.leg.waypoints).toBeNull();
+    expect(revertRes.body.leg.distanceKm).toBeCloseTo(original.distanceKm, 6);
+
+    const persisted = await prisma.tripRouteLeg.findUniqueOrThrow({
+      where: {
+        routeId_fromStopId_toStopId: { routeId, fromStopId: osloId, toStopId: kristiansandId },
+      },
+    });
+    expect(persisted.source).toBe("straight");
+    expect(persisted.waypoints).toBeNull();
+    expect(persisted.distanceKm).toBeCloseTo(original.distanceKm, 6);
+  });
 });

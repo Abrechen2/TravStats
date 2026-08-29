@@ -381,7 +381,11 @@ registry.registerPath({
     "there is no leg for a pair the itinerary doesn't contain. The drawn " +
     "line's first and last points must land within 1 km of the leg's own " +
     "stops (the anchor tolerance); anything looser is rejected rather than " +
-    "silently accepted.",
+    "silently accepted. Only `source: \"straight\"` or `\"drawn\"` are " +
+    "accepted here — `\"routed\"` geometry comes from a provider, not a " +
+    "request body, so this endpoint refuses it (400) and names the routing " +
+    "endpoint (`POST .../route` / `.../route-all`) instead of silently " +
+    "accepting a caller-supplied line mislabelled as provider-routed.",
   tags: ["Tours"],
   request: {
     params: legParams,
@@ -390,7 +394,9 @@ registry.registerPath({
   responses: {
     200: { description: "Leg updated", content: { "application/json": { schema: z.object({ leg: tourLeg }) } } },
     400: {
-      description: "Validation failed, or the line doesn't anchor to the leg's stops",
+      description:
+        "Validation failed (including source: \"routed\" or \"track\", both " +
+        "refused here), or the line doesn't anchor to the leg's stops",
       content: errorContent,
     },
     404: { description: "Trip, section or leg not found", content: errorContent },
