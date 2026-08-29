@@ -122,7 +122,7 @@
         },
         "type": {
           "label": "Art",
-          "hint": "Hotel, Pension, Ferienwohnung, Hostel oder Zeltplatz."
+          "hint": "Hotel, Pension, Ferienwohnung, Hostel oder Campingplatz."
         },
         "rating": {
           "label": "Bewertung",
