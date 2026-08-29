@@ -90,17 +90,19 @@ export const BETA_FEATURES = Object.freeze({
   /**
    * The "Touren" tab on the trip detail page (tour route sections: a named
    * ordered chain of stops with driven legs — the road-trip counterpart to
-   * cruise itineraries).
+   * cruise itineraries), and its editor at
+   * `/trips/:id/route/:routeId` — gated the same way as the tab, since the
+   * editor is otherwise reachable by URL with the tab hidden.
    *
-   * This is the FIRST user-visible surface for the feature. The list itself
-   * works — load, create, link to the editor — but the editor it links to
-   * (stop assignment, leg overrides, the map) does not exist yet, so the
-   * link is a dead end until that ships. Gate stays on until both land.
+   * The list AND its editor (stop assignment, per-leg mode/source
+   * overrides, the route map) are both feature-complete now. The gate stays
+   * on because the feature as a whole is still awaiting the owner's release
+   * decision, not because anything named here is unfinished.
    */
   tourRoutes: Object.freeze({
     reason: "beta",
-    why: "The section list is live but its editor (drag-assign stops, per-leg mode/source overrides, the route map) has not shipped yet, so every row link is currently a dead end.",
-    returnsWhen: "The route editor page (/trips/:id/route/:routeId) has shipped.",
+    why: "The section list and its editor both work end-to-end, but the feature has not yet been through the owner's review — the gate is what keeps it off production until that happens.",
+    returnsWhen: "The owner accepts the feature for release.",
   }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 

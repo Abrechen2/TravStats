@@ -12,6 +12,7 @@ import { setupApi, usageStatsApi } from "./lib/api";
 import i18n from "./i18n/config";
 import { useTranslation } from "./hooks/useTranslation";
 import { useEnabledDomains } from "./hooks/useEnabledDomains";
+import { useBetaFeatures } from "./hooks/useBetaFeatures";
 import { DomainRouteGuard } from "./components/DomainRouteGuard";
 import { useWhatsNew } from "./hooks/useWhatsNew";
 import { useSessionValidation } from "./hooks/useSessionValidation";
@@ -79,6 +80,7 @@ function AppContent() {
   const location = useLocation();
   const { t } = useTranslation("common");
   const { isEnabled } = useEnabledDomains();
+  const { isFeatureVisible } = useBetaFeatures();
   // A persisted user is only a CLAIM until the server confirms the cookie.
   // Nothing authenticated may be fetched or rendered before it does — hence
   // every authenticated effect below is gated on `sessionChecked`, not just
@@ -438,7 +440,17 @@ function AppContent() {
               />
               <Route
                 path="/trips/:id/route/:routeId"
-                element={isAuthenticated ? <TripRouteEditorPage /> : <Navigate to="/login" />}
+                element={
+                  // Gated the same way the Touren tab is gated
+                  // (`isFeatureVisible("tourRoutes")` in TripDetailPage) —
+                  // otherwise the editor stays reachable by URL with the tab,
+                  // and thus the flag, hidden.
+                  isAuthenticated && isFeatureVisible("tourRoutes") ? (
+                    <TripRouteEditorPage />
+                  ) : (
+                    <Navigate to={isAuthenticated ? "/trips" : "/login"} />
+                  )
+                }
               />
               <Route
                 path="/achievements"

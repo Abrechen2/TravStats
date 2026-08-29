@@ -135,6 +135,20 @@ export default function TripRouteEditorPage(): JSX.Element {
     return map;
   }, [assignerStops]);
 
+  // `TripMap` was specifically changed to protect its layer `useMemo` with a
+  // stable default (`NO_TOUR_GEOMETRIES`) when no `tourGeometries` prop is
+  // passed at all — but this page always passes one, and a fresh array
+  // literal built inline in JSX on every render defeats that protection just
+  // as completely as omitting the prop would help it. `react-hooks/exhaustive-deps`
+  // is disabled repo-wide, so the dependency array here is hand-picked to
+  // match exactly what the constructed object reads: `route.id`/`route.name`
+  // (not the whole `route` object, whose other fields like `distanceKm`
+  // change on every reload without touching this array's shape) and `geometry`.
+  const tourGeometries = useMemo(
+    () => (geometry && route ? [{ routeId: route.id, name: route.name, geometry }] : []),
+    [geometry, route?.id, route?.name]
+  );
+
   const handleAssignChange = useCallback(
     (orderedIds: string[]): void => {
       if (!id || !routeId) return;
@@ -232,10 +246,7 @@ export default function TripRouteEditorPage(): JSX.Element {
             </p>
           </header>
 
-          <TripMap
-            trip={trip}
-            tourGeometries={geometry ? [{ routeId: route.id, name: route.name, geometry }] : []}
-          />
+          <TripMap trip={trip} tourGeometries={tourGeometries} />
 
           <section>
             <h2 className="text-lg font-semibold mb-3">{t("trips:tours.stopsHeading")}</h2>
