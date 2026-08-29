@@ -1,4 +1,5 @@
-import { isRoutableMode, ROUTING_PROVIDER_IDS } from "../types";
+import { isRoutableMode, ROUTING_PROVIDER_IDS, PROFILE_BY_MODE } from "../types";
+import { LEG_MODES } from "../../tourDistance";
 
 describe("isRoutableMode", () => {
   it("routes the three modes a road router understands", () => {
@@ -19,5 +20,13 @@ describe("isRoutableMode", () => {
 describe("ROUTING_PROVIDER_IDS", () => {
   it("lists exactly the three shipped providers", () => {
     expect([...ROUTING_PROVIDER_IDS]).toEqual(["openrouteservice", "graphhopper", "custom"]);
+  });
+});
+
+describe("PROFILE_BY_MODE", () => {
+  it("has a profile for every routable mode and none for the rest", () => {
+    for (const mode of LEG_MODES) {
+      expect(mode in PROFILE_BY_MODE).toBe(isRoutableMode(mode));
+    }
   });
 });

@@ -33,6 +33,13 @@ export const ROUTING_PROVIDER_IDS = ["openrouteservice", "graphhopper", "custom"
 export type RoutingProviderId = (typeof ROUTING_PROVIDER_IDS)[number];
 
 /**
+ * The set of leg modes a road router can meaningfully answer.
+ * Road, foot, and bike are self-directed: the traveller or vehicle follows
+ * a path the router can compute. Ferry and rail are excluded by design.
+ */
+export type RoutableMode = Extract<LegMode, "road" | "foot" | "bike">;
+
+/**
  * Check whether a given leg mode can be routed by a road router.
  *
  * Road, foot, and bike are self-directed: the traveller or the vehicle follows
@@ -41,22 +48,26 @@ export type RoutingProviderId = (typeof ROUTING_PROVIDER_IDS)[number];
  * body of water), and a train follows dedicated track the traveller does not
  * choose. Asking a road router for either mode returns a plausible number that
  * is silently wrong — the wrong answer looks right and gets added to the tour
- * total. This guard prevents that silent error.
+ * total. This guard prevents that silent error by being a type guard: after
+ * this check, TypeScript knows the mode is RoutableMode and can safely index
+ * PROFILE_BY_MODE. Before the check, it cannot — forgetting the gate is a
+ * compile error, not a silent road detour.
  */
-export function isRoutableMode(mode: LegMode): boolean {
+export function isRoutableMode(mode: LegMode): mode is RoutableMode {
   return mode === "road" || mode === "foot" || mode === "bike";
 }
 
 /**
- * Map LegMode to the profile string each routing provider expects.
+ * Map routable leg modes to the profile string each routing provider expects.
+ * Deliberately has no entry for ferry or rail — calling code that forgets the
+ * isRoutableMode gate will get a type error instead of a working-looking profile.
+ *
  * A motorhome is not a car: where a provider offers a heavy-vehicle profile,
  * use it. Motorhomes have different speed/route characteristics (low clearance,
  * weight limits, fuel consumption) than light passenger cars.
  */
-export const PROFILE_BY_MODE: Record<LegMode, string> = {
+export const PROFILE_BY_MODE: Record<RoutableMode, string> = {
   road: "hgv",        // Heavy goods vehicle, not "car"
   foot: "foot",
   bike: "bike",
-  ferry: "hgv",       // Should never be routed, but we map it for completeness
-  rail: "hgv",        // Should never be routed, but we map it for completeness
 };
