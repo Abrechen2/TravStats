@@ -823,6 +823,8 @@ export function DeckGLMap({
     placeMarkerSize,
     placeColorConfig,
     placeListColors,
+    placeListLabels,
+    placeLabelSource,
     handlePlaceClick,
   ]);
 
