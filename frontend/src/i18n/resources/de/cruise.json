@@ -164,7 +164,25 @@
     "removeHandle": "Wegpunkt entfernen",
     "editedBadge": "von Hand korrigiert",
     "saveFailed": "Speichern fehlgeschlagen. Die Linie auf der Karte ist noch deine — noch einmal versuchen?",
-    "discardConfirm": "Änderungen an dieser Etappe verwerfen?"
+    "discardConfirm": "Änderungen an dieser Etappe verwerfen?",
+    "tool": "Werkzeug",
+    "toolPan": "Karte bewegen",
+    "toolSelect": "Auswählen",
+    "simplify": "Vereinfachen",
+    "removeSelected_other": "Löschen ({{count}})",
+    "closeLeg": "Etappe schließen",
+    "menu": {
+      "map": "Karte",
+      "openLeg": "Offene Etappe",
+      "otherLeg": "Andere Etappe",
+      "editThisLeg": "Diese Etappe bearbeiten",
+      "closeLeg": "Etappe schließen",
+      "simplify": "Route vereinfachen",
+      "removeHandle": "Wegpunkt löschen",
+      "removeSelected": "Ausgewählte löschen ({{count}})",
+      "clearSelection": "Auswahl aufheben"
+    },
+    "removeSelected_one": "Löschen ({{count}})"
   },
   "filter": {
     "title": "Filter",

@@ -17,16 +17,20 @@ import { computeBbox } from "../../utils/mapAnimationHelpers";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import { RouteEditorOverlay } from "./RouteEditorOverlay";
+import { MapContextMenu, type MapMenuEntry } from "./MapContextMenu";
 import {
   beginDrag,
   dragWaypoint,
   initRouteEditor,
+  clearSelection,
   insertWaypoint,
   isDirty,
   isEndpoint,
   nudgeWaypoint,
   redo,
   removeWaypoint,
+  removeWaypoints,
+  selectWaypointsIn,
   selectWaypoint,
   simplifyForEditing,
   undo,
@@ -62,9 +66,13 @@ interface DeckOverlayProps {
    * which is exactly the "click a leg to enter the editor" case.
    */
   onClick?: (info: PickingInfo) => void;
+  /** Handed the overlay so a right-click can ask deck WHAT is under the
+   *  cursor. A context menu arrives as a DOM event, not a deck pick, so
+   *  without this there is no way to name the leg the user aimed at. */
+  onReady?: (overlay: MapboxOverlay) => void;
 }
 
-function DeckGLOverlay({ layers, getTooltip, onClick }: DeckOverlayProps): null {
+function DeckGLOverlay({ layers, getTooltip, onClick, onReady }: DeckOverlayProps): null {
   const overlay = useControl<MapboxOverlay>(
     () =>
       new MapboxOverlay({
@@ -76,6 +84,9 @@ function DeckGLOverlay({ layers, getTooltip, onClick }: DeckOverlayProps): null 
     { position: "top-left" }
   );
   overlay.setProps({ layers, pickingRadius: 5, getTooltip, onClick });
+  useEffect(() => {
+    onReady?.(overlay);
+  }, [overlay, onReady]);
   return null;
 }
 
@@ -109,6 +120,25 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   const didFit = useRef(false);
   const [editing, setEditing] = useState<EditingLeg | null>(null);
   const [editorState, setEditorState] = useState<RouteEditorState | null>(null);
+  /**
+   * Which gesture the left mouse button performs on empty map.
+   *
+   * A marquee and a map pan are the same gesture, so one of them has to be
+   * chosen. The owner asked for mouse-only operation, which rules out "hold a
+   * key to select" — hence a toolbar toggle rather than a modifier.
+   */
+  const [tool, setTool] = useState<"pan" | "select">("pan");
+  /** Screen-space rectangle while dragging in select mode. Not editor state:
+   *  it is pointer geometry, gone the moment the button comes up. */
+  const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(
+    null
+  );
+  const [menu, setMenu] = useState<{
+    x: number;
+    y: number;
+    title: string;
+    entries: MapMenuEntry[];
+  } | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [saveError, setSaveError] = useState(false);
 
@@ -208,6 +238,99 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     setEditorState((prev) => (prev ? insertWaypoint(prev, segmentIndex, at) : prev));
   }, []);
 
+  /** Delete a whole selection in one step, one undo. */
+  /** The map's own box, so a pointer position becomes a position IN the map. */
+  const mapBoxRef = useRef<HTMLDivElement | null>(null);
+  const deckRef = useRef<MapboxOverlay | null>(null);
+  const keepDeck = useCallback((overlay: MapboxOverlay): void => {
+    deckRef.current = overlay;
+  }, []);
+
+  const toBoxPoint = useCallback((clientX: number, clientY: number): [number, number] | null => {
+    const box = mapBoxRef.current?.getBoundingClientRect();
+    if (!box) return null;
+    return [clientX - box.left, clientY - box.top];
+  }, []);
+
+  /**
+   * Which handle, if any, sits under a screen point.
+   *
+   * The handles are DOM markers rather than a deck layer, so deck's picking
+   * cannot answer this — `document.elementFromPoint` can, and it answers with
+   * what the user actually sees, overlaps included. That is also how this
+   * project measured the invisible overlay that once ate every dialog click.
+   */
+  const handleIndexAt = useCallback((clientX: number, clientY: number): number | null => {
+    const el = document.elementFromPoint(clientX, clientY);
+    const marker = el?.closest<HTMLElement>("[data-waypoint-index]");
+    if (!marker) return null;
+    const index = Number(marker.dataset.waypointIndex);
+    return Number.isFinite(index) ? index : null;
+  }, []);
+
+  /** Which leg's arc sits under a point already in map-box coordinates. */
+  const legAtBox = useCallback(
+    (x: number, y: number): { fromPortId: number; toPortId: number } | null => {
+      const deck = deckRef.current;
+      if (!deck) return null;
+      const picked = deck.pickObject({ x, y, radius: 8, layerIds: ["cruise-arcs"] });
+      const obj = picked?.object as { fromPortId?: number; toPortId?: number } | undefined;
+      if (!obj || obj.fromPortId === undefined || obj.toPortId === undefined) return null;
+      return { fromPortId: obj.fromPortId, toPortId: obj.toPortId };
+    },
+    []
+  );
+
+  /** Which leg's arc sits under a screen point, via deck's own picking. */
+  const legAt = useCallback(
+    (clientX: number, clientY: number): { fromPortId: number; toPortId: number } | null => {
+      const point = toBoxPoint(clientX, clientY);
+      return point ? legAtBox(point[0], point[1]) : null;
+    },
+    [toBoxPoint, legAtBox]
+  );
+
+  /**
+   * Is this click aimed at a leg OTHER than the open one?
+   *
+   * The guide line sits on top of the whole map and deck gives it the click
+   * first, so before this existed a click meant for a different leg was
+   * swallowed and inserted a waypoint into the leg already open. Measured in a
+   * browser: 20 of 20 handles unchanged plus one new, on a click 300 pixels
+   * away from the open line. The fix to the root handler alone did nothing,
+   * because the root handler never saw the click.
+   */
+  const clickBelongsToAnotherLeg = useCallback(
+    (x: number, y: number): boolean => {
+      if (!editing) return false;
+      const under = legAtBox(x, y);
+      if (!under) return false;
+      return under.fromPortId !== editing.fromPortId || under.toPortId !== editing.toPortId;
+    },
+    [editing, legAtBox]
+  );
+
+  const onEditorRemoveSelected = useCallback((): void => {
+    setEditorState((prev) => (prev ? removeWaypoints(prev, prev.selected) : prev));
+  }, []);
+
+  /** The budgeted Douglas-Peucker that entry already runs, offered as a
+   *  command. It existed in the state module and had no button. */
+  const onEditorSimplify = useCallback((): void => {
+    setEditorState((prev) => {
+      if (!prev) return prev;
+      const simplified = simplifyForEditing(prev.waypoints);
+      if (simplified.length === prev.waypoints.length) return prev;
+      return {
+        ...prev,
+        waypoints: simplified,
+        history: [...prev.history, prev.waypoints],
+        future: [],
+        selected: [],
+      };
+    });
+  }, []);
+
   const onEditorUndo = useCallback((): void => {
     setEditorState((prev) => (prev ? undo(prev) : prev));
   }, []);
@@ -233,36 +356,241 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     };
   }, [editing, mapLoaded]);
 
-  /**
-   * Entering the editor: while edit mode is armed and no leg is under edit
-   * yet, a click on a leg opens it. The `cruise-arcs` PathLayer is always
-   * pickable (see createCruiseArcsLayer) but is not given its own onClick
-   * here, so a hit on it falls through to this deck-level handler — see the
-   * comment on DeckOverlayProps.onClick above for why that is safe to rely
-   * on alongside the guide line's own onClick.
-   */
-  const handleMapClick = useCallback(
-    (info: PickingInfo): void => {
-      if (!editMode || editing || !geometry) return;
-      if (info.layer?.id !== "cruise-arcs") return;
-      const clicked = info.object as { fromPortId: number; toPortId: number } | undefined;
-      if (!clicked) return;
+  /** Open a leg, or switch to it, guarding whatever is unsaved. */
+  const enterLeg = useCallback(
+    (fromPortId: number, toPortId: number): void => {
+      if (!geometry) return;
+      if (editing && editing.fromPortId === fromPortId && editing.toPortId === toPortId) return;
+      if (
+        editorState &&
+        isDirty(editorState) &&
+        !window.confirm(t("cruise:routeEditor.discardConfirm"))
+      ) {
+        return;
+      }
       const feature = geometry.features.find(
-        (f) =>
-          f.properties.fromPortId === clicked.fromPortId &&
-          f.properties.toPortId === clicked.toPortId
+        (f) => f.properties.fromPortId === fromPortId && f.properties.toPortId === toPortId
       );
       if (!feature) return;
-      setEditing({ fromPortId: clicked.fromPortId, toPortId: clicked.toPortId });
+      setEditing({ fromPortId, toPortId });
       // A raw marnet leg can arrive with 178 waypoints — an unusable
       // caterpillar of handles (Nassau→Vancouver, owner decision 2026-08-21).
       // Simplify to the handle budget ON ENTRY; the stored route stays raw
       // unless the user actually edits, because an untouched simplified line
       // is the editor's `original` and therefore never dirty.
       setEditorState(initRouteEditor(simplifyForEditing(feature.geometry.coordinates)));
+      setSaveError(false);
     },
-    [editMode, editing, geometry]
+    [geometry, editing, editorState, t]
   );
+
+  /**
+   * A left click on the map, with a leg open or without one.
+   *
+   * The rule this replaces was: while a leg is open, ignore the click. That did
+   * not ignore it — the guide line's own handler took it and INSERTED a
+   * waypoint, so a user reaching for a different leg silently edited the leg
+   * they already had open. Reported 2026-08-29 as "you cannot select another
+   * leg", which understated it.
+   *
+   * Now: a hit on ANOTHER leg switches to it; a hit on the open leg's own line
+   * still inserts (that gesture is handled by the guide layer); a hit on
+   * nothing clears the selection.
+   */
+  const handleMapClick = useCallback(
+    (info: PickingInfo): void => {
+      if (!editMode || !geometry) return;
+      if (info.layer?.id !== "cruise-arcs") {
+        if (editorState && editorState.selected.length > 0) {
+          setEditorState(clearSelection(editorState));
+        }
+        return;
+      }
+      const clicked = info.object as { fromPortId: number; toPortId: number } | undefined;
+      if (!clicked) return;
+      enterLeg(clicked.fromPortId, clicked.toPortId);
+    },
+    [editMode, geometry, editorState, enterLeg]
+  );
+
+  /**
+   * Leave the leg but stay in the editor.
+   *
+   * There was no such exit: Save returned to leg selection, and Cancel left
+   * the editor entirely, so a user who opened the wrong leg had to leave and
+   * come back. Named `closeLegOnly` to keep it apart from `closeEditor`.
+   */
+  const closeLegOnly = useCallback((): void => {
+    setEditorState((prev) => {
+      if (prev && isDirty(prev) && !window.confirm(t("cruise:routeEditor.discardConfirm"))) {
+        return prev;
+      }
+      setEditing(null);
+      setSaveError(false);
+      return null;
+    });
+  }, [t]);
+
+  /**
+   * Right-click: a different menu for a handle, a leg, and empty water.
+   *
+   * The whole point of this menu is that the two commands with no mouse route
+   * before it — switch to another leg, delete a selection — now have one.
+   */
+  const onMapContextMenu = useCallback(
+    (event: React.MouseEvent): void => {
+      if (!editMode) return;
+      event.preventDefault();
+      const { clientX, clientY } = event;
+
+      const handleIndex = handleIndexAt(clientX, clientY);
+      if (handleIndex !== null && editorState) {
+        const many = editorState.selected.filter((i) => !isEndpoint(editorState, i));
+        setMenu({
+          x: clientX,
+          y: clientY,
+          title: t("cruise:routeEditor.handle", { index: handleIndex + 1 }),
+          entries: [
+            {
+              label: t("cruise:routeEditor.menu.removeHandle"),
+              disabled: isEndpoint(editorState, handleIndex),
+              onSelect: () => onEditorRemove(handleIndex),
+            },
+            {
+              label: t("cruise:routeEditor.menu.removeSelected", { count: many.length }),
+              disabled: many.length < 2,
+              onSelect: onEditorRemoveSelected,
+            },
+            { label: null },
+            {
+              label: t("cruise:routeEditor.menu.clearSelection"),
+              disabled: editorState.selected.length === 0,
+              onSelect: () => setEditorState((prev) => (prev ? clearSelection(prev) : prev)),
+            },
+          ],
+        });
+        return;
+      }
+
+      const leg = legAt(clientX, clientY);
+      if (leg) {
+        const isOpen =
+          editing?.fromPortId === leg.fromPortId && editing?.toPortId === leg.toPortId;
+        setMenu({
+          x: clientX,
+          y: clientY,
+          title: isOpen
+            ? t("cruise:routeEditor.menu.openLeg")
+            : t("cruise:routeEditor.menu.otherLeg"),
+          entries: isOpen
+            ? [
+                {
+                  label: t("cruise:routeEditor.menu.simplify"),
+                  disabled: !editorState || editorState.waypoints.length <= 3,
+                  onSelect: onEditorSimplify,
+                },
+                { label: null },
+                { label: t("cruise:routeEditor.menu.closeLeg"), onSelect: closeLegOnly },
+              ]
+            : [
+                {
+                  label: t("cruise:routeEditor.menu.editThisLeg"),
+                  onSelect: () => enterLeg(leg.fromPortId, leg.toPortId),
+                },
+              ],
+        });
+        return;
+      }
+
+      setMenu({
+        x: clientX,
+        y: clientY,
+        title: t("cruise:routeEditor.menu.map"),
+        entries: [
+          {
+            label: t("cruise:routeEditor.menu.clearSelection"),
+            disabled: !editorState || editorState.selected.length === 0,
+            onSelect: () => setEditorState((prev) => (prev ? clearSelection(prev) : prev)),
+          },
+          {
+            label: t("cruise:routeEditor.menu.closeLeg"),
+            disabled: !editing,
+            onSelect: closeLegOnly,
+          },
+        ],
+      });
+    },
+    [
+      editMode,
+      editorState,
+      editing,
+      handleIndexAt,
+      legAt,
+      t,
+      onEditorRemove,
+      onEditorRemoveSelected,
+      onEditorSimplify,
+      enterLeg,
+      closeLegOnly,
+    ]
+  );
+
+  /** The marquee, in select mode only — in pan mode the drag is the map's. */
+  const onMarqueeStart = useCallback(
+    (event: React.PointerEvent): void => {
+      if (!editMode || tool !== "select" || event.button !== 0) return;
+      if (handleIndexAt(event.clientX, event.clientY) !== null) return;
+      const point = toBoxPoint(event.clientX, event.clientY);
+      if (!point) return;
+      event.preventDefault();
+      setMarquee({ x0: point[0], y0: point[1], x1: point[0], y1: point[1] });
+    },
+    [editMode, tool, handleIndexAt, toBoxPoint]
+  );
+
+  const onMarqueeMove = useCallback(
+    (event: React.PointerEvent): void => {
+      if (!marquee) return;
+      const point = toBoxPoint(event.clientX, event.clientY);
+      if (!point) return;
+      setMarquee((prev) => (prev ? { ...prev, x1: point[0], y1: point[1] } : prev));
+    },
+    [marquee, toBoxPoint]
+  );
+
+  /**
+   * Release: turn the rectangle into a selection.
+   *
+   * The box is in SCREEN space and the waypoints are in lon/lat, so each
+   * waypoint is projected rather than the box unprojected — a box unprojected
+   * at low zoom is not a rectangle on the globe, and near the antimeridian it
+   * is not even connected.
+   */
+  const onMarqueeEnd = useCallback((): void => {
+    if (!marquee) return;
+    const box = marquee;
+    setMarquee(null);
+    const map = mapRef.current?.getMap();
+    if (!map || !editorState) return;
+    const left = Math.min(box.x0, box.x1);
+    const right = Math.max(box.x0, box.x1);
+    const top = Math.min(box.y0, box.y1);
+    const bottom = Math.max(box.y0, box.y1);
+    // A click, not a drag: treat it as "clear", not as a zero-size selection.
+    if (right - left < 3 && bottom - top < 3) {
+      setEditorState((prev) => (prev ? clearSelection(prev) : prev));
+      return;
+    }
+    setEditorState((prev) =>
+      prev
+        ? selectWaypointsIn(prev, (point) => {
+            const screen = map.project([point[0], point[1]]);
+            return screen.x >= left && screen.x <= right && screen.y >= top && screen.y <= bottom;
+          })
+        : prev
+    );
+  }, [marquee, editorState]);
+
 
   /** Legs the server says carry a hand-drawn line. Drives the badge and
    *  whether "back to automatic" is offered at all — there is nothing to
@@ -406,6 +734,11 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
             // multi-segment path would not tell us which stretch was hit.
             onClick: (info: PickingInfo<{ path: LonLat[]; segment: number }>): boolean => {
               if (info.index >= 0 && info.coordinate) {
+                // Defer when the user was aiming at a different leg: returning
+                // false lets the pick fall through to the root handler, which
+                // switches. Swallowing it here is what silently edited the
+                // wrong leg.
+                if (clickBelongsToAnotherLeg(info.x, info.y)) return false;
                 onEditorInsert(info.index, [info.coordinate[0], info.coordinate[1]]);
                 return true;
               }
@@ -420,7 +753,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
       ...(portsLayers ?? []),
       ...(guideLayer !== null ? [guideLayer] : []),
     ];
-  }, [cruise, geometryMap, zoom, editing, editorState, onEditorInsert]);
+  }, [cruise, geometryMap, zoom, editing, editorState, onEditorInsert, clickBelongsToAnotherLeg]);
 
   const bboxPoints: Array<[number, number]> = useMemo(() => {
     const pts: Array<[number, number]> = [];
@@ -470,9 +803,14 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
    */
   const mapPanel = (
     <div
+      ref={mapBoxRef}
       className={`relative w-full overflow-hidden rounded-md border border-border ${
         editMode ? "min-h-0 flex-1" : "h-64"
       }`}
+      onContextMenu={onMapContextMenu}
+      onPointerDown={onMarqueeStart}
+      onPointerMove={onMarqueeMove}
+      onPointerUp={onMarqueeEnd}
     >
       <MapGL
         reuseMaps
@@ -487,7 +825,12 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
         }}
       >
         {mapLoaded && (
-          <DeckGLOverlay layers={layers} getTooltip={getTooltip} onClick={handleMapClick} />
+          <DeckGLOverlay
+            layers={layers}
+            getTooltip={getTooltip}
+            onClick={handleMapClick}
+            onReady={keepDeck}
+          />
         )}
         {editing && editorState && (
           <RouteEditorOverlay
@@ -509,6 +852,27 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
           />
         )}
       </MapGL>
+      {marquee && (
+        <div
+          data-testid="route-marquee"
+          className="pointer-events-none absolute border border-(--accent) bg-(--accent)/15"
+          style={{
+            left: Math.min(marquee.x0, marquee.x1),
+            top: Math.min(marquee.y0, marquee.y1),
+            width: Math.abs(marquee.x1 - marquee.x0),
+            height: Math.abs(marquee.y1 - marquee.y0),
+          }}
+        />
+      )}
+      {menu && (
+        <MapContextMenu
+          x={menu.x}
+          y={menu.y}
+          title={menu.title}
+          entries={menu.entries}
+          onClose={(): void => setMenu(null)}
+        />
+      )}
     </div>
   );
 
@@ -524,6 +888,27 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
         <span className="mr-auto text-sm text-(--danger)">
           {t("cruise:routeEditor.saveFailed")}
         </span>
+      )}
+      {editMode && (
+        <div className="flex" role="group" aria-label={t("cruise:routeEditor.tool")}>
+          <button
+            type="button"
+            aria-pressed={tool === "pan"}
+            className={`${barButton} rounded-r-none ${tool === "pan" ? "border-(--accent) text-(--accent)" : ""}`}
+            onClick={(): void => setTool("pan")}
+          >
+            {t("cruise:routeEditor.toolPan")}
+          </button>
+          <button
+            type="button"
+            aria-pressed={tool === "select"}
+            disabled={!editing}
+            className={`${barButton} -ml-px rounded-l-none ${tool === "select" ? "border-(--accent) text-(--accent)" : ""}`}
+            onClick={(): void => setTool("select")}
+          >
+            {t("cruise:routeEditor.toolSelect")}
+          </button>
+        </div>
       )}
       {editing && editorState && (
         <>
@@ -551,10 +936,31 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
           <button
             type="button"
             className={barButton}
+            disabled={editorState.waypoints.length <= 3}
+            onClick={onEditorSimplify}
+          >
+            {t("cruise:routeEditor.simplify")}
+          </button>
+          <button
+            type="button"
+            className={barButton}
+            disabled={editorState.selected.filter((i) => !isEndpoint(editorState, i)).length === 0}
+            onClick={onEditorRemoveSelected}
+          >
+            {t("cruise:routeEditor.removeSelected", {
+              count: editorState.selected.filter((i) => !isEndpoint(editorState, i)).length,
+            })}
+          </button>
+          <button
+            type="button"
+            className={barButton}
             disabled={!isDirty(editorState)}
             onClick={(): void => void onSave()}
           >
             {t("cruise:routeEditor.save")}
+          </button>
+          <button type="button" className={barButton} onClick={closeLegOnly}>
+            {t("cruise:routeEditor.closeLeg")}
           </button>
         </>
       )}

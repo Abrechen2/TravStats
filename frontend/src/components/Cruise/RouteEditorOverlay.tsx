@@ -47,7 +47,7 @@ export function RouteEditorOverlay({
     <>
       {state.waypoints.map((point, index) => {
         const endpoint = isEndpoint(state, index);
-        const selected = state.selected === index;
+        const selected = state.selected.includes(index);
         return (
           <Marker
             // The index alone — a key that carried the coordinates would
@@ -62,7 +62,11 @@ export function RouteEditorOverlay({
             onDrag={(e): void => onDrag(index, [e.lngLat.lng, e.lngLat.lat])}
             onDragEnd={(e): void => onDrag(index, [e.lngLat.lng, e.lngLat.lat])}
           >
-            <div className="group relative">
+            {/* The index rides on a real DOM node rather than on <Marker>,
+                which does not forward unknown props. The right-click menu
+                finds the handle under the cursor with elementFromPoint and
+                reads it here — deck picking cannot see a DOM marker. */}
+            <div className="group relative" data-waypoint-index={index}>
               <button
                 type="button"
                 aria-label={handleLabel(index)}
@@ -73,6 +77,15 @@ export function RouteEditorOverlay({
                   // ones, so they must still fire when an
                   // (unfocusable-for-drag but still Tab-reachable) endpoint
                   // handle has focus.
+                  // Shift FIRST. Ctrl+Shift+Z is the standard redo on Windows
+                  // and Linux, and this branch used to swallow it and undo
+                  // instead -- measured in a browser 2026-08-29, with both
+                  // directions available so the outcome was unambiguous.
+                  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "z") {
+                    e.preventDefault();
+                    onRedo();
+                    return;
+                  }
                   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
                     e.preventDefault();
                     onUndo();
