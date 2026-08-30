@@ -66,36 +66,6 @@ export const BETA_FEATURES = Object.freeze({
   }),
 
   /**
-   * The whole Places (POI) domain — dashboard tab, /places list, nav entry,
-   * the module toggle, and place visits on the trip timeline.
-   *
-   * This is NOT the old `poiDashboardTab` stub gate. The domain is real now:
-   * Place + PlaceVisit, a migration off the old trip stops, an API, a map
-   * layer and a list. What it is not yet is FINISHED — see `returnsWhen`.
-   *
-   * READ THIS BEFORE REMOVING THE GATE: hiding the domain must not orphan the
-   * data. A user who created places on a beta instance and then upgrades to a
-   * build with the flag off still owns those rows; they simply stop being
-   * shown. Nothing here deletes or migrates anything, and the backend
-   * endpoints stay reachable (this is a visibility gate — see the file header),
-   * so a place visited on a trip keeps its `PlaceVisit` row and reappears
-   * intact the moment the flag comes back on.
-   */
-  /**
-   * User-chosen colour per domain, applied to every surface outside the map.
-   *
-   * READ THIS BEFORE REMOVING THE GATE: the gate covers the VALUE, not just
-   * the settings section — see `hooks/useDomainColors.ts`. With the flag off
-   * everyone gets the brand set from BRAND.md §3, so an instance that turns
-   * the flag back off does not keep rendering colours nobody can reach a
-   * control for.
-   *
-   * The open question it is waiting on is not technical. BRAND.md §3 names the
-   * four hexes as canonical and the backend mirrors the same table; letting a
-   * user override them turns a brand constant into a default, which affects
-   * screenshots, the wiki and the marketing site as much as the app.
-   */
-  /**
    * The passport page — /passport, its nav entry, and GET /stats/passport.
    *
    * READ THIS BEFORE REMOVING THE GATE: the endpoint stays reachable while the
@@ -111,6 +81,20 @@ export const BETA_FEATURES = Object.freeze({
       "2.6.0 is promoted and the passport has had a round of real use — or 2.7.0 opens, whichever comes first.",
   }),
 
+  /**
+   * User-chosen colour per domain, applied to every surface outside the map.
+   *
+   * READ THIS BEFORE REMOVING THE GATE: the gate covers the VALUE, not just
+   * the settings section — see `hooks/useDomainColors.ts`. With the flag off
+   * everyone gets the brand set from BRAND.md §3, so an instance that turns
+   * the flag back off does not keep rendering colours nobody can reach a
+   * control for.
+   *
+   * The open question it is waiting on is not technical. BRAND.md §3 names the
+   * four hexes as canonical and the backend mirrors the same table; letting a
+   * user override them turns a brand constant into a default, which affects
+   * screenshots, the wiki and the marketing site as much as the app.
+   */
   domainColors: Object.freeze({
     reason: "advanced",
     why: "Overriding the four domain hues turns BRAND.md §3 from a constant into a default. That reaches past the app into screenshots, the wiki and travstats.de, so it is shown to beta instances first rather than to everyone at once.",
@@ -119,10 +103,34 @@ export const BETA_FEATURES = Object.freeze({
     issue: "#270",
   }),
 
+  /**
+   * The whole Places (POI) domain — dashboard tab, /places list, nav entry,
+   * the module toggle, and place visits on the trip timeline.
+   *
+   * This is NOT the old `poiDashboardTab` stub gate. The domain is real now:
+   * Place + PlaceVisit, a migration off the old trip stops, an API, a map
+   * layer and a list. What it is not yet is FINISHED — see `returnsWhen`.
+   *
+   * The three gaps this entry used to name are CLOSED (checked 2026-08-30):
+   * the appearance panel has `map/PlaceAppearanceSection.tsx`, the All tab
+   * loads places and place lists, and both custom lists (phase B) and the
+   * curated checklists (phase C) ship. The `why` below was rewritten because a
+   * gate whose stated reason has expired is worse than an unexplained one —
+   * nobody re-reads a reason they have already accepted.
+   *
+   * READ THIS BEFORE REMOVING THE GATE: hiding the domain must not orphan the
+   * data. A user who created places on a beta instance and then upgrades to a
+   * build with the flag off still owns those rows; they simply stop being
+   * shown. Nothing here deletes or migrates anything, and the backend
+   * endpoints stay reachable (this is a visibility gate — see the file header),
+   * so a place visited on a trip keeps its `PlaceVisit` row and reappears
+   * intact the moment the flag comes back on.
+   */
   poiDomain: Object.freeze({
     reason: "beta",
-    why: "The domain works end-to-end — create, edit, detail page, list, map — but is incomplete: there is no POI section in the map appearance panel, places are absent from the All tab, and neither custom lists (phase B) nor the shipped checklists (phase C) exist yet. The owner's own case, \"every McDonald's I have been to\", is exactly what custom lists are for and is the reason to keep this hidden.",
-    returnsWhen: "Custom lists (phase B) have shipped.",
+    why: "Places can only be added one at a time, by hand. There is no import route of any kind, so Settings → Import renders the POI group empty — `poiAdapter.tsx` still reads POI_IMPORT_READY = false and nothing references it. The picker compounds it: it writes no `externalRef`, so the @@unique([userId, externalRef]) index on Place never fires and the same place entered twice stays two rows. Offering a domain whose only way in is manual, and which cannot recognise its own duplicates, is what this gate is holding back.",
+    returnsWhen:
+      "Phase D lands an import route and the picker mints an identity — see docs/superpowers/specs/2026-08-25-poi-phase-d-import-design.md, §3.1 for the picker and §4 for the cheapest import. Custom lists (phase B), which this gate used to wait for, shipped.",
   }),
 
   /**

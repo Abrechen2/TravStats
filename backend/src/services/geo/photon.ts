@@ -53,6 +53,22 @@ function getMaxResponseBytes(): number {
 
 export interface PlaceResult {
   name: string;
+  /**
+   * A stable identity for this hit, `osm:<type>/<id>`, or undefined when the
+   * geocoder did not name one.
+   *
+   * `Place` carries `@@unique([userId, externalRef])` to stop the same place
+   * existing twice, and nothing was minting a value for it: a place added by
+   * hand through this picker was stored with `externalRef: null`, so the index
+   * could never fire. Add the Colosseum by hand, import it later from Google
+   * Takeout as `gmaps:<cid>`, and you own two Colosseums.
+   *
+   * The namespace prefix is what keeps the schemes apart — see
+   * `docs/superpowers/specs/2026-08-25-poi-phase-d-import-design.md` §3, which
+   * defines `gmaps:`, `osm:` and `csv:` and calls this the precondition for
+   * any import.
+   */
+  externalRef?: string;
   address?: string;
   city?: string;
   country?: string;
@@ -94,6 +110,11 @@ const photonFeatureSchema = z
         countrycode: z.string().optional(),
         osm_value: z.string().optional(),
         type: z.string().optional(),
+        // The OSM identity of the hit. Photon has always returned these; we
+        // simply never read them, which is why a place added through the
+        // picker had no identity at all (see `externalRef` on PlaceResult).
+        osm_type: z.string().optional(),
+        osm_id: z.union([z.number(), z.string()]).optional(),
       })
       .passthrough()
       .optional(),
@@ -126,6 +147,27 @@ function buildAddress(props: PhotonProperties): string | undefined {
  * name or a valid `[lon, lat]` coordinate pair — a malformed feature is
  * dropped rather than surfaced with garbage fields.
  */
+/**
+ * `osm:<type>/<id>`, or undefined when the feature carries no identity.
+ *
+ * The type is normalised to the long form. Photon abbreviates it to `N`/`W`/`R`
+ * today, and an identity that changes shape when the geocoder changes its
+ * abbreviation is not an identity — every row minted under the old spelling
+ * would stop matching the new one, silently, and duplicates would return.
+ */
+function osmRef(props: PhotonProperties): string | undefined {
+  const rawType = typeof props.osm_type === "string" ? props.osm_type.trim() : "";
+  const rawId = props.osm_id;
+  if (!rawType || rawId === undefined || rawId === null) return undefined;
+  const id = String(rawId).trim();
+  if (!id) return undefined;
+
+  const longForm: Record<string, string> = { n: "node", w: "way", r: "relation" };
+  const key = rawType.toLowerCase();
+  const type = longForm[key] ?? key;
+  return `osm:${type}/${id}`;
+}
+
 function normalizeFeature(feature: PhotonFeature): PlaceResult | null {
   const props = feature.properties;
   const coords = feature.geometry?.coordinates;
@@ -139,6 +181,7 @@ function normalizeFeature(feature: PhotonFeature): PlaceResult | null {
 
   return {
     name: props.name,
+    externalRef: osmRef(props),
     address: buildAddress(props),
     city: props.city,
     country: props.country,

@@ -9,6 +9,8 @@ import { api } from "./client";
  */
 export interface PlaceSearchResult {
   name: string;
+  /** `osm:<type>/<id>` when the geocoder named one — the mirror of `PlaceResult.externalRef`. */
+  externalRef?: string;
   address?: string;
   city?: string;
   country?: string;

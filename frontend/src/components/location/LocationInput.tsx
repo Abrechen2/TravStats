@@ -41,6 +41,12 @@ export interface LocationCoordinates {
 export interface LocationSelection {
   lat: number;
   lon: number;
+  /**
+   * `osm:<type>/<id>` when the coordinates came from a search hit that named
+   * one. Absent for a hand-typed or map-picked coordinate, which genuinely has
+   * no identity — see `PlaceResult.externalRef` on the backend.
+   */
+  externalRef?: string;
   name?: string;
   address?: string;
   city?: string;
@@ -86,6 +92,7 @@ function placeToSelection(hit: PlaceSearchResult): LocationSelection {
     lat: hit.lat,
     lon: hit.lon,
     name: hit.name,
+    externalRef: hit.externalRef,
     address: hit.address,
     city: hit.city,
     country: hit.country,
