@@ -1,4 +1,5 @@
 import { TextProvider, ParserConfig, ParserResult } from './types';
+import { keepOnlyFlightsWithEvidence } from './shared/evidence';
 import { ParsedBooking } from '../bookingParser';
 import logger, { parserFactoryLogger, parserTextLogger } from '../../utils/logger';
 import { shouldLogParserOperations } from '../loggingConfig';
@@ -115,7 +116,7 @@ export async function parseEmail(
           "[Parser Factory] User-derived template matched (confidence >=80%)"
         );
         return {
-          flights: userResults as ParsedBooking[],
+          flights: keepOnlyFlightsWithEvidence(userResults as ParsedBooking[], "regex"),
           provider: "regex" as const,
           fallbackUsed: false,
         };
@@ -146,7 +147,7 @@ export async function parseEmail(
           const finalFlights = applyEmailRegexPostProcessing(ollamaFlights, subject, cleanedText, html);
           logger.info({ flightCount: finalFlights.length }, '[Parser Factory] Ollama succeeded — skipping templates');
           return {
-            flights: finalFlights,
+            flights: keepOnlyFlightsWithEvidence(finalFlights, "ollama"),
             provider: 'ollama' as const,
             fallbackUsed: false,
           };
@@ -171,7 +172,7 @@ export async function parseEmail(
         '[Parser Factory] Template parser matched with sufficient confidence'
       );
       return {
-        flights: templateResults,
+        flights: keepOnlyFlightsWithEvidence(templateResults, "regex"),
         provider: 'regex' as const,
         fallbackUsed: false,
       };
@@ -255,7 +256,7 @@ export async function parseEmail(
       }
 
       return {
-        flights: finalFlights,
+        flights: keepOnlyFlightsWithEvidence(finalFlights, finalProvider),
         provider: finalProvider,
         fallbackUsed: finalFallbackUsed,
       };
