@@ -135,7 +135,13 @@ export async function parseEmail(
       const ollamaAvail = await checkProviderAvailability(ollamaParser);
       if (ollamaAvail.available) {
         logger.info('[Parser Factory] Ollama configured — trying LLM before templates');
-        const ollamaFlights = await ollamaParser.parseEmail(subject, cleanedText, html);
+        const ollamaFlights = await ollamaParser.parseEmail(
+          subject,
+          cleanedText,
+          html,
+          undefined,
+          { referenceDate: config.referenceDate },
+        );
         if (ollamaFlights && ollamaFlights.length > 0) {
           const finalFlights = applyEmailRegexPostProcessing(ollamaFlights, subject, cleanedText, html);
           logger.info({ flightCount: finalFlights.length }, '[Parser Factory] Ollama succeeded — skipping templates');
@@ -208,7 +214,9 @@ export async function parseEmail(
         logger.info(`[Parser Factory] Attempting email parse with: ${provider}`);
       }
 
-      const flights = await parser.parseEmail(subject, cleanedText, html);
+      const flights = await parser.parseEmail(subject, cleanedText, html, undefined, {
+        referenceDate: config.referenceDate,
+      });
       const parseDuration = Date.now() - parseStartTime;
 
       if (!flights || flights.length === 0) {

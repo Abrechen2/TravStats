@@ -34,6 +34,7 @@ describe("commitLodgingImport", () => {
       data: { username: "lodging-import-commit-test", passwordHash: "x" },
     });
     userId = user.id;
+
   });
 
   beforeEach(() => {

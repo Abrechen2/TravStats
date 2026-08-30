@@ -120,6 +120,31 @@ export default function TimesFields({
   const actualArrTimeId = ids?.actualArrTime ?? "timesFieldsActualArrTime";
   const showActualTimes = Boolean(actualValue && onActualChange);
 
+  /**
+   * Fill the actual times from the planned ones — the empty fields only.
+   *
+   * Enabled as soon as ONE planned field could fill an empty actual one, so
+   * the button is live in the case it exists for (nothing entered yet) and
+   * dead once there is nothing left to help with.
+   */
+  const canCopyPlannedToActual = Boolean(
+    actualValue &&
+    ((value.depDate && !actualValue.actualDepDate) ||
+      (value.depTime && !actualValue.actualDepTime) ||
+      (value.arrDate && !actualValue.actualArrDate) ||
+      (value.arrTime && !actualValue.actualArrTime))
+  );
+
+  const handleCopyPlannedToActual = (): void => {
+    if (!actualValue || !onActualChange) return;
+    onActualChange({
+      actualDepDate: actualValue.actualDepDate || value.depDate,
+      actualDepTime: actualValue.actualDepTime || value.depTime,
+      actualArrDate: actualValue.actualArrDate || value.arrDate,
+      actualArrTime: actualValue.actualArrTime || value.arrTime,
+    });
+  };
+
   const handleCopyDepartureDate = (): void => {
     if (!value.depDate) return;
     onChange({ ...value, arrDate: value.depDate });
@@ -290,9 +315,26 @@ export default function TimesFields({
       </div>
       {showActualTimes && actualValue && onActualChange && (
         <div className="mt-4">
-          <h4 className="text-sm font-medium mb-2" style={{ color: "var(--text-primary)" }}>
-            {t("flights:actualTimes.label")}
-          </h4>
+          <div className="flex items-center gap-2 mb-2">
+            <h4 className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+              {t("flights:actualTimes.label")}
+            </h4>
+            {/* One button for all four fields, not an arrow per field.
+                An actual time is usually the planned one give or take a few
+                minutes, so the work is "take these and adjust", and four
+                separate copies would be four clicks for one intention
+                (Alex, 2026-08-29).
+
+                It never OVERWRITES: the copy fills only the fields that are
+                still empty. Someone who has already typed the real arrival and
+                then reaches for this expects help, not to lose it. */}
+            <CopyActionButton
+              icon="arrow-down"
+              title={t("flights:actualTimes.copyFromPlanned")}
+              disabled={!canCopyPlannedToActual}
+              onClick={handleCopyPlannedToActual}
+            />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label" htmlFor={actualDepDateId}>

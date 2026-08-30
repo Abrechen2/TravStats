@@ -45,6 +45,10 @@ export function LodgingFormModal({
   );
   const [notes, setNotes] = useState<string>(lodging?.notes ?? "");
   const [saving, setSaving] = useState(false);
+  // Forgejo #9: out-of-range coordinates used to vanish silently and the
+  // record saved without them. LocationInput now says so; this stops the
+  // form writing while the user is looking at that message.
+  const [coordsValid, setCoordsValid] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const position: LocationCoordinates | null = lat !== null && lon !== null ? { lat, lon } : null;
@@ -145,7 +149,7 @@ export function LodgingFormModal({
           <button
             type="button"
             onClick={() => void handleSave()}
-            disabled={saving || name.trim().length === 0}
+            disabled={saving || name.trim().length === 0 || !coordsValid}
             className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)] disabled:opacity-50"
           >
             {saving ? t("common:buttons.saving") : t("common:buttons.save")}
@@ -164,6 +168,7 @@ export function LodgingFormModal({
             <LocationInput
               value={position}
               onChange={handleLocationChange}
+              onValidityChange={setCoordsValid}
               label={t("lodging:form.searchLabel")}
               idPrefix="lodging-form-location"
             />

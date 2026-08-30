@@ -57,6 +57,7 @@ interface CruiseReviewSlotProps extends ReviewModalProps {
 
 function CruiseReviewSlot({
   parseResult,
+  sourceFileName,
   onCommit,
   onCancel,
   onEmpty,
@@ -80,6 +81,7 @@ function CruiseReviewSlot({
   return (
     <CruiseImportPreviewModal
       entries={cruises}
+      sourceFileName={sourceFileName ?? null}
       onCancel={onCancel}
       onSaved={async () => {
         await onCommit();

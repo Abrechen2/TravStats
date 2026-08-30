@@ -39,3 +39,72 @@ repos:
         entry: npx --prefix frontend prettier --write
         files: ^frontend/src/.*\.(ts|tsx|css)$
         pass_filenames: true
+
+      # ------------------------------------------------------------------
+      # Correctness hooks.
+      #
+      # Before these, the only thing guarding a commit was Prettier — so
+      # formatting was enforced and whether the code compiled was not. A
+      # type error could be committed, pushed and merged, and the first
+      # thing to notice would be a deploy-time `tsc` on the maintainer's
+      # machine, long after the context was gone.
+      #
+      # `pass_filenames: false` and a whole-project run are deliberate:
+      # both tsc and eslint resolve their config and module graph from the
+      # project root, and handing them a list of individual staged files
+      # makes them either miss cross-file type errors or fail to resolve
+      # config at all. The `files:` pattern is what keeps the cost down —
+      # it decides WHETHER the hook runs, not what it looks at. A commit
+      # touching only backend/ never pays for the frontend checks.
+      #
+      # Measured cost on this machine (2026-08-30), so the trade-off is a
+      # number rather than a feeling:
+      #
+      #   backend  — tsc 14 s, eslint  9 s
+      #   frontend — tsc 27 s, eslint 16 s
+      #
+      # A commit touching one tree costs ~23 s (backend) or ~43 s
+      # (frontend). If that becomes too slow to live with, drop the eslint
+      # hooks first — CI runs both, and lint findings are cheaper to fix
+      # late than type errors are.
+      # ------------------------------------------------------------------
+      - id: tsc-backend
+        name: TypeScript (backend)
+        language: system
+        entry: bash -c 'cd backend && npx tsc --noEmit'
+        files: ^backend/.*\.ts$
+        pass_filenames: false
+
+      - id: tsc-frontend
+        name: TypeScript (frontend)
+        language: system
+        entry: bash -c 'cd frontend && npx tsc --noEmit'
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+
+      - id: eslint-backend
+        name: ESLint (backend)
+        language: system
+        entry: bash -c 'cd backend && npm run lint'
+        files: ^backend/.*\.ts$
+        pass_filenames: false
+
+      # Runs with --max-warnings 0 (see frontend/package.json), so a new
+      # warning blocks the commit instead of quietly accumulating.
+      - id: eslint-frontend
+        name: ESLint (frontend)
+        language: system
+        entry: bash -c 'cd frontend && npm run lint'
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+
+# Deliberately NOT pre-commit hooks:
+#
+#   * The test suites. Vitest alone is ~37 s and the Jest suite needs a
+#     live Postgres with migrations applied and catalogues seeded — a
+#     commit hook that fails because a database container is not running
+#     is a hook people disable within a week. CI runs both instead.
+#   * Prettier over the whole frontend. ~95 files under frontend/src have
+#     never been formatted, so a repo-wide `--check` would block every
+#     commit for reasons unrelated to the change being made. The hook
+#     above formats the staged files only.

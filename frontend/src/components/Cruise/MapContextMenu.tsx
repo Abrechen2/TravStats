@@ -32,7 +32,13 @@ function clamp(value: number, size: number, limit: number): number {
   return Math.max(8, Math.min(value, limit - size - 8));
 }
 
-export function MapContextMenu({ x, y, title, entries, onClose }: MapContextMenuProps): JSX.Element {
+export function MapContextMenu({
+  x,
+  y,
+  title,
+  entries,
+  onClose,
+}: MapContextMenuProps): JSX.Element {
   const ref = useRef<HTMLDivElement | null>(null);
 
   // Close on anything that is not this menu: a click elsewhere, Escape, or the

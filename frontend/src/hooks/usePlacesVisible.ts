@@ -1,4 +1,4 @@
-import { useBetaFeatures } from "./useBetaFeatures";
+import { useBetaFeatureAccess } from "./useBetaFeatures";
 import { useEnabledDomains } from "./useEnabledDomains";
 
 /**
@@ -48,7 +48,11 @@ export type PlacesAccess = "pending" | "allowed" | "denied";
 
 export function usePlacesAccess(): PlacesAccess {
   const { isEnabled } = useEnabledDomains();
-  const { betaFeaturesEnabled, isFeatureVisible } = useBetaFeatures();
-  if (betaFeaturesEnabled === null) return "pending";
-  return isEnabled("poi") && isFeatureVisible("poiDomain") ? "allowed" : "denied";
+  // The pending/allowed/denied rule itself lives in useBetaFeatures now — a
+  // second gated route needed the same three states, and the argument this
+  // file makes about a rule spread over six call sites applies to the rule
+  // itself just as much.
+  const gate = useBetaFeatureAccess("poiDomain");
+  if (gate === "pending") return "pending";
+  return isEnabled("poi") && gate === "allowed" ? "allowed" : "denied";
 }

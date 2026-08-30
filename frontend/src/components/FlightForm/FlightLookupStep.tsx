@@ -15,7 +15,6 @@ import {
 const BoardingPassScanner = lazy(() => import("../BoardingPassScanner"));
 const EmailImportTab = lazy(() => import("../import/EmailImportTab"));
 
-
 export interface FlightLookupStepProps {
   // State
   flightNumber: string;
@@ -80,15 +79,18 @@ export default function FlightLookupStep({
    * A batch that cannot be created must not cost the user their import: the
    * flights still go in, they just land without an undo record.
    */
-  const openImportBatch = async (source: "email" | "pdf"): Promise<void> => {
+  const openImportBatch = async (
+    source: "email" | "pdf",
+    fileName: string | null = null
+  ): Promise<void> => {
     try {
-      setImportBatchId(await createImportBatch("flight", source, null));
+      setImportBatchId(await createImportBatch("flight", source, fileName));
     } catch {
       setImportBatchId(null);
     }
   };
 
-  const handleEmailResult = (result: ParseEmailResult): void => {
+  const handleEmailResult = (result: ParseEmailResult, fileName?: string | null): void => {
     if (isCruiseEmailResult(result) || isLodgingEmailResult(result)) {
       setError(t("flights:form.noFlightsInEmail"));
       return;
@@ -98,7 +100,7 @@ export default function FlightLookupStep({
       setError(t("flights:form.noFlightsInEmail"));
       return;
     }
-    void openImportBatch("email");
+    void openImportBatch("email", fileName ?? null);
     setParsedFlights(flights);
     setCurrentFlightIndex(0);
     setParserProvider(result.provider ?? "template");
@@ -106,7 +108,7 @@ export default function FlightLookupStep({
     setShowFlightReview(true);
   };
 
-  const handlePdfResult = (result: ParsePdfResult): void => {
+  const handlePdfResult = (result: ParsePdfResult, fileName?: string | null): void => {
     if (isCruisePdfResult(result) || isLodgingPdfResult(result)) {
       setError(t("flights:form.noFlightsInEmail"));
       return;
@@ -115,7 +117,7 @@ export default function FlightLookupStep({
       setError(t("flights:form.noFlightsInEmail"));
       return;
     }
-    void openImportBatch("pdf");
+    void openImportBatch("pdf", fileName ?? null);
     setParsedFlights(result.flights);
     setCurrentFlightIndex(0);
     setParserProvider(result.parserUsed ?? "template");
@@ -239,7 +241,6 @@ export default function FlightLookupStep({
           />
         </Suspense>
       )}
-
     </div>
   );
 }

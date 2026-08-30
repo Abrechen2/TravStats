@@ -331,6 +331,16 @@ export default function FlightReviewModal({
 
   const title = t("flights:review.title");
   const showProgress = totalFlights && totalFlights > 1 && flightIndex !== undefined;
+  /**
+   * Whether this click WRITES.
+   *
+   * Forgejo #14: every step of a multi-leg import, the last one included, was
+   * labelled "Weiter". The final press created the records and closed the
+   * wizard, so nothing on screen distinguished the click that only moves on
+   * from the click that commits — the user could not tell which button press
+   * was the irreversible one until it had happened.
+   */
+  const isFinalStep = showProgress && flightIndex! + 1 === totalFlights;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -762,9 +772,13 @@ export default function FlightReviewModal({
             >
               {loading
                 ? t("flights:review.saving")
-                : showProgress
-                  ? t("common:buttons.next")
-                  : t("flights:review.confirm")}
+                : isFinalStep
+                  ? // Names the write and its size. The intermediate steps only
+                    // ACCUMULATE — no request leaves the browser until this one.
+                    t("flights:review.importAll", { count: totalFlights! })
+                  : showProgress
+                    ? t("common:buttons.next")
+                    : t("flights:review.confirm")}
             </button>
           </div>
         </form>

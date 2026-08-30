@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import NavigationBar from "../components/NavigationBar";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import { LodgingMiniMap } from "../components/lodging/LodgingMiniMap";
 import { LodgingStayCard } from "../components/lodging/LodgingStayCard";
 import { StarRating } from "../components/lodging/StarRating";
+import { LodgingPhotoSection } from "../components/lodging/LodgingPhotoSection";
 import { StayEditor } from "../components/lodging/StayEditor";
 import { ChainNameLink } from "../components/lodging/ChainNameLink";
 import { useTranslation } from "../hooks/useTranslation";
@@ -32,7 +33,20 @@ import type { Lodging, LodgingMembership, LodgingStay } from "../types/lodging";
 export default function LodgingDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  /**
+   * Where the reader came from, when the app knows.
+   *
+   * Router state, not a stored value: it survives the click that set it and
+   * nothing else. On a reload, a bookmark or a link opened in a new tab there
+   * genuinely IS no origin, and the full list is then the honest answer rather
+   * than a guess dressed up as memory.
+   */
+  const fromChain =
+    (location.state as { fromChain?: { id: number; name: string } } | null)?.fromChain ?? null;
+  const backTo = fromChain ? `/lodging/chains/${fromChain.id}` : "/lodging";
   const { t } = useTranslation(["lodging", "common"]);
+  const backLabel = fromChain ? fromChain.name : t("lodging:list.title");
   const addToast = useToastStore((s) => s.addToast);
   // `totalSpendBase` is computed by the backend in the user's actual base
   // currency (`UserSettings.baseCurrency`) — NOT `units.currency`, which is an
@@ -120,6 +134,8 @@ export default function LodgingDetailPage(): JSX.Element {
     try {
       await deleteLodging(id);
       addToast("success", t("lodging:detail.deleteSuccess"));
+      // The list, not the origin: returning to the chain page would show the
+      // hotel that was just deleted until that page refetched.
       navigate("/lodging");
     } catch (err: unknown) {
       logger.error("LodgingDetailPage: delete failed", err);
@@ -145,10 +161,10 @@ export default function LodgingDetailPage(): JSX.Element {
         <NavigationBar />
         <div className="mx-auto max-w-3xl p-6">
           <button
-            onClick={() => navigate("/lodging")}
+            onClick={() => navigate(backTo)}
             className="text-sm text-[var(--accent)] hover:underline"
           >
-            ← {t("lodging:list.title")}
+            ← {backLabel}
           </button>
           <div
             role="alert"
@@ -183,10 +199,10 @@ export default function LodgingDetailPage(): JSX.Element {
       <NavigationBar />
       <div className="mx-auto max-w-6xl px-4 py-6">
         <button
-          onClick={() => navigate("/lodging")}
+          onClick={() => navigate(backTo)}
           className="mb-3 text-sm text-[var(--accent)] hover:underline"
         >
-          ← {t("lodging:list.title")}
+          ← {backLabel}
         </button>
 
         {/* Hotel-header strip */}
@@ -251,6 +267,23 @@ export default function LodgingDetailPage(): JSX.Element {
               </span>
             ))}
           </div>
+        )}
+
+        {id && <LodgingPhotoSection lodgingId={id} />}
+
+        {/* The notes, under the same name the form gives them.
+            They were stored and never shown, so anything typed there
+            disappeared on save. Rendered only when there are some: an empty
+            heading over blank space is its own small untruth. */}
+        {lodging.notes !== null && lodging.notes.trim().length > 0 && (
+          <section className="mb-4">
+            <h2 className="mb-1 text-sm font-semibold text-[var(--text-muted)]">
+              {t("lodging:field.notes")}
+            </h2>
+            <p className="whitespace-pre-line text-sm text-[var(--text-primary)]">
+              {lodging.notes}
+            </p>
+          </section>
         )}
 
         {/* Two-column body */}
@@ -337,7 +370,9 @@ export default function LodgingDetailPage(): JSX.Element {
                 <div className="flex justify-between">
                   <dt>{t("lodging:detail.spendPerNight")}</dt>
                   <dd>
-                    {priced && avgPerNight !== null ? formatCurrency(avgPerNight, baseCurrency) : "—"}
+                    {priced && avgPerNight !== null
+                      ? formatCurrency(avgPerNight, baseCurrency)
+                      : "—"}
                   </dd>
                 </div>
               </dl>

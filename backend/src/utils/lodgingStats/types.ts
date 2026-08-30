@@ -310,6 +310,16 @@ export interface LodgingLoyaltyStats {
   concentration: number | null;
   /** Chains by nights, most first. */
   chainNightsRanked: LodgingPlaceCount[];
+  /**
+   * The same ranking one level down: individual hotels by nights.
+   *
+   * Asked for by a tester who could see which BRAND he slept with most and not
+   * which HOUSE — "Ketten nach Nächten" without "Hotels nach Nächten" answers
+   * the loyalty-programme question and not the one a person actually asks about
+   * their own year. `key` is the lodging's name; two hotels sharing a name in
+   * different cities are two rows, because they are two hotels.
+   */
+  lodgingNightsRanked: LodgingPlaceCount[];
   /** Newest year first, then most nights — how a programme's own counter reads. */
   programmeYears: LodgingProgrammeYear[];
 }

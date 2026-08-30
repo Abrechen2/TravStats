@@ -178,6 +178,7 @@ interface PhotoTileProps {
 }
 
 function PhotoTile({ photo, onClick, onDelete }: PhotoTileProps): JSX.Element {
+  const { t } = useTranslation(["common"]);
   return (
     <div
       className="relative group rounded-lg overflow-hidden aspect-square cursor-pointer"
@@ -202,7 +203,7 @@ function PhotoTile({ photo, onClick, onDelete }: PhotoTileProps): JSX.Element {
           color: "#f87171",
           backdropFilter: "blur(4px)",
         }}
-        aria-label="Delete"
+        aria-label={t("common:buttons.delete")}
       >
         ✕
       </button>

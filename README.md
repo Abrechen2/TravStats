@@ -50,6 +50,29 @@ no ads.
 - 🔐 **Invite-only by default** — toggle public registration anytime from the admin UI; JWT in HttpOnly cookies, 18 rate limiters on sensitive endpoints
 - 🌐 **German + English UI** with browser-locale auto-detection, i18n-ready
 
+## Is TravStats for you?
+
+Being honest about the fit costs one paragraph and saves an evening of
+someone else's time.
+
+**It probably is, if you** want your travel history on hardware you
+control; keep a household's or a small group's trips in one place; already
+run Docker and Postgres, or are happy to let the bundled compose file run
+Postgres for you; like filling in a logbook after the fact and getting
+maps, stats and achievements out of it; and want flights *and* cruises
+(and hotels and places) in one timeline rather than four apps.
+
+**It probably is not, if you** want live flight tracking or a radar — this
+records where you have been, it does not watch aircraft move; expect a
+hosted account you just sign up for, because there is no SaaS version and
+running it means running a server; need to onboard more than a handful of
+people, since it is built and tested for roughly 1–10 users on one
+instance and has no SSO, no org/tenant model and no per-team permissions;
+need it on a phone as the primary interface — the web UI is responsive,
+but the native app is not released yet; or need automatic, hands-off
+import of everything, because a lot of travel history is typed in or
+imported from files you supply.
+
 ---
 
 ## Screenshots
@@ -133,13 +156,24 @@ moving tags. Pick the one your platform defaults to.
 
 | Tag | Points to | Use for |
 |---|---|---|
-| `:latest`, `:stable` | Latest stable release (currently `2.2.0`) | Normal production. Auto-updates to the next promoted release. |
-| `:X.Y.Z` (e.g. `:2.2.0`) | Pinned immutable release | Reproducible installs, audit, regulated environments. |
-| `:rc-latest` | Newest Release Candidate (currently `2.2.1-rc.1`) | Beta testers — receive every fresh RC via `docker compose pull`. May include breaking schema changes across major bumps; an in-place backup is taken automatically on first start of a new major. |
+| `:latest`, `:stable` | Newest promoted stable release | Normal production. Auto-updates to the next promoted release. |
+| `:X.Y.Z` | Pinned immutable release | Reproducible installs, audit, regulated environments. |
+| `:rc-latest` | Newest Release Candidate | Beta testers — receive every fresh RC via `docker compose pull`. May include breaking schema changes across major bumps; an in-place backup is taken automatically on first start of a new major. |
 
-Specific RC tags (`:2.2.1-rc.1`, `:2.0.0-beta.8`) and dev builds live on
-GHCR only — Docker Hub only mirrors the moving tags above plus pinned
-final releases.
+<!-- These rows deliberately name no version numbers. They used to read
+     "currently 2.2.0" / "currently 2.2.1-rc.1" and were still saying that
+     at 2.5.2 and 2.6.0-rc.26 — hand-maintained version prose goes stale
+     the first time someone ships without re-reading the README, and then
+     it misinforms with an air of precision. The badges at the top of this
+     file resolve live; the releases page is always current. -->
+
+Which version those moving tags currently resolve to is on the
+[releases page](https://github.com/Abrechen2/TravStats/releases) and in the
+Release badge at the top of this file.
+
+Specific RC and beta tags (`:X.Y.Z-rc.N`, `:X.Y.Z-beta.N`) and dev builds
+live on GHCR only — Docker Hub only mirrors the moving tags above plus
+pinned final releases.
 
 ---
 
@@ -183,6 +217,41 @@ See [CHANGELOG.md](CHANGELOG.md) for the full history and
 Android app (boarding-pass scan, a 3D globe of your travels) is in the
 works — no release date yet; hotels & places-of-interest, CO₂ tracking
 and a trip planner are on the map too.
+
+## Known limitations
+
+Things worth knowing before you commit a weekend to this. None of them are
+secrets; they are just easier to read here than to discover later.
+
+- **amd64 only.** The published images carry a single `linux/amd64`
+  manifest. A Raspberry Pi or an Apple-Silicon Mac cannot run them
+  natively — you would have to build the image yourself for your
+  architecture.
+- **Single instance, small groups.** Designed and tested for roughly 1–10
+  users on one instance. There is no multi-tenancy, no SSO/OIDC/LDAP, and
+  no per-team permission model; accounts are invite-only by default and
+  managed by an admin.
+- **Postgres is required.** Bundled in the compose file, but there is no
+  SQLite fallback, so the database is part of what you operate and back up.
+- **Enrichment depends on third-party APIs.** Flight enrichment via
+  AirLabs / Aviationstack / OpenSky is optional and works on free tiers,
+  which means their rate limits and occasional gaps are yours too. Nothing
+  breaks without a key — you just enter more by hand.
+- **Local LLM parsing needs real hardware.** The Ollama path
+  (`gemma3:12b`) handles messy multi-flight mails and unknown airline
+  templates. On a shared, CPU-only VM it has been measured at a fraction of
+  a token per second, which times out and falls back to the template
+  parser. Budget a machine with a GPU or accept the regex path.
+- **Import is assisted, not automatic.** Boarding passes, confirmation
+  emails and CSV/Excel are parsed for you, but there is no mailbox polling
+  and no airline account linking. You bring the file or the text.
+- **The native mobile app is not released.** It is in development; the web
+  UI is responsive and is the way to use TravStats today.
+- **Some features sit behind a beta flag.** An admin toggle hides
+  unfinished areas on production instances. If something in the docs or a
+  screenshot is not visible in your install, that is usually why.
+- **Solo project.** One maintainer. Issues and fixes move at the pace that
+  implies — see the commit history for an honest picture of it.
 
 ## Security
 
@@ -259,8 +328,27 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 npm run install:all     # install backend + frontend
 npm run dev             # backend :8000 + frontend :3000
 npm run typecheck       # tsc --noEmit on both
+npm run lint            # eslint on both
 npm run test:frontend   # Vitest (backend tests need Postgres)
 ```
+
+### What CI checks
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs typecheck and
+lint on both trees, the Vitest suite, and a Prettier check scoped to the
+frontend files a change touches. The Jest backend suite runs there too
+against a throwaway Postgres, but is marked advisory rather than blocking:
+it currently has pre-existing test-isolation failures that have nothing to
+do with the change under review. The measured numbers and both root causes
+are written at the top of that job.
+
+[`.github/workflows/security.yml`](.github/workflows/security.yml) runs
+`npm audit` over production dependencies (blocking at *critical*), plus
+Trivy and CodeQL, whose findings land in the repository's Security tab.
+
+Locally, [`.pre-commit-config.yaml`](.pre-commit-config.yaml) runs
+typecheck and lint for whichever tree a commit touches, alongside the
+formatting and hygiene hooks. Install it once with `pre-commit install`.
 
 Deep-dive developer reference: [CLAUDE.md](CLAUDE.md).
 

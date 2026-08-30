@@ -1,0 +1,35 @@
+{
+  "title": "Passport",
+  "backToStats": "Back to statistics",
+  "print": "Print",
+  "since": "since {{year}}",
+  "empty": "No flown flights yet — the passport fills up with the first entry.",
+  "needsFlights": "The passport is built from your flights. Switch the Flights area on in settings to see it.",
+  "loadError": "The passport could not be loaded.",
+  "stamps": "Stamps",
+  "summary": {
+    "countries": "Countries",
+    "airports": "Airports",
+    "entries": "Entries",
+    "continents": "Continents"
+  },
+  "continents": {
+    "title": "Continents",
+    "denominator": "Measured against the countries this catalogue knows — not against a total number of countries in the world, for which there is no agreed figure.",
+    "europe": "Europe",
+    "asia": "Asia",
+    "northAmerica": "North America",
+    "southAmerica": "South America",
+    "africaAntarctica": "Africa · Antarctica",
+    "oceania": "Oceania"
+  },
+  "countries": {
+    "title": "Countries",
+    "country": "Country",
+    "entries": "Entries",
+    "period": "Period",
+    "airports": "Airports",
+    "home": "Home",
+    "new": "new"
+  }
+}

@@ -13,6 +13,25 @@ export interface ExtractedEmail {
   subject: string;
   text: string;
   html?: string;
+  /**
+   * When the message itself was sent, if the format carries it.
+   *
+   * This is the anchor for a booking that names a day and a month but no year.
+   * Without it the parser reads "16.07." against TODAY, so a 2007 confirmation
+   * imports as a 2026 flight and quietly builds a trip in the wrong decade —
+   * measured on a real Germanwings mail (Forgejo #18). The mail knows its own
+   * date; nothing else in the pipeline does.
+   *
+   * Absent for plain text, and for any message whose header is unreadable.
+   */
+  sentAt?: Date;
+}
+
+/** A Date, or nothing — never an Invalid Date, which poisons every comparison. */
+function toDate(value: unknown): Date | undefined {
+  if (typeof value !== 'string' || value.trim() === '') return undefined;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
 /**
@@ -36,17 +55,23 @@ function extractFromMsg(buffer: Buffer): ExtractedEmail {
     const subject = fileData.subject || '';
     const body = fileData.body || '';
     const bodyHtml = fileData.bodyHtml || undefined;
+    // When the SENDER sent it, preferring submit over delivery: delivery is the
+    // receiving server's clock, and a mailbox re-imported years later can carry
+    // a delivery stamp from the migration rather than from the booking.
+    const sentAt = toDate(fileData.clientSubmitTime) ?? toDate(fileData.messageDeliveryTime);
 
     logger.debug({
       subject,
       bodyLength: body.length,
       hasHtml: !!bodyHtml,
+      sentAt: sentAt?.toISOString(),
     }, '[Email Extractor] Extracted .msg file');
 
     return {
       subject,
       text: body,
       html: bodyHtml,
+      sentAt,
     };
   } catch (error) {
     logger.error({ error }, '[Email Extractor] Failed to extract .msg file');
@@ -62,6 +87,7 @@ function extractFromEml(content: string): ExtractedEmail {
     // Simple EML parser - extract subject and body
     const lines = content.split('\n');
     let subject = '';
+    let sentAt: Date | undefined;
     let bodyStartIndex = 0;
     let inHeaders = true;
 
@@ -79,6 +105,12 @@ function extractFromEml(content: string): ExtractedEmail {
 
         if (line.toLowerCase().startsWith('subject:')) {
           subject = line.substring(8).trim();
+        }
+
+        // `Date:` only at the start of a line, so a `Delivery-Date:` or a
+        // quoted date inside another header cannot win.
+        if (line.toLowerCase().startsWith('date:')) {
+          sentAt = sentAt ?? toDate(line.substring(5).trim());
         }
       }
     }
@@ -112,6 +144,7 @@ function extractFromEml(content: string): ExtractedEmail {
       subject,
       text,
       html,
+      sentAt,
     };
   } catch (error) {
     logger.error({ error }, '[Email Extractor] Failed to extract .eml file');

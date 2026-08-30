@@ -75,7 +75,7 @@ export function ColumnMappingWizard<F extends string>({
   onCancel,
   submitError,
 }: ColumnMappingWizardProps<F>): JSX.Element {
-  const { t } = useTranslation("settings");
+  const { t } = useTranslation(["settings", "common"]);
 
   // Content-based signatures, not object/array identities. `fields` gets a
   // fresh array identity on every parent re-render (the caller's `t` from the
@@ -190,7 +190,26 @@ export function ColumnMappingWizard<F extends string>({
 
   const missingRequired = requiredFields.filter((f) => !mapping[f.key]);
   const skippedOptionalCount = optionalFields.filter((f) => !mapping[f.key]).length;
-  const canSubmit = missingRequired.length === 0 && collisions.size === 0;
+
+  /**
+   * The mapping as it stood when the last attempt was rejected.
+   *
+   * Forgejo #15: mapping a lodging CSV so that no row was readable ("640 dates
+   * unreadable") left "Weiter" enabled, and pressing it again simply produced
+   * the identical failure. The wizard offered a way forward out of a state it
+   * already knew was a dead end.
+   *
+   * Comparing against the mapping AT THE TIME OF THE FAILURE, rather than just
+   * hiding the button whenever an error is showing, is what keeps the wizard
+   * usable: the moment the user changes any field the attempt is worth making
+   * again, even before we know whether it will work.
+   */
+  const [rejectedMapping, setRejectedMapping] = useState<string | null>(null);
+  const mappingKey = JSON.stringify(mapping);
+  const repeatsRejectedAttempt = submitError != null && rejectedMapping === mappingKey;
+
+  const canSubmit =
+    missingRequired.length === 0 && collisions.size === 0 && !repeatsRejectedAttempt;
 
   return (
     <div
@@ -293,7 +312,10 @@ export function ColumnMappingWizard<F extends string>({
             </button>
             <button
               disabled={!canSubmit}
-              onClick={() => onSubmit(mapping)}
+              onClick={() => {
+                setRejectedMapping(mappingKey);
+                onSubmit(mapping);
+              }}
               className="btn-primary px-4 py-1.5 text-sm disabled:opacity-50"
             >
               {t("settings:import.preview.wizard.continue")}
@@ -362,7 +384,7 @@ function FieldSection<F extends string>({
                   <span
                     className="ml-1"
                     style={{ color: "rgb(248, 113, 113)" }}
-                    aria-label="required"
+                    aria-label={t("common:accessibility.required")}
                   >
                     *
                   </span>

@@ -11,6 +11,7 @@ import LodgingQualitySection from "./lodging/LodgingQualitySection";
 import LodgingGeoSection from "./lodging/LodgingGeoSection";
 import LodgingRhythmSection from "./lodging/LodgingRhythmSection";
 import LodgingLoyaltySection from "./lodging/LodgingLoyaltySection";
+import LodgingRecordsSection from "./lodging/LodgingRecordsSection";
 
 /**
  * The lodging numbers, on the statistics page where numbers belong.
@@ -72,6 +73,7 @@ export default function LodgingStatsSection(): JSX.Element {
       <LodgingGeoSection stats={stats} />
       <LodgingRhythmSection stats={stats} />
       <LodgingLoyaltySection stats={stats} />
+      <LodgingRecordsSection stats={stats} />
     </div>
   );
 }

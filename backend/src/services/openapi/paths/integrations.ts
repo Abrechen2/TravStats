@@ -13,11 +13,47 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { errorContent } from "./shared";
+import { PARSER_SUPPORTED_DOMAINS } from "../../../shared/domains";
 
 const badInput = { description: "Invalid input", content: errorContent };
 const notFound = { description: "Not found", content: errorContent };
 const deleted = { description: "Deleted" };
 const uuid = z.string().uuid();
+
+/**
+ * Which domains a document can be read as.
+ *
+ * Taken from the same constant the routes validate against, so the docs cannot
+ * claim a domain the server rejects — or, as happened, stay silent about one it
+ * accepts. Naming the values is the whole point: "a `domain` field" does not
+ * tell a reader that hotel confirmations are supported.
+ *
+ * WHAT IS DELIBERATELY ABSENT, because the question comes up:
+ *
+ * PLACES cannot be parsed. A booking confirmation describes a night, a flight
+ * or a sailing; it rarely describes somewhere you want to go. Places arrive
+ * through the map search, a Google Maps saved-list import, or the spreadsheet.
+ *
+ * TRIPS are not a parse target at all. A trip is the container, not the
+ * content. One is made by hand, created alongside an import, or proposed from
+ * flights that have none by POST /trips/detect.
+ */
+const parseDomain = z
+  .enum(PARSER_SUPPORTED_DOMAINS)
+  .default("flight")
+  .describe("What to read the document as. Omitted means flight.");
+
+const parseBody = {
+  content: {
+    "multipart/form-data": {
+      schema: z.object({
+        email: z.string().describe("The document itself"),
+        domain: parseDomain,
+      }),
+    },
+  },
+  required: true,
+};
 
 // ------------------------------------------------------------- parsing
 
@@ -28,11 +64,13 @@ registry.registerPath({
   path: "/parse-email-file",
   summary: "Read a booking out of an email",
   description:
-    "multipart/form-data with the .eml, plus a `domain` saying what to look for. " +
-    "Returns candidates for review; nothing is stored. A document it cannot read " +
-    "comes back as an empty result with a reason, not as an error — 'no booking " +
-    "here' is an answer, not a failure.",
+    "multipart/form-data with the .eml, plus a `domain` saying what to read it " +
+    "as — flight, cruise or lodging. All three are supported; omitting the field " +
+    "means flight. Returns candidates for review; nothing is stored. A document " +
+    "it cannot read comes back as an empty result with a reason, not as an error " +
+    "— 'no booking here' is an answer, not a failure.",
   tags: parseTag,
+  request: { body: parseBody },
   responses: { 200: { description: "Parse result" }, 400: badInput },
 });
 
@@ -40,7 +78,11 @@ registry.registerPath({
   method: "post",
   path: "/parse-pdf",
   summary: "Read a booking out of a PDF",
+  description:
+    "Same three domains as the email route — flight, cruise or lodging — and the " +
+    "same contract: a proposal, never a write.",
   tags: parseTag,
+  request: { body: parseBody },
   responses: { 200: { description: "Parse result" }, 400: badInput },
 });
 

@@ -10,6 +10,7 @@ import { GenericCsvImportTile } from "../import/GenericCsvImportTile";
 import { LodgingCsvImportTile } from "../import/LodgingCsvImportTile";
 import { MapsExportImportTile } from "../import/MapsExportImportTile";
 import { ImportLogSection } from "../import/ImportLogSection";
+import { useDomainColors } from "../../hooks/useDomainColors";
 
 /**
  * The one place for LISTS — a whole collection at once, from a file.
@@ -27,6 +28,7 @@ import { ImportLogSection } from "../import/ImportLogSection";
  */
 export default function ImportSection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
+  const { colorOf } = useDomainColors();
   const { isEnabled } = useEnabledDomains();
   const autoCreateTrips = useSettingsStore((s) => s.autoCreateTrips);
   const setAutoCreateTrips = useSettingsStore((s) => s.setAutoCreateTrips);
@@ -96,7 +98,7 @@ export default function ImportSection(): JSX.Element {
                 <span
                   aria-hidden="true"
                   className="h-2 w-2 rounded-full"
-                  style={{ background: DOMAINS[key].color }}
+                  style={{ background: colorOf(key) }}
                 />
                 <span className="text-xs font-semibold uppercase tracking-wider text-(--text-muted)">
                   {t(`common:${DOMAINS[key].i18nKey}`)}
@@ -130,8 +132,7 @@ export default function ImportSection(): JSX.Element {
           onClick={() => setLogOpen((open) => !open)}
           className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm font-medium text-(--text-primary) hover:bg-(--bg-inset)"
         >
-          <span aria-hidden="true">{logOpen ? "▾" : "▸"}</span>{" "}
-          {t("settings:import.log.title")}
+          <span aria-hidden="true">{logOpen ? "▾" : "▸"}</span> {t("settings:import.log.title")}
         </button>
         {logOpen && (
           <div id="import-log-panel">

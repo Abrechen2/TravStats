@@ -75,6 +75,7 @@ export const EMPTY_LODGING_LOYALTY_STATS: LodgingLoyaltyStats = {
   topChainShare: null,
   concentration: null,
   chainNightsRanked: [],
+  lodgingNightsRanked: [],
   programmeYears: [],
 };
 

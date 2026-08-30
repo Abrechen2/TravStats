@@ -195,6 +195,30 @@ export class RegexTextParser implements ITextParser {
     // Fallback to single flight parsing if no multi-flight pattern detected
     if (flights.length === 0) {
       const singleFlight = this.parseBookingEmailRegex(source);
+
+      /**
+       * A candidate needs SOMETHING that identifies a flight.
+       *
+       * This branch used to return its result unconditionally, so any text at
+       * all became one booking. Forgejo #17: an Emirates promotion and an
+       * American Airlines holiday greeting each came back as a flight — one
+       * with no flight number and no route at all, just a date scraped out of
+       * the prose, and the UI then opened a review form over it instead of
+       * saying no booking was found.
+       *
+       * A flight number, or both ends of a route. A date alone is not evidence:
+       * every marketing email carries one.
+       */
+      const hasFlightNumber = Boolean(singleFlight.flightNumber);
+      const hasRoute = Boolean(singleFlight.departureCode && singleFlight.arrivalCode);
+      if (!hasFlightNumber && !hasRoute) {
+        logger.debug({
+          operation: 'regex_parser_no_evidence',
+          message: 'Discarded a candidate with neither a flight number nor a route',
+        });
+        return [];
+      }
+
       return [singleFlight];
     }
 

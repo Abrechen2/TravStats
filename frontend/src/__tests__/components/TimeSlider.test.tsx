@@ -22,14 +22,18 @@ describe("TimeSlider", () => {
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
-  it("shows play label when not playing", () => {
+  // The accessible name is TRANSLATED copy, so these assert the key the test
+  // i18n fake returns. They used to assert the literals "Play"/"Pause", which
+  // pinned the defect Forgejo #7 reported one component over: an English name
+  // announced to a German screen reader.
+  it("names the button by its play action when not playing", () => {
     render(<TimeSlider {...defaultProps} playing={false} />);
-    expect(screen.getByLabelText("Play")).toBeInTheDocument();
+    expect(screen.getByLabelText("common:accessibility.play")).toBeInTheDocument();
   });
 
-  it("shows pause label when playing", () => {
+  it("names the button by its pause action when playing", () => {
     render(<TimeSlider {...defaultProps} playing={true} />);
-    expect(screen.getByLabelText("Pause")).toBeInTheDocument();
+    expect(screen.getByLabelText("common:accessibility.pause")).toBeInTheDocument();
   });
 
   it("calls onTogglePlay when button is clicked", () => {

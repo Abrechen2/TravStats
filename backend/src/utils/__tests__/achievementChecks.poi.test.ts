@@ -15,6 +15,7 @@ import type { Achievement } from "@prisma/client";
 import { checkAchievement } from "../achievementChecks";
 import { calculateUserStats, type UserStats } from "../achievementStats";
 import { seedsPartG } from "../../data/achievementSeeds/partG";
+import { seedsPartH } from "../../data/achievementSeeds/partH";
 import { achievements } from "../../data/achievements";
 
 jest.mock("../../services/airportCache", () => ({
@@ -136,7 +137,7 @@ describe("checkAchievement — POI requirement types", () => {
     });
   });
 
-  it("gives every seedsPartG requirement type real logic", async () => {
+  it("gives every POI requirement type real logic", async () => {
     const stats: UserStats = {
       ...(await baseStats()),
       placesCount: 999,
@@ -152,9 +153,26 @@ describe("checkAchievement — POI requirement types", () => {
         ["world-wonders-ancient", 7],
         ["world-heritage", 1000],
       ]),
+      // Part H's measures, all comfortably past their highest requirement, so a
+      // failure below means a missing case rather than a short fixture.
+      placeCities: new Set(Array.from({ length: 80 }, (_, i) => `city-${i}`)),
+      placeContinents: new Set([
+        "Africa", "Antarctica", "Asia", "Europe",
+        "North America", "Oceania", "South America",
+      ]),
+      placeCategoriesUnique: 8,
+      placeSameRepeatMax: 999,
+      placesInOneDayMax: 999,
+      placeVisitStreakMax: 999,
+      placeVisitsInYearMax: 999,
+      placeCountriesInYearMax: 999,
+      placeRatedVisits: 999,
+      placeTripVisits: 999,
+      placeNorthernLat: 78.2,
+      placeSouthernLat: -77.8,
     };
 
-    for (const seed of seedsPartG) {
+    for (const seed of [...seedsPartG, ...seedsPartH]) {
       const result = checkAchievement(
         fakeAchievement({
           code: seed.code,
@@ -179,6 +197,39 @@ describe("checkAchievement — POI requirement types", () => {
   });
 
   it("files every POI badge under the poi domain", () => {
-    expect(seedsPartG.every((s) => s.domain === "poi")).toBe(true);
+    expect([...seedsPartG, ...seedsPartH].every((s) => s.domain === "poi")).toBe(true);
+  });
+
+  /**
+   * A southern latitude requirement must not be satisfied by a northern place.
+   *
+   * The measure is an ABSOLUTE degree so one number reads the same in both
+   * hemispheres — which is exactly why the sign has to be checked before the
+   * absolute value is taken. Without that, a place in Tromsø at 69°N would
+   * quietly unlock "Ende der Welt".
+   */
+  it("does not award a southern badge for a northern place", async () => {
+    const stats: UserStats = {
+      ...(await baseStats()),
+      placeNorthernLat: 69.6,
+      placeSouthernLat: 41.9, // nothing south of the equator at all
+    };
+
+    const result = checkAchievement(
+      fakeAchievement({ requirementType: "place_southern_lat", requirement: 35 }),
+      stats,
+      []
+    );
+    expect(result).toEqual({ isUnlocked: false, progress: 0 });
+  });
+
+  it("awards a northern badge on the absolute degree", async () => {
+    const stats: UserStats = { ...(await baseStats()), placeNorthernLat: 66.7 };
+    const result = checkAchievement(
+      fakeAchievement({ requirementType: "place_northern_lat", requirement: 66 }),
+      stats,
+      []
+    );
+    expect(result).toEqual({ isUnlocked: true, progress: 66 });
   });
 });

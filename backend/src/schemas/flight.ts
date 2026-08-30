@@ -120,15 +120,55 @@ const baseFlightSchema = z.object({
   // the meaningless time component / falls back to a great-circle estimate
   // for duration. 'UNKNOWN' is for legacy / unresolvable rows.
   departureLocal: localDateTime.optional().nullable(),
-  depTimezone: ianaTimezone.optional().nullable(),
+  depTimezone: ianaTimezone
+    .optional()
+    .nullable()
+    .describe(
+      "IANA zone of the departure airport. Required whenever " +
+        "departureLocal is set: a wall-clock time without a zone cannot be turned into " +
+        "an instant. It may be OMITTED when departure carries an IATA or ICAO code, " +
+        "because the server then reads the zone from the airport catalogue. A value " +
+        "given here always wins over the catalogue, so a caller who knows better (a " +
+        "historical flight from an airport that has since changed zone) can say so."
+    ),
   arrivalLocal: localDateTime.optional().nullable(),
-  arrTimezone: ianaTimezone.optional().nullable(),
+  arrTimezone: ianaTimezone
+    .optional()
+    .nullable()
+    .describe(
+      "IANA zone of the arrival airport. Required whenever " +
+        "arrivalLocal is set: a wall-clock time without a zone cannot be turned into " +
+        "an instant. It may be OMITTED when arrival carries an IATA or ICAO code, " +
+        "because the server then reads the zone from the airport catalogue. A value " +
+        "given here always wins over the catalogue, so a caller who knows better (a " +
+        "historical flight from an airport that has since changed zone) can say so."
+    ),
   depTimeSemantics: z.enum(['UTC', 'DATE_ONLY', 'UNKNOWN']).optional(),
   arrTimeSemantics: z.enum(['UTC', 'DATE_ONLY', 'UNKNOWN']).optional(),
   actualDepartureLocal: localDateTime.optional().nullable(),
-  actualDepartureTz: ianaTimezone.optional().nullable(),
+  actualDepartureTz: ianaTimezone
+    .optional()
+    .nullable()
+    .describe(
+      "IANA zone of the departure airport. Required whenever " +
+        "actualDepartureLocal is set: a wall-clock time without a zone cannot be turned into " +
+        "an instant. It may be OMITTED when departure carries an IATA or ICAO code, " +
+        "because the server then reads the zone from the airport catalogue. A value " +
+        "given here always wins over the catalogue, so a caller who knows better (a " +
+        "historical flight from an airport that has since changed zone) can say so."
+    ),
   actualArrivalLocal: localDateTime.optional().nullable(),
-  actualArrivalTz: ianaTimezone.optional().nullable(),
+  actualArrivalTz: ianaTimezone
+    .optional()
+    .nullable()
+    .describe(
+      "IANA zone of the arrival airport. Required whenever " +
+        "actualArrivalLocal is set: a wall-clock time without a zone cannot be turned into " +
+        "an instant. It may be OMITTED when arrival carries an IATA or ICAO code, " +
+        "because the server then reads the zone from the airport catalogue. A value " +
+        "given here always wins over the catalogue, so a caller who knows better (a " +
+        "historical flight from an airport that has since changed zone) can say so."
+    ),
   // 'scheduled'/'flown' are HINTS only — the server derives the actual
   // temporal status from departureLocal/arrivalLocal (deriveFlightStatus,
   // shared/statusDerivation.ts; spec 2026-07-17-status-from-dates).

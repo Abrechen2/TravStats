@@ -40,6 +40,26 @@ const LODGING_LAYER_IDS = new Set<string>([
   "lodging-pins",
   "lodging-pins-labels",
 ]);
+const PLACE_LAYER_IDS = new Set<string>([
+  // Flat-map place pins (placePinsLayer.ts). All three are pickable and all
+  // three are the same place, so all three answer: hovering the label and
+  // getting nothing while the dot two pixels away answers is worse than no
+  // tooltip at all.
+  "place-pins",
+  "place-pins-labels",
+  "place-pins-symbols",
+]);
+
+interface PlaceDatum {
+  readonly name?: string;
+  readonly category?: string;
+  readonly city?: string | null;
+  /** Free text exactly as LodgingDatum.country is — resolved at render time. */
+  readonly country?: string | null;
+  readonly visitCount?: number;
+  /** Logbook vs. wishlist. A wishlist entry has no visits to report. */
+  readonly visited?: boolean;
+}
 
 interface AirportDatum {
   readonly iata?: string;
@@ -186,6 +206,13 @@ export function createMarkerTooltip(
       return { html, style: SURFACE_STYLE };
     }
 
+    if (PLACE_LAYER_IDS.has(layerId)) {
+      const datum = info.object as PlaceDatum | undefined | null;
+      if (!datum?.name) return null;
+      const html = renderPlaceHtml(datum, datum.name, t, locale);
+      return { html, style: SURFACE_STYLE };
+    }
+
     return null;
   };
 }
@@ -275,6 +302,8 @@ function renderPortHtml(d: PortDatum, heading: string, t: TFn, locale: string): 
 // as a literal hex — this module renders plain HTML strings, not deck.gl
 // props, so it can't reuse lodgingPinsLayer.ts's `hexToRgb`-derived tuple.
 const LODGING_ACCENT_HEX = "#d4778f";
+/** The POI domain hue, as BRAND.md §3 has it — same convention as the line above. */
+const PLACE_ACCENT_HEX = "#5ec2b2";
 
 function renderLodgingHtml(d: LodgingDatum, heading: string, t: TFn, locale: string): string {
   // `d.country` is free text (an ISO code or a full country name) — resolve
@@ -333,4 +362,39 @@ function renderArcHtml(d: ArcTooltipDatum, t: TFn): string {
     <div style="color:rgb(${r},${g},${b});font-weight:600;margin-top:4px;">
       ${escapeHtml(label)}
     </div>`;
+}
+
+/**
+ * A place card: what it is, where it is, and whether you have been.
+ *
+ * A wishlist entry reports its status instead of a visit count. "0 Besuche" is
+ * technically true and reads as a failure; "Merkliste" is the same fact told
+ * the way the user meant it.
+ */
+function renderPlaceHtml(d: PlaceDatum, heading: string, t: TFn, locale: string): string {
+  const countryCode = resolveCountryCode(d.country);
+  const where = [d.city, countryName(countryCode, locale)].filter(Boolean).join(", ");
+  const visits = typeof d.visitCount === "number" && d.visitCount > 0 ? d.visitCount : null;
+
+  const lines: string[] = [];
+  lines.push(
+    `<div style="display:flex;align-items:center;gap:8px;font-weight:600;">${flagImgHtml(countryCode, 16)}<span>${escapeHtml(heading)}</span></div>`
+  );
+  if (where) {
+    lines.push(
+      `<div style="opacity:0.62;font-size:10.5px;margin-top:2px;">${escapeHtml(where)}</div>`
+    );
+  }
+
+  const tail: string[] = [];
+  if (d.category) tail.push(t(`places:categories.${d.category}`));
+  if (d.visited === false) tail.push(t("places:list.status.wishlist"));
+  else if (visits !== null) tail.push(t("places:list.visitsCount", { count: visits }));
+
+  if (tail.length > 0) {
+    lines.push(
+      `<div style="color:${PLACE_ACCENT_HEX};margin-top:2px;">${escapeHtml(tail.join(" · "))}</div>`
+    );
+  }
+  return lines.join("");
 }

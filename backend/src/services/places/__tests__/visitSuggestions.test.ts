@@ -208,8 +208,43 @@ describe("suggestVisits", () => {
   });
 
   it("grades an airport lower than a bed", () => {
-    const [s] = suggestVisits([COLOSSEUM], [anchor({ kind: "flight", label: "FCO", lat: 41.8, lon: 12.25 })]);
+    // Within the flight radius on purpose: this test is about the GRADE, and
+    // the anchor used to sit 25km out, which no longer reaches at all.
+    const [s] = suggestVisits(
+      [COLOSSEUM],
+      [anchor({ kind: "flight", label: "FCO", lat: 41.9, lon: 12.58 })]
+    );
     expect(s.confidence).toBe("low");
+  });
+
+  describe("a flight only asks at city scale (Forgejo #23)", () => {
+    /**
+     * A real account produced 60 open suggestions, nearly all from one
+     * connection through AMS — among them a polder 29km from the gate. Sixty
+     * questions bury the few worth asking, and weak ones train people to tick
+     * without reading.
+     *
+     * The service always graded a flight anchor "low"; it just never acted on
+     * its own grading. A hotel or a port call still reaches further, because
+     * both mean the traveller was demonstrably on the ground there.
+     */
+    it("does not ask about a target half an hour outside the city", () => {
+      // ~25km from the Colosseum, roughly the Beemster case.
+      const distantAirport = anchor({ kind: "flight", label: "FCO", lat: 41.8, lon: 12.25 });
+      expect(suggestVisits([COLOSSEUM], [distantAirport])).toEqual([]);
+    });
+
+    it("still asks about one in the city itself", () => {
+      const cityAirport = anchor({ kind: "flight", label: "CIA", lat: 41.9, lon: 12.58 });
+      expect(suggestVisits([COLOSSEUM], [cityAirport])).toHaveLength(1);
+    });
+
+    it("leaves a hotel's longer reach alone", () => {
+      // Same distance that the flight anchor is now refused at. A bed is
+      // evidence of being there; a runway is not.
+      const distantHotel = anchor({ kind: "lodging", label: "Hotel", lat: 41.8, lon: 12.25 });
+      expect(suggestVisits([COLOSSEUM], [distantHotel])).toHaveLength(1);
+    });
   });
 
   it("lets the stronger anchor win even when a weaker one is closer", () => {
@@ -265,4 +300,35 @@ describe("suggestVisits", () => {
   it("returns nothing at all when the user has recorded no travel", () => {
     expect(suggestVisits([COLOSSEUM], [])).toEqual([]);
   });
+
+  describe("a suggestion carries its own label (Forgejo #22)", () => {
+    /**
+     * The hit used to be `{itemId, confidence, distanceKm, anchorKind,
+     * anchorLabel, visitedAt}` — no name. A client drawing "Warst du hier?
+     * Kölner Dom" therefore had to fetch the whole catalogue to resolve three
+     * names: 1,248 rows with descriptions, to render three cards.
+     *
+     * `suggestVisits` already receives both fields on its target. They were
+     * simply dropped on the way out.
+     */
+    it("names the target, so nobody has to fetch a catalogue to draw a card", () => {
+      const [hit] = suggestVisits([COLOSSEUM], [anchor({ lat: 41.8902, lon: 12.4922 })]);
+      expect(hit.name).toBe(COLOSSEUM.name);
+    });
+
+    it("passes the country through when the catalogue has one", () => {
+      const target = { ...COLOSSEUM, country: "IT" };
+      const [hit] = suggestVisits([target], [anchor({ lat: 41.8902, lon: 12.4922 })]);
+      expect(hit.country).toBe("IT");
+    });
+
+    it("reports a missing country as null rather than leaving the field out", () => {
+      // An absent key and an unknown country read the same to a client that
+      // checks truthiness, but only one of them is a shape it can rely on.
+      const [hit] = suggestVisits([COLOSSEUM], [anchor({ lat: 41.8902, lon: 12.4922 })]);
+      expect(hit).toHaveProperty("country");
+      expect(hit.country).toBeNull();
+    });
+  });
+
 });

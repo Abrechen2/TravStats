@@ -240,5 +240,46 @@
     "unmatchedTitle": "Unmatched ports",
     "unmatchedHint": "These ports weren't found in the catalog and were marked as unresolved — they stay ports (not sea days). Pick the matching port below, or resolve them later in the editor.",
     "alreadyImported": "{{count}} booking(s) had already been read in."
+  },
+  "stats": {
+    "rhythm": {
+      "title": "Rhythm",
+      "season": "Most common month",
+      "seasonDesc": "{{count}} cruises started in this month",
+      "seasonDesc_one": "{{count}} cruise started in this month",
+      "averageNights": "Avg length",
+      "averageNightsDesc": "nights per cruise",
+      "longest": "Longest",
+      "shortest": "Shortest",
+      "nightsCount": "{{count}} nights",
+      "nightsCount_one": "{{count}} night",
+      "byYear": "Cruises per year",
+      "byMonth": "By starting month",
+      "undatedNote": "{{count}} cruises have no start date. They are in the totals but on no chart.",
+      "undatedNote_one": "One cruise has no start date. It is in the totals but on no chart."
+    },
+    "money": {
+      "title": "Cost",
+      "byCurrency": "By currency",
+      "perNight": "{{amount}} per night",
+      "cruisesCount": "{{count}} cruises",
+      "cruisesCount_one": "{{count}} cruise",
+      "none": "No cruise has a price recorded.",
+      "coverage": "From {{priced}} of {{total}} cruises with a recorded price.",
+      "noTotalNote": "No single total on purpose: a cruise stores a price and a currency but no exchange rate. Adding amounts in different currencies would produce a figure nobody ever paid."
+    },
+    "fun": {
+      "title": "Curiosities",
+      "first": "First cruise",
+      "mostPorts": "Most ports",
+      "highestDeck": "Highest deck",
+      "onTrips": "On a trip",
+      "onTripsDesc": "cruises that belong to a trip",
+      "cabinTypes": "Cabin types",
+      "noCabins": "No cabin type recorded.",
+      "companions": "Companions",
+      "noCompanions": "No companions recorded.",
+      "more": "+ {{count}} more"
+    }
   }
 }

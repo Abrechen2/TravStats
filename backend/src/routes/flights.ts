@@ -25,11 +25,12 @@ import { getProviderQuota } from '../services/apiQuota';
 import { estimateRoute } from '../services/routeEstimationService';
 import { calculateCo2Kg, haversineKm, toSeatClass } from '../services/co2Calculator';
 import { getCachedAirports, compareAirportAuthority } from '../services/airportCache';
+import { enrichFlightsWithAirportFacts } from '../services/flightAirportFacts';
+import { withAirportTimezones } from '../services/flightTimezoneDefaults';
 import {
   buildAirportCoordinateIndex,
   resolveAirportCoordinate,
 } from '../services/airportCoordinates';
-import { tzAwareDurationMinutes, type FlightTimeSemantics } from '../utils/timezone';
 import { fromZonedTime } from 'date-fns-tz';
 import { resolveAirlineCodes } from '../utils/airlineNormalize';
 import { normalizeAircraft } from '../utils/aircraftNormalize';
@@ -251,7 +252,7 @@ const buildFlightWhere = (
 router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const data = createFlightSchema.parse(req.body);
+    const data = createFlightSchema.parse(await withAirportTimezones(req.body));
 
     // A mail carrying ONE flight comes through here rather than the batch
     // route, so provenance has to live in both places or half of every
@@ -732,52 +733,8 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       prisma.flight.count({ where }),
     ]);
 
-    // Enrich flights with timezone-aware duration
-    const allCodes = new Set<string>();
-    for (const f of flights) {
-      if (f.depIata) allCodes.add(f.depIata);
-      if (f.depIcao) allCodes.add(f.depIcao);
-      if (f.arrIata) allCodes.add(f.arrIata);
-      if (f.arrIcao) allCodes.add(f.arrIcao);
-    }
-    let tzMap = new Map<string, string>();
-    const countryMap = new Map<string, string>();
-    try {
-      const airports = await getCachedAirports(Array.from(allCodes));
-      for (const [code, data] of airports.entries()) {
-        if (data?.timezone) tzMap.set(code, data.timezone);
-        if (data?.country) countryMap.set(code, data.country);
-      }
-    } catch { /* timezone lookup failed — durations use naïve diff */ }
-
-    const enrichedFlights = flights.map(f => {
-      const depTz = (f.depIata && tzMap.get(f.depIata))
-        || (f.depIcao && tzMap.get(f.depIcao))
-        || null;
-      const arrTz = (f.arrIata && tzMap.get(f.arrIata))
-        || (f.arrIcao && tzMap.get(f.arrIcao))
-        || null;
-      const rawDuration = (f.departureTime && f.arrivalTime)
-        ? tzAwareDurationMinutes(
-            f.departureTime,
-            f.arrivalTime,
-            depTz,
-            arrTz,
-            f.depTimeSemantics as FlightTimeSemantics,
-            f.arrTimeSemantics as FlightTimeSemantics,
-          )
-        : null;
-      // null = DATE_ONLY semantics (issue #106A) — display layer renders
-      // a great-circle estimate instead of the placeholder-time duration.
-      return {
-        ...f,
-        durationMinutes: rawDuration === null ? null : Math.round(rawDuration),
-        depCountry: (f.depIata && countryMap.get(f.depIata)) || (f.depIcao && countryMap.get(f.depIcao)) || null,
-        arrCountry: (f.arrIata && countryMap.get(f.arrIata)) || (f.arrIcao && countryMap.get(f.arrIcao)) || null,
-        depTimezone: depTz,
-        arrTimezone: arrTz,
-      };
-    });
+    // One rule for every flight read path — see services/flightAirportFacts.ts.
+    const enrichedFlights = await enrichFlightsWithAirportFacts(flights);
 
     res.json({
       flights: enrichedFlights,
@@ -1066,11 +1023,17 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const flight = await prisma.flight.findFirst({ where: { id, userId } });
+    const flight = await prisma.flight.findFirst({
+      where: { id, userId },
+      include: { trip: { select: { id: true, name: true, color: true } } },
+    });
     if (!flight) {
       throw new AppError('Flight not found', 404);
     }
-    res.json(flight);
+    // The detail page renders each end in ITS airport's clock from these
+    // fields. Without them it falls back to UTC and contradicts the list.
+    const [enriched] = await enrichFlightsWithAirportFacts([flight]);
+    res.json(enriched);
   } catch (error) {
     next(error);
   }
@@ -1081,7 +1044,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const data = updateFlightSchema.parse(req.body);
+    const data = updateFlightSchema.parse(await withAirportTimezones(req.body));
 
     // Check if flight exists and belongs to user
     const existingFlight = await prisma.flight.findFirst({

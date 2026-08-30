@@ -89,10 +89,30 @@ export default function AirportAutocomplete({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // A string, not the object: `value` gets a fresh identity on every parent
+  // render, and depending on it directly would restart the search forever.
+  const selectedLabel = value ? airportInputLabel(value) : null;
+
   // Debounced search
   useEffect(() => {
     if (isSeeding || query.length < 2) {
       setResults([]);
+      return;
+    }
+
+    // A query that IS the current selection's label is not a search — it is
+    // what we just wrote into the field ourselves.
+    //
+    // Without this the field contradicted itself (Forgejo #10): picking an
+    // airport keeps focus on the input on purpose (see the mousedown handler
+    // below), so the effect re-ran with "JFK — John F. Kennedy International
+    // Airport" as the term. Nothing matches that string, results emptied, the
+    // input was still focused — so the dropdown REOPENED saying no airports
+    // were found, over a field holding a perfectly valid airport, while Save
+    // was enabled. One screen, two answers.
+    if (selectedLabel !== null && query === selectedLabel) {
+      setResults([]);
+      setIsOpen(false);
       return;
     }
 
@@ -136,7 +156,7 @@ export default function AirportAutocomplete({
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, selectedLabel, isSeeding]);
 
   const handleSelect = (airport: Airport) => {
     onChange(airport);
@@ -196,7 +216,12 @@ export default function AirportAutocomplete({
             </div>
           )}
 
-          {!loading && results.length === 0 && query.length >= 2 && (
+          {/* Never say "not found" about the airport that is currently chosen.
+              The effect above already skips searching for a selection's own
+              label, but focusing the field opens the dropdown directly without
+              going through it — so the guard has to sit here too, or Forgejo
+              #10 comes back the moment someone clicks into a filled field. */}
+          {!loading && results.length === 0 && query.length >= 2 && query !== selectedLabel && (
             <div className="px-4 py-3 text-sm" style={{ color: "var(--text-muted)" }}>
               {/^[A-Z]{3,4}$/i.test(query.trim())
                 ? t("flights:airportAutocomplete.notFound", { code: query.toUpperCase() })

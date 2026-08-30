@@ -32,7 +32,8 @@
     "later": "Later",
     "details": "Details",
     "dismiss": "Dismiss",
-    "retry": "Try again"
+    "retry": "Try again",
+    "showLess": "Show less"
   },
   "dismiss": "Dismiss",
   "app": {
@@ -63,7 +64,14 @@
     "showHelp": "Show help",
     "closeHint": "Close hint",
     "toggleMenu": "Toggle menu",
-    "back": "Back"
+    "back": "Back",
+    "required": "Required field",
+    "home": "Home",
+    "discord": "Join our Discord",
+    "view": "View",
+    "play": "Play",
+    "pause": "Pause",
+    "loading": "Loading"
   },
   "help": {
     "clickForMore": "Click for more info"

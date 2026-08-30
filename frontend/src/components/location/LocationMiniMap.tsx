@@ -22,8 +22,17 @@ export interface LocationMiniMapProps {
   height?: number;
   ariaLabel: string;
   attributionLabel: string;
-  onMapClick: (e: MapLayerMouseEvent) => void;
-  onMarkerDragEnd: (e: { lngLat: { lng: number; lat: number } }) => void;
+  /**
+   * OMIT BOTH TO GET A READ-ONLY MAP. Their absence is the read-only signal,
+   * rather than a flag somebody has to remember: a caller that cannot handle a
+   * move then cannot advertise one either.
+   *
+   * The place detail page used to pass no-ops here. Nothing was ever saved, but
+   * the pin could still be picked up and stayed where it was dropped, so the
+   * map showed one position and the coordinates below it another.
+   */
+  onMapClick?: (e: MapLayerMouseEvent) => void;
+  onMarkerDragEnd?: (e: { lngLat: { lng: number; lat: number } }) => void;
 }
 
 export function LocationMiniMap({
@@ -85,7 +94,7 @@ export function LocationMiniMap({
           <Marker
             longitude={value.lon}
             latitude={value.lat}
-            draggable
+            draggable={Boolean(onMarkerDragEnd)}
             onDragEnd={onMarkerDragEnd}
             anchor="bottom"
           >

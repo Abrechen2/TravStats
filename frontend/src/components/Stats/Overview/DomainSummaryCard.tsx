@@ -9,6 +9,7 @@ import type { DomainStats } from "../../../lib/stats/domain-stats";
 import { useTranslation } from "../../../hooks/useTranslation";
 import DeltaBadge from "./DeltaBadge";
 import { delta, isWithData } from "./aggregate";
+import { useDomainColors } from "../../../hooks/useDomainColors";
 
 interface Props {
   domain: DomainKey;
@@ -27,6 +28,8 @@ export default function DomainSummaryCard({
 }: Props): JSX.Element {
   const { t } = useTranslation(["stats", "common"]);
   const d = DOMAINS[domain];
+  const { colorOf } = useDomainColors();
+  const domainHex = colorOf(domain);
 
   if (!stats || !isWithData(stats)) {
     return (
@@ -42,7 +45,7 @@ export default function DomainSummaryCard({
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center text-lg"
             style={{
-              background: `color-mix(in srgb, ${d.color} 14%, transparent)`,
+              background: `color-mix(in srgb, ${domainHex} 14%, transparent)`,
             }}
             aria-hidden
           >
@@ -80,7 +83,7 @@ export default function DomainSummaryCard({
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center text-lg"
             style={{
-              background: `color-mix(in srgb, ${d.color} 14%, transparent)`,
+              background: `color-mix(in srgb, ${domainHex} 14%, transparent)`,
             }}
             aria-hidden
           >
@@ -105,7 +108,7 @@ export default function DomainSummaryCard({
         <a
           href={stats.summary.detailRoute}
           className="text-xs font-medium hover:underline whitespace-nowrap"
-          style={{ color: d.color }}
+          style={{ color: domainHex }}
         >
           {t("stats:overviewCard.detailLink")}
         </a>
@@ -161,7 +164,7 @@ export default function DomainSummaryCard({
               key={b.label}
               className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs"
               style={{
-                background: `color-mix(in srgb, ${d.color} 14%, transparent)`,
+                background: `color-mix(in srgb, ${domainHex} 14%, transparent)`,
                 color: "var(--text-primary)",
                 border: "1px solid var(--color-border)",
               }}

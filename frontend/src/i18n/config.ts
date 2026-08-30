@@ -21,6 +21,7 @@ import enTrips from "./resources/en/trips.json";
 import enCruise from "./resources/en/cruise.json";
 import enImport from "./resources/en/import.json";
 import enAircraft from "./resources/en/aircraft.json";
+import enPassport from "./resources/en/passport.json";
 import enSpecialFlights from "./resources/en/specialFlights.json";
 import enImmich from "./resources/en/immich.json";
 import enWhatsNew from "./resources/en/whatsNew.json";
@@ -49,6 +50,7 @@ import deTrips from "./resources/de/trips.json";
 import deCruise from "./resources/de/cruise.json";
 import deImport from "./resources/de/import.json";
 import deAircraft from "./resources/de/aircraft.json";
+import dePassport from "./resources/de/passport.json";
 import deSpecialFlights from "./resources/de/specialFlights.json";
 import deImmich from "./resources/de/immich.json";
 import deWhatsNew from "./resources/de/whatsNew.json";
@@ -100,6 +102,7 @@ const resources = {
     cruise: enCruise,
     import: enImport,
     aircraft: enAircraft,
+    passport: enPassport,
     specialFlights: enSpecialFlights,
     immich: enImmich,
     whatsNew: enWhatsNew,
@@ -129,6 +132,7 @@ const resources = {
     cruise: deCruise,
     import: deImport,
     aircraft: deAircraft,
+    passport: dePassport,
     specialFlights: deSpecialFlights,
     immich: deImmich,
     whatsNew: deWhatsNew,
@@ -167,6 +171,7 @@ i18n.use(initReactI18next).init({
     "cruise",
     "import",
     "aircraft",
+    "passport",
     "specialFlights",
     "immich",
     "whatsNew",

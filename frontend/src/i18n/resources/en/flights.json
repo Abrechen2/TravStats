@@ -208,7 +208,8 @@
       "deleted": "Flight deleted",
       "updated": "Flight updated",
       "duplicated": "Flight duplicated — please fill in date and time",
-      "duplicateFailed": "Duplicate failed"
+      "duplicateFailed": "Duplicate failed",
+      "created": "Flight created"
     },
     "duplicate": {
       "label": "Duplicate",
@@ -249,7 +250,14 @@
     "sourceText": "Source text",
     "hideSourceText": "Hide",
     "inferredHint": "Inferred by parser — please verify.",
-    "inferredDateHint": "Source did not state a year — parser guessed it. Please verify the date and year."
+    "inferredDateHint": "Source did not state a year — parser guessed it. Please verify the date and year.",
+    "importAll_one": "Import {{count}} flight",
+    "importAll_other": "Import {{count}} flights",
+    "batchImported_one": "{{count}} flight imported",
+    "batchImported_other": "{{count}} flights imported",
+    "batchImportedWithSkips": "{{created}} imported, {{skipped}} skipped — already on file",
+    "batchAllDuplicates_one": "Nothing imported — that flight was already on file",
+    "batchAllDuplicates_other": "Nothing imported — all {{count}} flights were already on file"
   },
   "lookup": {
     "resultsTitle_one": "Found {{count}} flight",
@@ -406,7 +414,8 @@
     "delayMinutes": "{{minutes}} min late",
     "earlyMinutes": "{{minutes}} min early",
     "co2Label": "CO₂",
-    "co2Value": "{{kg}} kg CO₂"
+    "co2Value": "{{kg}} kg CO₂",
+    "copyFromPlanned": "Copy the planned times — fills empty fields only"
   },
   "filter": {
     "searchPlaceholder": "Airline, flight number or airport …",

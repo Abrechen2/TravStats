@@ -20,11 +20,11 @@ import {
  * delete.
  */
 const LINE: LonLat[] = [
-  [0, 0],   // port
+  [0, 0], // port
   [1, 1],
   [2, 2],
   [3, 3],
-  [4, 4],   // port
+  [4, 4], // port
 ];
 
 describe("selection", () => {
@@ -47,7 +47,10 @@ describe("selection", () => {
   });
 
   it("selects everything inside a rectangle", () => {
-    const s = selectWaypointsIn(initRouteEditor(LINE), ([lon, lat]) => lon >= 1 && lon <= 3 && lat >= 1 && lat <= 3);
+    const s = selectWaypointsIn(
+      initRouteEditor(LINE),
+      ([lon, lat]) => lon >= 1 && lon <= 3 && lat >= 1 && lat <= 3
+    );
     expect(s.selected).toEqual([1, 2, 3]);
   });
 
@@ -67,7 +70,11 @@ describe("selection", () => {
 describe("removeWaypoints", () => {
   it("deletes several at once and leaves the line in order", () => {
     const s = removeWaypoints(initRouteEditor(LINE), [1, 3]);
-    expect(s.waypoints).toEqual([[0, 0], [2, 2], [4, 4]]);
+    expect(s.waypoints).toEqual([
+      [0, 0],
+      [2, 2],
+      [4, 4],
+    ]);
   });
 
   it("deletes back to front regardless of the order it is given", () => {
@@ -76,13 +83,21 @@ describe("removeWaypoints", () => {
     // not matter.
     const a = removeWaypoints(initRouteEditor(LINE), [1, 2, 3]);
     const b = removeWaypoints(initRouteEditor(LINE), [3, 1, 2]);
-    expect(a.waypoints).toEqual([[0, 0], [4, 4]]);
+    expect(a.waypoints).toEqual([
+      [0, 0],
+      [4, 4],
+    ]);
     expect(b.waypoints).toEqual(a.waypoints);
   });
 
   it("never deletes a port, even when asked", () => {
     const s = removeWaypoints(initRouteEditor(LINE), [0, 2, 4]);
-    expect(s.waypoints).toEqual([[0, 0], [1, 1], [3, 3], [4, 4]]);
+    expect(s.waypoints).toEqual([
+      [0, 0],
+      [1, 1],
+      [3, 3],
+      [4, 4],
+    ]);
   });
 
   it("is one undo step, not one per waypoint", () => {

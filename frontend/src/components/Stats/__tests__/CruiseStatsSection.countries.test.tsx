@@ -12,6 +12,12 @@ const api = vi.hoisted(() => ({ getCruiseStats: vi.fn() }));
 
 vi.mock("../../../lib/api/stats", () => ({ statsApi: api }));
 
+// The section reads the cruise ROWS as well as the rollup now — the calendar,
+// the money and the firsts are not in the rollup and never were.
+vi.mock("../../../lib/api/cruise", () => ({
+  cruiseApi: { list: vi.fn().mockResolvedValue([]) },
+}));
+
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
 }));

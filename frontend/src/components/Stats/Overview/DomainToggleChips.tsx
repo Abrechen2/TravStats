@@ -5,6 +5,7 @@ import type { JSX } from "react";
 import { DOMAINS, type DomainKey } from "../../../shared/domains";
 import type { DomainStatsMap } from "../../../lib/stats/domain-stats";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { useDomainColors } from "../../../hooks/useDomainColors";
 
 interface Props {
   /** Domains to offer chips for — the caller passes the user's enabledDomains. */
@@ -21,6 +22,7 @@ export default function DomainToggleChips({
   statsMap,
 }: Props): JSX.Element {
   const { t } = useTranslation(["stats", "common"]);
+  const { colorOf } = useDomainColors();
   return (
     <div className="flex flex-wrap gap-2 mb-4">
       {domains.map((key) => {
@@ -44,8 +46,8 @@ export default function DomainToggleChips({
                 ? "color-mix(in srgb, var(--domain-color) 14%, transparent)"
                 : "var(--bg-surface)",
               color: active ? "var(--text-primary)" : "var(--text-secondary)",
-              borderColor: active ? d.color : "var(--color-border)",
-              ["--domain-color" as string]: d.color,
+              borderColor: active ? colorOf(d.key) : "var(--color-border)",
+              ["--domain-color" as string]: colorOf(d.key),
             }}
           >
             <span

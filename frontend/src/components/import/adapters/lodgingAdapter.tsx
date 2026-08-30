@@ -93,6 +93,7 @@ interface LodgingReviewSlotProps extends ReviewModalProps {
 
 function LodgingReviewSlot({
   parseResult,
+  sourceFileName,
   onCommit,
   onCancel,
   onEmpty,
@@ -161,7 +162,9 @@ function LodgingReviewSlot({
       summary={summary}
       onCancel={onCancel}
       onCommit={async (commitRows: LodgingImportCommitRow[]) => {
-        const result = await commitLodgingImport(source, null, commitRows);
+        // Forgejo #19: the log row can name its file instead of reading
+        // like every other email import made that day.
+        const result = await commitLodgingImport(source, sourceFileName ?? null, commitRows);
         onCommitResult(result);
         await onCommit();
       }}

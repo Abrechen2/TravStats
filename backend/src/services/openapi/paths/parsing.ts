@@ -5,6 +5,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { parseEmailSchema } from "../../../schemas/parseEmail";
 import { errorContent, flightCreateInput, flightResponse } from "./shared";
 
 const parsedFlightSchema = registry.register(
@@ -40,12 +41,11 @@ registry.registerPath({
     body: {
       content: {
         "application/json": {
-          schema: z
-            .object({
-              emailContent: z.string().min(1).max(10 * 1024 * 1024),
-              subject: z.string().max(1000).optional(),
-            })
-            .openapi("ParseEmailRequest"),
+          // The route's OWN schema, not a copy of it. The copy that used to
+          // stand here listed two of its four fields, so `domain` was
+          // invisible and there was no way to see that the email's own date
+          // could be supplied.
+          schema: parseEmailSchema.openapi("ParseEmailRequest"),
         },
       },
     },

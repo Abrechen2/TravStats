@@ -81,6 +81,44 @@ export const BETA_FEATURES = Object.freeze({
    * so a place visited on a trip keeps its `PlaceVisit` row and reappears
    * intact the moment the flag comes back on.
    */
+  /**
+   * User-chosen colour per domain, applied to every surface outside the map.
+   *
+   * READ THIS BEFORE REMOVING THE GATE: the gate covers the VALUE, not just
+   * the settings section — see `hooks/useDomainColors.ts`. With the flag off
+   * everyone gets the brand set from BRAND.md §3, so an instance that turns
+   * the flag back off does not keep rendering colours nobody can reach a
+   * control for.
+   *
+   * The open question it is waiting on is not technical. BRAND.md §3 names the
+   * four hexes as canonical and the backend mirrors the same table; letting a
+   * user override them turns a brand constant into a default, which affects
+   * screenshots, the wiki and the marketing site as much as the app.
+   */
+  /**
+   * The passport page — /passport, its nav entry, and GET /stats/passport.
+   *
+   * READ THIS BEFORE REMOVING THE GATE: the endpoint stays reachable while the
+   * flag is off, as every gate here does (see the file header). That matters
+   * more than usual: the Companion app is expected to READ this endpoint and
+   * drop its own client-side derivation, and it must not have to care what an
+   * instance's beta flag says.
+   */
+  passport: Object.freeze({
+    reason: "beta",
+    why: "The page is complete and the numbers agree with the statistics page, but it ships in the middle of a release candidate. Hiding it keeps 2.6.0's released surface unchanged while the RC still gets it in front of testers.",
+    returnsWhen:
+      "2.6.0 is promoted and the passport has had a round of real use — or 2.7.0 opens, whichever comes first.",
+  }),
+
+  domainColors: Object.freeze({
+    reason: "advanced",
+    why: "Overriding the four domain hues turns BRAND.md §3 from a constant into a default. That reaches past the app into screenshots, the wiki and travstats.de, so it is shown to beta instances first rather than to everyone at once.",
+    returnsWhen:
+      "The brand decision is settled: whether an instance may paint its own domain colours, and whether documentation screenshots are expected to match.",
+    issue: "#270",
+  }),
+
   poiDomain: Object.freeze({
     reason: "beta",
     why: "The domain works end-to-end — create, edit, detail page, list, map — but is incomplete: there is no POI section in the map appearance panel, places are absent from the All tab, and neither custom lists (phase B) nor the shipped checklists (phase C) exist yet. The owner's own case, \"every McDonald's I have been to\", is exactly what custom lists are for and is the reason to keep this hidden.",
