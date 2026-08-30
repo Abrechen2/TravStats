@@ -154,6 +154,11 @@
     "flights_other": "Flüge",
     "unnamed": "Unbenannter Trip"
   },
+  "tours": {
+    "loading": "Touren werden geladen …",
+    "loadError": "Touren konnten nicht geladen werden.",
+    "retry": "Erneut versuchen"
+  },
   "airport": {
     "flightsTotal_one": "Flug gesamt",
     "flightsTotal_other": "Flüge gesamt",

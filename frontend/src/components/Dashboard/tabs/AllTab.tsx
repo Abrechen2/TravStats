@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
+import { useBetaFeatures } from "../../../hooks/useBetaFeatures";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
+import { useDashboardTours } from "../../../hooks/useDashboardTours";
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import { useFlightLookup } from "../../../hooks/useFlightLookup";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -18,6 +20,8 @@ import { buildFlightLegend, rgbCss, type FlightLegendRow } from "../../../lib/fl
 import { buildLodgingLegend, type LodgingLegendRow } from "../../../lib/lodgingColor";
 import { buildPlaceLegend, type PlaceLegendRow } from "../../../lib/placeColor";
 import { PORT_RGB } from "../../layers/cruisePortsLayer";
+import { buildTourPaths, type TourPathDatum } from "../../layers/tourPathsLayer";
+import { buildTourDeckLayers, buildTourLegendRows, TourStatusOverlay } from "./tourMapOverlay";
 import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
 import { logger } from "../../../lib/logger";
 import { useCruiseColorStore } from "../../../store/cruiseColorStore";
@@ -161,6 +165,12 @@ export function AllTab(): JSX.Element {
   // on "don't know yet" so a tab never flashes pins in and then loses them.
   const placesAllowed = usePlacesVisible();
   const placesVisible = filterDomains.includes("poi") && placesAllowed;
+
+  // Tours have no domain pill — gated only by the beta flag;
+  // `useDashboardTours` refuses to fetch while it is off.
+  const { isFeatureVisible } = useBetaFeatures();
+  const toursAllowed = isFeatureVisible("tourRoutes");
+  const dashboardTours = useDashboardTours(toursAllowed);
 
   // Filter flights by departureTime within the year/time range.
   // Flights without a departureTime stay visible (treat NaN as
@@ -437,6 +447,19 @@ export function AllTab(): JSX.Element {
     return buildJourneyLayers(visibleFlights, visibleCruises, effectiveTripId, cruiseColorConfig);
   }, [allMode, visibleFlights, visibleCruises, effectiveTripId, cruiseColorConfig]);
 
+  // Tours on the main overview map only — journey mode already takes over
+  // the map for ONE trip (`journeyLayers`); every tour on top would misdescribe it.
+  const showTours = toursAllowed && allMode !== "journey";
+
+  // `buildTourPaths` is the SAME builder `TripMap.tsx` uses; the deck.gl
+  // layer itself comes from `buildTourDeckLayers` (`./tourMapOverlay.tsx`,
+  // which also carries the width/alpha rationale).
+  const tourPathData = useMemo<TourPathDatum[]>(
+    () => (showTours ? buildTourPaths(dashboardTours.geometries) : []),
+    [showTours, dashboardTours.geometries]
+  );
+  const tourLayers = useMemo<Layer[]>(() => buildTourDeckLayers(tourPathData), [tourPathData]);
+
   // The ☰ Aktivität toggle stays top-left (it opens the activity sidebar).
   // Shifts right when the sidebar is open so it clears the panel.
   const activityToggle = (
@@ -482,7 +505,7 @@ export function AllTab(): JSX.Element {
     background: string,
     label: string,
     key: string,
-    shape: "line" | "ramp" | "dot" = "line",
+    shape: "line" | "ramp" | "dot" = "line"
   ): JSX.Element => (
     <span key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <span
@@ -572,9 +595,13 @@ export function AllTab(): JSX.Element {
         "place-airport",
         "dot"
       ),
-    cruisesVisible &&
-      legendRow(rgbCss(PORT_RGB), t("dashboard:legend.port"), "place-port", "dot"),
+    cruisesVisible && legendRow(rgbCss(PORT_RGB), t("dashboard:legend.port"), "place-port", "dot"),
   ].filter((row): row is JSX.Element => row !== false);
+
+  // See `buildTourLegendRows` (`./tourMapOverlay.tsx`) for why "empty"
+  // shows no row here — `tourStatusOverlay` below carries loading/error.
+  const tourLegend = buildTourLegendRows(showTours, dashboardTours, t, legendRow);
+  const tourHasData = tourLegend.hasData;
 
   // Colour key as a compact table pinned bottom-right — out of the top band
   // so it never collides with the globe's time histogram or the top-left
@@ -587,7 +614,9 @@ export function AllTab(): JSX.Element {
   // require the credit to stay visible, so covering it is a licence question,
   // not a cosmetic one. The other three map overlays in this app sit
   // bottom-LEFT and are unaffected.
-  const legendTable = (flightsVisible || cruisesVisible || lodgingsVisible || placesVisible) && (
+  const anyLegendVisible =
+    flightsVisible || cruisesVisible || lodgingsVisible || placesVisible || tourHasData;
+  const legendTable = anyLegendVisible && (
     <div
       style={{
         position: "absolute",
@@ -611,7 +640,20 @@ export function AllTab(): JSX.Element {
       {lodgingsVisible && lodgingLegendRows}
       {placesVisible && poiLegendRows}
       {placeLegendRows}
+      {tourHasData && tourLegend.rows}
     </div>
+  );
+
+  // Top-center, the same slot `journeySelector` uses in journey mode
+  // (mutually exclusive with this: `showTours` is false there). See
+  // `TourStatusOverlay` for why "empty" gets no banner of its own.
+  const tourStatusOverlay = showTours && (
+    <TourStatusOverlay
+      loading={dashboardTours.toursLoading}
+      error={dashboardTours.toursLoadError}
+      onRetry={dashboardTours.reload}
+      t={t}
+    />
   );
 
   // The panel takes the same `visible*` collections the map does, so the domain
@@ -731,6 +773,7 @@ export function AllTab(): JSX.Element {
       <MapContainer3D
         flights={visibleFlights}
         visMode={visMode}
+        extraLayers={tourLayers}
         appearanceDomains={["flight", "cruise", "lodging", "poi"]}
         placesOverride={visiblePlaces}
         placeListColors={placeListContext.byPlaceId}
@@ -747,6 +790,7 @@ export function AllTab(): JSX.Element {
       />
       {activityToggle}
       {legendTable}
+      {tourStatusOverlay}
       {activityPanel}
       {editModal}
     </div>

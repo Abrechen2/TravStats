@@ -154,6 +154,11 @@
     "flights_other": "flights",
     "unnamed": "Unnamed Trip"
   },
+  "tours": {
+    "loading": "Loading tours …",
+    "loadError": "Tours could not be loaded.",
+    "retry": "Retry"
+  },
   "airport": {
     "flightsTotal_one": "flight total",
     "flightsTotal_other": "flights total",
