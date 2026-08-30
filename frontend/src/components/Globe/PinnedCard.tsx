@@ -59,7 +59,7 @@ export function PinnedCard({
   onFlightOpen,
   onCruiseOpen,
 }: PinnedCardProps): JSX.Element {
-  const { t, i18n } = useTranslation(["map"]);
+  const { t, i18n } = useTranslation(["map", "common"]);
   const locale = i18n.language || "de";
 
   // Subtle entrance: fade + lift on mount (each pin remounts this card).
@@ -86,7 +86,7 @@ export function PinnedCard({
         <Heading pinned={pinned} />
         <button
           type="button"
-          aria-label="close"
+          aria-label={t("common:accessibility.close")}
           onClick={onClose}
           className="cursor-pointer rounded-sm px-1 text-[11px] leading-none opacity-70 hover:opacity-100"
           style={{ background: "rgba(255,255,255,0.08)" }}

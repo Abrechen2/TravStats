@@ -1353,6 +1353,7 @@ function RowActions({
   onEdit: () => void;
   onDelete: () => void;
 }): JSX.Element {
+  const { t } = useTranslation(["common"]);
   return (
     <div className="flex gap-1 mt-1">
       {onView && (
@@ -1361,7 +1362,7 @@ function RowActions({
           onClick={onView}
           className="text-[11px] px-1.5 py-0.5 rounded-sm"
           style={{ color: "var(--text-muted)" }}
-          aria-label="view"
+          aria-label={t("common:accessibility.view")}
           title="view"
         >
           👁
@@ -1372,7 +1373,7 @@ function RowActions({
         onClick={onEdit}
         className="text-[11px] px-1.5 py-0.5 rounded-sm"
         style={{ color: "var(--text-muted)" }}
-        aria-label="edit"
+        aria-label={t("common:buttons.edit")}
         title="edit"
       >
         ✎
@@ -1382,7 +1383,7 @@ function RowActions({
         onClick={onDelete}
         className="text-[11px] px-1.5 py-0.5 rounded-sm"
         style={{ color: "var(--danger, #f87171)" }}
-        aria-label="delete"
+        aria-label={t("common:buttons.delete")}
         title="delete"
       >
         ✕

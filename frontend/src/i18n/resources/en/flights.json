@@ -208,7 +208,8 @@
       "deleted": "Flight deleted",
       "updated": "Flight updated",
       "duplicated": "Flight duplicated — please fill in date and time",
-      "duplicateFailed": "Duplicate failed"
+      "duplicateFailed": "Duplicate failed",
+      "created": "Flight created"
     },
     "duplicate": {
       "label": "Duplicate",

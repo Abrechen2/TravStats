@@ -1,4 +1,5 @@
-// Monochrome spinning globe used as a branded loader. Renders on a
+
+import { useTranslation } from "../hooks/useTranslation";// Monochrome spinning globe used as a branded loader. Renders on a
 // <canvas> so it paints before three.js / deck.gl finish booting; the
 // country TopoJSON lives as a static /public asset to keep it off the
 // JS bundle. Reads --text-primary / --bg-base / --accent live so it
@@ -57,6 +58,7 @@ export function GlobeLoader({
   accent,
   className,
 }: GlobeLoaderProps): JSX.Element {
+  const { t } = useTranslation(["common"]);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   // `buffer` is a pure function of `size`; memoising it keeps the effect
   // dep array stable and prevents a teardown/re-init churn when a parent
@@ -169,7 +171,7 @@ export function GlobeLoader({
   return (
     <div
       role="status"
-      aria-label={label ?? "Loading"}
+      aria-label={label ?? t("common:accessibility.loading")}
       className={className}
       style={{
         display: "flex",

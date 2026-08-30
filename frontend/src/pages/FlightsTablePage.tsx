@@ -307,7 +307,10 @@ export default function FlightsTablePage(): JSX.Element {
           t("flights:form.duplicate.mergedToast", { count: result.mergedFields.length })
         );
       } else {
-        addToast("success", t("flights:table.toast.updated"));
+        // handleAddFlight always CREATES. Reporting "updated" told the user
+        // they had edited an existing record (Forgejo #11). The merge branch
+        // above keeps its own wording because a merge really did change a row.
+        addToast("success", t("flights:table.toast.created"));
       }
       if (!opts.hasMoreFlights) {
         setShowAddFlight(false);
@@ -946,9 +949,16 @@ export default function FlightsTablePage(): JSX.Element {
             setEditingSpecialFlight(null);
           }}
           onSaved={() => {
+            // This one modal serves both create and edit, so the message has
+            // to be read off which one is open — BEFORE the state is cleared,
+            // or it always reports a create (Forgejo #11).
+            const wasEdit = !!editingSpecialFlight;
             setShowSpecialModal(false);
             setEditingSpecialFlight(null);
-            addToast("success", t("flights:table.toast.updated"));
+            addToast(
+              "success",
+              t(wasEdit ? "flights:table.toast.updated" : "flights:table.toast.created")
+            );
             void loadFlights();
           }}
         />

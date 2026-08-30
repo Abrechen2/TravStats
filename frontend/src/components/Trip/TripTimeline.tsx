@@ -2,6 +2,7 @@ import { JSX } from "react";
 import { DOMAINS, type DomainKey } from "../../shared/domains";
 import { formatDateInTimezone } from "../../lib/dateUtils";
 import { useDomainColors } from "../../hooks/useDomainColors";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export interface TimelineEvent {
   id: string;
@@ -17,6 +18,7 @@ export interface TripTimelineProps {
 }
 
 export default function TripTimeline({ events }: TripTimelineProps): JSX.Element {
+  const { t } = useTranslation(["common"]);
   const { colorOf } = useDomainColors();
   const sorted = [...events].sort((a, b) => a.date.localeCompare(b.date));
   return (
@@ -40,7 +42,7 @@ export default function TripTimeline({ events }: TripTimelineProps): JSX.Element
                 color: colorOf(ev.domain),
                 fontSize: "18px",
               }}
-              aria-label={d.key}
+              aria-label={t(d.i18nKey)}
             >
               {d.icon}
             </div>

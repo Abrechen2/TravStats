@@ -82,7 +82,7 @@ export default function ModuleSection(): JSX.Element {
                 type="button"
                 role="switch"
                 aria-checked={enabled}
-                aria-label={d.i18nKey}
+                aria-label={t(d.i18nKey)}
                 disabled={!d.available}
                 onClick={(e) => {
                   e.stopPropagation();

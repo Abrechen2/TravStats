@@ -208,7 +208,8 @@
       "deleted": "Flug gelöscht",
       "updated": "Flug aktualisiert",
       "duplicated": "Flug dupliziert — bitte Datum und Zeit ergänzen",
-      "duplicateFailed": "Duplizieren fehlgeschlagen"
+      "duplicateFailed": "Duplizieren fehlgeschlagen",
+      "created": "Flug angelegt"
     },
     "duplicate": {
       "label": "Duplizieren",

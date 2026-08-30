@@ -75,7 +75,7 @@ export function ColumnMappingWizard<F extends string>({
   onCancel,
   submitError,
 }: ColumnMappingWizardProps<F>): JSX.Element {
-  const { t } = useTranslation("settings");
+  const { t } = useTranslation(["settings", "common"]);
 
   // Content-based signatures, not object/array identities. `fields` gets a
   // fresh array identity on every parent re-render (the caller's `t` from the
@@ -362,7 +362,7 @@ function FieldSection<F extends string>({
                   <span
                     className="ml-1"
                     style={{ color: "rgb(248, 113, 113)" }}
-                    aria-label="required"
+                    aria-label={t("common:accessibility.required")}
                   >
                     *
                   </span>

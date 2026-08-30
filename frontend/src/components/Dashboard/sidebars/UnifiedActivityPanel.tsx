@@ -130,7 +130,7 @@ export function UnifiedActivityPanel({
         <button
           type="button"
           onClick={onClose}
-          aria-label="close"
+          aria-label={t("common:accessibility.close")}
           style={{
             background: "none",
             border: "none",
