@@ -44,6 +44,7 @@ vi.mock("react-router-dom", async () => {
 
 // Imported after the mocks above so the module graph picks them up.
 import { TourTab } from "../TourTab";
+import { TOUR_PATH_GLOBE_ALTITUDE_M } from "../tourMapOverlay";
 
 const TOUR_A = {
   id: "tour-a",
@@ -138,6 +139,49 @@ describe("TourTab", () => {
   it("defaults to visMode routes", () => {
     renderTab();
     expect(mapProps[mapProps.length - 1].visMode).toBe("routes");
+  });
+
+  // Fix round 2 (2026-08-30, browser verification): the flat map drew the
+  // line correctly, the globe drew nothing at all -- an unlifted 2-D path
+  // z-fights with the sphere mesh and loses the depth test. This is the
+  // WIRING half of that fix (does TourTab actually ask for the lift on the
+  // globe); `tourMapOverlay.altitude.test.ts` covers the pure function's
+  // own math.
+  it("lifts the tour path altitude on the globe but not on the flat map", async () => {
+    mockUseDashboardTours.mockReturnValue({
+      ...READY_NO_TOURS,
+      tours: [TOUR_A],
+      geometries: [GEOMETRY],
+    });
+
+    renderTab();
+    await waitFor(() => expect(mapProps.length).toBeGreaterThan(0));
+    const flatLayers = mapProps[mapProps.length - 1].extraLayers as Array<{
+      props: { getPath: (d: unknown) => unknown };
+    }>;
+    const flatPath = flatLayers[0].props.getPath({
+      path: GEOMETRY.geometry.features[0].geometry.coordinates,
+    });
+    expect(flatPath).toEqual(GEOMETRY.geometry.features[0].geometry.coordinates);
+
+    mapProps.length = 0;
+    mockUseDashboardRoute.mockReturnValue({
+      tab: "tour",
+      mode: "globe",
+      setTab: () => {},
+      setMode: () => {},
+    });
+    renderTab();
+    await waitFor(() => expect(mapProps.length).toBeGreaterThan(0));
+    const globeLayers = mapProps[mapProps.length - 1].extraLayers as Array<{
+      props: { getPath: (d: unknown) => Array<[number, number, number]> };
+    }>;
+    const globePath = globeLayers[0].props.getPath({
+      path: GEOMETRY.geometry.features[0].geometry.coordinates,
+    });
+    for (const point of globePath) {
+      expect(point[2]).toBe(TOUR_PATH_GLOBE_ALTITUDE_M);
+    }
   });
 
   it("switches to visMode globe when the URL mode is globe", () => {

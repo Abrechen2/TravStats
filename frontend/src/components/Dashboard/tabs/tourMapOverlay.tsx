@@ -87,13 +87,49 @@ export function buildTourLegendRows(
  * browser against this dark basemap — alpha 70 at 1.5px drew ZERO pixels,
  * not merely "subtle". Do not lower these again.
  */
-export function buildTourDeckLayers(pathData: readonly TourPathDatum[]): Layer[] {
+/**
+ * Lifts tour paths a few km off the globe's sphere surface so they don't
+ * z-fight with / clip into it — the SAME mechanism `buildGlobeLayers.ts`
+ * already documents and fixes for cruise paths (`CRUISE_PATH_ALTITUDE_M`):
+ * the geometry arrives as 2-D `[lng, lat]` (from the tour geometry
+ * endpoint, same shape as the cruise sea-route GeoJSON that comment
+ * describes), and without an altitude component deck.gl renders it at
+ * exactly altitude 0, which shares depth-buffer values with the sphere
+ * mesh MapLibre's globe projection draws — the line is there, but every
+ * fragment loses the depth test and nothing reaches the screen.
+ *
+ * Found in browser verification (fix round 2, 2026-08-30): the flat map
+ * drew tour lines correctly, the globe drew nothing at all under a
+ * legend that still claimed data was present — exactly the clipping this
+ * constant already has a name for, just never applied to this layer,
+ * because `buildTourDeckLayers` had only ever been fed into the flat map
+ * before `extraLayers` was wired into GlobeView (fix round 1's H1).
+ *
+ * Matches `CRUISE_PATH_ALTITUDE_M` in `Globe/buildGlobeLayers.ts` exactly
+ * — same mechanism, same safe-and-invisible altitude, kept as an
+ * independent constant rather than importing that one because it is a
+ * module-private detail of a file with no other reason to export it.
+ */
+export const TOUR_PATH_GLOBE_ALTITUDE_M = 5_000;
+
+/**
+ * `altitudeM` is 0 for the flat map (the default — `d.path`'s raw 2-D
+ * coordinates render fine there, and lifting them would be a pointless
+ * behaviour change) and `TOUR_PATH_GLOBE_ALTITUDE_M` for the globe (see
+ * that constant's doc comment for why). Callers decide which based on
+ * their own resolved `visMode` — this function has no opinion about
+ * which map engine ends up drawing its output.
+ */
+export function buildTourDeckLayers(pathData: readonly TourPathDatum[], altitudeM = 0): Layer[] {
   if (pathData.length === 0) return [];
   return [
     new PathLayer<TourPathDatum>({
       id: "dashboard-tour-paths",
       data: pathData,
-      getPath: (d) => d.path,
+      getPath: (d) =>
+        altitudeM === 0
+          ? d.path
+          : d.path.map(([lng, lat]) => [lng, lat, altitudeM] as [number, number, number]),
       getColor: (d) =>
         [...d.color, d.isPlaceholder ? 170 : 255] as [number, number, number, number],
       getWidth: (d) => (d.isPlaceholder ? 2 : 3.5),

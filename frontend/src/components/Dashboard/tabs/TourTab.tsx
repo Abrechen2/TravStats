@@ -9,7 +9,12 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import type { TourSummary } from "../../../lib/api/tourIndex";
 import { LEG_MODES, type LegMode } from "../../../types/tour";
 import { buildTourPaths, type TourPathDatum } from "../../layers/tourPathsLayer";
-import { buildTourDeckLayers, buildTourLegendRows, TourStatusOverlay } from "./tourMapOverlay";
+import {
+  buildTourDeckLayers,
+  buildTourLegendRows,
+  TourStatusOverlay,
+  TOUR_PATH_GLOBE_ALTITUDE_M,
+} from "./tourMapOverlay";
 import { legendRow } from "./allTabLegendRows";
 import MapContainer3D from "../../MapContainer3D";
 
@@ -49,12 +54,20 @@ export function TourTab(): JSX.Element {
   const toursAllowed = isFeatureVisible("tourRoutes");
   const dashboardTours = useDashboardTours(toursAllowed);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const visMode = mode === "globe" ? "globe" : "routes";
 
   const tourPathData = useMemo<TourPathDatum[]>(
     () => (toursAllowed ? buildTourPaths(dashboardTours.geometries) : []),
     [toursAllowed, dashboardTours.geometries]
   );
-  const tourLayers = useMemo<Layer[]>(() => buildTourDeckLayers(tourPathData), [tourPathData]);
+  // Altitude-lifted on the globe only — see `TOUR_PATH_GLOBE_ALTITUDE_M`'s
+  // doc comment (tourMapOverlay.tsx) for why an unlifted path is invisible
+  // there (fix round 2, found in a real browser: routes mode drew the line,
+  // globe mode drew nothing under a legend that still claimed data).
+  const tourLayers = useMemo<Layer[]>(
+    () => buildTourDeckLayers(tourPathData, visMode === "globe" ? TOUR_PATH_GLOBE_ALTITUDE_M : 0),
+    [tourPathData, visMode]
+  );
 
   // The same swatch-JSX builder AllTab.tsx's "Alle" map legend uses —
   // shared in `./allTabLegendRows.tsx` since the fix-round review
@@ -118,7 +131,7 @@ export function TourTab(): JSX.Element {
     <div style={{ position: "absolute", inset: 0 }}>
       <MapContainer3D
         flights={[]}
-        visMode={mode === "globe" ? "globe" : "routes"}
+        visMode={visMode}
         extraLayers={tourLayers}
         // No per-domain appearance section applies here — tour leg colour
         // comes from the fixed LegMode palette (tourPathsLayer.ts), not a

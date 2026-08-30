@@ -16,7 +16,12 @@ import { resolvePlaceListColors } from "../../../lib/placeColor";
 import type { PlaceList } from "../../../types/placeList";
 import { tripsApi } from "../../../lib/api/trips";
 import { buildTourPaths, type TourPathDatum } from "../../layers/tourPathsLayer";
-import { buildTourDeckLayers, buildTourLegendRows, TourStatusOverlay } from "./tourMapOverlay";
+import {
+  buildTourDeckLayers,
+  buildTourLegendRows,
+  TourStatusOverlay,
+  TOUR_PATH_GLOBE_ALTITUDE_M,
+} from "./tourMapOverlay";
 import {
   buildAirportPortLegendRows,
   buildCruiseLegendRows,
@@ -418,7 +423,15 @@ export function AllTab(): JSX.Element {
     () => (showTours ? buildTourPaths(dashboardTours.geometries) : []),
     [showTours, dashboardTours.geometries]
   );
-  const tourLayers = useMemo<Layer[]>(() => buildTourDeckLayers(tourPathData), [tourPathData]);
+  // Altitude-lifted on the globe only — see `TOUR_PATH_GLOBE_ALTITUDE_M`'s
+  // doc comment (tourMapOverlay.tsx): an unlifted path z-fights with the
+  // sphere mesh and draws zero pixels there (fix round 2, found in a real
+  // browser). `visMode` already resolves "globe" vs "routes"/"heatmap"/
+  // "journey" a few lines up.
+  const tourLayers = useMemo<Layer[]>(
+    () => buildTourDeckLayers(tourPathData, visMode === "globe" ? TOUR_PATH_GLOBE_ALTITUDE_M : 0),
+    [tourPathData, visMode]
+  );
 
   // The ☰ Aktivität toggle stays top-left (it opens the activity sidebar).
   // Shifts right when the sidebar is open so it clears the panel.

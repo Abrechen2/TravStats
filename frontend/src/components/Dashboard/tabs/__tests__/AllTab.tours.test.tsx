@@ -60,6 +60,7 @@ vi.mock("../../../../lib/api/trips", () => ({
 
 // Imported after the mocks above so the module graph picks them up.
 import { AllTab } from "../AllTab";
+import { TOUR_PATH_GLOBE_ALTITUDE_M } from "../tourMapOverlay";
 
 const TOUR_A = {
   id: "tour-a",
@@ -270,5 +271,56 @@ describe("AllTab: tour lines and legend on the dashboard map", () => {
     const extraLayers = lastProps.extraLayers as Array<{ id: string }>;
     expect(extraLayers.some((layer) => layer.id === "dashboard-tour-paths")).toBe(false);
     expect(screen.queryByText("trips:tours.mode.road")).not.toBeInTheDocument();
+  });
+
+  // Fix round 2 (2026-08-30, browser verification): globe mode drew
+  // nothing at all on a real globe -- an unlifted 2-D path z-fights with
+  // the sphere mesh and loses the depth test (see
+  // `tourMapOverlay.altitude.test.ts` for the pure-function proof of the
+  // mechanism). This is the wiring half for the "Alle" map specifically:
+  // does AllTab ask for the lift on its own globe mode too.
+  it("lifts the tour path altitude in globe mode but not in overview mode", async () => {
+    mockUseDashboardTours.mockReturnValue({
+      ...READY_NO_TOURS,
+      tours: [TOUR_A],
+      geometries: [GEOMETRY],
+    });
+
+    render(
+      <MemoryRouter>
+        <AllTab />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(mapProps.length).toBeGreaterThan(0));
+    const flatLayers = mapProps[mapProps.length - 1].extraLayers as Array<{
+      props: { getPath: (d: unknown) => unknown };
+    }>;
+    const flatPath = flatLayers[0].props.getPath({
+      path: GEOMETRY.geometry.features[0].geometry.coordinates,
+    });
+    expect(flatPath).toEqual(GEOMETRY.geometry.features[0].geometry.coordinates);
+
+    mapProps.length = 0;
+    mockUseDashboardRoute.mockReturnValue({
+      tab: "all",
+      mode: "globe",
+      setTab: () => {},
+      setMode: () => {},
+    });
+    render(
+      <MemoryRouter>
+        <AllTab />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(mapProps.length).toBeGreaterThan(0));
+    const globeLayers = mapProps[mapProps.length - 1].extraLayers as Array<{
+      props: { getPath: (d: unknown) => Array<[number, number, number]> };
+    }>;
+    const globePath = globeLayers[0].props.getPath({
+      path: GEOMETRY.geometry.features[0].geometry.coordinates,
+    });
+    for (const point of globePath) {
+      expect(point[2]).toBe(TOUR_PATH_GLOBE_ALTITUDE_M);
+    }
   });
 });
