@@ -191,6 +191,83 @@ registry.registerPath({
   responses: { 200: { description: "Diff" }, 404: notFound },
 });
 
+// Bulk counterparts (Forgejo #33). Both answer with a per-id outcome list, not
+// a single flag: partial success is the normal case, and collapsing it would
+// hide proposals the caller believes were accepted.
+registry.registerPath({
+  method: "post",
+  path: "/pending-updates/apply",
+  summary: "Apply several proposals at once",
+  tags: pendingTag,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({ ids: z.array(z.string()).min(1).max(200) }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Per-id outcome",
+      content: {
+        "application/json": {
+          schema: z.object({
+            requested: z.number(),
+            applied: z.number(),
+            failed: z.number(),
+            results: z.array(
+              z.object({
+                id: z.string(),
+                status: z.enum(["applied", "rejected", "failed"]),
+                error: z.string().optional(),
+              })
+            ),
+          }),
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/pending-updates/reject",
+  summary: "Reject several proposals at once",
+  tags: pendingTag,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({ ids: z.array(z.string()).min(1).max(200) }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Per-id outcome",
+      content: {
+        "application/json": {
+          schema: z.object({
+            requested: z.number(),
+            rejected: z.number(),
+            failed: z.number(),
+            results: z.array(
+              z.object({
+                id: z.string(),
+                status: z.enum(["applied", "rejected", "failed"]),
+                error: z.string().optional(),
+              })
+            ),
+          }),
+        },
+      },
+    },
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/pending-updates/{id}/apply",
