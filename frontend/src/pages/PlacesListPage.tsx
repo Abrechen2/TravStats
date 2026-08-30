@@ -19,7 +19,9 @@ import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { FlagImg } from "../lib/countryFlag";
 import { continentLabel } from "../lib/continentLabel";
-import { countryName } from "../shared/geo/countryCode";
+import { placeCountryCode, placeCountryLabel } from "../lib/placeCountry";
+import { listPlaceLists } from "../lib/api/placeLists";
+import type { PlaceList } from "../types/placeList";
 import { logger } from "../lib/logger";
 import { deletePlace, listPlaces } from "../lib/api/places";
 import { useToastStore } from "../store/toastStore";
@@ -83,12 +85,6 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 /** The country as a reader sees it — localised from the ISO code, falling back
  *  to whatever text the source wrote. */
-function countryLabel(place: Place, locale: string): string {
-  if (place.isoCountryCode) {
-    return countryName(place.isoCountryCode, locale) ?? place.isoCountryCode;
-  }
-  return place.country ?? "";
-}
 
 /** One label source for header, picker, aria and footer — they must agree. */
 function columnLabel(t: Translate, id: PlaceColumnId): string {
@@ -122,7 +118,7 @@ function compareRows(
     // Country and continent sort on the LOCALISED label, not the raw code: a
     // German reader expects Ägypten by Ä, and "EG" would file it under E.
     case "country":
-      return countryLabel(a, locale).localeCompare(countryLabel(b, locale), locale);
+      return placeCountryLabel(a, locale).localeCompare(placeCountryLabel(b, locale), locale);
     case "continent":
       return continentLabel(a.continent, t, "").localeCompare(
         continentLabel(b.continent, t, ""),
@@ -157,6 +153,10 @@ export default function PlacesListPage(): JSX.Element {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<CategoryFilter>("all");
   const [country, setCountry] = useState<CountryFilter>("all");
+  /** Which list a place must belong to. "all" = every place. A filter, not
+   *  a mode: it changes WHICH rows are shown, never what one means. */
+  const [listId, setListId] = useState<string>("all");
+  const [lists, setLists] = useState<PlaceList[]>([]);
   const [visited, setVisited] = useState<VisitedFilter>("all");
   // Newest first everywhere, and the choice survives a reload — the
   // column choice already did (useColumnPrefs), the sort never had.
@@ -184,11 +184,36 @@ export default function PlacesListPage(): JSX.Element {
     void load();
   }, [load]);
 
+  // Entries come with the lists, because the filter needs membership, not just
+  // names. A failure here leaves the dropdown out rather than breaking the
+  // page: a missing filter is an inconvenience, a blank list page is not.
+  useEffect(() => {
+    let cancelled = false;
+    listPlaceLists(true)
+      .then((rows) => {
+        if (!cancelled) setLists(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setLists([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const listMembers = useMemo(() => {
+    if (listId === "all") return null;
+    const found = lists.find((l) => l.id === listId);
+    return new Set((found?.entries ?? []).map((e) => e.placeId));
+  }, [lists, listId]);
+
   const countryOptions = useMemo(() => {
     const seen = new Map<string, string>();
     for (const p of rows) {
       if (!p.isoCountryCode) continue;
-      seen.set(p.isoCountryCode, p.country ?? p.isoCountryCode);
+      // Label from the code, not from the row's own spelling — otherwise the
+      // dropdown reads "مصر" for a German reader whenever that row sorted first.
+      seen.set(p.isoCountryCode, placeCountryLabel(p, i18n.language) || p.isoCountryCode);
     }
     return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1], i18n.language));
   }, [rows, i18n.language]);
@@ -198,6 +223,7 @@ export default function PlacesListPage(): JSX.Element {
     const out = rows.filter((p) => {
       if (category !== "all" && p.category !== category) return false;
       if (country !== "all" && p.isoCountryCode !== country) return false;
+      if (listMembers && !listMembers.has(p.id)) return false;
       if (visited !== "all") {
         const state = classifyPlace(p);
         const wanted =
@@ -213,7 +239,7 @@ export default function PlacesListPage(): JSX.Element {
     });
     const dir = sortOrder === "asc" ? 1 : -1;
     return [...out].sort((a, b) => compareRows(a, b, sortBy, i18n.language, t) * dir);
-  }, [rows, search, category, country, visited, sortBy, sortOrder, i18n.language]);
+  }, [rows, search, category, country, visited, listMembers, sortBy, sortOrder, i18n.language]);
 
   const handleSort = useCallback(
     (key: PlaceSortKey): void => {
@@ -227,7 +253,11 @@ export default function PlacesListPage(): JSX.Element {
   );
 
   const hasActiveFilter =
-    search.trim() !== "" || category !== "all" || country !== "all" || visited !== "all";
+    search.trim() !== "" ||
+    category !== "all" ||
+    country !== "all" ||
+    listId !== "all" ||
+    visited !== "all";
 
   /** Read straight off the visible rows, like the other three lists. Visits
    *  are counted from data and dates (shared/placeCounting), never from a
@@ -236,7 +266,11 @@ export default function PlacesListPage(): JSX.Element {
     const countries = new Set<string>();
     let visited = 0;
     for (const p of filtered) {
-      if (p.country) countries.add(p.country);
+      // Count by ISO, never by the stored text. Reverse geocoding writes the
+      // country in ITS OWN language — "Egypt" from one row and "مصر" from the
+      // next are the same country, and counting the strings made it two.
+      const cc = placeCountryCode(p);
+      if (cc) countries.add(cc);
       if (p.visited) visited += 1;
     }
     return [
@@ -250,6 +284,7 @@ export default function PlacesListPage(): JSX.Element {
     setSearch("");
     setCategory("all");
     setCountry("all");
+    setListId("all");
     setVisited("all");
   }, []);
 
@@ -324,6 +359,24 @@ export default function PlacesListPage(): JSX.Element {
                 ))}
               </select>
             </FilterField>
+            {/* Only shown when there is something to filter BY. An empty
+                dropdown is a control that cannot do anything. */}
+            {lists.length > 0 && (
+              <FilterField label={t("places:list.filters.list")}>
+                <select
+                  className={PANEL_SELECT_CLASS}
+                  value={listId}
+                  onChange={(e) => setListId(e.target.value)}
+                >
+                  <option value="all">{t("places:list.filters.allLists")}</option>
+                  {lists.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+              </FilterField>
+            )}
             <FilterField label={t("places:list.filters.country")}>
               <select
                 className={PANEL_SELECT_CLASS}
@@ -500,7 +553,7 @@ export default function PlacesListPage(): JSX.Element {
                       )}
                       {columnPrefs.isVisible("country") && (
                         <td className="px-4 py-3 text-[var(--text-muted)]">
-                          {countryLabel(p, i18n.language) || "—"}
+                          {placeCountryLabel(p, i18n.language) || "—"}
                         </td>
                       )}
                       {columnPrefs.isVisible("continent") && (

@@ -8,9 +8,11 @@ import { describe, it, expect } from "vitest";
 import { createRoutesLayers, type RouteData } from "./routesLayer";
 import { createCruisePortsLayer } from "./cruisePortsLayer";
 import { buildLodgingPins } from "./lodgingPinsLayer";
+import { buildPlacePins } from "./placePinsLayer";
 import type { PointDatum } from "./layerTypes";
 import type { Cruise } from "../../types";
 import type { Lodging } from "../../types/lodging";
+import type { Place } from "../../types/place";
 import { MARKER_DOT_MAX_PX, MARKER_DOT_MIN_PX, MARKER_DOT_RADIUS_M } from "./markerDotStyle";
 
 function makePoint(): PointDatum {
@@ -221,5 +223,79 @@ describe("lodging dot parity with airport/port dots (Task 8)", () => {
     const props = (dotLayer as unknown as { props: DotLayerProps }).props;
     expect(props.radiusMinPixels).toBe(MARKER_DOT_MIN_PX);
     expect(props.radiusMaxPixels).toBe(MARKER_DOT_MAX_PX);
+  });
+});
+
+function makePlace(): Place {
+  return {
+    id: "place-1",
+    name: "Skytree",
+    category: "landmark",
+    lat: 35.71,
+    lon: 139.81,
+    city: "Tokyo",
+    country: "JP",
+    visited: true,
+    visitCount: 2,
+  } as unknown as Place;
+}
+
+function getPlaceDotProps(sizeScale: number): DotLayerProps {
+  const layers = buildPlacePins([makePlace()], sizeScale);
+  if (!layers) throw new Error("buildPlacePins returned null");
+  const dotLayer = layers.find((l) => l.id === "place-pins");
+  if (!dotLayer) throw new Error("place-pins layer not found");
+  return (dotLayer as unknown as { props: DotLayerProps }).props;
+}
+
+// 2026-08-28: places were the one domain the parity suite did not cover, and
+// also the one domain with no size slider — both callers passed a hardcoded
+// `1` into buildPlacePins, so the dot could not be sized at all. Now that
+// MapContainer3D owns a `placeMarkerSize` the way it owns the lodging one,
+// the same parity has to hold, and this pins it.
+describe("place dot parity with airport/port/lodging dots", () => {
+  it.each([0.7, 1, 1.45])(
+    "renders the same radiusMinPixels/radiusMaxPixels as the other dots for size scale %s",
+    (scale) => {
+      const airport = getAirportDotProps(scale);
+      const lodging = getLodgingDotProps(scale);
+      const place = getPlaceDotProps(scale);
+      expect(place.radiusMinPixels).toBe(airport.radiusMinPixels);
+      expect(place.radiusMaxPixels).toBe(airport.radiusMaxPixels);
+      expect(place.radiusMinPixels).toBe(lodging.radiusMinPixels);
+      expect(place.radiusMaxPixels).toBe(lodging.radiusMaxPixels);
+    }
+  );
+
+  it("uses the shared MARKER_DOT_RADIUS_M constant as its metre radius", () => {
+    const place = getPlaceDotProps(1);
+    const resolveRadius = (r: unknown): number => (typeof r === "function" ? r() : (r as number));
+    expect(resolveRadius(place.getRadius)).toBe(MARKER_DOT_RADIUS_M);
+  });
+
+  it("actually responds to the slider — 1.45x is bigger than 0.7x", () => {
+    // NOTE what this does and does not prove. The layer always honoured its
+    // `sizeScale` argument; the defect was that both CALLERS passed a literal
+    // `1`, which no layer-level test can see. This only pins that the layer
+    // keeps honouring it. The wiring is covered where it lives: the panel test
+    // in map/controlPanelKit.test.tsx.
+    const small = getPlaceDotProps(0.7);
+    const large = getPlaceDotProps(1.45);
+    expect(large.radiusMaxPixels!).toBeGreaterThan(small.radiusMaxPixels!);
+  });
+
+  it("goes to zero-pixel radius at scale 0 — the same 'Aus' semantics as the others", () => {
+    const place = getPlaceDotProps(0);
+    expect(place.radiusMinPixels).toBe(0);
+    expect(place.radiusMaxPixels).toBe(0);
+  });
+
+  it("draws a plain dot — no ring layer around it", () => {
+    // Owner decision 2026-08-28: a place reads as the same plain dot every
+    // other domain draws. The `mark: "target"` ring the All tab used is gone,
+    // and no caller may reintroduce it by accident.
+    const layers = buildPlacePins([makePlace()], 1);
+    if (!layers) throw new Error("buildPlacePins returned null");
+    expect(layers.find((l) => l.id === "place-pins-ring")).toBeUndefined();
   });
 });

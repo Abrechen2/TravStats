@@ -12,6 +12,55 @@ now be written in the currency it was actually paid in. Two-factor
 authentication and passkeys arrive alongside.
 
 ### Added
+- **The places list can be filtered by list.** It could already be narrowed by
+  status, category and country, but not by the lists you build yourself — even
+  though the dashboard had offered exactly that all along. With 58 McDonald's
+  in one list sitting beside a hundred other places, "show me only that list"
+  is the filter that makes the page usable. A list with no entries yet shows
+  nothing, rather than quietly showing everything.
+- **Flights are part of the spreadsheet, in both directions.** The export
+  carried cruises, lodging and places but not the largest domain; now it does,
+  with the eighteen fields you would actually edit in a table. Airports travel
+  as IATA codes rather than coordinates — a code is what you can type and check
+  — and the server resolves one into a real airport, which is what makes adding
+  a missing flight from a row possible at all. Changing a code moves the flight;
+  an unknown code is refused rather than quietly leaving the old route.
+- **Visits can be imported.** The export always wrote a Visits sheet and the
+  import ignored it without a word, so editing visits and sending the file back
+  did nothing. A visit now imports against its place — several visits to the
+  same place on the same day stay several visits. Cruise stops and stays remain
+  export-only, and the import panel says so instead of leaving you to find out.
+- **The spreadsheet import asks what to do with what is already there.**
+  *Add only* creates and never touches an existing entry. *Merge* — the
+  default — updates the rows the file names and creates the rest. *Replace
+  contents* additionally deletes everything the file leaves out, and is the
+  only mode that can lose data: it takes a full backup before writing a single
+  row, shows how many entries would disappear, and will not proceed unless you
+  confirm that number. If the backup cannot be made, the import does not run.
+  An empty sheet deletes nothing at all — clearing a domain has to be asked for
+  row by row, never by handing over a blank tab.
+- **The whole logbook exports to one spreadsheet, and comes back.** A sheet per
+  table — cruises and their stops, properties and their stays, places and their
+  visits — readable, filterable, and re-importable. Column A carries the row's
+  id: a row that returns with one updates the record it names, a row without one
+  is created. An import is previewed before anything is written, and shows what
+  it would change per sheet. A row carrying an id that is not yours is refused,
+  never applied.
+- **A place gets its address from its pin.** Places arrived located but
+  undescribed — the checklist catalogue has no address column and names a
+  country for 14 of its 1,261 entries. New places now fill in address, city and
+  country when they are saved or ticked, and a nightly pass fills in the ones
+  recorded earlier.
+- **Places can be sized on the map, like every other domain.** The map settings
+  had a size slider for flights, cruises and lodging but not for places; the
+  place dot was pinned at one size and its labels at one zoom level, so zooming
+  in never revealed another name.
+- **The API documentation covers cruises, catalogues, geography and
+  achievements.** It described flights and trips and claimed to be complete;
+  measured against what the server actually serves, 244 endpoints had no entry.
+  Coverage is now enforced by a test that walks the live route table, so an
+  endpoint can no longer ship undocumented. The remaining gaps are listed by
+  name rather than left to be discovered.
 - **Every dashboard tab has the same activity list.** Four tabs carried four
   different panels, places carried none, and "All" listed flights and cruises
   while the tab bar above it counted four domains. One list serves all of them
@@ -41,9 +90,8 @@ authentication and passkeys arrive alongside.
   tick is indistinguishable from a real one afterwards.
 - **Proof for a visit, with a caption.** Photographs attach to a single visit
   and carry a caption you can type.
-- **Places have a place in the map settings**, and on the "All" tab they wear a
-  ring rather than a colour of their own — turquoise against harbour blue sits
-  below what an eye can separate.
+- **Places have a place in the map settings**, and on the map they are drawn as
+  the same plain dot every other domain uses — including in the key beside it.
 - **Places become a domain of their own — hidden behind the beta switch.** A
   place is a first-class entry with its own list, detail page, form and map
   layer; a trip is a *view* of it rather than its owner, so "every McDonald's
@@ -238,6 +286,54 @@ authentication and passkeys arrive alongside.
   statistics, where figures belong.
 
 ### Fixed
+- **Addresses arrive in the alphabet you read.** Filling in an address asks a
+  geocoder, and it answered in the local language of the place — so a German
+  logbook collected entries in Japanese, Arabic, Armenian and Greek script:
+  text you cannot read, sort, or type into a search box. New entries now come
+  back in Latin script, and the nightly pass fetches the older ones again.
+  Accented names stay exactly as they are: the line is drawn at the script, not
+  the language, so Lëtzebuerg and Đà Nẵng are left alone.
+- **A country is one country, however it is spelled.** Filling in a place's
+  address asks a geocoder, and it answers in the country's own language — so
+  the same country arrived as "Egypt" on one row and "مصر" on the next. The
+  places summary counted the spellings rather than the countries and reported
+  20 as 23, the country filter offered whichever spelling happened to sort
+  first, and an export sheet could hold four spellings for two countries. All
+  three now read the country code, and show its name in your language.
+- **Help sits on the field it explains.** The settings and the admin area opened
+  with collapsible boxes that explained three or four fields at once, from above
+  the form — so the sentence about a control sat rows away from the control, and
+  collapsing the box once hid it for good. Each explanation now hangs on its own
+  field, and what a section needs to say up front is simply visible. Anything
+  with consequences — a restore replaces everything, a deactivated account keeps
+  its data, debug logging costs disk — stays as standing text rather than
+  becoming a tooltip that cannot be reached on a phone. The help icons are
+  keyboard-reachable for the first time; they were clickable `div`s before.
+- **A place on the "All" map is a plain dot again**, the same mark every other
+  domain draws, and the country of a place shows its name rather than an em dash
+  next to a bare code.
+- **Every "when did I fly" figure now reads the clock at the airport.** Eight of
+  them read the stored timestamp instead: the time-of-day buckets, weekend
+  warrior, fastest day, milestone year, busiest month, season explorer, most
+  countries in one day, and first airport visits — plus the year buckets on the
+  overview tab and the country year index. A flight leaving Bangkok late in the
+  evening could be counted onto the following day, so two figures on one screen
+  could disagree about the same flight. Rows stored as a wall clock are no longer
+  converted a second time, and a date-only row reports no hour at all rather than
+  being counted on its 12:00 placeholder.
+- **Antarctica's airfields can be flown to.** Rothera, Marambio, Union Glacier,
+  Novo and Teniente Marsh were not in the catalogue, so the flights could not be
+  recorded at all. The seed admitted only large, medium and closed airports, and
+  Antarctica — having no scheduled traffic — is listed almost entirely as small.
+  Wolf's Fang was the lone exception, which meant "Seven Continents" effectively
+  ran through a single airfield. The catalogue now carries 34 Antarctic fields
+  instead of 12. Existing installations pick them up on the next airport
+  re-sync in the admin settings.
+- **The Unraid install guide matched no longer-existing files.** Both template
+  links pointed at the pre-move filenames and returned 404, and the documented
+  `DATABASE_URL` used the database container's name — the custom Docker network
+  is gone and the default bridge has no DNS, so it never resolved. Same defect in
+  the Ollama endpoint.
 - **The flight sidebar opened on the oldest flight.** The two sort labels were
   swapped, and "newest first" — the default — did nothing at all.
 - **A bookmark to a domain page no longer bounces to the dashboard.** Opening

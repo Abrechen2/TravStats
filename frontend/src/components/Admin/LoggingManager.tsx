@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import InlineHelp from "../Help/InlineHelp";
+import HelpIcon from "../Help/HelpIcon";
 import { useTranslation } from "../../hooks/useTranslation";
 
 export interface LoggingConfig {
@@ -63,6 +63,9 @@ export default function LoggingManager({
             {t("admin:logging.title")}
           </h2>
           <p className="text-sm text-(--text-muted) mt-1">{t("admin:logging.description")}</p>
+          <p className="text-sm mt-1" style={{ color: "var(--warning, #e0921f)" }}>
+            {t("admin:logging.help.warning")}
+          </p>
         </div>
         <div className="flex gap-2">
           <button
@@ -87,25 +90,6 @@ export default function LoggingManager({
         </div>
       </div>
 
-      <InlineHelp
-        title={t("admin:logging.help.title")}
-        category="expert"
-        content={
-          <div className="space-y-2">
-            <p>{t("admin:logging.help.description")}</p>
-            <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-              <li>
-                <strong>{t("admin:logging.help.levelsTitle")}</strong>{" "}
-                {t("admin:logging.help.levels")}
-              </li>
-              <li>
-                <strong>{t("admin:logging.help.warningTitle")}</strong>{" "}
-                {t("admin:logging.help.warning")}
-              </li>
-            </ul>
-          </div>
-        }
-      />
 
       {/* Debug Mode Warning */}
       {loggingConfig.logLevel === "debug" && (
@@ -199,8 +183,9 @@ export default function LoggingManager({
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-(--text-primary) mb-2">
+            <label className="flex items-center gap-1.5 text-sm font-medium text-(--text-primary) mb-2">
               {t("admin:logging.level.label")}
+              <HelpIcon content={t("admin:logging.help.levels")} position="top" />
             </label>
             <select
               value={loggingConfig.logLevel}

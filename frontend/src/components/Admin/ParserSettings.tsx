@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { adminApi } from "../../lib/api";
-import InlineHelp from "../Help/InlineHelp";
 
 export interface ParserSettingsData {
   allowUserApiKeys: boolean;
@@ -113,27 +112,6 @@ export default function ParserSettings({
         </button>
       </div>
 
-      <InlineHelp
-        title={t("admin:parserSettings.help.title")}
-        category="advanced"
-        content={
-          <div className="space-y-2">
-            <p>{t("admin:parserSettings.help.description")}</p>
-            <div>
-              <p className="font-semibold">{t("admin:parserSettings.help.freeTitle")}</p>
-              <p className="ml-2 text-sm">{t("admin:parserSettings.help.free")}</p>
-            </div>
-            <div>
-              <p className="font-semibold">{t("admin:parserSettings.help.cloudTitle")}</p>
-              <p className="ml-2 text-sm">{t("admin:parserSettings.help.cloud")}</p>
-            </div>
-            <div>
-              <p className="font-semibold">{t("admin:parserSettings.help.autoTitle")}</p>
-              <p className="ml-2 text-sm">{t("admin:parserSettings.help.auto")}</p>
-            </div>
-          </div>
-        }
-      />
 
       {/* Parser Info */}
       <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">

@@ -105,6 +105,13 @@ export interface MapAppearance {
    *  the pin icon, for the separation reason documented in lib/placeColor.ts. */
   placeColorMode?: PlaceColorMode;
   placeColors?: PlaceColors;
+  /** Marker-size multiplier for place pins (1 = default), owned by
+   *  `MapContainer3D` exactly as `lodgingMarkerSize` is and persisted the same
+   *  way. Places went without one until 2026-08-28: both callers passed a
+   *  hardcoded `1` into `buildPlacePins`, so the panel offered every domain but
+   *  this one a size, and the dots could not be matched to the neighbours they
+   *  share a map with. */
+  placeMarkerSize?: number;
   /** Whether the lodging LIST panel is open (its own state, not the map
    *  control panel's `panelExpanded`). It used to open on every mount, so
    *  switching domain and coming back always sprang it open again. */

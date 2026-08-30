@@ -37,7 +37,6 @@ import type { AllMode } from "../../../types/dashboard";
 import { ALL_MODES } from "../../../types/dashboard";
 import FlightEditModal from "../../FlightEditModal";
 import MapContainer3D, { type MapMode } from "../../MapContainer3D";
-import { buildPlacePins } from "../../layers/placePinsLayer";
 import { classifyVisit } from "../../../shared/placeCounting";
 import { buildJourneyLayers, groupByTripId } from "../modes/buildJourneyLayers";
 import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
@@ -225,20 +224,6 @@ export function AllTab(): JSX.Element {
       )
     );
   }, [places, placesVisible, filterTime.from, filterTime.to]);
-
-  const placeLayers = useMemo<Layer[]>(() => {
-    if (visiblePlaces.length === 0) return [];
-    return (
-      buildPlacePins(visiblePlaces, 1, 4, {
-        onPinClick: (placeId) => navigate(`/places/${placeId}`),
-        colors: placeColorConfig,
-        // The ringed mark, not the plain dot: on this map a place shares the
-        // canvas with airport, port and lodging dots, and POI teal against
-        // cruise blue is below the colour-separation floor.
-        mark: "target",
-      }) ?? []
-    );
-  }, [visiblePlaces, placeColorConfig, navigate]);
 
   // Map click → selection store. DeckGLMap handles dim/highlight + tooltip.
   const handleFlightClick = useCallback(
@@ -473,13 +458,13 @@ export function AllTab(): JSX.Element {
    *
    *   "line"  a route — flights and cruises are drawn as arcs
    *   "ramp"  a route coloured by a gradient (flight frequency mode)
-   *   "dot"   a place — a lodging is a pin, not a line (Alex, 2026-08-09:
-   *           "Da Unterkünfte keine 'Strecken' sind sollte hier auch in der
-   *           Legende ein Kreis sein.")
-   *   "ring"  a POI place — the ringed mark the pin layer draws on THIS tab,
-   *           where a plain dot could not be told from a port. The key has to
-   *           show the mark, not merely its colour, or it describes something
-   *           that is not on the map.
+   *   "dot"   a place — a lodging or a POI is a pin, not a line (Alex,
+   *           2026-08-09: "Da Unterkünfte keine 'Strecken' sind sollte hier
+   *           auch in der Legende ein Kreis sein.")
+   *
+   * There was a "ring" shape for POIs while the pin layer drew a ringed mark.
+   * The ring left the map on 2026-08-28 and the shape left with it: a key that
+   * draws a mark the map does not is worse than no key.
    *
    * `background` takes any CSS colour OR gradient, so all three share one
    * renderer.
@@ -488,18 +473,17 @@ export function AllTab(): JSX.Element {
     background: string,
     label: string,
     key: string,
-    shape: "line" | "ramp" | "dot" | "ring" = "line",
+    shape: "line" | "ramp" | "dot" = "line",
   ): JSX.Element => (
     <span key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <span
         aria-hidden
         style={{
-          width: shape === "ramp" ? 24 : shape === "dot" ? 8 : shape === "ring" ? 11 : 14,
-          height: shape === "ramp" ? 4 : shape === "dot" ? 8 : shape === "ring" ? 11 : 2,
-          background: shape === "ring" ? "transparent" : background,
-          border: shape === "ring" ? `1.5px solid ${background}` : undefined,
+          width: shape === "ramp" ? 24 : shape === "dot" ? 8 : 14,
+          height: shape === "ramp" ? 4 : shape === "dot" ? 8 : 2,
+          background,
           boxSizing: "border-box",
-          borderRadius: shape === "dot" || shape === "ring" ? "50%" : 2,
+          borderRadius: shape === "dot" ? "50%" : 2,
           flexShrink: 0,
         }}
       />
@@ -549,13 +533,16 @@ export function AllTab(): JSX.Element {
   );
 
   // POI rows come from the same `buildPlaceLegend` the pin layer resolves
-  // through, and are drawn as RINGS, because that is the mark on this map.
+  // through, and are drawn as plain DOTS, because that is the mark on this map.
+  // They were rings until 2026-08-28, when the ring was removed from the pin
+  // layer by owner decision; the legend kept drawing one and so described a
+  // mark that is no longer there.
   const poiLegendRows = buildPlaceLegend(placeColorConfig).map((row: PlaceLegendRow) =>
     legendRow(
       rgbCss(row.color),
       row.label ?? t(PLACE_LEGEND_LABEL_KEY[row.slot] ?? "dashboard:poi.legend.solid"),
       `poi-${row.slot}`,
-      "ring"
+      "dot"
     )
   );
 
@@ -701,9 +688,11 @@ export function AllTab(): JSX.Element {
         <MapContainer3D
           flights={[]}
           visMode="routes"
-          extraLayers={[...journeyLayers, ...placeLayers]}
+          extraLayers={journeyLayers}
           showInternalCruises={false}
           appearanceDomains={["flight", "cruise", "lodging", "poi"]}
+          placesOverride={visiblePlaces}
+          onPlaceClick={(placeId) => navigate(`/places/${placeId}`)}
           onFlightClick={handleFlightClick}
           onRouteClick={handleRouteClick}
           onFlightOpen={handleFlightOpen}
@@ -727,8 +716,9 @@ export function AllTab(): JSX.Element {
       <MapContainer3D
         flights={visibleFlights}
         visMode={visMode}
-        extraLayers={placeLayers}
         appearanceDomains={["flight", "cruise", "lodging", "poi"]}
+        placesOverride={visiblePlaces}
+        onPlaceClick={(placeId) => navigate(`/places/${placeId}`)}
         onFlightClick={handleFlightClick}
         onRouteClick={handleRouteClick}
         onFlightOpen={handleFlightOpen}

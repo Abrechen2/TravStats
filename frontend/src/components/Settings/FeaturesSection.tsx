@@ -1,6 +1,6 @@
+import { SectionTitle } from "./SettingsShared";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useTranslation } from "../../hooks/useTranslation";
-import InlineHelp from "../Help/InlineHelp";
 
 export default function FeaturesSection(): JSX.Element {
   const { t } = useTranslation(["settings"]);
@@ -8,21 +8,9 @@ export default function FeaturesSection(): JSX.Element {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
-        {t("settings:features.title")}
-      </h2>
-      <InlineHelp
-        title={t("settings:features.help.title")}
-        category="basic"
-        content={
-          <div className="space-y-2">
-            <p>{t("settings:features.help.description")}</p>
-            <div>
-              <p className="font-semibold">{t("settings:features.help.costTitle")}</p>
-              <p className="ml-2 text-sm">{t("settings:features.help.cost")}</p>
-            </div>
-          </div>
-        }
+      <SectionTitle
+        title={t("settings:features.title")}
+        description={t("settings:features.description")}
       />
       <div
         className="rounded-lg p-4 flex items-center justify-between"

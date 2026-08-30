@@ -24,3 +24,4 @@ import "./diagnostics";
 import "./cruises";
 import "./catalog";
 import "./misc";
+import "./xlsxImport";

@@ -1,6 +1,7 @@
 // Adapter: Flight[] + country list -> DomainStats. Pure, sync.
 import type { Flight } from "../../../types";
 import { getFlightDuration } from "../../flightDuration";
+import { localWallClockOf } from "../../../shared/localWallClock";
 import type { DomainStats } from "./types";
 
 export interface FlightAdapterInput {
@@ -40,13 +41,15 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
     if (f.departureTime !== null) {
       const d = new Date(f.departureTime);
       if (!Number.isNaN(d.getTime())) {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, "0");
-        const day = String(d.getDate()).padStart(2, "0");
-        const ymKey = `${year}-${month}`;
-        const ymdKey = `${year}-${month}-${day}`;
+        // On the clock at the departure airport, not the viewer's — otherwise
+        // the same flight falls into different years for different readers,
+        // and disagrees with the year index the backend sends (#266).
+        const clock = localWallClockOf(d, f.depTimezone, f.depTimeSemantics);
+        const year = clock.year;
+        const ymKey = clock.date.slice(0, 7);
+        const ymdKey = clock.date;
         yearlyEvents[year] = (yearlyEvents[year] ?? 0) + 1;
-        weekdayEvents[d.getDay()] = (weekdayEvents[d.getDay()] ?? 0) + 1;
+        weekdayEvents[clock.weekday] = (weekdayEvents[clock.weekday] ?? 0) + 1;
         // Active-day buckets are boolean per (domain, day); multiple
         // flights on the same day still equal 1 active day.
         if (!dailyActiveDays[ymdKey]) {

@@ -1,4 +1,3 @@
-import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 import AirlineLogoRefreshButton from "./AirlineLogoRefreshButton";
 
@@ -174,33 +173,6 @@ export default function SystemInfo({
         <p className="text-sm text-(--text-muted) mt-2">
           {t("admin:systemInfo.exportDescription")}
         </p>
-        <InlineHelp
-          title={t("admin:systemInfo.exportHelp.title")}
-          category="advanced"
-          content={
-            <div className="space-y-2 mt-2">
-              <p>{t("admin:systemInfo.exportHelp.description")}</p>
-              <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-                <li>
-                  <strong>{t("admin:systemInfo.exportHelp.fullExportTitle")}</strong>{" "}
-                  {t("admin:systemInfo.exportHelp.fullExport")}
-                </li>
-                <li>
-                  <strong>{t("admin:systemInfo.exportHelp.gdprTitle")}</strong>{" "}
-                  {t("admin:systemInfo.exportHelp.gdpr")}
-                </li>
-                <li>
-                  <strong>{t("admin:systemInfo.exportHelp.backupTitle")}</strong>{" "}
-                  {t("admin:systemInfo.exportHelp.backup")}
-                </li>
-                <li>
-                  <strong>{t("admin:systemInfo.exportHelp.formatTitle")}</strong>{" "}
-                  {t("admin:systemInfo.exportHelp.format")}
-                </li>
-              </ul>
-            </div>
-          }
-        />
         <AirlineLogoRefreshButton />
       </div>
     </div>

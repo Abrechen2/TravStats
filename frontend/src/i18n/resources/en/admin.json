@@ -201,15 +201,6 @@
   "refreshing": "⏳ Loading...",
   "users": {
     "title": "User Management",
-    "help": {
-      "description": "Manage all users of your TravStats instance. View users, change roles and deactivate accounts.",
-      "adminTitle": "Admin:",
-      "admin": "Full access to all features including the admin panel",
-      "userTitle": "User:",
-      "user": "Standard user with access to flights, statistics and achievements",
-      "deactivateTitle": "Deactivate:",
-      "deactivate": "Deactivated users cannot log in but their data is preserved"
-    },
     "table": {
       "username": "Username",
       "flights": "Flights",
@@ -268,21 +259,11 @@
       "title": "Reset two-factor",
       "message": "Turn off two-factor sign-in for “{{username}}”? Their next sign-in will need the password only. This is the way back into the account when both the phone AND the recovery codes are gone.",
       "confirm": "Reset"
-    }
+    },
+    "description": "Everyone on this instance — change roles and deactivate accounts. A deactivated account can no longer sign in; its data is kept."
   },
   "invitations": {
     "title": "Manage Invitations",
-    "help": {
-      "description": "Create invitation links to invite new users to your TravStats instance.",
-      "createTitle": "Create invitation:",
-      "create": "Generates a unique link that can be used to register",
-      "expiryTitle": "Expiry date:",
-      "expiry": "Invitations expire after 7 days (by default)",
-      "oneUseTitle": "Single use:",
-      "oneUse": "Each link can only be used once",
-      "emailTitle": "Email (optional):",
-      "email": "You can assign an email address to track the invitation"
-    },
     "invitationLinks": "Invitation Links",
     "createButton": "+ Create Invitation",
     "copiedToClipboard": "Invitation link copied to clipboard!",
@@ -354,7 +335,8 @@
       "expired": "Expired",
       "active": "Active",
       "emailFailed": "Email failed"
-    }
+    },
+    "description": "Invitation links for new users. Each link works exactly once and expires after seven days."
   },
   "userLimitWarning": {
     "title": "⚠️ User Limit Warning",
@@ -376,19 +358,7 @@
     "buildLabel": "Build",
     "buildVersionHint": "Version that was baked into the container image at build time. This only differs from the displayed version when a promoted RC is running — the image is byte-identical to the tested RC, while the registry tag already points to the final version.",
     "exportButton": "Download Full Backup (JSON)",
-    "exportDescription": "Export all user data for backup purposes (GDPR compliant)",
-    "exportHelp": {
-      "title": "Data Export",
-      "description": "Export all user data as a JSON file for backup purposes.",
-      "fullExportTitle": "Full Export:",
-      "fullExport": "Contains all flights, achievements, settings and user data",
-      "gdprTitle": "GDPR compliant:",
-      "gdpr": "All data is exported in a structured format",
-      "backupTitle": "Backup:",
-      "backup": "Regular exports are recommended to avoid data loss",
-      "formatTitle": "Format:",
-      "format": "JSON file that can be easily imported or analyzed"
-    }
+    "exportDescription": "Exports all user data as JSON — for backups and for analysis."
   },
   "airlineLogos": {
     "title": "Airline logos",
@@ -402,14 +372,6 @@
     "button": "📥 Export Data",
     "description": "Export all user data as a JSON file.",
     "title": "Data Export",
-    "help": {
-      "title": "What will be exported?",
-      "items": {
-        "users": "All user accounts",
-        "flights": "All flight data",
-        "settings": "System settings"
-      }
-    },
     "confirmTitle": "Export all data?",
     "confirmMessage": "This will download a JSON file with all user data."
   },
@@ -448,15 +410,11 @@
   },
   "logging": {
     "title": "Debug Logging & Diagnostics",
-    "description": "Advanced logging for troubleshooting and monitoring",
+    "description": "Controls the logging behavior of the system. Debug mode enables detailed output for troubleshooting.",
     "debugMode": "Enable Debug Mode",
     "debugModeDisable": "Disable Debug Mode",
     "help": {
-      "title": "Logging Configuration",
-      "description": "Controls the logging behavior of the system. Debug mode enables detailed output for troubleshooting.",
-      "levelsTitle": "Log Levels:",
       "levels": "error → warn → info → debug → trace (from least to most detailed)",
-      "warningTitle": "Note:",
       "warning": "Debug mode can impact performance and generates large log files. Only enable for short diagnostic periods."
     },
     "debugActive": {
@@ -512,7 +470,7 @@
   },
   "parserSettings": {
     "title": "Global Parser Configuration",
-    "description": "Configure default parser settings for all users. API keys are managed in the API Keys tab.",
+    "description": "Default parsers for all users. Local ones are free; cloud AI costs per request and needs a key.",
     "defaultSettings": "Default Settings",
     "defaultSettingsDescription": "These defaults will be applied to new user accounts. Users can change them in their settings.",
     "visionParser": "Default Vision Parser (Boarding Pass)",
@@ -533,21 +491,11 @@
       "modelsAvailable": "Available models",
       "connectionSuccess": "Ollama reachable",
       "connectionFailed": "Connection failed"
-    },
-    "help": {
-      "title": "Parser Configuration",
-      "description": "Configures the default parsers used for all users.",
-      "freeTitle": "Free Options:",
-      "free": "Ollama (local AI, GPU recommended), Tesseract (OCR), Regex (pattern matching)",
-      "cloudTitle": "Cloud Options:",
-      "cloud": "OpenAI (~$0.01-0.05/request), Claude (~$0.01-0.03/request) – require API keys",
-      "autoTitle": "Auto Mode:",
-      "auto": "Priority: Cloud AI > local AI > OCR/Regex based on availability"
     }
   },
   "backup": {
     "title": "Backup Management",
-    "description": "Manage your backups and restore them if needed",
+    "description": "Backups capture all data on this instance and can be restored after data loss or a move. A restore replaces the current data entirely — take another backup first.",
     "loading": "Loading backups...",
     "creating": "Creating backup...",
     "running": "Backup running",
@@ -611,16 +559,6 @@
       "restoreFailed": "Failed to restore backup",
       "deleted": "Backup deleted",
       "deleteFailed": "Failed to delete backup"
-    },
-    "help": {
-      "title": "Backup Management",
-      "description": "Backups secure all data of the TravStats instance and can be restored in case of data loss or migration.",
-      "typesTitle": "Backup Types:",
-      "types": "Full (database + files), Database only, Files only",
-      "restoreTitle": "Restore:",
-      "restore": "It is recommended to create a new backup before restoring. All current data will be overwritten.",
-      "retentionTitle": "Retention:",
-      "retention": "Backups are automatically deleted after the configured retention period."
     }
   },
   "feedback": {
@@ -655,7 +593,7 @@
   },
   "globalApiKeys": {
     "title": "Global API Keys",
-    "description": "Configure global API keys that will be shared with all users. Users can still set their own keys if allowed.",
+    "description": "These keys apply to every user and act as a fallback for anyone who has not stored their own. A user's own key always takes precedence.",
     "parserApis": "Parser APIs",
     "parserApisDescription": "API keys for AI-powered email and boarding pass parsing.",
     "flightApis": "Flight Lookup APIs",
@@ -706,16 +644,6 @@
     "logostream": {
       "label": "Airline logos (logostream.dev)",
       "description": "Provides airline logos as icon, wordmark and dark-mode variants. Without a key only the basic full logos (Daisycon) are shown."
-    },
-    "help": {
-      "title": "Global API Keys",
-      "description": "These keys are shared with all users and enable access to external AI and flight data services.",
-      "parserTitle": "Parser APIs:",
-      "parser": "OpenAI and Claude are used for AI-powered parsing of emails and boarding passes.",
-      "flightTitle": "Flight Lookup APIs:",
-      "flight": "AirLabs, Aviationstack and OpenSky are used for automatic flight data updates.",
-      "permissionsTitle": "User Permissions:",
-      "permissions": "Controls whether users can set their own keys. Global keys are the fallback for users without their own keys."
     },
     "googlePlaces": {
       "label": "Google Places (lodging locations)",

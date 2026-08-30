@@ -1,5 +1,4 @@
-import { SectionCard, SectionTitle } from "./SettingsShared";
-import InlineHelp from "../Help/InlineHelp";
+import { FieldLabel, SectionCard, SectionTitle } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { UnitsSettings } from "../../store/settingsStore";
 import CurrencySelect from "../common/CurrencySelect";
@@ -39,26 +38,11 @@ export default function UnitsSection({
         title={t("settings:units.title")}
         description={t("settings:units.description")}
       />
-      <InlineHelp
-        title={t("settings:units.help.title")}
-        category="basic"
-        content={
-          <div className="space-y-2">
-            <p>{t("settings:units.help.description")}</p>
-            <div>
-              <p className="font-semibold">{t("settings:units.help.distanceTitle")}</p>
-              <p className="ml-2 text-sm">{t("settings:units.help.distance")}</p>
-            </div>
-            <div>
-              <p className="font-semibold">{t("settings:units.help.currencyTitle")}</p>
-              <p className="ml-2 text-sm">{t("settings:units.help.currency")}</p>
-            </div>
-          </div>
-        }
-      />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="label">{t("settings:units.distance")}</label>
+          <FieldLabel help={t("settings:units.help.distance")}>
+            {t("settings:units.distance")}
+          </FieldLabel>
           <select
             value={units.distanceUnit}
             onChange={(e) =>
@@ -72,9 +56,9 @@ export default function UnitsSection({
           </select>
         </div>
         <div>
-          <label className="label" htmlFor="units-base-currency">
+          <FieldLabel htmlFor="units-base-currency" help={t("settings:units.help.currency")}>
             {t("settings:units.currency")}
-          </label>
+          </FieldLabel>
           <CurrencySelect
             id="units-base-currency"
             value={baseCurrency}

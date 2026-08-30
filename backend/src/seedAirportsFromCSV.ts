@@ -7,6 +7,8 @@ import https from 'https';
 
 const prisma = new PrismaClient();
 
+import { admitsAirport } from './shared/antarcticAirfields';
+
 interface CSVAirport {
   id: string;
   ident: string;
@@ -116,24 +118,7 @@ export async function seedAirportsFromCSV(options: SeedAirportsOptions = {}) {
   // Tegel TXL, Denver Stapleton) remain selectable for historical flights.
   // Drop the `scheduled_service === 'yes'` filter — closed airports always
   // have `scheduled_service = 'no'` in the OurAirports CSV.
-  const allowedTypes = closedOnly
-    ? ['closed']
-    : ['large_airport', 'medium_airport', 'closed'];
-  const filteredAirports = records.filter((airport) => {
-    if (!allowedTypes.includes(airport.type)) {
-      return false;
-    }
-    if (!airport.latitude_deg || !airport.longitude_deg) {
-      return false;
-    }
-    // Closed airports in OurAirports data don't lose their IATA/ICAO — we
-    // still require a code so the airport is addressable. Active airports
-    // without a code are also dropped (same as before).
-    if (!airport.iata_code && !airport.gps_code && !airport.ident) {
-      return false;
-    }
-    return true;
-  });
+  const filteredAirports = records.filter((a) => admitsAirport(a, { closedOnly }));
 
   logger.info({
     operation: 'seed_airports_filtered',

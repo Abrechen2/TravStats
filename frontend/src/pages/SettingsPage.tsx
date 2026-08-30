@@ -17,6 +17,7 @@ import UnitsSection from "../components/Settings/UnitsSection";
 import DefaultsSection from "../components/Settings/DefaultsSection";
 import NotificationsSection from "../components/Settings/NotificationsSection";
 import BackupSection from "../components/Settings/BackupSection";
+import SpreadsheetSection from "../components/Settings/SpreadsheetSection";
 import AutoUpdateSection from "../components/Settings/AutoUpdateSection";
 import EnrichmentSection from "../components/Settings/EnrichmentSection";
 import ApiKeysSection from "../components/Settings/ApiKeysSection";
@@ -551,11 +552,17 @@ export default function SettingsPage(): JSX.Element {
             {activeSection === "notifications" && <NotificationsSection />}
             {activeSection === "features" && <FeaturesSection />}
             {activeSection === "backup" && (
-              <BackupSection
-                lastBackup={lastBackup}
-                backupStatus={backupStatus}
-                isAdmin={user?.isAdmin ?? false}
-              />
+              <div className="space-y-4">
+                <BackupSection
+                  lastBackup={lastBackup}
+                  backupStatus={backupStatus}
+                  isAdmin={user?.isAdmin ?? false}
+                />
+                {/* Next to the backup, because both answer "get my data out" —
+                    but they are not the same thing: a backup restores an
+                    instance, this one is for reading and editing. */}
+                <SpreadsheetSection />
+              </div>
             )}
             {activeSection === "autoupdate" && (
               <AutoUpdateSection

@@ -14,7 +14,6 @@ import { listPlaceLists } from "../../../lib/api/placeLists";
 import { logger } from "../../../lib/logger";
 import type { Place } from "../../../types/place";
 import type { PlaceList } from "../../../types/placeList";
-import { buildPlacePins } from "../../layers/placePinsLayer";
 import { buildPlaceLegend, resolvePlaceListColors } from "../../../lib/placeColor";
 import { usePlaceColorStore } from "../../../store/placeColorStore";
 import { classifyPlace } from "../../../shared/placeCounting";
@@ -135,14 +134,13 @@ export function PoiTab(): JSX.Element {
       ];
     }
 
-    return (
-      buildPlacePins(visiblePlaces, 1, 4, {
-        onPinClick: handlePinClick,
-        colors: colorConfig,
-        listColors: listColors.byPlaceId,
-      }) ?? []
-    );
-  }, [visiblePlaces, mode, colorConfig, listColors, handlePinClick]);
+    // Pin mode builds NO layer here: the pins are handed to MapContainer3D as
+    // `placesOverride` so DeckGLMap can build them with the real zoom, the real
+    // labelsMode and the user's marker size — none of which exist in this
+    // component. Building them here is what pinned the label budget to a
+    // hardcoded zoom of 4 and the size to a hardcoded 1x.
+    return [];
+  }, [visiblePlaces, mode]);
 
   const legend = useMemo(
     () => buildPlaceLegend(colorConfig, listColors.used),
@@ -161,6 +159,9 @@ export function PoiTab(): JSX.Element {
         flights={[]}
         visMode="routes"
         extraLayers={layers}
+        placesOverride={mode === "heatmap" ? undefined : visiblePlaces}
+        onPlaceClick={handlePinClick}
+        placeListColors={listColors.byPlaceId}
         // No flight or cruise geometry belongs on this tab; without this the
         // map fetches and draws every cruise route under the place pins.
         showInternalCruises={false}
