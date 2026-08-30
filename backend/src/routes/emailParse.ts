@@ -256,12 +256,25 @@ router.post(
         });
       }
 
-      // Parse email with configured parser
+      // Parse email with configured parser.
+      //
+      // The message's own send date anchors any year-less date in the body. An
+      // uploaded mailbox is mostly OLD mail, so reading "16.07." against today
+      // is wrong far more often than it is right: a 2007 Germanwings
+      // confirmation imported as two 2026 flights and built a trip in the wrong
+      // decade, with nothing on screen to suggest it (Forgejo #18).
+      //
+      // Only a default. A caller that knows better still wins, and a file whose
+      // header is unreadable falls back to the previous behaviour rather than
+      // refusing the import.
       const result = await parseBookingEmail(
         extracted.subject,
         extracted.text,
         extracted.html,
-        userId ? { userId } : undefined
+        {
+          ...(userId ? { userId } : {}),
+          ...(extracted.sentAt ? { referenceDate: extracted.sentAt } : {}),
+        }
       );
 
       logger.info(

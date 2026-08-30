@@ -14,6 +14,9 @@ jest.mock("../../services/bookingParser", () => ({
     parseBookingEmail(...(args as Parameters<typeof parseBookingEmail>)),
 }));
 
+import fs from "fs";
+import path from "path";
+
 import request from "supertest";
 import app from "../../index";
 import { prisma } from "../../db";
@@ -73,4 +76,41 @@ describe("POST /api/v1/parse-email — the email's own date", () => {
     expect(res.status).toBe(200);
     expect(parseBookingEmail.mock.calls[0]?.[3]).not.toHaveProperty("referenceDate");
   });
+
+  /**
+   * The FILE path, which is where the damage actually happened.
+   *
+   * The mechanism above shipped wired to the JSON body only, and no client
+   * sends the field — so on the one route people really use, an uploaded
+   * mailbox, the anchor was never set and every year-less date was read
+   * against today. A 2007 Germanwings confirmation imported as two 2026
+   * flights and built a trip in the wrong decade (Forgejo #18).
+   *
+   * The sample is a real .msg from `test-samples/`, sent 2023-08-26. Using a
+   * genuine file matters: the send date has to survive Outlook's binary format
+   * and the extractor, not just a fixture that asserts what we already believe.
+   */
+  it("anchors an uploaded message to the date the message itself carries", async () => {
+    parseBookingEmail.mockClear();
+
+    const sample = path.join(
+      __dirname,
+      "../../../../test-samples/Flug-emails/Buchungsdetails _ 23 November 2023_.msg"
+    );
+    // Guard the fixture itself: a renamed sample would otherwise make this
+    // test pass by never running its assertion.
+    expect(fs.existsSync(sample)).toBe(true);
+
+    const res = await request(app)
+      .post("/api/v1/parse-email-file")
+      .set("Cookie", authCookie)
+      .attach("email", sample);
+
+    expect(res.status).toBe(200);
+
+    const settings = parseBookingEmail.mock.calls[0]?.[3];
+    expect(settings?.referenceDate).toBeInstanceOf(Date);
+    expect(settings?.referenceDate?.toISOString().slice(0, 10)).toBe("2023-08-26");
+  });
+
 });
