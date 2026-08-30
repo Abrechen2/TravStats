@@ -1,5 +1,6 @@
 import { ParsedBooking } from '../../bookingParser';
 import logger from '../../../utils/logger';
+import { AIRLINE_IATA_MAP } from '../../../data/airlines';
 
 /**
  * Get all available Claude models for text parsing, ordered by preference (newest first)
@@ -209,6 +210,8 @@ export function extractAirlineCode(flightNumber: string): string | undefined {
  */
 export const PATTERNS = {
   FLIGHT_NUMBER: /\b([A-Z]{2,3}\s?\d{1,4})\b/,
+  /** The same shape, every occurrence — see {@link pickFlightNumber}. */
+  FLIGHT_NUMBER_ALL: /\b([A-Z]{2,3}\s?\d{1,4})\b/g,
   IATA_CODE: /\b([A-Z]{3})\b/g,
   /**
    * A booking reference the pass NAMES. Tried first, and the only form that is
@@ -247,14 +250,47 @@ export const PATTERNS = {
 /**
  * Parse text for common flight data patterns
  */
+/**
+ * The flight number, chosen from every candidate rather than the first one.
+ *
+ * A GATE has the same shape once OCR has been at it. Gates are printed as
+ * "B08", "E06", "K18" — a letter and two digits — and the O/0 and I/1
+ * confusions turn them into "BO8", "EO6", "KII8", which match a flight number
+ * exactly. They also sit ABOVE the flight number on the card, so first-match
+ * wins meant the gate won: three of the twelve passes in `test-samples/` were
+ * reported as flight EO6, KII8 and BO8 instead of LH2415, LH2414 and LH2317.
+ *
+ * The letters settle it. `LH`, `EN` and `LX` are airlines; `EO`, `KI` and `BO`
+ * are not. The check uses the curated cold-start list rather than the airline
+ * DB on purpose — this parser has to work in a script, in a test, and before
+ * the catalogue cache is warm.
+ *
+ * A candidate with an unknown prefix is still accepted when nothing better is
+ * on the pass: the list is ~145 common carriers, not a world index, and a real
+ * flight on an obscure airline must not be dropped for being unfashionable.
+ */
+export function pickFlightNumber(text: string): string | undefined {
+  const candidates = Array.from(text.matchAll(PATTERNS.FLIGHT_NUMBER_ALL))
+    .map((m) => validateFlightNumber(m[1]))
+    .filter((f): f is string => f !== undefined);
+  if (candidates.length === 0) {
+    return undefined;
+  }
+  const known = candidates.find((f) => {
+    const prefix = f.match(/^([A-Z]{2})/)?.[1];
+    return prefix !== undefined && prefix in AIRLINE_IATA_MAP;
+  });
+  return known ?? candidates[0];
+}
+
 export function extractFlightDataFromText(text: string): Partial<ParsedBooking> {
   const result: Partial<ParsedBooking> = {};
 
   // Flight number
-  const flightMatch = text.match(PATTERNS.FLIGHT_NUMBER);
-  if (flightMatch) {
-    result.flightNumber = validateFlightNumber(flightMatch[1]);
-    result.airline = extractAirlineCode(flightMatch[1]);
+  const flightNumber = pickFlightNumber(text);
+  if (flightNumber) {
+    result.flightNumber = flightNumber;
+    result.airline = extractAirlineCode(flightNumber);
   }
 
   // PNR/Booking reference — a labelled one first, since that is the only form

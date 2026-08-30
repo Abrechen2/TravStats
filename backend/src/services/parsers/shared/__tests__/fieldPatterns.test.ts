@@ -1,5 +1,5 @@
 import { describe, it, expect, jest } from '@jest/globals';
-import { extractFlightDataFromText } from '../utils';
+import { extractFlightDataFromText, pickFlightNumber } from '../utils';
 
 jest.mock('../../../../utils/logger', () => ({
   __esModule: true,
@@ -64,5 +64,32 @@ describe('extractFlightDataFromText — booking reference', () => {
 
   it('does not carve a reference out of a longer number', () => {
     expect(extractFlightDataFromText('1234567890123').pnr).toBeUndefined();
+  });
+});
+
+describe('pickFlightNumber', () => {
+  it('does not mistake an OCR-mangled gate for the flight', () => {
+    // Gates print as "B08", "E06", "K18"; the O/0 and I/1 confusions turn them
+    // into exactly the shape of a flight number, and they sit ABOVE the flight
+    // number on the card. Three of the twelve sample passes were reported as
+    // EO6, KII8 and BO8 instead of their real Lufthansa numbers.
+    expect(pickFlightNumber('GATE EO6 FLUG LH2415')).toBe('LH2415');
+    expect(pickFlightNumber('GATE KII8 FLUG LH2414')).toBe('LH2414');
+    expect(pickFlightNumber('GATE BO8 FLUG LH2317')).toBe('LH2317');
+  });
+
+  it('accepts a carrier the curated list does not know', () => {
+    // ~145 common airlines is a shortlist, not a world index. A real flight on
+    // an unfashionable carrier must not be dropped for being absent from it.
+    expect(pickFlightNumber('FLUG ZZ742')).toBe('ZZ742');
+  });
+
+  it('reads a known carrier that is not the first candidate', () => {
+    // Order alone decided this before, which is the whole defect.
+    expect(pickFlightNumber('BO8 ZZ742 EN8409')).toBe('EN8409');
+  });
+
+  it('is undefined when the text holds no flight number at all', () => {
+    expect(pickFlightNumber('PASSAGIER KLASSE STATUS')).toBeUndefined();
   });
 });
