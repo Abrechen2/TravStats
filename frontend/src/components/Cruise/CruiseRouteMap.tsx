@@ -474,8 +474,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
 
       const leg = legAt(clientX, clientY);
       if (leg) {
-        const isOpen =
-          editing?.fromPortId === leg.fromPortId && editing?.toPortId === leg.toPortId;
+        const isOpen = editing?.fromPortId === leg.fromPortId && editing?.toPortId === leg.toPortId;
         setMenu({
           x: clientX,
           y: clientY,
@@ -590,7 +589,6 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
         : prev
     );
   }, [marquee, editorState]);
-
 
   /** Legs the server says carry a hand-drawn line. Drives the badge and
    *  whether "back to automatic" is offered at all — there is nothing to
@@ -769,7 +767,6 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     }
     return pts;
   }, [cruise.departurePort, cruise.arrivalPort, cruise.stops, geometry]);
-
 
   useEffect(() => {
     if (!mapLoaded || didFit.current) return;

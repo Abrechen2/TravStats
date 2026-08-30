@@ -191,7 +191,13 @@ export function insertWaypoint(
   if (segmentIndex < 0 || segmentIndex >= state.waypoints.length - 1) return state;
   const waypoints = clone(state.waypoints);
   waypoints.splice(segmentIndex + 1, 0, [at[0], at[1]]);
-  return { ...state, waypoints, history: remember(state), selected: [segmentIndex + 1], future: [] };
+  return {
+    ...state,
+    waypoints,
+    history: remember(state),
+    selected: [segmentIndex + 1],
+    future: [],
+  };
 }
 
 export function removeWaypoint(state: RouteEditorState, index: number): RouteEditorState {
