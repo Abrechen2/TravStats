@@ -143,7 +143,8 @@
       "timeline": "Timeline",
       "map": "Map",
       "gallery": "Gallery",
-      "logistics": "Logistics"
+      "logistics": "Logistics",
+      "tours": "Tours"
     },
     "tabPlaceholder": {
       "gallery": "Gallery comes in the next iteration once photo upload + storage are in place.",
@@ -299,5 +300,103 @@
     "mostExpensive": "Most expensive trip",
     "mostCountries": "Most countries"
   },
-  "deleteTripConfirmTitle": "Delete trip?"
+  "deleteTripConfirmTitle": "Delete trip?",
+  "tours": {
+    "title": "Tours",
+    "newSection": "Add tour",
+    "namePlaceholder": "Tour name",
+    "save": "Save",
+    "empty": "No tour in this trip yet",
+    "loadError": "Tours could not be loaded",
+    "createError": "The tour could not be created",
+    "stopCount_one": "{{count}} stop",
+    "stopCount_other": "{{count}} stops",
+    "stopsHeading": "Stops",
+    "legsHeading": "Legs",
+    "noLegs": "No leg yet — assign at least two stops",
+    "noStops": "No stop in this trip yet — add stops in the timeline first",
+    "stopIsRoutePoint": "Route point",
+    "needsCoordinate": "A stop without a coordinate cannot be part of a route",
+    "notFound": "This tour does not exist",
+    "backToTrip": "Back to the trip",
+    "assignError": "The stops could not be saved",
+    "legError": "The leg could not be changed",
+    "clearLeg": "Remove line",
+    "noLineYet": "This leg has no drawn line yet",
+    "mode": {
+      "road": "Road",
+      "ferry": "Ferry",
+      "rail": "Rail",
+      "foot": "On foot",
+      "bike": "Bike"
+    },
+    "source": {
+      "straight": "Straight line",
+      "drawn": "Drawn",
+      "routed": "Routed",
+      "track": "From track"
+    },
+    "routing": {
+      "routeAll": "Route the whole tour",
+      "routingAll": "Routing …",
+      "unavailableReason": "No routing provider configured",
+      "notConfigured": "No routing provider is configured for this instance",
+      "error": "The leg could not be routed",
+      "allError": "The tour could not be routed",
+      "fallback": "No route could be found — kept the straight line",
+      "result": "{{routed}} legs processed, {{skipped}} skipped"
+    },
+    "tracks": {
+      "heading": "Recorded tracks",
+      "loading": "Loading tracks …",
+      "loadError": "Tracks could not be loaded",
+      "empty": "No track for this tour yet",
+      "uploadLabel": "Upload GPX",
+      "uploading": "Uploading …",
+      "uploadError": "The track could not be uploaded",
+      "deleteLabel": "Delete",
+      "deleteError": "The track could not be deleted",
+      "pointCount_one": "{{count}} point",
+      "pointCount_other": "{{count}} points",
+      "truncated": "Incomplete",
+      "truncatedReason": "This track does not cover the full requested time window — only the newest segment was stored. Its distance is a partial measurement.",
+      "noCoverageReason": "No recorded track covers this leg",
+      "source": {
+        "gpx": "GPX upload",
+        "dawarich": "Dawarich"
+      },
+      "dawarich": {
+        "pullLabel": "Pull from Dawarich",
+        "pulling": "Pulling …",
+        "unavailableReason": "No Dawarich connection configured",
+        "error": "The track could not be pulled from Dawarich",
+        "errors": {
+          "notConfigured": "No Dawarich connection configured",
+          "unreachable": "Dawarich is unreachable",
+          "auth": "Dawarich rejected the key",
+          "notFound": "The Dawarich address was not found",
+          "protocol": "Unexpected response from Dawarich",
+          "invalidUrl": "The Dawarich address is invalid"
+        }
+      }
+    },
+    "dawarichSettings": {
+      "title": "Dawarich connection",
+      "subtitle": "For automatic track import from Dawarich",
+      "baseUrl": "Server address",
+      "baseUrlPlaceholder": "https://dawarich.example.com",
+      "apiKey": "API key",
+      "apiKeyPlaceholder": "Enter API key",
+      "apiKeyStored": "A key is stored",
+      "clearKey": "Remove",
+      "shared": "Provided by a shared connection",
+      "save": "Save",
+      "saving": "Saving …",
+      "test": "Test connection",
+      "testing": "Testing …",
+      "connected": "Connected (version {{version}})",
+      "loadError": "Settings could not be loaded",
+      "saveError": "Save failed"
+    }
+  }
 }

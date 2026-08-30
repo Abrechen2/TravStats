@@ -98,6 +98,18 @@ interface GlobeViewProps {
   /** Which domain appearance sections the control panel exposes. Globe
       currently only mounts on the Alle tab, so this defaults to both. */
   appearanceDomains?: readonly AppearanceDomain[];
+  /**
+   * Extra deck.gl layers appended after every internally-built layer --
+   * the globe-mode counterpart of DeckGLMap's extraLayers prop
+   * (MapContainer3D.tsx). Before this existed, MapContainer3D only
+   * threaded extraLayers into DeckGLMap, so anything a caller drew this
+   * way (dashboard-wide tour paths, journey-mode layers) silently
+   * vanished the moment the user switched to globe mode -- the globe
+   * rendered with nothing on it while a legend built from the same data
+   * kept claiming otherwise. Merged into the deck.gl overlay's own
+   * layer list below, never a second overlay.
+   */
+  extraLayers?: Layer[];
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -310,6 +322,7 @@ export default function GlobeView({
   onCruiseOpen,
   minRouteCount = 1,
   appearanceDomains = ["flight", "cruise"],
+  extraLayers = [],
 }: GlobeViewProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
@@ -1411,8 +1424,8 @@ export default function GlobeView({
   }, []);
 
   const layers = useMemo<Layer[]>(
-    () =>
-      buildGlobeLayers({
+    () => [
+      ...buildGlobeLayers({
         arcsData,
         antipodalArcs,
         cruisePaths,
@@ -1439,6 +1452,11 @@ export default function GlobeView({
         nightCells: nightCellsData,
         showNight,
       }),
+      // Appended, never merged into buildGlobeLayers itself -- these are the
+      // caller's own layers (e.g. dashboard-wide tour paths), not part of
+      // what this component knows how to build.
+      ...extraLayers,
+    ],
     [
       arcsData,
       antipodalArcs,
@@ -1455,6 +1473,7 @@ export default function GlobeView({
       onPortHover,
       occlusionExt,
       occlusionProps,
+      extraLayers,
       flightColorConfig,
       flightRouteWidth,
       cruiseRouteWidth,

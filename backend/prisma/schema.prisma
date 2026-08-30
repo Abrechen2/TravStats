@@ -449,10 +449,24 @@ model UserSettings {
   openskyUsername     String? @map("opensky_username")
   openskyPassword     String? @map("opensky_password")
 
+  // Tour routing provider API keys (encrypted at application level, Phase 3).
+  // The "custom" provider (a self-hosted OSRM) has no key column here — it
+  // takes no key at all, see AdminSettings.routingCustomUrl.
+  openrouteserviceApiKey String? @map("openrouteservice_api_key")
+  graphhopperApiKey      String? @map("graphhopper_api_key")
+
   // Immich connection (base URL plain, API key encrypted at application level)
   immichBaseUrl     String? @map("immich_base_url")
   immichApiKey      String? @map("immich_api_key")
   immichDefaultMode String  @default("link") @map("immich_default_mode")
+
+  // Dawarich connection (base URL plain, API key encrypted at application
+  // level, Phase 3b). Same shape as the Immich connection above — Dawarich
+  // is a second self-hosted, LAN-adjacent, pull-only integration, not a
+  // fourth key-only provider — so it gets a base URL too rather than
+  // reusing `apiKeyResolver.ts`'s single-value-per-provider pattern.
+  dawarichBaseUrl String? @map("dawarich_base_url")
+  dawarichApiKey  String? @map("dawarich_api_key")
 
   // Trip automation: silently group imported flights of one PNR into a trip +
   // booking (routes/flightsBatch.ts). Default keeps today's behaviour; the
@@ -554,9 +568,41 @@ model AdminSettings {
   globalOpenskyUsername     String? @map("global_opensky_username")
   globalOpenskyPassword     String? @map("global_opensky_password")
 
+  // Global tour routing provider API keys (encrypted at application level,
+  // Phase 3) — same per-user > global > ENV chain as the flight lookup keys.
+  globalOpenrouteserviceApiKey String? @map("global_openrouteservice_api_key")
+  globalGraphhopperApiKey      String? @map("global_graphhopper_api_key")
+
+  /// Which routing provider computes routed leg geometry for tour routes
+  /// (Phase 3): one of `"openrouteservice" | "graphhopper" | "custom"`
+  /// (`RoutingProviderId`, services/tour/routing/types.ts), or null when
+  /// routing is not configured at all. Deliberately a bare string rather than
+  /// a Prisma enum — `RoutingProviderId` already owns the closed set in
+  /// TypeScript, and Zod (`schemas/tour.ts`) validates it at the boundary; a
+  /// duplicate DB-level enum would be a second place for that list to drift.
+  routingProvider   String? @map("routing_provider")
+  /// Base URL of a self-hosted OSRM instance, used only when
+  /// `routingProvider == "custom"`. The "custom" provider takes no API key —
+  /// see UserSettings/AdminSettings `*OpenrouteserviceApiKey` /
+  /// `*GraphhopperApiKey` above, which have no "custom" counterpart.
+  ///
+  /// Validated as a plain http(s) URL by `normalizeRoutingCustomUrl`
+  /// (schemas/tour.ts) with DELIBERATELY NO egress restriction — no block on
+  /// loopback / link-local / private / RFC1918 hosts. This mirrors
+  /// `normalizeImmichBaseUrl` (services/immich/types.ts) exactly and for the
+  /// same reason: a self-hosted OSRM instance lives on the operator's LAN by
+  /// design, so a private-IP filter would break the primary use case. The URL
+  /// is admin-supplied, not attacker-chosen, in the single-tenant deployment
+  /// this targets. Do not re-flag without changing that threat model.
+  routingCustomUrl String? @map("routing_custom_url")
+
   // Global Immich connection (base URL plain, API key encrypted)
   globalImmichBaseUrl String? @map("global_immich_base_url")
   globalImmichApiKey  String? @map("global_immich_api_key")
+
+  // Global Dawarich connection (base URL plain, API key encrypted, Phase 3b)
+  globalDawarichBaseUrl String? @map("global_dawarich_base_url")
+  globalDawarichApiKey  String? @map("global_dawarich_api_key")
 
   // User permissions
   allowUserApiKeys       Boolean @default(true) @map("allow_user_api_keys")
@@ -871,6 +917,7 @@ model Trip {
   bookings       Booking[]
   cruises        Cruise[]
   stops          TripStop[]
+  routes         TripRoute[]
   journalEntries TripJournalEntry[]
   photos         TripPhoto[]
   lodgingStays   LodgingStay[]
@@ -968,14 +1015,131 @@ model TripStop {
   lat         Float?
   lon         Float?
   notes       String?
+  /// Route membership. NULL means what every stop is today: a timeline
+  /// point that produces no kilometres. Set means it is a vertex of that
+  /// route section. Nothing derives this — see the migration note.
+  routeId       String? @map("route_id")
+  /// Position WITHIN the route, 0-based and contiguous. Written only by
+  /// PUT /trips/:id/routes/:routeId/stops, never by a client.
+  routeOrderIdx Int?    @map("route_order_idx")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  trip     Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  route     TripRoute?     @relation(fields: [routeId], references: [id], onDelete: SetNull)
+  legsFrom  TripRouteLeg[] @relation("LegFrom")
+  legsTo    TripRouteLeg[] @relation("LegTo")
 
+  @@unique([routeId, routeOrderIdx])
   @@index([tripId])
   @@index([tripId, orderIdx])
+  @@index([routeId])
   @@map("trip_stops")
+}
+
+/// A named, ordered route section inside a trip: "Norwegen mit dem
+/// Wohnmobil", "Besseggen-Wanderung", "Fähre nach Hirtshals".
+///
+/// A trip may hold several. A section may be a LOOP — its first and last
+/// stop may be the same place — which is what makes a day hike from a base
+/// camp expressible. The vehicle link arrives with phase 2.
+model TripRoute {
+  id       String  @id @default(uuid())
+  tripId   String  @map("trip_id")
+  name     String
+  /// Default mode for legs created in this section:
+  /// road | ferry | rail | foot | bike
+  mode     String
+  orderIdx Int     @default(0) @map("order_idx")
+  color    String?
+  notes    String?
+
+  /// Odometer at section start and end. Deliberately NOT reconciled with
+  /// the sum of the legs: the difference is the finding.
+  startOdometerKm Int? @map("start_odometer_km")
+  endOdometerKm   Int? @map("end_odometer_km")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  trip   Trip                @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  stops  TripStop[]
+  legs   TripRouteLeg[]
+  tracks TripRouteTrack[]
+
+  @@index([tripId])
+  @@map("trip_routes")
+}
+
+/// One leg of one section.
+///
+/// Keyed by its two ENDPOINT STOPS, never by an ordinal — the lesson
+/// `CruiseLegRoute` records: keying by position means inserting a stop
+/// shifts every stored line one leg along, and the map then looks like the
+/// router broke. With endpoint keying an inserted stop leaves its
+/// neighbours' stored geometry untouched.
+model TripRouteLeg {
+  id         String @id @default(uuid())
+  routeId    String @map("route_id")
+  fromStopId String @map("from_stop_id")
+  toStopId   String @map("to_stop_id")
+
+  distanceKm Float  @map("distance_km")
+  /// straight | drawn (phase 1). routed | track arrive in phase 3.
+  source     String
+  /// road | ferry | rail | foot | bike. Per LEG, not per section: a road
+  /// tour with one ferry crossing must not count it as motorway km.
+  mode       String
+  /// low | medium | high, mirroring CruiseLeg.
+  confidence String @default("medium")
+
+  /// `[[lon, lat], …]` in GeoJSON order. Null when source is `straight`.
+  waypoints      Json?
+  drivingMinutes Int?    @map("driving_minutes")
+  tollCost       Float?  @map("toll_cost")
+  currency       String?
+
+  computedAt DateTime @default(now()) @map("computed_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  route    TripRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  fromStop TripStop  @relation("LegFrom", fields: [fromStopId], references: [id], onDelete: Cascade)
+  toStop   TripStop  @relation("LegTo",   fields: [toStopId],   references: [id], onDelete: Cascade)
+
+  @@unique([routeId, fromStopId, toStopId])
+  @@index([routeId])
+  @@map("trip_route_legs")
+}
+
+/// A recorded track. Hangs off the SECTION and a time window, never off a
+/// leg: a GPX file knows nothing about the user's stops, and forcing it
+/// into the leg structure on import loses data. Legs may later take their
+/// distance from an overlapping track (§7.3); the track itself stays whole.
+model TripRouteTrack {
+  id         String   @id @default(uuid())
+  routeId    String   @map("route_id")
+  source     String   // gpx | dawarich
+  name       String?
+  startedAt  DateTime @map("started_at")
+  endedAt    DateTime @map("ended_at")
+  /// GeoJSON LineString coordinates, already simplified on import.
+  geometry   Json
+  pointCount Int      @map("point_count")
+  distanceKm Float    @map("distance_km")
+  /// True when a Dawarich pull hit `MAX_PAGES` (dawarichClient.ts) and the
+  /// stored points are therefore a PARTIAL window, not the full requested
+  /// span — the newest points only, per Dawarich's measured ordering. Always
+  /// false for `source = "gpx"`, which refuses an oversized file outright
+  /// instead of storing a silently-shortened one. Surfaced in the API
+  /// response and in `TourTrackList` so a partial track's distance is never
+  /// presented with the same confidence as a complete one.
+  truncated  Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  route TripRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@index([routeId])
+  @@map("trip_route_tracks")
 }
 
 model TripJournalEntry {

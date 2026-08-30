@@ -134,7 +134,11 @@ function dayRank(ev: SortableEvent): number {
  *    its midnight instant — see there for why.
  * 3. Otherwise ties keep their original relative order (the comparator returns
  *    0 and Array.prototype.sort is stable), so two stops entered for the same
- *    time stay in the order the backend returned them — which is `orderIdx`.
+ *    time stay in the order the backend returned them. That order is
+ *    `[orderIdx ASC, startDate ASC]`, but no client has ever SENT
+ *    `orderIdx` — `routes/trips.ts` stores `body.orderIdx ?? 0` — so in
+ *    practice every stop carries 0 and the date decides. Route ordering
+ *    uses `routeOrderIdx` instead, which the assignment endpoint owns.
  *
  * All three apply WITHIN a day only. Across days the instants decide, so a
  * check-in on the 1st can never be dragged past anything on the 2nd.

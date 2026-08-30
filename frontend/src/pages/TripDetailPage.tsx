@@ -14,6 +14,7 @@ import { stripMarkdown } from "../lib/markdownPreview";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../hooks/usePlacesVisible";
+import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { useTranslation } from "../hooks/useTranslation";
 import type { Booking, Trip, TripJournalEntry, TripStatus, TripStop } from "../types";
 import PageTransition from "../components/PageTransition";
@@ -29,6 +30,7 @@ import BookingEditModal from "../components/Trips/BookingEditModal";
 import TripMap from "../components/Trips/TripMap";
 import TripGallery from "../components/Trips/TripGallery";
 import TripSummaryPanel from "../components/Trips/TripSummaryPanel";
+import TourSectionList from "../components/Trips/TourSectionList";
 import {
   compareTimelineEvents,
   formatTimelineDate,
@@ -38,14 +40,15 @@ import { listPlaces } from "../lib/api/places";
 import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
 import type { Place, PlaceVisit } from "../types/place";
 
-type TabKey = "overview" | "timeline" | "map" | "gallery" | "logistics";
-const TABS: TabKey[] = ["overview", "timeline", "map", "gallery", "logistics"];
+type TabKey = "overview" | "timeline" | "map" | "gallery" | "logistics" | "tours";
+const TABS: TabKey[] = ["overview", "timeline", "map", "gallery", "logistics", "tours"];
 const TAB_ICON: Record<TabKey, string> = {
   overview: "📋",
   timeline: "📅",
   map: "🗺",
   gallery: "📷",
   logistics: "🧾",
+  tours: "🛣",
 };
 
 /**
@@ -216,6 +219,7 @@ export default function TripDetailPage(): JSX.Element {
           {tab === "logistics" && (
             <LogisticsTab trip={shownTrip} t={t} onChanged={() => void load()} />
           )}
+          {tab === "tours" && <TourSectionList tripId={shownTrip.id} />}
         </div>
       </div>
 
@@ -372,6 +376,11 @@ interface TabBarProps {
 }
 
 function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
+  // "tours" is the only tab gated by the instance-level beta flag today —
+  // see `config/betaFeatures.ts` (`tourRoutes`) for why.
+  const { isFeatureVisible } = useBetaFeatures();
+  const visibleTabs = TABS.filter((key) => key !== "tours" || isFeatureVisible("tourRoutes"));
+
   return (
     <div
       className="sticky top-0 z-30"
@@ -381,7 +390,7 @@ function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
       }}
     >
       <div className="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto overflow-y-hidden">
-        {TABS.map((key) => {
+        {visibleTabs.map((key) => {
           const isActive = tab === key;
           return (
             <button

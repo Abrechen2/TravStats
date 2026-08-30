@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
+import { useBetaFeatures } from "../../../hooks/useBetaFeatures";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
+import { useDashboardTours } from "../../../hooks/useDashboardTours";
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import { useFlightLookup } from "../../../hooks/useFlightLookup";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -13,11 +15,21 @@ import { listPlaceLists } from "../../../lib/api/placeLists";
 import { resolvePlaceListColors } from "../../../lib/placeColor";
 import type { PlaceList } from "../../../types/placeList";
 import { tripsApi } from "../../../lib/api/trips";
-import { buildCruiseLegend, type CruiseLegendRow } from "../../../lib/cruiseColor";
-import { buildFlightLegend, rgbCss, type FlightLegendRow } from "../../../lib/flightColor";
-import { buildLodgingLegend, type LodgingLegendRow } from "../../../lib/lodgingColor";
-import { buildPlaceLegend, type PlaceLegendRow } from "../../../lib/placeColor";
-import { PORT_RGB } from "../../layers/cruisePortsLayer";
+import { buildTourPaths, type TourPathDatum } from "../../layers/tourPathsLayer";
+import {
+  buildTourDeckLayers,
+  buildTourLegendRows,
+  TourStatusOverlay,
+  TOUR_PATH_GLOBE_ALTITUDE_M,
+} from "./tourMapOverlay";
+import {
+  buildAirportPortLegendRows,
+  buildCruiseLegendRows,
+  buildFlightLegendRows,
+  buildLodgingLegendRows,
+  buildPoiLegendRows,
+  legendRow,
+} from "./allTabLegendRows";
 import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
 import { logger } from "../../../lib/logger";
 import { useCruiseColorStore } from "../../../store/cruiseColorStore";
@@ -48,52 +60,6 @@ import { useLodgingSelectionStore } from "../../../store/lodgingSelectionStore";
 import { usePlaceSelectionStore } from "../../../store/placeSelectionStore";
 import type { Layer } from "@deck.gl/core";
 
-// Legend row → i18n key. The COLOURS never appear here — they come from
-// `buildFlightLegend`, i.e. the same function the map layers resolve through
-// (see lib/flightColor.ts). Adding a 4th colour mode later means adding a
-// label here, never a colour value.
-const FLIGHT_LEGEND_LABEL_KEY: Record<FlightLegendRow["slot"], string> = {
-  past: "dashboard:legend.flightPast",
-  upcoming: "dashboard:legend.flightUpcoming",
-  frequency: "dashboard:legend.flightFrequency",
-  solid: "dashboard:legend.flightSolid",
-};
-
-// Same contract on the cruise side (#reported-2.3.1): the legend used to
-// hardcode rgb(74,144,217) / rgb(34,211,238) as string literals, so it kept
-// claiming blue/cyan while the user's colours were already on the map.
-const LODGING_LEGEND_LABEL_KEY: Record<LodgingLegendRow["slot"], string> = {
-  solid: "dashboard:legend.lodging",
-  hotel: "lodging:type.hotel",
-  guesthouse: "lodging:type.guesthouse",
-  apartment: "lodging:type.apartment",
-  hostel: "lodging:type.hostel",
-  campsite: "lodging:type.campsite",
-  rated: "dashboard:legend.lodgingRated",
-  unrated: "dashboard:legend.lodgingUnrated",
-  chain: "dashboard:legend.lodgingChain",
-  independent: "dashboard:legend.lodgingIndependent",
-};
-
-// Place rows on this tab are always the mode's built-in slots — `list` mode's
-// user-named rows are a POI-tab thing, where a list filter sits beside them.
-/** Where the open/closed state of the map key is remembered. */
-const LEGEND_OPEN_KEY = "dashboard.legendOpen";
-
-const PLACE_LEGEND_LABEL_KEY: Record<string, string> = {
-  solid: "dashboard:poi.legend.solid",
-  visited: "dashboard:poi.legend.visited",
-  wishlist: "dashboard:poi.legend.wishlist",
-  unlisted: "dashboard:poi.legend.unlisted",
-};
-
-const CRUISE_LEGEND_LABEL_KEY: Record<CruiseLegendRow["slot"], string> = {
-  past: "dashboard:legend.cruisePast",
-  planned: "dashboard:legend.cruisePlanned",
-  perCruise: "dashboard:legend.cruisePerCruise",
-  solid: "dashboard:legend.cruiseSolid",
-};
-
 // Maps the dashboard-level AllMode to what MapContainer3D's visMode prop expects.
 // "journey" uses extraLayers with showInternalCruises=false so it has full
 // control over which trip is rendered.
@@ -117,6 +83,10 @@ function isAllMode(mode: unknown): mode is AllMode {
  * number to change — verify by measuring, not by eye: compare the legend's
  * `getBoundingClientRect().bottom` against `.maplibregl-ctrl-bottom-right`.
  */
+// Remembered per browser: a key someone shut should stay shut on the next
+// visit, and it is a display preference rather than account state.
+const LEGEND_OPEN_KEY = "dashboard.legendOpen";
+
 const ATTRIBUTION_CLEARANCE = 52;
 
 export function AllTab(): JSX.Element {
@@ -183,6 +153,12 @@ export function AllTab(): JSX.Element {
   // on "don't know yet" so a tab never flashes pins in and then loses them.
   const placesAllowed = usePlacesVisible();
   const placesVisible = filterDomains.includes("poi") && placesAllowed;
+
+  // Tours have no domain pill — gated only by the beta flag;
+  // `useDashboardTours` refuses to fetch while it is off.
+  const { isFeatureVisible } = useBetaFeatures();
+  const toursAllowed = isFeatureVisible("tourRoutes");
+  const dashboardTours = useDashboardTours(toursAllowed);
 
   // Filter flights by departureTime within the year/time range.
   // Flights without a departureTime stay visible (treat NaN as
@@ -459,6 +435,27 @@ export function AllTab(): JSX.Element {
     return buildJourneyLayers(visibleFlights, visibleCruises, effectiveTripId, cruiseColorConfig);
   }, [allMode, visibleFlights, visibleCruises, effectiveTripId, cruiseColorConfig]);
 
+  // Tours on the main overview map only — journey mode already takes over
+  // the map for ONE trip (`journeyLayers`); every tour on top would misdescribe it.
+  const showTours = toursAllowed && allMode !== "journey";
+
+  // `buildTourPaths` is the SAME builder `TripMap.tsx` uses; the deck.gl
+  // layer itself comes from `buildTourDeckLayers` (`./tourMapOverlay.tsx`,
+  // which also carries the width/alpha rationale).
+  const tourPathData = useMemo<TourPathDatum[]>(
+    () => (showTours ? buildTourPaths(dashboardTours.geometries) : []),
+    [showTours, dashboardTours.geometries]
+  );
+  // Altitude-lifted on the globe only — see `TOUR_PATH_GLOBE_ALTITUDE_M`'s
+  // doc comment (tourMapOverlay.tsx): an unlifted path z-fights with the
+  // sphere mesh and draws zero pixels there (fix round 2, found in a real
+  // browser). `visMode` already resolves "globe" vs "routes"/"heatmap"/
+  // "journey" a few lines up.
+  const tourLayers = useMemo<Layer[]>(
+    () => buildTourDeckLayers(tourPathData, visMode === "globe" ? TOUR_PATH_GLOBE_ALTITUDE_M : 0),
+    [tourPathData, visMode]
+  );
+
   // The ☰ Aktivität toggle stays top-left (it opens the activity sidebar).
   // Shifts right when the sidebar is open so it clears the panel.
   const activityToggle = (
@@ -484,127 +481,36 @@ export function AllTab(): JSX.Element {
     </button>
   );
 
-  /**
-   * One colour-key row. The swatch takes the SHAPE of the thing it stands for:
-   *
-   *   "line"  a route — flights and cruises are drawn as arcs
-   *   "ramp"  a route coloured by a gradient (flight frequency mode)
-   *   "dot"   a place — a lodging or a POI is a pin, not a line (Alex,
-   *           2026-08-09: "Da Unterkünfte keine 'Strecken' sind sollte hier
-   *           auch in der Legende ein Kreis sein.")
-   *
-   * There was a "ring" shape for POIs while the pin layer drew a ringed mark.
-   * The ring left the map on 2026-08-28 and the shape left with it: a key that
-   * draws a mark the map does not is worse than no key.
-   *
-   * `background` takes any CSS colour OR gradient, so all three share one
-   * renderer.
-   */
-  const legendRow = (
-    background: string,
-    label: string,
-    key: string,
-    shape: "line" | "ramp" | "dot" = "line"
-  ): JSX.Element => (
-    <span key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <span
-        aria-hidden
-        style={{
-          width: shape === "ramp" ? 24 : shape === "dot" ? 8 : 14,
-          height: shape === "ramp" ? 4 : shape === "dot" ? 8 : 2,
-          background,
-          boxSizing: "border-box",
-          borderRadius: shape === "dot" ? "50%" : 2,
-          flexShrink: 0,
-        }}
-      />
-      <span style={{ color: "var(--text-primary)" }}>{label}</span>
-    </span>
-  );
-
-  // Flight rows are DERIVED from the active colour config — never hardcoded.
-  const flightLegendRows = buildFlightLegend(flightColorConfig).map((row) => {
-    const label = t(FLIGHT_LEGEND_LABEL_KEY[row.slot]);
-    if (row.kind === "ramp") {
-      // Frequency mode: one gradient bar from the rarest to the most-flown
-      // tier, using the very stops the arcs are painted with.
-      const gradient = `linear-gradient(90deg, ${row.stops.map(rgbCss).join(", ")})`;
-      return legendRow(gradient, label, `flight-${row.slot}`, "ramp");
-    }
-    return legendRow(rgbCss(row.color), label, `flight-${row.slot}`);
-  });
-
-  // Cruise rows, same contract: DERIVED from the active cruise colour config,
-  // never hardcoded. "perCruise" has no single colour, so it renders one honest
-  // multi-hue swatch (hard colour stops, not a blend) with a "one colour per
-  // cruise" label — enumerating every cruise would be a second sidebar.
-  const cruiseLegendRows = buildCruiseLegend(cruiseColorConfig).map((row) => {
-    const label = t(CRUISE_LEGEND_LABEL_KEY[row.slot]);
-    if (row.kind === "multi") {
-      const step = 100 / row.stops.length;
-      const segments = row.stops
-        .map((c, i) => `${rgbCss(c)} ${i * step}% ${(i + 1) * step}%`)
-        .join(", ");
-      return legendRow(`linear-gradient(90deg, ${segments})`, label, `cruise-${row.slot}`, "ramp");
-    }
-    return legendRow(rgbCss(row.color), label, `cruise-${row.slot}`);
-  });
-
-  // Lodging rows are DERIVED from the same config `layers/lodgingPinsLayer.ts`
-  // resolves its pin colour through, so the dots on the map and the swatches in
-  // the legend can never disagree — including now that there is a mode, where a
-  // five-colour map beside a one-row legend would misdescribe what is on screen.
-  const lodgingLegendRows = buildLodgingLegend(lodgingColorConfig).map((row) =>
-    legendRow(
-      rgbCss(row.color),
-      t(LODGING_LEGEND_LABEL_KEY[row.slot]),
-      `lodging-${row.slot}`,
-      "dot"
-    )
-  );
-
-  // Resolved once for the legend AND both maps below. "First list wins" lives
-  // in this one function, so a pin's colour, its symbol and its legend row can
-  // never name different lists.
+  // `legendRow` (the swatch-JSX builder) now lives in `./allTabLegendRows.tsx`
+  // itself, alongside the five builders below that take it as a parameter —
+  // TourTab.tsx uses the exact same swatch shape and had its own inline
+  // copy until the fix-round review (2026-08-30) pointed out the
+  // duplication. Each builder is a pure function of its colour config, `t`,
+  // and `legendRow` — split into that file to keep this one under its
+  // 800-line ceiling (same reason as `tourMapOverlay.tsx`). Nothing about
+  // WHAT they compute changed: same config in, same JSX out.
+  // Colours and labels per place list. The POI legend names the lists the
+  // map is actually painting, so both read the same resolution.
   const placeListContext = useMemo(() => resolvePlaceListColors(placeLists), [placeLists]);
 
-  // POI rows come from the same `buildPlaceLegend` the pin layer resolves
-  // through, and are drawn as plain DOTS, because that is the mark on this map.
-  // They were rings until 2026-08-28, when the ring was removed from the pin
-  // layer by owner decision; the legend kept drawing one and so described a
-  // mark that is no longer there.
-  //
-  // The lists are passed in: in "by list" mode the key has to name them, or the
+  const flightLegendRows = buildFlightLegendRows(flightColorConfig, t, legendRow);
+  const cruiseLegendRows = buildCruiseLegendRows(cruiseColorConfig, t, legendRow);
+  const lodgingLegendRows = buildLodgingLegendRows(lodgingColorConfig, t, legendRow);
+  // The lists are passed in: in "by list" mode the key has to NAME them, or the
   // only row is the negative one and every coloured pin stays unexplained.
-  const poiLegendRows = buildPlaceLegend(placeColorConfig, placeListContext.used).map(
-    (row: PlaceLegendRow) =>
-      legendRow(
-        rgbCss(row.color),
-        row.label ?? t(PLACE_LEGEND_LABEL_KEY[row.slot] ?? "dashboard:poi.legend.solid"),
-        `poi-${row.slot}`,
-        "dot"
-      )
+  const poiLegendRows = buildPoiLegendRows(placeColorConfig, t, legendRow, placeListContext.used);
+  const placeLegendRows = buildAirportPortLegendRows(
+    flightsVisible,
+    cruisesVisible,
+    themeColors,
+    t,
+    legendRow
   );
 
-  // Airports and ports are the only marks on this map that are ONLY marks:
-  // an arc explains itself by connecting two places, a dot does not. They were
-  // drawn and never named, which is the one thing a legend exists for (Alex,
-  // 2026-08-09, same message as the lodging circle above).
-  //
-  // Both colours are READ from what the layers paint with — the airport dot
-  // from the active map theme (`routesLayer` falls back to exactly this value),
-  // the port from `cruisePortsLayer`'s own exported constant. Nothing is typed
-  // in twice, so switching the map theme cannot leave the key behind.
-  const placeLegendRows = [
-    flightsVisible &&
-      legendRow(
-        rgbCss(themeColors.airportDot),
-        t("dashboard:legend.airport"),
-        "place-airport",
-        "dot"
-      ),
-    cruisesVisible && legendRow(rgbCss(PORT_RGB), t("dashboard:legend.port"), "place-port", "dot"),
-  ].filter((row): row is JSX.Element => row !== false);
+  // See `buildTourLegendRows` (`./tourMapOverlay.tsx`) for why "empty"
+  // shows no row here — `tourStatusOverlay` below carries loading/error.
+  const tourLegend = buildTourLegendRows(showTours, dashboardTours, t, legendRow);
+  const tourHasData = tourLegend.hasData;
 
   // Colour key as a compact table pinned bottom-right — out of the top band
   // so it never collides with the globe's time histogram or the top-left
@@ -623,6 +529,10 @@ export function AllTab(): JSX.Element {
     ...(lodgingsVisible ? lodgingLegendRows : []),
     ...(placesVisible ? poiLegendRows : []),
     ...placeLegendRows,
+    // The tour rows join the same array rather than hanging outside it,
+    // or they would sit below the collapsed panel and stay visible when
+    // the key is shut — and be missing from the count on the button.
+    ...(tourHasData ? tourLegend.rows : []),
   ];
 
   // Collapsible, like the map options beside it. The key grew a row per LIST
@@ -681,6 +591,18 @@ export function AllTab(): JSX.Element {
       </button>
       {legendOpen && legendRows}
     </div>
+  );
+
+  // Top-center, the same slot `journeySelector` uses in journey mode
+  // (mutually exclusive with this: `showTours` is false there). See
+  // `TourStatusOverlay` for why "empty" gets no banner of its own.
+  const tourStatusOverlay = showTours && (
+    <TourStatusOverlay
+      loading={dashboardTours.toursLoading}
+      error={dashboardTours.toursLoadError}
+      onRetry={dashboardTours.reload}
+      t={t}
+    />
   );
 
   // The panel takes the same `visible*` collections the map does, so the domain
@@ -796,6 +718,7 @@ export function AllTab(): JSX.Element {
       <MapContainer3D
         flights={visibleFlights}
         visMode={visMode}
+        extraLayers={tourLayers}
         appearanceDomains={["flight", "cruise", "lodging", "poi"]}
         placesOverride={visiblePlaces}
         placeListColors={placeListContext.byPlaceId}
@@ -812,6 +735,7 @@ export function AllTab(): JSX.Element {
       />
       {activityToggle}
       {legendTable}
+      {tourStatusOverlay}
       {activityPanel}
       {editModal}
     </div>

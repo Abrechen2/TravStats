@@ -7,7 +7,9 @@ import { ArcLayer, PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layer
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { Trip } from "../../types";
 import type { Lodging } from "../../types/lodging";
+import type { TourGeometry } from "../../types/tour";
 import { buildLodgingPins } from "../layers/lodgingPinsLayer";
+import { buildTourPaths, type TourPathDatum } from "../layers/tourPathsLayer";
 import { stayNights } from "../../lib/lodgingDateDisplay";
 import { declutterByDistance, pickLabelled } from "../map/labelPriority";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/cruise";
@@ -94,9 +96,21 @@ function DeckGLOverlay({
 
 interface TripMapProps {
   trip: Trip;
+  tourGeometries?: readonly { routeId: string; name: string; geometry: TourGeometry }[];
 }
 
-export default function TripMap({ trip }: TripMapProps): JSX.Element {
+// Stable module-level default. `tourGeometries = []` inline in the props
+// destructuring would allocate a NEW array reference on every render where
+// the caller omits the prop (TripDetailPage.tsx renders `<TripMap trip={...} />`
+// with no `tourGeometries` at all) — a fresh reference invalidates the
+// `layers` useMemo below every single render, defeating the dependency array
+// entirely even though it lists `tourGeometries` correctly.
+const NO_TOUR_GEOMETRIES: readonly { routeId: string; name: string; geometry: TourGeometry }[] = [];
+
+export default function TripMap({
+  trip,
+  tourGeometries = NO_TOUR_GEOMETRIES,
+}: TripMapProps): JSX.Element {
   const { t, i18n } = useTranslation(["trips", "map"]);
   const locale = i18n.language || "de";
   const getTooltip = useMemo(() => createMarkerTooltip(t, locale), [t, locale]);
@@ -371,6 +385,32 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
       highlightColor: [255, 255, 255, 100],
     });
 
+    // Tour route sections (Task 12). Coloured per LEG mode, never the
+    // section's — a road tour with one ferry crossing must still show that
+    // one leg as a ferry line. `isPlaceholder` legs (an unrouted `straight`
+    // chord) have no dash support in deck.gl's PathLayer without an
+    // extension, so a placeholder is expressed as a thinner, more
+    // transparent line instead of a dash pattern — but it MUST stay clearly
+    // visible, because it still carries real distance that counts towards
+    // the tour's total. Measured in a browser against this dark basemap:
+    // alpha 70 at 1.5px was flat-out INVISIBLE, not just "subtle" — zero
+    // pixels drawn between two assigned stops at any zoom. Do not lower
+    // these again in the name of contrast; 170/2px is the floor that stays
+    // visible while still reading as weaker than a drawn route at 255/3.5px.
+    const tourPathData = buildTourPaths(tourGeometries);
+    const tourPaths = new PathLayer<TourPathDatum>({
+      id: "trip-tour-paths",
+      data: tourPathData,
+      getPath: (d) => d.path,
+      getColor: (d) => [...d.color, d.isPlaceholder ? 170 : 255] as [number, number, number, number],
+      getWidth: (d) => (d.isPlaceholder ? 2 : 3.5),
+      widthUnits: "pixels",
+      widthMinPixels: 2,
+      pickable: true,
+      autoHighlight: true,
+      highlightColor: [255, 255, 255, 80],
+    });
+
     const stops = new ScatterplotLayer<PointDatum>({
       id: "trip-stops",
       data: stopPoints,
@@ -433,8 +473,8 @@ export default function TripMap({ trip }: TripMapProps): JSX.Element {
     // hundreds the flat map's priority budget exists for.
     const lodgingPins = buildLodgingPins(lodgings, 1, zoom, { labelsMode: "important" }) ?? [];
 
-    return [paths, arcs, airports, stops, ...lodgingPins, stopLabels];
-  }, [flightArcs, cruisePaths, airportPoints, stopPoints, lodgings, zoom]);
+    return [paths, arcs, airports, tourPaths, stops, ...lodgingPins, stopLabels];
+  }, [flightArcs, cruisePaths, airportPoints, stopPoints, lodgings, zoom, tourGeometries]);
 
   /* ---- bbox fit ---- */
 

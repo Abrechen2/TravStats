@@ -41,6 +41,16 @@ export const FILE_LIMITS = {
   // Matches the client-side check in useSettingsPage.ts (handleAvatarUpload)
   // — the client check alone is not a security control, this is the real cap.
   PROFILE_PICTURE_MAX_SIZE: 5 * 1024 * 1024, // 5 MB
+  // GPX track upload for tour route sections (Phase 3b, task 4). Handled
+  // with multer.memoryStorage() — routes/trips/tourTracks.ts — because a GPX
+  // file has no life after parsing; only the simplified geometry is
+  // persisted, so it never touches disk. That means the whole buffer, plus
+  // fast-xml-parser's parsed DOM (roughly proportional in size), sits in
+  // process RAM for the request's duration with no disk backstop. 15 MB
+  // matches TRIP_PHOTO_MAX_SIZE and comfortably covers a full day of
+  // continuous 1 Hz GPS recording (~9-13 MB raw, timestamp + elevation per
+  // point) while still bounding worst-case memory on a self-hosted instance.
+  GPX_TRACK_MAX_SIZE: 15 * 1024 * 1024, // 15 MB
 
   // Body parsing limits
   JSON_BODY_MAX_SIZE: '10mb',

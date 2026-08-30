@@ -1,9 +1,9 @@
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
-import type { DashboardTab } from "../../../types/dashboard";
+import type { DomainKey } from "../../../shared/domains";
 
-const TAB_ICON: Record<Exclude<DashboardTab, "all">, string> = {
+const TAB_ICON: Record<DomainKey, string> = {
   flight: "✈",
   cruise: "⚓",
   poi: "📍",
@@ -15,12 +15,12 @@ const TAB_ICON: Record<Exclude<DashboardTab, "all">, string> = {
  * domain is disabled. Domain-gating rule: a disabled domain must not
  * render any of its content — this card is the only thing the tab shows
  * (same pattern as PoiTab's coming-soon stub).
+ *
+ * `domain` is a `DomainKey`, not `Exclude<DashboardTab, "all">` — the
+ * "Touren" tab has no domain to disable (types/dashboard.ts), so it never
+ * renders this notice, and this type must not claim it could.
  */
-export function DomainDisabledNotice({
-  domain,
-}: {
-  domain: Exclude<DashboardTab, "all">;
-}): JSX.Element {
+export function DomainDisabledNotice({ domain }: { domain: DomainKey }): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
 
   return (

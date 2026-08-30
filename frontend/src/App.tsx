@@ -33,10 +33,12 @@ const PlaceListsPage = lazy(() => import("./pages/PlaceListsPage"));
 const PlaceListDetailPage = lazy(() => import("./pages/PlaceListDetailPage"));
 const CuratedChecklistPage = lazy(() => import("./pages/CuratedChecklistPage"));
 import { PlacesRouteGuard } from "./components/places/PlacesRouteGuard";
+import { TripRouteGuard } from "./components/Trips/TripRouteGuard";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
 const TripDetailPage = lazy(() => import("./pages/TripDetailPage"));
+const TripRouteEditorPage = lazy(() => import("./pages/TripRouteEditorPage"));
 const AchievementsPage = lazy(() => import("./pages/AchievementsPage"));
 const AdvancedStatsPage = lazy(() => import("./pages/AdvancedStatsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
@@ -435,6 +437,26 @@ function AppContent() {
               <Route
                 path="/trips/:id"
                 element={isAuthenticated ? <TripDetailPage /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/trips/:id/route/:routeId"
+                element={
+                  // Gated the same way the Touren tab is gated
+                  // (`isFeatureVisible("tourRoutes")` in TripDetailPage) —
+                  // otherwise the editor stays reachable by URL with the tab,
+                  // and thus the flag, hidden. NOT a boolean guard: the beta
+                  // flag is unknown for one request on a cold load, and
+                  // redirecting on "unknown" bounced every refresh and
+                  // bookmark of this URL to /trips. See TripRouteGuard and
+                  // PlacesRouteGuard (same fix, same reason).
+                  isAuthenticated ? (
+                    <TripRouteGuard>
+                      <TripRouteEditorPage />
+                    </TripRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
               />
               <Route
                 path="/achievements"

@@ -30,7 +30,9 @@ import FeaturesSection from "../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../components/Settings/CruisePreferencesSection";
 import MembershipsSection from "../components/Settings/MembershipsSection";
 import GeocoderSettingsCard from "../components/Settings/GeocoderSettingsCard";
+import RoutingProviderSection from "../components/Settings/RoutingProviderSection";
 import ImmichConnectionCard from "../components/Settings/ImmichConnectionCard";
+import DawarichConnectionCard from "../components/Settings/DawarichConnectionCard";
 import PasswordModal from "../components/Settings/PasswordModal";
 import { normalizeSectionId } from "../lib/sectionAliases";
 
@@ -589,7 +591,22 @@ export default function SettingsPage(): JSX.Element {
                   onSetApiKeys={setApiKeys}
                   onSave={saveApiKeys}
                 />
+                {/* Admin-only AND behind the tours gate. The card configures a
+                    road router for tour legs and has no other consumer, so on a
+                    production instance with beta off it would offer to set up
+                    routing for a feature invisible everywhere else — the same
+                    defect the Dawarich card below was fixed for, which this,
+                    its sibling, kept until the merge review. */}
+                {isFeatureVisible("tourRoutes") && (
+                  <RoutingProviderSection isAdmin={user?.isAdmin ?? false} />
+                )}
                 <ImmichConnectionCard />
+                {/* Behind its OWN key, not `tourRoutes`. A Dawarich card is
+                    still meaningless where nothing consumes a recorded track,
+                    but tours stopped being the only consumer the moment cruise
+                    legs were scoped onto the same connection — a gate named
+                    after tours would then hide a card the cruise feature needs. */}
+                {isFeatureVisible("dawarich") && <DawarichConnectionCard />}
               </>
             )}
             {/* Intentionally NOT gated: the nav entry is hidden behind the
