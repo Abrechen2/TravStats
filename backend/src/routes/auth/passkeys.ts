@@ -10,8 +10,7 @@ import { prisma } from "../../db";
 import { authenticate, AuthRequest } from "../../middleware/auth";
 import { authLimiter } from "../../middleware/rateLimit";
 import { AppError } from "../../middleware/errorHandler";
-import { generateToken } from "../../utils/jwt";
-import { getAuthCookieOptions } from "../auth";
+import { issueAuthCookie } from "../../utils/session";
 import { resolveRpConfig, passkeyUnavailableReason } from "../../services/webauthn/rpConfig";
 import { putChallenge, takeChallenge } from "../../services/webauthn/challengeStore";
 import {
@@ -247,7 +246,7 @@ router.post("/login/verify", authLimiter, async (req: AuthRequest, res, next) =>
     // This is the reason USER_VERIFICATION may never be relaxed to "preferred":
     // that would turn the line below into a genuine 2FA bypass.
     res.clearCookie("passkey_handle", { path: "/" });
-    res.cookie("auth_token", generateToken(stored.userId), getAuthCookieOptions(req));
+    issueAuthCookie(req, res, stored.user);
 
     logger.info({
       operation: "passkey_login",

@@ -4,8 +4,7 @@ import { prisma } from "../../db";
 import { authenticate, AuthRequest } from "../../middleware/auth";
 import { authLimiter } from "../../middleware/rateLimit";
 import { AppError } from "../../middleware/errorHandler";
-import { getAuthCookieOptions } from "../auth";
-import { generateToken } from "../../utils/jwt";
+import { issueAuthCookie } from "../../utils/session";
 import {
   activateTwoFactorSchema,
   verifyTwoFactorSchema,
@@ -191,7 +190,9 @@ router.post("/verify", authLimiter, async (req: AuthRequest, res: Response, next
     });
     if (burned.count !== 1) throw new AppError("Two-factor challenge expired", 401);
     res.clearCookie("twofa_token", { path: "/" });
-    res.cookie("auth_token", generateToken(user.id), getAuthCookieOptions(req));
+    // Through the choke point: a deactivated account must not complete a
+    // second factor into a session either (Forgejo #31).
+    issueAuthCookie(req, res, user);
 
     logger.info({ operation: "two_factor_verify_ok", userId: user.id });
     res.json({

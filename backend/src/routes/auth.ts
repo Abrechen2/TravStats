@@ -1,8 +1,7 @@
-import { Router, Request, Response, NextFunction, CookieOptions } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import { prisma } from '../db';
 import { hashPassword, comparePassword } from '../utils/password';
-import { generateToken } from '../utils/jwt';
 import { registerSchema, loginSchema, changePasswordSchema } from '../schemas/auth';
 import { AppError } from '../middleware/errorHandler';
 import { authLimiter } from '../middleware/rateLimit';
@@ -10,39 +9,18 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { getInstanceSettings } from '../services/instanceSettingsService';
 import logger from '../utils/logger';
 import { stampWhatsNewSeen } from "../services/whatsNewStamp";
+import { getAuthCookieOptions, getCookieSecure, issueAuthCookie } from '../utils/session';
 
 const router = Router();
-const cookieMaxAgeMs = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 // Dummy bcrypt hash used to prevent timing oracle on login (constant-time for unknown users)
 const DUMMY_BCRYPT_HASH = '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012';
 
-// Determine if cookies should be secure
-// If COOKIE_SECURE is explicitly set, use that value
-// Otherwise, use secure cookies only if explicitly in production AND behind HTTPS
-function getCookieSecure(req: Request): boolean {
-  // If COOKIE_SECURE is explicitly set in env, use it
-  if (process.env.COOKIE_SECURE !== undefined) {
-    return process.env.COOKIE_SECURE !== 'false';
-  }
-
-  // Auto-detect: Check if request is over HTTPS (via proxy header)
-  // req.protocol is automatically set by Express when trust proxy is enabled
-  if (process.env.NODE_ENV === 'production') {
-    return req.protocol === 'https' || req.get('x-forwarded-proto') === 'https';
-  }
-
-  // In development, default to false (allow HTTP)
-  return false;
-}
-
-export const getAuthCookieOptions = (req: Request): CookieOptions => ({
-  httpOnly: true, // Prevents JavaScript access (XSS protection)
-  secure: getCookieSecure(req), // Auto-detect HTTPS or use COOKIE_SECURE env var
-  sameSite: 'strict',
-  maxAge: cookieMaxAgeMs,
-  path: '/',
-});
+// Cookie shaping and session issuance moved to utils/session.ts so that EVERY
+// route minting `auth_token` passes the same deactivation check (Forgejo #31).
+// Re-exported here because passkeys.ts, twoFactor.ts and setup.ts import it
+// from this module.
+export { getAuthCookieOptions };
 
 // Register
 router.post('/register', authLimiter, async (req: Request, res: Response, next: NextFunction) => {
@@ -138,11 +116,10 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
       isolationLevel: 'Serializable',
     });
 
-    // Generate token
-    const token = generateToken(user.id);
-
-    // Set HttpOnly cookie for security (XSS protection)
-    res.cookie('auth_token', token, getAuthCookieOptions(req));
+    // HttpOnly cookie (XSS protection). Goes through issueAuthCookie like every
+    // other session, even though a freshly registered account is active by
+    // definition — a second door that skips the check is how #31 happened.
+    issueAuthCookie(req, res, user);
 
     res.status(201).json({
       user: {
@@ -172,6 +149,16 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
     const isValid = await comparePassword(password, user?.passwordHash ?? DUMMY_BCRYPT_HASH);
     if (!user || !isValid) {
       throw new AppError('Invalid credentials', 401);
+    }
+
+    // A deactivated account is refused HERE, before any cookie is written —
+    // including the two-factor challenge and the password-change token below.
+    // `issueAuthCookie` enforces the same rule at the end, but only the early
+    // exit satisfies what #31 actually asked for: no token of any kind is
+    // handed to a disabled account, and the answer says why on the first
+    // request rather than on the next one.
+    if (!user.isActive) {
+      throw new AppError('This account has been deactivated', 403);
     }
 
     // Two-factor: the password was right, so the session is withheld until the
@@ -229,11 +216,8 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
       return res.json({ requiresPasswordChange: true });
     }
 
-    // Generate token
-    const token = generateToken(user.id);
-
     // Set HttpOnly cookie for security (XSS protection)
-    res.cookie('auth_token', token, getAuthCookieOptions(req));
+    issueAuthCookie(req, res, user);
 
     // Start airport seeding if the catalogue is empty OR was left truncated by
     // an interrupted run. Keying this on `count === 0` meant a partial seed
