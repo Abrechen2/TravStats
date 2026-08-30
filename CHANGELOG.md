@@ -6,12 +6,53 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [2.6.0] - 2026-08-19
 
-The lodging release. Hotels become a domain of their own — recorded, imported,
-mapped and counted like flights and cruises — and every price in TravStats can
-now be written in the currency it was actually paid in. Two-factor
-authentication and passkeys arrive alongside.
+The release where the other ways of travelling catch up with flying. Hotels
+become a domain of their own — recorded, imported, mapped and counted like
+flights and cruises — and every price can be written in the currency it was
+actually paid in. Cruises, stays and places gain statistics at the depth
+flights already had, and a trip can now be walked, driven and cycled rather
+than only flown. Two-factor authentication and passkeys arrive alongside.
+
+Several of the larger additions ship behind the instance beta switch, which is
+off by default: tours, the passport, the places domain and per-domain colours.
+They are complete and tested, but had not been through a release review in time
+for this one. The admin panel now lists exactly what that switch turns on, read
+from the same registry the application itself checks.
 
 ### Added
+- **Tours: a trip can be walked, driven and cycled, not only flown.** A trip
+  now carries route sections of its own — road, hike, bike and ferry — each
+  with a section list, an editor that works with the mouse, and its own line on
+  the dashboard map under a Touren tab. Recorded tracks can be pulled from a
+  Dawarich instance and adopted onto a section. Hidden behind the beta switch:
+  everything works end to end, but the feature has not been through a release
+  review, and the Dawarich connection carries a second switch of its own
+  because a connection with nothing to connect to is worse than no card at all.
+- **A passport.** Stamps, a continent quota band and a country table, built
+  entirely from flights already recorded — nothing new is asked of you. Behind
+  the beta switch for this release.
+- **Statistics for cruises, stays and places, at the depth flights already
+  had.** Each gets its own rhythm, quality and curiosity blocks rather than a
+  handful of totals. Cruise money is deliberately reported per currency and
+  never summed: cruises carry no exchange-rate snapshot, and adding the numbers
+  would have repeated a bug that already exists one domain over.
+- **Photographs belong to the hotel.** A picture of the building, the lobby or
+  the view is a fact about the house and survives every stay, so it hangs off
+  the lodging rather than off one visit.
+- **A statistics tab shows only the blocks you want.** Someone who records no
+  prices had a cost block on every screen. Only the HIDDEN blocks are
+  remembered, so a section added in a later release still appears rather than
+  being silently swallowed by an old preference.
+- **Twenty-five new achievements for places**, taking the catalogue to 275.
+  Places were the thinnest domain; cities, continents, streaks, latitudes and
+  ratings now count for something.
+- **The beta switch says what it turns on.** The admin panel lists every gated
+  feature with a plain sentence, read from the same registry the gates
+  themselves use — so it cannot claim something the build does not do.
+- **A per-domain colour can be chosen** rather than taken from the brand. It
+  applies to statistics, the trip timeline, the activity rail and the import
+  log. Behind the beta switch while the question of whether an instance may
+  repaint its own domains is settled.
 - **The route editor is worked with the mouse.** Clicking a different leg
   switches to it, which it did not before: the click was swallowed and quietly
   added a waypoint to the leg already open, so reaching for one leg edited
@@ -324,6 +365,59 @@ authentication and passkeys arrive alongside.
   statistics, where figures belong.
 
 ### Fixed
+- **Ordinary marketing email was being read as a flight booking.** An Emirates
+  promotion and an airline's holiday greeting each came back as a bookings with
+  a reference of "LEIDER" and "NSCHEN" — the latter being the tail of
+  "WÜNSCHEN", because the umlaut broke a word boundary and left six clean
+  letters behind. A booking reference must now be labelled as one, and a
+  candidate needs a flight number or both ends of a route: a date is not
+  evidence, since every promotional email has one.
+- **An old mailbox imported into the wrong decade.** A 2007 confirmation became
+  two flights in July 2026, complete with a trip named after them. A message
+  that names only a day and a month is now read against the date the message
+  itself carries, taken from the file rather than guessed from today.
+- **Re-importing the same file ended in silence.** After reviewing four legs
+  the dialog simply closed and nothing changed, because the server had skipped
+  every row as already present and the count was thrown away. Every outcome is
+  now reported — imported, partly imported, all duplicates.
+- **Buttons that promised work they would not do.** A duplicate-only import
+  offered "import 1 row" and imported none; the final step of a multi-leg
+  review said "next" while it was the click that wrote everything; a mapping
+  that produced no readable row kept its continue button live. Each now says
+  what it will actually do.
+- **A lodging saved while its coordinates were being discarded.** Typing an
+  out-of-range latitude left the number in the field, dropped it silently and
+  saved the record without a location. All four dialogs that take coordinates
+  now say which value is wrong and decline to save until it is fixed.
+- **An airport field called its own contents invalid.** Searching for something
+  that did not exist and then picking a real airport left the "no airports
+  found" message on screen beside a perfectly valid selection.
+- **The statistics and trips pages scrolled sideways on a phone.** Wide charts
+  and the category filter row pushed the whole document past a 390px screen;
+  they now scroll inside themselves.
+- **Screen readers were told the wrong thing.** Twelve controls announced
+  either an untranslated English word or a raw internal key — including the
+  domain switches in settings, which read "domain.flight" aloud.
+- **A statistics tab could be opened by URL that the account had switched off**,
+  and the place statistics rendered for an instance where the domain was hidden
+  entirely.
+- **Twenty-five new achievements spoke English on a German page.** A missing
+  German entry fell through to English rather than to the name already stored,
+  so "Stadtbummler" appeared as "City stroller" — with nothing broken, blank or
+  failing to show it.
+- **A fresh installation created no demo cruises**, because the demo data was
+  seeded before the ports and ships it depends on. A first start also logged
+  errors for a handful of offshore helidecks that share an identifier, which is
+  a property of the source data rather than a fault.
+- **The import log could not tell two imports apart.** Email imports were
+  recorded without a filename, so several on the same day were
+  indistinguishable and reverting the right one was guesswork.
+- **The parser availability notice contradicted the parser.** The import screen
+  could say no AI parser was available while the very next result was labelled
+  as coming from one; both now answer from the same place.
+- **A subscribed checklist reported itself complete.** 47 of 1,248 world
+  heritage sites showed as "47 / 47 — complete", because the number beside it
+  was never a total. The catalogue size now travels with it.
 - **The "All" map knows what a place pin means.** It drew places without their
   list's colour and, once lists could carry a symbol, without that either — so
   a list styled on the places map looked untouched next to the flights and
