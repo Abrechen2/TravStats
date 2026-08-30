@@ -28,7 +28,16 @@ export interface LodgingParseResult {
   bookings: ParsedLodgingBooking[];
   parserUsed: LodgingParserUsed;
   ollamaAvailable: boolean;
-  /** Set only when parserUsed === "none" — the UI shows manual entry with whatever fields it has. */
+  /**
+   * Set only when parserUsed === "none" — the UI shows manual entry with
+   * whatever fields it has.
+   *
+   * `"none"` means NO PARSER PRODUCED A RESULT, not that none was consulted.
+   * Ollama returning zero bookings lands here too, and the old wording ("the
+   * parser found no booking") read as though nothing had looked — which is how
+   * a working instance came to be reported as having no parser (Forgejo #34).
+   * The reason string now names who looked.
+   */
   fallbackReason?: string;
 }
 
@@ -200,8 +209,34 @@ function normalizeBooking(
   const checkOut = asString(raw.checkOut);
   // Without a name and a usable date range there is nothing to build a stay
   // from — drop the entry rather than emit a half-row the preview cannot show.
-  if (!hotelName || !checkIn || !checkOut) return null;
-  if (!ISO_DAY_RE.test(checkIn) || !ISO_DAY_RE.test(checkOut)) return null;
+  //
+  // The DROP IS LOGGED, and that is the point of this block existing as more
+  // than one line. A discarded entry is indistinguishable from a document the
+  // model found nothing in, so "the parser found no booking" was reported for
+  // confirmations where the model HAD read something and lost one field
+  // (Forgejo #34). Naming which field was missing turns an unfalsifiable
+  // complaint into something that can be reproduced.
+  if (!hotelName || !checkIn || !checkOut) {
+    logger.info(
+      {
+        operation: "lodging_candidate_discarded",
+        missing: [
+          !hotelName ? "hotelName" : null,
+          !checkIn ? "checkIn" : null,
+          !checkOut ? "checkOut" : null,
+        ].filter(Boolean),
+      },
+      "[Lodging Parser] Discarded a model answer that was missing a required field",
+    );
+    return null;
+  }
+  if (!ISO_DAY_RE.test(checkIn) || !ISO_DAY_RE.test(checkOut)) {
+    logger.info(
+      { operation: "lodging_candidate_discarded", checkIn, checkOut },
+      "[Lodging Parser] Discarded a model answer whose dates were not ISO days",
+    );
+    return null;
+  }
 
   const nightsRaw = asNumber(raw.nights);
   const nightsFromDates = Math.max(
@@ -309,12 +344,29 @@ async function checkAvailability(url: string): Promise<boolean> {
   }
 }
 
+/**
+ * How much of a document the model is shown. Mirrors EMAIL_SNIPPET_MAX_CHARS on
+ * the flight side; kept as a named constant so the two can be compared at a
+ * glance rather than by grepping for a literal.
+ */
+const LODGING_SNIPPET_MAX_CHARS = 12_000;
+
 async function parseWithOllama(
   text: string,
   url: string,
   model: string,
 ): Promise<ParsedLodgingBooking[]> {
-  const snippet = text.slice(0, 12_000);
+  // Same window as the flight parser, and — like it since 2.5.2 — a truncation
+  // is LOGGED. The lodging side cut silently, so a confirmation whose booking
+  // table sat past the window came back as "no booking found" with nothing to
+  // distinguish it from a document that genuinely holds none (Forgejo #34).
+  const snippet = text.slice(0, LODGING_SNIPPET_MAX_CHARS);
+  if (text.length > LODGING_SNIPPET_MAX_CHARS) {
+    logger.warn(
+      { totalChars: text.length, keptChars: LODGING_SNIPPET_MAX_CHARS },
+      "[Lodging Parser] Document truncated before the model saw it",
+    );
+  }
   const body = JSON.stringify({
     model,
     system: LODGING_SYSTEM_PROMPT,
@@ -394,7 +446,7 @@ export async function parseLodgingBookingText(
         bookings: [],
         parserUsed: "none",
         ollamaAvailable: true,
-        fallbackReason: "The parser found no booking in this document",
+        fallbackReason: "The AI parser read this document and found no booking in it",
       };
     }
     return { bookings, parserUsed: "ollama", ollamaAvailable: true };
