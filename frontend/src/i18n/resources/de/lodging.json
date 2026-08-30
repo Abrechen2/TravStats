@@ -568,5 +568,8 @@
     "yearField": "Jahr",
     "nightsField": "Nächte (falls bekannt)",
     "nightsHint": "Optional. Ohne Angabe zählt der Aufenthalt, aber ohne Nächte."
+  },
+  "photos": {
+    "title": "Fotos"
   }
 }

@@ -1268,6 +1268,7 @@ model Lodging {
   batch           ImportBatch?               @relation(fields: [batchId], references: [id], onDelete: SetNull)
   stays           LodgingStay[]
   membershipLinks LodgingMembershipLodging[]
+  photos          LodgingPhoto[]
 
   @@unique([userId, externalRef])
   @@index([userId])
@@ -1588,6 +1589,35 @@ model PlaceVisit {
 /// album-resync ordering invariant and the asset proxy's ownership check —
 /// three things CLAUDE.md flags as load-bearing. A parallel table costs one
 /// small file and risks none of them.
+/// Photographs of a HOUSE, not of a stay.
+///
+/// Asked for by a tester who wanted pictures on the hotel (Alex, 2026-08-29).
+/// Deliberately hung off the lodging rather than off a stay: a photo of the
+/// building, the lobby or the view is a fact about the place and survives every
+/// visit to it, while a stay-level photo would be re-uploaded each time.
+///
+/// A third table rather than a polymorphic photo owner, for the reason
+/// `routes/places/visitPhotos.ts` writes down at length: a shared owner column
+/// would reach into the Immich import job, the resync ordering invariant and
+/// the asset proxy's ownership check, three places that already answer the
+/// ownership question in a specific way.
+model LodgingPhoto {
+  id        String  @id @default(uuid())
+  lodgingId String  @map("lodging_id")
+  filename  String
+  mimetype  String
+  sizeBytes Int     @map("size_bytes")
+  caption   String?
+  sortIdx   Int     @default(0) @map("sort_idx")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  lodging Lodging @relation(fields: [lodgingId], references: [id], onDelete: Cascade)
+
+  @@index([lodgingId])
+  @@map("lodging_photos")
+}
+
 model PlaceVisitPhoto {
   id           String  @id @default(uuid())
   placeVisitId String  @map("place_visit_id")

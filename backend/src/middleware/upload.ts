@@ -372,6 +372,73 @@ export function deletePlacePhotoFile(filename: string): void {
   }
 }
 
+// =============== Lodging photos (Alex, 2026-08-29) ===============
+//
+// Its own directory for the same reason place photos got one: a cleanup sweep
+// that has to work out which rows point into a shared folder before it may
+// delete a byte is a sweep nobody will dare run. Same storage and filter rules
+// as the other two; a photo is a photo.
+//
+// REGISTER A NEW DIRECTORY IN `config/uploadDirs.ts`. The backup archives that
+// list and nothing else — three directories were once missing from it, so every
+// photo ROW came back from a restore with none of the bytes.
+
+const LODGING_PHOTO_DIR = path.join(__dirname, '../../uploads/lodging-photos');
+
+try {
+  if (!fs.existsSync(LODGING_PHOTO_DIR)) {
+    fs.mkdirSync(LODGING_PHOTO_DIR, { recursive: true });
+  }
+} catch (error: unknown) {
+  const errMsg = error instanceof Error ? error.message : String(error);
+  logger.warn({
+    operation: 'upload_lodging_photo_dir_creation_failed',
+    message: `Could not create lodging photo directory: ${LODGING_PHOTO_DIR}`,
+    context: { directory: LODGING_PHOTO_DIR, error: errMsg },
+  });
+}
+
+const lodgingPhotoStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, LODGING_PHOTO_DIR);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+    const ext = path.extname(file.originalname).toLowerCase();
+    const basename = path.basename(file.originalname, ext);
+    const sanitized = basename.replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 40);
+    cb(null, `${uniqueSuffix}-${sanitized}${ext}`);
+  },
+});
+
+export const uploadLodgingPhotos = multer({
+  storage: lodgingPhotoStorage,
+  fileFilter: tripPhotoFilter,
+  limits: {
+    fileSize: FILE_LIMITS.TRIP_PHOTO_MAX_SIZE,
+    files: FILE_LIMITS.TRIP_PHOTO_MAX_COUNT,
+  },
+});
+
+export function getLodgingPhotoDir(): string {
+  return LODGING_PHOTO_DIR;
+}
+
+export function deleteLodgingPhotoFile(filename: string): void {
+  const filePath = path.join(LODGING_PHOTO_DIR, path.basename(filename));
+  if (fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath);
+    } catch (error) {
+      logger.warn({
+        operation: 'upload_lodging_photo_delete_error',
+        message: `Failed to delete lodging photo file: ${filename}`,
+        context: { filename, error: error instanceof Error ? error.message : 'Unknown error' },
+      });
+    }
+  }
+}
+
 // =============== Profile pictures (issue #186) ===============
 
 const PROFILE_PICTURE_DIR = path.join(__dirname, '../../uploads/profile-pictures');

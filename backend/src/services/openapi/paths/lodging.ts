@@ -289,3 +289,82 @@ registry.registerPath({
     429: { description: "Too many requests", content: errorContent },
   },
 });
+
+// ------------------------------------------------------------- photographs
+
+/**
+ * Photographs of a HOUSE, not of a stay.
+ *
+ * A photo of the building, the lobby or the view is a fact about the place and
+ * survives every visit to it; a stay-level photo would be re-uploaded on every
+ * return. Ownership is read off the LODGING — a photo id alone reaches nothing.
+ */
+const uuid = z.string().uuid();
+const notFound = { description: "Not found", content: errorContent };
+const badInput = { description: "Invalid input", content: errorContent };
+const deleted = { description: "Deleted" };
+
+const lodgingPhotoTag = ["Lodging"];
+
+registry.registerPath({
+  method: "get",
+  path: "/lodging/{lodgingId}/photos",
+  summary: "Photographs of a lodging",
+  tags: lodgingPhotoTag,
+  request: { params: z.object({ lodgingId: uuid }) },
+  responses: { 200: { description: "Photos, in the user's order" }, 404: notFound },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/lodging/{lodgingId}/photos",
+  summary: "Add photographs to a lodging",
+  description:
+    "multipart/form-data, field `photos`, up to 20 files. A rejected upload " +
+    "removes the bytes it had already written — otherwise the directory grows " +
+    "by every failed attempt.",
+  tags: lodgingPhotoTag,
+  request: { params: z.object({ lodgingId: uuid }) },
+  responses: {
+    201: { description: "Added" },
+    400: { description: "No photos, or a file the filter refused", content: errorContent },
+    404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/lodging/{lodgingId}/photos/{photoId}/file",
+  summary: "Fetch a lodging photo's bytes",
+  description:
+    "Sets its own `Cache-Control: private`, overriding the API-wide `no-store`. " +
+    "Private and never public: a shared cache must not hold one user's photo.",
+  tags: lodgingPhotoTag,
+  request: { params: z.object({ lodgingId: uuid, photoId: uuid }) },
+  responses: {
+    200: { description: "Image bytes", content: { "image/*": { schema: z.string() } } },
+    404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/lodging/{lodgingId}/photos/{photoId}",
+  summary: "Caption or reorder a lodging photo",
+  tags: lodgingPhotoTag,
+  request: { params: z.object({ lodgingId: uuid, photoId: uuid }) },
+  responses: { 200: { description: "Updated" }, 400: badInput, 404: notFound },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/lodging/{lodgingId}/photos/{photoId}",
+  summary: "Delete a lodging photo",
+  description:
+    "The row goes first and the bytes second. The other order can delete the " +
+    "file and then fail the row, leaving a photo the client still lists and can " +
+    "never show.",
+  tags: lodgingPhotoTag,
+  request: { params: z.object({ lodgingId: uuid, photoId: uuid }) },
+  responses: { 204: deleted, 404: notFound },
+});

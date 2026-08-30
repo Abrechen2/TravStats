@@ -6,6 +6,7 @@ import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import { LodgingMiniMap } from "../components/lodging/LodgingMiniMap";
 import { LodgingStayCard } from "../components/lodging/LodgingStayCard";
 import { StarRating } from "../components/lodging/StarRating";
+import { LodgingPhotoSection } from "../components/lodging/LodgingPhotoSection";
 import { StayEditor } from "../components/lodging/StayEditor";
 import { ChainNameLink } from "../components/lodging/ChainNameLink";
 import { useTranslation } from "../hooks/useTranslation";
@@ -267,6 +268,8 @@ export default function LodgingDetailPage(): JSX.Element {
             ))}
           </div>
         )}
+
+        {id && <LodgingPhotoSection lodgingId={id} />}
 
         {/* The notes, under the same name the form gives them.
             They were stored and never shown, so anything typed there

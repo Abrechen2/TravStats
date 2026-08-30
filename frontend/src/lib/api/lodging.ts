@@ -169,3 +169,63 @@ export const getLodgingStats = async (): Promise<LodgingStats> => {
   const { data } = await api.get<Envelope<LodgingStats>>("/stats/lodging");
   return data.data;
 };
+
+// ------------------------------------------------------------- photographs
+
+/** A photograph of the HOUSE — see backend `routes/lodging/photos.ts`. */
+export interface LodgingPhoto {
+  id: string;
+  url: string;
+  caption: string | null;
+  sortIdx: number;
+  mimetype: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+export async function listLodgingPhotos(lodgingId: string): Promise<LodgingPhoto[]> {
+  const res = await api.get<Envelope<LodgingPhoto[]>>(`/lodging/${lodgingId}/photos`);
+  return res.data.data;
+}
+
+/**
+ * Upload one or more photographs.
+ *
+ * The `Content-Type` override is REQUIRED, and this file first shipped without
+ * it on the strength of a comment I wrote claiming the opposite. The shared
+ * axios instance sets `application/json` for EVERY request; leaving it alone
+ * sends a multipart body under a JSON header, multer parses no files, and the
+ * route answers "No photos uploaded" — a 400 that reads like a server bug and
+ * is entirely a client one. Naming `multipart/form-data` lets axios recognise
+ * the FormData and fill in the boundary itself.
+ *
+ * The visit and trip uploaders carry the same line with the same note. Three
+ * call sites, one trap, and it is only ever found by driving a browser.
+ */
+export async function uploadLodgingPhotos(
+  lodgingId: string,
+  files: readonly File[]
+): Promise<LodgingPhoto[]> {
+  const form = new FormData();
+  for (const file of files) form.append("photos", file);
+  const res = await api.post<Envelope<LodgingPhoto[]>>(`/lodging/${lodgingId}/photos`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data.data;
+}
+
+export async function updateLodgingPhoto(
+  lodgingId: string,
+  photoId: string,
+  input: { caption?: string | null; sortIdx?: number }
+): Promise<LodgingPhoto> {
+  const res = await api.patch<Envelope<LodgingPhoto>>(
+    `/lodging/${lodgingId}/photos/${photoId}`,
+    input
+  );
+  return res.data.data;
+}
+
+export async function deleteLodgingPhoto(lodgingId: string, photoId: string): Promise<void> {
+  await api.delete(`/lodging/${lodgingId}/photos/${photoId}`);
+}
