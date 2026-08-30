@@ -247,9 +247,27 @@ export class RegexTextParser implements ITextParser {
     for (const pattern of flightPatterns) {
       flightMatch = source.match(pattern);
       if (flightMatch) {
-        // Validate it's not a false positive (e.g., "AM18" from "am 18")
-        const potentialFlight = (flightMatch[1] + (flightMatch[2] || '')).replace(/\s+/g, '');
-        if (!FLIGHT_NUMBER_FALSE_PREFIXES.includes(potentialFlight.slice(0, 2))) {
+        // Validate it's not a false positive (e.g., "AM18" from "am 18").
+        //
+        // Uppercased BEFORE the check, and that is the whole fix: the patterns
+        // above carry /i and run over `source` in its original case, so an
+        // advertisement's "ab 380 EUR" arrives here as "ab380".
+        // FLIGHT_NUMBER_FALSE_PREFIXES lists "AB" — and "ab" is not "AB", so the
+        // guard that was written for exactly this case never fired. Six of the
+        // eight archived Emirates promotions became a flight this way (Forgejo
+        // #35), and the evidence rule cannot catch them: a flight number is
+        // precisely what the advertising manufactures.
+        //
+        // The multi-flight path above rejects a lowercase candidate outright via
+        // its /^[A-Z]{2,3}\d{2,4}$/ test, which is why only this branch leaked.
+        const potentialFlight = (flightMatch[1] + (flightMatch[2] || ''))
+          .replace(/\s+/g, '')
+          .toUpperCase();
+        // The WHOLE alphabetic prefix, not the first two characters: an airline
+        // code may be two or three letters, and slicing at two let "Nur 7 Tage
+        // gültig" through as NUR7 because the guard only ever saw "NU".
+        const prefix = /^[A-Z]+/.exec(potentialFlight)?.[0] ?? '';
+        if (!FLIGHT_NUMBER_FALSE_PREFIXES.includes(prefix)) {
           data.flightNumber = potentialFlight;
           data.airline = potentialFlight.slice(0, 2);
           break;
