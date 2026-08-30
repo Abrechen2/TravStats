@@ -96,6 +96,9 @@ export interface TrackMetaRow {
   endedAt: Date;
   pointCount: number;
   distanceKm: number;
+  /** See `TripRouteTrack.truncated`'s doc comment in schema.prisma. Always
+   *  `false` for `source: "gpx"`. */
+  truncated: boolean;
   createdAt: Date;
 }
 
@@ -118,6 +121,7 @@ const TRACK_META_SELECT = {
   endedAt: true,
   pointCount: true,
   distanceKm: true,
+  truncated: true,
   createdAt: true,
 } as const;
 
@@ -131,6 +135,7 @@ function toTrackMetaDto(track: TrackMetaRow): Record<string, unknown> {
     endedAt: track.endedAt,
     pointCount: track.pointCount,
     distanceKm: track.distanceKm,
+    truncated: track.truncated,
     createdAt: track.createdAt,
   };
 }
@@ -202,6 +207,10 @@ router.post(
           geometry: ingested.geometry as unknown as Prisma.InputJsonValue,
           pointCount: ingested.pointCount,
           distanceKm: ingested.distanceKm,
+          // The GPX path refuses an oversized file outright (see
+          // `handleGpxUpload` above) rather than ever storing a shortened
+          // one — always false here, unlike the Dawarich pull below.
+          truncated: false,
         },
       });
 
@@ -240,13 +249,20 @@ router.post(
  *  - The connection is configured but Dawarich itself failed (unreachable,
  *    rejected the key, …) -> 409, `{error: <DawarichErrorKind>}` — the
  *    FIXED vocabulary `errors.ts` defines, which the frontend parses.
- *  - The connection worked but the window has no points -> 409 with a
- *    plain message (`EmptyDawarichWindowError`), no `kind` — this is not
- *    an upstream failure, so it does not belong to that vocabulary.
+ *  - The connection worked but the window has no points, or too few to form
+ *    a track -> 409 with a plain message (`EmptyDawarichWindowError`), no
+ *    `kind` — this is not an upstream failure, so it does not belong to
+ *    that vocabulary.
  * All three are 409 ("the request is fine, this instance/window cannot
  * answer it right now"), never 502 — unlike the Immich album routes, which
  * use 502 for an upstream failure; a single-shot import like this one has
  * no "degraded panel" to fall back to, so 409 covers every case uniformly.
+ *
+ * A FOURTH, non-failure outcome: the pull can succeed but be TRUNCATED
+ * (`dawarichClient.ts`'s `MAX_PAGES` cap) — the stored track then has
+ * `truncated: true` in its response and its listed row, rather than only a
+ * log line, so a partial window is never presented with a complete one's
+ * confidence.
  */
 router.post(
   "/trips/:id/routes/:routeId/tracks/dawarich",
@@ -289,11 +305,12 @@ router.post(
       const client = createDawarichClient(connection);
 
       let ingested;
+      let truncated: boolean;
       try {
-        ingested = await pullDawarichWindow(client, {
+        ({ ingested, truncated } = await pullDawarichWindow(client, {
           startAt: window.startAt,
           endAt: window.endAt,
-        });
+        }));
       } catch (error) {
         if (error instanceof DawarichError) {
           res.status(409).json({ error: error.kind, message: error.message });
@@ -316,6 +333,11 @@ router.post(
           geometry: ingested.geometry as unknown as Prisma.InputJsonValue,
           pointCount: ingested.pointCount,
           distanceKm: ingested.distanceKm,
+          // Reaches the stored row (and from there the API response and
+          // `TourTrackList`) rather than only the log line
+          // `dawarichClient.ts` already writes — a partial pull must not be
+          // presented with the same confidence as a complete one.
+          truncated,
         },
       });
 
@@ -325,6 +347,7 @@ router.post(
         routeId,
         source,
         pointCount: track.pointCount,
+        truncated,
       });
       res.status(201).json({ track: toTrackDto(track) });
     } catch (error) {
@@ -381,7 +404,22 @@ router.get(
   },
 );
 
-/** DELETE /trips/:id/routes/:routeId/tracks/:trackId */
+/**
+ * DELETE /trips/:id/routes/:routeId/tracks/:trackId
+ *
+ * Deliberately does NOT touch any leg that previously adopted a segment of
+ * this track. `TripRouteLeg` has no `trackId` column — adoption
+ * (`routes/trips/tourLegs.ts`, the `track` source) COPIES the cut geometry
+ * (`waypoints`) and the measured `distanceKm` onto the leg at adoption
+ * time; it never stores a reference back to this row. So after this delete,
+ * an adopted leg keeps its `source: "track"`, its valid waypoints, and its
+ * real measured distance — it is not orphaned, because it was never wired
+ * to this row in the first place. What IS lost is falsifiability: nothing
+ * can any longer say WHICH recording that geometry came from, or that the
+ * recording is gone. This is intentional, not an oversight left by a
+ * missing cascade — recorded here so the next reader does not "fix" it by
+ * adding one, which would silently blank out working, still-accurate legs.
+ */
 router.delete(
   "/trips/:id/routes/:routeId/tracks/:trackId",
   authenticate,

@@ -6,10 +6,21 @@
  */
 import { z } from "zod";
 
+/**
+ * The settings card always SENDS `baseUrl` (it never omits the field), so an
+ * empty string is the only way the UI can express "clear the stored URL".
+ * Coerce it to an explicit `null` — the schema's own clear signal — instead
+ * of letting `.min(1)` reject it with a 400 that makes clearing impossible.
+ */
+const clearableBaseUrlField = z.preprocess(
+  (value) => (value === "" ? null : value),
+  z.string().min(1).max(500).nullable().optional(),
+);
+
 /** Partial update — an omitted field is untouched, an explicit null clears it. */
 export const dawarichConnectionSchema = z
   .object({
-    baseUrl: z.string().min(1).max(500).nullable().optional(),
+    baseUrl: clearableBaseUrlField,
     apiKey: z.string().min(1).max(500).nullable().optional(),
   })
   .strict();

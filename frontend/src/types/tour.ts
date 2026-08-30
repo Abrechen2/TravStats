@@ -131,6 +131,11 @@ export interface TourTrackMeta {
   endedAt: string;
   pointCount: number;
   distanceKm: number;
+  /** True when a Dawarich pull was cut short by the server's page cap — the
+   *  stored track covers only the newest slice of the requested window, so
+   *  `distanceKm` is a PARTIAL measurement. Always `false` for `source:
+   *  "gpx"`, which refuses an oversized file outright instead. */
+  truncated: boolean;
   createdAt: string;
 }
 

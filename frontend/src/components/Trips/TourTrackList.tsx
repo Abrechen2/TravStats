@@ -133,6 +133,14 @@ export default function TourTrackList({
               <span className="rounded-sm bg-(--bg-surface) px-1.5 py-0.5 text-xs">
                 {t(`trips:tours.tracks.source.${track.source}`)}
               </span>
+              {track.truncated && (
+                <span
+                  className="rounded-sm bg-amber-900/40 px-1.5 py-0.5 text-xs text-amber-400"
+                  title={t("trips:tours.tracks.truncatedReason")}
+                >
+                  {t("trips:tours.tracks.truncated")}
+                </span>
+              )}
               <span className="text-(--text-muted)">
                 {t("trips:tours.tracks.pointCount", { count: track.pointCount })}
               </span>

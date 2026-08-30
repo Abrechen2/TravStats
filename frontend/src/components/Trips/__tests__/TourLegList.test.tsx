@@ -38,6 +38,7 @@ interface RenderOverrides {
   onSetSource?: (leg: TourLeg, source: "straight" | "drawn") => void;
   onRoute?: (leg: TourLeg) => void;
   trackCoverageByLegId?: ReadonlyMap<string, string>;
+  tracksKnown?: boolean;
   onAdoptTrack?: (leg: TourLeg, trackId: string) => void;
   onClear?: (leg: TourLeg) => void;
   onRouteAll?: () => void;
@@ -50,6 +51,10 @@ function renderList(legs: TourLeg[], overrides: RenderOverrides = {}) {
     onSetSource: vi.fn(),
     onRoute: vi.fn(),
     trackCoverageByLegId: NO_TRACK_COVERAGE,
+    // Most tests below assert the "no track covers this leg" hint directly,
+    // so the default matches "the track list finished loading successfully"
+    // — the one state in which that hint is actually true.
+    tracksKnown: true,
     onAdoptTrack: vi.fn(),
     onClear: vi.fn(),
     onRouteAll: vi.fn(),
@@ -200,6 +205,7 @@ describe("TourLegList", () => {
         onSetSource={vi.fn()}
         onRoute={vi.fn()}
         trackCoverageByLegId={NO_TRACK_COVERAGE}
+        tracksKnown={true}
         onAdoptTrack={vi.fn()}
         onClear={vi.fn()}
         onRouteAll={vi.fn()}
@@ -222,6 +228,7 @@ describe("TourLegList", () => {
         onSetSource={vi.fn()}
         onRoute={vi.fn()}
         trackCoverageByLegId={NO_TRACK_COVERAGE}
+        tracksKnown={true}
         onAdoptTrack={vi.fn()}
         onClear={vi.fn()}
         onRouteAll={vi.fn()}
@@ -284,5 +291,42 @@ describe("TourLegList", () => {
     expect(
       screen.getByRole("button", { name: "trips:tours.routing.routeAll" })
     ).toBeEnabled();
+  });
+
+  // LOW-2 (final whole-phase review, 2026-08-29): `useTourTracks`'s own doc
+  // comment warns that an absent `trackCoverageByLegId` entry means "not
+  // fetched yet, or the fetch failed" — never "confirmed to cover nothing".
+  // Before this fix, the row rendered the definitive "no track covers this
+  // leg" hint in exactly those unknown states too.
+  it("does not claim 'no track covers this leg' while the track list is still loading or failed", () => {
+    const leg = makeLeg({ waypoints: null, mode: "road" });
+    renderList([leg], { tracksKnown: false });
+
+    expect(screen.queryByText("trips:tours.tracks.noCoverageReason")).not.toBeInTheDocument();
+  });
+
+  it("still claims 'no track covers this leg' once the track list is known and genuinely has no match", () => {
+    const leg = makeLeg({ waypoints: null, mode: "road" });
+    renderList([leg], { tracksKnown: true });
+
+    expect(screen.getByText("trips:tours.tracks.noCoverageReason")).toBeInTheDocument();
+  });
+
+  // Same finding, second half: after an adopted track is deleted, the leg
+  // keeps `source: "track"` (adoption COPIES the geometry, see the DELETE
+  // handler's doc comment) but no longer has a covering track id — the row
+  // must not show "aus der Spur" selected right next to "no track covers
+  // this leg", which contradicts it on the same line.
+  it("does not show the no-coverage hint for a leg already adopted from a track, even with no current coverage match", () => {
+    const leg = makeLeg({
+      source: "track",
+      waypoints: [
+        [8.0, 58.15],
+        [5.32, 60.39],
+      ],
+    });
+    renderList([leg], { tracksKnown: true, trackCoverageByLegId: NO_TRACK_COVERAGE });
+
+    expect(screen.queryByText("trips:tours.tracks.noCoverageReason")).not.toBeInTheDocument();
   });
 });

@@ -41,6 +41,7 @@ const TRACK_A = {
   endedAt: "2026-06-01T16:00:00.000Z",
   pointCount: 500,
   distanceKm: 120,
+  truncated: false,
   createdAt: "2026-06-02T00:00:00.000Z",
 };
 

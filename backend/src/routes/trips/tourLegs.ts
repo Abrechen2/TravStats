@@ -162,7 +162,7 @@ router.put(
           haversineKm(tail, toCoord) > ANCHOR_TOLERANCE_KM
         ) {
           throw new AppError(
-            "The line must start and end at the leg's stops (anchor tolerance 1 km)",
+            `The line must start and end at the leg's stops (anchor tolerance ${ANCHOR_TOLERANCE_KM} km)`,
             400,
           );
         }

@@ -206,4 +206,82 @@ describe("DawarichConnectionCard", () => {
     expect(screen.getByLabelText("T:trips:tours.dawarichSettings.baseUrl")).toBeInTheDocument();
     expect(screen.getByLabelText("T:trips:tours.dawarichSettings.apiKey")).toBeInTheDocument();
   });
+
+  // MEDIUM-3 (final whole-phase review, 2026-08-29): before this fix, EVERY
+  // failure on this card — including ones that never contact Dawarich at
+  // all — collapsed onto "Dawarich is unreachable". These four pin the
+  // fixed behaviour: our own API failing is reported as OUR failure, and a
+  // save failure that DOES carry a machine-readable kind (a mistyped base
+  // URL, `invalidUrl`) is reported as that specific kind rather than prose.
+  it("reports the INITIAL LOAD failing as our own API, not as Dawarich being unreachable", async () => {
+    getSettings.mockRejectedValue(new Error("session expired"));
+    render(<DawarichConnectionCard />);
+
+    await waitFor(() =>
+      expect(screen.getByText("trips:tours.dawarichSettings.loadError")).toBeInTheDocument()
+    );
+    expect(
+      screen.queryByText("trips:tours.tracks.dawarich.errors.unreachable")
+    ).not.toBeInTheDocument();
+  });
+
+  it("preserves the invalidUrl kind on a save failure instead of labelling it unreachable", async () => {
+    const user = userEvent.setup();
+    updateSettings.mockRejectedValue({
+      response: { data: { error: "invalidUrl" } },
+    });
+    render(<DawarichConnectionCard />);
+    await waitFor(() => expect(getSettings).toHaveBeenCalled());
+
+    await user.click(screen.getByRole("button", { name: "trips:tours.dawarichSettings.save" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("trips:tours.tracks.dawarich.errors.invalidUrl")).toBeInTheDocument()
+    );
+    expect(
+      screen.queryByText("trips:tours.tracks.dawarich.errors.unreachable")
+    ).not.toBeInTheDocument();
+  });
+
+  it("falls back to a save-specific generic message when the save failure carries no kind", async () => {
+    const user = userEvent.setup();
+    updateSettings.mockRejectedValue(new Error("network drop"));
+    render(<DawarichConnectionCard />);
+    await waitFor(() => expect(getSettings).toHaveBeenCalled());
+
+    await user.click(screen.getByRole("button", { name: "trips:tours.dawarichSettings.save" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("trips:tours.dawarichSettings.saveError")).toBeInTheDocument()
+    );
+  });
+
+  it("surfaces a clear-key failure instead of swallowing it", async () => {
+    const user = userEvent.setup();
+    updateSettings.mockRejectedValue(new Error("network drop"));
+    render(<DawarichConnectionCard />);
+    await waitFor(() => expect(getSettings).toHaveBeenCalled());
+
+    await user.click(
+      screen.getByRole("button", { name: "trips:tours.dawarichSettings.clearKey" })
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("trips:tours.dawarichSettings.saveError")).toBeInTheDocument()
+    );
+  });
+
+  it("sends an empty baseUrl on save when the field was cleared (the only way to clear the stored URL)", async () => {
+    const user = userEvent.setup();
+    render(<DawarichConnectionCard />);
+    await waitFor(() => expect(getSettings).toHaveBeenCalled());
+
+    const input = screen.getByLabelText("trips:tours.dawarichSettings.baseUrl");
+    await user.clear(input);
+    await user.click(screen.getByRole("button", { name: "trips:tours.dawarichSettings.save" }));
+
+    await waitFor(() =>
+      expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ baseUrl: "" }))
+    );
+  });
 });

@@ -34,6 +34,22 @@ export interface DawarichTestResult {
  * `ImmichFailureKind` by design — same taxonomy, same reason (`invalidUrl`
  * is the user's own typo, `protocol` means Dawarich answered but was not
  * what we expect).
+ *
+ * `DAWARICH_FAILURE_KINDS` is the canonical runtime list — the `as const` +
+ * derived-type convention every vocabulary in `types/tour.ts` follows.
+ * `lib/api/dawarich.ts` imports it rather than re-declaring the list, and
+ * `i18n/__tests__/tripsTourKeys.test.ts` binds it to the i18n
+ * `tours.tracks.dawarich.errors.*` keys the same way it binds `LEG_MODES`
+ * and `LEG_SOURCES` — a kind added here without its i18n label now fails a
+ * test instead of rendering a raw key at the user.
  */
-export type DawarichFailureKind =
-  "notConfigured" | "unreachable" | "auth" | "notFound" | "protocol" | "invalidUrl";
+export const DAWARICH_FAILURE_KINDS = [
+  "notConfigured",
+  "unreachable",
+  "auth",
+  "notFound",
+  "protocol",
+  "invalidUrl",
+] as const;
+
+export type DawarichFailureKind = (typeof DAWARICH_FAILURE_KINDS)[number];

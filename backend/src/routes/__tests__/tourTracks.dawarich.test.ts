@@ -234,6 +234,55 @@ describe("Tour tracks — pull a Dawarich window", () => {
     expect(after).toBe(before);
   });
 
+  // MEDIUM-2 (final whole-phase review, 2026-08-29): before this fix, hitting
+  // the client's hard page cap (`MAX_PAGES=50`) only logged a warning — the
+  // stored track and its 201 response looked byte-identical to a complete
+  // pull. `truncated` must now reach the stored row and the response.
+  it("stores truncated=true and returns it in the response when the pull hits the hard page cap", async () => {
+    await seedUserConnection();
+    const fullPage = (offset: number) =>
+      Array.from({ length: 1000 }, (_, i) => rawPoint(offset + i, 60.4, 5.33, T_MID));
+    for (let page = 1; page <= 50; page += 1) {
+      (global.fetch as jest.Mock).mockResolvedValueOnce(fakeOkResponse(fullPage(page * 1000)));
+    }
+
+    const res = await pull();
+
+    expect(res.status).toBe(201);
+    expect(res.body.track.truncated).toBe(true);
+
+    const stored = await prisma.tripRouteTrack.findUnique({ where: { id: res.body.track.id } });
+    expect(stored?.truncated).toBe(true);
+  });
+
+  it("stores truncated=false for a normal (non-capped) pull", async () => {
+    await seedUserConnection();
+    (global.fetch as jest.Mock).mockResolvedValueOnce(fakeOkResponse(NEWEST_FIRST_POINTS));
+
+    const res = await pull();
+
+    expect(res.status).toBe(201);
+    expect(res.body.track.truncated).toBe(false);
+  });
+
+  // LOW-1 (final whole-phase review): the minimum point count used to live
+  // only in `parseGpx`, so a Dawarich window with exactly one point stored a
+  // one-coordinate "track" (pointCount: 1, distanceKm: 0) instead of being
+  // refused the way an equivalent GPX file already is.
+  it("refuses a window with exactly one point instead of storing a one-point track", async () => {
+    await seedUserConnection();
+    (global.fetch as jest.Mock).mockResolvedValueOnce(
+      fakeOkResponse([rawPoint(1, 60.39, 5.32, T_OLD)]),
+    );
+
+    const before = await prisma.tripRouteTrack.count({ where: { routeId } });
+    const res = await pull();
+    const after = await prisma.tripRouteTrack.count({ where: { routeId } });
+
+    expect(res.status).toBe(409);
+    expect(after).toBe(before);
+  });
+
   it("an empty window (fetch succeeds, no points) → 409 with a message, not a zero-point track", async () => {
     await seedUserConnection();
     (global.fetch as jest.Mock).mockResolvedValueOnce(fakeOkResponse([]));

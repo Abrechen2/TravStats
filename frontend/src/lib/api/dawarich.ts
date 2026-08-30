@@ -1,22 +1,16 @@
 import { api } from "./client";
-import type {
-  DawarichConnectionStatus,
-  DawarichFailureKind,
-  DawarichTestResult,
+import {
+  DAWARICH_FAILURE_KINDS,
+  type DawarichConnectionStatus,
+  type DawarichFailureKind,
+  type DawarichTestResult,
 } from "../../types/dawarich";
-
-const FAILURE_KINDS: readonly DawarichFailureKind[] = [
-  "notConfigured",
-  "unreachable",
-  "auth",
-  "notFound",
-  "protocol",
-  "invalidUrl",
-];
 
 /** Narrow an arbitrary value to one of the fixed Dawarich failure kinds. */
 export function isDawarichFailureKind(value: unknown): value is DawarichFailureKind {
-  return typeof value === "string" && (FAILURE_KINDS as readonly string[]).includes(value);
+  return (
+    typeof value === "string" && (DAWARICH_FAILURE_KINDS as readonly string[]).includes(value)
+  );
 }
 
 /**

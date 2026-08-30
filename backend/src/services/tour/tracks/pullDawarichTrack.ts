@@ -79,17 +79,28 @@ function toParsedTrack(points: DawarichPoint[]): ParsedTrack {
   };
 }
 
+/** `pullDawarichWindow`'s result: the ingested track plus whether the pull
+ * was cut short by `dawarichClient.ts`'s `MAX_PAGES` cap. `truncated` must
+ * reach the caller (the route, and from there the stored row and the API
+ * response) — it is never enough to only log it, because a track's
+ * `distanceKm` looks identical whether it is complete or clipped. */
+export interface PulledDawarichTrack {
+  ingested: IngestedTrack;
+  truncated: boolean;
+}
+
 /**
  * Fetch `window` from `client` and run it through the SAME ingestion the
  * GPX upload uses (`ingestTrack`, task 3) — no second simplification, no
  * second distance measurement. Throws `EmptyDawarichWindowError` when the
- * window has no points; the caller (the route) turns that into a 409.
+ * window has no points, or too few to form a track; the caller (the route)
+ * turns that into a 409.
  */
 export async function pullDawarichWindow(
   client: DawarichClient,
   window: DawarichPointsWindow,
-): Promise<IngestedTrack> {
-  const points = await client.getPoints(window);
+): Promise<PulledDawarichTrack> {
+  const { points, truncated } = await client.getPoints(window);
   if (points.length === 0) {
     throw new EmptyDawarichWindowError(
       "No location data was found in the requested time window",
@@ -99,12 +110,13 @@ export async function pullDawarichWindow(
   const parsed = toParsedTrack(points);
   const ingested = ingestTrack(parsed);
   if (!ingested) {
-    // Unreachable in practice: `parsed.startedAt`/`endedAt` are always set
-    // above (from real points), and `ingestTrack` only returns `null` when
-    // one of those is `null`. Guarded anyway rather than a non-null
-    // assertion, matching this codebase's other defensive backstops
-    // (e.g. `requireLegMode` in `routes/trips/tourRouting.ts`).
-    throw new EmptyDawarichWindowError("Pulled points could not be placed in time");
+    // Reachable: `parsed.startedAt`/`endedAt` are always set above (from
+    // real points), so a `null` here means `ingestTrack`'s shared
+    // minimum-points rule rejected a window with exactly one point — the
+    // one case genuinely distinct from "no points at all" above.
+    throw new EmptyDawarichWindowError(
+      "The requested time window has too few location points to form a track",
+    );
   }
-  return ingested;
+  return { ingested, truncated };
 }

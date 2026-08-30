@@ -42,7 +42,12 @@ export default function DawarichConnectionCard(): JSX.Element {
         const next = await dawarichApi.getSettings();
         if (!cancelled) apply(next);
       } catch {
-        if (!cancelled) setError(t("trips:tours.tracks.dawarich.errors.unreachable"));
+        // This GET hits OUR OWN API (`/settings/dawarich`), not Dawarich —
+        // a session hiccup or a 500 here has nothing to do with the
+        // Dawarich server, so it must not be reported as "Dawarich is
+        // unreachable" (that message belongs to the `errors.*` vocabulary
+        // used for calls that actually talk to Dawarich).
+        if (!cancelled) setError(t("trips:tours.dawarichSettings.loadError"));
       }
     })();
     return () => {
@@ -54,14 +59,22 @@ export default function DawarichConnectionCard(): JSX.Element {
     setSaving(true);
     setError(null);
     try {
-      // An untouched key field must not overwrite the stored key.
+      // An untouched key field must not overwrite the stored key. An empty
+      // baseUrl is sent on purpose — the backend treats "" as "clear the
+      // stored URL" — this is the only way the UI can express that.
       const payload: { baseUrl: string; apiKey?: string } = { baseUrl };
       if (apiKey.trim() !== "") payload.apiKey = apiKey.trim();
 
       apply(await dawarichApi.updateSettings(payload));
       setApiKey("");
-    } catch {
-      setError(t("trips:tours.tracks.dawarich.errors.unreachable"));
+    } catch (err) {
+      // Preserve a machine-readable kind when the backend sent one (a
+      // mistyped base URL comes back as `invalidUrl`) instead of always
+      // reporting "Dawarich is unreachable" — this request never even
+      // contacts Dawarich, so that label was actively wrong for the most
+      // common failure (a typo).
+      const kind = dawarichFailureKind(err);
+      setError(t(kind ? dawarichFailureKey(kind) : "trips:tours.dawarichSettings.saveError"));
     } finally {
       setSaving(false);
     }
@@ -69,9 +82,13 @@ export default function DawarichConnectionCard(): JSX.Element {
 
   const handleClearKey = async (): Promise<void> => {
     setSaving(true);
+    setError(null);
     try {
       apply(await dawarichApi.updateSettings({ apiKey: null }));
       setApiKey("");
+    } catch (err) {
+      const kind = dawarichFailureKind(err);
+      setError(t(kind ? dawarichFailureKey(kind) : "trips:tours.dawarichSettings.saveError"));
     } finally {
       setSaving(false);
     }

@@ -1126,6 +1126,14 @@ model TripRouteTrack {
   geometry   Json
   pointCount Int      @map("point_count")
   distanceKm Float    @map("distance_km")
+  /// True when a Dawarich pull hit `MAX_PAGES` (dawarichClient.ts) and the
+  /// stored points are therefore a PARTIAL window, not the full requested
+  /// span — the newest points only, per Dawarich's measured ordering. Always
+  /// false for `source = "gpx"`, which refuses an oversized file outright
+  /// instead of storing a silently-shortened one. Surfaced in the API
+  /// response and in `TourTrackList` so a partial track's distance is never
+  /// presented with the same confidence as a complete one.
+  truncated  Boolean  @default(false)
   createdAt  DateTime @default(now()) @map("created_at")
 
   route TripRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)

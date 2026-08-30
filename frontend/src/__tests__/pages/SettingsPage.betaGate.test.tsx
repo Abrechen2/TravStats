@@ -14,6 +14,15 @@ vi.mock("../../components/NavigationBar", () => ({
 vi.mock("../../components/Settings/DevicesSection", () => ({
   default: () => <div data-testid="devices-section" />,
 }));
+// MEDIUM-1 (final whole-phase review, 2026-08-29): stubbed the same way
+// DevicesSection is above — its own fetches on mount are irrelevant to
+// whether the beta gate mounts it at all.
+vi.mock("../../components/Settings/DawarichConnectionCard", () => ({
+  default: () => <div data-testid="dawarich-connection-card" />,
+}));
+vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
+  default: () => <div data-testid="immich-connection-card" />,
+}));
 
 // The page's data hook fires API requests on mount. Everything it returns is
 // only consumed by sections we never render in these cases.
@@ -122,5 +131,37 @@ describe("SettingsPage — beta gate: devicePairing", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
     renderSettings("/settings");
     expect(screen.queryByTestId("devices-section")).toBeNull();
+  });
+});
+
+/**
+ * MEDIUM-1 (final whole-phase review, 2026-08-29): `DawarichConnectionCard`
+ * used to render unconditionally on `externalServices` — with the beta flag
+ * OFF (production's setting), every user saw a connection card for a feature
+ * invisible everywhere else (the Touren tab, the route editor). Gated the
+ * same way those two are, via `isFeatureVisible("tourRoutes")`.
+ * `ImmichConnectionCard` is the control: it has NO such gate and must keep
+ * rendering regardless of the flag.
+ */
+describe("SettingsPage — beta gate: tourRoutes (Dawarich connection card)", () => {
+  beforeEach(() => {
+    useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomains: ["flight"] });
+  });
+
+  it("does not render the Dawarich card on externalServices when the flag is OFF", () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: false });
+    renderSettings("/settings?section=externalServices");
+
+    expect(screen.queryByTestId("dawarich-connection-card")).toBeNull();
+    // The control: Immich has no such gate and must still render.
+    expect(screen.getByTestId("immich-connection-card")).toBeTruthy();
+  });
+
+  it("renders the Dawarich card on externalServices when the flag is ON", () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: true });
+    renderSettings("/settings?section=externalServices");
+
+    expect(screen.getByTestId("dawarich-connection-card")).toBeTruthy();
+    expect(screen.getByTestId("immich-connection-card")).toBeTruthy();
   });
 });

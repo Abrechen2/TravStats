@@ -18,6 +18,7 @@ function makeTrack(overrides: Partial<TourTrackMeta> = {}): TourTrackMeta {
     endedAt: "2026-06-01T16:00:00.000Z",
     pointCount: 1200,
     distanceKm: 340.4,
+    truncated: false,
     createdAt: "2026-06-02T00:00:00.000Z",
     ...overrides,
   };
@@ -131,5 +132,18 @@ describe("TourTrackList", () => {
     renderList({ dawarichAvailable: true, pulling: true });
     const button = screen.getByText("trips:tours.tracks.dawarich.pulling");
     expect(button).toBeDisabled();
+  });
+
+  // MEDIUM-2 (final whole-phase review, 2026-08-29): a Dawarich pull cut
+  // short by the server's hard page cap must be visibly marked incomplete —
+  // its distance is a partial measurement, not the full one it looks like.
+  it("shows a truncated badge for a track whose pull was cut short", () => {
+    renderList({ tracks: [makeTrack({ truncated: true })] });
+    expect(screen.getByText("trips:tours.tracks.truncated")).toBeInTheDocument();
+  });
+
+  it("shows no truncated badge for a complete track", () => {
+    renderList({ tracks: [makeTrack({ truncated: false })] });
+    expect(screen.queryByText("trips:tours.tracks.truncated")).not.toBeInTheDocument();
   });
 });

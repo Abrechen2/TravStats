@@ -594,7 +594,10 @@ export default function SettingsPage(): JSX.Element {
                 {/* Admin-only; the card itself renders null for non-admins. */}
                 <RoutingProviderSection isAdmin={user?.isAdmin ?? false} />
                 <ImmichConnectionCard />
-                <DawarichConnectionCard />
+                {/* Gated the same way the Touren tab and the route editor are
+                    (`tourRoutes`) — a Dawarich connection card is meaningless
+                    on an instance where nothing consumes it. */}
+                {isFeatureVisible("tourRoutes") && <DawarichConnectionCard />}
               </>
             )}
             {/* Intentionally NOT gated: the nav entry is hidden behind the

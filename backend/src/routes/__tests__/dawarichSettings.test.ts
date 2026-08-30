@@ -140,6 +140,44 @@ describe("PUT /settings/dawarich", () => {
     expect(userSettingsUpsert).not.toHaveBeenCalled();
   });
 
+  // MEDIUM-3 (final whole-phase review, 2026-08-29): before this fix, an
+  // invalid base URL came back as prose (`"Invalid Dawarich URL"`), which
+  // `dawarichFailureKind()` on the frontend cannot parse — every save
+  // failure collapsed onto "Dawarich is unreachable", telling a user who
+  // mistyped their hostname to debug a server that was never contacted.
+  it("rejects a non-http base URL with the machine-readable kind invalidUrl, not prose", async () => {
+    const res = await request(makeApp(dawarichSettingsRouter))
+      .put("/dawarich")
+      .send({ baseUrl: "file:///etc/passwd" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalidUrl");
+  });
+
+  it("rejects an unparsable base URL with the same invalidUrl kind", async () => {
+    const res = await request(makeApp(dawarichSettingsRouter))
+      .put("/dawarich")
+      .send({ baseUrl: "not a url at all" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalidUrl");
+  });
+
+  // MEDIUM-3, third bullet: the settings card always SENDS `baseUrl`, so an
+  // empty string was the only way a user could try to clear the stored URL —
+  // and `.min(1)` rejected it with a 400, making clearing impossible.
+  it("clears the stored base URL when an empty string is sent (the only way the UI can express it)", async () => {
+    userSettingsFindUnique.mockResolvedValue(null);
+    const res = await request(makeApp(dawarichSettingsRouter))
+      .put("/dawarich")
+      .send({ baseUrl: "" });
+
+    expect(res.status).toBe(200);
+    expect(userSettingsUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: { dawarichBaseUrl: null } }),
+    );
+  });
+
   it("rejects an unknown field with 400 (strict schema)", async () => {
     const res = await request(makeApp(dawarichSettingsRouter))
       .put("/dawarich")

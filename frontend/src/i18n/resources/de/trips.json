@@ -358,6 +358,8 @@
       "deleteError": "Der Track konnte nicht gelöscht werden",
       "pointCount_one": "{{count}} Punkt",
       "pointCount_other": "{{count}} Punkte",
+      "truncated": "Unvollständig",
+      "truncatedReason": "Dieser Track deckt nicht das gesamte angeforderte Zeitfenster ab — es wurde nur der neueste Abschnitt gespeichert. Die Distanz ist unvollständig gemessen.",
       "noCoverageReason": "Kein aufgezeichneter Track deckt diese Etappe ab",
       "source": {
         "gpx": "GPX-Upload",
@@ -392,7 +394,9 @@
       "saving": "Wird gespeichert …",
       "test": "Verbindung testen",
       "testing": "Wird getestet …",
-      "connected": "Verbunden (Version {{version}})"
+      "connected": "Verbunden (Version {{version}})",
+      "loadError": "Einstellungen konnten nicht geladen werden",
+      "saveError": "Speichern fehlgeschlagen"
     }
   }
 }

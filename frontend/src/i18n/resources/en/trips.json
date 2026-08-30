@@ -358,6 +358,8 @@
       "deleteError": "The track could not be deleted",
       "pointCount_one": "{{count}} point",
       "pointCount_other": "{{count}} points",
+      "truncated": "Incomplete",
+      "truncatedReason": "This track does not cover the full requested time window — only the newest segment was stored. Its distance is a partial measurement.",
       "noCoverageReason": "No recorded track covers this leg",
       "source": {
         "gpx": "GPX upload",
@@ -392,7 +394,9 @@
       "saving": "Saving …",
       "test": "Test connection",
       "testing": "Testing …",
-      "connected": "Connected (version {{version}})"
+      "connected": "Connected (version {{version}})",
+      "loadError": "Settings could not be loaded",
+      "saveError": "Save failed"
     }
   }
 }

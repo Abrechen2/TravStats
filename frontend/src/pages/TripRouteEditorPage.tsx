@@ -482,6 +482,7 @@ export default function TripRouteEditorPage(): JSX.Element {
               onSetSource={handleSetLegSource}
               onRoute={handleRouteLeg}
               trackCoverageByLegId={trackCoverageByLegId}
+              tracksKnown={!tracksLoading && !tracksLoadError}
               onAdoptTrack={handleAdoptTrack}
               onClear={handleClearLeg}
               onRouteAll={handleRouteAll}

@@ -70,6 +70,20 @@ export interface DawarichPoint {
   trackId: number | null;
 }
 
+export interface DawarichPointsResult {
+  /** Every point collected, sorted ASCENDING by timestamp. */
+  points: DawarichPoint[];
+  /**
+   * `true` when the window held MORE points than `MAX_PAGES * PAGE_SIZE`
+   * could collect — the result covers only the newest slice of the
+   * requested window (Dawarich's measured newest-first ordering), never
+   * the whole thing. Callers MUST propagate this rather than only logging
+   * it — a stored track with `truncated: true` is a partial measurement,
+   * not the complete one its `distanceKm` would otherwise imply.
+   */
+  truncated: boolean;
+}
+
 export interface DawarichClient {
   /** Unauthenticated reachability probe — `GET /api/v1/health`, no key needed. */
   checkHealth(): Promise<DawarichHealth>;
@@ -77,7 +91,7 @@ export interface DawarichClient {
    * Every point in `[startAt, endAt]`, paginated, sorted ASCENDING by
    * timestamp regardless of the order Dawarich returned them in.
    */
-  getPoints(window: DawarichPointsWindow): Promise<DawarichPoint[]>;
+  getPoints(window: DawarichPointsWindow): Promise<DawarichPointsResult>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -186,7 +200,7 @@ export function createDawarichClient(conn: DawarichConnection): DawarichClient {
       return { reachable: true, version };
     },
 
-    async getPoints({ startAt, endAt }: DawarichPointsWindow): Promise<DawarichPoint[]> {
+    async getPoints({ startAt, endAt }: DawarichPointsWindow): Promise<DawarichPointsResult> {
       const collected: DawarichPoint[] = [];
       let truncated = false;
 
@@ -236,7 +250,8 @@ export function createDawarichClient(conn: DawarichConnection): DawarichClient {
       // Dawarich returns points NEWEST FIRST (measured). Every leg later
       // adopted from this array assumes chronological order, so sort
       // ascending here once rather than trust every caller to remember.
-      return [...collected].sort((a, b) => a.timestampMs - b.timestampMs);
+      const points = [...collected].sort((a, b) => a.timestampMs - b.timestampMs);
+      return { points, truncated };
     },
   };
 }

@@ -3,7 +3,8 @@ import deTrips from "../resources/de/trips.json";
 import enTrips from "../resources/en/trips.json";
 import deSettings from "../resources/de/settings.json";
 import enSettings from "../resources/en/settings.json";
-import { LEG_MODES, LEG_SOURCES, ROUTING_PROVIDER_IDS } from "../../types/tour";
+import { LEG_MODES, LEG_SOURCES, ROUTING_PROVIDER_IDS, TRACK_SOURCES } from "../../types/tour";
+import { DAWARICH_FAILURE_KINDS } from "../../types/dawarich";
 
 /**
  * Tour route sections (dev/tour-routes). The Touren tab rendered the raw
@@ -175,6 +176,40 @@ describe("tour vocabulary bound to its TypeScript union (fix round 1)", () => {
           `${locale}/settings.json is missing routing.provider.${id}`
         ).toBe("string");
         expect((providers[id] as string).trim().length).toBeGreaterThan(0);
+      }
+    }
+  );
+
+  // Phase 3b added two more template-literal key families
+  // (`` t(`trips:tours.tracks.source.${track.source}`) `` in
+  // `TourTrackList.tsx` and `` `trips:tours.tracks.dawarich.errors.${kind}` ``
+  // in `lib/api/dawarich.ts`) without extending this guard to them — the
+  // exact gap this file's own doc comment warns is invisible to a static
+  // grep. Bound here the same way `LEG_MODES`/`LEG_SOURCES` are above.
+  it.each(["de", "en"] as const)("%s: every TrackSource has a tours.tracks.source label", (locale) => {
+    const sources = (LOCALES[locale] as { tours: { tracks: { source: Record<string, unknown> } } })
+      .tours.tracks.source;
+    for (const source of TRACK_SOURCES) {
+      expect(
+        typeof sources[source],
+        `${locale}/trips.json is missing tours.tracks.source.${source}`
+      ).toBe("string");
+      expect((sources[source] as string).trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it.each(["de", "en"] as const)(
+    "%s: every DawarichFailureKind has a tours.tracks.dawarich.errors label",
+    (locale) => {
+      const errors = (
+        LOCALES[locale] as { tours: { tracks: { dawarich: { errors: Record<string, unknown> } } } }
+      ).tours.tracks.dawarich.errors;
+      for (const kind of DAWARICH_FAILURE_KINDS) {
+        expect(
+          typeof errors[kind],
+          `${locale}/trips.json is missing tours.tracks.dawarich.errors.${kind}`
+        ).toBe("string");
+        expect((errors[kind] as string).trim().length).toBeGreaterThan(0);
       }
     }
   );

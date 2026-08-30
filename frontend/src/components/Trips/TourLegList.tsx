@@ -41,6 +41,17 @@ interface Props {
    * selecting it with no covering track can only 409.
    */
   trackCoverageByLegId: ReadonlyMap<string, string>;
+  /**
+   * Whether the track list has actually finished loading, successfully —
+   * i.e. `!tracksLoading && !tracksLoadError` from `useTourTracks`. An
+   * absent `trackCoverageByLegId` entry means "no candidate" in FOUR
+   * different situations (see that hook's own doc comment): genuinely no
+   * covering track, the list is still loading, the list failed to load, or
+   * one track's own geometry fetch failed. Only the first of those is a
+   * real "no track covers this leg"; the other three are an unknown state,
+   * not a negative match, and must not render the same definitive hint.
+   */
+  tracksKnown: boolean;
   /** Adopts the covering track's geometry onto this leg. Only ever invoked
    *  for a leg whose "track" option is enabled, with the trackId this
    *  component already resolved from `trackCoverageByLegId` — never a
@@ -114,6 +125,7 @@ export default function TourLegList({
   onSetSource,
   onRoute,
   trackCoverageByLegId,
+  tracksKnown,
   onAdoptTrack,
   onClear,
   onRouteAll,
@@ -196,7 +208,7 @@ export default function TourLegList({
                   {t("trips:tours.routing.unavailableReason")}
                 </span>
               )}
-              {coveringTrackId === undefined && (
+              {coveringTrackId === undefined && tracksKnown && leg.source !== "track" && (
                 <span className="text-xs text-(--text-muted)">
                   {t("trips:tours.tracks.noCoverageReason")}
                 </span>

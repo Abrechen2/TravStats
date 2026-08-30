@@ -63,10 +63,14 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         try {
           update.dawarichBaseUrl = normalizeDawarichBaseUrl(payload.baseUrl);
         } catch (error) {
-          throw new AppError(
-            error instanceof DawarichError ? error.message : "Invalid Dawarich URL",
-            400,
-          );
+          // Preserve the machine-readable `kind` (always `invalidUrl` here —
+          // `normalizeDawarichBaseUrl` never throws any other kind) instead
+          // of the earlier prose message, which the frontend's
+          // `dawarichFailureKind()` cannot parse and which then fell back to
+          // labelling every save failure "Dawarich is unreachable" — telling
+          // a user who mistyped their hostname to debug a server that was
+          // never contacted.
+          throw new AppError(error instanceof DawarichError ? error.kind : "invalidUrl", 400);
         }
       }
     }

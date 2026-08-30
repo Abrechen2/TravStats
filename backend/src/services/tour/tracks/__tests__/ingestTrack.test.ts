@@ -134,6 +134,29 @@ describe("ingestTrack", () => {
     expect(result?.geometry.length).toBeLessThanOrEqual(100);
   });
 
+  // LOW-1 (final whole-phase review, 2026-08-29): before this fix, the
+  // minimum point count lived ONLY in `parseGpx`, so the Dawarich pull
+  // (which builds a `ParsedTrack` directly, never through `parseGpx`) could
+  // store a one-point "LineString" — `pointCount: 1, distanceKm: 0` —
+  // measured for real against `pullDawarichWindow`. This pins the shared
+  // rule directly on `ingestTrack`.
+  it("case 8: returns null for a single-point track — cannot form a line", () => {
+    const parsed = withTimestamps([[13.0, 50.0]]);
+
+    expect(ingestTrack(parsed)).toBeNull();
+  });
+
+  it("case 8b: returns null for a zero-point track", () => {
+    const parsed: ParsedTrack = {
+      points: [],
+      startedAt: new Date("2026-06-01T08:00:00Z"),
+      endedAt: new Date("2026-06-01T08:10:00Z"),
+      name: null,
+    };
+
+    expect(ingestTrack(parsed)).toBeNull();
+  });
+
   it("case 5: returns null when startedAt is missing — cannot be matched to a leg by time", () => {
     const parsed: ParsedTrack = {
       points: [

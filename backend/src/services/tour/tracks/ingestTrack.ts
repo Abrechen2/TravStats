@@ -82,6 +82,15 @@ export function ingestTrack(
   opts?: { toleranceDeg?: number; maxPoints?: number }
 ): IngestedTrack | null {
   if (parsed.startedAt === null || parsed.endedAt === null) return null;
+  // The shared minimum: a "track" with fewer than two points cannot be a
+  // line — `polylineDistanceKm` measures 0 for it, `adoptSegment` refuses it
+  // below two points, and it can never cover a leg. `parseGpx` already
+  // enforces this for its own callers (kept as-is, so its own tests and
+  // "unreadable file" message stay unchanged); this is the second, SHARED
+  // enforcement so the Dawarich pull — which builds a `ParsedTrack` directly
+  // and never goes through `parseGpx` — obeys the same rule instead of
+  // storing a 1-point "LineString".
+  if (parsed.points.length < 2) return null;
 
   const toleranceDeg = resolveToleranceDeg(opts?.toleranceDeg);
   const maxPoints = opts?.maxPoints ?? DEFAULT_MAX_POINTS;

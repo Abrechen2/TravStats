@@ -179,11 +179,12 @@ describe("getPoints", () => {
       .fn()
       .mockResolvedValue(fakeResponse({ body: [REAL_POINT] })) as unknown as typeof fetch;
 
-    const points = await createDawarichClient(CONN).getPoints({
+    const { points, truncated } = await createDawarichClient(CONN).getPoints({
       startAt: new Date("2026-08-25T00:00:00Z"),
       endAt: new Date("2026-08-25T23:59:59Z"),
     });
 
+    expect(truncated).toBe(false);
     expect(points).toEqual([
       {
         id: 170766,
@@ -210,7 +211,7 @@ describe("getPoints", () => {
       .fn()
       .mockResolvedValue(fakeResponse({ body: newestFirst })) as unknown as typeof fetch;
 
-    const points = await createDawarichClient(CONN).getPoints({
+    const { points } = await createDawarichClient(CONN).getPoints({
       startAt: new Date(0),
       endAt: new Date(),
     });
@@ -233,7 +234,7 @@ describe("getPoints", () => {
       }),
     ) as unknown as typeof fetch;
 
-    const points = await createDawarichClient(CONN).getPoints({
+    const { points } = await createDawarichClient(CONN).getPoints({
       startAt: new Date(0),
       endAt: new Date(),
     });
@@ -247,7 +248,7 @@ describe("getPoints", () => {
       fakeResponse({ body: [{ ...REAL_POINT, timestamp: null }] }),
     ) as unknown as typeof fetch;
 
-    const points = await createDawarichClient(CONN).getPoints({
+    const { points } = await createDawarichClient(CONN).getPoints({
       startAt: new Date(0),
       endAt: new Date(),
     });
@@ -273,15 +274,59 @@ describe("getPoints", () => {
       .mockResolvedValueOnce(fakeResponse({ body: shortPage }));
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    const points = await createDawarichClient(CONN).getPoints({
+    const { points, truncated } = await createDawarichClient(CONN).getPoints({
       startAt: new Date(0),
       endAt: new Date(),
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(points).toHaveLength(1001);
+    expect(truncated).toBe(false);
     const secondCallUrl = new URL(fetchMock.mock.calls[1][0] as string);
     expect(secondCallUrl.searchParams.get("page")).toBe("2");
+  });
+
+  // MEDIUM-2 (final whole-phase review, 2026-08-29): a window that still had
+  // more to give when the hard page cap (`MAX_PAGES=50`) was hit used to only
+  // LOG a warning — the caller got back a plain array indistinguishable from
+  // a complete pull. `truncated` must now reach every caller.
+  it("reports truncated=true when the hard page cap is hit on a still-full page", async () => {
+    const fullPage = (offset: number) =>
+      Array.from({ length: 1000 }, (_, i) => ({ ...REAL_POINT, id: offset + i }));
+    const fetchMock = jest.fn();
+    for (let page = 1; page <= 50; page += 1) {
+      fetchMock.mockResolvedValueOnce(fakeResponse({ body: fullPage(page * 1000) }));
+    }
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const { points, truncated } = await createDawarichClient(CONN).getPoints({
+      startAt: new Date(0),
+      endAt: new Date(),
+    });
+
+    // Exactly MAX_PAGES requests — a 51st would mean the hard stop failed.
+    expect(fetchMock).toHaveBeenCalledTimes(50);
+    expect(points).toHaveLength(50_000);
+    expect(truncated).toBe(true);
+  });
+
+  it("reports truncated=false when the last page is short, even at exactly MAX_PAGES", async () => {
+    const fullPage = (offset: number) =>
+      Array.from({ length: 1000 }, (_, i) => ({ ...REAL_POINT, id: offset + i }));
+    const fetchMock = jest.fn();
+    for (let page = 1; page <= 49; page += 1) {
+      fetchMock.mockResolvedValueOnce(fakeResponse({ body: fullPage(page * 1000) }));
+    }
+    fetchMock.mockResolvedValueOnce(fakeResponse({ body: [{ ...REAL_POINT, id: 99999 }] }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const { truncated } = await createDawarichClient(CONN).getPoints({
+      startAt: new Date(0),
+      endAt: new Date(),
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(50);
+    expect(truncated).toBe(false);
   });
 
   it.each([
