@@ -92,24 +92,35 @@ export function checkAndUpdateAchievements(userId: string): Promise<UserAchievem
 }
 
 /**
- * Start a re-check without making the request wait for it.
+ * Run a re-check as part of the request, and never let it fail the request.
  *
- * Ten call sites had written this by hand, each with its own wording, and one
- * with a structured `operation` while the rest carried prose — so the one line
- * you want to grep for after a badge fails to appear was spelled ten ways. Each
- * also carried its own `.catch`; a future caller written without one would be an
- * unhandled rejection, which on Node ends the process.
+ * Forgejo #39. These ten call sites used to detach: `.catch(...)` and carry on,
+ * so the work outlived the response. Two things came of that. The transaction
+ * raced whatever else touched the user — a `40P01 deadlock` against a delete —
+ * and a re-check could still be writing to rows that had since been removed,
+ * which is what `Record to update not found` in the logs was.
  *
- * What this deliberately does NOT do is make the failure visible to the user.
- * The request has already answered by the time this runs, so a lost badge still
- * only reaches the log and shows up to the user as a badge that unlocks one save
- * later. Changing that means awaiting at these sites and paying the latency,
- * which is a product decision rather than a tidy-up (Forgejo #39).
+ * Shrinking the transaction (see `runningPerUser` above) removed the deadlock,
+ * because the run no longer holds locks across the whole catalogue. Awaiting
+ * removes the rest: the work cannot outlive the request that caused it. The
+ * latency this now adds is small for the same reason — in the ordinary case the
+ * plan is empty and no transaction is opened at all.
+ *
+ * The error is still swallowed rather than raised. The write the user asked for
+ * has already succeeded by this point; failing their request because a badge
+ * could not be recomputed would be the wrong trade. It stays a log line, and
+ * that limit is the part of #39 that remains open: a lost badge appears to the
+ * user one save later rather than as an error.
  */
-export function recheckAchievementsInBackground(userId: string, after: string): void {
-  void checkAndUpdateAchievements(userId).catch((error) => {
-    logger.error({ error, userId, context: { after } }, '[Achievements] Background re-check failed');
-  });
+export async function recheckAchievements(userId: string, after: string): Promise<void> {
+  try {
+    await checkAndUpdateAchievements(userId);
+  } catch (error) {
+    logger.error(
+      { error, userId, context: { after } },
+      "[Achievements] Re-check failed"
+    );
+  }
 }
 
 async function runAchievementCheck(userId: string): Promise<UserAchievementWithRelation[]> {
@@ -592,105 +603,145 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
       curatedTickedByList: placeStats.curatedTickedByList,
     };
 
-    // Prepare all updates/creates to execute in a single transaction
-    // Use callback-based transaction to prevent race conditions
     const newlyUnlocked: UserAchievementWithRelation[] = [];
-
     const revoked: string[] = [];
 
-    try {
-      await prisma.$transaction(async (tx) => {
-        for (const achievement of allAchievements) {
-          const existing = existingAchievementMap.get(achievement.id);
-          const wasUnlocked = Boolean(
-            existing && existing.progress >= achievement.requirement,
-          );
+    /**
+     * What this run will actually write, decided before a transaction is opened.
+     *
+     * Forgejo #39. The transaction used to wrap this whole loop — all ~259
+     * achievements, including `checkAchievement`, which is pure in-memory work
+     * and touches no database. So a transaction stayed open across the entire
+     * catalogue while holding the locks its earlier writes had taken, on every
+     * save in every domain. In the ordinary case it wrote almost nothing and
+     * held that open anyway: the steady-state guards below skip a badge whose
+     * stored value already matches.
+     *
+     * That is what produced `40P01 deadlock detected` against an unrelated
+     * statement touching the same user — a test's teardown in the reported case,
+     * and in production anyone deleting their account while a re-check runs.
+     *
+     * Deciding first and writing second makes the transaction as long as the
+     * number of rows that genuinely change, instead of as long as the catalogue.
+     * When nothing changed there is NO transaction at all, and nothing to
+     * collide with. It also makes awaiting these calls affordable, which is the
+     * other half of #39.
+     *
+     * No guarantee is weakened. `existingAchievementMap` was already read before
+     * the transaction — that staleness is exactly why the writes below are
+     * `upsert` and not `create` — so the decision was never protected by it.
+     */
+    type PlannedWrite =
+      | { kind: "unlock"; achievementId: string; requirement: number; wasUnlocked: boolean }
+      | { kind: "progress"; rowId: string; progress: number }
+      | { kind: "track"; achievementId: string; progress: number };
 
-          // Every achievement is re-evaluated on every run, unlocked ones included.
-          // This used to `continue` on an already-unlocked achievement, which meant a
-          // badge granted from data that was later corrected or deleted could never be
-          // taken back. It also meant a scoring bug (the Arctic being classified as
-          // Antarctica, say) stayed rewarded forever even after the bug was fixed.
-          const { isUnlocked, progress } = checkAchievement(
-            achievement,
-            augmentedStats,
-            flights as FlightData[],
-          );
+    const planned: PlannedWrite[] = [];
 
-          // existingAchievementMap is a snapshot from BEFORE the transaction
-          // started. Another concurrent invocation (e.g. a cruise POST +
-          // flight POST racing together) can insert a row for the same
-          // (user, achievement) pair between snapshot and create, tripping
-          // the unique constraint. Use upsert instead of create — it
-          // handles both cases atomically inside the transaction.
-          if (isUnlocked) {
-            // Steady state: the user already holds it and the stored progress is
-            // already the requirement. Re-evaluating is cheap (in memory), but writing
-            // is not — without this guard every flight save would re-upsert every badge
-            // the user has ever earned, adding dozens of pointless writes to a
-            // transaction that is already contended.
-            if (wasUnlocked && existing && existing.progress === achievement.requirement) {
-              continue;
-            }
+    for (const achievement of allAchievements) {
+      const existing = existingAchievementMap.get(achievement.id);
+      const wasUnlocked = Boolean(existing && existing.progress >= achievement.requirement);
 
-            const updated = await tx.userAchievement.upsert({
-              where: {
-                userId_achievementId: { userId, achievementId: achievement.id },
-              },
-              update: {
-                progress: achievement.requirement,
-                // Keep the ORIGINAL unlock date. Re-checking an achievement the user
-                // already holds must not make it look freshly earned — that would
-                // reshuffle the trophy case on every flight they add.
-                ...(wasUnlocked ? {} : { unlockedAt: new Date() }),
-              },
-              create: {
-                userId,
-                achievementId: achievement.id,
-                progress: achievement.requirement,
-              },
-              include: { achievement: true },
-            });
-            // Only count as newly-unlocked when the pre-transaction snapshot
-            // had no unlock yet. Re-upserting an already-unlocked row
-            // shouldn't emit another "unlocked" event.
-            if (!wasUnlocked) {
-              newlyUnlocked.push(updated);
-            }
-          } else if (existing) {
-            // Nothing changed — skip the write. (An unlocked badge that is still
-            // unlocked never reaches here; this is the progress-row steady state.)
-            if (existing.progress === progress) {
-              continue;
-            }
-            if (wasUnlocked) {
-              // The user holds this badge but no longer meets its requirement — the
-              // flights behind it were deleted, or it was granted by a scoring bug.
-              // Writing the true progress drops it back below the threshold, which is
-              // what "revoked" means here (there is no separate unlocked flag).
-              revoked.push(achievement.code);
-            }
-            await tx.userAchievement.update({
-              where: { id: existing.id },
-              data: { progress },
-            });
-          } else if (progress > 0) {
-            // Only create a progress row when there's something to track —
-            // upsert guards against the same race as the unlocked branch.
-            await tx.userAchievement.upsert({
-              where: {
-                userId_achievementId: { userId, achievementId: achievement.id },
-              },
-              update: { progress },
-              create: {
-                userId,
-                achievementId: achievement.id,
-                progress,
-              },
-            });
-          }
+      // Every achievement is re-evaluated on every run, unlocked ones included.
+      // This used to `continue` on an already-unlocked achievement, which meant a
+      // badge granted from data that was later corrected or deleted could never be
+      // taken back. It also meant a scoring bug (the Arctic being classified as
+      // Antarctica, say) stayed rewarded forever even after the bug was fixed.
+      const { isUnlocked, progress } = checkAchievement(
+        achievement,
+        augmentedStats,
+        flights as FlightData[],
+      );
+
+      if (isUnlocked) {
+        // Steady state: the user already holds it and the stored progress is
+        // already the requirement. Re-evaluating is cheap (in memory), but writing
+        // is not — without this guard every flight save would re-upsert every badge
+        // the user has ever earned.
+        if (wasUnlocked && existing && existing.progress === achievement.requirement) {
+          continue;
         }
-      });
+        planned.push({
+          kind: "unlock",
+          achievementId: achievement.id,
+          requirement: achievement.requirement,
+          wasUnlocked,
+        });
+      } else if (existing) {
+        // Nothing changed — skip the write. (An unlocked badge that is still
+        // unlocked never reaches here; this is the progress-row steady state.)
+        if (existing.progress === progress) {
+          continue;
+        }
+        if (wasUnlocked) {
+          // The user holds this badge but no longer meets its requirement — the
+          // flights behind it were deleted, or it was granted by a scoring bug.
+          // Writing the true progress drops it back below the threshold, which is
+          // what "revoked" means here (there is no separate unlocked flag).
+          revoked.push(achievement.code);
+        }
+        planned.push({ kind: "progress", rowId: existing.id, progress });
+      } else if (progress > 0) {
+        // Only create a progress row when there's something to track.
+        planned.push({ kind: "track", achievementId: achievement.id, progress });
+      }
+    }
+
+    try {
+      // The common case: nothing to write, so no transaction is opened and this
+      // run takes no locks at all.
+      if (planned.length > 0) {
+        await prisma.$transaction(async (tx) => {
+          for (const write of planned) {
+            // `upsert`, not `create`: the snapshot this plan was built from is
+            // older than the transaction, so a concurrent invocation may have
+            // inserted the same (user, achievement) pair in between and would
+            // otherwise trip the unique constraint.
+            if (write.kind === "unlock") {
+              const updated = await tx.userAchievement.upsert({
+                where: {
+                  userId_achievementId: { userId, achievementId: write.achievementId },
+                },
+                update: {
+                  progress: write.requirement,
+                  // Keep the ORIGINAL unlock date. Re-checking an achievement the user
+                  // already holds must not make it look freshly earned — that would
+                  // reshuffle the trophy case on every flight they add.
+                  ...(write.wasUnlocked ? {} : { unlockedAt: new Date() }),
+                },
+                create: {
+                  userId,
+                  achievementId: write.achievementId,
+                  progress: write.requirement,
+                },
+                include: { achievement: true },
+              });
+              // Only count as newly-unlocked when the snapshot had no unlock yet.
+              // Re-upserting an already-unlocked row shouldn't emit another event.
+              if (!write.wasUnlocked) {
+                newlyUnlocked.push(updated);
+              }
+            } else if (write.kind === "progress") {
+              await tx.userAchievement.update({
+                where: { id: write.rowId },
+                data: { progress: write.progress },
+              });
+            } else {
+              await tx.userAchievement.upsert({
+                where: {
+                  userId_achievementId: { userId, achievementId: write.achievementId },
+                },
+                update: { progress: write.progress },
+                create: {
+                  userId,
+                  achievementId: write.achievementId,
+                  progress: write.progress,
+                },
+              });
+            }
+          }
+        });
+      }
 
       if (revoked.length > 0) {
         logger.info({

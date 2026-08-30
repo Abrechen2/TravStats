@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
-import { recheckAchievementsInBackground } from "../utils/achievements";
+import { recheckAchievements } from "../utils/achievements";
 import { classifyPlace, classifyVisit } from "../shared/placeCounting";
 import {
   createPlaceListSchema,
@@ -264,7 +264,7 @@ router.post("/:id/entries", async (req: AuthRequest, res: Response, next: NextFu
       update: {},
     });
 
-    recheckAchievementsInBackground(userId, "list entry add");
+    await recheckAchievements(userId, "list entry add");
 
     const fresh = await findOwned(list.id, userId);
     res.status(201).json({ success: true, data: present(fresh, true) });

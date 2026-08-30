@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
-import { recheckAchievementsInBackground } from "../../utils/achievements";
+import { recheckAchievements } from "../../utils/achievements";
 import { classifyVisit } from "../../shared/placeCounting";
 import { getContinent } from "../../utils/continents";
 import { buildAnchors, suggestVisits } from "../../services/places/visitSuggestions";
@@ -461,7 +461,7 @@ router.post("/items/:itemId/tick", async (req: AuthRequest, res: Response, next:
       }
     }
 
-    recheckAchievementsInBackground(userId, "checklist tick");
+    await recheckAchievements(userId, "checklist tick");
 
     logger.info(
       { operation: "curated_item_tick", userId, itemId: item.id, placeId: place.id },
@@ -487,7 +487,7 @@ router.delete("/items/:itemId/tick", async (req: AuthRequest, res: Response, nex
     });
     if (updated.count === 0) throw new AppError("Checklist item not ticked", 404);
 
-    recheckAchievementsInBackground(userId, "checklist untick");
+    await recheckAchievements(userId, "checklist untick");
 
     res.json({ success: true });
   } catch (error) {

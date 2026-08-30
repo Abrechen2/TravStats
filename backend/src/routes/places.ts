@@ -6,7 +6,7 @@ import { AppError } from "../middleware/errorHandler";
 import { resolveCountryCode } from "../shared/geo/countryCode";
 import { completeAddressFromCoordinates } from "../services/geo/nominatim";
 import { getContinent } from "../utils/continents";
-import { recheckAchievementsInBackground } from "../utils/achievements";
+import { recheckAchievements } from "../utils/achievements";
 import { classifyVisit } from "../shared/placeCounting";
 import {
   createPlaceSchema,
@@ -263,7 +263,7 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
       include: PLACE_INCLUDE,
     });
 
-    recheckAchievementsInBackground(userId, "place create");
+    await recheckAchievements(userId, "place create");
 
     res.status(201).json({ success: true, data: decorate(place) });
   } catch (error) {
@@ -306,7 +306,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       include: PLACE_INCLUDE,
     });
 
-    recheckAchievementsInBackground(userId, "place update");
+    await recheckAchievements(userId, "place update");
 
     res.json({ success: true, data: decorate(place) });
   } catch (error) {
@@ -326,7 +326,7 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
     // which is what "delete this place" means.
     await prisma.place.delete({ where: { id: existing.id } });
 
-    recheckAchievementsInBackground(userId, "place delete");
+    await recheckAchievements(userId, "place delete");
 
     res.json({ success: true });
   } catch (error) {
@@ -392,7 +392,7 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
     }
     const [visit] = await prisma.$transaction(writes);
 
-    recheckAchievementsInBackground(userId, "visit create");
+    await recheckAchievements(userId, "visit create");
 
     res.status(201).json({ success: true, data: visit });
   } catch (error) {
@@ -436,7 +436,7 @@ router.patch("/visits/:visitId", async (req: AuthRequest, res: Response, next: N
       });
     }
 
-    recheckAchievementsInBackground(userId, "visit update");
+    await recheckAchievements(userId, "visit update");
 
     res.json({ success: true, data: visit });
   } catch (error) {
@@ -458,7 +458,7 @@ router.delete("/visits/:visitId", async (req: AuthRequest, res: Response, next: 
     // explicitly on the place itself.
     await prisma.placeVisit.delete({ where: { id: existing.id } });
 
-    recheckAchievementsInBackground(userId, "visit delete");
+    await recheckAchievements(userId, "visit delete");
 
     res.json({ success: true });
   } catch (error) {
