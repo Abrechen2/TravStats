@@ -85,6 +85,16 @@ export async function parseEmail(
   config: ParserConfig
 ): Promise<ParserResult> {
   const errors: Array<{ provider: TextProvider; error: string }> = [];
+
+  /**
+   * A provider that ran to completion and found no booking, if one did.
+   *
+   * Kept apart from `errors` because the two mean opposite things: an entry in
+   * `errors` is a provider that could not do its job, while this is a provider
+   * that did it and answered "there is no flight in this mail". Only the first
+   * kind justifies failing the request — see the tail of this function.
+   */
+  let parsedWithoutFlights: TextProvider | null = null;
   const shouldLog = await shouldLogParserOperations();
   const log = shouldLog ? parserFactoryLogger : logger;
   const textLog = shouldLog ? parserTextLogger : logger;
@@ -160,6 +170,7 @@ export async function parseEmail(
             fallbackUsed: false,
           };
         }
+        parsedWithoutFlights = 'ollama';
         logger.info('[Parser Factory] Ollama returned no flights — falling back to templates');
       } else {
         logger.info(`[Parser Factory] Ollama unavailable (${ollamaAvail.reason}) — falling back to templates`);
@@ -229,7 +240,13 @@ export async function parseEmail(
       const parseDuration = Date.now() - parseStartTime;
 
       if (!flights || flights.length === 0) {
-        throw new Error('Parser returned no flights');
+        // Finding no booking is an ANSWER, not a failure. Throwing here put the
+        // provider in `errors`, and once the chain was exhausted the caller was
+        // told every parser had failed — HTTP 500 for a marketing mail that
+        // simply contains no flight (Forgejo #35). Carry on to the next
+        // provider; the tail decides what an empty result means.
+        parsedWithoutFlights = provider;
+        continue;
       }
 
       const finalFlights = applyEmailRegexPostProcessing(flights, subject, cleanedText, html);
@@ -290,6 +307,18 @@ export async function parseEmail(
       // Continue to next provider
       continue;
     }
+  }
+
+  // A provider read the mail and found nothing in it. That is a result, and the
+  // route renders it as an empty list; the import modal then says "no flight
+  // found" instead of "email parsing failed". Only a chain in which nothing ran
+  // reaches the throw below.
+  if (parsedWithoutFlights) {
+    return {
+      flights: [],
+      provider: parsedWithoutFlights,
+      fallbackUsed: config.textProvider !== parsedWithoutFlights,
+    };
   }
 
   // All providers failed
