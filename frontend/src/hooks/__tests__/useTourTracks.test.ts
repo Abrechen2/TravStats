@@ -158,4 +158,47 @@ describe("useTourTracks", () => {
       ],
     });
   });
+
+  // Coordinator follow-up on b6829bf5, item 2: `tracksKnown` must reflect
+  // BOTH the list-level state and each track's own geometry resolution —
+  // a list that loaded fine is not enough if one of its tracks is still an
+  // unknown quantity.
+  it("tracksKnown is true once the list loaded and every track's geometry resolved", async () => {
+    mocks.list.mockResolvedValue([TRACK_A]);
+    mocks.get.mockResolvedValue({ ...TRACK_A, geometry: [[8.0, 58.15], [8.1, 58.3]] });
+    const { result } = renderHook(() => useTourTracks("trip-1", "route-1"));
+
+    expect(result.current.tracksKnown).toBe(false);
+    await waitFor(() => expect(result.current.tracksKnown).toBe(true));
+  });
+
+  it("tracksKnown stays false while the list loaded fine but a track's own geometry fetch failed", async () => {
+    mocks.list.mockResolvedValue([TRACK_A]);
+    mocks.get.mockRejectedValue(new Error("geometry fetch failed"));
+    const { result } = renderHook(() => useTourTracks("trip-1", "route-1"));
+
+    await waitFor(() => expect(result.current.tracksLoading).toBe(false));
+    await waitFor(() => expect(mocks.get).toHaveBeenCalled());
+    // The list itself is fine — no load error — but the one track's
+    // geometry never resolved, so coverage cannot be trusted yet.
+    expect(result.current.tracksLoadError).toBe(false);
+    expect(result.current.tracksWithGeometry).toHaveLength(0);
+    expect(result.current.tracksKnown).toBe(false);
+  });
+
+  it("tracksKnown is true (vacuously) once a genuinely empty list has loaded", async () => {
+    mocks.list.mockResolvedValue([]);
+    const { result } = renderHook(() => useTourTracks("trip-1", "route-1"));
+
+    await waitFor(() => expect(result.current.tracksLoading).toBe(false));
+    expect(result.current.tracksKnown).toBe(true);
+  });
+
+  it("tracksKnown is false while the list itself failed to load", async () => {
+    mocks.list.mockRejectedValue(new Error("network down"));
+    const { result } = renderHook(() => useTourTracks("trip-1", "route-1"));
+
+    await waitFor(() => expect(result.current.tracksLoadError).toBe(true));
+    expect(result.current.tracksKnown).toBe(false);
+  });
 });

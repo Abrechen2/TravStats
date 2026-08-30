@@ -19,8 +19,22 @@ export interface UseTourTracksResult {
   /** Each track's full geometry, resolved lazily. A track missing here only
    *  means "not fetched yet, or the fetch failed" — never "confirmed to
    *  cover nothing"; callers gating on coverage must treat it as "no
-   *  candidate", not as a negative match. */
+   *  candidate", not as a negative match. Use `tracksKnown` below to tell
+   *  whether that absence has actually been resolved yet. */
   tracksWithGeometry: TrackWithGeometry[];
+  /**
+   * True once coverage computed from `tracksWithGeometry` can be trusted as
+   * a genuine "this or nothing" answer. False while the list itself is
+   * loading or failed (`tracksLoading`/`tracksLoadError`) — see those — AND
+   * false while any track currently in `tracks` has not yet resolved its
+   * OWN geometry fetch, successfully or otherwise (a per-track failure
+   * removes the id from the retry-tracking ref but the fetch effect only
+   * reruns when `tracks` itself changes, so that track stays unresolved
+   * until the next list reload). Both are the same shape: an absence from
+   * `tracksWithGeometry` that has not actually been established as "this
+   * track cannot cover anything" — only genuinely resolved geometry may.
+   */
+  tracksKnown: boolean;
   trackUploading: boolean;
   uploadTrack: (file: File) => Promise<TourTrack>;
   trackPulling: boolean;
@@ -149,6 +163,15 @@ export function useTourTracks(
     return geometry ? [{ id: tr.id, geometry }] : [];
   });
 
+  // See the `tracksKnown` doc comment above: the list must have loaded
+  // successfully AND every track currently listed must have a resolved
+  // geometry entry — otherwise a leg could read as "no track covers this"
+  // only because ONE track's own fetch has not settled yet.
+  const tracksKnown =
+    !tracksLoading &&
+    !tracksLoadError &&
+    tracks.every((tr) => trackGeometryById.has(tr.id));
+
   const uploadTrack = useCallback(
     async (file: File): Promise<TourTrack> => {
       if (!tripId || !routeId) throw new Error("uploadTrack called with no trip/route id");
@@ -191,6 +214,7 @@ export function useTourTracks(
     tracksLoadError,
     loadTracks,
     tracksWithGeometry,
+    tracksKnown,
     trackUploading,
     uploadTrack,
     trackPulling,

@@ -42,14 +42,14 @@ interface Props {
    */
   trackCoverageByLegId: ReadonlyMap<string, string>;
   /**
-   * Whether the track list has actually finished loading, successfully —
-   * i.e. `!tracksLoading && !tracksLoadError` from `useTourTracks`. An
-   * absent `trackCoverageByLegId` entry means "no candidate" in FOUR
-   * different situations (see that hook's own doc comment): genuinely no
-   * covering track, the list is still loading, the list failed to load, or
-   * one track's own geometry fetch failed. Only the first of those is a
-   * real "no track covers this leg"; the other three are an unknown state,
-   * not a negative match, and must not render the same definitive hint.
+   * `useTourTracks`'s own `tracksKnown` — pass it straight through, never
+   * recompute it here. An absent `trackCoverageByLegId` entry means "no
+   * candidate" in FOUR different situations (see that hook's own doc
+   * comment): genuinely no covering track, the list is still loading, the
+   * list failed to load, or one track's own geometry fetch failed. Only the
+   * first of those is a real "no track covers this leg"; `tracksKnown` is
+   * `false` for the other three, so this component only ever renders the
+   * definitive hint once coverage has actually been established.
    */
   tracksKnown: boolean;
   /** Adopts the covering track's geometry onto this leg. Only ever invoked

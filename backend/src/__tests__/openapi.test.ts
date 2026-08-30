@@ -68,4 +68,34 @@ describe("openapi spec", () => {
     );
     expect(query).toBeDefined();
   });
+
+  // Coordinator follow-up on b6829bf5, item 1: `truncated` was added to the
+  // stored track row and every track-shaped API response, but neither
+  // OpenAPI schema declared it — the coverage guard only checks endpoint
+  // method+path, never response-field completeness, so a published
+  // consumer would never learn the API can return this. Pinned here so a
+  // future removal (or a description that stops explaining what the flag
+  // MEANS) fails a test instead of silently understating the contract.
+  it("documents TourRouteTrackMeta.truncated as a required, explained boolean", () => {
+    const schema = doc.components?.schemas?.TourRouteTrackMeta as any;
+    expect(schema).toBeDefined();
+    expect(schema.properties?.truncated).toMatchObject({ type: "boolean" });
+    expect(schema.required).toContain("truncated");
+    // A consumer reading the spec should learn the same thing the
+    // TourTrackList badge tells a user — not just that it's a boolean.
+    const description: string = schema.properties.truncated.description ?? "";
+    expect(description).toMatch(/partial/i);
+    expect(description).toMatch(/does not|only the newest|cut short/i);
+    expect(schema.example?.truncated).toBe(false);
+  });
+
+  it("carries truncated through to TourRouteTrack (which extends TourRouteTrackMeta)", () => {
+    const schema = doc.components?.schemas?.TourRouteTrack as any;
+    expect(schema).toBeDefined();
+    // Composed via allOf ($ref to TourRouteTrackMeta + the geometry-only
+    // extension), so the field itself lives on the referenced schema —
+    // what we can assert here is that the generated EXAMPLE, which zod-to-
+    // openapi flattens, actually carries the field through.
+    expect(schema.example?.truncated).toBe(false);
+  });
 });

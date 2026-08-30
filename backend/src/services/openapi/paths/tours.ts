@@ -558,6 +558,18 @@ const tourRouteTrackMeta = registry.register(
       endedAt: z.string().datetime(),
       pointCount: z.number().int().describe("Point count of the RAW recording, before simplification"),
       distanceKm: z.number().describe("Distance measured on the RAW recording, before simplification"),
+      truncated: z
+        .boolean()
+        .describe(
+          "True when a Dawarich pull was cut short by the server's page cap " +
+            "(MAX_PAGES in dawarichClient.ts): the stored track covers only " +
+            "the newest part of the requested time window, per Dawarich's " +
+            "measured newest-first ordering — never the whole span asked for. " +
+            "distanceKm above is therefore a PARTIAL measurement, not the " +
+            "complete one it would otherwise look like. Always false for " +
+            "source: \"gpx\", which refuses an oversized file outright instead " +
+            "of ever storing a silently-shortened one."
+        ),
       createdAt: z.string().datetime(),
     })
     .openapi("TourRouteTrackMeta", {
@@ -570,6 +582,7 @@ const tourRouteTrackMeta = registry.register(
         endedAt: "2026-06-01T08:10:00.000Z",
         pointCount: 3,
         distanceKm: 1.7,
+        truncated: false,
         createdAt: "2026-06-02T09:00:00.000Z",
       },
     }),
