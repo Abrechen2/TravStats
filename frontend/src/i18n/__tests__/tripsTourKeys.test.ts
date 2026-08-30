@@ -62,31 +62,33 @@ function flatten(obj: unknown, prefix = ""): string[] {
 
 describe("trips tour-section copy", () => {
   it.each(["de", "en"] as const)("%s: detail.tabs.tours is present and non-empty", (locale) => {
-    const tabs = (LOCALES[locale] as { detail?: { tabs?: Record<string, unknown> } }).detail
-      ?.tabs;
+    const tabs = (LOCALES[locale] as { detail?: { tabs?: Record<string, unknown> } }).detail?.tabs;
     expect(tabs, `${locale}/trips.json has no detail.tabs section`).toBeDefined();
     const value = tabs?.tours;
     expect(typeof value, `${locale}/trips.json is missing detail.tabs.tours`).toBe("string");
     expect((value as string).trim().length).toBeGreaterThan(0);
   });
 
-  it.each(["de", "en"] as const)("%s: tours.* section exists and every leaf is a non-empty string", (locale) => {
-    const tours = (LOCALES[locale] as { tours?: Record<string, unknown> }).tours;
-    expect(tours, `${locale}/trips.json has no tours section`).toBeDefined();
-    const leafKeys = flatten(tours, "tours");
-    expect(leafKeys.length).toBeGreaterThan(0);
-    for (const key of leafKeys) {
-      const parts = key.split(".").slice(1); // drop the leading "tours"
-      let value: unknown = tours;
-      for (const part of parts) {
-        value = (value as Record<string, unknown> | undefined)?.[part];
+  it.each(["de", "en"] as const)(
+    "%s: tours.* section exists and every leaf is a non-empty string",
+    (locale) => {
+      const tours = (LOCALES[locale] as { tours?: Record<string, unknown> }).tours;
+      expect(tours, `${locale}/trips.json has no tours section`).toBeDefined();
+      const leafKeys = flatten(tours, "tours");
+      expect(leafKeys.length).toBeGreaterThan(0);
+      for (const key of leafKeys) {
+        const parts = key.split(".").slice(1); // drop the leading "tours"
+        let value: unknown = tours;
+        for (const part of parts) {
+          value = (value as Record<string, unknown> | undefined)?.[part];
+        }
+        expect(typeof value, `${locale}/trips.json is missing tours.${parts.join(".")}`).toBe(
+          "string"
+        );
+        expect((value as string).trim().length).toBeGreaterThan(0);
       }
-      expect(typeof value, `${locale}/trips.json is missing tours.${parts.join(".")}`).toBe(
-        "string"
-      );
-      expect((value as string).trim().length).toBeGreaterThan(0);
     }
-  });
+  );
 
   it("does not leave one language behind the other", () => {
     const deTabKeys = Object.keys(
@@ -149,20 +151,16 @@ describe("tour vocabulary bound to its TypeScript union (fix round 1)", () => {
     }
   });
 
-  it.each(["de", "en"] as const)(
-    "%s: every LegSource has a tours.source label",
-    (locale) => {
-      const sources = (LOCALES[locale] as { tours: { source: Record<string, unknown> } }).tours
-        .source;
-      for (const source of LEG_SOURCES) {
-        expect(
-          typeof sources[source],
-          `${locale}/trips.json is missing tours.source.${source}`
-        ).toBe("string");
-        expect((sources[source] as string).trim().length).toBeGreaterThan(0);
-      }
+  it.each(["de", "en"] as const)("%s: every LegSource has a tours.source label", (locale) => {
+    const sources = (LOCALES[locale] as { tours: { source: Record<string, unknown> } }).tours
+      .source;
+    for (const source of LEG_SOURCES) {
+      expect(typeof sources[source], `${locale}/trips.json is missing tours.source.${source}`).toBe(
+        "string"
+      );
+      expect((sources[source] as string).trim().length).toBeGreaterThan(0);
     }
-  );
+  });
 
   it.each(["de", "en"] as const)(
     "%s: every RoutingProviderId has a settings routing.provider label",
@@ -186,17 +184,21 @@ describe("tour vocabulary bound to its TypeScript union (fix round 1)", () => {
   // in `lib/api/dawarich.ts`) without extending this guard to them — the
   // exact gap this file's own doc comment warns is invisible to a static
   // grep. Bound here the same way `LEG_MODES`/`LEG_SOURCES` are above.
-  it.each(["de", "en"] as const)("%s: every TrackSource has a tours.tracks.source label", (locale) => {
-    const sources = (LOCALES[locale] as { tours: { tracks: { source: Record<string, unknown> } } })
-      .tours.tracks.source;
-    for (const source of TRACK_SOURCES) {
-      expect(
-        typeof sources[source],
-        `${locale}/trips.json is missing tours.tracks.source.${source}`
-      ).toBe("string");
-      expect((sources[source] as string).trim().length).toBeGreaterThan(0);
+  it.each(["de", "en"] as const)(
+    "%s: every TrackSource has a tours.tracks.source label",
+    (locale) => {
+      const sources = (
+        LOCALES[locale] as { tours: { tracks: { source: Record<string, unknown> } } }
+      ).tours.tracks.source;
+      for (const source of TRACK_SOURCES) {
+        expect(
+          typeof sources[source],
+          `${locale}/trips.json is missing tours.tracks.source.${source}`
+        ).toBe("string");
+        expect((sources[source] as string).trim().length).toBeGreaterThan(0);
+      }
     }
-  });
+  );
 
   it.each(["de", "en"] as const)(
     "%s: every DawarichFailureKind has a tours.tracks.dawarich.errors label",

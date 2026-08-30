@@ -166,7 +166,9 @@ export default function DawarichConnectionCard(): JSX.Element {
           className="btn-primary px-3 py-1.5 text-sm"
           onClick={() => void handleSave()}
         >
-          {saving ? t("trips:tours.dawarichSettings.saving") : t("trips:tours.dawarichSettings.save")}
+          {saving
+            ? t("trips:tours.dawarichSettings.saving")
+            : t("trips:tours.dawarichSettings.save")}
         </button>
         <button
           type="button"
@@ -174,7 +176,9 @@ export default function DawarichConnectionCard(): JSX.Element {
           className="btn-secondary px-3 py-1.5 text-sm"
           onClick={() => void handleTest()}
         >
-          {testing ? t("trips:tours.dawarichSettings.testing") : t("trips:tours.dawarichSettings.test")}
+          {testing
+            ? t("trips:tours.dawarichSettings.testing")
+            : t("trips:tours.dawarichSettings.test")}
         </button>
       </div>
 

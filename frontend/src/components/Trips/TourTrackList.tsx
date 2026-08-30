@@ -96,7 +96,9 @@ export default function TourTrackList({
           className="rounded-sm border border-(--color-border) px-3 py-1.5 text-xs hover:bg-(--bg-surface) disabled:opacity-40"
           onClick={onPullDawarich}
         >
-          {pulling ? t("trips:tours.tracks.dawarich.pulling") : t("trips:tours.tracks.dawarich.pullLabel")}
+          {pulling
+            ? t("trips:tours.tracks.dawarich.pulling")
+            : t("trips:tours.tracks.dawarich.pullLabel")}
         </button>
         {!dawarichAvailable && (
           <span className="text-xs text-(--text-muted)">
@@ -145,11 +147,7 @@ export default function TourTrackList({
                 {t("trips:tours.tracks.pointCount", { count: track.pointCount })}
               </span>
               <span className="text-(--text-muted)">{formatDistanceKm(track.distanceKm)} km</span>
-              <button
-                type="button"
-                className="text-xs underline"
-                onClick={() => onDelete(track)}
-              >
+              <button type="button" className="text-xs underline" onClick={() => onDelete(track)}>
                 {t("trips:tours.tracks.deleteLabel")}
               </button>
             </li>

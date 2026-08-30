@@ -414,7 +414,7 @@ export default function TripRouteEditorPage(): JSX.Element {
           "error",
           kind
             ? t(dawarichFailureKey(kind))
-            : apiErrorMessage(err) ?? t("trips:tours.tracks.dawarich.error")
+            : (apiErrorMessage(err) ?? t("trips:tours.tracks.dawarich.error"))
         );
       }
     })();
@@ -422,7 +422,10 @@ export default function TripRouteEditorPage(): JSX.Element {
 
   if (loading) {
     return (
-      <div className="min-h-screen" style={{ background: "var(--bg-base)", color: "var(--text-muted)" }}>
+      <div
+        className="min-h-screen"
+        style={{ background: "var(--bg-base)", color: "var(--text-muted)" }}
+      >
         <NavigationBar />
         <div className="flex items-center justify-center py-20">{t("common:loading.default")}</div>
       </div>
@@ -431,7 +434,10 @@ export default function TripRouteEditorPage(): JSX.Element {
 
   if (failure || !trip || !route) {
     return (
-      <div className="min-h-screen" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>
+      <div
+        className="min-h-screen"
+        style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
+      >
         <NavigationBar />
         <div className="max-w-2xl mx-auto px-4 py-16 text-center">
           <p className="text-sm text-rose-400">
@@ -454,7 +460,10 @@ export default function TripRouteEditorPage(): JSX.Element {
 
   return (
     <PageTransition>
-      <div className="min-h-screen" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>
+      <div
+        className="min-h-screen"
+        style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
+      >
         <NavigationBar />
         <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
           <header>

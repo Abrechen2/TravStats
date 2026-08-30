@@ -402,7 +402,8 @@ export default function TripMap({
       id: "trip-tour-paths",
       data: tourPathData,
       getPath: (d) => d.path,
-      getColor: (d) => [...d.color, d.isPlaceholder ? 170 : 255] as [number, number, number, number],
+      getColor: (d) =>
+        [...d.color, d.isPlaceholder ? 170 : 255] as [number, number, number, number],
       getWidth: (d) => (d.isPlaceholder ? 2 : 3.5),
       widthUnits: "pixels",
       widthMinPixels: 2,
@@ -596,8 +597,7 @@ export default function TripMap({
           color: "var(--text-muted)",
         }}
       >
-        {flightArcs.length}✈ · {cruisePaths.length}⚓ · {lodgings.length}🏨 ·{" "}
-        {stopPoints.length}📍
+        {flightArcs.length}✈ · {cruisePaths.length}⚓ · {lodgings.length}🏨 · {stopPoints.length}📍
       </div>
       {!empty && (
         <div

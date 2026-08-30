@@ -40,9 +40,7 @@ export default function TourStopAssigner({ stops, onChange }: Props): JSX.Elemen
 
   const handleToggle = (stop: TourStop): void => {
     const isAssigned = stop.routeOrderIdx !== null;
-    const next = isAssigned
-      ? orderedIds.filter((id) => id !== stop.id)
-      : [...orderedIds, stop.id];
+    const next = isAssigned ? orderedIds.filter((id) => id !== stop.id) : [...orderedIds, stop.id];
     onChange(next);
   };
 

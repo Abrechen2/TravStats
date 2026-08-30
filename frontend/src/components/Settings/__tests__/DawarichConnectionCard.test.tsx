@@ -112,9 +112,7 @@ describe("DawarichConnectionCard", () => {
     render(<DawarichConnectionCard />);
     await waitFor(() => expect(getSettings).toHaveBeenCalled());
 
-    await user.click(
-      screen.getByRole("button", { name: "trips:tours.dawarichSettings.clearKey" })
-    );
+    await user.click(screen.getByRole("button", { name: "trips:tours.dawarichSettings.clearKey" }));
 
     await waitFor(() => expect(updateSettings).toHaveBeenCalledWith({ apiKey: null }));
   });
@@ -262,9 +260,7 @@ describe("DawarichConnectionCard", () => {
     render(<DawarichConnectionCard />);
     await waitFor(() => expect(getSettings).toHaveBeenCalled());
 
-    await user.click(
-      screen.getByRole("button", { name: "trips:tours.dawarichSettings.clearKey" })
-    );
+    await user.click(screen.getByRole("button", { name: "trips:tours.dawarichSettings.clearKey" }));
 
     await waitFor(() =>
       expect(screen.getByText("trips:tours.dawarichSettings.saveError")).toBeInTheDocument()

@@ -8,7 +8,13 @@ const geo = (mode: "road" | "ferry", source: "straight" | "drawn"): TourGeometry
   features: [
     {
       type: "Feature",
-      geometry: { type: "LineString", coordinates: [[8, 58], [5.3, 60.4]] },
+      geometry: {
+        type: "LineString",
+        coordinates: [
+          [8, 58],
+          [5.3, 60.4],
+        ],
+      },
       properties: { legId: "l1", source, mode, confidence: "low", distanceKm: 300 },
     },
   ],
@@ -23,7 +29,9 @@ describe("buildTourPaths", () => {
   });
 
   it("marks a straight leg as a placeholder so it renders lighter, not measured", () => {
-    const [straight] = buildTourPaths([{ routeId: "r1", name: "S", geometry: geo("road", "straight") }]);
+    const [straight] = buildTourPaths([
+      { routeId: "r1", name: "S", geometry: geo("road", "straight") },
+    ]);
     const [drawn] = buildTourPaths([{ routeId: "r1", name: "S", geometry: geo("road", "drawn") }]);
     expect(straight.isPlaceholder).toBe(true);
     expect(drawn.isPlaceholder).toBe(false);
@@ -35,7 +43,13 @@ describe("buildTourPaths", () => {
       features: [
         {
           type: "Feature",
-          geometry: { type: "LineString", coordinates: [[8, 58], [5.3, 60.4]] },
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [8, 58],
+              [5.3, 60.4],
+            ],
+          },
           properties: {
             legId: "l1",
             source: "drawn",
@@ -58,7 +72,13 @@ describe("buildTourPaths", () => {
         {
           type: "Feature",
           geometry: { type: "LineString", coordinates: [[8, 58]] },
-          properties: { legId: "l1", source: "straight", mode: "road", confidence: "low", distanceKm: 0 },
+          properties: {
+            legId: "l1",
+            source: "straight",
+            mode: "road",
+            confidence: "low",
+            distanceKm: 0,
+          },
         },
       ],
     };
@@ -67,7 +87,9 @@ describe("buildTourPaths", () => {
 
   it("returns nothing for an empty collection", () => {
     expect(
-      buildTourPaths([{ routeId: "r1", name: "S", geometry: { type: "FeatureCollection", features: [] } }]),
+      buildTourPaths([
+        { routeId: "r1", name: "S", geometry: { type: "FeatureCollection", features: [] } },
+      ])
     ).toEqual([]);
   });
 });

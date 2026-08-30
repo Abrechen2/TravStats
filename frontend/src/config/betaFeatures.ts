@@ -157,7 +157,8 @@ export const BETA_FEATURES = Object.freeze({
   dawarich: Object.freeze({
     reason: "beta",
     why: "The connection, the pull and the settings card all work, but every consumer of a recorded track is itself still behind a gate — a Dawarich card on production would offer a connection with nothing to connect to.",
-    returnsWhen: "A feature that consumes recorded tracks ships — tour routes today, cruise legs next.",
+    returnsWhen:
+      "A feature that consumes recorded tracks ships — tour routes today, cruise legs next.",
   }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 

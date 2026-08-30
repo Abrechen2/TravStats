@@ -190,7 +190,8 @@ export const settingsApi = {
     return data;
   },
   testApiKey: async (
-    provider: "airlabs" | "aviationstack" | "aerodatabox" | "opensky" | "openrouteservice" | "graphhopper",
+    provider:
+      "airlabs" | "aviationstack" | "aerodatabox" | "opensky" | "openrouteservice" | "graphhopper",
     apiKey?: string,
     openskyCredentials?: {
       clientId?: string;

@@ -30,9 +30,19 @@ describe("TourSectionList", () => {
   it("shows each section with its distance", async () => {
     vi.mocked(toursApi.list).mockResolvedValue([
       {
-        id: "r1", tripId: "t1", name: "Südnorwegen", mode: "road", orderIdx: 0,
-        color: null, notes: null, startOdometerKm: null, endOdometerKm: null,
-        stopCount: 8, legCount: 7, distanceKm: 1284.4, drivenKm: 1284.4,
+        id: "r1",
+        tripId: "t1",
+        name: "Südnorwegen",
+        mode: "road",
+        orderIdx: 0,
+        color: null,
+        notes: null,
+        startOdometerKm: null,
+        endOdometerKm: null,
+        stopCount: 8,
+        legCount: 7,
+        distanceKm: 1284.4,
+        drivenKm: 1284.4,
       },
     ]);
 
@@ -61,9 +71,19 @@ describe("TourSectionList", () => {
     await waitFor(() => expect(screen.getByText("trips:tours.loadError")).toBeInTheDocument());
 
     vi.mocked(toursApi.create).mockResolvedValue({
-      id: "r1", tripId: "t1", name: "Südnorwegen", mode: "road", orderIdx: 0,
-      color: null, notes: null, startOdometerKm: null, endOdometerKm: null,
-      stopCount: 0, legCount: 0, distanceKm: 0, drivenKm: 0,
+      id: "r1",
+      tripId: "t1",
+      name: "Südnorwegen",
+      mode: "road",
+      orderIdx: 0,
+      color: null,
+      notes: null,
+      startOdometerKm: null,
+      endOdometerKm: null,
+      stopCount: 0,
+      legCount: 0,
+      distanceKm: 0,
+      drivenKm: 0,
     });
 
     // Drive the create control the way a user would: open it, name the

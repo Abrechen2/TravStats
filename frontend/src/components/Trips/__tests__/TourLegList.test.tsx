@@ -288,9 +288,7 @@ describe("TourLegList", () => {
     const leg = makeLeg({ waypoints: null, mode: "road" });
     renderList([leg], { routingAvailable: true });
 
-    expect(
-      screen.getByRole("button", { name: "trips:tours.routing.routeAll" })
-    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "trips:tours.routing.routeAll" })).toBeEnabled();
   });
 
   // LOW-2 (final whole-phase review, 2026-08-29): `useTourTracks`'s own doc

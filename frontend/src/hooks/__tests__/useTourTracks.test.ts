@@ -50,7 +50,13 @@ const TRACK_B = { ...TRACK_A, id: "track-b", name: "Day 2" };
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.list.mockResolvedValue([]);
-  mocks.get.mockResolvedValue({ ...TRACK_A, geometry: [[8.0, 58.15], [8.1, 58.3]] });
+  mocks.get.mockResolvedValue({
+    ...TRACK_A,
+    geometry: [
+      [8.0, 58.15],
+      [8.1, 58.3],
+    ],
+  });
   mocks.getSettings.mockResolvedValue({
     baseUrl: null,
     hasKey: false,
@@ -165,7 +171,13 @@ describe("useTourTracks", () => {
   // unknown quantity.
   it("tracksKnown is true once the list loaded and every track's geometry resolved", async () => {
     mocks.list.mockResolvedValue([TRACK_A]);
-    mocks.get.mockResolvedValue({ ...TRACK_A, geometry: [[8.0, 58.15], [8.1, 58.3]] });
+    mocks.get.mockResolvedValue({
+      ...TRACK_A,
+      geometry: [
+        [8.0, 58.15],
+        [8.1, 58.3],
+      ],
+    });
     const { result } = renderHook(() => useTourTracks("trip-1", "route-1"));
 
     expect(result.current.tracksKnown).toBe(false);

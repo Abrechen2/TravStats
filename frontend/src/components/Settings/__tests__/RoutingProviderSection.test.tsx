@@ -167,9 +167,7 @@ describe("RoutingProviderSection", () => {
         })
       )
     );
-    expect(
-      await screen.findByText("Global API keys updated successfully")
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Global API keys updated successfully")).toBeInTheDocument();
   });
 
   it("shows a translated failure message (and logs) when the save fails", async () => {

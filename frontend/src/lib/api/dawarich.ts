@@ -8,9 +8,7 @@ import {
 
 /** Narrow an arbitrary value to one of the fixed Dawarich failure kinds. */
 export function isDawarichFailureKind(value: unknown): value is DawarichFailureKind {
-  return (
-    typeof value === "string" && (DAWARICH_FAILURE_KINDS as readonly string[]).includes(value)
-  );
+  return typeof value === "string" && (DAWARICH_FAILURE_KINDS as readonly string[]).includes(value);
 }
 
 /**

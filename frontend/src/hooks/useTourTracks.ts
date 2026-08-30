@@ -168,9 +168,7 @@ export function useTourTracks(
   // geometry entry — otherwise a leg could read as "no track covers this"
   // only because ONE track's own fetch has not settled yet.
   const tracksKnown =
-    !tracksLoading &&
-    !tracksLoadError &&
-    tracks.every((tr) => trackGeometryById.has(tr.id));
+    !tracksLoading && !tracksLoadError && tracks.every((tr) => trackGeometryById.has(tr.id));
 
   const uploadTrack = useCallback(
     async (file: File): Promise<TourTrack> => {

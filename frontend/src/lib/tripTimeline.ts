@@ -44,10 +44,7 @@ export function splitDateTimeInput(iso: string | null | undefined): {
  * yields null whatever the time says — a time without a day cannot be placed
  * on a timeline.
  */
-export function joinDateTimeInput(
-  date: string,
-  time: string,
-): string | null {
+export function joinDateTimeInput(date: string, time: string): string | null {
   if (!date.trim()) return null;
   const t = time.trim() === "" ? "00:00" : time.trim();
   const iso = `${date.trim()}T${t}:00.000Z`;
@@ -184,6 +181,11 @@ export function isSupersededByPlaceVisit(stop: {
   lat?: number | null;
   lon?: number | null;
 }): boolean {
-  return stop.domain === "poi" && stop.lat !== null && stop.lat !== undefined &&
-    stop.lon !== null && stop.lon !== undefined;
+  return (
+    stop.domain === "poi" &&
+    stop.lat !== null &&
+    stop.lat !== undefined &&
+    stop.lon !== null &&
+    stop.lon !== undefined
+  );
 }

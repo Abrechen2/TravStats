@@ -37,7 +37,7 @@ export interface TourPathDatum {
 }
 
 export function buildTourPaths(
-  geometries: readonly { routeId: string; name: string; geometry: TourGeometry }[],
+  geometries: readonly { routeId: string; name: string; geometry: TourGeometry }[]
 ): TourPathDatum[] {
   const out: TourPathDatum[] = [];
   for (const g of geometries) {
